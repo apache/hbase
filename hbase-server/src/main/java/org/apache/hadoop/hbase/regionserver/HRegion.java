@@ -1410,7 +1410,7 @@ public class HRegion implements HeapSize { // , Writable{
     this.updatesLock.writeLock().lock();
     long flushsize = this.memstoreSize.get();
     status.setStatus("Preparing to flush by snapshotting stores");
-    List<StoreFlusher> storeFlushers = new ArrayList<StoreFlusher>(stores.size());
+    List<StoreFlushContext> storeFlushCtxs = new ArrayList<StoreFlushContext>(stores.size());
     long flushSeqId = -1L;
     try {
       // Record the mvcc for all transactions in progress.
@@ -1430,12 +1430,12 @@ public class HRegion implements HeapSize { // , Writable{
       }
 
       for (Store s : stores.values()) {
-        storeFlushers.add(s.getStoreFlusher(flushSeqId));
+        storeFlushCtxs.add(s.createFlushContext(flushSeqId));
       }
 
       // prepare flush (take a snapshot)
-      for (StoreFlusher flusher : storeFlushers) {
-        flusher.prepare();
+      for (StoreFlushContext flush : storeFlushCtxs) {
+        flush.prepare();
       }
     } finally {
       this.updatesLock.writeLock().unlock();
@@ -1472,19 +1472,19 @@ public class HRegion implements HeapSize { // , Writable{
       // just-made new flush store file. The new flushed file is still in the
       // tmp directory.
 
-      for (StoreFlusher flusher : storeFlushers) {
-        flusher.flushCache(status);
+      for (StoreFlushContext flush : storeFlushCtxs) {
+        flush.flushCache(status);
       }
 
       // Switch snapshot (in memstore) -> new hfile (thus causing
       // all the store scanners to reset/reseek).
-      for (StoreFlusher flusher : storeFlushers) {
-        boolean needsCompaction = flusher.commit(status);
+      for (StoreFlushContext flush : storeFlushCtxs) {
+        boolean needsCompaction = flush.commit(status);
         if (needsCompaction) {
           compactionRequested = true;
         }
       }
-      storeFlushers.clear();
+      storeFlushCtxs.clear();
 
       // Set down the memstore size by amount of flush.
       this.addAndGetGlobalMemstoreSize(-flushsize);

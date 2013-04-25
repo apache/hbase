@@ -958,7 +958,7 @@ public class MemStore implements HeapSize {
    * @param notpresent True if the kv was NOT present in the set.
    * @return Size
    */
-  long heapSizeChange(final KeyValue kv, final boolean notpresent) {
+  static long heapSizeChange(final KeyValue kv, final boolean notpresent) {
     return notpresent ?
         ClassSize.align(ClassSize.CONCURRENT_SKIPLISTMAP_ENTRY + kv.heapSize()):
         0;

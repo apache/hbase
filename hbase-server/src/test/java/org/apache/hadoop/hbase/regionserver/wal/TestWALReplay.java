@@ -61,10 +61,11 @@ import org.apache.hadoop.hbase.exceptions.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
+import org.apache.hadoop.hbase.regionserver.DefaultStoreEngine;
+import org.apache.hadoop.hbase.regionserver.DefaultStoreFlusher;
 import org.apache.hadoop.hbase.regionserver.FlushRequester;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
-import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.RegionScanner;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.hadoop.hbase.regionserver.Store;
@@ -548,6 +549,29 @@ public class TestWALReplay {
     assertEquals(result.size(), result1b.size());
   }
 
+
+  // StoreFlusher implementation used in testReplayEditsAfterAbortingFlush.
+  // Only throws exception if throwExceptionWhenFlushing is set true.
+  public static class CustomStoreFlusher extends DefaultStoreFlusher {
+    // Switch between throw and not throw exception in flush
+    static final AtomicBoolean throwExceptionWhenFlushing = new AtomicBoolean(false);
+
+    public CustomStoreFlusher(Configuration conf, Store store) {
+      super(conf, store);
+    }
+    @Override
+    public List<Path> flushSnapshot(SortedSet<KeyValue> snapshot, long cacheFlushId,
+        TimeRangeTracker snapshotTimeRangeTracker, AtomicLong flushedSize, MonitoredTask status)
+            throws IOException {
+      if (throwExceptionWhenFlushing.get()) {
+        throw new IOException("Simulated exception by tests");
+      }
+      return super.flushSnapshot(snapshot, cacheFlushId, snapshotTimeRangeTracker,
+          flushedSize, status);
+    }
+
+  };
+
   /**
    * Test that we could recover the data correctly after aborting flush. In the
    * test, first we abort flush after writing some data, then writing more data
@@ -568,28 +592,12 @@ public class TestWALReplay {
     // of the families during the load of edits so its seqid is not same as
     // others to test we do right thing when different seqids.
     HLog wal = createWAL(this.conf);
-    final AtomicBoolean throwExceptionWhenFlushing = new AtomicBoolean(false);
     RegionServerServices rsServices = Mockito.mock(RegionServerServices.class);
     Mockito.doReturn(false).when(rsServices).isAborted();
-    HRegion region = new HRegion(basedir, wal, this.fs, this.conf, hri, htd,
-        rsServices) {
-      @Override
-      protected HStore instantiateHStore(final HColumnDescriptor family) throws IOException {
-        return new HStore(this, family, conf) {
-          @Override
-          protected Path flushCache(final long logCacheFlushId,
-              SortedSet<KeyValue> snapshot,
-              TimeRangeTracker snapshotTimeRangeTracker,
-              AtomicLong flushedSize, MonitoredTask status) throws IOException {
-            if (throwExceptionWhenFlushing.get()) {
-              throw new IOException("Simulated exception by tests");
-            }
-            return super.flushCache(logCacheFlushId, snapshot,
-                snapshotTimeRangeTracker, flushedSize, status);
-          }
-        };
-      }
-    };
+    Configuration customConf = new Configuration(this.conf);
+    customConf.set(DefaultStoreEngine.DEFAULT_STORE_FLUSHER_CLASS_KEY,
+        CustomStoreFlusher.class.getName());
+    HRegion region = new HRegion(basedir, wal, this.fs, customConf, hri, htd, rsServices);
     long seqid = region.initialize();
     // HRegionServer usually does this. It knows the largest seqid across all
     // regions.
@@ -610,7 +618,7 @@ public class TestWALReplay {
     assertEquals(writtenRowCount, getScannedCount(scanner));
 
     // Let us flush the region
-    throwExceptionWhenFlushing.set(true);
+    CustomStoreFlusher.throwExceptionWhenFlushing.set(true);
     try {
       region.flushcache();
       fail("Injected exception hasn't been thrown");
@@ -630,7 +638,7 @@ public class TestWALReplay {
     }
     writtenRowCount += moreRow;
     // call flush again
-    throwExceptionWhenFlushing.set(false);
+    CustomStoreFlusher.throwExceptionWhenFlushing.set(false);
     try {
       region.flushcache();
     } catch (IOException t) {

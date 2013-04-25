@@ -32,6 +32,12 @@ import org.mockito.Mockito;
 
 @Category(SmallTests.class)
 public class TestDefaultStoreEngine {
+  public static class DummyStoreFlusher extends DefaultStoreFlusher {
+    public DummyStoreFlusher(Configuration conf, Store store) {
+      super(conf, store);
+    }
+  }
+
   public static class DummyCompactor extends DefaultCompactor {
     public DummyCompactor(Configuration conf, Store store) {
       super(conf, store);
@@ -45,15 +51,18 @@ public class TestDefaultStoreEngine {
   }
 
   @Test
-  public void testCustomPolicyAndCompactor() throws Exception {
+  public void testCustomParts() throws Exception {
     Configuration conf = HBaseConfiguration.create();
     conf.set(DefaultStoreEngine.DEFAULT_COMPACTOR_CLASS_KEY, DummyCompactor.class.getName());
     conf.set(DefaultStoreEngine.DEFAULT_COMPACTION_POLICY_CLASS_KEY,
         DummyCompactionPolicy.class.getName());
+    conf.set(DefaultStoreEngine.DEFAULT_STORE_FLUSHER_CLASS_KEY,
+        DummyStoreFlusher.class.getName());
     Store mockStore = Mockito.mock(Store.class);
-    StoreEngine<?, ?, ?> se = StoreEngine.create(mockStore, conf, new KVComparator());
+    StoreEngine<?, ?, ?, ?> se = StoreEngine.create(mockStore, conf, new KVComparator());
     Assert.assertTrue(se instanceof DefaultStoreEngine);
     Assert.assertTrue(se.getCompactionPolicy() instanceof DummyCompactionPolicy);
+    Assert.assertTrue(se.getStoreFlusher() instanceof DummyStoreFlusher);
     Assert.assertTrue(se.getCompactor() instanceof DummyCompactor);
   }
 }

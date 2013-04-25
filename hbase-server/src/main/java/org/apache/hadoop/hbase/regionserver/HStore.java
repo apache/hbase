@@ -124,7 +124,6 @@ public class HStore implements Store {
   static int closeCheckInterval = 0;
   private volatile long storeSize = 0L;
   private volatile long totalUncompressedBytes = 0L;
-  private final Object flushLock = new Object();
   final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
   private final boolean verifyBulkLoads;
 
@@ -146,14 +145,14 @@ public class HStore implements Store {
   // Comparing KeyValues
   private final KeyValue.KVComparator comparator;
 
-  final StoreEngine<?, ?, ?> storeEngine;
+  final StoreEngine<?, ?, ?, ?> storeEngine;
 
   private static final AtomicBoolean offPeakCompactionTracker = new AtomicBoolean();
   private final OffPeakHours offPeakHours;
 
   private static final int DEFAULT_FLUSH_RETRIES_NUMBER = 10;
-  private static int flush_retries_number;
-  private static int pauseTime;
+  private int flushRetriesNumber;
+  private int pauseTime;
 
   private long blockingFileCount;
 
@@ -223,17 +222,13 @@ public class HStore implements Store {
     this.checksumType = getChecksumType(conf);
     // initilize bytes per checksum
     this.bytesPerChecksum = getBytesPerChecksum(conf);
-    // Create a compaction manager.
-    if (HStore.flush_retries_number == 0) {
-      HStore.flush_retries_number = conf.getInt(
-          "hbase.hstore.flush.retries.number", DEFAULT_FLUSH_RETRIES_NUMBER);
-      HStore.pauseTime = conf.getInt(HConstants.HBASE_SERVER_PAUSE,
-          HConstants.DEFAULT_HBASE_SERVER_PAUSE);
-      if (HStore.flush_retries_number <= 0) {
-        throw new IllegalArgumentException(
-            "hbase.hstore.flush.retries.number must be > 0, not "
-                + HStore.flush_retries_number);
-      }
+    flushRetriesNumber = conf.getInt(
+        "hbase.hstore.flush.retries.number", DEFAULT_FLUSH_RETRIES_NUMBER);
+    pauseTime = conf.getInt(HConstants.HBASE_SERVER_PAUSE, HConstants.DEFAULT_HBASE_SERVER_PAUSE);
+    if (flushRetriesNumber <= 0) {
+      throw new IllegalArgumentException(
+          "hbase.hstore.flush.retries.number must be > 0, not "
+              + flushRetriesNumber);
     }
   }
 
@@ -645,10 +640,10 @@ public class HStore implements Store {
    * @param snapshotTimeRangeTracker
    * @param flushedSize The number of bytes flushed
    * @param status
-   * @return Path The path name of the tmp file to which the store was flushed
+   * @return The path name of the tmp file to which the store was flushed
    * @throws IOException
    */
-  protected Path flushCache(final long logCacheFlushId,
+  protected List<Path> flushCache(final long logCacheFlushId,
       SortedSet<KeyValue> snapshot,
       TimeRangeTracker snapshotTimeRangeTracker,
       AtomicLong flushedSize,
@@ -658,20 +653,21 @@ public class HStore implements Store {
     // 'snapshot', the next time flush comes around.
     // Retry after catching exception when flushing, otherwise server will abort
     // itself
+    StoreFlusher flusher = storeEngine.getStoreFlusher();
     IOException lastException = null;
-    for (int i = 0; i < HStore.flush_retries_number; i++) {
+    for (int i = 0; i < flushRetriesNumber; i++) {
       try {
-        Path pathName = internalFlushCache(snapshot, logCacheFlushId,
-            snapshotTimeRangeTracker, flushedSize, status);
+        List<Path> pathNames = flusher.flushSnapshot(
+            snapshot, logCacheFlushId, snapshotTimeRangeTracker, flushedSize, status);
+        Path lastPathName = null;
         try {
-          // Path name is null if there is no entry to flush
-          if (pathName != null) {
+          for (Path pathName : pathNames) {
+            lastPathName = pathName;
             validateStoreFile(pathName);
           }
-          return pathName;
+          return pathNames;
         } catch (Exception e) {
-          LOG.warn("Failed validating store file " + pathName
-              + ", retring num=" + i, e);
+          LOG.warn("Failed validating store file " + lastPathName + ", retrying num=" + i, e);
           if (e instanceof IOException) {
             lastException = (IOException) e;
           } else {
@@ -693,109 +689,6 @@ public class HStore implements Store {
       }
     }
     throw lastException;
-  }
-
-  /*
-   * @param cache
-   * @param logCacheFlushId
-   * @param snapshotTimeRangeTracker
-   * @param flushedSize The number of bytes flushed
-   * @return Path The path name of the tmp file to which the store was flushed
-   * @throws IOException
-   */
-  private Path internalFlushCache(final SortedSet<KeyValue> set,
-      final long logCacheFlushId,
-      TimeRangeTracker snapshotTimeRangeTracker,
-      AtomicLong flushedSize,
-      MonitoredTask status)
-      throws IOException {
-    StoreFile.Writer writer;
-    // Find the smallest read point across all the Scanners.
-    long smallestReadPoint = region.getSmallestReadPoint();
-    long flushed = 0;
-    Path pathName;
-    // Don't flush if there are no entries.
-    if (set.size() == 0) {
-      return null;
-    }
-    // Use a store scanner to find which rows to flush.
-    // Note that we need to retain deletes, hence
-    // treat this as a minor compaction.
-    InternalScanner scanner = null;
-    KeyValueScanner memstoreScanner = new CollectionBackedScanner(set, this.comparator);
-    if (this.getCoprocessorHost() != null) {
-      scanner = this.getCoprocessorHost().preFlushScannerOpen(this, memstoreScanner);
-    }
-    if (scanner == null) {
-      Scan scan = new Scan();
-      scan.setMaxVersions(scanInfo.getMaxVersions());
-      scanner = new StoreScanner(this, scanInfo, scan,
-          Collections.singletonList(memstoreScanner), ScanType.COMPACT_RETAIN_DELETES,
-          smallestReadPoint, HConstants.OLDEST_TIMESTAMP);
-    }
-    if (this.getCoprocessorHost() != null) {
-      InternalScanner cpScanner =
-        this.getCoprocessorHost().preFlush(this, scanner);
-      // NULL scanner returned from coprocessor hooks means skip normal processing
-      if (cpScanner == null) {
-        return null;
-      }
-      scanner = cpScanner;
-    }
-    try {
-      int compactionKVMax = conf.getInt(HConstants.COMPACTION_KV_MAX, 10);
-      // TODO:  We can fail in the below block before we complete adding this
-      // flush to list of store files.  Add cleanup of anything put on filesystem
-      // if we fail.
-      synchronized (flushLock) {
-        status.setStatus("Flushing " + this + ": creating writer");
-        // A. Write the map out to the disk
-        writer = createWriterInTmp(set.size());
-        writer.setTimeRangeTracker(snapshotTimeRangeTracker);
-        pathName = writer.getPath();
-        try {
-          List<KeyValue> kvs = new ArrayList<KeyValue>();
-          boolean hasMore;
-          do {
-            hasMore = scanner.next(kvs, compactionKVMax);
-            if (!kvs.isEmpty()) {
-              for (KeyValue kv : kvs) {
-                // If we know that this KV is going to be included always, then let us
-                // set its memstoreTS to 0. This will help us save space when writing to
-                // disk.
-                if (kv.getMemstoreTS() <= smallestReadPoint) {
-                  // let us not change the original KV. It could be in the memstore
-                  // changing its memstoreTS could affect other threads/scanners.
-                  kv = kv.shallowCopy();
-                  kv.setMemstoreTS(0);
-                }
-                writer.append(kv);
-                flushed += this.memstore.heapSizeChange(kv, true);
-              }
-              kvs.clear();
-            }
-          } while (hasMore);
-        } finally {
-          // Write out the log sequence number that corresponds to this output
-          // hfile. Also write current time in metadata as minFlushTime.
-          // The hfile is current up to and including logCacheFlushId.
-          status.setStatus("Flushing " + this + ": appending metadata");
-          writer.appendMetadata(logCacheFlushId, false);
-          status.setStatus("Flushing " + this + ": closing flushed file");
-          writer.close();
-        }
-      }
-    } finally {
-      flushedSize.set(flushed);
-      scanner.close();
-    }
-    if (LOG.isInfoEnabled()) {
-      LOG.info("Flushed " +
-               ", sequenceid=" + logCacheFlushId +
-               ", memsize=" + StringUtils.humanReadableInt(flushed) +
-               ", into tmp file " + pathName);
-    }
-    return pathName;
   }
 
   /*
@@ -872,17 +765,18 @@ public class HStore implements Store {
 
   /*
    * Change storeFiles adding into place the Reader produced by this new flush.
-   * @param sf
-   * @param set That was used to make the passed file <code>p</code>.
+   * @param sfs Store files
+   * @param set That was used to make the passed file.
    * @throws IOException
    * @return Whether compaction is required.
    */
-  private boolean updateStorefiles(final StoreFile sf,
-                                   final SortedSet<KeyValue> set)
-  throws IOException {
+  private boolean updateStorefiles(
+      final List<StoreFile> sfs, final SortedSet<KeyValue> set) throws IOException {
     this.lock.writeLock().lock();
     try {
-      this.storeEngine.getStoreFileManager().insertNewFile(sf);
+      for (StoreFile sf : sfs) {
+        this.storeEngine.getStoreFileManager().insertNewFile(sf);
+      }
       this.memstore.clearSnapshot(set);
     } finally {
       // We need the lock, as long as we are updating the storeFiles
@@ -1747,22 +1641,20 @@ public class HStore implements Store {
     }
   }
 
-  public StoreFlusher getStoreFlusher(long cacheFlushId) {
+  public StoreFlushContext createFlushContext(long cacheFlushId) {
     return new StoreFlusherImpl(cacheFlushId);
   }
 
-  private class StoreFlusherImpl implements StoreFlusher {
+  private class StoreFlusherImpl implements StoreFlushContext {
 
-    private long cacheFlushId;
+    private long cacheFlushSeqNum;
     private SortedSet<KeyValue> snapshot;
-    private StoreFile storeFile;
-    private Path storeFilePath;
+    private List<Path> tempFiles;
     private TimeRangeTracker snapshotTimeRangeTracker;
-    private AtomicLong flushedSize;
+    private final AtomicLong flushedSize = new AtomicLong();
 
-    private StoreFlusherImpl(long cacheFlushId) {
-      this.cacheFlushId = cacheFlushId;
-      this.flushedSize = new AtomicLong();
+    private StoreFlusherImpl(long cacheFlushSeqNum) {
+      this.cacheFlushSeqNum = cacheFlushSeqNum;
     }
 
     @Override
@@ -1774,24 +1666,43 @@ public class HStore implements Store {
 
     @Override
     public void flushCache(MonitoredTask status) throws IOException {
-      storeFilePath = HStore.this.flushCache(
-        cacheFlushId, snapshot, snapshotTimeRangeTracker, flushedSize, status);
+      tempFiles = HStore.this.flushCache(
+        cacheFlushSeqNum, snapshot, snapshotTimeRangeTracker, flushedSize, status);
     }
 
     @Override
     public boolean commit(MonitoredTask status) throws IOException {
-      if (storeFilePath == null) {
+      if (this.tempFiles == null || this.tempFiles.isEmpty()) {
         return false;
       }
-      storeFile = HStore.this.commitFile(storeFilePath, cacheFlushId,
-                               snapshotTimeRangeTracker, flushedSize, status);
-      if (HStore.this.getCoprocessorHost() != null) {
-        HStore.this.getCoprocessorHost().postFlush(HStore.this, storeFile);
+      List<StoreFile> storeFiles = new ArrayList<StoreFile>(this.tempFiles.size());
+      for (Path storeFilePath : tempFiles) {
+        try {
+          storeFiles.add(HStore.this.commitFile(storeFilePath, cacheFlushSeqNum,
+              snapshotTimeRangeTracker, flushedSize, status));
+        } catch (IOException ex) {
+          LOG.error("Failed to commit store file " + storeFilePath, ex);
+          // Try to delete the files we have committed before.
+          for (StoreFile sf : storeFiles) {
+            Path pathToDelete = sf.getPath();
+            try {
+              sf.deleteReader();
+            } catch (IOException deleteEx) {
+              LOG.fatal("Failed to delete store file we committed, halting " + pathToDelete, ex);
+              Runtime.getRuntime().halt(1);
+            }
+          }
+          throw new IOException("Failed to commit the flush", ex);
+        }
       }
 
-      // Add new file to store files.  Clear snapshot too while we have
-      // the Store write lock.
-      return HStore.this.updateStorefiles(storeFile, snapshot);
+      if (HStore.this.getCoprocessorHost() != null) {
+        for (StoreFile sf : storeFiles) {
+          HStore.this.getCoprocessorHost().postFlush(HStore.this, sf);
+        }
+      }
+      // Add new file to store files.  Clear snapshot too while we have the Store write lock.
+      return HStore.this.updateStorefiles(storeFiles, snapshot);
     }
   }
 
@@ -1807,8 +1718,8 @@ public class HStore implements Store {
   }
 
   public static final long FIXED_OVERHEAD =
-      ClassSize.align(ClassSize.OBJECT + (16 * ClassSize.REFERENCE) + (4 * Bytes.SIZEOF_LONG)
-              + (2 * Bytes.SIZEOF_INT) + (2 * Bytes.SIZEOF_BOOLEAN));
+      ClassSize.align(ClassSize.OBJECT + (15 * ClassSize.REFERENCE) + (4 * Bytes.SIZEOF_LONG)
+              + (4 * Bytes.SIZEOF_INT) + (2 * Bytes.SIZEOF_BOOLEAN));
 
   public static final long DEEP_OVERHEAD = ClassSize.align(FIXED_OVERHEAD
       + ClassSize.OBJECT + ClassSize.REENTRANT_LOCK
