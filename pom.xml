@@ -1267,23 +1267,21 @@
         <artifactId>stax-api</artifactId>
         <version>${stax-api.version}</version>
       </dependency>
-      <!-- Test dependencies -->
       <dependency>
         <groupId>junit</groupId>
         <artifactId>junit</artifactId>
         <version>${junit.version}</version>
-        <scope>test</scope>
-      </dependency>
-      <dependency>
-        <groupId>org.cloudera.htrace</groupId>
-        <artifactId>htrace</artifactId>
-        <version>${htrace.version}</version>
       </dependency>
       <dependency>
         <groupId>org.mockito</groupId>
         <artifactId>mockito-all</artifactId>
         <version>${mockito-all.version}</version>
         <scope>test</scope>
+      </dependency>
+      <dependency>
+        <groupId>org.cloudera.htrace</groupId>
+        <artifactId>htrace</artifactId>
+        <version>${htrace.version}</version>
       </dependency>
     </dependencies>
   </dependencyManagement>
