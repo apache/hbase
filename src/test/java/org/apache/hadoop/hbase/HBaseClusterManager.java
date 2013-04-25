@@ -40,6 +40,7 @@ import org.apache.hadoop.util.Shell;
 public class HBaseClusterManager extends ClusterManager {
   private String sshUserName;
   private String sshOptions;
+  private String sshBeforeCommand;
 
   @Override
   public void setConf(Configuration conf) {
@@ -54,6 +55,10 @@ public class HBaseClusterManager extends ClusterManager {
     if (!extraSshOptions.isEmpty()) {
       sshOptions = StringUtils.join(new Object[] { sshOptions, extraSshOptions }, " ");
     }
+    sshBeforeCommand =  conf.get("hbase.it.clustermanager.ssh.beforeCommand", "");
+    if (!sshBeforeCommand.isEmpty()) {
+      sshBeforeCommand += " && ";
+    }
     LOG.info("Running with SSH user [" + sshUserName + "] and options [" + sshOptions + "]");
   }
 
@@ -61,7 +66,6 @@ public class HBaseClusterManager extends ClusterManager {
    * Executes commands over SSH
    */
   protected class RemoteShell extends Shell.ShellCommandExecutor {
-
     private String hostname;
 
     private String sshCmd = "/usr/bin/ssh";
@@ -94,7 +98,7 @@ public class HBaseClusterManager extends ClusterManager {
           StringUtils.join(new String[] { sshCmd,
               (sshOptions == null) ? "" : sshOptions,
               userAndHost,
-              "\"" + StringUtils.join(super.getExecString(), " ") + "\""
+              "\"" + sshBeforeCommand + StringUtils.join(super.getExecString(), " ") + "\""
           }, " ")};
     }
 
