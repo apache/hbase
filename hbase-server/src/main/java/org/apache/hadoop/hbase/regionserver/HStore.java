@@ -445,6 +445,11 @@ public class HStore implements Store {
     }
   }
 
+  @Override
+  public long timeOfOldestEdit() {
+    return memstore.timeOfOldestEdit();
+  }
+
   /**
    * Adds a value to the memstore
    *

@@ -117,6 +117,11 @@ public interface Store extends HeapSize, StoreConfigInformation {
   public long add(KeyValue kv);
 
   /**
+   * When was the last edit done in the memstore
+   */
+  long timeOfOldestEdit();
+
+  /**
    * Removes a kv from the memstore. The KeyValue is removed only if its key & memstoreTS match the
    * key & memstoreTS value of the kv parameter.
    * @param kv
