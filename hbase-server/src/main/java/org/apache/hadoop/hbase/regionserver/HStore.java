@@ -280,6 +280,10 @@ public class HStore implements Store {
   public long getMemstoreFlushSize() {
     return this.region.memstoreFlushSize;
   }
+
+  public long getBlockingFileCount() {
+    return blockingFileCount;
+  }
   /* End implementation of StoreConfigInformation */
 
   /**
