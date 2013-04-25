@@ -43,7 +43,8 @@ public abstract class AbstractHBaseTool implements Tool {
   private static final int EXIT_SUCCESS = 0;
   private static final int EXIT_FAILURE = 1;
 
-  private static final String HELP_OPTION = "help";
+  private static final String SHORT_HELP_OPTION = "h";
+  private static final String LONG_HELP_OPTION = "help";
 
   private static final Log LOG = LogFactory.getLog(AbstractHBaseTool.class);
 
@@ -94,7 +95,8 @@ public abstract class AbstractHBaseTool implements Tool {
       return EXIT_FAILURE;
     }
 
-    if (cmd.hasOption(HELP_OPTION) || !sanityCheckOptions(cmd)) {
+    if (cmd.hasOption(SHORT_HELP_OPTION) || cmd.hasOption(LONG_HELP_OPTION) ||
+        !sanityCheckOptions(cmd)) {
       printUsage();
       return EXIT_FAILURE;
     }
@@ -123,7 +125,7 @@ public abstract class AbstractHBaseTool implements Tool {
   }
 
   private CommandLine parseArgs(String[] args) throws ParseException {
-    options.addOption(HELP_OPTION, false, "Show usage");
+    options.addOption(SHORT_HELP_OPTION, LONG_HELP_OPTION, false, "Show usage");
     addOptions();
     CommandLineParser parser = new BasicParser();
     return parser.parse(options, args);
@@ -149,8 +151,16 @@ public abstract class AbstractHBaseTool implements Tool {
     options.addOption(opt, false, description);
   }
 
+  protected void addOptNoArg(String shortOpt, String longOpt, String description) {
+    options.addOption(shortOpt, longOpt, false, description);
+  }
+
   protected void addOptWithArg(String opt, String description) {
     options.addOption(opt, true, description);
+  }
+
+  protected void addOptWithArg(String shortOpt, String longOpt, String description) {
+    options.addOption(shortOpt, longOpt, true, description);
   }
 
   /**
