@@ -674,9 +674,9 @@ and public client API's can be used.
 <para>
 On a distributed cluster, integration tests that use ChaosMonkey or otherwise manipulate services thru cluster manager (e.g. restart regionservers) use SSH to do it.
 To run these, test process should be able to run commands on remote end, so ssh should be configured accordingly (for example, if HBase runs under hbase
-user in your cluster, you can set up passwordless ssh for that user and run the test also under it). To facilitate that, <code>hbase.it.clustermanager.ssh.user</code> and
-<code>hbase.it.clustermanager.ssh.opts</code> configuration settings can be used. The former is the remote user that cluster manager should use to perform ssh commands.
-The latter contains additional options that are passed to SSH (for example, "-i /tmp/my-key").
+user in your cluster, you can set up passwordless ssh for that user and run the test also under it). To facilitate that, <code>hbase.it.clustermanager.ssh.user</code>, 
+<code>hbase.it.clustermanager.ssh.opts</code> and <code>hbase.it.clustermanager.ssh.beforeCommand</code> configuration settings can be used. "User" is the remote user that cluster manager should use to perform ssh commands.
+"Opts" contains additional options that are passed to SSH (for example, "-i /tmp/my-key"). "BeforeCommand" is the command that will be run immediately after SSH-ing to the server, before the actual command (for example, "su hbase").
 </para>
 
 <section xml:id="maven.build.commands.integration.tests.mini">
