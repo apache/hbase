@@ -40,4 +40,9 @@ public interface StoreConfigInformation {
    * Gets the cf-specific time-to-live for store files.
    */
   public long getStoreFileTtl();
+
+  /**
+   * The number of files required before flushes for this store will be blocked.
+   */
+  public long getBlockingFileCount();
 }

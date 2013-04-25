@@ -62,7 +62,7 @@ public class TestDefaultCompactSelection extends TestCase {
   protected static final int maxFiles = 5;
 
   protected static final long minSize = 10;
-  protected static final long maxSize = 1000;
+  protected static final long maxSize = 2100;
 
   private HLog hlog;
   private HRegion region;
@@ -269,12 +269,8 @@ public class TestDefaultCompactSelection extends TestCase {
     // big size + threshold
     compactEquals(sfCreate(tooBig, tooBig, 700,700) /* empty */);
     // small files = don't care about ratio
-    compactEquals(sfCreate(8,3,1), 8,3,1);
-    /* TODO: add sorting + unit test back in when HBASE-2856 is fixed
-    // sort first so you don't include huge file the tail end.
-    // happens with HFileOutputFormat bulk migration
-    compactEquals(sfCreate(100,50,23,12,12, 500), 23, 12, 12);
-     */
+    compactEquals(sfCreate(7,1,1), 7,1,1);
+
     // don't exceed max file compact threshold
     // note:  file selection starts with largest to smallest.
     compactEquals(sfCreate(7, 6, 5, 4, 3, 2, 1), 5, 4, 3, 2, 1);
@@ -284,6 +280,15 @@ public class TestDefaultCompactSelection extends TestCase {
     compactEquals(sfCreate(10, 10, 10, 10, 50), 10, 10, 10, 10);
 
     compactEquals(sfCreate(251, 253, 251, maxSize -1), 251, 253, 251);
+
+    compactEquals(sfCreate(maxSize -1,maxSize -1,maxSize -1) /* empty */);
+
+    // Always try and compact something to get below blocking storefile count
+    this.conf.setLong("hbase.hstore.compaction.min.size", 1);
+    store.storeEngine.getCompactionPolicy().setConf(conf);
+    compactEquals(sfCreate(512,256,128,64,32,16,8,4,2,1), 4,2,1);
+    this.conf.setLong("hbase.hstore.compaction.min.size", minSize);
+    store.storeEngine.getCompactionPolicy().setConf(conf);
 
     /* MAJOR COMPACTION */
     // if a major compaction has been forced, then compact everything

@@ -114,6 +114,14 @@ public class RatioBasedCompactionPolicy extends CompactionPolicy {
       candidateSelection = checkMinFilesCriteria(candidateSelection);
     }
     candidateSelection = removeExcessFiles(candidateSelection, isUserCompaction, majorCompaction);
+
+    if (candidateSelection.size() == 0
+        && candidateFiles.size() >= storeConfigInfo.getBlockingFileCount()) {
+      candidateSelection = new ArrayList<StoreFile>(candidateFiles);
+      candidateSelection
+          .subList(0, Math.max(0,candidateSelection.size() - comConf.getMinFilesToCompact()))
+          .clear();
+    }
     CompactionRequest result = new CompactionRequest(candidateSelection);
     result.setOffPeak(!candidateSelection.isEmpty() && !majorCompaction && mayUseOffPeak);
     return result;
