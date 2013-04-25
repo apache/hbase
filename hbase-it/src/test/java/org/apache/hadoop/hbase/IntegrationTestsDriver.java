@@ -39,7 +39,8 @@ import org.apache.commons.logging.LogFactory;
  * already deployed distributed cluster.
  */
 public class IntegrationTestsDriver extends AbstractHBaseTool {
-  private static final String TESTS_ARG = "test";
+  private static final String SHORT_REGEX_ARG = "r";
+  private static final String LONG_REGEX_ARG = "regex";
   private static final Log LOG = LogFactory.getLog(IntegrationTestsDriver.class);
   private IntegrationTestFilter intTestFilter = new IntegrationTestFilter();
 
@@ -49,7 +50,7 @@ public class IntegrationTestsDriver extends AbstractHBaseTool {
   }
 
   private class IntegrationTestFilter extends ClassTestFinder.TestClassFilter {
-    private Pattern testFilterRe = Pattern.compile(".*");
+    private Pattern testFilterRe = Pattern.compile(".*\\.IntegrationTest.*");
     public IntegrationTestFilter() {
       super(IntegrationTests.class);
     }
@@ -60,18 +61,25 @@ public class IntegrationTestsDriver extends AbstractHBaseTool {
 
     @Override
     public boolean isCandidateClass(Class<?> c) {
-      return super.isCandidateClass(c) && testFilterRe.matcher(c.getName()).find();
+      return testFilterRe.matcher(c.getName()).find() &&
+        // Our pattern will match the below NON-IntegrationTest. Rather than
+        // do exotic regex, just filter it out here
+        !c.getName().contains("IntegrationTestingUtility") &&
+        super.isCandidateClass(c);
     }
   }
 
   @Override
   protected void addOptions() {
-    addOptWithArg(TESTS_ARG, "a Java regular expression to filter tests on");
+    addOptWithArg(SHORT_REGEX_ARG, LONG_REGEX_ARG,
+      "Java regex to use selecting tests to run: e.g. .*TestBig.*" +
+      " will select all tests that include TestBig in their name.  Default: " +
+      ".*IntegrationTest.*");
   }
 
   @Override
   protected void processOptions(CommandLine cmd) {
-    String testFilterString = cmd.getOptionValue(TESTS_ARG, null);
+    String testFilterString = cmd.getOptionValue(SHORT_REGEX_ARG, null);
     if (testFilterString != null) {
       intTestFilter.setPattern(testFilterString);
     }
@@ -95,8 +103,10 @@ public class IntegrationTestsDriver extends AbstractHBaseTool {
     //this is called from the command line, so we should set to use the distributed cluster
     IntegrationTestingUtility.setUseDistributedCluster(conf);
     Class<?>[] classes = findIntegrationTestClasses();
-    LOG.info("Found " + classes.length + " integration tests to run");
-
+    LOG.info("Found " + classes.length + " integration tests to run:");
+    for (int i = 0; i < classes.length; i++) {
+      LOG.info("  " + classes[i]);
+    }
     JUnitCore junit = new JUnitCore();
     junit.addListener(new TextListener(System.out));
     Result result = junit.run(classes);
