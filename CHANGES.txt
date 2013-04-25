@@ -1,6 +1,6 @@
 HBase Change Log
 
-Release 0.94.7 - 4/17/2013
+Release 0.94.7 - 4/24/2013
 Sub-task
 
     [HBASE-7615] - Add metrics for snapshots
@@ -65,6 +65,7 @@ Bug
     [HBASE-8313] - Add Bloom filter testing for HFileOutputFormat
     [HBASE-8326] - mapreduce.TestTableInputFormatScan times out frequently
     [HBASE-8352] - Rename '.snapshot' directory
+    [HBASE-8427] - Apache Rat is incorrectly excluding test source files
 
 Improvement
 
@@ -89,6 +90,13 @@ Task
 Test
 
     [HBASE-8106] - Test to check replication log znodes move is done correctly
+    [HBASE-8260] - create generic integration test for trunk and 94 that is more deterministic, can be run for longer and is less aggressive
+
+
+Release 0.94.6.1 - 4/13/2013
+Bug
+
+    [HBASE-8259] - Snapshot backport in 0.94.6 breaks rolling restarts
 
 
 Release 0.94.6 - 3/14/2013
