@@ -183,7 +183,7 @@ public interface Store extends HeapSize, StoreConfigInformation {
 
   public int getCompactPriority();
 
-  public StoreFlusher getStoreFlusher(long cacheFlushId);
+  public StoreFlushContext createFlushContext(long cacheFlushId);
 
   // Split oriented methods
 

@@ -732,10 +732,10 @@ public class TestStore extends TestCase {
 
 
   private static void flushStore(HStore store, long id) throws IOException {
-    StoreFlusher storeFlusher = store.getStoreFlusher(id);
-    storeFlusher.prepare();
-    storeFlusher.flushCache(Mockito.mock(MonitoredTask.class));
-    storeFlusher.commit(Mockito.mock(MonitoredTask.class));
+    StoreFlushContext storeFlushCtx = store.createFlushContext(id);
+    storeFlushCtx.prepare();
+    storeFlushCtx.flushCache(Mockito.mock(MonitoredTask.class));
+    storeFlushCtx.commit(Mockito.mock(MonitoredTask.class));
   }
 
 

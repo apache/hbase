@@ -35,8 +35,9 @@ import org.apache.hadoop.hbase.util.ReflectionUtils;
  * they are tied together and replaced together via StoreEngine-s.
  */
 @InterfaceAudience.Private
-public abstract class StoreEngine<
-  CP extends CompactionPolicy, C extends Compactor, SFM extends StoreFileManager> {
+public abstract class StoreEngine<SF extends StoreFlusher,
+    CP extends CompactionPolicy, C extends Compactor, SFM extends StoreFileManager> {
+  protected SF storeFlusher;
   protected CP compactionPolicy;
   protected C compactor;
   protected SFM storeFileManager;
@@ -47,7 +48,7 @@ public abstract class StoreEngine<
    */
   public static final String STORE_ENGINE_CLASS_KEY = "hbase.hstore.engine.class";
 
-  private static final Class<? extends StoreEngine<?, ?, ?>>
+  private static final Class<? extends StoreEngine<?, ?, ?, ?>>
     DEFAULT_STORE_ENGINE_CLASS = DefaultStoreEngine.class;
 
   /**
@@ -72,6 +73,13 @@ public abstract class StoreEngine<
   }
 
   /**
+   * @return Store flusher to use.
+   */
+  public StoreFlusher getStoreFlusher() {
+    return this.storeFlusher;
+  }
+
+  /**
    * Creates an instance of a compaction context specific to this engine.
    * Doesn't actually select or start a compaction. See CompactionContext class comment.
    * @return New CompactionContext object.
@@ -86,9 +94,11 @@ public abstract class StoreEngine<
 
   private void createComponentsOnce(
       Configuration conf, Store store, KVComparator kvComparator) throws IOException {
-    assert compactor == null && compactionPolicy == null && storeFileManager == null;
+    assert compactor == null && compactionPolicy == null
+        && storeFileManager == null && storeFlusher == null;
     createComponents(conf, store, kvComparator);
-    assert compactor != null && compactionPolicy != null && storeFileManager != null;
+    assert compactor != null && compactionPolicy != null
+        && storeFileManager != null && storeFlusher != null;
   }
 
   /**
@@ -99,11 +109,11 @@ public abstract class StoreEngine<
    * @param kvComparator KVComparator for storeFileManager.
    * @return StoreEngine to use.
    */
-  public static StoreEngine<?, ?, ?> create(
+  public static StoreEngine<?, ?, ?, ?> create(
       Store store, Configuration conf, KVComparator kvComparator) throws IOException {
     String className = conf.get(STORE_ENGINE_CLASS_KEY, DEFAULT_STORE_ENGINE_CLASS.getName());
     try {
-      StoreEngine<?,?,?> se = ReflectionUtils.instantiateWithCustomCtor(
+      StoreEngine<?,?,?,?> se = ReflectionUtils.instantiateWithCustomCtor(
           className, new Class[] { }, new Object[] { });
       se.createComponentsOnce(conf, store, kvComparator);
       return se;
