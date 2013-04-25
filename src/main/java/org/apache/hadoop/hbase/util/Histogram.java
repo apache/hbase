@@ -19,12 +19,37 @@ package org.apache.hadoop.hbase.util;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
+
+import org.apache.commons.logging.LogFactory;
+
+import org.apache.commons.logging.Log;
+
+/**
+ * The Histogram class provides a mechanism to sample data points and perform
+ * estimates about percentile metrics.
+ * Percentile metric is defined as the follows :
+ *  A P99 value is the 99th percentile value among the given data points.
+ *
+ * Usage :
+ * Refer to RegionServerMetrics to see how this Histogram can be used to find
+ * percentile estimates.
+ *
+ * The general expected workflow of a Histogram class is as follows:
+ * [<Initialize Histogram> [[<addValue>]* [<getPercentileEstimate>]+ <refresh>]*]
+ *
+ * In the above sequence addValue can be called from different threads, but
+ * getPercentileEstimate and refresh should be called from the same thread since
+ * they are not mutually thread safe.
+ */
 
 public class Histogram {
   private List<Bucket> buckets;
   private int numBuckets;
   private Double minValue;
   private Double maxValue;
+  final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
+  public static final Log LOG = LogFactory.getLog(Histogram.class.getName());
 
   // Bucket indexing is from 1 to N
   public Histogram(int numBuckets, Double minValue, Double maxValue) {
@@ -72,22 +97,29 @@ public class Histogram {
   }
 
   public void refresh(int numBuckets) {
-    Double minValue = this.minValue;
-    Double maxValue = this.maxValue;
-    for (Bucket bucket : this.buckets) {
-      if (bucket.count > 0) {
-        minValue = bucket.getMinValue();
-        break;
+    this.lock.writeLock().lock();
+    try {
+      Double minValue = this.minValue;
+      Double maxValue = this.maxValue;
+      for (Bucket bucket : this.buckets) {
+        if (bucket.count > 0) {
+          minValue = bucket.getMinValue();
+          break;
+        }
       }
-    }
-    for (int i = this.buckets.size() - 1; i>=0; i--) {
-      Bucket bucket = this.buckets.get(i);
-      if (bucket.count > 0) {
-        maxValue = bucket.getMaxValue();
-        break;
+      for (int i = this.buckets.size() - 1; i>=0; i--) {
+        Bucket bucket = this.buckets.get(i);
+        if (bucket.count > 0) {
+          maxValue = bucket.getMaxValue();
+          break;
+        }
       }
+      this.refresh(numBuckets, minValue, maxValue);
+    } catch (Exception e) {
+      LOG.error("Unknown Exception : " + e.getMessage());
+    } finally {
+      this.lock.writeLock().unlock();
     }
-    this.refresh(numBuckets, minValue, maxValue);
   }
 
   private void refresh(int numBuckets, Double minValue, Double maxValue) {
@@ -108,38 +140,53 @@ public class Histogram {
     // We scan from the end of the table since our use case is to find the
     // p99, p95 latencies.
     if (prcntyl > 100.0 || prcntyl < 0.0) {
-      throw new UnsupportedOperationException("Percentile input value not in range.");
+      throw new IllegalArgumentException("Percentile input value not in range.");
     } else {
       prcntyl = 100.0 - prcntyl;
     }
-    int totalCount = 0;
-    for (Bucket bucket : this.buckets) {
-      totalCount += bucket.count;
-    }
-    if (totalCount == 0) {
-      throw new UnsupportedOperationException("Too few data points.");
-    }
-    Double countToCoverDouble = (totalCount * prcntyl / 100.0);
-    int countToCover = countToCoverDouble.intValue();
-    for (int i=this.buckets.size() - 1; i >= 0; i--) {
-      Bucket bucket = this.buckets.get(i);
-      if (bucket.getCount() >= countToCover) {
-        return bucket.getGreaterValue(bucket.getCount() - countToCover);
-      } else {
-        countToCover -= bucket.getCount();
+    Double ret = 0.0;
+    this.lock.writeLock().lock();
+    try {
+      int totalCount = 0;
+      for (Bucket bucket : this.buckets) {
+        totalCount += bucket.count;
       }
+      if (totalCount == 0) {
+        throw new UnsupportedOperationException("Too few data points.");
+      }
+      Double countToCoverDouble = (totalCount * prcntyl / 100.0);
+      int countToCover = countToCoverDouble.intValue();
+      for (int i=this.buckets.size() - 1; i >= 0; i--) {
+        Bucket bucket = this.buckets.get(i);
+        if (bucket.getCount() >= countToCover) {
+          return bucket.getGreaterValue(bucket.getCount() - countToCover);
+        } else {
+          countToCover -= bucket.getCount();
+        }
+      }
+      ret = this.maxValue;
+    } catch(Exception e) {
+      LOG.error("Unknown Exception : " + e.getMessage());
+    } finally {
+      this.lock.writeLock().unlock();
     }
-    return this.maxValue;
+    return ret;
   }
 
   public void addValue(Double value) {
-    Bucket bucket = buckets.get(this.getBucketIndex(value));
-    bucket.addValue(value);
+    this.lock.readLock().lock();
+    try {
+      Bucket bucket = buckets.get(this.getBucketIndex(value));
+      bucket.addValue(value);
+    } catch (Exception e) {
+      LOG.error("Unknown Exception : " + e.getMessage());
+    } finally {
+      this.lock.readLock().unlock();
+    }
   }
 
   public void addValue(Long value) {
-    Bucket bucket = buckets.get(this.getBucketIndex((double)value));
-    bucket.addValue((double)value);
+    addValue(value.doubleValue());
   }
 
   public class Bucket {
@@ -173,7 +220,7 @@ public class Histogram {
      */
     public int getGreaterCount(Double value) {
       if (!(this.minValue < value && this.maxValue >= value)) {
-        throw new UnsupportedOperationException();
+        throw new IllegalArgumentException();
       }
       if (this.count == 0) return 0;
       else if (this.count == 1) {
@@ -191,7 +238,7 @@ public class Histogram {
      * */
     public Double getGreaterValue(int count) {
       if (count > this.count) {
-        throw new UnsupportedOperationException();
+        throw new IllegalArgumentException();
       }
       if (count == 0) return this.endValue;
       Double gap = this.maxValue - this.minValue;
