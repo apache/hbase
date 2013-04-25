@@ -2160,6 +2160,11 @@ Server {
         this.activeMasterManager.clusterHasActiveMaster.notifyAll();
       }
     }
+    // If no region server is online then master may stuck waiting on .META. to come on line.
+    // See HBASE-8422.
+    if (this.catalogTracker != null && this.serverManager.getOnlineServers().isEmpty()) {
+      this.catalogTracker.stop();
+    }
   }
 
   @Override
