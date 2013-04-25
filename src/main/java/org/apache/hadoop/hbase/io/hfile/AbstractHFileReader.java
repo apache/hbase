@@ -130,10 +130,20 @@ public abstract class AbstractHFileReader extends SchemaConfigured
 
   public abstract boolean isFileInfoLoaded();
 
+  public String toShortString() {
+    return path.toString() +
+        (!isFileInfoLoaded()? "":
+          ", encoding=" + getEncodingOnDisk() +
+          ", compression=" + compressAlgo.getName() +
+          ", entries=" + trailer.getEntryCount() +
+          ", length=" + fileSize);
+  }
+
   @Override
   public String toString() {
     return "reader=" + path.toString() +
         (!isFileInfoLoaded()? "":
+          ", encoding=" + getEncodingOnDisk() +
           ", compression=" + compressAlgo.getName() +
           ", cacheConf=" + cacheConf +
           ", firstKey=" + toStringFirstKey() +

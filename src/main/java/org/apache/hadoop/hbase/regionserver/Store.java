@@ -145,6 +145,7 @@ public class Store extends SchemaConfigured implements HeapSize {
   private final int blocksize;
   private final boolean blockcache;
   private final Compression.Algorithm compression;
+  private final Compression.Algorithm mcCompression;
 
   private HFileDataBlockEncoder dataBlockEncoder;
 
@@ -189,6 +190,8 @@ public class Store extends SchemaConfigured implements HeapSize {
     this.blockcache = family.isBlockCacheEnabled();
     this.blocksize = family.getBlocksize();
     this.compression = family.getCompression();
+    String mcStr = conf.get("hbase.hstore.majorcompaction.compression", compression.getName());
+    this.mcCompression = Compression.Algorithm.valueOf(mcStr.toUpperCase());
 
     this.dataBlockEncoder =
         new HFileDataBlockEncoderImpl(family.getDataBlockEncodingOnDisk(),
@@ -961,8 +964,8 @@ public class Store extends SchemaConfigured implements HeapSize {
           + StringUtils.formatTimeDiff(compactionStartTime, cr.getSelectionTime()) + ", and took "
           + StringUtils.formatTimeDiff(EnvironmentEdgeManager.currentTimeMillis(),
                                        compactionStartTime)
-          + " to execute. New storefile name=" + (sf == null ? "none" : sf.toString())
-          + ", size=" + (sf == null? "none" : StringUtils.humanReadableInt(sf.getReader().length()))
+          + " to execute. New storefile name="
+          + (sf == null ? "(none)" : sf.getReader().getHFileReader().toShortString())
           + "; total size for store is "
           + StringUtils.humanReadableInt(storeSize));
       if (writer != null) {
@@ -1173,11 +1176,7 @@ public class Store extends SchemaConfigured implements HeapSize {
             ? r.getFilterEntries() : r.getEntries();
         maxKeyCount += keyCount;
         if (LOG.isDebugEnabled()) {
-          LOG.debug("Compacting " + file +
-            ", keycount=" + keyCount +
-            ", bloomtype=" + r.getBloomFilterType().toString() +
-            ", size=" + StringUtils.humanReadableInt(r.length()) +
-            ", encoding=" + r.getHFileReader().getEncodingOnDisk());
+          LOG.debug("Compacting " + r.getHFileReader().toShortString());
         }
       }
     }
@@ -1190,6 +1189,8 @@ public class Store extends SchemaConfigured implements HeapSize {
     // Make the instantiation lazy in case compaction produces no product; i.e.
     // where all source cells are expired or deleted.
     StoreFile.Writer writer = null;
+    // determine compression type (may be different for major compaction)
+    Compression.Algorithm compression = (majorCompaction) ? this.mcCompression : this.compression;
     // Find the smallest read point across all the Scanners.
     long smallestReadPoint = region.getSmallestReadPoint();
     MultiVersionConsistencyControl.setThreadReadPoint(smallestReadPoint);

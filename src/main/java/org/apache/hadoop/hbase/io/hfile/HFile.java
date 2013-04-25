@@ -499,6 +499,8 @@ public class HFile {
     void close(boolean evictOnClose) throws IOException;
 
     DataBlockEncoding getEncodingOnDisk();
+
+    String toShortString();
   }
 
   private static Reader pickReaderVersion(Path path, FSDataInputStream fsdis,
