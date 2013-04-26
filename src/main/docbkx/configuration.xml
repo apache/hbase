@@ -227,11 +227,12 @@ to ensure well-formedness of your document after an edit session.
 		 <title>Hadoop version support matrix</title>
 		 <tgroup cols='4' align='left' colsep='1' rowsep='1'><colspec colname='c1' align='left'/><colspec colname='c2' align='center'/><colspec colname='c3' align='center'/><colspec colname='c4' align='center'/>
          <thead>
-	     <row><entry>               </entry><entry>HBase-0.92.x</entry><entry>HBase-0.94.x</entry><entry>HBase-0.96</entry></row>
+	     <row><entry>               </entry><entry>HBase-0.92.x</entry><entry>HBase-0.94.x</entry><entry>HBase-0.95</entry></row>
 	     </thead><tbody>
          <row><entry>Hadoop-0.20.205</entry><entry>S</entry>          <entry>X</entry>           <entry>X</entry></row>
          <row><entry>Hadoop-0.22.x  </entry><entry>S</entry>          <entry>X</entry>           <entry>X</entry></row>
-         <row><entry>Hadoop-1.0.x   </entry><entry>S</entry>          <entry>S</entry>           <entry>S</entry></row>
+         <row><entry>Hadoop-1.0.0-1.0.2<footnote><para>HBase requires hadoop 1.0.3 at a minimum; there is an issue where we cannot find KerberosUtil compiling against earlier versions of Hadoop.</para></footnote>   </entry><entry>S</entry>          <entry>S</entry>           <entry>X</entry></row>
+         <row><entry>Hadoop-1.0.3+</entry><entry>S</entry>          <entry>S</entry>           <entry>S</entry></row>
          <row><entry>Hadoop-1.1.x   </entry><entry>NT</entry>         <entry>S</entry>           <entry>S</entry></row>
          <row><entry>Hadoop-0.23.x  </entry><entry>X</entry>          <entry>S</entry>           <entry>NT</entry></row>
          <row><entry>Hadoop-2.x     </entry><entry>X</entry>          <entry>S</entry>           <entry>S</entry></row>
