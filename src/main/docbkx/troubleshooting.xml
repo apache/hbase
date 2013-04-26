@@ -119,14 +119,22 @@
            To help debug this or confirm this is happening GC logging can be turned on in the Java virtual machine.
           </para>
           <para>
-          To enable, in <filename>hbase-env.sh</filename> add:
+          To enable, in <filename>hbase-env.sh</filename>, uncomment one of the below lines :
           <programlisting>
-export HBASE_OPTS="-XX:+UseConcMarkSweepGC -verbose:gc -XX:+PrintGCDetails -XX:+PrintGCTimeStamps -Xloggc:/home/hadoop/hbase/logs/gc-hbase.log"
+# This enables basic gc logging to the .out file.
+# export SERVER_GC_OPTS="-verbose:gc -XX:+PrintGCDetails -XX:+PrintGCDateStamps"
+
+# This enables basic gc logging to its own file.
+# export SERVER_GC_OPTS="-verbose:gc -XX:+PrintGCDetails -XX:+PrintGCDateStamps -Xloggc:&lt;FILE-PATH&gt;"
+
+# This enables basic GC logging to its own file with automatic log rolling. Only applies to jdk 1.6.0_34+ and 1.7.0_2+.
+# export SERVER_GC_OPTS="-verbose:gc -XX:+PrintGCDetails -XX:+PrintGCDateStamps -Xloggc:&lt;FILE-PATH&gt; -XX:+UseGCLogFileRotation -XX:NumberOfGCLogFiles=1 -XX:GCLogFileSize=512M"
+
+# If &lt;FILE-PATH&gt; is not replaced, the log file(.gc) would be generated in the HBASE_LOG_DIR.
           </programlisting>
-           Adjust the log directory to wherever you log.  Note:  The GC log does NOT roll automatically, so you'll have to keep an eye on it so it doesn't fill up the disk.
           </para>
           <para>
-         At this point you should see logs like so:
+           At this point you should see logs like so:
           <programlisting>
 64898.952: [GC [1 CMS-initial-mark: 2811538K(3055704K)] 2812179K(3061272K), 0.0007360 secs] [Times: user=0.00 sys=0.00, real=0.00 secs]
 64898.953: [CMS-concurrent-mark-start]
@@ -185,9 +193,24 @@ export HBASE_OPTS="-XX:+UseConcMarkSweepGC -verbose:gc -XX:+PrintGCDetails -XX:+
             This can be due to the size of the ParNew, which should be relatively small. If your ParNew is very large after running HBase for a while, in one example a ParNew was about 150MB, then you might have to constrain the size of ParNew (The larger it is, the longer the collections take but if its too small, objects are promoted to old gen too quickly). In the below we constrain new gen size to 64m.
             </para>
             <para>
-             Add this to HBASE_OPTS:
+             Add the below line in <filename>hbase-env.sh</filename>:
             <programlisting>
-export HBASE_OPTS="-XX:NewSize=64m -XX:MaxNewSize=64m &lt;cms options from above&gt; &lt;gc logging options from above&gt;"
+export SERVER_GC_OPTS="$SERVER_GC_OPTS -XX:NewSize=64m -XX:MaxNewSize=64m"
+            </programlisting>
+            </para>
+            <para>
+            Similarly, to enable GC logging for client processes, uncomment one of the below lines in <filename>hbase-env.sh</filename>:
+            <programlisting>
+# This enables basic gc logging to the .out file.
+# export CLIENT_GC_OPTS="-verbose:gc -XX:+PrintGCDetails -XX:+PrintGCDateStamps"
+
+# This enables basic gc logging to its own file.
+# export CLIENT_GC_OPTS="-verbose:gc -XX:+PrintGCDetails -XX:+PrintGCDateStamps -Xloggc:&lt;FILE-PATH&gt;"
+
+# This enables basic GC logging to its own file with automatic log rolling. Only applies to jdk 1.6.0_34+ and 1.7.0_2+.
+# export CLIENT_GC_OPTS="-verbose:gc -XX:+PrintGCDetails -XX:+PrintGCDateStamps -Xloggc:&lt;FILE-PATH&gt; -XX:+UseGCLogFileRotation -XX:NumberOfGCLogFiles=1 -XX:GCLogFileSize=512M"
+
+# If &lt;FILE-PATH&gt; is not replaced, the log file(.gc) would be generated in the HBASE_LOG_DIR .
             </programlisting>
             </para>
             <para>
