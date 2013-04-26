@@ -35,18 +35,18 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
-import org.apache.hadoop.hbase.exceptions.FailedSanityCheckException;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestCase;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HConstants.OperationStatusCode;
-import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.HDFSBlocksDistribution;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
@@ -58,6 +58,7 @@ import org.apache.hadoop.hbase.MultithreadedTestUtil.RepeatingTestThread;
 import org.apache.hadoop.hbase.MultithreadedTestUtil.TestThread;
 import org.apache.hadoop.hbase.client.Append;
 import org.apache.hadoop.hbase.client.Delete;
+import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Increment;
@@ -65,7 +66,7 @@ import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.client.Durability;
+import org.apache.hadoop.hbase.exceptions.FailedSanityCheckException;
 import org.apache.hadoop.hbase.exceptions.NoSuchColumnFamilyException;
 import org.apache.hadoop.hbase.exceptions.NotServingRegionException;
 import org.apache.hadoop.hbase.exceptions.WrongRegionException;
@@ -82,6 +83,8 @@ import org.apache.hadoop.hbase.filter.SingleColumnValueFilter;
 import org.apache.hadoop.hbase.monitoring.MonitoredRPCHandler;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
+import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.protobuf.generated.WAL.CompactionDescriptor;
 import org.apache.hadoop.hbase.regionserver.HRegion.RegionScannerImpl;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.regionserver.wal.HLogFactory;
@@ -376,6 +379,95 @@ public class TestHRegion extends HBaseTestCase {
       long seqId = region.replayRecoveredEditsIfAny(regiondir,
           maxSeqIdInStores, null, null);
       assertEquals(minSeqId, seqId);
+    } finally {
+      HRegion.closeHRegion(this.region);
+      this.region = null;
+    }
+  }
+
+  @Test
+  public void testRecoveredEditsReplayCompaction() throws Exception {
+    String method = "testRecoveredEditsReplayCompaction";
+    byte[] tableName = Bytes.toBytes(method);
+    byte[] family = Bytes.toBytes("family");
+    this.region = initHRegion(tableName, method, conf, family);
+    try {
+      Path regiondir = region.getRegionFileSystem().getRegionDir();
+      FileSystem fs = region.getRegionFileSystem().getFileSystem();
+      byte[] regionName = region.getRegionInfo().getEncodedNameAsBytes();
+
+      long maxSeqId = 3;
+      long minSeqId = 0;
+
+      for (long i = minSeqId; i < maxSeqId; i++) {
+        Put put = new Put(Bytes.toBytes(i));
+        put.add(family, Bytes.toBytes(i), Bytes.toBytes(i));
+        region.put(put);
+        region.flushcache();
+      }
+
+      //this will create a region with 3 files
+      assertEquals(3, region.getStore(family).getStorefilesCount());
+      List<Path> storeFiles = new ArrayList<Path>(3);
+      for (StoreFile sf : region.getStore(family).getStorefiles()) {
+        storeFiles.add(sf.getPath());
+      }
+
+      //disable compaction completion
+      conf.setBoolean("hbase.hstore.compaction.complete",false);
+      region.compactStores();
+
+      //ensure that nothing changed
+      assertEquals(3, region.getStore(family).getStorefilesCount());
+
+      //now find the compacted file, and manually add it to the recovered edits
+      Path tmpDir = region.getRegionFileSystem().getTempDir();
+      FileStatus[] files = region.getRegionFileSystem().getFileSystem().listStatus(tmpDir);
+      assertEquals(1, files.length);
+      //move the file inside region dir
+      Path newFile = region.getRegionFileSystem().commitStoreFile(Bytes.toString(family), files[0].getPath());
+
+      CompactionDescriptor compactionDescriptor = ProtobufUtil.toCompactionDescriptor(
+          this.region.getRegionInfo(), family,
+          storeFiles, Lists.newArrayList(newFile),
+          region.getRegionFileSystem().getStoreDir(Bytes.toString(family)));
+
+      HLogUtil.writeCompactionMarker(region.getLog(), this.region.getTableDesc(),
+          this.region.getRegionInfo(), compactionDescriptor);
+
+      Path recoveredEditsDir = HLogUtil.getRegionDirRecoveredEditsDir(regiondir);
+
+      Path recoveredEdits = new Path(recoveredEditsDir, String.format("%019d", 1000));
+      fs.create(recoveredEdits);
+      HLog.Writer writer = HLogFactory.createWriter(fs, recoveredEdits, conf);
+
+      long time = System.nanoTime();
+
+      writer.append(new HLog.Entry(new HLogKey(regionName, tableName, 10, time, HConstants.DEFAULT_CLUSTER_ID),
+          WALEdit.createCompaction(compactionDescriptor)));
+      writer.close();
+
+      //close the region now, and reopen again
+      HTableDescriptor htd = region.getTableDesc();
+      HRegionInfo info = region.getRegionInfo();
+      region.close();
+      region = HRegion.openHRegion(conf, fs, regiondir.getParent().getParent(), info, htd, null);
+
+      //now check whether we have only one store file, the compacted one
+      Collection<StoreFile> sfs = region.getStore(family).getStorefiles();
+      for (StoreFile sf : sfs) {
+        LOG.info(sf.getPath());
+      }
+      assertEquals(1, region.getStore(family).getStorefilesCount());
+      files = region.getRegionFileSystem().getFileSystem().listStatus(tmpDir);
+      assertEquals(0, files.length);
+
+      for (long i = minSeqId; i < maxSeqId; i++) {
+        Get get = new Get(Bytes.toBytes(i));
+        Result result = region.get(get);
+        byte[] value = result.getValue(family, Bytes.toBytes(i));
+        assertEquals(Bytes.toBytes(i), value);
+      }
     } finally {
       HRegion.closeHRegion(this.region);
       this.region = null;

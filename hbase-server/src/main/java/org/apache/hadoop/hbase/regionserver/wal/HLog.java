@@ -27,23 +27,19 @@ import java.util.regex.Pattern;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.exceptions.FailedLogCloseException;
-import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.exceptions.FailedLogCloseException;
+import org.apache.hadoop.io.Writable;
 
 
 @InterfaceAudience.Private
 public interface HLog {
   public static final Log LOG = LogFactory.getLog(HLog.class);
-
-  public static final byte[] METAFAMILY = Bytes.toBytes("METAFAMILY");
-  static final byte[] METAROW = Bytes.toBytes("METAROW");
 
   /** File Extension used while splitting an HLog into regions (HBASE-2312) */
   public static final String SPLITTING_EXT = "-splitting";
@@ -96,7 +92,7 @@ public interface HLog {
 
     /**
      * Constructor for both params
-     * 
+     *
      * @param edit
      *          log's edit
      * @param key
@@ -110,7 +106,7 @@ public interface HLog {
 
     /**
      * Gets the edit
-     * 
+     *
      * @return edit
      */
     public WALEdit getEdit() {
@@ -119,7 +115,7 @@ public interface HLog {
 
     /**
      * Gets the key
-     * 
+     *
      * @return key
      */
     public HLogKey getKey() {
@@ -128,7 +124,7 @@ public interface HLog {
 
     /**
      * Set compression context for this entry.
-     * 
+     *
      * @param compressionContext
      *          Compression context
      */
@@ -157,14 +153,14 @@ public interface HLog {
 
   /**
    * registers WALActionsListener
-   * 
+   *
    * @param listener
    */
   public void registerWALActionsListener(final WALActionsListener listener);
 
   /**
    * unregisters WALActionsListener
-   * 
+   *
    * @param listener
    */
   public boolean unregisterWALActionsListener(final WALActionsListener listener);
@@ -178,7 +174,7 @@ public interface HLog {
    * Called by HRegionServer when it opens a new region to ensure that log
    * sequence numbers are always greater than the latest sequence number of the
    * region being brought on-line.
-   * 
+   *
    * @param newvalue
    *          We'll set log edit/sequence number to this value if it is greater
    *          than the current value.
@@ -192,7 +188,7 @@ public interface HLog {
 
   /**
    * Roll the log writer. That is, start writing log messages to a new file.
-   * 
+   *
    * <p>
    * The implementation is synchronized in order to make sure there's one rollWriter
    * running at any given time.
@@ -207,11 +203,11 @@ public interface HLog {
 
   /**
    * Roll the log writer. That is, start writing log messages to a new file.
-   * 
+   *
    * <p>
    * The implementation is synchronized in order to make sure there's one rollWriter
    * running at any given time.
-   * 
+   *
    * @param force
    *          If true, force creation of a new writer even if no entries have
    *          been written to the current writer
@@ -226,21 +222,21 @@ public interface HLog {
 
   /**
    * Shut down the log.
-   * 
+   *
    * @throws IOException
    */
   public void close() throws IOException;
 
   /**
    * Shut down the log and delete the log directory
-   * 
+   *
    * @throws IOException
    */
   public void closeAndDelete() throws IOException;
 
   /**
    * Append an entry to the log.
-   * 
+   *
    * @param regionInfo
    * @param logEdit
    * @param logKey
@@ -254,7 +250,7 @@ public interface HLog {
 
   /**
    * Only used in tests.
-   * 
+   *
    * @param info
    * @param tableName
    * @param edits
@@ -269,7 +265,7 @@ public interface HLog {
    * Append a set of edits to the log. Log edits are keyed by (encoded)
    * regionName, rowname, and log-sequence-id. The HLog is not flushed after
    * this transaction is written to the log.
-   * 
+   *
    * @param info
    * @param tableName
    * @param edits
@@ -286,7 +282,7 @@ public interface HLog {
    * Append a set of edits to the log. Log edits are keyed by (encoded)
    * regionName, rowname, and log-sequence-id. The HLog is flushed after this
    * transaction is written to the log.
-   * 
+   *
    * @param info
    * @param tableName
    * @param edits
@@ -351,7 +347,7 @@ public interface HLog {
 
   /**
    * Get LowReplication-Roller status
-   * 
+   *
    * @return lowReplicationRollEnabled
    */
   public boolean isLowReplicationRollEnabled();

@@ -52,23 +52,23 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.exceptions.InvalidHFileException;
 import org.apache.hadoop.hbase.exceptions.WrongRegionException;
-import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileDataBlockEncoder;
 import org.apache.hadoop.hbase.io.hfile.HFileDataBlockEncoderImpl;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
-import org.apache.hadoop.hbase.exceptions.InvalidHFileException;
 import org.apache.hadoop.hbase.io.hfile.NoOpDataBlockEncoder;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
+import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.protobuf.generated.WAL.CompactionDescriptor;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionContext;
-import org.apache.hadoop.hbase.regionserver.compactions.CompactionPolicy;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionProgress;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
-import org.apache.hadoop.hbase.regionserver.compactions.Compactor;
 import org.apache.hadoop.hbase.regionserver.compactions.OffPeakHours;
+import org.apache.hadoop.hbase.regionserver.wal.HLogUtil;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ChecksumType;
 import org.apache.hadoop.hbase.util.ClassSize;
@@ -123,6 +123,16 @@ public class HStore implements Store {
   static int closeCheckInterval = 0;
   private volatile long storeSize = 0L;
   private volatile long totalUncompressedBytes = 0L;
+
+  /**
+   * RWLock for store operations.
+   * Locked in shared mode when the list of component stores is looked at:
+   *   - all reads/writes to table data
+   *   - checking for split
+   * Locked in exclusive mode when the list of component stores is modified:
+   *   - closing
+   *   - completing a compaction
+   */
   final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
   private final boolean verifyBulkLoads;
 
@@ -388,14 +398,11 @@ public class HStore implements Store {
       new ExecutorCompletionService<StoreFile>(storeFileOpenerThreadPool);
 
     int totalValidStoreFile = 0;
-    final FileSystem fs = this.getFileSystem();
     for (final StoreFileInfo storeFileInfo: files) {
       // open each store file in parallel
       completionService.submit(new Callable<StoreFile>() {
         public StoreFile call() throws IOException {
-          StoreFile storeFile = new StoreFile(fs, storeFileInfo.getPath(), conf, cacheConf,
-              family.getBloomFilterType(), dataBlockEncoder);
-          storeFile.createReader();
+          StoreFile storeFile = createStoreFileAndReader(storeFileInfo.getPath());
           return storeFile;
         }
       });
@@ -437,6 +444,17 @@ public class HStore implements Store {
     }
 
     return results;
+  }
+
+  private StoreFile createStoreFileAndReader(final Path p) throws IOException {
+    return createStoreFileAndReader(p, this.dataBlockEncoder);
+  }
+
+  private StoreFile createStoreFileAndReader(final Path p, final HFileDataBlockEncoder encoder) throws IOException {
+    StoreFile storeFile = new StoreFile(this.getFileSystem(), p, this.conf, this.cacheConf,
+        this.family.getBloomFilterType(), encoder);
+    storeFile.createReader();
+    return storeFile;
   }
 
   @Override
@@ -552,10 +570,9 @@ public class HStore implements Store {
     Path srcPath = new Path(srcPathStr);
     Path dstPath = fs.bulkLoadStoreFile(getColumnFamilyName(), srcPath, seqNum);
 
-    StoreFile sf = new StoreFile(this.getFileSystem(), dstPath, this.conf, this.cacheConf,
-        this.family.getBloomFilterType(), this.dataBlockEncoder);
+    StoreFile sf = createStoreFileAndReader(dstPath);
 
-    StoreFile.Reader r = sf.createReader();
+    StoreFile.Reader r = sf.getReader();
     this.storeSize += r.length();
     this.totalUncompressedBytes += r.getTotalUncompressedBytes();
 
@@ -715,10 +732,9 @@ public class HStore implements Store {
     Path dstPath = fs.commitStoreFile(getColumnFamilyName(), path);
 
     status.setStatus("Flushing " + this + ": reopening flushed file");
-    StoreFile sf = new StoreFile(this.getFileSystem(), dstPath, this.conf, this.cacheConf,
-        this.family.getBloomFilterType(), this.dataBlockEncoder);
+    StoreFile sf = createStoreFileAndReader(dstPath);
 
-    StoreFile.Reader r = sf.createReader();
+    StoreFile.Reader r = sf.getReader();
     this.storeSize += r.length();
     this.totalUncompressedBytes += r.getTotalUncompressedBytes();
 
@@ -877,6 +893,29 @@ public class HStore implements Store {
    * <p>We don't want to hold the structureLock for the whole time, as a compact()
    * can be lengthy and we want to allow cache-flushes during this period.
    *
+   * <p> Compaction event should be idempotent, since there is no IO Fencing for
+   * the region directory in hdfs. A region server might still try to complete the
+   * compaction after it lost the region. That is why the following events are carefully
+   * ordered for a compaction:
+   *  1. Compaction writes new files under region/.tmp directory (compaction output)
+   *  2. Compaction atomically moves the temporary file under region directory
+   *  3. Compaction appends a WAL edit containing the compaction input and output files.
+   *  Forces sync on WAL.
+   *  4. Compaction deletes the input files from the region directory.
+   *
+   * Failure conditions are handled like this:
+   *  - If RS fails before 2, compaction wont complete. Even if RS lives on and finishes
+   *  the compaction later, it will only write the new data file to the region directory.
+   *  Since we already have this data, this will be idempotent but we will have a redundant
+   *  copy of the data.
+   *  - If RS fails between 2 and 3, the region will have a redundant copy of the data. The
+   *  RS that failed won't be able to finish snyc() for WAL because of lease recovery in WAL.
+   *  - If RS fails after 3, the region region server who opens the region will pick up the
+   *  the compaction marker from the WAL and replay it by removing the compaction input files.
+   *  Failed RS can also attempt to delete those files, but the operation will be idempotent
+   *
+   * See HBASE-2231 for details.
+   *
    * @param compaction compaction details obtained from requestCompaction()
    * @throws IOException
    * @return Storefile we compacted into or null if we failed or opted out early.
@@ -905,6 +944,13 @@ public class HStore implements Store {
       List<Path> newFiles = compaction.compact();
       // Move the compaction into place.
       if (this.conf.getBoolean("hbase.hstore.compaction.complete", true)) {
+        //Write compaction to WAL
+        List<Path> inputPaths = new ArrayList<Path>();
+        for (StoreFile f : filesToCompact) {
+          inputPaths.add(f.getPath());
+        }
+
+        ArrayList<Path> outputPaths = new ArrayList(newFiles.size());
         for (Path newFile: newFiles) {
           assert newFile != null;
           StoreFile sf = moveFileIntoPlace(newFile);
@@ -913,14 +959,21 @@ public class HStore implements Store {
           }
           assert sf != null;
           sfs.add(sf);
+          outputPaths.add(sf.getPath());
+        }
+        if (region.getLog() != null) {
+          HRegionInfo info = this.region.getRegionInfo();
+          CompactionDescriptor compactionDescriptor = ProtobufUtil.toCompactionDescriptor(info,
+              family.getName(), inputPaths, outputPaths, fs.getStoreDir(getFamily().getNameAsString()));
+
+          HLogUtil.writeCompactionMarker(region.getLog(), this.region.getTableDesc(),
+              this.region.getRegionInfo(), compactionDescriptor);
         }
         completeCompaction(filesToCompact, sfs);
       } else {
         for (Path newFile: newFiles) {
           // Create storefile around what we wrote with a reader on it.
-          StoreFile sf = new StoreFile(this.getFileSystem(), newFile, this.conf, this.cacheConf,
-            this.family.getBloomFilterType(), this.dataBlockEncoder);
-          sf.createReader();
+          StoreFile sf = createStoreFileAndReader(newFile);
           sfs.add(sf);
         }
       }
@@ -969,10 +1022,58 @@ public class HStore implements Store {
     validateStoreFile(newFile);
     // Move the file into the right spot
     Path destPath = fs.commitStoreFile(getColumnFamilyName(), newFile);
-    StoreFile result = new StoreFile(this.getFileSystem(), destPath, this.conf, this.cacheConf,
-        this.family.getBloomFilterType(), this.dataBlockEncoder);
-    result.createReader();
-    return result;
+    StoreFile sf = createStoreFileAndReader(destPath);
+
+    return sf;
+  }
+
+  /**
+   * Call to complete a compaction. Its for the case where we find in the WAL a compaction
+   * that was not finished.  We could find one recovering a WAL after a regionserver crash.
+   * See HBASE-2331.
+   * @param compaction
+   */
+  public void completeCompactionMarker(CompactionDescriptor compaction)
+      throws IOException {
+    LOG.debug("Completing compaction from the WAL marker");
+    List<String> compactionInputs = compaction.getCompactionInputList();
+    List<String> compactionOutputs = compaction.getCompactionOutputList();
+
+    List<StoreFile> outputStoreFiles = new ArrayList<StoreFile>(compactionOutputs.size());
+    for (String compactionOutput : compactionOutputs) {
+      //we should have this store file already
+      boolean found = false;
+      Path outputPath = new Path(fs.getStoreDir(family.getNameAsString()), compactionOutput);
+      outputPath = outputPath.makeQualified(fs.getFileSystem());
+      for (StoreFile sf : this.getStorefiles()) {
+        if (sf.getPath().makeQualified(sf.getPath().getFileSystem(conf)).equals(outputPath)) {
+          found = true;
+          break;
+        }
+      }
+      if (!found) {
+        if (getFileSystem().exists(outputPath)) {
+          outputStoreFiles.add(createStoreFileAndReader(outputPath));
+        }
+      }
+    }
+
+    List<Path> inputPaths = new ArrayList<Path>(compactionInputs.size());
+    for (String compactionInput : compactionInputs) {
+      Path inputPath = new Path(fs.getStoreDir(family.getNameAsString()), compactionInput);
+      inputPath = inputPath.makeQualified(fs.getFileSystem());
+      inputPaths.add(inputPath);
+    }
+
+    //some of the input files might already be deleted
+    List<StoreFile> inputStoreFiles = new ArrayList<StoreFile>(compactionInputs.size());
+    for (StoreFile sf : this.getStorefiles()) {
+      if (inputPaths.contains(sf.getPath().makeQualified(fs.getFileSystem()))) {
+        inputStoreFiles.add(sf);
+      }
+    }
+
+    this.completeCompaction(inputStoreFiles, outputStoreFiles);
   }
 
   /**
@@ -1179,10 +1280,7 @@ public class HStore implements Store {
       throws IOException {
     StoreFile storeFile = null;
     try {
-      storeFile = new StoreFile(this.getFileSystem(), path, this.conf,
-          this.cacheConf, this.family.getBloomFilterType(),
-          NoOpDataBlockEncoder.INSTANCE);
-      storeFile.createReader();
+      createStoreFileAndReader(path, NoOpDataBlockEncoder.INSTANCE);
     } catch (IOException e) {
       LOG.error("Failed to open store file : " + path
           + ", keeping it in tmp location", e);
@@ -1213,7 +1311,7 @@ public class HStore implements Store {
    * @return StoreFile created. May be null.
    * @throws IOException
    */
-  private void completeCompaction(final Collection<StoreFile> compactedFiles,
+  protected void completeCompaction(final Collection<StoreFile> compactedFiles,
       final Collection<StoreFile> result) throws IOException {
     try {
       this.lock.writeLock().lock();
@@ -1238,6 +1336,9 @@ public class HStore implements Store {
 
       // let the archive util decide if we should archive or delete the files
       LOG.debug("Removing store files after compaction...");
+      for (StoreFile compactedFile : compactedFiles) {
+        compactedFile.closeReader(true);
+      }
       this.fs.removeStoreFiles(this.getColumnFamilyName(), compactedFiles);
 
     } catch (IOException e) {

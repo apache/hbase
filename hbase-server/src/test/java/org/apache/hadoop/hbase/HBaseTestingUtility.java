@@ -57,6 +57,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Waiter.Predicate;
 import org.apache.hadoop.hbase.catalog.MetaEditor;
 import org.apache.hadoop.hbase.client.Delete;
+import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HConnection;
@@ -65,7 +66,6 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.exceptions.MasterNotRunningException;
 import org.apache.hadoop.hbase.exceptions.TableExistsException;
 import org.apache.hadoop.hbase.exceptions.TableNotEnabledException;
@@ -1320,6 +1320,15 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
     return rowCount;
   }
 
+  public void loadNumericRows(final HTable t, final byte[] f, int startRow, int endRow) throws IOException {
+    for (int i = startRow; i < endRow; i++) {
+      byte[] data = Bytes.toBytes(String.valueOf(i));
+      Put put = new Put(data);
+      put.add(f, null, data);
+      t.put(put);
+    }
+  }
+
   /**
    * Return the number of rows in the given table.
    */
@@ -1935,7 +1944,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
 
   /*
    * Retrieves a splittable region randomly from tableName
-   * 
+   *
    * @param tableName name of table
    * @param maxAttempts maximum number of attempts, unlimited for value of -1
    * @return the HRegion chosen, null if none was found within limit of maxAttempts
@@ -1954,7 +1963,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
       }
       regCount = regions.size();
       // There are chances that before we get the region for the table from an RS the region may
-      // be going for CLOSE.  This may be because online schema change is enabled 
+      // be going for CLOSE.  This may be because online schema change is enabled
       if (regCount > 0) {
         idx = random.nextInt(regCount);
         // if we have just tried this region, there is no need to try again
@@ -1972,7 +1981,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
     } while (maxAttempts == -1 || attempts < maxAttempts);
     return null;
   }
-  
+
   public MiniZooKeeperCluster getZkCluster() {
     return zkCluster;
   }
@@ -2253,10 +2262,10 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
     scanner.close();
     return result;
   }
-  
+
   /**
    * Create region split keys between startkey and endKey
-   * 
+   *
    * @param startKey
    * @param endKey
    * @param numRegions the number of regions to be created. it has to be greater than 3.

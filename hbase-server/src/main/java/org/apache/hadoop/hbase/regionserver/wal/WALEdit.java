@@ -27,8 +27,9 @@ import java.util.NavigableMap;
 import java.util.TreeMap;
 
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.io.HeapSize;
+import org.apache.hadoop.hbase.protobuf.generated.WAL.CompactionDescriptor;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.hadoop.io.Writable;
@@ -69,6 +70,11 @@ import org.apache.hadoop.io.Writable;
  */
 @InterfaceAudience.Private
 public class WALEdit implements Writable, HeapSize {
+  // TODO: Make it so user cannot make a cf w/ this name.  Make the illegal cf names.  Ditto for row.
+  public static final byte [] METAFAMILY = Bytes.toBytes("METAFAMILY");
+  static final byte [] METAROW = Bytes.toBytes("METAROW");
+  static final byte[] COMPLETE_CACHE_FLUSH = Bytes.toBytes("HBASE::CACHEFLUSH");
+  static final byte[] COMPACTION = Bytes.toBytes("HBASE::COMPACTION");
 
   private final int VERSION_2 = -1;
 
@@ -80,12 +86,21 @@ public class WALEdit implements Writable, HeapSize {
   public WALEdit() {
   }
 
+  /**
+   * @param f
+   * @return True is <code>f</code> is {@link #METAFAMILY}
+   */
+  public static boolean isMetaEditFamily(final byte [] f) {
+    return Bytes.equals(METAFAMILY, f);
+  }
+
   public void setCompressionContext(final CompressionContext compressionContext) {
     this.compressionContext = compressionContext;
   }
 
-  public void add(KeyValue kv) {
+  public WALEdit add(KeyValue kv) {
     this.kvs.add(kv);
+    return this;
   }
 
   public boolean isEmpty() {
@@ -197,4 +212,26 @@ public class WALEdit implements Writable, HeapSize {
     return sb.toString();
   }
 
+  /**
+   * Create a compacion WALEdit
+   * @param c
+   * @return A WALEdit that has <code>c</code> serialized as its value
+   */
+  public static WALEdit createCompaction(final CompactionDescriptor c) {
+    byte [] pbbytes = c.toByteArray();
+    KeyValue kv = new KeyValue(METAROW, METAFAMILY, COMPACTION, System.currentTimeMillis(), pbbytes);
+    return new WALEdit().add(kv); //replication scope null so that this won't be replicated
+  }
+
+  /**
+   * Deserialized and returns a CompactionDescriptor is the KeyValue contains one.
+   * @param kv the key value
+   * @return deserialized CompactionDescriptor or null.
+   */
+  public static CompactionDescriptor getCompaction(KeyValue kv) throws IOException {
+    if (kv.matchingRow(METAROW) && kv.matchingColumn(METAFAMILY, COMPACTION)) {
+      return CompactionDescriptor.parseFrom(kv.getValue());
+    }
+    return null;
+  }
 }

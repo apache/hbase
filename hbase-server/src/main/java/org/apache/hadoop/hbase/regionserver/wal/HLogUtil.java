@@ -28,26 +28,20 @@ import java.util.regex.Pattern;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
-import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.util.FSUtils;
-
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.protobuf.generated.WAL.CompactionDescriptor;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hbase.util.FSUtils;
 
 public class HLogUtil {
   static final Log LOG = LogFactory.getLog(HLogUtil.class);
-
-  /**
-   * @param family
-   * @return true if the column is a meta column
-   */
-  public static boolean isMetaFamily(byte[] family) {
-    return Bytes.equals(HLog.METAFAMILY, family);
-  }
 
   @SuppressWarnings("unchecked")
   public static Class<? extends HLogKey> getKeyClass(Configuration conf) {
@@ -69,7 +63,7 @@ public class HLogUtil {
   /**
    * Pattern used to validate a HLog file name
    */
-  private static final Pattern pattern = 
+  private static final Pattern pattern =
       Pattern.compile(".*\\.\\d*("+HLog.META_HLOG_FILE_EXTN+")*");
 
   /**
@@ -84,40 +78,40 @@ public class HLogUtil {
 
   /*
    * Get a reader for the WAL.
-   * 
+   *
    * @param fs
-   * 
+   *
    * @param path
-   * 
+   *
    * @param conf
-   * 
+   *
    * @return A WAL reader. Close when done with it.
-   * 
+   *
    * @throws IOException
-   * 
+   *
    * public static HLog.Reader getReader(final FileSystem fs, final Path path,
    * Configuration conf) throws IOException { try {
-   * 
+   *
    * if (logReaderClass == null) {
-   * 
+   *
    * logReaderClass = conf.getClass("hbase.regionserver.hlog.reader.impl",
    * SequenceFileLogReader.class, Reader.class); }
-   * 
-   * 
+   *
+   *
    * HLog.Reader reader = logReaderClass.newInstance(); reader.init(fs, path,
    * conf); return reader; } catch (IOException e) { throw e; } catch (Exception
    * e) { throw new IOException("Cannot get log reader", e); } }
-   * 
+   *
    * * Get a writer for the WAL.
-   * 
+   *
    * @param path
-   * 
+   *
    * @param conf
-   * 
+   *
    * @return A WAL writer. Close when done with it.
-   * 
+   *
    * @throws IOException
-   * 
+   *
    * public static HLog.Writer createWriter(final FileSystem fs, final Path
    * path, Configuration conf) throws IOException { try { if (logWriterClass ==
    * null) { logWriterClass =
@@ -130,7 +124,7 @@ public class HLogUtil {
 
   /**
    * Construct the HLog directory name
-   * 
+   *
    * @param serverName
    *          Server name formatted as described in {@link ServerName}
    * @return the relative HLog directory name, e.g.
@@ -157,7 +151,7 @@ public class HLogUtil {
 
   /**
    * Move aside a bad edits file.
-   * 
+   *
    * @param fs
    * @param edits
    *          Edits file to move aside.
@@ -239,7 +233,7 @@ public class HLogUtil {
   /**
    * Returns sorted set of edit files made by wal-log splitter, excluding files
    * with '.temp' suffix.
-   * 
+   *
    * @param fs
    * @param regiondir
    * @return Files in passed <code>regiondir</code> as a sorted set.
@@ -286,5 +280,19 @@ public class HLogUtil {
       return true;
     }
     return false;
+  }
+
+  /**
+   * Write the marker that a compaction has succeeded and is about to be committed.
+   * This provides info to the HMaster to allow it to recover the compaction if
+   * this regionserver dies in the middle (This part is not yet implemented). It also prevents the compaction from
+   * finishing if this regionserver has already lost its lease on the log.
+   */
+  public static void writeCompactionMarker(HLog log, HTableDescriptor htd, HRegionInfo info, final CompactionDescriptor c)
+  throws IOException {
+    WALEdit e = WALEdit.createCompaction(c);
+    log.append(info, c.getTableName().toByteArray(), e,
+        EnvironmentEdgeManager.currentTimeMillis(), htd);
+    LOG.info("Appended compaction marker " + c);
   }
 }

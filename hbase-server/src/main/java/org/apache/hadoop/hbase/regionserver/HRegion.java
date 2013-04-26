@@ -80,6 +80,7 @@ import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.backup.HFileArchiver;
 import org.apache.hadoop.hbase.client.Append;
 import org.apache.hadoop.hbase.client.Delete;
+import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Increment;
 import org.apache.hadoop.hbase.client.IsolationLevel;
@@ -89,7 +90,6 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Row;
 import org.apache.hadoop.hbase.client.RowMutations;
 import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.errorhandling.ForeignExceptionSnare;
 import org.apache.hadoop.hbase.exceptions.DroppedSnapshotException;
 import org.apache.hadoop.hbase.exceptions.FailedSanityCheckException;
@@ -115,6 +115,7 @@ import org.apache.hadoop.hbase.monitoring.TaskMonitor;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetRegionInfoResponse.CompactionState;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServiceCall;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
+import org.apache.hadoop.hbase.protobuf.generated.WAL.CompactionDescriptor;
 import org.apache.hadoop.hbase.regionserver.MultiVersionConsistencyControl.WriteEntry;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionContext;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
@@ -235,7 +236,7 @@ public class HRegion implements HeapSize { // , Writable{
 
   private final HLog log;
   private final HRegionFileSystem fs;
-  private final Configuration conf;
+  protected final Configuration conf;
   private final Configuration baseConf;
   private final KeyValue.KVComparator comparator;
   private final int rowLockWaitDuration;
@@ -1174,7 +1175,7 @@ public class HRegion implements HeapSize { // , Writable{
    * Do preparation for pending compaction.
    * @throws IOException
    */
-  void doRegionCompactionPrep() throws IOException {
+  protected void doRegionCompactionPrep() throws IOException {
   }
 
   void triggerMajorCompaction() {
@@ -2162,7 +2163,7 @@ public class HRegion implements HeapSize { // , Writable{
         batchOp.retCodeDetails[i] = OperationStatus.SUCCESS;
 
         Mutation m = batchOp.operations[i].getFirst();
-        Durability tmpDur = m.getDurability(); 
+        Durability tmpDur = m.getDurability();
         if (tmpDur.ordinal() > durability.ordinal()) {
           durability = tmpDur;
         }
@@ -2924,9 +2925,16 @@ public class HRegion implements HeapSize { // , Writable{
           for (KeyValue kv: val.getKeyValues()) {
             // Check this edit is for me. Also, guard against writing the special
             // METACOLUMN info such as HBASE::CACHEFLUSH entries
-            if (kv.matchingFamily(HLog.METAFAMILY) ||
+            if (kv.matchingFamily(WALEdit.METAFAMILY) ||
                 !Bytes.equals(key.getEncodedRegionName(),
                   this.getRegionInfo().getEncodedNameAsBytes())) {
+              //this is a special edit, we should handle it
+              CompactionDescriptor compaction = WALEdit.getCompaction(kv);
+              if (compaction != null) {
+                //replay the compaction
+                completeCompactionMarker(compaction);
+              }
+
               skippedEdits++;
               continue;
                 }
@@ -2998,6 +3006,23 @@ public class HRegion implements HeapSize { // , Writable{
          reader.close();
       }
     }
+  }
+
+  /**
+   * Call to complete a compaction. Its for the case where we find in the WAL a compaction
+   * that was not finished.  We could find one recovering a WAL after a regionserver crash.
+   * See HBASE-2331.
+   * @param fs
+   * @param compaction
+   */
+  void completeCompactionMarker(CompactionDescriptor compaction)
+      throws IOException {
+    Store store = this.getStore(compaction.getFamilyName().toByteArray());
+    if (store == null) {
+      LOG.warn("Found Compaction WAL edit for deleted family:" + Bytes.toString(compaction.getFamilyName().toByteArray()));
+      return;
+    }
+    store.completeCompactionMarker(compaction);
   }
 
   /**
@@ -3472,10 +3497,10 @@ public class HRegion implements HeapSize { // , Writable{
     public long getMvccReadPoint() {
       return this.readPt;
     }
-    
+
     /**
      * Reset both the filter and the old filter.
-     * 
+     *
      * @throws IOException in case a filter raises an I/O exception.
      */
     protected void resetFilters() throws IOException {
@@ -3684,7 +3709,7 @@ public class HRegion implements HeapSize { // , Writable{
             // If joinedHeap is pointing to some other row, try to seek to a correct one.
             boolean mayHaveData =
               (nextJoinedKv != null && nextJoinedKv.matchingRow(currentRow, offset, length))
-              || (this.joinedHeap.requestSeek(KeyValue.createFirstOnRow(currentRow, offset, length), 
+              || (this.joinedHeap.requestSeek(KeyValue.createFirstOnRow(currentRow, offset, length),
                 true, true)
                 && joinedHeap.peek() != null
                 && joinedHeap.peek().matchingRow(currentRow, offset, length));
@@ -4292,7 +4317,7 @@ public class HRegion implements HeapSize { // , Writable{
       LOG.debug("Files for region: " + b);
       b.getRegionFileSystem().logFileSystemState(LOG);
     }
-    
+
     RegionMergeTransaction rmt = new RegionMergeTransaction(a, b, true);
     if (!rmt.prepare(null)) {
       throw new IOException("Unable to merge regions " + a + " and " + b);
@@ -4318,7 +4343,7 @@ public class HRegion implements HeapSize { // , Writable{
       LOG.debug("Files for new region");
       dstRegion.getRegionFileSystem().logFileSystemState(LOG);
     }
-    
+
     if (dstRegion.getRegionFileSystem().hasReferences(dstRegion.getTableDesc())) {
       throw new IOException("Merged region " + dstRegion
           + " still has references after the compaction, is compaction canceled?");

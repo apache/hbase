@@ -676,6 +676,20 @@ public class MiniHBaseCluster extends HBaseCluster {
     this.hbaseCluster.join();
   }
 
+  public List<HRegion> findRegionsForTable(byte[] tableName) {
+    ArrayList<HRegion> ret = new ArrayList<HRegion>();
+    for (JVMClusterUtil.RegionServerThread rst : getRegionServerThreads()) {
+      HRegionServer hrs = rst.getRegionServer();
+      for (HRegion region : hrs.getOnlineRegions(tableName)) {
+        if (Bytes.equals(region.getTableDesc().getName(), tableName)) {
+          ret.add(region);
+        }
+      }
+    }
+    return ret;
+  }
+
+
   protected int getRegionServerIndex(ServerName serverName) {
     //we have a small number of region servers, this should be fine for now.
     List<RegionServerThread> servers = getRegionServerThreads();
