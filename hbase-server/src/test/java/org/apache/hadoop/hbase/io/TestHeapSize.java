@@ -353,32 +353,22 @@ public class TestHeapSize  {
       assertEquals(expected, actual);
     }
 
+    byte[] row = new byte[] { 0 };
     cl = Put.class;
-    actual = new Put(new byte[]{0}).heapSize();
+    actual = new Put(row).MUTATION_OVERHEAD + ClassSize.align(ClassSize.ARRAY);
     expected = ClassSize.estimateBase(cl, false);
     //The actual TreeMap is not included in the above calculation
-    expected += ClassSize.align(ClassSize.TREEMAP + ClassSize.REFERENCE);
+    expected += ClassSize.align(ClassSize.TREEMAP);
     if (expected != actual) {
       ClassSize.estimateBase(cl, true);
       assertEquals(expected, actual);
     }
-
 
     cl = Delete.class;
-    actual = new Delete(new byte[]{0}).heapSize();
+    actual = new Delete(row).MUTATION_OVERHEAD + ClassSize.align(ClassSize.ARRAY);
     expected  = ClassSize.estimateBase(cl, false);
     //The actual TreeMap is not included in the above calculation
-    expected += ClassSize.align(ClassSize.TREEMAP + ClassSize.REFERENCE);
-    if (expected != actual) {
-      ClassSize.estimateBase(cl, true);
-      assertEquals(expected, actual);
-    }
-
-    cl = Increment.class;
-    actual = new Increment(new byte[]{0}).heapSize();
-    expected  = ClassSize.estimateBase(cl, false);
-    //The actual TreeMap and TimeRange are not included in the above calculation
-    expected += ClassSize.align(ClassSize.TREEMAP + ClassSize.REFERENCE + ClassSize.TIMERANGE);
+    expected += ClassSize.align(ClassSize.TREEMAP);
     if (expected != actual) {
       ClassSize.estimateBase(cl, true);
       assertEquals(expected, actual);
