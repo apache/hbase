@@ -43,11 +43,10 @@ import java.util.UUID;
 @InterfaceStability.Evolving
 public abstract class Mutation extends OperationWithAttributes implements Row, CellScannable,
     HeapSize {
-  static final long MUTATION_OVERHEAD = ClassSize.align(
+  public static final long MUTATION_OVERHEAD = ClassSize.align(
       // This
       ClassSize.OBJECT +
-      // OperationWithAttributes map reference?  I don't know what the other reference is and if I
-      // remove it it breaks TestHeapSize so just leaving it.
+      // row + OperationWithAttributes.attributes
       2 * ClassSize.REFERENCE +
       // Timestamp
       1 * Bytes.SIZEOF_LONG +
