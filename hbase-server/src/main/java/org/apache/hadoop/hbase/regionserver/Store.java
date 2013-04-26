@@ -35,6 +35,7 @@ import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFileDataBlockEncoder;
+import org.apache.hadoop.hbase.protobuf.generated.WAL.CompactionDescriptor;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionContext;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionProgress;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
@@ -103,7 +104,7 @@ public interface Store extends HeapSize, StoreConfigInformation {
    * This operation is atomic on each KeyValue (row/family/qualifier) but not necessarily atomic
    * across all of them.
    * @param cells
-   * @param readpoint readpoint below which we can safely remove duplicate KVs 
+   * @param readpoint readpoint below which we can safely remove duplicate KVs
    * @return memstore size delta
    * @throws IOException
    */
@@ -190,6 +191,15 @@ public interface Store extends HeapSize, StoreConfigInformation {
 
   public StoreFlushContext createFlushContext(long cacheFlushId);
 
+  /**
+   * Call to complete a compaction. Its for the case where we find in the WAL a compaction
+   * that was not finished.  We could find one recovering a WAL after a regionserver crash.
+   * See HBASE-2331.
+   * @param compaction
+   */
+  public void completeCompactionMarker(CompactionDescriptor compaction)
+      throws IOException;
+
   // Split oriented methods
 
   public boolean canSplit();
@@ -211,7 +221,7 @@ public interface Store extends HeapSize, StoreConfigInformation {
   /**
    * This method should only be called from HRegion. It is assumed that the ranges of values in the
    * HFile fit within the stores assigned region. (assertBulkLoadHFileOk checks this)
-   * 
+   *
    * @param srcPathStr
    * @param sequenceId sequence Id associated with the HFile
    */

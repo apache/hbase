@@ -23,9 +23,6 @@ import static org.junit.Assert.assertEquals;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.client.HTable;
-import org.apache.hadoop.hbase.client.Result;
-import org.apache.hadoop.hbase.client.ResultScanner;
-import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.After;
 import org.junit.AfterClass;
@@ -99,13 +96,7 @@ public class TestFullLogReconstruction {
 
     // Load up the table with simple rows and count them
     int initialCount = TEST_UTIL.loadTable(table, FAMILY);
-    Scan scan = new Scan();
-    ResultScanner results = table.getScanner(scan);
-    int count = 0;
-    for (Result res : results) {
-      count++;
-    }
-    results.close();
+    int count = TEST_UTIL.countRows(table);
 
     assertEquals(initialCount, count);
 
@@ -114,15 +105,8 @@ public class TestFullLogReconstruction {
     }
 
     TEST_UTIL.expireRegionServerSession(0);
-    scan = new Scan();
-    results = table.getScanner(scan);
-    int newCount = 0;
-    for (Result res : results) {
-      newCount++;
-    }
+    int newCount = TEST_UTIL.countRows(table);
     assertEquals(count, newCount);
-    results.close();
     table.close();
   }
-
 }
