@@ -39,6 +39,7 @@ import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.compress.Compression.Algorithm;
+import org.apache.hadoop.hbase.io.FSDataInputStreamWrapper;
 import org.apache.hadoop.hbase.util.ChecksumType;
 
 import static org.apache.hadoop.hbase.io.compress.Compression.Algorithm.*;
@@ -102,7 +103,7 @@ public class TestChecksum {
         assertEquals(true, hfs.useHBaseChecksum());
 
         // Do a read that purposely introduces checksum verification failures.
-        FSDataInputStream is = fs.open(path);
+        FSDataInputStreamWrapper is = new FSDataInputStreamWrapper(fs, path);
         HFileBlock.FSReader hbr = new FSReaderV2Test(is, algo,
             totalSize, HFile.MAX_FORMAT_VERSION, fs, path);
         HFileBlock b = hbr.readBlockData(0, -1, -1, pread);
@@ -145,7 +146,7 @@ public class TestChecksum {
         // any retries within hbase. 
         HFileSystem newfs = new HFileSystem(TEST_UTIL.getConfiguration(), false);
         assertEquals(false, newfs.useHBaseChecksum());
-        is = newfs.open(path);
+        is = new FSDataInputStreamWrapper(newfs, path);
         hbr = new FSReaderV2Test(is, algo,
             totalSize, HFile.MAX_FORMAT_VERSION, newfs, path);
         b = hbr.readBlockData(0, -1, -1, pread);
@@ -210,8 +211,8 @@ public class TestChecksum {
         // Read data back from file.
         FSDataInputStream is = fs.open(path);
         FSDataInputStream nochecksum = hfs.getNoChecksumFs().open(path);
-        HFileBlock.FSReader hbr = new HFileBlock.FSReaderV2(is, nochecksum, 
-            algo, totalSize, HFile.MAX_FORMAT_VERSION, hfs, path);
+        HFileBlock.FSReader hbr = new HFileBlock.FSReaderV2(new FSDataInputStreamWrapper(
+            is, nochecksum), algo, totalSize, HFile.MAX_FORMAT_VERSION, hfs, path);
         HFileBlock b = hbr.readBlockData(0, -1, -1, pread);
         is.close();
         b.sanityCheck();
@@ -250,19 +251,15 @@ public class TestChecksum {
     }
   }
 
-
   /**
    * A class that introduces hbase-checksum failures while 
    * reading  data from hfiles. This should trigger the hdfs level
    * checksum validations.
    */
   static private class FSReaderV2Test extends HFileBlock.FSReaderV2 {
-
-    FSReaderV2Test(FSDataInputStream istream, Algorithm algo,
-                   long fileSize, int minorVersion, FileSystem fs,
-                   Path path) throws IOException {
-      super(istream, istream, algo, fileSize, minorVersion, 
-            (HFileSystem)fs, path);
+    public FSReaderV2Test(FSDataInputStreamWrapper istream, Algorithm algo, long fileSize,
+        int minorVersion, FileSystem fs,Path path) throws IOException {
+      super(istream, algo, fileSize, minorVersion, (HFileSystem)fs, path);
     }
 
     @Override

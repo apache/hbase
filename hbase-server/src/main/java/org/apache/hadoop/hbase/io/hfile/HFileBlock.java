@@ -43,6 +43,7 @@ import org.apache.hadoop.hbase.io.encoding.HFileBlockDefaultDecodingContext;
 import org.apache.hadoop.hbase.io.encoding.HFileBlockDefaultEncodingContext;
 import org.apache.hadoop.hbase.io.encoding.HFileBlockEncodingContext;
 import org.apache.hadoop.hbase.io.hfile.bucket.BucketCache;
+import org.apache.hadoop.hbase.io.FSDataInputStreamWrapper;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ChecksumType;
 import org.apache.hadoop.hbase.util.ClassSize;
@@ -1122,6 +1123,9 @@ public class HFileBlock implements Cacheable {
      * @return an iterator of blocks between the two given offsets
      */
     BlockIterator blockRange(long startOffset, long endOffset);
+
+    /** Closes the backing streams */
+    void closeStreams() throws IOException;
   }
 
   /**
@@ -1129,15 +1133,6 @@ public class HFileBlock implements Cacheable {
    * tools for implementing HFile format version-specific block readers.
    */
   private abstract static class AbstractFSReader implements FSReader {
-
-    /** The file system stream of the underlying {@link HFile} that 
-     * does checksum validations in the filesystem */
-    protected final FSDataInputStream istream;
-
-    /** The file system stream of the underlying {@link HFile} that
-     * does not do checksum verification in the file system */
-    protected final FSDataInputStream istreamNoFsChecksum;
-
     /** Compression algorithm used by the {@link HFile} */
     protected Compression.Algorithm compressAlgo;
 
@@ -1161,19 +1156,14 @@ public class HFileBlock implements Cacheable {
     /** The default buffer size for our buffered streams */
     public static final int DEFAULT_BUFFER_SIZE = 1 << 20;
 
-    public AbstractFSReader(FSDataInputStream istream, 
-        FSDataInputStream istreamNoFsChecksum,
-        Algorithm compressAlgo,
-        long fileSize, int minorVersion, HFileSystem hfs, Path path) 
-        throws IOException {
-      this.istream = istream;
+    public AbstractFSReader(Algorithm compressAlgo, long fileSize, int minorVersion,
+        HFileSystem hfs, Path path) throws IOException {
       this.compressAlgo = compressAlgo;
       this.fileSize = fileSize;
       this.minorVersion = minorVersion;
       this.hfs = hfs;
       this.path = path;
       this.hdrSize = headerSize(minorVersion);
-      this.istreamNoFsChecksum = istreamNoFsChecksum;
     }
 
     @Override
@@ -1277,22 +1267,6 @@ public class HFileBlock implements Cacheable {
     }
 
     /**
-     * Creates a buffered stream reading a certain slice of the file system
-     * input stream. We need this because the decompression we use seems to
-     * expect the input stream to be bounded.
-     *
-     * @param offset the starting file offset the bounded stream reads from
-     * @param size the size of the segment of the file the stream should read
-     * @param pread whether to use position reads
-     * @return a stream restricted to the given portion of the file
-     */
-    protected InputStream createBufferedBoundedStream(long offset,
-        int size, boolean pread) {
-      return new BufferedInputStream(new BoundedRangeFileInputStream(istream,
-          offset, size, pread), Math.min(DEFAULT_BUFFER_SIZE, size));
-    }
-
-    /**
      * @return The minorVersion of this HFile
      */
     protected int getMinorVersion() {
@@ -1312,19 +1286,9 @@ public class HFileBlock implements Cacheable {
 
   /** Reads version 2 blocks from the filesystem. */
   static class FSReaderV2 extends AbstractFSReader {
-
-    // The configuration states that we should validate hbase checksums
-    private final boolean useHBaseChecksumConfigured;
-
-    // Record the current state of this reader with respect to
-    // validating checkums in HBase. This is originally set the same
-    // value as useHBaseChecksumConfigured, but can change state as and when
-    // we encounter checksum verification failures.
-    private volatile boolean useHBaseChecksum;
-
-    // In the case of a checksum failure, do these many succeeding
-    // reads without hbase checksum verification.
-    private volatile int checksumOffCount = -1;
+    /** The file system stream of the underlying {@link HFile} that 
+     * does or doesn't do checksum validations in the filesystem */
+    protected FSDataInputStreamWrapper streamWrapper;
 
     /** Whether we include memstore timestamp in data blocks */
     protected boolean includesMemstoreTS;
@@ -1345,30 +1309,14 @@ public class HFileBlock implements Cacheable {
           }
         };
 
-    public FSReaderV2(FSDataInputStream istream, 
-        FSDataInputStream istreamNoFsChecksum, Algorithm compressAlgo,
-        long fileSize, int minorVersion, HFileSystem hfs, Path path) 
-      throws IOException {
-      super(istream, istreamNoFsChecksum, compressAlgo, fileSize, 
-            minorVersion, hfs, path);
+    public FSReaderV2(FSDataInputStreamWrapper stream, Algorithm compressAlgo, long fileSize,
+        int minorVersion, HFileSystem hfs, Path path) throws IOException {
+      super(compressAlgo, fileSize, minorVersion, hfs, path);
+      this.streamWrapper = stream;
+      // Older versions of HBase didn't support checksum.
+      boolean forceNoHBaseChecksum = (this.getMinorVersion() < MINOR_VERSION_WITH_CHECKSUM);
+      this.streamWrapper.prepareForBlockReader(forceNoHBaseChecksum);
 
-      if (hfs != null) {
-        // Check the configuration to determine whether hbase-level
-        // checksum verification is needed or not.
-        useHBaseChecksum = hfs.useHBaseChecksum();
-      } else {
-        // The configuration does not specify anything about hbase checksum
-        // validations. Set it to true here assuming that we will verify
-        // hbase checksums for all reads. For older files that do not have 
-        // stored checksums, this flag will be reset later.
-        useHBaseChecksum = true;
-      }
-
-      // for older versions, hbase did not store checksums.
-      if (getMinorVersion() < MINOR_VERSION_WITH_CHECKSUM) {
-        useHBaseChecksum = false;
-      }
-      this.useHBaseChecksumConfigured = useHBaseChecksum;
       defaultDecodingCtx =
         new HFileBlockDefaultDecodingContext(compressAlgo);
       encodedBlockDecodingCtx =
@@ -1381,7 +1329,7 @@ public class HFileBlock implements Cacheable {
      */
     FSReaderV2(FSDataInputStream istream, Algorithm compressAlgo,
         long fileSize) throws IOException {
-      this(istream, istream, compressAlgo, fileSize, 
+      this(new FSDataInputStreamWrapper(istream), compressAlgo, fileSize,
            HFileReaderV2.MAX_MINOR_VERSION, null, null);
     }
 
@@ -1400,20 +1348,14 @@ public class HFileBlock implements Cacheable {
     public HFileBlock readBlockData(long offset, long onDiskSizeWithHeaderL,
         int uncompressedSize, boolean pread) throws IOException {
 
-      // It is ok to get a reference to the stream here without any
-      // locks because it is marked final.
-      FSDataInputStream is = this.istreamNoFsChecksum;
-
       // get a copy of the current state of whether to validate
       // hbase checksums or not for this read call. This is not 
       // thread-safe but the one constaint is that if we decide 
       // to skip hbase checksum verification then we are 
       // guaranteed to use hdfs checksum verification.
-      boolean doVerificationThruHBaseChecksum = this.useHBaseChecksum;
-      if (!doVerificationThruHBaseChecksum) {
-        is = this.istream;
-      }
-                     
+      boolean doVerificationThruHBaseChecksum = streamWrapper.shouldUseHBaseChecksum();
+      FSDataInputStream is = streamWrapper.getStream(doVerificationThruHBaseChecksum);
+
       HFileBlock blk = readBlockDataInternal(is, offset, 
                          onDiskSizeWithHeaderL, 
                          uncompressedSize, pread,
@@ -1434,17 +1376,15 @@ public class HFileBlock implements Cacheable {
           throw new IOException(msg); // cannot happen case here
         }
         HFile.checksumFailures.incrementAndGet(); // update metrics
- 
+
         // If we have a checksum failure, we fall back into a mode where
         // the next few reads use HDFS level checksums. We aim to make the
         // next CHECKSUM_VERIFICATION_NUM_IO_THRESHOLD reads avoid
         // hbase checksum verification, but since this value is set without
         // holding any locks, it can so happen that we might actually do
         // a few more than precisely this number.
-        this.checksumOffCount = CHECKSUM_VERIFICATION_NUM_IO_THRESHOLD;
-        this.useHBaseChecksum = false;
+        is = this.streamWrapper.fallbackToFsChecksum(CHECKSUM_VERIFICATION_NUM_IO_THRESHOLD);
         doVerificationThruHBaseChecksum = false;
-        is = this.istream;
         blk = readBlockDataInternal(is, offset, onDiskSizeWithHeaderL,
                                     uncompressedSize, pread,
                                     doVerificationThruHBaseChecksum);
@@ -1469,11 +1409,7 @@ public class HFileBlock implements Cacheable {
       // The decrementing of this.checksumOffCount is not thread-safe,
       // but it is harmless because eventually checksumOffCount will be
       // a negative number.
-      if (!this.useHBaseChecksum && this.useHBaseChecksumConfigured) {
-        if (this.checksumOffCount-- < 0) {
-          this.useHBaseChecksum = true; // auto re-enable hbase checksums
-        }
-      }
+      streamWrapper.checksumOk();
       return blk;
     }
 
@@ -1677,6 +1613,11 @@ public class HFileBlock implements Cacheable {
       byte[] data, int hdrSize) throws IOException {
       return ChecksumUtil.validateBlockChecksum(path, block,
                                                 data, hdrSize);
+    }
+
+    @Override
+    public void closeStreams() throws IOException {
+      streamWrapper.close();
     }
   }
 

@@ -35,6 +35,7 @@ import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoder;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.HFile.FileInfo;
+import org.apache.hadoop.hbase.io.FSDataInputStreamWrapper;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.IdLock;
 import org.apache.hadoop.io.WritableUtils;
@@ -59,6 +60,9 @@ public class HFileReaderV2 extends AbstractHFileReader {
   private boolean shouldIncludeMemstoreTS() {
     return includesMemstoreTS;
   }
+
+  /** Filesystem-level block reader. */
+  private HFileBlock.FSReader fsBlockReader;
 
   /**
    * A "sparse lock" implementation allowing to lock on a particular block
@@ -91,27 +95,21 @@ public class HFileReaderV2 extends AbstractHFileReader {
    *
    * @param path Path to HFile.
    * @param trailer File trailer.
-   * @param fsdis input stream. Caller is responsible for closing the passed
-   *          stream.
+   * @param fsdis input stream.
    * @param size Length of the stream.
-   * @param closeIStream Whether to close the stream.
    * @param cacheConf Cache configuration.
    * @param preferredEncodingInCache the encoding to use in cache in case we
    *          have a choice. If the file is already encoded on disk, we will
    *          still use its on-disk encoding in cache.
    */
   public HFileReaderV2(Path path, FixedFileTrailer trailer,
-      final FSDataInputStream fsdis, final FSDataInputStream fsdisNoFsChecksum,
-      final long size,
-      final boolean closeIStream, final CacheConfig cacheConf,
+      final FSDataInputStreamWrapper fsdis, final long size, final CacheConfig cacheConf,
       DataBlockEncoding preferredEncodingInCache, final HFileSystem hfs)
       throws IOException {
-    super(path, trailer, fsdis, fsdisNoFsChecksum, size, 
-          closeIStream, cacheConf, hfs);
+    super(path, trailer, size, cacheConf, hfs);
     trailer.expectMajorVersion(2);
     validateMinorVersion(path, trailer.getMinorVersion());
     HFileBlock.FSReaderV2 fsBlockReaderV2 = new HFileBlock.FSReaderV2(fsdis,
-        fsdisNoFsChecksum,
         compressAlgo, fileSize, trailer.getMinorVersion(), hfs, path);
     this.fsBlockReader = fsBlockReaderV2; // upcast
 
@@ -420,17 +418,15 @@ public class HFileReaderV2 extends AbstractHFileReader {
           + " block(s)");
       }
     }
-    if (closeIStream) {
-      if (istream != istreamNoFsChecksum && istreamNoFsChecksum != null) {
-        istreamNoFsChecksum.close();
-        istreamNoFsChecksum = null;
-      }
-      if (istream != null) {
-        istream.close();
-        istream = null;
-      }
-    }
+    fsBlockReader.closeStreams();
   }
+
+  /** For testing */
+  @Override
+  HFileBlock.FSReader getUncachedBlockReader() {
+    return fsBlockReader;
+  }
+
 
   protected abstract static class AbstractScannerV2
       extends AbstractHFileReader.Scanner {
