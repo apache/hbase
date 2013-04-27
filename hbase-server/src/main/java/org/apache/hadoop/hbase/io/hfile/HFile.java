@@ -61,6 +61,7 @@ import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPair;
 import org.apache.hadoop.hbase.protobuf.generated.HFileProtos;
+import org.apache.hadoop.hbase.io.FSDataInputStreamWrapper;
 import org.apache.hadoop.hbase.regionserver.StoreFile.WriterBuilder;
 import org.apache.hadoop.hbase.util.BloomFilterWriter;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -543,32 +544,29 @@ public class HFile {
    * TODO This is a bad abstraction.  See HBASE-6635.
    *
    * @param path hfile's path
-   * @param fsdis an open checksummed stream of path's file
-   * @param fsdisNoFsChecksum an open unchecksummed stream of path's file
+   * @param fsdis stream of path's file
    * @param size max size of the trailer.
-   * @param closeIStream boolean for closing file after the getting the reader version.
    * @param cacheConf Cache configuation values, cannot be null.
    * @param preferredEncodingInCache
    * @param hfs
    * @return an appropriate instance of HFileReader
    * @throws IOException If file is invalid, will throw CorruptHFileException flavored IOException
    */
-  private static Reader pickReaderVersion(Path path, FSDataInputStream fsdis,
-      FSDataInputStream fsdisNoFsChecksum,
-      long size, boolean closeIStream, CacheConfig cacheConf,
-      DataBlockEncoding preferredEncodingInCache, HFileSystem hfs)
-      throws IOException {
+  private static Reader pickReaderVersion(Path path, FSDataInputStreamWrapper fsdis,
+      long size, CacheConfig cacheConf, DataBlockEncoding preferredEncodingInCache,
+      HFileSystem hfs) throws IOException {
     FixedFileTrailer trailer = null;
     try {
-      trailer = FixedFileTrailer.readFromStream(fsdis, size);
+      boolean isHBaseChecksum = fsdis.shouldUseHBaseChecksum();
+      assert !isHBaseChecksum; // Initially we must read with FS checksum.
+      trailer = FixedFileTrailer.readFromStream(fsdis.getStream(isHBaseChecksum), size);
     } catch (IllegalArgumentException iae) {
       throw new CorruptHFileException("Problem reading HFile Trailer from file " + path, iae);
     }
     switch (trailer.getMajorVersion()) {
     case 2:
-      return new HFileReaderV2(path, trailer, fsdis, fsdisNoFsChecksum,
-          size, closeIStream,
-          cacheConf, preferredEncodingInCache, hfs);
+      return new HFileReaderV2(
+          path, trailer, fsdis, size, cacheConf, preferredEncodingInCache, hfs);
     default:
       throw new CorruptHFileException("Invalid HFile version " + trailer.getMajorVersion());
     }
@@ -586,43 +584,24 @@ public class HFile {
       FileSystem fs, Path path, CacheConfig cacheConf,
       DataBlockEncoding preferredEncodingInCache) throws IOException {
     final boolean closeIStream = true;
-    HFileSystem hfs = null;
-    FSDataInputStream fsdis = fs.open(path);
-    FSDataInputStream fsdisNoFsChecksum = fsdis;
-    // If the fs is not an instance of HFileSystem, then create an 
-    // instance of HFileSystem that wraps over the specified fs.
-    // In this case, we will not be able to avoid checksumming inside
-    // the filesystem.
-    if (!(fs instanceof HFileSystem)) {
-      hfs = new HFileSystem(fs);
-    } else {
-      hfs = (HFileSystem)fs;
-      // open a stream to read data without checksum verification in
-      // the filesystem
-      fsdisNoFsChecksum = hfs.getNoChecksumFs().open(path);
-    }
-    return pickReaderVersion(path, fsdis, fsdisNoFsChecksum,
-        fs.getFileStatus(path).getLen(), closeIStream, cacheConf,
-        preferredEncodingInCache, hfs);
+    FSDataInputStreamWrapper stream = new FSDataInputStreamWrapper(fs, path);
+    return pickReaderVersion(path, stream, fs.getFileStatus(path).getLen(),
+        cacheConf, preferredEncodingInCache, stream.getHfs());
   }
 
   /**
    * @param fs A file system
    * @param path Path to HFile
-   * @param fsdis an open checksummed stream of path's file
-   * @param fsdisNoFsChecksum an open unchecksummed stream of path's file
+   * @param fsdis a stream of path's file
    * @param size max size of the trailer.
    * @param cacheConf Cache configuration for hfile's contents
    * @param preferredEncodingInCache Preferred in-cache data encoding algorithm.
-   * @param closeIStream boolean for closing file after the getting the reader version.
    * @return A version specific Hfile Reader
    * @throws IOException If file is invalid, will throw CorruptHFileException flavored IOException
    */
-  public static Reader createReaderWithEncoding(
-      FileSystem fs, Path path, FSDataInputStream fsdis,
-      FSDataInputStream fsdisNoFsChecksum, long size, CacheConfig cacheConf,
-      DataBlockEncoding preferredEncodingInCache, boolean closeIStream)
-      throws IOException {
+  public static Reader createReaderWithEncoding(FileSystem fs, Path path,
+      FSDataInputStreamWrapper fsdis, long size, CacheConfig cacheConf,
+      DataBlockEncoding preferredEncodingInCache) throws IOException {
     HFileSystem hfs = null;
 
     // If the fs is not an instance of HFileSystem, then create an
@@ -634,9 +613,7 @@ public class HFile {
     } else {
       hfs = (HFileSystem)fs;
     }
-    return pickReaderVersion(path, fsdis, fsdisNoFsChecksum, size,
-                             closeIStream, cacheConf,
-                             preferredEncodingInCache, hfs);
+    return pickReaderVersion(path, fsdis, size, cacheConf, preferredEncodingInCache, hfs);
   }
 
   /**
@@ -660,9 +637,8 @@ public class HFile {
   static Reader createReaderFromStream(Path path,
       FSDataInputStream fsdis, long size, CacheConfig cacheConf)
       throws IOException {
-    final boolean closeIStream = false;
-    return pickReaderVersion(path, fsdis, fsdis, size, closeIStream, cacheConf,
-        DataBlockEncoding.NONE, null);
+    FSDataInputStreamWrapper wrapper = new FSDataInputStreamWrapper(fsdis);
+    return pickReaderVersion(path, wrapper, size, cacheConf, DataBlockEncoding.NONE, null);
   }
 
   /**

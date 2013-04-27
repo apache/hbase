@@ -47,6 +47,7 @@ import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.encoding.HFileBlockDefaultEncodingContext;
 import org.apache.hadoop.hbase.io.encoding.HFileBlockEncodingContext;
 import org.apache.hadoop.hbase.io.hfile.HFileBlock.BlockWritable;
+import org.apache.hadoop.hbase.io.FSDataInputStreamWrapper;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ChecksumType;
 import org.apache.hadoop.io.compress.Compressor;
@@ -191,8 +192,8 @@ public class TestHFileBlockCompatibility {
         os.close();
 
         FSDataInputStream is = fs.open(path);
-        HFileBlock.FSReader hbr = new HFileBlock.FSReaderV2(is, is, algo,
-            totalSize, MINOR_VERSION, fs, path);
+        HFileBlock.FSReader hbr = new HFileBlock.FSReaderV2(new FSDataInputStreamWrapper(is),
+            algo, totalSize, MINOR_VERSION, fs, path);
         HFileBlock b = hbr.readBlockData(0, -1, -1, pread);
         is.close();
 
@@ -204,8 +205,8 @@ public class TestHFileBlockCompatibility {
 
         if (algo == GZ) {
           is = fs.open(path);
-          hbr = new HFileBlock.FSReaderV2(is, is, algo, totalSize, MINOR_VERSION,
-                                          fs, path);
+          hbr = new HFileBlock.FSReaderV2(new FSDataInputStreamWrapper(is),
+              algo, totalSize, MINOR_VERSION, fs, path);
           b = hbr.readBlockData(0, 2173 + HConstants.HFILEBLOCK_HEADER_SIZE_NO_CHECKSUM +
                                 b.totalChecksumBytes(), -1, pread);
           assertEquals(blockStr, b.toString());
@@ -265,8 +266,8 @@ public class TestHFileBlockCompatibility {
           os.close();
 
           FSDataInputStream is = fs.open(path);
-          HFileBlock.FSReaderV2 hbr = new HFileBlock.FSReaderV2(is, is, algo,
-              totalSize, MINOR_VERSION, fs, path);
+          HFileBlock.FSReaderV2 hbr = new HFileBlock.FSReaderV2(new FSDataInputStreamWrapper(is),
+              algo, totalSize, MINOR_VERSION, fs, path);
           hbr.setDataBlockEncoder(dataBlockEncoder);
           hbr.setIncludesMemstoreTS(includesMemstoreTS);
 

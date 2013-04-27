@@ -33,6 +33,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HDFSBlocksDistribution;
 import org.apache.hadoop.hbase.fs.HFileSystem;
+import org.apache.hadoop.hbase.io.FSDataInputStreamWrapper;
 import org.apache.hadoop.hbase.io.HFileLink;
 import org.apache.hadoop.hbase.io.Reference;
 import org.apache.hadoop.hbase.io.HalfStoreFileReader;
@@ -157,49 +158,30 @@ public class StoreFileInfo {
    */
   public StoreFile.Reader open(final FileSystem fs, final CacheConfig cacheConf,
       final DataBlockEncoding dataBlockEncoding) throws IOException {
-    FSDataInputStream inNoChecksum = null;
-    FileSystem noChecksumFs = null;
-    FSDataInputStream in;
+    FSDataInputStreamWrapper in;
     FileStatus status;
 
-    if (fs instanceof HFileSystem) {
-      noChecksumFs = ((HFileSystem)fs).getNoChecksumFs();
-    }
-
-    if (this.reference != null) {
-      if (this.link != null) {
-        // HFileLink Reference
-        in = this.link.open(fs);
-        inNoChecksum = (noChecksumFs != null) ? this.link.open(noChecksumFs) : in;
-        status = this.link.getFileStatus(fs);
-      } else {
-        // HFile Reference
-        Path referencePath = getReferredToFile(this.getPath());
-        in = fs.open(referencePath);
-        inNoChecksum = (noChecksumFs != null) ? noChecksumFs.open(referencePath) : in;
-        status = fs.getFileStatus(referencePath);
-      }
-
-      hdfsBlocksDistribution = computeRefFileHDFSBlockDistribution(fs, reference, status);
-      return new HalfStoreFileReader(fs, this.getPath(), in, inNoChecksum, status.getLen(),
-          cacheConf, reference, dataBlockEncoding);
+    if (this.link != null) {
+      // HFileLink
+      in = new FSDataInputStreamWrapper(fs, this.link);
+      status = this.link.getFileStatus(fs);
+    } else if (this.reference != null) {
+      // HFile Reference
+      Path referencePath = getReferredToFile(this.getPath());
+      in = new FSDataInputStreamWrapper(fs, referencePath);
+      status = fs.getFileStatus(referencePath);
     } else {
-      if (this.link != null) {
-        // HFileLink
-        in = this.link.open(fs);
-        inNoChecksum = (noChecksumFs != null) ? link.open(noChecksumFs) : in;
-        status = this.link.getFileStatus(fs);
-      } else {
-        // HFile
-        status = fileStatus;
-        in = fs.open(this.getPath());
-        inNoChecksum = (noChecksumFs != null) ? noChecksumFs.open(this.getPath()) : in;
-      }
-
-      long length = status.getLen();
+      in = new FSDataInputStreamWrapper(fs, this.getPath());
+      status = fileStatus;
+    }
+    long length = status.getLen();
+    if (this.reference != null) {
+      hdfsBlocksDistribution = computeRefFileHDFSBlockDistribution(fs, reference, status);
+      return new HalfStoreFileReader(
+          fs, this.getPath(), in, length, cacheConf, reference, dataBlockEncoding);
+    } else {
       hdfsBlocksDistribution = FSUtils.computeHDFSBlocksDistribution(fs, status, 0, length);
-      return new StoreFile.Reader(fs, this.getPath(), in, inNoChecksum, length,
-          cacheConf, dataBlockEncoding, true);
+      return new StoreFile.Reader(fs, this.getPath(), in, length, cacheConf, dataBlockEncoding);
     }
   }
 

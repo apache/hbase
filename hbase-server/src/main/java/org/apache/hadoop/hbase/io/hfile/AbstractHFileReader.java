@@ -36,22 +36,12 @@ import org.apache.hadoop.io.RawComparator;
  */
 @InterfaceAudience.Private
 public abstract class AbstractHFileReader implements HFile.Reader {
-
-  /** Filesystem-level block reader for this HFile format version. */
-  protected HFileBlock.FSReader fsBlockReader;
-
   /** Stream to read from. Does checksum verifications in file system */
   protected FSDataInputStream istream;
 
   /** The file system stream of the underlying {@link HFile} that
    * does not do checksum verification in the file system */
   protected FSDataInputStream istreamNoFsChecksum;
-
-  /**
-   * True if we should close the input stream when done. We don't close it if we
-   * didn't open it.
-   */
-  protected final boolean closeIStream;
 
   /** Data block index reader keeping the root data index in memory */
   protected HFileBlockIndex.BlockIndexReader dataBlockIndexReader;
@@ -101,27 +91,14 @@ public abstract class AbstractHFileReader implements HFile.Reader {
   protected HFileSystem hfs;
 
   protected AbstractHFileReader(Path path, FixedFileTrailer trailer,
-      final FSDataInputStream fsdis, final long fileSize,
-      final boolean closeIStream,
-      final CacheConfig cacheConf) {
-    this(path, trailer, fsdis, fsdis, fileSize, closeIStream, cacheConf, null);
-  }
-
-  protected AbstractHFileReader(Path path, FixedFileTrailer trailer,
-      final FSDataInputStream fsdis, final FSDataInputStream fsdisNoFsChecksum,
-      final long fileSize,
-      final boolean closeIStream,
-      final CacheConfig cacheConf, final HFileSystem hfs) {
+      final long fileSize, final CacheConfig cacheConf, final HFileSystem hfs) {
     this.trailer = trailer;
     this.compressAlgo = trailer.getCompressionCodec();
     this.cacheConf = cacheConf;
     this.fileSize = fileSize;
-    this.istream = fsdis;
-    this.closeIStream = closeIStream;
     this.path = path;
     this.name = path.getName();
     this.hfs = hfs;
-    this.istreamNoFsChecksum = fsdisNoFsChecksum;
   }
 
   @SuppressWarnings("serial")
@@ -341,9 +318,7 @@ public abstract class AbstractHFileReader implements HFile.Reader {
   }
 
   /** For testing */
-  HFileBlock.FSReader getUncachedBlockReader() {
-    return fsBlockReader;
-  }
+  abstract HFileBlock.FSReader getUncachedBlockReader();
 
   public Path getPath() {
     return path;

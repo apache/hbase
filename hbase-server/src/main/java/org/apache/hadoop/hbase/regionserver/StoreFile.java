@@ -43,6 +43,7 @@ import org.apache.hadoop.hbase.HDFSBlocksDistribution;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.KVComparator;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.io.FSDataInputStreamWrapper;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.BlockType;
@@ -1068,12 +1069,10 @@ public class StoreFile {
       bloomFilterType = BloomType.NONE;
     }
 
-    public Reader(FileSystem fs, Path path, FSDataInputStream in,
-        final FSDataInputStream inNoChecksum, long size,
-        CacheConfig cacheConf, DataBlockEncoding preferredEncodingInCache,
-        boolean closeIStream) throws IOException {
-      reader = HFile.createReaderWithEncoding(fs, path, in, inNoChecksum,
-                  size, cacheConf, preferredEncodingInCache, closeIStream);
+    public Reader(FileSystem fs, Path path, FSDataInputStreamWrapper in, long size,
+        CacheConfig cacheConf, DataBlockEncoding preferredEncodingInCache) throws IOException {
+      reader = HFile.createReaderWithEncoding(
+          fs, path, in, size, cacheConf, preferredEncodingInCache);
       bloomFilterType = BloomType.NONE;
     }
 
