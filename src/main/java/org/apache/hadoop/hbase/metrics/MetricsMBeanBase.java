@@ -20,9 +20,9 @@
 package org.apache.hadoop.hbase.metrics;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 import javax.management.AttributeNotFoundException;
 import javax.management.MBeanAttributeInfo;
@@ -55,8 +55,8 @@ public class MetricsMBeanBase extends MetricsDynamicMBeanBase {
   /** HBase MetricsBase implementations that MetricsDynamicMBeanBase does
    * not understand
    */
-  protected Map<String,MetricsBase> extendedAttributes =
-      new HashMap<String,MetricsBase>();
+  protected Map<String, MetricsBase> extendedAttributes =
+      new ConcurrentHashMap<String, MetricsBase>();
   protected MBeanInfo extendedInfo;
 
   protected MetricsMBeanBase( MetricsRegistry mr, String description ) {
