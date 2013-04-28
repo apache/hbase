@@ -18,6 +18,9 @@
  */
 package org.apache.hadoop.hbase.io.encoding;
 
+import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.fail;
 
 import java.io.ByteArrayOutputStream;
@@ -57,9 +60,54 @@ public class TestPrefixTreeEncoding {
   private ConcurrentSkipListSet<KeyValue> kvset = new ConcurrentSkipListSet<KeyValue>(
       KeyValue.COMPARATOR);
 
+  private static boolean formatRowNum = false;
+
   @Before
   public void setUp() throws Exception {
     kvset.clear();
+    formatRowNum = false;
+  }
+
+  @Test
+  public void testSeekBeforeWithFixedData() throws Exception {
+    formatRowNum = true;
+    PrefixTreeCodec encoder = new PrefixTreeCodec();
+    int batchId = numBatchesWritten++;
+    ByteBuffer dataBuffer = generateFixedTestData(kvset, batchId, false);
+    HFileBlockEncodingContext blkEncodingCtx = new HFileBlockDefaultEncodingContext(
+        Algorithm.NONE, DataBlockEncoding.PREFIX_TREE, new byte[0]);
+    encoder.encodeKeyValues(dataBuffer, false, blkEncodingCtx);
+    EncodedSeeker seeker = encoder.createSeeker(KeyValue.KEY_COMPARATOR, false);
+    byte[] onDiskBytes = blkEncodingCtx.getOnDiskBytesWithHeader();
+    ByteBuffer readBuffer = ByteBuffer.wrap(onDiskBytes,
+        DataBlockEncoding.ID_SIZE, onDiskBytes.length
+            - DataBlockEncoding.ID_SIZE);
+    seeker.setCurrentBuffer(readBuffer);
+
+    // Seek before the first keyvalue;
+    KeyValue seekKey = KeyValue.createFirstDeleteFamilyOnRow(
+        getRowKey(batchId, 0), CF_BYTES);
+    seeker.seekToKeyInBlock(seekKey.getBuffer(), seekKey.getKeyOffset(),
+        seekKey.getKeyLength(), true);
+    assertEquals(null, seeker.getKeyValue());
+
+    // Seek before the middle keyvalue;
+    seekKey = KeyValue.createFirstDeleteFamilyOnRow(
+        getRowKey(batchId, NUM_ROWS_PER_BATCH / 3), CF_BYTES);
+    seeker.seekToKeyInBlock(seekKey.getBuffer(), seekKey.getKeyOffset(),
+        seekKey.getKeyLength(), true);
+    assertNotNull(seeker.getKeyValue());
+    assertArrayEquals(getRowKey(batchId, NUM_ROWS_PER_BATCH / 3 - 1), seeker
+        .getKeyValue().getRow());
+
+    // Seek before the last keyvalue;
+    seekKey = KeyValue.createFirstDeleteFamilyOnRow(Bytes.toBytes("zzzz"),
+        CF_BYTES);
+    seeker.seekToKeyInBlock(seekKey.getBuffer(), seekKey.getKeyOffset(),
+        seekKey.getKeyLength(), true);
+    assertNotNull(seeker.getKeyValue());
+    assertArrayEquals(getRowKey(batchId, NUM_ROWS_PER_BATCH - 1), seeker
+        .getKeyValue().getRow());
   }
 
   @Test
@@ -157,10 +205,16 @@ public class TestPrefixTreeEncoding {
   
   private static ByteBuffer generateFixedTestData(
       ConcurrentSkipListSet<KeyValue> kvset, int batchId) throws Exception {
+    return generateFixedTestData(kvset, batchId, true);
+  }
+
+  private static ByteBuffer generateFixedTestData(
+      ConcurrentSkipListSet<KeyValue> kvset, int batchId, boolean partial)
+      throws Exception {
     ByteArrayOutputStream baosInMemory = new ByteArrayOutputStream();
     DataOutputStream userDataStream = new DataOutputStream(baosInMemory);
     for (int i = 0; i < NUM_ROWS_PER_BATCH; ++i) {
-      if (i / 10 % 2 == 1) continue;
+      if (partial && i / 10 % 2 == 1) continue;
       for (int j = 0; j < NUM_COLS_PER_ROW; ++j) {
         KeyValue kv = new KeyValue(getRowKey(batchId, i), CF_BYTES,
             getQualifier(j), getValue(batchId, i, j));
@@ -204,7 +258,8 @@ public class TestPrefixTreeEncoding {
   }
 
   private static byte[] getRowKey(int batchId, int i) {
-    return Bytes.toBytes("batch" + batchId + "_row" + i);
+    return Bytes.toBytes("batch" + batchId + "_row"
+        + (formatRowNum ? String.format("%04d", i) : i));
   }
 
   private static byte[] getQualifier(int j) {

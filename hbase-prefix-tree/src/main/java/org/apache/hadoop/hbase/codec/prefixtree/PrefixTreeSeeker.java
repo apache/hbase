@@ -91,6 +91,9 @@ public class PrefixTreeSeeker implements EncodedSeeker {
    */
   @Override
   public KeyValue getKeyValue() {
+    if (ptSearcher.current() == null) {
+      return null;
+    }
     return KeyValueUtil.copyToNewKeyValue(ptSearcher.current());
   }
 
@@ -163,14 +166,14 @@ public class PrefixTreeSeeker implements EncodedSeeker {
    */
 
   protected int seekToOrBeforeUsingPositionAtOrBefore(byte[] keyOnlyBytes, int offset, int length,
-      boolean forceBeforeOnExactMatch){
+      boolean seekBefore){
     // this does a deep copy of the key byte[] because the CellSearcher interface wants a Cell
     KeyValue kv = KeyValue.createKeyValueFromKey(keyOnlyBytes, offset, length);
 
     CellScannerPosition position = ptSearcher.seekForwardToOrBefore(kv);
 
     if(CellScannerPosition.AT == position){
-      if (forceBeforeOnExactMatch) {
+      if (seekBefore) {
         ptSearcher.previous();
         return 1;
       }
@@ -182,7 +185,7 @@ public class PrefixTreeSeeker implements EncodedSeeker {
 
 
   protected int seekToOrBeforeUsingPositionAtOrAfter(byte[] keyOnlyBytes, int offset, int length,
-      boolean forceBeforeOnExactMatch){
+      boolean seekBefore){
     // this does a deep copy of the key byte[] because the CellSearcher interface wants a Cell
     KeyValue kv = KeyValue.createKeyValueFromKey(keyOnlyBytes, offset, length);
 
@@ -190,7 +193,7 @@ public class PrefixTreeSeeker implements EncodedSeeker {
     CellScannerPosition position = ptSearcher.seekForwardToOrAfter(kv);
 
     if(CellScannerPosition.AT == position){
-      if (forceBeforeOnExactMatch) {
+      if (seekBefore) {
         ptSearcher.previous();
         return 1;
       }
@@ -206,6 +209,9 @@ public class PrefixTreeSeeker implements EncodedSeeker {
     }
 
     if(position == CellScannerPosition.AFTER_LAST){
+      if (seekBefore) {
+        ptSearcher.previous();
+      }
       return 1;
     }
 
