@@ -38,6 +38,7 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.LargeTests;
@@ -46,6 +47,7 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.Utils.OutputFileUtils.OutputFilesFilter;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
@@ -220,7 +222,9 @@ public class TestImportTsv implements Configurable {
     argv.add(inputPath.toString());
     Tool tool = new ImportTsv();
     LOG.debug("Running ImportTsv with arguments: " + argv);
-    assertEquals(0, ToolRunner.run(conf, tool, argv.toArray(args)));
+    JobConf jobConf = util.getMRCluster().createJobConf();
+    HBaseConfiguration.merge(jobConf, conf);
+    assertEquals(0, ToolRunner.run(jobConf, tool, argv.toArray(args)));
 
     // Perform basic validation. If the input args did not include
     // ImportTsv.BULK_OUTPUT_CONF_KEY then validate data in the table.
