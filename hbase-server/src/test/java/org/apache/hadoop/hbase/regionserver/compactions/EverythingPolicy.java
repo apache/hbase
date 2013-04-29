@@ -43,7 +43,7 @@ public class EverythingPolicy extends RatioBasedCompactionPolicy {
 
   @Override
   final ArrayList<StoreFile> applyCompactionPolicy(final ArrayList<StoreFile> candidates,
-                                                   final boolean mayUseOffPeak) throws IOException {
+    final boolean mayUseOffPeak, final boolean mayBeStuck) throws IOException {
 
     if (candidates.size() < comConf.getMinFilesToCompact()) {
       return new ArrayList<StoreFile>(0);

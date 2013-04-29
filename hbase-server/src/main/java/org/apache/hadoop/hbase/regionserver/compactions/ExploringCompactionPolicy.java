@@ -37,8 +37,6 @@ import org.apache.hadoop.hbase.regionserver.StoreFile;
 @InterfaceAudience.Private
 public class ExploringCompactionPolicy extends RatioBasedCompactionPolicy {
 
-  /** Computed number of files that are needed to assume compactions are stuck. */
-  private final long filesNeededToForce;
 
   /**
    * Constructor for ExploringCompactionPolicy.
@@ -48,19 +46,16 @@ public class ExploringCompactionPolicy extends RatioBasedCompactionPolicy {
   public ExploringCompactionPolicy(final Configuration conf,
                                    final StoreConfigInformation storeConfigInfo) {
     super(conf, storeConfigInfo);
-    filesNeededToForce = storeConfigInfo.getBlockingFileCount();
   }
 
   @Override
   final ArrayList<StoreFile> applyCompactionPolicy(final ArrayList<StoreFile> candidates,
-                                             final boolean mayUseOffPeak) throws IOException {
+    final boolean mayUseOffPeak, final boolean mightBeStuck) throws IOException {
     // Start off choosing nothing.
     List<StoreFile> bestSelection = new ArrayList<StoreFile>(0);
     List<StoreFile> smallest = new ArrayList<StoreFile>(0);
     long bestSize = 0;
     long smallestSize = Long.MAX_VALUE;
-
-    boolean mightBeStuck = candidates.size() >= filesNeededToForce;
 
     // Consider every starting place.
     for (int start = 0; start < candidates.size(); start++) {
