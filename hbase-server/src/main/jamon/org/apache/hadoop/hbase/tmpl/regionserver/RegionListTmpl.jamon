@@ -42,7 +42,8 @@
             <li class="active"><a href="#tab_regionBaseInfo" data-toggle="tab">Base Info</a> </li>
             <li><a href="#tab_regionRequestStats" data-toggle="tab">Request metrics</a></li>
             <li class=""><a href="#tab_regionStoreStats" data-toggle="tab">Storefile Metrics</a></li>
-            <li class=""><a href="#tab_regionCompactStas" data-toggle="tab">Compaction Metrics</a></li>
+            <li class=""><a href="#tab_regionMemstoreStats" data-toggle="tab">Memstore Metrics</a></li>
+            <li class=""><a href="#tab_regionCompactStats" data-toggle="tab">Compaction Metrics</a></li>
         </ul>
         <div class="tab-content" style="padding-bottom: 9px; border-bottom: 1px solid #ddd;">
             <div class="tab-pane active" id="tab_regionBaseInfo">
@@ -54,7 +55,10 @@
             <div class="tab-pane" id="tab_regionStoreStats">
                 <& storeStats; onlineRegions = onlineRegions; &>
             </div>
-            <div class="tab-pane" id="tab_regionCompactStas">
+            <div class="tab-pane" id="tab_regionMemstoreStats">
+                <& memstoreStats; onlineRegions = onlineRegions; &>
+            </div>
+            <div class="tab-pane" id="tab_regionCompactStats">
                 <& compactStats; onlineRegions = onlineRegions; &>
             </div>
         </div>
@@ -187,6 +191,31 @@
             <td><% load.getTotalCompactingKVs() %></td>
             <td><% load.getCurrentCompactedKVs() %></td>
             <td><% percentDone %></td>
+            </%if>
+        </tr>
+        </%for>
+    </table>
+</%def>
+
+<%def memstoreStats>
+<%args>
+    List<HRegionInfo> onlineRegions;
+</%args>
+    <table class="table table-striped">
+        <tr>
+            <th>Region Name</th>
+            <th>Memstore Size</th>
+        </tr>
+
+        <%for HRegionInfo r: onlineRegions %>
+
+        <tr>
+        <%java>
+            RegionLoad load = regionServer.createRegionLoad(r.getEncodedName());
+        </%java>
+            <td><% r.getRegionNameAsString() %></td>
+            <%if load != null %>
+            <td><% load.getMemstoreSizeMB() %>MB</td>
             </%if>
         </tr>
         </%for>
