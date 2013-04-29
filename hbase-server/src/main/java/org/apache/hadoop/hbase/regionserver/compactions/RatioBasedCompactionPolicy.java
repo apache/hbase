@@ -82,6 +82,12 @@ public class RatioBasedCompactionPolicy extends CompactionPolicy {
       final boolean mayUseOffPeak, final boolean forceMajor) throws IOException {
     // Preliminary compaction subject to filters
     ArrayList<StoreFile> candidateSelection = new ArrayList<StoreFile>(candidateFiles);
+    // Stuck and not compacting enough (estimate). It is not guaranteed that we will be
+    // able to compact more if stuck and compacting, because ratio policy excludes some
+    // non-compacting files from consideration during compaction (see getCurrentEligibleFiles).
+    int futureFiles = filesCompacting.isEmpty() ? 0 : 1;
+    boolean mayBeStuck = (candidateFiles.size() - filesCompacting.size() + futureFiles)
+        >= storeConfigInfo.getBlockingFileCount();
     candidateSelection = getCurrentEligibleFiles(candidateSelection, filesCompacting);
     long cfTtl = this.storeConfigInfo.getStoreFileTtl();
     if (!forceMajor) {
@@ -110,18 +116,10 @@ public class RatioBasedCompactionPolicy extends CompactionPolicy {
     if (!majorCompaction) {
       // we're doing a minor compaction, let's see what files are applicable
       candidateSelection = filterBulk(candidateSelection);
-      candidateSelection = applyCompactionPolicy(candidateSelection, mayUseOffPeak);
+      candidateSelection = applyCompactionPolicy(candidateSelection, mayUseOffPeak, mayBeStuck);
       candidateSelection = checkMinFilesCriteria(candidateSelection);
     }
     candidateSelection = removeExcessFiles(candidateSelection, isUserCompaction, majorCompaction);
-
-    if (candidateSelection.size() == 0
-        && candidateFiles.size() >= storeConfigInfo.getBlockingFileCount()) {
-      candidateSelection = new ArrayList<StoreFile>(candidateFiles);
-      candidateSelection
-          .subList(0, Math.max(0,candidateSelection.size() - comConf.getMinFilesToCompact()))
-          .clear();
-    }
     CompactionRequest result = new CompactionRequest(candidateSelection);
     result.setOffPeak(!candidateSelection.isEmpty() && !majorCompaction && mayUseOffPeak);
     return result;
@@ -261,8 +259,8 @@ public class RatioBasedCompactionPolicy extends CompactionPolicy {
     *    | |  | |  | |  | | | | | |
     *    | |  | |  | |  | | | | | |
     */
-  ArrayList<StoreFile> applyCompactionPolicy(
-      ArrayList<StoreFile> candidates, boolean mayUseOffPeak) throws IOException {
+  ArrayList<StoreFile> applyCompactionPolicy(ArrayList<StoreFile> candidates,
+      boolean mayUseOffPeak, boolean mayBeStuck) throws IOException {
     if (candidates.isEmpty()) {
       return candidates;
     }
@@ -298,11 +296,14 @@ public class RatioBasedCompactionPolicy extends CompactionPolicy {
     if (start < countOfFiles) {
       LOG.info("Default compaction algorithm has selected " + (countOfFiles - start)
         + " files from " + countOfFiles + " candidates");
+    } else if (mayBeStuck) {
+      // We may be stuck. Compact the latest files if we can.
+      int filesToLeave = candidates.size() - comConf.getMinFilesToCompact();
+      if (filesToLeave >= 0) {
+        start = filesToLeave;
+      }
     }
-
-    if (start > 0) {
-      candidates.subList(0, start).clear();
-    }
+    candidates.subList(0, start).clear();
     return candidates;
   }
 
