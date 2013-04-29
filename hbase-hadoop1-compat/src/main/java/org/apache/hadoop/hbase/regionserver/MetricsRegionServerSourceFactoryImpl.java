@@ -22,27 +22,33 @@ package org.apache.hadoop.hbase.regionserver;
  * Factory to create MetricsRegionServerSource when given a  MetricsRegionServerWrapper
  */
 public class MetricsRegionServerSourceFactoryImpl implements MetricsRegionServerSourceFactory {
-  private static enum FactoryStorage {
+  public static enum FactoryStorage {
     INSTANCE;
+    private Object aggLock = new Object();
+    private Object serverLock = new Object();
     private MetricsRegionServerSource serverSource;
     private MetricsRegionAggregateSourceImpl aggImpl;
   }
 
   private synchronized MetricsRegionAggregateSourceImpl getAggregate() {
-    if (FactoryStorage.INSTANCE.aggImpl == null) {
-      FactoryStorage.INSTANCE.aggImpl = new MetricsRegionAggregateSourceImpl();
+    synchronized (FactoryStorage.INSTANCE.aggLock) {
+      if (FactoryStorage.INSTANCE.aggImpl == null) {
+        FactoryStorage.INSTANCE.aggImpl = new MetricsRegionAggregateSourceImpl();
+      }
+      return FactoryStorage.INSTANCE.aggImpl;
     }
-    return FactoryStorage.INSTANCE.aggImpl;
   }
 
 
   @Override
   public synchronized MetricsRegionServerSource createServer(MetricsRegionServerWrapper regionServerWrapper) {
-    if (FactoryStorage.INSTANCE.serverSource == null) {
-      FactoryStorage.INSTANCE.serverSource = new MetricsRegionServerSourceImpl(
-          regionServerWrapper);
+    synchronized (FactoryStorage.INSTANCE.serverLock) {
+      if (FactoryStorage.INSTANCE.serverSource == null) {
+        FactoryStorage.INSTANCE.serverSource = new MetricsRegionServerSourceImpl(
+            regionServerWrapper);
+      }
+      return FactoryStorage.INSTANCE.serverSource;
     }
-    return FactoryStorage.INSTANCE.serverSource;
   }
 
   @Override

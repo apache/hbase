@@ -31,8 +31,12 @@ import java.util.ServiceLoader;
  *  created.
  */
 public class CompatibilitySingletonFactory extends CompatibilityFactory {
+  public static enum SingletonStorage {
+    INSTANCE;
+    Object lock = new Object();
+    private static final Map<Class, Object> instances = new HashMap<Class, Object>();
+  }
   private static final Log LOG = LogFactory.getLog(CompatibilitySingletonFactory.class);
-  private static final Map<Class, Object> instances = new HashMap<Class, Object>();
 
   /**
    * This is a static only class don't let anyone create an instance.
@@ -45,37 +49,40 @@ public class CompatibilitySingletonFactory extends CompatibilityFactory {
    * @return the singleton
    */
   @SuppressWarnings("unchecked")
-  public static synchronized <T> T getInstance(Class<T> klass) {
-    T instance = (T) instances.get(klass);
-    if (instance == null) {
-      try {
-        ServiceLoader<T> loader = ServiceLoader.load(klass);
-        Iterator<T> it = loader.iterator();
-        instance = it.next();
-        if (it.hasNext()) {
-          StringBuilder msg = new StringBuilder();
-          msg.append("ServiceLoader provided more than one implementation for class: ")
-                  .append(klass)
-                  .append(", using implementation: ").append(instance.getClass())
-                  .append(", other implementations: {");
-          while (it.hasNext()) {
-            msg.append(it.next()).append(" ");
-          }
-          msg.append("}");
-          LOG.warn(msg);
-        }
-      } catch (Exception e) {
-        throw new RuntimeException(createExceptionString(klass), e);
-      } catch (Error e) {
-        throw new RuntimeException(createExceptionString(klass), e);
-      }
-
-      // If there was nothing returned and no exception then throw an exception.
+  public static <T> T getInstance(Class<T> klass) {
+    synchronized (SingletonStorage.INSTANCE.lock) {
+      T instance = (T) SingletonStorage.INSTANCE.instances.get(klass);
       if (instance == null) {
-        throw new RuntimeException(createExceptionString(klass));
+        try {
+          ServiceLoader<T> loader = ServiceLoader.load(klass);
+          Iterator<T> it = loader.iterator();
+          instance = it.next();
+          if (it.hasNext()) {
+            StringBuilder msg = new StringBuilder();
+            msg.append("ServiceLoader provided more than one implementation for class: ")
+                .append(klass)
+                .append(", using implementation: ").append(instance.getClass())
+                .append(", other implementations: {");
+            while (it.hasNext()) {
+              msg.append(it.next()).append(" ");
+            }
+            msg.append("}");
+            LOG.warn(msg);
+          }
+        } catch (Exception e) {
+          throw new RuntimeException(createExceptionString(klass), e);
+        } catch (Error e) {
+          throw new RuntimeException(createExceptionString(klass), e);
+        }
+
+        // If there was nothing returned and no exception then throw an exception.
+        if (instance == null) {
+          throw new RuntimeException(createExceptionString(klass));
+        }
+        SingletonStorage.INSTANCE.instances.put(klass, instance);
       }
-      instances.put(klass, instance);
+      return instance;
     }
-    return instance;
+
   }
 }
