@@ -29,12 +29,12 @@ if not defined JAVA_HOME (
   set JAVA_HOME=c:\apps\java
 )
 
-if not exist %JAVA_HOME%\bin\java.exe (
+if not exist "%JAVA_HOME%\bin\java.exe" (
   echo Error: JAVA_HOME is incorrectly set or could not find java at the location %JAVA_HOME%\bin\
   exit /B 2
 )
 
-set JAVA=%JAVA_HOME%\bin\java
+set JAVA="%JAVA_HOME%\bin\java"
 
 for %%i in (%0) do (
   if not defined HBASE_BIN_PATH (

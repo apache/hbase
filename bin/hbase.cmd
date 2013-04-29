@@ -82,7 +82,7 @@ if not "%HBASE_HEAPSIZE%" == "" (
   set JAVA_HEAP_MAX=-Xmx%HBASE_HEAPSIZE%m
 )
 
-set CLASSPATH=%HBASE_CONF_DIR%;%JAVA_HOME%\lib\tools.jar
+set CLASSPATH=%HBASE_CONF_DIR%;"%JAVA_HOME%\lib\tools.jar"
 
 rem Add maven target directory
 set cached_classpath_filename=%HBASE_HOME%\target\cached_classpath.txt
