@@ -215,7 +215,7 @@ public class Replication implements WALActionsListener,
       }
     }
     if (!scopes.isEmpty()) {
-      logEdit.setScopes(scopes);
+      logKey.setScopes(scopes);
     }
   }
 

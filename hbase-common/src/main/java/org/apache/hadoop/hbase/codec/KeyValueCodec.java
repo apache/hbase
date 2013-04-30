@@ -43,8 +43,8 @@ import org.apache.hadoop.hbase.KeyValueUtil;
  * </pre>
  */
 public class KeyValueCodec implements Codec {
-  static class KeyValueEncoder extends BaseEncoder {
-    KeyValueEncoder(final OutputStream out) {
+  public static class KeyValueEncoder extends BaseEncoder {
+    public KeyValueEncoder(final OutputStream out) {
       super(out);
     }
 
@@ -61,8 +61,8 @@ public class KeyValueCodec implements Codec {
     }
   }
 
-  static class KeyValueDecoder extends BaseDecoder {
-    KeyValueDecoder(final InputStream in) {
+  public static class KeyValueDecoder extends BaseDecoder {
+    public KeyValueDecoder(final InputStream in) {
       super(in);
     }
 

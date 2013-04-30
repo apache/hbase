@@ -110,34 +110,25 @@ public class TestHLogRecordReader {
    */
   @Test
   public void testPartialRead() throws Exception {
-    HLog log = HLogFactory.createHLog(fs, hbaseDir,
-                                      logName, conf);
+    HLog log = HLogFactory.createHLog(fs, hbaseDir, logName, conf);
     long ts = System.currentTimeMillis();
     WALEdit edit = new WALEdit();
-    edit.add(new KeyValue(rowName, family, Bytes.toBytes("1"),
-        ts, value));
-    log.append(info, tableName, edit,
-      ts, htd);
+    edit.add(new KeyValue(rowName, family, Bytes.toBytes("1"), ts, value));
+    log.append(info, tableName, edit, ts, htd);
     edit = new WALEdit();
-    edit.add(new KeyValue(rowName, family, Bytes.toBytes("2"),
-        ts+1, value));
-    log.append(info, tableName, edit,
-        ts+1, htd);
+    edit.add(new KeyValue(rowName, family, Bytes.toBytes("2"), ts+1, value));
+    log.append(info, tableName, edit, ts+1, htd);
     log.rollWriter();
 
     Thread.sleep(1);
     long ts1 = System.currentTimeMillis();
 
     edit = new WALEdit();
-    edit.add(new KeyValue(rowName, family, Bytes.toBytes("3"),
-        ts1+1, value));
-    log.append(info, tableName, edit,
-        ts1+1, htd);
+    edit.add(new KeyValue(rowName, family, Bytes.toBytes("3"), ts1+1, value));
+    log.append(info, tableName, edit, ts1+1, htd);
     edit = new WALEdit();
-    edit.add(new KeyValue(rowName, family, Bytes.toBytes("4"),
-        ts1+2, value));
-    log.append(info, tableName, edit,
-        ts1+2, htd);
+    edit.add(new KeyValue(rowName, family, Bytes.toBytes("4"), ts1+2, value));
+    log.append(info, tableName, edit, ts1+2, htd);
     log.close();
 
     HLogInputFormat input = new HLogInputFormat();
@@ -229,8 +220,11 @@ public class TestHLogRecordReader {
 
     for (byte[] column : columns) {
       assertTrue(reader.nextKeyValue());
-      assertTrue(Bytes
-          .equals(column, reader.getCurrentValue().getKeyValues().get(0).getQualifier()));
+      KeyValue kv = reader.getCurrentValue().getKeyValues().get(0);
+      if (!Bytes.equals(column, kv.getQualifier())) {
+        assertTrue("expected [" + Bytes.toString(column) + "], actual ["
+            + Bytes.toString(kv.getQualifier()) + "]", false);
+      }
     }
     assertFalse(reader.nextKeyValue());
     reader.close();

@@ -25,6 +25,7 @@ option java_generate_equals_and_hash = true;
 option optimize_for = SPEED;
 
 import "hbase.proto";
+import "WAL.proto";
 
 message GetRegionInfoRequest {
   required RegionSpecifier region = 1;
@@ -155,39 +156,10 @@ message MergeRegionsRequest {
 message MergeRegionsResponse {
 }
 
-message UUID {
-  required uint64 leastSigBits = 1;
-  required uint64 mostSigBits = 2;
-}
-
-// Protocol buffer version of HLog
+// Protocol buffer version of WAL for replication
 message WALEntry {
   required WALKey key = 1;
-  required WALEdit edit = 2;
-
-  // Protocol buffer version of HLogKey
-  message WALKey {
-    required bytes encodedRegionName = 1;
-    required bytes tableName = 2;
-    required uint64 logSequenceNumber = 3;
-    required uint64 writeTime = 4;
-    optional UUID clusterId = 5;
-  }
-
-  message WALEdit {
-    repeated bytes keyValueBytes = 1;
-    repeated FamilyScope familyScope = 2;
-
-    enum ScopeType {
-      REPLICATION_SCOPE_LOCAL = 0;
-      REPLICATION_SCOPE_GLOBAL = 1;
-    }
-
-    message FamilyScope {
-      required bytes family = 1;
-      required ScopeType scopeType = 2;
-    }
-  }
+  repeated bytes keyValueBytes = 2;
 }
 
 /**

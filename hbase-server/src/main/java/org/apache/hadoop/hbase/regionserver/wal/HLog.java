@@ -29,6 +29,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -51,7 +52,14 @@ public interface HLog {
   public static final String RECOVERED_LOG_TMPFILE_SUFFIX = ".temp";
 
   public interface Reader {
-    void init(FileSystem fs, Path path, Configuration c) throws IOException;
+
+    /**
+     * @param fs File system.
+     * @param path Path.
+     * @param c Config.
+     * @param s Input stream that may have been pre-opened by the caller; may be null.
+     */
+    void init(FileSystem fs, Path path, Configuration c, FSDataInputStream s) throws IOException;
 
     void close() throws IOException;
 
@@ -233,20 +241,6 @@ public interface HLog {
    * @throws IOException
    */
   public void closeAndDelete() throws IOException;
-
-  /**
-   * Append an entry to the log.
-   *
-   * @param regionInfo
-   * @param logEdit
-   * @param logKey
-   * @param doSync
-   *          shall we sync after writing the transaction
-   * @return The txid of this transaction
-   * @throws IOException
-   */
-  public long append(HRegionInfo regionInfo, HLogKey logKey, WALEdit logEdit,
-      HTableDescriptor htd, boolean doSync) throws IOException;
 
   /**
    * Only used in tests.

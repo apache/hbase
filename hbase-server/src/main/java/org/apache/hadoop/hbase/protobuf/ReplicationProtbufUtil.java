@@ -26,6 +26,8 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.AdminProtocol;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos;
+import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
+import org.apache.hadoop.hbase.protobuf.generated.WALProtos;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
@@ -47,32 +49,23 @@ public class ReplicationProtbufUtil {
    * @return an array of HLog entries
    */
   public static HLog.Entry[]
-      toHLogEntries(final List<AdminProtos.WALEntry> protoList) {
+      toHLogEntries(final List<AdminProtos.WALEntry> protoList) throws IOException {
     List<HLog.Entry> entries = new ArrayList<HLog.Entry>();
     for (AdminProtos.WALEntry entry: protoList) {
-      AdminProtos.WALEntry.WALKey walKey = entry.getKey();
-      java.util.UUID clusterId = HConstants.DEFAULT_CLUSTER_ID;
-      if (walKey.hasClusterId()) {
-        AdminProtos.UUID protoUuid = walKey.getClusterId();
-        clusterId = new java.util.UUID(
-          protoUuid.getMostSigBits(), protoUuid.getLeastSigBits());
-      }
-      HLogKey key = new HLogKey(walKey.getEncodedRegionName().toByteArray(),
-        walKey.getTableName().toByteArray(), walKey.getLogSequenceNumber(),
-        walKey.getWriteTime(), clusterId);
-      AdminProtos.WALEntry.WALEdit walEdit = entry.getEdit();
+      WALProtos.WALKey walKey = entry.getKey();
+      HLogKey key = new HLogKey(walKey);
       WALEdit edit = new WALEdit();
-      for (ByteString keyValue: walEdit.getKeyValueBytesList()) {
+      for (ByteString keyValue: entry.getKeyValueBytesList()) {
         edit.add(new KeyValue(keyValue.toByteArray()));
       }
-      if (walEdit.getFamilyScopeCount() > 0) {
+      if (walKey.getScopesCount() > 0) {
         TreeMap<byte[], Integer> scopes =
           new TreeMap<byte[], Integer>(Bytes.BYTES_COMPARATOR);
-        for (AdminProtos.WALEntry.WALEdit.FamilyScope scope: walEdit.getFamilyScopeList()) {
+        for (WALProtos.FamilyScope scope: walKey.getScopesList()) {
           scopes.put(scope.getFamily().toByteArray(),
             Integer.valueOf(scope.getScopeType().ordinal()));
         }
-        edit.setScopes(scopes);
+        key.setScopes(scopes);
       }
       entries.add(new HLog.Entry(key, edit));
     }
@@ -105,16 +98,13 @@ public class ReplicationProtbufUtil {
    */
   public static AdminProtos.ReplicateWALEntryRequest
       buildReplicateWALEntryRequest(final HLog.Entry[] entries) {
-    AdminProtos.WALEntry.WALEdit.FamilyScope.Builder scopeBuilder = AdminProtos.WALEntry
-        .WALEdit
-        .FamilyScope
-        .newBuilder();
+    WALProtos.FamilyScope.Builder scopeBuilder = WALProtos.FamilyScope.newBuilder();
     AdminProtos.WALEntry.Builder entryBuilder = AdminProtos.WALEntry.newBuilder();
     AdminProtos.ReplicateWALEntryRequest.Builder builder =
       AdminProtos.ReplicateWALEntryRequest.newBuilder();
     for (HLog.Entry entry: entries) {
       entryBuilder.clear();
-      AdminProtos.WALEntry.WALKey.Builder keyBuilder = entryBuilder.getKeyBuilder();
+      WALProtos.WALKey.Builder keyBuilder = entryBuilder.getKeyBuilder();
       HLogKey key = entry.getKey();
       keyBuilder.setEncodedRegionName(
         ByteString.copyFrom(key.getEncodedRegionName()));
@@ -123,28 +113,24 @@ public class ReplicationProtbufUtil {
       keyBuilder.setWriteTime(key.getWriteTime());
       UUID clusterId = key.getClusterId();
       if (clusterId != null) {
-        AdminProtos.UUID.Builder uuidBuilder = keyBuilder.getClusterIdBuilder();
+        HBaseProtos.UUID.Builder uuidBuilder = keyBuilder.getClusterIdBuilder();
         uuidBuilder.setLeastSigBits(clusterId.getLeastSignificantBits());
         uuidBuilder.setMostSigBits(clusterId.getMostSignificantBits());
       }
       WALEdit edit = entry.getEdit();
-      AdminProtos.WALEntry.WALEdit.Builder editBuilder = entryBuilder.getEditBuilder();
-      NavigableMap<byte[], Integer> scopes = edit.getScopes();
+      NavigableMap<byte[], Integer> scopes = key.getScopes();
       if (scopes != null && !scopes.isEmpty()) {
         for (Map.Entry<byte[], Integer> scope: scopes.entrySet()) {
           scopeBuilder.setFamily(ByteString.copyFrom(scope.getKey()));
-          AdminProtos.WALEntry.WALEdit.ScopeType
-              scopeType = AdminProtos.WALEntry
-              .WALEdit
-              .ScopeType
-              .valueOf(scope.getValue().intValue());
+          WALProtos.ScopeType scopeType =
+              WALProtos.ScopeType.valueOf(scope.getValue().intValue());
           scopeBuilder.setScopeType(scopeType);
-          editBuilder.addFamilyScope(scopeBuilder.build());
+          keyBuilder.addScopes(scopeBuilder.build());
         }
       }
       List<KeyValue> keyValues = edit.getKeyValues();
       for (KeyValue value: keyValues) {
-        editBuilder.addKeyValueBytes(ByteString.copyFrom(
+        entryBuilder.addKeyValueBytes(ByteString.copyFrom(
           value.getBuffer(), value.getOffset(), value.getLength()));
       }
       builder.addEntry(entryBuilder.build());

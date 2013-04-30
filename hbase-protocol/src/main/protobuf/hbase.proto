@@ -301,3 +301,8 @@ message LongMsg {
 message BigDecimalMsg {
   required bytes bigdecimalMsg = 1;
 }
+
+message UUID {
+  required uint64 leastSigBits = 1;
+  required uint64 mostSigBits = 2;
+}

@@ -754,6 +754,73 @@ public class TestHLog  {
       log.append(hri, tableName, cols, timestamp, htd);
     }
   }
+  
+
+  /**
+   * @throws IOException
+   */
+  @Test
+  public void testReadLegacyLog() throws IOException {
+    final int columnCount = 5;
+    final int recordCount = 5;
+    final byte[] tableName = Bytes.toBytes("tablename");
+    final byte[] row = Bytes.toBytes("row");
+    long timestamp = System.currentTimeMillis();
+    Path path = new Path(dir, "temphlog");
+    SequenceFileLogWriter sflw = null;
+    HLog.Reader reader = null;
+    try {
+      HRegionInfo hri = new HRegionInfo(tableName,
+          HConstants.EMPTY_START_ROW, HConstants.EMPTY_END_ROW);
+      HTableDescriptor htd = new HTableDescriptor(tableName);
+      fs.mkdirs(dir);
+      // Write log in pre-PB format.
+      sflw = new SequenceFileLogWriter();
+      sflw.init(fs, path, conf);
+      for (int i = 0; i < recordCount; ++i) {
+        HLogKey key = new HLogKey(
+            hri.getEncodedNameAsBytes(), tableName, i, timestamp, HConstants.DEFAULT_CLUSTER_ID);
+        WALEdit edit = new WALEdit();
+        for (int j = 0; j < columnCount; ++j) {
+          if (i == 0) {
+            htd.addFamily(new HColumnDescriptor("column" + j));
+          }
+          String value = i + "" + j;
+          edit.add(new KeyValue(row, row, row, timestamp, Bytes.toBytes(value)));
+        }
+        sflw.append(new HLog.Entry(key, edit));
+      }
+      sflw.sync();
+      sflw.close();
+
+      // Now read the log using standard means.
+      reader = HLogFactory.createReader(fs, path, conf);
+      assertTrue(reader instanceof SequenceFileLogReader);
+      for (int i = 0; i < recordCount; ++i) {
+        HLog.Entry entry = reader.next();
+        assertNotNull(entry);
+        assertEquals(columnCount, entry.getEdit().size());
+        assertArrayEquals(hri.getEncodedNameAsBytes(), entry.getKey().getEncodedRegionName());
+        assertArrayEquals(tableName, entry.getKey().getTablename());
+        int idx = 0;
+        for (KeyValue val : entry.getEdit().getKeyValues()) {
+          assertTrue(Bytes.equals(row, val.getRow()));
+          String value = i + "" + idx;
+          assertArrayEquals(Bytes.toBytes(value), val.getValue());
+          idx++;
+        }
+      }
+      HLog.Entry entry = reader.next();
+      assertNull(entry);
+    } finally {
+      if (sflw != null) {
+        sflw.close();
+      }
+      if (reader != null) {
+        reader.close();
+      }
+    }
+  }
 
   static class DumbWALActionsListener implements WALActionsListener {
     int increments = 0;

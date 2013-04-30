@@ -100,8 +100,7 @@ public class TestWALActionsListener {
       HTableDescriptor htd = new HTableDescriptor();
       htd.addFamily(new HColumnDescriptor(b));
 
-      HLogKey key = new HLogKey(b,b, 0, 0, HConstants.DEFAULT_CLUSTER_ID);
-      hlog.append(hri, key, edit, htd, true);
+      hlog.append(hri, b, edit, 0, htd);
       if (i == 10) {
         hlog.registerWALActionsListener(laterobserver);
       }

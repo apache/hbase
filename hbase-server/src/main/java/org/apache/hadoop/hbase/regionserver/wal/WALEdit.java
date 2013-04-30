@@ -26,13 +26,18 @@ import java.util.List;
 import java.util.NavigableMap;
 import java.util.TreeMap;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.codec.Codec;
 import org.apache.hadoop.hbase.io.HeapSize;
-import org.apache.hadoop.hbase.protobuf.generated.WAL.CompactionDescriptor;
+import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.protobuf.generated.WALProtos.CompactionDescriptor;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.hadoop.io.Writable;
+
 
 /**
  * WALEdit: Used in HBase's transaction log (WAL) to represent
@@ -70,15 +75,19 @@ import org.apache.hadoop.io.Writable;
  */
 @InterfaceAudience.Private
 public class WALEdit implements Writable, HeapSize {
-  // TODO: Make it so user cannot make a cf w/ this name.  Make the illegal cf names.  Ditto for row.
+  public static final Log LOG = LogFactory.getLog(WALEdit.class);
+
+  // TODO: Get rid of this; see HBASE-8457
   public static final byte [] METAFAMILY = Bytes.toBytes("METAFAMILY");
   static final byte [] METAROW = Bytes.toBytes("METAROW");
   static final byte[] COMPLETE_CACHE_FLUSH = Bytes.toBytes("HBASE::CACHEFLUSH");
   static final byte[] COMPACTION = Bytes.toBytes("HBASE::COMPACTION");
-
   private final int VERSION_2 = -1;
 
   private final ArrayList<KeyValue> kvs = new ArrayList<KeyValue>();
+
+  // Only here for legacy writable deserialization
+  @Deprecated
   private NavigableMap<byte[], Integer> scopes;
 
   private CompressionContext compressionContext;
@@ -115,15 +124,10 @@ public class WALEdit implements Writable, HeapSize {
     return kvs;
   }
 
-  public NavigableMap<byte[], Integer> getScopes() {
-    return scopes;
-  }
-
-
-  public void setScopes (NavigableMap<byte[], Integer> scopes) {
-    // We currently process the map outside of WALEdit,
-    // TODO revisit when replication is part of core
-    this.scopes = scopes;
+  public NavigableMap<byte[], Integer> getAndRemoveScopes() {
+    NavigableMap<byte[], Integer> result = scopes;
+    scopes = null;
+    return result;
   }
 
   public void readFields(DataInput in) throws IOException {
@@ -141,7 +145,7 @@ public class WALEdit implements Writable, HeapSize {
           this.add(KeyValueCompression.readKV(in, compressionContext));
         } else {
           this.add(KeyValue.create(in));
-    	  }
+        }
       }
       int numFamilies = in.readInt();
       if (numFamilies > 0) {
@@ -159,10 +163,10 @@ public class WALEdit implements Writable, HeapSize {
       // read is actually the length of a single KeyValue
       this.add(KeyValue.create(versionOrLength, in));
     }
-
   }
 
   public void write(DataOutput out) throws IOException {
+    LOG.warn("WALEdit is being serialized to writable - only expected in test code");
     out.writeInt(VERSION_2);
     out.writeInt(kvs.size());
     // We interleave the two lists for code simplicity
@@ -182,6 +186,24 @@ public class WALEdit implements Writable, HeapSize {
         out.writeInt(scopes.get(key));
       }
     }
+  }
+
+  /**
+   * Reads WALEdit from cells.
+   * @param cellDecoder Cell decoder.
+   * @param expectedCount Expected cell count.
+   * @return Number of KVs read.
+   */
+  public int readFromCells(Codec.Decoder cellDecoder, int expectedCount) throws IOException {
+    kvs.clear();
+    while (kvs.size() < expectedCount && cellDecoder.advance()) {
+      Cell cell = cellDecoder.current();
+      if (!(cell instanceof KeyValue)) {
+        throw new IOException("WAL edit only supports KVs as cells");
+      }
+      kvs.add((KeyValue)cell);
+    }
+    return kvs.size();
   }
 
   public long heapSize() {
@@ -235,3 +257,4 @@ public class WALEdit implements Writable, HeapSize {
     return null;
   }
 }
+

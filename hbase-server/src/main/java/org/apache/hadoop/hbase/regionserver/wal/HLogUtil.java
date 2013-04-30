@@ -36,29 +36,12 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.protobuf.generated.WAL.CompactionDescriptor;
+import org.apache.hadoop.hbase.protobuf.generated.WALProtos.CompactionDescriptor;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
 
 public class HLogUtil {
   static final Log LOG = LogFactory.getLog(HLogUtil.class);
-
-  @SuppressWarnings("unchecked")
-  public static Class<? extends HLogKey> getKeyClass(Configuration conf) {
-    return (Class<? extends HLogKey>) conf.getClass(
-        "hbase.regionserver.hlog.keyclass", HLogKey.class);
-  }
-
-  public static HLogKey newKey(Configuration conf) throws IOException {
-    Class<? extends HLogKey> keyClass = getKeyClass(conf);
-    try {
-      return keyClass.newInstance();
-    } catch (InstantiationException e) {
-      throw new IOException("cannot create hlog key");
-    } catch (IllegalAccessException e) {
-      throw new IOException("cannot create hlog key");
-    }
-  }
 
   /**
    * Pattern used to validate a HLog file name
@@ -75,52 +58,6 @@ public class HLogUtil {
   public static boolean validateHLogFilename(String filename) {
     return pattern.matcher(filename).matches();
   }
-
-  /*
-   * Get a reader for the WAL.
-   *
-   * @param fs
-   *
-   * @param path
-   *
-   * @param conf
-   *
-   * @return A WAL reader. Close when done with it.
-   *
-   * @throws IOException
-   *
-   * public static HLog.Reader getReader(final FileSystem fs, final Path path,
-   * Configuration conf) throws IOException { try {
-   *
-   * if (logReaderClass == null) {
-   *
-   * logReaderClass = conf.getClass("hbase.regionserver.hlog.reader.impl",
-   * SequenceFileLogReader.class, Reader.class); }
-   *
-   *
-   * HLog.Reader reader = logReaderClass.newInstance(); reader.init(fs, path,
-   * conf); return reader; } catch (IOException e) { throw e; } catch (Exception
-   * e) { throw new IOException("Cannot get log reader", e); } }
-   *
-   * * Get a writer for the WAL.
-   *
-   * @param path
-   *
-   * @param conf
-   *
-   * @return A WAL writer. Close when done with it.
-   *
-   * @throws IOException
-   *
-   * public static HLog.Writer createWriter(final FileSystem fs, final Path
-   * path, Configuration conf) throws IOException { try { if (logWriterClass ==
-   * null) { logWriterClass =
-   * conf.getClass("hbase.regionserver.hlog.writer.impl",
-   * SequenceFileLogWriter.class, Writer.class); } FSHLog.Writer writer =
-   * (FSHLog.Writer) logWriterClass.newInstance(); writer.init(fs, path, conf);
-   * return writer; } catch (Exception e) { throw new
-   * IOException("cannot get log writer", e); } }
-   */
 
   /**
    * Construct the HLog directory name
@@ -285,11 +222,11 @@ public class HLogUtil {
   /**
    * Write the marker that a compaction has succeeded and is about to be committed.
    * This provides info to the HMaster to allow it to recover the compaction if
-   * this regionserver dies in the middle (This part is not yet implemented). It also prevents the compaction from
-   * finishing if this regionserver has already lost its lease on the log.
+   * this regionserver dies in the middle (This part is not yet implemented). It also prevents
+   * the compaction from finishing if this regionserver has already lost its lease on the log.
    */
-  public static void writeCompactionMarker(HLog log, HTableDescriptor htd, HRegionInfo info, final CompactionDescriptor c)
-  throws IOException {
+  public static void writeCompactionMarker(HLog log, HTableDescriptor htd, HRegionInfo info,
+      final CompactionDescriptor c) throws IOException {
     WALEdit e = WALEdit.createCompaction(c);
     log.append(info, c.getTableName().toByteArray(), e,
         EnvironmentEdgeManager.currentTimeMillis(), htd);

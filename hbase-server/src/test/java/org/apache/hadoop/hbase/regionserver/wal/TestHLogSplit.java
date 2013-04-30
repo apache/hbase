@@ -652,7 +652,7 @@ public class TestHLogSplit {
     int actualCount = 0;
     HLog.Reader in = HLogFactory.createReader(fs, splitLog, conf);
     @SuppressWarnings("unused")
-	HLog.Entry entry;
+    HLog.Entry entry;
     while ((entry = in.next()) != null) ++actualCount;
     assertEquals(entryCount-1, actualCount);
 

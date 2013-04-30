@@ -25,6 +25,7 @@ import java.io.IOException;
 
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.WritableUtils;
@@ -32,6 +33,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import com.google.common.base.Preconditions;
+import com.google.protobuf.ByteString;
 
 /**
  * A set of static functions for running our custom WAL compression/decompression.
@@ -63,26 +65,31 @@ public class Compressor {
 
   private static void transformFile(Path input, Path output)
       throws IOException {
-    SequenceFileLogReader in = new SequenceFileLogReader();
-    SequenceFileLogWriter out = new SequenceFileLogWriter();
+    Configuration conf = HBaseConfiguration.create();
+
+    FileSystem inFS = input.getFileSystem(conf);
+    FileSystem outFS = output.getFileSystem(conf);
+
+    HLog.Reader in = HLogFactory.createReader(inFS, input, conf, null, false);
+    HLog.Writer out = null;
 
     try {
-      Configuration conf = HBaseConfiguration.create();
-
-      FileSystem inFS = input.getFileSystem(conf);
-      FileSystem outFS = output.getFileSystem(conf);
-
-      in.init(inFS, input, conf);
-      boolean compress = in.reader.isWALCompressionEnabled();
-
+      if (!(in instanceof ReaderBase)) {
+        System.err.println("Cannot proceed, invalid reader type: " + in.getClass().getName());
+        return;
+      }
+      boolean compress = ((ReaderBase)in).hasCompression();
       conf.setBoolean(HConstants.ENABLE_WAL_COMPRESSION, !compress);
-      out.init(outFS, output, conf);
+      out = HLogFactory.createWriter(outFS, output, conf);
 
       HLog.Entry e = null;
       while ((e = in.next()) != null) out.append(e);
     } finally {
       in.close();
-      out.close();
+      if (out != null) {
+        out.close();
+        out = null;
+      }
     }
   }
 
@@ -93,6 +100,7 @@ public class Compressor {
    * @param dict the dictionary we use for our read.
    * @return the uncompressed array.
    */
+  @Deprecated
   static byte[] readCompressed(DataInput in, Dictionary dict)
       throws IOException {
     byte status = in.readByte();
@@ -129,6 +137,7 @@ public class Compressor {
    * 
    * @return the length of the uncompressed data
    */
+  @Deprecated
   static int uncompressIntoArray(byte[] to, int offset, DataInput in,
       Dictionary dict) throws IOException {
     byte status = in.readByte();
@@ -167,6 +176,7 @@ public class Compressor {
    * @param out the DataOutput to write into
    * @param dict the dictionary to use for compression
    */
+  @Deprecated
   static void writeCompressed(byte[] data, int offset, int length,
       DataOutput out, Dictionary dict)
       throws IOException {

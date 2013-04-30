@@ -215,12 +215,12 @@
   </property>
   <property>
     <name>hbase.regionserver.hlog.reader.impl</name>
-    <value>org.apache.hadoop.hbase.regionserver.wal.SequenceFileLogReader</value>
+    <value>org.apache.hadoop.hbase.regionserver.wal.ProtobufLogReader</value>
     <description>The HLog file reader implementation.</description>
   </property>
   <property>
     <name>hbase.regionserver.hlog.writer.impl</name>
-    <value>org.apache.hadoop.hbase.regionserver.wal.SequenceFileLogWriter</value>
+    <value>org.apache.hadoop.hbase.regionserver.wal.ProtobufLogWriter</value>
     <description>The HLog file writer implementation.</description>
   </property>
   <property>
