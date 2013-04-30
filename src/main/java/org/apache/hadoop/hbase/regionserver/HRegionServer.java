@@ -132,6 +132,8 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.HasThread;
 import org.apache.hadoop.hbase.util.InfoServer;
+import org.apache.hadoop.hbase.util.InjectionEvent;
+import org.apache.hadoop.hbase.util.InjectionHandler;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.ParamFormat;
 import org.apache.hadoop.hbase.util.ParamFormatter;
@@ -222,6 +224,10 @@ public class HRegionServer implements HRegionInterface,
   // below maps.
   protected final Map<Integer, HRegion> onlineRegions =
     new ConcurrentHashMap<Integer, HRegion>();
+  protected final Map<Integer, HRegionInfo> regionsOpening =
+    new ConcurrentHashMap<Integer, HRegionInfo>();
+  protected final Map<Integer, HRegionInfo> regionsClosing =
+    new ConcurrentHashMap<Integer, HRegionInfo>();
 
   // this is a list of region info that we recently closed
   protected final List<ClosedRegionInfo> recentlyClosedRegions =
@@ -706,8 +712,14 @@ public class HRegionServer implements HRegionInterface,
               continue;
             }
 
+            if (InjectionHandler.falseCondition(InjectionEvent.HREGIONSERVER_REPORT_RESPONSE, (Object[])msgs)) {
+              continue;
+            }
+
             // Queue up the HMaster's instruction stream for processing
             boolean restart = false;
+            HRegionInfo regionInfo;
+            Integer mapKey;
             for(int i = 0;
                 !restart && !stopRequestedAtStageOne.get() && i < msgs.length;
                 i++) {
@@ -728,6 +740,52 @@ public class HRegionServer implements HRegionInterface,
                         "interrupted.", e);
                   }
                   quiesceRequested = true;
+                }
+                break;
+
+              case MSG_REGION_CLOSE:
+                regionInfo = msgs[i].getRegionInfo();
+                mapKey = Bytes.mapKey(regionInfo.getRegionName());
+
+                this.lock.writeLock().lock();
+                try {
+                  if (!this.onlineRegions.containsKey(mapKey) || this.regionsClosing.containsKey(mapKey)) {
+                    LOG.warn("Region " + regionInfo + " already being processed as Closed/closing. Ignoring " + msgs[i]);
+                    break; // already closed the region, or it is closing. Ignore this request.
+                  }
+                  this.regionsClosing.put(mapKey, regionInfo);
+                } finally {
+                  this.lock.writeLock().unlock();
+                }
+                addProcessingCloseMessage(regionInfo);
+                try {
+                  toDo.put(new ToDoEntry(msgs[i]));
+                } catch (InterruptedException e) {
+                  throw new RuntimeException("Putting into msgQueue was " +
+                      "interrupted.", e);
+                }
+                break;
+
+              case MSG_REGION_OPEN:
+                regionInfo = msgs[i].getRegionInfo();
+                mapKey = Bytes.mapKey(regionInfo.getRegionName());
+
+                this.lock.writeLock().lock();
+                try {
+                  if (this.onlineRegions.containsKey(mapKey) || this.regionsOpening.containsKey(mapKey)) {
+                    LOG.warn("Region " + regionInfo + " already being processed as opened/opening. Ignoring " + msgs[i]);
+                    break; // already opened the region, or it is opening. Ignore this request.
+                  }
+                  this.regionsOpening.put(mapKey, regionInfo);
+                } finally {
+                  this.lock.writeLock().unlock();
+                }
+                addProcessingMessage(regionInfo);
+                try {
+                  toDo.put(new ToDoEntry(msgs[i]));
+                } catch (InterruptedException e) {
+                  throw new RuntimeException("Putting into msgQueue was " +
+                      "interrupted.", e);
                 }
                 break;
 
@@ -2149,6 +2207,7 @@ public class HRegionServer implements HRegionInterface,
         this.onlineRegions.put(mapKey, region);
         region.setRegionServer(this);
         region.setOpenDate(EnvironmentEdgeManager.currentTimeMillis());
+        this.regionsOpening.remove(mapKey);
       } finally {
         this.lock.writeLock().unlock();
       }
@@ -2214,6 +2273,17 @@ public class HRegionServer implements HRegionInterface,
    */
   public void addProcessingMessage(final HRegionInfo hri) {
     getOutboundMsgs().add(new HMsg(HMsg.Type.MSG_REPORT_PROCESS_OPEN, hri));
+  }
+
+  /**
+   * Add a MSG_REPORT_PROCESS_CLOSE to the outbound queue.
+   * This method is called while region is in the queue of regions to process
+   * and then while the region is being closed, it is called from the Worker
+   * thread that is running the region close.
+   * @param hri Region to add the message for
+   */
+  public void addProcessingCloseMessage(final HRegionInfo hri) {
+    getOutboundMsgs().add(new HMsg(HMsg.Type.MSG_REPORT_PROCESS_CLOSE, hri));
   }
 
   private void addToRecentlyClosedRegions(ClosedRegionInfo info) {
@@ -3097,10 +3167,12 @@ public class HRegionServer implements HRegionInterface,
   HRegion removeFromOnlineRegions(HRegionInfo hri) {
     byte[] regionName = hri.getRegionName();
     serverInfo.getFlushedSequenceIdByRegion().remove(regionName);
-    this.lock.writeLock().lock();
+    Integer key = Bytes.mapKey(regionName);
     HRegion toReturn = null;
+    this.lock.writeLock().lock();
     try {
-      toReturn = onlineRegions.remove(Bytes.mapKey(regionName));
+      toReturn = onlineRegions.remove(key);
+      regionsClosing.remove(key);
     } finally {
       this.lock.writeLock().unlock();
     }

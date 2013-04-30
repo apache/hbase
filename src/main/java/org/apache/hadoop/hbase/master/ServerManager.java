@@ -457,7 +457,7 @@ public class ServerManager {
       for (int i = 1; i < msgs.length; i++) {
         LOG.info("Processing " + msgs[i] + " from " +
             serverInfo.getServerName());
-        assert msgs[i].getType() == HMsg.Type.MSG_REGION_CLOSE;
+        assert msgs[i].getType() == HMsg.Type.MSG_REPORT_CLOSE;
         HRegionInfo info = msgs[i].getRegionInfo();
         // Meta/root region offlining is handed in removeServerInfo above.
         if (!info.isMetaRegion()) {
@@ -537,6 +537,8 @@ public class ServerManager {
     // Be careful that in message processors we don't throw exceptions that
     // break the switch below because then we might drop messages on the floor.
     int openingCount = 0;
+    HashSet<String> openingRegions = null;
+    HashSet<String> closingRegions = null;
     for (int i = 0; i < incomingMsgs.length; i++) {
       HRegionInfo region = incomingMsgs[i].getRegionInfo();
       LOG.info("Processing " + incomingMsgs[i] + " from " +
@@ -544,15 +546,26 @@ public class ServerManager {
         incomingMsgs.length);
       if (!this.master.getRegionServerOperationQueue().
           process(serverInfo, incomingMsgs[i])) {
+        LOG.debug("Not proceeding further for " + incomingMsgs[i] + " from " + serverInfo);
         continue;
       }
       switch (incomingMsgs[i].getType()) {
         case MSG_REPORT_PROCESS_OPEN:
           openingCount++;
+          if (openingRegions == null)
+            openingRegions = new HashSet<String>();
+          openingRegions.add(incomingMsgs[i].getRegionInfo().getEncodedName());
+          LOG.debug("Added to openingRegions " + incomingMsgs[i] + " from " + serverInfo);
           break;
 
         case MSG_REPORT_OPEN:
           LOG.error("MSG_REPORT_OPEN is not expected to be received from RS.");
+          break;
+
+        case MSG_REPORT_PROCESS_CLOSE:
+          if (closingRegions == null)
+            closingRegions = new HashSet<String>();
+          closingRegions.add(incomingMsgs[i].getRegionInfo().getEncodedName());
           break;
 
         case MSG_REPORT_CLOSE:
@@ -579,12 +592,34 @@ public class ServerManager {
       // Tell the region server to close regions that we have marked for closing.
       for (HRegionInfo i:
         this.master.getRegionManager().getMarkedToClose(serverInfo.getServerName())) {
-        returnMsgs.add(new HMsg(HMsg.Type.MSG_REGION_CLOSE, i));
-        // Transition the region from toClose to closing state
-        this.master.getRegionManager().setPendingClose(i.getRegionNameAsString());
+        if (closingRegions == null || !closingRegions.contains(i.getEncodedName())) {
+          HMsg msg = new HMsg(HMsg.Type.MSG_REGION_CLOSE, i);
+          LOG.info("HMsg " + msg.toString() + " was lost earlier. Resending to " + serverInfo.getServerName());
+          returnMsgs.add(msg);
+        } else {
+          // Transition the region from toClose to closing state
+          this.master.getRegionManager().setPendingClose(i.getRegionNameAsString());
+        }
       }
 
       // Figure out what the RegionServer ought to do, and write back.
+
+      // 1. Remind the server to open the regions that the RS has not acked for
+      // Normally, the master shouldn't need to do this. But, this may be required
+      // if there was a network Incident, in which the master's message to OPEN a
+      // region was lost.
+      for (HRegionInfo i:
+        this.master.getRegionManager().getRegionsInPendingOpenUnacked(serverInfo.getServerName())) {
+        if (openingRegions == null || !openingRegions.contains(i.getEncodedName())) {
+          HMsg msg = new HMsg(HMsg.Type.MSG_REGION_OPEN, i);
+          LOG.info("HMsg " + msg.toString() + " was lost earlier. Resending to " + serverInfo.getServerName());
+          returnMsgs.add(msg);
+          openingCount++;
+        } else {
+          LOG.info("Region " + i.getEncodedName() + " is reported to be opening " + serverInfo.getServerName());
+          this.processRegionOpening(i.getRegionNameAsString());
+        }
+      }
 
       // Should we tell it close regions because its overloaded?  If its
       // currently opening regions, leave it alone till all are open.
@@ -715,6 +750,20 @@ public class ServerManager {
     this.master.getRegionManager().setUnassigned(hri, false);
   }
 
+
+  /*
+   * Region server is reporting that a region is now opening
+   * consider this an ack for the open request.
+   *
+   * Master could have received this through the ZK notification.
+   * Or, through the heartbeat.
+   *
+   * @param regionName
+   */
+  public void processRegionOpening(String regionName) {
+    this.master.getRegionManager().setPendingOpenAcked(regionName);
+  }
+
   /*
    * Region server is reporting that a region is now opened
    * @param serverInfo
@@ -727,7 +776,7 @@ public class ServerManager {
     RegionManager regionManager = master.getRegionManager();
     synchronized (regionManager) {
       if (!regionManager.isUnassigned(region) &&
-          !regionManager.isPendingOpen(region.getRegionNameAsString())) {
+          !regionManager.isPendingOpenAckedOrUnacked(region.getRegionNameAsString())) {
         if (region.isRootRegion()) {
           // Root region
           HServerAddress rootServer =
@@ -745,7 +794,7 @@ public class ServerManager {
           // Not root region. If it is not a pending region, then we are
           // going to treat it as a duplicate assignment, although we can't
           // tell for certain that's the case.
-          if (regionManager.isPendingOpen(
+          if (regionManager.isPendingOpenAckedOrUnacked(
               region.getRegionNameAsString())) {
             // A duplicate report from the correct server
             return;
@@ -829,6 +878,8 @@ public class ServerManager {
       //       the messages we've received. In this case, a close could be
       //       processed before an open resulting in the master not agreeing on
       //       the region's state.
+
+      // setClosed works for both CLOSING, and PENDING_CLOSE
       this.master.getRegionManager().setClosed(region.getRegionNameAsString());
       RegionServerOperation op =
         new ProcessRegionClose(master, serverInfo.getServerName(), 

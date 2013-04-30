@@ -75,6 +75,7 @@ public class MasterOpenRegionHandler extends HBaseEventHandler {
     // TODO: not implemented. 
     LOG.debug("NO-OP call to handling region opening event");
     // Keep track to see how long the region open takes. If the RS is taking too 
+    serverManager.processRegionOpening(regionName);
     // long, then revert the region back to closed state so that it can be 
     // re-assigned.
   }

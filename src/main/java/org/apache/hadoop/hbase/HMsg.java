@@ -81,6 +81,9 @@ public class HMsg implements Writable {
     /** region server is processing open request */
     MSG_REPORT_PROCESS_OPEN,
 
+    /** region server is processing a close request */
+    MSG_REPORT_PROCESS_CLOSE,
+
     /**
      * Region server split the region associated with this message.
      *

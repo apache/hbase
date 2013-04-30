@@ -512,7 +512,7 @@ public class RegionManager {
       final HServerInfo sinfo, final ArrayList<HMsg> returnMsgs) {
     String regionName = rs.getRegionInfo().getRegionNameAsString();
     LOG.info("Assigning region " + regionName + " to " + sinfo.getServerName());
-    rs.setPendingOpen(sinfo.getServerName());
+    rs.setPendingOpenUnacked(sinfo.getServerName());
     synchronized (this.regionsInTransition) {
       byte[] data = null;
       try {
@@ -887,7 +887,6 @@ public class RegionManager {
         OVERLOADED));
       // mark the region as closing
       setClosing(info.getServerName(), currentRegion, false);
-      setPendingClose(regionName);
       // increment the count of regions we've marked
       regionsClosed++;
     }
@@ -1418,7 +1417,7 @@ public class RegionManager {
       }
 
       t2 = System.currentTimeMillis();
-      if (force || (!s.isPendingOpen() && !s.isOpen())) {
+      if (force || (!s.isPendingOpenAckedOrUnacked() && !s.isOpen())) {
         // Refresh assignment information when a region is marked unassigned so
         // that it opens on the preferred server.
         this.assignmentManager.executeAssignmentPlan(info);
@@ -1460,14 +1459,30 @@ public class RegionManager {
    * @param regionName name of the region
    * @return true if open, false otherwise
    */
-  public boolean isPendingOpen(String regionName) {
+  public boolean isPendingOpenAckedOrUnacked(String regionName) {
     synchronized (regionsInTransition) {
       RegionState s = regionsInTransition.get(regionName);
       if (s != null) {
-        return s.isPendingOpen();
+        return s.isPendingOpenAckedOrUnacked();
       }
     }
     return false;
+  }
+
+  /**
+   * Region has been assigned to a server and the server has told us it is open
+   * @param regionName
+   */
+  public void setPendingOpenAcked(String regionName) {
+    Preconditions.checkNotNull(regionName);
+    synchronized (regionsInTransition) {
+      RegionState s = regionsInTransition.get(regionName);
+      if (s != null) {
+        s.setPendingOpenAcked();
+      } else {
+        LOG.debug("regionsInTransition does not have an entry for " + regionName);
+      }
+    }
   }
 
   /**
@@ -1486,7 +1501,6 @@ public class RegionManager {
         }
       }
     }
-
   }
 
   /**
@@ -1530,7 +1544,7 @@ public class RegionManager {
       }
       // If region was asked to open before getting here, we could be taking
       // the wrong server name
-      if(s.isPendingOpen()) {
+      if(s.isPendingOpenAckedOrUnacked()) {
         serverName = s.getServerName();
       }
       s.setClosing(serverName, setOffline);
@@ -1556,6 +1570,25 @@ public class RegionManager {
       for (RegionState s: regionsInTransition.values()) {
         if (s.isClosing() && !s.isPendingClose() && !s.isClosed() &&
             s.getServerName().compareTo(serverName) == 0) {
+          result.add(s.getRegionInfo());
+        }
+      }
+    }
+    return result;
+  }
+
+  /**
+   * Returns the set of Regions that have been asked to open on this server
+   * but, it has not acked yet.
+   *
+   * @param serverName
+   * @return set of infos that were requested to open
+   */
+  public Set<HRegionInfo> getRegionsInPendingOpenUnacked(String serverName) {
+    Set<HRegionInfo> result = new HashSet<HRegionInfo>();
+    synchronized (regionsInTransition) {
+      for (RegionState s: regionsInTransition.values()) {
+        if (s.isPendingOpenUnacked() && s.getServerName().compareTo(serverName) == 0) {
           result.add(s.getRegionInfo());
         }
       }
@@ -2341,7 +2374,8 @@ public class RegionManager {
 
     enum State {
       UNASSIGNED, // awaiting a server to be assigned
-      PENDING_OPEN, // told a server to open, hasn't opened yet
+      PENDING_OPEN_UNACKED, // told a server to open, not sure if it got the message.
+      PENDING_OPEN_ACKED, // told a server to open, it got the message, hasn't opened yet
       OPEN, // has been opened on RS, but not yet marked in META/ROOT
       CLOSING, // a msg has been enqueued to close ths region, but not delivered to RS yet
       PENDING_CLOSE, // msg has been delivered to RS to close this region
@@ -2382,7 +2416,8 @@ public class RegionManager {
      */
     synchronized boolean isOpening() {
       return state == State.UNASSIGNED ||
-        state == State.PENDING_OPEN ||
+        state == State.PENDING_OPEN_UNACKED ||
+        state == State.PENDING_OPEN_ACKED ||
         state == State.OPEN;
     }
 
@@ -2403,20 +2438,37 @@ public class RegionManager {
       this.serverName = null;
     }
 
-    synchronized boolean isPendingOpen() {
-      return state == State.PENDING_OPEN;
+    synchronized boolean isPendingOpenAcked() {
+      return state == State.PENDING_OPEN_ACKED;
+    }
+
+    synchronized boolean isPendingOpenUnacked() {
+      return state == State.PENDING_OPEN_UNACKED;
+    }
+
+    synchronized boolean isPendingOpenAckedOrUnacked() {
+      return state == State.PENDING_OPEN_ACKED || state == State.PENDING_OPEN_UNACKED;
     }
 
     /*
      * @param serverName Server region was assigned to.
      */
-    synchronized void setPendingOpen(final String serverName) {
+    synchronized void setPendingOpenUnacked(final String serverName) {
       if (state != State.UNASSIGNED) {
         LOG.warn("Cannot assign a region that is not currently unassigned. " +
           "FIX!! State: " + toString());
       }
-      state = State.PENDING_OPEN;
+      state = State.PENDING_OPEN_UNACKED;
       this.serverName = serverName;
+    }
+
+    synchronized void setPendingOpenAcked() {
+      // it is okay to setPendingOpenAcked if it is already acked.
+      if (state != State.PENDING_OPEN_UNACKED && state != State.PENDING_OPEN_ACKED) {
+        LOG.warn("Cannot assign a region that is not currently unacked. " +
+          "FIX!! State: " + toString());
+      }
+      state = State.PENDING_OPEN_ACKED;
     }
 
     synchronized boolean isOpen() {
@@ -2424,7 +2476,7 @@ public class RegionManager {
     }
 
     synchronized void setOpen() {
-      if (state != State.PENDING_OPEN) {
+      if (state != State.PENDING_OPEN_ACKED && state != State.PENDING_OPEN_UNACKED) {
         LOG.warn("Cannot set a region as open if it has not been pending. " +
           "FIX!! State: " + toString());
       }
@@ -2459,7 +2511,8 @@ public class RegionManager {
 
     synchronized void setClosed() {
       if (state != State.PENDING_CLOSE &&
-          state != State.PENDING_OPEN &&
+          state != State.PENDING_OPEN_UNACKED &&
+          state != State.PENDING_OPEN_ACKED &&
           state != State.CLOSING) {
         throw new IllegalStateException(
             "Cannot set a region to be closed if it was not already marked as" +
@@ -2620,11 +2673,12 @@ public class RegionManager {
       synchronized (regionsInTransition) {
         RegionState s = regionsInTransition.get(regionName);
         if (s == null) {
-          s = new RegionState(regionInfo, RegionState.State.PENDING_OPEN);
+          s = new RegionState(regionInfo, RegionState.State.PENDING_OPEN_ACKED);
           regionsInTransition.put(regionName, s);
         } else {
           s.setUnassigned();
-          s.setPendingOpen(serverName);
+          s.setPendingOpenUnacked(serverName);
+          s.setPendingOpenAcked();
         }
         stateStr = s.toString();
       }

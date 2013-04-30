@@ -22,6 +22,7 @@ package org.apache.hadoop.hbase;
 import java.io.IOException;
 import java.util.List;
 import java.util.ArrayList;
+import java.util.Random;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -36,6 +37,7 @@ import org.apache.hadoop.hbase.util.DuplicateZKNotificationInjectionHandler;
 import org.apache.hadoop.hbase.util.InjectionEvent;
 import org.apache.hadoop.hbase.util.InjectionHandler;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
+import org.junit.Test;
 
 /**
  * Test whether region rebalancing works. (HBASE-71)
@@ -52,6 +54,8 @@ public class TestRegionRebalancing extends HBaseClusterTestCase {
   final byte[] FIVE_HUNDRED_KBYTES;
 
   final byte [] FAMILY_NAME = Bytes.toBytes("col");
+
+  final Random rand = new Random(57473);
 
   /** constructor */
   public TestRegionRebalancing() {
@@ -101,6 +105,7 @@ public class TestRegionRebalancing extends HBaseClusterTestCase {
    * Set the slot number near 0, so no server's load will large than 4.
    * The load balance algorithm should handle this case properly.
    */
+  @Test(timeout=10000)
   public void testRebalancing() throws IOException {
 
     for (int i = 1; i <= 16; i++){
@@ -108,6 +113,8 @@ public class TestRegionRebalancing extends HBaseClusterTestCase {
       cluster.startRegionServer();
       checkingServerStatus();
     }
+
+    setInjectionHandler();
 
     LOG.debug("Restart: killing 1 region server.");
     cluster.stopRegionServer(2, false);
@@ -117,6 +124,30 @@ public class TestRegionRebalancing extends HBaseClusterTestCase {
     LOG.debug("Restart: adding that region server back");
     cluster.startRegionServer();
     assertRegionsAreBalanced();
+  }
+
+  private void setInjectionHandler() {
+    InjectionHandler.set(
+        new InjectionHandler() {
+        protected boolean _falseCondition(InjectionEvent event, Object... args) {
+          if (event.equals(InjectionEvent.HREGIONSERVER_REPORT_RESPONSE)) {
+            double num = rand.nextDouble();
+            HMsg msgs[] = (HMsg[]) args;
+            if (msgs.length > 0 && num < 0.45) {
+              StringBuilder sb = new StringBuilder(
+              "Causing a false condition to be true. "
+                  + " rand prob = " + num + " msgs.length is " + msgs.length +
+              ". Messages received from the master that are ignored : \t" );
+              for (int i = 0; i < msgs.length; i++) {
+                sb.append(msgs[i].toString());
+                sb.append("\t");
+              }
+              LOG.debug(sb.toString());
+              return true;
+            }
+          }
+          return false;
+        }});
   }
 
   private void checkingServerStatus() {

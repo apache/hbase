@@ -82,7 +82,7 @@ class ChangeTableState extends TableOperation {
       }
 
       if(!this.online && this.master.getRegionManager().
-          isPendingOpen(i.getRegionNameAsString())) {
+          isPendingOpenAckedOrUnacked(i.getRegionNameAsString())) {
         LOG.debug("Skipping region " + i.toString() +
           " because it is pending open, will tell it to close later");
         continue;
