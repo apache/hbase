@@ -106,7 +106,10 @@ import com.google.common.collect.Lists;
  */
 @InterfaceAudience.Private
 public class HStore implements Store {
+  public static final String COMPACTCHECKER_INTERVAL_MULTIPLIER_KEY =
+      "hbase.server.compactchecker.interval.multiplier";
   public static final String BLOCKING_STOREFILES_KEY = "hbase.hstore.blockingStoreFiles";
+  public static final int DEFAULT_COMPACTCHECKER_INTERVAL_MULTIPLIER = 1000;
   public static final int DEFAULT_BLOCKING_STOREFILE_COUNT = 7;
 
   static final Log LOG = LogFactory.getLog(HStore.class);
@@ -165,6 +168,7 @@ public class HStore implements Store {
   private int pauseTime;
 
   private long blockingFileCount;
+  private int compactionCheckMultiplier;
 
   /**
    * Constructor
@@ -219,6 +223,13 @@ public class HStore implements Store {
 
     this.blockingFileCount =
         conf.getInt(BLOCKING_STOREFILES_KEY, DEFAULT_BLOCKING_STOREFILE_COUNT);
+    this.compactionCheckMultiplier = conf.getInt(
+        COMPACTCHECKER_INTERVAL_MULTIPLIER_KEY, DEFAULT_COMPACTCHECKER_INTERVAL_MULTIPLIER);
+    if (this.compactionCheckMultiplier <= 0) {
+      LOG.error("Compaction check period multiplier must be positive, setting default: "
+          + DEFAULT_COMPACTCHECKER_INTERVAL_MULTIPLIER);
+      this.compactionCheckMultiplier = DEFAULT_COMPACTCHECKER_INTERVAL_MULTIPLIER;
+    }
 
     if (HStore.closeCheckInterval == 0) {
       HStore.closeCheckInterval = conf.getInt(
@@ -289,6 +300,11 @@ public class HStore implements Store {
   @Override
   public long getMemstoreFlushSize() {
     return this.region.memstoreFlushSize;
+  }
+
+  @Override
+  public long getCompactionCheckMultiplier() {
+    return this.compactionCheckMultiplier;
   }
 
   public long getBlockingFileCount() {
@@ -1829,7 +1845,7 @@ public class HStore implements Store {
 
   public static final long FIXED_OVERHEAD =
       ClassSize.align(ClassSize.OBJECT + (15 * ClassSize.REFERENCE) + (4 * Bytes.SIZEOF_LONG)
-              + (4 * Bytes.SIZEOF_INT) + (2 * Bytes.SIZEOF_BOOLEAN));
+              + (5 * Bytes.SIZEOF_INT) + (2 * Bytes.SIZEOF_BOOLEAN));
 
   public static final long DEEP_OVERHEAD = ClassSize.align(FIXED_OVERHEAD
       + ClassSize.OBJECT + ClassSize.REENTRANT_LOCK

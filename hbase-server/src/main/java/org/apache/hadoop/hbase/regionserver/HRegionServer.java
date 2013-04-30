@@ -682,12 +682,9 @@ public class HRegionServer implements ClientProtocol,
     // Compaction thread
     this.compactSplitThread = new CompactSplitThread(this);
 
-    // Background thread to check for compactions; needed if region
-    // has not gotten updates in a while. Make it run at a lesser frequency.
-    int multiplier = this.conf.getInt(HConstants.THREAD_WAKE_FREQUENCY +
-      ".multiplier", 1000);
-    this.compactionChecker = new CompactionChecker(this,
-      this.threadWakeFrequency * multiplier, this);
+    // Background thread to check for compactions; needed if region has not gotten updates
+    // in a while. It will take care of not checking too frequently on store-by-store basis.
+    this.compactionChecker = new CompactionChecker(this, this.threadWakeFrequency, this);
     this.periodicFlusher = new PeriodicMemstoreFlusher(this.threadWakeFrequency, this);
     // Health checker thread.
     int sleepTime = this.conf.getInt(HConstants.HEALTH_CHORE_WAKE_FREQ,
@@ -1236,6 +1233,7 @@ public class HRegionServer implements ClientProtocol,
     private final HRegionServer instance;
     private final int majorCompactPriority;
     private final static int DEFAULT_PRIORITY = Integer.MAX_VALUE;
+    private long iteration = 0;
 
     CompactionChecker(final HRegionServer h, final int sleepTime,
         final Stoppable stopper) {
@@ -1258,6 +1256,9 @@ public class HRegionServer implements ClientProtocol,
           continue;
         for (Store s : r.getStores().values()) {
           try {
+            long multiplier = s.getCompactionCheckMultiplier();
+            assert multiplier > 0;
+            if (iteration % multiplier != 0) continue;
             if (s.needsCompaction()) {
               // Queue a compaction. Will recognize if major is needed.
               this.instance.compactSplitThread.requestCompaction(r, s, getName()
@@ -1278,6 +1279,7 @@ public class HRegionServer implements ClientProtocol,
           }
         }
       }
+      iteration = (iteration == Long.MAX_VALUE) ? 0 : (iteration + 1);
     }
   }
 

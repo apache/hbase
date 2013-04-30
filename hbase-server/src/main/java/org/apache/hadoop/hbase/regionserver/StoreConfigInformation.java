@@ -31,15 +31,22 @@ import org.apache.hadoop.classification.InterfaceStability;
 @InterfaceStability.Unstable
 public interface StoreConfigInformation {
   /**
-   * Gets the Memstore flush size for the region that this store works with.
-   * TODO: remove after HBASE-7236 is fixed.
+   * TODO: remove after HBASE-7252 is fixed.
+   * @return Gets the Memstore flush size for the region that this store works with.
    */
   public long getMemstoreFlushSize();
 
   /**
-   * Gets the cf-specific time-to-live for store files.
+   * @return Gets the cf-specific time-to-live for store files.
    */
   public long getStoreFileTtl();
+
+  /**
+   * @return Gets the cf-specific compaction check frequency multiplier.
+   *         The need for compaction (outside of normal checks during flush, open, etc.) will
+   *         be ascertained every multiplier * HConstants.THREAD_WAKE_FREQUENCY milliseconds.
+   */
+  public long getCompactionCheckMultiplier();
 
   /**
    * The number of files required before flushes for this store will be blocked.
