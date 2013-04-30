@@ -41,20 +41,10 @@ import org.apache.hadoop.io.compress.DefaultCodec;
 
 /**
  * Implementation of {@link HLog.Writer} that delegates to
- * SequenceFile.Writer.
+ * SequenceFile.Writer. Legacy implementation only used for compat tests.
  */
 @InterfaceAudience.Private
 public class SequenceFileLogWriter implements HLog.Writer {
-  static final Text WAL_VERSION_KEY = new Text("version");
-  // Let the version be 1.  Let absence of a version meta tag be old, version 0.
-  // Set this version '1' to be the version that introduces compression,
-  // the COMPRESSION_VERSION.
-  private static final int COMPRESSION_VERSION = 1;
-  static final int VERSION = COMPRESSION_VERSION;
-  static final Text WAL_VERSION = new Text("" + VERSION);
-  static final Text WAL_COMPRESSION_TYPE_KEY = new Text("compression.type");
-  static final Text DICTIONARY_COMPRESSION_TYPE = new Text("dictionary");
-
   private final Log LOG = LogFactory.getLog(this.getClass());
   // The sequence file we delegate to.
   private SequenceFile.Writer writer;
@@ -62,8 +52,11 @@ public class SequenceFileLogWriter implements HLog.Writer {
   // in the SequenceFile.Writer 'writer' instance above.
   private FSDataOutputStream writer_out;
 
-  private Class<? extends HLogKey> keyClass;
-
+  // Legacy stuff from pre-PB WAL metadata.
+  private static final Text WAL_VERSION_KEY = new Text("version");
+  private static final Text WAL_COMPRESSION_TYPE_KEY = new Text("compression.type");
+  private static final Text DICTIONARY_COMPRESSION_TYPE = new Text("dictionary");
+  
   /**
    * Context used by our wal dictionary compressor.  Null if we're not to do
    * our custom dictionary compression.  This custom WAL compression is distinct
@@ -79,16 +72,6 @@ public class SequenceFileLogWriter implements HLog.Writer {
   }
 
   /**
-   * This constructor allows a specific HLogKey implementation to override that
-   * which would otherwise be chosen via configuration property.
-   * 
-   * @param keyClass
-   */
-  public SequenceFileLogWriter(Class<? extends HLogKey> keyClass) {
-    this.keyClass = keyClass;
-  }
-
-  /**
    * Create sequence file Metadata for our WAL file with version and compression
    * type (if any).
    * @param conf
@@ -98,28 +81,12 @@ public class SequenceFileLogWriter implements HLog.Writer {
   private static Metadata createMetadata(final Configuration conf,
       final boolean compress) {
     TreeMap<Text, Text> metaMap = new TreeMap<Text, Text>();
-    metaMap.put(WAL_VERSION_KEY, WAL_VERSION);
+    metaMap.put(WAL_VERSION_KEY, new Text("1"));
     if (compress) {
       // Currently we only do one compression type.
       metaMap.put(WAL_COMPRESSION_TYPE_KEY, DICTIONARY_COMPRESSION_TYPE);
     }
     return new Metadata(metaMap);
-  }
-
-  /**
-   * Call this method after init() has been executed
-   * 
-   * @return whether WAL compression is enabled
-   */
-  static boolean isWALCompressionEnabled(final Metadata metadata) {
-    // Check version is >= VERSION?
-    Text txt = metadata.get(WAL_VERSION_KEY);
-    if (txt == null || Integer.parseInt(txt.toString()) < COMPRESSION_VERSION) {
-      return false;
-    }
-    // Now check that compression type is present.  Currently only one value.
-    txt = metadata.get(WAL_COMPRESSION_TYPE_KEY);
-    return txt != null && txt.equals(DICTIONARY_COMPRESSION_TYPE);
   }
 
   @Override
@@ -139,10 +106,6 @@ public class SequenceFileLogWriter implements HLog.Writer {
       }
     }
 
-    if (null == keyClass) {
-      keyClass = HLogUtil.getKeyClass(conf);
-    }
-
     // Create a SF.Writer instance.
     try {
       // reflection for a version of SequenceFile.createWriter that doesn't
@@ -152,8 +115,7 @@ public class SequenceFileLogWriter implements HLog.Writer {
             Configuration.class, Path.class, Class.class, Class.class,
             Integer.TYPE, Short.TYPE, Long.TYPE, Boolean.TYPE,
             CompressionType.class, CompressionCodec.class, Metadata.class})
-        .invoke(null, new Object[] {fs, conf, path, HLogUtil.getKeyClass(conf),
-            WALEdit.class,
+        .invoke(null, new Object[] {fs, conf, path, HLogKey.class, WALEdit.class,
             Integer.valueOf(fs.getConf().getInt("io.file.buffer.size", 4096)),
             Short.valueOf((short)
               conf.getInt("hbase.regionserver.hlog.replication",
@@ -175,7 +137,7 @@ public class SequenceFileLogWriter implements HLog.Writer {
     if (this.writer == null) {
       LOG.debug("new createWriter -- HADOOP-6840 -- not available");
       this.writer = SequenceFile.createWriter(fs, conf, path,
-        HLogUtil.getKeyClass(conf), WALEdit.class,
+        HLogKey.class, WALEdit.class,
         fs.getConf().getInt("io.file.buffer.size", 4096),
         (short) conf.getInt("hbase.regionserver.hlog.replication",
           fs.getDefaultReplication()),

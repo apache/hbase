@@ -491,7 +491,7 @@ public class ReplicationSource extends Thread
       HLogKey logKey = entry.getKey();
       // don't replicate if the log entries originated in the peer
       if (!logKey.getClusterId().equals(peerClusterId)) {
-        removeNonReplicableEdits(edit);
+        removeNonReplicableEdits(entry);
         // Don't replicate catalog entries, if the WALEdit wasn't
         // containing anything to replicate and if we're currently not set to replicate
         if (!(Bytes.equals(logKey.getTablename(), HConstants.ROOT_TABLE_NAME) ||
@@ -666,12 +666,12 @@ public class ReplicationSource extends Thread
 
   /**
    * We only want KVs that are scoped other than local
-   * @param edit The KV to check for replication
+   * @param entry The entry to check for replication
    */
-  protected void removeNonReplicableEdits(WALEdit edit) {
-    NavigableMap<byte[], Integer> scopes = edit.getScopes();
-    List<KeyValue> kvs = edit.getKeyValues();
-    for (int i = edit.size()-1; i >= 0; i--) {
+  protected void removeNonReplicableEdits(HLog.Entry entry) {
+    NavigableMap<byte[], Integer> scopes = entry.getKey().getScopes();
+    List<KeyValue> kvs = entry.getEdit().getKeyValues();
+    for (int i = kvs.size()-1; i >= 0; i--) {
       KeyValue kv = kvs.get(i);
       // The scope will be null or empty if
       // there's nothing to replicate in that WALEdit

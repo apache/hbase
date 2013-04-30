@@ -827,7 +827,7 @@ public class TestWALReplay {
         "The sequence number of the recoverd.edits and the current edit seq should be same",
         lastestSeqNumber, editCount);
   }
-  
+
   static class MockHLog extends FSHLog {
     boolean doCompleteCacheFlush = false;
 

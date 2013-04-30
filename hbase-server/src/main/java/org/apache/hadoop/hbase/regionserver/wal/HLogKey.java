@@ -22,15 +22,26 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.EOFException;
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.NavigableMap;
+import java.util.TreeMap;
 import java.util.UUID;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
+import org.apache.hadoop.hbase.protobuf.generated.WALProtos.FamilyScope;
+import org.apache.hadoop.hbase.protobuf.generated.WALProtos.ScopeType;
+import org.apache.hadoop.hbase.protobuf.generated.WALProtos.WALKey;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.io.WritableUtils;
+
+import com.google.protobuf.ByteString;
 
 /**
  * A Key for an entry in the change log.
@@ -42,8 +53,12 @@ import org.apache.hadoop.io.WritableUtils;
  * <p>Some Transactional edits (START, COMMIT, ABORT) will not have an
  * associated row.
  */
+// TODO: Key and WALEdit are never used separately, or in one-to-many relation, for practical
+//       purposes. They need to be merged into HLogEntry.
 @InterfaceAudience.Private
 public class HLogKey implements WritableComparable<HLogKey> {
+  public static final Log LOG = LogFactory.getLog(HLogKey.class);
+
   // should be < 0 (@see #readFields(DataInput))
   // version 2 supports HLog compression
   enum Version {
@@ -89,16 +104,17 @@ public class HLogKey implements WritableComparable<HLogKey> {
 
   private UUID clusterId;
 
+  private NavigableMap<byte[], Integer> scopes;
+
   private CompressionContext compressionContext;
 
-  /** Writable Constructor -- Do not use. */
   public HLogKey() {
     this(null, null, 0L, HConstants.LATEST_TIMESTAMP,
         HConstants.DEFAULT_CLUSTER_ID);
   }
 
   /**
-   * Create the log key!
+   * Create the log key for writing to somewhere.
    * We maintain the tablename mainly for debugging purposes.
    * A regionName is always a sub-table object.
    *
@@ -111,11 +127,19 @@ public class HLogKey implements WritableComparable<HLogKey> {
    */
   public HLogKey(final byte [] encodedRegionName, final byte [] tablename,
       long logSeqNum, final long now, UUID clusterId) {
-    this.encodedRegionName = encodedRegionName;
-    this.tablename = tablename;
     this.logSeqNum = logSeqNum;
     this.writeTime = now;
     this.clusterId = clusterId;
+    this.encodedRegionName = encodedRegionName;
+    this.tablename = tablename;
+  }
+
+  /**
+   * Create HLogKey wrapper around protobuf WAL key; takes care of compression.
+   * @throws IOException Never, as the compression is not enabled.
+   */
+  public HLogKey(WALKey walKey) throws IOException {
+    readFieldsFromPb(walKey, null);
   }
 
   /**
@@ -137,11 +161,7 @@ public class HLogKey implements WritableComparable<HLogKey> {
 
   /** @return log sequence number */
   public long getLogSeqNum() {
-    return logSeqNum;
-  }
-
-  void setLogSeqNum(long logSeqNum) {
-    this.logSeqNum = logSeqNum;
+    return this.logSeqNum;
   }
 
   /**
@@ -159,8 +179,16 @@ public class HLogKey implements WritableComparable<HLogKey> {
     return clusterId;
   }
 
+  public NavigableMap<byte[], Integer> getScopes() {
+    return scopes;
+  }
+
+  public void setScopes(NavigableMap<byte[], Integer> scopes) {
+    this.scopes = scopes;
+  }
+
   /**
-   * Set the cluster id of this key
+   * Set the cluster id of this key.
    * @param clusterId
    */
   public void setClusterId(UUID clusterId) {
@@ -213,7 +241,7 @@ public class HLogKey implements WritableComparable<HLogKey> {
     if (result == 0) {
       if (this.logSeqNum < o.logSeqNum) {
         result = -1;
-      } else if (this.logSeqNum > o.logSeqNum) {
+      } else if (this.logSeqNum  > o.logSeqNum ) {
         result = 1;
       }
       if (result == 0) {
@@ -255,7 +283,9 @@ public class HLogKey implements WritableComparable<HLogKey> {
   }
 
   @Override
+  @Deprecated
   public void write(DataOutput out) throws IOException {
+    LOG.warn("HLogKey is being serialized to writable - only expected in test code");
     WritableUtils.writeVInt(out, VERSION.code);
     if (compressionContext == null) {
       Bytes.writeByteArray(out, this.encodedRegionName);
@@ -290,6 +320,7 @@ public class HLogKey implements WritableComparable<HLogKey> {
     // encodes the length of encodedRegionName.
     // If < 0 we just read the version and the next vint is the length.
     // @see Bytes#readByteArray(DataInput)
+    this.scopes = null; // writable HLogKey does not contain scopes
     int len = WritableUtils.readVInt(in);
     if (len < 0) {
       // what we just read was the version
@@ -308,7 +339,7 @@ public class HLogKey implements WritableComparable<HLogKey> {
       this.encodedRegionName = Compressor.readCompressed(in, compressionContext.regionDict);
       this.tablename = Compressor.readCompressed(in, compressionContext.tableDict);
     }
-    
+
     this.logSeqNum = in.readLong();
     this.writeTime = in.readLong();
     this.clusterId = HConstants.DEFAULT_CLUSTER_ID;
@@ -324,5 +355,63 @@ public class HLogKey implements WritableComparable<HLogKey> {
         // Means it's a very old key, just continue
       }
     }
+  }
+
+  public WALKey.Builder getBuilder(
+      WALCellCodec.ByteStringCompressor compressor) throws IOException {
+    WALKey.Builder builder = WALKey.newBuilder();
+    if (compressionContext == null) {
+      builder.setEncodedRegionName(ByteString.copyFrom(this.encodedRegionName));
+      builder.setTableName(ByteString.copyFrom(this.tablename));
+    } else {
+      builder.setEncodedRegionName(
+          compressor.compress(this.encodedRegionName, compressionContext.regionDict));
+      builder.setTableName(compressor.compress(this.tablename, compressionContext.tableDict));
+    }
+    builder.setLogSequenceNumber(this.logSeqNum);
+    builder.setWriteTime(writeTime);
+    if (this.clusterId != HConstants.DEFAULT_CLUSTER_ID) {
+      builder.setClusterId(HBaseProtos.UUID.newBuilder()
+          .setLeastSigBits(this.clusterId.getLeastSignificantBits())
+          .setMostSigBits(this.clusterId.getMostSignificantBits()));
+    }
+    if (scopes != null) {
+      for (Map.Entry<byte[], Integer> e : scopes.entrySet()) {
+        ByteString family = (compressionContext == null) ? ByteString.copyFrom(e.getKey())
+            : compressor.compress(e.getKey(), compressionContext.familyDict);
+        builder.addScopes(FamilyScope.newBuilder()
+            .setFamily(family).setScopeType(ScopeType.valueOf(e.getValue())));
+      }
+    }
+    return builder;
+  }
+
+  public void readFieldsFromPb(
+      WALKey walKey, WALCellCodec.ByteStringUncompressor uncompressor) throws IOException {
+    if (this.compressionContext != null) {
+      this.encodedRegionName = uncompressor.uncompress(
+          walKey.getEncodedRegionName(), compressionContext.regionDict);
+      this.tablename = uncompressor.uncompress(
+          walKey.getTableName(), compressionContext.tableDict);
+    } else {
+      this.encodedRegionName = walKey.getEncodedRegionName().toByteArray();
+      this.tablename = walKey.getTableName().toByteArray();
+    }
+    this.clusterId = HConstants.DEFAULT_CLUSTER_ID;
+    if (walKey.hasClusterId()) {
+      this.clusterId = new UUID(
+          walKey.getClusterId().getMostSigBits(), walKey.getClusterId().getLeastSigBits());
+    }
+    this.scopes = null;
+    if (walKey.getScopesCount() > 0) {
+      this.scopes = new TreeMap<byte[], Integer>(Bytes.BYTES_COMPARATOR);
+      for (FamilyScope scope : walKey.getScopesList()) {
+        byte[] family = (compressionContext == null) ? scope.getFamily().toByteArray() :
+          uncompressor.uncompress(scope.getFamily(), compressionContext.familyDict);
+        this.scopes.put(family, scope.getScopeType().getNumber());
+      }
+    }
+    this.logSeqNum = walKey.getLogSequenceNumber();
+    this.writeTime = walKey.getWriteTime();
   }
 }

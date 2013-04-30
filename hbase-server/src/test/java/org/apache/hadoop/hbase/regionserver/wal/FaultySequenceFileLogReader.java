@@ -41,14 +41,12 @@ public class FaultySequenceFileLogReader extends SequenceFileLogReader {
 
   @Override
   public HLog.Entry next(HLog.Entry reuse) throws IOException {
-    this.entryStart = this.reader.getPosition();
+    this.entryStart = this.getPosition();
     boolean b = true;
 
     if (nextQueue.isEmpty()) { // Read the whole thing at once and fake reading
       while (b == true) {
-        HLogKey key = HLogUtil.newKey(conf);
-        WALEdit val = new WALEdit();
-        HLog.Entry e = new HLog.Entry(key, val);
+        HLog.Entry e = new HLog.Entry(new HLogKey(), new WALEdit());
         if (compressionContext != null) {
           e.setCompressionContext(compressionContext);
         }

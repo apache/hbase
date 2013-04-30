@@ -22,12 +22,12 @@ import java.io.IOException;
 
 import org.apache.hadoop.hbase.util.Bytes;
 
-public class InstrumentedSequenceFileLogWriter extends SequenceFileLogWriter {
+public class InstrumentedSequenceFileLogWriter extends ProtobufLogWriter {
 
   public InstrumentedSequenceFileLogWriter() {
-    super(HLogKey.class);
+    super();
   }
-  
+
   public static boolean activateFailure = false;
   @Override
     public void append(HLog.Entry entry) throws IOException {

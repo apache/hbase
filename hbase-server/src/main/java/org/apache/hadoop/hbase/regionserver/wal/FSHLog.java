@@ -527,12 +527,10 @@ class FSHLog implements HLog, Syncable {
           }
         }
         FSHLog.Writer nextWriter = this.createWriterInstance(fs, newPath, conf);
-        // Can we get at the dfsclient outputstream?  If an instance of
-        // SFLW, it'll have done the necessary reflection to get at the
-        // protected field name.
+        // Can we get at the dfsclient outputstream?
         FSDataOutputStream nextHdfsOut = null;
-        if (nextWriter instanceof SequenceFileLogWriter) {
-          nextHdfsOut = ((SequenceFileLogWriter)nextWriter).getWriterFSDataOutputStream();
+        if (nextWriter instanceof ProtobufLogWriter) {
+          nextHdfsOut = ((ProtobufLogWriter)nextWriter).getStream();
         }
 
         Path oldFile = null;
@@ -851,43 +849,6 @@ class FSHLog implements HLog, Syncable {
   protected HLogKey makeKey(byte[] encodedRegionName, byte[] tableName, long seqnum,
       long now, UUID clusterId) {
     return new HLogKey(encodedRegionName, tableName, seqnum, now, clusterId);
-  }
-
-  @Override
-  public long append(HRegionInfo regionInfo, HLogKey logKey, WALEdit logEdit,
-                     HTableDescriptor htd, boolean doSync)
-  throws IOException {
-    if (this.closed) {
-      throw new IOException("Cannot append; log is closed");
-    }
-    long txid = 0;
-    synchronized (updateLock) {
-      long seqNum = obtainSeqNum();
-      logKey.setLogSeqNum(seqNum);
-      // The 'lastSeqWritten' map holds the sequence number of the oldest
-      // write for each region (i.e. the first edit added to the particular
-      // memstore). When the cache is flushed, the entry for the
-      // region being flushed is removed if the sequence number of the flush
-      // is greater than or equal to the value in lastSeqWritten.
-      this.oldestUnflushedSeqNums.putIfAbsent(regionInfo.getEncodedNameAsBytes(),
-        Long.valueOf(seqNum));
-      doWrite(regionInfo, logKey, logEdit, htd);
-      txid = this.unflushedEntries.incrementAndGet();
-      this.numEntries.incrementAndGet();
-      if (htd.isDeferredLogFlush()) {
-        lastDeferredTxid = txid;
-      }
-    }
-
-    // Sync if catalog region, and if not then check if that table supports
-    // deferred log flushing
-    if (doSync &&
-        (regionInfo.isMetaRegion() ||
-        !htd.isDeferredLogFlush())) {
-      // sync txn to file system
-      this.sync(txid);
-    }
-    return txid;
   }
 
   @Override

@@ -21,23 +21,26 @@
 package org.apache.hadoop.hbase.regionserver.wal;
 
 import java.io.IOException;
+import java.util.Arrays;
 import java.io.InterruptedIOException;
 import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.regionserver.wal.HLog.Reader;
 import org.apache.hadoop.hbase.regionserver.wal.HLog.Writer;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CancelableProgressable;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 
 public class HLogFactory {
     private static final Log LOG = LogFactory.getLog(HLogFactory.class);
-    
+
     public static HLog createHLog(final FileSystem fs, final Path root, final String logName,
         final Configuration conf) throws IOException {
       return new FSHLog(fs, root, logName, conf);
@@ -60,13 +63,12 @@ public class HLogFactory {
       return new FSHLog(fs, root, logName, HConstants.HREGION_OLDLOGDIR_NAME, 
             conf, listeners, false, prefix, true);
     }
-    
+
     /*
      * WAL Reader
      */
-    
     private static Class<? extends Reader> logReaderClass;
-    
+
     static void resetLogReaderClass() {
       logReaderClass = null;
     }
@@ -85,10 +87,17 @@ public class HLogFactory {
      */
     public static HLog.Reader createReader(final FileSystem fs, final Path path,
         Configuration conf, CancelableProgressable reporter) throws IOException {
-      if (logReaderClass == null) {
+      return createReader(fs, path, conf, reporter, true);
+    }
+
+    public static HLog.Reader createReader(final FileSystem fs, final Path path,
+      Configuration conf, CancelableProgressable reporter, boolean allowCustom)
+        throws IOException {
+      if (allowCustom && (logReaderClass == null)) {
         logReaderClass = conf.getClass("hbase.regionserver.hlog.reader.impl",
-          SequenceFileLogReader.class, Reader.class);
+          ProtobufLogReader.class, Reader.class);
       }
+      Class<? extends Reader> lrClass = allowCustom ? logReaderClass : ProtobufLogReader.class;
 
       try {
         // A hlog file could be under recovery, so it may take several
@@ -99,9 +108,25 @@ public class HLogFactory {
         int nbAttempt = 0;
         while (true) {
           try {
-            HLog.Reader reader = logReaderClass.newInstance();
-            reader.init(fs, path, conf);
-            return reader;
+            if (lrClass != ProtobufLogReader.class) {
+              // User is overriding the WAL reader, let them.
+              HLog.Reader reader = lrClass.newInstance();
+              reader.init(fs, path, conf, null);
+              return reader;
+            } else {
+              FSDataInputStream stream = fs.open(path);
+              // Note that zero-length file will fail to read PB magic, and attempt to create
+              // a non-PB reader and fail the same way existing code expects it to. If we get
+              // rid of the old reader entirely, we need to handle 0-size files differently from
+              // merely non-PB files.
+              byte[] magic = new byte[ProtobufLogReader.PB_WAL_MAGIC.length];
+              boolean isPbWal = (stream.read(magic) == magic.length)
+                  && Arrays.equals(magic, ProtobufLogReader.PB_WAL_MAGIC);
+              HLog.Reader reader =
+                  isPbWal ? new ProtobufLogReader() : new SequenceFileLogReader();
+              reader.init(fs, path, conf, stream);
+              return reader;
+            }
           } catch (IOException e) {
             String msg = e.getMessage();
             if (msg != null && msg.contains("Cannot obtain block length")) {
@@ -139,9 +164,8 @@ public class HLogFactory {
     /*
      * WAL writer
      */
-    
     private static Class<? extends Writer> logWriterClass;
-    
+
     /**
      * Create a writer for the WAL.
      * @return A WAL writer.  Close when done with it.
@@ -153,9 +177,9 @@ public class HLogFactory {
       try {
         if (logWriterClass == null) {
           logWriterClass = conf.getClass("hbase.regionserver.hlog.writer.impl",
-              SequenceFileLogWriter.class, Writer.class);
+              ProtobufLogWriter.class, Writer.class);
         }
-        HLog.Writer writer = (HLog.Writer) logWriterClass.newInstance();
+        HLog.Writer writer = (HLog.Writer)logWriterClass.newInstance();
         writer.init(fs, path, conf);
         return writer;
       } catch (Exception e) {

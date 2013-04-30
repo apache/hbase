@@ -23,6 +23,8 @@ import java.io.FilterInputStream;
 import java.io.IOException;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.util.NavigableMap;
+
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -31,11 +33,23 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.regionserver.wal.HLog.Entry;
 import org.apache.hadoop.io.SequenceFile;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.io.SequenceFile.Metadata;
 
 @InterfaceAudience.Private
-public class SequenceFileLogReader implements HLog.Reader {
+public class SequenceFileLogReader extends ReaderBase {
   private static final Log LOG = LogFactory.getLog(SequenceFileLogReader.class);
+
+  // Legacy stuff from pre-PB WAL metadata.
+  private static final Text WAL_VERSION_KEY = new Text("version");
+  // Let the version be 1.  Let absence of a version meta tag be old, version 0.
+  // Set this version '1' to be the version that introduces compression,
+  // the COMPRESSION_VERSION.
+  private static final int COMPRESSION_VERSION = 1;
+  private static final Text WAL_COMPRESSION_TYPE_KEY = new Text("compression.type");
+  private static final Text DICTIONARY_COMPRESSION_TYPE = new Text("dictionary");
 
   /**
    * Hack just to set the correct file length up in SequenceFile.Reader.
@@ -49,7 +63,7 @@ public class SequenceFileLogReader implements HLog.Reader {
    *         this.end = in.getPos() + length;
    *
    */
-  static class WALReader extends SequenceFile.Reader {
+  private static class WALReader extends SequenceFile.Reader {
 
     WALReader(final FileSystem fs, final Path p, final Configuration c)
     throws IOException {
@@ -62,15 +76,6 @@ public class SequenceFileLogReader implements HLog.Reader {
     throws IOException {
       return new WALReaderFSDataInputStream(super.openFile(fs, file,
         bufferSize, length), length);
-    }
-
-    /**
-     * Call this method after init() has been executed
-     * 
-     * @return whether WAL compression is enabled
-     */
-    public boolean isWALCompressionEnabled() {
-      return SequenceFileLogWriter.isWALCompressionEnabled(this.getMetadata());
     }
 
     /**
@@ -138,59 +143,12 @@ public class SequenceFileLogReader implements HLog.Reader {
     }
   }
 
-  Configuration conf;
-  WALReader reader;
-  FileSystem fs;
+  // Protected for tests.
+  protected SequenceFile.Reader reader;
+  long entryStart = 0; // needed for logging exceptions
 
-  // Needed logging exceptions
-  Path path;
-  int edit = 0;
-  long entryStart = 0;
-  boolean emptyCompressionContext = true;
-  /**
-   * Compression context to use reading.  Can be null if no compression.
-   */
-  protected CompressionContext compressionContext = null;
-
-  protected Class<? extends HLogKey> keyClass;
-
-  /**
-   * Default constructor.
-   */
   public SequenceFileLogReader() {
-  }
-
-  /**
-   * This constructor allows a specific HLogKey implementation to override that
-   * which would otherwise be chosen via configuration property.
-   *
-   * @param keyClass
-   */
-  public SequenceFileLogReader(Class<? extends HLogKey> keyClass) {
-    this.keyClass = keyClass;
-  }
-
-  @Override
-  public void init(FileSystem fs, Path path, Configuration conf)
-      throws IOException {
-    this.conf = conf;
-    this.path = path;
-    reader = new WALReader(fs, path, conf);
-    this.fs = fs;
-
-    // If compression is enabled, new dictionaries are created here.
-    boolean compression = reader.isWALCompressionEnabled();
-    if (compression) {
-      try {
-        if (compressionContext == null) {
-          compressionContext = new CompressionContext(LRUDictionary.class);
-        } else {
-          compressionContext.clear();
-        }
-      } catch (Exception e) {
-        throw new IOException("Failed to initialize CompressionContext", e);
-      }
-    }
+    super();
   }
 
   @Override
@@ -206,67 +164,75 @@ public class SequenceFileLogReader implements HLog.Reader {
   }
 
   @Override
-  public HLog.Entry next() throws IOException {
-    return next(null);
+  public long getPosition() throws IOException {
+    return reader != null ? reader.getPosition() : 0;
   }
 
   @Override
-  public HLog.Entry next(HLog.Entry reuse) throws IOException {
-    this.entryStart = this.reader.getPosition();
-    HLog.Entry e = reuse;
-    if (e == null) {
-      HLogKey key;
-      if (keyClass == null) {
-        key = HLogUtil.newKey(conf);
-      } else {
-        try {
-          key = keyClass.newInstance();
-        } catch (InstantiationException ie) {
-          throw new IOException(ie);
-        } catch (IllegalAccessException iae) {
-          throw new IOException(iae);
-        }
-      }
+  public void reset() throws IOException {
+    // Resetting the reader lets us see newly added data if the file is being written to
+    // We also keep the same compressionContext which was previously populated for this file
+    reader = new WALReader(fs, path, conf);
+  }
 
-      WALEdit val = new WALEdit();
-      e = new HLog.Entry(key, val);
+  @Override
+  protected void initReader(FSDataInputStream stream) throws IOException {
+    // We don't use the stream because we have to have the magic stream above.
+    if (stream != null) {
+      stream.close();
     }
-    boolean b = false;
+    reset();
+  }
+  
+  @Override
+  protected void initAfterCompression() throws IOException {
+    // Nothing to do here
+  }
+
+  @Override
+  protected boolean hasCompression() {
+    return isWALCompressionEnabled(reader.getMetadata());
+  }
+
+  /**
+   * Call this method after init() has been executed
+   * @return whether WAL compression is enabled
+   */
+  static boolean isWALCompressionEnabled(final Metadata metadata) {
+    // Check version is >= VERSION?
+    Text txt = metadata.get(WAL_VERSION_KEY);
+    if (txt == null || Integer.parseInt(txt.toString()) < COMPRESSION_VERSION) {
+      return false;
+    }
+    // Now check that compression type is present.  Currently only one value.
+    txt = metadata.get(WAL_COMPRESSION_TYPE_KEY);
+    return txt != null && txt.equals(DICTIONARY_COMPRESSION_TYPE);
+  }
+
+
+  @Override
+  protected boolean readNext(Entry e) throws IOException {
     try {
-      if (compressionContext != null) {
-        e.setCompressionContext(compressionContext);
+      boolean hasNext = this.reader.next(e.getKey(), e.getEdit());
+      if (!hasNext) return false;
+      // Scopes are probably in WAL edit, move to key
+      NavigableMap<byte[], Integer> scopes = e.getEdit().getAndRemoveScopes();
+      if (scopes != null) {
+        e.getKey().setScopes(scopes);
       }
-      b = this.reader.next(e.getKey(), e.getEdit());
+      return true;
     } catch (IOException ioe) {
       throw addFileInfoToException(ioe);
     }
-    edit++;
-    if (compressionContext != null && emptyCompressionContext) {
-      emptyCompressionContext = false;
-    }
-    return b? e: null;
   }
 
   @Override
-  public void seek(long pos) throws IOException {
-    if (compressionContext != null && emptyCompressionContext) {
-      while (next() != null) {
-        if (getPosition() == pos) {
-          emptyCompressionContext = false;
-          break;
-        }
-      }
-    }
+  protected void seekOnFs(long pos) throws IOException {
     try {
       reader.seek(pos);
     } catch (IOException ioe) {
       throw addFileInfoToException(ioe);
     }
-  }
-
-  @Override
-  public long getPosition() throws IOException {
-    return reader != null ? reader.getPosition() : 0;
   }
 
   protected IOException addFileInfoToException(final IOException ioe)
@@ -300,12 +266,5 @@ public class SequenceFileLogReader implements HLog.Reader {
     } catch(Exception e) { /* reflection fail. keep going */ }
 
     return ioe;
-  }
-
-  @Override
-  public void reset() throws IOException {
-    // Resetting the reader lets us see newly added data if the file is being written to
-    // We also keep the same compressionContext which was previously populated for this file
-    reader = new WALReader(fs, path, conf);
   }
 }

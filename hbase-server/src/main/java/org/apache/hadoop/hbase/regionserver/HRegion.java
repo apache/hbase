@@ -115,7 +115,7 @@ import org.apache.hadoop.hbase.monitoring.TaskMonitor;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetRegionInfoResponse.CompactionState;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServiceCall;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
-import org.apache.hadoop.hbase.protobuf.generated.WAL.CompactionDescriptor;
+import org.apache.hadoop.hbase.protobuf.generated.WALProtos.CompactionDescriptor;
 import org.apache.hadoop.hbase.regionserver.MultiVersionConsistencyControl.WriteEntry;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionContext;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
@@ -2937,7 +2937,7 @@ public class HRegion implements HeapSize { // , Writable{
 
               skippedEdits++;
               continue;
-                }
+            }
             // Figure which store the edit is meant for.
             if (store == null || !kv.matchingFamily(store.getFamily().getName())) {
               store = this.stores.get(kv.getFamily());
@@ -3019,7 +3019,8 @@ public class HRegion implements HeapSize { // , Writable{
       throws IOException {
     Store store = this.getStore(compaction.getFamilyName().toByteArray());
     if (store == null) {
-      LOG.warn("Found Compaction WAL edit for deleted family:" + Bytes.toString(compaction.getFamilyName().toByteArray()));
+      LOG.warn("Found Compaction WAL edit for deleted family:" +
+          Bytes.toString(compaction.getFamilyName().toByteArray()));
       return;
     }
     store.completeCompactionMarker(compaction);

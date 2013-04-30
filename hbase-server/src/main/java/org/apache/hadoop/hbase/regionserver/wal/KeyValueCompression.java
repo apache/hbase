@@ -27,12 +27,15 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.WritableUtils;
 
 /**
+ * DO NOT USE. This class is deprecated and should only be used in pre-PB WAL.
+ * 
  * Compression class for {@link KeyValue}s written to the WAL. This is not
  * synchronized, so synchronization should be handled outside.
  * 
  * Class only compresses and uncompresses row keys, family names, and the
  * qualifier. More may be added depending on use patterns.
  */
+@Deprecated
 class KeyValueCompression {
   /**
    * Uncompresses a KeyValue from a DataInput and returns it.
