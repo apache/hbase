@@ -1082,7 +1082,7 @@
     <mockito-all.version>1.8.5</mockito-all.version>
     <protobuf.version>2.4.0a</protobuf.version>
     <stax-api.version>1.0.1</stax-api.version>
-    <thrift.version>0.8.0</thrift.version>
+    <thrift.version>${cdh.thrift.version}</thrift.version>
     <zookeeper.version>${cdh.zookeeper.version}</zookeeper.version>
     <hadoop-snappy.version>${cdh.hadoop-snappy.version}</hadoop-snappy.version>
     <clover.version>2.6.3</clover.version>
