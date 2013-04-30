@@ -116,10 +116,11 @@ public class AssignmentManager {
         regions = new ConcurrentSkipListSet<HRegionInfo>();
         transientAssignments.put(server, regions);
       }
+
       regions.add(region);
       regionsWithTransientAssignment.add(region);
       LOG.info("Add transient assignment for " +
-          region.getRegionNameAsString() + " to " + server.getHostname());
+          region.getRegionNameAsString() + " to " + server.getHostAddressWithPort());
     }
     // Add to delay queue
     transientAssignmentTimeout.add(new TransisentAssignment(region, server,
@@ -144,7 +145,8 @@ public class AssignmentManager {
         // shutting down.
         if (info != null &&
             !master.getServerManager().isDeadProcessingPending(info.getServerName()) &&
-            master.getServerManager().getServersToServerInfo().get(info.getServerName()) != null) {
+            master.getServerManager().getServersToServerInfo().get(info.getServerName()) != null &&
+            !master.isServerBlackListed(info.getHostnamePort())) {
           LOG.info("Add a transient assignment from the assignment plan: "
               + " region " + region.getRegionNameAsString() + " to the "
               + positions[i] + " region server" + info.getHostnamePort());

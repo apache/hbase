@@ -186,4 +186,30 @@ public interface HMasterInterface extends HBaseRPCProtocolVersion {
   public void disableLoadBalancer();
   
   public boolean isLoadBalancerDisabled();
+
+  /**
+   * Clears the blacklisted servers map, with which new regions can be
+   * assigned to the region servers which were present in this list
+   */
+  public void clearAllBlacklistedServers();
+
+  /**
+   * Removes a particular server from the blacklist map
+   * @param hostAndPort
+   */
+  public void clearBlacklistedServer(final String hostAndPort);
+
+  /**
+   * Adds a server to the blacklist map. With this, the Master will not assign
+   * any new regions to this region server
+   * @param hostAndPort
+   */
+  public void addServerToBlacklist(final String hostAndPort);
+
+  /**
+   * Tells whether a server is blacklisted or not.
+   * @param hostAndPort
+   * @return true if the server is blacklist, else false.
+   */
+  public boolean isServerBlackListed(String hostAndPort);
 }

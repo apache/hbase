@@ -319,15 +319,10 @@ public class RegionManager {
   }
 
   /**
-   * @return true if there is a single regionserver online, or if there is any other reason to
-   *         remove restrictions on assigning .META./-ROOT- to the same regionserver (e.g. if there
-   *         are blacklisted regionservers during testing).
+   * @return true if there is a single regionserver online.
    */
   private boolean isSingleRegionServer() {
-    // If there are blacklisted servers (unit tests only), treat the situation as if there is
-    // just a single host, otherwise we might keep trying to assign regions to blacklisted
-    // regionservers.
-    return master.numServers() == 1 || master.getServerManager().hasBlacklistedServersInTest();
+    return master.numServers() == 1;
   }
 
   private void assignRegionsWithoutFavoredNodes(HServerInfo info,
@@ -549,11 +544,7 @@ public class RegionManager {
    */
   private int regionsToGiveOtherServers(final int numUnassignedRegions,
       final HServerLoad thisServersLoad) {
-    if (master.getServerManager().hasBlacklistedServersInTest()) {
-      // For unit testing. Otherwise, we will always think we should give regions to blacklisted
-      // servers, but will not actually assign any.
-      return 0;
-    }
+
     SortedMap<HServerLoad, Collection<String>> lightServers = 
         master.getServerManager().getServersToLoad().getLightServers(thisServersLoad);
     // Examine the list of servers that are more lightly loaded than this one.
@@ -1955,6 +1946,7 @@ public class RegionManager {
      */
     public void loadBalancing(HServerInfo info, HRegionInfo[] mostLoadedRegions,
         ArrayList<HMsg> returnMsgs) {
+
       int regionsUnassigned = balanceToPrimary(info, mostLoadedRegions,
           returnMsgs);
 
@@ -2154,6 +2146,13 @@ public class RegionManager {
     }
 
     private boolean canOffloadTo(HServerAddress hServerAddress) {
+
+      // Server is black listed. Cannot move the regions to this server.
+      if (ServerManager.isServerBlackListed(hServerAddress.getHostAddressWithPort())) {
+        LOG.info("Blacklisted Server. Cannot offload. Returning...");
+        return false;
+      }
+
       Map<HServerAddress, Long> map = lastAssignedForTime;
       Long ts = map.get(hServerAddress);
       long tscur = EnvironmentEdgeManager.currentTimeMillis();
@@ -2573,6 +2572,12 @@ public class RegionManager {
     LOG.debug("Holding regions of restartng server: " +  
         regionServer.getServerName());
     HServerAddress addr = regionServer.getServerAddress();
+
+    if (master.isServerBlackListed(addr.getHostNameWithPort())) {
+      LOG.warn("Not adding regions for restarting server " + addr.getHostAddressWithPort()
+          + " as the server is blacklisted.");
+      return;
+    }
     for (HRegionInfo region : regions) {
       assignmentManager.addTransientAssignment(addr, region);
     }

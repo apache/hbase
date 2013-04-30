@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.master;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -26,6 +27,8 @@ import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+
+import org.mortbay.log.Log;
 
 import com.google.common.collect.TreeMultimap;
 
@@ -41,7 +44,9 @@ public class ServerLoadMap<L extends Comparable<?>> {
   private ReadWriteLock rwLock = new ReentrantReadWriteLock();
 
   public void updateServerLoad(String serverName, L load) {
+
     rwLock.writeLock().lock();
+
     try {
       L currentLoad = serversToLoad.get(serverName);
 
@@ -100,6 +105,7 @@ public class ServerLoadMap<L extends Comparable<?>> {
       SortedMap<L, Collection<String>> lightServers =
           new TreeMap<L, Collection<String>>();
       lightServers.putAll(loadToServers.asMap().headMap(referenceLoad));
+      removeBlacklistedServers(lightServers);
       return lightServers;
     } finally {
       rwLock.readLock().unlock();
@@ -112,9 +118,28 @@ public class ServerLoadMap<L extends Comparable<?>> {
       SortedMap<L, Collection<String>> heavyServers =
           new TreeMap<L, Collection<String>>();
       heavyServers.putAll(loadToServers.asMap().tailMap(referenceLoad));
+      removeBlacklistedServers(heavyServers);
       return heavyServers;
     } finally {
       rwLock.readLock().unlock();
+    }
+  }
+
+  private void removeBlacklistedServers(SortedMap<L, Collection<String>> map) {
+
+    if (!ServerManager.hasBlacklistedServers()) {
+      return;
+    }
+
+    // Iterate through all the blacklisted Servers and remove them from the map
+    for (String server : ServerManager.getBlacklistedServers()) {
+      // Get the load of the blacklisted server
+      L serverToLoad = serversToLoad.get(server);
+
+      // remove the entry from the collection of the current map
+      if (serverToLoad != null) {
+        map.get(serverToLoad).remove(server);
+      }
     }
   }
 

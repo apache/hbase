@@ -723,7 +723,7 @@ public class HRegionServer implements HRegionInterface,
             for(int i = 0;
                 !restart && !stopRequestedAtStageOne.get() && i < msgs.length;
                 i++) {
-              LOG.info(msgs[i].toString());
+              LOG.info(msgs[i].toString() + " " + this.address.getHostNameWithPort());
               this.connection.unsetRootRegionLocation();
               switch(msgs[i].getType()) {
 

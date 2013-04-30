@@ -24,12 +24,12 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Pattern;
 
@@ -113,6 +113,19 @@ public class ServerManager {
 
   private final OldLogsCleaner oldLogCleaner;
 
+  private final long blacklistNodeExpirationTimeWindow;
+
+  private final long blacklistUpdateInterval;
+
+  private final long timeBlackListWasUpdated = 0;
+
+  // Default interval after which node will no longer be in blacklist and will start
+  // receiving regions. (1 hr)
+  private static final int DEFAULT_BLACKLIST_NODE_EXPIRATION_WINDOW = 3600000;
+
+  // Default interval after which the backlist will be checked and updated. (10 minutes)
+  private static final int DEFAULT_BLACKLIST_UPDATE_WINDOW = 600000;
+
   /**
    * A lock that controls simultaneous changes and lookup to the dead server set and the server to
    * server info map. Required so that we don't reassign the same region both in expireServer
@@ -127,8 +140,8 @@ public class ServerManager {
    * be the underloaded one, so the master will keep trying to assign regions
    * to it.
    */
-  private static final Set<String> blacklistedRSHostPortSetForTest =
-      new ConcurrentSkipListSet<String>();
+  private static final ConcurrentHashMap<String, Long> blacklistedRSHostPortMap =
+      new ConcurrentHashMap<String, Long>();
 
   /*
    * Dumps into log current stats on dead servers and number of servers
@@ -163,6 +176,25 @@ public class ServerManager {
       LOG.info(numServers + " region servers, " + numDeadServers +
         " dead, average load " + averageLoad +
         (deadServersList != null? deadServersList: ""));
+      long currentTime = System.currentTimeMillis();
+      if ((currentTime - timeBlackListWasUpdated) >
+        blacklistUpdateInterval) {
+        updateBlacklistedServersList(currentTime);
+      }
+    }
+
+    private void updateBlacklistedServersList(long currentTime) {
+
+      Iterator<ConcurrentHashMap.Entry<String, Long>> iterator =
+          ServerManager.blacklistedRSHostPortMap.entrySet().iterator();
+      ConcurrentHashMap.Entry<String, Long> entry = null;
+      while (iterator.hasNext()) {
+        entry = iterator.next();
+        if ((currentTime - entry.getValue()) > blacklistNodeExpirationTimeWindow) {
+          LOG.info("Removing " + entry + " from blacklist server list.");
+          iterator.remove();
+        }
+      }
     }
   }
 
@@ -192,6 +224,10 @@ public class ServerManager {
         n + "ServerManager-Timeout-Monitor");
     
     this.pendingMsgsToSvrsMap = new ConcurrentHashMap<HServerInfo, ArrayList<HMsg>>();
+    this.blacklistNodeExpirationTimeWindow = c.getLong("hbase.master.blacklist.expiration.window",
+        DEFAULT_BLACKLIST_NODE_EXPIRATION_WINDOW);
+    this.blacklistUpdateInterval = c.getLong("hbase.master.blacklist.update.interval",
+        DEFAULT_BLACKLIST_UPDATE_WINDOW);
   }
 
   /**
@@ -533,6 +569,7 @@ public class ServerManager {
       throw new NullPointerException("Server address cannot be null; " +
         "hbase-958 debugging");
     }
+
     // Get reports on what the RegionServer did.
     // Be careful that in message processors we don't throw exceptions that
     // break the switch below because then we might drop messages on the floor.
@@ -624,18 +661,19 @@ public class ServerManager {
       // Should we tell it close regions because its overloaded?  If its
       // currently opening regions, leave it alone till all are open.
       if (openingCount < this.nobalancingCount) {
-        if (!blacklistedRSHostPortSetForTest.contains(
+
+        if (!blacklistedRSHostPortMap.containsKey(
             serverInfo.getHostnamePort()) || serversToServerInfo.size() <= 1) {
+
           // Production code path.
           master.getRegionManager().assignRegions(serverInfo,
               mostLoadedRegions, returnMsgs);
         } else {
-          // UNIT TESTS ONLY.
-          // We just don't assign anything to "blacklisted" regionservers as
-          // required by a unit test (for determinism). This is OK because
-          // another regionserver will get these regions in response to a
-          // heartbeat.
-          LOG.debug("[UNIT TEST ONLY] Not assigning regions to blacklisted regionserver "
+
+          // We just don't assign anything to "blacklisted" regionservers .
+          // This is OK because another regionserver will get these regions
+          // in response to a heartbeat.
+          LOG.debug("Not assigning regions to blacklisted regionserver "
               + serverInfo.getHostnamePort());
         }
       }
@@ -1125,16 +1163,25 @@ public class ServerManager {
     this.minimumServerCount = minimumServerCount;
   }
 
-  public static void blacklistRSHostPortInTest(String hostPort) {
+  public static void blacklistRSHostPort(String hostPort) {
     if (!HOST_PORT_RE.matcher(hostPort).matches()) {
       throw new IllegalArgumentException("host:port pair expected but got " +
           hostPort);
     }
     LOG.debug("Blacklisting the regionserver " + hostPort + " so that " +
-        "no regions are assigned to it. This is only done in unit tests.");
-    blacklistedRSHostPortSetForTest.add(hostPort);
+        "no regions are assigned to it.");
+
+    blacklistedRSHostPortMap.put(hostPort, new Long(System.currentTimeMillis()));
   }
 
+  public static void removeServerFromBlackList(String hostPort) {
+    LOG.debug("Removing the regionserver " + hostPort + " from the blacklist");
+    blacklistedRSHostPortMap.remove(hostPort);
+  }
+
+  public static Set<String> getBlacklistedServers() {
+    return blacklistedRSHostPortMap.keySet();
+  }
   public void joinThreads() {
     oldLogCleaner.triggerNow();
     Threads.shutdown(oldLogCleaner);
@@ -1145,6 +1192,7 @@ public class ServerManager {
   public void requestShutdown() {
     oldLogCleaner.stopThread();
     serverMonitorThread.stopThread();
+    ServerManager.clearRSBlacklist();
   }
 
   // should ServerTimeoutMonitor and ServerMonitor be merged XXX?
@@ -1268,7 +1316,8 @@ public class ServerManager {
             " timed-out=" + timedOut + " expired=" + expired +
             " timeOfLastPingFromServer=" + timeOfLastPingFromThisServer +
             " timeOfLastPingFromThisRack=" + timeOfLastPingFromThisRack +
-            " load.expireAfter =" + load.expireAfter
+            " load.expireAfter =" + load.expireAfter +
+            " server in load map " + e.getKey()
             );
       }
       if (!timedOut) {
@@ -1427,11 +1476,16 @@ public class ServerManager {
 
   }
 
-  boolean hasBlacklistedServersInTest() {
-    return !blacklistedRSHostPortSetForTest.isEmpty();
+  public static boolean hasBlacklistedServers() {
+    return !blacklistedRSHostPortMap.isEmpty();
   }
 
-  public static void clearRSBlacklistInTest() {
-    blacklistedRSHostPortSetForTest.clear();
+  static boolean isServerBlackListed(String hostAndPort) {
+    return blacklistedRSHostPortMap.containsKey(hostAndPort);
+  }
+
+  public static void clearRSBlacklist() {
+    LOG.debug("Cleared all the blacklisted servers");
+    blacklistedRSHostPortMap.clear();
   }
 }

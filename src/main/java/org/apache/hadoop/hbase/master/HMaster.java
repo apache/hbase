@@ -1880,12 +1880,21 @@ public class HMaster extends HasThread implements HMasterInterface,
       String hostnameAndPort = Bytes.toString(((ImmutableBytesWritable)args[1]).get());
       HServerAddress serverAddress = new HServerAddress(hostnameAndPort);
 
-      // Assign the specified host to be the preferred host for the specified region.
-      this.regionManager.getAssignmentManager().
-        addTransientAssignment(serverAddress, hri);
+      if (hri == null) {
+        throw new IOException("Cannot locate " +
+            Bytes.toStringBinary(regionname) + " in .META. Move failed");
+      }
 
-      // Close the region so that it will be re-opened by the preferred host.
-      modifyTable(tableName, HConstants.Modify.CLOSE_REGION, new Writable[]{args[0]});
+      // Assign the specified host to be the preferred host for the specified region.
+      if (!this.isServerBlackListed(hostnameAndPort)) {
+        this.regionManager.getAssignmentManager().
+          addTransientAssignment(serverAddress, hri);
+        // Close the region so that it will be re-opened by the preferred host.
+        modifyTable(tableName, HConstants.Modify.CLOSE_REGION, new Writable[]{args[0]});
+      } else {
+        LOG.warn("Cannot move the region " + Bytes.toStringBinary(regionname) +
+            " to blacklisted server " + hostnameAndPort);
+      }
       break;
     }
 
@@ -1965,6 +1974,7 @@ public class HMaster extends HasThread implements HMasterInterface,
   throws IOException {
     byte[] regioninfo = res.getValue(HConstants.CATALOG_FAMILY,
         HConstants.REGIONINFO_QUALIFIER);
+
     if (regioninfo == null) {
       StringBuilder sb =  new StringBuilder();
       NavigableMap<byte[], byte[]> infoMap =
@@ -2319,6 +2329,27 @@ public class HMaster extends HasThread implements HMasterInterface,
 
   ZKUnassignedWatcher getUnassignedWatcher() {
     return unassignedWatcher;
+  }
+
+  @Override
+  public void clearAllBlacklistedServers() {
+    ServerManager.clearRSBlacklist();
+  }
+
+  @Override
+  public void clearBlacklistedServer(String hostAndPort) {
+    ServerManager.removeServerFromBlackList(hostAndPort);
+  }
+
+  @Override
+  public void addServerToBlacklist(String hostAndPort) {
+    // Don't assign new regions to this server
+    ServerManager.blacklistRSHostPort(hostAndPort);
+  }
+
+  @Override
+  public boolean isServerBlackListed(final String hostAndPort) {
+    return ServerManager.isServerBlackListed(hostAndPort);
   }
 }
 

@@ -137,7 +137,7 @@ public class TestRegionStateOnMasterFailure extends MultiMasterTest {
 
   @Before
   public void setUp() throws IOException, InterruptedException {
-    ServerManager.clearRSBlacklistInTest();
+    ServerManager.clearRSBlacklist();
     startMiniCluster(NUM_MASTERS, NUM_RS);
     fillTable();
     shortSleep();
@@ -220,7 +220,7 @@ public class TestRegionStateOnMasterFailure extends MultiMasterTest {
         ": " + originalRS);
 
     // Blacklist this regionserver from being assigned any more regions.
-    ServerManager.blacklistRSHostPortInTest(originalRS);
+    ServerManager.blacklistRSHostPort(originalRS);
 
     final String targetRegionName = region.getRegionNameAsString();
     MasterKillerListener listener = new MasterKillerListener(
@@ -434,7 +434,7 @@ public class TestRegionStateOnMasterFailure extends MultiMasterTest {
           final String newRSHostPort = rsNameSplit[0] + ":" +
               rsNameSplit[1];
           assertHostPort(newRSHostPort);
-          ServerManager.blacklistRSHostPortInTest(newRSHostPort);
+          ServerManager.blacklistRSHostPort(newRSHostPort);
           logMsg("Killing master right before it can process the event "
               + eventType + " for region " + regionName);
           HBaseEventHandler.unregisterListener(this);

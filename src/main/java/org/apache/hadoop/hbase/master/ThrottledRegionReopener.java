@@ -218,7 +218,8 @@ public class ThrottledRegionReopener {
    */
   public synchronized void addPreferredAssignmentForReopen(HRegionInfo region,
       HServerInfo serverInfo) {
-    if (regionsBeingReopened.contains(region)) {
+    if (regionsBeingReopened.contains(region) &&
+        !master.isServerBlackListed(serverInfo.getHostnamePort())) {
       regionManager.getAssignmentManager().addTransientAssignment(
           serverInfo.getServerAddress(), region);
     }
