@@ -26,7 +26,6 @@ import java.util.ArrayList;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.*;
-import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
@@ -290,10 +289,7 @@ public class TestImportTsv {
         LOG.info("set the hbaseAdmin");
         ImportTsv.createHbaseAdmin(conf);
       }
-
-      JobConf jobConf = htu1.getMRCluster().createJobConf();
-      HBaseConfiguration.merge(jobConf, conf);
-      Job job = ImportTsv.createSubmittableJob(jobConf, args);
+      Job job = ImportTsv.createSubmittableJob(conf, args);
       job.waitForCompletion(false);
       assertTrue(job.isSuccessful());
       
