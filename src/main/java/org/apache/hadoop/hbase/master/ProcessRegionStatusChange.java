@@ -27,6 +27,7 @@ import org.apache.hadoop.hbase.HRegionInfo;
  */
 abstract class ProcessRegionStatusChange extends RegionServerOperation {
   protected final boolean isMetaTable;
+  protected final boolean isRootTable;
   protected final HRegionInfo regionInfo;
   @SuppressWarnings({"FieldCanBeLocal"})
   private volatile MetaRegion metaRegion = null;
@@ -41,11 +42,14 @@ abstract class ProcessRegionStatusChange extends RegionServerOperation {
     super(master, serverName);
     this.regionInfo = regionInfo;
     this.isMetaTable = regionInfo.isMetaTable();
+    this.isRootTable = regionInfo.isRootRegion();
   }
 
   protected boolean metaRegionAvailable() {
     boolean available = true;
-    if (isMetaTable) {
+    if (isRootTable) {
+      return true;
+    } else if (isMetaTable) {
       // This operation is for the meta table
       if (!rootAvailable()) {
         // But we can't proceed unless the root region is available
