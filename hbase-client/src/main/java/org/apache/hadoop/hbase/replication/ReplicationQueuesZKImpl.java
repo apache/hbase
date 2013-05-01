@@ -120,6 +120,10 @@ public class ReplicationQueuesZKImpl extends ReplicationStateZKBase implements R
   @Override
   public SortedMap<String, SortedSet<String>> claimQueues(String regionserverZnode) {
     SortedMap<String, SortedSet<String>> newQueues = new TreeMap<String, SortedSet<String>>();
+    if (ZKUtil.joinZNode(this.queuesZNode, regionserverZnode).equals(this.myQueuesZnode)) {
+      LOG.warn("An attempt was made to claim our own queues on region server " + regionserverZnode);
+      return newQueues;
+    }
     // check whether there is multi support. If yes, use it.
     if (conf.getBoolean(HConstants.ZOOKEEPER_USEMULTI, true)) {
       LOG.info("Atomically moving " + regionserverZnode + "'s hlogs to my queue");
@@ -337,7 +341,8 @@ public class ReplicationQueuesZKImpl extends ReplicationStateZKBase implements R
           try {
             position = parseHLogPositionFrom(positionBytes);
           } catch (DeserializationException e) {
-            LOG.warn("Failed parse of hlog position from the following znode: " + z);
+            LOG.warn("Failed parse of hlog position from the following znode: " + z
+                + ", Exception: " + e);
           }
           LOG.debug("Creating " + hlog + " with data " + position);
           String child = ZKUtil.joinZNode(newClusterZnode, hlog);
@@ -382,6 +387,9 @@ public class ReplicationQueuesZKImpl extends ReplicationStateZKBase implements R
    * @throws DeserializationException
    */
   private long parseHLogPositionFrom(final byte[] bytes) throws DeserializationException {
+    if(bytes == null) {
+      throw new DeserializationException("Unable to parse null HLog position.");
+    }
     if (ProtobufUtil.isPBMagicPrefix(bytes)) {
       int pblen = ProtobufUtil.lengthOfPBMagic();
       ZooKeeperProtos.ReplicationHLogPosition.Builder builder =

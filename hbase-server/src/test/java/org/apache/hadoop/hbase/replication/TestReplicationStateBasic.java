@@ -94,13 +94,11 @@ public abstract class TestReplicationStateBasic {
     rq1.removeLog("bogus", "bogus");
     rq1.removeAllQueues();
     assertNull(rq1.getAllQueues());
-    // TODO fix NPE if getting a log position on a file that does not exist
-    // assertEquals(0, rq1.getLogPosition("bogus", "bogus"));
+    assertEquals(0, rq1.getLogPosition("bogus", "bogus"));
     assertNull(rq1.getLogsInQueue("bogus"));
     assertEquals(0, rq1.claimQueues(new ServerName("bogus", 1234, -1L).toString()).size());
 
-    // TODO test setting a log position on a bogus file
-    // rq1.setLogPosition("bogus", "bogus", 5L);
+    rq1.setLogPosition("bogus", "bogus", 5L);
 
     populateQueues();
 
@@ -124,8 +122,8 @@ public abstract class TestReplicationStateBasic {
     assertEquals(5, queues.size());
     assertEquals(1, rq2.getListOfReplicators().size());
 
-    // TODO test claimQueues on yourself
-    // rq2.claimQueues(server2);
+    // Try to claim our own queues
+    assertEquals(0, rq2.claimQueues(server2).size());
 
     assertEquals(6, rq2.getAllQueues().size());
 
