@@ -1037,13 +1037,6 @@ public class HConnectionManager {
           // region at the same time. The first will load the meta region and
           // the second will use the value that the first one found.
           synchronized (regionLockObject) {
-            // If the parent table is META, we may want to pre-fetch some
-            // region info into the global region cache for this table.
-            if (Bytes.equals(parentTable, HConstants.META_TABLE_NAME) &&
-                (getRegionCachePrefetch(tableName)) )  {
-              prefetchRegionCache(tableName, row);
-            }
-
             // Check the cache again for a hit in case some other thread made the
             // same query while we were waiting on the lock. If not supposed to
             // be using the cache, delete any existing cached location so it won't
@@ -1055,6 +1048,13 @@ public class HConnectionManager {
               }
             } else {
               deleteCachedLocation(tableName, row, null);
+            }
+
+            // If the parent table is META, we may want to pre-fetch some
+            // region info into the global region cache for this table.
+            if (Bytes.equals(parentTable, HConstants.META_TABLE_NAME) &&
+                (getRegionCachePrefetch(tableName)) )  {
+              prefetchRegionCache(tableName, row);
             }
 
           // Query the root or meta region for the location of the meta region
