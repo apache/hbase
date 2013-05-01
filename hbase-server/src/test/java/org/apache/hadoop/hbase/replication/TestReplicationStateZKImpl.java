@@ -20,6 +20,8 @@ package org.apache.hadoop.hbase.replication;
 
 import java.io.IOException;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.MediumTests;
@@ -37,6 +39,8 @@ import org.junit.experimental.categories.Category;
 
 @Category(MediumTests.class)
 public class TestReplicationStateZKImpl extends TestReplicationStateBasic {
+
+  private static final Log LOG = LogFactory.getLog(TestReplicationStateZKImpl.class);
 
   private static Configuration conf;
   private static HBaseTestingUtility utility;
@@ -104,6 +108,7 @@ public class TestReplicationStateZKImpl extends TestReplicationStateBasic {
 
     @Override
     public void abort(String why, Throwable e) {
+      LOG.info("Aborting " + serverName);
       this.isAborted = true;
     }
 
