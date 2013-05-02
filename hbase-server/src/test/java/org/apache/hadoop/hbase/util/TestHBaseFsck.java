@@ -1939,7 +1939,7 @@ public class TestHBaseFsck {
     }
   }
 
-  @Test(timeout=30000)
+  @Test(timeout=60000)
   public void testCheckTableLocks() throws Exception {
     IncrementingEnvironmentEdge edge = new IncrementingEnvironmentEdge(0);
     EnvironmentEdgeManager.injectEdge(edge);
