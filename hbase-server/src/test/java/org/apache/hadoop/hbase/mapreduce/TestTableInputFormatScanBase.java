@@ -67,6 +67,10 @@ public abstract class TestTableInputFormatScanBase {
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
+    // test intermittently fails under hadoop2 (2.0.2-alpha) if shortcircuit-read (scr) is on.
+    // this turns it off for this test.  TODO: Figure out why scr breaks recovery. 
+    System.setProperty("hbase.tests.use.shortcircuit.reads", "false");
+
     // switch TIF to log at DEBUG level
     TEST_UTIL.enableDebug(TableInputFormat.class);
     TEST_UTIL.enableDebug(TableInputFormatBase.class);
