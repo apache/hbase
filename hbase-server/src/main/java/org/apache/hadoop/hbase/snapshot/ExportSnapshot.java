@@ -46,6 +46,7 @@ import org.apache.hadoop.hbase.io.HFileLink;
 import org.apache.hadoop.hbase.io.HLogLink;
 import org.apache.hadoop.hbase.mapreduce.JobUtil;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
+import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Pair;
@@ -147,7 +148,7 @@ public final class ExportSnapshot extends Configured implements Tool {
      */
     private Path getOutputPath(final Path inputPath) throws IOException {
       Path path;
-      if (HFileLink.isHFileLink(inputPath)) {
+      if (HFileLink.isHFileLink(inputPath) || StoreFileInfo.isReference(inputPath)) {
         String family = inputPath.getParent().getName();
         String table = HFileLink.getReferencedTableName(inputPath.getName());
         String region = HFileLink.getReferencedRegionName(inputPath.getName());
@@ -176,10 +177,12 @@ public final class ExportSnapshot extends Configured implements Tool {
         if (inputStat == null) return false;
 
         // Verify if the output file exists and is the same that we want to copy
-        FileStatus outputStat = getFileStatus(outputFs, outputPath);
-        if (outputStat != null && sameFile(inputStat, outputStat)) {
-          LOG.info("Skip copy " + inputPath + " to " + outputPath + ", same file.");
-          return true;
+        if (outputFs.exists(outputPath)) {
+          FileStatus outputStat = outputFs.getFileStatus(outputPath);
+          if (sameFile(inputStat, outputStat)) {
+            LOG.info("Skip copy " + inputPath + " to " + outputPath + ", same file.");
+            return true;
+          }
         }
 
         context.getCounter(Counter.BYTES_EXPECTED).increment(inputStat.getLen());
@@ -288,7 +291,7 @@ public final class ExportSnapshot extends Configured implements Tool {
 
     private FSDataInputStream openSourceFile(final Path path) {
       try {
-        if (HFileLink.isHFileLink(path)) {
+        if (HFileLink.isHFileLink(path) || StoreFileInfo.isReference(path)) {
           return new HFileLink(inputRoot, inputArchive, path).open(inputFs);
         } else if (isHLogLinkPath(path)) {
           String serverName = path.getParent().getName();
@@ -304,7 +307,7 @@ public final class ExportSnapshot extends Configured implements Tool {
 
     private FileStatus getFileStatus(final FileSystem fs, final Path path) {
       try {
-        if (HFileLink.isHFileLink(path)) {
+        if (HFileLink.isHFileLink(path) || StoreFileInfo.isReference(path)) {
           HFileLink link = new HFileLink(inputRoot, inputArchive, path);
           return link.getFileStatus(fs);
         } else if (isHLogLinkPath(path)) {
