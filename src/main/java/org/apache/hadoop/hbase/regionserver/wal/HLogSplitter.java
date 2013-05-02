@@ -34,7 +34,6 @@ import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.concurrent.CountDownLatch;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -177,20 +176,6 @@ public class HLogSplitter {
    */
   public List<Path> splitLog()
       throws IOException {
-    return splitLog((CountDownLatch) null);
-  }
-  
-  /**
-   * Split up a bunch of regionserver commit log files that are no longer being
-   * written to, into new files, one per region for region to replay on startup.
-   * Delete the old log files when finished.
-   *
-   * @param latch
-   * @throws IOException will throw if corrupted hlogs aren't tolerated
-   * @return the list of splits
-   */
-  public List<Path> splitLog(CountDownLatch latch)
-      throws IOException {
     Preconditions.checkState(!hasSplit,
         "An HLogSplitter instance may only be used once");
     hasSplit = true;
@@ -214,7 +199,7 @@ public class HLogSplitter {
     }
     logAndReport("Splitting " + logfiles.length + " hlog(s) in "
     + srcDir.toString());
-    splits = splitLog(logfiles, latch);
+    splits = splitLog(logfiles);
 
     splitTime = EnvironmentEdgeManager.currentTimeMillis() - startTime;
     String msg = "hlog file splitting completed in " + splitTime +
@@ -274,8 +259,7 @@ public class HLogSplitter {
    * After the process is complete, the log files are archived to a separate
    * directory.
    */
-  private List<Path> splitLog(final FileStatus[] logfiles, CountDownLatch latch)
-      throws IOException {
+  private List<Path> splitLog(final FileStatus[] logfiles) throws IOException {
     List<Path> processedLogs = new ArrayList<Path>();
     List<Path> corruptedLogs = new ArrayList<Path>();
     List<Path> splits = null;
@@ -317,19 +301,10 @@ public class HLogSplitter {
       }
       status.setStatus("Log splits complete. Checking for orphaned logs.");
       
-      if (latch != null) {
-        try {
-          latch.await();
-        } catch (InterruptedException ie) {
-          LOG.warn("wait for latch interrupted");
-          Thread.currentThread().interrupt();
-        }
-      }
-      FileStatus[] currFiles = fs.listStatus(srcDir);
-      if (currFiles.length > processedLogs.size()
+      if (fs.listStatus(srcDir).length > processedLogs.size()
           + corruptedLogs.size()) {
         throw new OrphanHLogAfterSplitException(
-          "Discovered orphan hlog after split. Maybe the "
+            "Discovered orphan hlog after split. Maybe the "
             + "HRegionServer was not dead when we started");
       }
     } finally {
