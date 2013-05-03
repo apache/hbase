@@ -835,12 +835,12 @@ config.set("hbase.zookeeper.quorum", "localhost");  // Here we are running zooke
           <title><filename>regionservers</filename></title>
 
           <para>In this file you list the nodes that will run RegionServers.
-          In our case we run RegionServers on all but the head node
-          <varname>example1</varname> which is carrying the HBase Master and
-          the HDFS namenode</para>
+          In our case, these nodes are <varname>example1</varname>-<varname>example9</varname>.
+          </para>
 
           <programlisting>
     example1
+    example2
     example3
     example4
     example5
