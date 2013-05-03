@@ -202,19 +202,19 @@ public class LruBlockCache implements BlockCache, HeapSize {
         DEFAULT_SINGLE_FACTOR, DEFAULT_MULTI_FACTOR,
         DEFAULT_MEMORY_FACTOR);
   }
-  
+
   public LruBlockCache(long maxSize, long blockSize, boolean evictionThread, Configuration conf) {
     this(maxSize, blockSize, evictionThread,
         (int)Math.ceil(1.2*maxSize/blockSize),
-        DEFAULT_LOAD_FACTOR, 
+        DEFAULT_LOAD_FACTOR,
         DEFAULT_CONCURRENCY_LEVEL,
-        conf.getFloat(LRU_MIN_FACTOR_CONFIG_NAME, DEFAULT_MIN_FACTOR), 
-        conf.getFloat(LRU_ACCEPTABLE_FACTOR_CONFIG_NAME, DEFAULT_ACCEPTABLE_FACTOR), 
-        DEFAULT_SINGLE_FACTOR, 
+        conf.getFloat(LRU_MIN_FACTOR_CONFIG_NAME, DEFAULT_MIN_FACTOR),
+        conf.getFloat(LRU_ACCEPTABLE_FACTOR_CONFIG_NAME, DEFAULT_ACCEPTABLE_FACTOR),
+        DEFAULT_SINGLE_FACTOR,
         DEFAULT_MULTI_FACTOR,
         DEFAULT_MEMORY_FACTOR);
   }
-  
+
   public LruBlockCache(long maxSize, long blockSize, Configuration conf) {
     this(maxSize, blockSize, true, conf);
   }
@@ -718,7 +718,7 @@ public class LruBlockCache implements BlockCache, HeapSize {
         "cachingAccesses=" + stats.getRequestCachingCount() + ", " +
         "cachingHits=" + stats.getHitCachingCount() + ", " +
         "cachingHitsRatio=" +
-          (stats.getHitCachingCount() == 0 ? "0" : (StringUtils.formatPercent(stats.getHitCachingRatio(), 2)+ ", ")) + ", " +
+          (stats.getHitCachingCount() == 0 ? "0,": (StringUtils.formatPercent(stats.getHitCachingRatio(), 2) + ", ")) +
         "evictions=" + stats.getEvictionCount() + ", " +
         "evicted=" + stats.getEvictedCount() + ", " +
         "evictedPerRun=" + stats.evictedPerEviction());
