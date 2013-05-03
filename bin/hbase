@@ -85,6 +85,7 @@ if [ $# = 0 ]; then
   echo "  rest             run an HBase REST server" 
   echo "  thrift           run the HBase Thrift server" 
   echo "  thrift2          run the HBase Thrift2 server"
+  echo "  clean            run the HBase clean up script"
   echo ""
   echo "PACKAGE MANAGEMENT"
   echo "  classpath        dump hbase CLASSPATH"
@@ -306,6 +307,22 @@ elif [ "$COMMAND" = "zookeeper" ] ; then
   if [ "$1" != "stop" ] ; then
     HBASE_OPTS="$HBASE_OPTS $HBASE_ZOOKEEPER_OPTS"
   fi
+elif [ "$COMMAND" = "clean" ] ; then
+  case $1 in
+    --cleanZk|--cleanHdfs|--cleanAll) 
+      matches="yes" ;;
+    *) ;;
+  esac
+  if [ $# -ne 1 -o "$matches" = "" ]; then
+    echo "Usage: hbase clean (--cleanZk|--cleanHdfs|--cleanAll)"
+    echo "Options: "
+    echo "        --cleanZk   cleans hbase related data from zookeeper."
+    echo "        --cleanHdfs cleans hbase related data from hdfs."
+    echo "        --cleanAll  cleans hbase related data from both zookeeper and hdfs."
+    exit 1;
+  fi
+  "$bin"/hbase-cleanup.sh $@
+  exit $?
 
 elif [ "$COMMAND" = "classpath" ] ; then
   echo $CLASSPATH
