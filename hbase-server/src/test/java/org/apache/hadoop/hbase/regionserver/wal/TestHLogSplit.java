@@ -889,7 +889,8 @@ public class TestHLogSplit {
     fs.initialize(fs.getUri(), conf);
 
     FileSystem spiedFs = Mockito.spy(fs);
-    // The "Cannot obtain block length" part is very important,
+    // The "Cannot obtain block length", "Could not obtain the last block",
+    // and "Blocklist for [^ ]* has changed.*" part is very important,
     // that's how it comes out of HDFS. If HDFS changes the exception
     // message, this test needs to be adjusted accordingly.
     //
@@ -898,11 +899,14 @@ public class TestHLogSplit {
     // last block is under recovery, HDFS may have problem to obtain
     // the block length, in which case, retry may help.
     Mockito.doAnswer(new Answer<FSDataInputStream>() {
+      private final String[] errors = new String[] {
+        "Cannot obtain block length", "Could not obtain the last block",
+        "Blocklist for " + OLDLOGDIR + " has changed"};
       private int count = 0;
 
       public FSDataInputStream answer(InvocationOnMock invocation) throws Throwable {
-            if (count++ < 3) {
-                throw new IOException("Cannot obtain block length");
+            if (count < 3) {
+                throw new IOException(errors[count++]);
             }
             return (FSDataInputStream)invocation.callRealMethod();
         }
