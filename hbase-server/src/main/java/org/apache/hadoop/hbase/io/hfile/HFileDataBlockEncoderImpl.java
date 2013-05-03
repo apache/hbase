@@ -57,7 +57,7 @@ public class HFileDataBlockEncoderImpl implements HFileDataBlockEncoder {
    */
   public HFileDataBlockEncoderImpl(DataBlockEncoding onDisk,
       DataBlockEncoding inCache) {
-    this(onDisk, inCache, null);
+    this(onDisk, inCache, HConstants.HFILEBLOCK_DUMMY_HEADER);
   }
 
   /**
@@ -71,7 +71,6 @@ public class HFileDataBlockEncoderImpl implements HFileDataBlockEncoder {
    */
   public HFileDataBlockEncoderImpl(DataBlockEncoding onDisk,
       DataBlockEncoding inCache, byte[] dummyHeader) {
-    dummyHeader = dummyHeader == null ? HConstants.HFILEBLOCK_DUMMY_HEADER : dummyHeader;
     this.onDisk = onDisk != null ?
         onDisk : DataBlockEncoding.NONE;
     this.inCache = inCache != null ?
@@ -96,18 +95,25 @@ public class HFileDataBlockEncoderImpl implements HFileDataBlockEncoder {
   public static HFileDataBlockEncoder createFromFileInfo(
       FileInfo fileInfo, DataBlockEncoding preferredEncodingInCache)
       throws IOException {
+    boolean hasPreferredCacheEncoding = preferredEncodingInCache != null
+        && preferredEncodingInCache != DataBlockEncoding.NONE;
+
     byte[] dataBlockEncodingType = fileInfo.get(DATA_BLOCK_ENCODING);
-    if (dataBlockEncodingType == null) {
+    if (dataBlockEncodingType == null && !hasPreferredCacheEncoding) {
       return NoOpDataBlockEncoder.INSTANCE;
     }
 
-    String dataBlockEncodingStr = Bytes.toString(dataBlockEncodingType);
     DataBlockEncoding onDisk;
-    try {
-      onDisk = DataBlockEncoding.valueOf(dataBlockEncodingStr);
-    } catch (IllegalArgumentException ex) {
-      throw new IOException("Invalid data block encoding type in file info: " +
-          dataBlockEncodingStr, ex);
+    if (dataBlockEncodingType == null) {
+      onDisk = DataBlockEncoding.NONE;
+    } else {
+      String dataBlockEncodingStr = Bytes.toString(dataBlockEncodingType);
+      try {
+        onDisk = DataBlockEncoding.valueOf(dataBlockEncodingStr);
+      } catch (IllegalArgumentException ex) {
+        throw new IOException("Invalid data block encoding type in file info: "
+            + dataBlockEncodingStr, ex);
+      }
     }
 
     DataBlockEncoding inCache;
@@ -123,6 +129,8 @@ public class HFileDataBlockEncoderImpl implements HFileDataBlockEncoder {
       // but new files will be generated with the new encoding.
       inCache = onDisk;
     }
+    // TODO: we are not passing proper header size here based on minor version, presumably
+    //       because this encoder will never actually be used for encoding.
     return new HFileDataBlockEncoderImpl(onDisk, inCache);
   }
 
@@ -189,7 +197,7 @@ public class HFileDataBlockEncoderImpl implements HFileDataBlockEncoder {
       BlockType blockType) throws IOException {
     if (onDisk == DataBlockEncoding.NONE) {
       // there is no need to encode the block before writing it to disk
-      ((HFileBlockDefaultEncodingContext) encodeCtx).compressAfterEncoding(
+      ((HFileBlockDefaultEncodingContext) encodeCtx).compressAfterEncodingWithBlockType(
           in.array(), blockType);
       return;
     }
@@ -231,12 +239,13 @@ public class HFileDataBlockEncoderImpl implements HFileDataBlockEncoder {
   private HFileBlock encodeDataBlock(HFileBlock block,
       DataBlockEncoding algo, boolean includesMemstoreTS,
       HFileBlockEncodingContext encodingCtx) {
+    encodingCtx.setDummyHeader(block.getDummyHeaderForVersion());
     encodeBufferToHFileBlockBuffer(
       block.getBufferWithoutHeader(), algo, includesMemstoreTS, encodingCtx);
     byte[] encodedUncompressedBytes =
       encodingCtx.getUncompressedBytesWithHeader();
     ByteBuffer bufferWrapper = ByteBuffer.wrap(encodedUncompressedBytes);
-    int sizeWithoutHeader = bufferWrapper.limit() - encodingCtx.getHeaderSize();
+    int sizeWithoutHeader = bufferWrapper.limit() - block.headerSize();
     HFileBlock encodedBlock = new HFileBlock(BlockType.ENCODED_DATA,
         block.getOnDiskSizeWithoutHeader(),
         sizeWithoutHeader, block.getPrevBlockOffset(),

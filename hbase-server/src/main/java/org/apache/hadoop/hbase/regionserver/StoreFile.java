@@ -1509,6 +1509,10 @@ public class StoreFile {
       return reader.getTrailer().getMajorVersion();
     }
 
+    public int getHFileMinorVersion() {
+      return reader.getTrailer().getMinorVersion();
+    }
+
     public HFile.Reader getHFileReader() {
       return reader;
     }

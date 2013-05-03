@@ -61,7 +61,7 @@ public class NoOpDataBlockEncoder implements HFileDataBlockEncoder {
 
     HFileBlockDefaultEncodingContext defaultContext =
         (HFileBlockDefaultEncodingContext) encodeCtx;
-    defaultContext.compressAfterEncoding(in.array(), blockType);
+    defaultContext.compressAfterEncodingWithBlockType(in.array(), blockType);
   }
 
   @Override

@@ -70,12 +70,13 @@ public class EncodedDataBlock {
 
   /**
    * Provides access to compressed value.
+   * @param headerSize header size of the block.
    * @return Forwards sequential iterator.
    */
-  public Iterator<KeyValue> getIterator() {
+  public Iterator<KeyValue> getIterator(int headerSize) {
     final int rawSize = rawKVs.length;
     byte[] encodedDataWithHeader = getEncodedData();
-    int bytesToSkip = encodingCtx.getHeaderSize() + Bytes.SIZEOF_SHORT;
+    int bytesToSkip = headerSize + Bytes.SIZEOF_SHORT;
     ByteArrayInputStream bais = new ByteArrayInputStream(encodedDataWithHeader,
         bytesToSkip, encodedDataWithHeader.length - bytesToSkip);
     final DataInputStream dis = new DataInputStream(bais);

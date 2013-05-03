@@ -59,9 +59,9 @@ public interface HFileBlockEncodingContext {
   public Compression.Algorithm getCompression();
 
   /**
-   * @return the header size used
+   * sets the dummy header bytes
    */
-  public int getHeaderSize();
+  public void setDummyHeader(byte[] headerBytes);
 
   /**
    * @return the {@link DataBlockEncoding} encoding used

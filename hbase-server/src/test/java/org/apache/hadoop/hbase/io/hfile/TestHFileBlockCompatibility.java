@@ -494,7 +494,7 @@ public class TestHFileBlockCompatibility {
       if (blockType == BlockType.DATA) {
         encodeDataBlockForDisk();
       } else {
-        defaultBlockEncodingCtx.compressAfterEncoding(
+        defaultBlockEncodingCtx.compressAfterEncodingWithBlockType(
             uncompressedBytesWithHeader, blockType);
         onDiskBytesWithHeader =
           defaultBlockEncodingCtx.getOnDiskBytesWithHeader();
