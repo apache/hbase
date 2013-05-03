@@ -741,7 +741,9 @@ public class HLog implements Syncable {
           return reader;
         } catch (IOException e) {
           String msg = e.getMessage();
-          if (msg != null && msg.contains("Cannot obtain block length")) {
+            if (msg != null && (msg.contains("Cannot obtain block length")
+                || msg.contains("Could not obtain the last block")
+                || msg.matches("Blocklist for [^ ]* has changed.*"))) {
             if (++nbAttempt == 1) {
               LOG.warn("Lease should have recovered. This is not expected. Will retry", e);
             }
