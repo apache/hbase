@@ -30,7 +30,7 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.catalog.CatalogTracker;
 import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.fs.HFileSystem;
-import org.apache.hadoop.hbase.ipc.RpcServer;
+import org.apache.hadoop.hbase.ipc.RpcServerInterface;
 import org.apache.hadoop.hbase.master.TableLockManager;
 import org.apache.hadoop.hbase.master.TableLockManager.NullTableLockManager;
 import org.apache.hadoop.hbase.regionserver.CompactionRequestor;
@@ -99,7 +99,7 @@ public class MockRegionServerServices implements RegionServerServices {
   }
 
   @Override
-  public RpcServer getRpcServer() {
+  public RpcServerInterface getRpcServer() {
     return null;
   }
 

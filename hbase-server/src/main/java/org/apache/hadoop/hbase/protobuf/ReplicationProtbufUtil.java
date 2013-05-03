@@ -22,12 +22,12 @@ package org.apache.hadoop.hbase.protobuf;
 
 import com.google.protobuf.ByteString;
 import com.google.protobuf.ServiceException;
-import org.apache.hadoop.hbase.HConstants;
+
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.client.AdminProtocol;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos;
+import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.AdminService;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
@@ -79,7 +79,7 @@ public class ReplicationProtbufUtil {
    * @param entries
    * @throws java.io.IOException
    */
-  public static void replicateWALEntry(final AdminProtocol admin,
+  public static void replicateWALEntry(final AdminService.BlockingInterface admin,
       final HLog.Entry[] entries) throws IOException {
     AdminProtos.ReplicateWALEntryRequest request =
       buildReplicateWALEntryRequest(entries);

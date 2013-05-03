@@ -17,6 +17,7 @@
  */
 
 // This file contains protocol buffers that are used for MasterMonitorProtocol.
+import "Master.proto";
 
 option java_package = "org.apache.hadoop.hbase.protobuf.generated";
 option java_outer_classname = "MasterMonitorProtos";
@@ -63,4 +64,7 @@ service MasterMonitorService {
   /** Return cluster status. */
   rpc getClusterStatus(GetClusterStatusRequest)
     returns(GetClusterStatusResponse);
+
+  /** return true if master is available */
+  rpc isMasterRunning(IsMasterRunningRequest) returns(IsMasterRunningResponse);
 }

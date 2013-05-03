@@ -30,24 +30,23 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.MediumTests;
-import org.apache.hadoop.hbase.exceptions.RegionException;
 import org.apache.hadoop.hbase.RegionTransition;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerLoad;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.exceptions.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.catalog.CatalogTracker;
 import org.apache.hadoop.hbase.catalog.MetaMockingUtil;
-import org.apache.hadoop.hbase.client.ClientProtocol;
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HConnectionTestingUtility;
 import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.exceptions.DeserializationException;
+import org.apache.hadoop.hbase.exceptions.RegionException;
+import org.apache.hadoop.hbase.exceptions.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.executor.EventType;
 import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.executor.ExecutorType;
@@ -58,6 +57,7 @@ import org.apache.hadoop.hbase.master.balancer.LoadBalancerFactory;
 import org.apache.hadoop.hbase.master.handler.EnableTableHandler;
 import org.apache.hadoop.hbase.master.handler.ServerShutdownHandler;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.GetRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.GetResponse;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ScanRequest;
@@ -583,7 +583,8 @@ public class TestAssignmentManager {
 
     // Need to set up a fake scan of meta for the servershutdown handler
     // Make an RS Interface implementation.  Make it so a scanner can go against it.
-    ClientProtocol implementation = Mockito.mock(ClientProtocol.class);
+    ClientProtos.ClientService.BlockingInterface implementation =
+      Mockito.mock(ClientProtos.ClientService.BlockingInterface.class);
     // Get a meta row result that has region up on SERVERNAME_A
 
     Result r;
@@ -1047,7 +1048,8 @@ public class TestAssignmentManager {
     // messing with. Needed when "new master" joins cluster. AM will try and
     // rebuild its list of user regions and it will also get the HRI that goes
     // with an encoded name by doing a Get on .META.
-    ClientProtocol ri = Mockito.mock(ClientProtocol.class);
+    ClientProtos.ClientService.BlockingInterface ri =
+      Mockito.mock(ClientProtos.ClientService.BlockingInterface.class);
     // Get a meta row result that has region up on SERVERNAME_A for REGIONINFO
     Result r = MetaMockingUtil.getMetaTableRowResult(REGIONINFO, SERVERNAME_A);
     ScanResponse.Builder builder = ScanResponse.newBuilder();

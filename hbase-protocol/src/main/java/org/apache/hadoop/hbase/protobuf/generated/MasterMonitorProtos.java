@@ -2632,6 +2632,11 @@ public final class MasterMonitorProtos {
           org.apache.hadoop.hbase.protobuf.generated.MasterMonitorProtos.GetClusterStatusRequest request,
           com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.MasterMonitorProtos.GetClusterStatusResponse> done);
       
+      public abstract void isMasterRunning(
+          com.google.protobuf.RpcController controller,
+          org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsMasterRunningRequest request,
+          com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsMasterRunningResponse> done);
+      
     }
     
     public static com.google.protobuf.Service newReflectiveService(
@@ -2659,6 +2664,14 @@ public final class MasterMonitorProtos {
             org.apache.hadoop.hbase.protobuf.generated.MasterMonitorProtos.GetClusterStatusRequest request,
             com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.MasterMonitorProtos.GetClusterStatusResponse> done) {
           impl.getClusterStatus(controller, request, done);
+        }
+        
+        @java.lang.Override
+        public  void isMasterRunning(
+            com.google.protobuf.RpcController controller,
+            org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsMasterRunningRequest request,
+            com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsMasterRunningResponse> done) {
+          impl.isMasterRunning(controller, request, done);
         }
         
       };
@@ -2689,6 +2702,8 @@ public final class MasterMonitorProtos {
               return impl.getTableDescriptors(controller, (org.apache.hadoop.hbase.protobuf.generated.MasterMonitorProtos.GetTableDescriptorsRequest)request);
             case 2:
               return impl.getClusterStatus(controller, (org.apache.hadoop.hbase.protobuf.generated.MasterMonitorProtos.GetClusterStatusRequest)request);
+            case 3:
+              return impl.isMasterRunning(controller, (org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsMasterRunningRequest)request);
             default:
               throw new java.lang.AssertionError("Can't get here.");
           }
@@ -2709,6 +2724,8 @@ public final class MasterMonitorProtos {
               return org.apache.hadoop.hbase.protobuf.generated.MasterMonitorProtos.GetTableDescriptorsRequest.getDefaultInstance();
             case 2:
               return org.apache.hadoop.hbase.protobuf.generated.MasterMonitorProtos.GetClusterStatusRequest.getDefaultInstance();
+            case 3:
+              return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsMasterRunningRequest.getDefaultInstance();
             default:
               throw new java.lang.AssertionError("Can't get here.");
           }
@@ -2729,6 +2746,8 @@ public final class MasterMonitorProtos {
               return org.apache.hadoop.hbase.protobuf.generated.MasterMonitorProtos.GetTableDescriptorsResponse.getDefaultInstance();
             case 2:
               return org.apache.hadoop.hbase.protobuf.generated.MasterMonitorProtos.GetClusterStatusResponse.getDefaultInstance();
+            case 3:
+              return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsMasterRunningResponse.getDefaultInstance();
             default:
               throw new java.lang.AssertionError("Can't get here.");
           }
@@ -2751,6 +2770,11 @@ public final class MasterMonitorProtos {
         com.google.protobuf.RpcController controller,
         org.apache.hadoop.hbase.protobuf.generated.MasterMonitorProtos.GetClusterStatusRequest request,
         com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.MasterMonitorProtos.GetClusterStatusResponse> done);
+    
+    public abstract void isMasterRunning(
+        com.google.protobuf.RpcController controller,
+        org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsMasterRunningRequest request,
+        com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsMasterRunningResponse> done);
     
     public static final
         com.google.protobuf.Descriptors.ServiceDescriptor
@@ -2789,6 +2813,11 @@ public final class MasterMonitorProtos {
             com.google.protobuf.RpcUtil.<org.apache.hadoop.hbase.protobuf.generated.MasterMonitorProtos.GetClusterStatusResponse>specializeCallback(
               done));
           return;
+        case 3:
+          this.isMasterRunning(controller, (org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsMasterRunningRequest)request,
+            com.google.protobuf.RpcUtil.<org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsMasterRunningResponse>specializeCallback(
+              done));
+          return;
         default:
           throw new java.lang.AssertionError("Can't get here.");
       }
@@ -2809,6 +2838,8 @@ public final class MasterMonitorProtos {
           return org.apache.hadoop.hbase.protobuf.generated.MasterMonitorProtos.GetTableDescriptorsRequest.getDefaultInstance();
         case 2:
           return org.apache.hadoop.hbase.protobuf.generated.MasterMonitorProtos.GetClusterStatusRequest.getDefaultInstance();
+        case 3:
+          return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsMasterRunningRequest.getDefaultInstance();
         default:
           throw new java.lang.AssertionError("Can't get here.");
       }
@@ -2829,6 +2860,8 @@ public final class MasterMonitorProtos {
           return org.apache.hadoop.hbase.protobuf.generated.MasterMonitorProtos.GetTableDescriptorsResponse.getDefaultInstance();
         case 2:
           return org.apache.hadoop.hbase.protobuf.generated.MasterMonitorProtos.GetClusterStatusResponse.getDefaultInstance();
+        case 3:
+          return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsMasterRunningResponse.getDefaultInstance();
         default:
           throw new java.lang.AssertionError("Can't get here.");
       }
@@ -2894,6 +2927,21 @@ public final class MasterMonitorProtos {
             org.apache.hadoop.hbase.protobuf.generated.MasterMonitorProtos.GetClusterStatusResponse.class,
             org.apache.hadoop.hbase.protobuf.generated.MasterMonitorProtos.GetClusterStatusResponse.getDefaultInstance()));
       }
+      
+      public  void isMasterRunning(
+          com.google.protobuf.RpcController controller,
+          org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsMasterRunningRequest request,
+          com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsMasterRunningResponse> done) {
+        channel.callMethod(
+          getDescriptor().getMethods().get(3),
+          controller,
+          request,
+          org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsMasterRunningResponse.getDefaultInstance(),
+          com.google.protobuf.RpcUtil.generalizeCallback(
+            done,
+            org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsMasterRunningResponse.class,
+            org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsMasterRunningResponse.getDefaultInstance()));
+      }
     }
     
     public static BlockingInterface newBlockingStub(
@@ -2915,6 +2963,11 @@ public final class MasterMonitorProtos {
       public org.apache.hadoop.hbase.protobuf.generated.MasterMonitorProtos.GetClusterStatusResponse getClusterStatus(
           com.google.protobuf.RpcController controller,
           org.apache.hadoop.hbase.protobuf.generated.MasterMonitorProtos.GetClusterStatusRequest request)
+          throws com.google.protobuf.ServiceException;
+      
+      public org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsMasterRunningResponse isMasterRunning(
+          com.google.protobuf.RpcController controller,
+          org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsMasterRunningRequest request)
           throws com.google.protobuf.ServiceException;
     }
     
@@ -2960,6 +3013,18 @@ public final class MasterMonitorProtos {
           org.apache.hadoop.hbase.protobuf.generated.MasterMonitorProtos.GetClusterStatusResponse.getDefaultInstance());
       }
       
+      
+      public org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsMasterRunningResponse isMasterRunning(
+          com.google.protobuf.RpcController controller,
+          org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsMasterRunningRequest request)
+          throws com.google.protobuf.ServiceException {
+        return (org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsMasterRunningResponse) channel.callBlockingMethod(
+          getDescriptor().getMethods().get(3),
+          controller,
+          request,
+          org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsMasterRunningResponse.getDefaultInstance());
+      }
+      
     }
   }
   
@@ -3002,25 +3067,27 @@ public final class MasterMonitorProtos {
       descriptor;
   static {
     java.lang.String[] descriptorData = {
-      "\n\023MasterMonitor.proto\032\013hbase.proto\032\023Clus" +
-      "terStatus.proto\"0\n\033GetSchemaAlterStatusR" +
-      "equest\022\021\n\ttableName\030\001 \002(\014\"P\n\034GetSchemaAl" +
-      "terStatusResponse\022\032\n\022yetToUpdateRegions\030" +
-      "\001 \001(\r\022\024\n\014totalRegions\030\002 \001(\r\"0\n\032GetTableD" +
-      "escriptorsRequest\022\022\n\ntableNames\030\001 \003(\t\"@\n" +
-      "\033GetTableDescriptorsResponse\022!\n\013tableSch" +
-      "ema\030\001 \003(\0132\014.TableSchema\"\031\n\027GetClusterSta" +
-      "tusRequest\"A\n\030GetClusterStatusResponse\022%" +
-      "\n\rclusterStatus\030\001 \002(\0132\016.ClusterStatus2\206\002",
-      "\n\024MasterMonitorService\022S\n\024getSchemaAlter" +
-      "Status\022\034.GetSchemaAlterStatusRequest\032\035.G" +
-      "etSchemaAlterStatusResponse\022P\n\023getTableD" +
-      "escriptors\022\033.GetTableDescriptorsRequest\032" +
-      "\034.GetTableDescriptorsResponse\022G\n\020getClus" +
-      "terStatus\022\030.GetClusterStatusRequest\032\031.Ge" +
-      "tClusterStatusResponseBI\n*org.apache.had" +
-      "oop.hbase.protobuf.generatedB\023MasterMoni" +
-      "torProtosH\001\210\001\001\240\001\001"
+      "\n\023MasterMonitor.proto\032\014Master.proto\032\013hba" +
+      "se.proto\032\023ClusterStatus.proto\"0\n\033GetSche" +
+      "maAlterStatusRequest\022\021\n\ttableName\030\001 \002(\014\"" +
+      "P\n\034GetSchemaAlterStatusResponse\022\032\n\022yetTo" +
+      "UpdateRegions\030\001 \001(\r\022\024\n\014totalRegions\030\002 \001(" +
+      "\r\"0\n\032GetTableDescriptorsRequest\022\022\n\ntable" +
+      "Names\030\001 \003(\t\"@\n\033GetTableDescriptorsRespon" +
+      "se\022!\n\013tableSchema\030\001 \003(\0132\014.TableSchema\"\031\n" +
+      "\027GetClusterStatusRequest\"A\n\030GetClusterSt" +
+      "atusResponse\022%\n\rclusterStatus\030\001 \002(\0132\016.Cl",
+      "usterStatus2\314\002\n\024MasterMonitorService\022S\n\024" +
+      "getSchemaAlterStatus\022\034.GetSchemaAlterSta" +
+      "tusRequest\032\035.GetSchemaAlterStatusRespons" +
+      "e\022P\n\023getTableDescriptors\022\033.GetTableDescr" +
+      "iptorsRequest\032\034.GetTableDescriptorsRespo" +
+      "nse\022G\n\020getClusterStatus\022\030.GetClusterStat" +
+      "usRequest\032\031.GetClusterStatusResponse\022D\n\017" +
+      "isMasterRunning\022\027.IsMasterRunningRequest" +
+      "\032\030.IsMasterRunningResponseBI\n*org.apache" +
+      ".hadoop.hbase.protobuf.generatedB\023Master",
+      "MonitorProtosH\001\210\001\001\240\001\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -3081,6 +3148,7 @@ public final class MasterMonitorProtos {
     com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
         new com.google.protobuf.Descriptors.FileDescriptor[] {
+          org.apache.hadoop.hbase.protobuf.generated.MasterProtos.getDescriptor(),
           org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.getDescriptor(),
           org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.getDescriptor(),
         }, assigner);

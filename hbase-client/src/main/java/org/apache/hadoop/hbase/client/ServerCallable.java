@@ -29,7 +29,8 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.exceptions.DoNotRetryIOException;
 import org.apache.hadoop.hbase.exceptions.NotServingRegionException;
-import org.apache.hadoop.hbase.ipc.HBaseClientRPC;
+import org.apache.hadoop.hbase.ipc.RpcClient;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ClientService;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.ipc.RemoteException;
@@ -47,7 +48,7 @@ import java.util.concurrent.Callable;
  * return type and method we actually invoke on remote Server.  Usually
  * used inside a try/catch that fields usual connection failures all wrapped
  * up in a retry loop.
- * <p>Call {@link #connect(boolean)} to connect to server hosting region
+ * <p>Call {@link #prepare(boolean)} to connect to server hosting region
  * that contains the passed row in the passed table before invoking
  * {@link #call()}.
  * @see HConnection#getRegionServerWithoutRetries(ServerCallable)
@@ -62,7 +63,7 @@ public abstract class ServerCallable<T> implements Callable<T> {
   protected final byte [] tableName;
   protected final byte [] row;
   protected HRegionLocation location;
-  protected ClientProtocol server;
+  protected ClientService.BlockingInterface stub;
   protected int callTimeout;
   protected long globalStartTime;
   protected long startTime, endTime;
@@ -86,13 +87,14 @@ public abstract class ServerCallable<T> implements Callable<T> {
   }
 
   /**
-   * Connect to the server hosting region with row from tablename.
+   * Prepare for connection to the server hosting region with row from tablename.  Does lookup
+   * to find region location and hosting server.
    * @param reload Set this to true if connection should re-find the region
    * @throws IOException e
    */
-  public void connect(final boolean reload) throws IOException {
+  public void prepare(final boolean reload) throws IOException {
     this.location = connection.getRegionLocation(tableName, row, reload);
-    this.server = connection.getClient(location.getServerName());
+    this.stub = connection.getClient(location.getServerName());
   }
 
   /** @return the server name
@@ -127,11 +129,11 @@ public abstract class ServerCallable<T> implements Callable<T> {
       // resetting to the minimum.
       remaining = MIN_RPC_TIMEOUT;
     }
-    HBaseClientRPC.setRpcTimeout(remaining);
+    RpcClient.setRpcTimeout(remaining);
   }
 
   public void afterCall() {
-    HBaseClientRPC.resetRpcTimeout();
+    RpcClient.resetRpcTimeout();
     this.endTime = EnvironmentEdgeManager.currentTimeMillis();
   }
 
@@ -164,11 +166,11 @@ public abstract class ServerCallable<T> implements Callable<T> {
       long expectedSleep = 0;
       try {
         beforeCall();
-        connect(tries != 0); // if called with false, check table status on ZK
+        prepare(tries != 0); // if called with false, check table status on ZK
         return call();
       } catch (Throwable t) {
-        LOG.warn("Received exception, tries=" + tries + ", numRetries=" + numRetries +
-            " message=" + t.getMessage());
+        LOG.warn("Received exception, tries=" + tries + ", numRetries=" + numRetries + ":" +
+          t.getMessage());
 
         t = translateException(t);
         // translateException throws an exception when we should not retry, i.e. when it's the
@@ -237,7 +239,7 @@ public abstract class ServerCallable<T> implements Callable<T> {
     this.globalStartTime = EnvironmentEdgeManager.currentTimeMillis();
     try {
       beforeCall();
-      connect(false);
+      prepare(false);
       return call();
     } catch (Throwable t) {
       Throwable t2 = translateException(t);

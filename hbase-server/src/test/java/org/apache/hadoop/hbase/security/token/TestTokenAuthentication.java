@@ -18,21 +18,25 @@
 
 package org.apache.hadoop.hbase.security.token;
 
+import static org.apache.hadoop.fs.CommonConfigurationKeys.HADOOP_SECURITY_AUTHORIZATION;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.security.PrivilegedExceptionAction;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.ConcurrentMap;
 
+import com.google.protobuf.BlockingRpcChannel;
+import com.google.protobuf.BlockingService;
 import com.google.protobuf.RpcController;
 import com.google.protobuf.ServiceException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ClusterId;
-import org.apache.hadoop.hbase.IpcProtocol;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
@@ -43,18 +47,16 @@ import org.apache.hadoop.hbase.catalog.CatalogTracker;
 import org.apache.hadoop.hbase.client.HTableInterface;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.ipc.BlockingRpcCallback;
-import org.apache.hadoop.hbase.ipc.HBaseClientRPC;
-import org.apache.hadoop.hbase.ipc.HBaseServer;
-import org.apache.hadoop.hbase.ipc.HBaseServerRPC;
-import org.apache.hadoop.hbase.ipc.ProtobufRpcClientEngine;
-import org.apache.hadoop.hbase.ipc.RequestContext;
+import org.apache.hadoop.hbase.ipc.RpcClient;
 import org.apache.hadoop.hbase.ipc.RpcServer;
+import org.apache.hadoop.hbase.ipc.RequestContext;
+import org.apache.hadoop.hbase.ipc.RpcServer.BlockingServiceAndInterface;
+import org.apache.hadoop.hbase.ipc.RpcServerInterface;
 import org.apache.hadoop.hbase.ipc.ServerRpcController;
 import org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
-import org.apache.hadoop.hbase.security.KerberosInfo;
-import org.apache.hadoop.hbase.security.TokenInfo;
+import org.apache.hadoop.hbase.security.SecurityInfo;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -67,6 +69,8 @@ import org.apache.hadoop.hbase.zookeeper.ZKClusterId;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.hadoop.net.DNS;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.authorize.PolicyProvider;
+import org.apache.hadoop.security.authorize.Service;
 import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
@@ -82,23 +86,16 @@ import org.junit.experimental.categories.Category;
 public class TestTokenAuthentication {
   private static Log LOG = LogFactory.getLog(TestTokenAuthentication.class);
 
-  @KerberosInfo(
-      serverPrincipal = "hbase.test.kerberos.principal")
-  @TokenInfo("HBASE_AUTH_TOKEN")
-  private static interface BlockingAuthenticationService
-  extends AuthenticationProtos.AuthenticationService.BlockingInterface, IpcProtocol {
-  }
+  public static interface AuthenticationServiceSecurityInfo {}
 
   /**
    * Basic server process for RPC authentication testing
    */
   private static class TokenServer extends TokenProvider
-      implements BlockingAuthenticationService, Runnable, Server {
-
+  implements AuthenticationProtos.AuthenticationService.BlockingInterface, Runnable, Server {
     private static Log LOG = LogFactory.getLog(TokenServer.class);
-
     private Configuration conf;
-    private RpcServer rpcServer;
+    private RpcServerInterface rpcServer;
     private InetSocketAddress isa;
     private ZooKeeperWatcher zookeeper;
     private Sleeper sleeper;
@@ -106,31 +103,27 @@ public class TestTokenAuthentication {
     private boolean aborted = false;
     private boolean stopped = false;
     private long startcode;
-    private AuthenticationProtos.AuthenticationService.BlockingInterface blockingService;
 
     public TokenServer(Configuration conf) throws IOException {
       this.conf = conf;
       this.startcode = EnvironmentEdgeManager.currentTimeMillis();
-
       // Server to handle client requests.
-      String hostname = Strings.domainNamePointerToHostName(
-          DNS.getDefaultHost("default", "default"));
+      String hostname =
+        Strings.domainNamePointerToHostName(DNS.getDefaultHost("default", "default"));
       int port = 0;
       // Creation of an ISA will force a resolve.
       InetSocketAddress initialIsa = new InetSocketAddress(hostname, port);
       if (initialIsa.getAddress() == null) {
         throw new IllegalArgumentException("Failed resolve of " + initialIsa);
       }
-
-      this.rpcServer = HBaseServerRPC.getServer(TokenServer.class, this,
-          new Class<?>[]{AuthenticationProtos.AuthenticationService.Interface.class},
-          initialIsa.getHostName(), // BindAddress is IP we got for this server.
-          initialIsa.getPort(),
-          3, // handlers
-          1, // meta handlers (not used)
-          true,
-          this.conf, HConstants.QOS_THRESHOLD);
-      // Set our address.
+      final List<BlockingServiceAndInterface> sai =
+        new ArrayList<BlockingServiceAndInterface>(1);
+      BlockingService service =
+        AuthenticationProtos.AuthenticationService.newReflectiveBlockingService(this);
+      sai.add(new BlockingServiceAndInterface(service,
+        AuthenticationProtos.AuthenticationService.BlockingInterface.class));
+      this.rpcServer =
+        new RpcServer(this, "tokenServer", sai, initialIsa, 3, 1, conf, HConstants.QOS_THRESHOLD);
       this.isa = this.rpcServer.getListenerAddress();
       this.sleeper = new Sleeper(1000, this);
     }
@@ -179,7 +172,7 @@ public class TestTokenAuthentication {
       // mock RegionServerServices to provide to coprocessor environment
       final RegionServerServices mockServices = new MockRegionServerServices() {
         @Override
-        public RpcServer getRpcServer() { return rpcServer; }
+        public RpcServerInterface getRpcServer() { return rpcServer; }
       };
 
       // mock up coprocessor environment
@@ -253,7 +246,7 @@ public class TestTokenAuthentication {
     }
 
     public SecretManager<? extends TokenIdentifier> getSecretManager() {
-      return ((HBaseServer)rpcServer).getSecretManager();
+      return ((RpcServer)rpcServer).getSecretManager();
     }
 
     @Override
@@ -304,19 +297,30 @@ public class TestTokenAuthentication {
   public static void setupBeforeClass() throws Exception {
     TEST_UTIL = new HBaseTestingUtility();
     TEST_UTIL.startMiniZKCluster();
+    // register token type for protocol
+    SecurityInfo.addInfo(AuthenticationProtos.AuthenticationService.getDescriptor().getName(),
+      new SecurityInfo("hbase.test.kerberos.principal",
+        AuthenticationProtos.TokenIdentifier.Kind.HBASE_AUTH_TOKEN));
     // security settings only added after startup so that ZK does not require SASL
     Configuration conf = TEST_UTIL.getConfiguration();
     conf.set("hadoop.security.authentication", "kerberos");
     conf.set("hbase.security.authentication", "kerberos");
+    conf.setBoolean(HADOOP_SECURITY_AUTHORIZATION, true);
     server = new TokenServer(conf);
     serverThread = new Thread(server);
-    Threads.setDaemonThreadRunning(serverThread,
-        "TokenServer:"+server.getServerName().toString());
+    Threads.setDaemonThreadRunning(serverThread, "TokenServer:"+server.getServerName().toString());
     // wait for startup
     while (!server.isStarted() && !server.isStopped()) {
       Thread.sleep(10);
     }
-
+    server.rpcServer.refreshAuthManager(new PolicyProvider() {
+      @Override
+      public Service[] getServices() {
+        return new Service [] {
+          new Service("security.client.protocol.acl",
+            AuthenticationProtos.AuthenticationService.BlockingInterface.class)};
+      }
+    });
     ZKClusterId.setClusterId(server.getZooKeeper(), clusterId);
     secretManager = (AuthenticationTokenSecretManager)server.getSecretManager();
     while(secretManager.getCurrentKey() == null) {
@@ -363,24 +367,23 @@ public class TestTokenAuthentication {
     testuser.doAs(new PrivilegedExceptionAction<Object>() {
       public Object run() throws Exception {
         Configuration c = server.getConfiguration();
-        ProtobufRpcClientEngine rpcClient =
-            new ProtobufRpcClientEngine(c, clusterId.toString());
+        RpcClient rpcClient = new RpcClient(c, clusterId.toString());
+        ServerName sn =
+          new ServerName(server.getAddress().getHostName(), server.getAddress().getPort(),
+            System.currentTimeMillis());
         try {
-          AuthenticationProtos.AuthenticationService.BlockingInterface proxy =
-              HBaseClientRPC.waitForProxy(rpcClient, BlockingAuthenticationService.class,
-                  server.getAddress(), c,
-                  HConstants.DEFAULT_HBASE_CLIENT_RPC_MAXATTEMPTS,
-                  HConstants.DEFAULT_HBASE_RPC_TIMEOUT,
-                  HConstants.DEFAULT_HBASE_RPC_TIMEOUT);
-
+          BlockingRpcChannel channel = rpcClient.createBlockingRpcChannel(sn,
+            User.getCurrent(), HConstants.DEFAULT_HBASE_RPC_TIMEOUT);
+          AuthenticationProtos.AuthenticationService.BlockingInterface stub =
+            AuthenticationProtos.AuthenticationService.newBlockingStub(channel);
           AuthenticationProtos.WhoAmIResponse response =
-              proxy.whoami(null, AuthenticationProtos.WhoAmIRequest.getDefaultInstance());
+            stub.whoami(null, AuthenticationProtos.WhoAmIRequest.getDefaultInstance());
           String myname = response.getUsername();
           assertEquals("testuser", myname);
           String authMethod = response.getAuthMethod();
           assertEquals("TOKEN", authMethod);
         } finally {
-          rpcClient.close();
+          rpcClient.stop();
         }
         return null;
       }

@@ -21,8 +21,9 @@
 package org.apache.hadoop.hbase.ipc;
 
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.IpcProtocol;
 import org.apache.hadoop.hbase.security.User;
+
+import com.google.protobuf.BlockingService;
 
 import java.net.InetAddress;
 
@@ -87,15 +88,14 @@ public class RequestContext {
    * Initializes the client credentials for the current request.
    * @param user
    * @param remoteAddress
-   * @param protocol
+   * @param service
    */
   public static void set(User user,
-      InetAddress remoteAddress,
-      Class<? extends IpcProtocol> protocol) {
+      InetAddress remoteAddress, BlockingService service) {
     RequestContext ctx = instance.get();
     ctx.user = user;
     ctx.remoteAddress = remoteAddress;
-    ctx.protocol = protocol;
+    ctx.service = service;
     ctx.inRequest = true;
   }
 
@@ -106,21 +106,20 @@ public class RequestContext {
     RequestContext ctx = instance.get();
     ctx.user = null;
     ctx.remoteAddress = null;
-    ctx.protocol = null;
+    ctx.service = null;
     ctx.inRequest = false;
   }
 
   private User user;
   private InetAddress remoteAddress;
-  private Class<? extends IpcProtocol> protocol;
+  private BlockingService service;
   // indicates we're within a RPC request invocation
   private boolean inRequest;
 
-  private RequestContext(User user, InetAddress remoteAddr,
-      Class<? extends IpcProtocol> protocol) {
+  private RequestContext(User user, InetAddress remoteAddr, BlockingService service) {
     this.user = user;
     this.remoteAddress = remoteAddr;
-    this.protocol = protocol;
+    this.service = service;
   }
 
   public User getUser() {
@@ -131,8 +130,8 @@ public class RequestContext {
     return remoteAddress;
   }
 
-  public Class<? extends IpcProtocol> getProtocol() {
-    return protocol;
+  public BlockingService getService() {
+    return this.service;
   }
 
   public boolean isInRequest() {

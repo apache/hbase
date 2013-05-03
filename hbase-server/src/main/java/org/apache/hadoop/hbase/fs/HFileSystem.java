@@ -196,8 +196,6 @@ public class HFileSystem extends FilterFileSystem {
    * @return true if the interceptor was added, false otherwise.
    */
   static boolean addLocationsOrderInterceptor(Configuration conf, final ReorderBlocks lrb) {
-    LOG.debug("Starting addLocationsOrderInterceptor with class " + lrb.getClass());
-
     if (!conf.getBoolean("hbase.filesystem.reorder.blocks", true)) {  // activated by default
       LOG.debug("addLocationsOrderInterceptor configured to false");
       return false;
@@ -212,8 +210,8 @@ public class HFileSystem extends FilterFileSystem {
     }
 
     if (!(fs instanceof DistributedFileSystem)) {
-      LOG.warn("The file system is not a DistributedFileSystem." +
-          "Not adding block location reordering");
+      LOG.debug("The file system is not a DistributedFileSystem. " +
+          "Skipping on block location reordering");
       return false;
     }
 
@@ -243,7 +241,8 @@ public class HFileSystem extends FilterFileSystem {
 
       ClientProtocol cp1 = createReorderingProxy(namenode, lrb, conf);
       nf.set(dfsc, cp1);
-      LOG.info("Added intercepting call to namenode#getBlockLocations");
+      LOG.info("Added intercepting call to namenode#getBlockLocations so can do block reordering" +
+        " using class " + lrb.getClass());
     } catch (NoSuchFieldException e) {
       LOG.warn("Can't modify the DFSClient#namenode field to add the location reorder.", e);
       return false;

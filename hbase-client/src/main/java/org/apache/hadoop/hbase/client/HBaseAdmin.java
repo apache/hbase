@@ -68,6 +68,7 @@ import org.apache.hadoop.hbase.ipc.MasterCoprocessorRpcChannel;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.protobuf.ResponseConverter;
+import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.AdminService;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.CloseRegionRequest;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.CloseRegionResponse;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.CompactRegionRequest;
@@ -78,6 +79,7 @@ import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetRegionInfoRespo
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.RollWALWriterRequest;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.RollWALWriterResponse;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.StopServerRequest;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ClientService;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ScanRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ScanResponse;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
@@ -570,7 +572,7 @@ public class HBaseAdmin implements Abortable, Closeable {
           firstMetaServer.getRegionInfo().getRegionName(), scan, 1, true);
         Result[] values = null;
         // Get a batch at a time.
-        ClientProtocol server = connection.getClient(firstMetaServer.getServerName());
+        ClientService.BlockingInterface server = connection.getClient(firstMetaServer.getServerName());
         try {
           ScanResponse response = server.scan(null, request);
           values = ResponseConverter.getResults(response);
@@ -583,7 +585,7 @@ public class HBaseAdmin implements Abortable, Closeable {
         if (values == null || values.length == 0) {
           tableExists = false;
           GetTableDescriptorsResponse htds;
-          MasterMonitorKeepAliveConnection master = connection.getKeepAliveMasterMonitor();
+          MasterMonitorKeepAliveConnection master = connection.getKeepAliveMasterMonitorService();
           try {
             GetTableDescriptorsRequest req =
               RequestConverter.buildGetTableDescriptorsRequest(null);
@@ -607,7 +609,7 @@ public class HBaseAdmin implements Abortable, Closeable {
         if(tries == numRetries - 1) {           // no more tries left
           if (ex instanceof RemoteException) {
             throw ((RemoteException) ex).unwrapRemoteException();
-          }else {
+          } else {
             throw ex;
           }
         }
@@ -1221,7 +1223,7 @@ public class HBaseAdmin implements Abortable, Closeable {
           "The servername cannot be null or empty.");
     }
     ServerName sn = new ServerName(serverName);
-    AdminProtocol admin = this.connection.getAdmin(sn);
+    AdminService.BlockingInterface admin = this.connection.getAdmin(sn);
     // Close the region without updating zk state.
     CloseRegionRequest request =
       RequestConverter.buildCloseRegionRequest(encodedRegionName, false);
@@ -1246,8 +1248,7 @@ public class HBaseAdmin implements Abortable, Closeable {
    */
   public void closeRegion(final ServerName sn, final HRegionInfo hri)
   throws IOException {
-    AdminProtocol admin =
-      this.connection.getAdmin(sn);
+    AdminService.BlockingInterface admin = this.connection.getAdmin(sn);
     // Close the region without updating zk state.
     ProtobufUtil.closeRegion(admin, hri.getRegionName(), false);
   }
@@ -1257,8 +1258,7 @@ public class HBaseAdmin implements Abortable, Closeable {
    */
   public List<HRegionInfo> getOnlineRegions(
       final ServerName sn) throws IOException {
-    AdminProtocol admin =
-      this.connection.getAdmin(sn);
+    AdminService.BlockingInterface admin = this.connection.getAdmin(sn);
     return ProtobufUtil.getOnlineRegions(admin);
   }
 
@@ -1320,8 +1320,7 @@ public class HBaseAdmin implements Abortable, Closeable {
 
   private void flush(final ServerName sn, final HRegionInfo hri)
   throws IOException {
-    AdminProtocol admin =
-      this.connection.getAdmin(sn);
+    AdminService.BlockingInterface admin = this.connection.getAdmin(sn);
     FlushRegionRequest request =
       RequestConverter.buildFlushRegionRequest(hri.getRegionName());
     try {
@@ -1490,8 +1489,7 @@ public class HBaseAdmin implements Abortable, Closeable {
   private void compact(final ServerName sn, final HRegionInfo hri,
       final boolean major, final byte [] family)
   throws IOException {
-    AdminProtocol admin =
-      this.connection.getAdmin(sn);
+    AdminService.BlockingInterface admin = this.connection.getAdmin(sn);
     CompactRegionRequest request =
       RequestConverter.buildCompactRegionRequest(hri.getRegionName(), major, family);
     try {
@@ -1518,10 +1516,11 @@ public class HBaseAdmin implements Abortable, Closeable {
    */
   public void move(final byte [] encodedRegionName, final byte [] destServerName)
   throws HBaseIOException, MasterNotRunningException, ZooKeeperConnectionException {
-    MasterAdminKeepAliveConnection master = connection.getKeepAliveMasterAdmin();
+    MasterAdminKeepAliveConnection stub = connection.getKeepAliveMasterAdminService();
     try {
-      MoveRegionRequest request = RequestConverter.buildMoveRegionRequest(encodedRegionName, destServerName);
-      master.moveRegion(null,request);
+      MoveRegionRequest request =
+        RequestConverter.buildMoveRegionRequest(encodedRegionName, destServerName);
+      stub.moveRegion(null,request);
     } catch (ServiceException se) {
       IOException ioe = ProtobufUtil.getRemoteException(se);
       if (ioe instanceof HBaseIOException) {
@@ -1530,9 +1529,8 @@ public class HBaseAdmin implements Abortable, Closeable {
       LOG.error("Unexpected exception: " + se + " from calling HMaster.moveRegion");
     } catch (DeserializationException de) {
       LOG.error("Could not parse destination server name: " + de);
-    }
-    finally {
-      master.close();
+    } finally {
+      stub.close();
     }
   }
 
@@ -1587,7 +1585,7 @@ public class HBaseAdmin implements Abortable, Closeable {
    */
   public void offline(final byte [] regionName)
   throws IOException {
-    MasterAdminKeepAliveConnection master = connection.getKeepAliveMasterAdmin();
+    MasterAdminKeepAliveConnection master = connection.getKeepAliveMasterAdminService();
     try {
       master.offlineRegion(null,RequestConverter.buildOfflineRegionRequest(regionName));
     } catch (ServiceException se) {
@@ -1605,11 +1603,11 @@ public class HBaseAdmin implements Abortable, Closeable {
    */
   public boolean setBalancerRunning(final boolean on, final boolean synchronous)
   throws MasterNotRunningException, ZooKeeperConnectionException {
-    MasterAdminKeepAliveConnection master = connection.getKeepAliveMasterAdmin();
+    MasterAdminKeepAliveConnection stub = connection.getKeepAliveMasterAdminService();
     try {
       SetBalancerRunningRequest req =
         RequestConverter.buildSetBalancerRunningRequest(on, synchronous);
-      return master.setBalancerRunning(null, req).getPrevBalanceValue();
+      return stub.setBalancerRunning(null, req).getPrevBalanceValue();
     } catch (ServiceException se) {
       IOException ioe = ProtobufUtil.getRemoteException(se);
       if (ioe instanceof MasterNotRunningException) {
@@ -1623,7 +1621,7 @@ public class HBaseAdmin implements Abortable, Closeable {
       // break interface by adding additional exception type.
       throw new MasterNotRunningException("Unexpected exception when calling balanceSwitch",se);
     } finally {
-      master.close();
+      stub.close();
     }
   }
 
@@ -1635,11 +1633,11 @@ public class HBaseAdmin implements Abortable, Closeable {
    */
   public boolean balancer()
   throws MasterNotRunningException, ZooKeeperConnectionException, ServiceException {
-    MasterAdminKeepAliveConnection master = connection.getKeepAliveMasterAdmin();
+    MasterAdminKeepAliveConnection stub = connection.getKeepAliveMasterAdminService();
     try {
-      return master.balance(null,RequestConverter.buildBalanceRequest()).getBalancerRan();
+      return stub.balance(null,RequestConverter.buildBalanceRequest()).getBalancerRan();
     } finally {
-      master.close();
+      stub.close();
     }
   }
 
@@ -1652,12 +1650,12 @@ public class HBaseAdmin implements Abortable, Closeable {
    */
   public boolean enableCatalogJanitor(boolean enable)
       throws ServiceException, MasterNotRunningException {
-    MasterAdminKeepAliveConnection master = connection.getKeepAliveMasterAdmin();
+    MasterAdminKeepAliveConnection stub = connection.getKeepAliveMasterAdminService();
     try {
-      return master.enableCatalogJanitor(null,
+      return stub.enableCatalogJanitor(null,
           RequestConverter.buildEnableCatalogJanitorRequest(enable)).getPrevValue();
     } finally {
-      master.close();
+      stub.close();
     }
   }
 
@@ -1668,12 +1666,12 @@ public class HBaseAdmin implements Abortable, Closeable {
    * @throws MasterNotRunningException
    */
   public int runCatalogScan() throws ServiceException, MasterNotRunningException {
-    MasterAdminKeepAliveConnection master = connection.getKeepAliveMasterAdmin();
+    MasterAdminKeepAliveConnection stub = connection.getKeepAliveMasterAdminService();
     try {
-      return master.runCatalogScan(null,
+      return stub.runCatalogScan(null,
           RequestConverter.buildCatalogScanRequest()).getScanResult();
     } finally {
-      master.close();
+      stub.close();
     }
   }
 
@@ -1683,12 +1681,12 @@ public class HBaseAdmin implements Abortable, Closeable {
    * @throws org.apache.hadoop.hbase.exceptions.MasterNotRunningException
    */
   public boolean isCatalogJanitorEnabled() throws ServiceException, MasterNotRunningException {
-    MasterAdminKeepAliveConnection master = connection.getKeepAliveMasterAdmin();
+    MasterAdminKeepAliveConnection stub = connection.getKeepAliveMasterAdminService();
     try {
-      return master.isCatalogJanitorEnabled(null,
+      return stub.isCatalogJanitorEnabled(null,
           RequestConverter.buildIsCatalogJanitorEnabledRequest()).getValue();
     } finally {
-      master.close();
+      stub.close();
     }
   }
 
@@ -1704,7 +1702,7 @@ public class HBaseAdmin implements Abortable, Closeable {
       final byte[] encodedNameOfRegionB, final boolean forcible)
       throws IOException {
     MasterAdminKeepAliveConnection master = connection
-        .getKeepAliveMasterAdmin();
+        .getKeepAliveMasterAdminService();
     try {
       DispatchMergingRegionsRequest request = RequestConverter
           .buildDispatchMergingRegionsRequest(encodedNameOfRegionA,
@@ -1800,8 +1798,7 @@ public class HBaseAdmin implements Abortable, Closeable {
 
   private void split(final ServerName sn, final HRegionInfo hri,
       byte[] splitPoint) throws IOException {
-    AdminProtocol admin =
-      this.connection.getAdmin(sn);
+    AdminService.BlockingInterface admin = this.connection.getAdmin(sn);
     ProtobufUtil.split(admin, hri, splitPoint);
   }
 
@@ -1924,7 +1921,7 @@ public class HBaseAdmin implements Abortable, Closeable {
   throws IOException {
     String hostname = Addressing.parseHostname(hostnamePort);
     int port = Addressing.parsePort(hostnamePort);
-    AdminProtocol admin =
+    AdminService.BlockingInterface admin =
       this.connection.getAdmin(new ServerName(hostname, port, 0));
     StopServerRequest request = RequestConverter.buildStopServerRequest(
       "Called by admin client " + this.connection.toString());
@@ -2067,7 +2064,7 @@ public class HBaseAdmin implements Abortable, Closeable {
  public synchronized  byte[][] rollHLogWriter(String serverName)
       throws IOException, FailedLogCloseException {
     ServerName sn = new ServerName(serverName);
-    AdminProtocol admin = this.connection.getAdmin(sn);
+    AdminService.BlockingInterface admin = this.connection.getAdmin(sn);
     RollWALWriterRequest request = RequestConverter.buildRollWALWriterRequest();
     try {
       RollWALWriterResponse response = admin.rollWALWriter(null, request);
@@ -2127,8 +2124,7 @@ public class HBaseAdmin implements Abortable, Closeable {
           throw new NoServerForRegionException(Bytes.toStringBinary(tableNameOrRegionName));
         } else {
           ServerName sn = regionServerPair.getSecond();
-          AdminProtocol admin =
-            this.connection.getAdmin(sn);
+          AdminService.BlockingInterface admin = this.connection.getAdmin(sn);
           GetRegionInfoRequest request = RequestConverter.buildGetRegionInfoRequest(
             regionServerPair.getFirst().getRegionName(), true);
           GetRegionInfoResponse response = admin.getRegionInfo(null, request);
@@ -2143,8 +2139,7 @@ public class HBaseAdmin implements Abortable, Closeable {
           if (pair.getSecond() == null) continue;
           try {
             ServerName sn = pair.getSecond();
-            AdminProtocol admin =
-              this.connection.getAdmin(sn);
+            AdminService.BlockingInterface admin = this.connection.getAdmin(sn);
             GetRegionInfoRequest request = RequestConverter.buildGetRegionInfoRequest(
               pair.getFirst().getRegionName(), true);
             GetRegionInfoResponse response = admin.getRegionInfo(null, request);
@@ -2607,7 +2602,7 @@ public class HBaseAdmin implements Abortable, Closeable {
    * Create a {@link MasterAdminCallable} to use it.
    */
   private <V> V execute(MasterAdminCallable<V> function) throws IOException {
-    function.masterAdmin = connection.getKeepAliveMasterAdmin();
+    function.masterAdmin = connection.getKeepAliveMasterAdminService();
     try {
       return executeCallable(function);
     } finally {
@@ -2621,7 +2616,7 @@ public class HBaseAdmin implements Abortable, Closeable {
    * Create a {@link MasterAdminCallable} to use it.
    */
   private <V> V execute(MasterMonitorCallable<V> function) throws IOException {
-    function.masterMonitor = connection.getKeepAliveMasterMonitor();
+    function.masterMonitor = connection.getKeepAliveMasterMonitorService();
     try {
       return executeCallable(function);
     } finally {

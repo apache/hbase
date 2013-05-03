@@ -40,32 +40,33 @@ import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Durability;
+import org.apache.hadoop.hbase.ipc.RpcClient;
+import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Threads;
+import org.apache.log4j.Level;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.apache.commons.logging.impl.Log4JLogger;
 
 /**
  * Tests changing data block encoding settings of a column family.
  */
 @Category(LargeTests.class)
 public class TestChangingEncoding {
-
   private static final Log LOG = LogFactory.getLog(TestChangingEncoding.class);
-
   static final String CF = "EncodingTestCF";
   static final byte[] CF_BYTES = Bytes.toBytes(CF);
 
   private static final int NUM_ROWS_PER_BATCH = 100;
   private static final int NUM_COLS_PER_ROW = 20;
 
-  private static final HBaseTestingUtility TEST_UTIL =
-      new HBaseTestingUtility();
+  private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static final Configuration conf = TEST_UTIL.getConfiguration();
 
   private static final int TIMEOUT_MS = 240000;
@@ -100,6 +101,8 @@ public class TestChangingEncoding {
   public static void setUpBeforeClass() throws Exception {
     // Use a small flush size to create more HFiles.
     conf.setInt(HConstants.HREGION_MEMSTORE_FLUSH_SIZE, 1024 * 1024);
+    // ((Log4JLogger)RpcServerImplementation.LOG).getLogger().setLevel(Level.TRACE);
+    // ((Log4JLogger)RpcClient.LOG).getLogger().setLevel(Level.TRACE);
     TEST_UTIL.startMiniCluster();
   }
 
@@ -190,6 +193,7 @@ public class TestChangingEncoding {
     prepareTest("ChangingEncoding");
     for (boolean encodeOnDisk : new boolean[]{false, true}) {
       for (DataBlockEncoding encoding : ENCODINGS_TO_ITERATE) {
+        LOG.info("encoding=" + encoding + ", encodeOnDisk=" + encodeOnDisk);
         setEncodingConf(encoding, encodeOnDisk);
         writeSomeNewData();
         verifyAllData();

@@ -573,17 +573,6 @@ public final class HConstants {
   public static int DEFAULT_HBASE_CLIENT_RETRIES_NUMBER = 10;
 
   /**
-   * Parameter name for maximum attempts, used to limit the number of times the
-   * client will try to obtain the proxy for a given region server.
-   */
-  public static String HBASE_CLIENT_RPC_MAXATTEMPTS = "hbase.client.rpc.maxattempts";
-
-  /**
-   * Default value of {@link #HBASE_CLIENT_RPC_MAXATTEMPTS}.
-   */
-  public static int DEFAULT_HBASE_CLIENT_RPC_MAXATTEMPTS = 1;
-
-  /**
    * Parameter name for client prefetch limit, used as the maximum number of regions
    * info that will be prefetched.
    */

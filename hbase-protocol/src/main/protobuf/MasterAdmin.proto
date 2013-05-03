@@ -18,6 +18,8 @@
 
 // This file contains protocol buffers that are used for MasterAdminProtocol.
 
+import "Master.proto";
+
 option java_package = "org.apache.hadoop.hbase.protobuf.generated";
 option java_outer_classname = "MasterAdminProtos";
 option java_generic_services = true;
@@ -354,7 +356,7 @@ service MasterAdminService {
 
   /**
    * List completed snapshots.
-   * @return a list of snapshot descriptors for completed snapshots
+   * Returns a list of snapshot descriptors for completed snapshots
    */
   rpc getCompletedSnapshots(ListSnapshotRequest) returns(ListSnapshotResponse);
 
@@ -379,4 +381,7 @@ service MasterAdminService {
    * Determine if the snapshot restore is done yet.
    */
   rpc isRestoreSnapshotDone(IsRestoreSnapshotDoneRequest) returns(IsRestoreSnapshotDoneResponse);
+
+  /** return true if master is available */
+  rpc isMasterRunning(IsMasterRunningRequest) returns(IsMasterRunningResponse);
 }

@@ -15,23 +15,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.apache.hadoop.hbase.ipc;
 
-package org.apache.hadoop.hbase.client;
-
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.hbase.IpcProtocol;
-import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ClientService;
-import org.apache.hadoop.hbase.security.KerberosInfo;
-import org.apache.hadoop.hbase.security.TokenInfo;
-
-/**
- * Protocol that a HBase client uses to communicate with a region server.
- */
-@KerberosInfo(
-  serverPrincipal = "hbase.regionserver.kerberos.principal")
-@TokenInfo("HBASE_AUTH_TOKEN")
-@InterfaceAudience.Public
-@InterfaceStability.Evolving
-public interface ClientProtocol
-extends ClientService.BlockingInterface, IpcProtocol {}
+@SuppressWarnings("serial")
+public class UnknownServiceException extends FatalConnectionException {
+  UnknownServiceException(final String msg) {
+    super(msg);
+  }
+}

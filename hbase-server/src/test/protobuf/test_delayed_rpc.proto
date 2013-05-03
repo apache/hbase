@@ -28,3 +28,7 @@ message TestArg {
 message TestResponse {
   required int32 response = 1;
 }
+
+service TestDelayedService {
+  rpc test(TestArg) returns (TestResponse);
+}

@@ -30,16 +30,15 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.catalog.CatalogTracker;
-import org.apache.hadoop.hbase.client.AdminProtocol;
-import org.apache.hadoop.hbase.client.ClientProtocol;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.exceptions.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.executor.ExecutorService;
-import org.apache.hadoop.hbase.ipc.RpcServer;
+import org.apache.hadoop.hbase.ipc.RpcServerInterface;
 import org.apache.hadoop.hbase.master.TableLockManager.NullTableLockManager;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.protobuf.generated.AdminProtos;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.CloseRegionRequest;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.CloseRegionResponse;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.CompactRegionRequest;
@@ -100,7 +99,9 @@ import com.google.protobuf.ServiceException;
  * {@link #setGetResult(byte[], byte[], Result)} for how to fill the backing data
  * store that the get pulls from.
  */
-class MockRegionServer implements AdminProtocol, ClientProtocol, RegionServerServices {
+class MockRegionServer
+implements AdminProtos.AdminService.BlockingInterface,
+ClientProtos.ClientService.BlockingInterface, RegionServerServices {
   private final ServerName sn;
   private final ZooKeeperWatcher zkw;
   private final Configuration conf;
@@ -304,7 +305,7 @@ class MockRegionServer implements AdminProtocol, ClientProtocol, RegionServerSer
   }
 
   @Override
-  public RpcServer getRpcServer() {
+  public RpcServerInterface getRpcServer() {
     // TODO Auto-generated method stub
     return null;
   }
@@ -323,7 +324,7 @@ class MockRegionServer implements AdminProtocol, ClientProtocol, RegionServerSer
 
   @Override
   public GetResponse get(RpcController controller, GetRequest request)
-      throws ServiceException {
+  throws ServiceException {
     byte[] regionName = request.getRegion().getValue().toByteArray();
     Map<byte [], Result> m = this.gets.get(regionName);
     GetResponse.Builder builder = GetResponse.newBuilder();
@@ -336,7 +337,7 @@ class MockRegionServer implements AdminProtocol, ClientProtocol, RegionServerSer
 
   @Override
   public MultiGetResponse multiGet(RpcController controller, MultiGetRequest requests)
-      throws ServiceException {
+  throws ServiceException {
     byte[] regionName = requests.getRegion().getValue().toByteArray();
     Map<byte [], Result> m = this.gets.get(regionName);
     MultiGetResponse.Builder builder = MultiGetResponse.newBuilder();

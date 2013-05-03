@@ -53,10 +53,9 @@ public class ZNodeClearer {
    */
   public static void writeMyEphemeralNodeOnDisk(String fileContent) {
     String fileName = ZNodeClearer.getMyEphemeralNodeFileName();
-
     if (fileName == null) {
-      LOG.warn("No filename given to save the znode used, it won't be saved " +
-          "(Environment variable HBASE_ZNODE_FILE is not set).");
+      LOG.warn("Environment variable HBASE_ZNODE_FILE not set; znodes will not be cleared " +
+        "on crash by start scripts (Longer MTTR!)");
       return;
     }
 

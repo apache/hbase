@@ -36,8 +36,8 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.LargeTests;
-import org.apache.hadoop.hbase.client.AdminProtocol;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.protobuf.generated.AdminProtos;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.junit.After;
@@ -116,7 +116,7 @@ public class TestFromClientSide3 {
     HConnection conn = HConnectionManager.getConnection(TEST_UTIL
         .getConfiguration());
     HRegionLocation loc = table.getRegionLocation(row, true);
-    AdminProtocol server = conn.getAdmin(loc.getServerName());
+    AdminProtos.AdminService.BlockingInterface server = conn.getAdmin(loc.getServerName());
     byte[] regName = loc.getRegionInfo().getRegionName();
 
     for (int i = 0; i < nFlushes; i++) {
@@ -163,7 +163,8 @@ public class TestFromClientSide3 {
     // Verify we have multiple store files.
     HRegionLocation loc = hTable.getRegionLocation(row, true);
     byte[] regionName = loc.getRegionInfo().getRegionName();
-    AdminProtocol server = connection.getAdmin(loc.getServerName());
+    AdminProtos.AdminService.BlockingInterface server =
+      connection.getAdmin(loc.getServerName());
     assertTrue(ProtobufUtil.getStoreFiles(
       server, regionName, FAMILY).size() > 1);
 

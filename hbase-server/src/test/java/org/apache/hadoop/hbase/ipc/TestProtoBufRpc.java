@@ -20,15 +20,19 @@ package org.apache.hadoop.hbase.ipc;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 
+import com.google.common.collect.Lists;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.IpcProtocol;
 import org.apache.hadoop.hbase.MediumTests;
+import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos;
+import org.apache.hadoop.hbase.ipc.protobuf.generated.TestRpcServiceProtos;
 import org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EchoRequestProto;
 import org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EchoResponseProto;
 import org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EmptyRequestProto;
 import org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EmptyResponseProto;
-import org.apache.hadoop.hbase.ipc.protobuf.generated.TestRpcServiceProtos.TestProtobufRpcProto;
+import org.apache.hadoop.hbase.security.User;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.junit.Assert;
@@ -37,30 +41,29 @@ import org.junit.Before;
 import org.junit.After;
 import org.junit.experimental.categories.Category;
 
+import com.google.protobuf.BlockingRpcChannel;
+import com.google.protobuf.BlockingService;
 import com.google.protobuf.RpcController;
 import com.google.protobuf.ServiceException;
 
 /**
  * Test for testing protocol buffer based RPC mechanism.
- * This test depends on test.proto definition of types in
- * hbase-server/src/test/protobuf/test.proto
- * and protobuf service definition from
- * hbase-server/src/test/protobuf/test_rpc_service.proto
+ * This test depends on test.proto definition of types in <code>src/test/protobuf/test.proto</code>
+ * and protobuf service definition from <code>src/test/protobuf/test_rpc_service.proto</code>
  */
 @Category(MediumTests.class)
 public class TestProtoBufRpc {
   public final static String ADDRESS = "0.0.0.0";
-  public final static int PORT = 0;
-  private static InetSocketAddress addr;
-  private static Configuration conf;
-  private static RpcServer server;
+  public static int PORT = 0;
+  private InetSocketAddress isa;
+  private Configuration conf;
+  private RpcServerInterface server;
 
-  public interface TestRpcService extends TestProtobufRpcProto.BlockingInterface, IpcProtocol {
-    public long VERSION = 1;
-  }
-
-  public static class PBServerImpl implements TestRpcService {
-
+  /**
+   * Implementation of the test service defined out in TestRpcServiceProtos
+   */
+  static class PBServerImpl
+  implements TestRpcServiceProtos.TestProtobufRpcProto.BlockingInterface {
     @Override
     public EmptyResponseProto ping(RpcController unused,
         EmptyRequestProto request) throws ServiceException {
@@ -83,19 +86,21 @@ public class TestProtoBufRpc {
 
   @Before
   public  void setUp() throws IOException { // Setup server for both protocols
-    conf = new Configuration();
+    this.conf = HBaseConfiguration.create();
     Logger log = Logger.getLogger("org.apache.hadoop.ipc.HBaseServer");
     log.setLevel(Level.DEBUG);
     log = Logger.getLogger("org.apache.hadoop.ipc.HBaseServer.trace");
     log.setLevel(Level.TRACE);
     // Create server side implementation
     PBServerImpl serverImpl = new PBServerImpl();
+    BlockingService service =
+      TestRpcServiceProtos.TestProtobufRpcProto.newReflectiveBlockingService(serverImpl);
     // Get RPC server for server side implementation
-    server = HBaseServerRPC.getServer(TestRpcService.class,serverImpl,
-        new Class[]{TestRpcService.class},
-        ADDRESS, PORT, 10, 10, true, conf, 0);
-    addr = server.getListenerAddress();
-    server.start();
+    this.server = new RpcServer(null, "testrpc",
+        Lists.newArrayList(new RpcServer.BlockingServiceAndInterface(service, null)),
+        new InetSocketAddress(ADDRESS, PORT), 10, 10, conf, 0);
+    this.isa = server.getListenerAddress();
+    this.server.start();
   }
 
   @After
@@ -105,27 +110,31 @@ public class TestProtoBufRpc {
 
   @Test
   public void testProtoBufRpc() throws Exception {
-    ProtobufRpcClientEngine clientEngine =
-        new ProtobufRpcClientEngine(conf, HConstants.CLUSTER_ID_DEFAULT);
+    RpcClient rpcClient = new RpcClient(conf, HConstants.CLUSTER_ID_DEFAULT);
     try {
-      TestRpcService client = clientEngine.getProxy(TestRpcService.class, addr, conf, 100000);
+      BlockingRpcChannel channel = rpcClient.createBlockingRpcChannel(
+        new ServerName(this.isa.getHostName(), this.isa.getPort(), System.currentTimeMillis()),
+        User.getCurrent(), 0);
+      TestRpcServiceProtos.TestProtobufRpcProto.BlockingInterface stub =
+        TestRpcServiceProtos.TestProtobufRpcProto.newBlockingStub(channel);
       // Test ping method
-      EmptyRequestProto emptyRequest = EmptyRequestProto.newBuilder().build();
-      client.ping(null, emptyRequest);
+      TestProtos.EmptyRequestProto emptyRequest =
+        TestProtos.EmptyRequestProto.newBuilder().build();
+      stub.ping(null, emptyRequest);
 
       // Test echo method
       EchoRequestProto echoRequest = EchoRequestProto.newBuilder().setMessage("hello").build();
-      EchoResponseProto echoResponse = client.echo(null, echoRequest);
+      EchoResponseProto echoResponse = stub.echo(null, echoRequest);
       Assert.assertEquals(echoResponse.getMessage(), "hello");
 
       // Test error method - error should be thrown as RemoteException
       try {
-        client.error(null, emptyRequest);
+        stub.error(null, emptyRequest);
         Assert.fail("Expected exception is not thrown");
       } catch (ServiceException e) {
       }
     } finally {
-      clientEngine.close();
+      rpcClient.stop();
     }
   }
 }

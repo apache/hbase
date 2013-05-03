@@ -19,7 +19,6 @@
 package org.apache.hadoop.hbase;
 
 import java.io.IOException;
-import java.util.List;
 import java.util.Set;
 import java.util.regex.Pattern;
 
@@ -113,5 +112,4 @@ public class IntegrationTestsDriver extends AbstractHBaseTool {
 
     return result.wasSuccessful() ? 0 : 1;
   }
-
 }

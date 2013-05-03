@@ -33,6 +33,12 @@ import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.codec.Codec;
 import org.apache.hadoop.hbase.io.ByteBufferOutputStream;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ScanRequest;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ScanResponse;
+import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerReportRequest;
+import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerReportResponse;
+import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerStartupRequest;
+import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerStartupResponse;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.compress.CodecPool;
 import org.apache.hadoop.io.compress.CompressionCodec;
@@ -44,6 +50,7 @@ import com.google.common.base.Preconditions;
 import com.google.protobuf.CodedInputStream;
 import com.google.protobuf.CodedOutputStream;
 import com.google.protobuf.Message;
+import com.google.protobuf.TextFormat;
 
 /**
  * Utility to help ipc'ing.
@@ -262,5 +269,25 @@ class IPCUtil {
     }
     Preconditions.checkArgument(totalSize < Integer.MAX_VALUE);
     return totalSize;
+  }
+
+  /**
+   * Return short version of Param Message toString'd, shorter than TextFormat#regionServerStartup
+   * @param methodName
+   * @param request
+   * @return toString of passed <code>param</code>
+   */
+  static String getRequestShortTextFormat(Message request) {
+    if (request instanceof ScanRequest) {
+      return TextFormat.shortDebugString(request);
+    } else if (request instanceof RegionServerReportRequest) {
+      // Print a short message only, just the servername and the requests, not the full load.
+      RegionServerReportRequest r = (RegionServerReportRequest)request;
+      return "server " + TextFormat.shortDebugString(r.getServer()) +
+        " load { numberOfRequests: " + r.getLoad().getNumberOfRequests() + " }";
+    } else if (request instanceof RegionServerStartupRequest) {
+      return TextFormat.shortDebugString(request);
+    }
+    return "TODO " + TextFormat.shortDebugString(request);
   }
 }

@@ -178,8 +178,7 @@ public class SplitLogManager extends ZooKeeperListener {
     this.timeout = conf.getInt("hbase.splitlog.manager.timeout", DEFAULT_TIMEOUT);
     this.unassignedTimeout =
       conf.getInt("hbase.splitlog.manager.unassigned.timeout", DEFAULT_UNASSIGNED_TIMEOUT);
-    LOG.info("timeout = " + timeout);
-    LOG.info("unassigned timeout = " + unassignedTimeout);
+    LOG.info("timeout=" + timeout + ", unassigned timeout=" + unassignedTimeout);
 
     this.serverName = serverName;
     this.timeoutMonitor =
@@ -855,7 +854,7 @@ public class SplitLogManager extends ZooKeeperListener {
       }
       getDataSetWatch(nodepath, zkretries);
     }
-    LOG.info("found " + (orphans.size() - rescan_nodes) + " orphan tasks and " +
+    LOG.info("Found " + (orphans.size() - rescan_nodes) + " orphan tasks and " +
         rescan_nodes + " rescan nodes");
   }
 

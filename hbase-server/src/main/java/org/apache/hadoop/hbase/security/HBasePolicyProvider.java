@@ -18,11 +18,11 @@
 package org.apache.hadoop.hbase.security;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.client.AdminProtocol;
-import org.apache.hadoop.hbase.client.ClientProtocol;
-import org.apache.hadoop.hbase.MasterMonitorProtocol;
-import org.apache.hadoop.hbase.MasterAdminProtocol;
-import org.apache.hadoop.hbase.RegionServerStatusProtocol;
+import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.AdminService;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ClientService;
+import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.MasterAdminService;
+import org.apache.hadoop.hbase.protobuf.generated.MasterMonitorProtos.MasterMonitorService;
+import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerStatusService;
 import org.apache.hadoop.security.authorize.PolicyProvider;
 import org.apache.hadoop.security.authorize.Service;
 import org.apache.hadoop.security.authorize.ServiceAuthorizationManager;
@@ -33,11 +33,11 @@ import org.apache.hadoop.security.authorize.ServiceAuthorizationManager;
  */
 public class HBasePolicyProvider extends PolicyProvider {
   protected final static Service[] services = {
-      new Service("security.client.protocol.acl", ClientProtocol.class),
-      new Service("security.client.protocol.acl", AdminProtocol.class),
-      new Service("security.admin.protocol.acl", MasterMonitorProtocol.class),
-      new Service("security.admin.protocol.acl", MasterAdminProtocol.class),
-      new Service("security.masterregion.protocol.acl", RegionServerStatusProtocol.class)
+      new Service("security.client.protocol.acl", ClientService.BlockingInterface.class),
+      new Service("security.client.protocol.acl", AdminService.BlockingInterface.class),
+      new Service("security.admin.protocol.acl", MasterMonitorService.BlockingInterface.class),
+      new Service("security.admin.protocol.acl", MasterAdminService.BlockingInterface.class),
+      new Service("security.masterregion.protocol.acl", RegionServerStatusService.BlockingInterface.class)
   };
 
   @Override
@@ -45,12 +45,10 @@ public class HBasePolicyProvider extends PolicyProvider {
     return services;
   }
 
-  public static void init(Configuration conf,
-      ServiceAuthorizationManager authManager) {
+  public static void init(Configuration conf, ServiceAuthorizationManager authManager) {
     // set service-level authorization security policy
     System.setProperty("hadoop.policy.file", "hbase-policy.xml");
-    if (conf.getBoolean(
-          ServiceAuthorizationManager.SERVICE_AUTHORIZATION_CONFIG, false)) {
+    if (conf.getBoolean(ServiceAuthorizationManager.SERVICE_AUTHORIZATION_CONFIG, false)) {
       authManager.refresh(conf, new HBasePolicyProvider());
     }
   }

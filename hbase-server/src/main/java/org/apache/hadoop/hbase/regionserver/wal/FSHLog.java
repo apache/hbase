@@ -441,7 +441,7 @@ class FSHLog implements HLog, Syncable {
       }
     }
     if (m != null) {
-      LOG.info("Using getNumCurrentReplicas--HDFS-826");
+      if (LOG.isTraceEnabled()) LOG.trace("Using getNumCurrentReplicas--HDFS-826");
     }
     return m;
   }

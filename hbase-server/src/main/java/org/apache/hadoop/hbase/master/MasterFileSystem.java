@@ -477,7 +477,7 @@ public class MasterFileSystem {
 
   private static void bootstrap(final Path rd, final Configuration c)
   throws IOException {
-    LOG.info("BOOTSTRAP: creating first META region");
+    LOG.info("BOOTSTRAP: creating META region");
     try {
       // Bootstrapping, make sure blockcache is off.  Else, one will be
       // created here in bootstap and it'll need to be cleaned up.  Better to

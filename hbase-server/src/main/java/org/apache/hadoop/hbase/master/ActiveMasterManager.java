@@ -156,7 +156,7 @@ class ActiveMasterManager extends ZooKeeperListener {
           // We are the master, return
           startupStatus.setStatus("Successfully registered as active master.");
           this.clusterHasActiveMaster.set(true);
-          LOG.info("Master=" + this.sn);
+          LOG.info("Registered Active Master=" + this.sn);
           return true;
         }
 

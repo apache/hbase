@@ -22,19 +22,19 @@ package org.apache.hadoop.hbase.master;
 import static org.junit.Assert.fail;
 
 import java.io.IOException;
-import java.net.InetSocketAddress;
 import java.net.SocketTimeoutException;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.*;
-import org.apache.hadoop.hbase.ipc.HBaseClientRPC;
-import org.apache.hadoop.hbase.MasterMonitorProtocol;
-import org.apache.hadoop.hbase.ipc.ProtobufRpcClientEngine;
+import org.apache.hadoop.hbase.ipc.RpcClient;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.protobuf.generated.MasterMonitorProtos;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsMasterRunningRequest;
+import org.apache.hadoop.hbase.security.User;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
+import com.google.protobuf.BlockingRpcChannel;
 import com.google.protobuf.ServiceException;
 
 @Category(MediumTests.class)
@@ -46,29 +46,31 @@ public class TestHMasterRPCException {
     TEST_UTIL.startMiniZKCluster();
     Configuration conf = TEST_UTIL.getConfiguration();
     conf.set(HConstants.MASTER_PORT, "0");
-
     HMaster hm = new HMaster(conf);
-
     ServerName sm = hm.getServerName();
-    InetSocketAddress isa = new InetSocketAddress(sm.getHostname(), sm.getPort());
-    ProtobufRpcClientEngine engine =
-        new ProtobufRpcClientEngine(conf, HConstants.CLUSTER_ID_DEFAULT);
+    RpcClient rpcClient = new RpcClient(conf, HConstants.CLUSTER_ID_DEFAULT);
     try {
       int i = 0;
       //retry the RPC a few times; we have seen SocketTimeoutExceptions if we
       //try to connect too soon. Retry on SocketTimeoutException.
       while (i < 20) {
         try {
-          MasterMonitorProtocol inf = engine.getProxy(
-              MasterMonitorProtocol.class, isa, conf, 100 * 10);
-          inf.isMasterRunning(null, IsMasterRunningRequest.getDefaultInstance());
+          BlockingRpcChannel channel =
+            rpcClient.createBlockingRpcChannel(sm, User.getCurrent(), 0);
+          MasterMonitorProtos.MasterMonitorService.BlockingInterface stub =
+            MasterMonitorProtos.MasterMonitorService.newBlockingStub(channel);
+          stub.isMasterRunning(null, IsMasterRunningRequest.getDefaultInstance());
           fail();
         } catch (ServiceException ex) {
           IOException ie = ProtobufUtil.getRemoteException(ex);
           if (!(ie instanceof SocketTimeoutException)) {
-            if(ie.getMessage().startsWith(
-                "org.apache.hadoop.hbase.exceptions.ServerNotRunningYetException: Server is not running yet")) {
+            if (ie.getMessage().startsWith("org.apache.hadoop.hbase.exceptions." +
+                "ServerNotRunningYetException: Server is not running yet")) {
+              // Done.  Got the exception we wanted.
+              System.out.println("Expected exception: " + ie.getMessage());
               return;
+            } else {
+              throw ex;
             }
           } else {
             System.err.println("Got SocketTimeoutException. Will retry. ");
@@ -81,7 +83,7 @@ public class TestHMasterRPCException {
       }
       fail();
     } finally {
-      engine.close();
+      rpcClient.stop();
     }
   }
 }
