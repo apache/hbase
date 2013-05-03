@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.hbase.codec.prefixtree.row.data;
 
+import java.io.IOException;
 import java.util.List;
 
 import org.apache.hadoop.hbase.Cell;
@@ -66,7 +67,11 @@ public class TestRowDataSimple extends BaseTestRowData {
     searcher.resetToBeforeFirstEntry();
 
     // test first cell
-    searcher.advance();
+    try {
+      searcher.advance();
+    } catch (IOException e) {
+      throw new RuntimeException(e);
+    }
     Cell first = searcher.current();
     Assert.assertTrue(CellComparator.equals(d.get(0), first));
 

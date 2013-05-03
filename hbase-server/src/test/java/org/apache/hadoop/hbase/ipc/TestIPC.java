@@ -113,8 +113,12 @@ public class TestIPC {
         // building.
         CellScanner cellScanner = pcrc.cellScanner();
         List<Cell> list = new ArrayList<Cell>();
-        while(cellScanner.advance()) {
-          list.add(cellScanner.current());
+        try {
+          while(cellScanner.advance()) {
+            list.add(cellScanner.current());
+          }
+        } catch (IOException e) {
+          throw new ServiceException(e);
         }
         cellScanner = CellUtil.createCellScanner(list);
         ((PayloadCarryingRpcController)controller).setCellScanner(cellScanner);
@@ -155,7 +159,7 @@ public class TestIPC {
   @Test
   public void testCompressCellBlock()
   throws IOException, InterruptedException, SecurityException, NoSuchMethodException {
-    // Currently, you set 
+    // Currently, you set
     Configuration conf = HBaseConfiguration.create();
     conf.set("hbase.client.rpc.compressor", GzipCodec.class.getCanonicalName());
     TestRpcServer rpcServer = new TestRpcServer();

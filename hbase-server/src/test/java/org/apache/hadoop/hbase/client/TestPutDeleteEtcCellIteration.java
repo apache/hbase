@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.client;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
+import java.io.IOException;
 import java.util.Arrays;
 import java.util.ConcurrentModificationException;
 
@@ -42,7 +43,7 @@ public class TestPutDeleteEtcCellIteration {
   private static final int COUNT = 10;
 
   @Test
-  public void testPutIteration() {
+  public void testPutIteration() throws IOException {
     Put p = new Put(ROW);
     for (int i = 0; i < COUNT; i++) {
       byte [] bytes = Bytes.toBytes(i);
@@ -58,7 +59,7 @@ public class TestPutDeleteEtcCellIteration {
   }
 
   @Test (expected = ConcurrentModificationException.class)
-  public void testPutConcurrentModificationOnIteration() {
+  public void testPutConcurrentModificationOnIteration() throws IOException {
     Put p = new Put(ROW);
     for (int i = 0; i < COUNT; i++) {
       byte [] bytes = Bytes.toBytes(i);
@@ -77,7 +78,7 @@ public class TestPutDeleteEtcCellIteration {
   }
 
   @Test
-  public void testDeleteIteration() {
+  public void testDeleteIteration() throws IOException {
     Delete d = new Delete(ROW);
     for (int i = 0; i < COUNT; i++) {
       byte [] bytes = Bytes.toBytes(i);
@@ -93,7 +94,7 @@ public class TestPutDeleteEtcCellIteration {
   }
 
   @Test
-  public void testAppendIteration() {
+  public void testAppendIteration() throws IOException {
     Append a = new Append(ROW);
     for (int i = 0; i < COUNT; i++) {
       byte [] bytes = Bytes.toBytes(i);
@@ -111,7 +112,7 @@ public class TestPutDeleteEtcCellIteration {
   }
 
   @Test
-  public void testIncrementIteration() {
+  public void testIncrementIteration() throws IOException {
     Increment increment = new Increment(ROW);
     for (int i = 0; i < COUNT; i++) {
       byte [] bytes = Bytes.toBytes(i);
@@ -131,7 +132,7 @@ public class TestPutDeleteEtcCellIteration {
   }
 
   @Test
-  public void testResultIteration() {
+  public void testResultIteration() throws IOException {
     Cell [] cells = new Cell[COUNT];
     for(int i = 0; i < COUNT; i++) {
       byte [] bytes = Bytes.toBytes(i);

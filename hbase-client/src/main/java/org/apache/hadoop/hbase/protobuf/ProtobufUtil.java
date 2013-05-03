@@ -559,10 +559,10 @@ public final class ProtobufUtil {
    * @param cellScanner
    * @param proto the protocol buffer Mutate to convert
    * @return the converted client Append
-   * @throws DoNotRetryIOException
+   * @throws IOException 
    */
   public static Append toAppend(final MutationProto proto, final CellScanner cellScanner)
-  throws DoNotRetryIOException {
+  throws IOException {
     MutationType type = proto.getMutateType();
     assert type == MutationType.APPEND : type.name();
     byte [] row = proto.hasRow()? proto.getRow().toByteArray(): null;

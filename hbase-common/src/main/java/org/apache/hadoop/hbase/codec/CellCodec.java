@@ -40,22 +40,18 @@ public class CellCodec implements Codec {
     @Override
     public void write(Cell cell) throws IOException {
       checkFlushed();
-      try {
-        // Row
-        write(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength());
-        // Column family
-        write(cell.getFamilyArray(), cell.getFamilyOffset(), cell.getFamilyLength());
-        // Qualifier
-        write(cell.getQualifierArray(), cell.getQualifierOffset(), cell.getQualifierLength());
-        // Version
-        this.out.write(Bytes.toBytes(cell.getTimestamp()));
-        // Type
-        this.out.write(cell.getTypeByte());
-        // Value
-        write(cell.getValueArray(), cell.getValueOffset(), cell.getValueLength());
-      } catch (IOException e) {
-        throw new CodecException(e);
-      }
+      // Row
+      write(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength());
+      // Column family
+      write(cell.getFamilyArray(), cell.getFamilyOffset(), cell.getFamilyLength());
+      // Qualifier
+      write(cell.getQualifierArray(), cell.getQualifierOffset(), cell.getQualifierLength());
+      // Version
+      this.out.write(Bytes.toBytes(cell.getTimestamp()));
+      // Type
+      this.out.write(cell.getTypeByte());
+      // Value
+      write(cell.getValueArray(), cell.getValueOffset(), cell.getValueLength());
     }
 
     /**

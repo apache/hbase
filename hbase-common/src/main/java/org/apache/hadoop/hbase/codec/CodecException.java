@@ -17,12 +17,16 @@
  */
 package org.apache.hadoop.hbase.codec;
 
-import java.io.IOException;
 
-public class CodecException extends IOException {
-  private static final long serialVersionUID = -2850095011686914405L;
+import org.apache.hadoop.hbase.HBaseIOException;
 
+/**
+ * Thrown when problems in the codec whether setup or context.
+ */
+@SuppressWarnings("serial")
+public class CodecException extends HBaseIOException {
   public CodecException() {
+    super();
   }
 
   public CodecException(String message) {

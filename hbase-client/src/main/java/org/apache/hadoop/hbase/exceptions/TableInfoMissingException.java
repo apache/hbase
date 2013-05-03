@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.exceptions;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.HBaseIOException;
 
 /**
  * 

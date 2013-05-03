@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.ipc;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -36,7 +37,7 @@ import org.junit.experimental.categories.Category;
 @Category(SmallTests.class)
 public class TestPayloadCarryingRpcController {
   @Test
-  public void testListOfCellScannerables() {
+  public void testListOfCellScannerables() throws IOException {
     List<CellScannable> cells = new ArrayList<CellScannable>();
     final int count = 10;
     for (int i = 0; i < count; i++) {

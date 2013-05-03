@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hbase.ipc;
 
-import org.apache.hadoop.hbase.exceptions.HBaseIOException;
+import org.apache.hadoop.hbase.HBaseIOException;
 
 public class StoppedRpcClientException extends HBaseIOException {
   public StoppedRpcClientException() {

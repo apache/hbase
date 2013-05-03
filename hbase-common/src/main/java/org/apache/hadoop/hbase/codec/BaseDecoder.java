@@ -32,17 +32,13 @@ public abstract class BaseDecoder implements Codec.Decoder {
   }
 
   @Override
-  public boolean advance() {
+  public boolean advance() throws IOException {
     if (!this.hasNext) return this.hasNext;
-    try {
-      if (this.in.available() <= 0) {
-        this.hasNext = false;
-        return this.hasNext;
-      }
-      this.current = parseCell();
-    } catch (IOException e) {
-      throw new RuntimeException(e);
+    if (this.in.available() <= 0) {
+      this.hasNext = false;
+      return this.hasNext;
     }
+    this.current = parseCell();
     return this.hasNext;
   }
 
