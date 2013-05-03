@@ -42,10 +42,6 @@ public abstract class BaseEncoder implements Codec.Encoder {
   public void flush() throws IOException {
     if (this.flushed) return;
     this.flushed = true;
-    try {
-      this.out.flush();
-    } catch (IOException e) {
-      throw new CodecException(e);
-    }
+    this.out.flush();
   }
 }

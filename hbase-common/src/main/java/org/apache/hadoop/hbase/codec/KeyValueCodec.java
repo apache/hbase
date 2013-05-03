@@ -53,11 +53,7 @@ public class KeyValueCodec implements Codec {
       checkFlushed();
       // This is crass and will not work when KV changes. Also if passed a non-kv Cell, it will
       // make expensive copy.
-      try {
-        KeyValue.oswrite((KeyValue)KeyValueUtil.ensureKeyValue(cell), this.out);
-      } catch (IOException e) {
-        throw new CodecException(e);
-      }
+      KeyValue.oswrite((KeyValue)KeyValueUtil.ensureKeyValue(cell), this.out);
     }
   }
 

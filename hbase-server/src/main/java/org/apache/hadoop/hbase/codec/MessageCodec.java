@@ -27,7 +27,6 @@ import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.codec.BaseDecoder;
 import org.apache.hadoop.hbase.codec.BaseEncoder;
 import org.apache.hadoop.hbase.codec.Codec;
-import org.apache.hadoop.hbase.codec.CodecException;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
 
 import com.google.protobuf.ByteString;
@@ -62,11 +61,7 @@ public class MessageCodec implements Codec {
       builder.setValue(ByteString.copyFrom(cell.getValueArray(), cell.getValueOffset(),
           cell.getValueLength()));
       HBaseProtos.Cell pbcell = builder.build();
-      try {
-        pbcell.writeDelimitedTo(this.out);
-      } catch (IOException e) {
-        throw new CodecException(e);
-      }
+      pbcell.writeDelimitedTo(this.out);
     }
   }
 

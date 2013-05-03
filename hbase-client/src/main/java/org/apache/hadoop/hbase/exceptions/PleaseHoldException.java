@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.exceptions;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.hbase.HBaseIOException;
 
 /**
  * This exception is thrown by the master when a region server was shut down and

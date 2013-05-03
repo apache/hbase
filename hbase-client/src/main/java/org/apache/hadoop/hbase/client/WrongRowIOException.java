@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import org.apache.hadoop.hbase.exceptions.HBaseIOException;
+import org.apache.hadoop.hbase.HBaseIOException;
 
 public class WrongRowIOException extends HBaseIOException {
   private static final long serialVersionUID = -5849522209440123059L;

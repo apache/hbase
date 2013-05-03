@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.hbase;
 
+import java.io.IOException;
+
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.Cell;
@@ -57,6 +59,7 @@ public interface CellScanner {
   /**
    * Advance the scanner 1 cell.
    * @return true if the next cell is found and {@link #current()} will return a valid Cell
+   * @throws IOException
    */
-  boolean advance();
+  boolean advance() throws IOException;
 }

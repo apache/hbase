@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.hbase;
 
+import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Iterator;
 import java.util.List;
@@ -142,7 +143,7 @@ public final class CellUtil {
       }
 
       @Override
-      public boolean advance() {
+      public boolean advance() throws IOException {
         if (this.cellScanner == null) {
           if (!this.iterator.hasNext()) return false;
           this.cellScanner = this.iterator.next().cellScanner();
