@@ -44,6 +44,7 @@ import org.apache.hadoop.hbase.io.encoding.DataBlockEncoder;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.encoding.EncodedDataBlock;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
+import org.apache.hadoop.hbase.io.hfile.HFileBlock;
 import org.apache.hadoop.hbase.io.hfile.NoOpDataBlockEncoder;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.compress.CompressionOutputStream;
@@ -119,6 +120,7 @@ public class DataBlockEncodingTool {
   private long totalCFLength = 0;
 
   private byte[] rawKVs;
+  private int minorVersion = 0;
 
   private final String compressionAlgorithmName;
   private final Algorithm compressionAlgorithm;
@@ -228,7 +230,7 @@ public class DataBlockEncodingTool {
     List<Iterator<KeyValue>> codecIterators =
         new ArrayList<Iterator<KeyValue>>();
     for(EncodedDataBlock codec : codecs) {
-      codecIterators.add(codec.getIterator());
+      codecIterators.add(codec.getIterator(HFileBlock.headerSize(minorVersion)));
     }
 
     int j = 0;
@@ -320,7 +322,7 @@ public class DataBlockEncodingTool {
 
       Iterator<KeyValue> it;
 
-      it = codec.getIterator();
+      it = codec.getIterator(HFileBlock.headerSize(minorVersion));
 
       // count only the algorithm time, without memory allocations
       // (expect first time)
@@ -590,6 +592,7 @@ public class DataBlockEncodingTool {
 
     // run the utilities
     DataBlockEncodingTool comp = new DataBlockEncodingTool(compressionName);
+    comp.minorVersion = reader.getHFileMinorVersion();
     comp.checkStatistics(scanner, kvLimit);
     if (doVerify) {
       comp.verifyCodecs(scanner, kvLimit);

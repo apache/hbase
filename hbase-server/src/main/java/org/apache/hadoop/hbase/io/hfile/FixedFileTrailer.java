@@ -580,7 +580,7 @@ public class FixedFileTrailer {
   /**
    * Returns the minor version of this HFile format
    */
-  int getMinorVersion() {
+  public int getMinorVersion() {
     return minorVersion;
   }
 

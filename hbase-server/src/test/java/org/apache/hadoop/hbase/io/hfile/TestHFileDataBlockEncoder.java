@@ -104,6 +104,41 @@ public class TestHFileDataBlockEncoder {
     }
   }
 
+  /** Test for HBASE-5746. */
+  @Test
+  public void testHeaderSizeInCacheWithoutChecksum() throws Exception {
+    int headerSize = HConstants.HFILEBLOCK_HEADER_SIZE_NO_CHECKSUM;
+    // Create some KVs and create the block with old-style header.
+    ByteBuffer keyValues = RedundantKVGenerator.convertKvToByteBuffer(
+        generator.generateTestKeyValues(60), includesMemstoreTS);
+    int size = keyValues.limit();
+    ByteBuffer buf = ByteBuffer.allocate(size + headerSize);
+    buf.position(headerSize);
+    keyValues.rewind();
+    buf.put(keyValues);
+    HFileBlock block = new HFileBlock(BlockType.DATA, size, size, -1, buf,
+        HFileBlock.FILL_HEADER, 0, includesMemstoreTS,
+        HFileBlock.MINOR_VERSION_NO_CHECKSUM, 0, ChecksumType.NULL.getCode(), 0);
+    HFileBlock cacheBlock = blockEncoder.diskToCacheFormat(createBlockOnDisk(block), false);
+    assertEquals(headerSize, cacheBlock.getDummyHeaderForVersion().length);
+  }
+
+  private HFileBlock createBlockOnDisk(HFileBlock block) throws IOException {
+    int size;
+    HFileBlockEncodingContext context = new HFileBlockDefaultEncodingContext(
+        Compression.Algorithm.NONE, blockEncoder.getEncodingOnDisk(),
+        HConstants.HFILEBLOCK_DUMMY_HEADER);
+    context.setDummyHeader(block.getDummyHeaderForVersion());
+    blockEncoder.beforeWriteToDisk(block.getBufferWithoutHeader(),
+            includesMemstoreTS, context, block.getBlockType());
+    byte[] encodedBytes = context.getUncompressedBytesWithHeader();
+    size = encodedBytes.length - block.getDummyHeaderForVersion().length;
+    return new HFileBlock(context.getBlockType(), size, size, -1,
+            ByteBuffer.wrap(encodedBytes), HFileBlock.FILL_HEADER, 0, includesMemstoreTS,
+            block.getMinorVersion(), block.getBytesPerChecksum(), block.getChecksumType(),
+            block.getOnDiskDataSizeWithHeader());
+  }
+
   /**
    * Test writing to disk.
    * @throws IOException
@@ -112,19 +147,7 @@ public class TestHFileDataBlockEncoder {
   public void testEncodingWritePath() throws IOException {
     // usually we have just block without headers, but don't complicate that
     HFileBlock block = getSampleHFileBlock();
-    HFileBlockEncodingContext context = new HFileBlockDefaultEncodingContext(
-        Compression.Algorithm.NONE, blockEncoder.getEncodingOnDisk(), HConstants.HFILEBLOCK_DUMMY_HEADER);
-    blockEncoder.beforeWriteToDisk(block.getBufferWithoutHeader(),
-            includesMemstoreTS, context, block.getBlockType());
-
-    byte[] encodedBytes = context.getUncompressedBytesWithHeader();
-    int size = encodedBytes.length - HConstants.HFILEBLOCK_HEADER_SIZE;
-    HFileBlock blockOnDisk =
-        new HFileBlock(context.getBlockType(), size, size, -1,
-            ByteBuffer.wrap(encodedBytes), HFileBlock.FILL_HEADER, 0,
-        includesMemstoreTS, block.getMinorVersion(),
-        block.getBytesPerChecksum(), block.getChecksumType(),
-        block.getOnDiskDataSizeWithHeader());
+    HFileBlock blockOnDisk = createBlockOnDisk(block);
 
     if (blockEncoder.getEncodingOnDisk() !=
         DataBlockEncoding.NONE) {

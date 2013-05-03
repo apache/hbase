@@ -813,7 +813,7 @@ public class HFileBlock implements Cacheable {
       if (blockType == BlockType.DATA) {
         encodeDataBlockForDisk();
       } else {
-        defaultBlockEncodingCtx.compressAfterEncoding(
+        defaultBlockEncodingCtx.compressAfterEncodingWithBlockType(
             uncompressedBytesWithHeader, blockType);
         onDiskBytesWithHeader =
           defaultBlockEncodingCtx.getOnDiskBytesWithHeader();
@@ -1748,11 +1748,28 @@ public class HFileBlock implements Cacheable {
   /**
    * Maps a minor version to the size of the header.
    */
-  static private int headerSize(int minorVersion) {
+  public static int headerSize(int minorVersion) {
     if (minorVersion < MINOR_VERSION_WITH_CHECKSUM) {
       return HConstants.HFILEBLOCK_HEADER_SIZE_NO_CHECKSUM;
     }
     return HConstants.HFILEBLOCK_HEADER_SIZE;
+  }
+
+  /**
+   * Return the appropriate DUMMY_HEADER for the minor version
+   */
+  public byte[] getDummyHeaderForVersion() {
+    return getDummyHeaderForVersion(minorVersion);
+  }
+
+  /**
+   * Return the appropriate DUMMY_HEADER for the minor version
+   */
+  static private byte[] getDummyHeaderForVersion(int minorVersion) {
+    if (minorVersion < MINOR_VERSION_WITH_CHECKSUM) {
+      return DUMMY_HEADER_NO_CHECKSUM;
+    }
+    return HConstants.HFILEBLOCK_DUMMY_HEADER;
   }
 
   /**

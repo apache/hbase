@@ -419,7 +419,7 @@ public class TestHFileBlock {
           new byte[rawBuf.array().length + headerLen];
       System.arraycopy(rawBuf.array(), 0, rawBufWithHeader,
           headerLen, rawBuf.array().length);
-      defaultEncodingCtx.compressAfterEncoding(rawBufWithHeader,
+      defaultEncodingCtx.compressAfterEncodingWithBlockType(rawBufWithHeader,
           BlockType.DATA);
       encodedResultWithHeader =
         defaultEncodingCtx.getUncompressedBytesWithHeader();

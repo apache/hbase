@@ -60,7 +60,7 @@ public class HFileBlockDefaultEncodingContext implements
   private ByteArrayOutputStream encodedStream = new ByteArrayOutputStream();
   private DataOutputStream dataOut = new DataOutputStream(encodedStream);
 
-  private final byte[] dummyHeader;
+  private byte[] dummyHeader;
 
   /**
    * @param compressionAlgorithm compression algorithm used
@@ -86,8 +86,13 @@ public class HFileBlockDefaultEncodingContext implements
                 + compressionAlgorithm, e);
       }
     }
-    dummyHeader = Preconditions.checkNotNull(headerBytes, 
-      "Please pass HFileBlock.HFILEBLOCK_DUMMY_HEADER instead of null for param headerBytes");
+    dummyHeader = Preconditions.checkNotNull(headerBytes,
+      "Please pass HConstants.HFILEBLOCK_DUMMY_HEADER instead of null for param headerBytes");
+  }
+
+  @Override
+  public void setDummyHeader(byte[] headerBytes) {
+    dummyHeader = headerBytes;
   }
 
   /**
@@ -107,7 +112,7 @@ public class HFileBlockDefaultEncodingContext implements
   public void postEncoding(BlockType blockType)
       throws IOException {
     dataOut.flush();
-    compressAfterEncoding(encodedStream.toByteArray(), blockType);
+    compressAfterEncodingWithBlockType(encodedStream.toByteArray(), blockType);
     this.blockType = blockType;
   }
 
@@ -116,7 +121,7 @@ public class HFileBlockDefaultEncodingContext implements
    * @param blockType
    * @throws IOException
    */
-  public void compressAfterEncoding(byte[] uncompressedBytesWithHeader,
+  public void compressAfterEncodingWithBlockType(byte[] uncompressedBytesWithHeader,
       BlockType blockType) throws IOException {
     compressAfterEncoding(uncompressedBytesWithHeader, blockType, dummyHeader);
   }
@@ -187,10 +192,4 @@ public class HFileBlockDefaultEncodingContext implements
   public DataBlockEncoding getDataBlockEncoding() {
     return this.encodingAlgo;
   }
-
-  @Override
-  public int getHeaderSize() {
-    return this.dummyHeader.length;
-  }
-
 }
