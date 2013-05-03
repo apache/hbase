@@ -33,6 +33,9 @@ import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.util.VersionInfo;
 import org.jboss.netty.bootstrap.ConnectionlessBootstrap;
+import org.jboss.netty.channel.ChannelEvent;
+import org.jboss.netty.channel.ChannelHandlerContext;
+import org.jboss.netty.channel.ChannelUpstreamHandler;
 import org.jboss.netty.channel.Channels;
 import org.jboss.netty.channel.socket.DatagramChannel;
 import org.jboss.netty.channel.socket.DatagramChannelFactory;
@@ -246,7 +249,14 @@ public class ClusterStatusPublisher extends Chore {
       DatagramChannelFactory f = new OioDatagramChannelFactory(service);
 
       ConnectionlessBootstrap b = new ConnectionlessBootstrap(f);
-      b.setPipeline(Channels.pipeline(new ProtobufEncoder()));
+      b.setPipeline(Channels.pipeline(new ProtobufEncoder(),
+          new ChannelUpstreamHandler() {
+            @Override
+            public void handleUpstream(ChannelHandlerContext ctx, ChannelEvent e)
+                throws Exception {
+              // We're just writing here. Discard any incoming data. See HBASE-8466.
+            }
+          }));
 
 
       channel = (DatagramChannel) b.bind(new InetSocketAddress(0));
