@@ -34,7 +34,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.regionserver.wal.HLog.Reader;
 import org.apache.hadoop.hbase.regionserver.wal.HLog.Writer;
-import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CancelableProgressable;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 
@@ -129,7 +128,9 @@ public class HLogFactory {
             }
           } catch (IOException e) {
             String msg = e.getMessage();
-            if (msg != null && msg.contains("Cannot obtain block length")) {
+            if (msg != null && (msg.contains("Cannot obtain block length")
+                || msg.contains("Could not obtain the last block")
+                || msg.matches("Blocklist for [^ ]* has changed.*"))) {
               if (++nbAttempt == 1) {
                 LOG.warn("Lease should have recovered. This is not expected. Will retry", e);
               }
