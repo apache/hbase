@@ -22,8 +22,6 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.net.ConnectException;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import junit.framework.Assert;
@@ -37,25 +35,20 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.MediumTests;
-import org.apache.hadoop.hbase.exceptions.NotAllMetaRegionsOnlineException;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.client.AdminProtocol;
-import org.apache.hadoop.hbase.client.ClientProtocol;
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.client.HConnectionTestingUtility;
 import org.apache.hadoop.hbase.client.Result;
-import org.apache.hadoop.hbase.client.RetriesExhaustedException;
-import org.apache.hadoop.hbase.client.ServerCallable;
+import org.apache.hadoop.hbase.exceptions.NotAllMetaRegionsOnlineException;
 import org.apache.hadoop.hbase.exceptions.ServerNotRunningYetException;
+import org.apache.hadoop.hbase.protobuf.generated.AdminProtos;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetRegionInfoRequest;
-import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetRegionInfoResponse;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.GetRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.GetResponse;
-import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.zookeeper.MetaRegionTracker;
-import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.hadoop.util.Progressable;
 import org.apache.zookeeper.KeeperException;
@@ -63,7 +56,6 @@ import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
@@ -149,7 +141,8 @@ public class TestCatalogTracker {
    */
   @Test public void testInterruptWaitOnMeta()
   throws IOException, InterruptedException, ServiceException {
-    final ClientProtocol client = Mockito.mock(ClientProtocol.class);
+    final ClientProtos.ClientService.BlockingInterface client =
+      Mockito.mock(ClientProtos.ClientService.BlockingInterface.class);
     HConnection connection = mockConnection(null, client);
     try {
       Mockito.when(client.get((RpcController)Mockito.any(), (GetRequest)Mockito.any())).
@@ -183,7 +176,8 @@ public class TestCatalogTracker {
   private void testVerifyMetaRegionLocationWithException(Exception ex)
   throws IOException, InterruptedException, KeeperException, ServiceException {
     // Mock an ClientProtocol.
-    final ClientProtocol implementation = Mockito.mock(ClientProtocol.class);
+    final ClientProtos.ClientService.BlockingInterface implementation =
+      Mockito.mock(ClientProtos.ClientService.BlockingInterface.class);
     HConnection connection = mockConnection(null, implementation);
     try {
       // If a 'get' is called on mocked interface, throw connection refused.
@@ -253,8 +247,8 @@ public class TestCatalogTracker {
     HConnection connection = Mockito.mock(HConnection.class);
     ServiceException connectException =
       new ServiceException(new ConnectException("Connection refused"));
-    final AdminProtocol implementation =
-      Mockito.mock(AdminProtocol.class);
+    final AdminProtos.AdminService.BlockingInterface implementation =
+      Mockito.mock(AdminProtos.AdminService.BlockingInterface.class);
     Mockito.when(implementation.getRegionInfo((RpcController)Mockito.any(),
       (GetRegionInfoRequest)Mockito.any())).thenThrow(connectException);
     Mockito.when(connection.getAdmin(Mockito.any(ServerName.class), Mockito.anyBoolean())).
@@ -309,22 +303,23 @@ public class TestCatalogTracker {
   }
 
   /**
-   * @param admin An {@link AdminProtocol} instance; you'll likely
+   * @param admin An {@link AdminProtos.AdminService.BlockingInterface} instance; you'll likely
    * want to pass a mocked HRS; can be null.
    * @param client A mocked ClientProtocol instance, can be null
    * @return Mock up a connection that returns a {@link Configuration} when
    * {@link HConnection#getConfiguration()} is called, a 'location' when
    * {@link HConnection#getRegionLocation(byte[], byte[], boolean)} is called,
-   * and that returns the passed {@link AdminProtocol} instance when
+   * and that returns the passed {@link AdminProtos.AdminService.BlockingInterface} instance when
    * {@link HConnection#getAdmin(ServerName)} is called, returns the passed
-   * {@link ClientProtocol} instance when {@link HConnection#getClient(ServerName)}
-   * is called (Be sure call
+   * {@link ClientProtos.ClientService.BlockingInterface} instance when
+   * {@link HConnection#getClient(ServerName)} is called (Be sure to call
    * {@link HConnectionManager#deleteConnection(org.apache.hadoop.conf.Configuration)}
    * when done with this mocked Connection.
    * @throws IOException
    */
-  private HConnection mockConnection(final AdminProtocol admin,
-      final ClientProtocol client) throws IOException {
+  private HConnection mockConnection(final AdminProtos.AdminService.BlockingInterface admin,
+      final ClientProtos.ClientService.BlockingInterface client)
+  throws IOException {
     HConnection connection =
       HConnectionTestingUtility.getMockedConnection(UTIL.getConfiguration());
     Mockito.doNothing().when(connection).close();

@@ -27,9 +27,9 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 import java.util.SortedMap;
-import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 
@@ -37,25 +37,25 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.exceptions.ClockOutOfSyncException;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.exceptions.PleaseHoldException;
 import org.apache.hadoop.hbase.RegionLoad;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerLoad;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.exceptions.YouAreDeadException;
-import org.apache.hadoop.hbase.exceptions.ZooKeeperConnectionException;
-import org.apache.hadoop.hbase.client.AdminProtocol;
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.client.RetriesExhaustedException;
+import org.apache.hadoop.hbase.exceptions.ClockOutOfSyncException;
+import org.apache.hadoop.hbase.exceptions.PleaseHoldException;
+import org.apache.hadoop.hbase.exceptions.YouAreDeadException;
+import org.apache.hadoop.hbase.exceptions.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.master.handler.MetaServerShutdownHandler;
 import org.apache.hadoop.hbase.master.handler.ServerShutdownHandler;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.protobuf.ResponseConverter;
+import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.AdminService;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.OpenRegionRequest;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.OpenRegionResponse;
 import org.apache.hadoop.hbase.regionserver.RegionOpeningState;
@@ -112,12 +112,12 @@ public class ServerManager {
   private final Map<ServerName, ServerLoad> onlineServers =
     new ConcurrentHashMap<ServerName, ServerLoad>();
 
-  // TODO: This is strange to have two maps but HSI above is used on both sides
   /**
-   * Map from full server-instance name to the RPC connection for this server.
+   * Map of admin interfaces per registered regionserver; these interfaces we use to control
+   * regionservers out on the cluster
    */
-  private final Map<ServerName, AdminProtocol> serverConnections =
-    new HashMap<ServerName, AdminProtocol>();
+  private final Map<ServerName, AdminService.BlockingInterface> rsAdmins =
+    new HashMap<ServerName, AdminService.BlockingInterface>();
 
   /**
    * List of region servers <ServerName> that should not get any more new
@@ -351,7 +351,7 @@ public class ServerManager {
   void recordNewServer(final ServerName serverName, final ServerLoad sl) {
     LOG.info("Registering server=" + serverName);
     this.onlineServers.put(serverName, sl);
-    this.serverConnections.remove(serverName);
+    this.rsAdmins.remove(serverName);
   }
 
   public long getLastFlushedSequenceId(byte[] regionName) {
@@ -472,7 +472,7 @@ public class ServerManager {
     synchronized (onlineServers) {
       onlineServers.notifyAll();
     }
-    this.serverConnections.remove(serverName);
+    this.rsAdmins.remove(serverName);
     // If cluster is going down, yes, servers are going to be expiring; don't
     // process as a dead server
     if (this.clusterShutdown) {
@@ -591,7 +591,7 @@ public class ServerManager {
   public RegionOpeningState sendRegionOpen(final ServerName server,
       HRegionInfo region, int versionOfOfflineNode)
   throws IOException {
-    AdminProtocol admin = getServerConnection(server);
+    AdminService.BlockingInterface admin = getRsAdmin(server);
     if (admin == null) {
       LOG.warn("Attempting to send OPEN RPC to server " + server.toString() +
         " failed because no RPC connection found to this server");
@@ -619,7 +619,7 @@ public class ServerManager {
   public List<RegionOpeningState> sendRegionOpen(ServerName server,
       List<Pair<HRegionInfo, Integer>> regionOpenInfos)
   throws IOException {
-    AdminProtocol admin = getServerConnection(server);
+    AdminService.BlockingInterface admin = getRsAdmin(server);
     if (admin == null) {
       LOG.warn("Attempting to send OPEN RPC to server " + server.toString() +
         " failed because no RPC connection found to this server");
@@ -653,7 +653,7 @@ public class ServerManager {
   public boolean sendRegionClose(ServerName server, HRegionInfo region,
     int versionOfClosingNode, ServerName dest, boolean transitionInZK) throws IOException {
     if (server == null) throw new NullPointerException("Passed server is null");
-    AdminProtocol admin = getServerConnection(server);
+    AdminService.BlockingInterface admin = getRsAdmin(server);
     if (admin == null) {
       throw new IOException("Attempting to send CLOSE RPC to server " +
         server.toString() + " for region " +
@@ -688,7 +688,7 @@ public class ServerManager {
       throw new NullPointerException("Passed server is null");
     if (region_a == null || region_b == null)
       throw new NullPointerException("Passed region is null");
-    AdminProtocol admin = getServerConnection(server);
+    AdminService.BlockingInterface admin = getRsAdmin(server);
     if (admin == null) {
       throw new IOException("Attempting to send MERGE REGIONS RPC to server "
           + server.toString() + " for region "
@@ -701,18 +701,17 @@ public class ServerManager {
 
     /**
     * @param sn
-    * @return
+    * @return Admin interface for the remote regionserver named <code>sn</code>
     * @throws IOException
     * @throws RetriesExhaustedException wrapping a ConnectException if failed
-    * putting up proxy.
     */
-  private AdminProtocol getServerConnection(final ServerName sn)
+  private AdminService.BlockingInterface getRsAdmin(final ServerName sn)
   throws IOException {
-    AdminProtocol admin = this.serverConnections.get(sn);
+    AdminService.BlockingInterface admin = this.rsAdmins.get(sn);
     if (admin == null) {
-      LOG.debug("New connection to " + sn.toString());
+      LOG.debug("New admin connection to " + sn.toString());
       admin = this.connection.getAdmin(sn);
-      this.serverConnections.put(sn, admin);
+      this.rsAdmins.put(sn, admin);
     }
     return admin;
   }

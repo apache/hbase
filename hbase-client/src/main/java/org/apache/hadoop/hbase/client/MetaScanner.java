@@ -26,10 +26,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.client.HConnectionManager.HConnectable;
 import org.apache.hadoop.hbase.exceptions.TableNotFoundException;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.PairOfSameType;
 
 import java.io.Closeable;
 import java.io.IOException;
@@ -275,7 +273,7 @@ public class MetaScanner {
   public static List<HRegionInfo> listAllRegions(Configuration conf, final boolean offlined)
   throws IOException {
     final List<HRegionInfo> regions = new ArrayList<HRegionInfo>();
-    MetaScannerVisitor visitor = new DefaultMetaScannerVisitor(conf) {
+    MetaScannerVisitor visitor = new DefaultMetaScannerVisitor() {
         @Override
         public boolean processRowInternal(Result result) throws IOException {
           if (result == null || result.isEmpty()) {
@@ -310,7 +308,7 @@ public class MetaScanner {
       final byte [] tablename, final boolean offlined) throws IOException {
     final NavigableMap<HRegionInfo, ServerName> regions =
       new TreeMap<HRegionInfo, ServerName>();
-    MetaScannerVisitor visitor = new TableMetaScannerVisitor(conf, tablename) {
+    MetaScannerVisitor visitor = new TableMetaScannerVisitor(tablename) {
       @Override
       public boolean processRowInternal(Result rowResult) throws IOException {
         HRegionInfo info = getHRegionInfo(rowResult);
@@ -354,10 +352,8 @@ public class MetaScanner {
   public static abstract class DefaultMetaScannerVisitor
     extends MetaScannerVisitorBase {
 
-    protected Configuration conf;
-
-    public DefaultMetaScannerVisitor(Configuration conf) {
-      this.conf = conf;
+    public DefaultMetaScannerVisitor() {
+      super();
     }
 
     public abstract boolean processRowInternal(Result rowResult) throws IOException;
@@ -386,8 +382,8 @@ public class MetaScanner {
   public static abstract class TableMetaScannerVisitor extends DefaultMetaScannerVisitor {
     private byte[] tableName;
 
-    public TableMetaScannerVisitor(Configuration conf, byte[] tableName) {
-      super(conf);
+    public TableMetaScannerVisitor(byte[] tableName) {
+      super();
       this.tableName = tableName;
     }
 
@@ -402,6 +398,5 @@ public class MetaScanner {
       }
       return super.processRow(rowResult);
     }
-
   }
 }

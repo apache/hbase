@@ -148,11 +148,11 @@ public class SequenceFileLogWriter implements HLog.Writer {
         null,
         createMetadata(conf, compress));
     } else {
-      LOG.debug("using new createWriter -- HADOOP-6840");
+      if (LOG.isTraceEnabled()) LOG.trace("Using new createWriter -- HADOOP-6840");
     }
     
     this.writer_out = getSequenceFilePrivateFSDataOutputStreamAccessible();
-    LOG.debug("Path=" + path + ", compression=" + compress);
+    if (LOG.isTraceEnabled()) LOG.trace("Path=" + path + ", compression=" + compress);
   }
 
   // Get at the private FSDataOutputStream inside in SequenceFile so we can

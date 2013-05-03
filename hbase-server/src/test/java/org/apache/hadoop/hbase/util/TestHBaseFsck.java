@@ -59,7 +59,6 @@ import org.apache.hadoop.hbase.LargeTests;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.catalog.MetaEditor;
-import org.apache.hadoop.hbase.client.AdminProtocol;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
@@ -77,6 +76,7 @@ import org.apache.hadoop.hbase.master.RegionStates;
 import org.apache.hadoop.hbase.master.TableLockManager;
 import org.apache.hadoop.hbase.master.TableLockManager.TableLock;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.protobuf.generated.AdminProtos;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
@@ -524,8 +524,7 @@ public class TestHBaseFsck {
         new HashMap<ServerName, List<String>>();
     HConnection connection = admin.getConnection();
     for (ServerName hsi : regionServers) {
-      AdminProtocol server =
-        connection.getAdmin(hsi);
+      AdminProtos.AdminService.BlockingInterface server = connection.getAdmin(hsi);
 
       // list all online regions from this region server
       List<HRegionInfo> regions = ProtobufUtil.getOnlineRegions(server);

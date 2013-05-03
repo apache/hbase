@@ -28,15 +28,18 @@ import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.google.common.collect.Lists;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.IpcProtocol;
 import org.apache.hadoop.hbase.MediumTests;
+import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.ipc.protobuf.generated.TestDelayedRpcProtos;
 import org.apache.hadoop.hbase.ipc.protobuf.generated.TestDelayedRpcProtos.TestArg;
 import org.apache.hadoop.hbase.ipc.protobuf.generated.TestDelayedRpcProtos.TestResponse;
+import org.apache.hadoop.hbase.security.User;
 import org.apache.log4j.AppenderSkeleton;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
@@ -44,6 +47,9 @@ import org.apache.log4j.spi.LoggingEvent;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
+import com.google.protobuf.BlockingRpcChannel;
+import com.google.protobuf.BlockingService;
+import com.google.protobuf.RpcController;
 import com.google.protobuf.ServiceException;
 
 /**
@@ -55,7 +61,7 @@ import com.google.protobuf.ServiceException;
 public class TestDelayedRpc {
   private static final Log LOG = LogFactory.getLog(TestDelayedRpc.class);
 
-  public static RpcServer rpcServer;
+  public static RpcServerInterface rpcServer;
 
   public static final int UNDELAYED = 0;
   public static final int DELAYED = 1;
@@ -73,23 +79,25 @@ public class TestDelayedRpc {
   private void testDelayedRpc(boolean delayReturnValue) throws Exception {
     Configuration conf = HBaseConfiguration.create();
     InetSocketAddress isa = new InetSocketAddress("localhost", 0);
-    TestRpcImpl instance = new TestRpcImpl(delayReturnValue);
-    rpcServer = HBaseServerRPC.getServer(instance.getClass(), instance,
-        new Class<?>[]{ TestRpcImpl.class },
-        isa.getHostName(), isa.getPort(), 1, 0, true, conf, 0);
+    TestDelayedImplementation instance = new TestDelayedImplementation(delayReturnValue);
+    BlockingService service =
+      TestDelayedRpcProtos.TestDelayedService.newReflectiveBlockingService(instance);
+    rpcServer = new RpcServer(null, "testDelayedRpc",
+        Lists.newArrayList(new RpcServer.BlockingServiceAndInterface(service, null)),
+        isa, 1, 0, conf, 0);
     rpcServer.start();
-
-    ProtobufRpcClientEngine clientEngine =
-        new ProtobufRpcClientEngine(conf, HConstants.CLUSTER_ID_DEFAULT);
+    RpcClient rpcClient = new RpcClient(conf, HConstants.DEFAULT_CLUSTER_ID.toString());
     try {
-      TestRpc client = clientEngine.getProxy(TestRpc.class,
-          rpcServer.getListenerAddress(), conf, 1000);
-
+      BlockingRpcChannel channel = rpcClient.createBlockingRpcChannel(
+          new ServerName(rpcServer.getListenerAddress().getHostName(),
+              rpcServer.getListenerAddress().getPort(), System.currentTimeMillis()),
+          User.getCurrent(), 1000);
+      TestDelayedRpcProtos.TestDelayedService.BlockingInterface stub =
+        TestDelayedRpcProtos.TestDelayedService.newBlockingStub(channel);
       List<Integer> results = new ArrayList<Integer>();
-
-      TestThread th1 = new TestThread(client, true, results);
-      TestThread th2 = new TestThread(client, false, results);
-      TestThread th3 = new TestThread(client, false, results);
+      TestThread th1 = new TestThread(stub, true, results);
+      TestThread th2 = new TestThread(stub, false, results);
+      TestThread th3 = new TestThread(stub, false, results);
       th1.start();
       Thread.sleep(100);
       th2.start();
@@ -104,7 +112,7 @@ public class TestDelayedRpc {
       assertEquals(UNDELAYED, results.get(1).intValue());
       assertEquals(results.get(2).intValue(), delayReturnValue ? DELAYED :  0xDEADBEEF);
     } finally {
-      clientEngine.close();
+      rpcClient.stop();
     }
   }
 
@@ -130,34 +138,41 @@ public class TestDelayedRpc {
     }
   }
 
+  /**
+   * Tests that we see a WARN message in the logs.
+   * @throws Exception
+   */
   @Test
   public void testTooManyDelayedRpcs() throws Exception {
     Configuration conf = HBaseConfiguration.create();
     final int MAX_DELAYED_RPC = 10;
     conf.setInt("hbase.ipc.warn.delayedrpc.number", MAX_DELAYED_RPC);
-
+    // Set up an appender to catch the "Too many delayed calls" that we expect.
     ListAppender listAppender = new ListAppender();
-    Logger log = Logger.getLogger("org.apache.hadoop.ipc.HBaseServer");
+    Logger log = Logger.getLogger("org.apache.hadoop.ipc.RpcServer");
     log.addAppender(listAppender);
     log.setLevel(Level.WARN);
 
+
     InetSocketAddress isa = new InetSocketAddress("localhost", 0);
-    TestRpcImpl instance = new TestRpcImpl(true);
-    rpcServer = HBaseServerRPC.getServer(instance.getClass(), instance,
-        new Class<?>[]{ TestRpcImpl.class },
-        isa.getHostName(), isa.getPort(), 1, 0, true, conf, 0);
+    TestDelayedImplementation instance = new TestDelayedImplementation(true);
+    BlockingService service =
+      TestDelayedRpcProtos.TestDelayedService.newReflectiveBlockingService(instance);
+    rpcServer = new RpcServer(null, "testTooManyDelayedRpcs",
+      Lists.newArrayList(new RpcServer.BlockingServiceAndInterface(service, null)),
+        isa, 1, 0, conf, 0);
     rpcServer.start();
-
-    ProtobufRpcClientEngine clientEngine =
-        new ProtobufRpcClientEngine(conf, HConstants.CLUSTER_ID_DEFAULT);
+    RpcClient rpcClient = new RpcClient(conf, HConstants.DEFAULT_CLUSTER_ID.toString());
     try {
-      TestRpc client = clientEngine.getProxy(TestRpc.class,
-          rpcServer.getListenerAddress(), conf, 1000);
-
+      BlockingRpcChannel channel = rpcClient.createBlockingRpcChannel(
+          new ServerName(rpcServer.getListenerAddress().getHostName(),
+              rpcServer.getListenerAddress().getPort(), System.currentTimeMillis()),
+          User.getCurrent(), 1000);
+      TestDelayedRpcProtos.TestDelayedService.BlockingInterface stub =
+        TestDelayedRpcProtos.TestDelayedService.newBlockingStub(channel);
       Thread threads[] = new Thread[MAX_DELAYED_RPC + 1];
-
       for (int i = 0; i < MAX_DELAYED_RPC; i++) {
-        threads[i] = new TestThread(client, true, null);
+        threads[i] = new TestThread(stub, true, null);
         threads[i].start();
       }
 
@@ -165,7 +180,7 @@ public class TestDelayedRpc {
       assertTrue(listAppender.getMessages().isEmpty());
 
       /* This should give a warning. */
-      threads[MAX_DELAYED_RPC] = new TestThread(client, true, null);
+      threads[MAX_DELAYED_RPC] = new TestThread(stub, true, null);
       threads[MAX_DELAYED_RPC].start();
 
       for (int i = 0; i < MAX_DELAYED_RPC; i++) {
@@ -173,20 +188,16 @@ public class TestDelayedRpc {
       }
 
       assertFalse(listAppender.getMessages().isEmpty());
-      assertTrue(listAppender.getMessages().get(0).startsWith(
-          "Too many delayed calls"));
+      assertTrue(listAppender.getMessages().get(0).startsWith("Too many delayed calls"));
 
       log.removeAppender(listAppender);
     } finally {
-      clientEngine.close();
+      rpcClient.stop();
     }
   }
 
-  public interface TestRpc extends IpcProtocol {
-    TestResponse test(final Object rpcController, TestArg delay) throws ServiceException;
-  }
-
-  private static class TestRpcImpl implements TestRpc {
+  static class TestDelayedImplementation
+  implements TestDelayedRpcProtos.TestDelayedService.BlockingInterface {
     /**
      * Should the return value of delayed call be set at the end of the delay
      * or at call return.
@@ -197,12 +208,12 @@ public class TestDelayedRpc {
      * @param delayReturnValue Should the response to the delayed call be set
      * at the start or the end of the delay.
      */
-    public TestRpcImpl(boolean delayReturnValue) {
+    public TestDelayedImplementation(boolean delayReturnValue) {
       this.delayReturnValue = delayReturnValue;
     }
 
     @Override
-    public TestResponse test(final Object rpcController, final TestArg testArg)
+    public TestResponse test(final RpcController rpcController, final TestArg testArg)
     throws ServiceException {
       boolean delay = testArg.getDelay();
       TestResponse.Builder responseBuilder = TestResponse.newBuilder();
@@ -210,7 +221,7 @@ public class TestDelayedRpc {
         responseBuilder.setResponse(UNDELAYED);
         return responseBuilder.build();
       }
-      final Delayable call = HBaseServer.getCurrentCall();
+      final Delayable call = RpcServer.getCurrentCall();
       call.startDelay(delayReturnValue);
       new Thread() {
         public void run() {
@@ -232,28 +243,30 @@ public class TestDelayedRpc {
   }
 
   private static class TestThread extends Thread {
-    private TestRpc server;
+    private TestDelayedRpcProtos.TestDelayedService.BlockingInterface stub;
     private boolean delay;
     private List<Integer> results;
 
-    public TestThread(TestRpc server, boolean delay, List<Integer> results) {
-      this.server = server;
+    public TestThread(TestDelayedRpcProtos.TestDelayedService.BlockingInterface stub,
+        boolean delay, List<Integer> results) {
+      this.stub = stub;
       this.delay = delay;
       this.results = results;
     }
 
     @Override
     public void run() {
+      Integer result;
       try {
-        Integer result = new Integer(server.test(null, TestArg.newBuilder().setDelay(delay).
+        result = new Integer(stub.test(null, TestArg.newBuilder().setDelay(delay).
           build()).getResponse());
-        if (results != null) {
-          synchronized (results) {
-            results.add(result);
-          }
+      } catch (ServiceException e) {
+        throw new RuntimeException(e);
+      }
+      if (results != null) {
+        synchronized (results) {
+          results.add(result);
         }
-      } catch (Exception e) {
-         fail("Unexpected exception: "+e.getMessage());
       }
     }
   }
@@ -262,22 +275,26 @@ public class TestDelayedRpc {
   public void testEndDelayThrowing() throws IOException {
     Configuration conf = HBaseConfiguration.create();
     InetSocketAddress isa = new InetSocketAddress("localhost", 0);
-    FaultyTestRpc instance = new FaultyTestRpc();
-    rpcServer = HBaseServerRPC.getServer(instance.getClass(), instance,
-        new Class<?>[]{ TestRpcImpl.class },
-        isa.getHostName(), isa.getPort(), 1, 0, true, conf, 0);
+    FaultyTestDelayedImplementation instance = new FaultyTestDelayedImplementation();
+    BlockingService service =
+      TestDelayedRpcProtos.TestDelayedService.newReflectiveBlockingService(instance);
+    rpcServer = new RpcServer(null, "testEndDelayThrowing",
+        Lists.newArrayList(new RpcServer.BlockingServiceAndInterface(service, null)),
+        isa, 1, 0, conf, 0);
     rpcServer.start();
-
-    ProtobufRpcClientEngine clientEngine =
-        new ProtobufRpcClientEngine(conf, HConstants.CLUSTER_ID_DEFAULT);
+    RpcClient rpcClient = new RpcClient(conf, HConstants.DEFAULT_CLUSTER_ID.toString());
     try {
-      TestRpc client = clientEngine.getProxy(TestRpc.class,
-          rpcServer.getListenerAddress(), conf, 1000);
+      BlockingRpcChannel channel = rpcClient.createBlockingRpcChannel(
+        new ServerName(rpcServer.getListenerAddress().getHostName(),
+          rpcServer.getListenerAddress().getPort(), System.currentTimeMillis()),
+        User.getCurrent(), 1000);
+      TestDelayedRpcProtos.TestDelayedService.BlockingInterface stub =
+        TestDelayedRpcProtos.TestDelayedService.newBlockingStub(channel);
 
       int result = 0xDEADBEEF;
 
       try {
-        result = client.test(null, TestArg.newBuilder().setDelay(false).build()).getResponse();
+        result = stub.test(null, TestArg.newBuilder().setDelay(false).build()).getResponse();
       } catch (Exception e) {
         fail("No exception should have been thrown.");
       }
@@ -285,30 +302,36 @@ public class TestDelayedRpc {
 
       boolean caughtException = false;
       try {
-        result = client.test(null, TestArg.newBuilder().setDelay(true).build()).getResponse();
+        result = stub.test(null, TestArg.newBuilder().setDelay(true).build()).getResponse();
       } catch(Exception e) {
         // Exception thrown by server is enclosed in a RemoteException.
-        if (e.getCause().getMessage().contains(
-            "java.lang.Exception: Something went wrong"))
+        if (e.getCause().getMessage().contains("java.lang.Exception: Something went wrong")) {
           caughtException = true;
-        LOG.warn(e);
+        }
+        LOG.warn("Caught exception, expected=" + caughtException);
       }
       assertTrue(caughtException);
     } finally {
-      clientEngine.close();
+      rpcClient.stop();
     }
   }
 
   /**
    * Delayed calls to this class throw an exception.
    */
-  private static class FaultyTestRpc implements TestRpc {
+  private static class FaultyTestDelayedImplementation extends TestDelayedImplementation {
+    public FaultyTestDelayedImplementation() {
+      super(false);
+    }
+
     @Override
-    public TestResponse test(Object rpcController, TestArg arg) {
-      if (!arg.getDelay())
-        return TestResponse.newBuilder().setResponse(UNDELAYED).build();
-      Delayable call = HBaseServer.getCurrentCall();
+    public TestResponse test(RpcController rpcController, TestArg arg)
+    throws ServiceException {
+      LOG.info("In faulty test, delay=" + arg.getDelay());
+      if (!arg.getDelay()) return TestResponse.newBuilder().setResponse(UNDELAYED).build();
+      Delayable call = RpcServer.getCurrentCall();
       call.startDelay(true);
+      LOG.info("In faulty test, delaying");
       try {
         call.endDelayThrowing(new Exception("Something went wrong"));
       } catch (IOException e) {

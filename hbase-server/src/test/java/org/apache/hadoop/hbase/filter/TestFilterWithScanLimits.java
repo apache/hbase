@@ -34,8 +34,8 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.exceptions.MasterNotRunningException;
 import org.apache.hadoop.hbase.exceptions.ZooKeeperConnectionException;
-import org.apache.hadoop.hbase.ipc.HBaseClient;
-import org.apache.hadoop.hbase.ipc.HBaseServer;
+import org.apache.hadoop.hbase.ipc.RpcClient;
+import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
@@ -177,8 +177,8 @@ public class TestFilterWithScanLimits {
 
   @BeforeClass
   public static void setUp() throws Exception {
-    ((Log4JLogger)HBaseServer.LOG).getLogger().setLevel(Level.ALL);
-    ((Log4JLogger)HBaseClient.LOG).getLogger().setLevel(Level.ALL);
+    ((Log4JLogger)RpcServer.LOG).getLogger().setLevel(Level.ALL);
+    ((Log4JLogger)RpcClient.LOG).getLogger().setLevel(Level.ALL);
     ((Log4JLogger)ScannerCallable.LOG).getLogger().setLevel(Level.ALL);
     TEST_UTIL.startMiniCluster(1);
     initialize(TEST_UTIL.getConfiguration());

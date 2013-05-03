@@ -318,8 +318,8 @@ public class ClientScanner extends AbstractClientScanner {
               if (retryAfterOutOfOrderException) {
                 retryAfterOutOfOrderException = false;
               } else {
-                throw new DoNotRetryIOException("Failed after retry"
-                    + ", it could be cause by rpc timeout", e);
+                throw new DoNotRetryIOException("Failed after retry of " +
+                  "OutOfOrderScannerNextException: was there a rpc timeout?", e);
               }
             }
             // Clear region

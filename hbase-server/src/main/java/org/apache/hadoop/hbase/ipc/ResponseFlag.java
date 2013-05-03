@@ -21,7 +21,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 
 /**
  * Utility for managing the flag byte passed in response to a
- * {@link HBaseServer.Call}
+ * {@link RpcServer.Call}
  */
 @InterfaceAudience.Private
 class ResponseFlag {

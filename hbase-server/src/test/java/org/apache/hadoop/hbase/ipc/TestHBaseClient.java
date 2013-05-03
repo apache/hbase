@@ -37,7 +37,7 @@ public class TestHBaseClient {
   public void testFailedServer(){
     ManualEnvironmentEdge ee = new ManualEnvironmentEdge();
     EnvironmentEdgeManager.injectEdge(  ee );
-    HBaseClient.FailedServers fs = new HBaseClient.FailedServers(new Configuration());
+    RpcClient.FailedServers fs = new RpcClient.FailedServers(new Configuration());
 
     InetSocketAddress ia = InetSocketAddress.createUnresolved("bad", 12);
     InetSocketAddress ia2 = InetSocketAddress.createUnresolved("bad", 12);  // same server as ia
@@ -55,7 +55,7 @@ public class TestHBaseClient {
     Assert.assertTrue( fs.isFailedServer(ia) );
     Assert.assertTrue( fs.isFailedServer(ia2) );
 
-    ee.incValue( HBaseClient.FAILED_SERVER_EXPIRY_DEFAULT + 1 );
+    ee.incValue( RpcClient.FAILED_SERVER_EXPIRY_DEFAULT + 1 );
     Assert.assertFalse( fs.isFailedServer(ia) );
     Assert.assertFalse( fs.isFailedServer(ia2) );
 
@@ -68,7 +68,7 @@ public class TestHBaseClient {
     Assert.assertTrue( fs.isFailedServer(ia3) );
     Assert.assertTrue( fs.isFailedServer(ia4) );
 
-    ee.incValue( HBaseClient.FAILED_SERVER_EXPIRY_DEFAULT + 1 );
+    ee.incValue( RpcClient.FAILED_SERVER_EXPIRY_DEFAULT + 1 );
     Assert.assertFalse( fs.isFailedServer(ia) );
     Assert.assertFalse( fs.isFailedServer(ia2) );
     Assert.assertFalse( fs.isFailedServer(ia3) );

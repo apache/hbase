@@ -24,9 +24,10 @@ import java.util.concurrent.ConcurrentMap;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.catalog.CatalogTracker;
 import org.apache.hadoop.hbase.executor.ExecutorService;
-import org.apache.hadoop.hbase.ipc.RpcServer;
+import org.apache.hadoop.hbase.ipc.RpcServerInterface;
 import org.apache.hadoop.hbase.master.TableLockManager;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.zookeeper.KeeperException;
@@ -80,7 +81,7 @@ public interface RegionServerServices extends OnlineRegions {
   /**
    * Returns a reference to the region server's RPC server
    */
-  public RpcServer getRpcServer();
+  public RpcServerInterface getRpcServer();
 
   /**
    * Get the regions that are currently being opened or closed in the RS

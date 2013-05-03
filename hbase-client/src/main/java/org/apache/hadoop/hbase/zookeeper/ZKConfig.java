@@ -56,8 +56,7 @@ public class ZKConfig {
    * @return Properties holding mappings representing ZooKeeper config file.
    */
   public static Properties makeZKProps(Configuration conf) {
-    if (conf.getBoolean(HConstants.HBASE_CONFIG_READ_ZOOKEEPER_CONFIG,
-        false)) {
+    if (conf.getBoolean(HConstants.HBASE_CONFIG_READ_ZOOKEEPER_CONFIG, false)) {
       LOG.warn(
           "Parsing ZooKeeper's " + HConstants.ZOOKEEPER_CONFIG_NAME +
           " file for ZK properties " +
@@ -80,12 +79,9 @@ public class ZKConfig {
         }
       }
     } else {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug(
-            "Skipped reading ZK properties file '" +
-            HConstants.ZOOKEEPER_CONFIG_NAME +
-            "' since '" + HConstants.HBASE_CONFIG_READ_ZOOKEEPER_CONFIG +
-            "' was not set to true");
+      if (LOG.isTraceEnabled()) {
+        LOG.trace("Skipped reading ZK properties file '" + HConstants.ZOOKEEPER_CONFIG_NAME +
+          "' since '" + HConstants.HBASE_CONFIG_READ_ZOOKEEPER_CONFIG + "' was not set to true");
       }
     }
 

@@ -92,9 +92,9 @@ public class ScannerCallable extends ServerCallable<Result[]> {
    * @throws IOException
    */
   @Override
-  public void connect(boolean reload) throws IOException {
+  public void prepare(boolean reload) throws IOException {
     if (!instantiated || reload) {
-      super.connect(reload);
+      super.prepare(reload);
       checkIfRegionServerIsRemote();
       instantiated = true;
     }
@@ -144,7 +144,7 @@ public class ScannerCallable extends ServerCallable<Result[]> {
             RequestConverter.buildScanRequest(scannerId, caching, false, nextCallSeq);
           ScanResponse response = null;
           try {
-            response = server.scan(null, request);
+            response = stub.scan(null, request);
             // Client and RS maintain a nextCallSeq number during the scan. Every next() call
             // from client to server will increment this number in both sides. Client passes this
             // number along with the request and at RS side both the incoming nextCallSeq and its
@@ -248,7 +248,7 @@ public class ScannerCallable extends ServerCallable<Result[]> {
       ScanRequest request =
         RequestConverter.buildScanRequest(this.scannerId, 0, true);
       try {
-        server.scan(null, request);
+        stub.scan(null, request);
       } catch (ServiceException se) {
         throw ProtobufUtil.getRemoteException(se);
       }
@@ -265,7 +265,7 @@ public class ScannerCallable extends ServerCallable<Result[]> {
         this.location.getRegionInfo().getRegionName(),
         this.scan, 0, false);
     try {
-      ScanResponse response = server.scan(null, request);
+      ScanResponse response = stub.scan(null, request);
       long id = response.getScannerId();
       if (logScannerActivity) {
         LOG.info("Open scanner=" + id + " for scan=" + scan.toString()

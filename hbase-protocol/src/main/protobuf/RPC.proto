@@ -79,7 +79,7 @@ message UserInformation {
 // This is sent on connection setup after the connection preamble is sent.
 message ConnectionHeader {
   optional UserInformation userInfo = 1;
-  optional string protocol = 2 [default = "org.apache.hadoop.hbase.client.ClientProtocol"];
+  optional string serviceName = 2;
   // Cell block codec we will use sending over optional cell blocks.  Server throws exception
   // if cannot deal.
   optional string cellBlockCodecClass = 3 [default = "org.apache.hadoop.hbase.codec.KeyValueCodec"];

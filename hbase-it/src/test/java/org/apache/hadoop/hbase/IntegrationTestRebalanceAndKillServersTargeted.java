@@ -103,7 +103,7 @@ public class IntegrationTestRebalanceAndKillServersTargeted extends IngestIntegr
   @SuppressWarnings("unchecked")
   public void setUp() throws Exception {
     Configuration conf = HBaseConfiguration.create();
-    conf.set(HConnectionManager.RETRIES_BY_SERVER, "true");
+    conf.set(HConnectionManager.RETRIES_BY_SERVER_KEY, "true");
     super.setUp(NUM_SLAVES_BASE, conf);
 
     ChaosMonkey.Policy chaosPolicy = new ChaosMonkey.PeriodicRandomActionPolicy(

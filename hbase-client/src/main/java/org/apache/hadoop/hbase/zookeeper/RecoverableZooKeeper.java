@@ -116,7 +116,8 @@ public class RecoverableZooKeeper {
       // the identifier = processID@hostName
       identifier = ManagementFactory.getRuntimeMXBean().getName();
     }
-    LOG.info("The identifier of this process is " + identifier);
+    LOG.info("Process identifier=" + identifier +
+      " connecting to ZooKeeper ensemble=" + quorumServers);
     this.identifier = identifier;
     this.id = Bytes.toBytes(identifier);
 

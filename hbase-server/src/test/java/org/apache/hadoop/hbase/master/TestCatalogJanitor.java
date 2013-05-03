@@ -39,26 +39,25 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.exceptions.NotAllMetaRegionsOnlineException;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.TableDescriptors;
 import org.apache.hadoop.hbase.catalog.CatalogTracker;
 import org.apache.hadoop.hbase.catalog.MetaMockingUtil;
-import org.apache.hadoop.hbase.client.AdminProtocol;
-import org.apache.hadoop.hbase.client.ClientProtocol;
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.client.HConnectionTestingUtility;
 import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.exceptions.NotAllMetaRegionsOnlineException;
 import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.io.Reference;
 import org.apache.hadoop.hbase.master.CatalogJanitor.SplitParentFirstComparator;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.protobuf.generated.AdminProtos;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutateRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutateResponse;
 import org.apache.hadoop.hbase.regionserver.HStore;
@@ -91,7 +90,8 @@ public class TestCatalogJanitor {
     MockServer(final HBaseTestingUtility htu)
     throws NotAllMetaRegionsOnlineException, IOException, InterruptedException {
       this.c = htu.getConfiguration();
-      ClientProtocol ri = Mockito.mock(ClientProtocol.class);
+      ClientProtos.ClientService.BlockingInterface ri =
+        Mockito.mock(ClientProtos.ClientService.BlockingInterface.class);
       MutateResponse.Builder builder = MutateResponse.newBuilder();
       builder.setProcessed(true);
       try {
@@ -106,7 +106,7 @@ public class TestCatalogJanitor {
       // to make our test work.
       this.connection =
         HConnectionTestingUtility.getMockedConnectionAndDecorate(this.c,
-          Mockito.mock(AdminProtocol.class), ri,
+          Mockito.mock(AdminProtos.AdminService.BlockingInterface.class), ri,
           new ServerName("example.org,12345,6789"),
           HRegionInfo.FIRST_META_REGIONINFO);
       // Set hbase.rootdir into test dir.
@@ -114,7 +114,8 @@ public class TestCatalogJanitor {
       Path rootdir = FSUtils.getRootDir(this.c);
       FSUtils.setRootDir(this.c, rootdir);
       this.ct = Mockito.mock(CatalogTracker.class);
-      AdminProtocol hri = Mockito.mock(AdminProtocol.class);
+      AdminProtos.AdminService.BlockingInterface hri =
+        Mockito.mock(AdminProtos.AdminService.BlockingInterface.class);
       Mockito.when(this.ct.getConnection()).thenReturn(this.connection);
       Mockito.when(ct.waitForMetaServerConnection(Mockito.anyLong())).thenReturn(hri);
     }

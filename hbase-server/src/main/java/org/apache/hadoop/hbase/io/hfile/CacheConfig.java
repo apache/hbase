@@ -347,8 +347,7 @@ public class CacheConfig {
    * @param conf  The current configuration.
    * @return The block cache or <code>null</code>.
    */
-  private static synchronized BlockCache instantiateBlockCache(
-      Configuration conf) {
+  private static synchronized BlockCache instantiateBlockCache(Configuration conf) {
     if (globalBlockCache != null) return globalBlockCache;
     if (blockCacheDisabled) return null;
 
@@ -366,14 +365,12 @@ public class CacheConfig {
     // Calculate the amount of heap to give the heap.
     MemoryUsage mu = ManagementFactory.getMemoryMXBean().getHeapMemoryUsage();
     long lruCacheSize = (long) (mu.getMax() * cachePercentage);
-    int blockSize = conf.getInt("hbase.offheapcache.minblocksize",
-        HConstants.DEFAULT_BLOCKSIZE);
+    int blockSize = conf.getInt("hbase.offheapcache.minblocksize", HConstants.DEFAULT_BLOCKSIZE);
     long offHeapCacheSize =
       (long) (conf.getFloat("hbase.offheapcache.percentage", (float) 0) *
           DirectMemoryUtils.getDirectMemorySize());
     if (offHeapCacheSize <= 0) {
-      String bucketCacheIOEngineName = conf
-          .get(BUCKET_CACHE_IOENGINE_KEY, null);
+      String bucketCacheIOEngineName = conf.get(BUCKET_CACHE_IOENGINE_KEY, null);
       float bucketCachePercentage = conf.getFloat(BUCKET_CACHE_SIZE_KEY, 0F);
       // A percentage of max heap size or a absolute value with unit megabytes
       long bucketCacheSize = (long) (bucketCachePercentage < 1 ? mu.getMax()
@@ -407,10 +404,9 @@ public class CacheConfig {
           throw new RuntimeException(ioex);
         }
       }
-      LOG.info("Allocating LruBlockCache with maximum size "
-          + StringUtils.humanReadableInt(lruCacheSize));
-      LruBlockCache lruCache = new LruBlockCache(lruCacheSize,
-          StoreFile.DEFAULT_BLOCKSIZE_SMALL);
+      LOG.info("Allocating LruBlockCache with maximum size " +
+        StringUtils.humanReadableInt(lruCacheSize));
+      LruBlockCache lruCache = new LruBlockCache(lruCacheSize, StoreFile.DEFAULT_BLOCKSIZE_SMALL);
       lruCache.setVictimCache(bucketCache);
       if (bucketCache != null && combinedWithLru) {
         globalBlockCache = new CombinedBlockCache(lruCache, bucketCache);

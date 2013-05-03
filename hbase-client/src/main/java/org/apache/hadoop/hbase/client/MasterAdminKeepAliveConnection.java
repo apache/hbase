@@ -20,25 +20,25 @@
 
 package org.apache.hadoop.hbase.client;
 
-
-import org.apache.hadoop.hbase.MasterAdminProtocol;
-
-import java.io.Closeable;
+import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos;
 
 /**
  * A KeepAlive connection is not physically closed immediately after the close,
- *  but rather kept alive for a few minutes. It makes sense only if it's shared.
+ *  but rather kept alive for a few minutes. It makes sense only if it is shared.
  *
- * This interface is used by a dynamic proxy. It allows to have a #close
- *  function in a master client.
+ * <p>This interface is implemented on a stub. It allows to have a #close function in a master
+ * client.
  *
- * This class is intended to be used internally by HBase classes that need to
- * speak the MasterAdminProtocol; but not by * final user code. Hence it's
- * package protected.
+ * <p>This class is intended to be used internally by HBase classes that need to make invocations
+ * against the master on the MasterAdminProtos.MasterAdminService.BlockingInterface; but not by
+ * final user code. Hence it's package protected.
  */
-interface MasterAdminKeepAliveConnection extends MasterAdminProtocol, Closeable {
-
-  @Override
+interface MasterAdminKeepAliveConnection
+extends MasterAdminProtos.MasterAdminService.BlockingInterface {
+  /**
+   * Close down all resources.
+   */
+  // The Closeable Interface wants to throw an IOE out of a close.
+  //  Thats a PITA.  Do this below instead of Closeable.
   public void close();
 }
-

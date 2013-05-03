@@ -98,7 +98,6 @@ public class RemoteExceptionHandler {
 
       if (t instanceof IOException) {
         i = (IOException) t;
-
       } else {
         i = new IOException("server error");
         i.initCause(t);

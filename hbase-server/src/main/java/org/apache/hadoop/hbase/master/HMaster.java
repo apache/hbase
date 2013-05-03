@@ -53,9 +53,6 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.HealthCheckChore;
-import org.apache.hadoop.hbase.MasterAdminProtocol;
-import org.apache.hadoop.hbase.MasterMonitorProtocol;
-import org.apache.hadoop.hbase.RegionServerStatusProtocol;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerLoad;
 import org.apache.hadoop.hbase.ServerName;
@@ -79,9 +76,9 @@ import org.apache.hadoop.hbase.exceptions.UnknownProtocolException;
 import org.apache.hadoop.hbase.exceptions.UnknownRegionException;
 import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.executor.ExecutorType;
-import org.apache.hadoop.hbase.ipc.HBaseServer;
-import org.apache.hadoop.hbase.ipc.HBaseServerRPC;
+import org.apache.hadoop.hbase.ipc.RpcServerInterface;
 import org.apache.hadoop.hbase.ipc.RpcServer;
+import org.apache.hadoop.hbase.ipc.RpcServer.BlockingServiceAndInterface;
 import org.apache.hadoop.hbase.ipc.ServerRpcController;
 import org.apache.hadoop.hbase.master.balancer.BalancerChore;
 import org.apache.hadoop.hbase.master.balancer.ClusterStatusChore;
@@ -109,6 +106,7 @@ import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier.RegionSpecifierType;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
+import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.AddColumnRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.AddColumnResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.AssignRegionRequest;
@@ -161,6 +159,7 @@ import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.TakeSnapshot
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.TakeSnapshotResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.UnassignRegionRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.UnassignRegionResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterMonitorProtos;
 import org.apache.hadoop.hbase.protobuf.generated.MasterMonitorProtos.GetClusterStatusRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterMonitorProtos.GetClusterStatusResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterMonitorProtos.GetSchemaAlterStatusRequest;
@@ -169,6 +168,7 @@ import org.apache.hadoop.hbase.protobuf.generated.MasterMonitorProtos.GetTableDe
 import org.apache.hadoop.hbase.protobuf.generated.MasterMonitorProtos.GetTableDescriptorsResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsMasterRunningRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsMasterRunningResponse;
+import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.GetLastFlushedSequenceIdRequest;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.GetLastFlushedSequenceIdResponse;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerReportRequest;
@@ -227,16 +227,15 @@ import com.google.protobuf.ServiceException;
  *
  * <p>You can also shutdown just this master.  Call {@link #stopMaster()}.
  *
- * @see MasterMonitorProtocol
- * @see MasterAdminProtocol
- * @see RegionServerStatusProtocol
  * @see Watcher
  */
 @InterfaceAudience.Private
 @SuppressWarnings("deprecation")
 public class HMaster extends HasThread
-implements MasterMonitorProtocol, MasterAdminProtocol, RegionServerStatusProtocol, MasterServices,
-Server {
+implements MasterMonitorProtos.MasterMonitorService.BlockingInterface,
+MasterAdminProtos.MasterAdminService.BlockingInterface,
+RegionServerStatusProtos.RegionServerStatusService.BlockingInterface,
+MasterServices, Server {
   private static final Log LOG = LogFactory.getLog(HMaster.class.getName());
 
   // MASTER is name of the webapp and the attribute name used stuffing this
@@ -260,7 +259,7 @@ Server {
   private LoadBalancerTracker loadBalancerTracker;
 
   // RPC server for the HMaster
-  private final RpcServer rpcServer;
+  private final RpcServerInterface rpcServer;
   // Set after we've called HBaseServer#openServer and ready to receive RPCs.
   // Set back to false after we stop rpcServer.  Used by tests.
   private volatile boolean rpcServerOpen = false;
@@ -367,8 +366,6 @@ Server {
     this.conf = new Configuration(conf);
     // Disable the block cache on the master
     this.conf.setFloat(HConstants.HFILE_BLOCK_CACHE_SIZE_KEY, 0.0f);
-    // Set how many times to retry talking to another server over HConnection.
-    HConnectionManager.setServerSideHConnectionRetries(this.conf, LOG);
     // Server to handle client requests.
     String hostname = Strings.domainNamePointerToHostName(DNS.getDefaultHost(
       conf.get("hbase.master.dns.interface", "default"),
@@ -387,23 +384,22 @@ Server {
         throw new IllegalArgumentException("Failed resolve of bind address " + initialIsa);
       }
     }
+    String name = "master/" + initialIsa.toString();
+    // Set how many times to retry talking to another server over HConnection.
+    HConnectionManager.setServerSideHConnectionRetries(this.conf, name, LOG);
     int numHandlers = conf.getInt("hbase.master.handler.count",
       conf.getInt("hbase.regionserver.handler.count", 25));
-    this.rpcServer = HBaseServerRPC.getServer(MasterMonitorProtocol.class, this,
-        new Class<?>[]{MasterMonitorProtocol.class,
-            MasterAdminProtocol.class, RegionServerStatusProtocol.class},
-        initialIsa.getHostName(), // This is bindAddress if set else it's hostname
-        initialIsa.getPort(),
-        numHandlers,
-        0, // we dont use high priority handlers in master
-        conf.getBoolean("hbase.rpc.verbose", false), conf,
-        0); // this is a DNC w/o high priority handlers
+    this.rpcServer = new RpcServer(this, name, getServices(),
+      initialIsa, // BindAddress is IP we got for this server.
+      numHandlers,
+      0, // we dont use high priority handlers in master
+      conf,
+      0); // this is a DNC w/o high priority handlers
     // Set our address.
     this.isa = this.rpcServer.getListenerAddress();
-    this.serverName = new ServerName(hostname,
-      this.isa.getPort(), System.currentTimeMillis());
+    this.serverName = new ServerName(hostname, this.isa.getPort(), System.currentTimeMillis());
     this.rsFatals = new MemoryBoundedLogMessageBuffer(
-        conf.getLong("hbase.master.buffer.for.rs.fatals", 1*1024*1024));
+      conf.getLong("hbase.master.buffer.for.rs.fatals", 1*1024*1024));
 
     // login the zookeeper client principal (if using security)
     ZKUtil.loginClient(this.conf, "hbase.zookeeper.client.keytab.file",
@@ -455,6 +451,23 @@ Server {
       clusterStatusPublisherChore = new ClusterStatusPublisher(this, conf, publisherClass);
       Threads.setDaemonThreadRunning(clusterStatusPublisherChore.getThread());
     }
+  }
+
+  /**
+   * @return list of blocking services and their security info classes that this server supports
+   */
+  private List<BlockingServiceAndInterface> getServices() {
+    List<BlockingServiceAndInterface> bssi = new ArrayList<BlockingServiceAndInterface>(3);
+    bssi.add(new BlockingServiceAndInterface(
+        MasterMonitorProtos.MasterMonitorService.newReflectiveBlockingService(this),
+        MasterMonitorProtos.MasterMonitorService.BlockingInterface.class));
+    bssi.add(new BlockingServiceAndInterface(
+        MasterAdminProtos.MasterAdminService.newReflectiveBlockingService(this),
+        MasterAdminProtos.MasterAdminService.BlockingInterface.class));
+    bssi.add(new BlockingServiceAndInterface(
+        RegionServerStatusProtos.RegionServerStatusService.newReflectiveBlockingService(this),
+        RegionServerStatusProtos.RegionServerStatusService.BlockingInterface.class));
+    return bssi;
   }
 
   /**
@@ -612,10 +625,10 @@ Server {
     boolean wasUp = this.clusterStatusTracker.isClusterUp();
     if (!wasUp) this.clusterStatusTracker.setClusterUp();
 
-    LOG.info("Server active/primary master; " + this.serverName +
+    LOG.info("Server active/primary master=" + this.serverName +
         ", sessionid=0x" +
         Long.toHexString(this.zooKeeper.getRecoverableZooKeeper().getSessionId()) +
-        ", cluster-up flag was=" + wasUp);
+        ", setting cluster-up flag (Was=" + wasUp + ")");
 
     // create the snapshot manager
     this.snapshotManager = new SnapshotManager(this, this.metricsMaster);
@@ -765,7 +778,7 @@ Server {
     enableServerShutdownHandler();
 
     // Update meta with new PB serialization if required. i.e migrate all HRI to PB serialization
-    // in meta. This must happen before we assign all user regions or else the assignment will 
+    // in meta. This must happen before we assign all user regions or else the assignment will
     // fail.
     // TODO: Remove this after 0.96, when we do 0.98.
     org.apache.hadoop.hbase.catalog.MetaMigrationConvertingToPB
@@ -995,7 +1008,6 @@ Server {
    *  need to install an unexpected exception handler.
    */
   void startServiceThreads() throws IOException{
-
    // Start the executor service pools
    this.executorService.startExecutorService(ExecutorType.MASTER_OPEN_REGION,
       conf.getInt("hbase.master.executor.openregion.threads", 5));
@@ -1037,22 +1049,22 @@ Server {
      this.infoServer.start();
     }
 
-   // Start the health checker
-   if (this.healthCheckChore != null) {
-     Threads.setDaemonThreadRunning(this.healthCheckChore.getThread(), n + ".healthChecker");
-   }
+    // Start the health checker
+    if (this.healthCheckChore != null) {
+      Threads.setDaemonThreadRunning(this.healthCheckChore.getThread(), n + ".healthChecker");
+    }
 
     // Start allowing requests to happen.
     this.rpcServer.openServer();
     this.rpcServerOpen = true;
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Started service threads");
+    if (LOG.isTraceEnabled()) {
+      LOG.trace("Started service threads");
     }
   }
 
   /**
    * Use this when trying to figure when its ok to send in rpcs.  Used by tests.
-   * @return True if we have successfully run {@link HBaseServer#openServer()}
+   * @return True if we have successfully run {@link RpcServer#openServer()}
    */
   boolean isRpcServerOpen() {
     return this.rpcServerOpen;
@@ -1141,7 +1153,7 @@ Server {
   throws UnknownHostException {
     // Do it out here in its own little method so can fake an address when
     // mocking up in tests.
-    return HBaseServer.getRemoteIp();
+    return RpcServer.getRemoteIp();
   }
 
   /**
@@ -2354,9 +2366,9 @@ Server {
   /**
    * Offline specified region from master's in-memory state. It will not attempt to
    * reassign the region as in unassign.
-   *  
+   *
    * This is a special method that should be used by experts or hbck.
-   * 
+   *
    */
   @Override
   public OfflineRegionResponse offlineRegion(RpcController controller, OfflineRegionRequest request)

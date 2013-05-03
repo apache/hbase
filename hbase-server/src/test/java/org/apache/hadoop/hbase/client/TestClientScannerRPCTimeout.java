@@ -29,8 +29,8 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.MiniHBaseCluster.MiniHBaseClusterRegionServer;
-import org.apache.hadoop.hbase.ipc.HBaseClient;
-import org.apache.hadoop.hbase.ipc.HBaseServer;
+import org.apache.hadoop.hbase.ipc.RpcClient;
+import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ScanRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ScanResponse;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -59,10 +59,12 @@ public class TestClientScannerRPCTimeout {
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
-    ((Log4JLogger)HBaseServer.LOG).getLogger().setLevel(Level.ALL);
-    ((Log4JLogger)HBaseClient.LOG).getLogger().setLevel(Level.ALL);
+    ((Log4JLogger)RpcServer.LOG).getLogger().setLevel(Level.ALL);
+    ((Log4JLogger)RpcClient.LOG).getLogger().setLevel(Level.ALL);
     ((Log4JLogger)ScannerCallable.LOG).getLogger().setLevel(Level.ALL);
     Configuration conf = TEST_UTIL.getConfiguration();
+    // Don't report so often so easier to see other rpcs
+    conf.setInt("hbase.regionserver.msginterval", 3 * 10000);
     conf.setInt(HConstants.HBASE_RPC_TIMEOUT_KEY, rpcTimeout);
     conf.setStrings(HConstants.REGION_SERVER_IMPL, RegionServerWithScanTimeout.class.getName());
     conf.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, CLIENT_RETRIES_NUMBER);
@@ -84,12 +86,14 @@ public class TestClientScannerRPCTimeout {
     putToTable(ht, r1);
     putToTable(ht, r2);
     putToTable(ht, r3);
+    LOG.info("Wrote our three values");
     RegionServerWithScanTimeout.seqNoToSleepOn = 1;
     Scan scan = new Scan();
     scan.setCaching(1);
     ResultScanner scanner = ht.getScanner(scan);
     Result result = scanner.next();
     assertTrue("Expected row: row-1", Bytes.equals(r1, result.getRow()));
+    LOG.info("Got expected first row");
     long t1 = System.currentTimeMillis();
     result = scanner.next();
     assertTrue((System.currentTimeMillis() - t1) > rpcTimeout);
@@ -127,7 +131,8 @@ public class TestClientScannerRPCTimeout {
     private static boolean sleepAlways = false;
     private static int tryNumber = 0;
 
-    public RegionServerWithScanTimeout(Configuration conf) throws IOException, InterruptedException {
+    public RegionServerWithScanTimeout(Configuration conf)
+    throws IOException, InterruptedException {
       super(conf);
     }
 
@@ -139,6 +144,7 @@ public class TestClientScannerRPCTimeout {
         if (this.tableScannerId == request.getScannerId() && 
             (sleepAlways || (!slept && seqNoToSleepOn == request.getNextCallSeq()))) {
           try {
+            LOG.info("SLEEPING " + (rpcTimeout + 500));
             Thread.sleep(rpcTimeout + 500);
           } catch (InterruptedException e) {
           }

@@ -116,8 +116,9 @@ public class ZKUtil {
     }
     int timeout = conf.getInt(HConstants.ZK_SESSION_TIMEOUT,
         HConstants.DEFAULT_ZK_SESSION_TIMEOUT);
-    LOG.debug(identifier + " opening connection to ZooKeeper with ensemble (" +
-        ensemble + ")");
+    if (LOG.isTraceEnabled()) {
+      LOG.debug(identifier + " opening connection to ZooKeeper ensemble=" + ensemble);
+    }
     int retry = conf.getInt("zookeeper.recovery.retry", 3);
     int retryIntervalMillis =
       conf.getInt("zookeeper.recovery.retry.intervalmill", 1000);
@@ -419,9 +420,9 @@ public class ZKUtil {
       Stat s = zkw.getRecoverableZooKeeper().exists(znode, zkw);
       boolean exists = s != null ? true : false;
       if (exists) {
-        LOG.debug(zkw.prefix("Set watcher on existing znode " + znode));
+        LOG.debug(zkw.prefix("Set watcher on existing znode=" + znode));
       } else {
-        LOG.debug(zkw.prefix(znode+" does not exist. Watcher is set."));
+        LOG.debug(zkw.prefix("Set watcher on znode that does not yet exist, " + znode));
       }
       return exists;
     } catch (KeeperException e) {

@@ -22,8 +22,9 @@ import org.apache.hadoop.hbase.exceptions.DoNotRetryIOException;
 import org.apache.hadoop.ipc.RemoteException;
 
 /**
- * An {@link RemoteException} with some extra information.  If source exception
+ * A {@link RemoteException} with some extra information.  If source exception
  * was a {@link DoNotRetryIOException}, {@link #isDoNotRetry()} will return true.
+ * <p>A {@link RemoteException} hosts exceptions we got from the server.
  */
 @SuppressWarnings("serial")
 @InterfaceAudience.Private

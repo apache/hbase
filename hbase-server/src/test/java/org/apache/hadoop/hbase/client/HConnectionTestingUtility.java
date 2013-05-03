@@ -20,13 +20,13 @@ package org.apache.hadoop.hbase.client;
 import java.io.IOException;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.exceptions.ZooKeeperConnectionException;
+import org.apache.hadoop.hbase.protobuf.generated.AdminProtos;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.client.HConnectionManager.HConnectionImplementation;
-import org.apache.hadoop.hbase.client.HConnectionManager.HConnectionKey;
 import org.mockito.Mockito;
 
 /**
@@ -52,13 +52,13 @@ public class HConnectionTestingUtility {
   public static HConnection getMockedConnection(final Configuration conf)
   throws ZooKeeperConnectionException {
     HConnectionKey connectionKey = new HConnectionKey(conf);
-    synchronized (HConnectionManager.HBASE_INSTANCES) {
+    synchronized (HConnectionManager.CONNECTION_INSTANCES) {
       HConnectionImplementation connection =
-        HConnectionManager.HBASE_INSTANCES.get(connectionKey);
+        HConnectionManager.CONNECTION_INSTANCES.get(connectionKey);
       if (connection == null) {
         connection = Mockito.mock(HConnectionImplementation.class);
         Mockito.when(connection.getConfiguration()).thenReturn(conf);
-        HConnectionManager.HBASE_INSTANCES.put(connectionKey, connection);
+        HConnectionManager.CONNECTION_INSTANCES.put(connectionKey, connection);
       }
       return connection;
     }
@@ -84,16 +84,17 @@ public class HConnectionTestingUtility {
    * @return Mock up a connection that returns a {@link Configuration} when
    * {@link HConnection#getConfiguration()} is called, a 'location' when
    * {@link HConnection#getRegionLocation(byte[], byte[], boolean)} is called,
-   * and that returns the passed {@link AdminProtocol} instance when
+   * and that returns the passed {@link AdminProtos.AdminService.BlockingInterface} instance when
    * {@link HConnection#getAdmin(ServerName)} is called, returns the passed
-   * {@link ClientProtocol} instance when {@link HConnection#getClient(ServerName)}
-   * is called (Be sure call
+   * {@link ClientProtos.ClientService.BlockingInterface} instance when
+   * {@link HConnection#getClient(ServerName)} is called (Be sure to call
    * {@link HConnectionManager#deleteConnection(HConnectionKey, boolean)}
    * when done with this mocked Connection.
    * @throws IOException
    */
   public static HConnection getMockedConnectionAndDecorate(final Configuration conf,
-      final AdminProtocol admin, final ClientProtocol client,
+      final AdminProtos.AdminService.BlockingInterface admin,
+      final ClientProtos.ClientService.BlockingInterface client,
       final ServerName sn, final HRegionInfo hri)
   throws IOException {
     HConnection c = HConnectionTestingUtility.getMockedConnection(conf);
@@ -133,12 +134,12 @@ public class HConnectionTestingUtility {
   public static HConnection getSpiedConnection(final Configuration conf)
   throws IOException {
     HConnectionKey connectionKey = new HConnectionKey(conf);
-    synchronized (HConnectionManager.HBASE_INSTANCES) {
+    synchronized (HConnectionManager.CONNECTION_INSTANCES) {
       HConnectionImplementation connection =
-        HConnectionManager.HBASE_INSTANCES.get(connectionKey);
+        HConnectionManager.CONNECTION_INSTANCES.get(connectionKey);
       if (connection == null) {
         connection = Mockito.spy(new HConnectionImplementation(conf, true));
-        HConnectionManager.HBASE_INSTANCES.put(connectionKey, connection);
+        HConnectionManager.CONNECTION_INSTANCES.put(connectionKey, connection);
       }
       return connection;
     }
@@ -148,8 +149,8 @@ public class HConnectionTestingUtility {
    * @return Count of extant connection instances
    */
   public static int getConnectionCount() {
-    synchronized (HConnectionManager.HBASE_INSTANCES) {
-      return HConnectionManager.HBASE_INSTANCES.size();
+    synchronized (HConnectionManager.CONNECTION_INSTANCES) {
+      return HConnectionManager.CONNECTION_INSTANCES.size();
     }
   }
 }

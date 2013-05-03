@@ -155,10 +155,7 @@ public interface MasterServices extends Server {
   public boolean isServerShutdownHandlerEnabled();
 
   /**
-   * Registers a new protocol buffer {@link Service} subclass as a master coprocessor endpoint to
-   * be available for handling
-   * {@link org.apache.hadoop.hbase.MasterAdminProtocol#execMasterService(com.google.protobuf.RpcController,
-   * org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServiceRequest)} calls.
+   * Registers a new protocol buffer {@link Service} subclass as a master coprocessor endpoint.
    *
    * <p>
    * Only a single instance may be registered for a given {@link Service} subclass (the

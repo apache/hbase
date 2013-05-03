@@ -21,9 +21,9 @@ package org.apache.hadoop.hbase.ipc;
 
 public class MetricsHBaseServerWrapperImpl implements MetricsHBaseServerWrapper {
 
-  private HBaseServer server;
+  private RpcServer server;
 
-  MetricsHBaseServerWrapperImpl(HBaseServer server) {
+  MetricsHBaseServerWrapperImpl(RpcServer server) {
     this.server = server;
   }
 

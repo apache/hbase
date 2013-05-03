@@ -37,20 +37,19 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.LargeTests;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.exceptions.TableExistsException;
-import org.apache.hadoop.hbase.client.ClientProtocol;
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.exceptions.TableExistsException;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.BulkLoadHFileRequest;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.TestHRegionServerBulkLoad;
@@ -199,12 +198,13 @@ public class TestLoadIncrementalHFilesSplitRecovery {
   /**
    * Checks that all columns have the expected value and that there is the
    * expected number of rows.
+   * @throws IOException 
    */
-  void assertExpectedTable(String table, int count, int value) {
+  void assertExpectedTable(String table, int count, int value) throws IOException {
+    HTable t = null;
     try {
       assertEquals(util.getHBaseAdmin().listTables(table).length, 1);
-
-      HTable t = new HTable(util.getConfiguration(), table);
+      t = new HTable(util.getConfiguration(), table);
       Scan s = new Scan();
       ResultScanner sr = t.getScanner(s);
       int i = 0;
@@ -219,6 +219,8 @@ public class TestLoadIncrementalHFilesSplitRecovery {
       assertEquals(count, i);
     } catch (IOException e) {
       fail("Failed due to exception");
+    } finally {
+      if (t != null) t.close();
     }
   }
 
@@ -277,7 +279,8 @@ public class TestLoadIncrementalHFilesSplitRecovery {
       thenReturn(loc);
     Mockito.when(c.locateRegion((byte[]) Mockito.any(), (byte[]) Mockito.any())).
       thenReturn(loc);
-    ClientProtocol hri = Mockito.mock(ClientProtocol.class);
+    ClientProtos.ClientService.BlockingInterface hri =
+      Mockito.mock(ClientProtos.ClientService.BlockingInterface.class);
     Mockito.when(hri.bulkLoadHFile((RpcController)Mockito.any(), (BulkLoadHFileRequest)Mockito.any())).
       thenThrow(new ServiceException(new IOException("injecting bulk load error")));
     Mockito.when(c.getClient(Mockito.any(ServerName.class))).

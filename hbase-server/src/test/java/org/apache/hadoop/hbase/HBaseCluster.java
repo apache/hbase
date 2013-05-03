@@ -25,8 +25,10 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.client.AdminProtocol;
-import org.apache.hadoop.hbase.client.ClientProtocol;
+import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.AdminService;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ClientService;
+import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.MasterAdminService;
+import org.apache.hadoop.hbase.protobuf.generated.MasterMonitorProtos.MasterMonitorService;
 import org.apache.hadoop.hbase.util.Threads;
 
 /**
@@ -94,26 +96,28 @@ public abstract class HBaseCluster implements Closeable, Configurable {
   }
 
   /**
-   * Returns an {@link MasterAdminProtocol} to the active master
+   * Returns an {@link MasterAdminService.BlockingInterface} to the active master
    */
-  public abstract MasterAdminProtocol getMasterAdmin()
+  public abstract MasterAdminService.BlockingInterface getMasterAdmin()
       throws IOException;
 
   /**
-   * Returns an {@link MasterMonitorProtocol} to the active master
+   * Returns an {@link MasterMonitorService.BlockingInterface} to the active master
    */
-  public abstract MasterMonitorProtocol getMasterMonitor()
-      throws IOException;
+  public abstract MasterMonitorService.BlockingInterface getMasterMonitor()
+  throws IOException;
 
   /**
    * Returns an AdminProtocol interface to the regionserver
    */
-  public abstract AdminProtocol getAdminProtocol(ServerName serverName) throws IOException;
+  public abstract AdminService.BlockingInterface getAdminProtocol(ServerName serverName)
+  throws IOException;
 
   /**
    * Returns a ClientProtocol interface to the regionserver
    */
-  public abstract ClientProtocol getClientProtocol(ServerName serverName) throws IOException;
+  public abstract ClientService.BlockingInterface getClientProtocol(ServerName serverName)
+  throws IOException;
 
   /**
    * Starts a new region server on the given hostname or if this is a mini/local cluster,

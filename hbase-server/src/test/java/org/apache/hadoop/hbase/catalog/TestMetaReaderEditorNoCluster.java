@@ -37,12 +37,12 @@ import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.client.ClientProtocol;
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.client.HConnectionTestingUtility;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ScanRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ScanResponse;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -138,7 +138,8 @@ public class TestMetaReaderEditorNoCluster {
     try {
       // Mock an ClientProtocol. Our mock implementation will fail a few
       // times when we go to open a scanner.
-      final ClientProtocol implementation = Mockito.mock(ClientProtocol.class);
+      final ClientProtos.ClientService.BlockingInterface implementation =
+        Mockito.mock(ClientProtos.ClientService.BlockingInterface.class);
       // When scan called throw IOE 'Server not running' a few times
       // before we return a scanner id.  Whats WEIRD is that these
       // exceptions do not show in the log because they are caught and only

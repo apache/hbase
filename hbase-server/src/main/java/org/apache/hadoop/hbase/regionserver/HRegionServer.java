@@ -65,7 +65,6 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.HealthCheckChore;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.RegionServerStatusProtocol;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.Stoppable;
@@ -74,9 +73,7 @@ import org.apache.hadoop.hbase.ZNodeClearer;
 import org.apache.hadoop.hbase.catalog.CatalogTracker;
 import org.apache.hadoop.hbase.catalog.MetaEditor;
 import org.apache.hadoop.hbase.catalog.MetaReader;
-import org.apache.hadoop.hbase.client.AdminProtocol;
 import org.apache.hadoop.hbase.client.Append;
-import org.apache.hadoop.hbase.client.ClientProtocol;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HConnectionManager;
@@ -108,19 +105,19 @@ import org.apache.hadoop.hbase.filter.ByteArrayComparable;
 import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
-import org.apache.hadoop.hbase.ipc.HBaseClientRPC;
 import org.apache.hadoop.hbase.ipc.HBaseRPCErrorHandler;
-import org.apache.hadoop.hbase.ipc.HBaseServerRPC;
-import org.apache.hadoop.hbase.ipc.PayloadCarryingRpcController;
-import org.apache.hadoop.hbase.ipc.ProtobufRpcClientEngine;
-import org.apache.hadoop.hbase.ipc.RpcClientEngine;
+import org.apache.hadoop.hbase.ipc.RpcClient;
 import org.apache.hadoop.hbase.ipc.RpcServer;
+import org.apache.hadoop.hbase.ipc.PayloadCarryingRpcController;
+import org.apache.hadoop.hbase.ipc.RpcServerInterface;
+import org.apache.hadoop.hbase.ipc.RpcServer.BlockingServiceAndInterface;
 import org.apache.hadoop.hbase.ipc.ServerRpcController;
 import org.apache.hadoop.hbase.master.TableLockManager;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.ReplicationProtbufUtil;
 import org.apache.hadoop.hbase.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.protobuf.ResponseConverter;
+import org.apache.hadoop.hbase.protobuf.generated.AdminProtos;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.CloseRegionRequest;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.CloseRegionResponse;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.CompactRegionRequest;
@@ -179,6 +176,7 @@ import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.GetLa
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerReportRequest;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerStartupRequest;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerStartupResponse;
+import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerStatusService;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.ReportRSFatalErrorRequest;
 import org.apache.hadoop.hbase.regionserver.Leases.LeaseStillHeldException;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionProgress;
@@ -218,6 +216,7 @@ import org.apache.hadoop.util.StringUtils;
 import org.apache.zookeeper.KeeperException;
 import org.cliffc.high_scale_lib.Counter;
 
+import com.google.protobuf.BlockingRpcChannel;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.Message;
 import com.google.protobuf.RpcController;
@@ -230,8 +229,9 @@ import com.google.protobuf.TextFormat;
  */
 @InterfaceAudience.Private
 @SuppressWarnings("deprecation")
-public class HRegionServer implements ClientProtocol,
-    AdminProtocol, Runnable, RegionServerServices, HBaseRPCErrorHandler, LastSequenceId {
+public class HRegionServer implements ClientProtos.ClientService.BlockingInterface,
+  AdminProtos.AdminService.BlockingInterface, Runnable, RegionServerServices,
+  HBaseRPCErrorHandler, LastSequenceId {
 
   public static final Log LOG = LogFactory.getLog(HRegionServer.class);
 
@@ -326,15 +326,14 @@ public class HRegionServer implements ClientProtocol,
 
   protected final int numRegionsToReport;
 
-  // Remote HMaster
-  private RegionServerStatusProtocol hbaseMaster;
+  // Stub to do region server status calls against the master.
+  private RegionServerStatusService.BlockingInterface rssStub;
+  // RPC client. Used to make the stub above that does region server status checking.
+  RpcClient rpcClient;
 
   // Server to handle client requests. Default access so can be accessed by
   // unit tests.
-  RpcServer rpcServer;
-
-  // RPC client for communicating with master
-  RpcClientEngine rpcClientEngine;
+  RpcServerInterface rpcServer;
 
   private final InetSocketAddress isa;
   private UncaughtExceptionHandler uncaughtExceptionHandler;
@@ -460,15 +459,12 @@ public class HRegionServer implements ClientProtocol,
   throws IOException, InterruptedException {
     this.fsOk = true;
     this.conf = conf;
-    // Set how many times to retry talking to another server over HConnection.
-    HConnectionManager.setServerSideHConnectionRetries(this.conf, LOG);
     this.isOnline = false;
     checkCodecs(this.conf);
 
     // do we use checksum verification in the hbase? If hbase checksum verification
     // is enabled, then we automatically switch off hdfs checksum verification.
-    this.useHBaseChecksum = conf.getBoolean(
-      HConstants.HBASE_CHECKSUM_VERIFICATION, false);
+    this.useHBaseChecksum = conf.getBoolean(HConstants.HBASE_CHECKSUM_VERIFICATION, false);
 
     // Config'ed params
     this.numRetries = conf.getInt("hbase.client.retries.number", 10);
@@ -506,18 +502,17 @@ public class HRegionServer implements ClientProtocol,
     if (initialIsa.getAddress() == null) {
       throw new IllegalArgumentException("Failed resolve of " + initialIsa);
     }
-
     this.rand = new Random(initialIsa.hashCode());
-    this.rpcServer = HBaseServerRPC.getServer(AdminProtocol.class, this,
-        new Class<?>[]{ClientProtocol.class,
-            AdminProtocol.class, HBaseRPCErrorHandler.class,
-            OnlineRegions.class},
-        initialIsa.getHostName(), // BindAddress is IP we got for this server.
-        initialIsa.getPort(),
-        conf.getInt("hbase.regionserver.handler.count", 10),
-        conf.getInt("hbase.regionserver.metahandler.count", 10),
-        conf.getBoolean("hbase.rpc.verbose", false),
-        conf, HConstants.QOS_THRESHOLD);
+    String name = "regionserver/" + initialIsa.toString();
+    // Set how many times to retry talking to another server over HConnection.
+    HConnectionManager.setServerSideHConnectionRetries(this.conf, name, LOG);
+    this.rpcServer = new RpcServer(this, name, getServices(),
+      /*HBaseRPCErrorHandler.class, OnlineRegions.class},*/
+      initialIsa, // BindAddress is IP we got for this server.
+      conf.getInt("hbase.regionserver.handler.count", 10),
+      conf.getInt("hbase.regionserver.metahandler.count", 10),
+      conf, HConstants.QOS_THRESHOLD);
+
     // Set our address.
     this.isa = this.rpcServer.getListenerAddress();
 
@@ -540,6 +535,20 @@ public class HRegionServer implements ClientProtocol,
       }
     };
     this.rsHost = new RegionServerCoprocessorHost(this, this.conf);
+  }
+
+  /**
+   * @return list of blocking services and their security info classes that this server supports
+   */
+  private List<BlockingServiceAndInterface> getServices() {
+    List<BlockingServiceAndInterface> bssi = new ArrayList<BlockingServiceAndInterface>(2);
+    bssi.add(new BlockingServiceAndInterface(
+        ClientProtos.ClientService.newReflectiveBlockingService(this),
+        ClientProtos.ClientService.BlockingInterface.class));
+    bssi.add(new BlockingServiceAndInterface(
+        AdminProtos.AdminService.newReflectiveBlockingService(this),
+        AdminProtos.AdminService.BlockingInterface.class));
+    return bssi;
   }
 
   /**
@@ -706,7 +715,7 @@ public class HRegionServer implements ClientProtocol,
     movedRegionsCleaner = MovedRegionsCleaner.createAndStart(this);
 
     // Setup RPC client for master communication
-    rpcClientEngine = new ProtobufRpcClientEngine(conf, clusterId);
+    rpcClient = new RpcClient(conf, clusterId);
   }
 
   /**
@@ -870,10 +879,10 @@ public class HRegionServer implements ClientProtocol,
     }
 
     // Make sure the proxy is down.
-    if (this.hbaseMaster != null) {
-      this.hbaseMaster = null;
+    if (this.rssStub != null) {
+      this.rssStub = null;
     }
-    this.rpcClientEngine.close();
+    this.rpcClient.stop();
     this.leases.close();
 
     if (!killed) {
@@ -920,7 +929,7 @@ public class HRegionServer implements ClientProtocol,
         this.serverNameFromMasterPOV.getVersionedBytes());
       request.setServer(ProtobufUtil.toServerName(sn));
       request.setLoad(sl);
-      this.hbaseMaster.regionServerReport(null, request.build());
+      this.rssStub.regionServerReport(null, request.build());
     } catch (ServiceException se) {
       IOException ioe = ProtobufUtil.getRemoteException(se);
       if (ioe instanceof YouAreDeadException) {
@@ -929,7 +938,9 @@ public class HRegionServer implements ClientProtocol,
       }
       // Couldn't connect to the master, get location from zk and reconnect
       // Method blocks until new master is found or we are stopped
-      getMaster();
+      Pair<ServerName, RegionServerStatusService.BlockingInterface> p =
+        createRegionServerStatusStub();
+      this.rssStub = p.getSecond();
     }
   }
 
@@ -1078,9 +1089,11 @@ public class HRegionServer implements ClientProtocol,
           String hostnameFromMasterPOV = e.getValue();
           this.serverNameFromMasterPOV = new ServerName(hostnameFromMasterPOV,
             this.isa.getPort(), this.startcode);
-          LOG.info("Master passed us hostname to use. Was=" +
-            this.isa.getHostName() + ", Now=" +
-            this.serverNameFromMasterPOV.getHostname());
+          if (!this.serverNameFromMasterPOV.equals(this.isa.getHostName())) {
+            LOG.info("Master passed us a different hostname to use; was=" +
+              this.isa.getHostName() + ", but now=" +
+              this.serverNameFromMasterPOV.getHostname());
+          }
           continue;
         }
         String value = e.getValue();
@@ -1301,10 +1314,10 @@ public class HRegionServer implements ClientProtocol,
           FlushRequester requester = server.getFlushRequester();
           if (requester != null) {
             long randomDelay = rand.nextInt(RANGE_OF_DELAY) + MIN_DELAY_TIME;
-            LOG.info(getName() + " requesting flush for region " + r.getRegionNameAsString() + 
+            LOG.info(getName() + " requesting flush for region " + r.getRegionNameAsString() +
                 " after a delay of " + randomDelay);
             //Throttle the flushes by putting a delay. If we don't throttle, and there
-            //is a balanced write-load on the regions in a table, we might end up 
+            //is a balanced write-load on the regions in a table, we might end up
             //overwhelming the filesystem with too many flushes at once.
             requester.requestDelayedFlush(r, randomDelay);
           }
@@ -1629,7 +1642,7 @@ public class HRegionServer implements ClientProtocol,
   }
 
   @Override
-  public RpcServer getRpcServer() {
+  public RpcServerInterface getRpcServer() {
     return rpcServer;
   }
 
@@ -1662,14 +1675,14 @@ public class HRegionServer implements ClientProtocol,
         msg += "\nCause:\n" + StringUtils.stringifyException(cause);
       }
       // Report to the master but only if we have already registered with the master.
-      if (hbaseMaster != null && this.serverNameFromMasterPOV != null) {
+      if (rssStub != null && this.serverNameFromMasterPOV != null) {
         ReportRSFatalErrorRequest.Builder builder =
           ReportRSFatalErrorRequest.newBuilder();
         ServerName sn =
           ServerName.parseVersionedServerName(this.serverNameFromMasterPOV.getVersionedBytes());
         builder.setServer(ProtobufUtil.toServerName(sn));
         builder.setErrorMessage(msg);
-        hbaseMaster.reportRSFatalError(null, builder.build());
+        rssStub.reportRSFatalError(null, builder.build());
       }
     } catch (Throwable t) {
       LOG.warn("Unable to report fatal error to master", t);
@@ -1753,14 +1766,16 @@ public class HRegionServer implements ClientProtocol,
    *
    * @return master + port, or null if server has been stopped
    */
-  private ServerName getMaster() {
-    ServerName masterServerName = null;
+  private Pair<ServerName, RegionServerStatusService.BlockingInterface>
+  createRegionServerStatusStub() {
+    ServerName sn = null;
     long previousLogTime = 0;
-    RegionServerStatusProtocol master = null;
+    RegionServerStatusService.BlockingInterface master = null;
     boolean refresh = false; // for the first time, use cached data
+    RegionServerStatusService.BlockingInterface intf = null;
     while (keepLooping() && master == null) {
-      masterServerName = this.masterAddressManager.getMasterAddress(refresh);
-      if (masterServerName == null) {
+      sn = this.masterAddressManager.getMasterAddress(refresh);
+      if (sn == null) {
         if (!keepLooping()) {
           // give up with no connection.
           LOG.debug("No master found and cluster is stopped; bailing out");
@@ -1769,22 +1784,20 @@ public class HRegionServer implements ClientProtocol,
         LOG.debug("No master found; retry");
         previousLogTime = System.currentTimeMillis();
         refresh = true; // let's try pull it from ZK directly
-
         sleeper.sleep();
         continue;
       }
 
       InetSocketAddress isa =
-        new InetSocketAddress(masterServerName.getHostname(), masterServerName.getPort());
+        new InetSocketAddress(sn.getHostname(), sn.getPort());
 
       LOG.info("Attempting connect to Master server at " +
         this.masterAddressManager.getMasterAddress());
       try {
-        // Do initial RPC setup. The final argument indicates that the RPC
-        // should retry indefinitely.
-        master = HBaseClientRPC.waitForProxy(rpcClientEngine, RegionServerStatusProtocol.class,
-            isa, this.conf, -1, this.rpcTimeout, this.rpcTimeout);
-        LOG.info("Connected to master at " + isa);
+        BlockingRpcChannel channel = this.rpcClient.createBlockingRpcChannel(sn,
+            User.getCurrent(), this.rpcTimeout);
+        intf = RegionServerStatusService.newBlockingStub(channel);
+        break;
       } catch (IOException e) {
         e = e instanceof RemoteException ?
             ((RemoteException)e).unwrapRemoteException() : e;
@@ -1805,8 +1818,7 @@ public class HRegionServer implements ClientProtocol,
         }
       }
     }
-    this.hbaseMaster = master;
-    return masterServerName;
+    return new Pair<ServerName, RegionServerStatusService.BlockingInterface>(sn, intf);
   }
 
   /**
@@ -1826,7 +1838,10 @@ public class HRegionServer implements ClientProtocol,
    */
   private RegionServerStartupResponse reportForDuty() throws IOException {
     RegionServerStartupResponse result = null;
-    ServerName masterServerName = getMaster();
+    Pair<ServerName, RegionServerStatusService.BlockingInterface> p =
+      createRegionServerStatusStub();
+    this.rssStub = p.getSecond();
+    ServerName masterServerName = p.getFirst();
     if (masterServerName == null) return result;
     try {
       this.requestCount.set(0);
@@ -1838,7 +1853,7 @@ public class HRegionServer implements ClientProtocol,
       request.setPort(port);
       request.setServerStartCode(this.startcode);
       request.setServerCurrentTime(now);
-      result = this.hbaseMaster.regionServerStartup(null, request.build());
+      result = this.rssStub.regionServerStartup(null, request.build());
     } catch (ServiceException se) {
       IOException ioe = ProtobufUtil.getRemoteException(se);
       if (ioe instanceof ClockOutOfSyncException) {
@@ -1858,7 +1873,7 @@ public class HRegionServer implements ClientProtocol,
     try {
       GetLastFlushedSequenceIdRequest req =
         RequestConverter.buildGetLastFlushedSequenceIdRequest(region);
-      lastFlushedSequenceId = hbaseMaster.getLastFlushedSequenceId(null, req)
+      lastFlushedSequenceId = rssStub.getLastFlushedSequenceId(null, req)
       .getLastFlushedSequenceId();
     } catch (ServiceException e) {
       lastFlushedSequenceId = -1l;
@@ -3062,8 +3077,7 @@ public class HRegionServer implements ClientProtocol,
         builder.setMoreResults(moreResults);
         return builder.build();
       } catch (Throwable t) {
-        if (scannerName != null &&
-            t instanceof NotServingRegionException) {
+        if (scannerName != null && t instanceof NotServingRegionException) {
           scanners.remove(scannerName);
         }
         throw convertThrowableToIOE(cleanup(t));

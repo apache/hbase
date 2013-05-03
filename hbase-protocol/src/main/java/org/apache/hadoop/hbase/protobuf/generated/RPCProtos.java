@@ -535,9 +535,9 @@ public final class RPCProtos {
     org.apache.hadoop.hbase.protobuf.generated.RPCProtos.UserInformation getUserInfo();
     org.apache.hadoop.hbase.protobuf.generated.RPCProtos.UserInformationOrBuilder getUserInfoOrBuilder();
     
-    // optional string protocol = 2 [default = "org.apache.hadoop.hbase.client.ClientProtocol"];
-    boolean hasProtocol();
-    String getProtocol();
+    // optional string serviceName = 2;
+    boolean hasServiceName();
+    String getServiceName();
     
     // optional string cellBlockCodecClass = 3 [default = "org.apache.hadoop.hbase.codec.KeyValueCodec"];
     boolean hasCellBlockCodecClass();
@@ -589,14 +589,14 @@ public final class RPCProtos {
       return userInfo_;
     }
     
-    // optional string protocol = 2 [default = "org.apache.hadoop.hbase.client.ClientProtocol"];
-    public static final int PROTOCOL_FIELD_NUMBER = 2;
-    private java.lang.Object protocol_;
-    public boolean hasProtocol() {
+    // optional string serviceName = 2;
+    public static final int SERVICENAME_FIELD_NUMBER = 2;
+    private java.lang.Object serviceName_;
+    public boolean hasServiceName() {
       return ((bitField0_ & 0x00000002) == 0x00000002);
     }
-    public String getProtocol() {
-      java.lang.Object ref = protocol_;
+    public String getServiceName() {
+      java.lang.Object ref = serviceName_;
       if (ref instanceof String) {
         return (String) ref;
       } else {
@@ -604,17 +604,17 @@ public final class RPCProtos {
             (com.google.protobuf.ByteString) ref;
         String s = bs.toStringUtf8();
         if (com.google.protobuf.Internal.isValidUtf8(bs)) {
-          protocol_ = s;
+          serviceName_ = s;
         }
         return s;
       }
     }
-    private com.google.protobuf.ByteString getProtocolBytes() {
-      java.lang.Object ref = protocol_;
+    private com.google.protobuf.ByteString getServiceNameBytes() {
+      java.lang.Object ref = serviceName_;
       if (ref instanceof String) {
         com.google.protobuf.ByteString b = 
             com.google.protobuf.ByteString.copyFromUtf8((String) ref);
-        protocol_ = b;
+        serviceName_ = b;
         return b;
       } else {
         return (com.google.protobuf.ByteString) ref;
@@ -687,7 +687,7 @@ public final class RPCProtos {
     
     private void initFields() {
       userInfo_ = org.apache.hadoop.hbase.protobuf.generated.RPCProtos.UserInformation.getDefaultInstance();
-      protocol_ = "org.apache.hadoop.hbase.client.ClientProtocol";
+      serviceName_ = "";
       cellBlockCodecClass_ = "org.apache.hadoop.hbase.codec.KeyValueCodec";
       cellBlockCompressorClass_ = "";
     }
@@ -713,7 +713,7 @@ public final class RPCProtos {
         output.writeMessage(1, userInfo_);
       }
       if (((bitField0_ & 0x00000002) == 0x00000002)) {
-        output.writeBytes(2, getProtocolBytes());
+        output.writeBytes(2, getServiceNameBytes());
       }
       if (((bitField0_ & 0x00000004) == 0x00000004)) {
         output.writeBytes(3, getCellBlockCodecClassBytes());
@@ -736,7 +736,7 @@ public final class RPCProtos {
       }
       if (((bitField0_ & 0x00000002) == 0x00000002)) {
         size += com.google.protobuf.CodedOutputStream
-          .computeBytesSize(2, getProtocolBytes());
+          .computeBytesSize(2, getServiceNameBytes());
       }
       if (((bitField0_ & 0x00000004) == 0x00000004)) {
         size += com.google.protobuf.CodedOutputStream
@@ -774,10 +774,10 @@ public final class RPCProtos {
         result = result && getUserInfo()
             .equals(other.getUserInfo());
       }
-      result = result && (hasProtocol() == other.hasProtocol());
-      if (hasProtocol()) {
-        result = result && getProtocol()
-            .equals(other.getProtocol());
+      result = result && (hasServiceName() == other.hasServiceName());
+      if (hasServiceName()) {
+        result = result && getServiceName()
+            .equals(other.getServiceName());
       }
       result = result && (hasCellBlockCodecClass() == other.hasCellBlockCodecClass());
       if (hasCellBlockCodecClass()) {
@@ -802,9 +802,9 @@ public final class RPCProtos {
         hash = (37 * hash) + USERINFO_FIELD_NUMBER;
         hash = (53 * hash) + getUserInfo().hashCode();
       }
-      if (hasProtocol()) {
-        hash = (37 * hash) + PROTOCOL_FIELD_NUMBER;
-        hash = (53 * hash) + getProtocol().hashCode();
+      if (hasServiceName()) {
+        hash = (37 * hash) + SERVICENAME_FIELD_NUMBER;
+        hash = (53 * hash) + getServiceName().hashCode();
       }
       if (hasCellBlockCodecClass()) {
         hash = (37 * hash) + CELLBLOCKCODECCLASS_FIELD_NUMBER;
@@ -937,7 +937,7 @@ public final class RPCProtos {
           userInfoBuilder_.clear();
         }
         bitField0_ = (bitField0_ & ~0x00000001);
-        protocol_ = "org.apache.hadoop.hbase.client.ClientProtocol";
+        serviceName_ = "";
         bitField0_ = (bitField0_ & ~0x00000002);
         cellBlockCodecClass_ = "org.apache.hadoop.hbase.codec.KeyValueCodec";
         bitField0_ = (bitField0_ & ~0x00000004);
@@ -992,7 +992,7 @@ public final class RPCProtos {
         if (((from_bitField0_ & 0x00000002) == 0x00000002)) {
           to_bitField0_ |= 0x00000002;
         }
-        result.protocol_ = protocol_;
+        result.serviceName_ = serviceName_;
         if (((from_bitField0_ & 0x00000004) == 0x00000004)) {
           to_bitField0_ |= 0x00000004;
         }
@@ -1020,8 +1020,8 @@ public final class RPCProtos {
         if (other.hasUserInfo()) {
           mergeUserInfo(other.getUserInfo());
         }
-        if (other.hasProtocol()) {
-          setProtocol(other.getProtocol());
+        if (other.hasServiceName()) {
+          setServiceName(other.getServiceName());
         }
         if (other.hasCellBlockCodecClass()) {
           setCellBlockCodecClass(other.getCellBlockCodecClass());
@@ -1077,7 +1077,7 @@ public final class RPCProtos {
             }
             case 18: {
               bitField0_ |= 0x00000002;
-              protocol_ = input.readBytes();
+              serviceName_ = input.readBytes();
               break;
             }
             case 26: {
@@ -1186,39 +1186,39 @@ public final class RPCProtos {
         return userInfoBuilder_;
       }
       
-      // optional string protocol = 2 [default = "org.apache.hadoop.hbase.client.ClientProtocol"];
-      private java.lang.Object protocol_ = "org.apache.hadoop.hbase.client.ClientProtocol";
-      public boolean hasProtocol() {
+      // optional string serviceName = 2;
+      private java.lang.Object serviceName_ = "";
+      public boolean hasServiceName() {
         return ((bitField0_ & 0x00000002) == 0x00000002);
       }
-      public String getProtocol() {
-        java.lang.Object ref = protocol_;
+      public String getServiceName() {
+        java.lang.Object ref = serviceName_;
         if (!(ref instanceof String)) {
           String s = ((com.google.protobuf.ByteString) ref).toStringUtf8();
-          protocol_ = s;
+          serviceName_ = s;
           return s;
         } else {
           return (String) ref;
         }
       }
-      public Builder setProtocol(String value) {
+      public Builder setServiceName(String value) {
         if (value == null) {
     throw new NullPointerException();
   }
   bitField0_ |= 0x00000002;
-        protocol_ = value;
+        serviceName_ = value;
         onChanged();
         return this;
       }
-      public Builder clearProtocol() {
+      public Builder clearServiceName() {
         bitField0_ = (bitField0_ & ~0x00000002);
-        protocol_ = getDefaultInstance().getProtocol();
+        serviceName_ = getDefaultInstance().getServiceName();
         onChanged();
         return this;
       }
-      void setProtocol(com.google.protobuf.ByteString value) {
+      void setServiceName(com.google.protobuf.ByteString value) {
         bitField0_ |= 0x00000002;
-        protocol_ = value;
+        serviceName_ = value;
         onChanged();
       }
       
@@ -3982,25 +3982,23 @@ public final class RPCProtos {
     java.lang.String[] descriptorData = {
       "\n\tRPC.proto\032\rTracing.proto\032\013hbase.proto\"" +
       ":\n\017UserInformation\022\025\n\reffectiveUser\030\001 \002(" +
-      "\t\022\020\n\010realUser\030\002 \001(\t\"\343\001\n\020ConnectionHeader" +
-      "\022\"\n\010userInfo\030\001 \001(\0132\020.UserInformation\022?\n\010" +
-      "protocol\030\002 \001(\t:-org.apache.hadoop.hbase." +
-      "client.ClientProtocol\022H\n\023cellBlockCodecC" +
-      "lass\030\003 \001(\t:+org.apache.hadoop.hbase.code" +
-      "c.KeyValueCodec\022 \n\030cellBlockCompressorCl" +
-      "ass\030\004 \001(\t\"\037\n\rCellBlockMeta\022\016\n\006length\030\001 \001" +
-      "(\r\"w\n\021ExceptionResponse\022\032\n\022exceptionClas",
-      "sName\030\001 \001(\t\022\022\n\nstackTrace\030\002 \001(\t\022\020\n\010hostn" +
-      "ame\030\003 \001(\t\022\014\n\004port\030\004 \001(\005\022\022\n\ndoNotRetry\030\005 " +
-      "\001(\010\"\216\001\n\rRequestHeader\022\016\n\006callId\030\001 \001(\r\022\034\n" +
-      "\ttraceInfo\030\002 \001(\0132\t.RPCTInfo\022\022\n\nmethodNam" +
-      "e\030\003 \001(\t\022\024\n\014requestParam\030\004 \001(\010\022%\n\rcellBlo" +
-      "ckMeta\030\005 \001(\0132\016.CellBlockMeta\"n\n\016Response" +
-      "Header\022\016\n\006callId\030\001 \001(\r\022%\n\texception\030\002 \001(" +
-      "\0132\022.ExceptionResponse\022%\n\rcellBlockMeta\030\003" +
-      " \001(\0132\016.CellBlockMetaB<\n*org.apache.hadoo" +
-      "p.hbase.protobuf.generatedB\tRPCProtosH\001\240",
-      "\001\001"
+      "\t\022\020\n\010realUser\030\002 \001(\t\"\267\001\n\020ConnectionHeader" +
+      "\022\"\n\010userInfo\030\001 \001(\0132\020.UserInformation\022\023\n\013" +
+      "serviceName\030\002 \001(\t\022H\n\023cellBlockCodecClass" +
+      "\030\003 \001(\t:+org.apache.hadoop.hbase.codec.Ke" +
+      "yValueCodec\022 \n\030cellBlockCompressorClass\030" +
+      "\004 \001(\t\"\037\n\rCellBlockMeta\022\016\n\006length\030\001 \001(\r\"w" +
+      "\n\021ExceptionResponse\022\032\n\022exceptionClassNam" +
+      "e\030\001 \001(\t\022\022\n\nstackTrace\030\002 \001(\t\022\020\n\010hostname\030",
+      "\003 \001(\t\022\014\n\004port\030\004 \001(\005\022\022\n\ndoNotRetry\030\005 \001(\010\"" +
+      "\216\001\n\rRequestHeader\022\016\n\006callId\030\001 \001(\r\022\034\n\ttra" +
+      "ceInfo\030\002 \001(\0132\t.RPCTInfo\022\022\n\nmethodName\030\003 " +
+      "\001(\t\022\024\n\014requestParam\030\004 \001(\010\022%\n\rcellBlockMe" +
+      "ta\030\005 \001(\0132\016.CellBlockMeta\"n\n\016ResponseHead" +
+      "er\022\016\n\006callId\030\001 \001(\r\022%\n\texception\030\002 \001(\0132\022." +
+      "ExceptionResponse\022%\n\rcellBlockMeta\030\003 \001(\013" +
+      "2\016.CellBlockMetaB<\n*org.apache.hadoop.hb" +
+      "ase.protobuf.generatedB\tRPCProtosH\001\240\001\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -4020,7 +4018,7 @@ public final class RPCProtos {
           internal_static_ConnectionHeader_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_ConnectionHeader_descriptor,
-              new java.lang.String[] { "UserInfo", "Protocol", "CellBlockCodecClass", "CellBlockCompressorClass", },
+              new java.lang.String[] { "UserInfo", "ServiceName", "CellBlockCodecClass", "CellBlockCompressorClass", },
               org.apache.hadoop.hbase.protobuf.generated.RPCProtos.ConnectionHeader.class,
               org.apache.hadoop.hbase.protobuf.generated.RPCProtos.ConnectionHeader.Builder.class);
           internal_static_CellBlockMeta_descriptor =

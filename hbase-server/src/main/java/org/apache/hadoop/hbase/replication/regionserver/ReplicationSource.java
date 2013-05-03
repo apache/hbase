@@ -49,12 +49,12 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.Stoppable;
-import org.apache.hadoop.hbase.client.AdminProtocol;
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.exceptions.TableNotFoundException;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.ReplicationProtbufUtil;
+import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.AdminService;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
@@ -718,7 +718,7 @@ public class ReplicationSource extends Thread
         continue;
       }
       try {
-        AdminProtocol rrs = getRS();
+        AdminService.BlockingInterface rrs = getRS();
         ReplicationProtbufUtil.replicateWALEntry(rrs,
             Arrays.copyOf(this.entriesArray, currentNbEntries));
         if (this.lastLoggedPosition != this.repLogReader.getPosition()) {
@@ -848,7 +848,7 @@ public class ReplicationSource extends Thread
    * @return
    * @throws IOException
    */
-  private AdminProtocol getRS() throws IOException {
+  private AdminService.BlockingInterface getRS() throws IOException {
     if (this.currentPeers.size() == 0) {
       throw new IOException(this.peerClusterZnode + " has 0 region servers");
     }
@@ -867,7 +867,7 @@ public class ReplicationSource extends Thread
     Thread pingThread = new Thread() {
       public void run() {
         try {
-          AdminProtocol rrs = getRS();
+          AdminService.BlockingInterface rrs = getRS();
           // Dummy call which should fail
           ProtobufUtil.getServerInfo(rrs);
           latch.countDown();

@@ -78,7 +78,7 @@ public class TestSnapshotFromAdmin {
     // mock the master admin to our mock
     MasterAdminKeepAliveConnection mockMaster = Mockito.mock(MasterAdminKeepAliveConnection.class);
     Mockito.when(mockConnection.getConfiguration()).thenReturn(conf);
-    Mockito.when(mockConnection.getKeepAliveMasterAdmin()).thenReturn(mockMaster);
+    Mockito.when(mockConnection.getKeepAliveMasterAdminService()).thenReturn(mockMaster);
     // set the max wait time for the snapshot to complete
     TakeSnapshotResponse response = TakeSnapshotResponse.newBuilder()
         .setExpectedTimeout(maxWaitTime)
@@ -135,7 +135,7 @@ public class TestSnapshotFromAdmin {
 
     // mock the master connection
     MasterAdminKeepAliveConnection master = Mockito.mock(MasterAdminKeepAliveConnection.class);
-    Mockito.when(mockConnection.getKeepAliveMasterAdmin()).thenReturn(master);
+    Mockito.when(mockConnection.getKeepAliveMasterAdminService()).thenReturn(master);
     TakeSnapshotResponse response = TakeSnapshotResponse.newBuilder().setExpectedTimeout(0).build();
     Mockito.when(
       master.snapshot((RpcController) Mockito.isNull(), Mockito.any(TakeSnapshotRequest.class)))

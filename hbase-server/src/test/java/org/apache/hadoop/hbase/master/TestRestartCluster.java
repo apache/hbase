@@ -132,6 +132,4 @@ public class TestRestartCluster {
       UTIL.waitTableAvailable(TABLE);
     }
   }
-
 }
-

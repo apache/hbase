@@ -17,23 +17,32 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.client;
 
-import java.io.Closeable;
+import java.io.IOException;
 
-import org.apache.hadoop.hbase.protobuf.generated.MasterMonitorProtos;
+import org.apache.hadoop.conf.Configuration;
 
 /**
- * A KeepAlive connection is not physically closed immediately after the close,
- *  but rather kept alive for a few minutes. It makes sense only if it's shared.
+ * This class makes it convenient for one to execute a command in the context
+ * of a {@link HConnection} instance based on the given {@link Configuration}.
  *
- * This interface is used by a dynamic proxy. It allows to have a #close
- *  function in a master client.
+ * <p>
+ * If you find yourself wanting to use a {@link HConnection} for a relatively
+ * short duration of time, and do not want to deal with the hassle of creating
+ * and cleaning up that resource, then you should consider using this
+ * convenience class.
  *
- * This class is intended to be used internally by HBase classes that need to
- * speak the MasterMonitorProtocol; but not by final user code. Hence it's
- * package protected.
+ * @param <T>
+ *          the return type of the {@link HConnectable#connect(HConnection)}
+ *          method.
  */
-interface MasterMonitorKeepAliveConnection
-extends MasterMonitorProtos.MasterMonitorService.BlockingInterface, Closeable {}
+public abstract class HConnectable<T> {
+  public Configuration conf;
+
+  protected HConnectable(Configuration conf) {
+    this.conf = conf;
+  }
+
+  public abstract T connect(HConnection connection) throws IOException;
+}

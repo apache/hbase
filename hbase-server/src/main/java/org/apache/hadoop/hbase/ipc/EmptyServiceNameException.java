@@ -1,5 +1,4 @@
 /**
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,25 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.ipc;
 
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.IpcProtocol;
-
-import java.io.IOException;
-import java.net.InetSocketAddress;
-
-/** An RPC implementation for the client */
-@InterfaceAudience.Private
-public interface RpcClientEngine {
-  /** Construct a client-side proxy object. */
-  <T extends IpcProtocol> T getProxy(Class<T> protocol, InetSocketAddress addr,
-      Configuration conf, int rpcTimeout) throws IOException;
-
-  /** Shutdown this instance */
-  void close();
-
-  public HBaseClient getClient();
-}
+@SuppressWarnings("serial")
+public class EmptyServiceNameException extends FatalConnectionException {}

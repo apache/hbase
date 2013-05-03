@@ -20,12 +20,10 @@ package org.apache.hadoop.hbase.ipc;
 import org.apache.hadoop.hbase.exceptions.CallerDisconnectedException;
 
 public interface RpcCallContext extends Delayable {
-
   /**
    * Throw an exception if the caller who made this IPC call has disconnected.
    * If called from outside the context of IPC, this does nothing.
    * @throws CallerDisconnectedException
    */
   void throwExceptionIfCallerDisconnected() throws CallerDisconnectedException;
-
 }

@@ -36,8 +36,8 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.Waiter;
-import org.apache.hadoop.hbase.ipc.HBaseClient;
-import org.apache.hadoop.hbase.ipc.HBaseServer;
+import org.apache.hadoop.hbase.ipc.RpcClient;
+import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
@@ -53,8 +53,8 @@ import org.junit.experimental.categories.Category;
 public class TestMultiParallel {
   private static final Log LOG = LogFactory.getLog(TestMultiParallel.class);
   {
-    ((Log4JLogger)HBaseServer.LOG).getLogger().setLevel(Level.ALL);
-    ((Log4JLogger)HBaseClient.LOG).getLogger().setLevel(Level.ALL);
+    ((Log4JLogger)RpcServer.LOG).getLogger().setLevel(Level.ALL);
+    ((Log4JLogger)RpcClient.LOG).getLogger().setLevel(Level.ALL);
   }
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
   private static final byte[] VALUE = Bytes.toBytes("value");
@@ -68,8 +68,8 @@ public class TestMultiParallel {
   private static final int slaves = 2; // also used for testing HTable pool size
 
   @BeforeClass public static void beforeClass() throws Exception {
-    ((Log4JLogger)HBaseServer.LOG).getLogger().setLevel(Level.ALL);
-    ((Log4JLogger)HBaseClient.LOG).getLogger().setLevel(Level.ALL);
+    ((Log4JLogger)RpcServer.LOG).getLogger().setLevel(Level.ALL);
+    ((Log4JLogger)RpcClient.LOG).getLogger().setLevel(Level.ALL);
     ((Log4JLogger)ScannerCallable.LOG).getLogger().setLevel(Level.ALL);
     UTIL.startMiniCluster(slaves);
     HTable t = UTIL.createTable(Bytes.toBytes(TEST_TABLE), Bytes.toBytes(FAMILY));

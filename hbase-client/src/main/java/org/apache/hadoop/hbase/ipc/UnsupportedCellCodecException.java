@@ -15,22 +15,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.apache.hadoop.hbase.ipc;
 
-package org.apache.hadoop.hbase;
+public class UnsupportedCellCodecException extends FatalConnectionException {
+  public UnsupportedCellCodecException() {
+    super();
+  }
 
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerStatusService;
-import org.apache.hadoop.hbase.security.TokenInfo;
-import org.apache.hadoop.hbase.security.KerberosInfo;
+  public UnsupportedCellCodecException(String msg) {
+    super(msg);
+  }
 
-/**
- * Protocol that a RegionServer uses to communicate its status to the Master.
- */
-@KerberosInfo(
-  serverPrincipal = "hbase.master.kerberos.principal")
-@TokenInfo("HBASE_AUTH_TOKEN")
-@InterfaceAudience.Private
-@InterfaceStability.Evolving
-public interface RegionServerStatusProtocol
-extends RegionServerStatusService.BlockingInterface, IpcProtocol {}
+  public UnsupportedCellCodecException(String msg, Throwable t) {
+    super(msg, t);
+  }
+}
