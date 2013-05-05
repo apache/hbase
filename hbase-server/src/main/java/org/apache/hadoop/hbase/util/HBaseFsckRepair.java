@@ -150,7 +150,11 @@ public class HBaseFsckRepair {
       ServerName server, HRegionInfo region) throws IOException, InterruptedException {
     HConnection connection = admin.getConnection();
     AdminService.BlockingInterface rs = connection.getAdmin(server);
-    ProtobufUtil.closeRegion(rs, region.getRegionName(), false);
+    try {
+      ProtobufUtil.closeRegion(rs, region.getRegionName(), false);
+    } catch (IOException e) {
+      LOG.warn("Exception when closing region: " + region.getRegionNameAsString(), e);
+    }
     long timeout = admin.getConfiguration()
       .getLong("hbase.hbck.close.timeout", 120000);
     long expiration = timeout + System.currentTimeMillis();
