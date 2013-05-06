@@ -40,7 +40,13 @@ import org.apache.hadoop.util.Shell;
 public class HBaseClusterManager extends ClusterManager {
   private String sshUserName;
   private String sshOptions;
-  private String sshBeforeCommand;
+
+  /**
+   * The command format that is used to execute the remote command. Arguments:
+   * 1 SSH options, 2 user name , 3 "@" if username is set, 4 host, 5 original command.
+   */
+  private static final String DEFAULT_TUNNEL_CMD = "/usr/bin/ssh %1$s %2$s%3$s%4$s \"%5$s\"";
+  private String tunnelCmd;
 
   @Override
   public void setConf(Configuration conf) {
@@ -55,10 +61,8 @@ public class HBaseClusterManager extends ClusterManager {
     if (!extraSshOptions.isEmpty()) {
       sshOptions = StringUtils.join(new Object[] { sshOptions, extraSshOptions }, " ");
     }
-    sshBeforeCommand =  conf.get("hbase.it.clustermanager.ssh.beforeCommand", "");
-    if (!sshBeforeCommand.isEmpty()) {
-      sshBeforeCommand += " && ";
-    }
+    sshOptions = (sshOptions == null) ? "" : sshOptions;
+    tunnelCmd = conf.get("hbase.it.clustermanager.ssh.cmd", DEFAULT_TUNNEL_CMD);
     LOG.info("Running with SSH user [" + sshUserName + "] and options [" + sshOptions + "]");
   }
 
@@ -67,8 +71,6 @@ public class HBaseClusterManager extends ClusterManager {
    */
   protected class RemoteShell extends Shell.ShellCommandExecutor {
     private String hostname;
-
-    private String sshCmd = "/usr/bin/ssh";
 
     public RemoteShell(String hostname, String[] execString, File dir, Map<String, String> env,
         long timeout) {
@@ -93,14 +95,11 @@ public class HBaseClusterManager extends ClusterManager {
 
     @Override
     public String[] getExecString() {
-      String userAndHost = sshUserName.isEmpty() ? hostname : (sshUserName + "@" + hostname);
-      return new String[] {
-          "bash", "-c",
-          StringUtils.join(new String[] { sshCmd,
-              (sshOptions == null) ? "" : sshOptions,
-              userAndHost,
-              "\"" + sshBeforeCommand + StringUtils.join(super.getExecString(), " ") + "\""
-          }, " ")};
+      String at = sshUserName.isEmpty() ? "" : "@";
+      String remoteCmd = StringUtils.join(super.getExecString(), " ");
+      String cmd = String.format(tunnelCmd, sshOptions, sshUserName, at, hostname, remoteCmd);
+      LOG.info("Executing full command [" + cmd + "]");
+      return new String[] { "/usr/bin/env", "bash", "-c", cmd };
     }
 
     @Override
