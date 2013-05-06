@@ -95,6 +95,7 @@ import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.test.MetricsAssertHelper;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManagerTestHelper;
+import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.IncrementingEnvironmentEdge;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.PairOfSameType;
@@ -422,8 +423,11 @@ public class TestHRegion extends HBaseTestCase {
 
       //now find the compacted file, and manually add it to the recovered edits
       Path tmpDir = region.getRegionFileSystem().getTempDir();
-      FileStatus[] files = region.getRegionFileSystem().getFileSystem().listStatus(tmpDir);
-      assertEquals(1, files.length);
+      FileStatus[] files = FSUtils.listStatus(fs, tmpDir);
+      String errorMsg = "Expected to find 1 file in the region temp directory " +
+          "from the compaction, could not find any";
+      assertNotNull(errorMsg, files);
+      assertEquals(errorMsg, 1, files.length);
       //move the file inside region dir
       Path newFile = region.getRegionFileSystem().commitStoreFile(Bytes.toString(family), files[0].getPath());
 
@@ -459,8 +463,9 @@ public class TestHRegion extends HBaseTestCase {
         LOG.info(sf.getPath());
       }
       assertEquals(1, region.getStore(family).getStorefilesCount());
-      files = region.getRegionFileSystem().getFileSystem().listStatus(tmpDir);
-      assertEquals(0, files.length);
+      files = FSUtils.listStatus(fs, tmpDir);
+      assertTrue("Expected to find 0 files inside " + tmpDir,
+        files == null || files.length == 0);
 
       for (long i = minSeqId; i < maxSeqId; i++) {
         Get get = new Get(Bytes.toBytes(i));
@@ -3176,6 +3181,7 @@ public class TestHRegion extends HBaseTestCase {
       ctx.addThread(new RepeatingTestThread(ctx) {
     	private int flushesSinceCompact = 0;
     	private final int maxFlushesSinceCompact = 20;
+        @Override
         public void doAnAction() throws Exception {
           if (region.flushcache()) {
             ++flushesSinceCompact;

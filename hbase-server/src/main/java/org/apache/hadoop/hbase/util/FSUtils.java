@@ -1398,7 +1398,9 @@ public abstract class FSUtils {
 
   /**
    * Calls fs.listStatus() and treats FileNotFoundException as non-fatal
-   * This accommodates differences between hadoop versions
+   * This accommodates differences between hadoop versions, where hadoop 1
+   * does not throw a FileNotFoundException, and return an empty FileStatus[]
+   * while Hadoop 2 will throw FileNotFoundException.
    *
    * @param fs file system
    * @param dir directory
