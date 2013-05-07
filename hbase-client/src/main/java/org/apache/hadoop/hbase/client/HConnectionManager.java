@@ -1579,6 +1579,9 @@ public class HConnectionManager {
       throws IOException {
       synchronized (masterAndZKLock) {
         if (keepAliveZookeeper == null) {
+          if (this.closed) {
+            throw new IOException(toString() + " closed");
+          }
           // We don't check that our link to ZooKeeper is still valid
           // But there is a retry mechanism in the ZooKeeperWatcher itself
           keepAliveZookeeper = new ZooKeeperKeepAliveConnection(
@@ -2640,12 +2643,12 @@ public class HConnectionManager {
       }
       delayedClosing.stop("Closing connection");
       closeMaster();
+      this.closed = true;
       closeZooKeeperWatcher();
       this.stubs.clear();
       if (clusterStatusListener != null) {
         clusterStatusListener.close();
       }
-      this.closed = true;
     }
 
     @Override
