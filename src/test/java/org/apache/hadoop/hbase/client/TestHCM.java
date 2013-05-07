@@ -23,7 +23,9 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
+import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -46,6 +48,7 @@ import org.apache.hadoop.hbase.client.HConnectionManager.HConnectionImplementati
 import org.apache.hadoop.hbase.client.HConnectionManager.HConnectionKey;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Threads;
+import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -61,6 +64,7 @@ public class TestHCM {
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static final byte[] TABLE_NAME = Bytes.toBytes("test");
   private static final byte[] TABLE_NAME1 = Bytes.toBytes("test1");
+  private static final byte[] TABLE_NAME2 = Bytes.toBytes("test2");
   private static final byte[] FAM_NAM = Bytes.toBytes("f");
   private static final byte[] ROW = Bytes.toBytes("bbb");
 
@@ -324,6 +328,64 @@ public class TestHCM {
     HConnection c3 = HConnectionManager.getConnection(configuration);
     assertTrue(c1 != c3);
     assertTrue(c2 != c3);
+  }
+
+  /**
+   * Tests that a closed connection does not have a live zookeeper
+   * @throws Exception
+   */
+  @Test
+  public void testDeleteForZKConnLeak() throws Exception {
+    TEST_UTIL.createTable(TABLE_NAME2, FAM_NAM);
+    final Configuration config = TEST_UTIL.getConfiguration();
+
+    ThreadPoolExecutor pool = new ThreadPoolExecutor(1, 10,
+      5, TimeUnit.SECONDS,
+      new SynchronousQueue<Runnable>(),
+      Threads.newDaemonThreadFactory("test-hcm-delete"));
+
+    pool.submit(new Runnable() {
+      @Override
+      public void run() {
+        while (!Thread.interrupted()) {
+          try {
+            HConnection conn = HConnectionManager.getConnection(config);
+            HConnectionManager.deleteStaleConnection(conn);
+          } catch (Exception e) {
+          }
+        }
+      }
+    });
+
+    // use connection multiple times
+    for (int i = 0; i < 10; i++) {
+      HConnection c1 = null;
+        try {
+          c1 = HConnectionManager.getConnection(config);
+          HTable table = new HTable(TABLE_NAME2, c1, pool);
+          table.close();
+        } catch (Exception e) {
+        } finally {
+          if (c1 != null) {
+            if (c1.isClosed()) {
+              // cannot use getZooKeeper as method instantiates watcher if null
+              Field zkwField = c1.getClass().getDeclaredField("zooKeeper");
+              zkwField.setAccessible(true);
+              Object watcher = zkwField.get(c1);
+
+              if (watcher != null) {
+                if (((ZooKeeperWatcher)watcher).getRecoverableZooKeeper().getState().isAlive()) {
+                  pool.shutdownNow();
+                  fail("Live zookeeper in closed connection");
+                }
+              }
+            }
+            c1.close();
+          }
+        }
+    }
+
+    pool.shutdownNow();
   }
 
   @org.junit.Rule

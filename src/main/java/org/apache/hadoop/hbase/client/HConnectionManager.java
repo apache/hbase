@@ -1392,6 +1392,9 @@ public class HConnectionManager {
         throws ZooKeeperConnectionException {
       if(zooKeeper == null) {
         try {
+          if (this.closed) {
+            throw new IOException(toString() + " closed");
+          }
           this.zooKeeper = new ZooKeeperWatcher(conf, "hconnection", this);
         } catch(ZooKeeperConnectionException zce) {
           throw zce;
@@ -1813,13 +1816,15 @@ public class HConnectionManager {
         this.rpcEngine.close();
       }
 
-      if (this.zooKeeper != null) {
-        LOG.info("Closed zookeeper sessionid=0x" +
-          Long.toHexString(this.zooKeeper.getRecoverableZooKeeper().getSessionId()));
-        this.zooKeeper.close();
-        this.zooKeeper = null;
+      synchronized (this) {
+        if (this.zooKeeper != null) {
+          LOG.info("Closed zookeeper sessionid=0x" +
+            Long.toHexString(this.zooKeeper.getRecoverableZooKeeper().getSessionId()));
+          this.zooKeeper.close();
+          this.zooKeeper = null;
+        }
+        this.closed = true;
       }
-      this.closed = true;
     }
 
     public void close() {
