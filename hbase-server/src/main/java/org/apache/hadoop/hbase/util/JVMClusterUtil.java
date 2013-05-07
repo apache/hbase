@@ -233,7 +233,7 @@ public class JVMClusterUtil {
    * @param regionservers
    */
   public static void shutdown(final List<MasterThread> masters,
-      final List<RegionServerThread> regionservers) throws IOException {
+      final List<RegionServerThread> regionservers) {
     LOG.debug("Shutting down HBase Cluster");
     if (masters != null) {
       // Do backups first.
