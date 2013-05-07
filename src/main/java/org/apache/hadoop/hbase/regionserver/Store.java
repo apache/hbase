@@ -155,6 +155,27 @@ public class Store extends SchemaConfigured implements HeapSize {
   private Class<KeyValueAggregator> aggregatorClass = null;
   private CompactionHook compactHook = null;
 
+  // This should account for the Store's non static variables. So, when there
+  // is an addition to the member variables to Store, this value should be
+  // adjusted accordingly.
+  public static final long FIXED_OVERHEAD =
+      ClassSize.align(SchemaConfigured.SCHEMA_CONFIGURED_UNALIGNED_HEAP_SIZE +
+          + (20 * ClassSize.REFERENCE) + (6 * Bytes.SIZEOF_LONG)
+          + (4 * Bytes.SIZEOF_INT) + 2 * Bytes.SIZEOF_BOOLEAN);
+
+  public static final long DEEP_OVERHEAD = ClassSize.align(FIXED_OVERHEAD +
+      ClassSize.OBJECT + ClassSize.REENTRANT_LOCK +
+      ClassSize.CONCURRENT_SKIPLISTMAP +
+      ClassSize.CONCURRENT_SKIPLISTMAP_ENTRY + ClassSize.OBJECT);
+
+  /*
+   * Set to
+   * true  : for using pread
+   * false : for using seek+read
+   */
+  public static boolean isPread = true;
+
+
   /**
    * Constructor
    * @param basedir qualified path under which the region directory lives;
@@ -1885,23 +1906,6 @@ public class Store extends SchemaConfigured implements HeapSize {
   public CacheConfig getCacheConfig() {
     return this.cacheConf;
   }
-
-  public static final long FIXED_OVERHEAD =
-      ClassSize.align(SchemaConfigured.SCHEMA_CONFIGURED_UNALIGNED_HEAP_SIZE +
-          + (19 * ClassSize.REFERENCE) + (6 * Bytes.SIZEOF_LONG)
-          + (4 * Bytes.SIZEOF_INT) + 2 * Bytes.SIZEOF_BOOLEAN);
-
-  public static final long DEEP_OVERHEAD = ClassSize.align(FIXED_OVERHEAD +
-      ClassSize.OBJECT + ClassSize.REENTRANT_LOCK +
-      ClassSize.CONCURRENT_SKIPLISTMAP +
-      ClassSize.CONCURRENT_SKIPLISTMAP_ENTRY + ClassSize.OBJECT);
-
-  /*
-   * Set to
-   * true  : for using pread
-   * false : for using seek+read
-   */
-  public static boolean isPread = true;
 
   @Override
   public long heapSize() {
