@@ -349,7 +349,7 @@ module Hbase
     # Truncates table while maintaing region boundaries (deletes all records by recreating the table)
     def truncate_preserve(table_name, conf = @conf)
       h_table = org.apache.hadoop.hbase.client.HTable.new(conf, table_name)
-      splits = h_table.getRegionsInfo().keys().map{|i| Bytes.toString(i.getStartKey)}.delete_if{|k| k == ""}.to_java :String
+      splits = h_table.getRegionLocations().keys().map{|i| Bytes.toString(i.getStartKey)}.delete_if{|k| k == ""}.to_java :String
       splits = org.apache.hadoop.hbase.util.Bytes.toByteArrays(splits)
       table_description = h_table.getTableDescriptor()
       yield 'Disabling table...' if block_given?
