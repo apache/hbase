@@ -1885,16 +1885,11 @@ public class HMaster extends HasThread implements HMasterInterface,
             Bytes.toStringBinary(regionname) + " in .META. Move failed");
       }
 
-      // Assign the specified host to be the preferred host for the specified region.
-      if (!this.isServerBlackListed(hostnameAndPort)) {
-        this.regionManager.getAssignmentManager().
-          addTransientAssignment(serverAddress, hri);
-        // Close the region so that it will be re-opened by the preferred host.
-        modifyTable(tableName, HConstants.Modify.CLOSE_REGION, new Writable[]{args[0]});
-      } else {
-        LOG.warn("Cannot move the region " + Bytes.toStringBinary(regionname) +
-            " to blacklisted server " + hostnameAndPort);
-      }
+      this.regionManager.getAssignmentManager().
+        addTransientAssignment(serverAddress, hri);
+      // Close the region so that it will be re-opened by the preferred host.
+      modifyTable(tableName, HConstants.Modify.CLOSE_REGION, new Writable[]{args[0]});
+
       break;
     }
 

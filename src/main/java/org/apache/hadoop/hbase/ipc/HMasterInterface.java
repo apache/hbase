@@ -201,7 +201,8 @@ public interface HMasterInterface extends HBaseRPCProtocolVersion {
 
   /**
    * Adds a server to the blacklist map. With this, the Master will not assign
-   * any new regions to this region server
+   * any new regions to this region server. Only an explicit MOVE_REGION
+   * request will move a region to the blacklisted server.
    * @param hostAndPort
    */
   public void addServerToBlacklist(final String hostAndPort);

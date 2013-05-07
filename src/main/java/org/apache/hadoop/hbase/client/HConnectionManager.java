@@ -1014,12 +1014,14 @@ public class HConnectionManager {
           HRegionLocation metaLocation = locateRegion(parentTable, metaKey);
 
           server = metaLocation.getServerAddress();
+          fInfo = repeatedFailuresMap.get(server);
+
           // Handle the case where .META. is on an unresponsive server.
           if (inFastFailMode(server) &&
               !this.currentThreadInFastFailMode()) {
             // In Fast-fail mode, all but one thread will fast fail. Check
             // if we are that one chosen thread.
-            fInfo = repeatedFailuresMap.get(server);
+
             retryDespiteFastFailMode = shouldRetryInspiteOfFastFail(fInfo);
 
             if (retryDespiteFastFailMode == false) { // we don't have to retry
@@ -1633,14 +1635,14 @@ public class HConnectionManager {
         if (instantiateRegionLocation) {
           callable.instantiateRegionLocation(false);
         }
-
         // Logic to fast fail requests to unreachable servers.
         server = callable.getServerAddress();
+        fInfo = repeatedFailuresMap.get(server);
+
         if (inFastFailMode(server) &&
             !currentThreadInFastFailMode()) {
           // In Fast-fail mode, all but one thread will fast fail. Check
           // if we are that one chosen thread.
-          fInfo = repeatedFailuresMap.get(server);
           retryDespiteFastFailMode = shouldRetryInspiteOfFastFail(fInfo);
           if (retryDespiteFastFailMode == false) { // we don't have to retry
             throw new PreemptiveFastFailException(fInfo.numConsecutiveFailures.get(),
@@ -1711,6 +1713,7 @@ public class HConnectionManager {
       if (fInfo == null) {
         fInfo = new FailureInfo(currentTime);
         FailureInfo oldfInfo = repeatedFailuresMap.putIfAbsent(server, fInfo);
+
         if (oldfInfo != null) {
           fInfo = oldfInfo;
         }
@@ -1841,6 +1844,7 @@ public class HConnectionManager {
 
       // If we were able to connect to the server, reset the failure information.
       if (couldNotCommunicate == false) {
+        LOG.info("Clearing out PFFE for server " + server.getHostname());
         repeatedFailuresMap.remove(server);
       } else {
         // update time of last attempt

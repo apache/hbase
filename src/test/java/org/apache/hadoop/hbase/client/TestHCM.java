@@ -33,6 +33,7 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
+import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.HConstants.OperationStatusCode;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.master.AssignmentPlan;
@@ -121,7 +122,7 @@ public class TestHCM {
 
     LOG.debug(blacklistedServer.getServerInfo().getHostnamePort() + " blacklisted");
 
-    drainRegionServer(blacklistedServer);
+    drainRegionServer(ap, blacklistedServer);
 
     LOG.debug("No more regions on black listed server " +
         blacklistedServer.getHServerInfo().getHostnamePort());
@@ -130,7 +131,17 @@ public class TestHCM {
         (blacklistedServerId + 1) % servers.size());
 
     Thread.sleep(60000);
-    assertTrue(blacklistedServer.getOnlineRegions().size() == 0);
+
+    int numberOfNonMetaRegions = 0;
+    for (HRegion r : blacklistedServer.getOnlineRegions()) {
+      LOG.debug("Region opened on " + r.getRegionNameAsString());
+      if (!r.getRegionInfo().isMetaRegion() &&
+          !r.getRegionInfo().isRootRegion()) {
+        numberOfNonMetaRegions++;
+      }
+    }
+
+    assertTrue(numberOfNonMetaRegions == 0);
 
     LOG.debug("Removing blacklisted Region Server");
 
@@ -294,7 +305,8 @@ public class TestHCM {
   }
 
   
-  private int drainRegionServer(HRegionServer blacklistedServer) throws IOException, InterruptedException {
+  private int drainRegionServer(AssignmentPlan ap,
+      HRegionServer blacklistedServer) throws IOException, InterruptedException {
 
     while (true) {
       Collection<HRegion> regions = blacklistedServer.getOnlineRegions();
@@ -309,13 +321,19 @@ public class TestHCM {
         break;
       }
 
-      HRegionServer destRS = TEST_UTIL.getHBaseCluster().getRegionServer(3);
       for (HRegion region : regions) {
+        HRegionInterface destRS =
+            getDestinationServer(ap, blacklistedServer.getHServerInfo().getServerAddress(),
+            region.getRegionInfo());
+        if (destRS == null) {
+          LOG.debug("No preferred server found for " + region.getRegionNameAsString() +
+              ". Skipping");
+        }
         LOG.debug("Moving region " + region.getRegionNameAsString());
         try {
           TEST_UTIL.getHBaseAdmin().moveRegion(
               region.getRegionInfo().getRegionName(),
-              destRS.getServerInfo().getHostnamePort());
+              destRS.getHServerInfo().getHostnamePort());
         } catch (IOException e) {
           LOG.info("Cannot move " + region.getRegionNameAsString());
           continue;
@@ -338,6 +356,30 @@ public class TestHCM {
     }
 
     return 0;
+  }
+
+ final HRegionInterface getDestinationServer(
+     AssignmentPlan plan, HServerAddress serverAddr,
+     final HRegionInfo region) {
+
+    List<HServerAddress> serversForRegion = plan.getAssignment(region);
+
+    // Get the preferred region server from the Assignment Plan
+    for (HServerAddress server : serversForRegion) {
+      if (!server.equals(serverAddr)) {
+        try {
+          HRegionInterface candidate = TEST_UTIL.getHBaseAdmin().getConnection().getHRegionConnection(server);
+          if (!TEST_UTIL.getHBaseAdmin().getConnection().getHRegionConnection(server).isStopped()) {
+            return candidate;
+          }
+        } catch (IOException e) {
+          // server not online/reachable skip
+        }
+      }
+    }
+
+    // if none found we should return a random server. For now return null
+    return null;
   }
 
   /**

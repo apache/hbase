@@ -594,7 +594,7 @@ public class RegionManager {
     if (rootState != null && rootState.isUnassigned()) {
       // just make sure it isn't hosting META regions (unless
       // it's the only server left).
-      if (!isMetaServer || isSingleServer) {
+      if ((!isMetaServer || isSingleServer) && !master.isServerBlackListed(server.getHostnamePort())) {
         regionsToAssign.add(rootState);
         LOG.debug("Going to assign -ROOT- region to server " +
             server.getHostnamePort());
@@ -625,7 +625,7 @@ public class RegionManager {
         }
         // Assign the META region here explicitly
         if (regionInfo.isMetaRegion()) {
-          if (regionState.isUnassigned()) {
+          if (regionState.isUnassigned() && !master.isServerBlackListed(server.getHostnamePort())) {
             regionsToAssign.clear();
             regionsToAssign.add(regionState);
             LOG.debug("Going to assign META region: " +
@@ -658,7 +658,8 @@ public class RegionManager {
         if (preservedRegionsForCurrentRS == null || 
             !preservedRegionsForCurrentRS.contains(regionInfo)) {
           if (assignmentManager.hasTransientAssignment(regionInfo) || 
-              nonPreferredAssignment > this.maxAssignInOneGo) {
+              nonPreferredAssignment > this.maxAssignInOneGo ||
+              master.isServerBlackListed(server.getHostnamePort())) {
             // Hold the region for its favored nodes and limit the number of 
             // non preferred assignments for each region server.
             continue;
@@ -1947,6 +1948,11 @@ public class RegionManager {
     public void loadBalancing(HServerInfo info, HRegionInfo[] mostLoadedRegions,
         ArrayList<HMsg> returnMsgs) {
 
+      if (master.isServerBlackListed(info.getHostnamePort())) {
+        LOG.debug("Server " + info.getHostnamePort() + " is blacklisted. " +
+            "Cannot load balance the regions for this server. Returning");
+        return;
+      }
       int regionsUnassigned = balanceToPrimary(info, mostLoadedRegions,
           returnMsgs);
 
@@ -2148,7 +2154,7 @@ public class RegionManager {
     private boolean canOffloadTo(HServerAddress hServerAddress) {
 
       // Server is black listed. Cannot move the regions to this server.
-      if (ServerManager.isServerBlackListed(hServerAddress.getHostAddressWithPort())) {
+      if (ServerManager.isServerBlackListed(hServerAddress.getHostNameWithPort())) {
         LOG.info("Blacklisted Server. Cannot offload. Returning...");
         return false;
       }

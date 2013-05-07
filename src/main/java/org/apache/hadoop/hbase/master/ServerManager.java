@@ -661,21 +661,8 @@ public class ServerManager {
       // Should we tell it close regions because its overloaded?  If its
       // currently opening regions, leave it alone till all are open.
       if (openingCount < this.nobalancingCount) {
-
-        if (!blacklistedRSHostPortMap.containsKey(
-            serverInfo.getHostnamePort()) || serversToServerInfo.size() <= 1) {
-
-          // Production code path.
           master.getRegionManager().assignRegions(serverInfo,
               mostLoadedRegions, returnMsgs);
-        } else {
-
-          // We just don't assign anything to "blacklisted" regionservers .
-          // This is OK because another regionserver will get these regions
-          // in response to a heartbeat.
-          LOG.debug("Not assigning regions to blacklisted regionserver "
-              + serverInfo.getHostnamePort());
-        }
       }
 
       // Send any pending table actions.
