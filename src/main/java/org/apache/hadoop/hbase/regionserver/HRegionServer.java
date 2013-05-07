@@ -640,6 +640,43 @@ public class HRegionServer implements HRegionInterface,
     return false;
   }
 
+  private final static String NEWLINE = System.getProperty("line.separator");
+  public static String printFailedRegionserverReport(HServerInfo server,
+    HMsg[] inMsgs, HRegionInfo[] loadedRegions, HMsg[] outMsgs, Throwable t) {
+    StringBuilder sb = new StringBuilder();
+    sb.append("Could not send the response to the regionserver. " +
+        "Printing diagnostic messages");
+    sb.append(NEWLINE);
+    sb.append("ServerAddress : " + server.getHostnamePort());
+    sb.append(NEWLINE);
+    sb.append("Incomming Messages :");
+    sb.append(NEWLINE);
+    if (inMsgs != null) {
+      for (HMsg msg : inMsgs) {
+        sb.append("HMsg : " + msg.toString());
+        sb.append(NEWLINE);
+      }
+    }
+    if (loadedRegions != null) {
+      sb.append("Loaded Regions : ");
+      for (HRegionInfo info : loadedRegions) {
+        sb.append(info.getRegionNameAsString());
+        sb.append(NEWLINE);
+      }
+    }
+    sb.append("Outgoing Messages :");
+    sb.append(NEWLINE);
+    if (outMsgs != null) {
+      for (HMsg msg : outMsgs) {
+        sb.append("HMsg : " + msg.toString());
+        sb.append(NEWLINE);
+      }
+    }
+    sb.append("Related Exception : " + t);
+    String s = sb.toString();
+    return s;
+  }
+
   /**
    * The HRegionServer sticks in this loop until closed. It repeatedly checks
    * in with the HMaster, sending heartbeats & reports, and receiving HRegion
@@ -696,9 +733,19 @@ public class HRegionServer implements HRegionInterface,
             // XXX add a field in serverInfo to report to fsOK to master?
             this.serverInfo.setLoad(hsl);
             addOutboundMsgs(outboundMessages);
-            HMsg msgs[] = this.hbaseMaster.regionServerReport(
-              serverInfo, outboundMessages.toArray(EMPTY_HMSG_ARRAY),
-              getMostLoadedRegions());
+            HMsg msgs[] = null;
+            LOG.debug("Attempting regionserver report with the master");
+            try {
+              msgs = this.hbaseMaster.regionServerReport(
+                serverInfo, outboundMessages.toArray(EMPTY_HMSG_ARRAY),
+                getMostLoadedRegions());
+            } catch (IOException e) {
+              LOG.debug("RegionServerReport failed.");
+              LOG.debug(HRegionServer.printFailedRegionserverReport(this.serverInfo,
+                  outboundMessages.toArray(EMPTY_HMSG_ARRAY),
+                  getMostLoadedRegions(), msgs, (Throwable)e));
+            }
+            LOG.debug("Attempted regionserver report with the master");
             lastMsg = System.currentTimeMillis();
             updateOutboundMsgs(outboundMessages);
             outboundMessages.clear();
@@ -712,7 +759,8 @@ public class HRegionServer implements HRegionInterface,
               continue;
             }
 
-            if (InjectionHandler.falseCondition(InjectionEvent.HREGIONSERVER_REPORT_RESPONSE, (Object[])msgs)) {
+            if (InjectionHandler.falseCondition(
+                InjectionEvent.HREGIONSERVER_REPORT_RESPONSE, (Object[])msgs)) {
               continue;
             }
 
