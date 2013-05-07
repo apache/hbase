@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.util;
 
+import org.apache.hadoop.hbase.regionserver.metrics.PercentileMetric;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
@@ -50,6 +51,16 @@ public class Histogram {
   private Double maxValue;
   final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
   public static final Log LOG = LogFactory.getLog(Histogram.class.getName());
+
+  /**
+   * Create a histogram with the default values of number of buckets,
+   * and min/max for the values.
+   */
+  public Histogram() {
+    this(PercentileMetric.HISTOGRAM_NUM_BUCKETS_DEFAULT,
+          PercentileMetric.HISTOGRAM_MINVALUE_DEFAULT,
+          PercentileMetric.HISTOGRAM_MAXVALUE_DEFAULT);
+  }
 
   // Bucket indexing is from 1 to N
   public Histogram(int numBuckets, Double minValue, Double maxValue) {

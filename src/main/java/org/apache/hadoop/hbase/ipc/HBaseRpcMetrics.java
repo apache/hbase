@@ -22,12 +22,14 @@ package org.apache.hadoop.hbase.ipc;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.regionserver.metrics.RpcMetricWrapper;
 import org.apache.hadoop.metrics.MetricsContext;
 import org.apache.hadoop.metrics.MetricsRecord;
 import org.apache.hadoop.metrics.MetricsUtil;
 import org.apache.hadoop.metrics.Updater;
 import org.apache.hadoop.metrics.util.MetricsRegistry;
 import org.apache.hadoop.metrics.util.MetricsTimeVaryingRate;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  *
@@ -60,7 +62,16 @@ public class HBaseRpcMetrics implements Updater {
     rpcStatistics = new HBaseRPCStatistics(this.registry, hostName, port);
   }
 
-
+  /**
+   * A metric name to RPCMetric object map. We do not keep RpcMetricWrapper objects
+   * in the registry, because firstly the RpcMetricWrapper class does not extend
+   * MetricsBase (since it is a container class, and not an atomic metric),
+   * and secondly we do not want to confuse between the RpcMetricWrapper name and the
+   * name of the rate metric contained within a RpcMetricWrapper object, when
+   * querying the registry.
+   */
+  private final ConcurrentHashMap<String, RpcMetricWrapper> rpcMetricWrapperMap =
+    new ConcurrentHashMap<String, RpcMetricWrapper>();
   /**
    * The metrics variables are public:
    *  - they can be set directly by calling their set/inc methods
@@ -71,18 +82,25 @@ public class HBaseRpcMetrics implements Updater {
   public MetricsTimeVaryingRate rpcQueueTime = new MetricsTimeVaryingRate("RpcQueueTime", registry);
   public MetricsTimeVaryingRate rpcProcessingTime = new MetricsTimeVaryingRate("RpcProcessingTime", registry);
 
-  //public Map <String, MetricsTimeVaryingRate> metricsList = Collections.synchronizedMap(new HashMap<String, MetricsTimeVaryingRate>());
-
-
-  private MetricsTimeVaryingRate get(String key) {
-    return (MetricsTimeVaryingRate) registry.get(key);
-  }
-  private MetricsTimeVaryingRate create(String key) {
-    return new MetricsTimeVaryingRate(key, this.registry);
+  private RpcMetricWrapper get(String name) {
+    return rpcMetricWrapperMap.get(name);
   }
 
+  private RpcMetricWrapper create(String name) {
+    RpcMetricWrapper m = new RpcMetricWrapper(name, this.registry);
+    rpcMetricWrapperMap.put(name, m);
+    return m;
+  }
+
+  /**
+   * Increment a metric. This would increment two different metrics.
+   * The first one being the standard MetricsTimeVaryingRate, and the
+   * other will be a PercentMetric.
+   * @param name
+   * @param amt
+   */
   public void inc(String name, int amt) {
-    MetricsTimeVaryingRate m = get(name);
+    RpcMetricWrapper m = get(name);
     if (m == null) {
       synchronized (this) {
         if ((m = get(name)) == null) {
@@ -104,13 +122,13 @@ public class HBaseRpcMetrics implements Updater {
     rpcProcessingTime.pushMetric(metricsRecord);
     rpcProcessingTime.resetMinMax();
 
-    synchronized (registry) {
-      // Iterate through the registry to propagate the different rpc metrics.
+    synchronized (rpcMetricWrapperMap) {
+      // Iterate through the rpcMetricWrapperMap to propagate the different rpc metrics.
 
-      for (String metricName : registry.getKeyList() ) {
-        MetricsTimeVaryingRate value = (MetricsTimeVaryingRate) registry.get(metricName);
+      for (String metricName : rpcMetricWrapperMap.keySet()) {
+        RpcMetricWrapper value = get(metricName);
         value.pushMetric(metricsRecord);
-        value.resetMinMax();
+        value.resetMetric();
       }
     }
     metricsRecord.update();
