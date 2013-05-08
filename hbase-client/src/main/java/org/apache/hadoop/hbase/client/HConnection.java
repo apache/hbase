@@ -38,7 +38,6 @@ import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.AdminService;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ClientService;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.MasterAdminService;
 import org.apache.hadoop.hbase.protobuf.generated.MasterMonitorProtos.MasterMonitorService;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 
 /**
  * A cluster connection.  Knows how to find the master, locate regions out on the cluster,
@@ -48,8 +47,7 @@ import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
  * connections at a lower level.
  *
  * <p>HConnections are used by {@link HTable} mostly but also by
- * {@link HBaseAdmin}, {@link CatalogTracker},
- * and {@link ZooKeeperWatcher}.  HConnection instances can be shared.  Sharing
+ * {@link HBaseAdmin}, and {@link CatalogTracker}.  HConnection instances can be shared.  Sharing
  * is usually what you want because rather than each HConnection instance
  * having to do its own discovery of regions out on the cluster, instead, all
  * clients get to share the one cache of locations.  {@link HConnectionManager} does the
@@ -65,17 +63,6 @@ public interface HConnection extends Abortable, Closeable {
    * @return Configuration instance being used by this HConnection instance.
    */
   public Configuration getConfiguration();
-
-  /**
-   * Retrieve ZooKeeperWatcher used by this connection.
-   * @return ZooKeeperWatcher handle being used by the connection.
-   * @throws IOException if a remote or network exception occurs
-   * @deprecated Removed because it was a mistake exposing zookeeper in this
-   * interface (ZooKeeper is an implementation detail).
-   * Deprecated in HBase 0.94
-   */
-  @Deprecated
-  public ZooKeeperWatcher getZooKeeperWatcher() throws IOException;
 
   /** @return - true if the master server is running */
   public boolean isMasterRunning()
@@ -104,9 +91,9 @@ public interface HConnection extends Abortable, Closeable {
    * @throws IOException if a remote or network exception occurs
    */
   public boolean isTableAvailable(byte[] tableName) throws IOException;
-  
+
   /**
-   * Use this api to check if the table has been created with the specified number of 
+   * Use this api to check if the table has been created with the specified number of
    * splitkeys which was used while creating the given table.
    * Note : If this api is used after a table's region gets splitted, the api may return
    * false.
@@ -202,7 +189,7 @@ public interface HConnection extends Abortable, Closeable {
    */
   public List<HRegionLocation> locateRegions(final byte[] tableName)
   throws IOException;
-  
+
   /**
    * Gets the locations of all regions in the specified table, <i>tableName</i>.
    * @param tableName table to get regions of

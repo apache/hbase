@@ -68,6 +68,8 @@ public class ZooKeeperWatcher implements Watcher, Abortable, Closeable {
 
   // abortable in case of zk failure
   protected Abortable abortable;
+  // Used if abortable is null
+  private boolean aborted = false;
 
   // listeners to be notified
   private final List<ZooKeeperListener> listeners =
@@ -128,10 +130,15 @@ public class ZooKeeperWatcher implements Watcher, Abortable, Closeable {
       Abortable abortable) throws ZooKeeperConnectionException, IOException {
     this(conf, identifier, abortable, false);
   }
+
   /**
    * Instantiate a ZooKeeper connection and watcher.
    * @param identifier string that is passed to RecoverableZookeeper to be used as
    * identifier for this instance. Use null for default.
+   * @param conf
+   * @param abortable Can be null if there is on error there is no host to abort: e.g. client
+   * context.
+   * @param canCreateBaseZNode
    * @throws IOException
    * @throws ZooKeeperConnectionException
    */
@@ -361,8 +368,9 @@ public class ZooKeeperWatcher implements Watcher, Abortable, Closeable {
           "ZooKeeper, aborting");
         // TODO: One thought is to add call to ZooKeeperListener so say,
         // ZooKeeperNodeTracker can zero out its data values.
-        if (this.abortable != null) this.abortable.abort(msg,
-            new KeeperException.SessionExpiredException());
+        if (this.abortable != null) {
+          this.abortable.abort(msg, new KeeperException.SessionExpiredException());
+        }
         break;
 
       case ConnectedReadOnly:
@@ -444,12 +452,13 @@ public class ZooKeeperWatcher implements Watcher, Abortable, Closeable {
 
   @Override
   public void abort(String why, Throwable e) {
-    this.abortable.abort(why, e);
+    if (this.abortable != null) this.abortable.abort(why, e);
+    else this.aborted = true;
   }
 
   @Override
   public boolean isAborted() {
-    return this.abortable.isAborted();
+    return this.abortable == null? this.aborted: this.abortable.isAborted();
   }
 
   /**

@@ -45,7 +45,9 @@ class ZooKeeperKeepAliveConnection extends ZooKeeperWatcher{
 
   @Override
   public void close() {
-    ((HConnectionManager.HConnectionImplementation)abortable).releaseZooKeeperWatcher(this);
+    if (this.abortable != null) {
+      ((HConnectionManager.HConnectionImplementation)abortable).releaseZooKeeperWatcher(this);
+    }
   }
 
   void internalClose(){

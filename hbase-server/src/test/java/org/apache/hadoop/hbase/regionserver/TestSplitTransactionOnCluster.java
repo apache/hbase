@@ -67,6 +67,7 @@ import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.KeeperException.NodeExistsException;
 import org.apache.zookeeper.data.Stat;
+import org.apache.hadoop.hbase.Abortable;
 import org.junit.AfterClass;
 import org.junit.After;
 import org.junit.Before;
@@ -422,6 +423,23 @@ public class TestSplitTransactionOnCluster {
   }
 
   /**
+   * Noop Abortable implementation used below in tests.
+   */
+  static class UselessTestAbortable implements Abortable {
+    boolean aborted = false;
+    @Override
+    public void abort(String why, Throwable e) {
+      LOG.warn("ABORTED (But nothing to abort): why=" + why, e);
+      aborted = true;
+    }
+
+    @Override
+    public boolean isAborted() {
+      return this.aborted;
+    }
+  }
+
+  /**
    * Verifies HBASE-5806.  When splitting is partially done and the master goes down
    * when the SPLIT node is in either SPLIT or SPLITTING state.
    *
@@ -448,6 +466,8 @@ public class TestSplitTransactionOnCluster {
     this.admin.setBalancerRunning(false, true);
     // Turn off the meta scanner so it don't remove parent on us.
     cluster.getMaster().setCatalogJanitorEnabled(false);
+    ZooKeeperWatcher zkw = new ZooKeeperWatcher(t.getConfiguration(),
+      "testMasterRestartWhenSplittingIsPartial", new UselessTestAbortable());
     try {
       // Add a bit of load up into the table so splittable.
       TESTING_UTIL.loadTable(t, HConstants.CATALOG_FAMILY);
@@ -462,14 +482,11 @@ public class TestSplitTransactionOnCluster {
       this.admin.split(hri.getRegionNameAsString());
       checkAndGetDaughters(tableName);
       // Assert the ephemeral node is up in zk.
-      String path = ZKAssign.getNodeName(t.getConnection()
-          .getZooKeeperWatcher(), hri.getEncodedName());
-      Stat stats = t.getConnection().getZooKeeperWatcher()
-          .getRecoverableZooKeeper().exists(path, false);
+      String path = ZKAssign.getNodeName(zkw, hri.getEncodedName());
+      Stat stats = zkw.getRecoverableZooKeeper().exists(path, false);
       LOG.info("EPHEMERAL NODE BEFORE SERVER ABORT, path=" + path + ", stats="
           + stats);
-      byte[] bytes = ZKAssign.getData(t.getConnection()
-          .getZooKeeperWatcher(), hri.getEncodedName());
+      byte[] bytes = ZKAssign.getData(zkw, hri.getEncodedName());
       RegionTransition rtd = RegionTransition.parseFrom(bytes);
       // State could be SPLIT or SPLITTING.
       assertTrue(rtd.getEventType().equals(EventType.RS_ZK_REGION_SPLIT)
@@ -493,6 +510,7 @@ public class TestSplitTransactionOnCluster {
       admin.setBalancerRunning(true, false);
       cluster.getMaster().setCatalogJanitorEnabled(true);
       t.close();
+      zkw.close();
     }
   }
 
@@ -521,6 +539,8 @@ public class TestSplitTransactionOnCluster {
     this.admin.setBalancerRunning(false, true);
     // Turn off the meta scanner so it don't remove parent on us.
     cluster.getMaster().setCatalogJanitorEnabled(false);
+    ZooKeeperWatcher zkw = new ZooKeeperWatcher(t.getConfiguration(),
+      "testMasterRestartAtRegionSplitPendingCatalogJanitor", new UselessTestAbortable());
     try {
       // Add a bit of load up into the table so splittable.
       TESTING_UTIL.loadTable(t, HConstants.CATALOG_FAMILY);
@@ -531,22 +551,17 @@ public class TestSplitTransactionOnCluster {
       this.admin.split(hri.getRegionNameAsString());
       checkAndGetDaughters(tableName);
       // Assert the ephemeral node is up in zk.
-      String path = ZKAssign.getNodeName(t.getConnection()
-          .getZooKeeperWatcher(), hri.getEncodedName());
-      Stat stats = t.getConnection().getZooKeeperWatcher()
-          .getRecoverableZooKeeper().exists(path, false);
+      String path = ZKAssign.getNodeName(zkw, hri.getEncodedName());
+      Stat stats = zkw.getRecoverableZooKeeper().exists(path, false);
       LOG.info("EPHEMERAL NODE BEFORE SERVER ABORT, path=" + path + ", stats="
           + stats);
-      String node = ZKAssign.getNodeName(t.getConnection()
-          .getZooKeeperWatcher(), hri.getEncodedName());
+      String node = ZKAssign.getNodeName(zkw, hri.getEncodedName());
       Stat stat = new Stat();
-      byte[] data = ZKUtil.getDataNoWatch(t.getConnection()
-          .getZooKeeperWatcher(), node, stat);
+      byte[] data = ZKUtil.getDataNoWatch(zkw, node, stat);
       // ZKUtil.create
       for (int i=0; data != null && i<60; i++) {
         Thread.sleep(1000);
-        data = ZKUtil.getDataNoWatch(t.getConnection().getZooKeeperWatcher(),
-            node, stat);
+        data = ZKUtil.getDataNoWatch(zkw, node, stat);
 
       }
       assertNull("Waited too long for ZK node to be removed: "+node, data);
@@ -566,6 +581,7 @@ public class TestSplitTransactionOnCluster {
       this.admin.setBalancerRunning(true, false);
       cluster.getMaster().setCatalogJanitorEnabled(true);
       t.close();
+      zkw.close();
     }
   }
 
