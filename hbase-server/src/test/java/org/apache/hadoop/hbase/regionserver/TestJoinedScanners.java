@@ -21,7 +21,14 @@ package org.apache.hadoop.hbase.regionserver;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Random;
 
+import org.apache.commons.cli.CommandLine;
+import org.apache.commons.cli.CommandLineParser;
+import org.apache.commons.cli.GnuParser;
+import org.apache.commons.cli.HelpFormatter;
+import org.apache.commons.cli.Option;
+import org.apache.commons.cli.Options;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -40,10 +47,10 @@ import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.filter.CompareFilter;
 import org.apache.hadoop.hbase.filter.SingleColumnValueFilter;
+import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-
 
 
 /**
@@ -63,6 +70,10 @@ public class TestJoinedScanners {
   private static final byte[] flag_yes = Bytes.toBytes("Y");
   private static final byte[] flag_no  = Bytes.toBytes("N");
 
+  private static DataBlockEncoding blockEncoding = DataBlockEncoding.FAST_DIFF;
+  private static int selectionRatio = 30;
+  private static int valueWidth = 128 * 1024;
+
   @Test
   public void testJoinedScanners() throws Exception {
     String dataNodeHosts[] = new String[] { "host1", "host2", "host3" };
@@ -80,28 +91,33 @@ public class TestJoinedScanners {
       cluster = htu.startMiniCluster(1, regionServersCount, dataNodeHosts);
       byte [][] families = {cf_essential, cf_joined};
 
-      HTable ht = htu.createTable(
-        Bytes.toBytes(this.getClass().getSimpleName()), families);
+      byte[] tableName = Bytes.toBytes(this.getClass().getSimpleName());
+      HTableDescriptor desc = new HTableDescriptor(tableName);
+      for(byte[] family : families) {
+        HColumnDescriptor hcd = new HColumnDescriptor(family);
+        hcd.setDataBlockEncoding(blockEncoding);
+        desc.addFamily(hcd);
+      }
+      htu.getHBaseAdmin().createTable(desc);
+      HTable ht = new HTable(htu.getConfiguration(), tableName);
 
       long rows_to_insert = 1000;
       int insert_batch = 20;
-      int flag_percent = 1;
-      int large_bytes = 128 * 1024;
       long time = System.nanoTime();
+      Random rand = new Random(time);
 
       LOG.info("Make " + Long.toString(rows_to_insert) + " rows, total size = "
-        + Float.toString(rows_to_insert * large_bytes / 1024 / 1024) + " MB");
+        + Float.toString(rows_to_insert * valueWidth / 1024 / 1024) + " MB");
 
-      byte [] val_large = new byte[large_bytes];
+      byte [] val_large = new byte[valueWidth];
 
       List<Put> puts = new ArrayList<Put>();
 
       for (long i = 0; i < rows_to_insert; i++) {
         Put put = new Put(Bytes.toBytes(Long.toString (i)));
-        if (i % 100 <= flag_percent) {
+        if (rand.nextInt(100) <= selectionRatio) {
           put.add(cf_essential, col_name, flag_yes);
-        }
-        else {
+        } else {
           put.add(cf_essential, col_name, flag_no);
         }
         put.add(cf_joined, col_name, val_large);
@@ -120,7 +136,7 @@ public class TestJoinedScanners {
         + Double.toString((System.nanoTime() - time) / 1000000000.0) + " seconds");
 
       boolean slow = true;
-      for (int i = 0; i < 20; ++i) {
+      for (int i = 0; i < 10; ++i) {
         runScanner(ht, slow);
         slow = !slow;
       }
@@ -163,7 +179,9 @@ public class TestJoinedScanners {
       throws IOException {
     HTableDescriptor htd = new HTableDescriptor(tableName);
     for(byte [] family : families) {
-      htd.addFamily(new HColumnDescriptor(family));
+      HColumnDescriptor hcd = new HColumnDescriptor(family);
+      hcd.setDataBlockEncoding(DataBlockEncoding.FAST_DIFF);
+      htd.addFamily(hcd);
     }
     HRegionInfo info = new HRegionInfo(htd.getName(), startKey, stopKey, false);
     Path path = new Path(DIR + callingMethod);
@@ -174,5 +192,49 @@ public class TestJoinedScanners {
       }
     }
     return HRegion.createHRegion(info, path, conf, htd);
+  }
+
+  private static Options options = new Options();
+
+  /**
+   * Command line interface:
+   * @param args
+   * @throws IOException if there is a bug while reading from disk
+   */
+  public static void main(final String[] args) throws Exception {
+    Option encodingOption = new Option("e", "blockEncoding", true,
+      "Data block encoding; Default: FAST_DIFF");
+    encodingOption.setRequired(false);
+    options.addOption(encodingOption);
+    
+    Option ratioOption = new Option("r", "selectionRatio", true,
+      "Ratio of selected rows using essential column family");
+    ratioOption.setRequired(false);
+    options.addOption(ratioOption);
+    
+    Option widthOption = new Option("w", "valueWidth", true,
+      "Width of value for non-essential column family");
+    widthOption.setRequired(false);
+    options.addOption(widthOption);
+    
+    CommandLineParser parser = new GnuParser();
+    CommandLine cmd = parser.parse(options, args);
+    if (args.length < 1) {
+      HelpFormatter formatter = new HelpFormatter();
+      formatter.printHelp("TestJoinedScanners", options, true);
+    }
+    
+    if (cmd.hasOption("e")) {
+      blockEncoding = DataBlockEncoding.valueOf(cmd.getOptionValue("e"));
+    }
+    if (cmd.hasOption("r")) {
+      selectionRatio = Integer.parseInt(cmd.getOptionValue("r"));
+    }
+    if (cmd.hasOption("w")) {
+      valueWidth = Integer.parseInt(cmd.getOptionValue("w"));
+    }
+    // run the test
+    TestJoinedScanners test = new TestJoinedScanners();
+    test.testJoinedScanners();
   }
 }

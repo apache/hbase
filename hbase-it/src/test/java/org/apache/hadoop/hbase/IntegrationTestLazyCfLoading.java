@@ -18,9 +18,7 @@
 
 package org.apache.hadoop.hbase;
 
-import java.io.IOException;
 import java.security.InvalidParameterException;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
@@ -38,17 +36,15 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.filter.CompareFilter;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.SingleColumnValueFilter;
+import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.apache.hadoop.hbase.util.LoadTestTool;
 import org.apache.hadoop.hbase.util.MultiThreadedWriter;
 import org.apache.hadoop.hbase.util.RegionSplitter;
 import org.apache.hadoop.hbase.util.test.LoadTestDataGenerator;
 import org.apache.hadoop.hbase.util.test.LoadTestKVGenerator;
 import org.junit.After;
-import org.junit.AfterClass;
 import org.junit.Before;
-import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
@@ -61,6 +57,7 @@ import org.junit.experimental.categories.Category;
 public class IntegrationTestLazyCfLoading {
   private static final String TABLE_NAME = IntegrationTestLazyCfLoading.class.getSimpleName();
   private static final String TIMEOUT_KEY = "hbase.%s.timeout";
+  private static final String ENCODING_KEY = "hbase.%s.datablock.encoding";
 
   /** A soft test timeout; duration of the test, as such, depends on number of keys to put. */
   private static final int DEFAULT_TIMEOUT_MINUTES = 10;
@@ -183,9 +180,14 @@ public class IntegrationTestLazyCfLoading {
   private void createTable() throws Exception {
     deleteTable();
     LOG.info("Creating table");
+    Configuration conf = util.getConfiguration();
+    String encodingKey = String.format(ENCODING_KEY, this.getClass().getSimpleName());
+    DataBlockEncoding blockEncoding = DataBlockEncoding.valueOf(conf.get(encodingKey, "FAST_DIFF"));
     HTableDescriptor htd = new HTableDescriptor(Bytes.toBytes(TABLE_NAME));
     for (byte[] cf : dataGen.getColumnFamilies()) {
-      htd.addFamily(new HColumnDescriptor(cf));
+      HColumnDescriptor hcd = new HColumnDescriptor(cf);
+      hcd.setDataBlockEncoding(blockEncoding);
+      htd.addFamily(hcd);
     }
     int serverCount = util.getHBaseClusterInterface().getClusterStatus().getServersSize();
     byte[][] splits = new RegionSplitter.HexStringSplit().split(serverCount * REGIONS_PER_SERVER);
