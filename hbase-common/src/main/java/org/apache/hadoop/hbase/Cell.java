@@ -90,7 +90,7 @@ public interface Cell {
   byte[] getFamilyArray();
 
   /**
-   * @return Array index of first row byte
+   * @return Array index of first family byte
    */
   int getFamilyOffset();
 
@@ -167,5 +167,20 @@ public interface Cell {
    * @return Number of value bytes.  Must be < valueArray.length - offset.
    */
   int getValueLength();
+  
+  /**
+   * @return the tags byte array
+   */
+  byte[] getTagsArray();
+
+  /**
+   * @return the first offset where the tags start in the Cell
+   */
+  int getTagsOffset();
+  
+  /**
+   * @return the total length of the tags in the Cell.
+   */
+  int getTagsLength();
 
 }
