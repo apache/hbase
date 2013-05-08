@@ -1546,24 +1546,6 @@ public class HConnectionManager {
       return serviceName + "@" + rsHostnamePort;
     }
 
-    @Override
-    @Deprecated
-    public ZooKeeperWatcher getZooKeeperWatcher()
-        throws ZooKeeperConnectionException {
-      canCloseZKW = false;
-
-      try {
-        return getKeepAliveZooKeeperWatcher();
-      } catch (ZooKeeperConnectionException e){
-        throw e;
-      }catch (IOException e) {
-        // Encapsulate exception to keep interface
-        throw new ZooKeeperConnectionException(
-          "Can't create a zookeeper connection", e);
-      }
-    }
-
-
     private ZooKeeperKeepAliveConnection keepAliveZookeeper;
     private int keepAliveZookeeperUserCount;
     private boolean canCloseZKW = true;

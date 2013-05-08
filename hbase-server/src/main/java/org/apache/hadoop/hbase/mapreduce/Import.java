@@ -117,7 +117,7 @@ public class Import {
   extends TableMapper<ImmutableBytesWritable, Mutation> {
     private Map<byte[], byte[]> cfRenameMap;
     private UUID clusterId;
-      
+
     /**
      * @param row  The current table row key.
      * @param value  The columns.
@@ -175,20 +175,27 @@ public class Import {
       Configuration conf = context.getConfiguration();
       cfRenameMap = createCfRenameMap(conf);
       filter = instantiateFilter(conf);
-
+      // TODO: This is kind of ugly doing setup of ZKW just to read the clusterid.
+      ReplicationZookeeper zkHelper = null;
+      ZooKeeperWatcher zkw = null;
       try {
         HConnection connection = HConnectionManager.getConnection(conf);
-        ZooKeeperWatcher zkw = connection.getZooKeeperWatcher();
-        ReplicationZookeeper zkHelper = new ReplicationZookeeper(connection, conf, zkw);
-        clusterId = zkHelper.getUUIDForCluster(zkw);
+        zkw = new ZooKeeperWatcher(conf, context.getTaskAttemptID().toString(), null);
+        zkHelper = new ReplicationZookeeper(connection, conf, zkw);
+        try {
+          this.clusterId = zkHelper.getUUIDForCluster(zkw);
+        } finally {
+          if (zkHelper != null) zkHelper.close();
+        }
       } catch (ZooKeeperConnectionException e) {
         LOG.error("Problem connecting to ZooKeper during task setup", e);
       } catch (KeeperException e) {
         LOG.error("Problem reading ZooKeeper data during task setup", e);
       } catch (IOException e) {
         LOG.error("Problem setting up task", e);
+      } finally {
+        if (zkw != null) zkw.close();
       }
-
     }
   }
 
