@@ -205,9 +205,11 @@ mvn clean package -DskipTests
   865  ~/bin/mvn/bin/mvn release:prepare
   866  # Answer questions and then ^C to kill the build after the last question. See below for more on this.
   867  vi release.properties
-       # Change the references to trunk svn to be 0.92.2mvn; the release plugin presumes trunk
-       # Then restart the release:prepare -- it won't ask questions
-       # because the properties file exists.
+       # Change the references to trunk svn to be 0.92.2mvn.  The release plugin presumes trunk.
+       # Where it asks for a label for the release specify a label that does not yet exist; e.g.
+       # 0.92.2mvn2 (i.e. add a character, here a '2', to the label you are currently working
+       # against so when maven goes to label the release, it does not clash with an existing one).
+       # Then restart the release:prepare -- it won't ask questions because the properties file exists.
   868  ~/bin/mvn/bin/mvn release:prepare
   # The apache-release profile comes from the apache parent pom and does signing of artifacts published
   869  ~/bin/mvn/bin/mvn release:perform  -Papache-release
@@ -674,9 +676,9 @@ and public client API's can be used.
 <para>
 On a distributed cluster, integration tests that use ChaosMonkey or otherwise manipulate services thru cluster manager (e.g. restart regionservers) use SSH to do it.
 To run these, test process should be able to run commands on remote end, so ssh should be configured accordingly (for example, if HBase runs under hbase
-user in your cluster, you can set up passwordless ssh for that user and run the test also under it). To facilitate that, <code>hbase.it.clustermanager.ssh.user</code>, 
+user in your cluster, you can set up passwordless ssh for that user and run the test also under it). To facilitate that, <code>hbase.it.clustermanager.ssh.user</code>,
 <code>hbase.it.clustermanager.ssh.opts</code> and <code>hbase.it.clustermanager.ssh.cmd</code> configuration settings can be used. "User" is the remote user that cluster manager should use to perform ssh commands.
-"Opts" contains additional options that are passed to SSH (for example, "-i /tmp/my-key"). 
+"Opts" contains additional options that are passed to SSH (for example, "-i /tmp/my-key").
 Finally, if you have some custom environment setup, "cmd" is the override format for the entire tunnel (ssh) command. The default string is {<code>/usr/bin/ssh %1$s %2$s%3$s%4$s "%5$s"</code>} and is a good starting point. This is a standard Java format string with 5 arguments that is used to execute the remote command. The argument 1 (%1$s) is SSH options set the via opts setting or via environment variable, 2 is SSH user name, 3 is "@" if username is set or "" otherwise, 4 is the target host name, and 5 is the logical command to execute (that may include single quotes, so don't use them). For example, if you run the tests under non-hbase user and want to ssh as that user and change to hbase on remote machine, you can use {<code>/usr/bin/ssh %1$s %2$s%3$s%4$s "su hbase - -c \"%5$s\""</code>}. That way, to kill RS (for example) integration tests may run {<code>/usr/bin/ssh some-hostname "su hbase - -c \"ps aux | ... | kill ...\""</code>}.
 The command is logged in the test logs, so you can verify it is correct for your environment.
 </para>
