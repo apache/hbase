@@ -873,7 +873,7 @@ public class KeyValue implements Cell, HeapSize, Cloneable {
   /**
    * Clones a KeyValue.  This creates a copy, re-allocating the buffer.
    * @return Fully copied clone of this KeyValue
-   * @throws CloneNotSupportedException 
+   * @throws CloneNotSupportedException
    */
   @Override
   public KeyValue clone() throws CloneNotSupportedException {
@@ -2805,5 +2805,20 @@ public class KeyValue implements Cell, HeapSize, Cloneable {
     sum += 3 * Bytes.SIZEOF_INT;// offset, length, keyLength
     sum += Bytes.SIZEOF_LONG;// memstoreTS
     return ClassSize.align(sum);
+  }
+
+  @Override
+  public int getTagsOffset() {
+    throw new UnsupportedOperationException("Not implememnted");
+  }
+
+  @Override
+  public int getTagsLength() {
+    throw new UnsupportedOperationException("Not implememnted");
+  }
+
+  @Override
+  public byte[] getTagsArray() {
+    throw new UnsupportedOperationException("Not implememnted");
   }
 }

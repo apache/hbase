@@ -157,6 +157,24 @@ public class TestPayloadCarryingRpcController {
               public int getValueLength() {
                 return Bytes.SIZEOF_INT;
               }
+
+              @Override
+              public int getTagsOffset() {
+                // TODO Auto-generated method stub
+                return 0;
+              }
+
+              @Override
+              public int getTagsLength() {
+                // TODO Auto-generated method stub
+                return 0;
+              }
+
+              @Override
+              public byte[] getTagsArray() {
+                // TODO Auto-generated method stub
+                return null;
+              }
             };
           }
 

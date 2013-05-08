@@ -194,4 +194,18 @@ public class PrefixTreeCell implements Cell, Comparable<Cell> {
     return kv.toString();
   }
 
+  @Override
+  public int getTagsOffset() {
+    throw new UnsupportedOperationException("Not implemented");
+  }
+
+  @Override
+  public int getTagsLength() {
+    throw new UnsupportedOperationException("Not implemented");
+  }
+
+  @Override
+  public byte[] getTagsArray() {
+    throw new UnsupportedOperationException("Not implemented");
+  }
 }
