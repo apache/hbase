@@ -137,6 +137,14 @@
     &lt;/property&gt;
     ...
   &lt;/configuration&gt;</programlisting></para>
+  <caution xml:id="zk.version">
+      <title>What verion of ZooKeeper should I use?</title>
+      <para>The newer version, the better.  For example, some folks have been bitten by
+          <link xlink:href="https://issues.apache.org/jira/browse/ZOOKEEPER-1277">ZOOKEEPER-1277</link>.
+          If running zookeeper 3.5+, you can ask hbase to make use of the new multi operation by
+          enabling <xref linkend="hbase.zookeeper.useMulti"/>" in your <filename>hbase-site.xml</filename>.
+      </para>
+  </caution>
   <caution>
       <title>ZooKeeper Maintenance</title>
       <para>Be sure to set up the data dir cleaner described under
