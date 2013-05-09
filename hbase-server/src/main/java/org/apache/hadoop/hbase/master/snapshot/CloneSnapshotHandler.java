@@ -70,8 +70,7 @@ public class CloneSnapshotHandler extends CreateTableHandler implements Snapshot
 
   public CloneSnapshotHandler(final MasterServices masterServices,
       final SnapshotDescription snapshot, final HTableDescriptor hTableDescriptor,
-      final MetricsMaster metricsMaster)
-      throws NotAllMetaRegionsOnlineException, TableExistsException, IOException {
+      final MetricsMaster metricsMaster) {
     super(masterServices, masterServices.getMasterFileSystem(), hTableDescriptor,
       masterServices.getConfiguration(), null, masterServices);
     this.metricsMaster = metricsMaster;
@@ -155,6 +154,11 @@ public class CloneSnapshotHandler extends CreateTableHandler implements Snapshot
   }
 
   @Override
+  public long getCompletionTimestamp() {
+    return this.status.getCompletionTimestamp();
+  }
+
+  @Override
   public SnapshotDescription getSnapshot() {
     return snapshot;
   }
@@ -172,5 +176,10 @@ public class CloneSnapshotHandler extends CreateTableHandler implements Snapshot
   @Override
   public ForeignException getExceptionIfFailed() {
     return this.monitor.getException();
+  }
+
+  @Override
+  public void rethrowExceptionIfFailed() throws ForeignException {
+    monitor.rethrowException();
   }
 }

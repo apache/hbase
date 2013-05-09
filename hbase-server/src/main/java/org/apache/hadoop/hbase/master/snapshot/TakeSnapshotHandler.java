@@ -87,10 +87,9 @@ public abstract class TakeSnapshotHandler extends EventHandler implements Snapsh
   /**
    * @param snapshot descriptor of the snapshot to take
    * @param masterServices master services provider
-   * @throws IOException on unexpected error
    */
   public TakeSnapshotHandler(SnapshotDescription snapshot, final MasterServices masterServices,
-      final MetricsMaster metricsMaster) throws IOException {
+      final MetricsMaster metricsMaster) {
     super(masterServices, EventType.C_M_SNAPSHOT_TABLE);
     assert snapshot != null : "SnapshotDescription must not be nul1";
     assert masterServices != null : "MasterServices must not be nul1";
@@ -264,6 +263,11 @@ public abstract class TakeSnapshotHandler extends EventHandler implements Snapsh
   }
 
   @Override
+  public long getCompletionTimestamp() {
+    return this.status.getCompletionTimestamp();
+  }
+
+  @Override
   public SnapshotDescription getSnapshot() {
     return snapshot;
   }
@@ -271,6 +275,11 @@ public abstract class TakeSnapshotHandler extends EventHandler implements Snapsh
   @Override
   public ForeignException getExceptionIfFailed() {
     return monitor.getException();
+  }
+
+  @Override
+  public void rethrowExceptionIfFailed() throws ForeignException {
+    monitor.rethrowException();
   }
 
   @Override

@@ -37,6 +37,11 @@ public interface SnapshotSentinel {
   public boolean isFinished();
 
   /**
+   * @return -1 if the snapshot is in progress, otherwise the completion timestamp.
+   */
+  public long getCompletionTimestamp();
+
+  /**
    * Actively cancel a running snapshot.
    * @param why Reason for cancellation.
    */
@@ -54,4 +59,11 @@ public interface SnapshotSentinel {
    */
   public ForeignException getExceptionIfFailed();
 
+  /**
+   * Rethrow the exception returned by {@link SnapshotSentinel#getExceptionIfFailed}.
+   * If there is no exception this is a no-op.
+   *
+   * @throws ForeignException all exceptions from remote sources are procedure exceptions
+   */
+  public void rethrowExceptionIfFailed() throws ForeignException;
 }
