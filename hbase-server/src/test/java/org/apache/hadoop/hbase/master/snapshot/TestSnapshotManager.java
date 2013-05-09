@@ -67,7 +67,8 @@ public class TestSnapshotManager {
     return getNewManager(UTIL.getConfiguration());
   }
 
-  private SnapshotManager getNewManager(final Configuration conf) throws IOException, KeeperException {
+  private SnapshotManager getNewManager(final Configuration conf)
+      throws IOException, KeeperException {
     Mockito.reset(services);
     Mockito.when(services.getConfiguration()).thenReturn(conf);
     Mockito.when(services.getMasterFileSystem()).thenReturn(mfs);
@@ -78,14 +79,18 @@ public class TestSnapshotManager {
 
   @Test
   public void testInProcess() throws KeeperException, IOException {
+    String tableName = "testTable";
     SnapshotManager manager = getNewManager();
     TakeSnapshotHandler handler = Mockito.mock(TakeSnapshotHandler.class);
-    assertFalse("Manager is in process when there is no current handler", manager.isTakingSnapshot());
-    manager.setSnapshotHandlerForTesting(handler);
+    assertFalse("Manager is in process when there is no current handler",
+        manager.isTakingSnapshot(tableName));
+    manager.setSnapshotHandlerForTesting(tableName, handler);
     Mockito.when(handler.isFinished()).thenReturn(false);
-    assertTrue("Manager isn't in process when handler is running", manager.isTakingSnapshot());
+    assertTrue("Manager isn't in process when handler is running",
+        manager.isTakingSnapshot(tableName));
     Mockito.when(handler.isFinished()).thenReturn(true);
-    assertFalse("Manager is process when handler isn't running", manager.isTakingSnapshot());
+    assertFalse("Manager is process when handler isn't running",
+        manager.isTakingSnapshot(tableName));
   }
 
   /**

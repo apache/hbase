@@ -54,6 +54,7 @@ import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.snapshot.SnapshotTestingUtils;
 import org.apache.hadoop.hbase.exceptions.UnknownSnapshotException;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.junit.After;
 import org.junit.AfterClass;
@@ -129,7 +130,7 @@ public class TestSnapshotFromMaster {
   @Before
   public void setup() throws Exception {
     UTIL.createTable(TABLE_NAME, TEST_FAM);
-    master.getSnapshotManagerForTesting().setSnapshotHandlerForTesting(null);
+    master.getSnapshotManagerForTesting().setSnapshotHandlerForTesting(STRING_TABLE_NAME, null);
   }
 
   @After
@@ -182,7 +183,8 @@ public class TestSnapshotFromMaster {
       UnknownSnapshotException.class);
 
     // and that we get the same issue, even if we specify a name
-    SnapshotDescription desc = SnapshotDescription.newBuilder().setName(snapshotName).build();
+    SnapshotDescription desc = SnapshotDescription.newBuilder()
+      .setName(snapshotName).setTable(STRING_TABLE_NAME).build();
     builder.setSnapshot(desc);
     SnapshotTestingUtils.expectSnapshotDoneException(master, builder.build(),
       UnknownSnapshotException.class);
@@ -192,8 +194,11 @@ public class TestSnapshotFromMaster {
     Mockito.when(mockHandler.getException()).thenReturn(null);
     Mockito.when(mockHandler.getSnapshot()).thenReturn(desc);
     Mockito.when(mockHandler.isFinished()).thenReturn(new Boolean(true));
+    Mockito.when(mockHandler.getCompletionTimestamp())
+      .thenReturn(EnvironmentEdgeManager.currentTimeMillis());
 
-    master.getSnapshotManagerForTesting().setSnapshotHandlerForTesting(mockHandler);
+    master.getSnapshotManagerForTesting()
+        .setSnapshotHandlerForTesting(STRING_TABLE_NAME, mockHandler);
 
     // if we do a lookup without a snapshot name, we should fail - you should always know your name
     builder = IsSnapshotDoneRequest.newBuilder();

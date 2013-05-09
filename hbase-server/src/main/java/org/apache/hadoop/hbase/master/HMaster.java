@@ -2665,8 +2665,8 @@ MasterServices, Server {
     try {
       SnapshotDescription snapshot = request.getSnapshot();
       IsRestoreSnapshotDoneResponse.Builder builder = IsRestoreSnapshotDoneResponse.newBuilder();
-      boolean isRestoring = snapshotManager.isRestoringTable(snapshot);
-      builder.setDone(!isRestoring);
+      boolean done = snapshotManager.isRestoreDone(request.getSnapshot());
+      builder.setDone(done);
       return builder.build();
     } catch (IOException e) {
       throw new ServiceException(e);
