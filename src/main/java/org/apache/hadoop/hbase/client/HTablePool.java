@@ -156,7 +156,7 @@ public class HTablePool {
     closeTablePool(Bytes.toString(tableName));
   }
 
-  int getCurrentPoolSize(String tableName) {
+  public int getCurrentPoolSize(String tableName) {
     Queue<HTableInterface> queue = tables.get(tableName);
     synchronized(queue) {
       return queue.size();
