@@ -63,7 +63,8 @@ public class TestDynamicClassLoader {
 
     try {
       String folder = TEST_UTIL.getDataTestDir().toString();
-      ClassLoaderTestHelper.buildJar(folder, className, null, localDirPath());
+      ClassLoaderTestHelper.buildJar(
+        folder, className, null, ClassLoaderTestHelper.localDirPath(conf));
       classLoader.loadClass(className);
     } catch (ClassNotFoundException cnfe) {
       LOG.error("Should be able to load class " + className, cnfe);
@@ -95,11 +96,6 @@ public class TestDynamicClassLoader {
     }
   }
 
-  private String localDirPath() {
-    return conf.get("hbase.local.dir")
-      + File.separator + "jars" + File.separator;
-  }
-
   private void deleteClass(String className) throws Exception {
     String jarFileName = className + ".jar";
     File file = new File(TEST_UTIL.getDataTestDir().toString(), jarFileName);
@@ -110,7 +106,7 @@ public class TestDynamicClassLoader {
     file.delete();
     assertFalse("Should be deleted: " + file.getPath(), file.exists());
 
-    file = new File(localDirPath(), jarFileName);
+    file = new File(ClassLoaderTestHelper.localDirPath(conf), jarFileName);
     file.delete();
     assertFalse("Should be deleted: " + file.getPath(), file.exists());
   }

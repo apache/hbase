@@ -25,9 +25,12 @@ import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.util.Collection;
 import java.util.Enumeration;
+import java.util.HashSet;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.locks.Lock;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.apache.commons.logging.Log;
@@ -38,6 +41,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IOUtils;
 
+import com.google.common.base.Preconditions;
 import com.google.common.collect.MapMaker;
 
 /**
@@ -120,6 +124,19 @@ public class CoprocessorClassLoader extends ClassLoaderBase {
     Pattern.compile("^[^-]+-default\\.xml$")
   };
 
+  private static final Pattern libJarPattern = Pattern.compile("[/]?lib/([^/]+\\.jar)");
+
+  /**
+   * A locker used to synchronize class loader initialization per coprocessor jar file
+   */
+  private static final KeyLocker<String> locker = new KeyLocker<String>();
+
+  /**
+   * A set used to synchronized parent path clean up.  Generally, there
+   * should be only one parent path, but using a set so that we can support more.
+   */
+  static final HashSet<String> parentDirLockSet = new HashSet<String>();
+
   /**
    * Creates a JarClassLoader that loads classes from the given paths.
    */
@@ -129,24 +146,24 @@ public class CoprocessorClassLoader extends ClassLoaderBase {
 
   private void init(Path path, String pathPrefix,
       Configuration conf) throws IOException {
-    if (path == null) {
-      throw new IOException("The jar path is null");
-    }
-    if (!path.toString().endsWith(".jar")) {
-      throw new IOException(path.toString() + ": not a jar file?");
-    }
-
     // Copy the jar to the local filesystem
-    String parentDirPath =
+    String parentDirStr =
       conf.get(LOCAL_DIR_KEY, DEFAULT_LOCAL_DIR) + TMP_JARS_DIR;
-    File parentDir = new File(parentDirPath);
-    if (!parentDir.mkdirs() && !parentDir.isDirectory()) {
-      throw new RuntimeException("Failed to create local dir " + parentDir.getPath()
-        + ", CoprocessorClassLoader failed to init");
+    synchronized (parentDirLockSet) {
+      if (!parentDirLockSet.contains(parentDirStr)) {
+        Path parentDir = new Path(parentDirStr);
+        FileSystem fs = parentDir.getFileSystem(conf);
+        fs.delete(parentDir, true); // it's ok if the dir doesn't exist now
+        parentDirLockSet.add(parentDirStr);
+        if (!fs.mkdirs(parentDir) && !fs.getFileStatus(parentDir).isDir()) {
+          throw new RuntimeException("Failed to create local dir " + parentDirStr
+            + ", CoprocessorClassLoader failed to init");
+        }
+      }
     }
 
     FileSystem fs = path.getFileSystem(conf);
-    File dst = new File(parentDir, "." + pathPrefix + "."
+    File dst = new File(parentDirStr, "." + pathPrefix + "."
       + path.getName() + "." + System.currentTimeMillis() + ".jar");
     fs.copyToLocalFile(path, new Path(dst.toString()));
     dst.deleteOnExit();
@@ -158,10 +175,12 @@ public class CoprocessorClassLoader extends ClassLoaderBase {
       Enumeration<JarEntry> entries = jarFile.entries();
       while (entries.hasMoreElements()) {
         JarEntry entry = entries.nextElement();
-        if (entry.getName().matches("[/]?lib/[^/]+\\.jar")) {
-          File file = new File(parentDir, "." + pathPrefix + "." + path.getName()
-            + "." + System.currentTimeMillis() + "." + entry.getName().substring(5));
-          IOUtils.copyBytes(jarFile.getInputStream(entry), new FileOutputStream(file), conf, true);
+        Matcher m = libJarPattern.matcher(entry.getName());
+        if (m.matches()) {
+          File file = new File(parentDirStr, "." + pathPrefix + "."
+            + path.getName() + "." + System.currentTimeMillis() + "." + m.group(1));
+          IOUtils.copyBytes(jarFile.getInputStream(entry),
+            new FileOutputStream(file), conf, true);
           file.deleteOnExit();
           addURL(file.toURI().toURL());
         }
@@ -173,7 +192,7 @@ public class CoprocessorClassLoader extends ClassLoaderBase {
 
   // This method is used in unit test
   public static CoprocessorClassLoader getIfCached(final Path path) {
-    if (path == null) return null; // No class loader for null path
+    Preconditions.checkNotNull(path, "The jar path is null!");
     return classLoadersCache.get(path);
   }
 
@@ -202,27 +221,46 @@ public class CoprocessorClassLoader extends ClassLoaderBase {
       final ClassLoader parent, final String pathPrefix,
       final Configuration conf) throws IOException {
     CoprocessorClassLoader cl = getIfCached(path);
+    String pathStr = path.toString();
     if (cl != null) {
-      LOG.debug("Found classloader "+ cl + "for "+ path.toString());
+      LOG.debug("Found classloader "+ cl + " for "+ pathStr);
       return cl;
     }
 
-    cl = AccessController.doPrivileged(new PrivilegedAction<CoprocessorClassLoader>() {
-      @Override
-      public CoprocessorClassLoader run() {
-        return new CoprocessorClassLoader(parent);
-      }
-    });
-
-    cl.init(path, pathPrefix, conf);
-
-    // Cache class loader as a weak value, will be GC'ed when no reference left
-    CoprocessorClassLoader prev = classLoadersCache.putIfAbsent(path, cl);
-    if (prev != null) {
-      // Lost update race, use already added class loader
-      cl = prev;
+    if (!pathStr.endsWith(".jar")) {
+      throw new IOException(pathStr + ": not a jar file?");
     }
-    return cl;
+
+    Lock lock = locker.acquireLock(pathStr);
+    try {
+      cl = getIfCached(path);
+      if (cl != null) {
+        LOG.debug("Found classloader "+ cl + " for "+ pathStr);
+        return cl;
+      }
+
+      cl = AccessController.doPrivileged(
+          new PrivilegedAction<CoprocessorClassLoader>() {
+        @Override
+        public CoprocessorClassLoader run() {
+          return new CoprocessorClassLoader(parent);
+        }
+      });
+
+      cl.init(path, pathPrefix, conf);
+
+      // Cache class loader as a weak value, will be GC'ed when no reference left
+      CoprocessorClassLoader prev = classLoadersCache.putIfAbsent(path, cl);
+      if (prev != null) {
+        // Lost update race, use already added class loader
+        LOG.warn("THIS SHOULD NOT HAPPEN, a class loader"
+          +" is already cached for " + pathStr);
+        cl = prev;
+      }
+      return cl;
+    } finally {
+      lock.unlock();
+    }
   }
 
   @Override
