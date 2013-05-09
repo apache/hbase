@@ -20,7 +20,9 @@
 package org.apache.hadoop.hbase;
 
 import java.io.DataInput;
+import java.io.DataInputStream;
 import java.io.DataOutput;
+import java.io.EOFException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -35,6 +37,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
@@ -2330,9 +2333,16 @@ public class KeyValue implements Cell, HeapSize, Cloneable {
    */
   public static KeyValue iscreate(final InputStream in) throws IOException {
     byte [] intBytes = new byte[Bytes.SIZEOF_INT];
-    int length = in.read(intBytes);
-    if (length == 0) return null;
-    if (length != intBytes.length) throw new IOException("Failed read of int length " + length);
+    int bytesRead = 0;
+    while (bytesRead < intBytes.length) {
+      int n = in.read(intBytes, bytesRead, intBytes.length - bytesRead);
+      if (n < 0) {
+        if (bytesRead == 0) return null; // EOF at start is ok
+        throw new IOException("Failed read of int, read " + bytesRead + " bytes");
+      }
+      bytesRead += n;
+    }
+    // TODO: perhaps some sanity check is needed here.
     byte [] bytes = new byte[Bytes.toInt(intBytes)];
     IOUtils.readFully(in, bytes, 0, bytes.length);
     return new KeyValue(bytes, 0, bytes.length);

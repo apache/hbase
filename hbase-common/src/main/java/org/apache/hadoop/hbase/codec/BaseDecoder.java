@@ -17,12 +17,16 @@
  */
 package org.apache.hadoop.hbase.codec;
 
+import java.io.EOFException;
 import java.io.IOException;
 import java.io.InputStream;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.Cell;
 
 public abstract class BaseDecoder implements Codec.Decoder {
+  protected static final Log LOG = LogFactory.getLog(BaseDecoder.class);
   protected final InputStream in;
   private boolean hasNext = true;
   private Cell current = null;
@@ -34,12 +38,30 @@ public abstract class BaseDecoder implements Codec.Decoder {
   @Override
   public boolean advance() throws IOException {
     if (!this.hasNext) return this.hasNext;
-    if (this.in.available() <= 0) {
+    if (this.in.available() == 0) {
       this.hasNext = false;
       return this.hasNext;
     }
-    this.current = parseCell();
+    try {
+      this.current = parseCell();
+    } catch (IOException ioEx) {
+      rethrowEofException(ioEx);
+    }
     return this.hasNext;
+  }
+
+  private void rethrowEofException(IOException ioEx) throws IOException {
+    boolean isEof = false;
+    try {
+      isEof = this.in.available() == 0;
+    } catch (Throwable t) {
+      LOG.trace("Error getting available for error message - ignoring", t);
+    }
+    if (!isEof) throw ioEx;
+    LOG.error("Partial cell read caused by EOF: " + ioEx);
+    EOFException eofEx = new EOFException("Partial cell read");
+    eofEx.initCause(ioEx);
+    throw eofEx;
   }
 
   /**

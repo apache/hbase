@@ -116,44 +116,63 @@ public class ProtobufLogReader extends ReaderBase {
 
   @Override
   protected boolean readNext(HLog.Entry entry) throws IOException {
-    WALKey.Builder builder = WALKey.newBuilder();
-    boolean hasNext = false;
-    try {
-      hasNext = builder.mergeDelimitedFrom(inputStream);
-    } catch (InvalidProtocolBufferException ipbe) {
-      LOG.error("Invalid PB while reading WAL, probably an unexpected EOF, ignoring", ipbe);
-    }
-    if (!hasNext) return false;
-    if (!builder.isInitialized()) {
-      // TODO: not clear if we should try to recover from corrupt PB that looks semi-legit.
-      //       If we can get the KV count, we could, theoretically, try to get next record.
-      LOG.error("Partial PB while reading WAL, probably an unexpected EOF, ignoring");
-      return false;
-    }
-    WALKey walKey = builder.build();
-    entry.getKey().readFieldsFromPb(walKey, this.byteStringUncompressor);
-    try {
-      int expectedCells = walKey.getFollowingKvCount();
-      int actualCells = entry.getEdit().readFromCells(cellDecoder, expectedCells);
-      if (expectedCells != actualCells) {
-        throw new EOFException("Unable to read " + expectedCells + " cells, got " + actualCells);
+    while (true) {
+      WALKey.Builder builder = WALKey.newBuilder();
+      boolean hasNext = false;
+      try {
+        hasNext = builder.mergeDelimitedFrom(inputStream);
+      } catch (InvalidProtocolBufferException ipbe) {
+        LOG.error("Invalid PB while reading WAL, probably an unexpected EOF, ignoring", ipbe);
       }
-    } catch (EOFException ex) {
-      LOG.error("EOF while reading KVs, ignoring", ex);
-      return false;
-    } catch (Exception ex) {
-      IOException realEofEx = extractHiddenEofOrRethrow(ex);
-      LOG.error("EOF while reading KVs, ignoring", realEofEx);
-      return false;
+      if (!hasNext) return false;
+      if (!builder.isInitialized()) {
+        // TODO: not clear if we should try to recover from corrupt PB that looks semi-legit.
+        //       If we can get the KV count, we could, theoretically, try to get next record.
+        LOG.error("Partial PB while reading WAL, probably an unexpected EOF, ignoring");
+        return false;
+      }
+      WALKey walKey = builder.build();
+      entry.getKey().readFieldsFromPb(walKey, this.byteStringUncompressor);
+      if (!walKey.hasFollowingKvCount() || 0 == walKey.getFollowingKvCount()) {
+        LOG.warn("WALKey has no KVs that follow it; trying the next one");
+        continue;
+      }
+      int expectedCells = walKey.getFollowingKvCount();
+      long posBefore = this.inputStream.getPos();
+      try {
+        int actualCells = entry.getEdit().readFromCells(cellDecoder, expectedCells);
+        if (expectedCells != actualCells) {
+          throw new EOFException("Only read " + actualCells); // other info added in catch
+        }
+      } catch (Exception ex) {
+        String posAfterStr = "<unknown>";
+        try {
+          posAfterStr = this.inputStream.getPos() + "";
+        } catch (Throwable t) {
+           LOG.trace("Error getting pos for error message - ignoring", t);
+        }
+        String message = " while reading " + expectedCells + " WAL KVs; started reading at "
+            + posBefore + " and read up to " + posAfterStr;
+        IOException realEofEx = extractHiddenEof(ex);
+        if (realEofEx != null) {
+          LOG.error("EOF " + message, realEofEx);
+          return false;
+        }
+        message = "Error " + message;
+        LOG.error(message);
+        throw new IOException(message, ex);
+      }
+      return true;
     }
-    return true;
   }
 
-  private IOException extractHiddenEofOrRethrow(Exception ex) throws IOException {
+  private IOException extractHiddenEof(Exception ex) {
     // There are two problems we are dealing with here. Hadoop stream throws generic exception
     // for EOF, not EOFException; and scanner further hides it inside RuntimeException.
     IOException ioEx = null;
-    if (ex instanceof IOException) {
+    if (ex instanceof EOFException) {
+      return (EOFException)ex;
+    } else if (ex instanceof IOException) {
       ioEx = (IOException)ex;
     } else if (ex instanceof RuntimeException
         && ex.getCause() != null && ex.getCause() instanceof IOException) {
@@ -161,9 +180,9 @@ public class ProtobufLogReader extends ReaderBase {
     }
     if (ioEx != null) {
       if (ioEx.getMessage().contains("EOF")) return ioEx;
-      throw ioEx;
+      return null;
     }
-    throw new IOException(ex);
+    return null;
   }
 
   @Override
