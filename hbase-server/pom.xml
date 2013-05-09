@@ -87,6 +87,7 @@
             <exclude>hbase-site.xml</exclude>
             <exclude>log4j.properties</exclude>
             <exclude>mapred-queues.xml</exclude>
+            <exclude>hdfs-site.xml</exclude>
           </excludes>
         </configuration>
       </plugin>
