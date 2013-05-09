@@ -87,7 +87,7 @@ public class PercentileMetric extends MetricsLongValue {
   }
 
   public void updateMetric() {
-    this.set(underlyingHistogram.getPercentileEstimate(percentile).longValue());
+    this.set((long)underlyingHistogram.getPercentileEstimate(percentile));
   }
 
   public void refresh() {

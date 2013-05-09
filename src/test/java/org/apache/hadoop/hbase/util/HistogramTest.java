@@ -27,22 +27,22 @@ public class HistogramTest extends TestCase{
   public void testAboveMaxValue() {
     Double hi = 10000.0;
     Histogram hist = new Histogram(1000, 100.0, hi);
-    for (int i=0; i<100; i++) {
+    for (int i=0; i<1000; i++) {
       Double tmp = hi + i * 1.0;
       hist.addValue(tmp);
     }
     Double prcntyl = hist.getPercentileEstimate(95.0);
-    assertTrue(prcntyl >= (hi + 94) && prcntyl <= (hi + 96));
+    assertTrue(prcntyl >= (hi + 949) && prcntyl <= (hi + 950));
   }
   @Test
   public void testBelowMinValue() {
-    Histogram hist = new Histogram(1000, 100.0, 10000.0);
-    for (int i=0; i<100; i++) {
+    Histogram hist = new Histogram(1000, 1000.0, 10000.0);
+    for (int i=0; i<1000; i++) {
       Double tmp = i * 1.0;
       hist.addValue(tmp);
     }
     Double prcntyl = hist.getPercentileEstimate(95.0);
-    assertTrue(prcntyl >= 94 && prcntyl <= 96);
+    assertTrue(prcntyl >= 949 && prcntyl <= 950);
   }
 
   @Test
@@ -61,18 +61,18 @@ public class HistogramTest extends TestCase{
 
   @Test
   public void testHistogramExtremeValues() {
-    Histogram hist = new Histogram(100, 0.0, 100.0);
-    for (int i=1; i<100; i++) {
+    Histogram hist = new Histogram(100, 0.0, 1000.0);
+    for (int i=1; i<1000; i++) {
       Double tmp = i - 0.1;
       hist.addValue(tmp);
     }
-    hist.addValue(100.1);
-    hist.addValue(100.2);
+    hist.addValue(1000.1);
+    hist.addValue(1000.2);
     Double prcntyl = hist.getPercentileEstimate(99.9999999999);
-    assertTrue(prcntyl <= 100.2);
+    assertTrue(prcntyl <= 1000.2);
 
     hist = new Histogram(100, 10.0, 100.0);
-    for (int i=11; i<100; i++) {
+    for (int i=10; i<1100; i++) {
       Double tmp = i - 0.1;
       hist.addValue(tmp);
     }
@@ -80,5 +80,16 @@ public class HistogramTest extends TestCase{
     hist.addValue(9.1);
     prcntyl = hist.getPercentileEstimate(0.0);
     assertTrue(prcntyl >= 5.1);
+  }
+
+  public void testFewDataPoints() {
+    Histogram hist = new Histogram(100, 0.0, 100.0);
+    for (int i=10; i>=1; i--) {
+      hist.addValue((double)i);
+    }
+    Double prcntyl = hist.getPercentileEstimate(99.0);
+    assertTrue(prcntyl >= 9 && prcntyl <= 10);
+    prcntyl = hist.getPercentileEstimate(0.0);
+    assertTrue(prcntyl >= 1 && prcntyl <= 2);
   }
 }
