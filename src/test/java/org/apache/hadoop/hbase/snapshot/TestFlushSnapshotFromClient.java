@@ -251,11 +251,8 @@ public class TestFlushSnapshotFromClient {
     // load the table so we have some data
     UTIL.loadTable(new HTable(UTIL.getConfiguration(), TABLE_NAME), TEST_FAM);
     // and wait until everything stabilizes
-    HRegionServer rs = UTIL.getRSForFirstRegionInTable(TABLE_NAME);
-    List<HRegion> onlineRegions = rs.getOnlineRegions(TABLE_NAME);
-    for (HRegion region : onlineRegions) {
-      region.waitForFlushesAndCompactions();
-    }
+    waitForTableToBeOnline(TABLE_NAME);
+
     String snapshotName = "flushSnapshotCreateListDestroy";
     // test creating the snapshot
     admin.snapshot(snapshotName, STRING_TABLE_NAME, SnapshotDescription.Type.FLUSH);
@@ -305,32 +302,27 @@ public class TestFlushSnapshotFromClient {
   }
 
   /**
-   * Demonstrate that we reject snapshot requests if there is a snapshot currently running.
+   * Demonstrate that we reject snapshot requests if there is a snapshot already running on the
+   * same table currently running and that concurrent snapshots on different tables can both
+   * succeed concurretly.
    */
   @Test(timeout=60000)
   public void testConcurrentSnapshottingAttempts() throws IOException, InterruptedException {
-    int ssNum = 10;
+    final String STRING_TABLE2_NAME = STRING_TABLE_NAME + "2";
+    final byte[] TABLE2_NAME = Bytes.toBytes(STRING_TABLE2_NAME);
+
+    int ssNum = 20;
     HBaseAdmin admin = UTIL.getHBaseAdmin();
     // make sure we don't fail on listing snapshots
     SnapshotTestingUtils.assertNoSnapshots(admin);
+    // create second testing table
+    UTIL.createTable(TABLE2_NAME, TEST_FAM);
     // load the table so we have some data
     UTIL.loadTable(new HTable(UTIL.getConfiguration(), TABLE_NAME), TEST_FAM);
+    UTIL.loadTable(new HTable(UTIL.getConfiguration(), TABLE2_NAME), TEST_FAM);
     // and wait until everything stabilizes
-    HRegionServer rs = UTIL.getRSForFirstRegionInTable(TABLE_NAME);
-    List<HRegion> onlineRegions = rs.getOnlineRegions(TABLE_NAME);
-    for (HRegion region : onlineRegions) {
-      region.waitForFlushesAndCompactions();
-    }
-
-    // build descriptions
-    SnapshotDescription[] descs = new SnapshotDescription[ssNum];
-    for (int i = 0; i < ssNum; i++) {
-      SnapshotDescription.Builder builder = SnapshotDescription.newBuilder();
-      builder.setTable(STRING_TABLE_NAME);
-      builder.setName("ss"+i);
-      builder.setType(SnapshotDescription.Type.FLUSH);
-      descs[i] = builder.build();
-    }
+    waitForTableToBeOnline(TABLE_NAME);
+    waitForTableToBeOnline(TABLE2_NAME);
 
     final CountDownLatch toBeSubmitted = new CountDownLatch(ssNum);
     // We'll have one of these per thread
@@ -354,6 +346,16 @@ public class TestFlushSnapshotFromClient {
         toBeSubmitted.countDown();
       }
     };
+
+    // build descriptions
+    SnapshotDescription[] descs = new SnapshotDescription[ssNum];
+    for (int i = 0; i < ssNum; i++) {
+      SnapshotDescription.Builder builder = SnapshotDescription.newBuilder();
+      builder.setTable((i % 2) == 0 ? STRING_TABLE_NAME : STRING_TABLE2_NAME);
+      builder.setName("ss"+i);
+      builder.setType(SnapshotDescription.Type.FLUSH);
+      descs[i] = builder.build();
+    }
 
     // kick each off its own thread
     for (int i=0 ; i < ssNum; i++) {
@@ -390,13 +392,36 @@ public class TestFlushSnapshotFromClient {
     LOG.info("Taken " + takenSize + " snapshots:  " + taken);
     assertTrue("We expect at least 1 request to be rejected because of we concurrently" +
         " issued many requests", takenSize < ssNum && takenSize > 0);
+
+    // Verify that there's at least one snapshot per table
+    int t1SnapshotsCount = 0;
+    int t2SnapshotsCount = 0;
+    for (SnapshotDescription ss : taken) {
+      if (ss.getTable().equals(STRING_TABLE_NAME)) {
+        t1SnapshotsCount++;
+      } else if (ss.getTable().equals(STRING_TABLE2_NAME)) {
+        t2SnapshotsCount++;
+      }
+    }
+    assertTrue("We expect at least 1 snapshot of table1 ", t1SnapshotsCount > 0);
+    assertTrue("We expect at least 1 snapshot of table2 ", t2SnapshotsCount > 0);
+
     // delete snapshots so subsequent tests are clean.
     for (SnapshotDescription ss : taken) {
       admin.deleteSnapshot(ss.getName());
     }
+    UTIL.deleteTable(TABLE2_NAME);
   }
 
   private void logFSTree(Path root) throws IOException {
     FSUtils.logFileSystemState(UTIL.getDFSCluster().getFileSystem(), root, LOG);
+  }
+
+  private void waitForTableToBeOnline(final byte[] tableName) throws IOException {
+    HRegionServer rs = UTIL.getRSForFirstRegionInTable(tableName);
+    List<HRegion> onlineRegions = rs.getOnlineRegions(tableName);
+    for (HRegion region : onlineRegions) {
+      region.waitForFlushesAndCompactions();
+    }
   }
 }

@@ -68,6 +68,7 @@ import org.apache.hadoop.hbase.snapshot.SnapshotExistsException;
 import org.apache.hadoop.hbase.snapshot.TablePartiallyOpenException;
 import org.apache.hadoop.hbase.snapshot.UnknownSnapshotException;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.zookeeper.KeeperException;
@@ -88,6 +89,19 @@ public class SnapshotManager implements Stoppable {
 
   /** By default, check to see if the snapshot is complete every WAKE MILLIS (ms) */
   private static final int SNAPSHOT_WAKE_MILLIS_DEFAULT = 500;
+
+  /**
+   * Wait time before removing a finished sentinel from the in-progress map
+   *
+   * NOTE: This is used as a safety auto cleanup.
+   * The snapshot and restore handlers map entries are removed when a user asks if a snapshot or
+   * restore is completed. This operation is part of the HBaseAdmin snapshot/restore API flow.
+   * In case something fails on the client side and the snapshot/restore state is not reclaimed
+   * after a default timeout, the entry is removed from the in-progress map.
+   * At this point, if the user asks for the snapshot/restore status, the result will be
+   * snapshot done if exists or failed if it doesn't exists.
+   */
+  private static final int SNAPSHOT_SENTINELS_CLEANUP_TIMEOUT = 60 * 1000;
 
   /** Enable or disable snapshot support */
   public static final String HBASE_SNAPSHOT_ENABLED = "hbase.snapshot.enabled";
@@ -110,10 +124,11 @@ public class SnapshotManager implements Stoppable {
   /** Name of the operation to use in the controller */
   public static final String ONLINE_SNAPSHOT_CONTROLLER_DESCRIPTION = "online-snapshot";
 
-  // TODO - enable having multiple snapshots with multiple monitors/threads
-  // this needs to be configuration based when running multiple snapshots is implemented
+  /** Conf key for # of threads used by the SnapshotManager thread pool */
+  private static final String SNAPSHOT_POOL_THREADS_KEY = "hbase.snapshot.master.threads";
+
   /** number of current operations running on the master */
-  private static final int opThreads = 1;
+  private static final int SNAPSHOT_POOL_THREADS_DEFAULT = 1;
 
   private boolean stopped;
   private final long wakeFrequency;
@@ -124,17 +139,20 @@ public class SnapshotManager implements Stoppable {
   // Is snapshot feature enabled?
   private boolean isSnapshotSupported = false;
 
-  // A reference to a handler.  If the handler is non-null, then it is assumed that a snapshot is
-  // in progress currently
-  // TODO: this is a bad smell;  likely replace with a collection in the future.  Also this gets
-  // reset by every operation.
-  private TakeSnapshotHandler handler;
+  // Snapshot handlers map, with table name as key.
+  // The map is always accessed and modified under the object lock using synchronized.
+  // snapshotTable() will insert an Handler in the table.
+  // isSnapshotDone() will remove the handler requested if the operation is finished.
+  private Map<String, SnapshotSentinel> snapshotHandlers = new HashMap<String, SnapshotSentinel>();
+
+  // Restore Sentinels map, with table name as key.
+  // The map is always accessed and modified under the object lock using synchronized.
+  // restoreSnapshot()/cloneSnapshot() will insert an Handler in the table.
+  // isRestoreDone() will remove the handler requested if the operation is finished.
+  private Map<String, SnapshotSentinel> restoreHandlers = new HashMap<String, SnapshotSentinel>();
 
   private final Path rootDir;
   private final ExecutorService executorService;
-
-  // Restore Sentinels map, with table name as key
-  private Map<String, SnapshotSentinel> restoreHandlers = new HashMap<String, SnapshotSentinel>();
 
   /**
    * Construct a snapshot manager.
@@ -151,6 +169,7 @@ public class SnapshotManager implements Stoppable {
     Configuration conf = master.getConfiguration();
     this.wakeFrequency = conf.getInt(SNAPSHOT_WAKE_MILLIS_KEY, SNAPSHOT_WAKE_MILLIS_DEFAULT);
     long keepAliveTime = conf.getLong(SNAPSHOT_TIMEOUT_MILLIS_KEY, SNAPSHOT_TIMEOUT_MILLIS_DEFAULT);
+    int opThreads = conf.getInt(SNAPSHOT_POOL_THREADS_KEY, SNAPSHOT_POOL_THREADS_DEFAULT);
 
     // setup the default procedure coordinator
     String name = master.getServerName().toString();
@@ -191,10 +210,20 @@ public class SnapshotManager implements Stoppable {
    * @throws IOException File system exception
    */
   public List<SnapshotDescription> getCompletedSnapshots() throws IOException {
+    return getCompletedSnapshots(SnapshotDescriptionUtils.getSnapshotsDir(rootDir));
+  }
+
+  /**
+   * Gets the list of all completed snapshots.
+   * @param snapshotDir snapshot directory
+   * @return list of SnapshotDescriptions
+   * @throws IOException File system exception
+   */
+  private List<SnapshotDescription> getCompletedSnapshots(Path snapshotDir) throws IOException {
     List<SnapshotDescription> snapshotDescs = new ArrayList<SnapshotDescription>();
     // first create the snapshot root path and check to see if it exists
-    Path snapshotDir = SnapshotDescriptionUtils.getSnapshotsDir(rootDir);
     FileSystem fs = master.getMasterFileSystem().getFileSystem();
+    if (snapshotDir == null) snapshotDir = SnapshotDescriptionUtils.getSnapshotsDir(rootDir);
 
     // if there are no snapshots, return an empty list
     if (!fs.exists(snapshotDir)) {
@@ -280,26 +309,8 @@ public class SnapshotManager implements Stoppable {
   }
 
   /**
-   * Return the handler if it is currently running and has the same snapshot target name.
-   * @param snapshot
-   * @return null if doesn't match, else a live handler.
-   */
-  private synchronized TakeSnapshotHandler getTakeSnapshotHandler(SnapshotDescription snapshot) {
-    TakeSnapshotHandler h = this.handler;
-    if (h == null) {
-      return null;
-    }
-
-    if (!h.getSnapshot().getName().equals(snapshot.getName())) {
-      // specified snapshot is to the one currently running
-      return null;
-    }
-
-    return h;
-  }
-
-  /**
    * Check if the specified snapshot is done
+   *
    * @param expected
    * @return true if snapshot is ready to be restored, false if it is still being taken.
    * @throws IOException IOException if error from HDFS or RPC
@@ -314,10 +325,20 @@ public class SnapshotManager implements Stoppable {
 
     String ssString = SnapshotDescriptionUtils.toString(expected);
 
-    // check to see if the sentinel exists
-    TakeSnapshotHandler handler = getTakeSnapshotHandler(expected);
+    // check to see if the sentinel exists,
+    // and if the task is complete removes it from the in-progress snapshots map.
+    SnapshotSentinel handler = removeSentinelIfFinished(this.snapshotHandlers, expected);
+
+    // stop tracking "abandoned" handlers
+    cleanupSentinels();
+
     if (handler == null) {
-      // doesn't exist, check if it is already completely done.
+      // If there's no handler in the in-progress map, it means one of the following:
+      //   - someone has already requested the snapshot state
+      //   - the requested snapshot was completed long time ago (cleanupSentinels() timeout)
+      //   - the snapshot was never requested
+      // In those cases returns to the user the "done state" if the snapshots exists on disk,
+      // otherwise raise an exception saying that the snapshot is not running and doesn't exist.
       if (!isSnapshotCompleted(expected)) {
         throw new UnknownSnapshotException("Snapshot " + ssString
             + " is not currently running or one of the known completed snapshots.");
@@ -328,7 +349,7 @@ public class SnapshotManager implements Stoppable {
 
     // pass on any failure we find in the sentinel
     try {
-      handler.rethrowException();
+      handler.rethrowExceptionIfFailed();
     } catch (ForeignException e) {
       // Give some procedure info on an exception.
       String status;
@@ -353,32 +374,19 @@ public class SnapshotManager implements Stoppable {
   }
 
   /**
-   * Check to see if there are any snapshots in progress currently.  Currently we have a
-   * limitation only allowing a single snapshot attempt at a time.
-   * @return <tt>true</tt> if there any snapshots in progress, <tt>false</tt> otherwise
-   * @throws SnapshotCreationException if the snapshot failed
+   * Check to see if the specified table has a snapshot in progress.  Currently we have a
+   * limitation only allowing a single snapshot per table at a time.
+   * @param tableName name of the table being snapshotted.
+   * @return <tt>true</tt> if there is a snapshot in progress on the specified table.
    */
-  synchronized boolean isTakingSnapshot() throws SnapshotCreationException {
-    // TODO later when we handle multiple there would be a map with ssname to handler.
+  synchronized boolean isTakingSnapshot(final String tableName) {
+    SnapshotSentinel handler = this.snapshotHandlers.get(tableName);
     return handler != null && !handler.isFinished();
   }
 
   /**
-   * Check to see if the specified table has a snapshot in progress.  Currently we have a
-   * limitation only allowing a single snapshot attempt at a time.
-   * @param tableName name of the table being snapshotted.
-   * @return <tt>true</tt> if there is a snapshot in progress on the specified table.
-   */
-  private boolean isTakingSnapshot(final String tableName) {
-    if (handler != null && handler.getSnapshot().getTable().equals(tableName)) {
-      return !handler.isFinished();
-    }
-    return false;
-  }
-
-  /**
    * Check to make sure that we are OK to run the passed snapshot. Checks to make sure that we
-   * aren't already running a snapshot.
+   * aren't already running a snapshot or restore on the requested table.
    * @param snapshot description of the snapshot we want to start
    * @throws HBaseSnapshotException if the filesystem could not be prepared to start the snapshot
    */
@@ -388,19 +396,21 @@ public class SnapshotManager implements Stoppable {
     Path workingDir = SnapshotDescriptionUtils.getWorkingSnapshotDir(snapshot, rootDir);
 
     // make sure we aren't already running a snapshot
-    if (isTakingSnapshot()) {
+    if (isTakingSnapshot(snapshot.getTable())) {
+      SnapshotSentinel handler = this.snapshotHandlers.get(snapshot.getTable());
       throw new SnapshotCreationException("Rejected taking "
           + SnapshotDescriptionUtils.toString(snapshot)
           + " because we are already running another snapshot "
-          + SnapshotDescriptionUtils.toString(this.handler.getSnapshot()), snapshot);
+          + SnapshotDescriptionUtils.toString(handler.getSnapshot()), snapshot);
     }
 
     // make sure we aren't running a restore on the same table
     if (isRestoringTable(snapshot.getTable())) {
+      SnapshotSentinel handler = restoreHandlers.get(snapshot.getTable());
       throw new SnapshotCreationException("Rejected taking "
           + SnapshotDescriptionUtils.toString(snapshot)
           + " because we are already have a restore in progress on the same snapshot "
-          + SnapshotDescriptionUtils.toString(this.handler.getSnapshot()), snapshot);
+          + SnapshotDescriptionUtils.toString(handler.getSnapshot()), snapshot);
     }
 
     try {
@@ -422,31 +432,64 @@ public class SnapshotManager implements Stoppable {
   }
 
   /**
+   * Take a snapshot of a disabled table.
+   * @param snapshot description of the snapshot to take. Modified to be {@link Type#DISABLED}.
+   * @throws HBaseSnapshotException if the snapshot could not be started
+   */
+  private synchronized void snapshotDisabledTable(SnapshotDescription snapshot)
+      throws HBaseSnapshotException {
+    // setup the snapshot
+    prepareToTakeSnapshot(snapshot);
+
+    // set the snapshot to be a disabled snapshot, since the client doesn't know about that
+    snapshot = snapshot.toBuilder().setType(Type.DISABLED).build();
+
+    // Take the snapshot of the disabled table
+    DisabledTableSnapshotHandler handler =
+        new DisabledTableSnapshotHandler(snapshot, master, metricsMaster);
+    snapshotTable(snapshot, handler);
+  }
+
+  /**
    * Take a snapshot of an enabled table.
-   * <p>
-   * The thread limitation on the executorService's thread pool for snapshots ensures the
-   * snapshot won't be started if there is another snapshot already running. Does
-   * <b>not</b> check to see if another snapshot of the same name already exists.
    * @param snapshot description of the snapshot to take.
    * @throws HBaseSnapshotException if the snapshot could not be started
    */
   private synchronized void snapshotEnabledTable(SnapshotDescription snapshot)
       throws HBaseSnapshotException {
-    TakeSnapshotHandler handler;
+    // setup the snapshot
+    prepareToTakeSnapshot(snapshot);
+
+    // Take the snapshot of the enabled table
+    EnabledTableSnapshotHandler handler =
+        new EnabledTableSnapshotHandler(snapshot, master, this, metricsMaster);
+    snapshotTable(snapshot, handler);
+  }
+
+  /**
+   * Take a snapshot using the specified handler.
+   * On failure the snapshot temporary working directory is removed.
+   * NOTE: prepareToTakeSnapshot() called before this one takes care of the rejecting the
+   *       snapshot request if the table is busy with another snapshot/restore operation.
+   * @param snapshot the snapshot description
+   * @param handler the snapshot handler
+   */
+  private synchronized void snapshotTable(SnapshotDescription snapshot,
+      final TakeSnapshotHandler handler) throws HBaseSnapshotException {
     try {
-      handler = new EnabledTableSnapshotHandler(snapshot, master, this, metricsMaster);
+      handler.prepare();
       this.executorService.submit(handler);
-      this.handler = handler;
-    } catch (IOException e) {
+      this.snapshotHandlers.put(snapshot.getTable(), handler);
+    } catch (Exception e) {
       // cleanup the working directory by trying to delete it from the fs.
       Path workingDir = SnapshotDescriptionUtils.getWorkingSnapshotDir(snapshot, rootDir);
       try {
         if (!this.master.getMasterFileSystem().getFileSystem().delete(workingDir, true)) {
-          LOG.warn("Couldn't delete working directory (" + workingDir + " for snapshot:"
-              + SnapshotDescriptionUtils.toString(snapshot));
+          LOG.error("Couldn't delete working directory (" + workingDir + " for snapshot:" +
+              SnapshotDescriptionUtils.toString(snapshot));
         }
       } catch (IOException e1) {
-        LOG.warn("Couldn't delete working directory (" + workingDir + " for snapshot:" +
+        LOG.error("Couldn't delete working directory (" + workingDir + " for snapshot:" +
             SnapshotDescriptionUtils.toString(snapshot));
       }
       // fail the snapshot
@@ -469,6 +512,9 @@ public class SnapshotManager implements Stoppable {
     }
 
     LOG.debug("No existing snapshot, attempting snapshot...");
+
+    // stop tracking "abandoned" handlers
+    cleanupSentinels();
 
     // check to see if the table exists
     HTableDescriptor desc = null;
@@ -497,9 +543,6 @@ public class SnapshotManager implements Stoppable {
       cpHost.preSnapshot(snapshot, desc);
     }
 
-    // setup the snapshot
-    prepareToTakeSnapshot(snapshot);
-
     // if the table is enabled, then have the RS run actually the snapshot work
     AssignmentManager assignmentMgr = master.getAssignmentManager();
     if (assignmentMgr.getZKTable().isEnabledTable(snapshot.getTable())) {
@@ -527,52 +570,21 @@ public class SnapshotManager implements Stoppable {
   }
 
   /**
-   * Take a snapshot of a disabled table.
-   * <p>
-   * The thread limitation on the executorService's thread pool for snapshots ensures the
-   * snapshot won't be started if there is another snapshot already running. Does
-   * <b>not</b> check to see if another snapshot of the same name already exists.
-   * @param snapshot description of the snapshot to take. Modified to be {@link Type#DISABLED}.
-   * @throws HBaseSnapshotException if the snapshot could not be started
-   */
-  private synchronized void snapshotDisabledTable(SnapshotDescription snapshot)
-      throws HBaseSnapshotException {
-
-    // set the snapshot to be a disabled snapshot, since the client doesn't know about that
-    snapshot = snapshot.toBuilder().setType(Type.DISABLED).build();
-
-    DisabledTableSnapshotHandler handler;
-    try {
-      handler = new DisabledTableSnapshotHandler(snapshot, master, metricsMaster);
-      this.executorService.submit(handler);
-      this.handler = handler;
-    } catch (IOException e) {
-      // cleanup the working directory by trying to delete it from the fs.
-      Path workingDir = SnapshotDescriptionUtils.getWorkingSnapshotDir(snapshot, rootDir);
-      try {
-        if (!this.master.getMasterFileSystem().getFileSystem().delete(workingDir, true)) {
-          LOG.error("Couldn't delete working directory (" + workingDir + " for snapshot:" +
-              SnapshotDescriptionUtils.toString(snapshot));
-        }
-      } catch (IOException e1) {
-        LOG.error("Couldn't delete working directory (" + workingDir + " for snapshot:" +
-            SnapshotDescriptionUtils.toString(snapshot));
-      }
-      // fail the snapshot
-      throw new SnapshotCreationException("Could not build snapshot handler", e, snapshot);
-    }
-  }
-
-  /**
    * Set the handler for the current snapshot
    * <p>
    * Exposed for TESTING
+   * @param tableName
    * @param handler handler the master should use
    *
    * TODO get rid of this if possible, repackaging, modify tests.
    */
-  public synchronized void setSnapshotHandlerForTesting(TakeSnapshotHandler handler) {
-    this.handler = handler;
+  public synchronized void setSnapshotHandlerForTesting(final String tableName,
+      final SnapshotSentinel handler) {
+    if (handler != null) {
+      this.snapshotHandlers.put(tableName, handler);
+    } else {
+      this.snapshotHandlers.remove(tableName);
+    }
   }
 
   /**
@@ -584,7 +596,9 @@ public class SnapshotManager implements Stoppable {
 
   /**
    * Check to see if the snapshot is one of the currently completed snapshots
-   * @param expected snapshot to check
+   * Returns true if the snapshot exists in the "completed snapshots folder".
+   *
+   * @param snapshot expected snapshot to check
    * @return <tt>true</tt> if the snapshot is stored on the {@link FileSystem}, <tt>false</tt> if is
    *         not stored
    * @throws IOException if the filesystem throws an unexpected exception,
@@ -608,7 +622,6 @@ public class SnapshotManager implements Stoppable {
    *
    * @param snapshot Snapshot Descriptor
    * @param hTableDescriptor Table Descriptor of the table to create
-   * @param waitTime timeout before considering the clone failed
    */
   synchronized void cloneSnapshot(final SnapshotDescription snapshot,
       final HTableDescriptor hTableDescriptor) throws HBaseSnapshotException {
@@ -628,7 +641,7 @@ public class SnapshotManager implements Stoppable {
       CloneSnapshotHandler handler =
         new CloneSnapshotHandler(master, snapshot, hTableDescriptor, metricsMaster);
       this.executorService.submit(handler);
-      restoreHandlers.put(tableName, handler);
+      this.restoreHandlers.put(tableName, handler);
     } catch (Exception e) {
       String msg = "Couldn't clone the snapshot=" + SnapshotDescriptionUtils.toString(snapshot) +
         " on table=" + tableName;
@@ -658,8 +671,8 @@ public class SnapshotManager implements Stoppable {
     HTableDescriptor snapshotTableDesc = FSTableDescriptors.getTableDescriptor(fs, snapshotDir);
     String tableName = reqSnapshot.getTable();
 
-    // stop tracking completed restores
-    cleanupRestoreSentinels();
+    // stop tracking "abandoned" handlers
+    cleanupSentinels();
 
     // Execute the restore/clone operation
     if (MetaReader.tableExists(master.getCatalogTracker(), tableName)) {
@@ -699,7 +712,6 @@ public class SnapshotManager implements Stoppable {
    *
    * @param snapshot Snapshot Descriptor
    * @param hTableDescriptor Table Descriptor
-   * @param waitTime timeout before considering the restore failed
    */
   private synchronized void restoreSnapshot(final SnapshotDescription snapshot,
       final HTableDescriptor hTableDescriptor) throws HBaseSnapshotException {
@@ -721,7 +733,8 @@ public class SnapshotManager implements Stoppable {
       this.executorService.submit(handler);
       restoreHandlers.put(hTableDescriptor.getNameAsString(), handler);
     } catch (Exception e) {
-      String msg = "Couldn't restore the snapshot=" + SnapshotDescriptionUtils.toString(snapshot)  +
+      String msg = "Couldn't restore the snapshot=" + SnapshotDescriptionUtils.toString(
+          snapshot)  +
           " on table=" + tableName;
       LOG.error(msg, e);
       throw new RestoreSnapshotException(msg, e);
@@ -734,79 +747,107 @@ public class SnapshotManager implements Stoppable {
    * @param tableName table under restore
    * @return <tt>true</tt> if there is a restore in progress of the specified table.
    */
-  private boolean isRestoringTable(final String tableName) {
-    SnapshotSentinel sentinel = restoreHandlers.get(tableName);
+  private synchronized boolean isRestoringTable(final String tableName) {
+    SnapshotSentinel sentinel = this.restoreHandlers.get(tableName);
     return(sentinel != null && !sentinel.isFinished());
   }
 
   /**
-   * Returns status of a restore request, specifically comparing source snapshot and target table
-   * names.  Throws exception if not a known snapshot.
+   * Returns the status of a restore operation.
+   * If the in-progress restore is failed throws the exception that caused the failure.
+   *
    * @param snapshot
-   * @return true if in progress, false if snapshot is completed.
-   * @throws UnknownSnapshotException if specified source snapshot does not exit.
-   * @throws IOException if there was some sort of IO failure
+   * @return false if in progress, true if restore is completed or not requested.
+   * @throws IOException if there was a failure during the restore
    */
-  public boolean isRestoringTable(final SnapshotDescription snapshot) throws IOException {
-    // check to see if the snapshot is already on the fs
-    if (!isSnapshotCompleted(snapshot)) {
-      throw new UnknownSnapshotException("Snapshot:" + snapshot.getName()
-          + " is not one of the known completed snapshots.");
-    }
+  public boolean isRestoreDone(final SnapshotDescription snapshot) throws IOException {
+    // check to see if the sentinel exists,
+    // and if the task is complete removes it from the in-progress restore map.
+    SnapshotSentinel sentinel = removeSentinelIfFinished(this.restoreHandlers, snapshot);
 
-    SnapshotSentinel sentinel = getRestoreSnapshotSentinel(snapshot.getTable());
+    // stop tracking "abandoned" handlers
+    cleanupSentinels();
+
     if (sentinel == null) {
       // there is no sentinel so restore is not in progress.
-      return false;
-    }
-    if (!sentinel.getSnapshot().getName().equals(snapshot.getName())) {
-      // another handler is trying to restore to the table, but it isn't the same snapshot source.
-      return false;
+      return true;
     }
 
     LOG.debug("Verify snapshot=" + snapshot.getName() + " against="
         + sentinel.getSnapshot().getName() + " table=" + snapshot.getTable());
-    ForeignException e = sentinel.getExceptionIfFailed();
-    if (e != null) throw e;
+
+    // If the restore is failed, rethrow the exception
+    sentinel.rethrowExceptionIfFailed();
 
     // check to see if we are done
     if (sentinel.isFinished()) {
       LOG.debug("Restore snapshot=" + SnapshotDescriptionUtils.toString(snapshot) +
           " has completed. Notifying the client.");
-      return false;
+      return true;
     }
 
     if (LOG.isDebugEnabled()) {
       LOG.debug("Sentinel is not yet finished with restoring snapshot=" +
           SnapshotDescriptionUtils.toString(snapshot));
     }
-    return true;
+    return false;
   }
 
   /**
-   * Get the restore snapshot sentinel for the specified table
-   * @param tableName table under restore
-   * @return the restore snapshot handler
+   * Return the handler if it is currently live and has the same snapshot target name.
+   * The handler is removed from the sentinels map if completed.
+   * @param sentinels live handlers
+   * @param snapshot snapshot description
+   * @return null if doesn't match, else a live handler.
    */
-  private synchronized SnapshotSentinel getRestoreSnapshotSentinel(final String tableName) {
-    try {
-      return restoreHandlers.get(tableName);
-    } finally {
-      cleanupRestoreSentinels();
+  private synchronized SnapshotSentinel removeSentinelIfFinished(
+      final Map<String, SnapshotSentinel> sentinels, final SnapshotDescription snapshot) {
+    SnapshotSentinel h = sentinels.get(snapshot.getTable());
+    if (h == null) {
+      return null;
     }
+
+    if (!h.getSnapshot().getName().equals(snapshot.getName())) {
+      // specified snapshot is to the one currently running
+      return null;
+    }
+
+    // Remove from the "in-progress" list once completed
+    if (h.isFinished()) {
+      sentinels.remove(snapshot.getTable());
+    }
+
+    return h;
   }
 
   /**
-   * Scan the restore handlers and remove the finished ones.
+   * Removes "abandoned" snapshot/restore requests.
+   * As part of the HBaseAdmin snapshot/restore API the operation status is checked until completed,
+   * and the in-progress maps are cleaned up when the status of a completed task is requested.
+   * To avoid having sentinels staying around for long time if something client side is failed,
+   * each operation tries to clean up the in-progress maps sentinels finished from a long time.
    */
-  private synchronized void cleanupRestoreSentinels() {
-    Iterator<Map.Entry<String, SnapshotSentinel>> it = restoreHandlers.entrySet().iterator();
+  private void cleanupSentinels() {
+    cleanupSentinels(this.snapshotHandlers);
+    cleanupSentinels(this.restoreHandlers);
+  }
+
+  /**
+   * Remove the sentinels that are marked as finished and the completion time
+   * has exceeded the removal timeout.
+   * @param sentinels map of sentinels to clean
+   */
+  private synchronized void cleanupSentinels(final Map<String, SnapshotSentinel> sentinels) {
+    long currentTime = EnvironmentEdgeManager.currentTimeMillis();
+    Iterator<Map.Entry<String, SnapshotSentinel>> it = sentinels.entrySet().iterator();
     while (it.hasNext()) {
-        Map.Entry<String, SnapshotSentinel> entry = it.next();
-        SnapshotSentinel sentinel = entry.getValue();
-        if (sentinel.isFinished()) {
-          it.remove();
-        }
+      Map.Entry<String, SnapshotSentinel> entry = it.next();
+      SnapshotSentinel sentinel = entry.getValue();
+      if (sentinel.isFinished() &&
+          (currentTime - sentinel.getCompletionTimestamp()) > SNAPSHOT_SENTINELS_CLEANUP_TIMEOUT)
+      {
+        it.remove();
+      }
     }
   }
 
@@ -821,7 +862,9 @@ public class SnapshotManager implements Stoppable {
     // make sure we get stop
     this.stopped = true;
     // pass the stop onto take snapshot handlers
-    if (this.handler != null) this.handler.cancel(why);
+    for (SnapshotSentinel snapshotHandler: this.snapshotHandlers.values()) {
+      snapshotHandler.cancel(why);
+    }
 
     // pass the stop onto all the restore handlers
     for (SnapshotSentinel restoreHandler: this.restoreHandlers.values()) {

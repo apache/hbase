@@ -151,6 +151,11 @@ public class CloneSnapshotHandler extends CreateTableHandler implements Snapshot
   }
 
   @Override
+  public long getCompletionTimestamp() {
+    return this.status.getCompletionTimestamp();
+  }
+
+  @Override
   public SnapshotDescription getSnapshot() {
     return snapshot;
   }
@@ -168,5 +173,10 @@ public class CloneSnapshotHandler extends CreateTableHandler implements Snapshot
   @Override
   public ForeignException getExceptionIfFailed() {
     return this.monitor.getException();
+  }
+
+  @Override
+  public void rethrowExceptionIfFailed() throws ForeignException {
+    monitor.rethrowException();
   }
 }

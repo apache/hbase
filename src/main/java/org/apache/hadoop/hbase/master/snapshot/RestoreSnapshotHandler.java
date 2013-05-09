@@ -159,6 +159,11 @@ public class RestoreSnapshotHandler extends TableEventHandler implements Snapsho
   }
 
   @Override
+  public long getCompletionTimestamp() {
+    return this.status.getCompletionTimestamp();
+  }
+
+  @Override
   public SnapshotDescription getSnapshot() {
     return snapshot;
   }
@@ -174,7 +179,13 @@ public class RestoreSnapshotHandler extends TableEventHandler implements Snapsho
     this.monitor.receive(new ForeignException(masterServices.getServerName().toString(), ce));
   }
 
+  @Override
   public ForeignException getExceptionIfFailed() {
     return this.monitor.getException();
+  }
+
+  @Override
+  public void rethrowExceptionIfFailed() throws ForeignException {
+    monitor.rethrowException();
   }
 }

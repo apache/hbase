@@ -63,7 +63,7 @@ public class DisabledTableSnapshotHandler extends TakeSnapshotHandler {
    * @throws IOException on unexpected error
    */
   public DisabledTableSnapshotHandler(SnapshotDescription snapshot,
-      final MasterServices masterServices, final MasterMetrics metricsMaster) throws IOException {
+      final MasterServices masterServices, final MasterMetrics metricsMaster) {
     super(snapshot, masterServices, metricsMaster);
 
     // setup the timer
