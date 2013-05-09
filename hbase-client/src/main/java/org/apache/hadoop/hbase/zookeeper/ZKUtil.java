@@ -1231,7 +1231,7 @@ public class ZKUtil {
       return;
     } catch(KeeperException.NoNodeException nne) {
       createWithParents(zkw, getParent(znode));
-      createWithParents(zkw, znode);
+      createWithParents(zkw, znode, data);
     } catch(InterruptedException ie) {
       zkw.interruptedException(ie);
     }
