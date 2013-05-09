@@ -84,7 +84,7 @@ public abstract class TakeSnapshotHandler extends EventHandler implements Snapsh
    * @throws IOException on unexpected error
    */
   public TakeSnapshotHandler(SnapshotDescription snapshot, final MasterServices masterServices,
-      final MasterMetrics metricsMaster) throws IOException {
+      final MasterMetrics metricsMaster) {
     super(masterServices, EventType.C_M_SNAPSHOT_TABLE);
     assert snapshot != null : "SnapshotDescription must not be nul1";
     assert masterServices != null : "MasterServices must not be nul1";
@@ -98,8 +98,6 @@ public abstract class TakeSnapshotHandler extends EventHandler implements Snapsh
     this.snapshotDir = SnapshotDescriptionUtils.getCompletedSnapshotDir(snapshot, rootDir);
     this.workingDir = SnapshotDescriptionUtils.getWorkingSnapshotDir(snapshot, rootDir);
     this.monitor =  new ForeignExceptionDispatcher();
-
-    loadTableDescriptor(); // check that .tableinfo is present
 
     // prepare the verify
     this.verifier = new MasterSnapshotVerifier(masterServices, snapshot, rootDir);
@@ -117,6 +115,11 @@ public abstract class TakeSnapshotHandler extends EventHandler implements Snapsh
       throw new IOException("HTableDescriptor missing for " + name);
     }
     return htd;
+  }
+
+  public TakeSnapshotHandler prepare() throws Exception {
+    loadTableDescriptor(); // check that .tableinfo is present
+    return this;
   }
 
   /**
@@ -228,6 +231,11 @@ public abstract class TakeSnapshotHandler extends EventHandler implements Snapsh
   }
 
   @Override
+  public long getCompletionTimestamp() {
+    return this.status.getCompletionTimestamp();
+  }
+
+  @Override
   public SnapshotDescription getSnapshot() {
     return snapshot;
   }
@@ -235,6 +243,11 @@ public abstract class TakeSnapshotHandler extends EventHandler implements Snapsh
   @Override
   public ForeignException getExceptionIfFailed() {
     return monitor.getException();
+  }
+
+  @Override
+  public void rethrowExceptionIfFailed() throws ForeignException {
+    monitor.rethrowException();
   }
 
   @Override
