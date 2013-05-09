@@ -80,8 +80,7 @@ public class TestZooKeeperScanPolicyObserver {
     HTable t = new HTable(new Configuration(TEST_UTIL.getConfiguration()), tableName);
     long now = EnvironmentEdgeManager.currentTimeMillis();
 
-    ZooKeeperWatcher zkw = HConnectionManager.getConnection(TEST_UTIL.getConfiguration())
-        .getZooKeeperWatcher();
+    ZooKeeperWatcher zkw = new ZooKeeperWatcher(TEST_UTIL.getConfiguration(), "test", null);
     ZooKeeper zk = zkw.getRecoverableZooKeeper().getZooKeeper();
     ZKUtil.createWithParents(zkw, ZooKeeperScanPolicyObserver.node);
     // let's say test last backup was 1h ago
