@@ -222,6 +222,27 @@ public class TestZooKeeper {
   }
 
   /**
+   * Create a znode with data
+   * @throws Exception
+   */
+  @Test
+  public void testCreateWithParents() throws Exception {
+    ZooKeeperWatcher zkw =
+        new ZooKeeperWatcher(new Configuration(TEST_UTIL.getConfiguration()),
+          TestZooKeeper.class.getName(), null);
+    byte[] expectedData = new byte[] { 1, 2, 3 };
+    ZKUtil.createWithParents(zkw, "/l1/l2/l3/l4/testCreateWithParents", expectedData);
+    byte[] data = ZKUtil.getData(zkw, "/l1/l2/l3/l4/testCreateWithParents");
+    assertEquals(Bytes.equals(expectedData, data), true);
+    ZKUtil.deleteNodeRecursively(zkw, "/l1");
+
+    ZKUtil.createWithParents(zkw, "/testCreateWithParents", expectedData);
+    data = ZKUtil.getData(zkw, "/testCreateWithParents");
+    assertEquals(Bytes.equals(expectedData, data), true);
+    ZKUtil.deleteNodeRecursively(zkw, "/testCreateWithParents");
+  }
+
+  /**
    * Create a bunch of znodes in a hierarchy, try deleting one that has childs
    * (it will fail), then delete it recursively, then delete the last znode
    * @throws Exception
