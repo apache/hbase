@@ -37,6 +37,7 @@ import javax.tools.ToolProvider;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 
 /**
@@ -44,6 +45,8 @@ import org.apache.hadoop.fs.Path;
  */
 public class ClassLoaderTestHelper {
   private static final Log LOG = LogFactory.getLog(ClassLoaderTestHelper.class);
+
+  private static final int BUFFER_SIZE = 4096;
 
   /**
    * Jar a list of files into a jar archive.
@@ -53,7 +56,7 @@ public class ClassLoaderTestHelper {
    */
   private static boolean createJarArchive(File archiveFile, File[] tobeJared) {
     try {
-      byte buffer[] = new byte[4096];
+      byte buffer[] = new byte[BUFFER_SIZE];
       // Open archive file
       FileOutputStream stream = new FileOutputStream(archiveFile);
       JarOutputStream out = new JarOutputStream(stream, new Manifest());
@@ -156,10 +159,55 @@ public class ClassLoaderTestHelper {
     // build a jar file by the classes files
     String jarFileName = className + ".jar";
     File jarFile = new File(folder, jarFileName);
+    jarFile.getParentFile().mkdirs();
     if (!createJarArchive(jarFile,
         new File[]{new File(srcDir.toString(), className + ".class")})){
       assertTrue("Build jar file failed.", false);
     }
     return jarFile;
   }
+
+  /**
+   * Add a list of jar files to another jar file under a specific folder.
+   * It is used to generated coprocessor jar files which can be loaded by
+   * the coprocessor class loader.  It is for testing usage only so we
+   * don't be so careful about stream closing in case any exception.
+   *
+   * @param targetJar the target jar file
+   * @param libPrefix the folder where to put inner jar files
+   * @param srcJars the source inner jar files to be added
+   * @throws Exception if anything doesn't work as expected
+   */
+  public static void addJarFilesToJar(File targetJar,
+      String libPrefix, File... srcJars) throws Exception {
+    FileOutputStream stream = new FileOutputStream(targetJar);
+    JarOutputStream out = new JarOutputStream(stream, new Manifest());
+    byte buffer[] = new byte[BUFFER_SIZE];
+
+    for (File jarFile: srcJars) {
+      // Add archive entry
+      JarEntry jarAdd = new JarEntry(libPrefix + jarFile.getName());
+      jarAdd.setTime(jarFile.lastModified());
+      out.putNextEntry(jarAdd);
+
+      // Write file to archive
+      FileInputStream in = new FileInputStream(jarFile);
+      while (true) {
+        int nRead = in.read(buffer, 0, buffer.length);
+        if (nRead <= 0)
+          break;
+        out.write(buffer, 0, nRead);
+      }
+      in.close();
+    }
+    out.close();
+    stream.close();
+    LOG.info("Adding jar file to outer jar file completed");
+  }
+
+  static String localDirPath(Configuration conf) {
+    return conf.get(ClassLoaderBase.LOCAL_DIR_KEY)
+      + File.separator + "jars" + File.separator;
+  }
+
 }

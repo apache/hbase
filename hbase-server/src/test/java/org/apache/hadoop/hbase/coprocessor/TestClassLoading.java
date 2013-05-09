@@ -56,7 +56,6 @@ public class TestClassLoading {
 
   private static MiniDFSCluster cluster;
 
-  static final int BUFFER_SIZE = 4096;
   static final String tableName = "TestClassLoading";
   static final String cpName1 = "TestCP1";
   static final String cpName2 = "TestCP2";
@@ -397,32 +396,8 @@ public class TestClassLoading {
     File innerJarFile2 = buildCoprocessorJar(cpName2);
     File outerJarFile = new File(TEST_UTIL.getDataTestDir().toString(), "outer.jar");
 
-    byte buffer[] = new byte[BUFFER_SIZE];
-    // TODO: code here and elsewhere in this file is duplicated w/TestClassFinder.
-    //       Some refactoring may be in order...
-    // Open archive file
-    FileOutputStream stream = new FileOutputStream(outerJarFile);
-    JarOutputStream out = new JarOutputStream(stream, new Manifest());
-
-    for (File jarFile: new File[] { innerJarFile1, innerJarFile2 }) {
-      // Add archive entry
-      JarEntry jarAdd = new JarEntry(libPrefix + jarFile.getName());
-      jarAdd.setTime(jarFile.lastModified());
-      out.putNextEntry(jarAdd);
-
-      // Write file to archive
-      FileInputStream in = new FileInputStream(jarFile);
-      while (true) {
-        int nRead = in.read(buffer, 0, buffer.length);
-        if (nRead <= 0)
-          break;
-        out.write(buffer, 0, nRead);
-      }
-      in.close();
-    }
-    out.close();
-    stream.close();
-    LOG.info("Adding jar file to outer jar file completed");
+    ClassLoaderTestHelper.addJarFilesToJar(
+      outerJarFile, libPrefix, innerJarFile1, innerJarFile2);
 
     // copy the jars into dfs
     fs.copyFromLocalFile(new Path(outerJarFile.getPath()),
