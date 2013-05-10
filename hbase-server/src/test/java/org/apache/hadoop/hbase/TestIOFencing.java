@@ -240,16 +240,16 @@ public class TestIOFencing {
       TEST_UTIL.createTable(TABLE_NAME, FAMILY);
       HTable table = new HTable(c, TABLE_NAME);
       LOG.info("Loading test table");
-      // Load some rows
-      TEST_UTIL.loadNumericRows(table, FAMILY, 0, FIRST_BATCH_COUNT);
       // Find the region
       List<HRegion> testRegions = TEST_UTIL.getMiniHBaseCluster().findRegionsForTable(TABLE_NAME);
       assertEquals(1, testRegions.size());
       compactingRegion = (CompactionBlockerRegion)testRegions.get(0);
-      assertTrue(compactingRegion.countStoreFiles() > 1);
-      final byte REGION_NAME[] = compactingRegion.getRegionName();
       LOG.info("Blocking compactions");
       compactingRegion.stopCompactions();
+      // Load some rows
+      TEST_UTIL.loadNumericRows(table, FAMILY, 0, FIRST_BATCH_COUNT);
+      assertTrue(compactingRegion.countStoreFiles() > 1);
+      final byte REGION_NAME[] = compactingRegion.getRegionName();
       LOG.info("Asking for compaction");
       admin.majorCompact(TABLE_NAME);
       LOG.info("Waiting for compaction to be about to start");
