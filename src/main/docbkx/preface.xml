@@ -38,7 +38,12 @@
   or <link xlink:href="http://wiki.apache.org/hadoop/Hbase">wiki</link> where
   the pertinent information can be found.</para>
 
-  <para>This reference guide is a work in progress.  Feel free to add content by adding
+  <para>This reference guide is a work in progress.  The source for this guide can
+      be found at <filename>src/main/docbkx</filename> in a checkout of the hbase
+      project.  This reference guide is marked up using
+      <link xlink:href="http://www.docbook.com/">DocBook</link> from which the
+      the finished guide is generated as part of the 'site' build target.
+      Feel free to add content by adding
   a patch to an issue up in the HBase <link
   xlink:href="https://issues.apache.org/jira/browse/HBASE">JIRA</link>.</para>
 
