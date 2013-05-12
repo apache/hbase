@@ -47,6 +47,7 @@ import org.apache.hadoop.hbase.master.balancer.StochasticLoadBalancer;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.zookeeper.ZKAssign;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -384,6 +385,41 @@ public class TestAssignmentManagerOnCluster {
         getRegionStates().getRegionServerOfRegion(hri);
       TEST_UTIL.assertRegionOnServer(hri, serverName, 200);
     } finally {
+      TEST_UTIL.deleteTable(Bytes.toBytes(table));
+    }
+  }
+  
+  @Test
+  public void testSSHWhenDisablingTableRegionsInOpeningOrPendingOpenState() throws Exception {
+    final String table = "testSSHWhenDisablingTableRegionsInOpeningOrPendingOpenState";
+    AssignmentManager am = TEST_UTIL.getHBaseCluster().getMaster().getAssignmentManager();
+    HRegionInfo hri = null;
+    ServerName serverName = null;
+    try {
+      hri = createTableAndGetOneRegion(table);
+      serverName = am.getRegionStates().getRegionServerOfRegion(hri);
+      ServerName destServerName = null;
+      HRegionServer destServer = null;
+      for (int i = 0; i < 3; i++) {
+        destServer = TEST_UTIL.getHBaseCluster().getRegionServer(i);
+        if (!destServer.getServerName().equals(serverName)) {
+          destServerName = destServer.getServerName();
+          break;
+        }
+      }
+      am.regionOffline(hri);
+      ZKAssign.createNodeOffline(TEST_UTIL.getHBaseCluster().getMaster().getZooKeeper(), hri,
+        destServerName);
+      ZKAssign.transitionNodeOpening(TEST_UTIL.getHBaseCluster().getMaster().getZooKeeper(), hri,
+        destServerName);
+      am.getZKTable().setDisablingTable(table);
+      List<HRegionInfo> toAssignRegions = am.processServerShutdown(destServerName);
+      assertTrue("Regions to be assigned should be empty.", toAssignRegions.isEmpty());
+      assertTrue("Regions to be assigned should be empty.", am.getRegionStates()
+          .getRegionState(hri).isOffline());
+    } finally {
+      am.regionOnline(hri, serverName);
+      am.getZKTable().setDisabledTable(table);
       TEST_UTIL.deleteTable(Bytes.toBytes(table));
     }
   }
