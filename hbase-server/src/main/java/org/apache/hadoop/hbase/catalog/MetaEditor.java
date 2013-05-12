@@ -133,7 +133,7 @@ public class MetaEditor {
    * @param ps Put to add to .META.
    * @throws IOException
    */
-  static void putsToMetaTable(final CatalogTracker ct, final List<Put> ps)
+  public static void putsToMetaTable(final CatalogTracker ct, final List<Put> ps)
   throws IOException {
     HTable t = MetaReader.getMetaHTable(ct);
     try {

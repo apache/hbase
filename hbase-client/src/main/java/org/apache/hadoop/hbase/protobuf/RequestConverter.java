@@ -97,6 +97,7 @@ import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsMasterRunningRe
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.GetLastFlushedSequenceIdRequest;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hadoop.hbase.util.Triple;
 
 import com.google.protobuf.ByteString;
 
@@ -685,13 +686,14 @@ public final class RequestConverter {
   * @return a protocol buffer OpenRegionRequest
   */
  public static OpenRegionRequest
-     buildOpenRegionRequest(final List<Pair<HRegionInfo, Integer>> regionOpenInfos) {
+     buildOpenRegionRequest(final List<Triple<HRegionInfo, Integer,
+         List<ServerName>>> regionOpenInfos) {
    OpenRegionRequest.Builder builder = OpenRegionRequest.newBuilder();
-   for (Pair<HRegionInfo, Integer> regionOpenInfo: regionOpenInfos) {
+   for (Triple<HRegionInfo, Integer, List<ServerName>> regionOpenInfo: regionOpenInfos) {
      Integer second = regionOpenInfo.getSecond();
      int versionOfOfflineNode = second == null ? -1 : second.intValue();
      builder.addOpenInfo(buildRegionOpenInfo(
-       regionOpenInfo.getFirst(), versionOfOfflineNode));
+       regionOpenInfo.getFirst(), versionOfOfflineNode, regionOpenInfo.getThird()));
    }
    return builder.build();
  }
@@ -700,13 +702,14 @@ public final class RequestConverter {
   * Create a protocol buffer OpenRegionRequest for a given region
   *
   * @param region the region to open
-  * @param versionOfOfflineNode that needs to be present in the offline node
+ * @param versionOfOfflineNode that needs to be present in the offline node
+ * @param favoredNodes
   * @return a protocol buffer OpenRegionRequest
   */
  public static OpenRegionRequest buildOpenRegionRequest(
-     final HRegionInfo region, final int versionOfOfflineNode) {
+     final HRegionInfo region, final int versionOfOfflineNode, List<ServerName> favoredNodes) {
    OpenRegionRequest.Builder builder = OpenRegionRequest.newBuilder();
-   builder.addOpenInfo(buildRegionOpenInfo(region, versionOfOfflineNode));
+   builder.addOpenInfo(buildRegionOpenInfo(region, versionOfOfflineNode, favoredNodes));
    return builder.build();
  }
 
@@ -1260,11 +1263,17 @@ public final class RequestConverter {
    * Create a RegionOpenInfo based on given region info and version of offline node
    */
   private static RegionOpenInfo buildRegionOpenInfo(
-      final HRegionInfo region, final int versionOfOfflineNode) {
+      final HRegionInfo region, final int versionOfOfflineNode,
+      final List<ServerName> favoredNodes) {
     RegionOpenInfo.Builder builder = RegionOpenInfo.newBuilder();
     builder.setRegion(HRegionInfo.convert(region));
     if (versionOfOfflineNode >= 0) {
       builder.setVersionOfOfflineNode(versionOfOfflineNode);
+    }
+    if (favoredNodes != null) {
+      for (ServerName server : favoredNodes) {
+        builder.addFavoredNodes(ProtobufUtil.toServerName(server));
+      }
     }
     return builder.build();
   }

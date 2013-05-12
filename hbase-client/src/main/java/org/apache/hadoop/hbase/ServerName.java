@@ -27,7 +27,9 @@ import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.RootRegionServ
 import org.apache.hadoop.hbase.util.Addressing;
 import org.apache.hadoop.hbase.util.Bytes;
 
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.List;
 import java.util.regex.Pattern;
 
 /**
@@ -91,6 +93,7 @@ public class ServerName implements Comparable<ServerName> {
    * @see #getVersionedBytes()
    */
   private byte [] bytes;
+  public static final List<ServerName> EMPTY_SERVER_LIST = new ArrayList<ServerName>(0);
 
   public ServerName(final String hostname, final int port, final long startcode) {
     this.hostname = hostname;

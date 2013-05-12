@@ -30,7 +30,7 @@ import org.apache.hadoop.util.ReflectionUtils;
 public class LoadBalancerFactory {
 
   /**
-   * Create a loadblanacer from the given conf.
+   * Create a loadbalancer from the given conf.
    * @param conf
    * @return A {@link LoadBalancer}
    */
