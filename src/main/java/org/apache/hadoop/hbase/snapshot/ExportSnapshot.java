@@ -622,7 +622,9 @@ public final class ExportSnapshot extends Configured implements Tool {
 
     // Check if the snapshot already in-progress
     if (outputFs.exists(snapshotTmpDir)) {
-      System.err.println("A snapshot with the same name '" + snapshotName + "' is in-progress");
+      System.err.println("A snapshot with the same name '" + snapshotName + "' may be in-progress");
+      System.err.println("Please check " + snapshotTmpDir + ". If the snapshot has completed, ");
+      System.err.println("consider removing " + snapshotTmpDir + " before retrying export"); 
       return 1;
     }
 
