@@ -3013,6 +3013,11 @@ public class AssignmentManager extends ZooKeeperListener {
           } catch (KeeperException ke) {
             server.abort("Unexpected ZK exception deleting node " + hri, ke);
           }
+          if (zkTable.isDisablingOrDisabledTable(hri.getTableNameAsString())) {
+            it.remove();
+            regionStates.regionOffline(hri);
+            continue;
+          }
           // Mark the region closed and assign it again by SSH
           regionStates.updateRegionState(hri, RegionState.State.CLOSED);
         }
