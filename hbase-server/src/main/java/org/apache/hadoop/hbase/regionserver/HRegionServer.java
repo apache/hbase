@@ -280,6 +280,18 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
   protected final Map<String, HRegion> onlineRegions =
     new ConcurrentHashMap<String, HRegion>();
 
+  /**
+   * Map of encoded region names to the DataNode locations they should be hosted on
+   * We store the value as InetSocketAddress since this is used only in HDFS
+   * API (create() that takes favored nodes as hints for placing file blocks).
+   * We could have used ServerName here as the value class, but we'd need to
+   * convert it to InetSocketAddress at some point before the HDFS API call, and
+   * it seems a bit weird to store ServerName since ServerName refers to RegionServers
+   * and here we really mean DataNode locations.
+   */
+  protected final Map<String, InetSocketAddress[]> regionFavoredNodesMap =
+      new ConcurrentHashMap<String, InetSocketAddress[]>();
+
   // Leases
   protected Leases leases;
 
@@ -2425,6 +2437,10 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
     return this.onlineRegions.get(encodedRegionName);
   }
 
+  public InetSocketAddress[] getRegionBlockLocations(final String encodedRegionName) {
+    return this.regionFavoredNodesMap.get(encodedRegionName);
+  }
+
   @Override
   public HRegion getFromOnlineRegions(final String encodedRegionName) {
     return this.onlineRegions.get(encodedRegionName);
@@ -2447,6 +2463,7 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
       }
       addToMovedRegions(r.getRegionInfo().getEncodedName(), destination, closeSeqNum);
     }
+    this.regionFavoredNodesMap.remove(r.getRegionInfo().getEncodedName());
     return toReturn != null;
   }
 
@@ -3438,6 +3455,8 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
             this.service.submit(new OpenMetaHandler(this, this, region, htd,
                 versionOfOfflineNode));
           } else {
+            updateRegionFavoredNodesMapping(region.getEncodedName(),
+                regionOpenInfo.getFavoredNodesList());
             this.service.submit(new OpenRegionHandler(this, this, region, htd,
                 versionOfOfflineNode));
           }
@@ -3456,6 +3475,28 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
     }
 
     return builder.build();
+  }
+
+  private void updateRegionFavoredNodesMapping(String encodedRegionName,
+      List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName> favoredNodes) {
+    InetSocketAddress[] addr = new InetSocketAddress[favoredNodes.size()];
+    // Refer to the comment on the declaration of regionFavoredNodesMap on why
+    // it is a map of region name to InetSocketAddress[]
+    for (int i = 0; i < favoredNodes.size(); i++) {
+      addr[i] = InetSocketAddress.createUnresolved(favoredNodes.get(i).getHostName(),
+          favoredNodes.get(i).getPort());
+    }
+    regionFavoredNodesMap.put(encodedRegionName, addr);
+  }
+
+  /**
+   * Return the favored nodes for a region given its encoded name. Look at the
+   * comment around {@link #regionFavoredNodesMap} on why it is InetSocketAddress[]
+   * @param encodedRegionName
+   * @return array of favored locations
+   */
+  public InetSocketAddress[] getFavoredNodesForRegion(String encodedRegionName) {
+    return regionFavoredNodesMap.get(encodedRegionName);
   }
 
   /**

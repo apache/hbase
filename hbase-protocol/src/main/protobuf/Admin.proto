@@ -70,6 +70,7 @@ message OpenRegionRequest {
   message RegionOpenInfo {
     required RegionInfo region = 1;
     optional uint32 versionOfOfflineNode = 2;
+    repeated ServerName favoredNodes = 3;
   }
 }
 

@@ -159,9 +159,9 @@ public class TestAssignmentManager {
     Mockito.when(this.serverManager.sendRegionClose(SERVERNAME_B, REGIONINFO, -1)).
       thenReturn(true);
     // Ditto on open.
-    Mockito.when(this.serverManager.sendRegionOpen(SERVERNAME_A, REGIONINFO, -1)).
+    Mockito.when(this.serverManager.sendRegionOpen(SERVERNAME_A, REGIONINFO, -1, null)).
       thenReturn(RegionOpeningState.OPENED);
-    Mockito.when(this.serverManager.sendRegionOpen(SERVERNAME_B, REGIONINFO, -1)).
+    Mockito.when(this.serverManager.sendRegionOpen(SERVERNAME_B, REGIONINFO, -1, null)).
       thenReturn(RegionOpeningState.OPENED);
     this.master = Mockito.mock(HMaster.class);
 

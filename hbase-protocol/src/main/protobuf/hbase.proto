@@ -84,6 +84,13 @@ message RegionInfo {
 }
 
 /**
+ * Protocol buffer for favored nodes
+ */
+message FavoredNodes {
+  repeated ServerName favoredNode = 1;
+}
+
+/**
  * Container protocol buffer to specify a region.
  * You can specify region by region name, or the hash
  * of the region name, which is known as encoded

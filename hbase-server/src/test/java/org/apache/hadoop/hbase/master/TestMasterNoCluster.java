@@ -188,7 +188,7 @@ public class TestMasterNoCluster {
         // Fake a successful open.
         Mockito.doReturn(RegionOpeningState.OPENED).when(spy).
           sendRegionOpen((ServerName)Mockito.any(), (HRegionInfo)Mockito.any(),
-            Mockito.anyInt());
+            Mockito.anyInt(), Mockito.anyListOf(ServerName.class));
         return spy;
       }
 
@@ -274,7 +274,7 @@ public class TestMasterNoCluster {
         // Fake a successful open.
         Mockito.doReturn(RegionOpeningState.OPENED).when(spy).
           sendRegionOpen((ServerName)Mockito.any(), (HRegionInfo)Mockito.any(),
-            Mockito.anyInt());
+            Mockito.anyInt(), Mockito.anyListOf(ServerName.class));
         return spy;
       }
 

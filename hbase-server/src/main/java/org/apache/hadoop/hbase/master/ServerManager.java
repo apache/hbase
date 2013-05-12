@@ -61,6 +61,7 @@ import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.OpenRegionResponse
 import org.apache.hadoop.hbase.regionserver.RegionOpeningState;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hadoop.hbase.util.Triple;
 
 import com.google.protobuf.ServiceException;
 
@@ -587,9 +588,10 @@ public class ServerManager {
    * @param region region to open
    * @param versionOfOfflineNode that needs to be present in the offline node
    * when RS tries to change the state from OFFLINE to other states.
+   * @param favoredNodes
    */
   public RegionOpeningState sendRegionOpen(final ServerName server,
-      HRegionInfo region, int versionOfOfflineNode)
+      HRegionInfo region, int versionOfOfflineNode, List<ServerName> favoredNodes)
   throws IOException {
     AdminService.BlockingInterface admin = getRsAdmin(server);
     if (admin == null) {
@@ -598,7 +600,7 @@ public class ServerManager {
       return RegionOpeningState.FAILED_OPENING;
     }
     OpenRegionRequest request =
-      RequestConverter.buildOpenRegionRequest(region, versionOfOfflineNode);
+      RequestConverter.buildOpenRegionRequest(region, versionOfOfflineNode, favoredNodes);
     try {
       OpenRegionResponse response = admin.openRegion(null, request);
       return ResponseConverter.getRegionOpeningState(response);
@@ -617,7 +619,7 @@ public class ServerManager {
    * @return a list of region opening states
    */
   public List<RegionOpeningState> sendRegionOpen(ServerName server,
-      List<Pair<HRegionInfo, Integer>> regionOpenInfos)
+      List<Triple<HRegionInfo, Integer, List<ServerName>>> regionOpenInfos)
   throws IOException {
     AdminService.BlockingInterface admin = getRsAdmin(server);
     if (admin == null) {
