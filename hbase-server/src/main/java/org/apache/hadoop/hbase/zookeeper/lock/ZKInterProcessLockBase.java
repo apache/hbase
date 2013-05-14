@@ -386,6 +386,7 @@ public abstract class ZKInterProcessLockBase implements InterProcessLock {
       LOG.error("Unexpected ZooKeeper error when listing children", e);
       throw new IOException("Unexpected ZooKeeper exception", e);
     }
+    if (children == null) return;
 
     KeeperException deferred = null;
     Stat stat = new Stat();
