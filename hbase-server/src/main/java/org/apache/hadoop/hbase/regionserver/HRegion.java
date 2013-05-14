@@ -1336,6 +1336,9 @@ public class HRegion implements HeapSize { // , Writable{
    * Should the memstore be flushed now
    */
   boolean shouldFlush() {
+    if (flushCheckInterval <= 0) { //disabled
+      return false;
+    }
     long now = EnvironmentEdgeManager.currentTimeMillis();
     //if we flushed in the recent past, we don't need to do again now
     if ((now - getLastFlushTime() < flushCheckInterval)) {

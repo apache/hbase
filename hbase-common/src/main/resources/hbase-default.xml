@@ -346,8 +346,8 @@
     <name>hbase.regionserver.optionalcacheflushinterval</name>
     <value>3600000</value>
     <description>
-    Amount of time to wait since the last time a region was flushed before
-    invoking an optional cache flush. Default 1 hour.
+    Maximum amount of time an edit lives in memory before being automatically flushed.
+    Default 1 hour. Set it to 0 to disable automatic flushing.
     </description>
   </property>
   <property>
