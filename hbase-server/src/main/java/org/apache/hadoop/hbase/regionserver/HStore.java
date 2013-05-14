@@ -76,6 +76,7 @@ import org.apache.hadoop.hbase.util.CollectionBackedScanner;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.util.StringUtils;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableCollection;
 import com.google.common.collect.ImmutableList;
@@ -954,51 +955,90 @@ public class HStore implements Store {
         + " into tmpdir=" + fs.getTempDir() + ", totalSize="
         + StringUtils.humanReadableInt(cr.getSize()));
 
-    List<StoreFile> sfs = new ArrayList<StoreFile>();
     long compactionStartTime = EnvironmentEdgeManager.currentTimeMillis();
+    List<StoreFile> sfs = null;
     try {
       // Commence the compaction.
       List<Path> newFiles = compaction.compact();
-      // Move the compaction into place.
-      if (this.conf.getBoolean("hbase.hstore.compaction.complete", true)) {
-        //Write compaction to WAL
-        List<Path> inputPaths = new ArrayList<Path>();
-        for (StoreFile f : filesToCompact) {
-          inputPaths.add(f.getPath());
-        }
-
-        ArrayList<Path> outputPaths = new ArrayList(newFiles.size());
-        for (Path newFile: newFiles) {
-          assert newFile != null;
-          StoreFile sf = moveFileIntoPlace(newFile);
-          if (this.getCoprocessorHost() != null) {
-            this.getCoprocessorHost().postCompact(this, sf, cr);
-          }
-          assert sf != null;
-          sfs.add(sf);
-          outputPaths.add(sf.getPath());
-        }
-        if (region.getLog() != null) {
-          HRegionInfo info = this.region.getRegionInfo();
-          CompactionDescriptor compactionDescriptor = ProtobufUtil.toCompactionDescriptor(info,
-              family.getName(), inputPaths, outputPaths, fs.getStoreDir(getFamily().getNameAsString()));
-
-          HLogUtil.writeCompactionMarker(region.getLog(), this.region.getTableDesc(),
-              this.region.getRegionInfo(), compactionDescriptor);
-        }
-        completeCompaction(filesToCompact, sfs);
-      } else {
-        for (Path newFile: newFiles) {
+      // TODO: get rid of this!
+      if (!this.conf.getBoolean("hbase.hstore.compaction.complete", true)) {
+        LOG.warn("hbase.hstore.compaction.complete is set to false");
+        sfs = new ArrayList<StoreFile>();
+        for (Path newFile : newFiles) {
           // Create storefile around what we wrote with a reader on it.
           StoreFile sf = createStoreFileAndReader(newFile);
           sfs.add(sf);
         }
+        return sfs;
       }
+      // Do the steps necessary to complete the compaction.
+      sfs = moveCompatedFilesIntoPlace(cr, newFiles);
+      writeCompactionWalRecord(filesToCompact, sfs);
+      replaceStoreFiles(filesToCompact, sfs);
+      // At this point the store will use new files for all new scanners.
+      completeCompaction(filesToCompact); // Archive old files & update store size.
     } finally {
       finishCompactionRequest(cr);
     }
     logCompactionEndMessage(cr, sfs, compactionStartTime);
     return sfs;
+  }
+
+  private List<StoreFile> moveCompatedFilesIntoPlace(
+      CompactionRequest cr, List<Path> newFiles) throws IOException {
+    List<StoreFile> sfs = new ArrayList<StoreFile>();
+    for (Path newFile : newFiles) {
+      assert newFile != null;
+      StoreFile sf = moveFileIntoPlace(newFile);
+      if (this.getCoprocessorHost() != null) {
+        this.getCoprocessorHost().postCompact(this, sf, cr);
+      }
+      assert sf != null;
+      sfs.add(sf);
+    }
+    return sfs;
+  }
+
+  // Package-visible for tests
+  StoreFile moveFileIntoPlace(final Path newFile) throws IOException {
+    validateStoreFile(newFile);
+    // Move the file into the right spot
+    Path destPath = fs.commitStoreFile(getColumnFamilyName(), newFile);
+    return createStoreFileAndReader(destPath);
+  }
+
+  /**
+   * Writes the compaction WAL record.
+   * @param filesCompacted Files compacted (input).
+   * @param newFiles Files from compaction.
+   */
+  private void writeCompactionWalRecord(Collection<StoreFile> filesCompacted,
+      Collection<StoreFile> newFiles) throws IOException {
+    if (region.getLog() == null) return;
+    List<Path> inputPaths = new ArrayList<Path>();
+    for (StoreFile f : filesCompacted) {
+      inputPaths.add(f.getPath());
+    }
+    List<Path> outputPaths = new ArrayList<Path>(newFiles.size());
+    for (StoreFile f : newFiles) {
+      outputPaths.add(f.getPath());
+    }
+    HRegionInfo info = this.region.getRegionInfo();
+    CompactionDescriptor compactionDescriptor = ProtobufUtil.toCompactionDescriptor(info,
+        family.getName(), inputPaths, outputPaths, fs.getStoreDir(getFamily().getNameAsString()));
+    HLogUtil.writeCompactionMarker(region.getLog(), this.region.getTableDesc(),
+        this.region.getRegionInfo(), compactionDescriptor);
+  }
+
+  private void replaceStoreFiles(final Collection<StoreFile> compactedFiles,
+      final Collection<StoreFile> result) throws IOException {
+    this.lock.writeLock().lock();
+    try {
+      this.storeEngine.getStoreFileManager().addCompactionResults(compactedFiles, result);
+      filesCompacting.removeAll(compactedFiles); // safe bc: lock.writeLock();
+    } finally {
+      this.lock.writeLock().unlock();
+    }
   }
 
   /**
@@ -1032,16 +1072,6 @@ public class HStore implements Store {
       .append(", and took ").append(StringUtils.formatTimeDiff(now, compactionStartTime))
       .append(" to execute.");
     LOG.info(message.toString());
-  }
-
-  // Package-visible for tests
-  StoreFile moveFileIntoPlace(final Path newFile) throws IOException {
-    validateStoreFile(newFile);
-    // Move the file into the right spot
-    Path destPath = fs.commitStoreFile(getColumnFamilyName(), newFile);
-    StoreFile sf = createStoreFileAndReader(destPath);
-
-    return sf;
   }
 
   /**
@@ -1090,7 +1120,8 @@ public class HStore implements Store {
       }
     }
 
-    this.completeCompaction(inputStoreFiles, outputStoreFiles);
+    this.replaceStoreFiles(inputStoreFiles, outputStoreFiles);
+    this.completeCompaction(inputStoreFiles);
   }
 
   /**
@@ -1140,9 +1171,8 @@ public class HStore implements Store {
         if (this.getCoprocessorHost() != null) {
           this.getCoprocessorHost().postCompact(this, sf, null);
         }
-        ArrayList<StoreFile> tmp = new ArrayList<StoreFile>();
-        tmp.add(sf);
-        completeCompaction(filesToCompact, tmp);
+        replaceStoreFiles(filesToCompact, Lists.newArrayList(sf));
+        completeCompaction(filesToCompact);
       }
     } finally {
       synchronized (filesCompacting) {
@@ -1243,7 +1273,6 @@ public class HStore implements Store {
 
         // Update filesCompacting (check that we do not try to compact the same StoreFile twice).
         if (!Collections.disjoint(filesCompacting, selectedFiles)) {
-          // TODO: change this from an IAE to LOG.error after sufficient testing
           Preconditions.checkArgument(false, "%s overlaps with %s",
               selectedFiles, filesCompacting);
         }
@@ -1317,39 +1346,23 @@ public class HStore implements Store {
    *
    * <p>Moving the compacted TreeMap into place means:
    * <pre>
-   * 1) Moving the new compacted StoreFile into place
-   * 2) Unload all replaced StoreFile, close and collect list to delete.
-   * 3) Loading the new TreeMap.
-   * 4) Compute new store size
+   * 1) Unload all replaced StoreFile, close and collect list to delete.
+   * 2) Compute new store size
    * </pre>
    *
    * @param compactedFiles list of files that were compacted
    * @param newFile StoreFile that is the result of the compaction
-   * @return StoreFile created. May be null.
-   * @throws IOException
    */
-  protected void completeCompaction(final Collection<StoreFile> compactedFiles,
-      final Collection<StoreFile> result) throws IOException {
+  @VisibleForTesting
+  protected void completeCompaction(final Collection<StoreFile> compactedFiles)
+      throws IOException {
     try {
-      this.lock.writeLock().lock();
-      try {
-        // Change this.storeFiles so it reflects new state but do not
-        // delete old store files until we have sent out notification of
-        // change in case old files are still being accessed by outstanding
-        // scanners.
-        this.storeEngine.getStoreFileManager().addCompactionResults(compactedFiles, result);
-        filesCompacting.removeAll(compactedFiles); // safe bc: lock.writeLock()
-      } finally {
-        // We need the lock, as long as we are updating the storeFiles
-        // or changing the memstore. Let us release it before calling
-        // notifyChangeReadersObservers. See HBASE-4485 for a possible
-        // deadlock scenario that could have happened if continue to hold
-        // the lock.
-        this.lock.writeLock().unlock();
-      }
-
-      // Tell observers that list of StoreFiles has changed.
+      // Do not delete old store files until we have sent out notification of
+      // change in case old files are still being accessed by outstanding scanners.
+      // Don't do this under writeLock; see HBASE-4485 for a possible deadlock
+      // scenario that could have happened if continue to hold the lock.
       notifyChangedReadersObservers();
+      // At this point the store will use new files for all scanners.
 
       // let the archive util decide if we should archive or delete the files
       LOG.debug("Removing store files after compaction...");
@@ -1357,13 +1370,11 @@ public class HStore implements Store {
         compactedFile.closeReader(true);
       }
       this.fs.removeStoreFiles(this.getColumnFamilyName(), compactedFiles);
-
     } catch (IOException e) {
       e = RemoteExceptionHandler.checkIOException(e);
-      LOG.error("Failed replacing compacted files in " + this +
-        ". Compacted files are " + (result == null? "none": result.toString()) +
-        ". Files replaced " + compactedFiles.toString() +
-        " some of which may have been already removed", e);
+      LOG.error("Failed removing compacted files in " + this +
+        ". Files we were trying to remove are " + compactedFiles.toString() +
+        "; some of them may have been already removed", e);
     }
 
     // 4. Compute new store size
