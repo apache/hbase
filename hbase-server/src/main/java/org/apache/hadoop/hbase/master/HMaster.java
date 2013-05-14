@@ -252,7 +252,7 @@ MasterServices, Server {
   // Manager and zk listener for master election
   private ActiveMasterManager activeMasterManager;
   // Region server tracker
-  private RegionServerTracker regionServerTracker;
+  RegionServerTracker regionServerTracker;
   // Draining region server tracker
   private DrainingServerTracker drainingServerTracker;
   // Tracker for load balancer state
@@ -275,7 +275,7 @@ MasterServices, Server {
   private MasterFileSystem fileSystemManager;
 
   // server manager to deal with region server info
-  private ServerManager serverManager;
+  ServerManager serverManager;
 
   // manager of assignment nodes in zookeeper
   AssignmentManager assignmentManager;
@@ -599,7 +599,7 @@ MasterServices, Server {
    * @throws IOException
    * @throws InterruptedException
    */
-  private void initializeZKBasedSystemTrackers() throws IOException,
+  void initializeZKBasedSystemTrackers() throws IOException,
       InterruptedException, KeeperException {
     this.catalogTracker = createCatalogTracker(this.zooKeeper, this.conf, this);
     this.catalogTracker.start();
@@ -757,11 +757,11 @@ MasterServices, Server {
     this.serverManager.waitForRegionServers(status);
     // Check zk for region servers that are up but didn't register
     for (ServerName sn: this.regionServerTracker.getOnlineServers()) {
-      if (!this.serverManager.isServerOnline(sn)) {
-        // Not registered; add it.
-        LOG.info("Registering server found up in zk but who has not yet " +
-          "reported in: " + sn);
-        this.serverManager.recordNewServer(sn, ServerLoad.EMPTY_SERVERLOAD);
+      if (!this.serverManager.isServerOnline(sn)
+          && serverManager.checkAlreadySameHostPortAndRecordNewServer(
+              sn, ServerLoad.EMPTY_SERVERLOAD)) {
+        LOG.info("Registered server found up in zk but who has not yet "
+          + "reported in: " + sn);
       }
     }
 
@@ -2666,7 +2666,7 @@ MasterServices, Server {
     try {
       SnapshotDescription snapshot = request.getSnapshot();
       IsRestoreSnapshotDoneResponse.Builder builder = IsRestoreSnapshotDoneResponse.newBuilder();
-      boolean done = snapshotManager.isRestoreDone(request.getSnapshot());
+      boolean done = snapshotManager.isRestoreDone(snapshot);
       builder.setDone(done);
       return builder.build();
     } catch (IOException e) {
