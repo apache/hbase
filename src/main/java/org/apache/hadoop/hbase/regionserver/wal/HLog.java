@@ -406,7 +406,7 @@ public class HLog implements Syncable {
       }
     }
     this.blocksize = conf.getLong("hbase.regionserver.hlog.blocksize",
-        getDefaultBlockSize());
+        FSUtils.getDefaultBlockSize(this.fs, this.dir));
     // Roll at 95% of block size.
     float multi = conf.getFloat("hbase.regionserver.logroll.multiplier", 0.95f);
     this.logrollsize = (long)(this.blocksize * multi);
@@ -427,7 +427,7 @@ public class HLog implements Syncable {
     this.maxLogs = conf.getInt("hbase.regionserver.maxlogs", 32);
     this.minTolerableReplication = conf.getInt(
         "hbase.regionserver.hlog.tolerable.lowreplication",
-        this.fs.getDefaultReplication());
+        FSUtils.getDefaultReplication(this.fs, this.dir));
     this.lowReplicationRollLimit = conf.getInt(
         "hbase.regionserver.hlog.lowreplication.rolllimit", 5);
     this.enabled = conf.getBoolean("hbase.regionserver.hlog.enabled", true);
@@ -459,33 +459,6 @@ public class HLog implements Syncable {
           + "Any Mutation, marked to be deferred synced, will be flushed immediately.");
     }
     coprocessorHost = new WALCoprocessorHost(this, conf);
-  }
-  
-  // use reflection to search for getDefaultBlockSize(Path f)
-  // if the method doesn't exist, fall back to using getDefaultBlockSize()
-  private long getDefaultBlockSize() throws IOException {
-    Method m = null;
-    Class<? extends FileSystem> cls = this.fs.getClass();
-    try {
-      m = cls.getMethod("getDefaultBlockSize",
-          new Class<?>[] { Path.class });
-    } catch (NoSuchMethodException e) {
-      LOG.info("FileSystem doesn't support getDefaultBlockSize");
-    } catch (SecurityException e) {
-      LOG.info("Doesn't have access to getDefaultBlockSize on "
-          + "FileSystems", e);
-      m = null; // could happen on setAccessible()
-    }
-    if (null == m) {
-      return this.fs.getDefaultBlockSize();
-    } else {
-      try {
-        Object ret = m.invoke(this.fs, this.dir);
-        return ((Long)ret).longValue();
-      } catch (Exception e) {
-        throw new IOException(e);
-      }
-    }
   }
 
   /**

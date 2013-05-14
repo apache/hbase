@@ -33,6 +33,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PositionedReadable;
 import org.apache.hadoop.fs.Seekable;
+import org.apache.hadoop.hbase.util.FSUtils;
 
 /**
  * The FileLink is a sort of hardlink, that allows to access a file given a set of locations.
@@ -107,7 +108,7 @@ public class FileLink {
 
     public FileLinkInputStream(final FileSystem fs, final FileLink fileLink)
         throws IOException {
-      this(fs, fileLink, fs.getConf().getInt("io.file.buffer.size", 4096));
+      this(fs, fileLink, FSUtils.getDefaultBufferSize(fs));
     }
 
     public FileLinkInputStream(final FileSystem fs, final FileLink fileLink, int bufferSize)
