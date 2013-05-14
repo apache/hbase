@@ -1426,9 +1426,14 @@ public class HBaseTestingUtility {
       FileSystem.get(conf).getUri().toString(), 1);
     LOG.info("Mini mapreduce cluster started");
     JobConf mrClusterJobConf = mrCluster.createJobConf();
+
+    // In hadoop2, YARN/MR2 starts a mini cluster with its own conf instance and updates settings.
+    // Our HBase MR jobs need several of these settings in order to properly run.  So we copy the
+    // necessary config properties here.  YARN-129 required adding a few properties.
     c.set("mapred.job.tracker", mrClusterJobConf.get("mapred.job.tracker"));
     /* this for mrv2 support */
     conf.set("mapreduce.framework.name", "yarn");
+    conf.setBoolean("yarn.is.minicluster", true);
     String rmAdress = mrClusterJobConf.get("yarn.resourcemanager.address");
     if (rmAdress != null) {
       conf.set("yarn.resourcemanager.address", rmAdress);
