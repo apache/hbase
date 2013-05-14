@@ -1683,10 +1683,13 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
       conf.get("mapred.local.dir")); //Hadoop MiniMR overwrites this while it should not
     LOG.info("Mini mapreduce cluster started");
 
-    // Needed for TestImportTsv.
+    // In hadoop2, YARN/MR2 starts a mini cluster with its own conf instance and updates settings.
+    // Our HBase MR jobs need several of these settings in order to properly run.  So we copy the
+    // necessary config properties here.  YARN-129 required adding a few properties.
     conf.set("mapred.job.tracker", jobConf.get("mapred.job.tracker"));
     // this for mrv2 support; mr1 ignores this
     conf.set("mapreduce.framework.name", "yarn");
+    conf.setBoolean("yarn.is.minicluster", true);
     String rmAddress = jobConf.get("yarn.resourcemanager.address");
     if (rmAddress != null) {
       conf.set("yarn.resourcemanager.address", rmAddress);
