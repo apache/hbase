@@ -165,6 +165,87 @@ public abstract class FSUtils {
     return fs.exists(dir) && fs.delete(dir, true);
   }
 
+  /**
+   * Return the number of bytes that large input files should be optimally
+   * be split into to minimize i/o time.
+   *
+   * use reflection to search for getDefaultBlockSize(Path f)
+   * if the method doesn't exist, fall back to using getDefaultBlockSize()
+   *
+   * @param fs filesystem object
+   * @return the default block size for the path's filesystem
+   * @throws IOException e
+   */
+  public static long getDefaultBlockSize(final FileSystem fs, final Path path) throws IOException {
+    Method m = null;
+    Class<? extends FileSystem> cls = fs.getClass();
+    try {
+      m = cls.getMethod("getDefaultBlockSize", new Class<?>[] { Path.class });
+    } catch (NoSuchMethodException e) {
+      LOG.info("FileSystem doesn't support getDefaultBlockSize");
+    } catch (SecurityException e) {
+      LOG.info("Doesn't have access to getDefaultBlockSize on FileSystems", e);
+      m = null; // could happen on setAccessible()
+    }
+    if (m == null) {
+      return fs.getDefaultBlockSize();
+    } else {
+      try {
+        Object ret = m.invoke(fs, path);
+        return ((Long)ret).longValue();
+      } catch (Exception e) {
+        throw new IOException(e);
+      }
+    }
+  }
+
+  /*
+   * Get the default replication.
+   *
+   * use reflection to search for getDefaultReplication(Path f)
+   * if the method doesn't exist, fall back to using getDefaultReplication()
+   *
+   * @param fs filesystem object
+   * @param f path of file
+   * @return default replication for the path's filesystem
+   * @throws IOException e
+   */
+  public static short getDefaultReplication(final FileSystem fs, final Path path) throws IOException {
+    Method m = null;
+    Class<? extends FileSystem> cls = fs.getClass();
+    try {
+      m = cls.getMethod("getDefaultReplication", new Class<?>[] { Path.class });
+    } catch (NoSuchMethodException e) {
+      LOG.info("FileSystem doesn't support getDefaultReplication");
+    } catch (SecurityException e) {
+      LOG.info("Doesn't have access to getDefaultReplication on FileSystems", e);
+      m = null; // could happen on setAccessible()
+    }
+    if (m == null) {
+      return fs.getDefaultReplication();
+    } else {
+      try {
+        Object ret = m.invoke(fs, path);
+        return ((Number)ret).shortValue();
+      } catch (Exception e) {
+        throw new IOException(e);
+      }
+    }
+  }
+
+  /**
+   * Returns the default buffer size to use during writes.
+   *
+   * The size of the buffer should probably be a multiple of hardware
+   * page size (4096 on Intel x86), and it determines how much data is
+   * buffered during read and write operations.
+   *
+   * @param fs filesystem object
+   * @return default buffer size to use during writes
+   */
+  public static int getDefaultBufferSize(final FileSystem fs) {
+    return fs.getConf().getInt("io.file.buffer.size", 4096);
+  }
 
   /**
    * Create the specified file on the filesystem. By default, this will:
@@ -209,9 +290,8 @@ public abstract class FSUtils {
       FsPermission perm, boolean overwrite) throws IOException {
     LOG.debug("Creating file=" + path + " with permission=" + perm);
 
-    return fs.create(path, perm, overwrite,
-        fs.getConf().getInt("io.file.buffer.size", 4096),
-        fs.getDefaultReplication(), fs.getDefaultBlockSize(), null);
+    return fs.create(path, perm, overwrite, getDefaultBufferSize(fs),
+        getDefaultReplication(fs, path), getDefaultBlockSize(fs, path), null);
   }
 
   /**

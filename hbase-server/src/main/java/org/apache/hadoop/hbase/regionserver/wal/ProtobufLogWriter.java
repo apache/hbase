@@ -32,6 +32,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.codec.Codec;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos.WALHeader;
+import org.apache.hadoop.hbase.util.FSUtils;
 
 /**
  * Writer for protobuf-based WAL.
@@ -63,10 +64,11 @@ public class ProtobufLogWriter implements HLog.Writer {
         throw new IOException("Failed to initiate CompressionContext", e);
       }
     }
-    int bufferSize = fs.getConf().getInt("io.file.buffer.size", 4096);
+    int bufferSize = FSUtils.getDefaultBufferSize(fs);
     short replication = (short)conf.getInt(
-        "hbase.regionserver.hlog.replication", fs.getDefaultReplication());
-    long blockSize = conf.getLong("hbase.regionserver.hlog.blocksize", fs.getDefaultBlockSize());
+        "hbase.regionserver.hlog.replication", FSUtils.getDefaultReplication(fs, path));
+    long blockSize = conf.getLong("hbase.regionserver.hlog.blocksize",
+        FSUtils.getDefaultBlockSize(fs, path));
     output = fs.create(path, true, bufferSize, replication, blockSize);
     output.write(ProtobufLogReader.PB_WAL_MAGIC);
     WALHeader.newBuilder().setHasCompression(doCompress).build().writeDelimitedTo(output);
