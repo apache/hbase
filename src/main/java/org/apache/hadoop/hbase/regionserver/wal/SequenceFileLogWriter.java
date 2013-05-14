@@ -34,6 +34,7 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.SequenceFile.CompressionType;
@@ -161,9 +162,9 @@ public class SequenceFileLogWriter implements HLog.Writer {
             Integer.valueOf(fs.getConf().getInt("io.file.buffer.size", 4096)),
             Short.valueOf((short)
               conf.getInt("hbase.regionserver.hlog.replication",
-              fs.getDefaultReplication())),
+              FSUtils.getDefaultReplication(fs, path))),
             Long.valueOf(conf.getLong("hbase.regionserver.hlog.blocksize",
-                fs.getDefaultBlockSize())),
+                FSUtils.getDefaultBlockSize(fs, path))),
             Boolean.valueOf(false) /*createParent*/,
             SequenceFile.CompressionType.NONE, new DefaultCodec(),
             createMetadata(conf, compress)
@@ -182,9 +183,9 @@ public class SequenceFileLogWriter implements HLog.Writer {
         HLog.getKeyClass(conf), WALEdit.class,
         fs.getConf().getInt("io.file.buffer.size", 4096),
         (short) conf.getInt("hbase.regionserver.hlog.replication",
-          fs.getDefaultReplication()),
+          FSUtils.getDefaultReplication(fs, path)),
         conf.getLong("hbase.regionserver.hlog.blocksize",
-          fs.getDefaultBlockSize()),
+          FSUtils.getDefaultBlockSize(fs, path)),
         SequenceFile.CompressionType.NONE,
         new DefaultCodec(),
         null,

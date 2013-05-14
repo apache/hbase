@@ -27,6 +27,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hbase.regionserver.wal.HLogFileSystem;
+import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Threads;
 
 /**
@@ -206,8 +207,8 @@ public abstract class HBaseFileSystem {
     boolean existsBefore = fs.exists(path);
     do {
       try {
-        return fs.create(path, perm, overwrite, fs.getConf().getInt("io.file.buffer.size", 4096),
-          fs.getDefaultReplication(), fs.getDefaultBlockSize(), null);
+        return fs.create(path, perm, overwrite, FSUtils.getDefaultBufferSize(fs),
+          FSUtils.getDefaultReplication(fs, path), FSUtils.getDefaultBlockSize(fs, path), null);
       } catch (IOException ioe) {
         lastIOE = ioe;
         if (existsBefore && !overwrite) throw ioe;// a legitimate exception
