@@ -28,7 +28,6 @@ import org.apache.hadoop.hbase.util.Addressing;
 import org.apache.hadoop.hbase.util.Bytes;
 
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.List;
 import java.util.regex.Pattern;
 
@@ -246,18 +245,6 @@ public class ServerName implements Comparable<ServerName> {
     if (o == null) return false;
     if (!(o instanceof ServerName)) return false;
     return this.compareTo((ServerName)o) == 0;
-  }
-
-
-  /**
-   * @return ServerName with matching hostname and port.
-   */
-  public static ServerName findServerWithSameHostnamePort(final Collection<ServerName> names,
-      final ServerName serverName) {
-    for (ServerName sn: names) {
-      if (isSameHostnameAndPort(serverName, sn)) return sn;
-    }
-    return null;
   }
 
   /**

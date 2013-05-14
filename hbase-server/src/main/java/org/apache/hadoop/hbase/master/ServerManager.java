@@ -60,7 +60,6 @@ import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.OpenRegionRequest;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.OpenRegionResponse;
 import org.apache.hadoop.hbase.regionserver.RegionOpeningState;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Triple;
 
 import com.google.protobuf.ServiceException;
@@ -214,8 +213,11 @@ public class ServerManager {
     ServerName sn = new ServerName(ia.getHostName(), port, serverStartcode);
     checkClockSkew(sn, serverCurrentTime);
     checkIsDead(sn, "STARTUP");
-    checkAlreadySameHostPort(sn);
-    recordNewServer(sn, ServerLoad.EMPTY_SERVERLOAD);
+    if (!checkAlreadySameHostPortAndRecordNewServer(
+        sn, ServerLoad.EMPTY_SERVERLOAD)) {
+      LOG.warn("THIS SHOULD NOT HAPPEN, RegionServerStartup"
+        + " could not record the server: " + sn);
+    }
     return sn;
   }
 
@@ -246,18 +248,20 @@ public class ServerManager {
     }
   }
 
-  void regionServerReport(ServerName sn, ServerLoad sl)
-  throws YouAreDeadException, PleaseHoldException {
+  void regionServerReport(ServerName sn,
+      ServerLoad sl) throws YouAreDeadException {
     checkIsDead(sn, "REPORT");
     if (!this.onlineServers.containsKey(sn)) {
       // Already have this host+port combo and its just different start code?
-      checkAlreadySameHostPort(sn);
       // Just let the server in. Presume master joining a running cluster.
       // recordNewServer is what happens at the end of reportServerStartup.
       // The only thing we are skipping is passing back to the regionserver
       // the ServerName to use. Here we presume a master has already done
       // that so we'll press on with whatever it gave us for ServerName.
-      recordNewServer(sn, sl);
+      if (!checkAlreadySameHostPortAndRecordNewServer(sn, sl)) {
+        LOG.info("RegionServerReport ignored, could not record the sever: " + sn);
+        return; // Not recorded, so no need to move on
+      }
     } else {
       this.onlineServers.put(sn, sl);
     }
@@ -265,29 +269,29 @@ public class ServerManager {
   }
 
   /**
-   * Test to see if we have a server of same host and port already.
-   * @param serverName
-   * @throws PleaseHoldException
+   * Check is a server of same host and port already exists,
+   * if not, or the existed one got a smaller start code, record it.
+   *
+   * @param sn the server to check and record
+   * @param sl the server load on the server
+   * @return true if the server is recorded, otherwise, false
    */
-  void checkAlreadySameHostPort(final ServerName serverName)
-  throws PleaseHoldException {
-    ServerName existingServer =
-      ServerName.findServerWithSameHostnamePort(getOnlineServersList(), serverName);
+  boolean checkAlreadySameHostPortAndRecordNewServer(
+      final ServerName serverName, final ServerLoad sl) {
+    ServerName existingServer = findServerWithSameHostnamePort(serverName);
     if (existingServer != null) {
-      String message = "Server serverName=" + serverName +
-        " rejected; we already have " + existingServer.toString() +
-        " registered with same hostname and port";
-      LOG.info(message);
-      if (existingServer.getStartcode() < serverName.getStartcode()) {
-        LOG.info("Triggering server recovery; existingServer " +
-          existingServer + " looks stale, new server:" + serverName);
-        expireServer(existingServer);
+      if (existingServer.getStartcode() > serverName.getStartcode()) {
+        LOG.info("Server serverName=" + serverName +
+          " rejected; we already have " + existingServer.toString() +
+          " registered with same hostname and port");
+        return false;
       }
-      if (services.isServerShutdownHandlerEnabled()) {
-        // master has completed the initialization
-        throw new PleaseHoldException(message);
-      }
+      LOG.info("Triggering server recovery; existingServer " +
+        existingServer + " looks stale, new server:" + serverName);
+      expireServer(existingServer);
     }
+    recordNewServer(serverName, sl);
+    return true;
   }
 
   /**
@@ -342,6 +346,17 @@ public class ServerManager {
       LOG.debug(what + ":" + " Server " + serverName + " came back up," +
           " removed it from the dead servers list");
     }
+  }
+
+  /**
+   * @return ServerName with matching hostname and port.
+   */
+  private ServerName findServerWithSameHostnamePort(
+      final ServerName serverName) {
+    for (ServerName sn: getOnlineServersList()) {
+      if (ServerName.isSameHostnameAndPort(serverName, sn)) return sn;
+    }
+    return null;
   }
 
   /**

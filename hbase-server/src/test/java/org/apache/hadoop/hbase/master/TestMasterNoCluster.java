@@ -19,11 +19,14 @@ package org.apache.hadoop.hbase.master;
 
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.util.ArrayList;
+import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
@@ -49,6 +52,7 @@ import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.hadoop.hbase.MediumTests;
 import org.apache.zookeeper.KeeperException;
+import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerReportRequest;
@@ -341,4 +345,62 @@ public class TestMasterNoCluster {
     }
   }
 
+  @Test
+  public void testNotPullingDeadRegionServerFromZK()
+      throws IOException, KeeperException, InterruptedException {
+    final Configuration conf = TESTUTIL.getConfiguration();
+    final ServerName newServer = new ServerName("test.sample", 1, 101);
+    final ServerName deadServer = new ServerName("test.sample", 1, 100);
+    final MockRegionServer rs0 = new MockRegionServer(conf, newServer);
+
+    HMaster master = new HMaster(conf) {
+      @Override
+      boolean assignMeta(MonitoredTask status) {
+        return true;
+      }
+
+      @Override
+      void initializeZKBasedSystemTrackers() throws IOException,
+      InterruptedException, KeeperException {
+        super.initializeZKBasedSystemTrackers();
+        // Record a newer server in server manager at first
+        serverManager.recordNewServer(newServer, ServerLoad.EMPTY_SERVERLOAD);
+
+        List<ServerName> onlineServers = new ArrayList<ServerName>();
+        onlineServers.add(deadServer);
+        onlineServers.add(newServer);
+        // Mock the region server tracker to pull the dead server from zk
+        regionServerTracker = Mockito.spy(regionServerTracker);
+        Mockito.doReturn(onlineServers).when(
+          regionServerTracker).getOnlineServers();
+      }
+
+      @Override
+      CatalogTracker createCatalogTracker(ZooKeeperWatcher zk,
+          Configuration conf, Abortable abortable)
+      throws IOException {
+        // Insert a mock for the connection used by the CatalogTracker.  Any
+        // regionserver should do.  Use TESTUTIL.getConfiguration rather than
+        // the conf from the master; the conf will already have an HConnection
+        // associate so the below mocking of a connection will fail.
+        HConnection connection =
+          HConnectionTestingUtility.getMockedConnectionAndDecorate(TESTUTIL.getConfiguration(),
+            rs0, rs0, rs0.getServerName(), HRegionInfo.ROOT_REGIONINFO);
+        return new CatalogTracker(zk, conf, connection, abortable);
+      }
+    };
+    master.start();
+
+    try {
+      // Wait till master is initialized.
+      while (!master.initialized) Threads.sleep(10);
+      LOG.info("Master is initialized");
+
+      assertFalse("The dead server should not be pulled in",
+        master.serverManager.isServerOnline(deadServer));
+    } finally {
+      master.stopMaster();
+      master.join();
+    }
+  }
 }
