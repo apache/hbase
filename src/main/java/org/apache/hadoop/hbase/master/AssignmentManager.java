@@ -2318,7 +2318,7 @@ public class AssignmentManager extends ZooKeeperListener {
   public void waitForAssignment(HRegionInfo regionInfo)
   throws InterruptedException {
     synchronized(regions) {
-      while(!regions.containsKey(regionInfo)) {
+      while (!this.master.isStopped() && !regions.containsKey(regionInfo)) {
         // We should receive a notification, but it's
         //  better to have a timeout to recheck the condition here:
         //  it lowers the impact of a race condition if any

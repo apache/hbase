@@ -92,6 +92,47 @@ public class TestMasterShutdown {
     TEST_UTIL.shutdownMiniCluster();
   }
 
+  @Test//(timeout = 180000)
+  public void testMasterShutdownBeforeStartingAnyRegionServer() throws Exception {
+
+    final int NUM_MASTERS = 1;
+    final int NUM_RS = 0;
+
+    // Create config to use for this cluster
+    Configuration conf = HBaseConfiguration.create();
+
+    // Start the cluster
+    final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility(conf);
+    TEST_UTIL.startMiniDFSCluster(1);
+    TEST_UTIL.startMiniZKCluster();
+    TEST_UTIL.createRootDir();
+    final LocalHBaseCluster cluster =
+        new LocalHBaseCluster(conf, NUM_MASTERS, NUM_RS, HMaster.class,
+            MiniHBaseCluster.MiniHBaseClusterRegionServer.class);
+    final MasterThread master = cluster.getMasters().get(0);
+    master.start();
+    Thread shutdownThread = new Thread() {
+      public void run() {
+        try {
+          TEST_UTIL.getHBaseAdmin().shutdown();
+          cluster.waitOnMaster(0);
+        } catch (Exception e) {
+        }
+      };
+    };
+    shutdownThread.start();
+    master.join();
+    shutdownThread.join();
+
+    List<MasterThread> masterThreads = cluster.getMasters();
+    // make sure all the masters properly shutdown
+    assertEquals(0, masterThreads.size());
+
+    TEST_UTIL.shutdownMiniZKCluster();
+    TEST_UTIL.cleanupTestDir();
+    TEST_UTIL.shutdownMiniDFSCluster();
+  }
+
   @org.junit.Rule
   public org.apache.hadoop.hbase.ResourceCheckerJUnitRule cu =
     new org.apache.hadoop.hbase.ResourceCheckerJUnitRule();
