@@ -52,7 +52,6 @@ public class TestClientNoCluster {
     // Run my HConnection overrides.  Use my little HConnectionImplementation below which
     // allows me insert mocks and also use my Registry below rather than the default zk based
     // one so tests run faster and don't have zk dependency.
-    this.conf.set("hbase.client.connection.impl", NoClusterConnection.class.getName());
     this.conf.set("hbase.client.registry.impl", SimpleRegistry.class.getName());
   }
 
@@ -90,11 +89,35 @@ public class TestClientNoCluster {
 
   @Test
   public void testDoNotRetryMetaScanner() throws IOException {
+    this.conf.set("hbase.client.connection.impl",
+      RegionServerStoppedOnScannerOpenConnection.class.getName());
     MetaScanner.metaScan(this.conf, null);
   }
 
   @Test
-  public void testDoNotRetryOnScan() throws IOException {
+  public void testDoNotRetryOnScanNext() throws IOException {
+    this.conf.set("hbase.client.connection.impl",
+      RegionServerStoppedOnScannerOpenConnection.class.getName());
+    // Go against meta else we will try to find first region for the table on construction which
+    // means we'll have to do a bunch more mocking.  Tests that go against meta only should be
+    // good for a bit of testing.
+    HTable table = new HTable(this.conf, HConstants.META_TABLE_NAME);
+    ResultScanner scanner = table.getScanner(HConstants.CATALOG_FAMILY);
+    try {
+      Result result = null;
+      while ((result = scanner.next()) != null) {
+        LOG.info(result);
+      }
+    } finally {
+      scanner.close();
+      table.close();
+    }
+  }
+
+  @Test
+  public void testRegionServerStoppedOnScannerOpen() throws IOException {
+    this.conf.set("hbase.client.connection.impl",
+      RegionServerStoppedOnScannerOpenConnection.class.getName());
     // Go against meta else we will try to find first region for the table on construction which
     // means we'll have to do a bunch more mocking.  Tests that go against meta only should be
     // good for a bit of testing.
@@ -114,10 +137,44 @@ public class TestClientNoCluster {
   /**
    * Override to shutdown going to zookeeper for cluster id and meta location.
    */
-  static class NoClusterConnection extends HConnectionManager.HConnectionImplementation {
+  static class ScanOpenNextThenExceptionThenRecoverConnection
+  extends HConnectionManager.HConnectionImplementation {
     final ClientService.BlockingInterface stub;
 
-    NoClusterConnection(Configuration conf, boolean managed) throws IOException {
+    ScanOpenNextThenExceptionThenRecoverConnection(Configuration conf,
+        boolean managed) throws IOException {
+      super(conf, managed);
+      // Mock up my stub so open scanner returns a scanner id and then on next, we throw
+      // exceptions for three times and then after that, we return no more to scan.
+      this.stub = Mockito.mock(ClientService.BlockingInterface.class);
+      long sid = 12345L;
+      try {
+        Mockito.when(stub.scan((RpcController)Mockito.any(),
+            (ClientProtos.ScanRequest)Mockito.any())).
+          thenReturn(ClientProtos.ScanResponse.newBuilder().setScannerId(sid).build()).
+          thenThrow(new ServiceException(new RegionServerStoppedException("From Mockito"))).
+          thenReturn(ClientProtos.ScanResponse.newBuilder().setScannerId(sid).
+            setMoreResults(false).build());
+      } catch (ServiceException e) {
+        throw new IOException(e);
+      }
+    }
+
+    @Override
+    public BlockingInterface getClient(ServerName sn) throws IOException {
+      return this.stub;
+    }
+  }
+
+  /**
+   * Override to shutdown going to zookeeper for cluster id and meta location.
+   */
+  static class RegionServerStoppedOnScannerOpenConnection
+  extends HConnectionManager.HConnectionImplementation {
+    final ClientService.BlockingInterface stub;
+
+    RegionServerStoppedOnScannerOpenConnection(Configuration conf, boolean managed)
+    throws IOException {
       super(conf, managed);
       // Mock up my stub so open scanner returns a scanner id and then on next, we throw
       // exceptions for three times and then after that, we return no more to scan.

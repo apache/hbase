@@ -18,6 +18,8 @@
  */
 package org.apache.hadoop.hbase.exceptions;
 
+import java.io.IOException;
+
 import org.apache.hadoop.classification.InterfaceAudience;
 
 /**
@@ -25,8 +27,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
  */
 @SuppressWarnings("serial")
 @InterfaceAudience.Private
-public class RegionServerStoppedException extends DoNotRetryIOException {
-
+public class RegionServerStoppedException extends IOException {
   public RegionServerStoppedException(String s) {
     super(s);
   }
