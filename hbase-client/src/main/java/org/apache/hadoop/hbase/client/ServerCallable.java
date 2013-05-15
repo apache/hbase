@@ -169,8 +169,7 @@ public abstract class ServerCallable<T> implements Callable<T> {
         prepare(tries != 0); // if called with false, check table status on ZK
         return call();
       } catch (Throwable t) {
-        LOG.warn("Received exception, tries=" + tries + ", numRetries=" + numRetries + ":" +
-          t.getMessage());
+        LOG.warn("Call exception, tries=" + tries + ", numRetries=" + numRetries + ": " + t);
 
         t = translateException(t);
         // translateException throws an exception when we should not retry, i.e. when it's the

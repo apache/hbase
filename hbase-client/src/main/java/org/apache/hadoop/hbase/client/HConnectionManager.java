@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.client;
 
 import java.io.Closeable;
 import java.io.IOException;
+import java.lang.reflect.Constructor;
 import java.lang.reflect.UndeclaredThrowableException;
 import java.net.SocketException;
 import java.util.ArrayList;
@@ -144,9 +145,6 @@ import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.SoftValueSortedMap;
 import org.apache.hadoop.hbase.util.Triple;
 import org.apache.hadoop.hbase.zookeeper.MasterAddressTracker;
-import org.apache.hadoop.hbase.zookeeper.MetaRegionTracker;
-import org.apache.hadoop.hbase.zookeeper.ZKClusterId;
-import org.apache.hadoop.hbase.zookeeper.ZKTableReadOnly;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.hadoop.ipc.RemoteException;
@@ -251,17 +249,18 @@ public class HConnectionManager {
    * @return HConnection object for <code>conf</code>
    * @throws ZooKeeperConnectionException
    */
+  @SuppressWarnings("resource")
   public static HConnection getConnection(final Configuration conf)
   throws IOException {
     HConnectionKey connectionKey = new HConnectionKey(conf);
     synchronized (CONNECTION_INSTANCES) {
       HConnectionImplementation connection = CONNECTION_INSTANCES.get(connectionKey);
       if (connection == null) {
-        connection = new HConnectionImplementation(conf, true);
+        connection = (HConnectionImplementation)createConnection(conf, true);
         CONNECTION_INSTANCES.put(connectionKey, connection);
       } else if (connection.isClosed()) {
         HConnectionManager.deleteConnection(connectionKey, true);
-        connection = new HConnectionImplementation(conf, true);
+        connection = (HConnectionImplementation)createConnection(conf, true);
         CONNECTION_INSTANCES.put(connectionKey, connection);
       }
       connection.incCount();
@@ -280,7 +279,28 @@ public class HConnectionManager {
    */
   public static HConnection createConnection(Configuration conf)
   throws IOException {
-    return new HConnectionImplementation(conf, false);
+    return createConnection(conf, false);
+  }
+
+  static HConnection createConnection(final Configuration conf, final boolean managed)
+  throws IOException {
+    String className = conf.get("hbase.client.connection.impl",
+      HConnectionManager.HConnectionImplementation.class.getName());
+    Class<?> clazz = null;
+    try {
+      clazz = Class.forName(className);
+    } catch (ClassNotFoundException e) {
+      throw new IOException(e);
+    }
+    try {
+      // Default HCM#HCI is not accessible; make it so before invoking.
+      Constructor<?> constructor =
+        clazz.getDeclaredConstructor(Configuration.class, boolean.class);
+      constructor.setAccessible(true);
+      return (HConnection) constructor.newInstance(conf, managed);
+    } catch (Exception e) {
+      throw new IOException(e);
+    }
   }
 
   /**
@@ -418,7 +438,7 @@ public class HConnectionManager {
     static final Log LOG = LogFactory.getLog(HConnectionImplementation.class);
     private final long pause;
     private final int numTries;
-    private final int rpcTimeout;
+    final int rpcTimeout;
     private final int prefetchRegionLimit;
     private final boolean useServerTrackerForRetries;
     private final long serverTrackerTimeout;
@@ -473,6 +493,11 @@ public class HConnectionManager {
     private final boolean managed;
 
     /**
+     * Cluster registry of basic info such as clusterid and meta region location.
+     */
+    final Registry registry;
+
+    /**
      * constructor
      * @param conf Configuration object
      * @param managed If true, does not do full shutdown on close; i.e. cleanup of connection
@@ -512,6 +537,7 @@ public class HConnectionManager {
         }
       }
       this.serverTrackerTimeout = serverTrackerTimeout;
+      this.registry = setupRegistry();
       retrieveClusterId();
 
       this.rpcClient = new RpcClient(this.conf, this.clusterId);
@@ -534,6 +560,23 @@ public class HConnectionManager {
             }, conf, listenerClass);
       }
     }
+ 
+    /**
+     * @return The cluster registry implementation to use.
+     * @throws IOException
+     */
+    private Registry setupRegistry() throws IOException {
+      String registryClass = this.conf.get("hbase.client.registry.impl",
+        ZooKeeperRegistry.class.getName());
+      Registry registry = null;
+      try {
+        registry = (Registry)Class.forName(registryClass).newInstance();
+      } catch (Throwable t) {
+        throw new IOException(t);
+      }
+      registry.init(this);
+      return registry;
+    }
 
     /**
      * For tests only.
@@ -554,31 +597,11 @@ public class HConnectionManager {
       return "hconnection-0x" + Integer.toHexString(hashCode());
     }
 
-    private String clusterId = null;
+    protected String clusterId = null;
 
-    public final void retrieveClusterId(){
-      if (clusterId != null) {
-        return;
-      }
-
-      // No synchronized here, worse case we will retrieve it twice, that's
-      //  not an issue.
-      ZooKeeperKeepAliveConnection zkw = null;
-      try {
-        zkw = getKeepAliveZooKeeperWatcher();
-        clusterId = ZKClusterId.readClusterIdZNode(zkw);
-        if (clusterId == null) {
-          LOG.info("ClusterId read in ZooKeeper is null");
-        }
-      } catch (KeeperException e) {
-        LOG.warn("Can't retrieve clusterId from Zookeeper", e);
-      } catch (IOException e) {
-        LOG.warn("Can't retrieve clusterId from Zookeeper", e);
-      } finally {
-        if (zkw != null) {
-          zkw.close();
-        }
-      }
+    void retrieveClusterId() {
+      if (clusterId != null) return;
+      this.clusterId = this.registry.getClusterId();
       if (clusterId == null) {
         clusterId = HConstants.CLUSTER_ID_DEFAULT;
       }
@@ -639,12 +662,12 @@ public class HConnectionManager {
 
     @Override
     public boolean isTableEnabled(byte[] tableName) throws IOException {
-      return testTableOnlineState(tableName, true);
+      return this.registry.isTableOnlineState(tableName, true);
     }
 
     @Override
     public boolean isTableDisabled(byte[] tableName) throws IOException {
-      return testTableOnlineState(tableName, false);
+      return this.registry.isTableOnlineState(tableName, false);
     }
 
     @Override
@@ -716,26 +739,6 @@ public class HConnectionManager {
       return available.get() && (regionCount.get() == splitKeys.length + 1);
     }
 
-    /*
-     * @param enabled True if table is enabled
-     */
-    private boolean testTableOnlineState(byte [] tableName, boolean enabled)
-    throws IOException {
-      String tableNameStr = Bytes.toString(tableName);
-      ZooKeeperKeepAliveConnection zkw = getKeepAliveZooKeeperWatcher();
-      try {
-        if (enabled) {
-          return ZKTableReadOnly.isEnabledTable(zkw, tableNameStr);
-        }
-        return ZKTableReadOnly.isDisabledTable(zkw, tableNameStr);
-      } catch (KeeperException e) {
-        throw new IOException("Enable/Disable failed", e);
-      }finally {
-         zkw.close();
-      }
-    }
-
-
     @Override
     public HRegionLocation locateRegion(final byte[] regionName) throws IOException {
       return locateRegion(HRegionInfo.getTableName(regionName),
@@ -801,26 +804,7 @@ public class HConnectionManager {
       }
 
       if (Bytes.equals(tableName, HConstants.META_TABLE_NAME)) {
-        ZooKeeperKeepAliveConnection zkw = getKeepAliveZooKeeperWatcher();
-        try {
-          if (LOG.isTraceEnabled()) {
-            LOG.trace("Looking up meta region location in ZK," + " connection=" + this);
-          }
-          ServerName servername =
-            MetaRegionTracker.blockUntilAvailable(zkw, this.rpcTimeout);
-
-          if (LOG.isTraceEnabled()) {
-            LOG.debug("Looked up meta region location, connection=" + this +
-              "; serverName=" + ((servername == null) ? "null" : servername));
-          }
-          if (servername == null) return null;
-          return new HRegionLocation(HRegionInfo.FIRST_META_REGIONINFO, servername, 0);
-        } catch (InterruptedException e) {
-          Thread.currentThread().interrupt();
-          return null;
-        } finally {
-          zkw.close();
-        }
+        return this.registry.getMetaRegionLocation();
       } else {
         // Region not in the cache - have to go to the meta RS
         return locateRegionInMeta(HConstants.META_TABLE_NAME, tableName, row,
@@ -1532,7 +1516,7 @@ public class HConnectionManager {
         stub = (ClientService.BlockingInterface)this.stubs.get(key);
         if (stub == null) {
           BlockingRpcChannel channel = this.rpcClient.createBlockingRpcChannel(sn,
-          User.getCurrent(), this.rpcTimeout);
+            User.getCurrent(), this.rpcTimeout);
           stub = ClientService.newBlockingStub(channel);
           // In old days, after getting stub/proxy, we'd make a call.  We are not doing that here.
           // Just fail on first actual call rather than in here on setup.
@@ -1557,7 +1541,7 @@ public class HConnectionManager {
      * Retrieve a shared ZooKeeperWatcher. You must close it it once you've have finished with it.
      * @return The shared instance. Never returns null.
      */
-    public ZooKeeperKeepAliveConnection getKeepAliveZooKeeperWatcher()
+    ZooKeeperKeepAliveConnection getKeepAliveZooKeeperWatcher()
       throws IOException {
       synchronized (masterAndZKLock) {
         if (keepAliveZookeeper == null) {
@@ -1566,8 +1550,7 @@ public class HConnectionManager {
           }
           // We don't check that our link to ZooKeeper is still valid
           // But there is a retry mechanism in the ZooKeeperWatcher itself
-          keepAliveZookeeper = new ZooKeeperKeepAliveConnection(
-            conf, this.toString(), this);
+          keepAliveZookeeper = new ZooKeeperKeepAliveConnection(conf, this.toString(), this);
         }
         keepAliveZookeeperUserCount++;
         keepZooKeeperWatcherAliveUntil = Long.MAX_VALUE;
@@ -1575,19 +1558,17 @@ public class HConnectionManager {
       }
     }
 
-    void releaseZooKeeperWatcher(ZooKeeperWatcher zkw) {
+    void releaseZooKeeperWatcher(final ZooKeeperWatcher zkw) {
       if (zkw == null){
         return;
       }
       synchronized (masterAndZKLock) {
         --keepAliveZookeeperUserCount;
-        if (keepAliveZookeeperUserCount <=0 ){
-          keepZooKeeperWatcherAliveUntil =
-            System.currentTimeMillis() + keepAlive;
+        if (keepAliveZookeeperUserCount <= 0 ){
+          keepZooKeeperWatcherAliveUntil = System.currentTimeMillis() + keepAlive;
         }
       }
     }
-
 
     /**
      * Creates a Chore thread to check the connections to master & zookeeper
@@ -2581,17 +2562,7 @@ public class HConnectionManager {
 
     @Override
     public int getCurrentNrHRS() throws IOException {
-      ZooKeeperKeepAliveConnection zkw = getKeepAliveZooKeeperWatcher();
-
-      try {
-        // We go to zk rather than to master to get count of regions to avoid
-        // HTable having a Master dependency.  See HBase-2828
-        return ZKUtil.getNumberOfChildren(zkw, zkw.rsZNode);
-      } catch (KeeperException ke) {
-        throw new IOException("Unexpected ZooKeeper exception", ke);
-      } finally {
-          zkw.close();
-      }
+      return this.registry.getCurrentNrHRS();
     }
 
     /**

@@ -193,7 +193,7 @@ public class ClientScanner extends AbstractClientScanner {
             done) {
           close();
           if (LOG.isDebugEnabled()) {
-            LOG.debug("Finished with scanning at " + this.currentRegion);
+            LOG.debug("Finished scanning region " + this.currentRegion);
           }
           return false;
         }
@@ -301,8 +301,9 @@ public class ClientScanner extends AbstractClientScanner {
             } else {
               Throwable cause = e.getCause();
               if ((cause == null || (!(cause instanceof NotServingRegionException)
-                  && !(cause instanceof RegionServerStoppedException)))
-                  && !(e instanceof OutOfOrderScannerNextException)) {
+                  && !(cause instanceof RegionServerStoppedException))) &&
+                  !(e instanceof RegionServerStoppedException) &&
+                  !(e instanceof OutOfOrderScannerNextException)) {
                 throw e;
               }
             }

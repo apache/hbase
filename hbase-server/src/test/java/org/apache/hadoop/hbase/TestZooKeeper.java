@@ -108,12 +108,10 @@ public class TestZooKeeper {
   }
 
 
-  private ZooKeeperWatcher getZooKeeperWatcher(HConnection c) throws
-    NoSuchMethodException, InvocationTargetException, IllegalAccessException {
-
-    Method getterZK = c.getClass().getMethod("getKeepAliveZooKeeperWatcher");
+  private ZooKeeperWatcher getZooKeeperWatcher(HConnection c)
+  throws NoSuchMethodException, InvocationTargetException, IllegalAccessException {
+    Method getterZK = c.getClass().getDeclaredMethod("getKeepAliveZooKeeperWatcher");
     getterZK.setAccessible(true);
-
     return (ZooKeeperWatcher) getterZK.invoke(c);
   }
 
@@ -196,12 +194,12 @@ public class TestZooKeeper {
     connection.close();
   }
 
-  @Test
+  @Test (timeout = 60000)
   public void testRegionServerSessionExpired() throws Exception {
     LOG.info("Starting testRegionServerSessionExpired");
     int metaIndex = TEST_UTIL.getMiniHBaseCluster().getServerWithMeta();
     TEST_UTIL.expireRegionServerSession(metaIndex);
-    testSanity();
+    testSanity("testRegionServerSessionExpired");
   }
 
   // @Test Disabled because seems to make no sense expiring master session
@@ -210,7 +208,7 @@ public class TestZooKeeper {
   public void testMasterSessionExpired() throws Exception {
     LOG.info("Starting testMasterSessionExpired");
     TEST_UTIL.expireMasterSession();
-    testSanity();
+    testSanity("testMasterSessionExpired");
   }
 
   /**
@@ -220,27 +218,31 @@ public class TestZooKeeper {
    */
   @Test(timeout = 60000)
   public void testMasterZKSessionRecoveryFailure() throws Exception {
+    LOG.info("Starting testMasterZKSessionRecoveryFailure");
     MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
     HMaster m = cluster.getMaster();
     m.abort("Test recovery from zk session expired",
       new KeeperException.SessionExpiredException());
     assertFalse(m.isStopped());
-    testSanity();
+    testSanity("testMasterZKSessionRecoveryFailure");
   }
 
   /**
    * Make sure we can use the cluster
    * @throws Exception
    */
-  private void testSanity() throws Exception{
-    HBaseAdmin admin =
-      new HBaseAdmin(TEST_UTIL.getConfiguration());
-    String tableName = "test"+System.currentTimeMillis();
+  private void testSanity(final String testName) throws Exception{
+    String tableName = testName + "." + System.currentTimeMillis();
     HTableDescriptor desc = new HTableDescriptor(tableName);
     HColumnDescriptor family = new HColumnDescriptor("fam");
     desc.addFamily(family);
     LOG.info("Creating table " + tableName);
-    admin.createTable(desc);
+    HBaseAdmin admin = new HBaseAdmin(TEST_UTIL.getConfiguration());
+    try {
+      admin.createTable(desc);
+    } finally {
+      admin.close();
+    }
 
     HTable table =
       new HTable(new Configuration(TEST_UTIL.getConfiguration()), tableName);
@@ -253,33 +255,29 @@ public class TestZooKeeper {
   }
 
   @Test
-  public void testMultipleZK() {
-    try {
-      HTable localMeta =
-        new HTable(new Configuration(TEST_UTIL.getConfiguration()), HConstants.META_TABLE_NAME);
-      Configuration otherConf = new Configuration(TEST_UTIL.getConfiguration());
-      otherConf.set(HConstants.ZOOKEEPER_QUORUM, "127.0.0.1");
-      HTable ipMeta = new HTable(otherConf, HConstants.META_TABLE_NAME);
+  public void testMultipleZK()
+  throws IOException, NoSuchMethodException, InvocationTargetException, IllegalAccessException {
+    HTable localMeta =
+      new HTable(new Configuration(TEST_UTIL.getConfiguration()), HConstants.META_TABLE_NAME);
+    Configuration otherConf = new Configuration(TEST_UTIL.getConfiguration());
+    otherConf.set(HConstants.ZOOKEEPER_QUORUM, "127.0.0.1");
+    HTable ipMeta = new HTable(otherConf, HConstants.META_TABLE_NAME);
 
-      // dummy, just to open the connection
-      final byte [] row = new byte [] {'r'};
-      localMeta.exists(new Get(row));
-      ipMeta.exists(new Get(row));
+    // dummy, just to open the connection
+    final byte [] row = new byte [] {'r'};
+    localMeta.exists(new Get(row));
+    ipMeta.exists(new Get(row));
 
-      // make sure they aren't the same
-      ZooKeeperWatcher z1 =
-        getZooKeeperWatcher(HConnectionManager.getConnection(localMeta.getConfiguration()));
-      ZooKeeperWatcher z2 =
-        getZooKeeperWatcher(HConnectionManager.getConnection(otherConf));
-      assertFalse(z1 == z2);
-      assertFalse(z1.getQuorum().equals(z2.getQuorum()));
+    // make sure they aren't the same
+    ZooKeeperWatcher z1 =
+      getZooKeeperWatcher(HConnectionManager.getConnection(localMeta.getConfiguration()));
+    ZooKeeperWatcher z2 =
+      getZooKeeperWatcher(HConnectionManager.getConnection(otherConf));
+    assertFalse(z1 == z2);
+    assertFalse(z1.getQuorum().equals(z2.getQuorum()));
 
-      localMeta.close();
-      ipMeta.close();
-    } catch (Exception e) {
-      e.printStackTrace();
-      fail();
-    }
+    localMeta.close();
+    ipMeta.close();
   }
 
   /**
@@ -311,7 +309,7 @@ public class TestZooKeeper {
   @Test
   public void testZNodeDeletes() throws Exception {
     ZooKeeperWatcher zkw = new ZooKeeperWatcher(
-      new Configuration(TEST_UTIL.getConfiguration()), 
+      new Configuration(TEST_UTIL.getConfiguration()),
       TestZooKeeper.class.getName(), null);
     ZKUtil.createWithParents(zkw, "/l1/l2/l3/l4");
     try {
@@ -446,8 +444,11 @@ public class TestZooKeeper {
     // Restore the ACL
     ZooKeeper zk3 = new ZooKeeper(quorumServers, sessionTimeout, EmptyWatcher.instance);
     zk3.addAuthInfo("digest", "hbase:rox".getBytes());
-    zk3.setACL("/", oldACL, -1);
-    zk3.close();
+    try {
+      zk3.setACL("/", oldACL, -1);
+    } finally {
+      zk3.close();
+    }
  }
 
   /**
@@ -477,23 +478,25 @@ public class TestZooKeeper {
     int expectedNumOfListeners = zkw.getNumberOfListeners();
     // now the cluster is up. So assign some regions.
     HBaseAdmin admin = new HBaseAdmin(TEST_UTIL.getConfiguration());
-    byte[][] SPLIT_KEYS = new byte[][] { Bytes.toBytes("a"), Bytes.toBytes("b"),
+    try {
+      byte[][] SPLIT_KEYS = new byte[][] { Bytes.toBytes("a"), Bytes.toBytes("b"),
         Bytes.toBytes("c"), Bytes.toBytes("d"), Bytes.toBytes("e"), Bytes.toBytes("f"),
         Bytes.toBytes("g"), Bytes.toBytes("h"), Bytes.toBytes("i"), Bytes.toBytes("j") };
-
-    String tableName = "testRegionAssignmentAfterMasterRecoveryDueToZKExpiry";
-    admin.createTable(new HTableDescriptor(tableName), SPLIT_KEYS);
-    ZooKeeperWatcher zooKeeperWatcher = HBaseTestingUtility.getZooKeeperWatcher(TEST_UTIL);
-    ZKAssign.blockUntilNoRIT(zooKeeperWatcher);
-    m.getZooKeeperWatcher().close();
-    MockLoadBalancer.retainAssignCalled = false;
-    m.abort("Test recovery from zk session expired", new KeeperException.SessionExpiredException());
-    assertFalse(m.isStopped());
-    // The recovered master should not call retainAssignment, as it is not a
-    // clean startup.
-    assertFalse("Retain assignment should not be called", MockLoadBalancer.retainAssignCalled);
-    // number of listeners should be same as the value before master aborted
-    assertEquals(expectedNumOfListeners, zkw.getNumberOfListeners());
+      String tableName = "testRegionAssignmentAfterMasterRecoveryDueToZKExpiry";
+      admin.createTable(new HTableDescriptor(tableName), SPLIT_KEYS);
+      ZooKeeperWatcher zooKeeperWatcher = HBaseTestingUtility.getZooKeeperWatcher(TEST_UTIL);
+      ZKAssign.blockUntilNoRIT(zooKeeperWatcher);
+      m.getZooKeeperWatcher().close();
+      MockLoadBalancer.retainAssignCalled = false;
+      m.abort("Test recovery from zk session expired",
+        new KeeperException.SessionExpiredException());
+      assertFalse(m.isStopped());
+      // The recovered master should not call retainAssignment, as it is not a
+      // clean startup.
+      assertFalse("Retain assignment should not be called", MockLoadBalancer.retainAssignCalled);
+    } finally {
+      admin.close();
+    }
   }
 
   /**
@@ -508,42 +511,49 @@ public class TestZooKeeper {
     HMaster m = cluster.getMaster();
     // now the cluster is up. So assign some regions.
     HBaseAdmin admin = new HBaseAdmin(TEST_UTIL.getConfiguration());
-    byte[][] SPLIT_KEYS = new byte[][] { Bytes.toBytes("1"), Bytes.toBytes("2"),
+    HTable table = null;
+    try {
+      byte[][] SPLIT_KEYS = new byte[][] { Bytes.toBytes("1"), Bytes.toBytes("2"),
         Bytes.toBytes("3"), Bytes.toBytes("4"), Bytes.toBytes("5") };
 
-    String tableName = "testLogSplittingAfterMasterRecoveryDueToZKExpiry";
-    HTableDescriptor htd = new HTableDescriptor(tableName);
-    HColumnDescriptor hcd = new HColumnDescriptor("col");
-    htd.addFamily(hcd);
-    admin.createTable(htd, SPLIT_KEYS);
-    ZooKeeperWatcher zooKeeperWatcher = HBaseTestingUtility.getZooKeeperWatcher(TEST_UTIL);
-    ZKAssign.blockUntilNoRIT(zooKeeperWatcher);
-    HTable table = new HTable(TEST_UTIL.getConfiguration(), tableName);
-
-    Put p;
-    int numberOfPuts;
-    for (numberOfPuts = 0; numberOfPuts < 6; numberOfPuts++) {
-      p = new Put(Bytes.toBytes(numberOfPuts));
-      p.add(Bytes.toBytes("col"), Bytes.toBytes("ql"), Bytes.toBytes("value" + numberOfPuts));
-      table.put(p);
+      String tableName = "testLogSplittingAfterMasterRecoveryDueToZKExpiry";
+      HTableDescriptor htd = new HTableDescriptor(tableName);
+      HColumnDescriptor hcd = new HColumnDescriptor("col");
+      htd.addFamily(hcd);
+      admin.createTable(htd, SPLIT_KEYS);
+      ZooKeeperWatcher zooKeeperWatcher = HBaseTestingUtility.getZooKeeperWatcher(TEST_UTIL);
+      ZKAssign.blockUntilNoRIT(zooKeeperWatcher);
+      table = new HTable(TEST_UTIL.getConfiguration(), tableName);
+      Put p;
+      int numberOfPuts;
+      for (numberOfPuts = 0; numberOfPuts < 6; numberOfPuts++) {
+        p = new Put(Bytes.toBytes(numberOfPuts));
+        p.add(Bytes.toBytes("col"), Bytes.toBytes("ql"), Bytes.toBytes("value" + numberOfPuts));
+        table.put(p);
+      }
+      m.getZooKeeperWatcher().close();
+      m.abort("Test recovery from zk session expired",
+        new KeeperException.SessionExpiredException());
+      assertFalse(m.isStopped());
+      cluster.getRegionServer(0).abort("Aborting");
+      // Without patch for HBASE-6046 this test case will always timeout
+      // with patch the test case should pass.
+      Scan scan = new Scan();
+      int numberOfRows = 0;
+      ResultScanner scanner = table.getScanner(scan);
+      Result[] result = scanner.next(1);
+      while (result != null && result.length > 0) {
+        numberOfRows++;
+        result = scanner.next(1);
+      }
+      assertEquals("Number of rows should be equal to number of puts.", numberOfPuts,
+        numberOfRows);
+    } finally {
+      if (table != null) table.close();
+      admin.close();
     }
-    m.getZooKeeperWatcher().close();
-    m.abort("Test recovery from zk session expired", new KeeperException.SessionExpiredException());
-    assertFalse(m.isStopped());
-    cluster.getRegionServer(0).abort("Aborting");
-    // Without patch for HBASE-6046 this test case will always timeout
-    // with patch the test case should pass.
-    Scan scan = new Scan();
-    int numberOfRows = 0;
-    ResultScanner scanner = table.getScanner(scan);
-    Result[] result = scanner.next(1);
-    while (result != null && result.length > 0) {
-      numberOfRows++;
-      result = scanner.next(1);
-    }
-    assertEquals("Number of rows should be equal to number of puts.", numberOfPuts, numberOfRows);
   }
-  
+
   static class MockLoadBalancer extends DefaultLoadBalancer {
     static boolean retainAssignCalled = false;
 

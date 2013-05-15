@@ -37,9 +37,8 @@ import java.util.NavigableMap;
 import java.util.TreeMap;
 
 /**
- * Scanner class that contains the <code>.META.</code> table scanning logic
- * and uses a Retryable scanner. Provided visitors will be called
- * for each row.
+ * Scanner class that contains the <code>.META.</code> table scanning logic.
+ * Provided visitors will be called for each row.
  *
  * Although public visibility, this is not a public-facing API and may evolve in
  * minor releases.
@@ -123,114 +122,58 @@ public class MetaScanner {
   public static void metaScan(Configuration configuration,
       final MetaScannerVisitor visitor, final byte[] tableName,
       final byte[] row, final int rowLimit, final byte[] metaTableName)
-      throws IOException {
-    try {
-      HConnectionManager.execute(new HConnectable<Void>(configuration) {
-        @Override
-        public Void connect(HConnection connection) throws IOException {
-          metaScan(conf, connection, visitor, tableName, row, rowLimit,
-              metaTableName);
-          return null;
-        }
-      });
-    } finally {
-      visitor.close();
-    }
-  }
-
-  private static void metaScan(Configuration configuration, HConnection connection,
-      MetaScannerVisitor visitor, byte [] tableName, byte[] row,
-      int rowLimit, final byte [] metaTableName)
   throws IOException {
     int rowUpperLimit = rowLimit > 0 ? rowLimit: Integer.MAX_VALUE;
-
-    // if row is not null, we want to use the startKey of the row's region as
-    // the startRow for the meta scan.
+    HTable metaTable = new HTable(configuration, HConstants.META_TABLE_NAME);
+    // Calculate startrow for scan.
     byte[] startRow;
-    if (row != null) {
-      // Scan starting at a particular row in a particular table
-      assert tableName != null;
-      byte[] searchRow =
-        HRegionInfo.createRegionName(tableName, row, HConstants.NINES,
-          false);
-      HTable metaTable = null;
-      try {
-        metaTable = new HTable(configuration, HConstants.META_TABLE_NAME);
-        Result startRowResult = metaTable.getRowOrBefore(searchRow,
-            HConstants.CATALOG_FAMILY);
+    try {
+      if (row != null) {
+        // Scan starting at a particular row in a particular table
+        byte[] searchRow = HRegionInfo.createRegionName(tableName, row, HConstants.NINES, false);
+        Result startRowResult = metaTable.getRowOrBefore(searchRow, HConstants.CATALOG_FAMILY);
         if (startRowResult == null) {
-          throw new TableNotFoundException("Cannot find row in .META. for table: "
-              + Bytes.toString(tableName) + ", row=" + Bytes.toStringBinary(searchRow));
+          throw new TableNotFoundException("Cannot find row in .META. for table: " +
+            Bytes.toString(tableName) + ", row=" + Bytes.toStringBinary(searchRow));
         }
         HRegionInfo regionInfo = getHRegionInfo(startRowResult);
         if (regionInfo == null) {
           throw new IOException("HRegionInfo was null or empty in Meta for " +
             Bytes.toString(tableName) + ", row=" + Bytes.toStringBinary(searchRow));
         }
-
         byte[] rowBefore = regionInfo.getStartKey();
-        startRow = HRegionInfo.createRegionName(tableName, rowBefore,
-            HConstants.ZEROES, false);
-      } finally {
-        if (metaTable != null) {
-          metaTable.close();
-        }
+        startRow = HRegionInfo.createRegionName(tableName, rowBefore, HConstants.ZEROES, false);
+      } else if (tableName == null || tableName.length == 0) {
+        // Full META scan
+        startRow = HConstants.EMPTY_START_ROW;
+      } else {
+        // Scan META for an entire table
+        startRow = HRegionInfo.createRegionName(tableName, HConstants.EMPTY_START_ROW,
+          HConstants.ZEROES, false);
       }
-    } else if (tableName == null || tableName.length == 0) {
-      // Full META scan
-      startRow = HConstants.EMPTY_START_ROW;
-    } else {
-      // Scan META for an entire table
-      startRow = HRegionInfo.createRegionName(
-          tableName, HConstants.EMPTY_START_ROW, HConstants.ZEROES, false);
-    }
-
-    // Scan over each meta region
-    ScannerCallable callable;
-    int rows = Math.min(rowLimit, configuration.getInt(
-        HConstants.HBASE_META_SCANNER_CACHING,
-        HConstants.DEFAULT_HBASE_META_SCANNER_CACHING));
-    do {
       final Scan scan = new Scan(startRow).addFamily(HConstants.CATALOG_FAMILY);
+      int rows = Math.min(rowLimit, configuration.getInt(HConstants.HBASE_META_SCANNER_CACHING,
+        HConstants.DEFAULT_HBASE_META_SCANNER_CACHING));
+      scan.setCaching(rows);
       if (LOG.isDebugEnabled()) {
-        LOG.debug("Scanning " + Bytes.toString(metaTableName) +
-          " starting at row=" + Bytes.toStringBinary(startRow) + " for max=" +
-          rowUpperLimit + " rows using " + connection.toString());
+        LOG.debug("Scanning " + Bytes.toString(metaTableName) + " starting at row=" +
+          Bytes.toStringBinary(startRow) + " for max=" + rowUpperLimit + " with caching=" + rows);
       }
-      callable = new ScannerCallable(connection, metaTableName, scan, null);
-      // Open scanner
-      callable.withRetries();
-
+      // Run the scan
+      ResultScanner scanner = metaTable.getScanner(scan);
+      Result result = null;
       int processedRows = 0;
-      try {
-        callable.setCaching(rows);
-        done: do {
-          if (processedRows >= rowUpperLimit) {
-            break;
-          }
-          //we have all the rows here
-          Result [] rrs = callable.withRetries();
-          if (rrs == null || rrs.length == 0 || rrs[0].size() == 0) {
-            break; //exit completely
-          }
-          for (Result rr : rrs) {
-            if (processedRows >= rowUpperLimit) {
-              break done;
-            }
-            if (!visitor.processRow(rr))
-              break done; //exit completely
-            processedRows++;
-          }
-          //here, we didn't break anywhere. Check if we have more rows
-        } while(true);
-        // Advance the startRow to the end key of the current region
-        startRow = callable.getHRegionInfo().getEndKey();
-      } finally {
-        // Close scanner
-        callable.setClose();
-        callable.withRetries();
+      while ((result = scanner.next()) != null) {
+        if (visitor != null) {
+          if (!visitor.processRow(result)) break;
+        }
+        processedRows++;
+        if (processedRows >= rowUpperLimit) break;
       }
-    } while (Bytes.compareTo(startRow, HConstants.LAST_ROW) != 0);
+    } finally {
+      if (visitor != null) visitor.close();
+      if (metaTable != null) metaTable.close();
+    }
   }
 
   /**
