@@ -193,11 +193,11 @@ public class LruBlockCache implements BlockCache, HeapSize {
   public LruBlockCache(long maxSize, long blockSize, boolean evictionThread, Configuration conf) {
     this(maxSize, blockSize, evictionThread,
         (int)Math.ceil(1.2*maxSize/blockSize),
-        DEFAULT_LOAD_FACTOR, 
+        DEFAULT_LOAD_FACTOR,
         DEFAULT_CONCURRENCY_LEVEL,
-        conf.getFloat(LRU_MIN_FACTOR_CONFIG_NAME, DEFAULT_MIN_FACTOR), 
-        conf.getFloat(LRU_ACCEPTABLE_FACTOR_CONFIG_NAME, DEFAULT_ACCEPTABLE_FACTOR), 
-        DEFAULT_SINGLE_FACTOR, 
+        conf.getFloat(LRU_MIN_FACTOR_CONFIG_NAME, DEFAULT_MIN_FACTOR),
+        conf.getFloat(LRU_ACCEPTABLE_FACTOR_CONFIG_NAME, DEFAULT_ACCEPTABLE_FACTOR),
+        DEFAULT_SINGLE_FACTOR,
         DEFAULT_MULTI_FACTOR,
         DEFAULT_MEMORY_FACTOR);
   }
@@ -276,7 +276,10 @@ public class LruBlockCache implements BlockCache, HeapSize {
   public void cacheBlock(BlockCacheKey cacheKey, Cacheable buf, boolean inMemory) {
     CachedBlock cb = map.get(cacheKey);
     if(cb != null) {
-      throw new RuntimeException("Cached an already cached block");
+      String msg = "Cached an already cached block: " + cacheKey + " cb:" + cb.getCacheKey();
+      msg += ". This is harmless and can happen in rare cases (see HBASE-8547)";
+      LOG.warn(msg);
+      assert false : msg;
     }
     cb = new CachedBlock(cacheKey, buf, count.incrementAndGet(), inMemory);
     long newSize = updateSizeMetrics(cb, false);

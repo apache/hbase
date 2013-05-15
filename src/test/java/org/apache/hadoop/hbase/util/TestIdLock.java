@@ -20,6 +20,8 @@
 
 package org.apache.hadoop.hbase.util;
 
+import static org.junit.Assert.assertTrue;
+
 import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.Callable;
@@ -28,12 +30,10 @@ import java.util.concurrent.ExecutorCompletionService;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-
-import static org.junit.Assert.*;
-
 import org.apache.hadoop.hbase.MediumTests;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -106,6 +106,7 @@ public class TestIdLock {
       idLock.assertMapEmpty();
     } finally {
       exec.shutdown();
+      exec.awaitTermination(5000, TimeUnit.MILLISECONDS);
     }
   }
 
