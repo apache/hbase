@@ -1610,6 +1610,7 @@ Server {
   private boolean tryRecoveringExpiredZKSession() throws InterruptedException,
       IOException, KeeperException, ExecutionException {
 
+    this.zooKeeper.unregisterAllListeners();
     this.zooKeeper.reconnectAfterExpiration();
 
     Callable<Boolean> callable = new Callable<Boolean> () {

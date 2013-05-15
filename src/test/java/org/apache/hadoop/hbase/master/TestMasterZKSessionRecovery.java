@@ -89,6 +89,8 @@ public class TestMasterZKSessionRecovery {
     MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
     cluster.startRegionServer();
     HMaster m = cluster.getMaster();
+    ZooKeeperWatcher zkw = m.getZooKeeperWatcher();
+    int expectedNumOfListeners = zkw.getNumberOfListeners();
     // now the cluster is up. So assign some regions.
     HBaseAdmin admin = new HBaseAdmin(TEST_UTIL.getConfiguration());
     byte[][] SPLIT_KEYS = new byte[][] { Bytes.toBytes("a"), Bytes.toBytes("b"),
@@ -106,6 +108,8 @@ public class TestMasterZKSessionRecovery {
     // The recovered master should not call retainAssignment, as it is not a
     // clean startup.
     assertFalse("Retain assignment should not be called", MockLoadBalancer.retainAssignCalled);
+    // number of listeners should be same as the value before master aborted
+    assertEquals(expectedNumOfListeners, zkw.getNumberOfListeners());
   }
 
   static class MockLoadBalancer extends DefaultLoadBalancer {
