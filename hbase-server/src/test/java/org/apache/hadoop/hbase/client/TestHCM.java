@@ -832,31 +832,35 @@ public class TestHCM {
     // use connection multiple times
     for (int i = 0; i < 50; i++) {
       HConnection c1 = null;
-        try {
-          c1 = HConnectionManager.getConnection(config);
-          HTable table = new HTable(TABLE_NAME4, c1, pool);
-          table.close();
-        } catch (Exception e) {
-        } finally {
-          if (c1 != null) {
-            if (c1.isClosed()) {
-              // cannot use getZooKeeper as method instantiates watcher if null
-              Field zkwField = c1.getClass().getDeclaredField("keepAliveZookeeper");
-              zkwField.setAccessible(true);
-              Object watcher = zkwField.get(c1);
+      try {
+        c1 = HConnectionManager.getConnection(config);
+        HTable table = new HTable(TABLE_NAME4, c1, pool);
+        table.close();
+      } catch (Exception e) {
+      } finally {
+        if (c1 != null) {
+          if (c1.isClosed()) {
+            // cannot use getZooKeeper as method instantiates watcher if null
+            Field zkwField = c1.getClass().getDeclaredField("keepAliveZookeeper");
+            zkwField.setAccessible(true);
+            Object watcher = zkwField.get(c1);
 
-              if (watcher != null) {
-                if (((ZooKeeperWatcher)watcher).getRecoverableZooKeeper().getState().isAlive()) {
+            if (watcher != null) {
+              if (((ZooKeeperWatcher)watcher).getRecoverableZooKeeper().getState().isAlive()) {
+                // non-synchronized access to watcher; sleep and check again in case zk connection
+                // hasn't been cleaned up yet.
+                Thread.sleep(50);
+                if (((ZooKeeperWatcher) watcher).getRecoverableZooKeeper().getState().isAlive()) {
                   pool.shutdownNow();
                   fail("Live zookeeper in closed connection");
                 }
               }
             }
-            c1.close();
           }
+          c1.close();
         }
+      }
     }
-
     pool.shutdownNow();
   }
 }
