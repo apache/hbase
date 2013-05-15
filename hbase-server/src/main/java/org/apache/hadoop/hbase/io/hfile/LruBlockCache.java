@@ -292,7 +292,9 @@ public class LruBlockCache implements BlockCache, HeapSize {
   public void cacheBlock(BlockCacheKey cacheKey, Cacheable buf, boolean inMemory) {
     CachedBlock cb = map.get(cacheKey);
     if(cb != null) {
-      throw new RuntimeException("Cached an already cached block");
+      String msg = "Cached an already cached block: " + cacheKey + " cb:" + cb.getCacheKey();
+      LOG.warn(msg);
+      assert false : msg;
     }
     cb = new CachedBlock(cacheKey, buf, count.incrementAndGet(), inMemory);
     long newSize = updateSizeMetrics(cb, false);

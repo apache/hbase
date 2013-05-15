@@ -123,8 +123,9 @@ public class TestLruBlockCache {
       try {
         cache.cacheBlock(block.cacheKey, block);
         assertTrue("Cache should not allow re-caching a block", false);
-      } catch(RuntimeException re) {
+      } catch(AssertionError re) {
         // expected
+        assertTrue(re.getMessage().contains("Cached an already cached block"));
       }
     }
 
