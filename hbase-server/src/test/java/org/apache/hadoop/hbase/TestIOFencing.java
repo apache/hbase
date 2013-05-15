@@ -217,6 +217,7 @@ public class TestIOFencing {
 
   public void doTest(Class<?> regionClass) throws Exception {
     Configuration c = TEST_UTIL.getConfiguration();
+    c.setBoolean(HConstants.DISTRIBUTED_LOG_REPLAY_KEY, false);
     // Insert our custom region
     c.setClass(HConstants.REGION_IMPL, regionClass, HRegion.class);
     c.setBoolean("dfs.support.append", true);

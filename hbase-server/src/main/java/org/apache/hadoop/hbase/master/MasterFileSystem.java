@@ -20,7 +20,9 @@ package org.apache.hadoop.hbase.master;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.NavigableMap;
 import java.util.Set;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
@@ -34,26 +36,29 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.hbase.ClusterId;
-import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.exceptions.InvalidFamilyOperationException;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.backup.HFileArchiver;
+import org.apache.hadoop.hbase.catalog.MetaReader;
+import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.exceptions.DeserializationException;
+import org.apache.hadoop.hbase.exceptions.InvalidFamilyOperationException;
+import org.apache.hadoop.hbase.exceptions.OrphanHLogAfterSplitException;
 import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.regionserver.wal.HLogSplitter;
 import org.apache.hadoop.hbase.regionserver.wal.HLogUtil;
-import org.apache.hadoop.hbase.exceptions.OrphanHLogAfterSplitException;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
 import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.zookeeper.KeeperException;
 
 /**
  * This class abstracts a bunch of operations the HMaster needs to interact with
@@ -83,6 +88,7 @@ public class MasterFileSystem {
   private final Path tempdir;
   // create the split log lock
   final Lock splitLogLock = new ReentrantLock();
+  final boolean distributedLogReplay;
   final boolean distributedLogSplitting;
   final SplitLogManager splitLogManager;
   private final MasterServices services;
@@ -118,15 +124,14 @@ public class MasterFileSystem {
     FSUtils.setFsDefault(conf, new Path(this.fs.getUri()));
     // make sure the fs has the same conf
     fs.setConf(conf);
-    this.distributedLogSplitting =
-      conf.getBoolean(HConstants.DISTRIBUTED_LOG_SPLITTING_KEY, true);
+    this.splitLogManager = new SplitLogManager(master.getZooKeeper(), master.getConfiguration(),
+        master, services, master.getServerName());
+    this.distributedLogSplitting = conf.getBoolean(HConstants.DISTRIBUTED_LOG_SPLITTING_KEY, true);
     if (this.distributedLogSplitting) {
-      this.splitLogManager = new SplitLogManager(master.getZooKeeper(),
-          master.getConfiguration(), master, services, master.getServerName());
       this.splitLogManager.finishInitialization(masterRecovery);
-    } else {
-      this.splitLogManager = null;
     }
+    this.distributedLogReplay = this.conf.getBoolean(HConstants.DISTRIBUTED_LOG_REPLAY_KEY, 
+      HConstants.DEFAULT_DISTRIBUTED_LOG_REPLAY_CONFIG);
     // setup the filesystem variable
     // set up the archived logs path
     this.oldLogDir = createInitialFileSystemLayout();
@@ -212,21 +217,23 @@ public class MasterFileSystem {
   }
 
   /**
-   * Inspect the log directory to recover any log file without
-   * an active region server.
+   * Inspect the log directory to find dead servers which need recovery work
+   * @return A set of ServerNames which aren't running but still have WAL files left in file system
    */
-  void splitLogAfterStartup() {
+  Set<ServerName> getFailedServersFromLogFolders() {
     boolean retrySplitting = !conf.getBoolean("hbase.hlog.split.skip.errors",
-        HLog.SPLIT_SKIP_ERRORS_DEFAULT);
+      HLog.SPLIT_SKIP_ERRORS_DEFAULT);
+
+    Set<ServerName> serverNames = new HashSet<ServerName>();
     Path logsDirPath = new Path(this.rootdir, HConstants.HREGION_LOGDIR_NAME);
+
     do {
       if (master.isStopped()) {
-        LOG.warn("Master stopped while splitting logs");
+        LOG.warn("Master stopped while trying to get failed servers.");
         break;
       }
-      List<ServerName> serverNames = new ArrayList<ServerName>();
       try {
-        if (!this.fs.exists(logsDirPath)) return;
+        if (!this.fs.exists(logsDirPath)) return serverNames;
         FileStatus[] logFolders = FSUtils.listStatus(this.fs, logsDirPath, null);
         // Get online servers after getting log folders to avoid log folder deletion of newly
         // checked in region servers . see HBASE-5916
@@ -235,7 +242,7 @@ public class MasterFileSystem {
 
         if (logFolders == null || logFolders.length == 0) {
           LOG.debug("No log files to split, proceeding...");
-          return;
+          return serverNames;
         }
         for (FileStatus status : logFolders) {
           String sn = status.getPath().getName();
@@ -249,23 +256,19 @@ public class MasterFileSystem {
                 + "to a known region server, splitting");
             serverNames.add(serverName);
           } else {
-            LOG.info("Log folder " + status.getPath()
-                + " belongs to an existing region server");
+            LOG.info("Log folder " + status.getPath() + " belongs to an existing region server");
           }
         }
-        splitLog(serverNames, META_FILTER);
-        splitLog(serverNames, NON_META_FILTER);
         retrySplitting = false;
       } catch (IOException ioe) {
-        LOG.warn("Failed splitting of " + serverNames, ioe);
+        LOG.warn("Failed getting failed servers to be recovered.", ioe);
         if (!checkFileSystem()) {
           LOG.warn("Bad Filesystem, exiting");
           Runtime.getRuntime().halt(1);
         }
         try {
           if (retrySplitting) {
-            Thread.sleep(conf.getInt(
-              "hbase.hlog.split.failure.retry.interval", 30 * 1000));
+            Thread.sleep(conf.getInt("hbase.hlog.split.failure.retry.interval", 30 * 1000));
           }
         } catch (InterruptedException e) {
           LOG.warn("Interrupted, aborting since cannot return w/o splitting");
@@ -275,10 +278,12 @@ public class MasterFileSystem {
         }
       }
     } while (retrySplitting);
+
+    return serverNames;
   }
 
   public void splitLog(final ServerName serverName) throws IOException {
-    List<ServerName> serverNames = new ArrayList<ServerName>();
+    Set<ServerName> serverNames = new HashSet<ServerName>();
     serverNames.add(serverName);
     splitLog(serverNames);
   }
@@ -290,23 +295,20 @@ public class MasterFileSystem {
    */
   public void splitMetaLog(final ServerName serverName) throws IOException {
     long splitTime = 0, splitLogSize = 0;
-    List<ServerName> serverNames = new ArrayList<ServerName>();
+    Set<ServerName> serverNames = new HashSet<ServerName>();
     serverNames.add(serverName);
     List<Path> logDirs = getLogDirs(serverNames);
-    if (logDirs.isEmpty()) {
-      LOG.info("No meta logs to split");
-      return;
-    }
+
     splitLogManager.handleDeadWorkers(serverNames);
     splitTime = EnvironmentEdgeManager.currentTimeMillis();
-    splitLogSize = splitLogManager.splitLogDistributed(logDirs, META_FILTER);
+    splitLogSize = splitLogManager.splitLogDistributed(serverNames, logDirs, META_FILTER);
     splitTime = EnvironmentEdgeManager.currentTimeMillis() - splitTime;
     if (this.metricsMaster != null) {
-      this.metricsMaster.addSplit(splitTime, splitLogSize);
+      this.metricsMaster.addMetaWALSplit(splitTime, splitLogSize);
     }
   }
 
-  private List<Path> getLogDirs(final List<ServerName> serverNames) throws IOException {
+  private List<Path> getLogDirs(final Set<ServerName> serverNames) throws IOException {
     List<Path> logDirs = new ArrayList<Path>();
     for (ServerName serverName: serverNames) {
       Path logDir = new Path(this.rootdir, HLogUtil.getHLogDirectoryName(serverName.toString()));
@@ -327,30 +329,79 @@ public class MasterFileSystem {
     return logDirs;
   }
 
-  public void splitLog(final List<ServerName> serverNames) throws IOException {
+  /**
+   * Mark regions in recovering state when distributedLogReplay are set true
+   * @param serverNames Set of ServerNames to be replayed wals in order to recover changes contained
+   *          in them
+   * @throws IOException
+   */
+  public void prepareLogReplay(Set<ServerName> serverNames) throws IOException {
+    if (!this.distributedLogReplay) {
+      return;
+    }
+    // mark regions in recovering state
+    for (ServerName serverName : serverNames) {
+      NavigableMap<HRegionInfo, Result> regions = this.getServerUserRegions(serverName);
+      if (regions == null) {
+        continue;
+      }
+      try {
+        this.splitLogManager.markRegionsRecoveringInZK(serverName, regions.keySet());
+      } catch (KeeperException e) {
+        throw new IOException(e);
+      }
+    }
+  }
+
+  /**
+   * Mark meta regions in recovering state when distributedLogReplay are set true. The function is used
+   * when {@link #getServerUserRegions(ServerName)} can't be used in case meta RS is down.
+   * @param serverName
+   * @param regions
+   * @throws IOException
+   */
+  public void prepareMetaLogReplay(ServerName serverName, Set<HRegionInfo> regions)
+      throws IOException {
+    if (!this.distributedLogReplay || (regions == null)) {
+      return;
+    }
+    // mark regions in recovering state
+    try {
+      this.splitLogManager.markRegionsRecoveringInZK(serverName, regions);
+    } catch (KeeperException e) {
+      throw new IOException(e);
+    }
+  }
+
+  public void splitLog(final Set<ServerName> serverNames) throws IOException {
     splitLog(serverNames, NON_META_FILTER);
   }
 
   /**
-   * This method is the base split method that splits HLog files matching a filter.
-   * Callers should pass the appropriate filter for meta and non-meta HLogs.
+   * Wrapper function on {@link SplitLogManager#removeStaleRecoveringRegionsFromZK(Set)}
+   * @param failedServers
+   * @throws KeeperException
+   */
+  void removeStaleRecoveringRegionsFromZK(final Set<ServerName> failedServers)
+      throws KeeperException {
+    this.splitLogManager.removeStaleRecoveringRegionsFromZK(failedServers);
+  }
+
+  /**
+   * This method is the base split method that splits HLog files matching a filter. Callers should
+   * pass the appropriate filter for meta and non-meta HLogs.
    * @param serverNames
    * @param filter
    * @throws IOException
    */
-  public void splitLog(final List<ServerName> serverNames, PathFilter filter) throws IOException {
+  public void splitLog(final Set<ServerName> serverNames, PathFilter filter) throws IOException {
     long splitTime = 0, splitLogSize = 0;
     List<Path> logDirs = getLogDirs(serverNames);
-
-    if (logDirs.isEmpty()) {
-      LOG.info("No logs to split");
-      return;
-    }
 
     if (distributedLogSplitting) {
       splitLogManager.handleDeadWorkers(serverNames);
       splitTime = EnvironmentEdgeManager.currentTimeMillis();
-      splitLogSize = splitLogManager.splitLogDistributed(logDirs,filter);
+      splitLogSize = splitLogManager.splitLogDistributed(serverNames, logDirs, filter);
       splitTime = EnvironmentEdgeManager.currentTimeMillis() - splitTime;
     } else {
       for(Path logDir: logDirs){
@@ -358,8 +409,8 @@ public class MasterFileSystem {
         // one at a time
         this.splitLogLock.lock();
         try {
-          HLogSplitter splitter = HLogSplitter.createLogSplitter(
-            conf, rootdir, logDir, oldLogDir, this.fs);
+          HLogSplitter splitter = HLogSplitter.createLogSplitter(conf, rootdir, logDir, oldLogDir,
+            this.fs);
           try {
             // If FS is in safe mode, just wait till out of it.
             FSUtils.waitOnSafeMode(conf, conf.getInt(HConstants.THREAD_WAKE_FREQUENCY, 1000));
@@ -380,7 +431,11 @@ public class MasterFileSystem {
     }
 
     if (this.metricsMaster != null) {
-      this.metricsMaster.addSplit(splitTime, splitLogSize);
+      if (filter == this.META_FILTER) {
+        this.metricsMaster.addMetaWALSplit(splitTime, splitLogSize);
+      } else {
+        this.metricsMaster.addSplit(splitTime, splitLogSize);
+      }
     }
   }
 
@@ -647,5 +702,19 @@ public class MasterFileSystem {
     htd.addFamily(hcd);
     this.services.getTableDescriptors().add(htd);
     return htd;
+  }
+
+  private NavigableMap<HRegionInfo, Result> getServerUserRegions(ServerName serverName)
+      throws IOException {
+    if (!this.master.isStopped()) {
+      try {
+        this.master.getCatalogTracker().waitForMeta();
+        return MetaReader.getServerUserRegions(this.master.getCatalogTracker(), serverName);
+      } catch (InterruptedException e) {
+        Thread.currentThread().interrupt();
+        throw new IOException("Interrupted", e);
+      }
+    }
+    return null;
   }
 }

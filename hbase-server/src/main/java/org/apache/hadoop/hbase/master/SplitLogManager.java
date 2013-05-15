@@ -33,6 +33,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.locks.ReentrantLock;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -43,16 +44,19 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.hbase.Chore;
-import org.apache.hadoop.hbase.exceptions.DeserializationException;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.SplitLogCounters;
 import org.apache.hadoop.hbase.SplitLogTask;
 import org.apache.hadoop.hbase.Stoppable;
+import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.master.SplitLogManager.TaskFinisher.Status;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
 import org.apache.hadoop.hbase.regionserver.SplitLogWorker;
 import org.apache.hadoop.hbase.regionserver.wal.HLogSplitter;
+import org.apache.hadoop.hbase.regionserver.wal.HLogUtil;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Threads;
@@ -118,6 +122,20 @@ public class SplitLogManager extends ZooKeeperListener {
   private long unassignedTimeout;
   private long lastNodeCreateTime = Long.MAX_VALUE;
   public boolean ignoreZKDeleteForTesting = false;
+  private volatile long lastRecoveringNodeCreationTime = Long.MAX_VALUE;
+  // When lastRecoveringNodeCreationTime is older than the following threshold, we'll check
+  // whether to GC stale recovering znodes
+  private long checkRecoveringTimeThreshold = 15000; // 15 seconds
+  private final Set<ServerName> failedRecoveringRegionDeletions = Collections
+      .synchronizedSet(new HashSet<ServerName>());
+
+  /**
+   * In distributedLogReplay mode, we need touch both splitlog and recovering-regions znodes in one
+   * operation. So the lock is used to guard such cases.
+   */
+  protected final ReentrantLock recoveringRegionLock = new ReentrantLock();
+
+  final boolean distributedLogReplay;
 
   private final ConcurrentMap<String, Task> tasks = new ConcurrentHashMap<String, Task>();
   private TimeoutMonitor timeoutMonitor;
@@ -181,10 +199,13 @@ public class SplitLogManager extends ZooKeeperListener {
     LOG.info("timeout=" + timeout + ", unassigned timeout=" + unassignedTimeout);
 
     this.serverName = serverName;
-    this.timeoutMonitor =
-      new TimeoutMonitor(conf.getInt("hbase.splitlog.manager.timeoutmonitor.period", 1000), stopper);
+    this.timeoutMonitor = new TimeoutMonitor(
+      conf.getInt("hbase.splitlog.manager.timeoutmonitor.period", 1000), stopper);
 
     this.failedDeletions = Collections.synchronizedSet(new HashSet<String>());
+    this.distributedLogReplay = this.conf.getBoolean(HConstants.DISTRIBUTED_LOG_REPLAY_KEY, 
+      HConstants.DEFAULT_DISTRIBUTED_LOG_REPLAY_CONFIG);
+    LOG.info("distributedLogReplay = " + this.distributedLogReplay);
   }
 
   public void finishInitialization(boolean masterRecovery) {
@@ -244,7 +265,22 @@ public class SplitLogManager extends ZooKeeperListener {
    * @return cumulative size of the logfiles split
    */
   public long splitLogDistributed(final List<Path> logDirs) throws IOException {
-    return splitLogDistributed(logDirs, null);
+    if (logDirs.isEmpty()) {
+      return 0;
+    }
+    Set<ServerName> serverNames = new HashSet<ServerName>();
+    for (Path logDir : logDirs) {
+      try {
+        ServerName serverName = HLogUtil.getServerNameFromHLogDirectoryName(logDir);
+        if (serverName != null) {
+          serverNames.add(serverName);
+        }
+      } catch (IllegalArgumentException e) {
+        // ignore invalid format error.
+        LOG.warn("Cannot parse server name from " + logDir);
+      }
+    }
+    return splitLogDistributed(serverNames, logDirs, null);
   }
 
   /**
@@ -258,15 +294,15 @@ public class SplitLogManager extends ZooKeeperListener {
    * @throws IOException If there was an error while splitting any log file
    * @return cumulative size of the logfiles split
    */
-  public long splitLogDistributed(final List<Path> logDirs, PathFilter filter) 
-      throws IOException {
+  public long splitLogDistributed(final Set<ServerName> serverNames, final List<Path> logDirs,
+      PathFilter filter) throws IOException {
     MonitoredTask status = TaskMonitor.get().createStatus(
           "Doing distributed log split in " + logDirs);
     FileStatus[] logfiles = getFileList(logDirs, filter);
     status.setStatus("Checking directory contents...");
     LOG.debug("Scheduling batch of logs to split");
     SplitLogCounters.tot_mgr_log_split_batch_start.incrementAndGet();
-    LOG.info("started splitting logs in " + logDirs);
+    LOG.info("started splitting " + logfiles.length + " logs in " + logDirs);
     long t = EnvironmentEdgeManager.currentTimeMillis();
     long totalSize = 0;
     TaskBatch batch = new TaskBatch();
@@ -283,6 +319,9 @@ public class SplitLogManager extends ZooKeeperListener {
       }
     }
     waitForSplittingCompletion(batch, status);
+    // remove recovering regions from ZK
+    this.removeRecoveringRegionsFromZK(serverNames);
+
     if (batch.done != batch.installed) {
       batch.isDead = true;
       SplitLogCounters.tot_mgr_log_split_batch_err.incrementAndGet();
@@ -407,6 +446,171 @@ public class SplitLogManager extends ZooKeeperListener {
       count = -1;
     }
     return count;
+  }
+
+  /**
+   * It removes recovering regions under /hbase/recovering-regions/[encoded region name] so that the
+   * region server hosting the region can allow reads to the recovered region
+   * @param serverNames servers which are just recovered
+   */
+  private void removeRecoveringRegionsFromZK(final Set<ServerName> serverNames) {
+
+    if (!this.distributedLogReplay) {
+      // the function is only used in WALEdit direct replay mode
+      return;
+    }
+
+    int count = 0;
+    Set<String> recoveredServerNameSet = new HashSet<String>();
+    if (serverNames != null) {
+      for (ServerName tmpServerName : serverNames) {
+        recoveredServerNameSet.add(tmpServerName.getServerName());
+      }
+    }
+
+    try {
+      this.recoveringRegionLock.lock();
+
+      List<String> tasks = ZKUtil.listChildrenNoWatch(watcher, watcher.splitLogZNode);
+      if (tasks != null) {
+        for (String t : tasks) {
+          if (!ZKSplitLog.isRescanNode(watcher, t)) {
+            count++;
+          }
+        }
+      }
+      if (count == 0 && this.master.isInitialized()
+          && !this.master.getServerManager().areDeadServersInProgress()) {
+        // no splitting work items left
+        deleteRecoveringRegionZNodes(null);
+        // reset lastRecoveringNodeCreationTime because we cleared all recovering znodes at
+        // this point.
+        lastRecoveringNodeCreationTime = Long.MAX_VALUE;
+      } else if (!recoveredServerNameSet.isEmpty()) {
+        // remove recovering regions which doesn't have any RS associated with it
+        List<String> regions = ZKUtil.listChildrenNoWatch(watcher, watcher.recoveringRegionsZNode);
+        if (regions != null) {
+          for (String region : regions) {
+            String nodePath = ZKUtil.joinZNode(watcher.recoveringRegionsZNode, region);
+            List<String> failedServers = ZKUtil.listChildrenNoWatch(watcher, nodePath);
+            if (failedServers == null || failedServers.isEmpty()) {
+              ZKUtil.deleteNode(watcher, nodePath);
+              continue;
+            } 
+            if (recoveredServerNameSet.containsAll(failedServers)) {
+              ZKUtil.deleteNodeRecursively(watcher, nodePath);
+            } else {
+              for (String failedServer : failedServers) {
+                if (recoveredServerNameSet.contains(failedServer)) {
+                  String tmpPath = ZKUtil.joinZNode(nodePath, failedServer);
+                  ZKUtil.deleteNode(watcher, tmpPath);
+                }
+              }
+            }
+          }
+        }
+      }
+    } catch (KeeperException ke) {
+      LOG.warn("removeRecoveringRegionsFromZK got zookeeper exception. Will retry", ke);
+      if (serverNames != null && !serverNames.isEmpty()) {
+        this.failedRecoveringRegionDeletions.addAll(serverNames);
+      }
+    } finally {
+      this.recoveringRegionLock.unlock();
+    }
+  }
+
+  /**
+   * It removes stale recovering regions under /hbase/recovering-regions/[encoded region name]
+   * during master initialization phase.
+   * @param failedServers A set of known failed servers
+   * @throws KeeperException
+   */
+  void removeStaleRecoveringRegionsFromZK(final Set<ServerName> failedServers)
+      throws KeeperException {
+
+    if (!this.distributedLogReplay) {
+      // the function is only used in distributedLogReplay mode when master is in initialization
+      return;
+    }
+
+    Set<String> knownFailedServers = new HashSet<String>();
+    if (failedServers != null) {
+      for (ServerName tmpServerName : failedServers) {
+        knownFailedServers.add(tmpServerName.getServerName());
+      }
+    }
+
+    this.recoveringRegionLock.lock();
+    try {
+      List<String> tasks = ZKUtil.listChildrenNoWatch(watcher, watcher.splitLogZNode);
+      if (tasks != null) {
+        for (String t : tasks) {
+          byte[] data = ZKUtil.getData(this.watcher, ZKUtil.joinZNode(watcher.splitLogZNode, t));
+          if (data != null) {
+            SplitLogTask slt = null;
+            try {
+              slt = SplitLogTask.parseFrom(data);
+            } catch (DeserializationException e) {
+              LOG.warn("Failed parse data for znode " + t, e);
+            }
+            if (slt != null && slt.isDone()) {
+              continue;
+            }
+          }
+          // decode the file name
+          t = ZKSplitLog.getFileName(t);
+          ServerName serverName = HLogUtil.getServerNameFromHLogDirectoryName(new Path(t));
+          if (serverName != null) {
+            knownFailedServers.add(serverName.getServerName());
+          } else {
+            LOG.warn("Found invalid WAL log file name:" + t);
+          }
+        }
+      }
+
+      // remove recovering regions which doesn't have any RS associated with it
+      List<String> regions = ZKUtil.listChildrenNoWatch(watcher, watcher.recoveringRegionsZNode);
+      if (regions != null) {
+        for (String region : regions) {
+          String nodePath = ZKUtil.joinZNode(watcher.recoveringRegionsZNode, region);
+          List<String> regionFailedServers = ZKUtil.listChildrenNoWatch(watcher, nodePath);
+          if (regionFailedServers == null || regionFailedServers.isEmpty()) {
+            ZKUtil.deleteNode(watcher, nodePath);
+            continue;
+          }
+          boolean needMoreRecovery = false;
+          for (String tmpFailedServer : regionFailedServers) {
+            if (knownFailedServers.contains(tmpFailedServer)) {
+              needMoreRecovery = true;
+              break;
+            }
+          }
+          if (!needMoreRecovery) {
+            ZKUtil.deleteNode(watcher, nodePath);
+          }
+        }
+      }
+    } finally {
+      this.recoveringRegionLock.unlock();
+    }
+  }
+
+  private void deleteRecoveringRegionZNodes(List<String> regions) {
+    try {
+      if (regions == null) {
+        // remove all children under /home/recovering-regions
+        LOG.info("Garbage collecting all recovering regions.");
+        ZKUtil.deleteChildrenRecursively(watcher, watcher.recoveringRegionsZNode);
+      } else {
+        for (String curRegion : regions) {
+          String nodePath = ZKUtil.joinZNode(watcher.recoveringRegionsZNode, curRegion);
+          ZKUtil.deleteNodeRecursively(watcher, nodePath);
+        }
+      }
+    } catch (KeeperException e) {
+      LOG.warn("Cannot remove recovering regions from ZooKeeper", e);
+    }
   }
 
   private void setDone(String path, TerminationStatus status) {
@@ -859,9 +1063,131 @@ public class SplitLogManager extends ZooKeeperListener {
   }
 
   /**
-   * Keeps track of the batch of tasks submitted together by a caller in
-   * splitLogDistributed(). Clients threads use this object to wait for all
-   * their tasks to be done.
+   * Create znodes /hbase/recovering-regions/[region_ids...]/[failed region server names ...] for
+   * all regions of the passed in region servers
+   * @param serverName the name of a region server
+   * @param userRegions user regiones assigned on the region server
+   */
+  void markRegionsRecoveringInZK(final ServerName serverName, Set<HRegionInfo> userRegions)
+      throws KeeperException {
+    if (userRegions == null || !this.distributedLogReplay) {
+      return;
+    }
+
+    try {
+      this.recoveringRegionLock.lock();
+      // mark that we're creating recovering znodes
+      this.lastRecoveringNodeCreationTime = EnvironmentEdgeManager.currentTimeMillis();
+
+      for (HRegionInfo region : userRegions) {
+        String regionEncodeName = region.getEncodedName();
+        long retries = this.zkretries;
+
+        do {
+          String nodePath = ZKUtil.joinZNode(watcher.recoveringRegionsZNode, regionEncodeName);
+          long lastRecordedFlushedSequenceId = -1;
+          try {
+            long lastSequenceId = this.master.getServerManager().getLastFlushedSequenceId(
+              regionEncodeName.getBytes());
+
+            /*
+             * znode layout: .../region_id[last known flushed sequence id]/failed server[last known
+             * flushed sequence id for the server]
+             */
+            byte[] data = ZKUtil.getData(this.watcher, nodePath);
+            if (data == null) {
+              ZKUtil.createSetData(this.watcher, nodePath,
+                ZKUtil.positionToByteArray(lastSequenceId));
+            } else {
+              lastRecordedFlushedSequenceId = SplitLogManager.parseLastFlushedSequenceIdFrom(data);
+              if (lastRecordedFlushedSequenceId < lastSequenceId) {
+                // update last flushed sequence id in the region level
+                ZKUtil.setData(this.watcher, nodePath,
+                  ZKUtil.positionToByteArray(lastSequenceId));
+              }
+            }
+            // go one level deeper with server name
+            nodePath = ZKUtil.joinZNode(nodePath, serverName.getServerName());
+            if (lastSequenceId <= lastRecordedFlushedSequenceId) {
+              // the newly assigned RS failed even before any flush to the region
+              lastSequenceId = lastRecordedFlushedSequenceId;
+            }
+            ZKUtil.createSetData(this.watcher, nodePath,
+              ZKUtil.positionToByteArray(lastSequenceId));
+            LOG.debug("Mark region " + regionEncodeName + " recovering from failed region server "
+                + serverName);
+
+            // break retry loop
+            break;
+          } catch (KeeperException e) {
+            // ignore ZooKeeper exceptions inside retry loop
+            if (retries <= 1) {
+              throw e;
+            }
+            // wait a little bit for retry
+            try {
+              Thread.sleep(20);
+            } catch (Exception ignoreE) {
+              // ignore
+            }
+          }
+        } while ((--retries) > 0 && (!this.stopper.isStopped()));
+      }
+    } finally {
+      this.recoveringRegionLock.unlock();
+    }
+  }
+
+  /**
+   * @param bytes - Content of a failed region server or recovering region znode.
+   * @return long - The last flushed sequence Id for the region server
+   */
+  public static long parseLastFlushedSequenceIdFrom(final byte[] bytes) {
+    long lastRecordedFlushedSequenceId = -1l;
+    try {
+      lastRecordedFlushedSequenceId = ZKUtil.parseHLogPositionFrom(bytes);
+    } catch (DeserializationException e) {
+      lastRecordedFlushedSequenceId = -1l;
+      LOG.warn("Can't parse last flushed sequence Id", e);
+    }
+    return lastRecordedFlushedSequenceId;
+  }
+
+  /**
+   * This function is used in distributedLogReplay to fetch last flushed sequence id from ZK
+   * @param zkw
+   * @param serverName
+   * @param encodedRegionName
+   * @return the last flushed sequence id recorded in ZK of the region for <code>serverName<code>
+   * @throws IOException
+   */
+  public static long getLastFlushedSequenceId(ZooKeeperWatcher zkw, String serverName,
+      String encodedRegionName) throws IOException {
+    // when SplitLogWorker recovers a region by directly replaying unflushed WAL edits,
+    // last flushed sequence Id changes when newly assigned RS flushes writes to the region.
+    // If the newly assigned RS fails again(a chained RS failures scenario), the last flushed
+    // sequence Id name space (sequence Id only valid for a particular RS instance), changes 
+    // when different newly assigned RS flushes the region.
+    // Therefore, in this mode we need to fetch last sequence Ids from ZK where we keep history of
+    // last flushed sequence Id for each failed RS instance.
+    long lastFlushedSequenceId = -1;
+    String nodePath = ZKUtil.joinZNode(zkw.recoveringRegionsZNode, encodedRegionName);
+    nodePath = ZKUtil.joinZNode(nodePath, serverName);
+    try {
+      byte[] data = ZKUtil.getData(zkw, nodePath);
+      if (data != null) {
+        lastFlushedSequenceId = SplitLogManager.parseLastFlushedSequenceIdFrom(data);
+      }
+    } catch (KeeperException e) {
+      throw new IOException("Cannot get lastFlushedSequenceId from ZooKeeper for server="
+          + serverName + "; region=" + encodedRegionName, e);
+    }
+    return lastFlushedSequenceId;
+  }
+
+  /**
+   * Keeps track of the batch of tasks submitted together by a caller in splitLogDistributed().
+   * Clients threads use this object to wait for all their tasks to be done.
    * <p>
    * All access is synchronized.
    */
@@ -944,18 +1270,14 @@ public class SplitLogManager extends ZooKeeperListener {
     LOG.info("dead splitlog worker " + workerName);
   }
 
-  void handleDeadWorkers(List<ServerName> serverNames) {
-    List<ServerName> workerNames = new ArrayList<ServerName>(serverNames.size());
-    for (ServerName serverName : serverNames) {
-      workerNames.add(serverName);
-    }
+  void handleDeadWorkers(Set<ServerName> serverNames) {
     synchronized (deadWorkersLock) {
       if (deadWorkers == null) {
         deadWorkers = new HashSet<ServerName>(100);
       }
-      deadWorkers.addAll(workerNames);
+      deadWorkers.addAll(serverNames);
     }
-    LOG.info("dead splitlog workers " + workerNames);
+    LOG.info("dead splitlog workers " + serverNames);
   }
 
   /**
@@ -1051,6 +1373,20 @@ public class SplitLogManager extends ZooKeeperListener {
           deleteNode(tmpPath, zkretries);
         }
         failedDeletions.removeAll(tmpPaths);
+      }
+
+      // Garbage collect left-over /hbase/recovering-regions/... znode
+      long timeInterval = EnvironmentEdgeManager.currentTimeMillis()
+          - lastRecoveringNodeCreationTime;
+      if (!failedRecoveringRegionDeletions.isEmpty()
+          || (tot == 0 && tasks.size() == 0 && (timeInterval > checkRecoveringTimeThreshold))) {
+        // inside the function there have more checks before GC anything
+        Set<ServerName> previouslyFailedDeletoins = null;
+        if (!failedRecoveringRegionDeletions.isEmpty()) {
+          previouslyFailedDeletoins = new HashSet<ServerName>(failedRecoveringRegionDeletions);
+          failedRecoveringRegionDeletions.removeAll(previouslyFailedDeletoins);
+        }
+        removeRecoveringRegionsFromZK(previouslyFailedDeletoins);
       }
     }
   }

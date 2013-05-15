@@ -19,6 +19,8 @@
 package org.apache.hadoop.hbase.master.handler;
 
 import java.io.IOException;
+import java.util.HashSet;
+import java.util.Set;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -27,6 +29,7 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.executor.EventType;
+import org.apache.hadoop.hbase.master.AssignmentManager;
 import org.apache.hadoop.hbase.master.DeadServer;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.zookeeper.KeeperException;
@@ -47,30 +50,55 @@ public class MetaServerShutdownHandler extends ServerShutdownHandler {
   @Override
   public void process() throws IOException {
     boolean gotException = true; 
-    try{
+    try {
+      AssignmentManager am = this.services.getAssignmentManager();
       try {
-        LOG.info("Splitting META logs for " + serverName);
         if (this.shouldSplitHlog) {
-          this.services.getMasterFileSystem().splitMetaLog(serverName);
-        }
+          LOG.info("Splitting META logs for " + serverName);
+          if(this.distributedLogReplay) {
+            Set<HRegionInfo> regions = new HashSet<HRegionInfo>();
+            regions.add(HRegionInfo.FIRST_META_REGIONINFO);
+            this.services.getMasterFileSystem().prepareMetaLogReplay(serverName, regions);
+          } else {
+            this.services.getMasterFileSystem().splitMetaLog(serverName);
+          }
+        } 
       } catch (IOException ioe) {
         this.services.getExecutorService().submit(this);
         this.deadServers.add(serverName);
-        throw new IOException("failed log splitting for " +
-            serverName + ", will retry", ioe);
+        throw new IOException("failed log splitting for " + serverName + ", will retry", ioe);
       }
   
       // Assign meta if we were carrying it.
       // Check again: region may be assigned to other where because of RIT
       // timeout
-      if (this.services.getAssignmentManager().isCarryingMeta(serverName)) {
+      if (am.isCarryingMeta(serverName)) {
         LOG.info("Server " + serverName + " was carrying META. Trying to assign.");
-        this.services.getAssignmentManager().regionOffline(HRegionInfo.FIRST_META_REGIONINFO);
+        am.regionOffline(HRegionInfo.FIRST_META_REGIONINFO);
         verifyAndAssignMetaWithRetries();
       } else {
         LOG.info("META has been assigned to otherwhere, skip assigning.");
       }
-      
+
+      try {
+        if (this.shouldSplitHlog && this.distributedLogReplay) {
+          if (!am.waitOnRegionToClearRegionsInTransition(HRegionInfo.FIRST_META_REGIONINFO,
+            regionAssignmentWaitTimeout)) {
+            throw new IOException("Region " + HRegionInfo.FIRST_META_REGIONINFO.getEncodedName()
+                + " didn't complete assignment in time");
+          }
+          this.services.getMasterFileSystem().splitMetaLog(serverName);
+        }
+      } catch (Exception ex) {
+        if (ex instanceof IOException) {
+          this.services.getExecutorService().submit(this);
+          this.deadServers.add(serverName);
+          throw new IOException("failed log splitting for " + serverName + ", will retry", ex);
+        } else {
+          throw new IOException(ex);
+        }
+      }
+
       gotException = false;
     } finally {
       if (gotException){
@@ -78,7 +106,13 @@ public class MetaServerShutdownHandler extends ServerShutdownHandler {
         this.deadServers.finish(serverName);
       }     
     }
+    
     super.process();
+  }
+
+  @Override
+  boolean isCarryingMeta() {
+    return true;
   }
 
   /**

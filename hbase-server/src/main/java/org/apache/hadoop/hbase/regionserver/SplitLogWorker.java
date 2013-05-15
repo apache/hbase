@@ -20,7 +20,11 @@ package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
 import java.io.InterruptedIOException;
+import java.net.ConnectException;
+import java.net.SocketTimeoutException;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.commons.logging.Log;
@@ -29,10 +33,12 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.SplitLogCounters;
 import org.apache.hadoop.hbase.SplitLogTask;
+import org.apache.hadoop.hbase.client.RetriesExhaustedException;
+import org.apache.hadoop.hbase.exceptions.DeserializationException;
+import org.apache.hadoop.hbase.exceptions.NotServingRegionException;
 import org.apache.hadoop.hbase.master.SplitLogManager;
 import org.apache.hadoop.hbase.regionserver.wal.HLogSplitter;
 import org.apache.hadoop.hbase.util.CancelableProgressable;
@@ -70,6 +76,7 @@ import org.apache.zookeeper.data.Stat;
 @InterfaceAudience.Private
 public class SplitLogWorker extends ZooKeeperListener implements Runnable {
   private static final Log LOG = LogFactory.getLog(SplitLogWorker.class);
+  private static final int checkInterval = 5000; // 5 seconds
 
   Thread worker;
   private final ServerName serverName;
@@ -83,20 +90,30 @@ public class SplitLogWorker extends ZooKeeperListener implements Runnable {
   private final Object grabTaskLock = new Object();
   private boolean workerInGrabTask = false;
   private final int report_period;
+  private RegionServerServices server = null;
 
   public SplitLogWorker(ZooKeeperWatcher watcher, Configuration conf,
-      ServerName serverName, TaskExecutor splitTaskExecutor) {
+      RegionServerServices server, TaskExecutor splitTaskExecutor) {
+    super(watcher);
+    this.server = server;
+    this.serverName = server.getServerName();
+    this.splitTaskExecutor = splitTaskExecutor;
+    report_period = conf.getInt("hbase.splitlog.report.period",
+      conf.getInt("hbase.splitlog.manager.timeout", SplitLogManager.DEFAULT_TIMEOUT) / 3);
+  }
+
+  public SplitLogWorker(ZooKeeperWatcher watcher, Configuration conf, ServerName serverName,
+      TaskExecutor splitTaskExecutor) {
     super(watcher);
     this.serverName = serverName;
     this.splitTaskExecutor = splitTaskExecutor;
     report_period = conf.getInt("hbase.splitlog.report.period",
-      conf.getInt("hbase.splitlog.manager.timeout",
-        SplitLogManager.DEFAULT_TIMEOUT) / 2);
+      conf.getInt("hbase.splitlog.manager.timeout", SplitLogManager.DEFAULT_TIMEOUT) / 3);
   }
 
-  public SplitLogWorker(ZooKeeperWatcher watcher, final Configuration conf,
-      final ServerName serverName, final LastSequenceId sequenceIdChecker) {
-    this(watcher, conf, serverName, new TaskExecutor () {
+  public SplitLogWorker(final ZooKeeperWatcher watcher, final Configuration conf,
+      RegionServerServices server, final LastSequenceId sequenceIdChecker) {
+    this(watcher, conf, server, new TaskExecutor() {
       @Override
       public Status exec(String filename, CancelableProgressable p) {
         Path rootdir;
@@ -113,7 +130,7 @@ public class SplitLogWorker extends ZooKeeperListener implements Runnable {
         // encountered a bad non-retry-able persistent error.
         try {
           if (!HLogSplitter.splitLogFile(rootdir, fs.getFileStatus(new Path(rootdir, filename)),
-            fs, conf, p, sequenceIdChecker)) {
+            fs, conf, p, sequenceIdChecker, watcher)) {
             return Status.PREEMPTED;
           }
         } catch (InterruptedIOException iioe) {
@@ -121,8 +138,17 @@ public class SplitLogWorker extends ZooKeeperListener implements Runnable {
           return Status.RESIGNED;
         } catch (IOException e) {
           Throwable cause = e.getCause();
-          if (cause instanceof InterruptedException) {
+          if (e instanceof RetriesExhaustedException && (cause instanceof NotServingRegionException 
+                  || cause instanceof ConnectException 
+                  || cause instanceof SocketTimeoutException)) {
+            LOG.warn("log replaying of " + filename + " can't connect to the target regionserver, "
+            		+ "resigning", e);
+            return Status.RESIGNED;
+          } else if (cause instanceof InterruptedException) {
             LOG.warn("log splitting of " + filename + " interrupted, resigning", e);
+            return Status.RESIGNED;
+          } else if(cause instanceof KeeperException) {
+            LOG.warn("log splitting of " + filename + " hit ZooKeeper issue, resigning", e);
             return Status.RESIGNED;
           }
           LOG.warn("log splitting of " + filename + " failed, returning error", e);
@@ -204,7 +230,39 @@ public class SplitLogWorker extends ZooKeeperListener implements Runnable {
       synchronized (taskReadyLock) {
         while (seq_start == taskReadySeq) {
           try {
-            taskReadyLock.wait();
+            taskReadyLock.wait(checkInterval);
+            if (this.server != null) {
+              // check to see if we have stale recovering regions in our internal memory state
+              Map<String, HRegion> recoveringRegions = this.server.getRecoveringRegions();
+              if (!recoveringRegions.isEmpty()) {
+                // Make a local copy to prevent ConcurrentModificationException when other threads
+                // modify recoveringRegions
+                List<String> tmpCopy = new ArrayList<String>(recoveringRegions.keySet());
+                for (String region : tmpCopy) {
+                  String nodePath = ZKUtil.joinZNode(this.watcher.recoveringRegionsZNode, region);
+                  try {
+                    if (ZKUtil.checkExists(this.watcher, nodePath) == -1) {
+                      HRegion r = recoveringRegions.remove(region);
+                      if (r != null) {
+                        r.setRecovering(false);
+                      }
+                      LOG.debug("Mark recovering region:" + region + " up.");
+                    } else {
+                      // current check is a defensive(or redundant) mechanism to prevent us from
+                      // having stale recovering regions in our internal RS memory state while
+                      // zookeeper(source of truth) says differently. We stop at the first good one
+                      // because we should not have a single instance such as this in normal case so
+                      // check the first one is good enough.
+                      break;
+                    }
+                  } catch (KeeperException e) {
+                    // ignore zookeeper error
+                    LOG.debug("Got a zookeeper when trying to open a recovering region", e);
+                    break;
+                  }
+                }
+              }
+            }
           } catch (InterruptedException e) {
             LOG.info("SplitLogWorker interrupted while waiting for task," +
                 " exiting: " + e.toString() + (exitWorker ? "" :
@@ -214,6 +272,7 @@ public class SplitLogWorker extends ZooKeeperListener implements Runnable {
           }
         }
       }
+
     }
   }
 
@@ -463,9 +522,6 @@ public class SplitLogWorker extends ZooKeeperListener implements Runnable {
     }
   }
 
-
-
-
   @Override
   public void nodeDataChanged(String path) {
     // there will be a self generated dataChanged event every time attemptToOwnTask()
@@ -509,7 +565,6 @@ public class SplitLogWorker extends ZooKeeperListener implements Runnable {
     }
     return childrenPaths;
   }
-
 
   @Override
   public void nodeChildrenChanged(String path) {

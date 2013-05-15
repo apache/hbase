@@ -81,6 +81,13 @@ public interface MetricsRegionServerSource extends BaseSource {
   void updateAppend(long t);
 
   /**
+   * Update the Replay time histogram.
+   *
+   * @param t time it took
+   */
+  void updateReplay(long t);
+
+  /**
    * Increment the number of slow Puts that have happened.
    */
   void incrSlowPut();
@@ -188,6 +195,7 @@ public interface MetricsRegionServerSource extends BaseSource {
   static final String INCREMENT_KEY = "increment";
   static final String MUTATE_KEY = "mutate";
   static final String APPEND_KEY = "append";
+  static final String REPLAY_KEY = "replay";
   static final String SCAN_NEXT_KEY = "scanNext";
   static final String SLOW_MUTATE_KEY = "slowPutCount";
   static final String SLOW_GET_KEY = "slowGetCount";

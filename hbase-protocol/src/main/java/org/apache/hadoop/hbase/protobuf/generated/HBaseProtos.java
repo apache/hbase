@@ -3132,6 +3132,10 @@ public final class HBaseProtos {
     // optional bool split = 6;
     boolean hasSplit();
     boolean getSplit();
+    
+    // optional bool recovering = 7;
+    boolean hasRecovering();
+    boolean getRecovering();
   }
   public static final class RegionInfo extends
       com.google.protobuf.GeneratedMessage
@@ -3222,6 +3226,16 @@ public final class HBaseProtos {
       return split_;
     }
     
+    // optional bool recovering = 7;
+    public static final int RECOVERING_FIELD_NUMBER = 7;
+    private boolean recovering_;
+    public boolean hasRecovering() {
+      return ((bitField0_ & 0x00000040) == 0x00000040);
+    }
+    public boolean getRecovering() {
+      return recovering_;
+    }
+    
     private void initFields() {
       regionId_ = 0L;
       tableName_ = com.google.protobuf.ByteString.EMPTY;
@@ -3229,6 +3243,7 @@ public final class HBaseProtos {
       endKey_ = com.google.protobuf.ByteString.EMPTY;
       offline_ = false;
       split_ = false;
+      recovering_ = false;
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
@@ -3268,6 +3283,9 @@ public final class HBaseProtos {
       if (((bitField0_ & 0x00000020) == 0x00000020)) {
         output.writeBool(6, split_);
       }
+      if (((bitField0_ & 0x00000040) == 0x00000040)) {
+        output.writeBool(7, recovering_);
+      }
       getUnknownFields().writeTo(output);
     }
     
@@ -3300,6 +3318,10 @@ public final class HBaseProtos {
       if (((bitField0_ & 0x00000020) == 0x00000020)) {
         size += com.google.protobuf.CodedOutputStream
           .computeBoolSize(6, split_);
+      }
+      if (((bitField0_ & 0x00000040) == 0x00000040)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeBoolSize(7, recovering_);
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
@@ -3354,6 +3376,11 @@ public final class HBaseProtos {
         result = result && (getSplit()
             == other.getSplit());
       }
+      result = result && (hasRecovering() == other.hasRecovering());
+      if (hasRecovering()) {
+        result = result && (getRecovering()
+            == other.getRecovering());
+      }
       result = result &&
           getUnknownFields().equals(other.getUnknownFields());
       return result;
@@ -3386,6 +3413,10 @@ public final class HBaseProtos {
       if (hasSplit()) {
         hash = (37 * hash) + SPLIT_FIELD_NUMBER;
         hash = (53 * hash) + hashBoolean(getSplit());
+      }
+      if (hasRecovering()) {
+        hash = (37 * hash) + RECOVERING_FIELD_NUMBER;
+        hash = (53 * hash) + hashBoolean(getRecovering());
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
       return hash;
@@ -3515,6 +3546,8 @@ public final class HBaseProtos {
         bitField0_ = (bitField0_ & ~0x00000010);
         split_ = false;
         bitField0_ = (bitField0_ & ~0x00000020);
+        recovering_ = false;
+        bitField0_ = (bitField0_ & ~0x00000040);
         return this;
       }
       
@@ -3577,6 +3610,10 @@ public final class HBaseProtos {
           to_bitField0_ |= 0x00000020;
         }
         result.split_ = split_;
+        if (((from_bitField0_ & 0x00000040) == 0x00000040)) {
+          to_bitField0_ |= 0x00000040;
+        }
+        result.recovering_ = recovering_;
         result.bitField0_ = to_bitField0_;
         onBuilt();
         return result;
@@ -3610,6 +3647,9 @@ public final class HBaseProtos {
         }
         if (other.hasSplit()) {
           setSplit(other.getSplit());
+        }
+        if (other.hasRecovering()) {
+          setRecovering(other.getRecovering());
         }
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
@@ -3678,6 +3718,11 @@ public final class HBaseProtos {
             case 48: {
               bitField0_ |= 0x00000020;
               split_ = input.readBool();
+              break;
+            }
+            case 56: {
+              bitField0_ |= 0x00000040;
+              recovering_ = input.readBool();
               break;
             }
           }
@@ -3817,6 +3862,27 @@ public final class HBaseProtos {
       public Builder clearSplit() {
         bitField0_ = (bitField0_ & ~0x00000020);
         split_ = false;
+        onChanged();
+        return this;
+      }
+      
+      // optional bool recovering = 7;
+      private boolean recovering_ ;
+      public boolean hasRecovering() {
+        return ((bitField0_ & 0x00000040) == 0x00000040);
+      }
+      public boolean getRecovering() {
+        return recovering_;
+      }
+      public Builder setRecovering(boolean value) {
+        bitField0_ |= 0x00000040;
+        recovering_ = value;
+        onChanged();
+        return this;
+      }
+      public Builder clearRecovering() {
+        bitField0_ = (bitField0_ & ~0x00000040);
+        recovering_ = false;
         onChanged();
         return this;
       }
@@ -14719,60 +14785,60 @@ public final class HBaseProtos {
       "hema\022&\n\rconfiguration\030\004 \003(\0132\017.NameString" +
       "Pair\"o\n\022ColumnFamilySchema\022\014\n\004name\030\001 \002(\014" +
       "\022#\n\nattributes\030\002 \003(\0132\017.BytesBytesPair\022&\n" +
-      "\rconfiguration\030\003 \003(\0132\017.NameStringPair\"s\n",
-      "\nRegionInfo\022\020\n\010regionId\030\001 \002(\004\022\021\n\ttableNa" +
-      "me\030\002 \002(\014\022\020\n\010startKey\030\003 \001(\014\022\016\n\006endKey\030\004 \001" +
-      "(\014\022\017\n\007offline\030\005 \001(\010\022\r\n\005split\030\006 \001(\010\"0\n\014Fa" +
-      "voredNodes\022 \n\013favoredNode\030\001 \003(\0132\013.Server" +
-      "Name\"\225\001\n\017RegionSpecifier\0222\n\004type\030\001 \002(\0162$" +
-      ".RegionSpecifier.RegionSpecifierType\022\r\n\005" +
-      "value\030\002 \002(\014\"?\n\023RegionSpecifierType\022\017\n\013RE" +
-      "GION_NAME\020\001\022\027\n\023ENCODED_REGION_NAME\020\002\"\260\003\n" +
-      "\nRegionLoad\022)\n\017regionSpecifier\030\001 \002(\0132\020.R" +
-      "egionSpecifier\022\016\n\006stores\030\002 \001(\r\022\022\n\nstoref",
-      "iles\030\003 \001(\r\022\037\n\027storeUncompressedSizeMB\030\004 " +
-      "\001(\r\022\027\n\017storefileSizeMB\030\005 \001(\r\022\026\n\016memstore" +
-      "SizeMB\030\006 \001(\r\022\034\n\024storefileIndexSizeMB\030\007 \001" +
-      "(\r\022\031\n\021readRequestsCount\030\010 \001(\004\022\032\n\022writeRe" +
-      "questsCount\030\t \001(\004\022\032\n\022totalCompactingKVs\030" +
-      "\n \001(\004\022\033\n\023currentCompactedKVs\030\013 \001(\004\022\027\n\017ro" +
-      "otIndexSizeKB\030\014 \001(\r\022\036\n\026totalStaticIndexS" +
-      "izeKB\030\r \001(\r\022\036\n\026totalStaticBloomSizeKB\030\016 " +
-      "\001(\r\022\032\n\022completeSequenceId\030\017 \001(\004\"\372\001\n\nServ" +
-      "erLoad\022\030\n\020numberOfRequests\030\001 \001(\r\022\035\n\025tota",
-      "lNumberOfRequests\030\002 \001(\r\022\022\n\nusedHeapMB\030\003 " +
-      "\001(\r\022\021\n\tmaxHeapMB\030\004 \001(\r\022 \n\013regionLoads\030\005 " +
-      "\003(\0132\013.RegionLoad\022\"\n\014coprocessors\030\006 \003(\0132\014" +
-      ".Coprocessor\022\027\n\017reportStartTime\030\007 \001(\004\022\025\n" +
-      "\rreportEndTime\030\010 \001(\004\022\026\n\016infoServerPort\030\t" +
-      " \001(\r\"%\n\tTimeRange\022\014\n\004from\030\001 \001(\004\022\n\n\002to\030\002 " +
-      "\001(\004\"0\n\006Filter\022\014\n\004name\030\001 \002(\t\022\030\n\020serialize" +
-      "dFilter\030\002 \001(\014\"x\n\010KeyValue\022\013\n\003row\030\001 \002(\014\022\016" +
-      "\n\006family\030\002 \002(\014\022\021\n\tqualifier\030\003 \002(\014\022\021\n\ttim" +
-      "estamp\030\004 \001(\004\022\032\n\007keyType\030\005 \001(\0162\t.CellType",
-      "\022\r\n\005value\030\006 \001(\014\"?\n\nServerName\022\020\n\010hostNam" +
-      "e\030\001 \002(\t\022\014\n\004port\030\002 \001(\r\022\021\n\tstartCode\030\003 \001(\004" +
-      "\"\033\n\013Coprocessor\022\014\n\004name\030\001 \002(\t\"-\n\016NameStr" +
-      "ingPair\022\014\n\004name\030\001 \002(\t\022\r\n\005value\030\002 \002(\t\",\n\r" +
-      "NameBytesPair\022\014\n\004name\030\001 \002(\t\022\r\n\005value\030\002 \001" +
-      "(\014\"/\n\016BytesBytesPair\022\r\n\005first\030\001 \002(\014\022\016\n\006s" +
-      "econd\030\002 \002(\014\",\n\rNameInt64Pair\022\014\n\004name\030\001 \001" +
-      "(\t\022\r\n\005value\030\002 \001(\003\"\255\001\n\023SnapshotDescriptio" +
-      "n\022\014\n\004name\030\001 \002(\t\022\r\n\005table\030\002 \001(\t\022\027\n\014creati" +
-      "onTime\030\003 \001(\003:\0010\022.\n\004type\030\004 \001(\0162\031.Snapshot",
-      "Description.Type:\005FLUSH\022\017\n\007version\030\005 \001(\005" +
-      "\"\037\n\004Type\022\014\n\010DISABLED\020\000\022\t\n\005FLUSH\020\001\"\n\n\010Emp" +
-      "tyMsg\"\032\n\007LongMsg\022\017\n\007longMsg\030\001 \002(\003\"&\n\rBig" +
-      "DecimalMsg\022\025\n\rbigdecimalMsg\030\001 \002(\014\"1\n\004UUI" +
-      "D\022\024\n\014leastSigBits\030\001 \002(\004\022\023\n\013mostSigBits\030\002" +
-      " \002(\004*`\n\010CellType\022\013\n\007MINIMUM\020\000\022\007\n\003PUT\020\004\022\n" +
-      "\n\006DELETE\020\010\022\021\n\rDELETE_COLUMN\020\014\022\021\n\rDELETE_" +
-      "FAMILY\020\016\022\014\n\007MAXIMUM\020\377\001*r\n\013CompareType\022\010\n" +
-      "\004LESS\020\000\022\021\n\rLESS_OR_EQUAL\020\001\022\t\n\005EQUAL\020\002\022\r\n" +
-      "\tNOT_EQUAL\020\003\022\024\n\020GREATER_OR_EQUAL\020\004\022\013\n\007GR",
-      "EATER\020\005\022\t\n\005NO_OP\020\006B>\n*org.apache.hadoop." +
-      "hbase.protobuf.generatedB\013HBaseProtosH\001\240" +
-      "\001\001"
+      "\rconfiguration\030\003 \003(\0132\017.NameStringPair\"\207\001",
+      "\n\nRegionInfo\022\020\n\010regionId\030\001 \002(\004\022\021\n\ttableN" +
+      "ame\030\002 \002(\014\022\020\n\010startKey\030\003 \001(\014\022\016\n\006endKey\030\004 " +
+      "\001(\014\022\017\n\007offline\030\005 \001(\010\022\r\n\005split\030\006 \001(\010\022\022\n\nr" +
+      "ecovering\030\007 \001(\010\"0\n\014FavoredNodes\022 \n\013favor" +
+      "edNode\030\001 \003(\0132\013.ServerName\"\225\001\n\017RegionSpec" +
+      "ifier\0222\n\004type\030\001 \002(\0162$.RegionSpecifier.Re" +
+      "gionSpecifierType\022\r\n\005value\030\002 \002(\014\"?\n\023Regi" +
+      "onSpecifierType\022\017\n\013REGION_NAME\020\001\022\027\n\023ENCO" +
+      "DED_REGION_NAME\020\002\"\260\003\n\nRegionLoad\022)\n\017regi" +
+      "onSpecifier\030\001 \002(\0132\020.RegionSpecifier\022\016\n\006s",
+      "tores\030\002 \001(\r\022\022\n\nstorefiles\030\003 \001(\r\022\037\n\027store" +
+      "UncompressedSizeMB\030\004 \001(\r\022\027\n\017storefileSiz" +
+      "eMB\030\005 \001(\r\022\026\n\016memstoreSizeMB\030\006 \001(\r\022\034\n\024sto" +
+      "refileIndexSizeMB\030\007 \001(\r\022\031\n\021readRequestsC" +
+      "ount\030\010 \001(\004\022\032\n\022writeRequestsCount\030\t \001(\004\022\032" +
+      "\n\022totalCompactingKVs\030\n \001(\004\022\033\n\023currentCom" +
+      "pactedKVs\030\013 \001(\004\022\027\n\017rootIndexSizeKB\030\014 \001(\r" +
+      "\022\036\n\026totalStaticIndexSizeKB\030\r \001(\r\022\036\n\026tota" +
+      "lStaticBloomSizeKB\030\016 \001(\r\022\032\n\022completeSequ" +
+      "enceId\030\017 \001(\004\"\372\001\n\nServerLoad\022\030\n\020numberOfR",
+      "equests\030\001 \001(\r\022\035\n\025totalNumberOfRequests\030\002" +
+      " \001(\r\022\022\n\nusedHeapMB\030\003 \001(\r\022\021\n\tmaxHeapMB\030\004 " +
+      "\001(\r\022 \n\013regionLoads\030\005 \003(\0132\013.RegionLoad\022\"\n" +
+      "\014coprocessors\030\006 \003(\0132\014.Coprocessor\022\027\n\017rep" +
+      "ortStartTime\030\007 \001(\004\022\025\n\rreportEndTime\030\010 \001(" +
+      "\004\022\026\n\016infoServerPort\030\t \001(\r\"%\n\tTimeRange\022\014" +
+      "\n\004from\030\001 \001(\004\022\n\n\002to\030\002 \001(\004\"0\n\006Filter\022\014\n\004na" +
+      "me\030\001 \002(\t\022\030\n\020serializedFilter\030\002 \001(\014\"x\n\010Ke" +
+      "yValue\022\013\n\003row\030\001 \002(\014\022\016\n\006family\030\002 \002(\014\022\021\n\tq" +
+      "ualifier\030\003 \002(\014\022\021\n\ttimestamp\030\004 \001(\004\022\032\n\007key",
+      "Type\030\005 \001(\0162\t.CellType\022\r\n\005value\030\006 \001(\014\"?\n\n" +
+      "ServerName\022\020\n\010hostName\030\001 \002(\t\022\014\n\004port\030\002 \001" +
+      "(\r\022\021\n\tstartCode\030\003 \001(\004\"\033\n\013Coprocessor\022\014\n\004" +
+      "name\030\001 \002(\t\"-\n\016NameStringPair\022\014\n\004name\030\001 \002" +
+      "(\t\022\r\n\005value\030\002 \002(\t\",\n\rNameBytesPair\022\014\n\004na" +
+      "me\030\001 \002(\t\022\r\n\005value\030\002 \001(\014\"/\n\016BytesBytesPai" +
+      "r\022\r\n\005first\030\001 \002(\014\022\016\n\006second\030\002 \002(\014\",\n\rName" +
+      "Int64Pair\022\014\n\004name\030\001 \001(\t\022\r\n\005value\030\002 \001(\003\"\255" +
+      "\001\n\023SnapshotDescription\022\014\n\004name\030\001 \002(\t\022\r\n\005" +
+      "table\030\002 \001(\t\022\027\n\014creationTime\030\003 \001(\003:\0010\022.\n\004",
+      "type\030\004 \001(\0162\031.SnapshotDescription.Type:\005F" +
+      "LUSH\022\017\n\007version\030\005 \001(\005\"\037\n\004Type\022\014\n\010DISABLE" +
+      "D\020\000\022\t\n\005FLUSH\020\001\"\n\n\010EmptyMsg\"\032\n\007LongMsg\022\017\n" +
+      "\007longMsg\030\001 \002(\003\"&\n\rBigDecimalMsg\022\025\n\rbigde" +
+      "cimalMsg\030\001 \002(\014\"1\n\004UUID\022\024\n\014leastSigBits\030\001" +
+      " \002(\004\022\023\n\013mostSigBits\030\002 \002(\004*`\n\010CellType\022\013\n" +
+      "\007MINIMUM\020\000\022\007\n\003PUT\020\004\022\n\n\006DELETE\020\010\022\021\n\rDELET" +
+      "E_COLUMN\020\014\022\021\n\rDELETE_FAMILY\020\016\022\014\n\007MAXIMUM" +
+      "\020\377\001*r\n\013CompareType\022\010\n\004LESS\020\000\022\021\n\rLESS_OR_" +
+      "EQUAL\020\001\022\t\n\005EQUAL\020\002\022\r\n\tNOT_EQUAL\020\003\022\024\n\020GRE",
+      "ATER_OR_EQUAL\020\004\022\013\n\007GREATER\020\005\022\t\n\005NO_OP\020\006B" +
+      ">\n*org.apache.hadoop.hbase.protobuf.gene" +
+      "ratedB\013HBaseProtosH\001\240\001\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -14808,7 +14874,7 @@ public final class HBaseProtos {
           internal_static_RegionInfo_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_RegionInfo_descriptor,
-              new java.lang.String[] { "RegionId", "TableName", "StartKey", "EndKey", "Offline", "Split", },
+              new java.lang.String[] { "RegionId", "TableName", "StartKey", "EndKey", "Offline", "Split", "Recovering", },
               org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo.class,
               org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo.Builder.class);
           internal_static_FavoredNodes_descriptor =

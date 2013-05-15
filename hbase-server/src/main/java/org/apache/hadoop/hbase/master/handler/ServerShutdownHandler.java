@@ -20,13 +20,16 @@ package org.apache.hadoop.hbase.master.handler;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableMap;
+import java.util.Set;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
@@ -56,6 +59,8 @@ public class ServerShutdownHandler extends EventHandler {
   protected final MasterServices services;
   protected final DeadServer deadServers;
   protected final boolean shouldSplitHlog; // whether to split HLog or not
+  protected final boolean distributedLogReplay;
+  protected final int regionAssignmentWaitTimeout;
 
   public ServerShutdownHandler(final Server server, final MasterServices services,
       final DeadServer deadServers, final ServerName serverName,
@@ -76,6 +81,11 @@ public class ServerShutdownHandler extends EventHandler {
       LOG.warn(this.serverName + " is NOT in deadservers; it should be!");
     }
     this.shouldSplitHlog = shouldSplitHlog;
+    this.distributedLogReplay = server.getConfiguration().getBoolean(
+          HConstants.DISTRIBUTED_LOG_REPLAY_KEY, 
+          HConstants.DEFAULT_DISTRIBUTED_LOG_REPLAY_CONFIG);
+    this.regionAssignmentWaitTimeout = server.getConfiguration().getInt(
+      HConstants.LOG_REPLAY_WAIT_REGION_TIMEOUT, 15000);
   }
 
   @Override
@@ -107,21 +117,7 @@ public class ServerShutdownHandler extends EventHandler {
   public void process() throws IOException {
     final ServerName serverName = this.serverName;
     try {
-      try {
-        if (this.shouldSplitHlog) {
-          LOG.info("Splitting logs for " + serverName);
-          this.services.getMasterFileSystem().splitLog(serverName);
-        } else {
-          LOG.info("Skipping log splitting for " + serverName);
-        }
-      } catch (IOException ioe) {
-        //typecast to SSH so that we make sure that it is the SSH instance that
-        //gets submitted as opposed to MSSH or some other derived instance of SSH
-        this.services.getExecutorService().submit((ServerShutdownHandler)this);
-        this.deadServers.add(serverName);
-        throw new IOException("failed log splitting for " +
-          serverName + ", will retry", ioe);
-      }
+
       // We don't want worker thread in the MetaServerShutdownHandler
       // executor pool to block by waiting availability of .META.
       // Otherwise, it could run into the following issue:
@@ -145,7 +141,7 @@ public class ServerShutdownHandler extends EventHandler {
       // the dead server for further processing too.
       if (isCarryingMeta() // .META.
           || !services.getAssignmentManager().isFailoverCleanupDone()) {
-        this.services.getServerManager().processDeadServer(serverName);
+        this.services.getServerManager().processDeadServer(serverName, this.shouldSplitHlog);
         return;
       }
 
@@ -181,6 +177,23 @@ public class ServerShutdownHandler extends EventHandler {
       }
       if (this.server.isStopped()) {
         throw new IOException("Server is stopped");
+      }
+
+      try {
+        if (this.shouldSplitHlog) {
+          LOG.info("Splitting logs for " + serverName + " before assignment.");
+          if(this.distributedLogReplay){
+            Set<ServerName> serverNames = new HashSet<ServerName>();
+            serverNames.add(serverName);
+            this.services.getMasterFileSystem().prepareLogReplay(serverNames);
+          } else {
+            this.services.getMasterFileSystem().splitLog(serverName);
+          }
+        } else {
+          LOG.info("Skipping log splitting for " + serverName);
+        }
+      } catch (IOException ioe) {
+        resubmit(serverName, ioe);
       }
 
       // Clean out anything in regions in transition.  Being conservative and
@@ -258,16 +271,45 @@ public class ServerShutdownHandler extends EventHandler {
           }
         }
       }
+
       try {
         am.assign(toAssignRegions);
       } catch (InterruptedException ie) {
         LOG.error("Caught " + ie + " during round-robin assignment");
         throw new IOException(ie);
       }
+
+      try {
+        if (this.shouldSplitHlog && this.distributedLogReplay) {
+          // wait for region assignment completes
+          for (HRegionInfo hri : toAssignRegions) {
+            if (!am.waitOnRegionToClearRegionsInTransition(hri, regionAssignmentWaitTimeout)) {
+              throw new IOException("Region " + hri.getEncodedName()
+                  + " didn't complete assignment in time");
+            }
+          }
+          this.services.getMasterFileSystem().splitLog(serverName);
+        }
+      } catch (Exception ex) {
+        if (ex instanceof IOException) {
+          resubmit(serverName, (IOException)ex);
+        } else {
+          throw new IOException(ex);
+        }
+      }
     } finally {
       this.deadServers.finish(serverName);
     }
+
     LOG.info("Finished processing of shutdown of " + serverName);
+  }
+
+  private void resubmit(final ServerName serverName, IOException ex) throws IOException {
+    // typecast to SSH so that we make sure that it is the SSH instance that
+    // gets submitted as opposed to MSSH or some other derived instance of SSH
+    this.services.getExecutorService().submit((ServerShutdownHandler) this);
+    this.deadServers.add(serverName);
+    throw new IOException("failed log splitting for " + serverName + ", will retry", ex);
   }
 
   /**

@@ -181,4 +181,9 @@ public interface MasterServices extends Server {
   public void dispatchMergingRegions(final HRegionInfo region_a,
       final HRegionInfo region_b, final boolean forcible) throws IOException;
 
+  /**
+   * @return true if master is initialized
+   */
+  public boolean isInitialized();
+
 }

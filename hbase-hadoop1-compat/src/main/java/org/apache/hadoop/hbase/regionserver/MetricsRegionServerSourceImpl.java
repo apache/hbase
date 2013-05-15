@@ -38,6 +38,7 @@ public class MetricsRegionServerSourceImpl
   private final MetricHistogram getHisto;
   private final MetricHistogram incrementHisto;
   private final MetricHistogram appendHisto;
+  private final MetricHistogram replayHisto;
   private final MetricMutableCounterLong slowPut;
   private final MetricMutableCounterLong slowDelete;
   private final MetricMutableCounterLong slowGet;
@@ -70,6 +71,8 @@ public class MetricsRegionServerSourceImpl
 
     appendHisto = getMetricsRegistry().newHistogram(APPEND_KEY);
     slowAppend = getMetricsRegistry().newCounter(SLOW_APPEND_KEY, SLOW_APPEND_DESC, 0l);
+
+    replayHisto = getMetricsRegistry().newHistogram(REPLAY_KEY);
   }
 
   @Override
@@ -95,6 +98,11 @@ public class MetricsRegionServerSourceImpl
   @Override
   public void updateAppend(long t) {
     appendHisto.add(t);
+  }
+
+  @Override
+  public void updateReplay(long t) {
+    replayHisto.add(t);
   }
 
   @Override

@@ -87,4 +87,8 @@ public class MetricsRegionServer {
     }
     serverSource.updateAppend(t);
   }
+
+  public void updateReplay(long t){
+    serverSource.updateReplay(t);
+  }
 }

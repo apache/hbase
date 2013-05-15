@@ -1221,7 +1221,7 @@ public class TestHLogSplit {
     generateHLogs(1, 10, -1);
     FileStatus logfile = fs.listStatus(HLOGDIR)[0];
     fs.initialize(fs.getUri(), conf);
-    HLogSplitter.splitLogFile(HBASEDIR, logfile, fs, conf, reporter, null);
+    HLogSplitter.splitLogFile(HBASEDIR, logfile, fs, conf, reporter);
     HLogSplitter.finishSplitLogFile(HBASEDIR, OLDLOGDIR, logfile.getPath()
         .toString(), conf);
 

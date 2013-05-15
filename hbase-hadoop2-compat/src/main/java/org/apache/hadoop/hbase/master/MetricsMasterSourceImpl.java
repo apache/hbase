@@ -45,6 +45,8 @@ public class MetricsMasterSourceImpl
   private MutableStat snapshotTimeHisto;
   private MutableStat snapshotCloneTimeHisto;
   private MutableStat snapshotRestoreTimeHisto;
+  private MutableHistogram metaSplitTimeHisto;
+  private MutableHistogram metaSplitSizeHisto;
 
   public MetricsMasterSourceImpl(MetricsMasterWrapper masterWrapper) {
     this(METRICS_NAME,
@@ -79,6 +81,8 @@ public class MetricsMasterSourceImpl
         SNAPSHOT_CLONE_TIME_NAME, SNAPSHOT_CLONE_TIME_DESC, "Ops", "Time", true);
     snapshotRestoreTimeHisto = metricsRegistry.newStat(
         SNAPSHOT_RESTORE_TIME_NAME, SNAPSHOT_RESTORE_TIME_DESC, "Ops", "Time", true);
+    metaSplitTimeHisto = metricsRegistry.newHistogram(META_SPLIT_TIME_NAME, META_SPLIT_TIME_DESC);
+    metaSplitSizeHisto = metricsRegistry.newHistogram(META_SPLIT_SIZE_NAME, META_SPLIT_SIZE_DESC);
   }
 
   public void incRequests(final int inc) {
@@ -120,6 +124,16 @@ public class MetricsMasterSourceImpl
   @Override
   public void updateSnapshotRestoreTime(long time) {
     snapshotRestoreTimeHisto.add(time);
+  }
+
+  @Override
+  public void updateMetaWALSplitTime(long time) {
+    metaSplitTimeHisto.add(time);
+  }
+
+  @Override
+  public void updateMetaWALSplitSize(long size) {
+    metaSplitSizeHisto.add(size);
   }
 
   @Override

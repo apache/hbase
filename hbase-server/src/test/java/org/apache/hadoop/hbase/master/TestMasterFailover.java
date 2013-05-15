@@ -783,6 +783,7 @@ public class TestMasterFailover {
     while (master.getServerManager().areDeadServersInProgress()) {
       Thread.sleep(10);
     }
+    
     // Failover should be completed, now wait for no RIT
     log("Waiting for no more RIT");
     ZKAssign.blockUntilNoRIT(zkw);
