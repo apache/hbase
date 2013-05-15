@@ -762,6 +762,12 @@ public class TestWALReplay {
         throw new RuntimeException("Exception flushing", e);
       }
     }
+
+    @Override
+    public void requestDelayedFlush(HRegion region, long when) {
+      // TODO Auto-generated method stub
+      
+    }
   }
 
   private void addWALEdits (final byte [] tableName, final HRegionInfo hri,

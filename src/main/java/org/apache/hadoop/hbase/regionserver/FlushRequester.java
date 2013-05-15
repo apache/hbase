@@ -30,4 +30,12 @@ public interface FlushRequester {
    * @param region the HRegion requesting the cache flush
    */
   void requestFlush(HRegion region);
+
+  /**
+   * Tell the listener the cache needs to be flushed after a delay
+   *
+   * @param region the HRegion requesting the cache flush
+   * @param delay after how much time should the flush happen
+   */
+  void requestDelayedFlush(HRegion region, long delay);
 }

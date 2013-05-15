@@ -31,7 +31,6 @@ import java.lang.reflect.Method;
 import java.net.BindException;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
@@ -210,7 +209,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
   private HFileSystem fs;
   private boolean useHBaseChecksum; // verify hbase checksums?
   private Path rootDir;
-  private final Random rand = new Random();
+  private final Random rand;
 
   //RegionName vs current action in progress
   //true - if open region action in progress
@@ -290,6 +289,11 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
    * Check for compactions requests.
    */
   Chore compactionChecker;
+
+  /*
+   * Check for flushes
+   */
+  Chore periodicFlusher;
 
   // HLog and HLog roller. log is protected rather than private to avoid
   // eclipse warning when accessed by inner classes
@@ -443,6 +447,8 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     if (initialIsa.getAddress() == null) {
       throw new IllegalArgumentException("Failed resolve of " + initialIsa);
     }
+
+    this.rand = new Random(initialIsa.hashCode());
     this.rpcServer = HBaseRPC.getServer(this,
       new Class<?>[]{HRegionInterface.class, HBaseRPCErrorHandler.class,
         OnlineRegions.class},
@@ -696,6 +702,8 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
       ".multiplier", 1000);
     this.compactionChecker = new CompactionChecker(this,
       this.threadWakeFrequency * multiplier, this);
+
+    this.periodicFlusher = new PeriodicMemstoreFlusher(this.threadWakeFrequency, this);
 
     // Health checker thread.
     int sleepTime = this.conf.getInt(HConstants.HEALTH_CHORE_WAKE_FREQ,
@@ -1348,6 +1356,36 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     }
   }
 
+  class PeriodicMemstoreFlusher extends Chore {
+    final HRegionServer server;
+    final static int RANGE_OF_DELAY = 20000; //millisec
+    final static int MIN_DELAY_TIME = 3000; //millisec
+    public PeriodicMemstoreFlusher(int cacheFlushInterval, final HRegionServer server) {
+      super(server.getServerName() + "-MemstoreFlusherChore", cacheFlushInterval, server);
+      this.server = server;
+    }
+
+    @Override
+    protected void chore() {
+      for (HRegion r : this.server.onlineRegions.values()) {
+        if (r == null)
+          continue;
+        if (r.shouldFlush()) {
+          FlushRequester requester = server.getFlushRequester();
+          if (requester != null) {
+            long randomDelay = rand.nextInt(RANGE_OF_DELAY) + MIN_DELAY_TIME;
+            LOG.info(getName() + " requesting flush for region " + r.getRegionNameAsString() + 
+                " after a delay of " + randomDelay);
+            //Throttle the flushes by putting a delay. If we don't throttle, and there
+            //is a balanced write-load on the regions in a table, we might end up 
+            //overwhelming the filesystem with too many flushes at once.
+            requester.requestDelayedFlush(r, randomDelay);
+          }
+        }
+      }
+    }
+  }
+
   /**
    * Report the status of the server. A server is online once all the startup is
    * completed (setting up filesystem, starting service threads, etc.). This
@@ -1659,6 +1697,8 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
         uncaughtExceptionHandler);
     Threads.setDaemonThreadRunning(this.compactionChecker.getThread(), n +
       ".compactionChecker", uncaughtExceptionHandler);
+    Threads.setDaemonThreadRunning(this.periodicFlusher.getThread(), n +
+        ".periodicFlusher", uncaughtExceptionHandler);
     if (this.healthCheckChore != null) {
       Threads.setDaemonThreadRunning(this.healthCheckChore.getThread(), n + ".healthChecker",
           uncaughtExceptionHandler);
@@ -1739,7 +1779,8 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     // Verify that all threads are alive
     if (!(leases.isAlive()
         && cacheFlusher.isAlive() && hlogRoller.isAlive()
-        && this.compactionChecker.isAlive())) {
+        && this.compactionChecker.isAlive())
+        && this.periodicFlusher.isAlive()) {
       stop("One or more threads are no longer alive -- stop");
       return false;
     }
@@ -1916,6 +1957,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
    */
   protected void join() {
     Threads.shutdown(this.compactionChecker.getThread());
+    Threads.shutdown(this.periodicFlusher.getThread());
     Threads.shutdown(this.cacheFlusher.getThread());
     if (this.healthCheckChore != null) {
       Threads.shutdown(this.healthCheckChore.getThread());

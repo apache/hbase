@@ -353,6 +353,14 @@
     </description>
   </property>
   <property>
+    <name>hbase.regionserver.optionalcacheflushinterval</name>
+    <value>3600000</value>
+    <description>
+    Maximum amount of time an edit lives in memory before being automatically flushed.
+    Default 1 hour. Set it to 0 to disable automatic flushing.
+    </description>
+  </property>
+  <property>
     <name>hbase.hregion.memstore.flush.size</name>
     <value>134217728</value>
     <description>

@@ -322,6 +322,18 @@ class MemStoreFlusher extends HasThread implements FlushRequester {
     }
   }
 
+  public void requestDelayedFlush(HRegion r, long delay) {
+    synchronized (regionsInQueue) {
+      if (!regionsInQueue.containsKey(r)) {
+        // This entry has some delay
+        FlushRegionEntry fqe = new FlushRegionEntry(r);
+        fqe.requeue(delay);
+        this.regionsInQueue.put(r, fqe);
+        this.flushQueue.add(fqe);
+      }
+    }
+  }
+
   public int getFlushQueueSize() {
     return flushQueue.size();
   }

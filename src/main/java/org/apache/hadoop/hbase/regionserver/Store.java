@@ -513,6 +513,13 @@ public class Store extends SchemaConfigured implements HeapSize {
   }
 
   /**
+   * When was the oldest edit done in the memstore
+   */
+  public long timeOfOldestEdit() {
+    return memstore.timeOfOldestEdit();
+  }
+
+  /**
    * Adds a value to the memstore
    *
    * @param kv
