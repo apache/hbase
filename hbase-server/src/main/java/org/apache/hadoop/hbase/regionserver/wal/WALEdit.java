@@ -83,6 +83,7 @@ public class WALEdit implements Writable, HeapSize {
   static final byte[] COMPLETE_CACHE_FLUSH = Bytes.toBytes("HBASE::CACHEFLUSH");
   static final byte[] COMPACTION = Bytes.toBytes("HBASE::COMPACTION");
   private final int VERSION_2 = -1;
+  private final boolean isReplay;
 
   private final ArrayList<KeyValue> kvs = new ArrayList<KeyValue>();
 
@@ -93,6 +94,11 @@ public class WALEdit implements Writable, HeapSize {
   private CompressionContext compressionContext;
 
   public WALEdit() {
+    this(false);
+  }
+
+  public WALEdit(boolean isReplay) {
+    this.isReplay = isReplay;
   }
 
   /**
@@ -101,6 +107,14 @@ public class WALEdit implements Writable, HeapSize {
    */
   public static boolean isMetaEditFamily(final byte [] f) {
     return Bytes.equals(METAFAMILY, f);
+  }
+
+  /**
+   * @return True when current WALEdit is created by log replay. Replication skips WALEdits from
+   *         replay.
+   */
+  public boolean isReplay() {
+    return this.isReplay;
   }
 
   public void setCompressionContext(final CompressionContext compressionContext) {

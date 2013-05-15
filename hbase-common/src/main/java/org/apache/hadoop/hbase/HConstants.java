@@ -717,6 +717,14 @@ public final class HConstants {
   public static final String DISTRIBUTED_LOG_SPLITTING_KEY =
       "hbase.master.distributed.log.splitting";
 
+  /** Conf key that enables unflushed WAL edits directly being replayed to region servers */
+  public static final String DISTRIBUTED_LOG_REPLAY_KEY = "hbase.master.distributed.log.replay";
+  public static final boolean DEFAULT_DISTRIBUTED_LOG_REPLAY_CONFIG = true;
+
+  /** Conf key that specifies timeout value to wait for a region ready */
+  public static final String LOG_REPLAY_WAIT_REGION_TIMEOUT = 
+      "hbase.master.log.replay.wait.region.timeout";
+
   /**
    * The name of the configuration parameter that specifies
    * the number of bytes in a newly created checksum chunk.
@@ -767,6 +775,7 @@ public final class HConstants {
   public static final int QOS_THRESHOLD = 10;
   public static final int HIGH_QOS = 100;
   public static final int REPLICATION_QOS = 5; // normal_QOS < replication_QOS < high_QOS
+  public static final int REPLAY_QOS = 6; // REPLICATION_QOS < REPLAY_QOS < high_QOS
 
   /** Directory under /hbase where archived hfiles are stored */
   public static final String HFILE_ARCHIVE_DIRECTORY = ".archive";

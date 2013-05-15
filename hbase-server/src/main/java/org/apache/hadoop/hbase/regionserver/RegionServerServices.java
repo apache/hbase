@@ -19,6 +19,7 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
+import java.util.Map;
 import java.util.concurrent.ConcurrentMap;
 
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -108,4 +109,9 @@ public interface RegionServerServices extends OnlineRegions {
    * @return The RegionServer's CatalogTracker
    */
   public CatalogTracker getCatalogTracker();
+
+  /**
+   * @return set of recovering regions on the hosting region server
+   */
+  public Map<String, HRegion> getRecoveringRegions();
 }

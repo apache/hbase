@@ -24,6 +24,7 @@ option java_generic_services = true;
 option java_generate_equals_and_hash = true;
 option optimize_for = SPEED;
 
+import "Client.proto";
 import "hbase.proto";
 import "WAL.proto";
 
@@ -233,6 +234,9 @@ service AdminService {
 
   rpc replicateWALEntry(ReplicateWALEntryRequest)
     returns(ReplicateWALEntryResponse);
+    
+  rpc replay(MultiRequest)
+    returns(MultiResponse);    
 
   rpc rollWALWriter(RollWALWriterRequest)
     returns(RollWALWriterResponse);

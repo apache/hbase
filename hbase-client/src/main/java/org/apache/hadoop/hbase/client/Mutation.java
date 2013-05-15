@@ -18,6 +18,14 @@
 
 package org.apache.hadoop.hbase.client;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.NavigableMap;
+import java.util.TreeMap;
+import java.util.UUID;
+
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.Cell;
@@ -30,14 +38,6 @@ import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
-
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.NavigableMap;
-import java.util.TreeMap;
-import java.util.UUID;
 
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
@@ -63,6 +63,7 @@ public abstract class Mutation extends OperationWithAttributes implements Row, C
   protected byte [] row = null;
   protected long ts = HConstants.LATEST_TIMESTAMP;
   protected Durability durability = Durability.USE_DEFAULT;
+  
   // A Map sorted by column family.
   protected NavigableMap<byte [], List<? extends Cell>> familyMap =
     new TreeMap<byte [], List<? extends Cell>>(Bytes.BYTES_COMPARATOR);

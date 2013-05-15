@@ -19,6 +19,7 @@
 package org.apache.hadoop.hbase.regionserver.handler;
 
 import java.io.IOException;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.commons.logging.Log;
@@ -137,6 +138,16 @@ public class OpenRegionHandler extends EventHandler {
       if (region == null) {
         return;
       }
+
+      // check if we need set current region in recovering state
+      region.setRecovering(false);
+      Map<String, HRegion> recoveringRegions = this.rsServices.getRecoveringRegions();
+      if (recoveringRegions != null && !recoveringRegions.isEmpty()
+          && recoveringRegions.containsKey(region.getRegionInfo().getEncodedName())) {
+        region.setRecovering(true);
+        recoveringRegions.put(region.getRegionInfo().getEncodedName(), region);
+      }
+
       boolean failed = true;
       if (tickleOpening("post_region_open")) {
         if (updateMeta(region)) {

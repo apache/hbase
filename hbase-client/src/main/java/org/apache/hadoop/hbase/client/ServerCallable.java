@@ -178,7 +178,7 @@ public abstract class ServerCallable<T> implements Callable<T> {
         if (t instanceof SocketTimeoutException ||
             t instanceof ConnectException ||
             t instanceof RetriesExhaustedException ||
-            getConnection().isDeadServer(location.getServerName())) {
+            (location != null && getConnection().isDeadServer(location.getServerName()))) {
           // if thrown these exceptions, we clear all the cache entries that
           // map to that slow/dead server; otherwise, let cache miss and ask
           // .META. again to find the new location
@@ -261,7 +261,9 @@ public abstract class ServerCallable<T> implements Callable<T> {
    */
   protected static Throwable translateException(Throwable t) throws DoNotRetryIOException {
     if (t instanceof UndeclaredThrowableException) {
-      t = t.getCause();
+      if(t.getCause() != null) {
+        t = t.getCause();
+      }
     }
     if (t instanceof RemoteException) {
       t = ((RemoteException)t).unwrapRemoteException();

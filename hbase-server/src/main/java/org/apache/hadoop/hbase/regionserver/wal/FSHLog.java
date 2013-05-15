@@ -1200,6 +1200,10 @@ class FSHLog implements HLog, Syncable {
       long now = EnvironmentEdgeManager.currentTimeMillis();
       // coprocessor hook:
       if (!coprocessorHost.preWALWrite(info, logKey, logEdit)) {
+        if (logEdit.isReplay()) {
+          // set replication scope null so that this won't be replicated
+          logKey.setScopes(null);
+        }
         // write to our buffer for the Hlog file.
         logSyncer.append(new FSHLog.Entry(logKey, logEdit));
       }

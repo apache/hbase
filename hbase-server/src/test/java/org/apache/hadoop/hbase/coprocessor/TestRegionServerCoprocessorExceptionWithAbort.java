@@ -58,7 +58,7 @@ public class TestRegionServerCoprocessorExceptionWithAbort {
     conf.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 2);  // Let's fail fast.
     conf.set(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY, BuggyRegionObserver.class.getName());
     conf.set("hbase.coprocessor.abortonerror", "true");
-    TEST_UTIL.startMiniCluster(2);
+    TEST_UTIL.startMiniCluster(3);
   }
 
   @AfterClass

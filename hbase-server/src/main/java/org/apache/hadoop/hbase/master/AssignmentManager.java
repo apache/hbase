@@ -422,7 +422,8 @@ public class AssignmentManager extends ZooKeeperListener {
       return;
     }
 
-    boolean failover = !serverManager.getDeadServers().isEmpty();
+    boolean failover = (!serverManager.getDeadServers().isEmpty() || !serverManager
+        .getRequeuedDeadServers().isEmpty());
 
     if (!failover) {
       // Run through all regions.  If they are not assigned and not in RIT, then
@@ -2728,18 +2729,38 @@ public class AssignmentManager extends ZooKeeperListener {
    */
   public void waitOnRegionToClearRegionsInTransition(final HRegionInfo hri)
       throws IOException, InterruptedException {
-    if (!regionStates.isRegionInTransition(hri)) return;
+    waitOnRegionToClearRegionsInTransition(hri, -1L);
+  }
+
+  /**
+   * Wait on region to clear regions-in-transition or time out
+   * @param hri
+   * @param timeOut Milliseconds to wait for current region to be out of transition state.
+   * @return True when a region clears regions-in-transition before timeout otherwise false
+   * @throws IOException
+   * @throws InterruptedException
+   */
+  public boolean waitOnRegionToClearRegionsInTransition(final HRegionInfo hri, long timeOut)
+      throws IOException, InterruptedException {
+    if (!regionStates.isRegionInTransition(hri)) return true;
     RegionState rs = null;
+    long end = (timeOut <= 0) ? Long.MAX_VALUE : EnvironmentEdgeManager.currentTimeMillis()
+        + timeOut;
     // There is already a timeout monitor on regions in transition so I
     // should not have to have one here too?
-    while(!this.server.isStopped() && regionStates.isRegionInTransition(hri)) {
-      LOG.info("Waiting on " + rs + " to clear regions-in-transition");
+    LOG.info("Waiting on " + rs + " to clear regions-in-transition");
+    while (!this.server.isStopped() && regionStates.isRegionInTransition(hri)) {
       regionStates.waitForUpdate(100);
+      if (EnvironmentEdgeManager.currentTimeMillis() > end) {
+        LOG.info("Timed out on waiting for region:" + hri.getEncodedName() + " to be assigned.");
+        return false;
+      }
     }
     if (this.server.isStopped()) {
-      LOG.info("Giving up wait on regions in " +
-        "transition because stoppable.isStopped is set");
+      LOG.info("Giving up wait on regions in transition because stoppable.isStopped is set");
+      return false;
     }
+    return true;
   }
 
   /**

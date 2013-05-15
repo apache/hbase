@@ -331,6 +331,12 @@ public class TestCatalogJanitor {
     public void dispatchMergingRegions(HRegionInfo region_a, HRegionInfo region_b,
         boolean forcible) throws IOException {
     }
+
+    @Override
+    public boolean isInitialized() {
+      // Auto-generated method stub
+      return false;
+    }
   }
 
   @Test

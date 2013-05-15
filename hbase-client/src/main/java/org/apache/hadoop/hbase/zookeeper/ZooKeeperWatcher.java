@@ -107,6 +107,8 @@ public class ZooKeeperWatcher implements Watcher, Abortable, Closeable {
   public String balancerZNode;
   // znode containing the lock for the tables
   public String tableLockZNode;
+  // znode containing the state of recovering regions
+  public String recoveringRegionsZNode;
 
   // Certain ZooKeeper nodes need to be world-readable
   public static final ArrayList<ACL> CREATOR_ALL_AND_WORLD_READABLE =
@@ -133,11 +135,11 @@ public class ZooKeeperWatcher implements Watcher, Abortable, Closeable {
 
   /**
    * Instantiate a ZooKeeper connection and watcher.
-   * @param identifier string that is passed to RecoverableZookeeper to be used as
-   * identifier for this instance. Use null for default.
    * @param conf
+   * @param identifier string that is passed to RecoverableZookeeper to be used as identifier for
+   *          this instance. Use null for default.
    * @param abortable Can be null if there is on error there is no host to abort: e.g. client
-   * context.
+   *          context.
    * @param canCreateBaseZNode
    * @throws IOException
    * @throws ZooKeeperConnectionException
@@ -176,6 +178,7 @@ public class ZooKeeperWatcher implements Watcher, Abortable, Closeable {
       ZKUtil.createAndFailSilent(this, splitLogZNode);
       ZKUtil.createAndFailSilent(this, backupMasterAddressesZNode);
       ZKUtil.createAndFailSilent(this, tableLockZNode);
+      ZKUtil.createAndFailSilent(this, recoveringRegionsZNode);
     } catch (KeeperException e) {
       throw new ZooKeeperConnectionException(
           prefix("Unexpected KeeperException creating base node"), e);
@@ -227,6 +230,8 @@ public class ZooKeeperWatcher implements Watcher, Abortable, Closeable {
         conf.get("zookeeper.znode.balancer", "balancer"));
     tableLockZNode = ZKUtil.joinZNode(baseZNode,
         conf.get("zookeeper.znode.tableLock", "table-lock"));
+    recoveringRegionsZNode = ZKUtil.joinZNode(baseZNode,
+      conf.get("zookeeper.znode.recovering.regions", "recovering-regions"));
   }
 
   /**

@@ -101,23 +101,6 @@ public class TestRSKilledWhenMasterInitializing {
         KeeperException, InterruptedException {
       super(conf);
     }
-
-    @Override
-    protected void splitLogAfterStartup(MasterFileSystem mfs) {
-      super.splitLogAfterStartup(mfs);
-      logSplit = true;
-      // If "TestingMaster.sleep" is set, sleep after log split.
-      if (getConfiguration().getBoolean("TestingMaster.sleep", false)) {
-        int duration = getConfiguration().getInt(
-            "TestingMaster.sleep.duration", 0);
-        Threads.sleep(duration);
-      }
-    }
-
-
-    public boolean isLogSplitAfterStartup() {
-      return logSplit;
-    }
   }
 
   @Test(timeout = 120000)
@@ -163,7 +146,7 @@ public class TestRSKilledWhenMasterInitializing {
     /* NO.1 .META. region correctness */
     // First abort master
     abortMaster(cluster);
-    TestingMaster master = startMasterAndWaitUntilLogSplit(cluster);
+    TestingMaster master = startMasterAndWaitTillMetaRegionAssignment(cluster);
 
     // Second kill meta server
     int metaServerNum = cluster.getServerWithMeta();
@@ -216,14 +199,12 @@ public class TestRSKilledWhenMasterInitializing {
     LOG.debug("Master is aborted");
   }
 
-  private TestingMaster startMasterAndWaitUntilLogSplit(MiniHBaseCluster cluster)
+  private TestingMaster startMasterAndWaitTillMetaRegionAssignment(MiniHBaseCluster cluster)
       throws IOException, InterruptedException {
     TestingMaster master = (TestingMaster) cluster.startMaster().getMaster();
-    while (!master.isLogSplitAfterStartup()) {
+    while (!master.isInitializationStartsMetaRegionAssignment()) {
       Thread.sleep(100);
     }
-    LOG.debug("splitted:" + master.isLogSplitAfterStartup() + ",initialized:"
-        + master.isInitialized());
     return master;
   }
 
@@ -232,7 +213,9 @@ public class TestRSKilledWhenMasterInitializing {
     while (!master.isInitialized()) {
       Thread.sleep(100);
     }
+    while (master.getServerManager().areDeadServersInProgress()) {
+      Thread.sleep(100);
+    }
     LOG.debug("master isInitialized");
   }
-  
 }

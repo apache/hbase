@@ -376,6 +376,7 @@ public class ZKTable {
     Set<String> allTables = new HashSet<String>();
     List<String> children =
       ZKUtil.listChildrenNoWatch(zkw, zkw.tableZNode);
+    if(children == null) return allTables;
     for (String child: children) {
       ZooKeeperProtos.Table.State state = ZKTableReadOnly.getTableState(zkw, child);
       for (ZooKeeperProtos.Table.State expectedState: states) {

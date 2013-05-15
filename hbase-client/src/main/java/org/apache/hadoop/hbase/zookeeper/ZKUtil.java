@@ -27,6 +27,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
+import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil.ZKUtilOp.CreateAndFailSilent;
@@ -49,6 +51,8 @@ import org.apache.zookeeper.proto.CreateRequest;
 import org.apache.zookeeper.proto.DeleteRequest;
 import org.apache.zookeeper.proto.SetDataRequest;
 import org.apache.zookeeper.server.ZooKeeperSaslServer;
+
+import com.google.protobuf.InvalidProtocolBufferException;
 
 import javax.security.auth.login.AppConfigurationEntry;
 import javax.security.auth.login.AppConfigurationEntry.LoginModuleControlFlag;
@@ -1815,4 +1819,39 @@ public class ZKUtil {
     }
   }
 
+  /**
+   * @param position
+   * @return Serialized protobuf of <code>position</code> with pb magic prefix prepended suitable
+   *         for use as content of an hlog position in a replication queue.
+   */
+  public static byte[] positionToByteArray(final long position) {
+    byte[] bytes = ZooKeeperProtos.ReplicationHLogPosition.newBuilder().setPosition(position)
+        .build().toByteArray();
+    return ProtobufUtil.prependPBMagic(bytes);
+  }
+
+  /**
+   * @param bytes - Content of a HLog position znode.
+   * @return long - The current HLog position.
+   * @throws DeserializationException
+   */
+  public static long parseHLogPositionFrom(final byte[] bytes) throws DeserializationException {
+    if (ProtobufUtil.isPBMagicPrefix(bytes)) {
+      int pblen = ProtobufUtil.lengthOfPBMagic();
+      ZooKeeperProtos.ReplicationHLogPosition.Builder builder = 
+          ZooKeeperProtos.ReplicationHLogPosition.newBuilder();
+      ZooKeeperProtos.ReplicationHLogPosition position;
+      try {
+        position = builder.mergeFrom(bytes, pblen, bytes.length - pblen).build();
+      } catch (InvalidProtocolBufferException e) {
+        throw new DeserializationException(e);
+      }
+      return position.getPosition();
+    } else {
+      if (bytes.length > 0) {
+        return Bytes.toLong(bytes);
+      }
+      return 0;
+    }
+  }
 }

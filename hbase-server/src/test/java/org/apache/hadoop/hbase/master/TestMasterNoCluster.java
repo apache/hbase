@@ -355,8 +355,8 @@ public class TestMasterNoCluster {
 
     HMaster master = new HMaster(conf) {
       @Override
-      boolean assignMeta(MonitoredTask status) {
-        return true;
+      void assignMeta(MonitoredTask status) {
+        return;
       }
 
       @Override

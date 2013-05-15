@@ -60,6 +60,8 @@ public interface MetricsMasterSource extends BaseSource {
   static final String SNAPSHOT_TIME_NAME = "snapshotTime";
   static final String SNAPSHOT_RESTORE_TIME_NAME = "snapshotRestoreTime";
   static final String SNAPSHOT_CLONE_TIME_NAME = "snapshotCloneTime";
+  static final String META_SPLIT_TIME_NAME = "metaHlogSplitTime";
+  static final String META_SPLIT_SIZE_NAME = "metaHlogSplitSize";
   static final String CLUSTER_REQUESTS_NAME = "clusterRequests";
   static final String RIT_COUNT_NAME = "ritCount";
   static final String RIT_COUNT_OVER_THRESHOLD_NAME = "ritCountOverThreshold";
@@ -78,7 +80,8 @@ public interface MetricsMasterSource extends BaseSource {
   static final String SNAPSHOT_TIME_DESC = "Time it takes to finish snapshot()";
   static final String SNAPSHOT_RESTORE_TIME_DESC = "Time it takes to finish restoreSnapshot()";
   static final String SNAPSHOT_CLONE_TIME_DESC = "Time it takes to finish cloneSnapshot()";
-
+  static final String META_SPLIT_TIME_DESC = "Time it takes to finish splitMetaLog()";
+  static final String META_SPLIT_SIZE_DESC = "Size of META HLog files being split";
 
   /**
    * Increment the number of requests the cluster has seen.
@@ -117,4 +120,9 @@ public interface MetricsMasterSource extends BaseSource {
   void updateSnapshotCloneTime(long time);
 
   void updateSnapshotRestoreTime(long time);
+  
+  void updateMetaWALSplitTime(long time);
+
+  void updateMetaWALSplitSize(long size);
+
 }

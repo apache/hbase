@@ -14155,6 +14155,11 @@ public final class AdminProtos {
           org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ReplicateWALEntryRequest request,
           com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ReplicateWALEntryResponse> done);
       
+      public abstract void replay(
+          com.google.protobuf.RpcController controller,
+          org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiRequest request,
+          com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiResponse> done);
+      
       public abstract void rollWALWriter(
           com.google.protobuf.RpcController controller,
           org.apache.hadoop.hbase.protobuf.generated.AdminProtos.RollWALWriterRequest request,
@@ -14256,6 +14261,14 @@ public final class AdminProtos {
         }
         
         @java.lang.Override
+        public  void replay(
+            com.google.protobuf.RpcController controller,
+            org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiRequest request,
+            com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiResponse> done) {
+          impl.replay(controller, request, done);
+        }
+        
+        @java.lang.Override
         public  void rollWALWriter(
             com.google.protobuf.RpcController controller,
             org.apache.hadoop.hbase.protobuf.generated.AdminProtos.RollWALWriterRequest request,
@@ -14322,10 +14335,12 @@ public final class AdminProtos {
             case 9:
               return impl.replicateWALEntry(controller, (org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ReplicateWALEntryRequest)request);
             case 10:
-              return impl.rollWALWriter(controller, (org.apache.hadoop.hbase.protobuf.generated.AdminProtos.RollWALWriterRequest)request);
+              return impl.replay(controller, (org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiRequest)request);
             case 11:
-              return impl.getServerInfo(controller, (org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetServerInfoRequest)request);
+              return impl.rollWALWriter(controller, (org.apache.hadoop.hbase.protobuf.generated.AdminProtos.RollWALWriterRequest)request);
             case 12:
+              return impl.getServerInfo(controller, (org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetServerInfoRequest)request);
+            case 13:
               return impl.stopServer(controller, (org.apache.hadoop.hbase.protobuf.generated.AdminProtos.StopServerRequest)request);
             default:
               throw new java.lang.AssertionError("Can't get here.");
@@ -14362,10 +14377,12 @@ public final class AdminProtos {
             case 9:
               return org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ReplicateWALEntryRequest.getDefaultInstance();
             case 10:
-              return org.apache.hadoop.hbase.protobuf.generated.AdminProtos.RollWALWriterRequest.getDefaultInstance();
+              return org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiRequest.getDefaultInstance();
             case 11:
-              return org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetServerInfoRequest.getDefaultInstance();
+              return org.apache.hadoop.hbase.protobuf.generated.AdminProtos.RollWALWriterRequest.getDefaultInstance();
             case 12:
+              return org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetServerInfoRequest.getDefaultInstance();
+            case 13:
               return org.apache.hadoop.hbase.protobuf.generated.AdminProtos.StopServerRequest.getDefaultInstance();
             default:
               throw new java.lang.AssertionError("Can't get here.");
@@ -14402,10 +14419,12 @@ public final class AdminProtos {
             case 9:
               return org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ReplicateWALEntryResponse.getDefaultInstance();
             case 10:
-              return org.apache.hadoop.hbase.protobuf.generated.AdminProtos.RollWALWriterResponse.getDefaultInstance();
+              return org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiResponse.getDefaultInstance();
             case 11:
-              return org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetServerInfoResponse.getDefaultInstance();
+              return org.apache.hadoop.hbase.protobuf.generated.AdminProtos.RollWALWriterResponse.getDefaultInstance();
             case 12:
+              return org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetServerInfoResponse.getDefaultInstance();
+            case 13:
               return org.apache.hadoop.hbase.protobuf.generated.AdminProtos.StopServerResponse.getDefaultInstance();
             default:
               throw new java.lang.AssertionError("Can't get here.");
@@ -14464,6 +14483,11 @@ public final class AdminProtos {
         com.google.protobuf.RpcController controller,
         org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ReplicateWALEntryRequest request,
         com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ReplicateWALEntryResponse> done);
+    
+    public abstract void replay(
+        com.google.protobuf.RpcController controller,
+        org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiRequest request,
+        com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiResponse> done);
     
     public abstract void rollWALWriter(
         com.google.protobuf.RpcController controller,
@@ -14553,16 +14577,21 @@ public final class AdminProtos {
               done));
           return;
         case 10:
+          this.replay(controller, (org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiRequest)request,
+            com.google.protobuf.RpcUtil.<org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiResponse>specializeCallback(
+              done));
+          return;
+        case 11:
           this.rollWALWriter(controller, (org.apache.hadoop.hbase.protobuf.generated.AdminProtos.RollWALWriterRequest)request,
             com.google.protobuf.RpcUtil.<org.apache.hadoop.hbase.protobuf.generated.AdminProtos.RollWALWriterResponse>specializeCallback(
               done));
           return;
-        case 11:
+        case 12:
           this.getServerInfo(controller, (org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetServerInfoRequest)request,
             com.google.protobuf.RpcUtil.<org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetServerInfoResponse>specializeCallback(
               done));
           return;
-        case 12:
+        case 13:
           this.stopServer(controller, (org.apache.hadoop.hbase.protobuf.generated.AdminProtos.StopServerRequest)request,
             com.google.protobuf.RpcUtil.<org.apache.hadoop.hbase.protobuf.generated.AdminProtos.StopServerResponse>specializeCallback(
               done));
@@ -14602,10 +14631,12 @@ public final class AdminProtos {
         case 9:
           return org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ReplicateWALEntryRequest.getDefaultInstance();
         case 10:
-          return org.apache.hadoop.hbase.protobuf.generated.AdminProtos.RollWALWriterRequest.getDefaultInstance();
+          return org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiRequest.getDefaultInstance();
         case 11:
-          return org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetServerInfoRequest.getDefaultInstance();
+          return org.apache.hadoop.hbase.protobuf.generated.AdminProtos.RollWALWriterRequest.getDefaultInstance();
         case 12:
+          return org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetServerInfoRequest.getDefaultInstance();
+        case 13:
           return org.apache.hadoop.hbase.protobuf.generated.AdminProtos.StopServerRequest.getDefaultInstance();
         default:
           throw new java.lang.AssertionError("Can't get here.");
@@ -14642,10 +14673,12 @@ public final class AdminProtos {
         case 9:
           return org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ReplicateWALEntryResponse.getDefaultInstance();
         case 10:
-          return org.apache.hadoop.hbase.protobuf.generated.AdminProtos.RollWALWriterResponse.getDefaultInstance();
+          return org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiResponse.getDefaultInstance();
         case 11:
-          return org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetServerInfoResponse.getDefaultInstance();
+          return org.apache.hadoop.hbase.protobuf.generated.AdminProtos.RollWALWriterResponse.getDefaultInstance();
         case 12:
+          return org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetServerInfoResponse.getDefaultInstance();
+        case 13:
           return org.apache.hadoop.hbase.protobuf.generated.AdminProtos.StopServerResponse.getDefaultInstance();
         default:
           throw new java.lang.AssertionError("Can't get here.");
@@ -14818,12 +14851,27 @@ public final class AdminProtos {
             org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ReplicateWALEntryResponse.getDefaultInstance()));
       }
       
+      public  void replay(
+          com.google.protobuf.RpcController controller,
+          org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiRequest request,
+          com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiResponse> done) {
+        channel.callMethod(
+          getDescriptor().getMethods().get(10),
+          controller,
+          request,
+          org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiResponse.getDefaultInstance(),
+          com.google.protobuf.RpcUtil.generalizeCallback(
+            done,
+            org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiResponse.class,
+            org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiResponse.getDefaultInstance()));
+      }
+      
       public  void rollWALWriter(
           com.google.protobuf.RpcController controller,
           org.apache.hadoop.hbase.protobuf.generated.AdminProtos.RollWALWriterRequest request,
           com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.AdminProtos.RollWALWriterResponse> done) {
         channel.callMethod(
-          getDescriptor().getMethods().get(10),
+          getDescriptor().getMethods().get(11),
           controller,
           request,
           org.apache.hadoop.hbase.protobuf.generated.AdminProtos.RollWALWriterResponse.getDefaultInstance(),
@@ -14838,7 +14886,7 @@ public final class AdminProtos {
           org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetServerInfoRequest request,
           com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetServerInfoResponse> done) {
         channel.callMethod(
-          getDescriptor().getMethods().get(11),
+          getDescriptor().getMethods().get(12),
           controller,
           request,
           org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetServerInfoResponse.getDefaultInstance(),
@@ -14853,7 +14901,7 @@ public final class AdminProtos {
           org.apache.hadoop.hbase.protobuf.generated.AdminProtos.StopServerRequest request,
           com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.AdminProtos.StopServerResponse> done) {
         channel.callMethod(
-          getDescriptor().getMethods().get(12),
+          getDescriptor().getMethods().get(13),
           controller,
           request,
           org.apache.hadoop.hbase.protobuf.generated.AdminProtos.StopServerResponse.getDefaultInstance(),
@@ -14918,6 +14966,11 @@ public final class AdminProtos {
       public org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ReplicateWALEntryResponse replicateWALEntry(
           com.google.protobuf.RpcController controller,
           org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ReplicateWALEntryRequest request)
+          throws com.google.protobuf.ServiceException;
+      
+      public org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiResponse replay(
+          com.google.protobuf.RpcController controller,
+          org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiRequest request)
           throws com.google.protobuf.ServiceException;
       
       public org.apache.hadoop.hbase.protobuf.generated.AdminProtos.RollWALWriterResponse rollWALWriter(
@@ -15063,12 +15116,24 @@ public final class AdminProtos {
       }
       
       
+      public org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiResponse replay(
+          com.google.protobuf.RpcController controller,
+          org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiRequest request)
+          throws com.google.protobuf.ServiceException {
+        return (org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiResponse) channel.callBlockingMethod(
+          getDescriptor().getMethods().get(10),
+          controller,
+          request,
+          org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiResponse.getDefaultInstance());
+      }
+      
+      
       public org.apache.hadoop.hbase.protobuf.generated.AdminProtos.RollWALWriterResponse rollWALWriter(
           com.google.protobuf.RpcController controller,
           org.apache.hadoop.hbase.protobuf.generated.AdminProtos.RollWALWriterRequest request)
           throws com.google.protobuf.ServiceException {
         return (org.apache.hadoop.hbase.protobuf.generated.AdminProtos.RollWALWriterResponse) channel.callBlockingMethod(
-          getDescriptor().getMethods().get(10),
+          getDescriptor().getMethods().get(11),
           controller,
           request,
           org.apache.hadoop.hbase.protobuf.generated.AdminProtos.RollWALWriterResponse.getDefaultInstance());
@@ -15080,7 +15145,7 @@ public final class AdminProtos {
           org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetServerInfoRequest request)
           throws com.google.protobuf.ServiceException {
         return (org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetServerInfoResponse) channel.callBlockingMethod(
-          getDescriptor().getMethods().get(11),
+          getDescriptor().getMethods().get(12),
           controller,
           request,
           org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetServerInfoResponse.getDefaultInstance());
@@ -15092,7 +15157,7 @@ public final class AdminProtos {
           org.apache.hadoop.hbase.protobuf.generated.AdminProtos.StopServerRequest request)
           throws com.google.protobuf.ServiceException {
         return (org.apache.hadoop.hbase.protobuf.generated.AdminProtos.StopServerResponse) channel.callBlockingMethod(
-          getDescriptor().getMethods().get(12),
+          getDescriptor().getMethods().get(13),
           controller,
           request,
           org.apache.hadoop.hbase.protobuf.generated.AdminProtos.StopServerResponse.getDefaultInstance());
@@ -15255,78 +15320,80 @@ public final class AdminProtos {
       descriptor;
   static {
     java.lang.String[] descriptorData = {
-      "\n\013Admin.proto\032\013hbase.proto\032\tWAL.proto\"Q\n" +
-      "\024GetRegionInfoRequest\022 \n\006region\030\001 \002(\0132\020." +
-      "RegionSpecifier\022\027\n\017compactionState\030\002 \001(\010" +
-      "\"\301\001\n\025GetRegionInfoResponse\022\037\n\nregionInfo" +
-      "\030\001 \002(\0132\013.RegionInfo\022?\n\017compactionState\030\002" +
-      " \001(\0162&.GetRegionInfoResponse.CompactionS" +
-      "tate\"F\n\017CompactionState\022\010\n\004NONE\020\000\022\t\n\005MIN" +
-      "OR\020\001\022\t\n\005MAJOR\020\002\022\023\n\017MAJOR_AND_MINOR\020\003\"G\n\023" +
-      "GetStoreFileRequest\022 \n\006region\030\001 \002(\0132\020.Re" +
-      "gionSpecifier\022\016\n\006family\030\002 \003(\014\")\n\024GetStor",
-      "eFileResponse\022\021\n\tstoreFile\030\001 \003(\t\"\030\n\026GetO" +
-      "nlineRegionRequest\":\n\027GetOnlineRegionRes" +
-      "ponse\022\037\n\nregionInfo\030\001 \003(\0132\013.RegionInfo\"\270" +
-      "\001\n\021OpenRegionRequest\0223\n\010openInfo\030\001 \003(\0132!" +
-      ".OpenRegionRequest.RegionOpenInfo\032n\n\016Reg" +
-      "ionOpenInfo\022\033\n\006region\030\001 \002(\0132\013.RegionInfo" +
-      "\022\034\n\024versionOfOfflineNode\030\002 \001(\r\022!\n\014favore" +
-      "dNodes\030\003 \003(\0132\013.ServerName\"\234\001\n\022OpenRegion" +
-      "Response\022<\n\014openingState\030\001 \003(\0162&.OpenReg" +
-      "ionResponse.RegionOpeningState\"H\n\022Region",
-      "OpeningState\022\n\n\006OPENED\020\000\022\022\n\016ALREADY_OPEN" +
-      "ED\020\001\022\022\n\016FAILED_OPENING\020\002\"\232\001\n\022CloseRegion" +
-      "Request\022 \n\006region\030\001 \002(\0132\020.RegionSpecifie" +
-      "r\022\034\n\024versionOfClosingNode\030\002 \001(\r\022\034\n\016trans" +
-      "itionInZK\030\003 \001(\010:\004true\022&\n\021destinationServ" +
-      "er\030\004 \001(\0132\013.ServerName\"%\n\023CloseRegionResp" +
-      "onse\022\016\n\006closed\030\001 \002(\010\"M\n\022FlushRegionReque" +
-      "st\022 \n\006region\030\001 \002(\0132\020.RegionSpecifier\022\025\n\r" +
-      "ifOlderThanTs\030\002 \001(\004\"=\n\023FlushRegionRespon" +
-      "se\022\025\n\rlastFlushTime\030\001 \002(\004\022\017\n\007flushed\030\002 \001",
-      "(\010\"J\n\022SplitRegionRequest\022 \n\006region\030\001 \002(\013" +
-      "2\020.RegionSpecifier\022\022\n\nsplitPoint\030\002 \001(\014\"\025" +
-      "\n\023SplitRegionResponse\"W\n\024CompactRegionRe" +
-      "quest\022 \n\006region\030\001 \002(\0132\020.RegionSpecifier\022" +
-      "\r\n\005major\030\002 \001(\010\022\016\n\006family\030\003 \001(\014\"\027\n\025Compac" +
-      "tRegionResponse\"t\n\023MergeRegionsRequest\022!" +
-      "\n\007regionA\030\001 \002(\0132\020.RegionSpecifier\022!\n\007reg" +
-      "ionB\030\002 \002(\0132\020.RegionSpecifier\022\027\n\010forcible" +
-      "\030\003 \001(\010:\005false\"\026\n\024MergeRegionsResponse\"7\n" +
-      "\010WALEntry\022\024\n\003key\030\001 \002(\0132\007.WALKey\022\025\n\rkeyVa",
-      "lueBytes\030\002 \003(\014\"4\n\030ReplicateWALEntryReque" +
-      "st\022\030\n\005entry\030\001 \003(\0132\t.WALEntry\"\033\n\031Replicat" +
-      "eWALEntryResponse\"\026\n\024RollWALWriterReques" +
-      "t\".\n\025RollWALWriterResponse\022\025\n\rregionToFl" +
-      "ush\030\001 \003(\014\"#\n\021StopServerRequest\022\016\n\006reason" +
-      "\030\001 \002(\t\"\024\n\022StopServerResponse\"\026\n\024GetServe" +
-      "rInfoRequest\"@\n\nServerInfo\022\037\n\nserverName" +
-      "\030\001 \002(\0132\013.ServerName\022\021\n\twebuiPort\030\002 \001(\r\"8" +
-      "\n\025GetServerInfoResponse\022\037\n\nserverInfo\030\001 " +
-      "\002(\0132\013.ServerInfo2\266\006\n\014AdminService\022>\n\rget",
-      "RegionInfo\022\025.GetRegionInfoRequest\032\026.GetR" +
-      "egionInfoResponse\022;\n\014getStoreFile\022\024.GetS" +
-      "toreFileRequest\032\025.GetStoreFileResponse\022D" +
-      "\n\017getOnlineRegion\022\027.GetOnlineRegionReque" +
-      "st\032\030.GetOnlineRegionResponse\0225\n\nopenRegi" +
-      "on\022\022.OpenRegionRequest\032\023.OpenRegionRespo" +
-      "nse\0228\n\013closeRegion\022\023.CloseRegionRequest\032" +
-      "\024.CloseRegionResponse\0228\n\013flushRegion\022\023.F" +
-      "lushRegionRequest\032\024.FlushRegionResponse\022" +
-      "8\n\013splitRegion\022\023.SplitRegionRequest\032\024.Sp",
-      "litRegionResponse\022>\n\rcompactRegion\022\025.Com" +
-      "pactRegionRequest\032\026.CompactRegionRespons" +
-      "e\022;\n\014mergeRegions\022\024.MergeRegionsRequest\032" +
-      "\025.MergeRegionsResponse\022J\n\021replicateWALEn" +
-      "try\022\031.ReplicateWALEntryRequest\032\032.Replica" +
-      "teWALEntryResponse\022>\n\rrollWALWriter\022\025.Ro" +
-      "llWALWriterRequest\032\026.RollWALWriterRespon" +
-      "se\022>\n\rgetServerInfo\022\025.GetServerInfoReque" +
-      "st\032\026.GetServerInfoResponse\0225\n\nstopServer" +
-      "\022\022.StopServerRequest\032\023.StopServerRespons",
-      "eBA\n*org.apache.hadoop.hbase.protobuf.ge" +
-      "neratedB\013AdminProtosH\001\210\001\001\240\001\001"
+      "\n\013Admin.proto\032\014Client.proto\032\013hbase.proto" +
+      "\032\tWAL.proto\"Q\n\024GetRegionInfoRequest\022 \n\006r" +
+      "egion\030\001 \002(\0132\020.RegionSpecifier\022\027\n\017compact" +
+      "ionState\030\002 \001(\010\"\301\001\n\025GetRegionInfoResponse" +
+      "\022\037\n\nregionInfo\030\001 \002(\0132\013.RegionInfo\022?\n\017com" +
+      "pactionState\030\002 \001(\0162&.GetRegionInfoRespon" +
+      "se.CompactionState\"F\n\017CompactionState\022\010\n" +
+      "\004NONE\020\000\022\t\n\005MINOR\020\001\022\t\n\005MAJOR\020\002\022\023\n\017MAJOR_A" +
+      "ND_MINOR\020\003\"G\n\023GetStoreFileRequest\022 \n\006reg" +
+      "ion\030\001 \002(\0132\020.RegionSpecifier\022\016\n\006family\030\002 ",
+      "\003(\014\")\n\024GetStoreFileResponse\022\021\n\tstoreFile" +
+      "\030\001 \003(\t\"\030\n\026GetOnlineRegionRequest\":\n\027GetO" +
+      "nlineRegionResponse\022\037\n\nregionInfo\030\001 \003(\0132" +
+      "\013.RegionInfo\"\270\001\n\021OpenRegionRequest\0223\n\010op" +
+      "enInfo\030\001 \003(\0132!.OpenRegionRequest.RegionO" +
+      "penInfo\032n\n\016RegionOpenInfo\022\033\n\006region\030\001 \002(" +
+      "\0132\013.RegionInfo\022\034\n\024versionOfOfflineNode\030\002" +
+      " \001(\r\022!\n\014favoredNodes\030\003 \003(\0132\013.ServerName\"" +
+      "\234\001\n\022OpenRegionResponse\022<\n\014openingState\030\001" +
+      " \003(\0162&.OpenRegionResponse.RegionOpeningS",
+      "tate\"H\n\022RegionOpeningState\022\n\n\006OPENED\020\000\022\022" +
+      "\n\016ALREADY_OPENED\020\001\022\022\n\016FAILED_OPENING\020\002\"\232" +
+      "\001\n\022CloseRegionRequest\022 \n\006region\030\001 \002(\0132\020." +
+      "RegionSpecifier\022\034\n\024versionOfClosingNode\030" +
+      "\002 \001(\r\022\034\n\016transitionInZK\030\003 \001(\010:\004true\022&\n\021d" +
+      "estinationServer\030\004 \001(\0132\013.ServerName\"%\n\023C" +
+      "loseRegionResponse\022\016\n\006closed\030\001 \002(\010\"M\n\022Fl" +
+      "ushRegionRequest\022 \n\006region\030\001 \002(\0132\020.Regio" +
+      "nSpecifier\022\025\n\rifOlderThanTs\030\002 \001(\004\"=\n\023Flu" +
+      "shRegionResponse\022\025\n\rlastFlushTime\030\001 \002(\004\022",
+      "\017\n\007flushed\030\002 \001(\010\"J\n\022SplitRegionRequest\022 " +
+      "\n\006region\030\001 \002(\0132\020.RegionSpecifier\022\022\n\nspli" +
+      "tPoint\030\002 \001(\014\"\025\n\023SplitRegionResponse\"W\n\024C" +
+      "ompactRegionRequest\022 \n\006region\030\001 \002(\0132\020.Re" +
+      "gionSpecifier\022\r\n\005major\030\002 \001(\010\022\016\n\006family\030\003" +
+      " \001(\014\"\027\n\025CompactRegionResponse\"t\n\023MergeRe" +
+      "gionsRequest\022!\n\007regionA\030\001 \002(\0132\020.RegionSp" +
+      "ecifier\022!\n\007regionB\030\002 \002(\0132\020.RegionSpecifi" +
+      "er\022\027\n\010forcible\030\003 \001(\010:\005false\"\026\n\024MergeRegi" +
+      "onsResponse\"7\n\010WALEntry\022\024\n\003key\030\001 \002(\0132\007.W",
+      "ALKey\022\025\n\rkeyValueBytes\030\002 \003(\014\"4\n\030Replicat" +
+      "eWALEntryRequest\022\030\n\005entry\030\001 \003(\0132\t.WALEnt" +
+      "ry\"\033\n\031ReplicateWALEntryResponse\"\026\n\024RollW" +
+      "ALWriterRequest\".\n\025RollWALWriterResponse" +
+      "\022\025\n\rregionToFlush\030\001 \003(\014\"#\n\021StopServerReq" +
+      "uest\022\016\n\006reason\030\001 \002(\t\"\024\n\022StopServerRespon" +
+      "se\"\026\n\024GetServerInfoRequest\"@\n\nServerInfo" +
+      "\022\037\n\nserverName\030\001 \002(\0132\013.ServerName\022\021\n\tweb" +
+      "uiPort\030\002 \001(\r\"8\n\025GetServerInfoResponse\022\037\n" +
+      "\nserverInfo\030\001 \002(\0132\013.ServerInfo2\337\006\n\014Admin",
+      "Service\022>\n\rgetRegionInfo\022\025.GetRegionInfo" +
+      "Request\032\026.GetRegionInfoResponse\022;\n\014getSt" +
+      "oreFile\022\024.GetStoreFileRequest\032\025.GetStore" +
+      "FileResponse\022D\n\017getOnlineRegion\022\027.GetOnl" +
+      "ineRegionRequest\032\030.GetOnlineRegionRespon" +
+      "se\0225\n\nopenRegion\022\022.OpenRegionRequest\032\023.O" +
+      "penRegionResponse\0228\n\013closeRegion\022\023.Close" +
+      "RegionRequest\032\024.CloseRegionResponse\0228\n\013f" +
+      "lushRegion\022\023.FlushRegionRequest\032\024.FlushR" +
+      "egionResponse\0228\n\013splitRegion\022\023.SplitRegi",
+      "onRequest\032\024.SplitRegionResponse\022>\n\rcompa" +
+      "ctRegion\022\025.CompactRegionRequest\032\026.Compac" +
+      "tRegionResponse\022;\n\014mergeRegions\022\024.MergeR" +
+      "egionsRequest\032\025.MergeRegionsResponse\022J\n\021" +
+      "replicateWALEntry\022\031.ReplicateWALEntryReq" +
+      "uest\032\032.ReplicateWALEntryResponse\022\'\n\006repl" +
+      "ay\022\r.MultiRequest\032\016.MultiResponse\022>\n\rrol" +
+      "lWALWriter\022\025.RollWALWriterRequest\032\026.Roll" +
+      "WALWriterResponse\022>\n\rgetServerInfo\022\025.Get" +
+      "ServerInfoRequest\032\026.GetServerInfoRespons",
+      "e\0225\n\nstopServer\022\022.StopServerRequest\032\023.St" +
+      "opServerResponseBA\n*org.apache.hadoop.hb" +
+      "ase.protobuf.generatedB\013AdminProtosH\001\210\001\001" +
+      "\240\001\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -15571,6 +15638,7 @@ public final class AdminProtos {
     com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
         new com.google.protobuf.Descriptors.FileDescriptor[] {
+          org.apache.hadoop.hbase.protobuf.generated.ClientProtos.getDescriptor(),
           org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.getDescriptor(),
           org.apache.hadoop.hbase.protobuf.generated.WALProtos.getDescriptor(),
         }, assigner);

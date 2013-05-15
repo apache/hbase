@@ -16,18 +16,30 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.regionserver;
+package org.apache.hadoop.hbase.exceptions;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 
 /**
- * Last flushed sequence Ids for the regions on region server
+ * Thrown when a read request issued against a region which is in recovering state.
  */
-@InterfaceAudience.Private
-public interface LastSequenceId {
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
+public class RegionInRecoveryException extends NotServingRegionException {
+  private static final long serialVersionUID = 327302071153799L;
+
+  /** default constructor */
+  public RegionInRecoveryException() {
+    super();
+  }
+
   /**
-   * @param regionName Encoded region name
-   * @return Last flushed sequence Id for regionName or -1 if it can't be determined
+   * Constructor
+   * @param s message
    */
-  public long getLastSequenceId(byte[] regionName);
+  public RegionInRecoveryException(String s) {
+    super(s);
+  }
+
 }

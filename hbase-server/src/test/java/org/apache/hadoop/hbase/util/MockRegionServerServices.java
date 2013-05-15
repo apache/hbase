@@ -191,4 +191,10 @@ public class MockRegionServerServices implements RegionServerServices {
   public ExecutorService getExecutorService() {
     return null;
   }
+
+  @Override
+  public Map<String, HRegion> getRecoveringRegions() {
+    // TODO Auto-generated method stub
+    return null;
+  }
 }

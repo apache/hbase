@@ -432,6 +432,30 @@ public class ReplicationZookeeper implements Closeable {
   }
 
   /**
+   * @param position
+   * @return Serialized protobuf of <code>position</code> with pb magic prefix
+   *         prepended suitable for use as content of an hlog position in a
+   *         replication queue.
+   */
+  public static byte[] positionToByteArray(
+      final long position) {
+    return ZKUtil.positionToByteArray(position);
+  }
+
+  /**
+   * @param lockOwner
+   * @return Serialized protobuf of <code>lockOwner</code> with pb magic prefix
+   *         prepended suitable for use as content of an replication lock during
+   *         region server fail over.
+   */
+  static byte[] lockToByteArray(
+      final String lockOwner) {
+    byte[] bytes = ZooKeeperProtos.ReplicationLock.newBuilder().setLockOwner(lockOwner).build()
+        .toByteArray();
+    return ProtobufUtil.prependPBMagic(bytes);
+  }
+
+  /**
    * @param bytes Content of a peer znode.
    * @return ClusterKey parsed from the passed bytes.
    * @throws DeserializationException
@@ -473,6 +497,42 @@ public class ReplicationZookeeper implements Closeable {
       return state.getState();
     } catch (InvalidProtocolBufferException e) {
       throw new DeserializationException(e);
+    }
+  }
+
+  /**
+   * @param bytes - Content of a HLog position znode.
+   * @return long - The current HLog position.
+   * @throws DeserializationException
+   */
+  public static long parseHLogPositionFrom(
+      final byte[] bytes) throws DeserializationException {
+    return ZKUtil.parseHLogPositionFrom(bytes);
+  }
+
+  /**
+   * @param bytes - Content of a lock znode.
+   * @return String - The owner of the lock.
+   * @throws DeserializationException
+   */
+  static String parseLockOwnerFrom(
+      final byte[] bytes) throws DeserializationException {
+    if (ProtobufUtil.isPBMagicPrefix(bytes)) {
+      int pblen = ProtobufUtil.lengthOfPBMagic();
+      ZooKeeperProtos.ReplicationLock.Builder builder = ZooKeeperProtos.ReplicationLock
+          .newBuilder();
+      ZooKeeperProtos.ReplicationLock lock;
+      try {
+        lock = builder.mergeFrom(bytes, pblen, bytes.length - pblen).build();
+      } catch (InvalidProtocolBufferException e) {
+        throw new DeserializationException(e);
+      }
+      return lock.getLockOwner();
+    } else {
+      if (bytes.length > 0) {
+        return Bytes.toString(bytes);
+      }
+      return "";
     }
   }
 

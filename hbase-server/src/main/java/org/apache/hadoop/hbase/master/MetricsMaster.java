@@ -59,6 +59,16 @@ public class MetricsMaster {
   }
 
   /**
+   * Record a single instance of a split
+   * @param time time that the split took
+   * @param size length of original HLogs that were split
+   */
+  public synchronized void addMetaWALSplit(long time, long size) {
+    masterSource.updateMetaWALSplitTime(time);
+    masterSource.updateMetaWALSplitSize(size);
+  }
+
+  /**
    * @param inc How much to add to requests.
    */
   public void incrementRequests(final int inc) {

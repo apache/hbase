@@ -154,21 +154,21 @@ public class ServerManager {
   private Set<ServerName> queuedDeadServers = new HashSet<ServerName>();
 
   /**
-   * Set of region servers which are dead and submitted to ServerShutdownHandler to
-   * process but not fully processed immediately.
+   * Set of region servers which are dead and submitted to ServerShutdownHandler to process but not
+   * fully processed immediately.
    * <p>
-   * If one server died before assignment manager finished the failover cleanup, the server
-   * will be added to this set and will be processed through calling
+   * If one server died before assignment manager finished the failover cleanup, the server will be
+   * added to this set and will be processed through calling
    * {@link ServerManager#processQueuedDeadServers()} by assignment manager.
    * <p>
-   * For all the region servers in this set, HLog split is already completed.
+   * The Boolean value indicates whether log split is needed inside ServerShutdownHandler
    * <p>
-   * ServerShutdownHandler processes a dead server submitted to the handler after
-   * the handler is enabled. It may not be able to complete the processing because meta
-   * is not yet online or master is currently in startup mode.  In this case, the dead
-   * server will be parked in this set temporarily.
+   * ServerShutdownHandler processes a dead server submitted to the handler after the handler is
+   * enabled. It may not be able to complete the processing because meta is not yet online or master
+   * is currently in startup mode. In this case, the dead server will be parked in this set
+   * temporarily.
    */
-  private Set<ServerName> requeuedDeadServers = new HashSet<ServerName>();
+  private Map<ServerName, Boolean> requeuedDeadServers = new HashMap<ServerName, Boolean>();
 
   /**
    * Constructor.
@@ -513,6 +513,10 @@ public class ServerManager {
   }
 
   public synchronized void processDeadServer(final ServerName serverName) {
+    this.processDeadServer(serverName, false);
+  }
+
+  public synchronized void processDeadServer(final ServerName serverName, boolean shouldSplitHlog) {
     // When assignment manager is cleaning up the zookeeper nodes and rebuilding the
     // in-memory region states, region servers could be down. Meta table can and
     // should be re-assigned, log splitting can be done too. However, it is better to
@@ -522,13 +526,14 @@ public class ServerManager {
     // the handler threads and meta table could not be re-assigned in case
     // the corresponding server is down. So we queue them up here instead.
     if (!services.getAssignmentManager().isFailoverCleanupDone()) {
-      requeuedDeadServers.add(serverName);
+      requeuedDeadServers.put(serverName, shouldSplitHlog);
       return;
     }
 
     this.deadservers.add(serverName);
-    this.services.getExecutorService().submit(new ServerShutdownHandler(
-      this.master, this.services, this.deadservers, serverName, false));
+    this.services.getExecutorService().submit(
+      new ServerShutdownHandler(this.master, this.services, this.deadservers, serverName,
+          shouldSplitHlog));
   }
 
   /**
@@ -541,18 +546,20 @@ public class ServerManager {
     }
     Iterator<ServerName> serverIterator = queuedDeadServers.iterator();
     while (serverIterator.hasNext()) {
-      expireServer(serverIterator.next());
+      ServerName tmpServerName = serverIterator.next();
+      expireServer(tmpServerName);
       serverIterator.remove();
+      requeuedDeadServers.remove(tmpServerName);
     }
 
     if (!services.getAssignmentManager().isFailoverCleanupDone()) {
       LOG.info("AssignmentManager hasn't finished failover cleanup");
     }
-    serverIterator = requeuedDeadServers.iterator();
-    while (serverIterator.hasNext()) {
-      processDeadServer(serverIterator.next());
-      serverIterator.remove();
+
+    for(ServerName tmpServerName : requeuedDeadServers.keySet()){
+      processDeadServer(tmpServerName, requeuedDeadServers.get(tmpServerName));
     }
+    requeuedDeadServers.clear();
   }
 
   /*
@@ -838,6 +845,14 @@ public class ServerManager {
     return new HashSet<ServerName>(this.queuedDeadServers);
   }
 
+  /**
+   * @return A copy of the internal map of requeuedDeadServers servers and their corresponding
+   *         splitlog need flag.
+   */
+  Map<ServerName, Boolean> getRequeuedDeadServers() {
+    return Collections.unmodifiableMap(this.requeuedDeadServers);
+  }
+  
   public boolean isServerOnline(ServerName serverName) {
     return serverName != null && onlineServers.containsKey(serverName);
   }
@@ -851,7 +866,7 @@ public class ServerManager {
   public synchronized boolean isServerDead(ServerName serverName) {
     return serverName == null || deadservers.isDeadServer(serverName)
       || queuedDeadServers.contains(serverName)
-      || requeuedDeadServers.contains(serverName);
+      || requeuedDeadServers.containsKey(serverName);
   }
 
   public void shutdownCluster() {
