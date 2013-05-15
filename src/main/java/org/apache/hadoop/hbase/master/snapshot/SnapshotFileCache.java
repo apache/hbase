@@ -188,7 +188,9 @@ public class SnapshotFileCache implements Stoppable {
     try {
       status = fs.getFileStatus(snapshotDir);
     } catch (FileNotFoundException e) {
-      LOG.error("Snapshot directory: " + snapshotDir + " doesn't exist");
+      if (this.cache.size() > 0) {
+        LOG.error("Snapshot directory: " + snapshotDir + " doesn't exist");
+      }
       return;
     }
     // if the snapshot directory wasn't modified since we last check, we are done
@@ -210,7 +212,9 @@ public class SnapshotFileCache implements Stoppable {
     FileStatus[] snapshots = FSUtils.listStatus(fs, snapshotDir);
     if (snapshots == null) {
       // remove all the remembered snapshots because we don't have any left
-      LOG.debug("No snapshots on-disk, cache empty");
+      if (LOG.isDebugEnabled() && this.snapshots.size() > 0) {
+        LOG.debug("No snapshots on-disk, cache empty");
+      }
       this.snapshots.clear();
       return;
     }
