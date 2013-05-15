@@ -79,7 +79,7 @@ public abstract class BaseRegionObserver implements RegionObserver {
   public InternalScanner preFlushScannerOpen(final ObserverContext<RegionCoprocessorEnvironment> c,
       final Store store, final KeyValueScanner memstoreScanner, final InternalScanner s)
       throws IOException {
-    return null;
+    return s;
   }
 
   @Override
@@ -148,7 +148,7 @@ public abstract class BaseRegionObserver implements RegionObserver {
   public InternalScanner preCompactScannerOpen(final ObserverContext<RegionCoprocessorEnvironment> c,
       final Store store, List<? extends KeyValueScanner> scanners, final ScanType scanType,
       final long earliestPutTs, final InternalScanner s) throws IOException {
-    return null;
+    return s;
   }
 
   @Override
@@ -315,7 +315,7 @@ public abstract class BaseRegionObserver implements RegionObserver {
   public KeyValueScanner preStoreScannerOpen(final ObserverContext<RegionCoprocessorEnvironment> c,
       final Store store, final Scan scan, final NavigableSet<byte[]> targetCols,
       final KeyValueScanner s) throws IOException {
-    return null;
+    return s;
   }
 
   @Override
