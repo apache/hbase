@@ -475,11 +475,14 @@ class FSHLog implements HLog, Syncable {
         return null;
       }
       byte [][] regionsToFlush = null;
+      if (closed) {
+        LOG.debug("HLog closed. Skipping rolling of writer");
+        return null;
+      }
       try {
         this.logRollRunning = true;
-        boolean isClosed = closed;
-        if (isClosed || !closeBarrier.beginOp()) {
-          LOG.debug("HLog " + (isClosed ? "closed" : "closing") + ". Skipping rolling of writer");
+        if (!closeBarrier.beginOp()) {
+          LOG.debug("HLog closing. Skipping rolling of writer");
           return regionsToFlush;
         }
         // Do all the preparation outside of the updateLock to block
@@ -955,6 +958,7 @@ class FSHLog implements HLog, Syncable {
           } catch (IOException e) {
             LOG.error("Error while syncing, requesting close of hlog ", e);
             requestLogRoll();
+            Threads.sleep(this.optionalFlushInterval);
           }
         }
       } catch (InterruptedException e) {
@@ -1081,7 +1085,7 @@ class FSHLog implements HLog, Syncable {
         }
       }
     } catch (IOException e) {
-      LOG.fatal("Could not sync. Requesting close of hlog", e);
+      LOG.fatal("Could not sync. Requesting roll of hlog", e);
       requestLogRoll();
       throw e;
     }
@@ -1160,18 +1164,22 @@ class FSHLog implements HLog, Syncable {
     return this.getNumCurrentReplicas != null;
   }
 
+  @Override
   public void hsync() throws IOException {
     syncer();
   }
 
+  @Override
   public void hflush() throws IOException {
     syncer();
   }
 
+  @Override
   public void sync() throws IOException {
     syncer();
   }
 
+  @Override
   public void sync(long txid) throws IOException {
     syncer(txid);
   }
