@@ -125,8 +125,12 @@ public class HBaseClusterManager extends ClusterManager {
     }
 
     protected String findPidCommand(ServiceType service) {
-      return String.format("ps aux | grep %s | grep -v grep | tr -s ' ' | cut -d ' ' -f2",
-          service);
+      String servicePathFilter = "";
+      if (service == ServiceType.HBASE_MASTER || service == ServiceType.HBASE_REGIONSERVER) {
+        servicePathFilter = " | grep hbase";
+      }
+      return String.format("ps ux | grep %s %s | grep -v grep | tr -s ' ' | cut -d ' ' -f2",
+          service, servicePathFilter);
     }
 
     public String signalCommand(ServiceType service, String signal) {
