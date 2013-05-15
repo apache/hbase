@@ -798,7 +798,8 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
       } // for
     } catch (Throwable t) {
       if (!checkOOME(t)) {
-        abort("Unhandled exception: " + t.getMessage(), t);
+        String prefix = t instanceof YouAreDeadException? "": "Unhandled: ";
+        abort(prefix + t.getMessage(), t);
       }
     }
     // Run shutdown.

@@ -201,12 +201,7 @@ public class ScannerCallable extends ServerCallable<Result[]> {
             if (this.scanMetrics != null) {
               this.scanMetrics.countOfNSRE.incrementAndGet();
             }
-            throw new DoNotRetryIOException("Reset scanner", ioe);
-          } else if (ioe instanceof RegionServerStoppedException) {
-            // Throw a DNRE so that we break out of cycle of calling RSSE
-            // when what we need is to open scanner against new location.
-            // Attach RSSE to signal client that it needs to resetup scanner.
-            throw new DoNotRetryIOException("Reset scanner", ioe);
+            throw new DoNotRetryIOException("Resetting the scanner -- see exception cause", ioe);
           } else {
             // The outer layers will retry
             throw ioe;

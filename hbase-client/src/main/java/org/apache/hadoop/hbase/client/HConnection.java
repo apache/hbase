@@ -333,12 +333,10 @@ public interface HConnection extends Abortable, Closeable {
   public boolean getRegionCachePrefetch(final byte[] tableName);
 
   /**
-   * Scan zookeeper to get the number of region servers
    * @return the number of region servers that are currently running
    * @throws IOException if a remote or network exception occurs
    * @deprecated This method will be changed from public to package protected.
    */
-  @Deprecated
   public int getCurrentNrHRS() throws IOException;
 
   /**
