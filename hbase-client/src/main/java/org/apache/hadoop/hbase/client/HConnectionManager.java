@@ -604,9 +604,8 @@ public class HConnectionManager {
       this.clusterId = this.registry.getClusterId();
       if (clusterId == null) {
         clusterId = HConstants.CLUSTER_ID_DEFAULT;
+        LOG.debug("clusterid came back null, using default " + clusterId);
       }
-
-      LOG.info("ClusterId is " + clusterId);
     }
 
     @Override

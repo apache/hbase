@@ -26,6 +26,7 @@ import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.zookeeper.MetaRegionTracker;
+import org.apache.hadoop.hbase.zookeeper.ZKClusterId;
 import org.apache.hadoop.hbase.zookeeper.ZKTableReadOnly;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.zookeeper.KeeperException;
@@ -69,10 +70,28 @@ class ZooKeeperRegistry implements Registry {
     }
   }
 
+  private String clusterId = null;
+
   @Override
   public String getClusterId() {
-    // TODO Auto-generated method stub
-    return null;
+    if (this.clusterId != null) return this.clusterId;
+    // No synchronized here, worse case we will retrieve it twice, that's
+    //  not an issue.
+    ZooKeeperKeepAliveConnection zkw = null;
+    try {
+      zkw = hci.getKeepAliveZooKeeperWatcher();
+      this.clusterId = ZKClusterId.readClusterIdZNode(zkw);
+      if (this.clusterId == null) {
+        LOG.info("ClusterId read in ZooKeeper is null");
+      }
+    } catch (KeeperException e) {
+      LOG.warn("Can't retrieve clusterId from Zookeeper", e);
+    } catch (IOException e) {
+      LOG.warn("Can't retrieve clusterId from Zookeeper", e);
+    } finally {
+      if (zkw != null) zkw.close();
+    }
+    return this.clusterId;
   }
 
   @Override
