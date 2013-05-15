@@ -285,11 +285,13 @@ public class ClientScanner extends AbstractClientScanner {
             values = callable.withRetries();
             retryAfterOutOfOrderException  = true;
           } catch (DoNotRetryIOException e) {
+            // DNRIOEs are thrown to make us break out of retries.  Some types of DNRIOEs want us
+            // to reset the scanner and come back in again.
             if (e instanceof UnknownScannerException) {
               long timeout = lastNext + scannerTimeout;
-              // If we are over the timeout, throw this exception to the client
-              // Else, it's because the region moved and we used the old id
-              // against the new region server; reset the scanner.
+              // If we are over the timeout, throw this exception to the client wrapped in
+              // a ScannerTimeoutException. Else, it's because the region moved and we used the old
+              // id against the new region server; reset the scanner.
               if (timeout < System.currentTimeMillis()) {
                 long elapsed = System.currentTimeMillis() - lastNext;
                 ScannerTimeoutException ex = new ScannerTimeoutException(
@@ -299,16 +301,20 @@ public class ClientScanner extends AbstractClientScanner {
                 throw ex;
               }
             } else {
+              // If exception is any but the list below throw it back to the client; else setup
+              // the scanner and retry.
               Throwable cause = e.getCause();
-              if ((cause == null || (!(cause instanceof NotServingRegionException)
-                  && !(cause instanceof RegionServerStoppedException))) &&
-                  !(e instanceof RegionServerStoppedException) &&
-                  !(e instanceof OutOfOrderScannerNextException)) {
+              if ((cause != null && cause instanceof NotServingRegionException) ||
+                (cause != null && cause instanceof RegionServerStoppedException) ||
+                e instanceof OutOfOrderScannerNextException) {
+                // Pass
+                // It is easier writing the if loop test as list of what is allowed rather than
+                // as a list of what is not allowed... so if in here, it means we do not throw.
+              } else {
                 throw e;
               }
             }
-            // Else, its signal from depths of ScannerCallable that we got an
-            // NSRE on a next and that we need to reset the scanner.
+            // Else, its signal from depths of ScannerCallable that we need to reset the scanner.
             if (this.lastResult != null) {
               this.scan.setStartRow(this.lastResult.getRow());
               // Skip first row returned.  We already let it out on previous
@@ -319,13 +325,17 @@ public class ClientScanner extends AbstractClientScanner {
               if (retryAfterOutOfOrderException) {
                 retryAfterOutOfOrderException = false;
               } else {
+                // TODO: Why wrap this in a DNRIOE when it already is a DNRIOE?
                 throw new DoNotRetryIOException("Failed after retry of " +
                   "OutOfOrderScannerNextException: was there a rpc timeout?", e);
               }
             }
-            // Clear region
+            // Clear region.
             this.currentRegion = null;
+            // Set this to zero so we don't try and do an rpc and close on remote server when
+            // the exception we got was UnknownScanner or the Server is going down.
             callable = null;
+            // This continue will take us to while at end of loop where we will set up new scanner.
             continue;
           }
           long currentTime = System.currentTimeMillis();

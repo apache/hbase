@@ -140,8 +140,7 @@ public class ScannerCallable extends ServerCallable<Result[]> {
         ScanRequest request = null;
         try {
           incRPCcallsMetrics();
-          request =
-            RequestConverter.buildScanRequest(scannerId, caching, false, nextCallSeq);
+          request = RequestConverter.buildScanRequest(scannerId, caching, false, nextCallSeq);
           ScanResponse response = null;
           try {
             response = stub.scan(null, request);
@@ -194,13 +193,23 @@ public class ScannerCallable extends ServerCallable<Result[]> {
               LOG.info("Failed to relocate region", t);
             }
           }
+          // The below convertion of exceptions into DoNotRetryExceptions is a little strange.
+          // Why not just have these exceptions implment DNRIOE you ask?  Well, usually we want
+          // ServerCallable#withRetries to just retry when it gets these exceptions.  In here in
+          // a scan when doing a next in particular, we want to break out and get the scanner to
+          // reset itself up again.  Throwing a DNRIOE is how we signal this to happen (its ugly,
+          // yeah and hard to follow and in need of a refactor).
           if (ioe instanceof NotServingRegionException) {
             // Throw a DNRE so that we break out of cycle of calling NSRE
             // when what we need is to open scanner against new location.
-            // Attach NSRE to signal client that it needs to resetup scanner.
+            // Attach NSRE to signal client that it needs to re-setup scanner.
             if (this.scanMetrics != null) {
               this.scanMetrics.countOfNSRE.incrementAndGet();
             }
+            throw new DoNotRetryIOException("Resetting the scanner -- see exception cause", ioe);
+          } else if (ioe instanceof RegionServerStoppedException) {
+            // Throw a DNRE so that we break out of cycle of the retries and instead go and
+            // open scanner against new location.
             throw new DoNotRetryIOException("Resetting the scanner -- see exception cause", ioe);
           } else {
             // The outer layers will retry
