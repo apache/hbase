@@ -557,8 +557,11 @@ public class HBaseRPC {
     @Override
     public Writable call(Writable param, long receivedTime,
         MonitoredRPCHandler status) throws IOException {
+      long startTime = 0L;
+      Invocation call = null;
+      int qTime = -1;
       try {
-        Invocation call = (Invocation)param;
+        call = (Invocation)param;
         if(call.getMethodName() == null) {
           throw new IOException("Could not find requested method, the usual " +
               "cause is a version mismatch between client and server.");
@@ -574,10 +577,10 @@ public class HBaseRPC {
         status.setRPC(call.getMethodName(), call.getParameters(), receivedTime, method);
         status.setRPCPacket(param);
         status.resume("Servicing call");
-        long startTime = System.currentTimeMillis();
+        startTime = System.currentTimeMillis();
+        qTime = (int) (startTime - receivedTime);
         Object value = method.invoke(instance, call.getParameters());
         int processingTime = (int) (System.currentTimeMillis() - startTime);
-        int qTime = (int) (startTime - receivedTime);
         if (LOG.isTraceEnabled()) {
           LOG.trace("Served: " + call.getMethodName() +
             " queueTime= " + qTime +
@@ -632,6 +635,11 @@ public class HBaseRPC {
       } catch (InvocationTargetException e) {
         Throwable target = e.getTargetException();
         if (target instanceof IOException) {
+          if (target instanceof CallInterruptedException) {
+            int processingTime = (int) (System.currentTimeMillis() - startTime);
+            // put -1 for response size since we are not going to return a response
+            logResponse(call, "INTERRUPTED", status.getClient(), startTime, processingTime, qTime, -1);
+          }
           throw (IOException) target;
         }
         IOException ioe = new IOException(target.toString());

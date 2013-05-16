@@ -43,6 +43,7 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.IncompatibleFilterException;
+import org.apache.hadoop.hbase.ipc.CallInterruptedException;
 import org.apache.hadoop.hbase.util.Bytes;
 
 /**
@@ -357,7 +358,7 @@ public class RegionScanner implements InternalScanner {
       if (!prefetch && HRegionServer.isCurrentConnectionClosed()) {
         HRegion.incrNumericMetric(HConstants.SERVER_INTERRUPTED_CALLS_KEY, 1);
         LOG.error(HConstants.CLIENT_SOCKED_CLOSED_EXC_MSG);
-        throw new IOException(HConstants.CLIENT_SOCKED_CLOSED_EXC_MSG);
+        throw new CallInterruptedException(HConstants.CLIENT_SOCKED_CLOSED_EXC_MSG);
       }
       byte [] currentRow = peekRow();
       if (isStopRow(currentRow)) {
@@ -379,7 +380,7 @@ public class RegionScanner implements InternalScanner {
             HRegion.incrNumericMetric(HConstants.SERVER_INTERRUPTED_CALLS_KEY,
                 1);
             LOG.error(HConstants.CLIENT_SOCKED_CLOSED_EXC_MSG);
-            throw new IOException(HConstants.CLIENT_SOCKED_CLOSED_EXC_MSG);
+            throw new CallInterruptedException(HConstants.CLIENT_SOCKED_CLOSED_EXC_MSG);
           }
           this.storeHeap.next(results, limit - results.size(), metric, kvContext);
           if (limit > 0 && results.size() == limit) {
