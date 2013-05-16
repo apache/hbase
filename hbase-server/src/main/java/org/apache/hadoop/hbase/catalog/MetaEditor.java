@@ -494,25 +494,6 @@ public class MetaEditor {
   }
 
   /**
-   * Deletes daughters references in offlined split parent.
-   * @param catalogTracker
-   * @param parent Parent row we're to remove daughter reference from
-   * @throws org.apache.hadoop.hbase.exceptions.NotAllMetaRegionsOnlineException
-   * @throws IOException
-   */
-  public static void deleteDaughtersReferencesInParent(CatalogTracker catalogTracker,
-      final HRegionInfo parent)
-  throws NotAllMetaRegionsOnlineException, IOException {
-    Delete delete = new Delete(parent.getRegionName());
-    delete.deleteColumns(HConstants.CATALOG_FAMILY, HConstants.SPLITA_QUALIFIER);
-    delete.deleteColumns(HConstants.CATALOG_FAMILY, HConstants.SPLITB_QUALIFIER);
-    deleteFromMetaTable(catalogTracker, delete);
-    LOG.info("Deleted daughters references, qualifier=" + Bytes.toStringBinary(HConstants.SPLITA_QUALIFIER) +
-      " and qualifier=" + Bytes.toStringBinary(HConstants.SPLITB_QUALIFIER) +
-      ", from parent " + parent.getRegionNameAsString());
-  }
-
-  /**
    * Deletes merge qualifiers for the specified merged region.
    * @param catalogTracker
    * @param mergedRegion

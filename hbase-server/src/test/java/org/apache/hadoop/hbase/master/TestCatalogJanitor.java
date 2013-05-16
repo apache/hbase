@@ -39,6 +39,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.Server;
@@ -586,6 +587,87 @@ public class TestCatalogJanitor {
    * Test that we correctly archive all the storefiles when a region is deleted
    * @throws Exception
    */
+  @Test
+  public void testSplitParentFirstComparator() {
+    SplitParentFirstComparator comp = new SplitParentFirstComparator();
+    final HTableDescriptor htd = createHTableDescriptor();
+
+    /*  Region splits:
+     *
+     *  rootRegion --- firstRegion --- firstRegiona
+     *              |               |- firstRegionb
+     *              |
+     *              |- lastRegion --- lastRegiona  --- lastRegionaa
+     *                             |                |- lastRegionab
+     *                             |- lastRegionb
+     *
+     *  rootRegion   :   []  - []
+     *  firstRegion  :   []  - bbb
+     *  lastRegion   :   bbb - []
+     *  firstRegiona :   []  - aaa
+     *  firstRegionb :   aaa - bbb
+     *  lastRegiona  :   bbb - ddd
+     *  lastRegionb  :   ddd - []
+     */
+
+    // root region
+    HRegionInfo rootRegion = new HRegionInfo(htd.getName(), HConstants.EMPTY_START_ROW,
+      HConstants.EMPTY_END_ROW, true);
+    HRegionInfo firstRegion = new HRegionInfo(htd.getName(), HConstants.EMPTY_START_ROW,
+      Bytes.toBytes("bbb"), true);
+    HRegionInfo lastRegion = new HRegionInfo(htd.getName(), Bytes.toBytes("bbb"),
+      HConstants.EMPTY_END_ROW, true);
+
+    assertTrue(comp.compare(rootRegion, rootRegion) == 0);
+    assertTrue(comp.compare(firstRegion, firstRegion) == 0);
+    assertTrue(comp.compare(lastRegion, lastRegion) == 0);
+    assertTrue(comp.compare(rootRegion, firstRegion) < 0);
+    assertTrue(comp.compare(rootRegion, lastRegion) < 0);
+    assertTrue(comp.compare(firstRegion, lastRegion) < 0);
+
+    //first region split into a, b
+    HRegionInfo firstRegiona = new HRegionInfo(htd.getName(), HConstants.EMPTY_START_ROW,
+      Bytes.toBytes("aaa"), true);
+    HRegionInfo firstRegionb = new HRegionInfo(htd.getName(), Bytes.toBytes("aaa"),
+      Bytes.toBytes("bbb"), true);
+    //last region split into a, b
+    HRegionInfo lastRegiona = new HRegionInfo(htd.getName(), Bytes.toBytes("bbb"),
+      Bytes.toBytes("ddd"), true);
+    HRegionInfo lastRegionb = new HRegionInfo(htd.getName(), Bytes.toBytes("ddd"),
+      HConstants.EMPTY_END_ROW, true);
+
+    assertTrue(comp.compare(firstRegiona, firstRegiona) == 0);
+    assertTrue(comp.compare(firstRegionb, firstRegionb) == 0);
+    assertTrue(comp.compare(rootRegion, firstRegiona) < 0);
+    assertTrue(comp.compare(rootRegion, firstRegionb) < 0);
+    assertTrue(comp.compare(firstRegion, firstRegiona) < 0);
+    assertTrue(comp.compare(firstRegion, firstRegionb) < 0);
+    assertTrue(comp.compare(firstRegiona, firstRegionb) < 0);
+
+    assertTrue(comp.compare(lastRegiona, lastRegiona) == 0);
+    assertTrue(comp.compare(lastRegionb, lastRegionb) == 0);
+    assertTrue(comp.compare(rootRegion, lastRegiona) < 0);
+    assertTrue(comp.compare(rootRegion, lastRegionb) < 0);
+    assertTrue(comp.compare(lastRegion, lastRegiona) < 0);
+    assertTrue(comp.compare(lastRegion, lastRegionb) < 0);
+    assertTrue(comp.compare(lastRegiona, lastRegionb) < 0);
+
+    assertTrue(comp.compare(firstRegiona, lastRegiona) < 0);
+    assertTrue(comp.compare(firstRegiona, lastRegionb) < 0);
+    assertTrue(comp.compare(firstRegionb, lastRegiona) < 0);
+    assertTrue(comp.compare(firstRegionb, lastRegionb) < 0);
+
+    HRegionInfo lastRegionaa = new HRegionInfo(htd.getName(), Bytes.toBytes("bbb"),
+      Bytes.toBytes("ccc"), false);
+    HRegionInfo lastRegionab = new HRegionInfo(htd.getName(), Bytes.toBytes("ccc"),
+      Bytes.toBytes("ddd"), false);
+
+    assertTrue(comp.compare(lastRegiona, lastRegionaa) < 0);
+    assertTrue(comp.compare(lastRegiona, lastRegionab) < 0);
+    assertTrue(comp.compare(lastRegionaa, lastRegionab) < 0);
+
+  }
+
   @Test
   public void testArchiveOldRegion() throws Exception {
     String table = "table";
