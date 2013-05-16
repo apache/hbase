@@ -2553,6 +2553,35 @@ public class HBaseAdmin implements Abortable, Closeable {
   }
 
   /**
+   * List all the completed snapshots matching the given regular expression.
+   *
+   * @param regex The regular expression to match against
+   * @return - returns a List of SnapshotDescription
+   * @throws IOException if a remote or network exception occurs
+   */
+  public List<SnapshotDescription> listSnapshots(String regex) throws IOException {
+    return listSnapshots(Pattern.compile(regex));
+  }
+  
+  /**
+   * List all the completed snapshots matching the given pattern.
+   *
+   * @param pattern The compiled regular expression to match against
+   * @return - returns a List of SnapshotDescription
+   * @throws IOException if a remote or network exception occurs
+   */
+  public List<SnapshotDescription> listSnapshots(Pattern pattern) throws IOException {
+    List<SnapshotDescription> matched = new LinkedList<SnapshotDescription>();
+    List<SnapshotDescription> snapshots = listSnapshots();
+    for (SnapshotDescription snapshot : snapshots) {
+      if (pattern.matcher(snapshot.getName()).matches()) {
+        matched.add(snapshot);
+      }
+    }
+    return matched;
+  }
+  
+  /**
    * Delete an existing snapshot.
    * @param snapshotName name of the snapshot
    * @throws IOException if a remote or network exception occurs
@@ -2582,6 +2611,36 @@ public class HBaseAdmin implements Abortable, Closeable {
     });
   }
 
+  /**
+   * Delete existing snapshots whose names match the pattern passed.
+   * @param regex The regular expression to match against
+   * @throws IOException if a remote or network exception occurs
+   */
+  public void deleteSnapshots(final String regex) throws IOException {
+    deleteSnapshots(Pattern.compile(regex));
+  }
+  
+  /**
+   * Delete existing snapshots whose names match the pattern passed.
+   * @param pattern pattern for names of the snapshot to match
+   * @throws IOException if a remote or network exception occurs
+   */
+  public void deleteSnapshots(final Pattern pattern) throws IOException {
+    List<SnapshotDescription> snapshots = listSnapshots(pattern);
+    for (final SnapshotDescription snapshot : snapshots) {
+      // do the delete
+      execute(new MasterAdminCallable<Void>() {
+        @Override
+        public Void call() throws ServiceException {
+          masterAdmin.deleteSnapshot(
+            null,
+            DeleteSnapshotRequest.newBuilder().setSnapshot(snapshot).build());
+          return null;
+        }
+      });
+    }
+  }
+  
   /**
    * @see {@link #execute(MasterAdminCallable<V>)}
    */

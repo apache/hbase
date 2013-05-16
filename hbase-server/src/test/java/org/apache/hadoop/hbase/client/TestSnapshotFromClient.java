@@ -17,12 +17,14 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
 
 import java.io.IOException;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.regex.Pattern;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -140,6 +142,43 @@ public class TestSnapshotFromClient {
     }
   }
 
+  /**
+   * Test HBaseAdmin#deleteSnapshots(String) which deletes snapshots whose names match the parameter
+   * 
+   * @throws Exception
+   */
+  @Test
+  public void testSnapshotDeletionWithRegex() throws Exception {
+    HBaseAdmin admin = UTIL.getHBaseAdmin();
+    // make sure we don't fail on listing snapshots
+    SnapshotTestingUtils.assertNoSnapshots(admin);
+
+    // put some stuff in the table
+    HTable table = new HTable(UTIL.getConfiguration(), TABLE_NAME);
+    UTIL.loadTable(table, TEST_FAM);
+    table.close();
+    
+    byte[] snapshot1 = Bytes.toBytes("TableSnapshot1");
+    admin.snapshot(snapshot1, TABLE_NAME);
+    LOG.debug("Snapshot1 completed.");
+    
+    byte[] snapshot2 = Bytes.toBytes("TableSnapshot2");
+    admin.snapshot(snapshot2, TABLE_NAME);
+    LOG.debug("Snapshot2 completed.");
+    
+    String snapshot3 = "3rdTableSnapshot";
+    admin.snapshot(Bytes.toBytes(snapshot3), TABLE_NAME);
+    LOG.debug(snapshot3 + " completed.");
+
+    // delete the first two snapshots
+    admin.deleteSnapshots("TableSnapshot.*");
+    List<SnapshotDescription> snapshots = admin.listSnapshots();
+    assertEquals(1, snapshots.size());
+    assertEquals(snapshots.get(0).getName(), snapshot3);
+    
+    admin.deleteSnapshot(snapshot3);
+    admin.close();
+  }
   /**
    * Test snapshotting a table that is offline
    * @throws Exception
