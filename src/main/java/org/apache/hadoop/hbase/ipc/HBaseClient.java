@@ -68,6 +68,7 @@ import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.ReflectionUtils;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.HasThread;
 
 /** A client for an IPC service.  IPC calls take a single {@link Writable} as a
@@ -106,6 +107,13 @@ public class HBaseClient {
   private Random random = new Random();
 
   protected final SocketFactory socketFactory;           // how to create sockets
+
+  // To avoid indefinite wait, an outstanding RPC will wait in a loop
+  // and check every min {defaultWaitTime, rpcTimeout}; until the
+  // rpcTimeout is hit.
+  final private static String RPC_POLL_INTERVAL_NAME = "rpc.poll.interval";
+  final private static int DEFAULT_RPC_POLL_INTERVAL = 50;
+  private int defaultWaitTime;
 
   final private static String PING_INTERVAL_NAME = "ipc.ping.interval";
   final static int DEFAULT_PING_INTERVAL = 60000; // 1 min
@@ -792,6 +800,7 @@ public class HBaseClient {
     this.socketFactory = factory;
     this.connectionTimeOutMillSec =
       conf.getInt("hbase.client.connection.timeout.millsec", 5000);
+    this.defaultWaitTime = conf.getInt(RPC_POLL_INTERVAL_NAME, DEFAULT_RPC_POLL_INTERVAL);
     this.numConnectionsPerServer = conf.getInt(NUM_CONNECTIONS_PER_SERVER, 
         DEFAULT_NUM_CONNECTIONS_PER_SERVER);
     LOG.debug("Created a new HBaseClient with " + numConnectionsPerServer + 
@@ -865,13 +874,23 @@ public class HBaseClient {
     connection.sendParam(call);                 // send the parameter
     boolean interrupted = false;
     //noinspection SynchronizationOnLocalVariableOrMethodParameter
+    long startTime = EnvironmentEdgeManager.currentTimeMillis();
+    long waitPeriod = rpcTimeout > 0 ? rpcTimeout : defaultWaitTime;
     synchronized (call) {
       while (!call.done) {
         try {
-          call.wait();                           // wait for the result
+          call.wait(waitPeriod);                           // wait for the result
         } catch (InterruptedException ignored) {
           // save the fact that we were interrupted
           interrupted = true;
+        }
+
+        if (rpcTimeout > 0 &&
+            !call.done
+            && EnvironmentEdgeManager.currentTimeMillis() > startTime + rpcTimeout) {
+          String msg = "Waited for " + rpcTimeout + " Call " + call.toString() + " still not complete";
+          LOG.warn(msg);
+          call.setException(new InterruptedIOException(msg));
         }
       }
 
