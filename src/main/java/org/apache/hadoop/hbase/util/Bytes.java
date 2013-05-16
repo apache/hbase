@@ -33,7 +33,6 @@ import java.security.PrivilegedAction;
 import java.util.Comparator;
 import java.util.Iterator;
 
-import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HConstants;
@@ -120,6 +119,34 @@ public class Bytes {
     public int compare(byte [] b1, int s1, int l1, byte [] b2, int s2, int l2) {
       return LexicographicalComparerHolder.BEST_COMPARER.
         compareTo(b1, s1, l1, b2, s2, l2);
+    }
+  }
+
+  /**
+   * A {@link ByteArrayComparator} that treats the empty array as the largest value.
+   * This is useful for comparing row end keys for regions.
+   */
+  // TODO: unfortunately, HBase uses byte[0] as both start and end keys for region
+  // boundaries. Thus semantically, we should treat empty byte array as the smallest value
+  // while comparing row keys, start keys etc; but as the largest value for comparing
+  // region boundaries for endKeys.
+  public static class RowEndKeyComparator extends ByteArrayComparator {
+    @Override
+    public int compare(byte[] left, byte[] right) {
+      return compare(left, 0, left.length, right, 0, right.length);
+    }
+    @Override
+    public int compare(byte[] b1, int s1, int l1, byte[] b2, int s2, int l2) {
+      if (b1 == b2 && s1 == s2 && l1 == l2) {
+        return 0;
+      }
+      if (l1 == 0) {
+        return l2; //0 or positive
+      }
+      if (l2 == 0) {
+        return -1;
+      }
+      return super.compare(b1, s1, l1, b2, s2, l2);
     }
   }
 
@@ -339,9 +366,9 @@ public class Bytes {
    */
   public static String toStringBinary(final byte [] b, int off, int len) {
     StringBuilder result = new StringBuilder();
-    for (int i = off; i < off + len ; ++i ) { 
+    for (int i = off; i < off + len ; ++i ) {
       int ch = b[i] & 0xFF;
-      if ( (ch >= '0' && ch <= '9')      
+      if ( (ch >= '0' && ch <= '9')
           || (ch >= 'A' && ch <= 'Z')
           || (ch >= 'a' && ch <= 'z')
           || " `~!@#$%^&*()-_=+[]{}|;:'\",.<>/?".indexOf(ch) >= 0 ) {

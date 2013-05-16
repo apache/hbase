@@ -21,7 +21,6 @@ import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.net.ConnectException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
 import org.apache.commons.logging.Log;
@@ -356,25 +355,6 @@ public class MetaEditor {
     if (regionsToAdd != null && regionsToAdd.size() > 0) {
       LOG.debug("Add to META, regions: " + regionsToAdd);
     }
-  }
-
-  /**
-   * Deletes daughters references in offlined split parent.
-   * @param catalogTracker
-   * @param parent Parent row we're to remove daughter reference from
-   * @throws NotAllMetaRegionsOnlineException
-   * @throws IOException
-   */
-  public static void deleteDaughtersReferencesInParent(CatalogTracker catalogTracker,
-      final HRegionInfo parent)
-  throws NotAllMetaRegionsOnlineException, IOException {
-    Delete delete = new Delete(parent.getRegionName());
-    delete.deleteColumns(HConstants.CATALOG_FAMILY, HConstants.SPLITA_QUALIFIER);
-    delete.deleteColumns(HConstants.CATALOG_FAMILY, HConstants.SPLITB_QUALIFIER);
-    deleteFromMetaTable(catalogTracker, delete);
-    LOG.info("Deleted daughters references, qualifier=" + Bytes.toStringBinary(HConstants.SPLITA_QUALIFIER) +
-      " and qualifier=" + Bytes.toStringBinary(HConstants.SPLITB_QUALIFIER) +
-      ", from parent " + parent.getRegionNameAsString());
   }
 
   public static HRegionInfo getHRegionInfo(
