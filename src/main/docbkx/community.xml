@@ -95,7 +95,7 @@ until the justification for the -1 is addressed.
     <section xml:id="community.roles">
       <title>Community Roles</title>
       <section xml:id="OWNER">
-        <title>Component Owner</title>
+          <title>Component Owner/Lieutenant</title>
         <para>
 Component owners are listed in the description field on this Apache HBase JIRA <link xlink:href="https://issues.apache.org/jira/browse/HBASE#selectedTab=com.atlassian.jira.plugin.system.project%3Acomponents-panel">components</link>
 page.  The owners are listed in the 'Description' field rather than in the 'Component
@@ -103,7 +103,7 @@ Lead' field because the latter only allows us list one individual
 whereas it is encouraged that components have multiple owners.
         </para>
 <para>
-Owners are volunteers who are (usually, but not necessarily) expert in
+Owners or component lieutenants are volunteers who are (usually, but not necessarily) expert in
 their component domain and may have an agenda on how they think their
 Apache HBase component should evolve.
 </para>
