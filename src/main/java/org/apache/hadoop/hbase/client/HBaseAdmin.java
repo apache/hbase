@@ -1375,7 +1375,8 @@ public class HBaseAdmin {
     updateConfiguration(new HServerAddress(hostNameWithPort));
   }
 
-  private void updateConfiguration(HServerAddress address) throws IOException {
+  // Update configuration for region server at this address.
+  public void updateConfiguration(HServerAddress address) throws IOException {
     HRegionInterface server = connection.getHRegionConnection(address);
     server.updateConfiguration();
   }

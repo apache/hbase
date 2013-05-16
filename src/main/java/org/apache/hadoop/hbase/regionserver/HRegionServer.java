@@ -3782,7 +3782,11 @@ public class HRegionServer implements HRegionInterface,
     return "RS-" + serverInfo.getServerName();
   }
 
+  /**
+   * Reload the configuration from disk.
+   */
   public void updateConfiguration() {
+    LOG.info("Reloading the configuration from disk.");
     conf.reloadConfiguration();
     for (HRegion r : onlineRegions.values()) {
       r.updateConfiguration();
