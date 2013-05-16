@@ -41,6 +41,8 @@ import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.backup.HFileArchiver;
 import org.apache.hadoop.hbase.catalog.MetaEditor;
 import org.apache.hadoop.hbase.catalog.MetaReader;
+import org.apache.hadoop.hbase.client.MetaScanner;
+import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitor;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -136,9 +138,10 @@ public class CatalogJanitor extends Chore {
       new TreeMap<HRegionInfo, Result>(new SplitParentFirstComparator());
     final Map<HRegionInfo, Result> mergedRegions = new TreeMap<HRegionInfo, Result>();
     // This visitor collects split parents and counts rows in the .META. table
-    MetaReader.Visitor visitor = new MetaReader.Visitor() {
+
+    MetaScannerVisitor visitor = new MetaScanner.MetaScannerVisitorBase() {
       @Override
-      public boolean visit(Result r) throws IOException {
+      public boolean processRow(Result r) throws IOException {
         if (r == null || r.isEmpty()) return true;
         count.incrementAndGet();
         HRegionInfo info = HRegionInfo.getHRegionInfo(r);
@@ -157,12 +160,9 @@ public class CatalogJanitor extends Chore {
       }
     };
 
-    byte[] startRow = (!isTableSpecified) ? HConstants.EMPTY_START_ROW
-        : HRegionInfo.createRegionName(tableName, HConstants.EMPTY_START_ROW,
-            HConstants.ZEROES, false);
     // Run full scan of .META. catalog table passing in our custom visitor with
     // the start row
-    MetaReader.fullScan(this.server.getCatalogTracker(), visitor, startRow);
+    MetaScanner.metaScan(server.getConfiguration(), visitor, tableName);
 
     return new Triple<Integer, Map<HRegionInfo, Result>, Map<HRegionInfo, Result>>(
         count.get(), mergedRegions, splitParents);
@@ -281,6 +281,7 @@ public class CatalogJanitor extends Chore {
    * daughters.
    */
   static class SplitParentFirstComparator implements Comparator<HRegionInfo> {
+    Comparator<byte[]> rowEndKeyComparator = new Bytes.RowEndKeyComparator();
     @Override
     public int compare(HRegionInfo left, HRegionInfo right) {
       // This comparator differs from the one HRegionInfo in that it sorts
@@ -295,19 +296,9 @@ public class CatalogJanitor extends Chore {
       result = Bytes.compareTo(left.getStartKey(), right.getStartKey());
       if (result != 0) return result;
       // Compare end keys.
-      result = Bytes.compareTo(left.getEndKey(), right.getEndKey());
-      if (result != 0) {
-        if (left.getStartKey().length != 0
-                && left.getEndKey().length == 0) {
-            return -1;  // left is last region
-        }
-        if (right.getStartKey().length != 0
-                && right.getEndKey().length == 0) {
-            return 1;  // right is the last region
-        }
-        return -result; // Flip the result so parent comes first.
-      }
-      return result;
+      result = rowEndKeyComparator.compare(left.getEndKey(), right.getEndKey());
+
+      return -result; // Flip the result so parent comes first.
     }
   }
 
@@ -338,8 +329,6 @@ public class CatalogJanitor extends Chore {
     if (hasNoReferences(a) && hasNoReferences(b)) {
       LOG.debug("Deleting region " + parent.getRegionNameAsString() +
         " because daughter splits no longer hold references");
-      // wipe out daughter references from parent region in meta
-      removeDaughtersFromParent(parent);
 
       // This latter regionOffline should not be necessary but is done for now
       // until we let go of regionserver to master heartbeats.  See HBASE-3368.
@@ -365,16 +354,6 @@ public class CatalogJanitor extends Chore {
    */
   private boolean hasNoReferences(final Pair<Boolean, Boolean> p) {
     return !p.getFirst() || !p.getSecond();
-  }
-
-  /**
-   * Remove mention of daughters from parent row.
-   * @param parent
-   * @throws IOException
-   */
-  private void removeDaughtersFromParent(final HRegionInfo parent)
-  throws IOException {
-    MetaEditor.deleteDaughtersReferencesInParent(this.server.getCatalogTracker(), parent);
   }
 
   /**

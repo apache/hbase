@@ -18,8 +18,8 @@
 package org.apache.hadoop.hbase.util;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkPositionIndex;
 import static com.google.common.base.Preconditions.checkNotNull;
+import static com.google.common.base.Preconditions.checkPositionIndex;
 
 import java.io.DataInput;
 import java.io.DataOutput;
@@ -123,12 +123,42 @@ public class Bytes {
     public ByteArrayComparator() {
       super();
     }
+    @Override
     public int compare(byte [] left, byte [] right) {
       return compareTo(left, right);
     }
+    @Override
     public int compare(byte [] b1, int s1, int l1, byte [] b2, int s2, int l2) {
       return LexicographicalComparerHolder.BEST_COMPARER.
         compareTo(b1, s1, l1, b2, s2, l2);
+    }
+  }
+
+  /**
+   * A {@link ByteArrayComparator} that treats the empty array as the largest value.
+   * This is useful for comparing row end keys for regions.
+   */
+  // TODO: unfortunately, HBase uses byte[0] as both start and end keys for region
+  // boundaries. Thus semantically, we should treat empty byte array as the smallest value
+  // while comparing row keys, start keys etc; but as the largest value for comparing
+  // region boundaries for endKeys.
+  public static class RowEndKeyComparator extends ByteArrayComparator {
+    @Override
+    public int compare(byte[] left, byte[] right) {
+      return compare(left, 0, left.length, right, 0, right.length);
+    }
+    @Override
+    public int compare(byte[] b1, int s1, int l1, byte[] b2, int s2, int l2) {
+      if (b1 == b2 && s1 == s2 && l1 == l2) {
+        return 0;
+      }
+      if (l1 == 0) {
+        return l2; //0 or positive
+      }
+      if (l2 == 0) {
+        return -1;
+      }
+      return super.compare(b1, s1, l1, b2, s2, l2);
     }
   }
 
@@ -1660,23 +1690,23 @@ public class Bytes {
   }
 
   /**
-   * Copy the byte array given in parameter and return an instance 
+   * Copy the byte array given in parameter and return an instance
    * of a new byte array with the same length and the same content.
    * @param bytes the byte array to duplicate
-   * @return a copy of the given byte array 
+   * @return a copy of the given byte array
    */
   public static byte [] copy(byte [] bytes) {
     if (bytes == null) return null;
     byte [] result = new byte[bytes.length];
-    System.arraycopy(bytes, 0, result, 0, bytes.length);	  
+    System.arraycopy(bytes, 0, result, 0, bytes.length);
     return result;
   }
 
   /**
-   * Copy the byte array given in parameter and return an instance 
+   * Copy the byte array given in parameter and return an instance
    * of a new byte array with the same length and the same content.
    * @param bytes the byte array to copy from
-   * @return a copy of the given designated byte array 
+   * @return a copy of the given designated byte array
    * @param offset
    * @param length
    */
@@ -1801,7 +1831,7 @@ public class Bytes {
     }
     return -1;
   }
-  
+
   /**
    * Returns the start position of the first occurrence of the specified {@code
    * target} within {@code array}, or {@code -1} if there is no such occurrence.
@@ -1831,7 +1861,7 @@ public class Bytes {
     }
     return -1;
   }
-  
+
   /**
    * @param array an array of {@code byte} values, possibly empty
    * @param target a primitive {@code byte} value
@@ -1840,7 +1870,7 @@ public class Bytes {
   public static boolean contains(byte[] array, byte target) {
     return indexOf(array, target) > -1;
   }
-  
+
   /**
    * @param array an array of {@code byte} values, possibly empty
    * @param target an array of {@code byte}
@@ -1849,7 +1879,7 @@ public class Bytes {
   public static boolean contains(byte[] array, byte[] target) {
     return indexOf(array, target) > -1;
   }
-  
+
   /**
    * Fill given array with zeros.
    * @param b array which needs to be filled with zeros

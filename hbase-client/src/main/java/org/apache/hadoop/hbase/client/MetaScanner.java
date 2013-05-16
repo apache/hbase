@@ -19,6 +19,13 @@
 
 package org.apache.hadoop.hbase.client;
 
+import java.io.Closeable;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.NavigableMap;
+import java.util.TreeMap;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -28,13 +35,6 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.exceptions.TableNotFoundException;
 import org.apache.hadoop.hbase.util.Bytes;
-
-import java.io.Closeable;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.NavigableMap;
-import java.util.TreeMap;
 
 /**
  * Scanner class that contains the <code>.META.</code> table scanning logic.
@@ -287,10 +287,7 @@ public class MetaScanner {
   }
 
   /**
-   * A MetaScannerVisitor that provides a consistent view of the table's
-   * META entries during concurrent splits (see HBASE-5986 for details). This class
-   * does not guarantee ordered traversal of meta entries, and can block until the
-   * META entries for daughters are available during splits.
+   * A MetaScannerVisitor that skips offline regions and split parents
    */
   public static abstract class DefaultMetaScannerVisitor
     extends MetaScannerVisitorBase {
