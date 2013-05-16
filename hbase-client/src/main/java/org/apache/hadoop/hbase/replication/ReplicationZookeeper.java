@@ -82,7 +82,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * </pre>
  */
 @InterfaceAudience.Private
-public class ReplicationZookeeper implements Closeable {
+public class ReplicationZookeeper extends ReplicationStateZKBase implements Closeable {
   private static final Log LOG =
     LogFactory.getLog(ReplicationZookeeper.class);
 
@@ -132,6 +132,7 @@ public class ReplicationZookeeper implements Closeable {
    */
   public ReplicationZookeeper(final Abortable abortable, final Configuration conf,
       final ZooKeeperWatcher zk) throws KeeperException {
+    super(zk, conf, abortable);
     this.conf = conf;
     this.zookeeper = zk;
     setZNodes(abortable);
@@ -151,6 +152,7 @@ public class ReplicationZookeeper implements Closeable {
    */
   public ReplicationZookeeper(final Server server, final AtomicBoolean replicating)
   throws IOException, KeeperException {
+    super(server.getZooKeeper(), server.getConfiguration(), server);
     this.abortable = server;
     this.zookeeper = server.getZooKeeper();
     this.conf = server.getConfiguration();
@@ -534,11 +536,6 @@ public class ReplicationZookeeper implements Closeable {
       }
       return "";
     }
-  }
-
-  private boolean peerExists(String id) throws KeeperException {
-    return ZKUtil.checkExists(this.zookeeper,
-          ZKUtil.joinZNode(this.peersZNode, id)) >= 0;
   }
 
   /**
