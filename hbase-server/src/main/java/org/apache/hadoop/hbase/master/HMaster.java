@@ -801,6 +801,9 @@ MasterServices, Server {
     // Make sure meta assigned before proceeding.
     status.setStatus("Assigning Meta Region");
     assignMeta(status);
+    // check if master is shutting down because above assignMeta could return even META isn't 
+    // assigned when master is shutting down
+    if(this.stopped) return;
 
     if (this.distributedLogReplay && oldMetaServerLocation != null
         && previouslyFailedServers.contains(oldMetaServerLocation)) {
@@ -941,6 +944,7 @@ MasterServices, Server {
       this.assignmentManager.regionOnline(HRegionInfo.FIRST_META_REGIONINFO,
         this.catalogTracker.getMetaLocation());
     }
+
     enableCatalogTables(Bytes.toString(HConstants.META_TABLE_NAME));
     LOG.info(".META. assigned=" + assigned + ", rit=" + rit + ", location="
         + catalogTracker.getMetaLocation());
@@ -2059,7 +2063,7 @@ MasterServices, Server {
           serverShutdownHandlerEnabled = false;
           initialized = false;
           finishInitialization(status, true);
-          return Boolean.TRUE;
+          return !stopped;
         } finally {
           status.cleanup();
         }
