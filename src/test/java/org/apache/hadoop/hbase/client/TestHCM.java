@@ -160,7 +160,48 @@ public class TestHCM {
         " regions.");
   }
 
-  
+  /**
+   * Simulates a case where the RegionServer throws exception because
+   * a put operation failed.
+   * @throws Exception
+   */
+  @Test
+  public void testRemoteServerFailure() throws Exception {
+
+    HTable table = TEST_UTIL.createTable(Bytes.toBytes("testRemoteServerFailure"), FAM_NAM);
+    table.setAutoFlush(true);
+
+    TEST_UTIL.createMultiRegions(table, FAM_NAM);
+
+    try {
+
+      for (int i = 0; i < REGION_SERVERS; i++) {
+        TEST_UTIL.getHBaseCluster().getRegionServer(i).
+        getConfiguration().set(HConstants.REGION_IMPL,
+          TestHRegion.class.getName());
+      }
+
+      TEST_UTIL.closeRegionByRow(ROW, table);
+      // Enough time for region to close and reopen with the new TestHRegionClass
+      Thread.sleep(10000);
+
+      Put put = new Put(ROW);
+      put.add(FAM_NAM, ROW, ROW);
+
+      table.put(put);
+
+      assertNull("Put should not succeed");
+    } catch (RetriesExhaustedException e) {
+      assertTrue(e.wasOperationAttemptedByServer());
+    } finally {
+      for (int i = 0; i < REGION_SERVERS; i++) {
+        TEST_UTIL.getHBaseCluster().getRegionServer(i).
+        getConfiguration().set(HConstants.REGION_IMPL,
+          HRegion.class.getName());
+      }
+    }
+  }
+
   /**
    * Test that when we delete a location using the first row of a region
    * that we really delete it.
@@ -382,41 +423,6 @@ public class TestHCM {
     return null;
   }
 
-  /**
-   * Simulates a case where the RegionServer throws exception because
-   * a put operation failed.
-   * @throws Exception
-   */
-  @Test
-  public void testRemoteServerFailure() throws Exception {
-
-    HTable table = TEST_UTIL.createTable(Bytes.toBytes("testRemoteServerFailure"), FAM_NAM);
-    table.setAutoFlush(true);
-
-    TEST_UTIL.createMultiRegions(table, FAM_NAM);
-
-    try {
-
-      for (int i = 0; i < REGION_SERVERS; i++) {
-        TEST_UTIL.getHBaseCluster().getRegionServer(i).
-        getConfiguration().set(HConstants.REGION_IMPL,
-          TestHRegion.class.getName());
-      }
-
-      TEST_UTIL.closeRegionByRow(ROW, table);
-      // Enough time for region to close and reopen with the new TestHRegionClass
-      Thread.sleep(10000);
-
-      Put put = new Put(ROW);
-      put.add(FAM_NAM, ROW, ROW);
-
-      table.put(put);
-
-      assertNull("Put should not succeed");
-    } catch (RetriesExhaustedException e) {
-      assertTrue(e.wasOperationAttemptedByServer());
-    }
-  }
 
   static public class TestHRegion extends HRegion {
     public TestHRegion(Path basedir, HLog log, FileSystem fs,
