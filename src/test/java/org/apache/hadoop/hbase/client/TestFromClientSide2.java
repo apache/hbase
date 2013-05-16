@@ -65,6 +65,10 @@ public class TestFromClientSide2 {
     // Nothing to do.
   }
 
+  public static enum ResultScannerType {
+    CLIENT_SCANNER,
+    CLIENT_LOCAL_SCANNER
+  }
 
   /**
    * Test from client side for batch of scan
@@ -73,7 +77,19 @@ public class TestFromClientSide2 {
    */
   @Test
   public void testScanBatch() throws Exception {
-    byte [] TABLE = Bytes.toBytes("testScanBatch");
+    testScanBatch(ResultScannerType.CLIENT_SCANNER);
+  }
+
+  /*
+   * Test for Client Side Scan
+   */
+  @Test
+  public void testScanBatchLocalScan() throws Exception {
+    testScanBatch(ResultScannerType.CLIENT_LOCAL_SCANNER);
+  }
+
+  public void testScanBatch(ResultScannerType version) throws IOException {
+    byte [] TABLE = Bytes.toBytes("testScanBatch" + version.name());
     byte [][] QUALIFIERS = makeNAscii(QUALIFIER, 8);
 
     HTable ht = TEST_UTIL.createTable(TABLE, FAMILY);
@@ -104,12 +120,17 @@ public class TestFromClientSide2 {
     delete = new Delete(ROW);
     delete.deleteFamily(FAMILY, 3);
     ht.delete(delete);
-
+    if (version == ResultScannerType.CLIENT_LOCAL_SCANNER) {
+      TEST_UTIL.flush();
+    }
     // without batch
     scan = new Scan(ROW);
     scan.setMaxVersions();
-    scanner = ht.getScanner(scan);
-
+    if (version == ResultScannerType.CLIENT_LOCAL_SCANNER) {
+      scanner = ht.getLocalScanner(scan);
+    } else {
+      scanner = ht.getScanner(scan);
+    }
     // c4:4, c5:5, c6:6, c7:7
     kvListExp = new ArrayList<KeyValue>();
     kvListExp.add(new KeyValue(ROW, FAMILY, QUALIFIERS[4], 4, VALUE));
@@ -118,12 +139,17 @@ public class TestFromClientSide2 {
     kvListExp.add(new KeyValue(ROW, FAMILY, QUALIFIERS[7], 7, VALUE));
     result = scanner.next();
     verifyResult(result, kvListExp, toLog, "Testing first batch of scan");
+    scanner.close();
 
     // with batch
     scan = new Scan(ROW);
     scan.setMaxVersions();
     scan.setBatch(2);
-    scanner = ht.getScanner(scan);
+    if (version == ResultScannerType.CLIENT_LOCAL_SCANNER) {
+      scanner = ht.getLocalScanner(scan);
+    } else {
+      scanner = ht.getScanner(scan);
+    }
 
     // First batch: c4:4, c5:5
     kvListExp = new ArrayList<KeyValue>();

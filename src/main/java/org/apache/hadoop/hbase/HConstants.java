@@ -684,6 +684,14 @@ public final class HConstants {
       "hbase.histogrambasedmetric.numbuckets.preadcompactionlatency";
   public static final String HISTOGRAM_BASED_METRICS_WINDOW =
       "hbase.histogrambasedmetric.window";
+  /*
+   * This is the folder address for the hard links folder where the
+   * hard links are created during creating a read only store.
+   */
+  public static final String READ_ONLY_HARDLINKS_FOLDER =
+      "hbase.store.readonly.hardlinks.folder";
+  public static final String READ_ONLY_HARDLINKS_FOLDER_DEFAULT =
+      "/tmp/hardlinks/";
 
   public static final String CLIENT_SOCKED_CLOSED_EXC_MSG = "Interrupting the read request";
   public static final String SERVER_INTERRUPTED_CALLS_KEY = "serverInterruptedCalls";

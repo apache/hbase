@@ -103,7 +103,7 @@ public class Store extends SchemaConfigured implements HeapSize {
   static final Log LOG = LogFactory.getLog(Store.class);
   protected final MemStore memstore;
   // This stores directory in the filesystem.
-  private final Path homedir;
+  protected final Path homedir;
   private final HRegion region;
   private final HColumnDescriptor family;
   CompactionManager compactionManager;
@@ -134,7 +134,7 @@ public class Store extends SchemaConfigured implements HeapSize {
    * List of store files inside this store. This is an immutable list that
    * is atomically replaced when its contents change.
    */
-  private ImmutableList<StoreFile> storefiles = null;
+  protected ImmutableList<StoreFile> storefiles = null;
 
   List<StoreFile> filesCompacting = Lists.newArrayList();
 
@@ -155,12 +155,14 @@ public class Store extends SchemaConfigured implements HeapSize {
   private Class<KeyValueAggregator> aggregatorClass = null;
   private CompactionHook compactHook = null;
 
+  private final HRegionInfo info;
+
   // This should account for the Store's non static variables. So, when there
   // is an addition to the member variables to Store, this value should be
   // adjusted accordingly.
   public static final long FIXED_OVERHEAD =
       ClassSize.align(SchemaConfigured.SCHEMA_CONFIGURED_UNALIGNED_HEAP_SIZE +
-          + (20 * ClassSize.REFERENCE) + (6 * Bytes.SIZEOF_LONG)
+          + (21 * ClassSize.REFERENCE) + (6 * Bytes.SIZEOF_LONG)
           + (4 * Bytes.SIZEOF_INT) + 2 * Bytes.SIZEOF_BOOLEAN);
 
   public static final long DEEP_OVERHEAD = ClassSize.align(FIXED_OVERHEAD +
@@ -175,7 +177,6 @@ public class Store extends SchemaConfigured implements HeapSize {
    */
   public static boolean isPread = true;
 
-
   /**
    * Constructor
    * @param basedir qualified path under which the region directory lives;
@@ -188,21 +189,21 @@ public class Store extends SchemaConfigured implements HeapSize {
    * @throws IOException
    */
   @SuppressWarnings("unchecked")
-  protected Store(Path basedir, HRegion region, HColumnDescriptor family,
-      FileSystem fs, Configuration confParam)
-  throws IOException {
+  protected Store(Path basedir, HColumnDescriptor family, FileSystem fs,
+      Configuration confParam, HRegion region, HRegionInfo regionInfo)
+          throws IOException{
     super(new CompoundConfiguration().add(confParam).add(
-        family.getValues()), region.getTableDesc().getNameAsString(),
+        family.getValues()), regionInfo.getTableDesc().getNameAsString(),
         Bytes.toString(family.getName()));
-    HRegionInfo info = region.regionInfo;
+    this.info = regionInfo;
+    this.region = region;
     this.fs = fs;
-    this.homedir = getStoreHomedir(basedir, info.getEncodedName(), family.getName());
+    this.homedir = Store.getStoreHomedir(basedir, info.getEncodedName(), family.getName());
     if (!this.fs.exists(this.homedir)) {
       LOG.info("No directory exists for family " + family + "; creating one");
       if (!this.fs.mkdirs(this.homedir))
         throw new IOException("Failed create of: " + this.homedir.toString());
     }
-    this.region = region;
     this.family = family;
     // 'conf' renamed to 'confParam' b/c we use this.conf in the constructor
     this.conf = new CompoundConfiguration()
@@ -231,6 +232,7 @@ public class Store extends SchemaConfigured implements HeapSize {
       // second -> ms adjust for user data
       this.ttl *= 1000;
     }
+
     // used by ScanQueryMatcher
     timeToPurgeDeletes =
         Math.max(conf.getLong("hbase.hstore.time.to.purge.deletes", 0), 0);
@@ -257,7 +259,25 @@ public class Store extends SchemaConfigured implements HeapSize {
       Store.closeCheckInterval = conf.getInt(
           "hbase.hstore.close.check.interval", 10*1000*1000 /* 10 MB */);
     }
-    this.storefiles = sortAndClone(loadStoreFiles());
+  }
+  /**
+   * Constructor
+   * @param basedir qualified path under which the region directory lives;
+   * generally the table subdirectory
+   * @param region
+   * @param family HColumnDescriptor for this column
+   * @param fs file system object
+   * @param conf configuration object
+   * failed.  Can be null.
+   * @throws IOException
+   */
+  @SuppressWarnings("unchecked")
+  protected Store(Path basedir, HRegion region, HColumnDescriptor family,
+      FileSystem fs, Configuration confParam)
+  throws IOException {
+    this(basedir, family, fs, confParam, region, region.regionInfo);
+    this.storefiles = sortAndClone(loadStoreFiles(this.fs.listStatus(this.homedir)));
+
     // Peak time is from [peakStartHour, peakEndHour). Valid numbers are [0, 23]
     this.peakStartHour = conf.getInt("hbase.peak.start.hour", -1);
     this.peakEndHour = conf.getInt("hbase.peak.end.hour", -1);
@@ -269,7 +289,6 @@ public class Store extends SchemaConfigured implements HeapSize {
       }
       this.peakStartHour = this.peakEndHour = -1;
     }
-
     setCompactionPolicy(conf.get(HConstants.COMPACTION_MANAGER_CLASS,
                                  HConstants.DEFAULT_COMPACTION_MANAGER_CLASS));
 
@@ -409,9 +428,9 @@ public class Store extends SchemaConfigured implements HeapSize {
    * from the given directory.
    * @throws IOException
    */
-  private List<StoreFile> loadStoreFiles() throws IOException {
+  protected List<StoreFile> loadStoreFiles(FileStatus[] files)
+      throws IOException {
     ArrayList<StoreFile> results = new ArrayList<StoreFile>();
-    FileStatus files[] = this.fs.listStatus(this.homedir);
 
     if (files == null || files.length == 0) {
       return results;
@@ -605,6 +624,17 @@ public class Store extends SchemaConfigured implements HeapSize {
    * @throws IOException
    */
   ImmutableList<StoreFile> close() throws IOException {
+    return close(false);
+  }
+
+  /**
+   * Closes the Store. In addition it also physically deletes the corresponding
+   * store files underlying this store depending upon argument.
+   * @param deleteStoreFile : True - deletes the store files
+   * @return
+   * @throws IOException
+   */
+  public ImmutableList<StoreFile> close(final boolean deleteStoreFile) throws IOException {
     this.lock.writeLock().lock();
     try {
       ImmutableList<StoreFile> result = storefiles;
@@ -623,7 +653,11 @@ public class Store extends SchemaConfigured implements HeapSize {
         for (final StoreFile f : result) {
           completionService.submit(new Callable<Void>() {
             public Void call() throws IOException {
-              f.closeReader(true);
+              if (deleteStoreFile) {
+                f.deleteReader();
+              } else {
+                f.closeReader(true);
+              }
               return null;
             }
           });
@@ -1816,7 +1850,7 @@ public class Store extends SchemaConfigured implements HeapSize {
   }
 
   HRegionInfo getHRegionInfo() {
-    return this.region.regionInfo;
+    return this.info;
   }
 
   /**

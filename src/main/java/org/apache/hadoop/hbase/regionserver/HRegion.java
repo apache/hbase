@@ -1665,7 +1665,8 @@ public class HRegion implements HeapSize {
     // return new RegionScanner(scan, additionalScanners);
     RegionContext regionContext = new RegionContext(stores, scannerReadPoints,
         comparator, mvcc, closing, closed, regionInfo, rowReadCnt);
-    return new RegionScanner(scan, additionalScanners, regionContext);
+    return new RegionScanner(scan, additionalScanners, regionContext,
+        HRegionServer.scanPrefetchThreadPool);
   }
 
   /*

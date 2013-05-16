@@ -694,6 +694,34 @@ public class HBaseTestingUtility {
     return rowCount;
   }
 
+  public int loadTable2(final HTable t, final byte[] f) throws IOException {
+    t.setAutoFlush(false);
+    byte[] k = new byte[4];
+    int rowCount = 0;
+    for (byte b0 = 'a'; b0 <= 'z'; b0++) {
+      for (byte b1 = 'a'; b1 <= 'z'; b1++) {
+        for (byte b2 = 'a'; b2 <= 'z'; b2++) {
+          for (byte b3 = 'a'; b3 <= 'z'; b3++) {
+            k[0] = b0;
+            k[1] = b1;
+            k[2] = b2;
+            k[3] = b3;
+            Put put = new Put(k);
+            put.add(f, null, k);
+            t.put(put);
+            rowCount++;
+            if (rowCount % 6000 == 0) {
+              t.flushCommits();
+              this.flush(t.getTableName());
+            }
+          }
+        }
+      }
+    }
+    t.flushCommits();
+    return rowCount;
+  }
+
   /**
    * Return the number of rows in the given table.
    */

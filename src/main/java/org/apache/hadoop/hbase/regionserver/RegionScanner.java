@@ -28,6 +28,7 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
+import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -72,8 +73,10 @@ public class RegionScanner implements InternalScanner {
   private HRegionInfo regionInfo;
   private AtomicInteger rowReadCnt;
   private final List<KeyValue> MOCKED_LIST = HRegion.MOCKED_LIST;
+  private final ThreadPoolExecutor scanPrefetchThreadPool;
 
-  public RegionScanner(Scan scan, List<KeyValueScanner> additionalScanners, RegionContext regionContext)
+  public RegionScanner(Scan scan, List<KeyValueScanner> additionalScanners,
+      RegionContext regionContext, ThreadPoolExecutor scanPrefetchThreadPool)
     throws IOException {
     this.stores = regionContext.getStores();
     this.scannerReadPoints = regionContext.getScannerReadPoints();
@@ -84,6 +87,7 @@ public class RegionScanner implements InternalScanner {
     this.regionInfo = regionContext.getRegionInfo();
     this.rowReadCnt = regionContext.getRowReadCnt();
     this.originalScan = scan;
+    this.scanPrefetchThreadPool = scanPrefetchThreadPool;
 
     this.filter = scan.getFilter();
     this.batch = scan.getBatch();
@@ -280,7 +284,7 @@ public class RegionScanner implements InternalScanner {
       (scanResult.outResults == null || scanResult.outResults.length == 0);
     if (prefetchingEnabled && !scanDone) {
       ScanPrefetcher callable = new ScanPrefetcher(nbRows, limit, metric);
-      prefetchScanFuture = HRegionServer.scanPrefetchThreadPool.submit(callable);
+      prefetchScanFuture = scanPrefetchThreadPool.submit(callable);
     }
     rowReadCnt.addAndGet(scanResult.outResults.length);
     return scanResult.outResults == null ||
@@ -368,7 +372,6 @@ public class RegionScanner implements InternalScanner {
         if (filter != null && filter.filterRow()) {
           results.clear();
         }
-
         return false;
       } else if (filterRowKey(currentRow)) {
         nextRow(currentRow);

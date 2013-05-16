@@ -49,10 +49,10 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.UnknownScannerException;
 import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitor;
-import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.io.hfile.Compression;
 import org.apache.hadoop.hbase.ipc.HBaseRPCOptions;
 import org.apache.hadoop.hbase.ipc.ProfilingData;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.DaemonThreadFactory;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Writables;
@@ -587,6 +587,12 @@ public class HTable implements HTableInterface {
     Scan scan = new Scan();
     scan.addColumn(family, qualifier);
     return getScanner(scan);
+  }
+
+  public ResultScanner getLocalScanner(final Scan scan) throws IOException {
+    ClientLocalScanner s = new ClientLocalScanner(scan, this);
+    s.initialize();
+    return s;
   }
 
   public Result get(final Get get) throws IOException {
