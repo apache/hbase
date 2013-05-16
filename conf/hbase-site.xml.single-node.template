@@ -1,0 +1,518 @@
+<?xml version="1.0"?>
+<?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
+<!--
+/**
+ * Copyright 2009 The Apache Software Foundation
+ *
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+-->
+<configuration>
+
+<property>
+  <name>hbase.regionserver.hlog.replication</name>
+  <value>1</value>
+  <description>For HBase to offer good data durability, we roll logs if
+  filesystem replication falls below a certain amount.  In psuedo-distributed
+  mode, you normally only have the local filesystem or 1 HDFS DataNode, so you
+  don't want to roll logs constantly.</description>
+</property>
+
+<property>
+  <name>hbase.tmp.dir</name>
+  <value>/tmp/hbase-testing</value>
+  <description>Temporary directory on the local filesystem.</description>
+</property>
+
+<!-- DEFAULT = use local filesystem, not HDFS
+     ADD THESE LINES if you have a copy of HDFS source and want to run HBase
+     psuedo-distributed over a psuedo-distributed HDFS cluster.
+     For HDFS psuedo-distributed setup, see their documentation:
+
+     http://hadoop.apache.org/common/docs/r0.20.2/quickstart.html#PseudoDistributed
+
+-->
+<property>
+  <name>hbase.rootdir</name>
+  <value>hdfs://localhost:9010/hbase-cluster</value>
+  <description>The directory shared by region servers.
+  Should be fully-qualified to include the filesystem to use.
+  E.g: hdfs://NAMENODE_SERVER:PORT/HBASE_ROOTDIR
+  </description>
+</property>
+
+
+<!-- OPTIONAL: You might want to add these options depending upon your use case
+-->
+
+<property>
+  <name>dfs.support.append</name>
+  <value>true</value>
+  <description>Allow append support (if you want to test data durability with HDFS)
+  </description>
+</property>
+
+
+  <property>
+    <name>hbase.cluster.distributed</name>
+    <value>true</value>
+    <description>The mode the cluster will be in. Possible values are
+      false: standalone and pseudo-distributed setups with managed Zookeeper
+      true: fully-distributed with unmanaged Zookeeper Quorum (see hbase-env.sh)
+    </description>
+  </property>
+  <property>
+    <name>hbase.regionserver.handler.count</name>
+    <value>300</value>
+  </property>
+
+  <!--
+  The following three properties are used together to create the list of
+  host:peer_port:leader_port quorum servers for ZooKeeper.
+  -->
+  <property>
+    <name>hbase.zookeeper.peerport</name>
+    <value>52888</value>
+    <description>Port used by ZooKeeper peers to talk to each other.
+    See http://hadoop.apache.org/zookeeper/docs/r3.1.1/zookeeperStarted.html#sc_RunningReplicatedZooKeeper
+    for more information.
+    </description>
+  </property>
+
+  <property>
+    <name>hbase.zookeeper.leaderport</name>
+    <value>53888</value>
+    <description>Port used by ZooKeeper for leader election.
+    See http://hadoop.apache.org/zookeeper/docs/r3.1.1/zookeeperStarted.html#sc_RunningReplicatedZooKeeper
+    for more information.
+    </description>
+  </property>
+  <!-- End of properties used to generate ZooKeeper host:port quorum list. -->
+
+  <property>
+    <name>hbase.hregion.memstore.flush.size</name>
+    <value>135266304</value>
+    <description>
+    128MB
+    Memstore will be flushed to disk if size of the memstore
+    exceeds this number of bytes.  Value is checked by a thread that runs
+    every hbase.server.thread.wakefrequency.
+    </description>
+  </property>
+
+  <property>
+    <name>hbase.regionserver.maxlogs</name>
+    <value>8</value>
+    <description>
+    When these many logs accumulate, memstores containing old edits
+    will get flushed preemptively even if they have not reached
+    their threshold size. This keeps an upper bound on recovery times.
+    </description>
+  </property>
+
+  <property>
+    <name>hbase.regionserver.logroll.multiplier</name>
+    <value>0.95</value>
+    <description>
+    Roll logs at this multiplier * HDFS block size.
+    </description>
+  </property>
+
+  <property>
+    <name>hbase.hregion.memstore.block.multiplier</name>
+    <value>4</value>
+    <description>
+    Block updates if memstore has hbase.hregion.block.memstore
+    time hbase.hregion.flush.size bytes.  Useful preventing
+    runaway memstore during spikes in update traffic.  Without an
+    upper-bound, memstore fills such that when it flushes the
+    resultant flush files take a long time to compact or split, or
+    worse, we OOME.
+    </description>
+  </property>
+  <property>
+    <name>hbase.hregion.max.filesize</name>
+    <value>2147483648000</value>
+    <description>
+    2000GB.
+   (Set high enough to avoid automatic splits. We want to do the splits
+    manually for now).
+    Maximum HStoreFile size. If any one of a column families' HStoreFiles has
+    grown to exceed this value, the hosting HRegion is split in two.
+    </description>
+  </property>
+  <property>
+   <name>hbase.hstore.compaction.max</name>
+   <value>12</value>
+   <description>Never compact more than these files, even if it is a 
+   major compaction. This is to safe guard against OOM.</description>
+  </property>
+  <property>
+   <name>hbase.hstore.compaction.min.size</name>
+   <value>4194304</value>
+   <description>
+     The "minimum" compaction size. All files below this size are always
+     included into a compaction, even if outside compaction ratio times
+     the total size of all files added to compaction so far.
+   </description>
+  </property>
+  <property>
+    <name>hbase.hregion.majorcompaction</name>
+    <value>2419200000</value>
+    <description>
+    Force a major compaction if any StoreFile is this old (28 days)
+    </description>
+  </property>
+  <property>
+    <name>hbase.hregion.majorcompaction.jitter</name>
+    <value>0.33</value>
+    <description>
+    Jitter in major compaction time (+/- 33% == 1 day)
+    </description>
+  </property>
+  <property>
+    <name>hbase.hstore.compaction.exclude.bulk</name>
+    <value>true</value>
+    <description>
+      Exclude bulk files from minor compaction to prevent compaction storms after an incremental HFileOutputFormat load
+    </description>
+  </property>
+  <property>
+    <name>hbase.regionserver.thread.compaction.small</name>
+    <value>1</value>
+    <description>
+      Number of threads dedicated to small-sized compactions
+    </description>
+  </property>
+  <property>
+    <name>hbase.regionserver.thread.compaction.throttle</name>
+    <value>1000000000</value>
+    <description>
+      Put all compactions over this size in a different thread pool than compactions under this size (1 GB)
+    </description>
+  </property>
+  
+  <property>
+    <name>hbase.hstore.blockingStoreFiles</name>
+    <value>25</value>
+    <description>
+    If more than this number of StoreFiles in any one Store
+    (one StoreFile is written per flush of MemStore) then updates are
+    blocked for this HRegion until a compaction is completed, or
+    until hbase.hstore.blockingWaitTime has been exceeded.
+    </description>
+  </property>
+  <property>
+    <name>hbase.client.keyvalue.maxsize</name>
+    <value>0</value>
+    <description>Specifies the combined maximum allowed size of a KeyValue
+    instance. This is to set an upper boundary for a single entry saved in a
+    storage file. Since they cannot be split it helps avoiding that a region
+    cannot be split any further because the data is too large. It seems wise
+    to set this to a fraction of the maximum region size. Setting it to zero
+    or less disables the check.
+    </description>
+  </property>
+
+  <property>
+    <name>hbase.master.logcleaner.maxdeletedlogs</name>
+    <value>1000</value>
+    <description>The max number of archived logs (logs in .oldlogs)
+    directory that we'll delete in one iteration of the oldLogsCleaner
+    background chore.
+    </description>
+  </property>
+
+  <property>
+     <name>hbase.hstore.compaction.ratio</name>
+     <value>1.4</value>
+     <description>During compaction file selection, a file is included in
+     compaction if it is within sum(newer_files) * compaction.ratio
+     </description>
+  </property>
+
+  <property>
+     <name>io.storefile.bloom.max.keys</name>
+     <value>128000000</value>
+     <description>If output might contain more than these many keys,
+     do not create a  bloom for the given store file. This avoids
+     creating blooms for the large (e.g. major compacted) files,
+     but retains the benefit of bloom to avoid seeking into
+     the larger number of small/recent files.
+     </description>
+  </property>
+
+  <property>
+     <name>hfile.io.bytes.per.checksum</name>
+     <value>4096</value>
+     <description>Generate a checksum for HFiles for every specified
+      number of bytes.
+     </description>
+  </property>
+
+  <property>
+     <name>hbase.regions.percheckin</name>
+     <value>1</value>
+     <description>
+     Max number of regions to give an RS when he heartbeats.
+     </description>
+  </property>
+
+  <property>
+     <name>hbase.regions.nobalancing.count</name>
+     <value>1</value>
+     <description>
+     Don't give a new region to an RS if it is still initializing a
+     previously-assigned region
+     </description>
+  </property>
+
+  <property>
+     <name>hbase.regions.close.max</name>
+     <value>1</value>
+     <description>
+     When balancing from a high-loaded RS to a low-loaded RS, only balance
+     one region at a time.  This smoothes out rebalancing in the case where
+     multiple RS have roughly the same load.
+     </description>
+  </property>
+
+  <property>
+     <name>hbase.regions.slop</name>
+     <value>0.05</value>
+     <description>
+     Percentage of variance allowed above the average before an RS is
+     considered high-loaded.  Note that we would put this lower, but we have
+     some clusters with 5 regions/server, so we wanted a min variance of:
+      10 * 0.05 == 0.5 i.e. about 1 region slop.
+     </description>
+  </property>
+
+  <property>
+      <name>hfile.block.cache.size</name>
+      <value>0.60</value>
+      <description>
+          Percentage of maximum heap (-Xmx setting) to allocate to block cache
+          used by HFile/StoreFile. Default of 0.2 means allocate 20%.
+          Set to 0 to disable.
+      </description>
+  </property>
+
+  <property>
+      <name>hbase.regionserver.discardLastNonExistantBlock</name>
+      <value>true</value>
+      <description>
+        If the RS dies before it could write any data to the last block of
+        HLog, then the lease recovery would get stuck trying to recover the
+        last block of that file (which was not even created). The fix is
+        to make the lease recovery code drop the last block of a file if
+        nobody has previously issued a hsync on that block.
+      </description>
+  </property>
+  
+  <property>
+    <name>hbase.master.applyPreferredAssignment.period</name>
+    <value>300000</value>
+    <description>Assign regioins based on the region locality in this period
+      (ms) of time when the master restarts. Also disable the preferred 
+      assignment by setting this variable to 0.
+    </description>
+  </property>
+
+  <property>
+    <name>hbase.master.regionLocality.snapshot.validity_time_ms</name>
+    <value>86400000</value>
+    <description>Ensure that we ignore region-locality preferences that were
+    calculated more than this time ago.
+    </description>
+  </property>
+
+  <property>
+    <name>hbase.rs.blockcache.lru.bucket.multi</name>
+    <value>0.8</value>
+    <description>
+      Fraction of total block cache size for multiple-access blocks
+    </description>
+  </property>
+
+  <property>
+    <name>hbase.rs.blockcache.lru.bucket.single</name>
+    <value>0.19</value>
+    <description>
+      Fraction of total block cache size for single-access blocks
+    </description>
+  </property>
+
+  <property>
+    <name>hbase.rs.blockcache.lru.bucket.inmemory</name>
+    <value>0.01</value>
+    <description>
+      Percentage of total size for in-memory blocks
+    </description>
+  </property>
+
+  <property>
+    <name>hbase.rs.blockcache.lru.watermark.high</name>
+    <value>0.95</value>
+    <description>
+      Percentage of total block cache size that triggers eviction
+    </description>
+  </property>
+
+  <property>
+    <name>hbase.rs.blockcache.lru.watermark.low</name>
+    <value>0.85</value>
+    <description>
+      Percentage of total block cache size that eviction will evict until
+    </description>
+  </property>
+
+
+  <property>
+    <name>hbase.offpeak.start.hour</name>
+    <value>21</value>
+    <description>
+      Start of the off-peak hour
+    </description>
+  </property>
+
+  <property>
+    <name>hbase.offpeak.end.hour</name>
+    <value>22</value>
+    <description>
+      End of the off-peak hour
+    </description>
+  </property>
+
+  <property>
+    <name>hbase.hstore.compaction.ratio.offpeak</name>
+    <value>3</value>
+    <description>
+      Compact selection ratio for the off-peak hours
+    </description>
+  </property>
+
+  <property>
+    <name>zookeeper.connection.retry.num</name>
+    <value>6</value>
+    <description>
+      The number of retry times if hbase gets zookeeper connection 
+			exception.
+    </description>
+  </property>
+
+  <property>
+    <name>zookeeper.connection.retry.freq</name>
+    <value>1000</value>
+    <description>
+    	The frequency in mill secs that hbase will retry to connect to zookeeper quorum when 
+			getting zookeeper connection exception.
+		</description>
+  </property>
+
+  <property>
+    <name>zookeeper.dump.connection.timeout</name>
+    <value>1000</value>
+    <description>
+    	The timeout in mill secs that HBase will try to connect to each server of zookeeper 
+    	quorum during the zk dump.
+		</description>
+  </property>
+
+  <property>
+    <name>hbase.master.logcleaner.ttl</name>
+    <value>604800000</value>
+    <description>Maximum time (in ms) a log can stay in the .oldlogdir
+    directory, after which it will be cleaned by a master thread.
+    </description>
+  </property>
+  
+	<property>
+    <name>hbase.master.distributed.log.splitting</name>
+    <value>true</value>
+  </property>
+
+  <property>
+    <name>hbase.thrift.minWorkerThreads</name>
+    <value>200</value>
+    <description>
+      The core size of the HBase Thrift server's thread pool. At least this
+      many threads will be running at all times after very short initial
+      warmup.
+    </description>
+  </property>
+
+  <property> 
+    <name>hbase.thrift.maxWorkerThreads</name>
+    <value>1000</value>
+    <description>
+      The maximum size of the HBase Thrift server thread pool.
+    </description>
+  </property>
+
+  <property> 
+    <name>hbase.thrift.maxQueuedRequests</name>
+    <value>1000</value>
+    <description>
+      The maximum number of queued requests (connections) outstanding while
+      waiting for Thrift worker threads to become available. When this queue
+      overflows, new connections will be closed.
+    </description>
+  </property>
+
+  <property>
+    <name>hbase.regionserver.preferredAssignment.regionHoldPeriod</name>
+    <value>120000</value>
+    <description>
+      Time the master holds regions to reassign.
+    </description>
+  </property>
+
+  <property>
+    <name>zookeeper.session.timeout</name>
+    <value>600000</value>
+    <description>
+      controlls the zk session timeout for master and region servers.
+      master zk session timeout can be overridden by
+      hbase.master.zookeeper.session.timeout
+    </description>
+  </property>
+
+  <property>
+    <name>hbase.zookeeper.property.maxSessionTimeout</name>
+    <value>600000</value>
+  </property>
+
+  <property>
+    <name>hbase.master.zookeeper.session.timeout</name>
+    <value>55000</value>
+    <description>
+      override zookeeper.session.timeout for master
+    </description>
+  </property>
+
+  <property>
+    <name>hbase.splitlog.manager.timeout</name>
+    <value>90000</value>
+    <description>
+      Distributed log splitting will preempt a task if it doesn't
+      get a heartbeat from the worker within this timeout
+      Mostly Depends upon DFS IPC/RPC/Socket timeouts
+    </description>
+  </property>
+
+</configuration>
