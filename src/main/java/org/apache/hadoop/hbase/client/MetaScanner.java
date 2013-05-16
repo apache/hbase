@@ -403,32 +403,36 @@ public class MetaScanner {
          * seen by this scanner as well, so we block until they are added to the META table. Even
          * though we are waiting for META entries, ACID semantics in HBase indicates that this
          * scanner might not see the new rows. So we manually query the daughter rows */
-        HRegionInfo splitA = Writables.getHRegionInfo(rowResult.getValue(HConstants.CATALOG_FAMILY,
+        HRegionInfo splitA = Writables.getHRegionInfoOrNull(rowResult.getValue(HConstants.CATALOG_FAMILY,
             HConstants.SPLITA_QUALIFIER));
-        HRegionInfo splitB = Writables.getHRegionInfo(rowResult.getValue(HConstants.CATALOG_FAMILY,
+        HRegionInfo splitB = Writables.getHRegionInfoOrNull(rowResult.getValue(HConstants.CATALOG_FAMILY,
             HConstants.SPLITB_QUALIFIER));
 
         HTable metaTable = getMetaTable();
         long start = System.currentTimeMillis();
-        Result resultA = getRegionResultBlocking(metaTable, blockingTimeout,
-            splitA.getRegionName());
-        if (resultA != null) {
-          processRow(resultA);
-          daughterRegions.add(splitA.getRegionName());
-        } else {
-          throw new RegionOfflineException("Split daughter region " +
-              splitA.getRegionNameAsString() + " cannot be found in META.");
+        if (splitA != null) {
+          Result resultA = getRegionResultBlocking(metaTable, blockingTimeout,
+              splitA.getRegionName());
+          if (resultA != null) {
+            processRow(resultA);
+            daughterRegions.add(splitA.getRegionName());
+          } else {
+            throw new RegionOfflineException("Split daughter region " +
+                splitA.getRegionNameAsString() + " cannot be found in META.");
+          }
         }
         long rem = blockingTimeout - (System.currentTimeMillis() - start);
 
-        Result resultB = getRegionResultBlocking(metaTable, rem,
-            splitB.getRegionName());
-        if (resultB != null) {
-          processRow(resultB);
-          daughterRegions.add(splitB.getRegionName());
-        } else {
-          throw new RegionOfflineException("Split daughter region " +
-              splitB.getRegionNameAsString() + " cannot be found in META.");
+        if (splitB != null) {
+          Result resultB = getRegionResultBlocking(metaTable, rem,
+              splitB.getRegionName());
+          if (resultB != null) {
+            processRow(resultB);
+            daughterRegions.add(splitB.getRegionName());
+          } else {
+            throw new RegionOfflineException("Split daughter region " +
+                splitB.getRegionNameAsString() + " cannot be found in META.");
+          }
         }
       }
 
@@ -437,9 +441,7 @@ public class MetaScanner {
 
     private Result getRegionResultBlocking(HTable metaTable, long timeout, byte[] regionName)
         throws IOException {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("blocking until region is in META: " + Bytes.toStringBinary(regionName));
-      }
+      boolean logged = false;
       long start = System.currentTimeMillis();
       while (System.currentTimeMillis() - start < timeout) {
         Get get = new Get(regionName);
@@ -450,6 +452,12 @@ public class MetaScanner {
           return result;
         }
         try {
+          if (!logged) {
+            if (LOG.isDebugEnabled()) {
+              LOG.debug("blocking until region is in META: " + Bytes.toStringBinary(regionName));
+            }
+            logged = true;
+          }
           Thread.sleep(10);
         } catch (InterruptedException ex) {
           Thread.currentThread().interrupt();

@@ -41,7 +41,8 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.backup.HFileArchiver;
 import org.apache.hadoop.hbase.catalog.MetaEditor;
-import org.apache.hadoop.hbase.catalog.MetaReader;
+import org.apache.hadoop.hbase.client.MetaScanner;
+import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitor;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
@@ -107,9 +108,10 @@ class CatalogJanitor extends Chore {
     final Map<HRegionInfo, Result> splitParents =
       new TreeMap<HRegionInfo, Result>(new SplitParentFirstComparator());
     // This visitor collects split parents and counts rows in the .META. table
-    MetaReader.Visitor visitor = new MetaReader.Visitor() {
+
+    MetaScannerVisitor visitor = new MetaScanner.BlockingMetaScannerVisitor(server.getConfiguration()) {
       @Override
-      public boolean visit(Result r) throws IOException {
+      public boolean processRowInternal(Result r) throws IOException {
         if (r == null || r.isEmpty()) return true;
         count.incrementAndGet();
         HRegionInfo info = getHRegionInfo(r);
@@ -119,8 +121,9 @@ class CatalogJanitor extends Chore {
         return true;
       }
     };
+
     // Run full scan of .META. catalog table passing in our custom visitor
-    MetaReader.fullScan(this.server.getCatalogTracker(), visitor);
+    MetaScanner.metaScan(server.getConfiguration(), visitor);
 
     return new Pair<Integer, Map<HRegionInfo, Result>>(count.get(), splitParents);
   }
@@ -164,6 +167,7 @@ class CatalogJanitor extends Chore {
    * daughters.
    */
   static class SplitParentFirstComparator implements Comparator<HRegionInfo> {
+    Comparator<byte[]> rowEndKeyComparator = new Bytes.RowEndKeyComparator();
     @Override
     public int compare(HRegionInfo left, HRegionInfo right) {
       // This comparator differs from the one HRegionInfo in that it sorts
@@ -178,19 +182,9 @@ class CatalogJanitor extends Chore {
       result = Bytes.compareTo(left.getStartKey(), right.getStartKey());
       if (result != 0) return result;
       // Compare end keys.
-      result = Bytes.compareTo(left.getEndKey(), right.getEndKey());
-      if (result != 0) {
-        if (left.getStartKey().length != 0
-                && left.getEndKey().length == 0) {
-            return -1;  // left is last region
-        }
-        if (right.getStartKey().length != 0
-                && right.getEndKey().length == 0) {
-            return 1;  // right is the last region
-        }
-        return -result; // Flip the result so parent comes first.
-      }
-      return result;
+      result = rowEndKeyComparator.compare(left.getEndKey(), right.getEndKey());
+
+      return -result; // Flip the result so parent comes first.
     }
   }
 
@@ -235,8 +229,6 @@ class CatalogJanitor extends Chore {
     if (hasNoReferences(a) && hasNoReferences(b)) {
       LOG.debug("Deleting region " + parent.getRegionNameAsString() +
         " because daughter splits no longer hold references");
-      // wipe out daughter references from parent region in meta
-      removeDaughtersFromParent(parent);
 
       // This latter regionOffline should not be necessary but is done for now
       // until we let go of regionserver to master heartbeats.  See HBASE-3368.
@@ -276,16 +268,6 @@ class CatalogJanitor extends Chore {
   throws IOException {
     byte [] bytes = result.getValue(HConstants.CATALOG_FAMILY, which);
     return Writables.getHRegionInfoOrNull(bytes);
-  }
-
-  /**
-   * Remove mention of daughters from parent row.
-   * @param parent
-   * @throws IOException
-   */
-  private void removeDaughtersFromParent(final HRegionInfo parent)
-  throws IOException {
-    MetaEditor.deleteDaughtersReferencesInParent(this.server.getCatalogTracker(), parent);
   }
 
   /**
