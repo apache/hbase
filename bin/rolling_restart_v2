@@ -1,0 +1,155 @@
+#!/bin/env /opt/hbase/bin/hbase-groovy
+import org.apache.hadoop.hbase.HBaseConfiguration; 
+import org.apache.hadoop.conf.Configuration; 
+import org.apache.hadoop.hbase.client.MetaScanner;
+import org.apache.hadoop.hbase.client.HBaseAdmin;
+import org.apache.hadoop.hbase.client.*;
+import org.apache.hadoop.hbase.master.*;
+import org.apache.hadoop.hbase.*;
+import org.apache.hadoop.hbase.util.Bytes;
+import java.io.ByteArrayInputStream;
+import org.apache.log4j.*
+import org.apache.commons.cli.*
+
+Logger.getLogger("org.apache.zookeeper").setLevel(Level.ERROR);
+Logger.getLogger("org.apache.hadoop.hbase").setLevel(Level.INFO);
+
+def restartRegionServer(HBaseAdmin admin, HServerInfo regionserver,
+    Configuration conf, String rollingRestartArgs, String logsFolder) {
+  long startCode = regionserver.getStartCode()/1000;
+  String host = regionserver.getHostname();
+
+  // Start the rolling restart
+
+  String cmd ="/usr/local/hadoop/" + conf.get("titan.cell.name") +
+    "-HBASE/bin/hbase org.apache.hadoop.hbase.util.RollingRestart" +
+    rollingRestartArgs + " -s " + host;
+
+  println "Performing rolling restart for host " + host;
+  println cmd;
+
+  File file = new File(logsFolder + "/rolling_restart_" + host + ".txt");
+
+  file.createNewFile();
+  FileOutputStream ostream = new FileOutputStream(file); 
+  println "Check the output at " + logsFolder + "/rolling_restart_" + host + ".txt";
+
+  def proc = cmd.execute()
+    proc.consumeProcessOutput(ostream, ostream);
+  proc.waitForOrKill(30 * 60 * 1000)
+
+  ostream.close();
+  long newStartCode = admin.getConnection().
+    getHRegionConnection(regionserver.getServerAddress()).getHServerInfo().getStartCode()/1000;
+
+  if (newStartCode <= startCode) {
+    throw new Exception("Rolling Restart failed for Regionserver " + host);
+  }
+}
+
+// START
+
+Options options = new Options();
+
+options.addOption("n", "nodes", true,
+      "Name of the region servers to restart");
+options.addOption("a", "all", false,
+      "Name of the region servers to restart");
+options.addOption("r", "sleep_after_restart", true,
+      "time interval after which the region server should be started assigning regions. Default : 10000ms");
+options.addOption("b", "sleep_before_restart", true,
+ 	    "time interval after which the region server should be restarted after draining. Default : 10000ms");
+options.addOption("d", "region_drain_interval", true,
+		  "time interval between region movements while draining. Default : 1000ms");
+options.addOption("u", "region_undrain_interval", true,
+	    "time interval between region movements while undraining. Default : 10000ms");
+options.addOption("g", "get_request_frequency", true,
+	    "frequency at which region checker will check for region availability. Default : 1000ms");
+options.addOption("c", "clear", false,
+ 		  "Clear all the regionserver from blacklist. Default : false");
+options.addOption("h", "dont_use_hadoopctl", false,
+		  "Don't hadoopctl to restart the regionserver. Default : true");
+options.addOption("f", "log_file_folder", true,
+		  "Default location where logs for rolling restart should be stored. Default : /tmp");
+
+if (args.length == 0) {
+  HelpFormatter formatter = new HelpFormatter();
+  formatter.printHelp("rolling_restart", options, true);
+  return;
+}
+
+CommandLineParser parser = new PosixParser();
+CommandLine cmd = parser.parse(options, args);
+
+String rollingRestartArgs = "";
+String logsFolder = "/tmp";
+hosts = null;
+
+if (cmd.hasOption('r')) {
+  rollingRestartArgs += " -r " + cmd.getOptionValue('r');
+}
+if (cmd.hasOption('b')) {
+  rollingRestartArgs += " -b " + cmd.getOptionValue('b');
+}
+if (cmd.hasOption('d')) {
+  rollingRestartArgs += " -d " + cmd.getOptionValue('d');
+}
+if (cmd.hasOption('u')) {
+  rollingRestartArgs += " -u " + cmd.getOptionValue('u');
+}
+if (cmd.hasOption('g')) {
+  rollingRestartArgs += " -g " + cmd.getOptionValue('g');
+}
+if (cmd.hasOption('c')) {
+  rollingRestartArgs += " -c " + cmd.getOptionValue('c');
+}
+if (cmd.hasOption('h')) {
+  rollingRestartArgs += " -h " + cmd.getOptionValue('h');
+}
+if (cmd.hasOption('f')) {
+  logsFolder = cmd.getOptionValue('f');
+}
+
+if (cmd.hasOption("n")) {
+  hosts = cmd.getOptionValue("n").split(',');
+  println hosts;
+} else if (cmd.hasOption('a')) {
+  println "Performing restart on all regionservers";
+} else {
+  HelpFormatter formatter = new HelpFormatter();
+  formatter.printHelp("rolling_restart", options, true);
+  return;
+}
+
+conf = HBaseConfiguration.create();
+admin = new HBaseAdmin(conf);
+
+PrintWriter errFileWriter = new PrintWriter(logsFolder + "/rolling_restart_failed_nodes");
+
+if (hosts != null) {
+  for (String server in hosts) {
+    HServerAddress serverAddr = new HServerAddress(server, 60020);
+    try {
+      HServerInfo host = 
+        admin.getConnection().getHRegionConnection(serverAddr).getHServerInfo();
+      restartRegionServer(admin, host, conf, rollingRestartArgs, logsFolder);
+    } catch (Exception e) {
+      e.printStackTrace();
+      println "\nERROR: "+ server + " Failed.";
+      errFileWriter.println(host.getHostname());
+    }
+  }
+} else {
+
+  for (host in admin.getClusterStatus().getServerInfo()) { 
+    try {
+      restartRegionServer(admin, host, conf, rollingRestartArgs, logsFolder);
+    } catch (Exception e) {
+      e.printStackTrace();
+      println "\nERROR: "+ host + " Failed.";
+      errFileWriter.println(host.getHostname());
+    }
+  } 
+}
+
+errFileWriter.close();

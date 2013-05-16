@@ -85,7 +85,6 @@ public class RollingRestart {
       currentState = STAGE.FAIL;
       return;
     }
-
     this.serverAddr = new HServerAddress(serverName, 60020);
 
     currentState = STAGE.SETUP;
@@ -164,22 +163,50 @@ public class RollingRestart {
    * @throws InterruptedException
    */
   void restart() throws IOException, InterruptedException {
-    System.out.println("Shutting down the region server");
+    System.out.println("Shutting down the region server after sleep of " +
+        this.sleepIntervalBeforeRestart);
     Thread.sleep(this.sleepIntervalBeforeRestart);
     String cellName = conf.get("titan.cell.name");
-    try {
+    String sshCmd = "ssh hadoop@" + serverAddr.getHostname();
 
+    try {
       if (this.useHadoopCtl) {
-        Process p = Runtime.getRuntime().exec("/usr/local/bin/hadoopctl restart regionserver");
+        sshCmd += " hadoopctl restart regionserver";
+        LOG.info("Executing " + sshCmd);
+        Process p = Runtime.getRuntime().exec(sshCmd);
+
         p.waitFor();
+
+        LOG.info("Exit value for the region server restart " + p.exitValue());
+
+        if (p.exitValue() != 0) {
+          LOG.error("Failed to restart. regionserver. Aborting..");
+          throw new IOException("Failed to restart regionserver. Aborting..");
+        }
       } else {
-        Process p = Runtime.getRuntime().exec("/usr/local/hadoop/" +
-            cellName + "-HBASE/bin/hbase-daemon.sh stop regionserver");
+        String sshCmdToStopRS = sshCmd + " /usr/local/hadoop/" +
+            cellName + "-HBASE/bin/hbase-daemon.sh stop regionserver";
+        LOG.info("Executing " + sshCmd);
+        Process p = Runtime.getRuntime().exec(sshCmdToStopRS);
         p.waitFor();
-        p = Runtime.getRuntime().exec("/usr/local/hadoop/" +
-            cellName + "-HBASE/bin/hbase-daemon.sh start regionserver");
+
+        LOG.info("Exit value for the region server stop " + p.exitValue());
+
+        if (p.exitValue() != 0) {
+          LOG.error("Failed to stop regionserver. Aborting..");
+          throw new IOException("Failed to stop regionserver. Aborting..");
+        }
+        String sshCmdToStartRS = sshCmd + " /usr/local/hadoop/" +
+            cellName + "-HBASE/bin/hbase-daemon.sh start regionserver ";
+        p = Runtime.getRuntime().exec(sshCmdToStartRS);
         p.waitFor();
-        LOG.info("Exit value for the restarter " + p.exitValue());
+
+        LOG.info("Exit value for the region server start " + p.exitValue());
+
+        if (p.exitValue() != 0) {
+          LOG.error("Failed to start regionserver. Aborting..");
+          throw new IOException("Failed to start regionserver. Aborting..");
+        }
       }
 
     } catch (IOException e1) {
@@ -210,6 +237,9 @@ public class RollingRestart {
 
     List<HServerAddress> serversForRegion = plan.getAssignment(region);
 
+    if (serversForRegion == null) {
+      return null;
+    }
     // Get the preferred region server from the Assignment Plan
     for (HServerAddress server : serversForRegion) {
       if (!server.equals(serverAddr)) {
@@ -402,7 +432,7 @@ public class RollingRestart {
         "Name of the region server to restart");
     options.addOption("r", "sleep_after_restart", true,
         "time interval after which the region server should be started assigning regions. Default : 10000ms");
-    options.addOption("r", "sleep_before_restart", true,
+    options.addOption("b", "sleep_before_restart", true,
         "time interval after which the region server should be restarted after draining. Default : 10000ms");
     options.addOption("d", "region_drain_interval", true,
         "time interval between region movements while draining. Default : 1000ms");
@@ -434,6 +464,7 @@ public class RollingRestart {
 
     if (cmd.hasOption("c")) {
       RollingRestart.clearAll();
+      return;
     }
 
     if (!cmd.hasOption("s")) {
