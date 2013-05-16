@@ -258,6 +258,12 @@ public class ReplicationQueuesZKImpl extends ReplicationStateZKBase implements R
       peerIdsToProcess = ZKUtil.listChildrenNoWatch(this.zookeeper, deadRSZnodePath);
       if (peerIdsToProcess == null) return queues; // node already processed
       for (String peerId : peerIdsToProcess) {
+        ReplicationQueueInfo replicationQueueInfo = new ReplicationQueueInfo(peerId);
+        if (!peerExists(replicationQueueInfo.getPeerId())) {
+          LOG.warn("Peer " + peerId + " didn't exist, skipping the replay");
+          // Protection against moving orphaned queues
+          continue;
+        }
         String newPeerId = peerId + "-" + znode;
         String newPeerZnode = ZKUtil.joinZNode(this.myQueuesZnode, newPeerId);
         // check the logs queue for the old peer cluster
@@ -319,6 +325,12 @@ public class ReplicationQueuesZKImpl extends ReplicationStateZKBase implements R
       // The lock isn't a peer cluster, remove it
       clusters.remove(RS_LOCK_ZNODE);
       for (String cluster : clusters) {
+        ReplicationQueueInfo replicationQueueInfo = new ReplicationQueueInfo(cluster);
+        if (!peerExists(replicationQueueInfo.getPeerId())) {
+          LOG.warn("Peer " + cluster + " didn't exist, skipping the replay");
+          // Protection against moving orphaned queues
+          continue;
+        }
         // We add the name of the recovered RS to the new znode, we can even
         // do that for queues that were recovered 10 times giving a znode like
         // number-startcode-number-otherstartcode-number-anotherstartcode-etc

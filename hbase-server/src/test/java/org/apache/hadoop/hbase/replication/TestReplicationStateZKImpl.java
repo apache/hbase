@@ -45,6 +45,7 @@ public class TestReplicationStateZKImpl extends TestReplicationStateBasic {
   private static Configuration conf;
   private static HBaseTestingUtility utility;
   private static ZooKeeperWatcher zkw;
+  private static String replicationZNode;
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
@@ -52,6 +53,8 @@ public class TestReplicationStateZKImpl extends TestReplicationStateBasic {
     utility.startMiniZKCluster();
     conf = utility.getConfiguration();
     zkw = HBaseTestingUtility.getZooKeeperWatcher(utility);
+    String replicationZNodeName = conf.get("zookeeper.znode.replication", "replication");
+    replicationZNode = ZKUtil.joinZNode(zkw.baseZNode, replicationZNodeName);
   }
 
   @Before
@@ -63,12 +66,14 @@ public class TestReplicationStateZKImpl extends TestReplicationStateBasic {
     rq2 = new ReplicationQueuesZKImpl(zkw, conf, ds2);
     rq3 = new ReplicationQueuesZKImpl(zkw, conf, ds3);
     rqc = new ReplicationQueuesClientZKImpl(zkw, conf, ds1);
+    String peersZnode = ZKUtil.joinZNode(replicationZNode, "peers");
+    for (int i = 1; i < 6; i++) {
+      ZKUtil.createWithParents(zkw, ZKUtil.joinZNode(peersZnode, "qId"+i));
+    }
   }
 
   @After
   public void tearDown() throws KeeperException, IOException {
-    String replicationZNodeName = conf.get("zookeeper.znode.replication", "replication");
-    String replicationZNode = ZKUtil.joinZNode(zkw.baseZNode, replicationZNodeName);
     ZKUtil.deleteNodeRecursively(zkw, replicationZNode);
   }
 

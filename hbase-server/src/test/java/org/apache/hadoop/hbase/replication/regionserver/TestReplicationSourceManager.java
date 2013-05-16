@@ -51,6 +51,7 @@ import org.apache.hadoop.hbase.regionserver.wal.HLogFactory;
 import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
 import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
+import org.apache.hadoop.hbase.replication.ReplicationQueueInfo;
 import org.apache.hadoop.hbase.replication.ReplicationSourceDummy;
 import org.apache.hadoop.hbase.replication.ReplicationZookeeper;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -293,9 +294,8 @@ public class TestReplicationSourceManager {
     testMap = rz3.claimQueues(s2.getServerName().getServerName());
     rz3.close();
 
-    ReplicationSource s = new ReplicationSource();
-    s.checkIfQueueRecovered(testMap.firstKey());
-    List<String> result = s.getDeadRegionServers();
+    ReplicationQueueInfo replicationQueueInfo = new ReplicationQueueInfo(testMap.firstKey());
+    List<String> result = replicationQueueInfo.getDeadRegionServers();
 
     // verify
     assertTrue(result.contains(server.getServerName().getServerName()));

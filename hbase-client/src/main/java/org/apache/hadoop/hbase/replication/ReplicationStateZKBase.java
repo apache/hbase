@@ -78,4 +78,9 @@ public abstract class ReplicationStateZKBase {
     }
     return result;
   }
+
+  public boolean peerExists(String id) throws KeeperException {
+    return ZKUtil.checkExists(this.zookeeper,
+        ZKUtil.joinZNode(this.peersZNode, id)) >= 0;
+  }
 }

@@ -25,7 +25,6 @@ import java.net.ConnectException;
 import java.net.SocketTimeoutException;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
@@ -58,6 +57,7 @@ import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.AdminService;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
+import org.apache.hadoop.hbase.replication.ReplicationQueueInfo;
 import org.apache.hadoop.hbase.replication.ReplicationZookeeper;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Threads;
@@ -94,6 +94,7 @@ public class ReplicationSource extends Thread
   private Random random;
   // should we replicate or not?
   private AtomicBoolean replicating;
+  private ReplicationQueueInfo replicationQueueInfo;
   // id of the peer cluster this source replicates to
   private String peerId;
   // The manager of all sources to which we ping back our progress
@@ -123,10 +124,6 @@ public class ReplicationSource extends Thread
   private long totalReplicatedEdits = 0;
   // The znode we currently play with
   private String peerClusterZnode;
-  // Indicates if this queue is recovered (and will be deleted when depleted)
-  private boolean queueRecovered;
-  // List of all the dead region servers that had this queue (if recovered)
-  private List<String> deadRegionServers = new ArrayList<String>();
   // Maximum number of retries before taking bold actions
   private int maxRetriesMultiplier;
   // Socket timeouts require even bolder actions since we don't want to DDOS
@@ -196,100 +193,22 @@ public class ReplicationSource extends Thread
     } catch (KeeperException ke) {
       throw new IOException("Could not read cluster id", ke);
     }
-
-    // Finally look if this is a recovered queue
-    this.checkIfQueueRecovered(peerClusterZnode);
-  }
-
-  // The passed znode will be either the id of the peer cluster or
-  // the handling story of that queue in the form of id-servername-*
-  //
-  // package access for testing
-  void checkIfQueueRecovered(String peerClusterZnode) {
-    String[] parts = peerClusterZnode.split("-", 2);
-    this.queueRecovered = parts.length != 1;
-    this.peerId = this.queueRecovered ?
-        parts[0] : peerClusterZnode;
     this.peerClusterZnode = peerClusterZnode;
-
-    if (parts.length < 2) {
-      // not queue recovered situation
-      return;
-    }
-
-    // extract dead servers
-    extractDeadServersFromZNodeString(parts[1], this.deadRegionServers);
-  }
-  
-  /**
-   * for tests only
-   */
-  List<String> getDeadRegionServers() {
-    return Collections.unmodifiableList(this.deadRegionServers);
+    this.replicationQueueInfo = new ReplicationQueueInfo(peerClusterZnode);
+    // ReplicationQueueInfo parses the peerId out of the znode for us
+    this.peerId = this.replicationQueueInfo.getPeerId();
   }
 
-  /**
-   * Parse dead server names from znode string servername can contain "-" such as
-   * "ip-10-46-221-101.ec2.internal", so we need skip some "-" during parsing for the following
-   * cases: 2-ip-10-46-221-101.ec2.internal,52170,1364333181125-<server name>-...
-   */
-  private static void
-      extractDeadServersFromZNodeString(String deadServerListStr, List<String> result) {
-    
-    if(deadServerListStr == null || result == null || deadServerListStr.isEmpty()) return;
-
-    // valid server name delimiter "-" has to be after "," in a server name
-    int seenCommaCnt = 0;
-    int startIndex = 0;
-    int len = deadServerListStr.length();
-
-    for (int i = 0; i < len; i++) {
-      switch (deadServerListStr.charAt(i)) {
-      case ',':
-        seenCommaCnt += 1;
-        break;
-      case '-':
-        if(seenCommaCnt>=2) {
-          if (i > startIndex) {
-            String serverName = deadServerListStr.substring(startIndex, i);
-            if(ServerName.isFullServerName(serverName)){
-              result.add(serverName);
-            } else {
-              LOG.error("Found invalid server name:" + serverName);
-            }
-            startIndex = i + 1;
-          }
-          seenCommaCnt = 0;
-        }
-        break;
-      default:
-        break;
-      }
-    }
-
-    // add tail
-    if(startIndex < len - 1){
-      String serverName = deadServerListStr.substring(startIndex, len);
-      if(ServerName.isFullServerName(serverName)){
-        result.add(serverName);
-      } else {
-        LOG.error("Found invalid server name at the end:" + serverName);
-      }
-    }
-
-    LOG.debug("Found dead servers:" + result);
-  }
-  
   /**
    * Select a number of peers at random using the ratio. Mininum 1.
    */
   private void chooseSinks() {
     this.currentPeers.clear();
-    List<ServerName> addresses = this.zkHelper.getSlavesAddresses(peerId);
+    List<ServerName> addresses = this.zkHelper.getSlavesAddresses(this.peerId);
     Set<ServerName> setOfAddr = new HashSet<ServerName>();
     int nbPeers = (int) (Math.ceil(addresses.size() * ratio));
     LOG.info("Getting " + nbPeers +
-        " rs from peer cluster # " + peerId);
+        " rs from peer cluster # " + this.peerId);
     for (int i = 0; i < nbPeers; i++) {
       ServerName sn;
       // Make sure we get one address that we don't already have
@@ -333,13 +252,13 @@ public class ReplicationSource extends Thread
 
     // If this is recovered, the queue is already full and the first log
     // normally has a position (unless the RS failed between 2 logs)
-    if (this.queueRecovered) {
+    if (this.replicationQueueInfo.isQueueRecovered()) {
       try {
         this.repLogReader.setPosition(this.zkHelper.getHLogRepPosition(
             this.peerClusterZnode, this.queue.peek().getName()));
       } catch (KeeperException e) {
         this.terminate("Couldn't get the position of this recovered queue " +
-            peerClusterZnode, e);
+            this.peerClusterZnode, e);
       }
     }
     // Loop until we close down
@@ -374,7 +293,7 @@ public class ReplicationSource extends Thread
       //We take the snapshot now so that we are protected against races
       //where a new file gets enqueued while the current file is being processed
       //(and where we just finished reading the current file).
-      if (!this.queueRecovered && queue.size() == 0) {
+      if (!this.replicationQueueInfo.isQueueRecovered() && queue.size() == 0) {
         currentWALisBeingWrittenTo = true;
       }
       // Open a reader on it
@@ -401,24 +320,24 @@ public class ReplicationSource extends Thread
           continue;
         }
       } catch (IOException ioe) {
-        LOG.warn(peerClusterZnode + " Got: ", ioe);
+        LOG.warn(this.peerClusterZnode + " Got: ", ioe);
         gotIOE = true;
         if (ioe.getCause() instanceof EOFException) {
 
           boolean considerDumping = false;
-          if (this.queueRecovered) {
+          if (this.replicationQueueInfo.isQueueRecovered()) {
             try {
               FileStatus stat = this.fs.getFileStatus(this.currentPath);
               if (stat.getLen() == 0) {
-                LOG.warn(peerClusterZnode + " Got EOF and the file was empty");
+                LOG.warn(this.peerClusterZnode + " Got EOF and the file was empty");
               }
               considerDumping = true;
             } catch (IOException e) {
-              LOG.warn(peerClusterZnode + " Got while getting file size: ", e);
+              LOG.warn(this.peerClusterZnode + " Got while getting file size: ", e);
             }
           } else if (currentNbEntries != 0) {
-            LOG.warn(peerClusterZnode + " Got EOF while reading, " +
-                "looks like this file is broken? " + currentPath);
+            LOG.warn(this.peerClusterZnode +
+                " Got EOF while reading, " + "looks like this file is broken? " + currentPath);
             considerDumping = true;
             currentNbEntries = 0;
           }
@@ -446,7 +365,7 @@ public class ReplicationSource extends Thread
         if (this.lastLoggedPosition != this.repLogReader.getPosition()) {
           this.manager.logPositionAndCleanOldLogs(this.currentPath,
               this.peerClusterZnode, this.repLogReader.getPosition(),
-              queueRecovered, currentWALisBeingWrittenTo);
+              this.replicationQueueInfo.isQueueRecovered(), currentWALisBeingWrittenTo);
           this.lastLoggedPosition = this.repLogReader.getPosition();
         }
         if (sleepForRetries("Nothing to replicate", sleepMultiplier)) {
@@ -465,7 +384,7 @@ public class ReplicationSource extends Thread
         LOG.debug("Attempt to close connection failed", e);
       }
     }
-    LOG.debug("Source exiting " + peerId);
+    LOG.debug("Source exiting " + this.peerId);
     metrics.clear();
   }
 
@@ -571,10 +490,11 @@ public class ReplicationSource extends Thread
       try {
         this.reader = repLogReader.openReader(this.currentPath);
       } catch (FileNotFoundException fnfe) {
-        if (this.queueRecovered) {
+        if (this.replicationQueueInfo.isQueueRecovered()) {
           // We didn't find the log in the archive directory, look if it still
           // exists in the dead RS folder (there could be a chain of failures
           // to look at)
+          List<String> deadRegionServers = this.replicationQueueInfo.getDeadRegionServers();
           LOG.info("NB dead servers : " + deadRegionServers.size());
           for (String curDeadServerName : deadRegionServers) {
             Path deadRsDirectory =
@@ -621,7 +541,7 @@ public class ReplicationSource extends Thread
       }
     } catch (IOException ioe) {
       if (ioe instanceof EOFException && isCurrentLogEmpty()) return true;
-      LOG.warn(peerClusterZnode + " Got: ", ioe);
+      LOG.warn(this.peerClusterZnode + " Got: ", ioe);
       this.reader = null;
       if (ioe.getCause() instanceof NullPointerException) {
         // Workaround for race condition in HDFS-4380
@@ -645,7 +565,8 @@ public class ReplicationSource extends Thread
    * may be empty, and we don't want to retry that.
    */
   private boolean isCurrentLogEmpty() {
-    return (this.repLogReader.getPosition() == 0 && !queueRecovered && queue.size() == 0);
+    return (this.repLogReader.getPosition() == 0 &&
+        !this.replicationQueueInfo.isQueueRecovered() && queue.size() == 0);
   }
   
   /**
@@ -724,7 +645,7 @@ public class ReplicationSource extends Thread
         if (this.lastLoggedPosition != this.repLogReader.getPosition()) {
           this.manager.logPositionAndCleanOldLogs(this.currentPath,
               this.peerClusterZnode, this.repLogReader.getPosition(),
-              queueRecovered, currentWALisBeingWrittenTo);
+              this.replicationQueueInfo.isQueueRecovered(), currentWALisBeingWrittenTo);
           this.lastLoggedPosition = this.repLogReader.getPosition();
         }
         this.totalReplicatedEdits += currentNbEntries;
@@ -788,7 +709,8 @@ public class ReplicationSource extends Thread
    * @return true if the peer is enabled, otherwise false
    */
   protected boolean isPeerEnabled() {
-    return this.replicating.get() && this.zkHelper.getPeerEnabled(peerId);
+    return this.replicating.get() &&
+        this.zkHelper.getPeerEnabled(this.peerId);
   }
 
   /**
@@ -804,7 +726,7 @@ public class ReplicationSource extends Thread
       this.repLogReader.finishCurrentFile();
       this.reader = null;
       return true;
-    } else if (this.queueRecovered) {
+    } else if (this.replicationQueueInfo.isQueueRecovered()) {
       this.manager.closeRecoveredQueue(this);
       LOG.info("Finished recovering the queue");
       this.running = false;
@@ -823,7 +745,8 @@ public class ReplicationSource extends Thread
           }
         };
     Threads.setDaemonThreadRunning(
-        this, n + ".replicationSource," + peerClusterZnode, handler);
+        this, n + ".replicationSource," +
+        this.peerClusterZnode, handler);
   }
 
   public void terminate(String reason) {
