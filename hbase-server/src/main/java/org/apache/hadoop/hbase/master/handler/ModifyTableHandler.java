@@ -20,7 +20,10 @@ package org.apache.hadoop.hbase.master.handler;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Set;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
@@ -28,10 +31,14 @@ import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.executor.EventType;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
+import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.master.MasterServices;
+import org.apache.hadoop.hbase.util.Bytes;
 
 @InterfaceAudience.Private
 public class ModifyTableHandler extends TableEventHandler {
+  private static final Log LOG = LogFactory.getLog(ModifyTableHandler.class);
+
   private final HTableDescriptor htd;
 
   public ModifyTableHandler(final byte [] tableName,
@@ -52,15 +59,38 @@ public class ModifyTableHandler extends TableEventHandler {
   @Override
   protected void handleTableOperation(List<HRegionInfo> hris)
   throws IOException {
-    MasterCoprocessorHost cpHost = ((HMaster) this.server)
-        .getCoprocessorHost();
+    MasterCoprocessorHost cpHost = ((HMaster) this.server).getCoprocessorHost();
     if (cpHost != null) {
       cpHost.preModifyTableHandler(this.tableName, this.htd);
     }
     // Update descriptor
+    HTableDescriptor oldHtd = getTableDescriptor();
     this.masterServices.getTableDescriptors().add(this.htd);
+    deleteFamilyFromFS(hris, oldHtd.getFamiliesKeys());
     if (cpHost != null) {
       cpHost.postModifyTableHandler(this.tableName, this.htd);
+    }
+  }
+
+  /**
+   * Removes from hdfs the families that are not longer present in the new table descriptor.
+   */
+  private void deleteFamilyFromFS(final List<HRegionInfo> hris, final Set<byte[]> oldFamilies) {
+    try {
+      Set<byte[]> newFamilies = this.htd.getFamiliesKeys();
+      MasterFileSystem mfs = this.masterServices.getMasterFileSystem();
+      for (byte[] familyName: oldFamilies) {
+        if (!newFamilies.contains(familyName)) {
+          LOG.debug("Removing family=" + Bytes.toString(familyName) +
+                    " from table=" + this.tableName);
+          for (HRegionInfo hri: hris) {
+            // Delete the family directory in FS for all the regions one by one
+            mfs.deleteFamilyFromFS(hri, familyName);
+          }
+        }
+      }
+    } catch (IOException e) {
+      LOG.warn("Unable to remove on-disk directories for the removed families", e);
     }
   }
 
