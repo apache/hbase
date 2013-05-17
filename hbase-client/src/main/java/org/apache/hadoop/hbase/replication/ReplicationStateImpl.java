@@ -54,13 +54,18 @@ public class ReplicationStateImpl extends ReplicationStateZKBase implements
     // Set a tracker on replicationStateNode
     this.stateTracker =
         new ReplicationStateTracker(this.zookeeper, this.stateZNode, this.abortable);
-    stateTracker.start();
-    readReplicationStateZnode();
   }
 
   public ReplicationStateImpl(final ZooKeeperWatcher zk, final Configuration conf,
       final Abortable abortable) {
     this(zk, conf, abortable, new AtomicBoolean());
+  }
+
+  @Override
+  public void init() throws KeeperException {
+    ZKUtil.createWithParents(this.zookeeper, this.stateZNode);
+    stateTracker.start();
+    readReplicationStateZnode();
   }
 
   @Override
@@ -115,8 +120,7 @@ public class ReplicationStateImpl extends ReplicationStateZKBase implements
    */
   private void setReplicating(boolean newState) throws KeeperException {
     ZKUtil.createWithParents(this.zookeeper, this.stateZNode);
-    byte[] stateBytes = (newState == true) ? ReplicationZookeeper.ENABLED_ZNODE_BYTES
-        : ReplicationZookeeper.DISABLED_ZNODE_BYTES;
+    byte[] stateBytes = (newState == true) ? ENABLED_ZNODE_BYTES : DISABLED_ZNODE_BYTES;
     ZKUtil.setData(this.zookeeper, this.stateZNode, stateBytes);
   }
 

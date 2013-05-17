@@ -177,7 +177,7 @@ public class ReplicationSourceManager {
    * old region server hlog queues
    */
   public void init() throws IOException {
-    for (String id : this.zkHelper.getPeerClusters().keySet()) {
+    for (String id : this.zkHelper.getPeerClusters()) {
       addSource(id);
     }
     List<String> currentReplicators = this.replicationQueues.getListOfReplicators();
@@ -601,7 +601,7 @@ public class ReplicationSourceManager {
         try {
           ReplicationSourceInterface src = getReplicationSource(conf,
               fs, ReplicationSourceManager.this, stopper, replicating, peerId);
-          if (!zkHelper.getPeerClusters().containsKey(src.getPeerClusterId())) {
+          if (!zkHelper.getPeerClusters().contains((src.getPeerClusterId()))) {
             src.terminate("Recovered queue doesn't belong to any current peer");
             break;
           }

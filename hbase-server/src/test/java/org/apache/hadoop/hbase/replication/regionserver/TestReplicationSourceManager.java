@@ -53,6 +53,7 @@ import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.replication.ReplicationQueueInfo;
 import org.apache.hadoop.hbase.replication.ReplicationSourceDummy;
+import org.apache.hadoop.hbase.replication.ReplicationStateZKBase;
 import org.apache.hadoop.hbase.replication.ReplicationZookeeper;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
@@ -124,9 +125,9 @@ public class TestReplicationSourceManager {
             + conf.get(HConstants.ZOOKEEPER_CLIENT_PORT) + ":/1"));
     ZKUtil.createWithParents(zkw, "/hbase/replication/peers/1/peer-state");
     ZKUtil.setData(zkw, "/hbase/replication/peers/1/peer-state",
-      ReplicationZookeeper.ENABLED_ZNODE_BYTES);
+      ReplicationStateZKBase.ENABLED_ZNODE_BYTES);
     ZKUtil.createWithParents(zkw, "/hbase/replication/state");
-    ZKUtil.setData(zkw, "/hbase/replication/state", ReplicationZookeeper.ENABLED_ZNODE_BYTES);
+    ZKUtil.setData(zkw, "/hbase/replication/state", ReplicationStateZKBase.ENABLED_ZNODE_BYTES);
 
     replication = new Replication(new DummyServer(), fs, logDir, oldLogDir);
     manager = replication.getReplicationManager();
@@ -277,6 +278,7 @@ public class TestReplicationSourceManager {
     for (String file : files) {
       rz.addLogToList(file, "1");
     }
+
     // create 3 DummyServers
     Server s1 = new DummyServer("ip-10-8-101-114.ec2.internal");
     Server s2 = new DummyServer("ec2-107-20-52-47.compute-1.amazonaws.com");

@@ -53,6 +53,8 @@ public class TestReplicationZookeeper {
 
   private static String slaveClusterKey;
 
+  private static String peersZNode;
+
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
     utility = new HBaseTestingUtility();
@@ -63,6 +65,10 @@ public class TestReplicationZookeeper {
     repZk = new ReplicationZookeeper(server, new AtomicBoolean());
     slaveClusterKey = conf.get(HConstants.ZOOKEEPER_QUORUM) + ":" +
       conf.get("hbase.zookeeper.property.clientPort") + ":/1";
+    String replicationZNodeName = conf.get("zookeeper.znode.replication", "replication");
+    String peersZNodeName = conf.get("zookeeper.znode.replication.peers", "peers");
+    String replicationZNode = ZKUtil.joinZNode(zkw.baseZNode, replicationZNodeName);
+    peersZNode = ZKUtil.joinZNode(replicationZNode, peersZNodeName);
   }
 
   @AfterClass
@@ -80,19 +86,19 @@ public class TestReplicationZookeeper {
   
   @Test
   public void testIsPeerPath_PathToParentOfPeerNode() {
-    String peerParentNode = repZk.getPeersZNode();
+    String peerParentNode = peersZNode;
     assertFalse(repZk.isPeerPath(peerParentNode));
   }
   
   @Test
   public void testIsPeerPath_PathToChildOfPeerNode() {
-    String peerChild = ZKUtil.joinZNode(ZKUtil.joinZNode(repZk.getPeersZNode(), "1"), "child");
+    String peerChild = ZKUtil.joinZNode(ZKUtil.joinZNode(peersZNode, "1"), "child");
     assertFalse(repZk.isPeerPath(peerChild));
   }
   
   @Test
   public void testIsPeerPath_ActualPeerPath() {
-    String peerPath = ZKUtil.joinZNode(repZk.getPeersZNode(), "1");
+    String peerPath = ZKUtil.joinZNode(peersZNode, "1");
     assertTrue(repZk.isPeerPath(peerPath));
   }
 

@@ -22,6 +22,8 @@ import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
+import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.zookeeper.KeeperException;
@@ -51,7 +53,13 @@ public abstract class ReplicationStateZKBase {
   protected final Configuration conf;
   protected final Abortable abortable;
 
-  public ReplicationStateZKBase(ZooKeeperWatcher zookeeper, Configuration conf, 
+  // Public for testing
+  public static final byte[] ENABLED_ZNODE_BYTES =
+      toByteArray(ZooKeeperProtos.ReplicationState.State.ENABLED);
+  protected static final byte[] DISABLED_ZNODE_BYTES =
+      toByteArray(ZooKeeperProtos.ReplicationState.State.DISABLED);
+
+  public ReplicationStateZKBase(ZooKeeperWatcher zookeeper, Configuration conf,
       Abortable abortable) {
     this.zookeeper = zookeeper;
     this.conf = conf;
@@ -79,8 +87,20 @@ public abstract class ReplicationStateZKBase {
     return result;
   }
 
+  /**
+   * @param state
+   * @return Serialized protobuf of <code>state</code> with pb magic prefix prepended suitable for
+   *         use as content of either the cluster state znode -- whether or not we should be
+   *         replicating kept in /hbase/replication/state -- or as content of a peer-state znode
+   *         under a peer cluster id as in /hbase/replication/peers/PEER_ID/peer-state.
+   */
+  protected static byte[] toByteArray(final ZooKeeperProtos.ReplicationState.State state) {
+    byte[] bytes =
+        ZooKeeperProtos.ReplicationState.newBuilder().setState(state).build().toByteArray();
+    return ProtobufUtil.prependPBMagic(bytes);
+  }
+
   public boolean peerExists(String id) throws KeeperException {
-    return ZKUtil.checkExists(this.zookeeper,
-        ZKUtil.joinZNode(this.peersZNode, id)) >= 0;
+    return ZKUtil.checkExists(this.zookeeper, ZKUtil.joinZNode(this.peersZNode, id)) >= 0;
   }
 }

@@ -20,12 +20,17 @@ package org.apache.hadoop.hbase.replication;
 
 import static org.junit.Assert.*;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.SortedMap;
 import java.util.SortedSet;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.zookeeper.KeeperException;
+import org.junit.Before;
 import org.junit.Test;
 
 /**
@@ -41,6 +46,26 @@ public abstract class TestReplicationStateBasic {
   protected String server1 = new ServerName("hostname1.example.org", 1234, -1L).toString();
   protected String server2 = new ServerName("hostname2.example.org", 1234, -1L).toString();
   protected String server3 = new ServerName("hostname3.example.org", 1234, -1L).toString();
+  protected ReplicationPeers rp;
+  protected static final String ID_ONE = "1";
+  protected static final String ID_TWO = "2";
+  protected static String KEY_ONE;
+  protected static String KEY_TWO;
+
+  // For testing when we try to replicate to ourself
+  protected String OUR_ID = "3";
+  protected String OUR_KEY;
+
+  protected static int zkTimeoutCount;
+  protected static final int ZK_MAX_COUNT = 300;
+  protected static final int ZK_SLEEP_INTERVAL = 100; // millis
+
+  private static final Log LOG = LogFactory.getLog(TestReplicationStateBasic.class);
+
+  @Before
+  public void setUp() {
+    zkTimeoutCount = 0;
+  }
 
   @Test
   public void testReplicationQueuesClient() throws KeeperException {
@@ -83,13 +108,15 @@ public abstract class TestReplicationStateBasic {
   }
 
   @Test
-  public void testReplicationQueues() throws KeeperException {
+  public void testReplicationQueues() throws KeeperException, IOException {
     rq1.init(server1);
     rq2.init(server2);
     rq3.init(server3);
+    //Initialize ReplicationPeer so we can add peers (we don't transfer lone queues)
+    rp.init();
 
-    // Zero queues or replicators exist
-    assertEquals(0, rq1.getListOfReplicators().size());
+    // 3 replicators should exist
+    assertEquals(3, rq1.getListOfReplicators().size());
     rq1.removeQueue("bogus");
     rq1.removeLog("bogus", "bogus");
     rq1.removeAllQueues();
@@ -132,11 +159,102 @@ public abstract class TestReplicationStateBasic {
     assertEquals(0, rq2.getListOfReplicators().size());
   }
 
+  @Test
+  public void testReplicationPeers() throws Exception {
+    rp.init();
+
+    // Test methods with non-existent peer ids
+    try {
+      rp.removePeer("bogus");
+      fail("Should have thrown an IllegalArgumentException when passed a bogus peerId");
+    } catch (IllegalArgumentException e) {
+    }
+    try {
+      rp.enablePeer("bogus");
+      fail("Should have thrown an IllegalArgumentException when passed a bogus peerId");
+    } catch (IllegalArgumentException e) {
+    }
+    try {
+      rp.disablePeer("bogus");
+      fail("Should have thrown an IllegalArgumentException when passed a bogus peerId");
+    } catch (IllegalArgumentException e) {
+    }
+    try {
+      rp.getStatusOfConnectedPeer("bogus");
+      fail("Should have thrown an IllegalArgumentException when passed a bogus peerId");
+    } catch (IllegalArgumentException e) {
+    }
+    assertFalse(rp.connectToPeer("bogus"));
+    rp.disconnectFromPeer("bogus");
+    assertEquals(0, rp.getRegionServersOfConnectedPeer("bogus").size());
+    assertNull(rp.getPeerUUID("bogus"));
+    assertNull(rp.getPeerConf("bogus"));
+    assertNumberOfPeers(0, 0);
+
+    // Add some peers
+    rp.addPeer(ID_ONE, KEY_ONE);
+    assertNumberOfPeers(0, 1);
+    rp.addPeer(ID_TWO, KEY_TWO);
+    assertNumberOfPeers(0, 2);
+
+    // Test methods with a peer that is added but not connected
+    try {
+      rp.getStatusOfConnectedPeer(ID_ONE);
+      fail("There are no connected peers, should have thrown an IllegalArgumentException");
+    } catch (IllegalArgumentException e) {
+    }
+    assertNull(rp.getPeerUUID(ID_ONE));
+    assertEquals(KEY_ONE, ZKUtil.getZooKeeperClusterKey(rp.getPeerConf(ID_ONE)));
+    rp.disconnectFromPeer(ID_ONE);
+    assertEquals(0, rp.getRegionServersOfConnectedPeer(ID_ONE).size());
+
+    // Connect to one peer
+    rp.connectToPeer(ID_ONE);
+    assertNumberOfPeers(1, 2);
+    assertTrue(rp.getStatusOfConnectedPeer(ID_ONE));
+    rp.disablePeer(ID_ONE);
+    assertConnectedPeerStatus(false, ID_ONE);
+    rp.enablePeer(ID_ONE);
+    assertConnectedPeerStatus(true, ID_ONE);
+    assertEquals(1, rp.getRegionServersOfConnectedPeer(ID_ONE).size());
+    assertNotNull(rp.getPeerUUID(ID_ONE).toString());
+
+    // Disconnect peer
+    rp.disconnectFromPeer(ID_ONE);
+    assertNumberOfPeers(0, 2);
+    try {
+      rp.getStatusOfConnectedPeer(ID_ONE);
+      fail("There are no connected peers, should have thrown an IllegalArgumentException");
+    } catch (IllegalArgumentException e) {
+    }
+  }
+
+  protected void assertConnectedPeerStatus(boolean status, String peerId) throws Exception {
+    while (true) {
+      if (status == rp.getStatusOfConnectedPeer(peerId)) {
+        return;
+      }
+      if (zkTimeoutCount < ZK_MAX_COUNT) {
+        LOG.debug("ConnectedPeerStatus was " + !status + " but expected " + status
+            + ", sleeping and trying again.");
+        Thread.sleep(ZK_SLEEP_INTERVAL);
+      } else {
+        fail("Timed out waiting for ConnectedPeerStatus to be " + status);
+      }
+    }
+  }
+
+  protected void assertNumberOfPeers(int connected, int total) {
+    assertEquals(total, rp.getAllPeerClusterKeys().size());
+    assertEquals(connected, rp.getConnectedPeers().size());
+    assertEquals(total, rp.getAllPeerIds().size());
+  }
+
   /*
    * three replicators: rq1 has 0 queues, rq2 has 1 queue with no logs, rq3 has 5 queues with 1, 2,
    * 3, 4, 5 log files respectively
    */
-  protected void populateQueues() throws KeeperException {
+  protected void populateQueues() throws KeeperException, IOException {
     rq1.addLog("trash", "trash");
     rq1.removeQueue("trash");
 
@@ -147,6 +265,8 @@ public abstract class TestReplicationStateBasic {
       for (int j = 0; j < i; j++) {
         rq3.addLog("qId" + i, "filename" + j);
       }
+      //Add peers for the corresponding queues so they are not orphans
+      rp.addPeer("qId" + i, "bogus" + i);
     }
   }
 }

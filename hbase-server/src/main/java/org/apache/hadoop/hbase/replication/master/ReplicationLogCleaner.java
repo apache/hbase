@@ -136,6 +136,7 @@ public class ReplicationLogCleaner extends BaseLogCleanerDelegate implements Abo
       this.zkw = new ZooKeeperWatcher(conf, "replicationLogCleaner", null);
       this.replicationQueues = new ReplicationQueuesClientZKImpl(zkw, conf, this);
       this.replicationState = new ReplicationStateImpl(zkw, conf, this);
+      this.replicationState.init();
     } catch (KeeperException e) {
       LOG.error("Error while configuring " + this.getClass().getName(), e);
     } catch (IOException e) {
