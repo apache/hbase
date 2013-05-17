@@ -771,6 +771,7 @@ public class TestDistributedLogSplitting {
       Path editsdir =
         HLogUtil.getRegionDirRecoveredEditsDir(HRegion.getRegionDir(tdir, hri.getEncodedName()));
       LOG.debug("checking edits dir " + editsdir);
+      if(!fs.exists(editsdir)) continue;
       FileStatus[] files = fs.listStatus(editsdir);
       if(files != null) {
         for(FileStatus file : files) {
