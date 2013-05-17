@@ -934,6 +934,9 @@ public class HBaseAdmin implements Abortable, Closeable {
     if (!HTableDescriptor.isMetaTable(tableName)) {
       HTableDescriptor.isLegalTableName(tableName);
     }
+    if(!tableExists(tableName)){
+      throw new TableNotFoundException(Bytes.toString(tableName));
+    }
     return connection.isTableEnabled(tableName);
   }
 

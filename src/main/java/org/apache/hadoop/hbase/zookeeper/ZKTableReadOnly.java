@@ -66,6 +66,8 @@ public class ZKTableReadOnly {
   public static boolean isEnabledTable(final ZooKeeperWatcher zkw,
       final String tableName) throws KeeperException {
     TableState state = getTableState(zkw, tableName);
+    // If a table is ENABLED then we are removing table state znode in 0.92
+    // but in 0.94 we keep it in ENABLED state.
     return state == null || state == TableState.ENABLED;
   }
 

@@ -256,6 +256,15 @@ public class TestAdmin {
   }
 
   @Test
+  public void testIsEnabledOnUnknownTable() throws Exception {
+    try {
+      admin.isTableEnabled(Bytes.toBytes("unkownTable"));
+      fail("Test should fail if isTableEnabled called on unknown table.");
+    } catch (IOException e) {
+    }
+  }
+  
+  @Test
   public void testDisableAndEnableTables() throws IOException {
     final byte [] row = Bytes.toBytes("row");
     final byte [] qualifier = Bytes.toBytes("qualifier");
