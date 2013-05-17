@@ -18,8 +18,6 @@
 
 package org.apache.hadoop.hbase.regionserver;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.metrics.BaseSourceImpl;
 import org.apache.hadoop.metrics2.MetricsCollector;
 import org.apache.hadoop.metrics2.MetricsRecordBuilder;
@@ -30,9 +28,8 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 public class MetricsRegionAggregateSourceImpl extends BaseSourceImpl
     implements MetricsRegionAggregateSource {
 
-  private final Log LOG = LogFactory.getLog(this.getClass());
   // lock to guard against concurrent access to regionSources
-  final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
+  private final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
 
   private final TreeSet<MetricsRegionSourceImpl> regionSources =
       new TreeSet<MetricsRegionSourceImpl>();

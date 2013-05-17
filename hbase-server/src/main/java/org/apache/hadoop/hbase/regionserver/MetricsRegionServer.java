@@ -17,8 +17,6 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
@@ -26,22 +24,27 @@ import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
 /**
  * This class is for maintaining the various regionserver statistics
  * and publishing them through the metrics interfaces.
- * <p>
+ * <p/>
  * This class has a number of metrics variables that are publicly accessible;
  * these variables (objects) have methods to update their values.
  */
 @InterfaceStability.Evolving
 @InterfaceAudience.Private
 public class MetricsRegionServer {
-  private final Log LOG = LogFactory.getLog(this.getClass());
   private MetricsRegionServerSource serverSource;
   private MetricsRegionServerWrapper regionServerWrapper;
 
   public MetricsRegionServer(MetricsRegionServerWrapper regionServerWrapper) {
+    this(regionServerWrapper,
+        CompatibilitySingletonFactory.getInstance(MetricsRegionServerSourceFactory.class)
+            .createServer(regionServerWrapper));
+
+  }
+
+  MetricsRegionServer(MetricsRegionServerWrapper regionServerWrapper,
+                      MetricsRegionServerSource serverSource) {
     this.regionServerWrapper = regionServerWrapper;
-    serverSource =
-            CompatibilitySingletonFactory.getInstance(MetricsRegionServerSourceFactory.class)
-            .createServer(regionServerWrapper);
+    this.serverSource = serverSource;
   }
 
   // for unit-test usage
@@ -53,35 +56,35 @@ public class MetricsRegionServer {
     return regionServerWrapper;
   }
 
-  public void updatePut(long t){
+  public void updatePut(long t) {
     if (t > 1000) {
       serverSource.incrSlowPut();
     }
     serverSource.updatePut(t);
   }
 
-  public void updateDelete(long t){
+  public void updateDelete(long t) {
     if (t > 1000) {
       serverSource.incrSlowDelete();
     }
     serverSource.updateDelete(t);
   }
 
-  public void updateGet(long t){
+  public void updateGet(long t) {
     if (t > 1000) {
       serverSource.incrSlowGet();
     }
     serverSource.updateGet(t);
   }
 
-  public void updateIncrement(long t){
+  public void updateIncrement(long t) {
     if (t > 1000) {
       serverSource.incrSlowIncrement();
     }
     serverSource.updateIncrement(t);
   }
 
-  public void updateAppend(long t){
+  public void updateAppend(long t) {
     if (t > 1000) {
       serverSource.incrSlowAppend();
     }

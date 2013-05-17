@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.regionserver;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.CompatibilityFactory;
+import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
 
 
 /**
@@ -29,10 +30,10 @@ import org.apache.hadoop.hbase.CompatibilityFactory;
 @InterfaceAudience.Private
 public class MetricsRegion {
 
-  private MetricsRegionSource source;
+  private final MetricsRegionSource source;
 
-  public MetricsRegion(MetricsRegionWrapper wrapper) {
-    source = CompatibilityFactory.getInstance(MetricsRegionServerSourceFactory.class)
+  public MetricsRegion(final MetricsRegionWrapper wrapper) {
+    source = CompatibilitySingletonFactory.getInstance(MetricsRegionServerSourceFactory.class)
                                              .createRegion(wrapper);
   }
 
@@ -48,11 +49,11 @@ public class MetricsRegion {
     source.updateDelete();
   }
 
-  public void updateGet(long getSize) {
+  public void updateGet(final long getSize) {
     source.updateGet(getSize);
   }
 
-  public void updateScanNext(long scanSize) {
+  public void updateScanNext(final long scanSize) {
     source.updateScan(scanSize);
   }
 
