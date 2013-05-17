@@ -191,7 +191,10 @@ class Compactor extends Configured {
         boolean hasMore;
         do {
           hasMore = scanner.next(kvs, compactionKVMax);
-          if (writer == null && !kvs.isEmpty()) {
+          // Create the writer even if no kv(Empty store file is also ok),
+          // because we need record the max seq id for the store file, see
+          // HBASE-6059
+          if (writer == null) {
             writer = store.createWriterInTmp(maxKeyCount, compactionCompression, true,
                 maxMVCCReadpoint >= smallestReadPoint);
           }

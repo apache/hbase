@@ -45,15 +45,24 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.MediumTests;
+import org.apache.hadoop.hbase.MiniHBaseCluster;
+import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.ZooKeeperConnectionException;
+import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
+import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.hfile.HFile;
+import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.regionserver.FlushRequester;
 import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.RegionScanner;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.hadoop.hbase.regionserver.Store;
@@ -91,7 +100,7 @@ public class TestWALReplay {
     conf.setBoolean("dfs.support.append", true);
     // The below config supported by 0.20-append and CDH3b2
     conf.setInt("dfs.client.block.recovery.retries", 2);
-    TEST_UTIL.startMiniDFSCluster(3);
+    TEST_UTIL.startMiniCluster(3);
     Path hbaseRootDir =
       TEST_UTIL.getDFSCluster().getFileSystem().makeQualified(new Path("/hbase"));
     LOG.info("hbase.rootdir=" + hbaseRootDir);
@@ -100,7 +109,7 @@ public class TestWALReplay {
 
   @AfterClass
   public static void tearDownAfterClass() throws Exception {
-    TEST_UTIL.shutdownMiniDFSCluster();
+    TEST_UTIL.shutdownMiniCluster();
   }
 
   @Before
@@ -128,6 +137,100 @@ public class TestWALReplay {
       if (!this.fs.delete(p, true)) {
         throw new IOException("Failed remove of " + p);
       }
+    }
+  }
+
+  /**
+   * 
+   * @throws Exception
+   */
+  @Test
+  public void testReplayEditsAfterRegionMovedWithMultiCF() throws Exception {
+    final byte[] tableName = Bytes
+        .toBytes("testReplayEditsAfterRegionMovedWithMultiCF");
+    byte[] family1 = Bytes.toBytes("cf1");
+    byte[] family2 = Bytes.toBytes("cf2");
+    byte[] qualifier = Bytes.toBytes("q");
+    byte[] value = Bytes.toBytes("testV");
+    byte[][] familys = { family1, family2 };
+    TEST_UTIL.createTable(tableName, familys);
+    HTable htable = new HTable(TEST_UTIL.getConfiguration(), tableName);
+    Put put = new Put(Bytes.toBytes("r1"));
+    put.add(family1, qualifier, value);
+    htable.put(put);
+    ResultScanner resultScanner = htable.getScanner(new Scan());
+    int count = 0;
+    while (resultScanner.next() != null) {
+      count++;
+    }
+    resultScanner.close();
+    assertEquals(1, count);
+
+    MiniHBaseCluster hbaseCluster = TEST_UTIL.getMiniHBaseCluster();
+    List<HRegion> regions = hbaseCluster.getRegions(tableName);
+    assertEquals(1, regions.size());
+
+    // move region to another regionserver
+    HRegion destRegion = regions.get(0);
+    int originServerNum = hbaseCluster
+        .getServerWith(destRegion.getRegionName());
+    assertTrue("Please start more than 1 regionserver", hbaseCluster
+        .getRegionServerThreads().size() > 1);
+    int destServerNum = 0;
+    while (destServerNum == originServerNum) {
+      destServerNum++;
+    }
+    HRegionServer originServer = hbaseCluster.getRegionServer(originServerNum);
+    HRegionServer destServer = hbaseCluster.getRegionServer(destServerNum);
+    // move region to destination regionserver
+    moveRegionAndWait(destRegion, destServer);
+
+    // delete the row
+    Delete del = new Delete(Bytes.toBytes("r1"));
+    htable.delete(del);
+    resultScanner = htable.getScanner(new Scan());
+    count = 0;
+    while (resultScanner.next() != null) {
+      count++;
+    }
+    resultScanner.close();
+    assertEquals(0, count);
+
+    // flush region and make major compaction
+    destServer.getOnlineRegion(destRegion.getRegionName()).flushcache();
+    // wait to complete major compaction
+    for (Store store : destServer.getOnlineRegion(destRegion.getRegionName())
+        .getStores().values()) {
+      store.triggerMajorCompaction();
+    }
+    destServer.getOnlineRegion(destRegion.getRegionName()).compactStores();
+
+    // move region to origin regionserver
+    moveRegionAndWait(destRegion, originServer);
+    // abort the origin regionserver
+    originServer.abort("testing");
+
+    // see what we get
+    Result result = htable.get(new Get(Bytes.toBytes("r1")));
+    if (result != null) {
+      assertTrue("Row is deleted, but we get" + result.toString(),
+          (result == null) || result.isEmpty());
+    }
+    resultScanner.close();
+  }
+
+  private void moveRegionAndWait(HRegion destRegion, HRegionServer destServer)
+      throws InterruptedException, MasterNotRunningException,
+      ZooKeeperConnectionException, IOException {
+    HMaster master = TEST_UTIL.getMiniHBaseCluster().getMaster();
+    TEST_UTIL.getHBaseAdmin().move(
+        destRegion.getRegionInfo().getEncodedNameAsBytes(),
+        Bytes.toBytes(destServer.getServerName().getServerName()));
+    while (true) {
+      ServerName serverName = master.getAssignmentManager()
+          .getRegionServerOfRegion(destRegion.getRegionInfo());
+      if (serverName != null && serverName.equals(destServer.getServerName())) break;
+      Thread.sleep(10);
     }
   }
 

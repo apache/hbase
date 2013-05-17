@@ -268,7 +268,13 @@ public class TestHRegion extends HBaseTestCase {
         writer.close();
       }
       MonitoredTask status = TaskMonitor.get().createStatus(method);
-      long seqId = region.replayRecoveredEditsIfAny(regiondir, minSeqId-1, null, status);
+      Map<byte[], Long> maxSeqIdInStores = new TreeMap<byte[], Long>(
+          Bytes.BYTES_COMPARATOR);
+      for (Store store : region.getStores().values()) {
+        maxSeqIdInStores.put(store.getColumnFamilyName().getBytes(),
+            minSeqId - 1);
+      }
+      long seqId = region.replayRecoveredEditsIfAny(regiondir, maxSeqIdInStores, null, status);
       assertEquals(maxSeqId, seqId);
       Get get = new Get(row);
       Result result = region.get(get, null);
@@ -314,7 +320,13 @@ public class TestHRegion extends HBaseTestCase {
       }
       long recoverSeqId = 1030;
       MonitoredTask status = TaskMonitor.get().createStatus(method);
-      long seqId = region.replayRecoveredEditsIfAny(regiondir, recoverSeqId-1, null, status);
+      Map<byte[], Long> maxSeqIdInStores = new TreeMap<byte[], Long>(
+          Bytes.BYTES_COMPARATOR);
+      for (Store store : region.getStores().values()) {
+        maxSeqIdInStores.put(store.getColumnFamilyName().getBytes(),
+            recoverSeqId - 1);
+      }
+      long seqId = region.replayRecoveredEditsIfAny(regiondir, maxSeqIdInStores, null, status);
       assertEquals(maxSeqId, seqId);
       Get get = new Get(row);
       Result result = region.get(get, null);
@@ -355,7 +367,14 @@ public class TestHRegion extends HBaseTestCase {
           recoveredEditsDir, String.format("%019d", minSeqId-1));
       FSDataOutputStream dos=  fs.create(recoveredEdits);
       dos.close();
-      long seqId = region.replayRecoveredEditsIfAny(regiondir, minSeqId, null, null);
+      
+      Map<byte[], Long> maxSeqIdInStores = new TreeMap<byte[], Long>(
+        Bytes.BYTES_COMPARATOR);
+      for (Store store : region.getStores().values()) {
+        maxSeqIdInStores.put(store.getColumnFamilyName().getBytes(), minSeqId);
+      }
+      long seqId = region.replayRecoveredEditsIfAny(regiondir,
+          maxSeqIdInStores, null, null);
       assertEquals(minSeqId, seqId);
     } finally {
       HRegion.closeHRegion(this.region);

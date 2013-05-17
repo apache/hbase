@@ -572,22 +572,13 @@ public class HRegion implements HeapSize { // , Writable{
     cleanupTmpDir();
 
     // Load in all the HStores.
-    // Get minimum of the maxSeqId across all the store.
     //
     // Context: During replay we want to ensure that we do not lose any data. So, we
     // have to be conservative in how we replay logs. For each store, we calculate
-    // the maxSeqId up to which the store was flushed. But, since different stores
-    // could have a different maxSeqId, we choose the
-    // minimum across all the stores.
-    // This could potentially result in duplication of data for stores that are ahead
-    // of others. ColumnTrackers in the ScanQueryMatchers do the de-duplication, so we
-    // do not have to worry.
-    // TODO: If there is a store that was never flushed in a long time, we could replay
-    // a lot of data. Currently, this is not a problem because we flush all the stores at
-    // the same time. If we move to per-cf flushing, we might want to revisit this and send
-    // in a vector of maxSeqIds instead of sending in a single number, which has to be the
-    // min across all the max.
-    long minSeqId = -1;
+    // the maxSeqId up to which the store was flushed. And, skip the edits which
+    // is equal to or lower than maxSeqId for each store.
+    Map<byte[], Long> maxSeqIdInStores = new TreeMap<byte[], Long>(
+        Bytes.BYTES_COMPARATOR);
     long maxSeqId = -1;
     // initialized to -1 so that we pick up MemstoreTS from column families
     long maxMemstoreTS = -1;
@@ -617,9 +608,8 @@ public class HRegion implements HeapSize { // , Writable{
 
           this.stores.put(store.getColumnFamilyName().getBytes(), store);
           long storeSeqId = store.getMaxSequenceId();
-          if (minSeqId == -1 || storeSeqId < minSeqId) {
-            minSeqId = storeSeqId;
-          }
+          maxSeqIdInStores.put(store.getColumnFamilyName().getBytes(),
+              storeSeqId);
           if (maxSeqId == -1 || storeSeqId > maxSeqId) {
             maxSeqId = storeSeqId;
           }
@@ -639,7 +629,7 @@ public class HRegion implements HeapSize { // , Writable{
     mvcc.initialize(maxMemstoreTS + 1);
     // Recover any edits if available.
     maxSeqId = Math.max(maxSeqId, replayRecoveredEditsIfAny(
-        this.regiondir, minSeqId, reporter, status));
+        this.regiondir, maxSeqIdInStores, reporter, status));
 
     status.setStatus("Cleaning up detritus from prior splits");
     // Get rid of any splits or merges that were lost in-progress.  Clean out
@@ -3094,8 +3084,8 @@ public class HRegion implements HeapSize { // , Writable{
    * make sense in a this single region context only -- until we online.
    *
    * @param regiondir
-   * @param minSeqId Any edit found in split editlogs needs to be in excess of
-   * this minSeqId to be applied, else its skipped.
+   * @param maxSeqIdInStores Any edit found in split editlogs needs to be in excess of
+   * the maxSeqId for the store to be applied, else its skipped.
    * @param reporter
    * @return the sequence id of the last edit added to this region out of the
    * recovered edits log or <code>minSeqId</code> if nothing added from editlogs.
@@ -3103,12 +3093,19 @@ public class HRegion implements HeapSize { // , Writable{
    * @throws IOException
    */
   protected long replayRecoveredEditsIfAny(final Path regiondir,
-      final long minSeqId, final CancelableProgressable reporter,
-      final MonitoredTask status)
+      Map<byte[], Long> maxSeqIdInStores,
+      final CancelableProgressable reporter, final MonitoredTask status)
       throws UnsupportedEncodingException, IOException {
-    long seqid = minSeqId;
+    long minSeqIdForTheRegion = -1;
+    for (Long maxSeqIdInStore : maxSeqIdInStores.values()) {
+      if (maxSeqIdInStore < minSeqIdForTheRegion || minSeqIdForTheRegion == -1) {
+        minSeqIdForTheRegion = maxSeqIdInStore;
+      }
+    }
+    long seqid = minSeqIdForTheRegion;
     NavigableSet<Path> files = HLog.getSplitEditFilesSorted(this.fs, regiondir);
     if (files == null || files.isEmpty()) return seqid;
+
     for (Path edits: files) {
       if (edits == null || !this.fs.exists(edits)) {
         LOG.warn("Null or non-existent edits file: " + edits);
@@ -3119,16 +3116,16 @@ public class HRegion implements HeapSize { // , Writable{
       long maxSeqId = Long.MAX_VALUE;
       String fileName = edits.getName();
       maxSeqId = Math.abs(Long.parseLong(fileName));
-      if (maxSeqId <= minSeqId) {
+      if (maxSeqId <= minSeqIdForTheRegion) {
         String msg = "Maximum sequenceid for this log is " + maxSeqId
-            + " and minimum sequenceid for the region is " + minSeqId
+            + " and minimum sequenceid for the region is " + minSeqIdForTheRegion
             + ", skipped the whole file, path=" + edits;
         LOG.debug(msg);
         continue;
       }
 
       try {
-        seqid = replayRecoveredEdits(edits, seqid, reporter);
+        seqid = replayRecoveredEdits(edits, maxSeqIdInStores, reporter);
       } catch (IOException e) {
         boolean skipErrors = conf.getBoolean("hbase.skip.errors", false);
         if (skipErrors) {
@@ -3145,7 +3142,7 @@ public class HRegion implements HeapSize { // , Writable{
         this.rsAccounting.clearRegionReplayEditsSize(this.regionInfo.getRegionName());
       }
     }
-    if (seqid > minSeqId) {
+    if (seqid > minSeqIdForTheRegion) {
       // Then we added some edits to memory. Flush and cleanup split edit files.
       internalFlushcache(null, seqid, status);
     }
@@ -3162,18 +3159,17 @@ public class HRegion implements HeapSize { // , Writable{
 
   /*
    * @param edits File of recovered edits.
-   * @param minSeqId Minimum sequenceid found in a store file.  Edits in log
-   * must be larger than this to be replayed.
+   * @param maxSeqIdInStores Maximum sequenceid found in each store.  Edits in log
+   * must be larger than this to be replayed for each store.
    * @param reporter
    * @return the sequence id of the last edit added to this region out of the
    * recovered edits log or <code>minSeqId</code> if nothing added from editlogs.
    * @throws IOException
    */
   private long replayRecoveredEdits(final Path edits,
-      final long minSeqId, final CancelableProgressable reporter)
+      Map<byte[], Long> maxSeqIdInStores, final CancelableProgressable reporter)
     throws IOException {
-    String msg = "Replaying edits from " + edits + "; minSequenceid=" +
-      minSeqId + "; path=" + edits;
+    String msg = "Replaying edits from " + edits;
     LOG.info(msg);
     MonitoredTask status = TaskMonitor.get().createStatus(msg);
 
@@ -3181,7 +3177,7 @@ public class HRegion implements HeapSize { // , Writable{
     HLog.Reader reader = null;
     try {
       reader = HLog.getReader(this.fs, edits, conf);
-      long currentEditSeqId = minSeqId;
+      long currentEditSeqId = -1;
       long firstSeqIdInLog = -1;
       long skippedEdits = 0;
       long editsCount = 0;
@@ -3240,12 +3236,6 @@ public class HRegion implements HeapSize { // , Writable{
           if (firstSeqIdInLog == -1) {
             firstSeqIdInLog = key.getLogSeqNum();
           }
-          // Now, figure if we should skip this edit.
-          if (key.getLogSeqNum() <= currentEditSeqId) {
-            skippedEdits++;
-            continue;
-          }
-          currentEditSeqId = key.getLogSeqNum();
           boolean flush = false;
           for (KeyValue kv: val.getKeyValues()) {
             // Check this edit is for me. Also, guard against writing the special
@@ -3266,6 +3256,13 @@ public class HRegion implements HeapSize { // , Writable{
               skippedEdits++;
               continue;
             }
+            // Now, figure if we should skip this edit.
+            if (key.getLogSeqNum() <= maxSeqIdInStores.get(store.getFamily()
+                .getName())) {
+              skippedEdits++;
+              continue;
+            }
+            currentEditSeqId = key.getLogSeqNum();
             // Once we are over the limit, restoreEdit will keep returning true to
             // flush -- but don't flush until we've played all the kvs that make up
             // the WALEdit.
