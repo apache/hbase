@@ -1742,8 +1742,6 @@ public class HRegion implements HeapSize { // , Writable{
   protected RegionScanner getScanner(Scan scan,
       List<KeyValueScanner> additionalScanners) throws IOException {
     startRegionOperation();
-    this.readRequestsCount.increment();
-    this.opMetrics.setReadRequestCountMetrics(this.readRequestsCount.get());
     try {
       // Verify families are all valid
       prepareScanner(scan);
