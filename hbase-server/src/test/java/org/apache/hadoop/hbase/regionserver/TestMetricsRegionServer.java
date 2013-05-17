@@ -38,7 +38,11 @@ public class TestMetricsRegionServer {
 
   @Test
   public void testWrapperSource() {
-    MetricsRegionServer rsm = new MetricsRegionServer(new MetricsRegionServerWrapperStub());
+    MetricsRegionServerWrapperStub wrapper = new MetricsRegionServerWrapperStub();
+    MetricsRegionServerSource source =
+        CompatibilityFactory.getInstance(MetricsRegionServerSourceFactory.class)
+            .createServer(wrapper);
+    MetricsRegionServer rsm = new MetricsRegionServer(wrapper, source);
     MetricsRegionServerSource serverSource = rsm.getMetricsSource();
     HELPER.assertTag("serverName", "test", serverSource);
     HELPER.assertTag("clusterId", "tClusterId", serverSource);
