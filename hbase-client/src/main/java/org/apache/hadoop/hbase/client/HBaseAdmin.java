@@ -1813,6 +1813,11 @@ public class HBaseAdmin implements Abortable, Closeable {
    */
   public void modifyTable(final byte [] tableName, final HTableDescriptor htd)
   throws IOException {
+    if (!Bytes.equals(tableName, htd.getName())) {
+      throw new IllegalArgumentException("the specified table name '" + Bytes.toString(tableName) +
+        "' doesn't match with the HTD one: " + htd.getNameAsString());
+    }
+
     execute(new MasterAdminCallable<Void>() {
       @Override
       public Void call() throws ServiceException {
