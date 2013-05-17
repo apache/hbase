@@ -810,7 +810,7 @@ public class TestDistributedLogSplitting {
   @Test (timeout=300000)
   public void testWorkerAbort() throws Exception {
     LOG.info("testWorkerAbort");
-    startCluster(1);
+    startCluster(2);
     final int NUM_LOG_LINES = 10000;
     final SplitLogManager slm = master.getMasterFileSystem().splitLogManager;
     FileSystem fs = master.getMasterFileSystem().getFileSystem();
