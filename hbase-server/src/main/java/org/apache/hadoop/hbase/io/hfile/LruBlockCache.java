@@ -302,7 +302,6 @@ public class LruBlockCache implements BlockCache, HeapSize {
       String msg = "Cached an already cached block: " + cacheKey + " cb:" + cb.getCacheKey();
       msg += ". This is harmless and can happen in rare cases (see HBASE-8547)";
       LOG.warn(msg);
-      assert false : msg;
       return;
     }
     cb = new CachedBlock(cacheKey, buf, count.incrementAndGet(), inMemory);
