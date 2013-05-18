@@ -22,12 +22,14 @@ import java.util.List;
 import java.util.SortedMap;
 import java.util.SortedSet;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.zookeeper.KeeperException;
 
 /**
  * This provides an interface for maintaining a region server's replication queues. These queues
  * keep track of the HLogs that still need to be replicated to remote clusters.
  */
+@InterfaceAudience.Private
 public interface ReplicationQueues {
 
   /**
@@ -35,7 +37,7 @@ public interface ReplicationQueues {
    * @param serverName The server name of the region server that owns the replication queues this
    *          interface manages.
    */
-  public void init(String serverName);
+  public void init(String serverName) throws KeeperException;
 
   /**
    * Remove a replication queue.

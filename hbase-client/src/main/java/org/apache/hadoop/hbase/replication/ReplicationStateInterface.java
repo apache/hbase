@@ -18,6 +18,7 @@
  */
 package org.apache.hadoop.hbase.replication;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.zookeeper.KeeperException;
 
 import java.io.Closeable;
@@ -27,19 +28,23 @@ import java.io.Closeable;
  * cluster. This state is used to indicate whether replication is enabled or
  * disabled on a cluster.
  */
+@InterfaceAudience.Private
 public interface ReplicationStateInterface extends Closeable {
-	
+
+  /**
+   * Initialize the replication state interface.
+   */
+  public void init() throws KeeperException;
+
   /**
    * Get the current state of replication (i.e. ENABLED or DISABLED).
-   * 
    * @return true if replication is enabled, false otherwise
    * @throws KeeperException
    */
   public boolean getState() throws KeeperException;
-	
+
   /**
    * Set the state of replication.
-   * 
    * @param newState
    * @throws KeeperException
    */

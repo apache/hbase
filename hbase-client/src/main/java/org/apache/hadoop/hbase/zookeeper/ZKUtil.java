@@ -1836,9 +1836,12 @@ public class ZKUtil {
    * @throws DeserializationException
    */
   public static long parseHLogPositionFrom(final byte[] bytes) throws DeserializationException {
+    if (bytes == null) {
+      throw new DeserializationException("Unable to parse null HLog position.");
+    }
     if (ProtobufUtil.isPBMagicPrefix(bytes)) {
       int pblen = ProtobufUtil.lengthOfPBMagic();
-      ZooKeeperProtos.ReplicationHLogPosition.Builder builder = 
+      ZooKeeperProtos.ReplicationHLogPosition.Builder builder =
           ZooKeeperProtos.ReplicationHLogPosition.newBuilder();
       ZooKeeperProtos.ReplicationHLogPosition position;
       try {

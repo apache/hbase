@@ -19,6 +19,8 @@
 
 package org.apache.hadoop.hbase.zookeeper;
 
+import java.util.UUID;
+
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.ClusterId;
@@ -76,5 +78,15 @@ public class ZKClusterId {
   public static void setClusterId(ZooKeeperWatcher watcher, ClusterId id)
       throws KeeperException {
     ZKUtil.createSetData(watcher, watcher.clusterIdZNode, id.toByteArray());
+  }
+
+  /**
+   * Get the UUID for the provided ZK watcher. Doesn't handle any ZK exceptions
+   * @param zkw watcher connected to an ensemble
+   * @return the UUID read from zookeeper
+   * @throws KeeperException
+   */
+  public static UUID getUUIDForCluster(ZooKeeperWatcher zkw) throws KeeperException {
+    return UUID.fromString(readClusterIdZNode(zkw));
   }
 }

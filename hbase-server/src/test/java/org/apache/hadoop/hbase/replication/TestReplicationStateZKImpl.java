@@ -23,16 +23,20 @@ import java.io.IOException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.ClusterId;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.catalog.CatalogTracker;
+import org.apache.hadoop.hbase.zookeeper.ZKClusterId;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.zookeeper.KeeperException;
 import org.junit.After;
 import org.junit.AfterClass;
+import static org.junit.Assert.*;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.experimental.categories.Category;
@@ -55,20 +59,42 @@ public class TestReplicationStateZKImpl extends TestReplicationStateBasic {
     zkw = HBaseTestingUtility.getZooKeeperWatcher(utility);
     String replicationZNodeName = conf.get("zookeeper.znode.replication", "replication");
     replicationZNode = ZKUtil.joinZNode(zkw.baseZNode, replicationZNodeName);
+    KEY_ONE = initPeerClusterState("/hbase1");
+    KEY_TWO = initPeerClusterState("/hbase2");
+  }
+
+  private static String initPeerClusterState(String baseZKNode)
+      throws IOException, KeeperException {
+    // Set up state nodes of peer clusters
+    Configuration testConf = new Configuration(conf);
+    testConf.set(HConstants.ZOOKEEPER_ZNODE_PARENT, baseZKNode);
+    ZooKeeperWatcher zkw1 = new ZooKeeperWatcher(testConf, "test1", null);
+    ReplicationStateInterface rsi = new ReplicationStateImpl(zkw1, testConf, zkw1);
+    rsi.init();
+    rsi.setState(true);
+    rsi.close();
+    String fakeRs = ZKUtil.joinZNode(zkw1.rsZNode, "hostname1.example.org:1234");
+    ZKUtil.createWithParents(zkw1, fakeRs);
+    ZKClusterId.setClusterId(zkw1, new ClusterId());
+    return ZKUtil.getZooKeeperClusterKey(testConf);
   }
 
   @Before
-  public void setUp() throws KeeperException {
+  @Override
+  public void setUp() {
+    super.setUp();
     DummyServer ds1 = new DummyServer(server1);
     DummyServer ds2 = new DummyServer(server2);
     DummyServer ds3 = new DummyServer(server3);
-    rq1 = new ReplicationQueuesZKImpl(zkw, conf, ds1);
-    rq2 = new ReplicationQueuesZKImpl(zkw, conf, ds2);
-    rq3 = new ReplicationQueuesZKImpl(zkw, conf, ds3);
-    rqc = new ReplicationQueuesClientZKImpl(zkw, conf, ds1);
-    String peersZnode = ZKUtil.joinZNode(replicationZNode, "peers");
-    for (int i = 1; i < 6; i++) {
-      ZKUtil.createWithParents(zkw, ZKUtil.joinZNode(peersZnode, "qId"+i));
+    try {
+      rq1 = new ReplicationQueuesZKImpl(zkw, conf, ds1);
+      rq2 = new ReplicationQueuesZKImpl(zkw, conf, ds2);
+      rq3 = new ReplicationQueuesZKImpl(zkw, conf, ds3);
+      rqc = new ReplicationQueuesClientZKImpl(zkw, conf, ds1);
+      rp = new ReplicationPeersZKImpl(zkw, conf, zkw);
+      OUR_KEY = ZKUtil.getZooKeeperClusterKey(conf);
+    } catch (KeeperException e) {
+      fail("Exception thrown: " + e);
     }
   }
 

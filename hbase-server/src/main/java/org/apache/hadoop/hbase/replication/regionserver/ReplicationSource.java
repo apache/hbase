@@ -61,6 +61,7 @@ import org.apache.hadoop.hbase.replication.ReplicationQueueInfo;
 import org.apache.hadoop.hbase.replication.ReplicationZookeeper;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Threads;
+import org.apache.hadoop.hbase.zookeeper.ZKClusterId;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.zookeeper.KeeperException;
 
@@ -189,7 +190,7 @@ public class ReplicationSource extends Thread
     this.metrics = new MetricsSource(peerClusterZnode);
     this.repLogReader = new ReplicationHLogReaderManager(this.fs, this.conf);
     try {
-      this.clusterId = zkHelper.getUUIDForCluster(zkHelper.getZookeeperWatcher());
+      this.clusterId = ZKClusterId.getUUIDForCluster(zkHelper.getZookeeperWatcher());
     } catch (KeeperException ke) {
       throw new IOException("Could not read cluster id", ke);
     }

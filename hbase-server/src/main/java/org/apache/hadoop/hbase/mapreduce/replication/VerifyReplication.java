@@ -37,6 +37,8 @@ import org.apache.hadoop.hbase.mapreduce.TableInputFormat;
 import org.apache.hadoop.hbase.mapreduce.TableMapReduceUtil;
 import org.apache.hadoop.hbase.mapreduce.TableMapper;
 import org.apache.hadoop.hbase.replication.ReplicationPeer;
+import org.apache.hadoop.hbase.replication.ReplicationPeers;
+import org.apache.hadoop.hbase.replication.ReplicationPeersZKImpl;
 import org.apache.hadoop.hbase.replication.ReplicationZookeeper;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
@@ -117,11 +119,13 @@ public class VerifyReplication {
                 @Override public void abort(String why, Throwable e) {}
                 @Override public boolean isAborted() {return false;}
               });
-              zk = new ReplicationZookeeper(conn, conf, localZKW);
-              // Just verifying it we can connect
-              peer = zk.getPeer(peerId);
-              HTable replicatedTable = new HTable(peer.getConfiguration(),
-                  conf.get(NAME+".tableName"));
+              ReplicationPeers rp = new ReplicationPeersZKImpl(localZKW, conf, localZKW);
+              rp.init();
+              Configuration peerConf = rp.getPeerConf(peerId);
+              if (peerConf == null) {
+                throw new IOException("Couldn't get peer conf!");
+              }
+              HTable replicatedTable = new HTable(peerConf, conf.get(NAME + ".tableName"));
               scan.setStartRow(value.getRow());
               replicatedScanner = replicatedTable.getScanner(scan);
             } catch (KeeperException e) {
@@ -175,42 +179,6 @@ public class VerifyReplication {
     if (!conf.getBoolean(HConstants.REPLICATION_ENABLE_KEY, false)) {
       throw new IOException("Replication needs to be enabled to verify it.");
     }
-    HConnectionManager.execute(new HConnectable<Void>(conf) {
-      @Override
-      public Void connect(HConnection conn) throws IOException {
-        ZooKeeperWatcher localZKW = null;
-        ReplicationZookeeper zk = null;
-        ReplicationPeer peer = null;
-        try {
-          localZKW = new ZooKeeperWatcher(
-            conf, "VerifyReplication", new Abortable() {
-            @Override public void abort(String why, Throwable e) {}
-            @Override public boolean isAborted() {return false;}
-          });
-          zk = new ReplicationZookeeper(conn, conf, localZKW);
-          // Just verifying it we can connect
-          peer = zk.getPeer(peerId);
-          if (peer == null) {
-            throw new IOException("Couldn't get access to the slave cluster," +
-                "please see the log");
-          }
-        } catch (KeeperException ex) {
-          throw new IOException("Couldn't get access to the slave cluster" +
-              " because: ", ex);
-        } finally {
-          if (peer != null){
-             peer.close();
-          }
-          if (zk != null){
-            zk.close();
-          }
-          if (localZKW != null){
-            localZKW.close();
-          }
-        }
-        return null;
-      }
-    });
     conf.set(NAME+".peerId", peerId);
     conf.set(NAME+".tableName", tableName);
     conf.setLong(NAME+".startTime", startTime);

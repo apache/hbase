@@ -45,8 +45,10 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.exceptions.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
+import org.apache.hadoop.hbase.replication.ReplicationPeersZKImpl;
 import org.apache.hadoop.hbase.replication.ReplicationZookeeper;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.zookeeper.ZKClusterId;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
@@ -176,17 +178,10 @@ public class Import {
       cfRenameMap = createCfRenameMap(conf);
       filter = instantiateFilter(conf);
       // TODO: This is kind of ugly doing setup of ZKW just to read the clusterid.
-      ReplicationZookeeper zkHelper = null;
       ZooKeeperWatcher zkw = null;
       try {
-        HConnection connection = HConnectionManager.getConnection(conf);
         zkw = new ZooKeeperWatcher(conf, context.getTaskAttemptID().toString(), null);
-        zkHelper = new ReplicationZookeeper(connection, conf, zkw);
-        try {
-          this.clusterId = zkHelper.getUUIDForCluster(zkw);
-        } finally {
-          if (zkHelper != null) zkHelper.close();
-        }
+        clusterId = ZKClusterId.getUUIDForCluster(zkw);
       } catch (ZooKeeperConnectionException e) {
         LOG.error("Problem connecting to ZooKeper during task setup", e);
       } catch (KeeperException e) {

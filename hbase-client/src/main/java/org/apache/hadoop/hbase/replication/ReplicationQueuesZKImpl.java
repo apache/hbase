@@ -39,8 +39,27 @@ import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil.ZKUtilOp;
 import org.apache.zookeeper.KeeperException;
 
-import com.google.protobuf.InvalidProtocolBufferException;
-
+/**
+ * This class provides an implementation of the ReplicationQueues interface using Zookeeper. The
+ * base znode that this class works at is the myQueuesZnode. The myQueuesZnode contains a list of
+ * all outstanding HLog files on this region server that need to be replicated. The myQueuesZnode is
+ * the regionserver name (a concatenation of the region server’s hostname, client port and start
+ * code). For example: 
+ * 
+ * /hbase/replication/rs/hostname.example.org,6020,1234 
+ * 
+ * Within this znode, the region server maintains a set of HLog replication queues. These queues are
+ * represented by child znodes named using there give queue id. For example:
+ * 
+ * /hbase/replication/rs/hostname.example.org,6020,1234/1
+ * /hbase/replication/rs/hostname.example.org,6020,1234/2
+ *
+ * Each queue has one child znode for every HLog that still needs to be replicated. The value of
+ * these HLog child znodes is the latest position that has been replicated. This position is updated
+ * every time a HLog entry is replicated. For example:
+ * 
+ * /hbase/replication/rs/hostname.example.org,6020,1234/1/23522342.23422 [VALUE: 254]
+ */
 public class ReplicationQueuesZKImpl extends ReplicationStateZKBase implements ReplicationQueues {
 
   /** Znode containing all replication queues for this region server. */
@@ -50,14 +69,15 @@ public class ReplicationQueuesZKImpl extends ReplicationStateZKBase implements R
 
   private static final Log LOG = LogFactory.getLog(ReplicationQueuesZKImpl.class);
 
-  public ReplicationQueuesZKImpl(final ZooKeeperWatcher zk, Configuration conf, Abortable abortable)
-      throws KeeperException {
+  public ReplicationQueuesZKImpl(final ZooKeeperWatcher zk, Configuration conf, 
+      Abortable abortable) {
     super(zk, conf, abortable);
   }
 
   @Override
-  public void init(String serverName) {
+  public void init(String serverName) throws KeeperException {
     this.myQueuesZnode = ZKUtil.joinZNode(this.queuesZNode, serverName);
+    ZKUtil.createWithParents(this.zookeeper, this.myQueuesZnode);
   }
 
   @Override
@@ -94,7 +114,7 @@ public class ReplicationQueuesZKImpl extends ReplicationStateZKBase implements R
       String znode = ZKUtil.joinZNode(this.myQueuesZnode, queueId);
       znode = ZKUtil.joinZNode(znode, filename);
       // Why serialize String of Long and not Long as bytes?
-      ZKUtil.setData(this.zookeeper, znode, toByteArray(position));
+      ZKUtil.setData(this.zookeeper, znode, ZKUtil.positionToByteArray(position));
     } catch (KeeperException e) {
       this.abortable.abort("Failed to write replication hlog position (filename=" + filename
           + ", position=" + position + ")", e);
@@ -107,7 +127,7 @@ public class ReplicationQueuesZKImpl extends ReplicationStateZKBase implements R
     String znode = ZKUtil.joinZNode(clusterZnode, filename);
     byte[] bytes = ZKUtil.getData(this.zookeeper, znode);
     try {
-      return parseHLogPositionFrom(bytes);
+      return ZKUtil.parseHLogPositionFrom(bytes);
     } catch (DeserializationException de) {
       LOG.warn("Failed to parse HLogPosition for queueId=" + queueId + " and hlog=" + filename
           + "znode content, continuing.");
@@ -351,7 +371,7 @@ public class ReplicationQueuesZKImpl extends ReplicationStateZKBase implements R
           byte[] positionBytes = ZKUtil.getData(this.zookeeper, z);
           long position = 0;
           try {
-            position = parseHLogPositionFrom(positionBytes);
+            position = ZKUtil.parseHLogPositionFrom(positionBytes);
           } catch (DeserializationException e) {
             LOG.warn("Failed parse of hlog position from the following znode: " + z
                 + ", Exception: " + e);
@@ -379,45 +399,5 @@ public class ReplicationQueuesZKImpl extends ReplicationStateZKBase implements R
     byte[] bytes =
         ZooKeeperProtos.ReplicationLock.newBuilder().setLockOwner(lockOwner).build().toByteArray();
     return ProtobufUtil.prependPBMagic(bytes);
-  }
-
-  /**
-   * @param position
-   * @return Serialized protobuf of <code>position</code> with pb magic prefix prepended suitable
-   *         for use as content of an hlog position in a replication queue.
-   */
-  static byte[] toByteArray(final long position) {
-    byte[] bytes =
-        ZooKeeperProtos.ReplicationHLogPosition.newBuilder().setPosition(position).build()
-            .toByteArray();
-    return ProtobufUtil.prependPBMagic(bytes);
-  }
-
-  /**
-   * @param bytes - Content of a HLog position znode.
-   * @return long - The current HLog position.
-   * @throws DeserializationException
-   */
-  private long parseHLogPositionFrom(final byte[] bytes) throws DeserializationException {
-    if(bytes == null) {
-      throw new DeserializationException("Unable to parse null HLog position.");
-    }
-    if (ProtobufUtil.isPBMagicPrefix(bytes)) {
-      int pblen = ProtobufUtil.lengthOfPBMagic();
-      ZooKeeperProtos.ReplicationHLogPosition.Builder builder =
-          ZooKeeperProtos.ReplicationHLogPosition.newBuilder();
-      ZooKeeperProtos.ReplicationHLogPosition position;
-      try {
-        position = builder.mergeFrom(bytes, pblen, bytes.length - pblen).build();
-      } catch (InvalidProtocolBufferException e) {
-        throw new DeserializationException(e);
-      }
-      return position.getPosition();
-    } else {
-      if (bytes.length > 0) {
-        return Bytes.toLong(bytes);
-      }
-      return 0;
-    }
   }
 }
