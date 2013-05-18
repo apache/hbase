@@ -25,8 +25,6 @@ public class MetricsRegionServerSourceFactoryImpl implements MetricsRegionServer
   public static enum FactoryStorage {
     INSTANCE;
     private Object aggLock = new Object();
-    private Object serverLock = new Object();
-    private MetricsRegionServerSource serverSource;
     private MetricsRegionAggregateSourceImpl aggImpl;
   }
 
@@ -42,13 +40,7 @@ public class MetricsRegionServerSourceFactoryImpl implements MetricsRegionServer
 
   @Override
   public synchronized MetricsRegionServerSource createServer(MetricsRegionServerWrapper regionServerWrapper) {
-    synchronized (FactoryStorage.INSTANCE.serverLock) {
-      if (FactoryStorage.INSTANCE.serverSource == null) {
-        FactoryStorage.INSTANCE.serverSource = new MetricsRegionServerSourceImpl(
-            regionServerWrapper);
-      }
-      return FactoryStorage.INSTANCE.serverSource;
-    }
+    return new MetricsRegionServerSourceImpl(regionServerWrapper);
   }
 
   @Override

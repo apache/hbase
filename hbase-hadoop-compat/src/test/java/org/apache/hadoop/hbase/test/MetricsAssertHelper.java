@@ -24,6 +24,12 @@ import org.apache.hadoop.hbase.metrics.BaseSource;
 public interface MetricsAssertHelper {
 
   /**
+   * Init helper.  This method will make sure that the metrics system is set
+   * up for tests.
+   */
+  public void init();
+
+  /**
    * Assert that a tag exists and has a given value.
    *
    * @param name     The name of the tag.

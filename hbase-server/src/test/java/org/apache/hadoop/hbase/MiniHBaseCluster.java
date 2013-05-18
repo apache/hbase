@@ -39,6 +39,7 @@ import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.Regio
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.security.User;
+import org.apache.hadoop.hbase.test.MetricsAssertHelper;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.MasterThread;
@@ -88,6 +89,10 @@ public class MiniHBaseCluster extends HBaseCluster {
       throws IOException, InterruptedException {
     super(conf);
     conf.set(HConstants.MASTER_PORT, "0");
+
+    // Hadoop 2
+    CompatibilityFactory.getInstance(MetricsAssertHelper.class).init();
+
     init(numMasters, numRegionServers, masterClass, regionserverClass);
     this.initialClusterStatus = getClusterStatus();
   }
