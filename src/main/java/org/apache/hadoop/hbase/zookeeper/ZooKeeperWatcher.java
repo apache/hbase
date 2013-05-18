@@ -250,6 +250,13 @@ public class ZooKeeperWatcher implements Watcher, Abortable {
   }
 
   /**
+   * Get a copy of current registered listeners
+   */
+  public List<ZooKeeperListener> getListeners() {
+    return new ArrayList<ZooKeeperListener>(listeners);
+  }
+
+  /**
    * @return The number of currently registered listeners
    */
   public int getNumberOfListeners() {

@@ -118,6 +118,7 @@ import org.apache.hadoop.hbase.zookeeper.ClusterStatusTracker;
 import org.apache.hadoop.hbase.zookeeper.DrainingServerTracker;
 import org.apache.hadoop.hbase.zookeeper.RegionServerTracker;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
+import org.apache.hadoop.hbase.zookeeper.ZooKeeperListener;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.hadoop.io.MapWritable;
 import org.apache.hadoop.io.Text;
@@ -260,6 +261,9 @@ Server {
   /** flag used in test cases in order to simulate RS failures during master initialization */
   private volatile boolean initializationBeforeMetaAssignment = false;
 
+  /** The following is used in master recovery scenario to re-register listeners */
+  private List<ZooKeeperListener> registeredZKListenersBeforeRecovery;
+
   /**
    * Initializes the HMaster. The steps are as follows:
    * <p>
@@ -391,6 +395,7 @@ Server {
     startupStatus.setDescription("Master startup");
     masterStartTime = System.currentTimeMillis();
     try {
+      this.registeredZKListenersBeforeRecovery = this.zooKeeper.getListeners();
       /*
        * Block on becoming the active master.
        *
@@ -1627,6 +1632,14 @@ Server {
       IOException, KeeperException, ExecutionException {
 
     this.zooKeeper.unregisterAllListeners();
+    // add back listeners which were registered before master initialization
+    // because they won't be added back in below Master re-initialization code
+    if (this.registeredZKListenersBeforeRecovery != null) {
+      for (ZooKeeperListener curListener : this.registeredZKListenersBeforeRecovery) {
+        this.zooKeeper.registerListener(curListener);
+      }
+    }
+
     this.zooKeeper.reconnectAfterExpiration();
 
     Callable<Boolean> callable = new Callable<Boolean> () {
