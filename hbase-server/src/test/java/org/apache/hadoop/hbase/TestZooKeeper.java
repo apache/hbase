@@ -494,6 +494,8 @@ public class TestZooKeeper {
       // The recovered master should not call retainAssignment, as it is not a
       // clean startup.
       assertFalse("Retain assignment should not be called", MockLoadBalancer.retainAssignCalled);
+      // number of listeners should be same as the value before master aborted
+      assertEquals(expectedNumOfListeners, zkw.getNumberOfListeners());
     } finally {
       admin.close();
     }
