@@ -25,6 +25,7 @@ import org.apache.hadoop.metrics2.MetricsBuilder;
 import org.apache.hadoop.metrics2.MetricsRecordBuilder;
 import org.apache.hadoop.metrics2.MetricsSource;
 import org.apache.hadoop.metrics2.MetricsTag;
+import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -108,6 +109,11 @@ public class MetricsAssertHelperImpl implements MetricsAssertHelper {
       gauges.put(canonicalizeMetricName(metric.name()), metric.value());
       return this;
     }
+  }
+
+  @Override
+  public void init() {
+    // In hadoop 1 there's no minicluster mode so there's nothing to do here.
   }
 
   @Override

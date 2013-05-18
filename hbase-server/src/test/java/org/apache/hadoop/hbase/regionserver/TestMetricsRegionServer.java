@@ -19,10 +19,9 @@ package org.apache.hadoop.hbase.regionserver;
 
 import org.apache.hadoop.hbase.CompatibilityFactory;
 import org.apache.hadoop.hbase.SmallTests;
-import org.apache.hadoop.hbase.regionserver.MetricsRegionServer;
-import org.apache.hadoop.hbase.regionserver.MetricsRegionServerWrapperStub;
-import org.apache.hadoop.hbase.regionserver.MetricsRegionServerSource;
 import org.apache.hadoop.hbase.test.MetricsAssertHelper;
+import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
@@ -33,17 +32,27 @@ import static org.junit.Assert.assertNotNull;
  */
 @Category(SmallTests.class)
 public class TestMetricsRegionServer {
+  public static MetricsAssertHelper HELPER =
+      CompatibilityFactory.getInstance(MetricsAssertHelper.class);
 
-  public MetricsAssertHelper HELPER = CompatibilityFactory.getInstance(MetricsAssertHelper.class);
+  private MetricsRegionServerWrapperStub wrapper;
+  private MetricsRegionServer rsm;
+  private MetricsRegionServerSource serverSource;
+
+  @BeforeClass
+  public static void classSetUp() {
+    HELPER.init();
+  }
+
+  @Before
+  public void setUp() {
+    wrapper = new MetricsRegionServerWrapperStub();
+    rsm = new MetricsRegionServer(wrapper);
+    serverSource = rsm.getMetricsSource();
+  }
 
   @Test
   public void testWrapperSource() {
-    MetricsRegionServerWrapperStub wrapper = new MetricsRegionServerWrapperStub();
-    MetricsRegionServerSource source =
-        CompatibilityFactory.getInstance(MetricsRegionServerSourceFactory.class)
-            .createServer(wrapper);
-    MetricsRegionServer rsm = new MetricsRegionServer(wrapper, source);
-    MetricsRegionServerSource serverSource = rsm.getMetricsSource();
     HELPER.assertTag("serverName", "test", serverSource);
     HELPER.assertTag("clusterId", "tClusterId", serverSource);
     HELPER.assertTag("zookeeperQuorum", "zk", serverSource);
@@ -79,15 +88,12 @@ public class TestMetricsRegionServer {
 
   @Test
   public void testConstuctor() {
-    MetricsRegionServer rsm = new MetricsRegionServer(new MetricsRegionServerWrapperStub());
     assertNotNull("There should be a hadoop1/hadoop2 metrics source", rsm.getMetricsSource() );
     assertNotNull("The RegionServerMetricsWrapper should be accessable", rsm.getRegionServerWrapper());
   }
 
   @Test
   public void testSlowCount() {
-    MetricsRegionServer rsm = new MetricsRegionServer(new MetricsRegionServerWrapperStub());
-    MetricsRegionServerSource serverSource = rsm.getMetricsSource();
     for (int i=0; i < 12; i ++) {
       rsm.updateAppend(12);
       rsm.updateAppend(1002);

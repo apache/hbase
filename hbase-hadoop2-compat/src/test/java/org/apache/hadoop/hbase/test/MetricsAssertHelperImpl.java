@@ -26,6 +26,7 @@ import org.apache.hadoop.metrics2.MetricsInfo;
 import org.apache.hadoop.metrics2.MetricsRecordBuilder;
 import org.apache.hadoop.metrics2.MetricsSource;
 import org.apache.hadoop.metrics2.MetricsTag;
+import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -36,7 +37,6 @@ import static org.junit.Assert.*;
  *  A helper class that will allow tests to get into hadoop2's metrics2 values.
  */
 public class MetricsAssertHelperImpl implements MetricsAssertHelper {
-
   private Map<String, String> tags = new HashMap<String, String>();
   private Map<String, Number> gauges = new HashMap<String, Number>();
   private Map<String, Long> counters = new HashMap<String, Long>();
@@ -127,6 +127,13 @@ public class MetricsAssertHelperImpl implements MetricsAssertHelper {
     public MetricsCollector parent() {
       return mockMetricsBuilder;
     }
+  }
+
+  @Override
+  public void init() {
+    // Make sure that the metrics system doesn't throw an exception when
+    // registering a source with the same name
+    DefaultMetricsSystem.setMiniClusterMode(true);
   }
 
   @Override
