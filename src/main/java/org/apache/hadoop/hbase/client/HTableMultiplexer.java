@@ -27,6 +27,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -177,7 +178,6 @@ public class HTableMultiplexer {
     return new HTableMultiplexerStatus(serverToFlushWorkerMap);
   }
 
-
   private HTable getHTable(final byte[] table) throws IOException {
     HTable htable = this.tableNameToHTableMap.get(table);
     if (htable == null) {
@@ -228,6 +228,40 @@ public class HTableMultiplexer {
     return queue;
   }
 
+  public static class MultiPutBatchMetrics {
+    private Map<String, Long> serverToMinMultiPutBatchSize;
+    private Map<String, Long> serverToMaxMultiPutBatchSize;
+    private Map<String, Double> serverToAvgMultiPutBatchSize;
+
+    public MultiPutBatchMetrics() {
+      this.serverToAvgMultiPutBatchSize = new HashMap<String, Double>();
+      this.serverToMinMultiPutBatchSize = new HashMap<String, Long>();
+      this.serverToMaxMultiPutBatchSize = new HashMap<String, Long>();
+    }
+
+    public void resetMultiPutMetrics(String hostnameWithPort,
+        HTableFlushWorker worker) {
+      double avg = worker.getAndResetAvgMultiPutCount();
+      long min = worker.getAndResetMinMultiPutCount();
+      long max = worker.getAndResetMaxMultiPutCount();
+      this.serverToAvgMultiPutBatchSize.put(hostnameWithPort, avg);
+      this.serverToMinMultiPutBatchSize.put(hostnameWithPort, min);
+      this.serverToMaxMultiPutBatchSize.put(hostnameWithPort, max);
+    }
+
+    public long getMaxMultiPuBatchSizeForRs(String hostnameWithPort) {
+      return this.serverToMaxMultiPutBatchSize.get(hostnameWithPort);
+    }
+
+    public long getMinMultiPutBatchSizeForRs(String hostnameWithPort) {
+      return this.serverToMinMultiPutBatchSize.get(hostnameWithPort);
+    }
+
+    public double getAvgMultiPutBatchSizeForRs(String hostnameWithPort) {
+      return this.serverToAvgMultiPutBatchSize.get(hostnameWithPort);
+    }
+  }
+
   /**
    * HTableMultiplexerStatus keeps track of the current status of the HTableMultiplexer.
    * report the number of buffered requests and the number of the failed (dropped) requests
@@ -242,6 +276,9 @@ public class HTableMultiplexer {
     private Map<String, Long> serverToBufferedCounterMap;
     private Map<String, Long> serverToAverageLatencyMap;
     private Map<String, Long> serverToMaxLatencyMap;
+    private MultiPutBatchMetrics metrics;
+    private long overallAvgMultiPutSize;
+    private Map<HServerAddress, HTableFlushWorker> serverToFlushWorkerMap;
 
     public HTableMultiplexerStatus(Map<HServerAddress, HTableFlushWorker> serverToFlushWorkerMap) {
       this.totalBufferedPutCounter = 0;
@@ -252,16 +289,18 @@ public class HTableMultiplexer {
       this.serverToFailedCounterMap = new HashMap<String, Long>();
       this.serverToAverageLatencyMap = new HashMap<String, Long>();
       this.serverToMaxLatencyMap = new HashMap<String, Long>();
-      this.initialize(serverToFlushWorkerMap);
+      this.serverToFlushWorkerMap = serverToFlushWorkerMap;
+      this.metrics = new MultiPutBatchMetrics();
+      this.initialize();
     }
 
-    private void initialize(Map<HServerAddress, HTableFlushWorker> serverToFlushWorkerMap) {
+    private void initialize() {
       if (serverToFlushWorkerMap == null) {
         return;
       }
-
       long averageCalcSum = 0;
       int averageCalcCount = 0;
+      int avgMultiPutBatchSizeSum = 0;
       for (Map.Entry<HServerAddress, HTableFlushWorker> entry : serverToFlushWorkerMap
           .entrySet()) {
         HServerAddress addr = entry.getKey();
@@ -274,7 +313,7 @@ public class HTableMultiplexer {
         // Get sum and count pieces separately to compute overall average
         SimpleEntry<Long, Integer> averageComponents =
           averageCounter.getComponents();
-        long serverAvgLatency = averageCounter.getAndReset();
+        long serverAvgLatency = (long) averageCounter.getAndReset();
 
         this.totalBufferedPutCounter += bufferedCounter;
         this.totalFailedPutCounter += failedCounter;
@@ -284,17 +323,17 @@ public class HTableMultiplexer {
         averageCalcSum += averageComponents.getKey();
         averageCalcCount += averageComponents.getValue();
 
-        this.serverToBufferedCounterMap.put(addr.getHostNameWithPort(),
-            bufferedCounter);
-        this.serverToFailedCounterMap.put(addr.getHostNameWithPort(),
-            failedCounter);
-        this.serverToAverageLatencyMap.put(addr.getHostNameWithPort(),
-            serverAvgLatency);
-        this.serverToMaxLatencyMap.put(addr.getHostNameWithPort(),
-            serverMaxLatency);
+        String hostnameWithPort = addr.getHostNameWithPort();
+        this.serverToBufferedCounterMap.put(hostnameWithPort, bufferedCounter);
+        this.serverToFailedCounterMap.put(hostnameWithPort, failedCounter);
+        this.serverToAverageLatencyMap.put(hostnameWithPort, serverAvgLatency);
+        this.serverToMaxLatencyMap.put(hostnameWithPort, serverMaxLatency);
+        this.metrics.resetMultiPutMetrics(hostnameWithPort, worker);
+        avgMultiPutBatchSizeSum += this.metrics.getAvgMultiPutBatchSizeForRs(hostnameWithPort);
       }
       this.overallAverageLatency = averageCalcCount != 0 ?
         averageCalcSum / averageCalcCount : 0;
+      this.overallAvgMultiPutSize = avgMultiPutBatchSizeSum / serverToFlushWorkerMap.size();
     }
 
     public long getTotalBufferedCounter() {
@@ -313,6 +352,18 @@ public class HTableMultiplexer {
       return this.overallAverageLatency;
     }
 
+    public long getOverallAvgMultiPutSize() {
+      return overallAvgMultiPutSize;
+    }
+
+    public void resetMultiPutMetrics() {
+      for (Entry<HServerAddress, HTableFlushWorker> entry : serverToFlushWorkerMap.entrySet()) {
+        HServerAddress addr = entry.getKey();
+        HTableFlushWorker worker = entry.getValue();
+        metrics.resetMultiPutMetrics(addr.getHostNameWithPort(), worker);
+      }
+    }
+
     public Map<String, Long> getBufferedCounterForEachRegionServer() {
       return this.serverToBufferedCounterMap;
     }
@@ -328,6 +379,10 @@ public class HTableMultiplexer {
     public Map<String, Long> getAverageLatencyForEachRegionServer() {
       return this.serverToAverageLatencyMap;
     }
+
+    public MultiPutBatchMetrics getMetrics() {
+      return metrics;
+    }
   }
   
   private static class PutStatus {
@@ -335,6 +390,7 @@ public class HTableMultiplexer {
     private final Put put;
     private final int retryCount;
     private final HBaseRPCOptions options;
+
     public PutStatus(final HRegionInfo regionInfo, final Put put,
         final int retryCount, final HBaseRPCOptions options) {
       this.regionInfo = regionInfo;
@@ -346,15 +402,19 @@ public class HTableMultiplexer {
     public HRegionInfo getRegionInfo() {
       return regionInfo;
     }
+
     public Put getPut() {
       return put;
     }
+
     public int getRetryCount() {
       return retryCount;
     }
+
     public HBaseRPCOptions getOptions () {
       return options;
     }
+
   }
 
   /**
@@ -369,13 +429,13 @@ public class HTableMultiplexer {
       this.count = 0;
     }
 
-    public synchronized long getAndReset() {
-      long result = this.get();
+    public synchronized double getAndReset() {
+      double result = this.get();
       this.reset();
       return result;
     }
 
-    public synchronized long get() {
+    public synchronized double get() {
       if (this.count == 0) {
         return 0;
       }
@@ -405,6 +465,9 @@ public class HTableMultiplexer {
     private HTableMultiplexer htableMultiplexer;
     private AtomicLong totalFailedPutCount;
     private AtomicInteger currentProcessingPutCount;
+    private AtomicInteger minProcessingPutCount;
+    private AtomicInteger maxProcessingPutCount;
+    private AtomicAverageCounter avgProcessingPutCount;
     private AtomicAverageCounter averageLatency;
     private AtomicLong maxLatency;
 
@@ -418,6 +481,9 @@ public class HTableMultiplexer {
       this.queue = queue;
       this.totalFailedPutCount = new AtomicLong(0);
       this.currentProcessingPutCount = new AtomicInteger(0);
+      this.minProcessingPutCount = new AtomicInteger(0);
+      this.maxProcessingPutCount = new AtomicInteger(0);
+      this.avgProcessingPutCount = new AtomicAverageCounter();
       this.averageLatency = new AtomicAverageCounter();
       this.maxLatency = new AtomicLong(0);
     }
@@ -455,6 +521,18 @@ public class HTableMultiplexer {
       }
     }
 
+    public long getAndResetMaxMultiPutCount() {
+      return this.maxProcessingPutCount.getAndSet(0);
+    }
+
+    public long getAndResetMinMultiPutCount() {
+      return this.minProcessingPutCount.getAndSet(0);
+    }
+
+    public double getAndResetAvgMultiPutCount() {
+      return this.avgProcessingPutCount.getAndReset();
+    }
+
     @Override
     public void run() {
       List<PutStatus> processingList = new ArrayList<PutStatus>();
@@ -483,7 +561,12 @@ public class HTableMultiplexer {
           // drain all the queued puts into the tmp list
           queue.drainTo(processingList);
           currentProcessingPutCount.set(processingList.size());
-
+          if (minProcessingPutCount.get() > currentProcessingPutCount.get()) {
+            minProcessingPutCount.set(currentProcessingPutCount.get());
+          } else if (maxProcessingPutCount.get() < currentProcessingPutCount.get()) {
+            maxProcessingPutCount.set(currentProcessingPutCount.get());
+          }
+          avgProcessingPutCount.add(currentProcessingPutCount.get());
           if (processingList.size() > 0) {
             // Create the MultiPut object
             // Amit: Need to change this to use multi, at some point in future.
