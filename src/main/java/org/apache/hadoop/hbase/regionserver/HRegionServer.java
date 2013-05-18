@@ -108,6 +108,7 @@ import org.apache.hadoop.hbase.client.RowMutations;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.ServerConnection;
 import org.apache.hadoop.hbase.client.ServerConnectionManager;
+import org.apache.hadoop.hbase.conf.ConfigurationManager;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.LruBlockCache;
 import org.apache.hadoop.hbase.io.hfile.LruBlockCache.CacheStats;
@@ -373,6 +374,10 @@ public class HRegionServer implements HRegionInterface,
 
   public static boolean runMetrics = true;
 
+  // This object lets classes register themselves to get notified on
+  // Configuration changes.
+  public ConfigurationManager configurationManager;
+
   public static long getResponseSizeLimit() {
     return responseSizeLimit;
   }
@@ -405,6 +410,7 @@ public class HRegionServer implements HRegionInterface,
     this.abortRequested = false;
     this.fsOk = true;
     this.conf = conf;
+    this.configurationManager = new ConfigurationManager();
     this.connection = ServerConnectionManager.getConnection(conf);
 
     this.isOnline = false;
@@ -1451,6 +1457,14 @@ public class HRegionServer implements HRegionInterface,
    */
   public boolean isOnline() {
     return isOnline;
+  }
+
+  /**
+   * Return the ConfigurationManager object.
+   * @return
+   */
+  public ConfigurationManager getConfigurationManager() {
+    return this.configurationManager;
   }
 
   private void setupHLog(Path logDir, Path oldLogDir, int totalHLogCnt) throws IOException {
@@ -3788,9 +3802,13 @@ public class HRegionServer implements HRegionInterface,
   public void updateConfiguration() {
     LOG.info("Reloading the configuration from disk.");
     conf.reloadConfiguration();
+    // TODO @gauravm
+    // Move this to the notifyOnChange() method in HRegionServer
     for (HRegion r : onlineRegions.values()) {
       r.updateConfiguration();
     }
+    // Notify all the observers that the configuration has changed.
+    configurationManager.notifyAllObservers(conf);
   }
 
   public long getResponseQueueSize(){
