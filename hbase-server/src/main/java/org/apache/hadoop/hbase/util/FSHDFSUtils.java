@@ -76,6 +76,8 @@ public class FSHDFSUtils extends FSUtils {
         if (e instanceof LeaseExpiredException && e.getMessage().contains("File does not exist")) {
           // This exception comes out instead of FNFE, fix it
           throw new FileNotFoundException("The given HLog wasn't found at " + p);
+        } else if (e instanceof FileNotFoundException) {
+          throw e;
         }
         LOG.warn("Got IOException on attempt " + nbAttempt + " to recover lease for file " + p +
             ", retrying.", e);
