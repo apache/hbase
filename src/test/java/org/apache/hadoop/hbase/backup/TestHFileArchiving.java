@@ -39,7 +39,6 @@ import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.backup.HFileArchiver;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
-import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.master.cleaner.HFileCleaner;
 import org.apache.hadoop.hbase.regionserver.ConstantSizeRegionSplitPolicy;
 import org.apache.hadoop.hbase.regionserver.HRegion;
@@ -52,7 +51,6 @@ import org.apache.hadoop.hbase.util.StoppableImplementation;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Assert;
-import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -64,11 +62,8 @@ import org.junit.experimental.categories.Category;
 @Category(MediumTests.class)
 public class TestHFileArchiving {
 
-  private static final String STRING_TABLE_NAME = "test_table";
-
   private static final Log LOG = LogFactory.getLog(TestHFileArchiving.class);
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
-  private static final byte[] TABLE_NAME = Bytes.toBytes(STRING_TABLE_NAME);
   private static final byte[] TEST_FAM = Bytes.toBytes("fam");
 
   /**
@@ -96,18 +91,9 @@ public class TestHFileArchiving {
       ConstantSizeRegionSplitPolicy.class.getName());
   }
 
-  @Before
-  public void setup() throws Exception {
-    UTIL.createTable(TABLE_NAME, TEST_FAM);
-  }
-
   @After
   public void tearDown() throws Exception {
-    // cleanup the cluster if its up still
-    if (UTIL.getHBaseAdmin().tableExists(STRING_TABLE_NAME)) {
-      UTIL.deleteTable(TABLE_NAME);
-    }
-    // and cleanup the archive directory
+    // cleanup the archive directory
     try {
       clearArchiveDirectory();
     } catch (IOException e) {
@@ -126,6 +112,9 @@ public class TestHFileArchiving {
 
   @Test
   public void testRemovesRegionDirOnArchive() throws Exception {
+    byte[] TABLE_NAME = Bytes.toBytes("testRemovesRegionDirOnArchive");
+    UTIL.createTable(TABLE_NAME, TEST_FAM);
+
     final HBaseAdmin admin = UTIL.getHBaseAdmin();
 
     // get the current store files for the region
@@ -138,7 +127,7 @@ public class TestHFileArchiving {
     UTIL.loadRegion(region, TEST_FAM);
 
     // shutdown the table so we can manipulate the files
-    admin.disableTable(STRING_TABLE_NAME);
+    admin.disableTable(TABLE_NAME);
 
     FileSystem fs = UTIL.getTestFileSystem();
 
@@ -161,6 +150,8 @@ public class TestHFileArchiving {
 
     // then ensure the region's directory isn't present
     assertFalse(fs.exists(regionDir));
+
+    UTIL.deleteTable(TABLE_NAME);
   }
 
   /**
@@ -170,6 +161,9 @@ public class TestHFileArchiving {
    */
   @Test
   public void testDeleteRegionWithNoStoreFiles() throws Exception {
+    byte[] TABLE_NAME = Bytes.toBytes("testDeleteRegionWithNoStoreFiles");
+    UTIL.createTable(TABLE_NAME, TEST_FAM);
+
     // get the current store files for the region
     List<HRegion> servingRegions = UTIL.getHBaseCluster().getRegions(TABLE_NAME);
     // make sure we only have 1 region serving this table
@@ -209,10 +203,15 @@ public class TestHFileArchiving {
 
     // and check to make sure the region directoy got deleted
     assertFalse("Region directory (" + regionDir + "), still exists.", fs.exists(regionDir));
+
+    UTIL.deleteTable(TABLE_NAME);
   }
 
   @Test
   public void testArchiveOnTableDelete() throws Exception {
+    byte[] TABLE_NAME = Bytes.toBytes("testArchiveOnTableDelete");
+    UTIL.createTable(TABLE_NAME, TEST_FAM);
+
     List<HRegion> servingRegions = UTIL.getHBaseCluster().getRegions(TABLE_NAME);
     // make sure we only have 1 region serving this table
     assertEquals(1, servingRegions.size());
@@ -273,6 +272,9 @@ public class TestHFileArchiving {
    */
   @Test
   public void testArchiveOnTableFamilyDelete() throws Exception {
+    byte[] TABLE_NAME = Bytes.toBytes("testArchiveOnTableFamilyDelete");
+    UTIL.createTable(TABLE_NAME, TEST_FAM);
+
     List<HRegion> servingRegions = UTIL.getHBaseCluster().getRegions(TABLE_NAME);
     // make sure we only have 1 region serving this table
     assertEquals(1, servingRegions.size());
@@ -325,6 +327,8 @@ public class TestHFileArchiving {
 
     assertTrue("Archived files are missing some of the store files!",
       archivedFiles.containsAll(storeFiles));
+
+    UTIL.deleteTable(TABLE_NAME);
   }
 
   /**
