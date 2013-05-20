@@ -3607,7 +3607,12 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
       }
       FlushRegionResponse.Builder builder = FlushRegionResponse.newBuilder();
       if (shouldFlush) {
-        builder.setFlushed(region.flushcache());
+        boolean result = region.flushcache();
+        if (result) {
+          this.compactSplitThread.requestCompaction(region,
+              "Compaction through user triggered flush");
+        }
+        builder.setFlushed(result);
       }
       builder.setLastFlushTime(region.getLastFlushTime());
       return builder.build();
