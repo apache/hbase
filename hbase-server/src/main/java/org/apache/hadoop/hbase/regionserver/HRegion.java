@@ -1345,7 +1345,7 @@ public class HRegion implements HeapSize { // , Writable{
    * <p>This method may block for some time, so it should not be called from a
    * time-sensitive thread.
    *
-   * @return true if cache was flushed
+   * @return true if the region needs compacting
    *
    * @throws IOException general io exceptions
    * @throws DroppedSnapshotException Thrown when replay of hlog is required
