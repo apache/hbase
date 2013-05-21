@@ -2449,7 +2449,10 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
       throw new IllegalArgumentException("No region : " + new String(regionName)
       + " available");
     }
-    region.flushcache();
+    boolean needsCompaction = region.flushcache();
+    if (needsCompaction) {
+      this.compactSplitThread.requestCompaction(region, "Compaction through user triggered flush");
+    }
   }
 
  /**
@@ -2462,7 +2465,13 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
        throw new IllegalArgumentException("No region : " + new String(regionName)
        + " available");
      }
-     if (region.getLastFlushTime() < ifOlderThanTS) region.flushcache();
+     if (region.getLastFlushTime() < ifOlderThanTS) {
+      boolean needsCompaction = region.flushcache();
+      if (needsCompaction) {
+        this.compactSplitThread
+            .requestCompaction(region, "Compaction through user triggered flush");
+      }
+    }
    }
 
   /**
@@ -3247,7 +3256,10 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     checkOpen();
     LOG.info("Flushing " + regionInfo.getRegionNameAsString());
     HRegion region = getRegion(regionInfo.getRegionName());
-    region.flushcache();
+    boolean needsCompaction = region.flushcache();
+    if (needsCompaction) {
+      this.compactSplitThread.requestCompaction(region, "Compaction through user triggered flush");
+    }
   }
 
   @Override
