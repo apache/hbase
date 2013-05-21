@@ -817,7 +817,7 @@ public class TestHCM {
     config.setInt("zookeeper.recovery.retry", 1);
     config.setInt("zookeeper.recovery.retry.intervalmill", 1000);
     config.setInt("hbase.rpc.timeout", 2000);
-    config.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 2);
+    config.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 1);
 
     ThreadPoolExecutor pool = new ThreadPoolExecutor(1, 10,
       5, TimeUnit.SECONDS,
@@ -866,7 +866,7 @@ public class TestHCM {
               if (((ZooKeeperWatcher)watcher).getRecoverableZooKeeper().getState().isAlive()) {
                 // non-synchronized access to watcher; sleep and check again in case zk connection
                 // hasn't been cleaned up yet.
-                Thread.sleep(50);
+                Thread.sleep(1000);
                 if (((ZooKeeperWatcher) watcher).getRecoverableZooKeeper().getState().isAlive()) {
                   pool.shutdownNow();
                   fail("Live zookeeper in closed connection");
