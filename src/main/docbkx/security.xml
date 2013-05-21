@@ -296,7 +296,10 @@
 Access control mechanisms are mature and fairly standardized in the relational database world. The HBase implementation approximates current convention, but HBase has a simpler feature set than relational databases, especially in terms of client operations. We don't distinguish between an insert (new record) and update (of existing record), for example, as both collapse down into a Put. Accordingly, the important operations condense to four permissions: READ, WRITE, CREATE, and ADMIN.
     </para>
     <table>
-      <title>Operation To Permission Mapping</title>
+     <title>Operation To Permission Mapping</title>
+     <tgroup cols='2' align='left' colsep='1' rowsep='1'>
+        <colspec colname='c1' align='center'/>
+        <colspec colname='c2' align='left'/>
       <thead>
         <row>
           <entry>Permission</entry>
@@ -366,6 +369,10 @@ Access control mechanisms are mature and fairly standardized in the relational d
         </row>
         <row>
           <entry></entry>
+          <entry>Snapshot/Restore/Clone</entry>
+        </row>
+        <row>
+          <entry></entry>
           <entry>Split</entry>
         </row>
         <row>
@@ -385,6 +392,7 @@ Access control mechanisms are mature and fairly standardized in the relational d
           <entry>Shutdown</entry>
         </row>
       </tbody>
+      </tgroup>
     </table>
     <para>
         Permissions can be granted in any of the following scopes, though
@@ -468,7 +476,7 @@ The HBase shell has been extended to provide simple commands for editing and upd
     Grant
     <para>
     <programlisting>
-    grant &lt;user&gt; &lt;permissions&gt; &lt;table&gt; [ &lt;column family&gt; [ &lt;column qualifier&gt; ] ]
+    grant &lt;user&gt; &lt;permissions&gt; [ &lt;table&gt; [ &lt;column family&gt; [ &lt;column qualifier&gt; ] ] ]
     </programlisting>
     </para>
     <para>
@@ -482,7 +490,7 @@ The HBase shell has been extended to provide simple commands for editing and upd
     </para>
     <para>
     <programlisting>
-    revoke &lt;user&gt; &lt;table&gt; [ &lt;column family&gt; [ &lt;column qualifier&gt; ] ]
+    revoke &lt;user&gt; [ &lt;table&gt; [ &lt;column family&gt; [ &lt;column qualifier&gt; ] ] ]
     </programlisting>
     </para>
     <para>
