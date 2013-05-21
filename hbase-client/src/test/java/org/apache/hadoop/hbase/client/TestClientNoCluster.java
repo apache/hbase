@@ -17,7 +17,10 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import static org.junit.Assert.*;
+
 import java.io.IOException;
+import java.net.SocketTimeoutException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -31,6 +34,7 @@ import org.apache.hadoop.hbase.exceptions.RegionServerStoppedException;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ClientService;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ClientService.BlockingInterface;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mockito;
@@ -85,6 +89,41 @@ public class TestClientNoCluster {
     public int getCurrentNrHRS() throws IOException {
       return 1;
     }
+  }
+
+  /**
+   * Test that operation timeout prevails over rpc default timeout and retries, etc.
+   * @throws IOException
+   */
+  @Test
+  public void testRocTimeout() throws IOException {
+    Configuration localConfig = HBaseConfiguration.create(this.conf);
+    // This override mocks up our exists/get call to throw a RegionServerStoppedException.
+    localConfig.set("hbase.client.connection.impl", RpcTimeoutConnection.class.getName());
+    int pause = 10;
+    localConfig.setInt("hbase.client.pause", pause);
+    localConfig.setInt("hbase.client.retries.number", 10);
+    // Set the operation timeout to be < the pause.  Expectation is that after first pause, we will
+    // fail out of the rpc because the rpc timeout will have been set to the operation tiemout
+    // and it has expired.  Otherwise, if this functionality is broke, all retries will be run --
+    // all ten of them -- and we'll get the RetriesExhaustedException exception.
+    localConfig.setInt(HConstants.HBASE_CLIENT_META_OPERATION_TIMEOUT, pause - 1);
+    HTable table = new HTable(localConfig, HConstants.META_TABLE_NAME);
+    Throwable t = null;
+    try {
+      // An exists call turns into a get w/ a flag.
+      table.exists(new Get(Bytes.toBytes("abc")));
+    } catch (SocketTimeoutException e) {
+      // I expect this exception.
+      LOG.info("Got expected exception", e);
+      t = e;
+    } catch (RetriesExhaustedException e) {
+      // This is the old, unwanted behavior.  If we get here FAIL!!!
+      fail();
+    } finally {
+      table.close();
+    }
+    assertTrue(t != null);
   }
 
   @Test
@@ -187,6 +226,33 @@ public class TestClientNoCluster {
           thenThrow(new ServiceException(new RegionServerStoppedException("From Mockito"))).
           thenReturn(ClientProtos.ScanResponse.newBuilder().setScannerId(sid).
             setMoreResults(false).build());
+      } catch (ServiceException e) {
+        throw new IOException(e);
+      }
+    }
+
+    @Override
+    public BlockingInterface getClient(ServerName sn) throws IOException {
+      return this.stub;
+    }
+  }
+
+  /**
+   * Override to check we are setting rpc timeout right.
+   */
+  static class RpcTimeoutConnection
+  extends HConnectionManager.HConnectionImplementation {
+    final ClientService.BlockingInterface stub;
+
+    RpcTimeoutConnection(Configuration conf, boolean managed)
+    throws IOException {
+      super(conf, managed);
+      // Mock up my stub so an exists call -- which turns into a get -- throws an exception
+      this.stub = Mockito.mock(ClientService.BlockingInterface.class);
+      try {
+        Mockito.when(stub.get((RpcController)Mockito.any(),
+            (ClientProtos.GetRequest)Mockito.any())).
+          thenThrow(new ServiceException(new RegionServerStoppedException("From Mockito")));
       } catch (ServiceException e) {
         throw new IOException(e);
       }
