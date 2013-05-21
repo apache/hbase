@@ -264,6 +264,10 @@ public final class HConstants {
   /** Parameter name for HBase client operation timeout, which overrides RPC timeout */
   public static final String HBASE_CLIENT_OPERATION_TIMEOUT = "hbase.client.operation.timeout";
 
+  /** Parameter name for HBase client operation timeout, which overrides RPC timeout */
+  public static final String HBASE_CLIENT_META_OPERATION_TIMEOUT =
+    "hbase.client.meta.operation.timeout";
+
   /** Default HBase client operation timeout, which is tantamount to a blocking call */
   public static final int DEFAULT_HBASE_CLIENT_OPERATION_TIMEOUT = Integer.MAX_VALUE;
 
