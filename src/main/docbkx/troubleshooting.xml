@@ -26,7 +26,7 @@
  * limitations under the License.
  */
 -->
-  <title>Troubleshooting and Debugging Apache HBase (TM)</title>
+  <title>Troubleshooting and Debugging Apache HBase</title>
     <section xml:id="trouble.general">
       <title>General Guidelines</title>
       <para>
@@ -37,7 +37,7 @@
           should return some hits for those exceptions you’re seeing.
       </para>
       <para>
-          An error rarely comes alone in Apache HBase (TM), usually when something gets screwed up what will
+          An error rarely comes alone in Apache HBase, usually when something gets screwed up what will
           follow may be hundreds of exceptions and stack traces coming from all over the place.
           The best way to approach this type of problem is to walk the log up to where it all
           began, for example one trick with RegionServers is that they will print some

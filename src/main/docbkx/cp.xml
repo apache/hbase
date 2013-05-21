@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<chapter version="5.0" xml:id="preface" xmlns="http://docbook.org/ns/docbook"
+<chapter version="5.0" xml:id="cp" xmlns="http://docbook.org/ns/docbook"
          xmlns:xlink="http://www.w3.org/1999/xlink"
          xmlns:xi="http://www.w3.org/2001/XInclude"
          xmlns:svg="http://www.w3.org/2000/svg"
@@ -26,6 +26,8 @@
  */
 -->
   <title>Coprocessors</title>
-  <para></para>
+  <para>HBase coprocessors was inspired by Google's BigTable coprocessors. The <link xlink:href="https://blogs.apache.org/hbase/entry/coprocessor_introduction">Apache HBase Blog on Coprocessor</link> is a very good documentation on that. It has detailed information about the coprocessor framework, terminology, management, and so on.
+  </para>
 
 </chapter>
+

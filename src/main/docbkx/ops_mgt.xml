@@ -26,7 +26,7 @@
  * limitations under the License.
  */
 -->
-  <title>Apache HBase (TM) Operational Management</title>
+  <title>Apache HBase Operational Management</title>
   This chapter will cover operational tools and practices required of a running Apache HBase cluster.
   The subject of operations is related to the topics of <xref linkend="trouble" />, <xref linkend="performance"/>,
   and <xref linkend="configuration" /> but is a distinct topic in itself.

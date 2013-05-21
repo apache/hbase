@@ -26,8 +26,8 @@
  * limitations under the License.
  */
 -->
-    <title>Building and Developing Apache HBase (TM)</title>
-    <para>This chapter will be of interest only to those building and developing Apache HBase (TM) (i.e., as opposed to
+    <title>Building and Developing Apache HBase</title>
+    <para>This chapter will be of interest only to those building and developing Apache HBase (i.e., as opposed to
     just downloading the latest distribution).
     </para>
     <section xml:id="repos">

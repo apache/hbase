@@ -45,7 +45,7 @@
     </copyright>
       <abstract>
     <para>This is the official reference guide of
-    <link xlink:href="http://www.hbase.org">Apache HBase (TM)</link>,
+    <link xlink:href="http://www.hbase.org">Apache HBase&#153;</link>,
     a distributed, versioned, column-oriented database built on top of
     <link xlink:href="http://hadoop.apache.org/">Apache Hadoop</link> and
     <link xlink:href="http://zookeeper.apache.org/">Apache ZooKeeper</link>.
@@ -2150,6 +2150,7 @@ myHtd.setValue(HTableDescriptor.SPLIT_POLICY, MyCustomSplitPolicy.class.getName(
   </chapter>   <!--  architecture -->
 
   <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="external_apis.xml" />
+  <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="cp.xml" />
   <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="performance.xml" />
   <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="troubleshooting.xml" />
   <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="case_studies.xml" />

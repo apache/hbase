@@ -26,8 +26,8 @@
  * limitations under the License.
  */
 -->
-    <title>Apache HBase (TM) Configuration</title>
-    <para>This chapter is the Not-So-Quick start guide to Apache HBase (TM) configuration.  It goes
+    <title>Apache HBase Configuration</title>
+    <para>This chapter is the Not-So-Quick start guide to Apache HBase configuration.  It goes
     over system requirements, Hadoop setup, the different Apache HBase run modes, and the
     various configurations in HBase.  Please read this chapter carefully.  At a mimimum
     ensure that all <xref linkend="basic.prerequisites" /> have

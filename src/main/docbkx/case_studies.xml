@@ -26,11 +26,11 @@
  * limitations under the License.
  */
 -->
-  <title>Apache HBase (TM) Case Studies</title>
+  <title>Apache HBase Case Studies</title>
     <section xml:id="casestudies.overview">
       <title>Overview</title>
       <para>This chapter will describe a variety of performance and troubleshooting case studies that can 
-      provide a useful blueprint on diagnosing Apache HBase (TM) cluster issues.</para>
+      provide a useful blueprint on diagnosing Apache HBase cluster issues.</para>
       <para>For more information on Performance and Troubleshooting, see <xref linkend="performance"/> and <xref linkend="trouble"/>.
       </para>
     </section>
