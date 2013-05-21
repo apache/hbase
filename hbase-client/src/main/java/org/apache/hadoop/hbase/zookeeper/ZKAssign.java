@@ -798,7 +798,6 @@ public class ZKAssign {
       // Node no longer exists.  Return -1. It means unsuccessful transition.
       return -1;
     }
-    RegionTransition rt = getRegionTransition(existingBytes);
 
     // Verify it is the expected version
     if (expectedVersion != -1 && stat.getVersion() != expectedVersion) {
@@ -808,7 +807,9 @@ public class ZKAssign {
         "the node existed but was version " + stat.getVersion() +
         " not the expected version " + expectedVersion));
         return -1;
-    } else if (beginState.equals(EventType.M_ZK_REGION_OFFLINE)
+    }
+
+    if (beginState.equals(EventType.M_ZK_REGION_OFFLINE)
         && endState.equals(EventType.RS_ZK_REGION_OPENING)
         && expectedVersion == -1 && stat.getVersion() != 0) {
       // the below check ensures that double assignment doesnot happen.
@@ -819,6 +820,18 @@ public class ZKAssign {
           + encoded + " from " + beginState + " to " + endState + " failed, "
           + "the node existed but was version " + stat.getVersion()
           + " not the expected version " + expectedVersion));
+      return -1;
+    }
+
+    RegionTransition rt = getRegionTransition(existingBytes);
+
+    // Verify the server transition happens on is not changed
+    if (!rt.getServerName().equals(serverName)) {
+      LOG.warn(zkw.prefix("Attempt to transition the " +
+        "unassigned node for " + encoded +
+        " from " + beginState + " to " + endState + " failed, " +
+        "the server that tried to transition was " + serverName +
+        " not the expected " + rt.getServerName()));
       return -1;
     }
 

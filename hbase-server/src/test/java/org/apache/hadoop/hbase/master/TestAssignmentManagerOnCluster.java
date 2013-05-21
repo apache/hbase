@@ -24,6 +24,7 @@ import static org.junit.Assert.fail;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Set;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -34,6 +35,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MediumTests;
+import org.apache.hadoop.hbase.ServerLoad;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.catalog.MetaEditor;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
@@ -43,6 +45,7 @@ import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.RegionObserver;
+import org.apache.hadoop.hbase.executor.EventType;
 import org.apache.hadoop.hbase.master.balancer.StochasticLoadBalancer;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -106,6 +109,64 @@ public class TestAssignmentManagerOnCluster {
         getRegionStates().getRegionServerOfRegion(hri);
       TEST_UTIL.assertRegionOnServer(hri, serverName, 200);
     } finally {
+      TEST_UTIL.deleteTable(Bytes.toBytes(table));
+    }
+  }
+
+  /**
+   * This tests region assignment on a simulated restarted server
+   */
+  @Test
+  public void testAssignRegionOnRestartedServer() throws Exception {
+    String table = "testAssignRegionOnRestartedServer";
+    ServerName deadServer = null;
+    HMaster master = null;
+    try {
+      HTableDescriptor desc = new HTableDescriptor(table);
+      desc.addFamily(new HColumnDescriptor(FAMILY));
+      admin.createTable(desc);
+
+      HTable meta = new HTable(conf, HConstants.META_TABLE_NAME);
+      HRegionInfo hri = new HRegionInfo(
+        desc.getName(), Bytes.toBytes("A"), Bytes.toBytes("Z"));
+      MetaEditor.addRegionToMeta(meta, hri);
+
+      master = TEST_UTIL.getHBaseCluster().getMaster();
+      Set<ServerName> onlineServers = master.serverManager.getOnlineServers().keySet();
+      assertFalse("There should be some servers online", onlineServers.isEmpty());
+
+      // Use the first server as the destination server
+      ServerName destServer = onlineServers.iterator().next();
+
+      // Created faked dead server
+      deadServer = new ServerName(destServer.getHostname(),
+        destServer.getPort(), destServer.getStartcode() - 100L);
+      master.serverManager.recordNewServer(deadServer, ServerLoad.EMPTY_SERVERLOAD);
+
+      AssignmentManager am = master.getAssignmentManager();
+      RegionPlan plan = new RegionPlan(hri, null, deadServer);
+      am.addPlan(hri.getEncodedName(), plan);
+      master.assignRegion(hri);
+
+      int version = ZKAssign.transitionNode(master.getZooKeeper(), hri,
+        destServer, EventType.M_ZK_REGION_OFFLINE,
+        EventType.RS_ZK_REGION_OPENING, 0);
+      assertEquals("TansitionNode should fail", -1, version);
+
+      // Give region 2 seconds to assign, which may not be enough.
+      // However, if HBASE-8545 is broken, this test will be flaky.
+      // Otherwise, this test should never be flaky.
+      Thread.sleep(2000);
+
+      assertTrue("Region should still be in transition",
+        am.getRegionStates().isRegionInTransition(hri));
+      assertEquals("Assign node should still be in version 0", 0,
+        ZKAssign.getVersion(master.getZooKeeper(), hri));
+    } finally {
+      if (deadServer != null) {
+        master.serverManager.expireServer(deadServer);
+      }
+
       TEST_UTIL.deleteTable(Bytes.toBytes(table));
     }
   }

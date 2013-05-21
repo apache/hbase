@@ -399,7 +399,7 @@ public class TestAssignmentManager {
       assertNotSame(-1, versionid);
       // This uglyness below is what the openregionhandler on RS side does.
       versionid = ZKAssign.transitionNode(server.getZooKeeper(), REGIONINFO,
-        SERVERNAME_A, EventType.M_ZK_REGION_OFFLINE,
+        SERVERNAME_B, EventType.M_ZK_REGION_OFFLINE,
         EventType.RS_ZK_REGION_OPENING, versionid);
       assertNotSame(-1, versionid);
       // Move znode from OPENING to OPENED as RS does on successful open.
