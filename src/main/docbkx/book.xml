@@ -47,8 +47,8 @@
     <para>This is the official reference guide of
     <link xlink:href="http://www.hbase.org">Apache HBase&#153;</link>,
     a distributed, versioned, column-oriented database built on top of
-    <link xlink:href="http://hadoop.apache.org/">Apache Hadoop</link> and
-    <link xlink:href="http://zookeeper.apache.org/">Apache ZooKeeper</link>.
+    <link xlink:href="http://hadoop.apache.org/">Apache Hadoop&#153;</link> and
+    <link xlink:href="http://zookeeper.apache.org/">Apache ZooKeeper&#153;</link>.
       </para>
       </abstract>
 

@@ -25,8 +25,8 @@
  * limitations under the License.
  */
 -->
-  <title>Coprocessors</title>
-  <para>HBase coprocessors was inspired by Google's BigTable coprocessors. The <link xlink:href="https://blogs.apache.org/hbase/entry/coprocessor_introduction">Apache HBase Blog on Coprocessor</link> is a very good documentation on that. It has detailed information about the coprocessor framework, terminology, management, and so on.
+  <title>Apache HBase Coprocessors</title>
+  <para>The idea of HBase coprocessors was inspired by Google's BigTable coprocessors. The <link xlink:href="https://blogs.apache.org/hbase/entry/coprocessor_introduction">Apache HBase Blog on Coprocessor</link> is a very good documentation on that. It has detailed information about the coprocessor framework, terminology, management, and so on.
   </para>
 
 </chapter>
