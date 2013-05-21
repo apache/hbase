@@ -534,7 +534,7 @@ public class AssignmentManager extends ZooKeeperListener {
     EventType et = rt.getEventType();
     // Get ServerName.  Could not be null.
     final ServerName sn = rt.getServerName();
-    String encodedRegionName = regionInfo.getEncodedName();
+    final String encodedRegionName = regionInfo.getEncodedName();
     LOG.info("Processing region " + regionInfo.getRegionNameAsString() + " in state " + et);
 
 
@@ -592,6 +592,8 @@ public class AssignmentManager extends ZooKeeperListener {
                 public void process() throws IOException {
                   ReentrantLock lock = locker.acquireLock(regionInfo.getEncodedName());
                   try {
+                    RegionPlan plan = new RegionPlan(regionInfo, null, sn);
+                    addPlan(encodedRegionName, plan);
                     assign(rs, false, false);
                   } finally {
                     lock.unlock();
