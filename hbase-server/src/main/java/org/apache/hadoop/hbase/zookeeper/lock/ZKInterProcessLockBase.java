@@ -423,7 +423,7 @@ public abstract class ZKInterProcessLockBase implements InterProcessLock {
       LOG.error("Unexpected ZooKeeper error when listing children", e);
       throw new IOException("Unexpected ZooKeeper exception", e);
     }
-    if (children.size() > 0) {
+    if (children != null && children.size() > 0) {
       for (String child : children) {
         if (isChildOfSameType(child)) {
           String znode = ZKUtil.joinZNode(parentLockNode, child);
