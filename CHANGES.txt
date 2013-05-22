@@ -1,5 +1,70 @@
 HBase Change Log
 
+Release 0.94.8 - 5/22/2013
+Sub-task
+
+    [HBASE-8381] - TestTableInputFormatScan on Hadoop 2 fails because YARN kills our applications
+    [HBASE-8399] - TestTableInputFormatScan2#testScanFromConfiguration fails on hadoop2 profile
+
+Bug
+
+    [HBASE-7122] - Proper warning message when opening a log file with no entries (idle cluster)
+    [HBASE-7210] - Backport HBASE-6059 to 0.94
+    [HBASE-7921] - TestHFileBlock.testGzipCompression should ignore the block checksum
+    [HBASE-8282] - User triggered flushes does not allow compaction to get triggered even if compaction criteria is met
+    [HBASE-8327] - Consolidate class loaders
+    [HBASE-8354] - Backport HBASE-7878 'recoverFileLease does not check return value of recoverLease' to 0.94
+    [HBASE-8355] - BaseRegionObserver#pre(Compact|Flush|Store)ScannerOpen returns null
+    [HBASE-8377] - IntegrationTestBigLinkedList calculates wrap for linked list size incorrectly
+    [HBASE-8379] - bin/graceful_stop.sh does not return the balancer to original state
+    [HBASE-8385] - [SNAPSHOTS]: Restore fails to restore snapshot of a deleted table
+    [HBASE-8389] - HBASE-8354 forces Namenode into loop with lease recovery requests
+    [HBASE-8413] - Snapshot verify region will always fail if the HFile has been archived
+    [HBASE-8451] - MetricsMBeanBase has concurrency issues in init
+    [HBASE-8455] - Update ExportSnapshot to reflect changes in HBASE-7419
+    [HBASE-8464] - FastDiffEncoder - valueOffset calculation is incorrect
+    [HBASE-8483] - HConnectionManager can leak ZooKeeper connections when using deleteStaleConnection
+    [HBASE-8493] - Backport HBASE-8422, 'Master won't go down', to 0.94
+    [HBASE-8503] - Backport hbase-8483 "HConnectionManager can leak ZooKeeper connections when using deleteStaleConnection" to 0.94
+    [HBASE-8505] - References to split daughters should not be deleted separately from parent META entry
+    [HBASE-8509] - ZKUtil#createWithParents won't set data during znode creation when parent folder doesn't exit
+    [HBASE-8513] - [0.94] Fix class files with CRLF endings
+    [HBASE-8516] - FSUtils.create() fail with ViewFS
+    [HBASE-8525] - Use sleep multilier when choosing sinks in ReplicationSource
+    [HBASE-8530] - Refine error message from ExportSnapshot when there is leftover snapshot in target cluster
+    [HBASE-8538] - HBaseAdmin#isTableEnabled() should check table existence before checking zk state.
+    [HBASE-8539] - Double(or tripple ...) ZooKeeper listeners of the same type when Master recovers from ZK SessionExpiredException
+    [HBASE-8540] - SnapshotFileCache logs too many times if snapshot dir doesn't exists
+    [HBASE-8547] - Fix java.lang.RuntimeException: Cached an already cached block
+    [HBASE-8550] - 0.94 ChaosMonkey grep for master is too broad
+    [HBASE-8563] - Double count of read requests for Gets
+    [HBASE-8588] - [Documentation]: Add information about adding REST and Thrift API kerberos principals to HBase ACL table
+
+Improvement
+
+    [HBASE-5930] - Limits the amount of time an edit can live in the memstore.
+    [HBASE-6870] - HTable#coprocessorExec always scan the whole table
+    [HBASE-8345] - Add all available resources in o.a.h.h.rest.RootResource and VersionResource to o.a.h.h.rest.client.RemoteAdmin
+    [HBASE-8350] - enable ChaosMonkey to run commands as different users
+    [HBASE-8367] - LoadIncrementalHFiles does not return an error code nor throw Exception when failures occur due to timeouts
+    [HBASE-8383] - Support lib/*jar inside coprocessor jar
+    [HBASE-8405] - Add more custom options to how ClusterManager runs commands
+    [HBASE-8446] - Allow parallel snapshot of different tables
+
+New Feature
+
+    [HBASE-7965] - Port table locking to 0.94 (HBASE-7305, HBASE-7546, HBASE-7933)
+    [HBASE-8415] - DisabledRegionSplitPolicy
+
+Task
+
+    [HBASE-8574] - Add how to rename a table in the docbook
+
+Test
+
+    [HBASE-8508] - improve unit-test coverage of package org.apache.hadoop.hbase.metrics.file
+
+
 Release 0.94.7 - 4/24/2013
 Sub-task
 
