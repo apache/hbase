@@ -213,4 +213,9 @@ public interface HMasterInterface extends HBaseRPCProtocolVersion {
    * @return true if the server is blacklist, else false.
    */
   public boolean isServerBlackListed(String hostAndPort);
+
+  /**
+   * Update the configuration from disk.
+   */
+  public void updateConfiguration();
 }

@@ -87,6 +87,7 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.ServerConnection;
 import org.apache.hadoop.hbase.client.ServerConnectionManager;
+import org.apache.hadoop.hbase.conf.ConfigurationManager;
 import org.apache.hadoop.hbase.executor.HBaseEventHandler.HBaseEventType;
 import org.apache.hadoop.hbase.executor.HBaseExecutorService;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
@@ -252,6 +253,9 @@ public class HMaster extends HasThread implements HMasterInterface,
   private ZKClusterStateRecovery clusterStateRecovery;
   
   private AtomicBoolean isLoadBalancerDisabled = new AtomicBoolean(false);
+
+  private ConfigurationManager configurationManager =
+      new ConfigurationManager();
   
   /**
    * Constructor
@@ -2345,6 +2349,13 @@ public class HMaster extends HasThread implements HMasterInterface,
   @Override
   public boolean isServerBlackListed(final String hostAndPort) {
     return ServerManager.isServerBlackListed(hostAndPort);
+  }
+
+  @Override
+  public void updateConfiguration() {
+    LOG.info("Reloading the configuration from disk.");
+    conf.reloadConfiguration();
+    configurationManager.notifyAllObservers(conf);
   }
 }
 
