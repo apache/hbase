@@ -740,6 +740,10 @@ Caused by: java.io.FileNotFoundException: File _partition.lst does not exist.
 		    <para>See the <link xlink:href="see http://hadoop.apache.org/common/docs/current/hdfs_user_guide.html">HDFS User Guide</link> for other non-shell diagnostic
 		    utilities like <code>fsck</code>.
             </para>
+          <section xml:id="trouble.namenode.0size.hlogs">
+            <title>Zero size HLogs with data in them</title>
+              <para>Problem: when getting a listing of all the files in a region server's .logs directory, one file has a size of 0 but it contains data.</para>
+              <para>Answer: It's an HDFS quirk. A file that's currently being to will appear to have a size of 0 but once it's closed it will show its true size</para>
           <section xml:id="trouble.namenode.uncompaction">
             <title>Use Cases</title>
               <para>Two common use-cases for querying HDFS for HBase objects is research the degree of uncompaction of a table.  If there are a large number of StoreFiles for each ColumnFamily it could

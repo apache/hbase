@@ -684,7 +684,7 @@ the data will still be read.
      <para>A fairly common question on the dist-list is why HBase isn't as performant as HDFS files in a batch context (e.g., as
      a MapReduce source or sink).  The short answer is that HBase is doing a lot more than HDFS (e.g., reading the KeyValues,
      returning the most current row or specified timestamps, etc.), and as such HBase is 4-5 times slower than HDFS in this
-     processing context.  Not that there isn't room for improvement (and this gap will, over time, be reduced), but HDFS
+     processing context.  There is room for improvement and this gap will, over time, be reduced, but HDFS
       will always be faster in this use-case.
      </para>
     </section>
@@ -698,6 +698,24 @@ the data will still be read.
    <para>If you are running on EC2 and post performance questions on the dist-list, please state this fact up-front that
     because EC2 issues are practically a separate class of performance issues.
    </para>
+  </section>
+
+  <section xml:id="perf.hbase.mr.cluster"><title>Collocating HBase and MapReduce</title>
+    <para>It is often recommended to have different clusters for HBase and MapReduce. A better qualification of this is:
+          don't collocate a HBase that serves live requests with a heavy MR workload. OLTP and OLAP-optimized systems have
+          conflicting requirements and one will lose to the other, usually the former. For example, short latency-sensitive
+          disk reads will have to wait in line behind longer reads that are trying to squeeze out as much throughput as
+          possible. MR jobs that write to HBase will also generate flushes and compactions, which will in turn invalidate
+          blocks in the <xref linkend="block.cache"/>.
+    </para>
+    <para>If you need to process the data from your live HBase cluster in MR, you can ship the deltas with <xref linkend="copy.table"/>
+          or use replication to get the new data in real time on the OLAP cluster. In the worst case, if you really need to
+          collocate both, set MR to use less Map and Reduce slots than you'd normally configure, possibly just one.
+    </para>
+    <para>When HBase is used for OLAP operations, it's preferable to set it up in a hardened way like configuring the ZooKeeper session
+          timeout higher and giving more memory to the MemStores (the argument being that the Block Cache won't be used much
+          since the workloads are usually long scans).
+    </para>
   </section>
 
   <section xml:id="perf.casestudy"><title>Case Studies</title>

@@ -65,8 +65,10 @@ to ensure well-formedness of your document after an edit session.
 
     <section xml:id="java">
         <title>Java</title>
-        <para>Just like Hadoop, HBase requires at least java 6 from
-        <link xlink:href="http://www.java.com/download/">Oracle</link>.</para>
+        <para>Just like Hadoop, HBase requires at least Java 6 from
+        <link xlink:href="http://www.java.com/download/">Oracle</link>.
+        Java 7 should work and can even be faster than Java 6, but almost all testing
+        has been done on the latter at this point.</para>
     </section>
 
     <section xml:id="os">
@@ -701,6 +703,8 @@ stopping hbase...............</programlisting> Shutdown can take a moment to
       </section>
 
       <section xml:id="client_dependencies"><title>Client configuration and dependencies connecting to an HBase cluster</title>
+       <para>If you are running HBase in standalone mode, you don't need to configure anything for your client to work
+             provided that they are all on the same machine.</para>
        <para>
           Since the HBase Master may move around, clients bootstrap by looking to ZooKeeper for
           current critical locations.  ZooKeeper is where all these values are kept.  Thus clients

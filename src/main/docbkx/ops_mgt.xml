@@ -490,6 +490,28 @@ false
             </orderedlist>
         </para>
     </section>
+    <section xml:id="adding.new.node">
+        <title>Adding a New Node</title>
+        <para>Adding a new regionserver in HBase is essentially free, you simply start it like this:
+              <programlisting>$ ./bin/hbase-daemon.sh start regionserver</programlisting>
+              and it will register itself with the master. Ideally you also started a DataNode on the same
+              machine so that the RS can eventually start to have local files. If you rely on ssh to start your
+              daemons, don't forget to add the new hostname in <filename>conf/regionservers</filename> on the master.
+        </para>
+        <para>At this point the region server isn't serving data because no regions have moved to it yet. If the balancer is
+              enabled, it will start moving regions to the new RS. On a small/medium cluster this can have a very adverse effect
+              on latency as a lot of regions will be offline at the same time. It is thus recommended to disable the balancer
+              the same way it's done when decommissioning a node and move the regions manually (or even better, using a script
+              that moves them one by one).
+        </para>
+        <para>The moved regions will all have 0% locality and won't have any blocks in cache so the region server will have
+              to use the network to serve requests. Apart from resulting in higher latency, it may also be able to use all of
+              your network card's capacity. For practical purposes, consider that a standard 1GigE NIC won't be able to read
+              much more than <emphasis>100MB/s</emphasis>. In this case, or if you are in a OLAP environment and require having
+              locality, then it is recommended to major compact the moved regions.
+        </para>
+
+    </section>
     </section>  <!--  node mgt -->
 
   <section xml:id="hbase_metrics">
