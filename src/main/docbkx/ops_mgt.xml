@@ -904,14 +904,16 @@ do it using the hbase shell:
 <programlisting>hbase shell> disable 'tableName'
 hbase shell> snapshot 'tableName', 'tableSnapshot'
 hbase shell> clone 'tableSnapshot', 'newTableName'
-hbase shell> delete_snapshot 'tableSnapshot'</programlisting>
+hbase shell> delete_snapshot 'tableSnapshot'
+hbase shell> drop 'tableName'</programlisting>
 or in code it would be as follows:
 <programlisting>void rename(HBaseAdmin admin, String oldTableName, String newTableName) {
     String snapshotName = randomName();
+    admin.disableTable(oldTableName);
     admin.snapshot(snapshotName, oldTableName);
     admin.cloneSnapshot(snapshotName, newTableName);
     admin.deleteSnapshot(snapshotName);
-    admin.deleteTable(oldTableName)
+    admin.deleteTable(oldTableName);
 }</programlisting>
       </para>
   </section>
