@@ -181,6 +181,9 @@
     <property>
       <name>hbase.thrift.kerberos.principal</name>
       <value>$USER/_HOST@HADOOP.LOCALDOMAIN</value>
+      <!-- TODO: This may need to be  HTTP/_HOST@<REALM> and _HOST may not work.
+       You may have  to put the concrete full hostname.
+       -->
     </property>
     ]]></programlisting>
     </para>
