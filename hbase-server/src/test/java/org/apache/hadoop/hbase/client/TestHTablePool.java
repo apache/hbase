@@ -182,6 +182,34 @@ public class TestHTablePool {
         Assert.assertTrue("alien table rejected", true);
       }
     }
+
+    @Test
+    public void testHTablePoolCloseTwice() throws Exception {
+      HTablePool pool = new HTablePool(TEST_UTIL.getConfiguration(),
+          Integer.MAX_VALUE, getPoolType());
+      String tableName = Bytes.toString(TABLENAME);
+
+      // Request a table from an empty pool
+      HTableInterface table = pool.getTable(tableName);
+      Assert.assertNotNull(table);
+      Assert.assertTrue(((HTablePool.PooledHTable) table).isOpen());
+      // Close table (returns table to the pool)
+      table.close();
+      // check if the table is closed
+      Assert.assertFalse(((HTablePool.PooledHTable) table).isOpen());
+      try {
+        table.close();
+        Assert.fail("Should not allow table to be closed twice");
+      } catch (IllegalStateException ex) {
+        Assert.assertTrue("table cannot be closed twice", true);
+      } finally {
+        pool.close();
+      }
+
+    }
+
+   
+
   }
 
   @Category(MediumTests.class)
