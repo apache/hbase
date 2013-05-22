@@ -119,11 +119,9 @@
         <p>
           Synchronously, the region server that receives the edits reads them
           sequentially and separates each of them into buffers, one per table.
-          Once all edits are read, each buffer is flushed using the normal HBase
-          client (HTables managed by a HTablePool). This is done in order to
-          leverage parallel insertion (MultiPut).
-          The master's cluster UUID is retained in the edits applied at the
-          slave cluster in order to allow cyclic replication.
+          Once all edits are read, each buffer is flushed using HTable, the normal
+          HBase client.The master's cluster UUID is retained in the edits applied at 
+          the slave cluster in order to allow cyclic replication.
         </p>
         <p>
           Back in the master cluster's region server, the offset for the current
@@ -514,6 +512,19 @@
         </pre>
       </section>
     </section>
+    <section name="Replication Metrics"> 
+    Following the some useful metrics which can be used to check the replication progress:
+	<ul>
+	 <li><b>source.sizeOfLogQueue:</b> number of HLogs to process (excludes the one which is being 
+		processed) at the Replication source</li>
+    	 <li><b>source.shippedOps:</b> number of mutations shipped</li>
+   	 <li><b>source.logEditsRead:</b> number of mutations read from HLogs at the replication source</li>
+    	 <li><b>source.ageOfLastShippedOp:</b> age of last batch that was shipped by the replication source</li>
+	</ul>
+	Please note that the above metrics are at the global level at this regionserver. In 0.95.0 and onwards, these
+	 metrics are also exposed per peer level.
+    </section>
+	
     <section name="FAQ">
       <section name="GLOBAL means replicate? Any provision to replicate only to cluster X and not to cluster Y? or is that for later?">
         <p>
@@ -533,19 +544,6 @@
           in HBase (BatchUpdate had that, but it was lost in the new API).
         </p>
       </section>
-    </section>
-    <section name="Known bugs/missing features">
-      <p>
-        Here's a list of all the jiras that relate to major issues or missing
-        features in the replication implementation.
-      </p>
-      <ol>
-        <li>
-            HBASE-2611, basically if a region server dies while recovering the
-            queues of another dead RS, we will miss the data from the queues
-            that weren't copied.
-        </li>
-      </ol>
     </section>
   </body>
 </document>
