@@ -30,6 +30,8 @@ import java.util.NavigableMap;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.Abortable;
+import org.apache.hadoop.hbase.CellScannable;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -41,8 +43,10 @@ import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.client.HConnectionTestingUtility;
 import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.ipc.PayloadCarryingRpcController;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ResultCellMeta;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ScanRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ScanResponse;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -52,6 +56,8 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
+import org.mockito.invocation.InvocationOnMock;
+import org.mockito.stubbing.Answer;
 
 import com.google.protobuf.RpcController;
 import com.google.protobuf.ServiceException;
@@ -158,20 +164,26 @@ public class TestMetaReaderEditorNoCluster {
       kvs.add(new KeyValue(rowToVerify,
         HConstants.CATALOG_FAMILY, HConstants.STARTCODE_QUALIFIER,
         Bytes.toBytes(sn.getStartcode())));
-      final Result [] results = new Result [] {new Result(kvs)};
-      ScanResponse.Builder builder = ScanResponse.newBuilder();
-      for (Result result: results) {
-        builder.addResult(ProtobufUtil.toResult(result));
+      final List<CellScannable> cellScannables = new ArrayList<CellScannable>(1);
+      cellScannables.add(new Result(kvs));
+      final ScanResponse.Builder builder = ScanResponse.newBuilder();
+      ResultCellMeta.Builder metaBuilder = ResultCellMeta.newBuilder();
+      for (CellScannable result : cellScannables) {
+        metaBuilder.addCellsLength(((Result)result).size());
       }
-      Mockito.when(implementation.scan(
-        (RpcController)Mockito.any(), (ScanRequest)Mockito.any())).
-          thenThrow(new ServiceException("Server not running (1 of 3)")).
-          thenThrow(new ServiceException("Server not running (2 of 3)")).
-          thenThrow(new ServiceException("Server not running (3 of 3)")).
-          thenReturn(ScanResponse.newBuilder().setScannerId(1234567890L).build())
-            .thenReturn(builder.build()).thenReturn(
-              ScanResponse.newBuilder().setMoreResults(false).build());
-
+      builder.setResultCellMeta(metaBuilder.build());
+      Mockito.when(implementation.scan((RpcController) Mockito.any(), (ScanRequest) Mockito.any()))
+          .thenThrow(new ServiceException("Server not running (1 of 3)"))
+          .thenThrow(new ServiceException("Server not running (2 of 3)"))
+          .thenThrow(new ServiceException("Server not running (3 of 3)"))
+          .thenReturn(ScanResponse.newBuilder().setScannerId(1234567890L).build())
+          .thenAnswer(new Answer<ScanResponse>() {
+            public ScanResponse answer(InvocationOnMock invocation) throws Throwable {
+              ((PayloadCarryingRpcController) invocation.getArguments()[0]).setCellScanner(CellUtil
+                  .createCellScanner(cellScannables));
+              return builder.build();
+            }
+          }).thenReturn(ScanResponse.newBuilder().setMoreResults(false).build());
       // Associate a spied-upon HConnection with UTIL.getConfiguration.  Need
       // to shove this in here first so it gets picked up all over; e.g. by
       // HTable.

@@ -21,11 +21,15 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.exceptions.DoNotRetryIOException;
 import org.apache.hadoop.hbase.ipc.ServerRpcController;
 import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermissionsResponse;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.CloseRegionResponse;
@@ -36,6 +40,7 @@ import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.RollWALWriterRespo
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ServerInfo;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ActionResult;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ResultCellMeta;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ScanResponse;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameBytesPair;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.CatalogScanResponse;
@@ -54,27 +59,12 @@ import com.google.protobuf.RpcController;
  */
 @InterfaceAudience.Private
 public final class ResponseConverter {
+  public static final Log LOG = LogFactory.getLog(ResponseConverter.class);
 
   private ResponseConverter() {
   }
 
 // Start utilities for Client
-
-  /**
-   * Get the client Results from a protocol buffer ScanResponse
-   *
-   * @param response the protocol buffer ScanResponse
-   * @return the client Results in the response
-   */
-  public static Result[] getResults(final ScanResponse response) {
-    if (response == null) return null;
-    int count = response.getResultCount();
-    Result[] results = new Result[count];
-    for (int i = 0; i < count; i++) {
-      results[i] = ProtobufUtil.toResult(response.getResult(i));
-    }
-    return results;
-  }
 
   /**
    * Get the results from a protocol buffer MultiResponse
@@ -277,5 +267,47 @@ public final class ResponseConverter {
         controller.setFailed(StringUtils.stringifyException(ioe));
       }
     }
+  }
+
+  /**
+   * Create Results from the cells using the cells meta data. 
+   * @param cellScanner
+   * @param response
+   * @return results
+   */
+  public static Result[] getResults(CellScanner cellScanner, ScanResponse response)
+      throws IOException {
+    if (response == null || cellScanner == null) return null;
+    ResultCellMeta resultCellMeta = response.getResultCellMeta();
+    if (resultCellMeta == null) return null;
+    int noOfResults = resultCellMeta.getCellsLengthCount();
+    Result[] results = new Result[noOfResults];
+    for (int i = 0; i < noOfResults; i++) {
+      int noOfCells = resultCellMeta.getCellsLength(i);
+      List<Cell> cells = new ArrayList<Cell>(noOfCells);
+      for (int j = 0; j < noOfCells; j++) {
+        try {
+          if (cellScanner.advance() == false) {
+            // We are not able to retrieve the exact number of cells which ResultCellMeta says us.
+            // We have to scan for the same results again. Throwing DNRIOE as a client retry on the
+            // same scanner will result in OutOfOrderScannerNextException
+            String msg = "Results sent from server=" + noOfResults + ". But only got " + i
+                + " results completely at client. Resetting the scanner to scan again.";
+            LOG.error(msg);
+            throw new DoNotRetryIOException(msg);
+          }
+        } catch (IOException ioe) {
+          // We are getting IOE while retrieving the cells for Results.
+          // We have to scan for the same results again. Throwing DNRIOE as a client retry on the
+          // same scanner will result in OutOfOrderScannerNextException
+          LOG.error("Exception while reading cells from result."
+              + "Resetting the scanner to scan again.", ioe);
+          throw new DoNotRetryIOException("Resetting the scanner.", ioe);
+        }
+        cells.add(cellScanner.current());
+      }
+      results[i] = new Result(cells);
+    }
+    return results;
   }
 }
