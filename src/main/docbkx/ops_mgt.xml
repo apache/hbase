@@ -419,13 +419,37 @@ false
             </para>
         </note>
         </para>
+        <section xml:id="draining.servers">
+            <title>Decommissioning several Regions Servers concurrently</title>
+            <para>If you have a large cluster, you may want to
+            decomission more than one machines at a time by gracefully
+            stopping mutiple RegionServers concurrently.
+	    </para>
+	    <para>To gracefully drain multiple regionservers at the
+	    same time, RegionServers can be put into a "draining"
+	    state.  This is done by marking a RegionServer as a
+	    draining node by creating an entry in ZooKeeper under the
+	    hbase_root/draining znode.  This znode has format
+	    "name,port,startcode" just like the regionserver entries
+	    under hbase_root/rs znode.
+	    </para>
+	    <para>Without this, when decommissioning mulitple nodes
+	    may be non-optimal because regions that are being drained
+	    from one region server may be moved to other regions that
+	    are also draining.  Marking RegionServers to be in the
+	    draining state prevents this from happening.  <note>See
+	    this <link xlink:href="http://inchoate-clatter.blogspot.com/2012/03/hbase-ops-automation.html">blog
+	    post</link> for more details. </note>
+	    </para>
+        </section>
+
         <section xml:id="bad.disk">
             <title>Bad or Failing Disk</title>
             <para>It is good having <xref linkend="dfs.datanode.failed.volumes.tolerated" /> set if you have a decent number of disks
             per machine for the case where a disk plain dies.  But usually disks do the "John Wayne" -- i.e. take a while
             to go down spewing errors in <filename>dmesg</filename> -- or for some reason, run much slower than their
             companions.  In this case you want to decommission the disk.  You have two options.  You can
-            <xlink href="http://wiki.apache.org/hadoop/FAQ#I_want_to_make_a_large_cluster_smaller_by_taking_out_a_bunch_of_nodes_simultaneously._How_can_this_be_done.3F">decommission the datanode</xlink>
+            <link xlink:href="http://wiki.apache.org/hadoop/FAQ#I_want_to_make_a_large_cluster_smaller_by_taking_out_a_bunch_of_nodes_simultaneously._How_can_this_be_done.3F">decommission the datanode</link>
             or, less disruptive in that only the bad disks data will be rereplicated, can stop the datanode,
             unmount the bad volume (You can't umount a volume while the datanode is using it), and then restart the
             datanode (presuming you have set dfs.datanode.failed.volumes.tolerated > 0).  The regionserver will
@@ -489,6 +513,12 @@ false
                 </listitem>
             </orderedlist>
         </para>
+	<para>It is important to drain HBase regions slowly when
+	restarting regionservers. Otherwise, multiple regions go
+	offline simultaneously as they are re-assigned to other
+	nodes. Depending on your usage patterns, this might not be
+	desirable.
+	</para>
     </section>
     <section xml:id="adding.new.node">
         <title>Adding a New Node</title>
