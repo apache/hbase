@@ -92,7 +92,6 @@ import org.apache.hadoop.hbase.exceptions.NoSuchColumnFamilyException;
 import org.apache.hadoop.hbase.exceptions.NotServingRegionException;
 import org.apache.hadoop.hbase.exceptions.OutOfOrderScannerNextException;
 import org.apache.hadoop.hbase.exceptions.RegionAlreadyInTransitionException;
-import org.apache.hadoop.hbase.exceptions.RegionInRecoveryException;
 import org.apache.hadoop.hbase.exceptions.RegionMovedException;
 import org.apache.hadoop.hbase.exceptions.RegionOpeningException;
 import org.apache.hadoop.hbase.exceptions.RegionServerRunningException;
@@ -165,6 +164,7 @@ import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiResponse;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutateRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutateResponse;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ResultCellMeta;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.MutationType;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ScanRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ScanResponse;
@@ -2947,7 +2947,6 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
         RegionScannerHolder rsh = null;
         boolean moreResults = true;
         boolean closeScanner = false;
-        Long resultsWireSize = null;
         ScanResponse.Builder builder = ScanResponse.newBuilder();
         if (request.hasCloseScanner()) {
           closeScanner = request.getCloseScanner();
@@ -2974,7 +2973,6 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
             scan.setLoadColumnFamiliesOnDemand(region.isLoadingCfsOnDemandDefault());
           }
           byte[] hasMetrics = scan.getAttribute(Scan.SCAN_ATTRIBUTES_METRICS_ENABLE);
-          resultsWireSize = (hasMetrics != null && Bytes.toBoolean(hasMetrics)) ? 0L : null;
           region.prepareScanner(scan);
           if (region.getCoprocessorHost() != null) {
             scanner = region.getCoprocessorHost().preScannerOpen(scan);
@@ -3081,18 +3079,16 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
               moreResults = false;
               results = null;
             } else {
-              for (Result result: results) {
-                if (result != null) {
-                  ClientProtos.Result pbResult = ProtobufUtil.toResult(result);
-                  if (resultsWireSize != null) {
-                    resultsWireSize += pbResult.getSerializedSize();
-                  }
-                  builder.addResult(pbResult);
-                }
+              ResultCellMeta.Builder rcmBuilder = ResultCellMeta.newBuilder();
+              List<CellScannable> cellScannables = new ArrayList<CellScannable>(results.size());
+              for (Result res : results) {
+                cellScannables.add(res);
+                rcmBuilder.addCellsLength(res.size());
               }
-              if (resultsWireSize != null) {
-                builder.setResultSizeBytes(resultsWireSize.longValue());
-              }
+              builder.setResultCellMeta(rcmBuilder.build());
+              // TODO is this okey to assume the type and cast
+              ((PayloadCarryingRpcController) controller).setCellScanner(CellUtil
+                  .createCellScanner(cellScannables));
             }
           } finally {
             // We're done. On way out re-add the above removed lease.

@@ -260,11 +260,14 @@ message ScanRequest {
  * be false.  If it is not specified, it means there are more.
  */
 message ScanResponse {
-  repeated Result result = 1;
+  optional ResultCellMeta resultCellMeta = 1;
   optional uint64 scannerId = 2;
   optional bool moreResults = 3;
   optional uint32 ttl = 4;
-  optional uint64 resultSizeBytes = 5;
+}
+
+message ResultCellMeta {
+  repeated uint32 cellsLength = 1;
 }
 
 /**

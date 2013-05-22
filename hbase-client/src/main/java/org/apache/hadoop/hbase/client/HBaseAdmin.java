@@ -65,6 +65,7 @@ import org.apache.hadoop.hbase.exceptions.UnknownSnapshotException;
 import org.apache.hadoop.hbase.exceptions.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcChannel;
 import org.apache.hadoop.hbase.ipc.MasterCoprocessorRpcChannel;
+import org.apache.hadoop.hbase.ipc.PayloadCarryingRpcController;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.protobuf.ResponseConverter;
@@ -572,10 +573,12 @@ public class HBaseAdmin implements Abortable, Closeable {
           firstMetaServer.getRegionInfo().getRegionName(), scan, 1, true);
         Result[] values = null;
         // Get a batch at a time.
-        ClientService.BlockingInterface server = connection.getClient(firstMetaServer.getServerName());
+        ClientService.BlockingInterface server = connection.getClient(firstMetaServer
+            .getServerName());
+        PayloadCarryingRpcController controller = new PayloadCarryingRpcController();
         try {
-          ScanResponse response = server.scan(null, request);
-          values = ResponseConverter.getResults(response);
+          ScanResponse response = server.scan(controller, request);
+          values = ResponseConverter.getResults(controller.cellScanner(), response);
         } catch (ServiceException se) {
           throw ProtobufUtil.getRemoteException(se);
         }

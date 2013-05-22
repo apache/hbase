@@ -26,14 +26,17 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
+import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
 import org.apache.hadoop.hbase.exceptions.DoNotRetryIOException;
 import org.apache.hadoop.hbase.exceptions.NotServingRegionException;
 import org.apache.hadoop.hbase.exceptions.RegionServerStoppedException;
 import org.apache.hadoop.hbase.exceptions.UnknownScannerException;
+import org.apache.hadoop.hbase.ipc.PayloadCarryingRpcController;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.protobuf.ResponseConverter;
@@ -142,8 +145,9 @@ public class ScannerCallable extends ServerCallable<Result[]> {
           incRPCcallsMetrics();
           request = RequestConverter.buildScanRequest(scannerId, caching, false, nextCallSeq);
           ScanResponse response = null;
+          PayloadCarryingRpcController controller = new PayloadCarryingRpcController();
           try {
-            response = stub.scan(null, request);
+            response = stub.scan(controller, request);
             // Client and RS maintain a nextCallSeq number during the scan. Every next() call
             // from client to server will increment this number in both sides. Client passes this
             // number along with the request and at RS side both the incoming nextCallSeq and its
@@ -155,7 +159,9 @@ public class ScannerCallable extends ServerCallable<Result[]> {
             // See HBASE-5974
             nextCallSeq++;
             long timestamp = System.currentTimeMillis();
-            rrs = ResponseConverter.getResults(response);
+            // Results are returned via controller
+            CellScanner cellScanner = controller.cellScanner();
+            rrs = ResponseConverter.getResults(cellScanner, response);
             if (logScannerActivity) {
               long now = System.currentTimeMillis();
               if (now - timestamp > logCutOffLatency) {
@@ -173,7 +179,7 @@ public class ScannerCallable extends ServerCallable<Result[]> {
           } catch (ServiceException se) {
             throw ProtobufUtil.getRemoteException(se);
           }
-          updateResultsMetrics(response);
+          updateResultsMetrics(rrs);
         } catch (IOException e) {
           if (logScannerActivity) {
             LOG.info("Got exception making request " + TextFormat.shortDebugString(request), e);
@@ -232,14 +238,19 @@ public class ScannerCallable extends ServerCallable<Result[]> {
     }
   }
 
-  private void updateResultsMetrics(ScanResponse response) {
-    if (this.scanMetrics == null || !response.hasResultSizeBytes()) {
+  private void updateResultsMetrics(Result[] rrs) {
+    if (this.scanMetrics == null || rrs == null || rrs.length == 0) {
       return;
     }
-    long value = response.getResultSizeBytes();
-    this.scanMetrics.countOfBytesInResults.addAndGet(value);
+    long resultSize = 0;
+    for (Result rr : rrs) {
+      for (KeyValue kv : rr.raw()) {
+        resultSize += kv.getLength();
+      }
+    }
+    this.scanMetrics.countOfBytesInResults.addAndGet(resultSize);
     if (isRegionServerRemote) {
-      this.scanMetrics.countOfBytesInRemoteResults.addAndGet(value);
+      this.scanMetrics.countOfBytesInRemoteResults.addAndGet(resultSize);
     }
   }
 

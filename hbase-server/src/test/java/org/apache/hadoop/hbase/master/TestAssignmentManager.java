@@ -30,6 +30,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import org.apache.hadoop.hbase.CellScannable;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
@@ -50,6 +52,7 @@ import org.apache.hadoop.hbase.exceptions.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.executor.EventType;
 import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.executor.ExecutorType;
+import org.apache.hadoop.hbase.ipc.PayloadCarryingRpcController;
 import org.apache.hadoop.hbase.master.RegionState.State;
 import org.apache.hadoop.hbase.master.TableLockManager.NullTableLockManager;
 import org.apache.hadoop.hbase.master.balancer.DefaultLoadBalancer;
@@ -60,6 +63,7 @@ import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.GetRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.GetResponse;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ResultCellMeta;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ScanRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ScanResponse;
 import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.Table;
@@ -81,6 +85,8 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
 import org.mockito.internal.util.reflection.Whitebox;
+import org.mockito.invocation.InvocationOnMock;
+import org.mockito.stubbing.Answer;
 
 import com.google.protobuf.RpcController;
 import com.google.protobuf.ServiceException;
@@ -594,12 +600,25 @@ public class TestAssignmentManager {
       r = MetaMockingUtil.getMetaTableRowResult(REGIONINFO, SERVERNAME_A);
     }
 
-    ScanResponse.Builder builder = ScanResponse.newBuilder();
+    final ScanResponse.Builder builder = ScanResponse.newBuilder();
     builder.setMoreResults(true);
-    builder.addResult(ProtobufUtil.toResult(r));
+    ResultCellMeta.Builder metaBuilder = ResultCellMeta.newBuilder();
+    metaBuilder.addCellsLength(r.size());
+    builder.setResultCellMeta(metaBuilder.build());
+    final List<CellScannable> cellScannables = new ArrayList<CellScannable>(1);
+    cellScannables.add(r);
     Mockito.when(implementation.scan(
       (RpcController)Mockito.any(), (ScanRequest)Mockito.any())).
-        thenReturn(builder.build());
+      thenAnswer(new Answer<ScanResponse>() {
+          public ScanResponse answer(InvocationOnMock invocation) throws Throwable {
+            PayloadCarryingRpcController controller = (PayloadCarryingRpcController) invocation
+                .getArguments()[0];
+            if (controller != null) {
+              controller.setCellScanner(CellUtil.createCellScanner(cellScannables));
+            }
+            return builder.build();
+          }
+      });
 
     // Get a connection w/ mocked up common methods.
     HConnection connection =
@@ -1052,17 +1071,30 @@ public class TestAssignmentManager {
       Mockito.mock(ClientProtos.ClientService.BlockingInterface.class);
     // Get a meta row result that has region up on SERVERNAME_A for REGIONINFO
     Result r = MetaMockingUtil.getMetaTableRowResult(REGIONINFO, SERVERNAME_A);
-    ScanResponse.Builder builder = ScanResponse.newBuilder();
+    final ScanResponse.Builder builder = ScanResponse.newBuilder();
     builder.setMoreResults(true);
-    builder.addResult(ProtobufUtil.toResult(r));
+    ResultCellMeta.Builder metaBuilder = ResultCellMeta.newBuilder();
+    metaBuilder.addCellsLength(r.size());
+    builder.setResultCellMeta(metaBuilder.build());
+    final List<CellScannable> rows = new ArrayList<CellScannable>(1);
+    rows.add(r);
+    Answer<ScanResponse> ans = new Answer<ClientProtos.ScanResponse>() {
+      public ScanResponse answer(InvocationOnMock invocation) throws Throwable {
+        PayloadCarryingRpcController controller = (PayloadCarryingRpcController) invocation
+            .getArguments()[0];
+        if (controller != null) {
+          controller.setCellScanner(CellUtil.createCellScanner(rows));
+        }
+        return builder.build();
+      }
+    };
     if (enabling) {
       Mockito.when(ri.scan((RpcController) Mockito.any(), (ScanRequest) Mockito.any()))
-          .thenReturn(builder.build()).thenReturn(builder.build()).thenReturn(builder.build())
-          .thenReturn(builder.build()).thenReturn(builder.build())
+          .thenAnswer(ans).thenAnswer(ans).thenAnswer(ans).thenAnswer(ans).thenAnswer(ans)
           .thenReturn(ScanResponse.newBuilder().setMoreResults(false).build());
     } else {
-      Mockito.when(ri.scan((RpcController) Mockito.any(), (ScanRequest) Mockito.any())).thenReturn(
-          builder.build());
+      Mockito.when(ri.scan((RpcController) Mockito.any(), (ScanRequest) Mockito.any())).thenAnswer(
+          ans);
     }
     // If a get, return the above result too for REGIONINFO
     GetResponse.Builder getBuilder = GetResponse.newBuilder();
