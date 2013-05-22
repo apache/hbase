@@ -1225,6 +1225,100 @@ public class TestFilter extends HBaseTestCase {
     verifyScanFull(s, kvs);
   }
 
+  public void testNestedFilterListWithSCVF() throws IOException {
+    byte[] columnStatus = Bytes.toBytes("S");
+    HTableDescriptor htd = new HTableDescriptor(getName());
+    htd.addFamily(new HColumnDescriptor(FAMILIES[0]));
+    HRegionInfo info = new HRegionInfo(htd.getName(), null, null, false);
+    HRegion testRegion = HRegion.createHRegion(info, testDir, conf, htd);
+    for(int i=0; i<10; i++) {
+      Put p = new Put(Bytes.toBytes("row" + i));
+      p.setWriteToWAL(false);
+      p.add(FAMILIES[0], columnStatus, Bytes.toBytes(i%2));
+      testRegion.put(p);
+    }
+    testRegion.flushcache();
+    // 1. got rows > "row4"
+    Filter rowFilter = new RowFilter(CompareOp.GREATER, new BinaryComparator(
+        Bytes.toBytes("row4")));
+    Scan s1 = new Scan();
+    s1.setFilter(rowFilter);
+    InternalScanner scanner = testRegion.getScanner(s1);
+    List<KeyValue> results = new ArrayList<KeyValue>();
+    int i = 5;
+    for (boolean done = true; done; i++) {
+      done = scanner.next(results);
+      Assert.assertTrue(Bytes.equals(results.get(0).getRow(), Bytes.toBytes("row" + i)));
+      Assert.assertEquals(Bytes.toInt(results.get(0).getValue()), i%2);
+      results.clear();
+    }
+    // 2. got rows <= "row4" and S=
+    FilterList subFilterList = new FilterList(FilterList.Operator.MUST_PASS_ALL);
+    Filter subFilter1 = new RowFilter(CompareOp.LESS_OR_EQUAL, new BinaryComparator(
+        Bytes.toBytes("row4")));
+    subFilterList.addFilter(subFilter1);
+    Filter subFilter2 = new SingleColumnValueFilter(FAMILIES[0], columnStatus, CompareOp.EQUAL,
+        Bytes.toBytes(0));
+    subFilterList.addFilter(subFilter2);
+    s1 = new Scan();
+    s1.setFilter(subFilterList);
+    scanner = testRegion.getScanner(s1);
+    results = new ArrayList<KeyValue>();
+    for (i=0; i<=4; i+=2) {
+      scanner.next(results);
+      Assert.assertTrue(Bytes.equals(results.get(0).getRow(), Bytes.toBytes("row" + i)));
+      Assert.assertEquals(Bytes.toInt(results.get(0).getValue()), i%2);
+      results.clear();
+    }
+    Assert.assertFalse(scanner.next(results));
+    // 3. let's begin to verify nested filter list
+    // 3.1 add rowFilter, then add subFilterList
+    FilterList filterList = new FilterList(FilterList.Operator.MUST_PASS_ONE);
+    filterList.addFilter(rowFilter);
+    filterList.addFilter(subFilterList);
+    s1 = new Scan();
+    s1.setFilter(filterList);
+    scanner = testRegion.getScanner(s1);
+    results = new ArrayList<KeyValue>();
+    for (i=0; i<=4; i+=2) {
+      scanner.next(results);
+      Assert.assertTrue(Bytes.equals(results.get(0).getRow(), Bytes.toBytes("row" + i)));
+      Assert.assertEquals(Bytes.toInt(results.get(0).getValue()), i%2);
+      results.clear();
+    }
+    for (i=5; i<=9; i++) {
+      scanner.next(results);
+      Assert.assertTrue(Bytes.equals(results.get(0).getRow(), Bytes.toBytes("row" + i)));
+      Assert.assertEquals(Bytes.toInt(results.get(0).getValue()), i%2);
+      results.clear();
+    }
+    Assert.assertFalse(scanner.next(results));
+    // 3.2 MAGIC here! add subFilterList first, then add rowFilter
+    filterList = new FilterList(FilterList.Operator.MUST_PASS_ONE);
+    filterList.addFilter(subFilterList);
+    filterList.addFilter(rowFilter);
+    s1 = new Scan();
+    s1.setFilter(filterList);
+    scanner = testRegion.getScanner(s1);
+    results = new ArrayList<KeyValue>();
+    for (i=0; i<=4; i+=2) {
+      scanner.next(results);
+      Assert.assertTrue(Bytes.equals(results.get(0).getRow(), Bytes.toBytes("row" + i)));
+      Assert.assertEquals(Bytes.toInt(results.get(0).getValue()), i%2);
+      results.clear();
+    }
+    for (i=5; i<=9; i++) {
+      scanner.next(results);
+      Assert.assertTrue(Bytes.equals(results.get(0).getRow(), Bytes.toBytes("row" + i)));
+      Assert.assertEquals(Bytes.toInt(results.get(0).getValue()), i%2);
+      results.clear();
+    }
+    Assert.assertFalse(scanner.next(results));
+    HLog hlog = testRegion.getLog();
+    testRegion.close();
+    hlog.closeAndDelete();
+  }
+
   public void testSingleColumnValueFilter() throws IOException {
 
     // From HBASE-1821

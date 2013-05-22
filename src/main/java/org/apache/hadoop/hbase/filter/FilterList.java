@@ -149,20 +149,21 @@ public class FilterList implements Filter {
 
   @Override
   public boolean filterRowKey(byte[] rowKey, int offset, int length) {
+    boolean flag = (this.operator == Operator.MUST_PASS_ONE) ? true : false;
     for (Filter filter : filters) {
       if (this.operator == Operator.MUST_PASS_ALL) {
         if (filter.filterAllRemaining() ||
             filter.filterRowKey(rowKey, offset, length)) {
-          return true;
+          flag = true;
         }
       } else if (this.operator == Operator.MUST_PASS_ONE) {
         if (!filter.filterAllRemaining() &&
             !filter.filterRowKey(rowKey, offset, length)) {
-          return false;
+          flag = false;
         }
       }
     }
-    return this.operator == Operator.MUST_PASS_ONE;
+    return flag;
   }
 
   @Override
