@@ -115,7 +115,7 @@ public class HFileWriterV2 extends AbstractHFileWriter {
       final KeyComparator comparator, final ChecksumType checksumType,
       final int bytesPerChecksum, final boolean includeMVCCReadpoint) throws IOException {
     super(cacheConf,
-        ostream == null ? createOutputStream(conf, fs, path) : ostream,
+        ostream == null ? createOutputStream(conf, fs, path, null) : ostream,
         path, blockSize, compressAlgo, blockEncoder, comparator);
     this.checksumType = checksumType;
     this.bytesPerChecksum = bytesPerChecksum;

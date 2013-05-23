@@ -24,7 +24,9 @@ import java.io.EOFException;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.net.InetSocketAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
@@ -56,6 +58,7 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.exceptions.FileSystemVersionException;
+import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.FSProtos;
@@ -66,6 +69,7 @@ import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.StringUtils;
 
@@ -262,11 +266,42 @@ public abstract class FSUtils {
    *
    * @param fs {@link FileSystem} on which to write the file
    * @param path {@link Path} to the file to write
+   * @param perm permissions
+   * @param favoredNodes
    * @return output stream to the created file
    * @throws IOException if the file cannot be created
    */
   public static FSDataOutputStream create(FileSystem fs, Path path,
-      FsPermission perm) throws IOException {
+      FsPermission perm, InetSocketAddress[] favoredNodes) throws IOException {
+    if (fs instanceof HFileSystem) {
+      FileSystem backingFs = ((HFileSystem)fs).getBackingFs();
+      if (backingFs instanceof DistributedFileSystem) {
+        // Try to use the favoredNodes version via reflection to allow backwards-
+        // compatibility.
+        try {
+          return (FSDataOutputStream) (DistributedFileSystem.class
+              .getDeclaredMethod("create", Path.class, FsPermission.class,
+                  boolean.class, int.class, short.class, long.class,
+                  Progressable.class, InetSocketAddress[].class)
+                  .invoke(backingFs, path, FsPermission.getDefault(), true,
+                      getDefaultBufferSize(backingFs),
+                      getDefaultReplication(backingFs, path),
+                      getDefaultBlockSize(backingFs, path),
+                      null, favoredNodes));
+        } catch (InvocationTargetException ite) {
+          // Function was properly called, but threw it's own exception.
+          throw new IOException(ite.getCause());
+        } catch (NoSuchMethodException e) {
+          LOG.debug("Ignoring (most likely Reflection related exception) " + e);
+        } catch (IllegalArgumentException e) {
+          LOG.debug("Ignoring (most likely Reflection related exception) " + e);
+        } catch (SecurityException e) {
+          LOG.debug("Ignoring (most likely Reflection related exception) " + e);
+        } catch (IllegalAccessException e) {
+          LOG.debug("Ignoring (most likely Reflection related exception) " + e);
+        }
+      }
+    }
     return create(fs, path, perm, true);
   }
 

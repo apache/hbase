@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
 import java.io.InterruptedIOException;
+import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -790,6 +791,11 @@ public class HStore implements Store {
     } else {
       writerCacheConf = cacheConf;
     }
+    InetSocketAddress[] favoredNodes = null;
+    if (region.getRegionServerServices() != null) {
+      favoredNodes = region.getRegionServerServices().getFavoredNodesForRegion(
+          region.getRegionInfo().getEncodedName());
+    }
     StoreFile.Writer w = new StoreFile.WriterBuilder(conf, writerCacheConf,
         this.getFileSystem(), blocksize)
             .withFilePath(fs.createTempName())
@@ -800,6 +806,7 @@ public class HStore implements Store {
             .withChecksumType(checksumType)
             .withBytesPerChecksum(bytesPerChecksum)
             .withCompression(compression)
+            .withFavoredNodes(favoredNodes)
             .includeMVCCReadpoint(includeMVCCReadpoint)
             .build();
     return w;

@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.io.hfile;
 
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -261,9 +262,9 @@ public abstract class AbstractHFileWriter implements HFile.Writer {
 
   /** A helper method to create HFile output streams in constructors */
   protected static FSDataOutputStream createOutputStream(Configuration conf,
-      FileSystem fs, Path path) throws IOException {
+      FileSystem fs, Path path, InetSocketAddress[] favoredNodes) throws IOException {
     FsPermission perms = FSUtils.getFilePermissions(fs, conf,
         HConstants.DATA_FILE_UMASK_KEY);
-    return FSUtils.create(fs, path, perms);
+    return FSUtils.create(fs, path, perms, favoredNodes);
   }
 }

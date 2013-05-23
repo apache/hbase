@@ -25,6 +25,7 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.SequenceInputStream;
+import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -338,6 +339,7 @@ public class HFile {
         HFile.DEFAULT_COMPRESSION_ALGORITHM;
     protected HFileDataBlockEncoder encoder = NoOpDataBlockEncoder.INSTANCE;
     protected KeyComparator comparator;
+    protected InetSocketAddress[] favoredNodes;
     protected ChecksumType checksumType = HFile.DEFAULT_CHECKSUM_TYPE;
     protected int bytesPerChecksum = DEFAULT_BYTES_PER_CHECKSUM;
     protected boolean includeMVCCReadpoint = true;
@@ -390,6 +392,12 @@ public class HFile {
       return this;
     }
 
+    public WriterFactory withFavoredNodes(InetSocketAddress[] favoredNodes) {
+      // Deliberately not checking for null here.
+      this.favoredNodes = favoredNodes;
+      return this;
+    }
+
     public WriterFactory withChecksumType(ChecksumType checksumType) {
       Preconditions.checkNotNull(checksumType);
       this.checksumType = checksumType;
@@ -416,7 +424,7 @@ public class HFile {
             "filesystem/path or path");
       }
       if (path != null) {
-        ostream = AbstractHFileWriter.createOutputStream(conf, fs, path);
+        ostream = AbstractHFileWriter.createOutputStream(conf, fs, path, favoredNodes);
       }
       return createWriter(fs, path, ostream, blockSize,
           compression, encoder, comparator, checksumType, bytesPerChecksum, includeMVCCReadpoint);
