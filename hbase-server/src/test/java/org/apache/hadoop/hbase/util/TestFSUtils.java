@@ -23,6 +23,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertNotEquals;
 
 import java.io.File;
 import java.io.IOException;
@@ -287,4 +288,39 @@ public class TestFSUtils {
     }
   }
 
+  @Test
+  public void testRenameAndSetModifyTime() throws Exception {
+    HBaseTestingUtility htu = new HBaseTestingUtility();
+    Configuration conf = htu.getConfiguration();
+        
+    MiniDFSCluster cluster = htu.startMiniDFSCluster(1);
+    assertTrue(FSUtils.isHDFS(conf));
+
+    FileSystem fs = FileSystem.get(conf);
+    Path testDir = htu.getDataTestDir("testArchiveFile");
+    
+    String file = UUID.randomUUID().toString();
+    Path p = new Path(testDir, file);
+
+    FSDataOutputStream out = fs.create(p);
+    out.close();
+    assertTrue("The created file should be present", FSUtils.isExists(fs, p));
+    
+    long expect = System.currentTimeMillis() + 1000;
+    assertNotEquals(expect, fs.getFileStatus(p).getModificationTime());
+    
+    ManualEnvironmentEdge mockEnv = new ManualEnvironmentEdge();
+    mockEnv.setValue(expect);
+    EnvironmentEdgeManager.injectEdge(mockEnv);
+    
+    String dstFile = UUID.randomUUID().toString();
+    Path dst = new Path(testDir , dstFile);
+    
+    assertTrue(FSUtils.renameAndSetModifyTime(fs, p, dst));
+    assertFalse("The moved file should not be present", FSUtils.isExists(fs, p));
+    assertTrue("The dst file should be present", FSUtils.isExists(fs, dst));
+
+    assertEquals(expect, fs.getFileStatus(dst).getModificationTime());
+    cluster.shutdown();
+  }
 }
