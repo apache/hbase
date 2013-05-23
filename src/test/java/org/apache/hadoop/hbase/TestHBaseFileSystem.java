@@ -17,10 +17,12 @@
  */
 package org.apache.hadoop.hbase;
 
+import static org.junit.Assert.*;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.net.URI;
+import java.util.UUID;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -31,6 +33,9 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.ManualEnvironmentEdge;
 import org.apache.hadoop.util.Progressable;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -91,7 +96,40 @@ public class TestHBaseFileSystem {
     assertTrue("Couldn't delete the directory", result);
     fs.delete(rootDir, true);
   }
+  
+  @Test
+  public void testRenameAndSetModifyTime() throws Exception {
+    assertTrue(FSUtils.isHDFS(conf));
 
+    FileSystem fs = FileSystem.get(conf);
+    Path testDir = TEST_UTIL.getDataTestDir("testArchiveFile");
+
+    String file = UUID.randomUUID().toString();
+    Path p = new Path(testDir, file);
+
+    FSDataOutputStream out = fs.create(p);
+    out.close();
+    assertTrue("The created file should be present", FSUtils.isExists(fs, p));
+
+    long expect = System.currentTimeMillis() + 1000;
+    assertFalse(expect == fs.getFileStatus(p).getModificationTime());
+
+    ManualEnvironmentEdge mockEnv = new ManualEnvironmentEdge();
+    mockEnv.setValue(expect);
+    EnvironmentEdgeManager.injectEdge(mockEnv);
+
+    String dstFile = UUID.randomUUID().toString();
+    Path dst = new Path(testDir , dstFile);
+
+    assertTrue(HBaseFileSystem.renameAndSetModifyTime(fs, p, dst));
+    assertFalse("The moved file should not be present", FSUtils.isExists(fs,
+                                                                         p));
+    assertTrue("The dst file should be present", FSUtils.isExists(fs, dst));
+
+    assertEquals(expect, fs.getFileStatus(dst).getModificationTime());
+  }
+
+  
   static class MockFileSystemForCreate extends MockFileSystem {
     @Override
     public boolean exists(Path path) {

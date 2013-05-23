@@ -629,7 +629,7 @@ public class HLogSplitter {
     for (Path p : processedLogs) {
       Path newPath = HLog.getHLogArchivePath(oldLogDir, p);
       if (fs.exists(p)) {
-        if (!HBaseFileSystem.renameDirForFileSystem(fs, p, newPath)) {
+        if (!HBaseFileSystem.renameAndSetModifyTime(fs, p, newPath)) {
           LOG.warn("Unable to move  " + p + " to " + newPath);
         } else {
           LOG.debug("Archived processed log " + p + " to " + newPath);

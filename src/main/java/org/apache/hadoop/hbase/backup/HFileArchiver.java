@@ -386,7 +386,7 @@ public class HFileArchiver {
 
       // move the archive file to the stamped backup
       Path backedupArchiveFile = new Path(archiveDir, filename + SEPARATOR + archiveStartTime);
-      if (!HBaseFileSystem.renameDirForFileSystem(fs, archiveFile, backedupArchiveFile)) {
+      if (!HBaseFileSystem.renameAndSetModifyTime(fs, archiveFile, backedupArchiveFile)) {
         LOG.error("Could not rename archive file to backup: " + backedupArchiveFile
             + ", deleting existing file in favor of newer.");
         // try to delete the exisiting file, if we can't rename it
@@ -610,7 +610,7 @@ public class HFileArchiver {
     public boolean moveAndClose(Path dest) throws IOException {
       this.close();
       Path p = this.getPath();
-      return HBaseFileSystem.renameDirForFileSystem(fs, p, dest);
+      return HBaseFileSystem.renameAndSetModifyTime(fs, p, dest);
     }
 
     /**

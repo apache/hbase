@@ -27,6 +27,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hbase.regionserver.wal.HLogFileSystem;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Threads;
 
@@ -251,5 +252,16 @@ public abstract class HBaseFileSystem {
     }
     LOG.info(msg + ", sleeping " + baseSleepBeforeRetries + " times " + sleepMultiplier);
     Threads.sleep(baseSleepBeforeRetries * sleepMultiplier);
+  }
+  
+  /**
+   * rename the src path to dest path and set the dest path's modify time to current timestamp
+   */
+  public static boolean renameAndSetModifyTime(final FileSystem fs, Path src, Path dest)
+      throws IOException {
+    if (!renameDirForFileSystem(fs, src, dest)) return false;
+    // set the modify time for TimeToLive Cleaner
+    fs.setTimes(dest, EnvironmentEdgeManager.currentTimeMillis(), -1);
+    return true;
   }
 }

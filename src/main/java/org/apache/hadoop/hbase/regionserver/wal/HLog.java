@@ -904,7 +904,7 @@ public class HLog implements Syncable {
         i.preLogArchive(p, newPath);
       }
     }
-    if (!HBaseFileSystem.renameDirForFileSystem(fs, p, newPath)) {
+    if (!HBaseFileSystem.renameAndSetModifyTime(this.fs, p, newPath)) {
       throw new IOException("Unable to rename " + p + " to " + newPath);
     }
     // Tell our listeners that a log has been archived.
@@ -966,8 +966,7 @@ public class HLog implements Syncable {
           i.preLogArchive(file.getPath(), p);
         }
       }
-
-      if (!HBaseFileSystem.renameDirForFileSystem(fs, file.getPath(), p)) {
+      if (!HBaseFileSystem.renameAndSetModifyTime(fs, file.getPath(), p)) {
         throw new IOException("Unable to rename " + file.getPath() + " to " + p);
       }
       // Tell our listeners that a log was archived.
