@@ -35,6 +35,8 @@ import org.junit.experimental.categories.Category;
 @Category(MediumTests.class)
 @SuppressWarnings("deprecation")
 public class TestHRegionBusyWait extends TestHRegion {
+  // TODO: This subclass runs all the tests in TestHRegion as well as the test below which means
+  // all TestHRegion tests are run twice.
   public TestHRegionBusyWait() {
     conf.set("hbase.busy.wait.duration", "1000");
   }

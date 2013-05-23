@@ -76,9 +76,8 @@ public class TestThriftHBaseServiceHandler {
   private static byte[] valueAname = Bytes.toBytes("valueA");
   private static byte[] valueBname = Bytes.toBytes("valueB");
   private static HColumnDescriptor[] families = new HColumnDescriptor[] {
-      new HColumnDescriptor(familyAname),
-      new HColumnDescriptor(familyBname)
-          .setMaxVersions(2)
+      new HColumnDescriptor(familyAname).setMaxVersions(3),
+      new HColumnDescriptor(familyBname).setMaxVersions(2)
   };
 
 

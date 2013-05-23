@@ -1063,7 +1063,12 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
   throws IOException {
     HTableDescriptor desc = new HTableDescriptor(tableName);
     for(byte[] family : families) {
-      desc.addFamily(new HColumnDescriptor(family));
+      HColumnDescriptor hcd = new HColumnDescriptor(family);
+      // Disable blooms (they are on by default as of 0.95) but we disable them here because
+      // tests have hard coded counts of what to expect in block cache, etc., and blooms being
+      // on is interfering.
+      hcd.setBloomFilterType(BloomType.NONE);
+      desc.addFamily(hcd);
     }
     getHBaseAdmin().createTable(desc);
     return new HTable(c, tableName);
@@ -1117,8 +1122,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
   throws IOException {
     HTableDescriptor desc = new HTableDescriptor(tableName);
     for (byte[] family : families) {
-      HColumnDescriptor hcd = new HColumnDescriptor(family)
-          .setMaxVersions(numVersions);
+      HColumnDescriptor hcd = new HColumnDescriptor(family).setMaxVersions(numVersions);
       desc.addFamily(hcd);
     }
     getHBaseAdmin().createTable(desc);

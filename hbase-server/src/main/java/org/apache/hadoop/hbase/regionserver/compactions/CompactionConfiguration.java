@@ -24,7 +24,6 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.StoreConfigInformation;
 
 /**
@@ -79,8 +78,9 @@ public class CompactionConfiguration {
     throttlePoint =  conf.getLong("hbase.regionserver.thread.compaction.throttle",
           2 * maxFilesToCompact * storeConfigInfo.getMemstoreFlushSize());
     shouldDeleteExpired = conf.getBoolean("hbase.store.delete.expired.storefile", true);
-    majorCompactionPeriod = conf.getLong(HConstants.MAJOR_COMPACTION_PERIOD, 1000*60*60*24);
-    majorCompactionJitter = conf.getFloat("hbase.hregion.majorcompaction.jitter", 0.20F);
+    majorCompactionPeriod = conf.getLong(HConstants.MAJOR_COMPACTION_PERIOD, 1000*60*60*24*7);
+    // Make it 0.5 so jitter has us fall evenly either side of when the compaction should run
+    majorCompactionJitter = conf.getFloat("hbase.hregion.majorcompaction.jitter", 0.50F);
 
     LOG.info("Compaction configuration " + this.toString());
   }

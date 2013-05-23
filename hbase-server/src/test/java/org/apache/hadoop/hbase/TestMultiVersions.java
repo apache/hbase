@@ -95,7 +95,9 @@ public class TestMultiVersions {
   @Test
   public void testTimestamps() throws Exception {
     HTableDescriptor desc = new HTableDescriptor("testTimestamps");
-    desc.addFamily(new HColumnDescriptor(TimestampTestBase.FAMILY_NAME));
+    HColumnDescriptor hcd = new HColumnDescriptor(TimestampTestBase.FAMILY_NAME);
+    hcd.setMaxVersions(3);
+    desc.addFamily(hcd);
     this.admin.createTable(desc);
     HTable table = new HTable(UTIL.getConfiguration(), desc.getName());
     // TODO: Remove these deprecated classes or pull them in here if this is
@@ -134,7 +136,9 @@ public class TestMultiVersions {
     final long timestamp1 = 100L;
     final long timestamp2 = 200L;
     final HTableDescriptor desc = new HTableDescriptor(tableName);
-    desc.addFamily(new HColumnDescriptor(contents));
+    HColumnDescriptor hcd = new HColumnDescriptor(contents);
+    hcd.setMaxVersions(3);
+    desc.addFamily(hcd);
     this.admin.createTable(desc);
     Put put = new Put(row, timestamp1);
     put.add(contents, contents, value1);
