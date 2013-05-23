@@ -4014,7 +4014,10 @@ public class TestHRegion extends HBaseTestCase {
     HTableDescriptor htd = new HTableDescriptor(tableName);
     htd.setReadOnly(isReadOnly);
     for(byte [] family : families) {
-      htd.addFamily(new HColumnDescriptor(family));
+      HColumnDescriptor hcd = new HColumnDescriptor(family);
+      // Set default to be three versions.
+      hcd.setMaxVersions(Integer.MAX_VALUE);
+      htd.addFamily(hcd);
     }
     HRegionInfo info = new HRegionInfo(htd.getName(), startKey, stopKey, false);
     Path path = new Path(DIR + callingMethod);

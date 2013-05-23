@@ -56,6 +56,7 @@ public class TestColumnSeeking {
 
     HColumnDescriptor hcd =
         new HColumnDescriptor(familyBytes).setMaxVersions(1000);
+    hcd.setMaxVersions(3);
     HTableDescriptor htd = new HTableDescriptor(table);
     htd.addFamily(hcd);
     HRegionInfo info = new HRegionInfo(Bytes.toBytes(table), null, null, false);
@@ -168,7 +169,9 @@ public class TestColumnSeeking {
     String table = "TestSingleVersions";
 
     HTableDescriptor htd = new HTableDescriptor(table);
-    htd.addFamily(new HColumnDescriptor(family));
+    HColumnDescriptor hcd = new HColumnDescriptor(family);
+    hcd.setMaxVersions(3);
+    htd.addFamily(hcd);
 
     HRegionInfo info = new HRegionInfo(Bytes.toBytes(table), null, null, false);
     HRegion region =

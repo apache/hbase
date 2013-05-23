@@ -171,7 +171,7 @@ public class TestFromClientSide {
      final byte[] T2 = Bytes.toBytes("T2");
      final byte[] T3 = Bytes.toBytes("T3");
      HColumnDescriptor hcd = new HColumnDescriptor(FAMILY)
-         .setKeepDeletedCells(true);
+         .setKeepDeletedCells(true).setMaxVersions(3);
 
      HTableDescriptor desc = new HTableDescriptor(TABLENAME);
      desc.addFamily(hcd);
@@ -1730,7 +1730,7 @@ public class TestFromClientSide {
     byte [][] VALUES = makeN(VALUE, 5);
     long [] ts = {1000, 2000, 3000, 4000, 5000};
 
-    HTable ht = TEST_UTIL.createTable(TABLE, FAMILIES);
+    HTable ht = TEST_UTIL.createTable(TABLE, FAMILIES, 3);
 
     Put put = new Put(ROW);
     put.add(FAMILIES[0], QUALIFIER, ts[0], VALUES[0]);
@@ -4459,7 +4459,7 @@ public class TestFromClientSide {
     conf.setInt(HConstants.HBASE_CLIENT_IPC_POOL_SIZE, poolSize);
 
     final HTable table = TEST_UTIL.createTable(tableName,
-        new byte[][] { FAMILY }, conf);
+        new byte[][] { FAMILY }, conf, 3);
     table.setAutoFlush(true);
 
     final long ts = EnvironmentEdgeManager.currentTimeMillis();

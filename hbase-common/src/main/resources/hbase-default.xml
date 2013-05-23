@@ -19,24 +19,50 @@
  * limitations under the License.
  */
 -->
+
+<!--
+OVERVIEW
+
+The important configs. are listed near the top.  You should change
+at least the setting for hbase.tmp.dir.  Other settings will change
+dependent on whether you are running hbase in standalone mode or
+distributed.  See the hbase reference guide for requirements and
+guidance making configuration.
+
+This file does not contain all possible configurations.  The file would be
+much larger if it carried everything. The absent configurations will only be
+found through source code reading.  The idea is that such configurations are
+exotic and only those who would go to the trouble of reading a particular
+section in the code would be knowledgeable or invested enough in ever wanting
+to alter such configurations, so we do not list them here.  Listing all
+possible configurations would overwhelm and obscure the important.
+-->
+
 <configuration>
+  <!--Configs you will likely change are listed here at the top of the file.
+  -->
+  <property>
+    <name>hbase.tmp.dir</name>
+    <value>${java.io.tmpdir}/hbase-${user.name}</value>
+    <description>Temporary directory on the local filesystem.
+    Change this setting to point to a location more permanent
+    than '/tmp', the usual resolve for java.io.tmpdir, as the
+    '/tmp' directory is cleared on machine restart.
+    </description>
+  </property>
   <property>
     <name>hbase.rootdir</name>
-    <value>file:///tmp/hbase-${user.name}/hbase</value>
+    <value>file://${hbase.tmp.dir}/hbase</value>
     <description>The directory shared by region servers and into
     which HBase persists.  The URL should be 'fully-qualified'
     to include the filesystem scheme.  For example, to specify the
     HDFS directory '/hbase' where the HDFS instance's namenode is
     running at namenode.example.org on port 9000, set this value to:
-    hdfs://namenode.example.org:9000/hbase.  By default HBase writes
-    into /tmp.  Change this configuration else all data will be lost
-    on machine restart.
+    hdfs://namenode.example.org:9000/hbase.  By default, we write
+    to whatever ${hbase.tmp.dir} is set too -- usually /tmp --
+    so change this configuration or else all data will be lost on
+    machine restart.
     </description>
-  </property>
-  <property>
-    <name>hbase.master.port</name>
-    <value>60000</value>
-    <description>The port the HBase Master should bind to.</description>
   </property>
   <property>
     <name>hbase.cluster.distributed</name>
@@ -48,20 +74,33 @@
     </description>
   </property>
   <property>
-    <name>hbase.tmp.dir</name>
-    <value>${java.io.tmpdir}/hbase-${user.name}</value>
-    <description>Temporary directory on the local filesystem.
-    Change this setting to point to a location more permanent
-    than '/tmp' (The '/tmp' directory is often cleared on
-    machine restart).
+    <name>hbase.zookeeper.quorum</name>
+    <value>localhost</value>
+    <description>Comma separated list of servers in the ZooKeeper Quorum.
+    For example, "host1.mydomain.com,host2.mydomain.com,host3.mydomain.com".
+    By default this is set to localhost for local and pseudo-distributed modes
+    of operation. For a fully-distributed setup, this should be set to a full
+    list of ZooKeeper quorum servers. If HBASE_MANAGES_ZK is set in hbase-env.sh
+    this is the list of servers which hbase will start/stop ZooKeeper on as
+    part of cluster start/stop.
     </description>
   </property>
+  <!--The above are the important configurations for getting hbase up
+    and running -->
+
   <property>
     <name>hbase.local.dir</name>
     <value>${hbase.tmp.dir}/local/</value>
     <description>Directory on the local filesystem to be used
     as a local storage.
     </description>
+  </property>
+
+  <!--Master configurations-->
+  <property>
+    <name>hbase.master.port</name>
+    <value>60000</value>
+    <description>The port the HBase Master should bind to.</description>
   </property>
   <property>
     <name>hbase.master.info.port</name>
@@ -77,16 +116,57 @@
     </description>
   </property>
   <property>
-    <name>hbase.client.write.buffer</name>
-    <value>2097152</value>
-    <description>Default size of the HTable clien write buffer in bytes.
-    A bigger buffer takes more memory -- on both the client and server
-    side since server instantiates the passed write buffer to process
-    it -- but a larger buffer size reduces the number of RPCs made.
-    For an estimate of server-side memory-used, evaluate
-    hbase.client.write.buffer * hbase.regionserver.handler.count
+    <name>hbase.master.logcleaner.plugins</name>
+    <value>org.apache.hadoop.hbase.master.cleaner.TimeToLiveLogCleaner</value>
+    <description>A comma-separated list of LogCleanerDelegate invoked by
+    the LogsCleaner service. These WAL/HLog cleaners are called in order,
+    so put the HLog cleaner that prunes the most HLog files in front. To
+    implement your own LogCleanerDelegate, just put it in HBase's classpath
+    and add the fully qualified class name here. Always add the above
+    default log cleaners in the list.
     </description>
   </property>
+  <property>
+    <name>hbase.master.logcleaner.ttl</name>
+    <value>600000</value>
+    <description>Maximum time a HLog can stay in the .oldlogdir directory,
+    after which it will be cleaned by a Master thread.
+    </description>
+  </property>
+  <property>
+    <name>hbase.master.hfilecleaner.plugins</name>
+    <value>org.apache.hadoop.hbase.master.cleaner.TimeToLiveHFileCleaner</value>
+    <description>A comma-separated list of HFileCleanerDelegate invoked by
+    the HFileCleaner service. These HFiles cleaners are called in order,
+    so put the cleaner that prunes the most files in front. To
+    implement your own HFileCleanerDelegate, just put it in HBase's classpath
+    and add the fully qualified class name here. Always add the above
+    default log cleaners in the list as they will be overwritten in hbase-site.xml.
+    </description>
+  </property>
+  <property>
+    <name>hbase.master.catalog.timeout</name>
+    <value>600000</value>
+    <description>Timeout value for the Catalog Janitor from the master to META.
+    </description>
+  </property>
+  <property>
+    <name>hbase.master.dns.interface</name>
+    <value>default</value>
+    <description>The name of the Network Interface from which a master
+      should report its IP address.
+    </description>
+  </property>
+  <property>
+    <name>hbase.master.dns.nameserver</name>
+    <value>default</value>
+    <description>The host name or IP address of the name server (DNS)
+      which a master should use to determine the host name used
+      for communication and display purposes.
+    </description>
+  </property>
+
+  <!--RegionServer configurations-->
   <property>
     <name>hbase.regionserver.port</name>
     <value>60020</value>
@@ -101,6 +181,12 @@
     </description>
   </property>
   <property>
+    <name>hbase.regionserver.info.bindAddress</name>
+    <value>0.0.0.0</value>
+    <description>The address for the HBase RegionServer web UI
+    </description>
+  </property>
+  <property>
     <name>hbase.regionserver.info.port.auto</name>
     <value>false</value>
     <description>Whether or not the Master or RegionServer
@@ -110,68 +196,11 @@
     </description>
   </property>
   <property>
-    <name>hbase.regionserver.info.bindAddress</name>
-    <value>0.0.0.0</value>
-    <description>The address for the HBase RegionServer web UI
-    </description>
-  </property>
-  <property>
-    <name>hbase.client.pause</name>
-    <value>1000</value>
-    <description>General client pause value.  Used mostly as value to wait
-    before running a retry of a failed get, region lookup, etc.</description>
-  </property>
-  <property>
-    <name>hbase.client.retries.number</name>
-    <value>10</value>
-    <description>Maximum retries.  Used as maximum for all retryable
-    operations such as fetching of the root region from root region
-    server, getting a cell's value, starting a row update, etc.
-    Default: 10.
-    </description>
-  </property>
-  <property>
-    <name>hbase.bulkload.retries.number</name>
-    <value>0</value>
-    <description>Maximum retries.  This is maximum number of iterations
-    to atomic bulk loads are attempted in the face of splitting operations
-    0 means never give up.  Default: 0.
-    </description>
-  </property>
-  <property>
-    <name>hbase.client.scanner.caching</name>
-    <value>100</value>
-    <description>Number of rows that will be fetched when calling next
-    on a scanner if it is not served from (local, client) memory. Higher
-    caching values will enable faster scanners but will eat up more memory
-    and some calls of next may take longer and longer times when the cache is empty.
-    Do not set this value such that the time between invocations is greater
-    than the scanner timeout; i.e. hbase.client.scanner.timeout.period
-    </description>
-  </property>
-  <property>
-    <name>hbase.client.keyvalue.maxsize</name>
-    <value>10485760</value>
-    <description>Specifies the combined maximum allowed size of a KeyValue
-    instance. This is to set an upper boundary for a single entry saved in a
-    storage file. Since they cannot be split it helps avoiding that a region
-    cannot be split any further because the data is too large. It seems wise
-    to set this to a fraction of the maximum region size. Setting it to zero
-    or less disables the check.
-    </description>
-  </property>
-  <property>
-    <name>hbase.client.scanner.timeout.period</name>
-    <value>60000</value>
-    <description>Client scanner lease period in milliseconds. Default is
-    60 seconds. </description>
-  </property>
-  <property>
     <name>hbase.regionserver.handler.count</name>
-    <value>10</value>
+    <value>30</value>
     <description>Count of RPC Listener instances spun up on RegionServers.
     Same property is used by the Master for count of master handlers.
-    Default is 10.
+    Default is 30.
     </description>
   </property>
   <property>
@@ -224,26 +253,36 @@
     <description>The HLog file writer implementation.</description>
   </property>
   <property>
-    <name>hbase.regionserver.nbreservationblocks</name>
-    <value>4</value>
-    <description>The number of resevoir blocks of memory release on
-    OOME so we can cleanup properly before server shutdown.
+    <name>hbase.regionserver.global.memstore.upperLimit</name>
+    <value>0.4</value>
+    <description>Maximum size of all memstores in a region server before new
+      updates are blocked and flushes are forced. Defaults to 40% of heap.
+      Updates are blocked and flushes are forced until size of all memstores
+      in a region server hits hbase.regionserver.global.memstore.lowerLimit.
     </description>
   </property>
   <property>
-    <name>hbase.zookeeper.dns.interface</name>
-    <value>default</value>
-    <description>The name of the Network Interface from which a ZooKeeper server
-      should report its IP address.
+    <name>hbase.regionserver.global.memstore.lowerLimit</name>
+    <value>0.38</value>
+    <description>Maximum size of all memstores in a region server before
+      flushes are forced. Defaults to 38% of heap.
+      This value equal to hbase.regionserver.global.memstore.upperLimit causes
+      the minimum possible flushing to occur when updates are blocked due to
+      memstore limiting.
     </description>
   </property>
   <property>
-    <name>hbase.zookeeper.dns.nameserver</name>
-    <value>default</value>
-    <description>The host name or IP address of the name server (DNS)
-      which a ZooKeeper server should use to determine the host name used by the
-      master for communication and display purposes.
+    <name>hbase.regionserver.optionalcacheflushinterval</name>
+    <value>3600000</value>
+    <description>
+    Maximum amount of time an edit lives in memory before being automatically flushed.
+    Default 1 hour. Set it to 0 to disable automatic flushing.
     </description>
+  </property>
+  <property>
+    <name>hbase.regionserver.catalog.timeout</name>
+    <value>600000</value>
+    <description>Timeout value for the Catalog Janitor from the regionserver to META.</description>
   </property>
   <property>
     <name>hbase.regionserver.dns.interface</name>
@@ -260,19 +299,212 @@
       master for communication and display purposes.
     </description>
   </property>
+
+  <!--ZooKeeper configuration-->
   <property>
-    <name>hbase.master.dns.interface</name>
+    <name>zookeeper.session.timeout</name>
+    <value>90000</value>
+    <description>ZooKeeper session timeout.
+      HBase passes this to the zk quorum as suggested maximum time for a
+      session (This setting becomes zookeeper's 'maxSessionTimeout').  See
+      http://hadoop.apache.org/zookeeper/docs/current/zookeeperProgrammers.html#ch_zkSessions
+      "The client sends a requested timeout, the server responds with the
+      timeout that it can give the client. " In milliseconds.
+    </description>
+  </property>
+  <property>
+    <name>zookeeper.znode.parent</name>
+    <value>/hbase</value>
+    <description>Root ZNode for HBase in ZooKeeper. All of HBase's ZooKeeper
+      files that are configured with a relative path will go under this node.
+      By default, all of HBase's ZooKeeper file path are configured with a
+      relative path, so they will all go under this directory unless changed.
+    </description>
+  </property>
+  <property>
+    <name>zookeeper.znode.rootserver</name>
+    <value>root-region-server</value>
+    <description>Path to ZNode holding root region location. This is written by
+      the master and read by clients and region servers. If a relative path is
+      given, the parent folder will be ${zookeeper.znode.parent}. By default,
+      this means the root location is stored at /hbase/root-region-server.
+    </description>
+  </property>
+  <property>
+    <name>zookeeper.znode.acl.parent</name>
+    <value>acl</value>
+    <description>Root ZNode for access control lists.</description>
+  </property>
+  <property>
+    <name>hbase.zookeeper.dns.interface</name>
     <value>default</value>
-    <description>The name of the Network Interface from which a master
+    <description>The name of the Network Interface from which a ZooKeeper server
       should report its IP address.
     </description>
   </property>
   <property>
-    <name>hbase.master.dns.nameserver</name>
+    <name>hbase.zookeeper.dns.nameserver</name>
     <value>default</value>
     <description>The host name or IP address of the name server (DNS)
-      which a master should use to determine the host name used
-      for communication and display purposes.
+      which a ZooKeeper server should use to determine the host name used by the
+      master for communication and display purposes.
+    </description>
+  </property>
+  <!--
+  The following three properties are used together to create the list of
+  host:peer_port:leader_port quorum servers for ZooKeeper.
+  -->
+  <property>
+    <name>hbase.zookeeper.peerport</name>
+    <value>2888</value>
+    <description>Port used by ZooKeeper peers to talk to each other.
+    Seehttp://hadoop.apache.org/zookeeper/docs/r3.1.1/zookeeperStarted.html#sc_RunningReplicatedZooKeeper
+    for more information.
+    </description>
+  </property>
+  <property>
+    <name>hbase.zookeeper.leaderport</name>
+    <value>3888</value>
+    <description>Port used by ZooKeeper for leader election.
+    See http://hadoop.apache.org/zookeeper/docs/r3.1.1/zookeeperStarted.html#sc_RunningReplicatedZooKeeper
+    for more information.
+    </description>
+  </property>
+  <!-- End of properties used to generate ZooKeeper host:port quorum list. -->
+  <property>
+    <name>hbase.zookeeper.useMulti</name>
+    <value>false</value>
+    <description>Instructs HBase to make use of ZooKeeper's multi-update functionality.
+    This allows certain ZooKeeper operations to complete more quickly and prevents some issues
+    with rare Replication failure scenarios (see the release note of HBASE-2611 for an example).
+    IMPORTANT: only set this to true if all ZooKeeper servers in the cluster are on version 3.4+
+    and will not be downgraded.  ZooKeeper versions before 3.4 do not support multi-update and
+    will not fail gracefully if multi-update is invoked (see ZOOKEEPER-1495).
+    </description>
+  </property>
+  <property>
+    <name>hbase.config.read.zookeeper.config</name>
+    <value>false</value>
+    <description>
+        Set to true to allow HBaseConfiguration to read the
+        zoo.cfg file for ZooKeeper properties. Switching this to true
+        is not recommended, since the functionality of reading ZK
+        properties from a zoo.cfg file has been deprecated.
+    </description>
+  </property>
+  <!--
+  Beginning of properties that are directly mapped from ZooKeeper's zoo.cfg.
+  All properties with an "hbase.zookeeper.property." prefix are converted for
+  ZooKeeper's configuration. Hence, if you want to add an option from zoo.cfg,
+  e.g.  "initLimit=10" you would append the following to your configuration:
+    <property>
+      <name>hbase.zookeeper.property.initLimit</name>
+      <value>10</value>
+    </property>
+  -->
+  <property>
+    <name>hbase.zookeeper.property.initLimit</name>
+    <value>10</value>
+    <description>Property from ZooKeeper's config zoo.cfg.
+    The number of ticks that the initial synchronization phase can take.
+    </description>
+  </property>
+  <property>
+    <name>hbase.zookeeper.property.syncLimit</name>
+    <value>5</value>
+    <description>Property from ZooKeeper's config zoo.cfg.
+    The number of ticks that can pass between sending a request and getting an
+    acknowledgment.
+    </description>
+  </property>
+  <property>
+    <name>hbase.zookeeper.property.dataDir</name>
+    <value>${hbase.tmp.dir}/zookeeper</value>
+    <description>Property from ZooKeeper's config zoo.cfg.
+    The directory where the snapshot is stored.
+    </description>
+  </property>
+  <property>
+    <name>hbase.zookeeper.property.clientPort</name>
+    <value>2181</value>
+    <description>Property from ZooKeeper's config zoo.cfg.
+    The port at which the clients will connect.
+    </description>
+  </property>
+  <property>
+    <name>hbase.zookeeper.property.maxClientCnxns</name>
+    <value>300</value>
+    <description>Property from ZooKeeper's config zoo.cfg.
+    Limit on number of concurrent connections (at the socket level) that a
+    single client, identified by IP address, may make to a single member of
+    the ZooKeeper ensemble. Set high to avoid zk connection issues running
+    standalone and pseudo-distributed.
+    </description>
+  </property>
+  <!-- End of properties that are directly mapped from ZooKeeper's zoo.cfg -->
+
+  <!--Client configurations-->
+  <property>
+    <name>hbase.client.write.buffer</name>
+    <value>2097152</value>
+    <description>Default size of the HTable client write buffer in bytes.
+    A bigger buffer takes more memory -- on both the client and server
+    side since server instantiates the passed write buffer to process
+    it -- but a larger buffer size reduces the number of RPCs made.
+    For an estimate of server-side memory-used, evaluate
+    hbase.client.write.buffer * hbase.regionserver.handler.count
+    </description>
+  </property>
+  <property>
+    <name>hbase.client.pause</name>
+    <value>100</value>
+    <description>General client pause value.  Used mostly as value to wait
+    before running a retry of a failed get, region lookup, etc.</description>
+  </property>
+  <property>
+    <name>hbase.client.retries.number</name>
+    <value>20</value>
+    <description>Maximum retries.  Used as maximum for all retryable
+    operations such as the getting of a cell's value, starting a row update, etc.
+    Default: 10.
+    </description>
+  </property>
+  <property>
+    <name>hbase.client.scanner.caching</name>
+    <value>100</value>
+    <description>Number of rows that will be fetched when calling next
+    on a scanner if it is not served from (local, client) memory. Higher
+    caching values will enable faster scanners but will eat up more memory
+    and some calls of next may take longer and longer times when the cache is empty.
+    Do not set this value such that the time between invocations is greater
+    than the scanner timeout; i.e. hbase.client.scanner.timeout.period
+    </description>
+  </property>
+  <property>
+    <name>hbase.client.keyvalue.maxsize</name>
+    <value>10485760</value>
+    <description>Specifies the combined maximum allowed size of a KeyValue
+    instance. This is to set an upper boundary for a single entry saved in a
+    storage file. Since they cannot be split it helps avoiding that a region
+    cannot be split any further because the data is too large. It seems wise
+    to set this to a fraction of the maximum region size. Setting it to zero
+    or less disables the check.
+    </description>
+  </property>
+  <property>
+    <name>hbase.client.scanner.timeout.period</name>
+    <value>60000</value>
+    <description>Client scanner lease period in milliseconds. Default is
+    60 seconds. </description>
+  </property>
+
+  <!--Miscellaneous configuration-->
+  <property>
+    <name>hbase.bulkload.retries.number</name>
+    <value>0</value>
+    <description>Maximum retries.  This is maximum number of iterations
+    to atomic bulk loads are attempted in the face of splitting operations
+    0 means never give up.  Default: 0.
     </description>
   </property>
   <property>
@@ -290,43 +522,6 @@
     </description>
   </property>
   <property>
-    <name>hbase.master.logcleaner.ttl</name>
-    <value>600000</value>
-    <description>Maximum time a HLog can stay in the .oldlogdir directory,
-    after which it will be cleaned by a Master thread.
-    </description>
-  </property>
-  <property>
-    <name>hbase.master.logcleaner.plugins</name>
-    <value>org.apache.hadoop.hbase.master.cleaner.TimeToLiveLogCleaner</value>
-    <description>A comma-separated list of LogCleanerDelegate invoked by
-    the LogsCleaner service. These WAL/HLog cleaners are called in order,
-    so put the HLog cleaner that prunes the most HLog files in front. To
-    implement your own LogCleanerDelegate, just put it in HBase's classpath
-    and add the fully qualified class name here. Always add the above
-    default log cleaners in the list.
-    </description>
-  </property>
-  <property>
-    <name>hbase.regionserver.global.memstore.upperLimit</name>
-    <value>0.4</value>
-    <description>Maximum size of all memstores in a region server before new
-      updates are blocked and flushes are forced. Defaults to 40% of heap.
-      Updates are blocked and flushes are forced until size of all memstores
-      in a region server hits hbase.regionserver.global.memstore.lowerLimit.
-    </description>
-  </property>
-  <property>
-    <name>hbase.regionserver.global.memstore.lowerLimit</name>
-    <value>0.35</value>
-    <description>Maximum size of all memstores in a region server before
-      flushes are forced. Defaults to 35% of heap.
-      This value equal to hbase.regionserver.global.memstore.upperLimit causes
-      the minimum possible flushing to occur when updates are blocked due to
-      memstore limiting.
-    </description>
-  </property>
-  <property>
     <name>hbase.server.thread.wakefrequency</name>
     <value>10000</value>
     <description>Time to sleep in between searches for work (in milliseconds).
@@ -340,14 +535,6 @@
     How many time to retry attempting to write a version file
     before just aborting. Each attempt is seperated by the
     hbase.server.thread.wakefrequency milliseconds.
-    </description>
-  </property>
-  <property>
-    <name>hbase.regionserver.optionalcacheflushinterval</name>
-    <value>3600000</value>
-    <description>
-    Maximum amount of time an edit lives in memory before being automatically flushed.
-    Default 1 hour. Set it to 0 to disable automatic flushing.
     </description>
   </property>
   <property>
@@ -406,6 +593,29 @@
     </description>
   </property>
   <property>
+    <name>hbase.hregion.majorcompaction</name>
+    <value>604800000</value>
+    <description>The time (in miliseconds) between 'major' compactions of all
+    HStoreFiles in a region.  Default: Set to 7 days.  Major compactions tend to
+    happen exactly when you need them least so enable them such that they run at
+    off-peak for your deploy; or, since this setting is on a periodicity that is
+    unlikely to match your loading, run the compactions via an external
+    invocation out of a cron job or some such.
+    </description>
+  </property>
+  <property>
+    <name>hbase.hregion.majorcompaction.jitter</name>
+    <value>0.50</value>
+    <description>Jitter outer bound for major compactions.
+    On each regionserver, we multiply the hbase.region.majorcompaction
+    interval by some random fraction that is inside the bounds of this
+    maximum.  We then add this + or - product to when the next
+    major compaction is to run.  The idea is that major compaction
+    does happen on every regionserver at exactly the same time.  The
+    smaller this number, the closer the compactions come together.
+    </description>
+  </property>
+  <property>
     <name>hbase.hstore.compactionThreshold</name>
     <value>3</value>
     <description>
@@ -417,7 +627,7 @@
   </property>
   <property>
     <name>hbase.hstore.blockingStoreFiles</name>
-    <value>7</value>
+    <value>10</value>
     <description>
     If more than this number of StoreFiles in any one Store
     (one StoreFile is written per flush of MemStore) then updates are
@@ -439,14 +649,6 @@
     <name>hbase.hstore.compaction.max</name>
     <value>10</value>
     <description>Max number of HStoreFiles to compact per 'minor' compaction.
-    </description>
-  </property>
-  <property>
-    <name>hbase.hregion.majorcompaction</name>
-    <value>86400000</value>
-    <description>The time (in miliseconds) between 'major' compactions of all
-    HStoreFiles in a region.  Default: 1 day.
-    Set to 0 to disable automated major compactions.
     </description>
   </property>
   <property>
@@ -479,19 +681,12 @@
   </property>
   <property>
     <name>hfile.block.cache.size</name>
-    <value>0.25</value>
+    <value>0.4</value>
     <description>
         Percentage of maximum heap (-Xmx setting) to allocate to block cache
-        used by HFile/StoreFile. Default of 0.25 means allocate 25%.
-        Set to 0 to disable but it's not recommended.
-    </description>
-  </property>
-  <property>
-    <name>hbase.hash.type</name>
-    <value>murmur</value>
-    <description>The hashing algorithm for use in HashFunction. Two values are
-    supported now: murmur (MurmurHash) and jenkins (JenkinsHash).
-    Used by bloom filters.
+        used by HFile/StoreFile. Default of 0.4 means allocate 40%.
+        Set to 0 to disable but it's not recommended; you need at least
+        enough cache to hold the storefile indices.
     </description>
   </property>
   <property>
@@ -521,6 +716,13 @@
       </description>
   </property>
   <property>
+      <name>hfile.block.bloom.cacheonwrite</name>
+      <value>false</value>
+      <description>
+          Enables cache-on-write for inline blocks of a compound Bloom filter.
+      </description>
+  </property>
+  <property>
       <name>io.storefile.bloom.block.size</name>
       <value>131072</value>
       <description>
@@ -531,13 +733,6 @@
       </description>
   </property>
   <property>
-      <name>hfile.block.bloom.cacheonwrite</name>
-      <value>false</value>
-      <description>
-          Enables cache-on-write for inline blocks of a compound Bloom filter.
-      </description>
-  </property>
-  <property>
       <name>hbase.rs.cacheblocksonwrite</name>
       <value>false</value>
       <description>
@@ -545,12 +740,21 @@
           block is finished.
       </description>
   </property>
-
   <property>
     <name>hbase.rpc.server.engine</name>
     <value>org.apache.hadoop.hbase.ipc.ProtobufRpcServerEngine</value>
     <description>Implementation of org.apache.hadoop.hbase.ipc.RpcServerEngine to be
     used for server RPC call marshalling.
+    </description>
+  </property>
+  <property>
+    <name>hbase.rpc.timeout</name>
+    <value>60000</value>
+    <description>
+        This is for the RPC layer to define how long HBase client applications
+        take for a remote call to time out. It uses pings to check connections
+        but will eventually throw a TimeoutException.
+        The default value is 10000ms(10s).
     </description>
   </property>
   <property>
@@ -560,7 +764,6 @@
     http://docs.oracle.com/javase/1.5.0/docs/api/java/net/Socket.html#getTcpNoDelay()
     </description>
   </property>
-
   <!-- The following properties configure authentication information for
        HBase processes when using Kerberos security.  There are no default
        values, included here for documentation purposes -->
@@ -599,7 +802,6 @@
     specified in hbase.regionserver.keytab.file
     </description>
   </property>
-
   <!-- Additional configuration specific to HBase security -->
   <property>
     <name>hadoop.policy.file</name>
@@ -631,43 +833,6 @@
     authentication token expires.  Only used when HBase security is enabled.
     </description>
   </property>
-
-  <property>
-    <name>zookeeper.session.timeout</name>
-    <value>180000</value>
-    <description>ZooKeeper session timeout.
-      HBase passes this to the zk quorum as suggested maximum time for a
-      session (This setting becomes zookeeper's 'maxSessionTimeout').  See
-      http://hadoop.apache.org/zookeeper/docs/current/zookeeperProgrammers.html#ch_zkSessions
-      "The client sends a requested timeout, the server responds with the
-      timeout that it can give the client. " In milliseconds.
-    </description>
-  </property>
-  <property>
-    <name>zookeeper.znode.parent</name>
-    <value>/hbase</value>
-    <description>Root ZNode for HBase in ZooKeeper. All of HBase's ZooKeeper
-      files that are configured with a relative path will go under this node.
-      By default, all of HBase's ZooKeeper file path are configured with a
-      relative path, so they will all go under this directory unless changed.
-    </description>
-  </property>
-  <property>
-    <name>zookeeper.znode.rootserver</name>
-    <value>root-region-server</value>
-    <description>Path to ZNode holding root region location. This is written by
-      the master and read by clients and region servers. If a relative path is
-      given, the parent folder will be ${zookeeper.znode.parent}. By default,
-      this means the root location is stored at /hbase/root-region-server.
-    </description>
-  </property>
-
-  <property>
-    <name>zookeeper.znode.acl.parent</name>
-    <value>acl</value>
-    <description>Root ZNode for access control lists.</description>
-  </property>
-
   <property>
     <name>hbase.coprocessor.region.classes</name>
     <value></value>
@@ -678,114 +843,6 @@
     A coprocessor can also be loaded on demand by setting HTableDescriptor.
     </description>
   </property>
-
-  <property>
-    <name>hbase.coprocessor.master.classes</name>
-    <value></value>
-    <description>A comma-separated list of
-    org.apache.hadoop.hbase.coprocessor.MasterObserver coprocessors that are
-    loaded by default on the active HMaster process. For any implemented
-    coprocessor methods, the listed classes will be called in order. After
-    implementing your own MasterObserver, just put it in HBase's classpath
-    and add the fully qualified class name here.
-    </description>
-  </property>
-
-  <!--
-  The following three properties are used together to create the list of
-  host:peer_port:leader_port quorum servers for ZooKeeper.
-  -->
-  <property>
-    <name>hbase.zookeeper.quorum</name>
-    <value>localhost</value>
-    <description>Comma separated list of servers in the ZooKeeper Quorum.
-    For example, "host1.mydomain.com,host2.mydomain.com,host3.mydomain.com".
-    By default this is set to localhost for local and pseudo-distributed modes
-    of operation. For a fully-distributed setup, this should be set to a full
-    list of ZooKeeper quorum servers. If HBASE_MANAGES_ZK is set in hbase-env.sh
-    this is the list of servers which we will start/stop ZooKeeper on.
-    </description>
-  </property>
-  <property>
-    <name>hbase.zookeeper.peerport</name>
-    <value>2888</value>
-    <description>Port used by ZooKeeper peers to talk to each other.
-    See http://hadoop.apache.org/zookeeper/docs/r3.1.1/zookeeperStarted.html#sc_RunningReplicatedZooKeeper
-    for more information.
-    </description>
-  </property>
-  <property>
-    <name>hbase.zookeeper.leaderport</name>
-    <value>3888</value>
-    <description>Port used by ZooKeeper for leader election.
-    See http://hadoop.apache.org/zookeeper/docs/r3.1.1/zookeeperStarted.html#sc_RunningReplicatedZooKeeper
-    for more information.
-    </description>
-  </property>
-  <property>
-    <name>hbase.zookeeper.useMulti</name>
-    <value>false</value>
-    <description>Instructs HBase to make use of ZooKeeper's multi-update functionality.
-    This allows certain ZooKeeper operations to complete more quickly and prevents some issues
-    with rare Replication failure scenarios (see the release note of HBASE-2611 for an example).
-    IMPORTANT: only set this to true if all ZooKeeper servers in the cluster are on version 3.4+
-    and will not be downgraded.  ZooKeeper versions before 3.4 do not support multi-update and will
-    not fail gracefully if multi-update is invoked (see ZOOKEEPER-1495).
-    </description>
-  </property>
-
-  <!-- End of properties used to generate ZooKeeper host:port quorum list. -->
-
-  <!--
-  Beginning of properties that are directly mapped from ZooKeeper's zoo.cfg.
-  All properties with an "hbase.zookeeper.property." prefix are converted for
-  ZooKeeper's configuration. Hence, if you want to add an option from zoo.cfg,
-  e.g.  "initLimit=10" you would append the following to your configuration:
-    <property>
-      <name>hbase.zookeeper.property.initLimit</name>
-      <value>10</value>
-    </property>
-  -->
-  <property>
-    <name>hbase.zookeeper.property.initLimit</name>
-    <value>10</value>
-    <description>Property from ZooKeeper's config zoo.cfg.
-    The number of ticks that the initial synchronization phase can take.
-    </description>
-  </property>
-  <property>
-    <name>hbase.zookeeper.property.syncLimit</name>
-    <value>5</value>
-    <description>Property from ZooKeeper's config zoo.cfg.
-    The number of ticks that can pass between sending a request and getting an
-    acknowledgment.
-    </description>
-  </property>
-  <property>
-    <name>hbase.zookeeper.property.dataDir</name>
-    <value>${hbase.tmp.dir}/zookeeper</value>
-    <description>Property from ZooKeeper's config zoo.cfg.
-    The directory where the snapshot is stored.
-    </description>
-  </property>
-  <property>
-    <name>hbase.zookeeper.property.clientPort</name>
-    <value>2181</value>
-    <description>Property from ZooKeeper's config zoo.cfg.
-    The port at which the clients will connect.
-    </description>
-  </property>
-  <property>
-    <name>hbase.zookeeper.property.maxClientCnxns</name>
-    <value>300</value>
-    <description>Property from ZooKeeper's config zoo.cfg.
-    Limit on number of concurrent connections (at the socket level) that a
-    single client, identified by IP address, may make to a single member of
-    the ZooKeeper ensemble. Set high to avoid zk connection issues running
-    standalone and pseudo-distributed.
-    </description>
-  </property>
-  <!-- End of properties that are directly mapped from ZooKeeper's zoo.cfg -->
   <property>
     <name>hbase.rest.port</name>
     <value>8080</value>
@@ -800,7 +857,29 @@
     true: Only the GET method is permitted.
     </description>
   </property>
-
+  <property>
+    <name>hbase.rest.threads.max</name>
+    <value>100</value>
+    <description>
+        The maximum number of threads of the REST server thread pool.
+        Threads in the pool are reused to process REST requests. This
+        controls the maximum number of requests processed concurrently.
+        It may help to control the memory used by the REST server to
+        avoid OOM issues. If the thread pool is full, incoming requests
+        will be queued up and wait for some free threads. The default
+        is 100.
+    </description>
+  </property>
+  <property>
+    <name>hbase.rest.threads.min</name>
+    <value>2</value>
+    <description>
+        The minimum number of threads of the REST server thread pool.
+        The thread pool always has at least these number of threads so
+        the REST server is ready to serve incoming requests. The default
+        is 2.
+    </description>
+  </property>
   <property skipInDoc="true">
     <name>hbase.defaults.for.version</name>
     <value>@@@VERSION@@@</value>
@@ -821,6 +900,17 @@
     seeing the RuntimException complaint: "hbase-default.xml file
     seems to be for and old version of HBase (\${hbase.version}), this
     version is X.X.X-SNAPSHOT"
+    </description>
+  </property>
+  <property>
+    <name>hbase.coprocessor.master.classes</name>
+    <value></value>
+    <description>A comma-separated list of
+    org.apache.hadoop.hbase.coprocessor.MasterObserver coprocessors that are
+    loaded by default on the active HMaster process. For any implemented
+    coprocessor methods, the listed classes will be called in order. After
+    implementing your own MasterObserver, just put it in HBase's classpath
+    and add the fully qualified class name here.
     </description>
   </property>
   <property>
@@ -851,15 +941,6 @@
     Set to true to enable locking the table in zookeeper for schema change operations.
     Table locking from master prevents concurrent schema modifications to corrupt table
     state.
-    </description>
-  </property>
-  <property>
-    <name>dfs.support.append</name>
-    <value>true</value>
-    <description>Does HDFS allow appends to files?
-    This is an hdfs config. set in here so the hdfs client will do append support.
-    You must ensure that this config. is true serverside too when running hbase
-    (You will have to restart your cluster after setting it).
     </description>
   </property>
   <property>
@@ -930,74 +1011,10 @@
 	</description>
   </property>
   <property>
-    <name>hbase.master.hfilecleaner.plugins</name>
-    <value>org.apache.hadoop.hbase.master.cleaner.TimeToLiveHFileCleaner</value>
-    <description>A comma-separated list of HFileCleanerDelegate invoked by
-    the HFileCleaner service. These HFiles cleaners are called in order,
-    so put the cleaner that prunes the most files in front. To
-    implement your own HFileCleanerDelegate, just put it in HBase's classpath
-    and add the fully qualified class name here. Always add the above
-    default log cleaners in the list as they will be overwritten in hbase-site.xml.
-    </description>
-  </property>
-  <property>
-    <name>hbase.regionserver.catalog.timeout</name>
-    <value>600000</value>
-    <description>Timeout value for the Catalog Janitor from the regionserver to META.</description>
-  </property>
-  <property>
-    <name>hbase.master.catalog.timeout</name>
-    <value>600000</value>
-    <description>Timeout value for the Catalog Janitor from the master to META.</description>
-  </property>
-  <property>
-    <name>hbase.config.read.zookeeper.config</name>
-    <value>false</value>
-    <description>
-        Set to true to allow HBaseConfiguration to read the
-        zoo.cfg file for ZooKeeper properties. Switching this to true
-        is not recommended, since the functionality of reading ZK
-        properties from a zoo.cfg file has been deprecated.
-    </description>
-  </property>
-  <property>
     <name>hbase.snapshot.enabled</name>
     <value>true</value>
     <description>
         Set to true to allow snapshots to be taken / restored / cloned.
-    </description>
-  </property>
-  <property>
-    <name>hbase.rest.threads.max</name>
-    <value>100</value>
-    <description>
-        The maximum number of threads of the REST server thread pool.
-        Threads in the pool are reused to process REST requests. This
-        controls the maximum number of requests processed concurrently.
-        It may help to control the memory used by the REST server to
-        avoid OOM issues. If the thread pool is full, incoming requests
-        will be queued up and wait for some free threads. The default
-        is 100.
-    </description>
-  </property>
-  <property>
-    <name>hbase.rest.threads.min</name>
-    <value>2</value>
-    <description>
-        The minimum number of threads of the REST server thread pool.
-        The thread pool always has at least these number of threads so
-        the REST server is ready to serve incoming requests. The default
-        is 2.
-    </description>
-  </property>
-  <property>
-    <name>hbase.rpc.timeout</name>
-    <value>60000</value>
-    <description>
-        This is for the RPC layer to define how long HBase client applications
-        take for a remote call to time out. It uses pings to check connections
-        but will eventually throw a TimeoutException. 
-        The default value is 60000ms(60s).
     </description>
   </property>
   <property>

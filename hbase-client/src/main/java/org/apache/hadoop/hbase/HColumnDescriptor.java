@@ -118,7 +118,7 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
   /**
    * Default number of versions of a record to keep.
    */
-  public static final int DEFAULT_VERSIONS = 3;
+  public static final int DEFAULT_VERSIONS = 1;
 
   /**
    * Default is not to keep a minimum of versions.
@@ -151,7 +151,7 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
    * is enabled.
    */
   public static final boolean DEFAULT_CACHE_DATA_ON_WRITE = false;
-  
+
   /**
    * Default setting for whether to cache index blocks on write if block
    * caching is enabled.
@@ -166,7 +166,7 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
   /**
    * Default setting for whether or not to use bloomfilters.
    */
-  public static final String DEFAULT_BLOOMFILTER = BloomType.NONE.toString();
+  public static final String DEFAULT_BLOOMFILTER = BloomType.ROW.toString();
 
   /**
    * Default setting for whether to cache bloom filter blocks on write if block
@@ -543,7 +543,7 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
     return Compression.Algorithm.valueOf(n.toUpperCase());
   }
 
-  /** @return compression type being used for the column family for major 
+  /** @return compression type being used for the column family for major
       compression */
   public Compression.Algorithm getCompactionCompression() {
     String n = getValue(COMPRESSION_COMPACT);

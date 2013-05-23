@@ -27,6 +27,7 @@ import java.util.Map;
 
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.client.Get;
@@ -34,9 +35,9 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.LruBlockCache;
+import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.MultiThreadedWriter;
 import org.apache.hadoop.hbase.util.Strings;
 import org.apache.hadoop.hbase.util.test.LoadTestKVGenerator;
 import org.junit.Test;
@@ -91,17 +92,16 @@ public class TestEncodedSeekers {
   @Test
   public void testEncodedSeeker() throws IOException {
     System.err.println("Testing encoded seekers for encoding " + encoding);
-    LruBlockCache cache = (LruBlockCache)
-    new CacheConfig(testUtil.getConfiguration()).getBlockCache();
+    LruBlockCache cache =
+      (LruBlockCache)new CacheConfig(testUtil.getConfiguration()).getBlockCache();
     cache.clearCache();
-
-    HRegion region = testUtil.createTestRegion(
-        TABLE_NAME, new HColumnDescriptor(CF_NAME)
-            .setMaxVersions(MAX_VERSIONS)
-            .setDataBlockEncoding(encoding)
-            .setEncodeOnDisk(encodeOnDisk)
-            .setBlocksize(BLOCK_SIZE)
-    );
+    // Need to disable default row bloom filter for this test to pass.
+    HColumnDescriptor hcd = (new HColumnDescriptor(CF_NAME)).setMaxVersions(MAX_VERSIONS).
+        setDataBlockEncoding(encoding).
+        setEncodeOnDisk(encodeOnDisk).
+        setBlocksize(BLOCK_SIZE).
+        setBloomFilterType(BloomType.NONE);
+    HRegion region = testUtil.createTestRegion(TABLE_NAME, hcd);
 
     //write the data, but leave some in the memstore
     doPuts(region);

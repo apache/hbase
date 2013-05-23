@@ -143,6 +143,7 @@ public class TestSeekOptimizations {
         new HColumnDescriptor(FAMILY)
             .setCompressionType(comprAlgo)
             .setBloomFilterType(bloomType)
+            .setMaxVersions(3)
     );
 
     // Delete the given timestamp and everything before.

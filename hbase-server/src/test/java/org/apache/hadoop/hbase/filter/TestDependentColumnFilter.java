@@ -71,8 +71,12 @@ public class TestDependentColumnFilter {
     testVals = makeTestVals();
 
     HTableDescriptor htd = new HTableDescriptor(this.getClass().getName());
-    htd.addFamily(new HColumnDescriptor(FAMILIES[0]));
-    htd.addFamily(new HColumnDescriptor(FAMILIES[1]));
+    HColumnDescriptor hcd0 = new HColumnDescriptor(FAMILIES[0]);
+    hcd0.setMaxVersions(3);
+    htd.addFamily(hcd0);
+    HColumnDescriptor hcd1 = new HColumnDescriptor(FAMILIES[1]);
+    hcd1.setMaxVersions(3);
+    htd.addFamily(hcd1);
     HRegionInfo info = new HRegionInfo(htd.getName(), null, null, false);
     this.region = HRegion.createHRegion(info, TEST_UTIL.getDataTestDir(),
       TEST_UTIL.getConfiguration(), htd);

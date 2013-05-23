@@ -44,6 +44,7 @@ import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPair;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ColumnFamilySchema;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableSchema;
+import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Writables;
@@ -1287,6 +1288,8 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
               .setInMemory(true)
               .setBlocksize(8 * 1024)
               .setScope(HConstants.REPLICATION_SCOPE_LOCAL)
+              // Disable blooms for meta.  Needs work.  Seems to mess w/ getClosestOrBefore.
+              .setBloomFilterType(BloomType.NONE)
       });
 
   static {

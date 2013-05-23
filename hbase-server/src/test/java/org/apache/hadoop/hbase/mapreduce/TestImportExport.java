@@ -133,7 +133,7 @@ public class TestImportExport {
   @Test
   public void testSimpleCase() throws Exception {
     String EXPORT_TABLE = "exportSimpleCase";
-    HTable t = UTIL.createTable(Bytes.toBytes(EXPORT_TABLE), FAMILYA);
+    HTable t = UTIL.createTable(Bytes.toBytes(EXPORT_TABLE), FAMILYA, 3);
     Put p = new Put(ROW1);
     p.add(FAMILYA, QUAL, now, QUAL);
     p.add(FAMILYA, QUAL, now+1, QUAL);
@@ -153,7 +153,7 @@ public class TestImportExport {
     assertTrue(runExport(args));
 
     String IMPORT_TABLE = "importTableSimpleCase";
-    t = UTIL.createTable(Bytes.toBytes(IMPORT_TABLE), FAMILYB);
+    t = UTIL.createTable(Bytes.toBytes(IMPORT_TABLE), FAMILYB, 3);
     args = new String[] {
         "-D" + Import.CF_RENAME_PROP + "="+FAMILYA_STRING+":"+FAMILYB_STRING,
         IMPORT_TABLE,

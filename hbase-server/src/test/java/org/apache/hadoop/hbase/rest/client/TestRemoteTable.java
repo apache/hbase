@@ -78,9 +78,9 @@ public class TestRemoteTable {
     HBaseAdmin admin = TEST_UTIL.getHBaseAdmin();
     if (!admin.tableExists(TABLE)) {
       HTableDescriptor htd = new HTableDescriptor(TABLE);
-      htd.addFamily(new HColumnDescriptor(COLUMN_1));
-      htd.addFamily(new HColumnDescriptor(COLUMN_2));
-      htd.addFamily(new HColumnDescriptor(COLUMN_3));
+      htd.addFamily(new HColumnDescriptor(COLUMN_1).setMaxVersions(3));
+      htd.addFamily(new HColumnDescriptor(COLUMN_2).setMaxVersions(3));
+      htd.addFamily(new HColumnDescriptor(COLUMN_3).setMaxVersions(3));
       admin.createTable(htd);
       HTable table = new HTable(TEST_UTIL.getConfiguration(), TABLE);
       Put put = new Put(ROW_1);
