@@ -33,6 +33,7 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.codec.Codec;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos.WALHeader;
 import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.protobuf.generated.WALProtos.WALTrailer;
 
 /**
  * Writer for protobuf-based WAL.
@@ -43,7 +44,11 @@ public class ProtobufLogWriter implements HLog.Writer {
   private FSDataOutputStream output;
   private Codec.Encoder cellEncoder;
   private WALCellCodec.ByteStringCompressor compressor;
-
+  private boolean trailerWritten;
+  private WALTrailer trailer;
+  // maximum size of the wal Trailer in bytes. If a user writes/reads a trailer with size larger
+  // than this size, it is written/read respectively, with a WARN message in the log.
+  private int trailerWarnSize;
 
   /** Context used by our wal dictionary compressor.
    * Null if we're not to do our custom dictionary compression. */
@@ -64,6 +69,8 @@ public class ProtobufLogWriter implements HLog.Writer {
         throw new IOException("Failed to initiate CompressionContext", e);
       }
     }
+    this.trailerWarnSize = conf.getInt(HLog.WAL_TRAILER_WARN_SIZE,
+      HLog.DEFAULT_WAL_TRAILER_WARN_SIZE);
     int bufferSize = FSUtils.getDefaultBufferSize(fs);
     short replication = (short)conf.getInt(
         "hbase.regionserver.hlog.replication", FSUtils.getDefaultReplication(fs, path));
@@ -78,6 +85,8 @@ public class ProtobufLogWriter implements HLog.Writer {
     if (doCompress) {
       this.compressor = codec.getByteStringCompressor();
     }
+    // instantiate trailer to default value.
+    trailer = WALTrailer.newBuilder().build();
     LOG.debug("Writing protobuf WAL; path=" + path + ", compression=" + doCompress);
   }
 
@@ -96,12 +105,35 @@ public class ProtobufLogWriter implements HLog.Writer {
   public void close() throws IOException {
     if (this.output != null) {
       try {
+        if (!trailerWritten) writeWALTrailer();
         this.output.close();
       } catch (NullPointerException npe) {
         // Can get a NPE coming up from down in DFSClient$DFSOutputStream#close
         LOG.warn(npe);
       }
       this.output = null;
+    }
+  }
+
+  private void writeWALTrailer() {
+    try {
+      int trailerSize = 0;
+      if (this.trailer == null) {
+        // use default trailer.
+        LOG.warn("WALTrailer is null. Continuing with default.");
+        this.trailer = WALTrailer.newBuilder().build();
+        trailerSize = this.trailer.getSerializedSize();
+      } else if ((trailerSize = this.trailer.getSerializedSize()) > this.trailerWarnSize) {
+        // continue writing after warning the user.
+        LOG.warn("Please investigate WALTrailer usage. Trailer size > maximum size : " +
+          trailerSize + " > " + this.trailerWarnSize);
+      }
+      this.trailer.writeTo(output);
+      this.output.writeInt(trailerSize);
+      this.output.write(ProtobufLogReader.PB_WAL_COMPLETE_MAGIC);
+      this.trailerWritten = true;
+    } catch (IOException ioe) {
+      LOG.error("Got IOException while writing trailer", ioe);
     }
   }
 
@@ -128,5 +160,10 @@ public class ProtobufLogWriter implements HLog.Writer {
 
   public FSDataOutputStream getStream() {
     return this.output;
+  }
+
+  @Override
+  public void setWALTrailer(WALTrailer walTrailer) {
+    this.trailer = walTrailer;
   }
 }

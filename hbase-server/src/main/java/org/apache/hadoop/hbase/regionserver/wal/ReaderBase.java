@@ -26,6 +26,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.protobuf.generated.WALProtos.WALTrailer;
 
 @InterfaceAudience.Private
 public abstract class ReaderBase implements HLog.Reader {
@@ -33,6 +34,11 @@ public abstract class ReaderBase implements HLog.Reader {
   protected FileSystem fs;
   protected Path path;
   protected long edit = 0;
+  protected long fileLength;
+  protected WALTrailer trailer;
+  // maximum size of the wal Trailer in bytes. If a user writes/reads a trailer with size larger
+  // than this size, it is written/read respectively, with a WARN message in the log.
+  protected int trailerWarnSize;
   /**
    * Compression context to use reading.  Can be null if no compression.
    */
@@ -51,7 +57,9 @@ public abstract class ReaderBase implements HLog.Reader {
     this.conf = conf;
     this.path = path;
     this.fs = fs;
-
+    this.fileLength = this.fs.getFileStatus(path).getLen();
+    this.trailerWarnSize = conf.getInt(HLog.WAL_TRAILER_WARN_SIZE,
+      HLog.DEFAULT_WAL_TRAILER_WARN_SIZE);
     initReader(stream);
 
     boolean compression = hasCompression();
@@ -134,4 +142,8 @@ public abstract class ReaderBase implements HLog.Reader {
    */
   protected abstract void seekOnFs(long pos) throws IOException;
 
+  @Override
+  public WALTrailer getWALTrailer() {
+    return null;
+  }
 }

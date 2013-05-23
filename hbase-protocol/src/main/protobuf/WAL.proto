@@ -74,3 +74,10 @@ message CompactionDescriptor {
   repeated string compactionOutput = 5;
   required string storeHomeDir = 6;
 }
+
+/**
+ * A trailer that is appended to the end of a properly closed HLog WAL file.
+ * If missing, this is either a legacy or a corrupted WAL file.
+ */
+message WALTrailer {
+}
