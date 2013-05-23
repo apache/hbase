@@ -582,7 +582,7 @@ public class HFileArchiver {
     public boolean moveAndClose(Path dest) throws IOException {
       this.close();
       Path p = this.getPath();
-      return fs.rename(p, dest);
+      return FSUtils.renameAndSetModifyTime(fs, p, dest);
     }
 
     /**

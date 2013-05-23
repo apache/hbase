@@ -701,7 +701,7 @@ class FSHLog implements HLog, Syncable {
         i.preLogArchive(p, newPath);
       }
     }
-    if (!this.fs.rename(p, newPath)) {
+    if (!FSUtils.renameAndSetModifyTime(this.fs, p, newPath)) {
       throw new IOException("Unable to rename " + p + " to " + newPath);
     }
     // Tell our listeners that a log has been archived.
@@ -754,7 +754,7 @@ class FSHLog implements HLog, Syncable {
           }
         }
 
-        if (!fs.rename(file.getPath(),p)) {
+        if (!FSUtils.renameAndSetModifyTime(fs, file.getPath(), p)) {
           throw new IOException("Unable to rename " + file.getPath() + " to " + p);
         }
         // Tell our listeners that a log was archived.
