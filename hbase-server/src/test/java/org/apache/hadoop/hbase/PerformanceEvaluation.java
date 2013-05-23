@@ -131,6 +131,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
   private DataBlockEncoding blockEncoding = DataBlockEncoding.NONE;
   private boolean flushCommits = true;
   private boolean writeToWAL = true;
+  private boolean inMemoryCF = false;
   private int presplitRegions = 0;
 
   private static final Path PERF_EVAL_DIR = new Path("performance_evaluation");
@@ -510,6 +511,9 @@ public class PerformanceEvaluation extends Configured implements Tool {
       HColumnDescriptor family = new HColumnDescriptor(FAMILY_NAME);
       family.setDataBlockEncoding(blockEncoding);
       family.setCompressionType(compression);
+      if (inMemoryCF) {
+        family.setInMemory(true);
+      }
       TABLE_DESCRIPTOR.addFamily(family);
     }
     return TABLE_DESCRIPTOR;
@@ -1292,6 +1296,9 @@ public class PerformanceEvaluation extends Configured implements Tool {
     System.err.println(" flushCommits    Used to determine if the test should flush the table.  Default: false");
     System.err.println(" writeToWAL      Set writeToWAL on puts. Default: True");
     System.err.println(" presplit        Create presplit table. Recommended for accurate perf analysis (see guide).  Default: disabled");
+    System.err
+        .println(" inmemory        Tries to keep the HFiles of the CF inmemory as far as possible.  Not " +
+        		"guaranteed that reads are always served from inmemory.  Default: false");
     System.err.println();
     System.err.println(" Note: -D properties will be applied to the conf used. ");
     System.err.println("  For example: ");
@@ -1396,7 +1403,13 @@ public class PerformanceEvaluation extends Configured implements Tool {
           this.presplitRegions = Integer.parseInt(cmd.substring(presplit.length()));
           continue;
         }
-
+        
+        final String inMemory = "--inmemory=";
+        if (cmd.startsWith(inMemory)) {
+          this.inMemoryCF = Boolean.parseBoolean(cmd.substring(inMemory.length()));
+          continue;
+        }
+        
         Class<? extends Test> cmdClass = determineCommandClass(cmd);
         if (cmdClass != null) {
           getArgs(i + 1, args);
