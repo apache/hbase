@@ -532,7 +532,22 @@ public class HTable implements HTableInterface {
    * @throws IOException if a remote or network exception occurs
    */
   public List<HRegionLocation> getRegionsInRange(final byte [] startKey,
-    final byte [] endKey) throws IOException {
+      final byte [] endKey) throws IOException {
+    return getRegionsInRange(startKey, endKey, false);
+  }
+
+  /**
+   * Get the corresponding regions for an arbitrary range of keys.
+   * <p>
+   * @param startKey Starting row in range, inclusive
+   * @param endKey Ending row in range, exclusive
+   * @param reload true to reload information or false to use cached information
+   * @return A list of HRegionLocations corresponding to the regions that
+   * contain the specified range
+   * @throws IOException if a remote or network exception occurs
+   */
+  public List<HRegionLocation> getRegionsInRange(final byte [] startKey,
+      final byte [] endKey, final boolean reload) throws IOException {
     final boolean endKeyIsEndOfTable = Bytes.equals(endKey,
                                                     HConstants.EMPTY_END_ROW);
     if ((Bytes.compareTo(startKey, endKey) > 0) && !endKeyIsEndOfTable) {
@@ -543,7 +558,7 @@ public class HTable implements HTableInterface {
     final List<HRegionLocation> regionList = new ArrayList<HRegionLocation>();
     byte [] currentKey = startKey;
     do {
-      HRegionLocation regionLocation = getRegionLocation(currentKey, false);
+      HRegionLocation regionLocation = getRegionLocation(currentKey, reload);
       regionList.add(regionLocation);
       currentKey = regionLocation.getRegionInfo().getEndKey();
     } while (!Bytes.equals(currentKey, HConstants.EMPTY_END_ROW) &&
