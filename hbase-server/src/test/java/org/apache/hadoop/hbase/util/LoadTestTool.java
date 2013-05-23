@@ -86,6 +86,10 @@ public class LoadTestTool extends AbstractHBaseTool {
   public static final String OPT_ENCODE_IN_CACHE_ONLY_USAGE =
       "If this is specified, data blocks will only be encoded in block " +
       "cache but not on disk";
+  
+  public static final String OPT_INMEMORY = "in_memory";
+  public static final String OPT_USAGE_IN_MEMORY = "Tries to keep the HFiles of the CF " +
+  		"inmemory as far as possible.  Not guaranteed that reads are always served from inmemory";
 
   private static final String OPT_KEY_WINDOW = "key_window";
   private static final String OPT_WRITE = "write";
@@ -116,7 +120,7 @@ public class LoadTestTool extends AbstractHBaseTool {
   private boolean encodeInCacheOnly;
   private Compression.Algorithm compressAlgo;
   private BloomType bloomType;
-
+  private boolean inMemoryCF;
   // Writer options
   private int numWriterThreads = DEFAULT_NUM_THREADS;
   private int minColsPerKey, maxColsPerKey;
@@ -177,6 +181,9 @@ public class LoadTestTool extends AbstractHBaseTool {
         columnDesc.setDataBlockEncoding(dataBlockEncodingAlgo);
         columnDesc.setEncodeOnDisk(!encodeInCacheOnly);
       }
+      if (inMemoryCF) {
+        columnDesc.setInMemory(inMemoryCF);
+      }
       if (isNewCf) {
         admin.addColumn(tableName, columnDesc);
       } else {
@@ -208,6 +215,7 @@ public class LoadTestTool extends AbstractHBaseTool {
     addOptNoArg(OPT_MULTIPUT, "Whether to use multi-puts as opposed to " +
         "separate puts for every column in a row");
     addOptNoArg(OPT_ENCODE_IN_CACHE_ONLY, OPT_ENCODE_IN_CACHE_ONLY_USAGE);
+    addOptNoArg(OPT_INMEMORY, OPT_USAGE_IN_MEMORY);
 
     addOptWithArg(OPT_NUM_KEYS, "The number of keys to read/write");
     addOptWithArg(OPT_START_KEY, "The first key to read/write " +
@@ -318,6 +326,9 @@ public class LoadTestTool extends AbstractHBaseTool {
     String bloomStr = cmd.getOptionValue(OPT_BLOOM);
     bloomType = bloomStr == null ? null :
         BloomType.valueOf(bloomStr);
+    
+    inMemoryCF = cmd.hasOption(OPT_INMEMORY);
+    
   }
 
   public void initTestTable() throws IOException {
