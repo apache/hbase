@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.util;
 
 import java.io.IOException;
+import java.net.InetSocketAddress;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -189,6 +190,16 @@ public class MockRegionServerServices implements RegionServerServices {
 
   @Override
   public ExecutorService getExecutorService() {
+    return null;
+  }
+
+  @Override
+  public void updateRegionFavoredNodesMapping(String encodedRegionName,
+      List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName> favoredNodes) {
+  }
+
+  @Override
+  public InetSocketAddress[] getFavoredNodesForRegion(String encodedRegionName) {
     return null;
   }
 

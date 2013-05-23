@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.regionserver;
 import java.io.DataInput;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Collection;
@@ -528,6 +529,7 @@ public class StoreFile {
     private long maxKeyCount = 0;
     private Path dir;
     private Path filePath;
+    private InetSocketAddress[] favoredNodes;
     private ChecksumType checksumType = HFile.DEFAULT_CHECKSUM_TYPE;
     private int bytesPerChecksum = HFile.DEFAULT_BYTES_PER_CHECKSUM;
     private boolean includeMVCCReadpoint = true;
@@ -567,6 +569,15 @@ public class StoreFile {
     public WriterBuilder withCompression(Compression.Algorithm compressAlgo) {
       Preconditions.checkNotNull(compressAlgo);
       this.compressAlgo = compressAlgo;
+      return this;
+    }
+
+    /**
+     * @param favoredNodes an array of favored nodes or possibly null
+     * @return this (for chained invocation)
+     */
+    public WriterBuilder withFavoredNodes(InetSocketAddress[] favoredNodes) {
+      this.favoredNodes = favoredNodes;
       return this;
     }
 
@@ -658,7 +669,7 @@ public class StoreFile {
       }
       return new Writer(fs, filePath, blockSize, compressAlgo, dataBlockEncoder,
           conf, cacheConf, comparator, bloomType, maxKeyCount, checksumType,
-          bytesPerChecksum, includeMVCCReadpoint);
+          bytesPerChecksum, includeMVCCReadpoint, favoredNodes);
     }
   }
 
@@ -763,6 +774,7 @@ public class StoreFile {
      * @param checksumType the checksum type
      * @param bytesPerChecksum the number of bytes per checksum value
      * @param includeMVCCReadpoint whether to write the mvcc readpoint to the file for each KV
+     * @param favoredNodes
      * @throws IOException problem writing to FS
      */
     private Writer(FileSystem fs, Path path, int blocksize,
@@ -771,7 +783,8 @@ public class StoreFile {
         CacheConfig cacheConf,
         final KVComparator comparator, BloomType bloomType, long maxKeys,
         final ChecksumType checksumType, final int bytesPerChecksum,
-        final boolean includeMVCCReadpoint) throws IOException {
+        final boolean includeMVCCReadpoint, InetSocketAddress[] favoredNodes) 
+            throws IOException {
       this.dataBlockEncoder = dataBlockEncoder != null ?
           dataBlockEncoder : NoOpDataBlockEncoder.INSTANCE;
       writer = HFile.getWriterFactory(conf, cacheConf)
@@ -782,6 +795,7 @@ public class StoreFile {
           .withComparator(comparator.getRawComparator())
           .withChecksumType(checksumType)
           .withBytesPerChecksum(bytesPerChecksum)
+          .withFavoredNodes(favoredNodes)
           .includeMVCCReadpoint(includeMVCCReadpoint)
           .create();
 

@@ -3516,7 +3516,8 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
     return builder.build();
   }
 
-  private void updateRegionFavoredNodesMapping(String encodedRegionName,
+  @Override
+  public void updateRegionFavoredNodesMapping(String encodedRegionName,
       List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName> favoredNodes) {
     InetSocketAddress[] addr = new InetSocketAddress[favoredNodes.size()];
     // Refer to the comment on the declaration of regionFavoredNodesMap on why
@@ -3534,6 +3535,7 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
    * @param encodedRegionName
    * @return array of favored locations
    */
+  @Override
   public InetSocketAddress[] getFavoredNodesForRegion(String encodedRegionName) {
     return regionFavoredNodesMap.get(encodedRegionName);
   }

@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.master;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.net.InetSocketAddress;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
@@ -530,6 +531,16 @@ ClientProtos.ClientService.BlockingInterface, RegionServerServices {
 
   @Override
   public ExecutorService getExecutorService() {
+    return null;
+  }
+
+  @Override
+  public void updateRegionFavoredNodesMapping(String encodedRegionName,
+      List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName> favoredNodes) {
+  }
+
+  @Override
+  public InetSocketAddress[] getFavoredNodesForRegion(String encodedRegionName) {
     return null;
   }
 
