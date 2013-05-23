@@ -33,6 +33,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.protobuf.generated.WALProtos.WALTrailer;
 import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.SequenceFile.CompressionType;
@@ -231,5 +232,12 @@ public class SequenceFileLogWriter implements HLog.Writer {
    */
   public FSDataOutputStream getWriterFSDataOutputStream() {
     return this.writer_out;
+  }
+
+  /**
+   * This method is empty as trailer is added only in Protobuf based hlog readers/writers.
+   */
+  @Override
+  public void setWALTrailer(WALTrailer walTrailer) {
   }
 }

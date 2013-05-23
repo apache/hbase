@@ -822,6 +822,93 @@ public class TestHLog  {
     }
   }
 
+  /**
+   * Reads the WAL with and without WALTrailer.
+   * @throws IOException
+   */
+  @Test
+  public void testWALTrailer() throws IOException {
+    // read With trailer.
+    doRead(true);
+    // read without trailer
+    doRead(false);
+  }
+
+  /**
+   * Appends entries in the WAL and reads it.
+   * @param withTrailer If 'withTrailer' is true, it calls a close on the WALwriter before reading
+   *          so that a trailer is appended to the WAL. Otherwise, it starts reading after the sync
+   *          call. This means that reader is not aware of the trailer. In this scenario, if the
+   *          reader tries to read the trailer in its next() call, it returns false from
+   *          ProtoBufLogReader.
+   * @throws IOException
+   */
+  private void doRead(boolean withTrailer) throws IOException {
+    final int columnCount = 5;
+    final int recordCount = 5;
+    final byte[] tableName = Bytes.toBytes("tablename");
+    final byte[] row = Bytes.toBytes("row");
+    long timestamp = System.currentTimeMillis();
+    Path path = new Path(dir, "temphlog");
+    HLog.Writer writer = null;
+    HLog.Reader reader = null;
+    try {
+      HRegionInfo hri = new HRegionInfo(tableName,
+          HConstants.EMPTY_START_ROW, HConstants.EMPTY_END_ROW);
+      HTableDescriptor htd = new HTableDescriptor(tableName);
+      fs.mkdirs(dir);
+      // Write log in pb format.
+      writer = HLogFactory.createWriter(fs, path, conf);
+      for (int i = 0; i < recordCount; ++i) {
+        HLogKey key = new HLogKey(
+            hri.getEncodedNameAsBytes(), tableName, i, timestamp, HConstants.DEFAULT_CLUSTER_ID);
+        WALEdit edit = new WALEdit();
+        for (int j = 0; j < columnCount; ++j) {
+          if (i == 0) {
+            htd.addFamily(new HColumnDescriptor("column" + j));
+          }
+          String value = i + "" + j;
+          edit.add(new KeyValue(row, row, row, timestamp, Bytes.toBytes(value)));
+        }
+        writer.append(new HLog.Entry(key, edit));
+      }
+      writer.sync();
+      if (withTrailer) writer.close();
+
+      // Now read the log using standard means.
+      reader = HLogFactory.createReader(fs, path, conf);
+      assertTrue(reader instanceof ProtobufLogReader);
+      if (withTrailer) {
+        assertNotNull(reader.getWALTrailer());
+      } else {
+        assertNull(reader.getWALTrailer());
+      }
+      for (int i = 0; i < recordCount; ++i) {
+        HLog.Entry entry = reader.next();
+        assertNotNull(entry);
+        assertEquals(columnCount, entry.getEdit().size());
+        assertArrayEquals(hri.getEncodedNameAsBytes(), entry.getKey().getEncodedRegionName());
+        assertArrayEquals(tableName, entry.getKey().getTablename());
+        int idx = 0;
+        for (KeyValue val : entry.getEdit().getKeyValues()) {
+          assertTrue(Bytes.equals(row, val.getRow()));
+          String value = i + "" + idx;
+          assertArrayEquals(Bytes.toBytes(value), val.getValue());
+          idx++;
+        }
+      }
+      HLog.Entry entry = reader.next();
+      assertNull(entry);
+    } finally {
+      if (writer != null) {
+        writer.close();
+      }
+      if (reader != null) {
+        reader.close();
+      }
+    }
+  }
+
   static class DumbWALActionsListener implements WALActionsListener {
     int increments = 0;
 

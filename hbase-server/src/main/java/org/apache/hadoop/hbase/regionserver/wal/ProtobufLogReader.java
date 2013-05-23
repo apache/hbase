@@ -21,32 +21,45 @@ package org.apache.hadoop.hbase.regionserver.wal;
 
 import java.io.EOFException;
 import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.util.Arrays;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.FSDataInputStream;
-import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.codec.Codec;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos.WALKey;
+import org.apache.hadoop.hbase.protobuf.generated.WALProtos.WALTrailer;
 import org.apache.hadoop.hbase.util.Bytes;
 
 import com.google.protobuf.InvalidProtocolBufferException;
 
 /**
- * Reader for protobuf-based WAL.
+ * A Protobuf based WAL has the following structure:
+ * <p>
+ * &lt;PB_WAL_MAGIC&gt;&lt;WALHeader&gt;&lt;WALEdits&gt;...&lt;WALEdits&gt;&lt;Trailer&gt;
+ * &lt;TrailerSize&gt; &lt;PB_WAL_COMPLETE_MAGIC&gt;
+ * </p>
+ * The Reader reads meta information (WAL Compression state, WALTrailer, etc) in
+ * {@link ProtobufLogReader#initReader(FSDataInputStream)}. A WALTrailer is an extensible structure
+ * which is appended at the end of the WAL. This is empty for now; it can contain some meta
+ * information such as Region level stats, etc in future.
  */
 @InterfaceAudience.Private
 public class ProtobufLogReader extends ReaderBase {
   private static final Log LOG = LogFactory.getLog(ProtobufLogReader.class);
   static final byte[] PB_WAL_MAGIC = Bytes.toBytes("PWAL");
-
+  static final byte[] PB_WAL_COMPLETE_MAGIC = Bytes.toBytes("LAWP");
   private FSDataInputStream inputStream;
   private Codec.Decoder cellDecoder;
   private WALCellCodec.ByteStringUncompressor byteStringUncompressor;
   private boolean hasCompression = false;
+  // walEditsStopOffset is the position of the last byte to read. After reading the last WALEdit entry
+  // in the hlog, the inputstream's position is equal to walEditsStopOffset.
+  private long walEditsStopOffset;
+  private boolean trailerPresent;
 
   public ProtobufLogReader() {
     super();
@@ -97,7 +110,67 @@ public class ProtobufLogReader extends ReaderBase {
       this.hasCompression = header.hasHasCompression() && header.getHasCompression();
     }
     this.inputStream = stream;
+    this.walEditsStopOffset = this.fileLength;
+    long currentPosition = stream.getPos();
+    trailerPresent = setTrailerIfPresent();
+    this.seekOnFs(currentPosition);
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("After reading the trailer: walEditsStopOffset: " + this.walEditsStopOffset
+          + ", fileLength: " + this.fileLength + ", " + "trailerPresent: " + trailerPresent);
+    }
+  }
 
+  /**
+   * To check whether a trailer is present in a WAL, it seeks to position (fileLength -
+   * PB_WAL_COMPLETE_MAGIC.size() - Bytes.SIZEOF_INT). It reads the int value to know the size of
+   * the trailer, and checks whether the trailer is present at the end or not by comparing the last
+   * PB_WAL_COMPLETE_MAGIC.size() bytes. In case trailer is not present, it returns false;
+   * otherwise, sets the trailer and sets this.walEditsStopOffset variable up to the point just
+   * before the trailer.
+   * <ul>
+   * The trailer is ignored in case:
+   * <li>fileLength is 0 or not correct (when file is under recovery, etc).
+   * <li>the trailer size is negative.
+   * </ul>
+   * <p>
+   * In case the trailer size > this.trailerMaxSize, it is read after a WARN message.
+   * @return true if a valid trailer is present
+   * @throws IOException
+   */
+  private boolean setTrailerIfPresent() {
+    try {
+      long trailerSizeOffset = this.fileLength - (PB_WAL_COMPLETE_MAGIC.length + Bytes.SIZEOF_INT);
+      if (trailerSizeOffset <= 0) return false;// no trailer possible.
+      this.seekOnFs(trailerSizeOffset);
+      // read the int as trailer size.
+      int trailerSize = this.inputStream.readInt();
+      ByteBuffer buf = ByteBuffer.allocate(ProtobufLogReader.PB_WAL_COMPLETE_MAGIC.length);
+      this.inputStream.readFully(buf.array(), buf.arrayOffset(), buf.capacity());
+      if (!Arrays.equals(buf.array(), PB_WAL_COMPLETE_MAGIC)) {
+        LOG.warn("No trailer found.");
+        return false;
+      }
+      if (trailerSize < 0) {
+        LOG.warn("Invalid trailer Size " + trailerSize + ", ignoring the trailer");
+        return false;
+      } else if (trailerSize > this.trailerWarnSize) {
+        // continue reading after warning the user.
+        LOG.warn("Please investigate WALTrailer usage. Trailer size > maximum configured size : "
+          + trailerSize + " > " + this.trailerWarnSize);
+      }
+      // seek to the position where trailer starts.
+      long positionOfTrailer = trailerSizeOffset - trailerSize;
+      this.seekOnFs(positionOfTrailer);
+      // read the trailer.
+      buf = ByteBuffer.allocate(trailerSize);// for trailer.
+      this.inputStream.readFully(buf.array(), buf.arrayOffset(), buf.capacity());
+      trailer = WALTrailer.parseFrom(buf.array());
+      this.walEditsStopOffset = positionOfTrailer;
+      return true;
+    } catch (IOException ioe) {
+      LOG.warn("Got IOE while reading the trailer. Continuing as if no trailer is present.", ioe);
+    }
+    return false;
   }
 
   @Override
@@ -117,6 +190,7 @@ public class ProtobufLogReader extends ReaderBase {
   @Override
   protected boolean readNext(HLog.Entry entry) throws IOException {
     while (true) {
+      if (trailerPresent && this.inputStream.getPos() == this.walEditsStopOffset) return false;
       WALKey.Builder builder = WALKey.newBuilder();
       boolean hasNext = false;
       try {
@@ -162,6 +236,12 @@ public class ProtobufLogReader extends ReaderBase {
         LOG.error(message);
         throw new IOException(message, ex);
       }
+      if (trailerPresent && this.inputStream.getPos() > this.walEditsStopOffset) {
+        LOG.error("Read WALTrailer while reading WALEdits. hlog: " + this.path
+            + ", inputStream.getPos(): " + this.inputStream.getPos() + ", walEditsStopOffset: "
+            + this.walEditsStopOffset);
+        throw new IOException("Read WALTrailer while reading WALEdits");
+      }
       return true;
     }
   }
@@ -183,6 +263,11 @@ public class ProtobufLogReader extends ReaderBase {
       return null;
     }
     return null;
+  }
+
+  @Override
+  public WALTrailer getWALTrailer() {
+    return trailer;
   }
 
   @Override

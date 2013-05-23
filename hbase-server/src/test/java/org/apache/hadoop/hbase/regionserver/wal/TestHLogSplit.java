@@ -133,6 +133,7 @@ public class TestHLogSplit {
     INSERT_GARBAGE_IN_THE_MIDDLE,
     APPEND_GARBAGE,
     TRUNCATE,
+    TRUNCATE_TRAILER
   }
 
   @BeforeClass
@@ -655,6 +656,38 @@ public class TestHLogSplit {
     HLog.Entry entry;
     while ((entry = in.next()) != null) ++actualCount;
     assertEquals(entryCount-1, actualCount);
+
+    // should not have stored the EOF files as corrupt
+    FileStatus[] archivedLogs = fs.listStatus(CORRUPTDIR);
+    assertEquals(archivedLogs.length, 0);
+  }
+
+  @Test
+  public void testCorruptWALTrailer() throws IOException {
+    conf.setBoolean(HBASE_SKIP_ERRORS, false);
+
+    final String REGION = "region__1";
+    REGIONS.removeAll(REGIONS);
+    REGIONS.add(REGION);
+
+    int entryCount = 10;
+    Path c1 = new Path(HLOGDIR, HLOG_FILE_PREFIX + "0");
+    generateHLogs(1, entryCount, -1);
+    corruptHLog(c1, Corruptions.TRUNCATE_TRAILER, true, fs);
+
+    fs.initialize(fs.getUri(), conf);
+    HLogSplitter logSplitter = HLogSplitter.createLogSplitter(conf,
+        HBASEDIR, HLOGDIR, OLDLOGDIR, fs);
+    logSplitter.splitLog();
+
+    Path splitLog = getLogForRegion(HBASEDIR, TABLE_NAME, REGION);
+
+    int actualCount = 0;
+    HLog.Reader in = HLogFactory.createReader(fs, splitLog, conf);
+    @SuppressWarnings("unused")
+    HLog.Entry entry;
+    while ((entry = in.next()) != null) ++actualCount;
+    assertEquals(entryCount, actualCount);
 
     // should not have stored the EOF files as corrupt
     FileStatus[] archivedLogs = fs.listStatus(CORRUPTDIR);
@@ -1462,9 +1495,16 @@ public class TestHLogSplit {
       case TRUNCATE:
         fs.delete(path, false);
         out = fs.create(path);
-        out.write(corrupted_bytes, 0, fileSize-32);
+        out.write(corrupted_bytes, 0, fileSize
+          - (32 + ProtobufLogReader.PB_WAL_COMPLETE_MAGIC.length + Bytes.SIZEOF_INT));
         closeOrFlush(close, out);
+        break;
 
+      case TRUNCATE_TRAILER:
+        fs.delete(path, false);
+        out = fs.create(path);
+        out.write(corrupted_bytes, 0, fileSize - Bytes.SIZEOF_INT);// trailer is truncated.
+        closeOrFlush(close, out);
         break;
     }
   }
