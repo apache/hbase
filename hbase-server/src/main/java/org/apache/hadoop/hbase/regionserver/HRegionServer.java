@@ -300,7 +300,7 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
    */
   protected final Map<String, InetSocketAddress[]> regionFavoredNodesMap =
       new ConcurrentHashMap<String, InetSocketAddress[]>();
-   
+
   /**
    * Set of regions currently being in recovering state which means it can accept writes(edits from
    * previous failed region server) but not reads. A recovering region is also an online region.
@@ -472,7 +472,7 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
 
   /** Handle all the snapshot requests to this server */
   RegionServerSnapshotManager snapshotManager;
-  
+
   // configuration setting on if replay WAL edits directly to another RS
   private final boolean distributedLogReplay;
 
@@ -567,7 +567,7 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
     };
     this.rsHost = new RegionServerCoprocessorHost(this, this.conf);
 
-    this.distributedLogReplay = this.conf.getBoolean(HConstants.DISTRIBUTED_LOG_REPLAY_KEY, 
+    this.distributedLogReplay = this.conf.getBoolean(HConstants.DISTRIBUTED_LOG_REPLAY_KEY,
       HConstants.DEFAULT_DISTRIBUTED_LOG_REPLAY_CONFIG);
   }
 
@@ -1903,6 +1903,8 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
         LOG.fatal("Master rejected startup because clock is out of sync", ioe);
         // Re-throw IOE will cause RS to abort
         throw ioe;
+      } else if (ioe instanceof ServerNotRunningYetException) {
+        LOG.debug("Master is not running yet");
       } else {
         LOG.warn("error telling master we are up", se);
       }
@@ -3773,7 +3775,7 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
   @QosPriority(priority = HConstants.REPLAY_QOS)
   public MultiResponse replay(final RpcController rpcc, final MultiRequest request)
       throws ServiceException {
-    long before = EnvironmentEdgeManager.currentTimeMillis();  
+    long before = EnvironmentEdgeManager.currentTimeMillis();
     PayloadCarryingRpcController controller = (PayloadCarryingRpcController) rpcc;
     CellScanner cellScanner = controller != null ? controller.cellScanner() : null;
     // Clear scanner so we are not holding on to reference across call.
@@ -3807,7 +3809,7 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
     } catch (IOException ie) {
       throw new ServiceException(ie);
     } finally {
-      metricsRegionServer.updateReplay(EnvironmentEdgeManager.currentTimeMillis() - before); 
+      metricsRegionServer.updateReplay(EnvironmentEdgeManager.currentTimeMillis() - before);
     }
   }
 
@@ -3945,7 +3947,7 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
       final HRegion region, final List<MutationProto> mutates, final CellScanner cells) {
     doBatchOp(builder, region, mutates, cells, false);
   }
-  
+
   /**
    * Execute a list of Put/Delete mutations.
    *
@@ -4255,7 +4257,7 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
       // one level deeper for failed RS
       nodePath = ZKUtil.joinZNode(nodePath, previousRSName);
       ZKUtil.setData(zkw, nodePath, ZKUtil.positionToByteArray(minSeqIdForLogReplay));
-      LOG.debug("Update last flushed sequence id of region " + region.getEncodedName() + " for " 
+      LOG.debug("Update last flushed sequence id of region " + region.getEncodedName() + " for "
           + previousRSName);
     } else {
       LOG.warn("Can't find failed region server for recovering region " + region.getEncodedName());
