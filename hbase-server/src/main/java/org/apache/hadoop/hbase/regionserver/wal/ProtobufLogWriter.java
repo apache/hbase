@@ -87,7 +87,9 @@ public class ProtobufLogWriter implements HLog.Writer {
     }
     // instantiate trailer to default value.
     trailer = WALTrailer.newBuilder().build();
-    LOG.debug("Writing protobuf WAL; path=" + path + ", compression=" + doCompress);
+    if (LOG.isTraceEnabled()) {
+      LOG.trace("Initialized protobuf WAL=" + path + ", compression=" + doCompress);
+    }
   }
 
   @Override

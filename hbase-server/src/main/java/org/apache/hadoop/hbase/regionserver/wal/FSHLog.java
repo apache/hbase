@@ -347,7 +347,7 @@ class FSHLog implements HLog, Syncable {
 
     this.logSyncer = new LogSyncer(this.optionalFlushInterval);
 
-    LOG.info("HLog configuration: blocksize=" +
+    LOG.info("WAL/HLog configuration: blocksize=" +
       StringUtils.byteDesc(this.blocksize) +
       ", rollsize=" + StringUtils.byteDesc(this.logrollsize) +
       ", enabled=" + this.enabled +
@@ -519,9 +519,10 @@ class FSHLog implements HLog, Syncable {
           this.hdfs_out = nextHdfsOut;
           this.numEntries.set(0);
         }
-        LOG.info("Rolled log" + (oldFile != null ? " for file=" + FSUtils.getPath(oldFile)
-          + ", entries=" + oldNumEntries + ", filesize=" + this.fs.getFileStatus(oldFile).getLen()
-          : "" ) + "; new path=" + FSUtils.getPath(newPath));
+        LOG.info("Rolled WAL " + (oldFile != null ?
+          FSUtils.getPath(oldFile) + ", entries=" + oldNumEntries + ", filesize=" +
+            StringUtils.humanReadableInt(this.fs.getFileStatus(oldFile).getLen()):
+          "" ) + "; new WAL=" + FSUtils.getPath(newPath));
 
         // Tell our listeners that a new log was created
         if (!this.listeners.isEmpty()) {

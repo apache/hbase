@@ -239,7 +239,7 @@ public abstract class TableLockManager {
         if (data == null) {
           return;
         }
-        LOG.debug("Table is locked by: " +
+        LOG.debug("Table is locked by " +
             String.format("[tableName=%s, lockOwner=%s, threadId=%s, " +
                 "purpose=%s, isShared=%s, createTime=%s]", Bytes.toString(data.getTableName().toByteArray()),
                 ProtobufUtil.toServerName(data.getLockOwner()), data.getThreadId(),
@@ -270,9 +270,9 @@ public abstract class TableLockManager {
 
       @Override
       public void acquire() throws IOException {
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Attempt to acquire table " + (isShared ? "read" : "write")
-              + " lock on :" + tableNameStr + " for:" + purpose);
+        if (LOG.isTraceEnabled()) {
+          LOG.trace("Attempt to acquire table " + (isShared ? "read" : "write") +
+            " lock on: " + tableNameStr + " for:" + purpose);
         }
 
         lock = createTableLock();
@@ -292,15 +292,15 @@ public abstract class TableLockManager {
           Thread.currentThread().interrupt();
           throw new InterruptedIOException("Interrupted acquiring a lock");
         }
-        LOG.debug("Acquired table " + (isShared ? "read" : "write")
-            + " lock on :" + tableNameStr + " for:" + purpose);
+        if (LOG.isTraceEnabled()) LOG.trace("Acquired table " + (isShared ? "read" : "write")
+            + " lock on " + tableNameStr + " for " + purpose);
       }
 
       @Override
       public void release() throws IOException {
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Attempt to release table " + (isShared ? "read" : "write")
-              + " lock on :" + tableNameStr);
+        if (LOG.isTraceEnabled()) {
+          LOG.trace("Attempt to release table " + (isShared ? "read" : "write")
+              + " lock on " + tableNameStr);
         }
         if (lock == null) {
           throw new IllegalStateException("Table " + tableNameStr +
@@ -314,8 +314,8 @@ public abstract class TableLockManager {
           Thread.currentThread().interrupt();
           throw new InterruptedIOException();
         }
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Released table lock on :" + tableNameStr);
+        if (LOG.isTraceEnabled()) {
+          LOG.trace("Released table lock on " + tableNameStr);
         }
       }
 

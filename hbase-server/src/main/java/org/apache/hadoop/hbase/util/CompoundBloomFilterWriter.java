@@ -135,8 +135,8 @@ public class CompoundBloomFilterWriter extends CompoundBloomFilterBase
 
     chunk.compactBloom();
 
-    if (LOG.isDebugEnabled() && prevByteSize != chunk.getByteSize()) {
-      LOG.debug("Compacted Bloom chunk #" + readyChunk.chunkId + " from ["
+    if (LOG.isTraceEnabled() && prevByteSize != chunk.getByteSize()) {
+      LOG.trace("Compacted Bloom chunk #" + readyChunk.chunkId + " from ["
           + prevMaxKeys + " max keys, " + prevByteSize + " bytes] to ["
           + chunk.getMaxKeys() + " max keys, " + chunk.getByteSize()
           + " bytes]");

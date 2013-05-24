@@ -19,7 +19,6 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import java.io.DataInput;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
@@ -36,14 +35,12 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HDFSBlocksDistribution;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.KVComparator;
-import org.apache.hadoop.hbase.KeyValue.MetaKeyComparator;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.FSDataInputStreamWrapper;
 import org.apache.hadoop.hbase.io.compress.Compression;
@@ -808,8 +805,8 @@ public class StoreFile {
 
       if (generalBloomFilterWriter != null) {
         this.bloomType = bloomType;
-        LOG.info("Bloom filter type for " + path + ": " + this.bloomType + ", "
-            + generalBloomFilterWriter.getClass().getSimpleName());
+        if (LOG.isTraceEnabled()) LOG.trace("Bloom filter type for " + path + ": " +
+          this.bloomType + ", " + generalBloomFilterWriter.getClass().getSimpleName());
       } else {
         // Not using Bloom filters.
         this.bloomType = BloomType.NONE;
@@ -825,7 +822,7 @@ public class StoreFile {
         deleteFamilyBloomFilterWriter = null;
       }
       if (deleteFamilyBloomFilterWriter != null) {
-        LOG.info("Delete Family Bloom filter type for " + path + ": "
+        if (LOG.isTraceEnabled()) LOG.trace("Delete Family Bloom filter type for " + path + ": "
             + deleteFamilyBloomFilterWriter.getClass().getSimpleName());
       }
       this.checksumType = checksumType;
@@ -1045,9 +1042,11 @@ public class StoreFile {
 
       // Log final Bloom filter statistics. This needs to be done after close()
       // because compound Bloom filters might be finalized as part of closing.
-      StoreFile.LOG.info((hasGeneralBloom ? "" : "NO ") + "General Bloom and "
-          + (hasDeleteFamilyBloom ? "" : "NO ") + "DeleteFamily"
-          + " was added to HFile (" + getPath() + ") ");
+      if (StoreFile.LOG.isTraceEnabled()) {
+        StoreFile.LOG.trace((hasGeneralBloom ? "" : "NO ") + "General Bloom and " +
+          (hasDeleteFamilyBloom ? "" : "NO ") + "DeleteFamily" + " was added to HFile " +
+          getPath());
+      }
 
     }
 
@@ -1424,9 +1423,11 @@ public class StoreFile {
             } else {
               generalBloomFilter = BloomFilterFactory.createFromMeta(bloomMeta,
                   reader);
-              LOG.info("Loaded " + bloomFilterType.toString() + " ("
+              if (LOG.isTraceEnabled()) {
+                LOG.trace("Loaded " + bloomFilterType.toString() + " "
                   + generalBloomFilter.getClass().getSimpleName()
-                  + ") metadata for " + reader.getName());
+                  + " metadata for " + reader.getName());
+              }
             }
           }
         } else if (blockType == BlockType.DELETE_FAMILY_BLOOM_META) {

@@ -1507,10 +1507,10 @@ public class HRegion implements HeapSize { // , Writable{
     } finally {
       this.updatesLock.writeLock().unlock();
     }
-    String s = "Finished snapshotting " + this +
-      ", commencing wait for mvcc, flushsize=" + flushsize;
+    String s = "Finished memstore snapshotting " + this +
+      ", syncing WAL and waiting on mvcc, flushsize=" + flushsize;
     status.setStatus(s);
-    LOG.debug(s);
+    if (LOG.isTraceEnabled()) LOG.trace(s);
 
     // sync unflushed WAL changes when deferred log sync is enabled
     // see HBASE-8208 for details
@@ -1525,8 +1525,9 @@ public class HRegion implements HeapSize { // , Writable{
     // were removed via a rollbackMemstore could be written to Hfiles.
     mvcc.waitForRead(w);
 
-    status.setStatus("Flushing stores");
-    LOG.debug("Finished snapshotting, commencing flushing stores");
+    s = "Flushing stores of " + this;
+    status.setStatus(s);
+    if (LOG.isTraceEnabled()) LOG.trace(s);
 
     // Any failure from here on out will be catastrophic requiring server
     // restart so hlog content can be replayed and put back into the memstore.
