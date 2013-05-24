@@ -21,6 +21,9 @@ package org.apache.hadoop.hbase.util;
 import java.io.PrintWriter;
 import java.lang.Thread.UncaughtExceptionHandler;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.RejectedExecutionHandler;
+import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
@@ -180,8 +183,42 @@ public class Threads {
     boundedCachedThreadPool.allowCoreThreadTimeOut(true);
     return boundedCachedThreadPool;
   }
-  
-  
+
+  /**
+   * Creates a ThreadPoolExecutor which has a bound on the number of tasks that can be
+   * submitted to it, determined by the blockingLimit parameter. Excess tasks
+   * submitted will block on the calling thread till space frees up.
+   *
+   * @param blockingLimit max number of tasks that can be submitted
+   * @param timeout time value after which unused threads are killed
+   * @param unit time unit for killing unused threads
+   * @param threadFactory thread factory to use to spawn threads
+   * @return the ThreadPoolExecutor
+   */
+  public static ThreadPoolExecutor getBlockingThreadPool(
+      int blockingLimit, long timeout, TimeUnit unit,
+      ThreadFactory threadFactory) {
+    ThreadPoolExecutor blockingThreadPool =
+      new ThreadPoolExecutor(
+        1, blockingLimit, timeout, TimeUnit.SECONDS,
+        new SynchronousQueue<Runnable>(),
+        threadFactory,
+        new RejectedExecutionHandler() {
+          @Override
+          public void rejectedExecution(Runnable r, ThreadPoolExecutor executor) {
+            try {
+              // The submitting thread will block until the thread pool frees up.
+              executor.getQueue().put(r);
+            } catch (InterruptedException e) {
+              throw new RejectedExecutionException(
+                  "Failed to requeue the rejected request because of ", e);
+            }
+          }
+        });
+    blockingThreadPool.allowCoreThreadTimeOut(true);
+    return blockingThreadPool;
+  }
+
   /**
    * Returns a {@link java.util.concurrent.ThreadFactory} that names each created thread uniquely,
    * with a common prefix.

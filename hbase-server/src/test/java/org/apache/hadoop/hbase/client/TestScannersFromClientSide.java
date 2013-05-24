@@ -17,31 +17,41 @@
 package org.apache.hadoop.hbase.client;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
+import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTestConst;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.MediumTests;
+import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.filter.ColumnPrefixFilter;
 import org.apache.hadoop.hbase.filter.ColumnRangeFilter;
+import org.apache.hadoop.hbase.regionserver.RegionScannerHolder;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.After;
+import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.junit.AfterClass;
-import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
+import org.junit.runners.Parameterized.Parameters;
 
 /**
  * A client-side test, mostly testing scanners with various parameters.
  */
 @Category(MediumTests.class)
+@RunWith(Parameterized.class)
 public class TestScannersFromClientSide {
   private static final Log LOG = LogFactory.getLog(TestScannersFromClientSide.class);
 
@@ -50,6 +60,37 @@ public class TestScannersFromClientSide {
   private static byte [] FAMILY = Bytes.toBytes("testFamily");
   private static byte [] QUALIFIER = Bytes.toBytes("testQualifier");
   private static byte [] VALUE = Bytes.toBytes("testValue");
+
+  private final boolean prefetching;
+  private long maxSize;
+
+  @Parameters
+  public static final Collection<Object[]> parameters() {
+    List<Object[]> prefetchings = new ArrayList<Object[]>();
+    prefetchings.add(new Object[] {Long.valueOf(-1)});
+    prefetchings.add(new Object[] {Long.valueOf(0)});
+    prefetchings.add(new Object[] {Long.valueOf(1)});
+    prefetchings.add(new Object[] {Long.valueOf(1024)});
+    return prefetchings;
+  }
+
+  public TestScannersFromClientSide(Long maxPrefetchedResultSize) {
+    this.maxSize = maxPrefetchedResultSize.longValue();
+    if (this.maxSize < 0) {
+      this.prefetching = false;
+    } else {
+      this.prefetching = true;
+      if (this.maxSize == 0) {
+        this.maxSize = RegionScannerHolder.MAX_PREFETCHED_RESULT_SIZE_DEFAULT;
+      } else {
+        MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
+        for (JVMClusterUtil.RegionServerThread rst: cluster.getLiveRegionServerThreads()) {
+          Configuration conf = rst.getRegionServer().getConfiguration();
+          conf.setLong(RegionScannerHolder.MAX_PREFETCHED_RESULT_SIZE_KEY, maxSize);
+        }
+      }
+    }
+  }
 
   /**
    * @throws java.lang.Exception
@@ -65,22 +106,9 @@ public class TestScannersFromClientSide {
   @AfterClass
   public static void tearDownAfterClass() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
-  }
-
-  /**
-   * @throws java.lang.Exception
-   */
-  @Before
-  public void setUp() throws Exception {
-    // Nothing to do.
-  }
-
-  /**
-   * @throws java.lang.Exception
-   */
-  @After
-  public void tearDown() throws Exception {
-    // Nothing to do.
+    long remainingPrefetchedSize = RegionScannerHolder.getPrefetchedResultSize();
+    assertEquals("All prefetched results should be gone",
+      0, remainingPrefetchedSize);
   }
 
   /**
@@ -89,8 +117,23 @@ public class TestScannersFromClientSide {
    * @throws Exception
    */
   @Test
+  public void testScanBatchWithDefaultCaching() throws Exception {
+    batchedScanWithCachingSpecified(-1);  // Using default caching which is 100
+  }
+
+    /**
+     * Test from client side for batch of scan
+     *
+     * @throws Exception
+     */
+    @Test
   public void testScanBatch() throws Exception {
-    byte [] TABLE = Bytes.toBytes("testScanBatch");
+      batchedScanWithCachingSpecified(1);
+  }
+
+  private void batchedScanWithCachingSpecified(int caching) throws Exception {
+    byte [] TABLE = Bytes.toBytes(
+      "testScanBatch-" + prefetching + "_" + maxSize + "_" + caching);
     byte [][] QUALIFIERS = HTestConst.makeNAscii(QUALIFIER, 8);
 
     HTable ht = TEST_UTIL.createTable(TABLE, FAMILY);
@@ -99,7 +142,7 @@ public class TestScannersFromClientSide {
     Scan scan;
     Delete delete;
     Result result;
-    ResultScanner scanner;
+    ClientScanner scanner;
     boolean toLog = true;
     List<KeyValue> kvListExp;
 
@@ -124,8 +167,11 @@ public class TestScannersFromClientSide {
 
     // without batch
     scan = new Scan(ROW);
+    scan.setCaching(caching);
     scan.setMaxVersions();
-    scanner = ht.getScanner(scan);
+    scan.setPrefetching(prefetching);
+    scanner = (ClientScanner)ht.getScanner(scan);
+    verifyPrefetching(scanner);
 
     // c4:4, c5:5, c6:6, c7:7
     kvListExp = new ArrayList<KeyValue>();
@@ -135,12 +181,16 @@ public class TestScannersFromClientSide {
     kvListExp.add(new KeyValue(ROW, FAMILY, QUALIFIERS[7], 7, VALUE));
     result = scanner.next();
     verifyResult(result, kvListExp, toLog, "Testing first batch of scan");
+    verifyPrefetching(scanner);
 
     // with batch
     scan = new Scan(ROW);
+    scan.setCaching(caching);
     scan.setMaxVersions();
     scan.setBatch(2);
-    scanner = ht.getScanner(scan);
+    scan.setPrefetching(prefetching);
+    scanner = (ClientScanner)ht.getScanner(scan);
+    verifyPrefetching(scanner);
 
     // First batch: c4:4, c5:5
     kvListExp = new ArrayList<KeyValue>();
@@ -148,6 +198,7 @@ public class TestScannersFromClientSide {
     kvListExp.add(new KeyValue(ROW, FAMILY, QUALIFIERS[5], 5, VALUE));
     result = scanner.next();
     verifyResult(result, kvListExp, toLog, "Testing first batch of scan");
+    verifyPrefetching(scanner);
 
     // Second batch: c6:6, c7:7
     kvListExp = new ArrayList<KeyValue>();
@@ -155,7 +206,7 @@ public class TestScannersFromClientSide {
     kvListExp.add(new KeyValue(ROW, FAMILY, QUALIFIERS[7], 7, VALUE));
     result = scanner.next();
     verifyResult(result, kvListExp, toLog, "Testing second batch of scan");
-
+    verifyPrefetching(scanner);
   }
 
   /**
@@ -165,7 +216,7 @@ public class TestScannersFromClientSide {
    */
   @Test
   public void testGetMaxResults() throws Exception {
-    byte [] TABLE = Bytes.toBytes("testGetMaxResults");
+    byte [] TABLE = Bytes.toBytes("testGetMaxResults-" + prefetching + "_" + maxSize);
     byte [][] FAMILIES = HTestConst.makeNAscii(FAMILY, 3);
     byte [][] QUALIFIERS = HTestConst.makeNAscii(QUALIFIER, 20);
 
@@ -285,7 +336,7 @@ public class TestScannersFromClientSide {
    */
   @Test
   public void testScanMaxResults() throws Exception {
-    byte [] TABLE = Bytes.toBytes("testScanLimit");
+    byte [] TABLE = Bytes.toBytes("testScanLimit-" + prefetching + "_" + maxSize);
     byte [][] ROWS = HTestConst.makeNAscii(ROW, 2);
     byte [][] FAMILIES = HTestConst.makeNAscii(FAMILY, 3);
     byte [][] QUALIFIERS = HTestConst.makeNAscii(QUALIFIER, 10);
@@ -315,17 +366,19 @@ public class TestScannersFromClientSide {
     }
 
     scan = new Scan();
+    scan.setCaching(1);
+    scan.setPrefetching(prefetching);
     scan.setMaxResultsPerColumnFamily(4);
-    ResultScanner scanner = ht.getScanner(scan);
+    ClientScanner scanner = (ClientScanner)ht.getScanner(scan);
     kvListScan = new ArrayList<KeyValue>();
     while ((result = scanner.next()) != null) {
+      verifyPrefetching(scanner);
       for (KeyValue kv : result.list()) {
         kvListScan.add(kv);
       }
     }
     result = new Result(kvListScan);
     verifyResult(result, kvListExp, toLog, "Testing scan with maxResults");
-
   }
 
   /**
@@ -335,7 +388,7 @@ public class TestScannersFromClientSide {
    */
   @Test
   public void testGetRowOffset() throws Exception {
-    byte [] TABLE = Bytes.toBytes("testGetRowOffset");
+    byte [] TABLE = Bytes.toBytes("testGetRowOffset-" + prefetching + "_" + maxSize);
     byte [][] FAMILIES = HTestConst.makeNAscii(FAMILY, 3);
     byte [][] QUALIFIERS = HTestConst.makeNAscii(QUALIFIER, 20);
 
@@ -421,7 +474,47 @@ public class TestScannersFromClientSide {
     kvListExp.add(new KeyValue(ROW, FAMILIES[2], QUALIFIERS[5], 1, VALUE));
     verifyResult(result, kvListExp, toLog,
        "Testing offset + multiple CFs + maxResults");
+  }
 
+  /**
+   * For testing only, find a region scanner holder for a scan.
+   */
+  RegionScannerHolder findRegionScannerHolder(ClientScanner scanner) {
+    long scannerId = scanner.currentScannerId();
+    if (scannerId == -1L) return null;
+
+    HRegionInfo expectedRegion = scanner.currentRegionInfo();
+    MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
+    for (JVMClusterUtil.RegionServerThread rst: cluster.getLiveRegionServerThreads()) {
+      RegionScannerHolder rsh = rst.getRegionServer().getScannerHolder(scannerId);
+      if (rsh != null && rsh.getRegionInfo().equals(expectedRegion)) {
+        return rsh;
+      }
+    }
+    return null;
+  }
+
+  void verifyPrefetching(ClientScanner scanner) throws IOException {
+    long scannerId = scanner.currentScannerId();
+    if (scannerId == -1L) return; // scanner is already closed
+    RegionScannerHolder rsh = findRegionScannerHolder(scanner);
+    assertNotNull("We should be able to find the scanner", rsh);
+    boolean isPrefetchSubmitted = rsh.isPrefetchSubmitted();
+    if (prefetching && (RegionScannerHolder.getPrefetchedResultSize() < this.maxSize)) {
+      assertTrue("Prefetching should be submitted or no more result",
+        isPrefetchSubmitted || scanner.next() == null);
+    } else if (isPrefetchSubmitted) {
+      // Prefetch submitted, it must be because prefetching is enabled,
+      // and there was still room before it's scheduled
+      long sizeBefore = RegionScannerHolder.getPrefetchedResultSize()
+        - rsh.currentPrefetchedResultSize();
+      assertTrue("There should have room before prefetching is submitted",
+        prefetching && sizeBefore < this.maxSize);
+    }
+    if (isPrefetchSubmitted && rsh.waitForPrefetchingDone()) {
+      assertTrue("Prefetched result size should not be 0",
+        rsh.currentPrefetchedResultSize() > 0);
+    }
   }
 
   static void verifyResult(Result result, List<KeyValue> expKvList, boolean toLog,
@@ -449,6 +542,4 @@ public class TestScannersFromClientSide {
 
     assertEquals(expKvList.size(), result.size());
   }
-
-
 }
