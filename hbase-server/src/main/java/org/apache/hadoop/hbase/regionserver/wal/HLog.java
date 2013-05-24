@@ -264,17 +264,25 @@ public interface HLog {
   public void closeAndDelete() throws IOException;
 
   /**
-   * Only used in tests.
-   *
+   * Same as {@link #appendNoSync(HRegionInfo, byte[], WALEdit, UUID, long, HTableDescriptor)},
+   * except it causes a sync on the log
+   */
+  public void append(HRegionInfo info, byte[] tableName, WALEdit edits,
+      final long now, HTableDescriptor htd) throws IOException;
+
+  /**
+   * Append a set of edits to the log. Log edits are keyed by (encoded)
+   * regionName, rowname, and log-sequence-id. The HLog is flushed after this
+   * transaction is written to the log.
    * @param info
    * @param tableName
    * @param edits
    * @param now
    * @param htd
-   * @throws IOException
+   * @param isInMemstore Whether the record is in memstore. False for system records.
    */
   public void append(HRegionInfo info, byte[] tableName, WALEdit edits,
-      final long now, HTableDescriptor htd) throws IOException;
+      final long now, HTableDescriptor htd, boolean isInMemstore) throws IOException;
 
   /**
    * Append a set of edits to the log. Log edits are keyed by (encoded)
@@ -287,28 +295,11 @@ public interface HLog {
    * @param clusterId
    *          The originating clusterId for this edit (for replication)
    * @param now
-   * @return txid of this transaction
-   * @throws IOException
-   */
-  public long appendNoSync(HRegionInfo info, byte[] tableName, WALEdit edits,
-      UUID clusterId, final long now, HTableDescriptor htd) throws IOException;
-
-  /**
-   * Append a set of edits to the log. Log edits are keyed by (encoded)
-   * regionName, rowname, and log-sequence-id. The HLog is flushed after this
-   * transaction is written to the log.
-   *
-   * @param info
-   * @param tableName
-   * @param edits
-   * @param clusterId
-   *          The originating clusterId for this edit (for replication)
-   * @param now
    * @param htd
    * @return txid of this transaction
    * @throws IOException
    */
-  public long append(HRegionInfo info, byte[] tableName, WALEdit edits,
+  public long appendNoSync(HRegionInfo info, byte[] tableName, WALEdit edits,
       UUID clusterId, final long now, HTableDescriptor htd) throws IOException;
 
   public void hsync() throws IOException;
