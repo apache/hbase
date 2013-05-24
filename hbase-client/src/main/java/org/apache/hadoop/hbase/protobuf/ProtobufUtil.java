@@ -709,6 +709,9 @@ public final class ProtobufUtil {
     if (scan.getBatch() > 0) {
       scanBuilder.setBatchSize(scan.getBatch());
     }
+    if (scan.getCaching() > 0) {
+      scanBuilder.setCachingCount(scan.getCaching());
+    }
     if (scan.getMaxResultSize() > 0) {
       scanBuilder.setMaxResultSize(scan.getMaxResultSize());
     }
@@ -716,6 +719,7 @@ public final class ProtobufUtil {
     if (loadColumnFamiliesOnDemand != null) {
       scanBuilder.setLoadColumnFamiliesOnDemand(loadColumnFamiliesOnDemand.booleanValue());
     }
+    scanBuilder.setPrefetching(scan.getPrefetching());
     scanBuilder.setMaxVersions(scan.getMaxVersions());
     TimeRange timeRange = scan.getTimeRange();
     if (!timeRange.isAllTime()) {
@@ -793,6 +797,9 @@ public final class ProtobufUtil {
     if (proto.hasMaxVersions()) {
       scan.setMaxVersions(proto.getMaxVersions());
     }
+    if (proto.hasPrefetching()) {
+      scan.setPrefetching(proto.getPrefetching());
+    }
     if (proto.hasStoreLimit()) {
       scan.setMaxResultsPerColumnFamily(proto.getStoreLimit());
     }
@@ -820,6 +827,9 @@ public final class ProtobufUtil {
     }
     if (proto.hasBatchSize()) {
       scan.setBatch(proto.getBatchSize());
+    }
+    if (proto.hasCachingCount()) {
+      scan.setCaching(proto.getCachingCount());
     }
     if (proto.hasMaxResultSize()) {
       scan.setMaxResultSize(proto.getMaxResultSize());

@@ -10622,6 +10622,14 @@ public final class ClientProtos {
     // optional bool loadColumnFamiliesOnDemand = 13;
     boolean hasLoadColumnFamiliesOnDemand();
     boolean getLoadColumnFamiliesOnDemand();
+    
+    // optional uint32 cachingCount = 14;
+    boolean hasCachingCount();
+    int getCachingCount();
+    
+    // optional bool prefetching = 15;
+    boolean hasPrefetching();
+    boolean getPrefetching();
   }
   public static final class Scan extends
       com.google.protobuf.GeneratedMessage
@@ -10810,6 +10818,26 @@ public final class ClientProtos {
       return loadColumnFamiliesOnDemand_;
     }
     
+    // optional uint32 cachingCount = 14;
+    public static final int CACHINGCOUNT_FIELD_NUMBER = 14;
+    private int cachingCount_;
+    public boolean hasCachingCount() {
+      return ((bitField0_ & 0x00000800) == 0x00000800);
+    }
+    public int getCachingCount() {
+      return cachingCount_;
+    }
+    
+    // optional bool prefetching = 15;
+    public static final int PREFETCHING_FIELD_NUMBER = 15;
+    private boolean prefetching_;
+    public boolean hasPrefetching() {
+      return ((bitField0_ & 0x00001000) == 0x00001000);
+    }
+    public boolean getPrefetching() {
+      return prefetching_;
+    }
+    
     private void initFields() {
       column_ = java.util.Collections.emptyList();
       attribute_ = java.util.Collections.emptyList();
@@ -10824,6 +10852,8 @@ public final class ClientProtos {
       storeLimit_ = 0;
       storeOffset_ = 0;
       loadColumnFamiliesOnDemand_ = false;
+      cachingCount_ = 0;
+      prefetching_ = false;
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
@@ -10894,6 +10924,12 @@ public final class ClientProtos {
       if (((bitField0_ & 0x00000400) == 0x00000400)) {
         output.writeBool(13, loadColumnFamiliesOnDemand_);
       }
+      if (((bitField0_ & 0x00000800) == 0x00000800)) {
+        output.writeUInt32(14, cachingCount_);
+      }
+      if (((bitField0_ & 0x00001000) == 0x00001000)) {
+        output.writeBool(15, prefetching_);
+      }
       getUnknownFields().writeTo(output);
     }
     
@@ -10954,6 +10990,14 @@ public final class ClientProtos {
       if (((bitField0_ & 0x00000400) == 0x00000400)) {
         size += com.google.protobuf.CodedOutputStream
           .computeBoolSize(13, loadColumnFamiliesOnDemand_);
+      }
+      if (((bitField0_ & 0x00000800) == 0x00000800)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeUInt32Size(14, cachingCount_);
+      }
+      if (((bitField0_ & 0x00001000) == 0x00001000)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeBoolSize(15, prefetching_);
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
@@ -11037,6 +11081,16 @@ public final class ClientProtos {
         result = result && (getLoadColumnFamiliesOnDemand()
             == other.getLoadColumnFamiliesOnDemand());
       }
+      result = result && (hasCachingCount() == other.hasCachingCount());
+      if (hasCachingCount()) {
+        result = result && (getCachingCount()
+            == other.getCachingCount());
+      }
+      result = result && (hasPrefetching() == other.hasPrefetching());
+      if (hasPrefetching()) {
+        result = result && (getPrefetching()
+            == other.getPrefetching());
+      }
       result = result &&
           getUnknownFields().equals(other.getUnknownFields());
       return result;
@@ -11097,6 +11151,14 @@ public final class ClientProtos {
       if (hasLoadColumnFamiliesOnDemand()) {
         hash = (37 * hash) + LOADCOLUMNFAMILIESONDEMAND_FIELD_NUMBER;
         hash = (53 * hash) + hashBoolean(getLoadColumnFamiliesOnDemand());
+      }
+      if (hasCachingCount()) {
+        hash = (37 * hash) + CACHINGCOUNT_FIELD_NUMBER;
+        hash = (53 * hash) + getCachingCount();
+      }
+      if (hasPrefetching()) {
+        hash = (37 * hash) + PREFETCHING_FIELD_NUMBER;
+        hash = (53 * hash) + hashBoolean(getPrefetching());
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
       return hash;
@@ -11260,6 +11322,10 @@ public final class ClientProtos {
         bitField0_ = (bitField0_ & ~0x00000800);
         loadColumnFamiliesOnDemand_ = false;
         bitField0_ = (bitField0_ & ~0x00001000);
+        cachingCount_ = 0;
+        bitField0_ = (bitField0_ & ~0x00002000);
+        prefetching_ = false;
+        bitField0_ = (bitField0_ & ~0x00004000);
         return this;
       }
       
@@ -11368,6 +11434,14 @@ public final class ClientProtos {
           to_bitField0_ |= 0x00000400;
         }
         result.loadColumnFamiliesOnDemand_ = loadColumnFamiliesOnDemand_;
+        if (((from_bitField0_ & 0x00002000) == 0x00002000)) {
+          to_bitField0_ |= 0x00000800;
+        }
+        result.cachingCount_ = cachingCount_;
+        if (((from_bitField0_ & 0x00004000) == 0x00004000)) {
+          to_bitField0_ |= 0x00001000;
+        }
+        result.prefetching_ = prefetching_;
         result.bitField0_ = to_bitField0_;
         onBuilt();
         return result;
@@ -11468,6 +11542,12 @@ public final class ClientProtos {
         }
         if (other.hasLoadColumnFamiliesOnDemand()) {
           setLoadColumnFamiliesOnDemand(other.getLoadColumnFamiliesOnDemand());
+        }
+        if (other.hasCachingCount()) {
+          setCachingCount(other.getCachingCount());
+        }
+        if (other.hasPrefetching()) {
+          setPrefetching(other.getPrefetching());
         }
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
@@ -11591,6 +11671,16 @@ public final class ClientProtos {
             case 104: {
               bitField0_ |= 0x00001000;
               loadColumnFamiliesOnDemand_ = input.readBool();
+              break;
+            }
+            case 112: {
+              bitField0_ |= 0x00002000;
+              cachingCount_ = input.readUInt32();
+              break;
+            }
+            case 120: {
+              bitField0_ |= 0x00004000;
+              prefetching_ = input.readBool();
               break;
             }
           }
@@ -12342,6 +12432,48 @@ public final class ClientProtos {
       public Builder clearLoadColumnFamiliesOnDemand() {
         bitField0_ = (bitField0_ & ~0x00001000);
         loadColumnFamiliesOnDemand_ = false;
+        onChanged();
+        return this;
+      }
+      
+      // optional uint32 cachingCount = 14;
+      private int cachingCount_ ;
+      public boolean hasCachingCount() {
+        return ((bitField0_ & 0x00002000) == 0x00002000);
+      }
+      public int getCachingCount() {
+        return cachingCount_;
+      }
+      public Builder setCachingCount(int value) {
+        bitField0_ |= 0x00002000;
+        cachingCount_ = value;
+        onChanged();
+        return this;
+      }
+      public Builder clearCachingCount() {
+        bitField0_ = (bitField0_ & ~0x00002000);
+        cachingCount_ = 0;
+        onChanged();
+        return this;
+      }
+      
+      // optional bool prefetching = 15;
+      private boolean prefetching_ ;
+      public boolean hasPrefetching() {
+        return ((bitField0_ & 0x00004000) == 0x00004000);
+      }
+      public boolean getPrefetching() {
+        return prefetching_;
+      }
+      public Builder setPrefetching(boolean value) {
+        bitField0_ |= 0x00004000;
+        prefetching_ = value;
+        onChanged();
+        return this;
+      }
+      public Builder clearPrefetching() {
+        bitField0_ = (bitField0_ & ~0x00004000);
+        prefetching_ = false;
         onChanged();
         return this;
       }
@@ -21467,7 +21599,7 @@ public final class ClientProtos {
       "ation\030\002 \002(\0132\016.MutationProto\022\035\n\tcondition" +
       "\030\003 \001(\0132\n.Condition\"<\n\016MutateResponse\022\027\n\006" +
       "result\030\001 \001(\0132\007.Result\022\021\n\tprocessed\030\002 \001(\010" +
-      "\"\307\002\n\004Scan\022\027\n\006column\030\001 \003(\0132\007.Column\022!\n\tat" +
+      "\"\362\002\n\004Scan\022\027\n\006column\030\001 \003(\0132\007.Column\022!\n\tat" +
       "tribute\030\002 \003(\0132\016.NameBytesPair\022\020\n\010startRo" +
       "w\030\003 \001(\014\022\017\n\007stopRow\030\004 \001(\014\022\027\n\006filter\030\005 \001(\013" +
       "2\007.Filter\022\035\n\ttimeRange\030\006 \001(\0132\n.TimeRange" +
@@ -21475,45 +21607,46 @@ public final class ClientProtos {
       "\010 \001(\010:\004true\022\021\n\tbatchSize\030\t \001(\r\022\025\n\rmaxRes" +
       "ultSize\030\n \001(\004\022\022\n\nstoreLimit\030\013 \001(\r\022\023\n\013sto" +
       "reOffset\030\014 \001(\r\022\"\n\032loadColumnFamiliesOnDe" +
-      "mand\030\r \001(\010\"\230\001\n\013ScanRequest\022 \n\006region\030\001 \001" +
-      "(\0132\020.RegionSpecifier\022\023\n\004scan\030\002 \001(\0132\005.Sca" +
-      "n\022\021\n\tscannerId\030\003 \001(\004\022\024\n\014numberOfRows\030\004 \001" +
-      "(\r\022\024\n\014closeScanner\030\005 \001(\010\022\023\n\013nextCallSeq\030" +
-      "\006 \001(\004\"l\n\014ScanResponse\022\'\n\016resultCellMeta\030" +
-      "\001 \001(\0132\017.ResultCellMeta\022\021\n\tscannerId\030\002 \001(" +
-      "\004\022\023\n\013moreResults\030\003 \001(\010\022\013\n\003ttl\030\004 \001(\r\"%\n\016R",
-      "esultCellMeta\022\023\n\013cellsLength\030\001 \003(\r\"\260\001\n\024B" +
-      "ulkLoadHFileRequest\022 \n\006region\030\001 \002(\0132\020.Re" +
-      "gionSpecifier\0224\n\nfamilyPath\030\002 \003(\0132 .Bulk" +
-      "LoadHFileRequest.FamilyPath\022\024\n\014assignSeq" +
-      "Num\030\003 \001(\010\032*\n\nFamilyPath\022\016\n\006family\030\001 \002(\014\022" +
-      "\014\n\004path\030\002 \002(\t\"\'\n\025BulkLoadHFileResponse\022\016" +
-      "\n\006loaded\030\001 \002(\010\"_\n\026CoprocessorServiceCall" +
-      "\022\013\n\003row\030\001 \002(\014\022\023\n\013serviceName\030\002 \002(\t\022\022\n\nme" +
-      "thodName\030\003 \002(\t\022\017\n\007request\030\004 \002(\014\"d\n\031Copro" +
-      "cessorServiceRequest\022 \n\006region\030\001 \002(\0132\020.R",
-      "egionSpecifier\022%\n\004call\030\002 \002(\0132\027.Coprocess" +
-      "orServiceCall\"]\n\032CoprocessorServiceRespo" +
-      "nse\022 \n\006region\030\001 \002(\0132\020.RegionSpecifier\022\035\n" +
-      "\005value\030\002 \002(\0132\016.NameBytesPair\"B\n\013MultiAct" +
-      "ion\022 \n\010mutation\030\001 \001(\0132\016.MutationProto\022\021\n" +
-      "\003get\030\002 \001(\0132\004.Get\"I\n\014ActionResult\022\026\n\005valu" +
-      "e\030\001 \001(\0132\007.Result\022!\n\texception\030\002 \001(\0132\016.Na" +
-      "meBytesPair\"^\n\014MultiRequest\022 \n\006region\030\001 " +
-      "\002(\0132\020.RegionSpecifier\022\034\n\006action\030\002 \003(\0132\014." +
-      "MultiAction\022\016\n\006atomic\030\003 \001(\010\".\n\rMultiResp",
-      "onse\022\035\n\006result\030\001 \003(\0132\r.ActionResult2\342\002\n\r" +
-      "ClientService\022 \n\003get\022\013.GetRequest\032\014.GetR" +
-      "esponse\022/\n\010multiGet\022\020.MultiGetRequest\032\021." +
-      "MultiGetResponse\022)\n\006mutate\022\016.MutateReque" +
-      "st\032\017.MutateResponse\022#\n\004scan\022\014.ScanReques" +
-      "t\032\r.ScanResponse\022>\n\rbulkLoadHFile\022\025.Bulk" +
-      "LoadHFileRequest\032\026.BulkLoadHFileResponse" +
-      "\022F\n\013execService\022\032.CoprocessorServiceRequ" +
-      "est\032\033.CoprocessorServiceResponse\022&\n\005mult" +
-      "i\022\r.MultiRequest\032\016.MultiResponseBB\n*org.",
-      "apache.hadoop.hbase.protobuf.generatedB\014" +
-      "ClientProtosH\001\210\001\001\240\001\001"
+      "mand\030\r \001(\010\022\024\n\014cachingCount\030\016 \001(\r\022\023\n\013pref" +
+      "etching\030\017 \001(\010\"\230\001\n\013ScanRequest\022 \n\006region\030" +
+      "\001 \001(\0132\020.RegionSpecifier\022\023\n\004scan\030\002 \001(\0132\005." +
+      "Scan\022\021\n\tscannerId\030\003 \001(\004\022\024\n\014numberOfRows\030" +
+      "\004 \001(\r\022\024\n\014closeScanner\030\005 \001(\010\022\023\n\013nextCallS" +
+      "eq\030\006 \001(\004\"l\n\014ScanResponse\022\'\n\016resultCellMe" +
+      "ta\030\001 \001(\0132\017.ResultCellMeta\022\021\n\tscannerId\030\002",
+      " \001(\004\022\023\n\013moreResults\030\003 \001(\010\022\013\n\003ttl\030\004 \001(\r\"%" +
+      "\n\016ResultCellMeta\022\023\n\013cellsLength\030\001 \003(\r\"\260\001" +
+      "\n\024BulkLoadHFileRequest\022 \n\006region\030\001 \002(\0132\020" +
+      ".RegionSpecifier\0224\n\nfamilyPath\030\002 \003(\0132 .B" +
+      "ulkLoadHFileRequest.FamilyPath\022\024\n\014assign" +
+      "SeqNum\030\003 \001(\010\032*\n\nFamilyPath\022\016\n\006family\030\001 \002" +
+      "(\014\022\014\n\004path\030\002 \002(\t\"\'\n\025BulkLoadHFileRespons" +
+      "e\022\016\n\006loaded\030\001 \002(\010\"_\n\026CoprocessorServiceC" +
+      "all\022\013\n\003row\030\001 \002(\014\022\023\n\013serviceName\030\002 \002(\t\022\022\n" +
+      "\nmethodName\030\003 \002(\t\022\017\n\007request\030\004 \002(\014\"d\n\031Co",
+      "processorServiceRequest\022 \n\006region\030\001 \002(\0132" +
+      "\020.RegionSpecifier\022%\n\004call\030\002 \002(\0132\027.Coproc" +
+      "essorServiceCall\"]\n\032CoprocessorServiceRe" +
+      "sponse\022 \n\006region\030\001 \002(\0132\020.RegionSpecifier" +
+      "\022\035\n\005value\030\002 \002(\0132\016.NameBytesPair\"B\n\013Multi" +
+      "Action\022 \n\010mutation\030\001 \001(\0132\016.MutationProto" +
+      "\022\021\n\003get\030\002 \001(\0132\004.Get\"I\n\014ActionResult\022\026\n\005v" +
+      "alue\030\001 \001(\0132\007.Result\022!\n\texception\030\002 \001(\0132\016" +
+      ".NameBytesPair\"^\n\014MultiRequest\022 \n\006region" +
+      "\030\001 \002(\0132\020.RegionSpecifier\022\034\n\006action\030\002 \003(\013",
+      "2\014.MultiAction\022\016\n\006atomic\030\003 \001(\010\".\n\rMultiR" +
+      "esponse\022\035\n\006result\030\001 \003(\0132\r.ActionResult2\342" +
+      "\002\n\rClientService\022 \n\003get\022\013.GetRequest\032\014.G" +
+      "etResponse\022/\n\010multiGet\022\020.MultiGetRequest" +
+      "\032\021.MultiGetResponse\022)\n\006mutate\022\016.MutateRe" +
+      "quest\032\017.MutateResponse\022#\n\004scan\022\014.ScanReq" +
+      "uest\032\r.ScanResponse\022>\n\rbulkLoadHFile\022\025.B" +
+      "ulkLoadHFileRequest\032\026.BulkLoadHFileRespo" +
+      "nse\022F\n\013execService\022\032.CoprocessorServiceR" +
+      "equest\032\033.CoprocessorServiceResponse\022&\n\005m",
+      "ulti\022\r.MultiRequest\032\016.MultiResponseBB\n*o" +
+      "rg.apache.hadoop.hbase.protobuf.generate" +
+      "dB\014ClientProtosH\001\210\001\001\240\001\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -21629,7 +21762,7 @@ public final class ClientProtos {
           internal_static_Scan_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_Scan_descriptor,
-              new java.lang.String[] { "Column", "Attribute", "StartRow", "StopRow", "Filter", "TimeRange", "MaxVersions", "CacheBlocks", "BatchSize", "MaxResultSize", "StoreLimit", "StoreOffset", "LoadColumnFamiliesOnDemand", },
+              new java.lang.String[] { "Column", "Attribute", "StartRow", "StopRow", "Filter", "TimeRange", "MaxVersions", "CacheBlocks", "BatchSize", "MaxResultSize", "StoreLimit", "StoreOffset", "LoadColumnFamiliesOnDemand", "CachingCount", "Prefetching", },
               org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Scan.class,
               org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Scan.Builder.class);
           internal_static_ScanRequest_descriptor =

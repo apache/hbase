@@ -335,6 +335,7 @@ public class TestRegionServerMetrics {
     Scan s = new Scan();
     s.setBatch(1);
     s.setCaching(1);
+    s.setPrefetching(false);
     ResultScanner resultScanners = t.getScanner(s);
 
     for (int nextCount = 0; nextCount < 30; nextCount++) {

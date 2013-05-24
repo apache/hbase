@@ -233,6 +233,8 @@ message Scan {
   optional uint32 storeLimit = 11;
   optional uint32 storeOffset = 12;
   optional bool loadColumnFamiliesOnDemand = 13; /* DO NOT add defaults to loadColumnFamiliesOnDemand. */
+  optional uint32 cachingCount = 14;
+  optional bool prefetching = 15;
 }
 
 /**

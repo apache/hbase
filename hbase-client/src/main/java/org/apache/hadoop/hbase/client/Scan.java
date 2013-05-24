@@ -116,6 +116,8 @@ public class Scan extends OperationWithAttributes {
     new TreeMap<byte [], NavigableSet<byte []>>(Bytes.BYTES_COMPARATOR);
   private Boolean loadColumnFamiliesOnDemand = null;
 
+  private boolean prefetching = true;
+
   /**
    * Create a Scan operation across all rows.
    */
@@ -168,6 +170,7 @@ public class Scan extends OperationWithAttributes {
     getScan = scan.isGetScan();
     filter = scan.getFilter(); // clone?
     loadColumnFamiliesOnDemand = scan.getLoadColumnFamiliesOnDemandValue();
+    prefetching = scan.getPrefetching();
     TimeRange ctr = scan.getTimeRange();
     tr = new TimeRange(ctr.getMin(), ctr.getMax());
     Map<byte[], NavigableSet<byte[]>> fams = scan.getFamilyMap();
@@ -201,6 +204,7 @@ public class Scan extends OperationWithAttributes {
     this.storeOffset = get.getRowOffsetPerColumnFamily();
     this.tr = get.getTimeRange();
     this.familyMap = get.getFamilyMap();
+    this.prefetching = false;
     this.getScan = true;
   }
 
@@ -364,6 +368,21 @@ public class Scan extends OperationWithAttributes {
   }
 
   /**
+   * Set if pre-fetching is enabled. If enabled, the region
+   * server will try to read the next scan result ahead of time. This
+   * improves scan performance if we are doing large scans.
+   *
+   * @param enablePrefetching if pre-fetching is enabled or not
+   */
+  public void setPrefetching(boolean enablePrefetching) {
+    this.prefetching = enablePrefetching;
+  }
+
+  public boolean getPrefetching() {
+    return prefetching;
+  }
+
+/**
    * @return the maximum result size in bytes. See {@link #setMaxResultSize(long)}
    */
   public long getMaxResultSize() {
@@ -613,6 +632,7 @@ public class Scan extends OperationWithAttributes {
     map.put("maxResultSize", this.maxResultSize);
     map.put("cacheBlocks", this.cacheBlocks);
     map.put("loadColumnFamiliesOnDemand", this.loadColumnFamiliesOnDemand);
+    map.put("prefetching", this.prefetching);
     List<Long> timeRange = new ArrayList<Long>();
     timeRange.add(this.tr.getMin());
     timeRange.add(this.tr.getMax());
