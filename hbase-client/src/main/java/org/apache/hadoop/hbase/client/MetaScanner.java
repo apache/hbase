@@ -127,6 +127,7 @@ public class MetaScanner {
     HTable metaTable = new HTable(configuration, HConstants.META_TABLE_NAME);
     // Calculate startrow for scan.
     byte[] startRow;
+    ResultScanner scanner = null;
     try {
       if (row != null) {
         // Scan starting at a particular row in a particular table
@@ -160,7 +161,7 @@ public class MetaScanner {
           Bytes.toStringBinary(startRow) + " for max=" + rowUpperLimit + " with caching=" + rows);
       }
       // Run the scan
-      ResultScanner scanner = metaTable.getScanner(scan);
+      scanner = metaTable.getScanner(scan);
       Result result = null;
       int processedRows = 0;
       while ((result = scanner.next()) != null) {
@@ -171,8 +172,27 @@ public class MetaScanner {
         if (processedRows >= rowUpperLimit) break;
       }
     } finally {
-      if (visitor != null) visitor.close();
-      if (metaTable != null) metaTable.close();
+      if (scanner != null) {
+        try {
+          scanner.close();
+        } catch (Throwable t) {
+          LOG.debug("Got exception in closing the result scanner", t);
+        }
+      }
+      if (visitor != null) {
+        try {
+          visitor.close();
+        } catch (Throwable t) {
+          LOG.debug("Got exception in closing the meta scanner visitor", t);
+        }
+      }
+      if (metaTable != null) {
+        try {
+          metaTable.close();
+        } catch (Throwable t) {
+          LOG.debug("Got exception in closing the meta table", t);
+        }
+      }
     }
   }
 
