@@ -364,6 +364,11 @@ public class CompactSplitThread implements CompactionRequestor {
       this.region = region;
       this.compaction = compaction;
     }
+    
+    @Override
+    public String toString() {
+      return "Request = " + compaction.getRequest();
+    }
 
     @Override
     public void run() {
