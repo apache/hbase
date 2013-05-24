@@ -48,7 +48,8 @@
     <note xml:id="loopback.ip.getting.started">
         <title>Loopback IP</title>
         <para>HBase expects the loopback IP address to be 127.0.0.1.  Ubuntu and some other distributions,
-        for example, will default to 127.0.1.1 and this will cause problems for you.
+            for example, will default to 127.0.1.1 and this will cause problems for you
+            <footnote>See <link xlink:href="http://blog.devving.com/why-does-hbase-care-about-etchosts/">Why does HBase care about /etc/hosts?</link> for detail</footnote>.
         </para>
         <para><filename>/etc/hosts</filename> should look something like this:
 <programlisting>
