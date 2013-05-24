@@ -914,7 +914,7 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
     }
 
     //fsOk flag may be changed when closing regions throws exception.
-    if (!this.killed && this.fsOk) {
+    if (this.fsOk) {
       closeWAL(!abortRequested);
     }
 
