@@ -23,6 +23,7 @@ import java.util.Comparator;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.hbase.KeyValue.Type;
 import org.apache.hadoop.hbase.util.Bytes;
 
 import com.google.common.primitives.Longs;
@@ -54,6 +55,19 @@ public class CellComparator implements Comparator<Cell>, Serializable{
         a.getRowArray(), a.getRowOffset(), a.getRowLength(),
         b.getRowArray(), b.getRowOffset(), b.getRowLength());
     if (c != 0) return c;
+
+    // If the column is not specified, the "minimum" key type appears the
+    // latest in the sorted order, regardless of the timestamp. This is used
+    // for specifying the last key/value in a given row, because there is no
+    // "lexicographically last column" (it would be infinitely long). The
+    // "maximum" key type does not need this behavior.
+    if (a.getFamilyLength() == 0 && a.getTypeByte() == Type.Minimum.getCode()) {
+      // a is "bigger", i.e. it appears later in the sorted order
+      return 1;
+    }
+    if (b.getFamilyLength() == 0 && b.getTypeByte() == Type.Minimum.getCode()) {
+      return -1;
+    }
 
     //family
     c = Bytes.compareTo(
