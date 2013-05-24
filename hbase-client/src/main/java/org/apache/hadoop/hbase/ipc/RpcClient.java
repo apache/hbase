@@ -57,6 +57,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.codec.Codec;
 import org.apache.hadoop.hbase.codec.KeyValueCodec;
+import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos;
 import org.apache.hadoop.hbase.protobuf.generated.RPCProtos.CellBlockMeta;
 import org.apache.hadoop.hbase.protobuf.generated.RPCProtos.ConnectionHeader;
@@ -272,7 +273,7 @@ public class RpcClient {
     @Override
     public String toString() {
       return "callId: " + this.id + " methodName: " + this.md.getName() + " param {" +
-        (this.param != null? TextFormat.shortDebugString(this.param): "") + "}";
+        (this.param != null? ProtobufUtil.getShortTextFormat(this.param): "") + "}";
     }
 
     /** Indicate when the call is complete and the

@@ -95,6 +95,7 @@ import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.Col
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.ColumnValue.QualifierValue;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.DeleteType;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.MutationType;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ScanRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ComparatorProtos;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameBytesPair;
@@ -106,6 +107,8 @@ import org.apache.hadoop.hbase.protobuf.generated.MapReduceProtos;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.CreateTableRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.MasterAdminService;
 import org.apache.hadoop.hbase.protobuf.generated.MasterMonitorProtos.GetTableDescriptorsResponse;
+import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerReportRequest;
+import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerStartupRequest;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos.CompactionDescriptor;
 import org.apache.hadoop.hbase.security.access.Permission;
 import org.apache.hadoop.hbase.security.access.TablePermission;
@@ -434,12 +437,12 @@ public final class ProtobufUtil {
       // The proto has metadata only and the data is separate to be found in the cellScanner.
       if (cellScanner == null) {
         throw new DoNotRetryIOException("Cell count of " + cellCount + " but no cellScanner: " +
-          TextFormat.shortDebugString(proto));
+            toShortString(proto));
       }
       for (int i = 0; i < cellCount; i++) {
         if (!cellScanner.advance()) {
           throw new DoNotRetryIOException("Cell count of " + cellCount + " but at index " + i +
-            " no cell returned: " + TextFormat.shortDebugString(proto));
+            " no cell returned: " + toShortString(proto));
         }
         Cell cell = cellScanner.current();
         if (put == null) {
@@ -508,11 +511,13 @@ public final class ProtobufUtil {
     if (cellCount > 0) {
       // The proto has metadata only and the data is separate to be found in the cellScanner.
       if (cellScanner == null) {
+        // TextFormat should be fine for a Delete since it carries no data, just coordinates.
         throw new DoNotRetryIOException("Cell count of " + cellCount + " but no cellScanner: " +
           TextFormat.shortDebugString(proto));
       }
       for (int i = 0; i < cellCount; i++) {
         if (!cellScanner.advance()) {
+          // TextFormat should be fine for a Delete since it carries no data, just coordinates.
           throw new DoNotRetryIOException("Cell count of " + cellCount + " but at index " + i +
             " no cell returned: " + TextFormat.shortDebugString(proto));
         }
@@ -572,12 +577,12 @@ public final class ProtobufUtil {
       // The proto has metadata only and the data is separate to be found in the cellScanner.
       if (cellScanner == null) {
         throw new DoNotRetryIOException("Cell count of " + cellCount + " but no cellScanner: " +
-          TextFormat.shortDebugString(proto));
+          toShortString(proto));
       }
       for (int i = 0; i < cellCount; i++) {
         if (!cellScanner.advance()) {
           throw new DoNotRetryIOException("Cell count of " + cellCount + " but at index " + i +
-            " no cell returned: " + TextFormat.shortDebugString(proto));
+            " no cell returned: " + toShortString(proto));
         }
         Cell cell = cellScanner.current();
         if (append == null) {
@@ -2024,5 +2029,41 @@ public final class ProtobufUtil {
       builder.addCompactionOutput(outputPath.getName());
     }
     return builder.build();
+  }
+
+  /**
+   * Return short version of Message toString'd, shorter than TextFormat#shortDebugString.
+   * Tries to NOT print out data both because it can be big but also so we do not have data in our
+   * logs. Use judiciously.
+   * @param m
+   * @return toString of passed <code>m</code>
+   */
+  public static String getShortTextFormat(Message m) {
+    if (m == null) return "null";
+    if (m instanceof ScanRequest) {
+      // This should be small and safe to output.  No data.
+      return TextFormat.shortDebugString(m);
+    } else if (m instanceof RegionServerReportRequest) {
+      // Print a short message only, just the servername and the requests, not the full load.
+      RegionServerReportRequest r = (RegionServerReportRequest)m;
+      return "server " + TextFormat.shortDebugString(r.getServer()) +
+        " load { numberOfRequests: " + r.getLoad().getNumberOfRequests() + " }";
+    } else if (m instanceof RegionServerStartupRequest) {
+      // Should be small enough.
+      return TextFormat.shortDebugString(m);
+    } else if (m instanceof MutationProto) {
+      return toShortString((MutationProto)m);
+    }
+    return "TODO: " + m.getClass().toString();
+  }
+
+  /**
+   * Print out some subset of a MutationProto rather than all of it and its data
+   * @param proto Protobuf to print out
+   * @return Short String of mutation proto
+   */
+  static String toShortString(final MutationProto proto) {
+    return "row=" + Bytes.toString(proto.getRow().toByteArray()) +
+        ", type=" + proto.getMutateType().toString();
   }
 }
