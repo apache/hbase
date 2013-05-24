@@ -291,10 +291,13 @@ public class HRegion implements HeapSize { // , Writable{
   private final AtomicInteger majorInProgress = new AtomicInteger(0);
   private final AtomicInteger minorInProgress = new AtomicInteger(0);
 
-  /**
-   * Min sequence id stored in store files of a region when opening the region
-   */
-  private long minSeqIdForLogReplay = -1;
+  //
+  // Context: During replay we want to ensure that we do not lose any data. So, we
+  // have to be conservative in how we replay logs. For each store, we calculate
+  // the maxSeqId up to which the store was flushed. And, skip the edits which
+  // are equal to or lower than maxSeqId for each store.
+  // The following map is populated when opening the region
+  Map<byte[], Long> maxSeqIdInStores = new TreeMap<byte[], Long>(Bytes.BYTES_COMPARATOR);
 
   /**
    * @return The smallest mvcc readPoint across all the scanners in this
@@ -620,12 +623,7 @@ public class HRegion implements HeapSize { // , Writable{
   private long initializeRegionStores(final CancelableProgressable reporter, MonitoredTask status)
       throws IOException, UnsupportedEncodingException {
     // Load in all the HStores.
-    //
-    // Context: During replay we want to ensure that we do not lose any data. So, we
-    // have to be conservative in how we replay logs. For each store, we calculate
-    // the maxSeqId up to which the store was flushed. And, skip the edits which
-    // is equal to or lower than maxSeqId for each store.
-    Map<byte[], Long> maxSeqIdInStores = new TreeMap<byte[], Long>(Bytes.BYTES_COMPARATOR);
+
     long maxSeqId = -1;
     // initialized to -1 so that we pick up MemstoreTS from column families
     long maxMemstoreTS = -1;
@@ -657,9 +655,6 @@ public class HRegion implements HeapSize { // , Writable{
           long storeSeqIdForReplay = store.getMaxSequenceId(false);
           maxSeqIdInStores.put(store.getColumnFamilyName().getBytes(),
               storeSeqIdForReplay);
-          if (this.minSeqIdForLogReplay == -1 || storeSeqIdForReplay < this.minSeqIdForLogReplay) {
-            this.minSeqIdForLogReplay = storeSeqIdForReplay;
-          }
           // Include bulk loaded files when determining seqIdForAssignment
           long storeSeqIdForAssignment = store.getMaxSequenceId(true);
           if (maxSeqId == -1 || storeSeqIdForAssignment > maxSeqId) {
@@ -5036,8 +5031,8 @@ public class HRegion implements HeapSize { // , Writable{
   public static final long FIXED_OVERHEAD = ClassSize.align(
       ClassSize.OBJECT +
       ClassSize.ARRAY +
-      38 * ClassSize.REFERENCE + 2 * Bytes.SIZEOF_INT +
-      (12 * Bytes.SIZEOF_LONG) +
+      39 * ClassSize.REFERENCE + 2 * Bytes.SIZEOF_INT +
+      (11 * Bytes.SIZEOF_LONG) +
       Bytes.SIZEOF_BOOLEAN);
 
   public static final long DEEP_OVERHEAD = FIXED_OVERHEAD +
@@ -5051,6 +5046,7 @@ public class HRegion implements HeapSize { // , Writable{
       (2 * ClassSize.REENTRANT_LOCK) + // lock, updatesLock
       ClassSize.ARRAYLIST + // recentFlushes
       MultiVersionConsistencyControl.FIXED_SIZE // mvcc
+      + ClassSize.TREEMAP // maxSeqIdInStores
       ;
 
   @Override
@@ -5562,11 +5558,11 @@ public class HRegion implements HeapSize { // , Writable{
   }
 
   /**
-   * Gets the min sequence number that was read from storage when this region was opened. WAL Edits
-   * with smaller sequence number will be skipped from replay.
+   * Gets max sequence ids of stores that was read from storage when this region was opened. WAL
+   * Edits with smaller or equal sequence number will be skipped from replay.
    */
-  public long getMinSeqIdForLogReplay() {
-    return this.minSeqIdForLogReplay;
+  public Map<byte[], Long> getMaxStoreSeqIdForLogReplay() {
+    return this.maxSeqIdInStores;
   }
 
   /**

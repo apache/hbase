@@ -29,6 +29,8 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos;
+import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.RegionStoreSequenceIds;
+import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.StoreSequenceId;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil.ZKUtilOp.CreateAndFailSilent;
@@ -52,6 +54,7 @@ import org.apache.zookeeper.proto.DeleteRequest;
 import org.apache.zookeeper.proto.SetDataRequest;
 import org.apache.zookeeper.server.ZooKeeperSaslServer;
 
+import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
 
 import javax.security.auth.login.AppConfigurationEntry;
@@ -69,6 +72,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+import java.util.TreeMap;
 
 /**
  * Internal HBase utility class for ZooKeeper.
@@ -1856,5 +1860,54 @@ public class ZKUtil {
       }
       return 0;
     }
+  }
+
+  /**
+   * @param regionLastFlushedSequenceId the flushed sequence id of a region which is the min of its
+   *          store max seq ids
+   * @param storeSequenceIds column family to sequence Id map
+   * @return Serialized protobuf of <code>RegionSequenceIds</code> with pb magic prefix prepended
+   *         suitable for use to filter wal edits in distributedLogReplay mode
+   */
+  public static byte[] regionSequenceIdsToByteArray(final Long regionLastFlushedSequenceId,
+      final Map<byte[], Long> storeSequenceIds) {
+    ZooKeeperProtos.RegionStoreSequenceIds.Builder regionSequenceIdsBuilder =
+        ZooKeeperProtos.RegionStoreSequenceIds.newBuilder();
+    ZooKeeperProtos.StoreSequenceId.Builder storeSequenceIdBuilder =
+        ZooKeeperProtos.StoreSequenceId.newBuilder();
+    if (storeSequenceIds != null) {
+      for (byte[] columnFamilyName : storeSequenceIds.keySet()) {
+        Long curSeqId = storeSequenceIds.get(columnFamilyName);
+        storeSequenceIdBuilder.setFamilyName(ByteString.copyFrom(columnFamilyName));
+        storeSequenceIdBuilder.setSequenceId(curSeqId);
+        regionSequenceIdsBuilder.addStoreSequenceId(storeSequenceIdBuilder.build());
+        storeSequenceIdBuilder.clear();
+      }
+    }
+    regionSequenceIdsBuilder.setLastFlushedSequenceId(regionLastFlushedSequenceId);
+    byte[] result = regionSequenceIdsBuilder.build().toByteArray();
+    return ProtobufUtil.prependPBMagic(result);
+  }
+
+  /**
+   * @param bytes Content of serialized data of RegionStoreSequenceIds
+   * @return a RegionStoreSequenceIds object
+   * @throws DeserializationException
+   */
+  public static RegionStoreSequenceIds parseRegionStoreSequenceIds(final byte[] bytes)
+      throws DeserializationException {
+    if (bytes == null || !ProtobufUtil.isPBMagicPrefix(bytes)) {
+      throw new DeserializationException("Unable to parse RegionStoreSequenceIds.");
+    }
+    RegionStoreSequenceIds.Builder regionSequenceIdsBuilder =
+        ZooKeeperProtos.RegionStoreSequenceIds.newBuilder();
+    int pblen = ProtobufUtil.lengthOfPBMagic();
+    RegionStoreSequenceIds storeIds = null;
+    try {
+      storeIds = regionSequenceIdsBuilder.mergeFrom(bytes, pblen, bytes.length - pblen).build();
+    } catch (InvalidProtocolBufferException e) {
+      throw new DeserializationException(e);
+    }
+    return storeIds;
   }
 }

@@ -823,7 +823,7 @@ public class TestDistributedLogSplitting {
   @Test (timeout=300000)
   public void testWorkerAbort() throws Exception {
     LOG.info("testWorkerAbort");
-    startCluster(2);
+    startCluster(3);
     final int NUM_LOG_LINES = 10000;
     final SplitLogManager slm = master.getMasterFileSystem().splitLogManager;
     FileSystem fs = master.getMasterFileSystem().getFileSystem();
@@ -845,6 +845,7 @@ public class TestDistributedLogSplitting {
         waitForCounter(tot_wkr_task_acquired, 0, 1, 1000);
         for (RegionServerThread rst : rsts) {
           rst.getRegionServer().abort("testing");
+          break;
         }
       }
     }.start();
