@@ -4241,7 +4241,14 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
     HRegionInfo region = r.getRegionInfo();
     ZooKeeperWatcher zkw = getZooKeeper();
     String previousRSName = this.getLastFailedRSFromZK(region.getEncodedName());
-    long minSeqIdForLogReplay = r.getMinSeqIdForLogReplay();
+    Map<byte[], Long> maxSeqIdInStores = r.getMaxStoreSeqIdForLogReplay();
+    long minSeqIdForLogReplay = -1;
+    for (byte[] columnFamily : maxSeqIdInStores.keySet()) {
+      Long storeSeqIdForReplay = maxSeqIdInStores.get(columnFamily);
+      if (minSeqIdForLogReplay == -1 || storeSeqIdForReplay < minSeqIdForLogReplay) {
+        minSeqIdForLogReplay = storeSeqIdForReplay;
+      }
+    }
     long lastRecordedFlushedSequenceId = -1;
     String nodePath = ZKUtil.joinZNode(this.zooKeeper.recoveringRegionsZNode,
       region.getEncodedName());
@@ -4254,10 +4261,11 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
       ZKUtil.setData(zkw, nodePath, ZKUtil.positionToByteArray(minSeqIdForLogReplay));
     }
     if (previousRSName != null) {
-      // one level deeper for failed RS
+      // one level deeper for the failed RS
       nodePath = ZKUtil.joinZNode(nodePath, previousRSName);
-      ZKUtil.setData(zkw, nodePath, ZKUtil.positionToByteArray(minSeqIdForLogReplay));
-      LOG.debug("Update last flushed sequence id of region " + region.getEncodedName() + " for "
+      ZKUtil.setData(zkw, nodePath,
+        ZKUtil.regionSequenceIdsToByteArray(minSeqIdForLogReplay, maxSeqIdInStores));
+      LOG.debug("Update last flushed sequence id of region " + region.getEncodedName() + " for " 
           + previousRSName);
     } else {
       LOG.warn("Can't find failed region server for recovering region " + region.getEncodedName());

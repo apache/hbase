@@ -54,6 +54,7 @@ import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.master.SplitLogManager.TaskFinisher.Status;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
+import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.RegionStoreSequenceIds;
 import org.apache.hadoop.hbase.regionserver.SplitLogWorker;
 import org.apache.hadoop.hbase.regionserver.wal.HLogSplitter;
 import org.apache.hadoop.hbase.regionserver.wal.HLogUtil;
@@ -1102,8 +1103,7 @@ public class SplitLogManager extends ZooKeeperListener {
               lastRecordedFlushedSequenceId = SplitLogManager.parseLastFlushedSequenceIdFrom(data);
               if (lastRecordedFlushedSequenceId < lastSequenceId) {
                 // update last flushed sequence id in the region level
-                ZKUtil.setData(this.watcher, nodePath,
-                  ZKUtil.positionToByteArray(lastSequenceId));
+                ZKUtil.setData(this.watcher, nodePath, ZKUtil.positionToByteArray(lastSequenceId));
               }
             }
             // go one level deeper with server name
@@ -1113,7 +1113,7 @@ public class SplitLogManager extends ZooKeeperListener {
               lastSequenceId = lastRecordedFlushedSequenceId;
             }
             ZKUtil.createSetData(this.watcher, nodePath,
-              ZKUtil.positionToByteArray(lastSequenceId));
+              ZKUtil.regionSequenceIdsToByteArray(lastSequenceId, null));
             LOG.debug("Mark region " + regionEncodeName + " recovering from failed region server "
                 + serverName);
 
@@ -1158,10 +1158,11 @@ public class SplitLogManager extends ZooKeeperListener {
    * @param zkw
    * @param serverName
    * @param encodedRegionName
-   * @return the last flushed sequence id recorded in ZK of the region for <code>serverName<code>
+   * @return the last flushed sequence ids recorded in ZK of the region for <code>serverName<code>
    * @throws IOException
    */
-  public static long getLastFlushedSequenceId(ZooKeeperWatcher zkw, String serverName,
+  public static RegionStoreSequenceIds getRegionFlushedSequenceId(ZooKeeperWatcher zkw,
+      String serverName,
       String encodedRegionName) throws IOException {
     // when SplitLogWorker recovers a region by directly replaying unflushed WAL edits,
     // last flushed sequence Id changes when newly assigned RS flushes writes to the region.
@@ -1170,19 +1171,21 @@ public class SplitLogManager extends ZooKeeperListener {
     // when different newly assigned RS flushes the region.
     // Therefore, in this mode we need to fetch last sequence Ids from ZK where we keep history of
     // last flushed sequence Id for each failed RS instance.
-    long lastFlushedSequenceId = -1;
+    RegionStoreSequenceIds result = null;
     String nodePath = ZKUtil.joinZNode(zkw.recoveringRegionsZNode, encodedRegionName);
     nodePath = ZKUtil.joinZNode(nodePath, serverName);
     try {
       byte[] data = ZKUtil.getData(zkw, nodePath);
       if (data != null) {
-        lastFlushedSequenceId = SplitLogManager.parseLastFlushedSequenceIdFrom(data);
+        result = ZKUtil.parseRegionStoreSequenceIds(data);
       }
     } catch (KeeperException e) {
       throw new IOException("Cannot get lastFlushedSequenceId from ZooKeeper for server="
           + serverName + "; region=" + encodedRegionName, e);
+    } catch (DeserializationException e) {
+      LOG.warn("Can't parse last flushed sequence Id from znode:" + nodePath, e);
     }
-    return lastFlushedSequenceId;
+    return result;
   }
 
   /**

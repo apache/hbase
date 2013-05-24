@@ -28,6 +28,7 @@ import java.net.ConnectException;
 import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
@@ -81,6 +82,8 @@ import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.AdminService.BlockingInterface;
+import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.RegionStoreSequenceIds;
+import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.StoreSequenceId;
 import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.Table;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.LastSequenceId;
@@ -154,7 +157,14 @@ public class HLogSplitter {
   protected boolean distributedLogReplay;
 
   // Map encodedRegionName -> lastFlushedSequenceId
-  Map<String, Long> lastFlushedSequenceIds = new ConcurrentHashMap<String, Long>();
+  protected Map<String, Long> lastFlushedSequenceIds = new ConcurrentHashMap<String, Long>();
+
+  // Map encodedRegionName -> maxSeqIdInStores
+  protected Map<String, Map<byte[], Long>> regionMaxSeqIdInStores =
+      new ConcurrentHashMap<String, Map<byte[], Long>>();
+
+  // Failed region server that the wal file being split belongs to
+  protected String failedServerName = "";
 
   // Number of writer threads
   private final int numWriterThreads;
@@ -528,19 +538,23 @@ public class HLogSplitter {
       Entry entry;
       Long lastFlushedSequenceId = -1L;
       ServerName serverName = HLogUtil.getServerNameFromHLogDirectoryName(logPath);
-      String serverNameStr = (serverName == null) ? "" : serverName.getServerName(); 
+      failedServerName = (serverName == null) ? "" : serverName.getServerName();
       while ((entry = getNextLogLine(in, logPath, skipErrors)) != null) {
         byte[] region = entry.getKey().getEncodedRegionName();
         String key = Bytes.toString(region);
         lastFlushedSequenceId = lastFlushedSequenceIds.get(key);
         if (lastFlushedSequenceId == null) {
           if (this.distributedLogReplay) {
-            lastFlushedSequenceId = SplitLogManager.getLastFlushedSequenceId(this.watcher,
-              serverNameStr, key);
+            lastFlushedSequenceId = -1L;
+            RegionStoreSequenceIds ids =
+                SplitLogManager.getRegionFlushedSequenceId(this.watcher, failedServerName, key);
+            if (ids != null) {
+              lastFlushedSequenceId = ids.getLastFlushedSequenceId();
+            }
           } else if (sequenceIdChecker != null) {
             lastFlushedSequenceId = sequenceIdChecker.getLastSequenceId(region);
           }
-          if (lastFlushedSequenceId != null) {
+          if (lastFlushedSequenceId != null && lastFlushedSequenceId >= 0) {
             lastFlushedSequenceIds.put(key, lastFlushedSequenceId);
           } else {
             lastFlushedSequenceId = -1L;
@@ -1712,6 +1726,8 @@ public class HLogSplitter {
           this.skippedEdits.incrementAndGet();
           continue;
         }
+
+        Map<byte[], Long> maxStoreSequenceIds = null;
         boolean needSkip = false;
         Put put = null;
         Delete del = null;
@@ -1761,16 +1777,32 @@ public class HLogSplitter {
               needSkip = true;
               break;
             }
-            cachedLastFlushedSequenceId = lastFlushedSequenceIds.get(loc.getRegionInfo()
-                .getEncodedName());
+
+            cachedLastFlushedSequenceId =
+                lastFlushedSequenceIds.get(loc.getRegionInfo().getEncodedName());
             if (cachedLastFlushedSequenceId != null
                 && cachedLastFlushedSequenceId >= entry.getKey().getLogSeqNum()) {
               // skip the whole HLog entry
               this.skippedEdits.incrementAndGet();
               needSkip = true;
               break;
+            } else {
+              if (maxStoreSequenceIds == null) {
+                maxStoreSequenceIds =
+                    regionMaxSeqIdInStores.get(loc.getRegionInfo().getEncodedName());
+              }
+              if (maxStoreSequenceIds != null) {
+                Long maxStoreSeqId = maxStoreSequenceIds.get(kv.getFamily());
+                if (maxStoreSeqId == null || maxStoreSeqId >= entry.getKey().getLogSeqNum()) {
+                  // skip current kv if column family doesn't exist anymore or already flushed
+                  continue;
+                }
+              } else {
+                LOG.warn("Can't find store max sequence ids map for region:"
+                    + loc.getRegionInfo().getEncodedName());
+              }
             }
-            
+
             if (kv.isDelete()) {
               del = new Delete(kv.getRow());
               del.setClusterId(entry.getKey().getClusterId());
@@ -1834,8 +1866,19 @@ public class HLogSplitter {
       onlineRegions.add(loc.getRegionInfo().getEncodedName());
       // retrieve last flushed sequence Id from ZK. Because region postOpenDeployTasks will
       // update the value for the region
-      lastFlushedSequenceId = SplitLogManager.getLastFlushedSequenceId(watcher, loc
-          .getServerName().getServerName(), loc.getRegionInfo().getEncodedName());
+      RegionStoreSequenceIds ids =
+          SplitLogManager.getRegionFlushedSequenceId(watcher, failedServerName, loc.getRegionInfo()
+              .getEncodedName());
+      if(ids != null) {
+        lastFlushedSequenceId = ids.getLastFlushedSequenceId();
+        Map<byte[], Long> storeIds = new TreeMap<byte[], Long>(Bytes.BYTES_COMPARATOR);
+        List<StoreSequenceId> maxSeqIdInStores = ids.getStoreSequenceIdList();
+        for (StoreSequenceId id : maxSeqIdInStores) {
+          storeIds.put(id.getFamilyName().toByteArray(), id.getSequenceId());
+        }
+        regionMaxSeqIdInStores.put(loc.getRegionInfo().getEncodedName(), storeIds);
+      }
+      
       if (cachedLastFlushedSequenceId == null
           || lastFlushedSequenceId > cachedLastFlushedSequenceId) {
         lastFlushedSequenceIds.put(loc.getRegionInfo().getEncodedName(), lastFlushedSequenceId);

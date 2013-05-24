@@ -145,3 +145,20 @@ message TableLock {
   optional string purpose = 5;
   optional int64 createTime = 6;
 }
+
+/**
+ * sequence Id of a store
+ */
+message StoreSequenceId {
+  required bytes familyName = 1;
+  required uint64 sequenceId = 2;
+}
+
+/**
+ * contains a sequence id of a region which should be the minimum of its store sequence ids and 
+ * list sequence ids of the region's stores
+ */
+message RegionStoreSequenceIds {
+  required uint64 lastFlushedSequenceId = 1;
+  repeated StoreSequenceId storeSequenceId = 2;
+}
