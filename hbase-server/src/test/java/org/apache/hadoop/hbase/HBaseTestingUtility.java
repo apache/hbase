@@ -735,7 +735,16 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
    */
   public MiniHBaseCluster startMiniCluster(final int numMasters,
       final int numSlaves, final String[] dataNodeHosts) throws Exception {
-    return startMiniCluster(numMasters, numSlaves, dataNodeHosts, null, null);
+    return startMiniCluster(numMasters, numSlaves, numSlaves, dataNodeHosts, null, null);
+  }
+
+  /**
+   * Same as {@link #startMiniCluster(int, int)}, but with custom number of datanodes.
+   * @param numDataNodes Number of data nodes.
+   */
+  public MiniHBaseCluster startMiniCluster(final int numMasters,
+      final int numSlaves, final int numDataNodes) throws Exception {
+    return startMiniCluster(numMasters, numSlaves, numDataNodes, null, null, null);
   }
 
   /**
@@ -766,12 +775,24 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
    * @return Mini hbase cluster instance created.
    */
   public MiniHBaseCluster startMiniCluster(final int numMasters,
-    final int numSlaves, final String[] dataNodeHosts,
+      final int numSlaves, final String[] dataNodeHosts, Class<? extends HMaster> masterClass,
+      Class<? extends MiniHBaseCluster.MiniHBaseClusterRegionServer> regionserverClass)
+          throws Exception {
+    return startMiniCluster(
+        numMasters, numSlaves, numSlaves, dataNodeHosts, masterClass, regionserverClass);
+  }
+
+  /**
+   * Same as {@link #startMiniCluster(int, int, String[], Class, Class)}, but with custom
+   * number of datanodes.
+   * @param numDataNodes Number of data nodes.
+   */
+  public MiniHBaseCluster startMiniCluster(final int numMasters,
+    final int numSlaves, int numDataNodes, final String[] dataNodeHosts,
     Class<? extends HMaster> masterClass,
     Class<? extends MiniHBaseCluster.MiniHBaseClusterRegionServer> regionserverClass)
   throws Exception {
-    int numDataNodes = numSlaves;
-    if ( dataNodeHosts != null && dataNodeHosts.length != 0) {
+    if (dataNodeHosts != null && dataNodeHosts.length != 0) {
       numDataNodes = dataNodeHosts.length;
     }
 

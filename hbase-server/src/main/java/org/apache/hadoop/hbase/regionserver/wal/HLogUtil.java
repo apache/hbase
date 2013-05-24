@@ -262,7 +262,7 @@ public class HLogUtil {
       final CompactionDescriptor c) throws IOException {
     WALEdit e = WALEdit.createCompaction(c);
     log.append(info, c.getTableName().toByteArray(), e,
-        EnvironmentEdgeManager.currentTimeMillis(), htd);
+        EnvironmentEdgeManager.currentTimeMillis(), htd, false);
     if (LOG.isTraceEnabled()) {
       LOG.trace("Appended compaction marker " + TextFormat.shortDebugString(c));
     }
