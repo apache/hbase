@@ -78,6 +78,7 @@ import org.apache.hadoop.hbase.exceptions.ServerNotRunningYetException;
 import org.apache.hadoop.hbase.io.ByteBufferOutputStream;
 import org.apache.hadoop.hbase.monitoring.MonitoredRPCHandler;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
+import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.RPCProtos.CellBlockMeta;
 import org.apache.hadoop.hbase.protobuf.generated.RPCProtos.ConnectionHeader;
 import org.apache.hadoop.hbase.protobuf.generated.RPCProtos.ExceptionResponse;
@@ -290,12 +291,30 @@ public class RpcServer implements RpcServerInterface {
 
     @Override
     public String toString() {
-      String serviceName = this.connection.service != null?
-        this.connection.service.getDescriptorForType().getName(): "null";
-      return "callId: " + this.id + " service: " + serviceName + " methodName: " +
-        ((this.md != null)? this.md.getName(): null) + " param: " +
-        (this.param != null? IPCUtil.getRequestShortTextFormat(this.param): "") +
+      return toShortString() + " param: " +
+        (this.param != null? ProtobufUtil.getShortTextFormat(this.param): "") +
         " connection: " + connection.toString();
+    }
+
+    /*
+     * Short string representation without param info because param itself could be huge depends on
+     * the payload of a command
+     */
+    String toShortString() {
+      String serviceName = this.connection.service != null?
+        this.connection.service.getDescriptorForType().getName() : "null";
+      StringBuilder sb = new StringBuilder();
+      sb.append("callId: ");
+      sb.append(this.id);
+      sb.append(" service: ");
+      sb.append(serviceName);
+      sb.append(" methodName: ");
+      sb.append((this.md != null) ? this.md.getName() : "");
+      sb.append(" size: ");
+      sb.append(StringUtils.humanReadableInt(this.size));
+      sb.append(" connection: ");
+      sb.append(connection.toString());
+      return sb.toString();
     }
 
     protected synchronized void setSaslTokenResponse(ByteBuffer response) {
@@ -978,7 +997,7 @@ public class RpcServer implements RpcServerInterface {
                 done = true;
             }
             if (LOG.isDebugEnabled()) {
-              LOG.debug(getName() + call.toString() + " partially sent, wrote " +
+              LOG.debug(getName() + call.toShortString() + " partially sent, wrote " +
                 numBytes + " bytes.");
             }
           }
@@ -986,7 +1005,7 @@ public class RpcServer implements RpcServerInterface {
         }
       } finally {
         if (error && call != null) {
-          LOG.warn(getName() + call.toString() + ": output error");
+          LOG.warn(getName() + call.toShortString() + ": output error");
           done = true;               // error. no more data for this channel.
           closeConnection(call.connection);
         }
@@ -1787,7 +1806,7 @@ public class RpcServer implements RpcServerInterface {
           status.setConnection(call.connection.getHostAddress(), call.connection.getRemotePort());
           if (LOG.isDebugEnabled()) {
             UserGroupInformation remoteUser = call.connection.user;
-            LOG.debug(call.toString() + " executing as " +
+            LOG.debug(call.toShortString() + " executing as " +
               ((remoteUser == null)? "NULL principal": remoteUser.getUserName()));
           }
           Throwable errorThrowable = null;
@@ -1801,7 +1820,7 @@ public class RpcServer implements RpcServerInterface {
             }
             if (call.tinfo != null) {
               currentRequestSpan = Trace.startSpan(
-                  "handling " + call.toString(), call.tinfo, Sampler.ALWAYS);
+                  "handling " + call.toShortString(), call.tinfo, Sampler.ALWAYS);
             }
             RequestContext.set(User.create(call.connection.user), getRemoteIp(),
               call.connection.service);
@@ -1810,7 +1829,7 @@ public class RpcServer implements RpcServerInterface {
             resultPair = call(call.service, call.md, call.param, call.cellScanner, call.timestamp,
               status);
           } catch (Throwable e) {
-            LOG.debug(getName() + ": " + call.toString(), e);
+            LOG.debug(getName() + ": " + call.toShortString(), e);
             errorThrowable = e;
             error = StringUtils.stringifyException(e);
           } finally {
