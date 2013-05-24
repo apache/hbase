@@ -290,27 +290,12 @@ public class RpcServer implements RpcServerInterface {
 
     @Override
     public String toString() {
-      return toShortString() + " param: "
-          + (this.param != null ? IPCUtil.getRequestShortTextFormat(this.param) : "");
-    }
-
-    /*
-     * Short string representation without param info because param itself could be huge depends on
-     * the payload of a command
-     */
-    String toShortString() {
-      String serviceName = this.connection.service != null ? this.connection.service
-          .getDescriptorForType().getName() : "null";
-      StringBuilder sb = new StringBuilder();
-      sb.append("callId: ");
-      sb.append(this.id);
-      sb.append(" service: ");
-      sb.append(serviceName);
-      sb.append(" methodName: ");
-      sb.append((this.md != null) ? this.md.getName() : "");
-      sb.append(" connection: ");
-      sb.append(connection.toString());
-      return sb.toString();
+      String serviceName = this.connection.service != null?
+        this.connection.service.getDescriptorForType().getName(): "null";
+      return "callId: " + this.id + " service: " + serviceName + " methodName: " +
+        ((this.md != null)? this.md.getName(): null) + " param: " +
+        (this.param != null? IPCUtil.getRequestShortTextFormat(this.param): "") +
+        " connection: " + connection.toString();
     }
 
     protected synchronized void setSaslTokenResponse(ByteBuffer response) {
@@ -1001,8 +986,7 @@ public class RpcServer implements RpcServerInterface {
         }
       } finally {
         if (error && call != null) {
-          LOG.warn(getName() + ((call.size > 512) ? call.toShortString() : call.toString())
-              + ": output error");
+          LOG.warn(getName() + call.toString() + ": output error");
           done = true;               // error. no more data for this channel.
           closeConnection(call.connection);
         }

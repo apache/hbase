@@ -170,8 +170,6 @@ public class IntegrationTestBigLinkedList extends Configured implements Tool {
   private static final String GENERATOR_NUM_MAPPERS_KEY
     = "IntegrationTestBigLinkedList.generator.map.tasks";
 
-  protected int NUM_SLAVES_BASE = 3; // number of slaves for the cluster
-
   static class CINode {
     long key;
     long prev;
@@ -650,7 +648,7 @@ public class IntegrationTestBigLinkedList extends Configured implements Tool {
    * Executes Generate and Verify in a loop. Data is not cleaned between runs, so each iteration
    * adds more data.
    */
-  static class Loop extends Configured implements Tool {
+  private static class Loop extends Configured implements Tool {
 
     private static final Log LOG = LogFactory.getLog(Loop.class);
 
@@ -918,12 +916,12 @@ public class IntegrationTestBigLinkedList extends Configured implements Tool {
     return node;
   }
 
-  protected IntegrationTestingUtility util;
+  private IntegrationTestingUtility util;
 
   @Before
   public void setUp() throws Exception {
     util = getTestingUtil();
-    util.initializeCluster(this.NUM_SLAVES_BASE);
+    util.initializeCluster(3);
     this.setConf(util.getConfiguration());
   }
 
@@ -941,7 +939,7 @@ public class IntegrationTestBigLinkedList extends Configured implements Tool {
     org.junit.Assert.assertEquals(0, ret);
   }
 
-  protected IntegrationTestingUtility getTestingUtil() {
+  private IntegrationTestingUtility getTestingUtil() {
     if (this.util == null) {
       if (getConf() == null) {
         this.util = new IntegrationTestingUtility();
