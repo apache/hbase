@@ -86,7 +86,9 @@ public class DefaultStoreFlusher extends StoreFlusher {
       scanner.close();
     }
     LOG.info("Flushed, sequenceid=" + cacheFlushId +", memsize="
-        + StringUtils.humanReadableInt(flushed) +", into tmp file " + writer.getPath());
+        + StringUtils.humanReadableInt(flushed) +
+        ", hasBloomFilter=" + writer.hasGeneralBloom() +
+        ", into tmp file " + writer.getPath());
     result.add(writer.getPath());
     return result;
   }
