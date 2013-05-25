@@ -148,9 +148,9 @@ import org.junit.experimental.categories.Category;
 @Category(IntegrationTests.class)
 public class IntegrationTestBigLinkedList extends Configured implements Tool {
 
-  private static final String TABLE_NAME_KEY = "IntegrationTestBigLinkedList.table";
+  protected static String TABLE_NAME_KEY = "IntegrationTestBigLinkedList.table";
 
-  private static final String DEFAULT_TABLE_NAME = "IntegrationTestBigLinkedList";
+  protected static String DEFAULT_TABLE_NAME = "IntegrationTestBigLinkedList";
 
   private static byte[] FAMILY_NAME = Bytes.toBytes("meta");
 
@@ -169,6 +169,8 @@ public class IntegrationTestBigLinkedList extends Configured implements Tool {
 
   private static final String GENERATOR_NUM_MAPPERS_KEY
     = "IntegrationTestBigLinkedList.generator.map.tasks";
+
+  protected int NUM_SLAVES_BASE = 3; // number of slaves for the cluster
 
   static class CINode {
     long key;
@@ -648,7 +650,7 @@ public class IntegrationTestBigLinkedList extends Configured implements Tool {
    * Executes Generate and Verify in a loop. Data is not cleaned between runs, so each iteration
    * adds more data.
    */
-  private static class Loop extends Configured implements Tool {
+  static class Loop extends Configured implements Tool {
 
     private static final Log LOG = LogFactory.getLog(Loop.class);
 
@@ -916,12 +918,12 @@ public class IntegrationTestBigLinkedList extends Configured implements Tool {
     return node;
   }
 
-  private IntegrationTestingUtility util;
+  protected IntegrationTestingUtility util;
 
   @Before
   public void setUp() throws Exception {
     util = getTestingUtil();
-    util.initializeCluster(3);
+    util.initializeCluster(this.NUM_SLAVES_BASE);
     this.setConf(util.getConfiguration());
   }
 
@@ -939,7 +941,7 @@ public class IntegrationTestBigLinkedList extends Configured implements Tool {
     org.junit.Assert.assertEquals(0, ret);
   }
 
-  private IntegrationTestingUtility getTestingUtil() {
+  protected IntegrationTestingUtility getTestingUtil() {
     if (this.util == null) {
       if (getConf() == null) {
         this.util = new IntegrationTestingUtility();
