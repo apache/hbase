@@ -343,7 +343,7 @@ public class RegionStates {
     // Clean up this server from map of servers to regions, and remove all regions
     // of this server from online map of regions.
     List<HRegionInfo> rits = new ArrayList<HRegionInfo>();
-    Set<HRegionInfo> assignedRegions = serverHoldings.get(sn);
+    Set<HRegionInfo> assignedRegions = serverHoldings.remove(sn);
     if (assignedRegions == null) {
       assignedRegions = new HashSet<HRegionInfo>();
     }
