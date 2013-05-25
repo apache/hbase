@@ -40,7 +40,6 @@ import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.hadoop.hbase.util.CollectionBackedScanner;
-import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 
 /**
  * The MemStore holds in-memory modifications to the Store.  Modifications
@@ -125,10 +124,7 @@ public class MemStore implements HeapSize {
    * To get the snapshot made by this method, use {@link #getSnapshot()}
    */
   void snapshot() {
-    long t0 = 0, t1 = 0, t2 = 0;
-    t0 = EnvironmentEdgeManager.currentTimeMillis();
     this.lock.writeLock().lock();
-    t1 = EnvironmentEdgeManager.currentTimeMillis();
     try {
       // If snapshot currently has entries, then flusher failed or didn't call
       // cleanup.  Log a warning.
@@ -149,9 +145,6 @@ public class MemStore implements HeapSize {
       }
     } finally {
       this.lock.writeLock().unlock();
-      t2 = EnvironmentEdgeManager.currentTimeMillis();
-      LOG.debug("Snapshotting " + this.toString() + " took "
-          + (t2-t1) + " ms. To grab the writeLock : " + (t1 - t0));
     }
   }
 

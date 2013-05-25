@@ -605,9 +605,7 @@ public class HLog implements Syncable {
     int oldNumEntries;
     long t0 = 0;
     long t1 = 0;
-    long startWLock, endWLock;
     this.cacheFlushLock.writeLock().lock();
-    startWLock = EnvironmentEdgeManager.currentTimeMillis();
     try {
       synchronized (updateLock) {
         t0 = EnvironmentEdgeManager.currentTimeMillis();
@@ -636,10 +634,6 @@ public class HLog implements Syncable {
       }
     } finally {
       this.cacheFlushLock.writeLock().unlock();
-      endWLock = EnvironmentEdgeManager.currentTimeMillis();
-      LOG.debug("While rolling held cacheFlushLock.writeLock() for "
-          + (endWLock - startWLock) + " ms. From "
-          + startWLock + " to " + endWLock);
     }
 
     Path oldFile = null;
@@ -1361,10 +1355,7 @@ public class HLog implements Syncable {
    * @see #abortCacheFlush()
    */
   public long startCacheFlush(final byte [] regionName) {
-    long startRLock, endRLock, obSeqT;
-    startRLock = EnvironmentEdgeManager.currentTimeMillis();
     this.cacheFlushLock.readLock().lock();
-    endRLock = EnvironmentEdgeManager.currentTimeMillis();
     if (this.firstSeqWrittenInSnapshotMemstore.containsKey(regionName)) {
       LOG.warn("Requested a startCacheFlush while firstSeqWrittenInSnapshotMemstore still"
           + " contains " + Bytes.toString(regionName) + " . Did the previous flush fail?"
@@ -1375,13 +1366,7 @@ public class HLog implements Syncable {
         this.firstSeqWrittenInSnapshotMemstore.put(regionName, seq);
       }
     }
-    long num = obtainSeqNum();
-    obSeqT = EnvironmentEdgeManager.currentTimeMillis();
-    LOG.debug("Trying to get cacheFlushLock.readLock for startCacheFlush took "
-      + (obSeqT - startRLock) + " ms. startRLock = "
-      + startRLock + " endRLock = "
-      + endRLock + " obSeqT = " + obSeqT);
-    return num;
+    return obtainSeqNum();
   }
 
   /**
