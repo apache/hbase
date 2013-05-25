@@ -2262,6 +2262,14 @@ public class HRegionServer implements HRegionInterface,
           // TODO: Can we recover? Should be throw RTE?
           LOG.error("Failed to abort open region " + regionInfo.getRegionNameAsString(), e1);
         }
+
+        this.lock.writeLock().lock();
+        try {
+          this.regionsOpening.remove(mapKey);
+        } finally {
+          this.lock.writeLock().unlock();
+        }
+
         return;
       }
       this.lock.writeLock().lock();
