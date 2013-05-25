@@ -223,7 +223,7 @@ public abstract class ZKInterProcessLockBase implements InterProcessLock {
       }
     }
     updateAcquiredLock(createdZNode);
-    LOG.debug("Successfully acquired a lock for " + createdZNode);
+    LOG.debug("Acquired a lock for " + createdZNode);
     return true;
   }
 
@@ -325,7 +325,7 @@ public abstract class ZKInterProcessLockBase implements InterProcessLock {
         }
       }
       if (LOG.isDebugEnabled()) {
-        LOG.debug("Successfully released " + lock.getPath());
+        LOG.debug("Released " + lock.getPath());
       }
     } catch (BadVersionException e) {
       throw new IllegalStateException(e);

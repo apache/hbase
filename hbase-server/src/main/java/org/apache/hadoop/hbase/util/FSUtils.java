@@ -290,7 +290,8 @@ public abstract class FSUtils {
           // Function was properly called, but threw it's own exception.
           throw new IOException(ite.getCause());
         } catch (NoSuchMethodException e) {
-          LOG.debug("Ignoring (most likely Reflection related exception) " + e);
+          LOG.debug("DFS Client does not support most favored nodes create; using default create");
+          if (LOG.isTraceEnabled()) LOG.trace("Ignoring; use default create", e);
         } catch (IllegalArgumentException e) {
           LOG.debug("Ignoring (most likely Reflection related exception) " + e);
         } catch (SecurityException e) {

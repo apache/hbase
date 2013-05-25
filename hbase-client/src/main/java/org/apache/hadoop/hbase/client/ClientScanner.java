@@ -204,7 +204,8 @@ public class ClientScanner extends AbstractClientScanner {
         localStartKey = this.scan.getStartRow();
       }
 
-      if (LOG.isDebugEnabled()) {
+      if (LOG.isDebugEnabled() && this.currentRegion != null) {
+        // Only worth logging if NOT first region in scan.
         LOG.debug("Advancing internal scanner to startKey at '" +
           Bytes.toStringBinary(localStartKey) + "'");
       }

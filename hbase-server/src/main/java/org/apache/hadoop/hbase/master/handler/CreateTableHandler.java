@@ -143,7 +143,7 @@ public class CreateTableHandler extends EventHandler {
   @Override
   public void process() {
     String tableName = this.hTableDescriptor.getNameAsString();
-    LOG.info("Attempting to create the table " + tableName);
+    LOG.info("Create table " + tableName);
 
     try {
       MasterCoprocessorHost cpHost = ((HMaster) this.server).getCoprocessorHost();
