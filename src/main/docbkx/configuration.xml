@@ -1172,6 +1172,14 @@ of all regions.
       see the graphs on the tail of <link xlink:href="https://issues.apache.org/jira/browse/HBASE-7008">HBASE-7008 Set scanner caching to a better default</link>
       where our Lars Hofhansl tries various data sizes w/ Nagle's on and off measuring the effect.</para>
     </section>
+    <section xml:id="mttr">
+      <title>Better Mean Time to Recover (MTTR)</title>
+      <para>See the Deveraj Das an Nicolas Liochon blog post
+          <link xlink:href="http://hortonworks.com/blog/introduction-to-hbase-mean-time-to-recover-mttr/">Introduction to HBase Mean Time to Recover (MTTR)</link>
+          for a brief introduction.  The issue <link xlink:href="https://issues.apache.org/jira/browse/HBASE-8389">HBASE-8354 forces Namenode into loop with lease recovery requests</link>
+          is messy but has a bunch of good discussion toward the end on low timeouts and how to effect faster recovery including citation of fixes
+          added to HDFS.  Read the Varun Sharma comments.</para>
+    </section>
 
       </section>
 
