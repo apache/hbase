@@ -43,7 +43,7 @@ import org.apache.hadoop.hbase.util.Bytes;
  */
 public class BalancerTestBase {
 
-  private static Random rand = new Random();
+  protected static Random rand = new Random();
   static int regionId = 0;
 
   /**
@@ -125,7 +125,9 @@ public class BalancerTestBase {
    * @param plans
    * @return
    */
-  protected List<ServerAndLoad> reconcile(List<ServerAndLoad> list, List<RegionPlan> plans) {
+  protected List<ServerAndLoad> reconcile(List<ServerAndLoad> list,
+                                          List<RegionPlan> plans,
+                                          Map<ServerName, List<HRegionInfo>> servers) {
     List<ServerAndLoad> result = new ArrayList<ServerAndLoad>(list.size());
     if (plans == null) return result;
     Map<ServerName, ServerAndLoad> map = new HashMap<ServerName, ServerAndLoad>(list.size());
@@ -134,9 +136,13 @@ public class BalancerTestBase {
     }
     for (RegionPlan plan : plans) {
       ServerName source = plan.getSource();
+
       updateLoad(map, source, -1);
       ServerName destination = plan.getDestination();
       updateLoad(map, destination, +1);
+
+      servers.get(source).remove(plan.getRegionInfo());
+      servers.get(destination).add(plan.getRegionInfo());
     }
     result.clear();
     result.addAll(map.values());

@@ -116,7 +116,7 @@ public class TestDefaultLoadBalancer extends BalancerTestBase {
       List<ServerAndLoad> list = convertToList(servers);
       LOG.info("Mock Cluster : " + printMock(list) + " " + printStats(list));
       List<RegionPlan> plans = loadBalancer.balanceCluster(servers);
-      List<ServerAndLoad> balancedCluster = reconcile(list, plans);
+      List<ServerAndLoad> balancedCluster = reconcile(list, plans, servers);
       LOG.info("Mock Balance : " + printMock(balancedCluster));
       assertClusterAsBalanced(balancedCluster);
       for (Map.Entry<ServerName, List<HRegionInfo>> entry : servers.entrySet()) {

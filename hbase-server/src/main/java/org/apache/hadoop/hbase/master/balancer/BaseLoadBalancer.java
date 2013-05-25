@@ -18,6 +18,8 @@
 package org.apache.hadoop.hbase.master.balancer;
 
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -58,7 +60,7 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
    */
   protected static class Cluster {
     ServerName[] servers;
-    ArrayList<byte[]> tables;
+    ArrayList<String> tables;
     HRegionInfo[] regions;
     List<RegionLoad>[] regionLoads;
     int[][] regionLocations; //regionIndex -> list of serverIndex sorted by locality
@@ -70,8 +72,10 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
     int[][] numRegionsPerServerPerTable; //serverIndex -> tableIndex -> # regions
     int[]   numMaxRegionsPerTable;       //tableIndex -> max number of regions in a single RS
 
-    Map<ServerName, Integer> serversToIndex;
-    Map<Integer, Integer> tablesToIndex;
+    Integer[] serverIndicesSortedByRegionCount;
+
+    Map<String, Integer> serversToIndex;
+    Map<String, Integer> tablesToIndex;
 
     int numRegions;
     int numServers;
@@ -82,21 +86,35 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
 
     protected Cluster(Map<ServerName, List<HRegionInfo>> clusterState,  Map<String, List<RegionLoad>> loads,
         RegionLocationFinder regionFinder) {
-      serversToIndex = new HashMap<ServerName, Integer>(clusterState.size());
-      tablesToIndex = new HashMap<Integer, Integer>();
+
+      serversToIndex = new HashMap<String, Integer>();
+      tablesToIndex = new HashMap<String, Integer>();
       //regionsToIndex = new HashMap<HRegionInfo, Integer>();
 
       //TODO: We should get the list of tables from master
-      tables = new ArrayList<byte[]>();
+      tables = new ArrayList<String>();
 
-      numServers = clusterState.size();
+
       numRegions = 0;
 
+      int serverIndex = 0;
+
+      // Use servername and port as there can be dead servers in this list. We want everything with
+      // a matching hostname and port to have the same index.
+      for (ServerName sn:clusterState.keySet()) {
+        if (serversToIndex.get(sn.getHostAndPort()) == null) {
+          serversToIndex.put(sn.getHostAndPort(), serverIndex++);
+        }
+      }
+
+      // Count how many regions there are.
       for (Entry<ServerName, List<HRegionInfo>> entry : clusterState.entrySet()) {
         numRegions += entry.getValue().size();
       }
 
-      regionsPerServer = new int[clusterState.size()][];
+      numServers = serversToIndex.size();
+      regionsPerServer = new int[serversToIndex.size()][];
+
       servers = new ServerName[numServers];
       regions = new HRegionInfo[numRegions];
       regionIndexToServerIndex = new int[numRegions];
@@ -104,26 +122,35 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
       regionIndexToTableIndex = new int[numRegions];
       regionLoads = new List[numRegions];
       regionLocations = new int[numRegions][];
+      serverIndicesSortedByRegionCount = new Integer[numServers];
 
-      int tableIndex = 0, serverIndex = 0, regionIndex = 0, regionPerServerIndex = 0;
-      // populate serversToIndex first
+      int tableIndex = 0, regionIndex = 0, regionPerServerIndex = 0;
+
       for (Entry<ServerName, List<HRegionInfo>> entry : clusterState.entrySet()) {
-        servers[serverIndex] = entry.getKey();
+        serverIndex = serversToIndex.get(entry.getKey().getHostAndPort());
+
+        // keep the servername if this is the first server name for this hostname
+        // or this servername has the newest startcode.
+        if (servers[serverIndex] == null ||
+            servers[serverIndex].getStartcode() < entry.getKey().getStartcode()) {
+          servers[serverIndex] = entry.getKey();
+        }
+
         regionsPerServer[serverIndex] = new int[entry.getValue().size()];
-        serversToIndex.put(servers[serverIndex], Integer.valueOf(serverIndex));
-        serverIndex++;
+        serverIndicesSortedByRegionCount[serverIndex] = serverIndex;
       }
-      serverIndex = 0;
+
       for (Entry<ServerName, List<HRegionInfo>> entry : clusterState.entrySet()) {
+        serverIndex = serversToIndex.get(entry.getKey().getHostAndPort());
         regionPerServerIndex = 0;
+
         for (HRegionInfo region : entry.getValue()) {
-          byte[] tableName = region.getTableName();
-          int tableHash = Bytes.mapKey(tableName);
-          Integer idx = tablesToIndex.get(tableHash);
+          String tableName = region.getTableNameAsString();
+          Integer idx = tablesToIndex.get(tableName);
           if (idx == null) {
             tables.add(tableName);
             idx = tableIndex;
-            tablesToIndex.put(tableHash, tableIndex++);
+            tablesToIndex.put(tableName, tableIndex++);
           }
 
           regions[regionIndex] = region;
@@ -132,7 +159,7 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
           regionIndexToTableIndex[regionIndex] = idx;
           regionsPerServer[serverIndex][regionPerServerIndex++] = regionIndex;
 
-          //region load
+          // region load
           if (loads != null) {
             List<RegionLoad> rl = loads.get(region.getRegionNameAsString());
             // That could have failed if the RegionLoad is using the other regionName
@@ -156,7 +183,6 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
 
           regionIndex++;
         }
-        serverIndex++;
       }
 
       numTables = tables.size();
@@ -263,6 +289,53 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
       }
       return regions;
     }
+
+    void sortServersByRegionCount() {
+      Arrays.sort(serverIndicesSortedByRegionCount, numRegionsComparator);
+    }
+
+    int getNumRegions(int server) {
+      return regionsPerServer[server].length;
+    }
+
+    private Comparator<Integer> numRegionsComparator = new Comparator<Integer>() {
+      @Override
+      public int compare(Integer integer, Integer integer2) {
+        return Integer.valueOf(getNumRegions(integer)).compareTo(getNumRegions(integer2));
+      }
+    };
+
+    @Override
+    public String toString() {
+      String desc = "Cluster{" +
+          "servers=[";
+          for(ServerName sn:servers) {
+             desc += sn.getHostAndPort() + ", ";
+          }
+          desc +=
+          ", serverIndicesSortedByRegionCount="+
+          Arrays.toString(serverIndicesSortedByRegionCount) +
+          ", regionsPerServer=[";
+
+          for (int[]r:regionsPerServer) {
+            desc += Arrays.toString(r);
+          }
+          desc += "]" +
+          ", numMaxRegionsPerTable=" +
+          Arrays.toString(numMaxRegionsPerTable) +
+          ", numRegions=" +
+          numRegions +
+          ", numServers=" +
+          numServers +
+          ", numTables=" +
+          numTables +
+          ", numMovedRegions=" +
+          numMovedRegions +
+          ", numMovedMetaRegions=" +
+          numMovedMetaRegions +
+          '}';
+      return desc;
+    }
   }
 
   // slop for regions
@@ -270,7 +343,6 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
   private Configuration config;
   private static final Random RANDOM = new Random(System.currentTimeMillis());
   private static final Log LOG = LogFactory.getLog(BaseLoadBalancer.class);
-
   protected MasterServices services;
 
   @Override

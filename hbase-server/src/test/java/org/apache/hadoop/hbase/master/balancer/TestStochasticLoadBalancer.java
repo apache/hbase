@@ -19,10 +19,14 @@ package org.apache.hadoop.hbase.master.balancer;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -34,7 +38,6 @@ import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.master.RegionPlan;
 import org.junit.BeforeClass;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
@@ -46,6 +49,7 @@ public class TestStochasticLoadBalancer extends BalancerTestBase {
   @BeforeClass
   public static void beforeAllTests() throws Exception {
     Configuration conf = HBaseConfiguration.create();
+    conf.setFloat("hbase.master.balancer.stochastic.maxMovePercent", 0.75f);
     loadBalancer = new StochasticLoadBalancer();
     loadBalancer.setConf(conf);
   }
@@ -101,6 +105,10 @@ public class TestStochasticLoadBalancer extends BalancerTestBase {
       new int[]{1, 1, 1, 1, 1, 1, 1, 1, 1, 10},
       new int[]{1, 1, 1, 1, 1, 1, 1, 1, 1, 123},
       new int[]{1, 1, 1, 1, 1, 1, 1, 1, 1, 155},
+      new int[]{10, 7, 12, 8, 11, 10, 9, 14},
+      new int[]{13, 14, 6, 10, 10, 10, 8, 10},
+      new int[]{130, 14, 60, 10, 100, 10, 80, 10},
+      new int[]{130, 140, 60, 100, 100, 100, 80, 100}
   };
 
   /**
@@ -119,9 +127,11 @@ public class TestStochasticLoadBalancer extends BalancerTestBase {
       List<ServerAndLoad> list = convertToList(servers);
       LOG.info("Mock Cluster : " + printMock(list) + " " + printStats(list));
       List<RegionPlan> plans = loadBalancer.balanceCluster(servers);
-      List<ServerAndLoad> balancedCluster = reconcile(list, plans);
+      List<ServerAndLoad> balancedCluster = reconcile(list, plans, servers);
       LOG.info("Mock Balance : " + printMock(balancedCluster));
       assertClusterAsBalanced(balancedCluster);
+      List<RegionPlan> secondPlans =  loadBalancer.balanceCluster(servers);
+      assertNull(secondPlans);
       for (Map.Entry<ServerName, List<HRegionInfo>> entry : servers.entrySet()) {
         returnRegions(entry.getValue());
         returnServer(entry.getKey());
@@ -132,56 +142,96 @@ public class TestStochasticLoadBalancer extends BalancerTestBase {
 
   @Test
   public void testSkewCost() {
+    Configuration conf = HBaseConfiguration.create();
+    StochasticLoadBalancer.CostFunction
+        costFunction = new StochasticLoadBalancer.RegionCountSkewCostFunction(conf);
     for (int[] mockCluster : clusterStateMocks) {
-      double cost = loadBalancer.computeSkewLoadCost(mockCluster(mockCluster));
+      double cost = costFunction.cost(mockCluster(mockCluster));
       assertTrue(cost >= 0);
       assertTrue(cost <= 1.01);
     }
     assertEquals(1,
-      loadBalancer.computeSkewLoadCost(mockCluster(new int[] { 0, 0, 0, 0, 1 })), 0.01);
+        costFunction.cost(mockCluster(new int[]{0, 0, 0, 0, 1})), 0.01);
     assertEquals(.75,
-      loadBalancer.computeSkewLoadCost(mockCluster(new int[] { 0, 0, 0, 1, 1 })), 0.01);
+        costFunction.cost(mockCluster(new int[]{0, 0, 0, 1, 1})), 0.01);
     assertEquals(.5,
-      loadBalancer.computeSkewLoadCost(mockCluster(new int[] { 0, 0, 1, 1, 1 })), 0.01);
+        costFunction.cost(mockCluster(new int[]{0, 0, 1, 1, 1})), 0.01);
     assertEquals(.25,
-      loadBalancer.computeSkewLoadCost(mockCluster(new int[] { 0, 1, 1, 1, 1 })), 0.01);
+        costFunction.cost(mockCluster(new int[]{0, 1, 1, 1, 1})), 0.01);
     assertEquals(0,
-      loadBalancer.computeSkewLoadCost(mockCluster(new int[] { 1, 1, 1, 1, 1 })), 0.01);
+        costFunction.cost(mockCluster(new int[]{1, 1, 1, 1, 1})), 0.01);
     assertEquals(0,
-        loadBalancer.computeSkewLoadCost(mockCluster(new int[] { 10, 10, 10, 10, 10 })), 0.01);
+        costFunction.cost(mockCluster(new int[]{10, 10, 10, 10, 10})), 0.01);
   }
 
   @Test
   public void testTableSkewCost() {
+    Configuration conf = HBaseConfiguration.create();
+    StochasticLoadBalancer.CostFunction
+        costFunction = new StochasticLoadBalancer.TableSkewCostFunction(conf);
     for (int[] mockCluster : clusterStateMocks) {
       BaseLoadBalancer.Cluster cluster = mockCluster(mockCluster);
-      double cost = loadBalancer.computeTableSkewLoadCost(cluster);
+      double cost = costFunction.cost(cluster);
       assertTrue(cost >= 0);
       assertTrue(cost <= 1.01);
     }
   }
 
   @Test
-  public void testCostFromStats() {
-    DescriptiveStatistics statOne = new DescriptiveStatistics();
-    for (int i =0; i < 100; i++) {
-      statOne.addValue(10);
-    }
-    assertEquals(0, loadBalancer.costFromStats(statOne), 0.01);
+  public void testCostFromArray() {
+    Configuration conf = HBaseConfiguration.create();
+    StochasticLoadBalancer.CostFromRegionLoadFunction
+        costFunction = new StochasticLoadBalancer.MemstoreSizeCostFunction(conf);
 
-    DescriptiveStatistics statTwo = new DescriptiveStatistics();
+    double[] statOne = new double[100];
     for (int i =0; i < 100; i++) {
-      statTwo.addValue(0);
+      statOne[i] = 10;
     }
-    statTwo.addValue(100);
-    assertEquals(1, loadBalancer.costFromStats(statTwo), 0.01);
+    assertEquals(0, costFunction.costFromArray(statOne), 0.01);
 
-    DescriptiveStatistics statThree = new DescriptiveStatistics();
+    double[] statTwo= new double[101];
     for (int i =0; i < 100; i++) {
-      statThree.addValue(0);
-      statThree.addValue(100);
+      statTwo[i] = 0;
     }
-    assertEquals(0.5, loadBalancer.costFromStats(statThree), 0.01);
+    statTwo[100] = 100;
+    assertEquals(1, costFunction.costFromArray(statTwo), 0.01);
+
+    double[] statThree = new double[200];
+    for (int i =0; i < 100; i++) {
+      statThree[i] = (0);
+      statThree[i+100] = 100;
+    }
+    assertEquals(0.5, costFunction.costFromArray(statThree), 0.01);
+  }
+
+  @Test(timeout =  30000)
+  public void testLosingRs() throws Exception {
+    int numNodes = 3;
+    int numRegions = 20;
+    int numRegionsPerServer = 3; //all servers except one
+    int numTables = 2;
+
+    Map<ServerName, List<HRegionInfo>> serverMap =
+        createServerMap(numNodes, numRegions, numRegionsPerServer, numTables);
+    List<ServerAndLoad> list = convertToList(serverMap);
+
+
+    List<RegionPlan> plans = loadBalancer.balanceCluster(serverMap);
+    assertNotNull(plans);
+
+    // Apply the plan to the mock cluster.
+    List<ServerAndLoad> balancedCluster = reconcile(list, plans, serverMap);
+
+    assertClusterAsBalanced(balancedCluster);
+
+    ServerName sn = serverMap.keySet().toArray(new ServerName[serverMap.size()])[0];
+
+    ServerName deadSn = new ServerName(sn.getHostname(), sn.getPort(), sn.getStartcode() -100);
+
+    serverMap.put(deadSn, new ArrayList<HRegionInfo>(0));
+
+    plans = loadBalancer.balanceCluster(serverMap);
+    assertNull(plans);
   }
 
   @Test (timeout = 20000)
@@ -190,7 +240,7 @@ public class TestStochasticLoadBalancer extends BalancerTestBase {
     int numRegions = 1000;
     int numRegionsPerServer = 40; //all servers except one
     int numTables = 10;
-    testWithCluster(numNodes, numRegions, numRegionsPerServer, numTables);
+    testWithCluster(numNodes, numRegions, numRegionsPerServer, numTables, true);
   }
 
   @Test (timeout = 20000)
@@ -199,45 +249,92 @@ public class TestStochasticLoadBalancer extends BalancerTestBase {
     int numRegions = 2000;
     int numRegionsPerServer = 40; //all servers except one
     int numTables = 10;
-    testWithCluster(numNodes, numRegions, numRegionsPerServer, numTables);
+    testWithCluster(numNodes, numRegions, numRegionsPerServer, numTables, true);
   }
 
-  @Test (timeout = 40000)
+  @Test (timeout = 20000)
+  public void testSmallCluster3() {
+    int numNodes = 20;
+    int numRegions = 2000;
+    int numRegionsPerServer = 1; // all servers except one
+    int numTables = 10;
+    testWithCluster(numNodes, numRegions, numRegionsPerServer, numTables, false /* max moves */);
+  }
+
+  @Test (timeout = 800000)
   public void testMidCluster() {
     int numNodes = 100;
     int numRegions = 10000;
-    int numRegionsPerServer = 60; //all servers except one
+    int numRegionsPerServer = 60; // all servers except one
     int numTables = 40;
-    testWithCluster(numNodes, numRegions, numRegionsPerServer, numTables);
+    testWithCluster(numNodes, numRegions, numRegionsPerServer, numTables, true);
   }
 
-  @Test (timeout = 1200000)
+  @Test (timeout = 800000)
   public void testMidCluster2() {
     int numNodes = 200;
     int numRegions = 100000;
-    int numRegionsPerServer = 40; //all servers except one
+    int numRegionsPerServer = 40; // all servers except one
     int numTables = 400;
-    testWithCluster(numNodes, numRegions, numRegionsPerServer, numTables);
+    testWithCluster(numNodes,
+        numRegions,
+        numRegionsPerServer,
+        numTables,
+        false /* num large num regions means may not always get to best balance with one run */);
+  }
+
+
+  @Test (timeout = 800000)
+  public void testMidCluster3() {
+    int numNodes = 100;
+    int numRegions = 2000;
+    int numRegionsPerServer = 9; // all servers except one
+    int numTables = 110;
+    testWithCluster(numNodes, numRegions, numRegionsPerServer, numTables, true);
+    // TODO(eclark): Make sure that the tables are well distributed.
   }
 
   @Test
-  @Ignore
-  //TODO: This still does not finish, making the LoadBalancer unusable at this scale. We should solve this.
-  //There are two reasons so far;
-  // - It takes too long for iterating for all servers
-  // - Moving one region out of the loaded server only costs a slight decrease in the cost of regionCountSkewCost
-  // but also a slight increase on the moveCost. loadMultiplier / moveCostMultiplier is not high enough to bring down
-  // the total cost, so that the eager selection cannot continue. This can be solved by smt like
-  // http://en.wikipedia.org/wiki/Simulated_annealing instead of random walk with eager selection
   public void testLargeCluster() {
     int numNodes = 1000;
     int numRegions = 100000; //100 regions per RS
     int numRegionsPerServer = 80; //all servers except one
     int numTables = 100;
-    testWithCluster(numNodes, numRegions, numRegionsPerServer, numTables);
+    testWithCluster(numNodes, numRegions, numRegionsPerServer, numTables, true);
   }
 
-  protected void testWithCluster(int numNodes, int numRegions, int numRegionsPerServer, int numTables) {
+  protected void testWithCluster(int numNodes,
+                                 int numRegions,
+                                 int numRegionsPerServer,
+                                 int numTables,
+                                 boolean assertFullyBalanced) {
+    Map<ServerName, List<HRegionInfo>> serverMap =
+        createServerMap(numNodes, numRegions, numRegionsPerServer, numTables);
+
+    List<ServerAndLoad> list = convertToList(serverMap);
+    LOG.info("Mock Cluster : " + printMock(list) + " " + printStats(list));
+
+    // Run the balancer.
+    List<RegionPlan> plans = loadBalancer.balanceCluster(serverMap);
+    assertNotNull(plans);
+
+    // Check to see that this actually got to a stable place.
+    if (assertFullyBalanced) {
+      // Apply the plan to the mock cluster.
+      List<ServerAndLoad> balancedCluster = reconcile(list, plans, serverMap);
+
+      // Print out the cluster loads to make debugging easier.
+      LOG.info("Mock Balance : " + printMock(balancedCluster));
+      assertClusterAsBalanced(balancedCluster);
+      List<RegionPlan> secondPlans =  loadBalancer.balanceCluster(serverMap);
+      assertNull(secondPlans);
+    }
+  }
+
+  private Map<ServerName, List<HRegionInfo>> createServerMap(int numNodes,
+                                                             int numRegions,
+                                                             int numRegionsPerServer,
+                                                             int numTables) {
     //construct a cluster of numNodes, having  a total of numRegions. Each RS will hold
     //numRegionsPerServer many regions except for the last one, which will host all the
     //remaining regions
@@ -246,8 +343,6 @@ public class TestStochasticLoadBalancer extends BalancerTestBase {
       cluster[i] = numRegionsPerServer;
     }
     cluster[cluster.length - 1] = numRegions - ((cluster.length - 1) * numRegionsPerServer);
-
-    assertNotNull(loadBalancer.balanceCluster(mockClusterServers(cluster, numTables)));
+    return mockClusterServers(cluster, numTables);
   }
-
 }
