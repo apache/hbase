@@ -1595,6 +1595,7 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
       } catch (BindException e) {
         if (!auto) {
           // auto bind disabled throw BindException
+          LOG.error("Failed binding http info server to port: " + port);
           throw e;
         }
         // auto bind enabled, try to use another port
