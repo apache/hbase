@@ -23,7 +23,6 @@ Map<String, Integer> frags = null;
 ServerName metaLocation = null;
 List<ServerName> servers = null;
 Set<ServerName> deadServers = null;
-boolean showAppendWarning = false;
 boolean catalogJanitorEnabled = true;
 String filter = "general";
 String format = "html";
@@ -105,14 +104,6 @@ org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
           Your current JVM version <% System.getProperty("java.version") %> is known to be
           unstable with HBase. Please see the
           <a href="http://wiki.apache.org/hadoop/Hbase/Troubleshooting#A18">HBase wiki</a>
-          for details.
-          </div>
-        </%if>
-        <%if showAppendWarning %>
-          <div class="alert alert-error">
-          You are currently running the HMaster without HDFS append support enabled.
-          This may result in data loss.
-          Please see the <a href="http://wiki.apache.org/hadoop/Hbase/HdfsSyncSupport">HBase wiki</a>
           for details.
           </div>
         </%if>
