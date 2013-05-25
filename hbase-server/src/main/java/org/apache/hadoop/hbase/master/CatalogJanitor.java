@@ -265,8 +265,8 @@ public class CatalogJanitor extends Chore {
         LOG.info("Scanned " + count + " catalog row(s), gc'd " + mergeCleaned
             + " unreferenced merged region(s) and " + splitCleaned
             + " unreferenced parent region(s)");
-      } else if (LOG.isDebugEnabled()) {
-        LOG.debug("Scanned " + count + " catalog row(s), gc'd " + mergeCleaned
+      } else if (LOG.isTraceEnabled()) {
+        LOG.trace("Scanned " + count + " catalog row(s), gc'd " + mergeCleaned
             + " unreferenced merged region(s) and " + splitCleaned
             + " unreferenced parent region(s)");
       }

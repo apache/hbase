@@ -378,11 +378,14 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
     int ceiling = (int) Math.ceil(average * (1 + slop));
     if (!(cs.getMinLoad() > ceiling || cs.getMaxLoad() < floor)) {
       NavigableMap<ServerAndLoad, List<HRegionInfo>> serversByLoad = cs.getServersByLoad();
-      LOG.info("Skipping load balancing because balanced cluster; " +
+      if (LOG.isTraceEnabled()) {
+        // If nothing to balance, then don't say anything unless trace-level logging.
+        LOG.trace("Skipping load balancing because balanced cluster; " +
           "servers=" + cs.getNumServers() + " " +
           "regions=" + cs.getNumRegions() + " average=" + average + " " +
           "mostloaded=" + serversByLoad.lastKey().getLoad() +
           " leastloaded=" + serversByLoad.firstKey().getLoad());
+      }
       return false;
     }
     return true;

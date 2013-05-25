@@ -27,16 +27,14 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HDFSBlocksDistribution;
-import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.io.FSDataInputStreamWrapper;
 import org.apache.hadoop.hbase.io.HFileLink;
-import org.apache.hadoop.hbase.io.Reference;
 import org.apache.hadoop.hbase.io.HalfStoreFileReader;
+import org.apache.hadoop.hbase.io.Reference;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.util.FSUtils;
@@ -101,13 +99,12 @@ public class StoreFileInfo {
   public StoreFileInfo(final Configuration conf, final FileSystem fs, final FileStatus fileStatus)
       throws IOException {
     this.fileStatus = fileStatus;
-
     Path p = fileStatus.getPath();
     if (HFileLink.isHFileLink(p)) {
       // HFileLink
       this.reference = null;
       this.link = new HFileLink(conf, p);
-      LOG.debug("Store file " + p + " is a link");
+      if (LOG.isTraceEnabled()) LOG.trace(p + " is a link");
     } else if (isReference(p)) {
       this.reference = Reference.read(fs, p);
       Path referencePath = getReferredToFile(p);
@@ -118,7 +115,7 @@ public class StoreFileInfo {
         // Reference
         this.link = null;
       }
-      LOG.debug("Store file " + p + " is a " + reference.getFileRegion() +
+      if (LOG.isTraceEnabled()) LOG.trace(p + " is a " + reference.getFileRegion() +
         " reference to " + referencePath);
     } else if (isHFile(p)) {
       // HFile
