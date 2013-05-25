@@ -54,12 +54,12 @@ public class MasterStatusServlet extends HttpServlet {
   {
     HMaster master = (HMaster) getServletContext().getAttribute(HMaster.MASTER);
     assert master != null : "No Master in context!";
-    
+
     Configuration conf = master.getConfiguration();
-    HBaseAdmin admin = new HBaseAdmin(conf);    
-        
+    HBaseAdmin admin = new HBaseAdmin(conf);
+
     Map<String, Integer> frags = getFragmentationInfo(master, conf);
-    
+
     ServerName metaLocation = getMetaLocationOrNull(master);
     //ServerName metaLocation = master.getCatalogTracker().getMetaLocation();
     List<ServerName> servers = master.getServerManager().getOnlineServersList();
@@ -70,7 +70,6 @@ public class MasterStatusServlet extends HttpServlet {
     try {
        tmpl = new MasterStatusTmpl()
       .setFrags(frags)
-      .setShowAppendWarning(shouldShowAppendWarning(conf))
       .setMetaLocation(metaLocation)
       .setServers(servers)
       .setDeadServers(deadServers)
@@ -99,20 +98,11 @@ public class MasterStatusServlet extends HttpServlet {
   private Map<String, Integer> getFragmentationInfo(
       HMaster master, Configuration conf) throws IOException {
     boolean showFragmentation = conf.getBoolean(
-        "hbase.master.ui.fragmentation.enabled", false);    
+        "hbase.master.ui.fragmentation.enabled", false);
     if (showFragmentation) {
       return FSUtils.getTableFragmentation(master);
     } else {
       return null;
-    }
-  }
-
-  static boolean shouldShowAppendWarning(Configuration conf) {
-    try {
-      return !FSUtils.isAppendSupported(conf) && FSUtils.isHDFS(conf);
-    } catch (IOException e) {
-      LOG.warn("Unable to determine if append is supported", e);
-      return false;
     }
   }
 }
