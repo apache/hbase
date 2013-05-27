@@ -101,7 +101,7 @@ import static org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Acc
  *
  * <p>
  * To perform authorization checks, {@code AccessController} relies on the
- * {@link org.apache.hadoop.hbase.ipc.RpcServerEngine} being loaded to provide
+ * RpcServer being loaded to provide
  * the user identities for remote requests.
  * </p>
  *
@@ -453,10 +453,10 @@ public class AccessController extends BaseRegionObserver
     if (env instanceof MasterCoprocessorEnvironment) {
       // if running on HMaster
       MasterCoprocessorEnvironment mEnv = (MasterCoprocessorEnvironment) env;
-      zk = mEnv.getMasterServices().getZooKeeper();      
-    } else if (env instanceof RegionServerCoprocessorEnvironment) {      
+      zk = mEnv.getMasterServices().getZooKeeper();
+    } else if (env instanceof RegionServerCoprocessorEnvironment) {
       RegionServerCoprocessorEnvironment rsEnv = (RegionServerCoprocessorEnvironment) env;
-      zk = rsEnv.getRegionServerServices().getZooKeeper();      
+      zk = rsEnv.getRegionServerServices().getZooKeeper();
     } else if (env instanceof RegionCoprocessorEnvironment) {
       // if running at region
       regionEnv = (RegionCoprocessorEnvironment) env;
@@ -822,7 +822,7 @@ public class AccessController extends BaseRegionObserver
   public void preSplit(ObserverContext<RegionCoprocessorEnvironment> e) throws IOException {
     requirePermission("split", getTableName(e.getEnvironment()), null, null, Action.ADMIN);
   }
-  
+
   @Override
   public void preSplit(ObserverContext<RegionCoprocessorEnvironment> e,
       byte[] splitRow) throws IOException {
