@@ -26,8 +26,8 @@
  * limitations under the License.
  */
 -->
-    <title>Building and Developing Apache HBase (TM)</title>
-    <para>This chapter will be of interest only to those building and developing Apache HBase (TM) (i.e., as opposed to
+    <title>Building and Developing Apache HBase</title>
+    <para>This chapter will be of interest only to those building and developing Apache HBase (i.e., as opposed to
     just downloading the latest distribution).
     </para>
     <section xml:id="repos">
@@ -44,6 +44,12 @@ svn co http://svn.apache.org/repos/asf/hbase/trunk hbase-core-trunk
         <programlisting>
 git clone git://git.apache.org/hbase.git
         </programlisting>
+          <para>
+              There is also a github repository that mirrors Apache git repository.  If you'd like to develop within github environment (collaborating, pull requests) you can get the source code by:
+              <programlisting>
+git clone git://github.com/apache/hbase.git
+              </programlisting>
+          </para>
       </section>
     </section>
 
@@ -164,7 +170,7 @@ mvn clean package -DskipTests
         <title>Building the HBase tarball</title>
         <para>Do the following to build the HBase tarball.
         Passing the -Prelease will generate javadoc and run the RAT plugin to verify licenses on source.
-        <programlisting>% MAVEN_OPTS="-Xmx2g" mvn clean install javadoc:aggregate site assembly:assembly -DskipTests -Prelease</programlisting>
+        <programlisting>% MAVEN_OPTS="-Xmx2g" mvn clean install javadoc:aggregate site assembly:single -DskipTests -Prelease</programlisting>
 </para>
       </section>
 
@@ -199,9 +205,11 @@ mvn clean package -DskipTests
   865  ~/bin/mvn/bin/mvn release:prepare
   866  # Answer questions and then ^C to kill the build after the last question. See below for more on this.
   867  vi release.properties
-       # Change the references to trunk svn to be 0.92.2mvn; the release plugin presumes trunk
-       # Then restart the release:prepare -- it won't ask questions
-       # because the properties file exists.
+       # Change the references to trunk svn to be 0.92.2mvn.  The release plugin presumes trunk.
+       # Where it asks for a label for the release specify a label that does not yet exist; e.g.
+       # 0.92.2mvn2 (i.e. add a character, here a '2', to the label you are currently working
+       # against so when maven goes to label the release, it does not clash with an existing one).
+       # Then restart the release:prepare -- it won't ask questions because the properties file exists.
   868  ~/bin/mvn/bin/mvn release:prepare
   # The apache-release profile comes from the apache parent pom and does signing of artifacts published
   869  ~/bin/mvn/bin/mvn release:perform  -Papache-release
@@ -325,8 +333,16 @@ What is the new development version for "HBase"? (org.apache.hbase:hbase) 0.92.3
     <title>Updating hbase.apache.org</title>
       <section xml:id="hbase.org.site.contributing">
       <title>Contributing to hbase.apache.org</title>
-      <para>The Apache HBase apache web site (including this reference guide) is maintained as part of the main Apache HBase source tree, under <filename>/src/docbkx</filename> and <filename>/src/site</filename>. The former is this reference guide; the latter, in most cases, are legacy pages that are in the process of being merged into the docbkx tree.</para>
-      <para>To contribute to the reference guide, edit these files and submit them as a patch (see <xref linkend="submitting.patches"/>). Your Jira should contain a summary of the changes in each section (see <link xlink:href="https://issues.apache.org/jira/browse/HBASE-6081">HBASE-6081</link> for an example).</para>
+      <para>The Apache HBase apache web site (including this reference guide) is maintained as part of the main
+          Apache HBase source tree, under <filename>/src/main/docbkx</filename> and <filename>/src/main/site</filename>
+          <footnote><para>Before 0.95.0, site and reference guide were at src/docbkx and src/site respectively</para></footnote>.
+          The former -- docbkx -- is this reference guide as a bunch of xml marked up using <link xlink:href="http://docbook.org">docbook</link>;
+          the latter is the hbase site (the navbars, the header, the layout, etc.),
+          and some of the documentation, legacy pages mostly that are in the process of being merged into the docbkx tree that is
+      converted to html by a maven plugin by the site build.</para>
+      <para>To contribute to the reference guide, edit these files under site or docbkx and submit them as a patch
+          (see <xref linkend="submitting.patches"/>). Your Jira should contain a summary of the changes in each
+          section (see <link xlink:href="https://issues.apache.org/jira/browse/HBASE-6081">HBASE-6081</link> for an example).</para>
       <para>To generate the site locally while you're working on it, run:
       <programlisting>mvn site</programlisting>
       Then you can load up the generated HTML files in your browser (file are under <filename>/target/site</filename>).</para>
@@ -334,20 +350,22 @@ What is the new development version for "HBase"? (org.apache.hbase:hbase) 0.92.3
       <section xml:id="hbase.org.site.publishing">
       <title>Publishing hbase.apache.org</title>
       <para>As of <link xlink:href="https://issues.apache.org/jira/browse/INFRA-5680">INFRA-5680 Migrate apache hbase website</link>,
-          to publish the website, build it, and then deploy it over a checkout of <filename>https://svn.apache.org/repos/asf/hbase/hbase.apache.org/trunk</filename>,
-          and then check it in.  For example, if trunk is checked out out at <filename>/Users/stack/checkouts/trunk</filename>
-          and hbase.apache.org is checked out at <filename>/Users/stack/checkouts/hbase.apache.org/trunk</filename>, to update
+          to publish the website, build it, and then deploy it over a checkout of <filename>https://svn.apache.org/repos/asf/hbase/hbase.apache.org/trunk</filename>.
+          Finally, check it in.  For example, if trunk is checked out out at <filename>/Users/stack/checkouts/trunk</filename>
+          and the hbase website, hbase.apache.org, is checked out at <filename>/Users/stack/checkouts/hbase.apache.org/trunk</filename>, to update
           the site, do the following:
           <programlisting>
               # Build the site and deploy it to the checked out directory
-              # Getting the javadoc into site is a little tricky.  You have to build it independent, then
-              # 'aggregate' it at top-level so the pre-site site lifecycle step can find it; that is
-              # what the javadoc:javadoc and javadoc:aggregate is about.
-              $ MAVEN_OPTS=" -Xmx3g" mvn clean -DskipTests javadoc:aggregate site  site:stage -DstagingDirectory=/Users/stack/checkouts/hbase.apache.org/trunk
-              # Check the deployed site by viewing in a brower.
-              # If all is good, commit it and it will show up at http://hbase.apache.org
-              #
+              # Getting the javadoc into site is a little tricky.  You have to build it before you invoke 'site'.
+              $ MAVEN_OPTS=" -Xmx3g" mvn clean install -DskipTests javadoc:aggregate site  site:stage -DstagingDirectory=/Users/stack/checkouts/hbase.apache.org/trunk
+          </programlisting>
+          Now check the deployed site by viewing in a brower, browse to file:////Users/stack/checkouts/hbase.apache.org/trunk/index.html and check all is good.
+          If all checks out, commit it and your new build will show up immediately at http://hbase.apache.org
+          <programlisting>
               $ cd /Users/stack/checkouts/hbase.apache.org/trunk
+              $ svn status
+              # Do an svn add of any new content...
+              $ svn add ....
               $ svn commit -m 'Committing latest version of website...'
           </programlisting>
       </para>
@@ -658,9 +676,9 @@ and public client API's can be used.
 <para>
 On a distributed cluster, integration tests that use ChaosMonkey or otherwise manipulate services thru cluster manager (e.g. restart regionservers) use SSH to do it.
 To run these, test process should be able to run commands on remote end, so ssh should be configured accordingly (for example, if HBase runs under hbase
-user in your cluster, you can set up passwordless ssh for that user and run the test also under it). To facilitate that, <code>hbase.it.clustermanager.ssh.user</code>, 
+user in your cluster, you can set up passwordless ssh for that user and run the test also under it). To facilitate that, <code>hbase.it.clustermanager.ssh.user</code>,
 <code>hbase.it.clustermanager.ssh.opts</code> and <code>hbase.it.clustermanager.ssh.cmd</code> configuration settings can be used. "User" is the remote user that cluster manager should use to perform ssh commands.
-"Opts" contains additional options that are passed to SSH (for example, "-i /tmp/my-key"). 
+"Opts" contains additional options that are passed to SSH (for example, "-i /tmp/my-key").
 Finally, if you have some custom environment setup, "cmd" is the override format for the entire tunnel (ssh) command. The default string is {<code>/usr/bin/ssh %1$s %2$s%3$s%4$s "%5$s"</code>} and is a good starting point. This is a standard Java format string with 5 arguments that is used to execute the remote command. The argument 1 (%1$s) is SSH options set the via opts setting or via environment variable, 2 is SSH user name, 3 is "@" if username is set or "" otherwise, 4 is the target host name, and 5 is the logical command to execute (that may include single quotes, so don't use them). For example, if you run the tests under non-hbase user and want to ssh as that user and change to hbase on remote machine, you can use {<code>/usr/bin/ssh %1$s %2$s%3$s%4$s "su hbase - -c \"%5$s\""</code>}. That way, to kill RS (for example) integration tests may run {<code>/usr/bin/ssh some-hostname "su hbase - -c \"ps aux | ... | kill ...\""</code>}.
 The command is logged in the test logs, so you can verify it is correct for your environment.
 </para>
@@ -982,6 +1000,13 @@ mvn compile
           </para>
           <para>Please submit one patch-file per Jira.  For example, if multiple files are changed make sure the
           selected resource when generating the patch is a directory.  Patch files can reflect changes in multiple files. </para>
+      <para>
+          Generating patches using git:<sbr/>
+              <programlisting>
+$ git diff --no-prefix  > HBASE_XXXX.patch
+              </programlisting>
+              Don't forget the 'no-prefix' option; and generate the diff from the root directory of project
+      </para>
           <para>Make sure you review <xref linkend="eclipse.code.formatting"/> for code style. </para>
           </section>
           <section xml:id="submitting.patches.naming">
@@ -989,7 +1014,7 @@ mvn compile
           <para>The patch file should have the Apache HBase Jira ticket in the name.  For example, if a patch was submitted for <filename>Foo.java</filename>, then
           a patch file called <filename>Foo_HBASE_XXXX.patch</filename> would be acceptable where XXXX is the Apache HBase Jira number.
           </para>
-          <para>If you generating from a branch, then including the target branch in the filename is advised, e.g., <filename>HBASE-XXXX-0.90.patch</filename>.
+          <para>If you generating from a branch, then including the target branch in the filename is advised, e.g., <filename>HBASE_XXXX-0.90.patch</filename>.
           </para>
           </section>
           <section xml:id="submitting.patches.tests">
@@ -1152,6 +1177,76 @@ Bar bar = foo.getBar();     &lt;--- imagine there's an extra space(s) after the 
           </section>
 
         </section>   <!--  patch feedback -->
+
+        <section>
+            <title>Submitting a patch again</title>
+            <para>
+                Sometimes committers ask for changes for a patch.  After incorporating the suggested/requested changes, follow the following process to submit the patch again.
+            </para>
+            <itemizedlist>
+                <listitem>
+                    Do not delete the old patch file
+                </listitem>
+                <listitem>
+                    version your new patch file using a simple scheme like this: <sbr/>
+                    HBASE-{jira number}-{version}.patch <sbr/>
+                    e.g:
+                    HBASE_XXXX-v2.patch
+                </listitem>
+                <listitem>
+                    'Cancel Patch' on JIRA.. bug status will change back to Open
+                </listitem>
+                <listitem>
+                    Attach new patch file (e.g. HBASE_XXXX-v2.patch) using 'Files --> Attach'
+                </listitem>
+                <listitem>
+                    Click on 'Submit Patch'.  Now the bug status will say 'Patch Available'.
+                </listitem>
+            </itemizedlist>
+            Committers will review the patch.  Rinse and repeat as many times as needed :-)
+        </section>
+
+        <section>
+            <title>Submitting incremental patches</title>
+            <para>
+                At times you may want to break a big change into mulitple patches.  Here is a sample work-flow using git
+                <itemizedlist>
+                    <listitem>
+                        patch 1:
+                        <itemizedlist>
+                            <listitem>
+                                $ git diff --no-prefix > HBASE_XXXX-1.patch
+                            </listitem>
+                        </itemizedlist>
+                    </listitem>
+                    <listitem>
+                        patch 2:
+                        <itemizedlist>
+                            <listitem>
+                                create a new git branch <sbr/>
+                                $ git checkout -b my_branch
+                            </listitem>
+                            <listitem>
+                                save your work
+                                $ git add file1 file2 <sbr/>
+                                $ git commit -am 'saved after HBASE_XXXX-1.patch' <sbr/>
+                                now you have your own branch, that is different from remote master branch <sbr/>
+                            </listitem>
+                            <listitem>
+                                make more changes...
+                            </listitem>
+                            <listitem>
+                                create second patch <sbr/>
+                                $ git diff --no-prefix > HBASE_XXXX-2.patch
+                            </listitem>
+                        </itemizedlist>
+
+
+
+                    </listitem>
+                </itemizedlist>
+            </para>
+        </section>
 
          <section xml:id="reviewboard">
             <title>ReviewBoard</title>
