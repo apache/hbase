@@ -23,7 +23,7 @@
   <parent>
     <artifactId>hbase</artifactId>
     <groupId>org.apache.hbase</groupId>
-    <version>0.95.0-SNAPSHOT</version>
+    <version>0.95.1</version>
     <relativePath>..</relativePath>
   </parent>
 
@@ -229,7 +229,7 @@
       </dependencies>
     </profile>
 
-    <!-- profile against Hadoop 1.0.x: 
+    <!-- profile against Hadoop 1.0.x:
           mvn -Dhadoop.profile=1.0
     -->
     <profile>
