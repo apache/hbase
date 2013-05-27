@@ -180,6 +180,21 @@ byte[] sbDigest = Bytes.toBytes(sDigest);
 System.out.println("md5 digest as string length: " + sbDigest.length);    // returns 26
 </programlisting>
          </para>
+         <para>Unfortunately, using a binary representation of a type will make your data harder to read outside of your code. For example,
+               this is what you will see in the shell when you increment a value:
+<programlisting>
+hbase(main):001:0> incr 't', 'r', 'f:q', 1
+COUNTER VALUE = 1
+
+hbase(main):002:0> get 't', 'r'
+COLUMN                                        CELL
+ f:q                                          timestamp=1369163040570, value=\x00\x00\x00\x00\x00\x00\x00\x01
+1 row(s) in 0.0310 seconds
+</programlisting>
+               The shell makes a best effort to print a string, and it this case it decided to just print the hex. The same will
+               happen to your row keys inside the region names. It can be okay if you know what's being stored, but it might also
+               be unreadable if arbitrary data can be put in the same cells. This is the main trade-off.
+         </para>
        </section>
 
     </section>

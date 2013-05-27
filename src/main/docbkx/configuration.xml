@@ -26,8 +26,8 @@
  * limitations under the License.
  */
 -->
-    <title>Apache HBase (TM) Configuration</title>
-    <para>This chapter is the Not-So-Quick start guide to Apache HBase (TM) configuration.  It goes
+    <title>Apache HBase Configuration</title>
+    <para>This chapter is the Not-So-Quick start guide to Apache HBase configuration.  It goes
     over system requirements, Hadoop setup, the different Apache HBase run modes, and the
     various configurations in HBase.  Please read this chapter carefully.  At a mimimum
     ensure that all <xref linkend="basic.prerequisites" /> have
@@ -65,8 +65,10 @@ to ensure well-formedness of your document after an edit session.
 
     <section xml:id="java">
         <title>Java</title>
-        <para>Just like Hadoop, HBase requires at least java 6 from
-        <link xlink:href="http://www.java.com/download/">Oracle</link>.</para>
+        <para>Just like Hadoop, HBase requires at least Java 6 from
+        <link xlink:href="http://www.java.com/download/">Oracle</link>.
+        Java 7 should work and can even be faster than Java 6, but almost all testing
+        has been done on the latter at this point.</para>
     </section>
 
     <section xml:id="os">
@@ -227,11 +229,12 @@ to ensure well-formedness of your document after an edit session.
 		 <title>Hadoop version support matrix</title>
 		 <tgroup cols='4' align='left' colsep='1' rowsep='1'><colspec colname='c1' align='left'/><colspec colname='c2' align='center'/><colspec colname='c3' align='center'/><colspec colname='c4' align='center'/>
          <thead>
-	     <row><entry>               </entry><entry>HBase-0.92.x</entry><entry>HBase-0.94.x</entry><entry>HBase-0.96</entry></row>
+	     <row><entry>               </entry><entry>HBase-0.92.x</entry><entry>HBase-0.94.x</entry><entry>HBase-0.95</entry></row>
 	     </thead><tbody>
          <row><entry>Hadoop-0.20.205</entry><entry>S</entry>          <entry>X</entry>           <entry>X</entry></row>
          <row><entry>Hadoop-0.22.x  </entry><entry>S</entry>          <entry>X</entry>           <entry>X</entry></row>
-         <row><entry>Hadoop-1.0.x   </entry><entry>S</entry>          <entry>S</entry>           <entry>S</entry></row>
+         <row><entry>Hadoop-1.0.0-1.0.2<footnote><para>HBase requires hadoop 1.0.3 at a minimum; there is an issue where we cannot find KerberosUtil compiling against earlier versions of Hadoop.</para></footnote>   </entry><entry>S</entry>          <entry>S</entry>           <entry>X</entry></row>
+         <row><entry>Hadoop-1.0.3+</entry><entry>S</entry>          <entry>S</entry>           <entry>S</entry></row>
          <row><entry>Hadoop-1.1.x   </entry><entry>NT</entry>         <entry>S</entry>           <entry>S</entry></row>
          <row><entry>Hadoop-0.23.x  </entry><entry>X</entry>          <entry>S</entry>           <entry>NT</entry></row>
          <row><entry>Hadoop-2.x     </entry><entry>X</entry>          <entry>S</entry>           <entry>S</entry></row>
@@ -700,6 +703,8 @@ stopping hbase...............</programlisting> Shutdown can take a moment to
       </section>
 
       <section xml:id="client_dependencies"><title>Client configuration and dependencies connecting to an HBase cluster</title>
+       <para>If you are running HBase in standalone mode, you don't need to configure anything for your client to work
+             provided that they are all on the same machine.</para>
        <para>
           Since the HBase Master may move around, clients bootstrap by looking to ZooKeeper for
           current critical locations.  ZooKeeper is where all these values are kept.  Thus clients
@@ -834,12 +839,12 @@ config.set("hbase.zookeeper.quorum", "localhost");  // Here we are running zooke
           <title><filename>regionservers</filename></title>
 
           <para>In this file you list the nodes that will run RegionServers.
-          In our case we run RegionServers on all but the head node
-          <varname>example1</varname> which is carrying the HBase Master and
-          the HDFS namenode</para>
+          In our case, these nodes are <varname>example1</varname>-<varname>example9</varname>.
+          </para>
 
           <programlisting>
     example1
+    example2
     example3
     example4
     example5
@@ -1166,6 +1171,14 @@ of all regions.
       and the issue cited therein where setting notcpdelay improved scan speeds.  You might also
       see the graphs on the tail of <link xlink:href="https://issues.apache.org/jira/browse/HBASE-7008">HBASE-7008 Set scanner caching to a better default</link>
       where our Lars Hofhansl tries various data sizes w/ Nagle's on and off measuring the effect.</para>
+    </section>
+    <section xml:id="mttr">
+      <title>Better Mean Time to Recover (MTTR)</title>
+      <para>See the Deveraj Das an Nicolas Liochon blog post
+          <link xlink:href="http://hortonworks.com/blog/introduction-to-hbase-mean-time-to-recover-mttr/">Introduction to HBase Mean Time to Recover (MTTR)</link>
+          for a brief introduction.  The issue <link xlink:href="https://issues.apache.org/jira/browse/HBASE-8389">HBASE-8354 forces Namenode into loop with lease recovery requests</link>
+          is messy but has a bunch of good discussion toward the end on low timeouts and how to effect faster recovery including citation of fixes
+          added to HDFS.  Read the Varun Sharma comments.</para>
     </section>
 
       </section>
