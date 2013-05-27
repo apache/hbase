@@ -172,6 +172,26 @@ mvn clean package -DskipTests
         Passing the -Prelease will generate javadoc and run the RAT plugin to verify licenses on source.
         <programlisting>% MAVEN_OPTS="-Xmx2g" mvn clean install javadoc:aggregate site assembly:single -DskipTests -Prelease</programlisting>
 </para>
+     <section xml:id="release">
+         <title>Making Release Tarballs</title>
+         <para>Making release tarballs -- src, hadoop1, and hadoop2 -- do as follows making use of the mvn
+             versions plugin to rewrite the hbase version string between builds to add the hadoop1 or haddop2
+             suffix to the version as appropriate (Only the src tgz is built without modification from the tag
+             checkout; the binary builds will have unchecked-in modifications to their pom adding the
+             hadoop1/hadoop2 suffix to the version string).
+             <programlisting>$ MAVEN_OPTS="-Xmx2g" mvn clean install javadoc:aggregate site assembly:single -DskipTests -Dassembly.file=hbase-assembly/src/main/assembly/src.xml -Prelease
+  $ mvn clean org.codehaus.mojo:versions-maven-plugin:1.3.1:set -DnewVersion=0.95.1-hadoop1
+  # Copy away the src tgz found in hbase-assembly/target after verifying the content of the tgz is good.
+  $ MAVEN_OPTS="-Xmx2g" mvn clean install javadoc:aggregate site assembly:single -DskipTests -Dassembly.file=hbase-assembly/src/main/assembly/hadoop-one-compat.xml -Dhadoop.profile=1.0 -Prelease
+  # Copy away the hadoop1 bing tgz found in hbase-assembly/target after verifying the content of the tgz is good.
+  $ mvn clean org.codehaus.mojo:versions-maven-plugin:1.3.1:set -DnewVersion=0.95.1-hadoop2
+  $  MAVEN_OPTS="-Xmx2g" mvn clean install javadoc:aggregate site assembly:single -DskipTests -Dassembly.file=hbase-assembly/src/main/assembly/hadoop-two-compat.xml -Dhadoop.profile=2.0 -Prelease
+  # Copy away the hadoop2 bing tgz found in hbase-assembly/target after verifying the content of the tgz is good.
+             </programlisting>
+         </para>
+         <para>Next sign the tgzs and deploy (see the hadoop how to release instructions for how).</para>
+     </section>
+
       </section>
 
 
