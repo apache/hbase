@@ -52,6 +52,14 @@ public class ScannerCallable extends ServerCallable<Result[]> {
   private ScanMetrics scanMetrics;
   private boolean logScannerActivity = false;
   private int logCutOffLatency = 1000;
+  private static String myAddress;
+  static {
+    try {
+      myAddress = DNS.getDefaultHost("default", "default");
+    } catch (UnknownHostException uhe) {
+      LOG.error("cannot determine my address", uhe);
+    }
+  }
 
   // indicate if it is a remote server call
   private boolean isRegionServerRemote = true;
@@ -99,10 +107,8 @@ public class ScannerCallable extends ServerCallable<Result[]> {
   /**
    * compare the local machine hostname with region server's hostname
    * to decide if hbase client connects to a remote region server
-   * @throws UnknownHostException.
    */
-  private void checkIfRegionServerIsRemote() throws UnknownHostException {
-    String myAddress = DNS.getDefaultHost("default", "default");
+  private void checkIfRegionServerIsRemote() {
     if (this.location.getHostname().equalsIgnoreCase(myAddress)) {
       isRegionServerRemote = false;
     } else {
