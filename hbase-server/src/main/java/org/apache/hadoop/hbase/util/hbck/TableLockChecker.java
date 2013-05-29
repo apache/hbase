@@ -65,7 +65,7 @@ public class TableLockChecker {
               data.getPurpose(), data.getIsShared(), data.getCreateTime());
         }
 
-        if (data.hasCreateTime() && data.getCreateTime() < expireDate) {
+        if (data != null && data.hasCreateTime() && data.getCreateTime() < expireDate) {
           errorReporter.reportError(HBaseFsck.ErrorReporter.ERROR_CODE.EXPIRED_TABLE_LOCK, msg);
         } else {
           errorReporter.print(msg);

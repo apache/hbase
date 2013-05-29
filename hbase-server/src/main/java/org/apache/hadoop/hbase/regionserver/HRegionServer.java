@@ -2829,7 +2829,7 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
     PayloadCarryingRpcController controller = (PayloadCarryingRpcController)rpcc;
     CellScanner cellScanner = controller != null? controller.cellScanner(): null;
     // Clear scanner so we are not holding on to reference across call.
-    controller.setCellScanner(null);
+    if (controller != null) controller.setCellScanner(null);
     try {
       requestCount.increment();
       HRegion region = getRegion(request.getRegion());
@@ -2915,7 +2915,7 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
         builder.setResult(ProtobufUtil.toResultNoData(r));
         cellsToReturn = r;
       }
-      if (cellsToReturn != null) {
+      if (controller != null && cellsToReturn != null) {
         controller.setCellScanner(cellsToReturn.cellScanner());
       }
       return builder.build();
@@ -3171,9 +3171,9 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
     // rpc controller is how we bring in data via the back door;  it is unprotobuf'ed data.
     // It is also the conduit via which we pass back data.
     PayloadCarryingRpcController controller = (PayloadCarryingRpcController)rpcc;
-    CellScanner cellScanner = controller != null? controller.cellScanner(): null;
+    CellScanner cellScanner = controller != null ? controller.cellScanner(): null;
     // Clear scanner so we are not holding on to reference across call.
-    controller.setCellScanner(null);
+    if (controller != null) controller.setCellScanner(null);
     List<CellScannable> cellsToReturn = null;
     try {
       HRegion region = getRegion(request.getRegion());
@@ -3265,7 +3265,7 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
         }
       }
       // Load the controller with the Cells to return.
-      if (cellsToReturn != null && !cellsToReturn.isEmpty()) {
+      if (cellsToReturn != null && !cellsToReturn.isEmpty() && controller != null) {
         controller.setCellScanner(CellUtil.createCellScanner(cellsToReturn));
       }
       return builder.build();
@@ -3739,7 +3739,7 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
     PayloadCarryingRpcController controller = (PayloadCarryingRpcController) rpcc;
     CellScanner cellScanner = controller != null ? controller.cellScanner() : null;
     // Clear scanner so we are not holding on to reference across call.
-    controller.setCellScanner(null);
+    if (controller != null) controller.setCellScanner(null);
     try {
       checkOpen();
       HRegion region = getRegion(request.getRegion());
