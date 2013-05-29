@@ -19,13 +19,18 @@
  */
 package org.apache.hadoop.hbase.mapreduce;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.util.GenericOptionsParser;
+import org.apache.hadoop.util.Tool;
+import org.apache.hadoop.util.ToolRunner;
 
 import java.io.IOException;
 import java.util.HashMap;
@@ -36,18 +41,23 @@ import java.util.Map;
  * It is also configurable with a start and time as well as a specification
  * of the region server implementation if different from the local cluster.
  */
-public class CopyTable {
+public class CopyTable extends Configured implements Tool {
 
   final static String NAME = "copytable";
   static long startTime = 0;
   static long endTime = 0;
   static int versions = -1;
   static String tableName = null;
+  static String startRow = null;
+  static String stopRow = null;
   static String newTableName = null;
   static String peerAddress = null;
   static String families = null;
   static boolean allCells = false;
-
+  
+  public CopyTable(Configuration conf) {
+    super(conf);
+  }
   /**
    * Sets up the actual job.
    *
@@ -75,6 +85,15 @@ public class CopyTable {
     if (versions >= 0) {
       scan.setMaxVersions(versions);
     }
+    
+    if (startRow != null) {
+      scan.setStartRow(Bytes.toBytes(startRow));
+    }
+    
+    if (stopRow != null) {
+      scan.setStopRow(Bytes.toBytes(stopRow));
+    }
+    
     if(families != null) {
       String[] fams = families.split(",");
       Map<String,String> cfRenameMap = new HashMap<String,String>();
@@ -117,6 +136,8 @@ public class CopyTable {
     System.err.println(" rs.class     hbase.regionserver.class of the peer cluster");
     System.err.println("              specify if different from current cluster");
     System.err.println(" rs.impl      hbase.regionserver.impl of the peer cluster");
+    System.err.println(" startrow     the start row");
+    System.err.println(" stoprow      the stop row");
     System.err.println(" starttime    beginning of the time range (unixtime in millis)");
     System.err.println("              without endtime means from starttime to forever");
     System.err.println(" endtime      end of the time range.  Ignored if no starttime specified.");
@@ -156,7 +177,19 @@ public class CopyTable {
           printUsage(null);
           return false;
         }
-
+        
+        final String startRowArgKey = "--startrow=";
+        if (cmd.startsWith(startRowArgKey)) {
+          startRow = cmd.substring(startRowArgKey.length());
+          continue;
+        }
+        
+        final String stopRowArgKey = "--stoprow=";
+        if (cmd.startsWith(stopRowArgKey)) {
+          stopRow = cmd.substring(stopRowArgKey.length());
+          continue;
+        }
+        
         final String startTimeArgKey = "--starttime=";
         if (cmd.startsWith(startTimeArgKey)) {
           startTime = Long.parseLong(cmd.substring(startTimeArgKey.length()));
@@ -229,12 +262,15 @@ public class CopyTable {
    * @throws Exception When running the job fails.
    */
   public static void main(String[] args) throws Exception {
-    Configuration conf = HBaseConfiguration.create();
-    String[] otherArgs =
-      new GenericOptionsParser(conf, args).getRemainingArgs();
-    Job job = createSubmittableJob(conf, otherArgs);
-    if (job != null) {
-      System.exit(job.waitForCompletion(true) ? 0 : 1);
-    }
+    int ret = ToolRunner.run(new CopyTable(HBaseConfiguration.create()), args);
+    System.exit(ret);
+  }
+
+  @Override
+  public int run(String[] args) throws Exception {
+    String[] otherArgs = new GenericOptionsParser(getConf(), args).getRemainingArgs();
+    Job job = createSubmittableJob(getConf(), otherArgs);
+    if (job == null) return 1;
+    return job.waitForCompletion(true) ? 0 : 1;
   }
 }
