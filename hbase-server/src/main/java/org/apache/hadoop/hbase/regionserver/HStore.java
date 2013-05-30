@@ -767,15 +767,6 @@ public class HStore implements Store {
 
   /*
    * @param maxKeyCount
-   * @return Writer for a new StoreFile in the tmp dir.
-   */
-  private StoreFile.Writer createWriterInTmp(long maxKeyCount)
-  throws IOException {
-    return createWriterInTmp(maxKeyCount, this.family.getCompression(), false, true);
-  }
-
-  /*
-   * @param maxKeyCount
    * @param compression Compression algorithm to use
    * @param isCompaction whether we are creating a new file in a compaction
    * @return Writer for a new StoreFile in the tmp dir.
