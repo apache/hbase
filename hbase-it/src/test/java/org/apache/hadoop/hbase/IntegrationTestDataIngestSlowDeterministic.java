@@ -31,13 +31,13 @@ import org.junit.experimental.categories.Category;
 /**
  * A system test which does large data ingestion and verify using {@link LoadTestTool}.
  * It performs a set of actions deterministically using ChaosMonkey, then starts killing
- * things randomly. You can configure how long should the load test run by using 
+ * things randomly. You can configure how long should the load test run by using
  * "hbase.IntegrationTestDataIngestSlowDeterministic.runtime" configuration parameter.
  */
 @Category(IntegrationTests.class)
 public class IntegrationTestDataIngestSlowDeterministic extends IngestIntegrationTestBase {
   private static final int SERVER_COUNT = 4; // number of slaves for the smallest cluster
-  private static final long DEFAULT_RUN_TIME = 30 * 60 * 1000;
+  private static final long DEFAULT_RUN_TIME = 10 * 60 * 1000;
   private static final long CHAOS_EVERY_MS = 150 * 1000; // Chaos every 2.5 minutes.
 
   private ChaosMonkey monkey;

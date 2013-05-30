@@ -126,13 +126,14 @@ extends RetriesExhaustedException {
       Throwable t = this.exceptions.get(i);
       Row action = this.actions.get(i);
       String server = this.hostnameAndPort.get(i);
-      pw.append("Error");
+      pw.append("exception");
       if (this.exceptions.size() > 1) {
         pw.append(" #" + i);
       }
-      pw.append(" from [" + server + "] for ["
-        + ((action == null) ? "unknown key" : Bytes.toStringBinary(action.getRow())) + "]");
+      pw.append(" from " + server + " for "
+        + ((action == null) ? "unknown key" : Bytes.toStringBinary(action.getRow())));
       if (t != null) {
+        pw.println();
         t.printStackTrace(pw);
       }
     }

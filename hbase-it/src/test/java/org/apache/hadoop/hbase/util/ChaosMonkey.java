@@ -22,13 +22,11 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Queue;
 import java.util.Random;
-import java.util.Set;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.logging.Log;
@@ -38,8 +36,8 @@ import org.apache.hadoop.hbase.ClusterStatus;
 import org.apache.hadoop.hbase.HBaseCluster;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.IntegrationTestingUtility;
 import org.apache.hadoop.hbase.IntegrationTestDataIngestWithChaosMonkey;
+import org.apache.hadoop.hbase.IntegrationTestingUtility;
 import org.apache.hadoop.hbase.ServerLoad;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.Stoppable;
@@ -49,7 +47,6 @@ import org.apache.hadoop.util.ToolRunner;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import com.google.protobuf.ServiceException;
 
 /**
  * A utility to injects faults in a running cluster.
@@ -158,6 +155,7 @@ public class ChaosMonkey extends AbstractHBaseTool implements Stoppable {
     /** Returns current region servers */
     protected ServerName[] getCurrentServers() throws IOException {
       Collection<ServerName> regionServers = cluster.getClusterStatus().getServers();
+      if (regionServers == null || regionServers.size() <= 0) return new ServerName [] {};
       return regionServers.toArray(new ServerName[regionServers.size()]);
     }
 
