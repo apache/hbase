@@ -45,7 +45,7 @@ public abstract class IngestIntegrationTestBase {
 
   protected void setUp(int numSlavesBase, Configuration conf) throws Exception {
     tableName = this.getClass().getSimpleName();
-    util = (conf == null) ? new IntegrationTestingUtility() : new IntegrationTestingUtility(conf);
+    util = getTestingUtil(conf);
     LOG.info("Initializing cluster with " + numSlavesBase + " servers");
     util.initializeCluster(numSlavesBase);
     LOG.info("Done initializing cluster");
@@ -57,6 +57,17 @@ public abstract class IngestIntegrationTestBase {
     // LoadTestTool init, even when it is a no-op, is very fragile.
     int ret = loadTool.run(new String[] { "-tn", tableName, "-init_only" });
     Assert.assertEquals("Failed to initialize LoadTestTool", 0, ret);
+  }
+
+  protected IntegrationTestingUtility getTestingUtil(Configuration conf) {
+    if (this.util == null) {
+      if (conf == null) {
+        this.util = new IntegrationTestingUtility();
+      } else {
+        this.util = new IntegrationTestingUtility(conf);
+      }
+    }
+    return util;
   }
 
   protected void setUp(int numSlavesBase) throws Exception {

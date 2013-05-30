@@ -199,7 +199,8 @@ public abstract class ServerCallable<T> implements Callable<T> {
 
         // If the server is dead, we need to wait a little before retrying, to give
         //  a chance to the regions to be
-        expectedSleep = ConnectionUtils.getPauseTime(pause, tries);
+        // tries hasn't been bumped up yet so we use "tries + 1" to get right pause time
+        expectedSleep = ConnectionUtils.getPauseTime(pause, tries + 1);
         if (expectedSleep < MIN_WAIT_DEAD_SERVER 
             && (location == null || getConnection().isDeadServer(location.getServerName()))) {
           expectedSleep = ConnectionUtils.addJitter(MIN_WAIT_DEAD_SERVER, 0.10f);

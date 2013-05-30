@@ -58,6 +58,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
@@ -1628,8 +1629,9 @@ public class HLogSplitter {
     private final Set<String> recoveredRegions = Collections.synchronizedSet(new HashSet<String>());
     private final Map<String, RegionServerWriter> writers = 
         new ConcurrentHashMap<String, RegionServerWriter>();
-    // online encoded region name map
-    private final Set<String> onlineRegions = Collections.synchronizedSet(new HashSet<String>());
+    // online encoded region name -> region location map
+    private final Map<String, HRegionLocation> onlineRegions = 
+        new ConcurrentHashMap<String, HRegionLocation>();
 
     private Map<byte[], HConnection> tableNameToHConnectionMap = Collections
         .synchronizedMap(new TreeMap<byte[], HConnection>(Bytes.BYTES_COMPARATOR));
@@ -1648,8 +1650,17 @@ public class HLogSplitter {
     private LogRecoveredEditsOutputSink logRecoveredEditsOutputSink;
     private boolean hasEditsInDisablingOrDisabledTables = false;
 
+    private Configuration sinkConf;
     public LogReplayOutputSink(int numWriters) {
       super(numWriters);
+      // set a smaller retries to fast fail otherwise splitlogworker could be blocked for
+      // quite a while inside HConnection layer. The worker won't available for other
+      // tasks even after current task is preempted after a split task times out.
+      sinkConf = HBaseConfiguration.create(conf);
+      sinkConf.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER,
+        HConstants.DEFAULT_HBASE_CLIENT_RETRIES_NUMBER - 2);
+      sinkConf.setInt(HConstants.HBASE_RPC_TIMEOUT_KEY, HConstants.DEFAULT_HBASE_RPC_TIMEOUT / 2);
+      sinkConf.setInt("hbase.client.serverside.retries.multiplier", 1);
 
       this.waitRegionOnlineTimeOut = conf.getInt("hbase.splitlog.manager.timeout", 
         SplitLogManager.DEFAULT_TIMEOUT);
@@ -1763,7 +1774,8 @@ public class HLogSplitter {
             }
 
             try {
-              loc = locateRegionAndRefreshLastFlushedSequenceId(hconn, table, kv.getRow());
+              loc = locateRegionAndRefreshLastFlushedSequenceId(hconn, table, kv.getRow(), 
+                encodeRegionNameStr);
             } catch (TableNotFoundException ex) {
               // table has been deleted so skip edits of the table
               LOG.info("Table " + Bytes.toString(table)
@@ -1848,14 +1860,14 @@ public class HLogSplitter {
      * @throws IOException
      */
     private HRegionLocation locateRegionAndRefreshLastFlushedSequenceId(HConnection hconn,
-        byte[] table, byte[] row) throws IOException {
-      HRegionLocation loc = hconn.getRegionLocation(table, row, false);
+        byte[] table, byte[] row, String originalEncodedRegionName) throws IOException {
+      HRegionLocation loc = onlineRegions.get(originalEncodedRegionName);
+      if(loc != null) return loc;
+      
+      loc = hconn.getRegionLocation(table, row, false);
       if (loc == null) {
         throw new IOException("Can't locate location for row:" + Bytes.toString(row)
             + " of table:" + Bytes.toString(table));
-      }
-      if (onlineRegions.contains(loc.getRegionInfo().getEncodedName())) {
-        return loc;
       }
 
       Long lastFlushedSequenceId = -1l;
@@ -1863,7 +1875,7 @@ public class HLogSplitter {
       Long cachedLastFlushedSequenceId = lastFlushedSequenceIds.get(loc.getRegionInfo()
           .getEncodedName());
 
-      onlineRegions.add(loc.getRegionInfo().getEncodedName());
+      onlineRegions.put(loc.getRegionInfo().getEncodedName(), loc);
       // retrieve last flushed sequence Id from ZK. Because region postOpenDeployTasks will
       // update the value for the region
       RegionStoreSequenceIds ids =
@@ -2116,7 +2128,7 @@ public class HLogSplitter {
         synchronized (this.tableNameToHConnectionMap) {
           hconn = this.tableNameToHConnectionMap.get(tableName);
           if (hconn == null) {
-            hconn =  HConnectionManager.createConnection(conf);
+            hconn = HConnectionManager.createConnection(sinkConf);
             this.tableNameToHConnectionMap.put(tableName, hconn);
           }
         }
