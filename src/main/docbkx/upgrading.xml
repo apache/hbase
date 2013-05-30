@@ -94,8 +94,20 @@
      <title>Cleaning zookeeper of old data</title>
      <para>Clean zookeeper of all its content before you start 0.96.x (or 0.95.x).  Here is how:
          <programlisting>$ ./bin/hbase clean</programlisting>
-This will printout usage.  Run the following to clean zookeeper in particular
+         This will printout usage.</para>
+     <para>To 'clean' ZooKeeper, it needs to be running.  But you don't want the cluster running
+         because the cluster will then register its entities in ZooKeeper and as a precaution,
+         our clean script will not run if there are registered masters and regionservers with
+         registered znodes present.  So, make sure all servers are down but for zookeeper.  If
+         zookeeper is managed by HBase, a commmon-configuration, then you will need to start
+         zookeeper only:
+         <programlisting>$ ./hbase/bin/hbase-daemons.sh  --config /home/stack/conf-hbase start zookeeper</programlisting>
+         If zookeeper is managed independently of HBase, make sure it is up.
+       Now run the following to clean zookeeper in particular
          <programlisting>$ ./bin/hbase clean --cleanZk</programlisting>
+         It may complain that there are still registered regionserver znodes present in zookeeper.
+         If so, ensure they are indeed down.  Then wait a few tens of seconds and they should
+         disappear.
      </para>
      <para>This is what you will see if zookeeper has old data in it: the Master won't start with
          an exception like the following
