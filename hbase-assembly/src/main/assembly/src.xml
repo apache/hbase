@@ -34,6 +34,8 @@
       <sources>
         <fileSets>
           <fileSet>
+            <!--Make sure this excludes is same as the hbase-hadoop2-compat
+                 excludes below-->
             <excludes>
               <exclude>target/</exclude>
               <exclude>test/</exclude>
@@ -47,6 +49,29 @@
     </moduleSet>
   </moduleSets>
   <fileSets>
+    <!--This one is weird.  When we assemble src, it'll be default profile which
+         at the moment is hadoop1.  But we should include the hadoop2 compat module
+         too so can build hadoop2 from src -->
+    <fileSet>
+      <directory>${project.basedir}/../hbase-hadoop2-compat</directory>
+      <outputDirectory>hbase-hadoop2-compat</outputDirectory>
+      <fileMode>0644</fileMode>
+      <directoryMode>0755</directoryMode>
+            <excludes>
+              <exclude>target/</exclude>
+              <exclude>test/</exclude>
+              <exclude>.classpath</exclude>
+              <exclude>.project</exclude>
+              <exclude>.settings/</exclude>
+            </excludes>
+    </fileSet>
+    <!--Include dev tools-->
+    <fileSet>
+      <directory>${project.basedir}/../dev-tools</directory>
+      <outputDirectory>dev-tools</outputDirectory>
+      <fileMode>0644</fileMode>
+      <directoryMode>0755</directoryMode>
+    </fileSet>
     <fileSet>
       <directory>${project.basedir}/../dev-tools</directory>
       <outputDirectory>dev-tools</outputDirectory>
