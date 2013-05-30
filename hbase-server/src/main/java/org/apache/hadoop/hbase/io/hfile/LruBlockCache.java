@@ -463,8 +463,8 @@ public class LruBlockCache implements BlockCache, HeapSize {
       long currentSize = this.size.get();
       long bytesToFree = currentSize - minSize();
 
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Block cache LRU eviction started; Attempting to free " +
+      if (LOG.isTraceEnabled()) {
+        LOG.trace("Block cache LRU eviction started; Attempting to free " +
           StringUtils.byteDesc(bytesToFree) + " of total=" +
           StringUtils.byteDesc(currentSize));
       }
@@ -518,11 +518,11 @@ public class LruBlockCache implements BlockCache, HeapSize {
         remainingBuckets--;
       }
 
-      if (LOG.isDebugEnabled()) {
+      if (LOG.isTraceEnabled()) {
         long single = bucketSingle.totalSize();
         long multi = bucketMulti.totalSize();
         long memory = bucketMemory.totalSize();
-        LOG.debug("Block cache LRU eviction completed; " +
+        LOG.trace("Block cache LRU eviction completed; " +
           "freed=" + StringUtils.byteDesc(bytesFreed) + ", " +
           "total=" + StringUtils.byteDesc(this.size.get()) + ", " +
           "single=" + StringUtils.byteDesc(single) + ", " +
