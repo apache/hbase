@@ -89,6 +89,10 @@ public class RatioBasedCompactionPolicy extends CompactionPolicy {
     boolean mayBeStuck = (candidateFiles.size() - filesCompacting.size() + futureFiles)
         >= storeConfigInfo.getBlockingFileCount();
     candidateSelection = getCurrentEligibleFiles(candidateSelection, filesCompacting);
+    LOG.debug("Selecting compaction from " + candidateFiles.size() + " store files, " +
+        filesCompacting.size() + " compacting, " + candidateSelection.size() +
+        " eligible, " + storeConfigInfo.getBlockingFileCount() + " blocking");
+
     long cfTtl = this.storeConfigInfo.getStoreFileTtl();
     if (!forceMajor) {
       // If there are expired files, only select them so that compaction deletes them
