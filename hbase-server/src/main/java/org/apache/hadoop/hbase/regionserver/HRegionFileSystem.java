@@ -838,7 +838,7 @@ public class HRegionFileSystem {
       throw new IOException("The specified region do not exists on disk: " + regionDir);
     }
 
-    if (readOnly) {
+    if (!readOnly) {
       // Cleanup temporary directories
       regionFs.cleanupTempDir();
       regionFs.cleanupSplitsDir();
