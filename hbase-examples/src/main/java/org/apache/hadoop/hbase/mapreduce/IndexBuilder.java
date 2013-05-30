@@ -128,7 +128,6 @@ public class IndexBuilder {
       fields[i] = args[i + 2];
     }
     conf.setStrings("index.fields", fields);
-    conf.set("index.familyname", "attributes");
     Job job = new Job(conf, tableName);
     job.setJarByClass(IndexBuilder.class);
     job.setMapperClass(Map.class);
