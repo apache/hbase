@@ -574,7 +574,7 @@ public final class HConstants {
   /**
    * Default value of {@link #HBASE_CLIENT_RETRIES_NUMBER}.
    */
-  public static int DEFAULT_HBASE_CLIENT_RETRIES_NUMBER = 10;
+  public static int DEFAULT_HBASE_CLIENT_RETRIES_NUMBER = 20;
 
   /**
    * Parameter name for client prefetch limit, used as the maximum number of regions

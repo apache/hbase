@@ -171,8 +171,8 @@ public class MultiThreadedWriter extends MultiThreadedAction {
   }
 
   public void insert(HTable table, Put put, long keyBase) {
+    long start = System.currentTimeMillis();
     try {
-      long start = System.currentTimeMillis();
       table.put(put);
       totalOpTimeMs.addAndGet(System.currentTimeMillis() - start);
     } catch (IOException e) {
@@ -188,8 +188,8 @@ public class MultiThreadedWriter extends MultiThreadedAction {
         pw.flush();
         exceptionInfo = StringUtils.stringifyException(e);
       }
-      LOG.error("Failed to insert: " + keyBase + "; region information: "
-          + getRegionDebugInfoSafe(table, put.getRow()) + "; errors: "
+      LOG.error("Failed to insert: " + keyBase + " after " + (System.currentTimeMillis() - start) +
+        "ms; region information: " + getRegionDebugInfoSafe(table, put.getRow()) + "; errors: "
           + exceptionInfo);
     }
   }

@@ -93,9 +93,8 @@ public class ClientScanner extends AbstractClientScanner {
     public ClientScanner(final Configuration conf, final Scan scan,
       final byte[] tableName, HConnection connection) throws IOException {
       if (LOG.isDebugEnabled()) {
-        LOG.debug("Creating scanner over "
-            + Bytes.toString(tableName)
-            + " starting at key '" + Bytes.toStringBinary(scan.getStartRow()) + "'");
+        LOG.debug("Scan table=" + Bytes.toString(tableName)
+            + ", startRow=" + Bytes.toStringBinary(scan.getStartRow()));
       }
       this.scan = scan;
       this.tableName = tableName;
@@ -192,7 +191,7 @@ public class ClientScanner extends AbstractClientScanner {
             done) {
           close();
           if (LOG.isDebugEnabled()) {
-            LOG.debug("Finished scanning region " + this.currentRegion);
+            LOG.debug("Finished region=" + this.currentRegion);
           }
           return false;
         }

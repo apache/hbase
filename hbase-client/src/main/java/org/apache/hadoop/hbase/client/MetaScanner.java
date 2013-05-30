@@ -156,8 +156,8 @@ public class MetaScanner {
       int rows = Math.min(rowLimit, configuration.getInt(HConstants.HBASE_META_SCANNER_CACHING,
         HConstants.DEFAULT_HBASE_META_SCANNER_CACHING));
       scan.setCaching(rows);
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Scanning " + Bytes.toString(metaTableName) + " starting at row=" +
+      if (LOG.isTraceEnabled()) {
+        LOG.trace("Scanning " + Bytes.toString(metaTableName) + " starting at row=" +
           Bytes.toStringBinary(startRow) + " for max=" + rowUpperLimit + " with caching=" + rows);
       }
       // Run the scan

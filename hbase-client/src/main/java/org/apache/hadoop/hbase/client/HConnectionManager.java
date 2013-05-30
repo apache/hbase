@@ -1188,14 +1188,18 @@ public class HConnectionManager {
         }
       }
       if (isNewCacheEntry) {
-        LOG.debug("Cached location for " +
+        if (LOG.isTraceEnabled()) {
+          LOG.trace("Cached location for " +
             location.getRegionInfo().getRegionNameAsString() +
             " is " + location.getHostnamePort());
+        }
       } else if (isStaleUpdate && !location.equals(oldLocation)) {
-        LOG.debug("Ignoring stale location update for "
-          + location.getRegionInfo().getRegionNameAsString() + ": "
-          + location.getHostnamePort() + " at " + location.getSeqNum() + "; local "
-          + oldLocation.getHostnamePort() + " at " + oldLocation.getSeqNum());
+        if (LOG.isTraceEnabled()) {
+          LOG.trace("Ignoring stale location update for "
+            + location.getRegionInfo().getRegionNameAsString() + ": "
+            + location.getHostnamePort() + " at " + location.getSeqNum() + "; local "
+            + oldLocation.getHostnamePort() + " at " + oldLocation.getSeqNum());
+        }
       }
     }
 
@@ -1388,7 +1392,7 @@ public class HConnectionManager {
                 // tries at this point is 1 or more; decrement to start from 0.
                 long pauseTime = ConnectionUtils.getPauseTime(pause, tries - 1);
                 LOG.info("getMaster attempt " + tries + " of " + numTries +
-                    " failed; retrying after sleep of " +pauseTime + ", exception=" +
+                    " failed; retrying after sleep of " + pauseTime + ", exception=" +
                   exceptionCaught);
 
                 try {
@@ -2217,10 +2221,11 @@ public class HConnectionManager {
           if (LOG.isTraceEnabled() && isRetry) {
             StringBuilder sb = new StringBuilder();
             for (Action<R> action : e.getValue().allActions()) {
-              sb.append(Bytes.toStringBinary(action.getAction().getRow())).append(';');
+              if (sb.length() > 0) sb.append(' ');
+              sb.append(Bytes.toStringBinary(action.getAction().getRow()));
             }
-            LOG.trace("Will retry requests to [" + e.getKey().getHostnamePort()
-              + "] after delay of [" + backoffTime + "] for rows [" + sb.toString() + "]");
+            LOG.trace("Attempt #" + this.curNumRetries + " against " + e.getKey().getHostnamePort()
+              + " after=" + backoffTime + "ms, row(s)=" + sb.toString());
           }
           Triple<MultiAction<R>, HRegionLocation, Future<MultiResponse>> p =
             new Triple<MultiAction<R>, HRegionLocation, Future<MultiResponse>>(
@@ -2280,11 +2285,10 @@ public class HConnectionManager {
         //  we had more than numRetries for any action
         //  In this case, we will finish the current retries but we won't start new ones.
         boolean lastRetry = false;
-        // despite its name numRetries means number of tries. So if numRetries == 1 it means we
-        //  won't retry. And we compare vs. 2 in case someone set it to zero.
+        // If hci.numTries is 1 or 0, we do not retry.
         boolean noRetry = (hci.numTries < 2);
 
-        // Analyze and resubmit until all actions are done successfully or failed after numRetries
+        // Analyze and resubmit until all actions are done successfully or failed after numTries
         while (!this.inProgress.isEmpty()) {
           // We need the original multi action to find out what actions to replay if
           //  we have a 'total' failure of the Future<MultiResponse>
@@ -2355,8 +2359,9 @@ public class HConnectionManager {
           // Retry all actions in toReplay then clear it.
           if (!noRetry && !toReplay.isEmpty()) {
             if (isTraceEnabled) {
-              LOG.trace("Retrying due to errors" + (lastRetry ? " (one last time)" : "")
-                   + ": " + retriedErrors.getDescriptionAndClear());
+              LOG.trace("Retrying #" + this.curNumRetries +
+                (lastRetry ? " (one last time)": "") + " because " +
+                retriedErrors.getDescriptionAndClear());
             }
             doRetry();
             if (lastRetry) {
