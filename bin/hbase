@@ -321,7 +321,7 @@ elif [ "$COMMAND" = "clean" ] ; then
     echo "        --cleanAll  cleans hbase related data from both zookeeper and hdfs."
     exit 1;
   fi
-  "$bin"/hbase-cleanup.sh $@
+  "$bin"/hbase-cleanup.sh --config ${HBASE_CONF_DIR} $@
   exit $?
 
 elif [ "$COMMAND" = "classpath" ] ; then
