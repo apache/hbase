@@ -51,7 +51,7 @@ fi
 
 format_option=$1;
 
-distMode=`$bin/hbase org.apache.hadoop.hbase.util.HBaseConfTool hbase.cluster.distributed | head -n 1`
+distMode=`$bin/hbase --config ${HBASE_CONF_DIR} org.apache.hadoop.hbase.util.HBaseConfTool hbase.cluster.distributed | head -n 1`
 
 if [ "$distMode" == 'false' ];then
   echo "Skipping hbase data clearing in standalone mode." 2>&1
