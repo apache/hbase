@@ -23,6 +23,8 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.regionserver.StoreConfigInformation;
@@ -36,7 +38,7 @@ import org.apache.hadoop.hbase.regionserver.StoreFile;
  */
 @InterfaceAudience.Private
 public class ExploringCompactionPolicy extends RatioBasedCompactionPolicy {
-
+  private static final Log LOG = LogFactory.getLog(ExploringCompactionPolicy.class);
 
   /**
    * Constructor for ExploringCompactionPolicy.
@@ -57,6 +59,7 @@ public class ExploringCompactionPolicy extends RatioBasedCompactionPolicy {
     long bestSize = 0;
     long smallestSize = Long.MAX_VALUE;
 
+    int opts = 0, optsInRatio = 0, bestStart = -1; // for debug logging
     // Consider every starting place.
     for (int start = 0; start < candidates.size(); start++) {
       // Consider every different sub list permutation in between start and end with min files.
@@ -83,26 +86,34 @@ public class ExploringCompactionPolicy extends RatioBasedCompactionPolicy {
           smallestSize = size;
         }
 
+        if (size > comConf.getMaxCompactSize()) {
+          continue;
+        }
+
+        ++opts;
         if (size >= comConf.getMinCompactSize()
             && !filesInRatio(potentialMatchFiles, mayUseOffPeak)) {
           continue;
         }
 
-        if (size > comConf.getMaxCompactSize()) {
-          continue;
-        }
-
+        ++optsInRatio;
         // Keep if this gets rid of more files.  Or the same number of files for less io.
         if (potentialMatchFiles.size() > bestSelection.size()
             || (potentialMatchFiles.size() == bestSelection.size() && size < bestSize)) {
           bestSelection = potentialMatchFiles;
           bestSize = size;
+          bestStart = start;
         }
       }
     }
     if (bestSelection.size() == 0 && mightBeStuck) {
+      LOG.debug("Exploring compaction algorithm has selected " + smallest.size()
+          + " files of size "+ smallestSize + " because the store might be stuck");
       return new ArrayList<StoreFile>(smallest);
     }
+    LOG.debug("Exploring compaction algorithm has selected " + bestSelection.size()
+        + " files of size " + bestSize + " starting at candidate #" + bestStart +
+        " after considering " + opts + " permutations with " + optsInRatio + " in ratio");
     return new ArrayList<StoreFile>(bestSelection);
   }
 

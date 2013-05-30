@@ -19,6 +19,8 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -395,7 +397,11 @@ public class CompactSplitThread implements CompactionRequestor {
           }
         }
       } catch (IOException ex) {
-        LOG.error("Compaction failed " + this, RemoteExceptionHandler.checkIOException(ex));
+        IOException remoteEx = RemoteExceptionHandler.checkIOException(ex);
+        LOG.error("Compaction failed " + this, remoteEx);
+        if (remoteEx != ex) {
+          LOG.info("Compaction failed at original callstack: " + formatStackTrace(ex));
+        }
         server.checkFileSystem();
       } catch (Exception ex) {
         LOG.error("Compaction failed " + this, ex);
@@ -404,6 +410,14 @@ public class CompactSplitThread implements CompactionRequestor {
         LOG.debug("CompactSplitThread Status: " + CompactSplitThread.this);
       }
       this.compaction.getRequest().afterExecute();
+    }
+
+    private String formatStackTrace(Exception ex) {
+      StringWriter sw = new StringWriter();
+      PrintWriter pw = new PrintWriter(sw);
+      ex.printStackTrace(pw);
+      pw.flush();
+      return sw.toString();
     }
 
     @Override
