@@ -33,7 +33,7 @@ import org.junit.experimental.categories.Category;
 @Category(IntegrationTests.class)
 public class IntegrationTestDataIngestWithChaosMonkey extends IngestIntegrationTestBase {
 
-  private static final int NUM_SLAVES_BASE = 4; //number of slaves for the smallest cluster
+  private static int NUM_SLAVES_BASE = 4; //number of slaves for the smallest cluster
 
   // run for 5 min by default
   private static final long DEFAULT_RUN_TIME = 5 * 60 * 1000;
@@ -42,6 +42,11 @@ public class IntegrationTestDataIngestWithChaosMonkey extends IngestIntegrationT
 
   @Before
   public void setUp() throws Exception {
+    util= getTestingUtil(null);
+    if(!util.isDistributedCluster()) {
+      // In MiniCluster mode, we increase number of RS a little bit to speed the test
+      NUM_SLAVES_BASE = 5;
+    }
     super.setUp(NUM_SLAVES_BASE);
     monkey = new ChaosMonkey(util, ChaosMonkey.EVERY_MINUTE_RANDOM_ACTION_POLICY);
     monkey.start();

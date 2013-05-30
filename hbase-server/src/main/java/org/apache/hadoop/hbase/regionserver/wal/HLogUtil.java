@@ -246,7 +246,11 @@ public class HLogUtil {
   }
 
   public static boolean isMetaFile(Path p) {
-    if (p.getName().endsWith(HLog.META_HLOG_FILE_EXTN)) {
+    return isMetaFile(p.getName());
+  }
+
+  public static boolean isMetaFile(String p) {
+    if (p != null && p.endsWith(HLog.META_HLOG_FILE_EXTN)) {
       return true;
     }
     return false;

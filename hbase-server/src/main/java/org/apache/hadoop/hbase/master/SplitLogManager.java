@@ -60,6 +60,7 @@ import org.apache.hadoop.hbase.regionserver.wal.HLogSplitter;
 import org.apache.hadoop.hbase.regionserver.wal.HLogUtil;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.zookeeper.ZKSplitLog;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
@@ -127,8 +128,8 @@ public class SplitLogManager extends ZooKeeperListener {
   // When lastRecoveringNodeCreationTime is older than the following threshold, we'll check
   // whether to GC stale recovering znodes
   private long checkRecoveringTimeThreshold = 15000; // 15 seconds
-  private final Set<ServerName> failedRecoveringRegionDeletions = Collections
-      .synchronizedSet(new HashSet<ServerName>());
+  private final List<Pair<Set<ServerName>, Boolean>> failedRecoveringRegionDeletions = Collections
+      .synchronizedList(new ArrayList<Pair<Set<ServerName>, Boolean>>());
 
   /**
    * In distributedLogReplay mode, we need touch both splitlog and recovering-regions znodes in one
@@ -307,6 +308,7 @@ public class SplitLogManager extends ZooKeeperListener {
     long t = EnvironmentEdgeManager.currentTimeMillis();
     long totalSize = 0;
     TaskBatch batch = new TaskBatch();
+    Boolean isMetaRecovery = (filter == null) ? null : false;
     for (FileStatus lf : logfiles) {
       // TODO If the log file is still being written to - which is most likely
       // the case for the last log file - then its length will show up here
@@ -321,7 +323,12 @@ public class SplitLogManager extends ZooKeeperListener {
     }
     waitForSplittingCompletion(batch, status);
     // remove recovering regions from ZK
-    this.removeRecoveringRegionsFromZK(serverNames);
+    if (filter == MasterFileSystem.META_FILTER /* reference comparison */) {
+      // we split meta regions and user regions separately therefore logfiles are either all for
+      // meta or user regions but won't for both( we could have mixed situations in tests)
+      isMetaRecovery = true;
+    }
+    this.removeRecoveringRegionsFromZK(serverNames, isMetaRecovery);
 
     if (batch.done != batch.installed) {
       batch.isDead = true;
@@ -453,14 +460,18 @@ public class SplitLogManager extends ZooKeeperListener {
    * It removes recovering regions under /hbase/recovering-regions/[encoded region name] so that the
    * region server hosting the region can allow reads to the recovered region
    * @param serverNames servers which are just recovered
+   * @param isMetaRecovery whether current recovery is for the meta region on
+   *          <code>serverNames<code>
    */
-  private void removeRecoveringRegionsFromZK(final Set<ServerName> serverNames) {
+  private void
+      removeRecoveringRegionsFromZK(final Set<ServerName> serverNames, Boolean isMetaRecovery) {
 
     if (!this.distributedLogReplay) {
       // the function is only used in WALEdit direct replay mode
       return;
     }
 
+    final String metaEncodeRegionName = HRegionInfo.FIRST_META_REGIONINFO.getEncodedName();
     int count = 0;
     Set<String> recoveredServerNameSet = new HashSet<String>();
     if (serverNames != null) {
@@ -492,12 +503,20 @@ public class SplitLogManager extends ZooKeeperListener {
         List<String> regions = ZKUtil.listChildrenNoWatch(watcher, watcher.recoveringRegionsZNode);
         if (regions != null) {
           for (String region : regions) {
+            if(isMetaRecovery != null) {
+              if ((isMetaRecovery && !region.equalsIgnoreCase(metaEncodeRegionName))
+                  || (!isMetaRecovery && region.equalsIgnoreCase(metaEncodeRegionName))) {
+                // skip non-meta regions when recovering the meta region or 
+                // skip the meta region when recovering user regions
+                continue;
+              }
+            }
             String nodePath = ZKUtil.joinZNode(watcher.recoveringRegionsZNode, region);
             List<String> failedServers = ZKUtil.listChildrenNoWatch(watcher, nodePath);
             if (failedServers == null || failedServers.isEmpty()) {
               ZKUtil.deleteNode(watcher, nodePath);
               continue;
-            } 
+            }
             if (recoveredServerNameSet.containsAll(failedServers)) {
               ZKUtil.deleteNodeRecursively(watcher, nodePath);
             } else {
@@ -514,7 +533,8 @@ public class SplitLogManager extends ZooKeeperListener {
     } catch (KeeperException ke) {
       LOG.warn("removeRecoveringRegionsFromZK got zookeeper exception. Will retry", ke);
       if (serverNames != null && !serverNames.isEmpty()) {
-        this.failedRecoveringRegionDeletions.addAll(serverNames);
+        this.failedRecoveringRegionDeletions.add(new Pair<Set<ServerName>, Boolean>(serverNames,
+            isMetaRecovery));
       }
     } finally {
       this.recoveringRegionLock.unlock();
@@ -588,7 +608,7 @@ public class SplitLogManager extends ZooKeeperListener {
             }
           }
           if (!needMoreRecovery) {
-            ZKUtil.deleteNode(watcher, nodePath);
+            ZKUtil.deleteNodeRecursively(watcher, nodePath);
           }
         }
       }
@@ -1384,12 +1404,16 @@ public class SplitLogManager extends ZooKeeperListener {
       if (!failedRecoveringRegionDeletions.isEmpty()
           || (tot == 0 && tasks.size() == 0 && (timeInterval > checkRecoveringTimeThreshold))) {
         // inside the function there have more checks before GC anything
-        Set<ServerName> previouslyFailedDeletoins = null;
         if (!failedRecoveringRegionDeletions.isEmpty()) {
-          previouslyFailedDeletoins = new HashSet<ServerName>(failedRecoveringRegionDeletions);
-          failedRecoveringRegionDeletions.removeAll(previouslyFailedDeletoins);
+          List<Pair<Set<ServerName>, Boolean>> previouslyFailedDeletions =
+              new ArrayList<Pair<Set<ServerName>, Boolean>>(failedRecoveringRegionDeletions);
+          failedRecoveringRegionDeletions.removeAll(previouslyFailedDeletions);
+          for (Pair<Set<ServerName>, Boolean> failedDeletion : previouslyFailedDeletions) {
+            removeRecoveringRegionsFromZK(failedDeletion.getFirst(), failedDeletion.getSecond());
+          }
+        } else {
+          removeRecoveringRegionsFromZK(null, null);
         }
-        removeRecoveringRegionsFromZK(previouslyFailedDeletoins);
       }
     }
   }

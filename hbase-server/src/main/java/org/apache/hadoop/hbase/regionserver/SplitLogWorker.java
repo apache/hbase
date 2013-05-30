@@ -41,6 +41,7 @@ import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.exceptions.NotServingRegionException;
 import org.apache.hadoop.hbase.master.SplitLogManager;
 import org.apache.hadoop.hbase.regionserver.wal.HLogSplitter;
+import org.apache.hadoop.hbase.regionserver.wal.HLogUtil;
 import org.apache.hadoop.hbase.util.CancelableProgressable;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
@@ -217,7 +218,14 @@ public class SplitLogWorker extends ZooKeeperListener implements Runnable {
             this.watcher.splitLogZNode + " ... worker thread exiting.");
         return;
       }
-      int offset = (int)(Math.random() * paths.size());
+      // pick meta wal firstly
+      int offset = (int) (Math.random() * paths.size());
+      for(int i = 0; i < paths.size(); i ++){
+        if(HLogUtil.isMetaFile(paths.get(i))) {
+          offset = i;
+          break;
+        }
+      }
       for (int i = 0; i < paths.size(); i ++) {
         int idx = (i + offset) % paths.size();
         // don't call ZKSplitLog.getNodeName() because that will lead to

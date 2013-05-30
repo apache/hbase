@@ -26,6 +26,7 @@ import static org.apache.hadoop.hbase.SplitLogCounters.tot_wkr_task_done;
 import static org.apache.hadoop.hbase.SplitLogCounters.tot_wkr_task_err;
 import static org.apache.hadoop.hbase.SplitLogCounters.tot_wkr_task_resigned;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -993,6 +994,72 @@ public class TestDistributedLogSplitting {
       }
       fs.delete(logDir, true);
     }
+  }
+
+  @Test(timeout = 300000)
+  public void testMetaRecoveryInZK() throws Exception {
+    LOG.info("testMetaRecoveryInZK");
+    Configuration curConf = HBaseConfiguration.create();
+    curConf.setBoolean(HConstants.DISTRIBUTED_LOG_REPLAY_KEY, true);
+    startCluster(NUM_RS, curConf);
+
+    // turn off load balancing to prevent regions from moving around otherwise
+    // they will consume recovered.edits
+    master.balanceSwitch(false);
+    FileSystem fs = master.getMasterFileSystem().getFileSystem();
+    final ZooKeeperWatcher zkw = new ZooKeeperWatcher(curConf, "table-creation", null);
+    List<RegionServerThread> rsts = cluster.getLiveRegionServerThreads();
+
+    installTable(zkw, "table", "family", 40);
+    List<HRegionInfo> regions = null;
+    HRegionServer hrs = null;
+    for (int i = 0; i < NUM_RS; i++) {
+      boolean isCarryingMeta = false;
+      hrs = rsts.get(i).getRegionServer();
+      regions = ProtobufUtil.getOnlineRegions(hrs);
+      for (HRegionInfo region : regions) {
+        if (region.isMetaRegion()) {
+          isCarryingMeta = true;
+          break;
+        }
+      }
+      if (!isCarryingMeta) {
+        continue;
+      }
+      break;
+    }
+
+    LOG.info("#regions = " + regions.size());
+    Set<HRegionInfo> tmpRegions = new HashSet<HRegionInfo>();
+    tmpRegions.add(HRegionInfo.FIRST_META_REGIONINFO);
+    master.getMasterFileSystem().prepareMetaLogReplay(hrs.getServerName(), tmpRegions);
+    Set<ServerName> failedServers = new HashSet<ServerName>();
+    failedServers.add(hrs.getServerName());
+    master.getMasterFileSystem().prepareLogReplay(failedServers);
+    boolean isMetaRegionInRecovery = false;
+    List<String> recoveringRegions =
+        zkw.getRecoverableZooKeeper().getChildren(zkw.recoveringRegionsZNode, false);
+    for (String curEncodedRegionName : recoveringRegions) {
+      if (curEncodedRegionName.equals(HRegionInfo.FIRST_META_REGIONINFO.getEncodedName())) {
+        isMetaRegionInRecovery = true;
+        break;
+      }
+    }
+    assertTrue(isMetaRegionInRecovery);
+
+    master.getMasterFileSystem().splitMetaLog(hrs.getServerName());
+    
+    isMetaRegionInRecovery = false;
+    recoveringRegions =
+        zkw.getRecoverableZooKeeper().getChildren(zkw.recoveringRegionsZNode, false);
+    for (String curEncodedRegionName : recoveringRegions) {
+      if (curEncodedRegionName.equals(HRegionInfo.FIRST_META_REGIONINFO.getEncodedName())) {
+        isMetaRegionInRecovery = true;
+        break;
+      }
+    }
+    // meta region should be recovered
+    assertFalse(isMetaRegionInRecovery);
   }
 
   HTable installTable(ZooKeeperWatcher zkw, String tname, String fname, int nrs) throws Exception {

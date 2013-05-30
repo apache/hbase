@@ -93,13 +93,13 @@ public class MasterFileSystem {
   final SplitLogManager splitLogManager;
   private final MasterServices services;
 
-  private final static PathFilter META_FILTER = new PathFilter() {
+  final static PathFilter META_FILTER = new PathFilter() {
     public boolean accept(Path p) {
       return HLogUtil.isMetaFile(p);
     }
   };
 
-  private final static PathFilter NON_META_FILTER = new PathFilter() {
+  final static PathFilter NON_META_FILTER = new PathFilter() {
     public boolean accept(Path p) {
       return !HLogUtil.isMetaFile(p);
     }
