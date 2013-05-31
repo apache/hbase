@@ -200,9 +200,16 @@ public class Store extends SchemaConfigured implements HeapSize {
     this.fs = fs;
     this.homedir = Store.getStoreHomedir(basedir, info.getEncodedName(), family.getName());
     if (!this.fs.exists(this.homedir)) {
-      LOG.info("No directory exists for family " + family + "; creating one");
-      if (!this.fs.mkdirs(this.homedir))
-        throw new IOException("Failed create of: " + this.homedir.toString());
+      LOG.info("No directory exists for family " + family);
+      // region being null is the case where we are creating a read only store.
+      if (region != null) {
+        LOG.info("Creating one");
+        if (!this.fs.mkdirs(this.homedir))
+          throw new IOException("Failed create of: " + this.homedir.toString());
+      } else {
+        throw new IOException("Failed create a read only store. " +
+            "Possibly an inconsistent region");
+      }
     }
     this.family = family;
     // 'conf' renamed to 'confParam' b/c we use this.conf in the constructor

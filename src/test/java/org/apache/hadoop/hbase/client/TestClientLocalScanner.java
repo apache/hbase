@@ -79,6 +79,29 @@ public class TestClientLocalScanner {
   }
 
   @Test
+  public void testInconsistentRegionDirectories() throws IOException {
+    byte [] tableName = Bytes.toBytes("testInconsistentRegionDirectories");
+    String rootDir = TEST_UTIL.getConfiguration().get("hbase.rootdir");
+    String tmpPath = "/tmp/testInconsistentRegionDirectories/";
+    FileSystem fs = FileSystem.get(TEST_UTIL.getConfiguration());
+    Path p = new Path(tmpPath);
+    fs.mkdirs(p);
+    assertTrue(fs.listStatus(p).length == 0);
+    TEST_UTIL.getConfiguration().set("hbase.rootdir", tmpPath);
+    HTable t = TEST_UTIL.createTable(tableName, FAMILY);
+    TEST_UTIL.loadTable(t, FAMILY);
+    try {
+      t.getLocalScanner(new Scan());
+    } catch (IOException e) {
+      assertTrue(fs.listStatus(p).length == 0);
+      return;
+    } finally {
+      TEST_UTIL.getConfiguration().set("hbase.rootdir", rootDir);
+    }
+    assertTrue(false);
+  }
+
+  @Test
   public void testCompareLocalScanToRemoteScan() throws IOException {
     byte [] name = Bytes.toBytes("testCompareLocalScanToRemoteScan");
     HTable t = TEST_UTIL.createTable(name, new byte[][] {FAMILY, FAMILY2});
