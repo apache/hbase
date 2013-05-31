@@ -1410,7 +1410,7 @@ public class TestHLogSplit {
   }
 
   private HLog.Writer [] generateHLogs(final int writers, final int entries, final int leaveOpen) throws IOException {
-    return generateHLogs((DistributedFileSystem)this.fs, writers, ENTRIES, leaveOpen);
+    return generateHLogs((DistributedFileSystem)this.fs, writers, entries, leaveOpen);
   }
 
   private static void makeRegionDirs(FileSystem fs, List<String> regions) throws IOException {
