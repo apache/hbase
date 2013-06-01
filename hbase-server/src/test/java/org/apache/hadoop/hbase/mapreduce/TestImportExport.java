@@ -20,8 +20,13 @@ package org.apache.hadoop.hbase.mapreduce;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.PrintStream;
+import java.util.ArrayList;
+import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -39,9 +44,14 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.filter.Filter;
+import org.apache.hadoop.hbase.filter.FilterBase;
 import org.apache.hadoop.hbase.filter.PrefixFilter;
+import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
+import org.apache.hadoop.hbase.mapreduce.Import.KeyValueImporter;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.LauncherSecurityManager;
 import org.apache.hadoop.mapreduce.Job;
+import org.apache.hadoop.mapreduce.Mapper.Context;
 import org.apache.hadoop.util.GenericOptionsParser;
 import org.junit.After;
 import org.junit.AfterClass;
@@ -50,6 +60,10 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.mockito.invocation.InvocationOnMock;
+import org.mockito.stubbing.Answer;
+
+import static org.mockito.Mockito.*;
 
 /**
  * Tests the table import and table export MR job functionality
@@ -213,6 +227,7 @@ public class TestImportExport {
 
     FileSystem fs = FileSystem.get(UTIL.getConfiguration());
     fs.delete(new Path(FQ_OUTPUT_DIR), true);
+    t.close();
   }
 
   @Test
@@ -354,5 +369,121 @@ public class TestImportExport {
     }
     results.close();
     return count;
+  }
+  
+  /**
+   * test main method. Import should print help and call System.exit
+   */
+  @Test
+  public void testImportMain() throws Exception {
+    PrintStream oldPrintStream = System.err;
+    SecurityManager SECURITY_MANAGER = System.getSecurityManager();
+    LauncherSecurityManager newSecurityManager= new LauncherSecurityManager();
+    System.setSecurityManager(newSecurityManager);
+    ByteArrayOutputStream data = new ByteArrayOutputStream();
+    String[] args = {};
+    System.setErr(new PrintStream(data));
+    try {
+      System.setErr(new PrintStream(data));
+      Import.main(args);
+      fail("should be SecurityException");
+    } catch (SecurityException e) {
+      assertEquals(-1, newSecurityManager.getExitCode());
+      assertTrue(data.toString().contains("Wrong number of arguments:"));
+      assertTrue(data.toString().contains("-Dimport.bulk.output=/path/for/output"));
+      assertTrue(data.toString().contains("-Dimport.filter.class=<name of filter class>"));
+      assertTrue(data.toString().contains("-Dimport.bulk.output=/path/for/output"));
+      assertTrue(data.toString().contains("-Dmapred.reduce.tasks.speculative.execution=false"));
+    } finally {
+      System.setErr(oldPrintStream);
+      System.setSecurityManager(SECURITY_MANAGER);
+    }
+  }
+
+  /**
+   * test main method. Export should print help and call System.exit
+   */
+  @Test
+  public void testExportMain() throws Exception {
+    PrintStream oldPrintStream = System.err;
+    SecurityManager SECURITY_MANAGER = System.getSecurityManager();
+    LauncherSecurityManager newSecurityManager= new LauncherSecurityManager();
+    System.setSecurityManager(newSecurityManager);
+    ByteArrayOutputStream data = new ByteArrayOutputStream();
+    String[] args = {};
+    System.setErr(new PrintStream(data));
+    try {
+      System.setErr(new PrintStream(data));
+      Export.main(args);
+      fail("should be SecurityException");
+    } catch (SecurityException e) {
+      assertEquals(-1, newSecurityManager.getExitCode());
+      assertTrue(data.toString().contains("Wrong number of arguments:"));
+      assertTrue(data.toString().contains(
+              "Usage: Export [-D <property=value>]* <tablename> <outputdir> [<versions> " +
+              "[<starttime> [<endtime>]] [^[regex pattern] or [Prefix] to filter]]"));
+      assertTrue(data.toString().contains("-D hbase.mapreduce.scan.column.family=<familyName>"));
+      assertTrue(data.toString().contains("-D hbase.mapreduce.include.deleted.rows=true"));
+      assertTrue(data.toString().contains("-Dhbase.client.scanner.caching=100"));
+      assertTrue(data.toString().contains("-Dmapred.map.tasks.speculative.execution=false"));
+      assertTrue(data.toString().contains("-Dmapred.reduce.tasks.speculative.execution=false"));
+      assertTrue(data.toString().contains("-Dhbase.export.scanner.batch=10"));
+    } finally {
+      System.setErr(oldPrintStream);
+      System.setSecurityManager(SECURITY_MANAGER);
+    }
+  }
+
+  /**
+   * Test map method of Importer
+   */
+  @SuppressWarnings({ "unchecked", "rawtypes" })
+  @Test
+  public void testKeyValueImporter() throws Exception {
+    KeyValueImporter importer = new KeyValueImporter();
+    Configuration configuration = new Configuration();
+    Context ctx = mock(Context.class);
+    when(ctx.getConfiguration()).thenReturn(configuration);
+
+    doAnswer(new Answer<Void>() {
+
+      @Override
+      public Void answer(InvocationOnMock invocation) throws Throwable {
+        ImmutableBytesWritable writer = (ImmutableBytesWritable) invocation.getArguments()[0];
+        KeyValue key = (KeyValue) invocation.getArguments()[1];
+        assertEquals("Key", Bytes.toString(writer.get()));
+        assertEquals("row", Bytes.toString(key.getRow()));
+        return null;
+      }
+    }).when(ctx).write(any(ImmutableBytesWritable.class), any(KeyValue.class));
+
+    importer.setup(ctx);
+    Result value = mock(Result.class);
+    KeyValue[] keys = {
+        new KeyValue(Bytes.toBytes("row"), Bytes.toBytes("family"), Bytes.toBytes("qualifier"),
+            Bytes.toBytes("value")),
+        new KeyValue(Bytes.toBytes("row"), Bytes.toBytes("family"), Bytes.toBytes("qualifier"),
+            Bytes.toBytes("value1")) };
+    when(value.raw()).thenReturn(keys);
+    importer.map(new ImmutableBytesWritable(Bytes.toBytes("Key")), value, ctx);
+
+  }
+
+  /**
+   * Test addFilterAndArguments method of Import This method set couple
+   * parameters into Configuration
+   */
+  @Test
+  public void testAddFilterAndArguments() {
+    Configuration configuration = new Configuration();
+
+    List<String> args = new ArrayList<String>();
+    args.add("param1");
+    args.add("param2");
+
+    Import.addFilterAndArguments(configuration, FilterBase.class, args);
+    assertEquals("org.apache.hadoop.hbase.filter.FilterBase", 
+        configuration.get(Import.FILTER_CLASS_CONF_KEY));
+    assertEquals("param1,param2", configuration.get(Import.FILTER_ARGS_CONF_KEY));
   }
 }

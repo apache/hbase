@@ -17,9 +17,6 @@
  */
 package org.apache.hadoop.hbase.mapreduce;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.LargeTests;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
@@ -28,10 +25,19 @@ import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.LauncherSecurityManager;
+import org.apache.hadoop.mapreduce.Job;
+import org.apache.hadoop.util.GenericOptionsParser;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.apache.hadoop.conf.Configuration;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.PrintStream;
+
+import static org.junit.Assert.*;
 
 /**
  * Basic test for the CopyTable M/R tool
@@ -40,6 +46,14 @@ import org.junit.experimental.categories.Category;
 public class TestCopyTable {
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static MiniHBaseCluster cluster;
+  private static final byte[] ROW1 = Bytes.toBytes("row1");
+  private static final byte[] ROW2 = Bytes.toBytes("row2");
+  private static final String FAMILY_A_STRING = "a";
+  private static final String FAMILY_B_STRING = "b";
+  private static final byte[] FAMILY_A = Bytes.toBytes(FAMILY_A_STRING);
+  private static final byte[] FAMILY_B = Bytes.toBytes(FAMILY_B_STRING);
+  private static final byte[] QUALIFIER = Bytes.toBytes("q");
+
 
   @BeforeClass
   public static void beforeClass() throws Exception {
@@ -144,5 +158,103 @@ public class TestCopyTable {
     t2.close();
     TEST_UTIL.deleteTable(TABLENAME1);
     TEST_UTIL.deleteTable(TABLENAME2);
+  }
+
+  /**
+   * Test copy of table from sourceTable to targetTable all rows from family a
+   */
+  @Test
+  public void testRenameFamily() throws Exception {
+    String sourceTable = "sourceTable";
+    String targetTable = "targetTable";
+
+    byte[][] families = { FAMILY_A, FAMILY_B };
+
+    HTable t = TEST_UTIL.createTable(Bytes.toBytes(sourceTable), families);
+    HTable t2 = TEST_UTIL.createTable(Bytes.toBytes(targetTable), families);
+    Put p = new Put(ROW1);
+    p.add(FAMILY_A, QUALIFIER,  Bytes.toBytes("Data11"));
+    p.add(FAMILY_B, QUALIFIER,  Bytes.toBytes("Data12"));
+    p.add(FAMILY_A, QUALIFIER,  Bytes.toBytes("Data13"));
+    t.put(p);
+    p = new Put(ROW2);
+    p.add(FAMILY_B, QUALIFIER, Bytes.toBytes("Dat21"));
+    p.add(FAMILY_A, QUALIFIER, Bytes.toBytes("Data22"));
+    p.add(FAMILY_B, QUALIFIER, Bytes.toBytes("Data23"));
+    t.put(p);
+
+    long currentTime = System.currentTimeMillis();
+    String[] args = new String[] { "--new.name=" + targetTable, "--families=a:b", "--all.cells",
+        "--starttime=" + (currentTime - 100000), "--endtime=" + (currentTime + 100000),
+        "--versions=1", sourceTable };
+    assertNull(t2.get(new Get(ROW1)).getRow());
+    clean();
+
+    assertTrue(runCopy(args));
+
+    assertNotNull(t2.get(new Get(ROW1)).getRow());
+    Result res = t2.get(new Get(ROW1));
+    byte[] b1 = res.getValue(FAMILY_B, QUALIFIER);
+    assertEquals("Data13", new String(b1));
+    assertNotNull(t2.get(new Get(ROW2)).getRow());
+    res = t2.get(new Get(ROW2));
+    b1 = res.getValue(FAMILY_A, QUALIFIER);
+    // Data from the family of B is not copied
+    assertNull(b1);
+
+  }
+
+  /**
+   * Test main method of CopyTable.
+   */
+  @Test
+  public void testMainMethod() throws Exception {
+    String[] emptyArgs = { "-h" };
+    PrintStream oldWriter = System.err;
+    ByteArrayOutputStream data = new ByteArrayOutputStream();
+    PrintStream writer = new PrintStream(data);
+    System.setErr(writer);
+    SecurityManager SECURITY_MANAGER = System.getSecurityManager();
+    LauncherSecurityManager newSecurityManager= new LauncherSecurityManager();
+    System.setSecurityManager(newSecurityManager);
+    try {
+      CopyTable.main(emptyArgs);
+      fail("should be exit");
+    } catch (SecurityException e) {
+      assertEquals(1, newSecurityManager.getExitCode());
+    } finally {
+      System.setErr(oldWriter);
+      System.setSecurityManager(SECURITY_MANAGER);
+    }
+    assertTrue(data.toString().contains("rs.class"));
+    // should print usage information
+    assertTrue(data.toString().contains("Usage:"));
+  }
+
+  private boolean runCopy(String[] args) throws IOException, InterruptedException,
+      ClassNotFoundException {
+    GenericOptionsParser opts = new GenericOptionsParser(
+        new Configuration(TEST_UTIL.getConfiguration()), args);
+    Configuration configuration = opts.getConfiguration();
+    args = opts.getRemainingArgs();
+    clean();
+    Job job = CopyTable.createSubmittableJob(configuration, args);
+    job.waitForCompletion(false);
+    return job.isSuccessful();
+  }
+
+
+  private void clean() {
+
+      CopyTable.startTime = 0;
+      CopyTable.endTime = 0;
+      CopyTable.versions = -1;
+      CopyTable.tableName = null;
+      CopyTable.startRow = null;
+      CopyTable.stopRow = null;
+      CopyTable.newTableName = null;
+      CopyTable.peerAddress = null;
+      CopyTable.families = null;
+      CopyTable.allCells = false;
   }
 }
