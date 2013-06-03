@@ -19,12 +19,17 @@
 
 package org.apache.hadoop.hbase.rest;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.Options;
-import org.apache.commons.cli.PosixParser;
 import org.apache.commons.cli.ParseException;
-
+import org.apache.commons.cli.PosixParser;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -36,19 +41,17 @@ import org.apache.hadoop.hbase.util.InfoServer;
 import org.apache.hadoop.hbase.util.Strings;
 import org.apache.hadoop.hbase.util.VersionInfo;
 import org.apache.hadoop.net.DNS;
-
-import java.util.List;
-import java.util.ArrayList;
-import java.util.Map;
-import java.util.Map.Entry;
-
+import org.apache.hadoop.security.SecurityUtil;
+import org.apache.hadoop.security.authentication.server.AuthenticationFilter;
 import org.mortbay.jetty.Connector;
 import org.mortbay.jetty.Server;
 import org.mortbay.jetty.nio.SelectChannelConnector;
 import org.mortbay.jetty.servlet.Context;
+import org.mortbay.jetty.servlet.FilterHolder;
 import org.mortbay.jetty.servlet.ServletHolder;
 import org.mortbay.thread.QueuedThreadPool;
 
+import com.google.common.base.Preconditions;
 import com.sun.jersey.api.json.JSONConfiguration;
 import com.sun.jersey.spi.container.servlet.ServletContainer;
 
@@ -63,6 +66,11 @@ import com.sun.jersey.spi.container.servlet.ServletContainer;
  */
 @InterfaceAudience.Private
 public class RESTServer implements Constants {
+
+  private static final String REST_SECURITY_KEY = "hbase.rest.authentication";
+  private static final String REST_KEYTAB_KEY = "hbase.rest.keytab.file";
+  private static final String REST_SPNEGO_PRINCIPAL_KEY = "hbase.rest.kerberos.spnego.principal";
+  private static final String REST_PRINCIPAL_KEY = "hbase.rest.kerberos.principal";
 
   private static void printUsageAndExit(Options options, int exitCode) {
     HelpFormatter formatter = new HelpFormatter();
@@ -81,15 +89,35 @@ public class RESTServer implements Constants {
     Log LOG = LogFactory.getLog("RESTServer");
 
     VersionInfo.logVersion();
+    FilterHolder authFilter = null;
     Configuration conf = HBaseConfiguration.create();
     // login the server principal (if using secure Hadoop)   
     if (User.isSecurityEnabled() && User.isHBaseSecurityEnabled(conf)) {
       String machineName = Strings.domainNamePointerToHostName(
         DNS.getDefaultHost(conf.get("hbase.rest.dns.interface", "default"),
           conf.get("hbase.rest.dns.nameserver", "default")));
-      User.login(conf, "hbase.rest.keytab.file", "hbase.rest.kerberos.principal",
+      User.login(conf, REST_KEYTAB_KEY, REST_PRINCIPAL_KEY,
         machineName);
+      if ("kerberos".equalsIgnoreCase(conf.get(REST_SECURITY_KEY))) {
+        Map<String, String> params = new HashMap<String, String>();
+        String principalInConf = conf.get(REST_SPNEGO_PRINCIPAL_KEY);
+        Preconditions.checkArgument(principalInConf != null && !principalInConf.isEmpty(),
+          REST_SPNEGO_PRINCIPAL_KEY + " should be set if authentication is enabled");
+        params.put("kerberos.principal",
+          SecurityUtil.getServerPrincipal(principalInConf, machineName));
+        String httpKeytab = conf.get(REST_KEYTAB_KEY);
+        Preconditions.checkArgument(httpKeytab != null && !httpKeytab.isEmpty(),
+          REST_KEYTAB_KEY + " should be set if authentication is enabled");
+        params.put("kerberos.keytab", httpKeytab);
+        params.put(AuthenticationFilter.AUTH_TYPE, "kerberos");
+        params.put(AuthenticationFilter.COOKIE_PATH, "/");
+        authFilter = new FilterHolder();
+        authFilter.setName("AuthenticationFilter");
+        authFilter.setClassName(AuthenticationFilter.class.getName());
+        authFilter.setInitParameters(params);
+      }
     }
+
     RESTServlet servlet = RESTServlet.getInstance(conf);
 
     Options options = new Options();
@@ -194,6 +222,10 @@ public class RESTServer implements Constants {
     Context context = new Context(server, "/", Context.SESSIONS);
     context.addServlet(shPojoMap, "/status/cluster");
     context.addServlet(sh, "/*");
+    if (authFilter != null) {
+      context.addFilter(authFilter, "/*", 1);
+    }
+
     context.addFilter(GzipFilter.class, "/*", 0);
 
     // Put up info server.
