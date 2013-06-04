@@ -87,6 +87,11 @@ public class MockRegionServerServices implements RegionServerServices {
   }
 
   @Override
+  public HLog getWAL() throws IOException {
+    return null;
+  }
+
+  @Override
   public RpcServer getRpcServer() {
     return null;
   }

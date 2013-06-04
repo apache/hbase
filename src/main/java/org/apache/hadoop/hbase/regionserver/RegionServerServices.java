@@ -41,6 +41,9 @@ public interface RegionServerServices extends OnlineRegions {
    * default (common) WAL */
   public HLog getWAL(HRegionInfo regionInfo) throws IOException;
 
+  /** @return get the default (common) WAL for the server*/
+  public HLog getWAL() throws IOException;
+
   /**
    * @return Implementation of {@link CompactionRequestor} or null.
    */
