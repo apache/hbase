@@ -124,7 +124,7 @@ public class SplitLogManager extends ZooKeeperListener {
   private long unassignedTimeout;
   private long lastNodeCreateTime = Long.MAX_VALUE;
   public boolean ignoreZKDeleteForTesting = false;
-  private volatile long lastRecoveringNodeCreationTime = Long.MAX_VALUE;
+  private volatile long lastRecoveringNodeCreationTime = 0;
   // When lastRecoveringNodeCreationTime is older than the following threshold, we'll check
   // whether to GC stale recovering znodes
   private long checkRecoveringTimeThreshold = 15000; // 15 seconds

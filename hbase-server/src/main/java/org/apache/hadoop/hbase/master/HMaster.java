@@ -795,6 +795,7 @@ MasterServices, Server {
       // Note: we can't remove oldMetaServerLocation from previousFailedServers list because it
       // may also host user regions
     }
+    Set<ServerName> previouslyFailedMetaRSs = getPreviouselyFailedMetaServersFromZK();
 
     this.initializationBeforeMetaAssignment = true;
     // Make sure meta assigned before proceeding.
@@ -804,11 +805,19 @@ MasterServices, Server {
     // assigned when master is shutting down
     if(this.stopped) return;
 
-    if (this.distributedLogReplay && oldMetaServerLocation != null
-        && previouslyFailedServers.contains(oldMetaServerLocation)) {
+    if (this.distributedLogReplay && (!previouslyFailedMetaRSs.isEmpty())) {
       // replay WAL edits mode need new .META. RS is assigned firstly
       status.setStatus("replaying log for Meta Region");
-      this.fileSystemManager.splitMetaLog(oldMetaServerLocation);
+      // need to use union of previouslyFailedMetaRSs recorded in ZK and previouslyFailedServers
+      // instead of oldMetaServerLocation to address the following two situations:
+      // 1) the chained failure situation(recovery failed multiple times in a row).
+      // 2) master get killed right before it could delete the recovering META from ZK while the
+      // same server still has non-meta wals to be replayed so that
+      // removeStaleRecoveringRegionsFromZK can't delete the stale META region
+      // Passing more servers into splitMetaLog is all right. If a server doesn't have .META. wal,
+      // there is no op for the server.
+      previouslyFailedMetaRSs.addAll(previouslyFailedServers);
+      this.fileSystemManager.splitMetaLog(previouslyFailedMetaRSs);
     }
 
     enableServerShutdownHandler();
@@ -990,6 +999,25 @@ MasterServices, Server {
     LOG.info("Forcing expire of " + sn);
     serverManager.expireServer(sn);
     return true;
+  }
+
+  /**
+   * This function returns a set of region server names under .META. recovering region ZK node
+   * @return Set of meta server names which were recorded in ZK
+   * @throws KeeperException
+   */
+  private Set<ServerName> getPreviouselyFailedMetaServersFromZK() throws KeeperException {
+    Set<ServerName> result = new HashSet<ServerName>();
+    String metaRecoveringZNode = ZKUtil.joinZNode(zooKeeper.recoveringRegionsZNode,
+      HRegionInfo.FIRST_META_REGIONINFO.getEncodedName());
+    List<String> regionFailedServers = ZKUtil.listChildrenNoWatch(zooKeeper, metaRecoveringZNode);
+    if (regionFailedServers == null) return result;
+
+    for(String failedServer : regionFailedServers) {
+      ServerName server = ServerName.parseServerName(failedServer);
+      result.add(server);
+    }
+    return result;
   }
 
   @Override

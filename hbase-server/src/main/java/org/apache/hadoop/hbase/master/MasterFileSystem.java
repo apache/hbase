@@ -294,9 +294,18 @@ public class MasterFileSystem {
    * @throws IOException
    */
   public void splitMetaLog(final ServerName serverName) throws IOException {
-    long splitTime = 0, splitLogSize = 0;
     Set<ServerName> serverNames = new HashSet<ServerName>();
     serverNames.add(serverName);
+    splitMetaLog(serverNames);
+  }
+
+  /**
+   * Specialized method to handle the splitting for meta HLog
+   * @param serverNames
+   * @throws IOException
+   */
+  public void splitMetaLog(final Set<ServerName> serverNames) throws IOException {
+    long splitTime = 0, splitLogSize = 0;
     List<Path> logDirs = getLogDirs(serverNames);
 
     splitLogManager.handleDeadWorkers(serverNames);
