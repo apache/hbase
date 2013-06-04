@@ -27,9 +27,7 @@ import java.util.concurrent.atomic.AtomicLong;
  *     queues - you can submit object that is bigger than limit.
  *
  * This implementation introduces small costs in terms of
- * synchronization (no synchronization in most cases at all), but is
- * vulnerable to races. For details see documentation of
- * increase method.
+ * synchronization (no synchronization in most cases at all).
  */
 public class SizeBasedThrottler {
 
@@ -53,29 +51,28 @@ public class SizeBasedThrottler {
    * Blocks until internal counter is lower than threshold
    * and then increases value of internal counter.
    *
-   * THIS METHOD IS VULNERABLE TO RACES.
-   * It may happen that increment operation will
-   * succeed immediately, even if it should block. This happens when
-   * at least two threads call increase at the some moment. The decision
-   * whether to block is made at the beginning, without synchronization.
-   * If value of currentSize is lower than threshold at that time, call
-   * will succeed immediately. It is possible, that 2 threads will make
-   * decision not to block, even if one of them should block.
+   * Note that order in which increases will be granted is not guaranteed,
+   * i.e. some request can wait, while newer request are granted in the meantime
    *
    * @param delta increase internal counter by this value
    * @return new value of internal counter
    * @throws InterruptedException when interrupted during waiting
    */
-  public synchronized long increase(long delta) throws InterruptedException{
-    if (currentSize.get() >= threshold) {
-      synchronized (this) {
-        while (currentSize.get() >= threshold) {
-          wait();
+  public long increase(long delta) throws InterruptedException{
+    while (true) {
+      long size = currentSize.get();
+      if (size >= threshold) {
+        synchronized (this) {
+          while ((size = currentSize.get()) >= threshold) {
+            wait();
+          }
         }
       }
-    }
 
-    return currentSize.addAndGet(delta);
+      if (currentSize.compareAndSet(size, size + delta)) {
+        return size + delta;
+      }
+    }
   }
 
 
@@ -85,7 +82,7 @@ public class SizeBasedThrottler {
    * @param delta decrease internal counter by this value
    * @return new value of internal counter
    */
-  public synchronized long decrease(long delta) {
+  public long decrease(long delta) {
     final long newSize = currentSize.addAndGet(-delta);
 
     if (newSize < threshold && newSize + delta >= threshold) {
@@ -101,7 +98,7 @@ public class SizeBasedThrottler {
    *
    * @return current value of internal counter
    */
-  public synchronized long getCurrentValue(){
+  public long getCurrentValue(){
     return currentSize.get();
   }
 
