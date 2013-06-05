@@ -152,6 +152,7 @@ public class SequenceFileLogReader implements HLog.Reader {
   protected CompressionContext compressionContext = null;
 
   protected Class<? extends HLogKey> keyClass;
+  private WALEditCodec codec;
 
   /**
    * Default constructor.
@@ -175,6 +176,7 @@ public class SequenceFileLogReader implements HLog.Reader {
     this.conf = conf;
     this.path = path;
     reader = new WALReader(fs, path, conf);
+
     this.fs = fs;
 
     // If compression is enabled, new dictionaries are created here.
@@ -190,6 +192,9 @@ public class SequenceFileLogReader implements HLog.Reader {
         throw new IOException("Failed to initialize CompressionContext", e);
       }
     }
+
+    // setup the codec
+    this.codec = new WALEditCodec(compressionContext);
   }
 
   @Override
@@ -230,10 +235,12 @@ public class SequenceFileLogReader implements HLog.Reader {
       WALEdit val = new WALEdit();
       e = new HLog.Entry(key, val);
     }
+
     boolean b = false;
     try {
+      e.getEdit().setCodec(codec);
       if (compressionContext != null) {
-        e.setCompressionContext(compressionContext);
+        e.getKey().setCompressionContext(compressionContext);
       }
       b = this.reader.next(e.getKey(), e.getEdit());
     } catch (IOException ioe) {

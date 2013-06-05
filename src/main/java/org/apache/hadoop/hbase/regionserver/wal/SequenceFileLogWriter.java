@@ -75,6 +75,7 @@ public class SequenceFileLogWriter implements HLog.Writer {
 
   private Method syncFs = null;
   private Method hflush = null;
+  private WALEditCodec codec;
 
   /**
    * Default constructor.
@@ -193,7 +194,8 @@ public class SequenceFileLogWriter implements HLog.Writer {
     } else {
       LOG.debug("using new createWriter -- HADOOP-6840");
     }
-    
+
+    this.codec = new WALEditCodec(compressionContext);
     this.writer_out = getSequenceFilePrivateFSDataOutputStreamAccessible();
     this.syncFs = getSyncFs();
     this.hflush = getHFlush();
@@ -274,7 +276,9 @@ public class SequenceFileLogWriter implements HLog.Writer {
 
   @Override
   public void append(HLog.Entry entry) throws IOException {
-    entry.setCompressionContext(compressionContext);
+    entry.getEdit().setCodec(this.codec);
+    entry.getKey().setCompressionContext(compressionContext);
+
     try {
       this.writer.append(entry.getKey(), entry.getEdit());
     } catch (NullPointerException npe) {

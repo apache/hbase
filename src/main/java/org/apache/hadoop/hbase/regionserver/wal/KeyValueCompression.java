@@ -19,10 +19,14 @@
 package org.apache.hadoop.hbase.regionserver.wal;
 
 import java.io.DataInput;
+import java.io.DataInputStream;
 import java.io.DataOutput;
+import java.io.DataOutputStream;
 import java.io.IOException;
 
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.codec.BaseDecoder;
+import org.apache.hadoop.hbase.codec.BaseEncoder;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.WritableUtils;
 
@@ -122,5 +126,33 @@ class KeyValueCompression {
     int pos = keyVal.getTimestampOffset();
     int remainingLength = keyVal.getLength() + offset - (pos);
     out.write(backingArray, pos, remainingLength);
+  }
+
+  static class CompressedKvEncoder extends BaseEncoder {
+    private final CompressionContext compression;
+
+    public CompressedKvEncoder(DataOutputStream out, CompressionContext compression) {
+      super(out);
+      this.compression = compression;
+    }
+
+    @Override
+    public void write(KeyValue kv) throws IOException {
+      KeyValueCompression.writeKV((DataOutputStream) out, kv, compression);
+    }
+  }
+
+  static class CompressedKvDecoder extends BaseDecoder {
+    private final CompressionContext compression;
+
+    public CompressedKvDecoder(DataInputStream in, CompressionContext compression) {
+      super(in);
+      this.compression = compression;
+    }
+
+    @Override
+    protected KeyValue parseCell() throws IOException {
+      return KeyValueCompression.readKV((DataInputStream) in, compression);
+    }
   }
 }

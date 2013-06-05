@@ -25,6 +25,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
+import org.apache.hadoop.hbase.regionserver.wal.WALEditCodec;
 
 import java.io.IOException;
 
@@ -36,6 +37,7 @@ import java.io.IOException;
 public class ReplicationHLogReaderManager {
 
   private static final Log LOG = LogFactory.getLog(ReplicationHLogReaderManager.class);
+  private final WALEditCodec nonCompressingCodec = new WALEditCodec(null);
   private final FileSystem fs;
   private final Configuration conf;
   private long position = 0;
@@ -93,7 +95,8 @@ public class ReplicationHLogReaderManager {
     this.position = this.reader.getPosition();
     // We need to set the CC to null else it will be compressed when sent to the sink
     if (entry != null) {
-      entry.setCompressionContext(null);
+      entry.getKey().setCompressionContext(null);
+      entry.getEdit().setCodec(nonCompressingCodec);
     }
     return entry;
   }

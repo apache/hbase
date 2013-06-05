@@ -20,15 +20,19 @@
 package org.apache.hadoop.hbase.regionserver.wal;
 
 import java.io.DataInput;
+import java.io.DataInputStream;
 import java.io.DataOutput;
+import java.io.DataOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.NavigableMap;
 import java.util.TreeMap;
 
-import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.codec.Decoder;
+import org.apache.hadoop.hbase.codec.Encoder;
+import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.hadoop.io.Writable;
@@ -74,14 +78,27 @@ public class WALEdit implements Writable, HeapSize {
   private final ArrayList<KeyValue> kvs = new ArrayList<KeyValue>();
   private NavigableMap<byte[], Integer> scopes;
 
-  private CompressionContext compressionContext;
+  // default to decoding uncompressed data - needed for replication, which enforces that
+  // uncompressed edits are sent across the wire. In the regular case (reading/writing WAL), the
+  // codec will be setup by the reader/writer class, not here.
+  private WALEditCodec codec = new WALEditCodec(null);
 
   public WALEdit() {
   }
 
-  public void setCompressionContext(final CompressionContext compressionContext) {
-    this.compressionContext = compressionContext;
+  /**
+   * {@link #setCodec(WALEditCodec)} must be called before calling this method.
+   * @param compression the {@link CompressionContext} for the underlying codec.
+   */
+  @SuppressWarnings("javadoc")
+  public void setCompressionContext(final CompressionContext compression) {
+    this.codec.setCompression(compression);
   }
+
+  public void setCodec(WALEditCodec codec) {
+    this.codec = codec;
+  }
+
 
   public void add(KeyValue kv) {
     this.kvs.add(kv);
@@ -115,19 +132,22 @@ public class WALEdit implements Writable, HeapSize {
     if (scopes != null) {
       scopes.clear();
     }
+    Decoder decoder = this.codec.getDecoder((DataInputStream) in);
     int versionOrLength = in.readInt();
+    int length = versionOrLength;
+
+    // make sure we get the real length
     if (versionOrLength == VERSION_2) {
-      // this is new style HLog entry containing multiple KeyValues.
-      int numEdits = in.readInt();
-      for (int idx = 0; idx < numEdits; idx++) {
-        if (compressionContext != null) {
-          this.add(KeyValueCompression.readKV(in, compressionContext));
-        } else {
-          KeyValue kv = new KeyValue();
-          kv.readFields(in);
-          this.add(kv);
-    	  }
-      }
+      length = in.readInt();
+    }
+
+    // read in all the key values
+    for(int i=0; i< length && decoder.advance(); i++) {
+      kvs.add(decoder.current());
+    }
+
+    //its a new style WAL, so we need replication scopes too
+    if (versionOrLength == VERSION_2) {
       int numFamilies = in.readInt();
       if (numFamilies > 0) {
         if (scopes == null) {
@@ -139,27 +159,20 @@ public class WALEdit implements Writable, HeapSize {
           scopes.put(fam, scope);
         }
       }
-    } else {
-      // this is an old style HLog entry. The int that we just
-      // read is actually the length of a single KeyValue
-      KeyValue kv = new KeyValue();
-      kv.readFields(versionOrLength, in);
-      this.add(kv);
     }
-
   }
 
   public void write(DataOutput out) throws IOException {
+    Encoder kvEncoder = codec.getEncoder((DataOutputStream) out);
     out.writeInt(VERSION_2);
+
+    //write out the keyvalues
     out.writeInt(kvs.size());
-    // We interleave the two lists for code simplicity
-    for (KeyValue kv : kvs) {
-      if (compressionContext != null) {
-        KeyValueCompression.writeKV(out, kv, compressionContext);
-      } else{
-        kv.write(out);
-      }
+    for(KeyValue kv: kvs){
+      kvEncoder.write(kv);
     }
+    kvEncoder.flush();
+
     if (scopes == null) {
       out.writeInt(0);
     } else {
@@ -198,5 +211,4 @@ public class WALEdit implements Writable, HeapSize {
     sb.append(">]");
     return sb.toString();
   }
-
 }
