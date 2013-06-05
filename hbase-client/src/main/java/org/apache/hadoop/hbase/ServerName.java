@@ -18,6 +18,7 @@
  */
 package org.apache.hadoop.hbase;
 
+import com.google.common.net.InetAddresses;
 import com.google.protobuf.InvalidProtocolBufferException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -33,16 +34,15 @@ import java.util.regex.Pattern;
 
 /**
  * Instance of an HBase ServerName.
- * A server name is used uniquely identifying a server instance and is made
- * of the combination of hostname, port, and startcode. The startcode
- * distingushes restarted servers on same hostname and port (startcode is
- * usually timestamp of server startup). The {@link #toString()} format of
- * ServerName is safe to use in the  filesystem and as znode name up in
- * ZooKeeper.  Its format is:
+ * A server name is used uniquely identifying a server instance in a cluster and is made
+ * of the combination of hostname, port, and startcode.  The startcode distingushes restarted
+ * servers on same hostname and port (startcode is usually timestamp of server startup). The
+ * {@link #toString()} format of ServerName is safe to use in the  filesystem and as znode name
+ * up in ZooKeeper.  Its format is:
  * <code>&lt;hostname> '{@link #SERVERNAME_SEPARATOR}' &lt;port> '{@link #SERVERNAME_SEPARATOR}' &lt;startcode></code>.
- * For example, if hostname is <code>example.org</code>, port is <code>1234</code>,
+ * For example, if hostname is <code>www.example.org</code>, port is <code>1234</code>,
  * and the startcode for the regionserver is <code>1212121212</code>, then
- * the {@link #toString()} would be <code>example.org,1234,1212121212</code>.
+ * the {@link #toString()} would be <code>www.example.org,1234,1212121212</code>.
  * 
  * <p>You can obtain a versioned serialized form of this class by calling
  * {@link #getVersionedBytes()}.  To deserialize, call {@link #parseVersionedServerName(byte[])}
@@ -83,7 +83,7 @@ public class ServerName implements Comparable<ServerName> {
   public static final String UNKNOWN_SERVERNAME = "#unknown#";
 
   private final String servername;
-  private final String hostname;
+  private final String hostnameOnly;
   private final int port;
   private final long startcode;
 
@@ -95,10 +95,23 @@ public class ServerName implements Comparable<ServerName> {
   public static final List<ServerName> EMPTY_SERVER_LIST = new ArrayList<ServerName>(0);
 
   public ServerName(final String hostname, final int port, final long startcode) {
-    this.hostname = hostname;
+    // Drop the domain is there is one; no need of it in a local cluster.  With it, we get long
+    // unwieldy names.
+    this.hostnameOnly = hostname;
     this.port = port;
     this.startcode = startcode;
-    this.servername = getServerName(hostname, port, startcode);
+    this.servername = getServerName(this.hostnameOnly, port, startcode);
+  }
+
+  /**
+   * @param hostname
+   * @return hostname minus the domain, if there is one (will do pass-through on ip addresses)
+   */
+  static String getHostNameMinusDomain(final String hostname) {
+    if (InetAddresses.isInetAddress(hostname)) return hostname;
+    String [] parts = hostname.split("\\.");
+    if (parts == null || parts.length == 0) return hostname;
+    return parts[0];
   }
 
   public ServerName(final String serverName) {
@@ -135,6 +148,16 @@ public class ServerName implements Comparable<ServerName> {
   }
 
   /**
+   * @return Return a SHORT version of {@link ServerName#toString()}, one that has the host only,
+   * minus the domain, and the port only -- no start code; the String is for us internally mostly
+   * tying threads to their server.  Not for external use.  It is lossy and will not work in
+   * in compares, etc.
+   */
+  public String toShortString() {
+    return Addressing.createHostAndPortStr(getHostNameMinusDomain(this.hostnameOnly), this.port);
+  }
+
+  /**
    * @return {@link #getServerName()} as bytes with a short-sized prefix with
    * the ServerName#VERSION of this class.
    */
@@ -150,7 +173,7 @@ public class ServerName implements Comparable<ServerName> {
   }
 
   public String getHostname() {
-    return hostname;
+    return hostnameOnly;
   }
 
   public int getPort() {
@@ -162,13 +185,14 @@ public class ServerName implements Comparable<ServerName> {
   }
 
   /**
+   * For internal use only.
    * @param hostName
    * @param port
    * @param startcode
    * @return Server name made of the concatenation of hostname, port and
    * startcode formatted as <code>&lt;hostname> ',' &lt;port> ',' &lt;startcode></code>
    */
-  public static String getServerName(String hostName, int port, long startcode) {
+  static String getServerName(String hostName, int port, long startcode) {
     final StringBuilder name = new StringBuilder(hostName.length() + 1 + 5 + 1 + 13);
     name.append(hostName);
     name.append(SERVERNAME_SEPARATOR);
@@ -197,7 +221,7 @@ public class ServerName implements Comparable<ServerName> {
    * {@link Addressing#createHostAndPortStr(String, int)}
    */
   public String getHostAndPort() {
-    return Addressing.createHostAndPortStr(this.hostname, this.port);
+    return Addressing.createHostAndPortStr(this.hostnameOnly, this.port);
   }
 
   /**

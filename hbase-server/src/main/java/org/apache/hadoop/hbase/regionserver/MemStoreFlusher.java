@@ -358,7 +358,7 @@ class MemStoreFlusher implements FlushRequester {
 
   synchronized void start(UncaughtExceptionHandler eh) {
     ThreadFactory flusherThreadFactory = Threads.newDaemonThreadFactory(
-        server.getServerName().toString() + "-MemStoreFlusher", eh);
+        server.getServerName().toShortString() + "-MemStoreFlusher", eh);
     for (int i = 0; i < flushHandlers.length; i++) {
       flushHandlers[i] = new FlushHandler();
       flusherThreadFactory.newThread(flushHandlers[i]);

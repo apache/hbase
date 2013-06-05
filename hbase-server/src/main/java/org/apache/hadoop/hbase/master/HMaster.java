@@ -420,7 +420,7 @@ MasterServices, Server {
         ", hbase.cluster.distributed=" + this.conf.getBoolean("hbase.cluster.distributed", false));
 
     // set the thread name now we have an address
-    setName(MASTER + "-" + this.serverName.toString());
+    setName(MASTER + ":" + this.serverName.toShortString());
 
     Replication.decorateMasterConfiguration(this.conf);
 

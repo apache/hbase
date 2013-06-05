@@ -1508,7 +1508,7 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
   private void startServiceThreads() throws IOException {
     String n = Thread.currentThread().getName();
     // Start executor services
-    this.service = new ExecutorService(getServerName().toString());
+    this.service = new ExecutorService(getServerName().toShortString());
     this.service.startExecutorService(ExecutorType.RS_OPEN_REGION,
       conf.getInt("hbase.regionserver.executor.openregion.threads", 3));
     this.service.startExecutorService(ExecutorType.RS_OPEN_META,
