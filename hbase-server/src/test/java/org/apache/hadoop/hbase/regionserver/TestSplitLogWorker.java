@@ -200,14 +200,14 @@ public class TestSplitLogWorker {
     slw.start();
     try {
       Thread.yield(); // let the worker start
-      Thread.sleep(100);
+      Thread.sleep(1000);
 
       // this time create a task node after starting the splitLogWorker
       zkw.getRecoverableZooKeeper().create(PATH,
         new SplitLogTask.Unassigned(MANAGER).toByteArray(), Ids.OPEN_ACL_UNSAFE,
         CreateMode.PERSISTENT);
 
-      waitForCounter(SplitLogCounters.tot_wkr_task_acquired, 0, 1, 1500);
+      waitForCounter(SplitLogCounters.tot_wkr_task_acquired, 0, 1, 8000);
       assertEquals(1, slw.taskReadySeq);
       byte [] bytes = ZKUtil.getData(zkw, PATH);
       SplitLogTask slt = SplitLogTask.parseFrom(bytes);

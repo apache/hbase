@@ -36,6 +36,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.SplitLogCounters;
 import org.apache.hadoop.hbase.SplitLogTask;
+import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.client.RetriesExhaustedException;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.exceptions.NotServingRegionException;
@@ -92,6 +93,7 @@ public class SplitLogWorker extends ZooKeeperListener implements Runnable {
   private boolean workerInGrabTask = false;
   private final int report_period;
   private RegionServerServices server = null;
+  private Configuration conf = null;
 
   public SplitLogWorker(ZooKeeperWatcher watcher, Configuration conf,
       RegionServerServices server, TaskExecutor splitTaskExecutor) {
@@ -101,6 +103,7 @@ public class SplitLogWorker extends ZooKeeperListener implements Runnable {
     this.splitTaskExecutor = splitTaskExecutor;
     report_period = conf.getInt("hbase.splitlog.report.period",
       conf.getInt("hbase.splitlog.manager.timeout", SplitLogManager.DEFAULT_TIMEOUT) / 3);
+    this.conf = conf;
   }
 
   public SplitLogWorker(ZooKeeperWatcher watcher, Configuration conf, ServerName serverName,
@@ -110,6 +113,7 @@ public class SplitLogWorker extends ZooKeeperListener implements Runnable {
     this.splitTaskExecutor = splitTaskExecutor;
     report_period = conf.getInt("hbase.splitlog.report.period",
       conf.getInt("hbase.splitlog.manager.timeout", SplitLogManager.DEFAULT_TIMEOUT) / 3);
+    this.conf = conf;
   }
 
   public SplitLogWorker(final ZooKeeperWatcher watcher, final Configuration conf,
@@ -165,6 +169,8 @@ public class SplitLogWorker extends ZooKeeperListener implements Runnable {
     try {
       LOG.info("SplitLogWorker " + this.serverName + " starting");
       this.watcher.registerListener(this);
+      // initialize a new connection for splitlogworker configuration
+      HConnectionManager.getConnection(conf);
       int res;
       // wait for master to create the splitLogZnode
       res = -1;
