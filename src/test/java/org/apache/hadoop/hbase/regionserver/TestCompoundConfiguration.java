@@ -36,6 +36,7 @@ import junit.framework.TestCase;
 @Category(SmallTests.class)
 public class TestCompoundConfiguration extends TestCase {
   private Configuration baseConf;
+  private int baseConfSize;
 
   @Override
   protected void setUp() throws Exception {
@@ -43,6 +44,7 @@ public class TestCompoundConfiguration extends TestCase {
     baseConf.set("A", "1");
     baseConf.setInt("B", 2);
     baseConf.set("C", "3");
+    baseConfSize = baseConf.size();
   }
 
   @Test
@@ -81,6 +83,15 @@ public class TestCompoundConfiguration extends TestCase {
     assertEquals(4, compoundConf.getInt("D", 0));
     assertNull(compoundConf.get("E"));
     assertEquals(6, compoundConf.getInt("F", 6));
+
+    int cnt = 0;
+    for (Map.Entry<String,String> entry : compoundConf) {
+      cnt++;
+      if (entry.getKey().equals("B")) assertEquals("2b", entry.getValue());
+      else if (entry.getKey().equals("G")) assertEquals(null, entry.getValue());
+    }
+    // verify that entries from ImmutableConfigMap's are merged in the iterator's view
+    assertEquals(baseConfSize + 1, cnt);
   }
 
   private ImmutableBytesWritable strToIbw(String s) {
@@ -108,6 +119,44 @@ public class TestCompoundConfiguration extends TestCase {
     assertNull(compoundConf.get("E"));
     assertEquals(6, compoundConf.getInt("F", 6));
     assertNull(compoundConf.get("G"));
+
+    int cnt = 0;
+    for (Map.Entry<String,String> entry : compoundConf) {
+      cnt++;
+      if (entry.getKey().equals("B")) assertEquals("2b", entry.getValue());
+      else if (entry.getKey().equals("G")) assertEquals(null, entry.getValue());
+    }
+    // verify that entries from ImmutableConfigMap's are merged in the iterator's view
+    assertEquals(baseConfSize + 2, cnt);
+  }
+
+  @Test
+  public void testLaterConfigsOverrideEarlier() {
+    Configuration map1 = new Configuration(false);
+    map1.set("A", "2");
+    map1.set("D", "5");
+    Configuration map2 = new Configuration(false);
+    String newValueForA = "3", newValueForB = "4";
+    map2.set("A", newValueForA);
+    map2.set("B", newValueForB);
+
+    CompoundConfiguration compoundConf = new CompoundConfiguration()
+      .add(map1).add(baseConf);
+    assertEquals("1", compoundConf.get("A"));
+    assertEquals("5", compoundConf.get("D"));
+    compoundConf.add(map2);
+    assertEquals(newValueForA, compoundConf.get("A"));
+    assertEquals(newValueForB, compoundConf.get("B"));
+    assertEquals("5", compoundConf.get("D"));
+
+    int cnt = 0;
+    for (Map.Entry<String,String> entry : compoundConf) {
+      cnt++;
+      if (entry.getKey().equals("A")) assertEquals(newValueForA, entry.getValue());
+      else if (entry.getKey().equals("B")) assertEquals(newValueForB, entry.getValue());
+    }
+    // verify that entries from ImmutableConfigMap's are merged in the iterator's view
+    assertEquals(baseConfSize + 1, cnt);
   }
 
   @org.junit.Rule

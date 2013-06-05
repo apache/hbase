@@ -25,10 +25,13 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 
+import org.apache.commons.collections.iterators.UnmodifiableIterator;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
@@ -61,7 +64,7 @@ class CompoundConfiguration extends Configuration {
 
   // Devs: these APIs are the same contract as their counterparts in
   // Configuration.java
-  private static interface ImmutableConfigMap {
+  private static interface ImmutableConfigMap extends Iterable<Map.Entry<String,String>> {
     String get(String key);
     String getRaw(String key);
     Class<?> getClassByName(String name) throws ClassNotFoundException;
@@ -114,6 +117,11 @@ class CompoundConfiguration extends Configuration {
       public String toString() {
         return c.toString();
       }
+
+      @Override
+      public Iterator<Entry<String, String>> iterator() {
+        return c.iterator();
+      }
     });
     return this;
   }
@@ -165,6 +173,55 @@ class CompoundConfiguration extends Configuration {
       @Override
       public String toString() {
         return m.toString();
+      }
+
+      @Override
+      public Iterator<Entry<String, String>> iterator() {
+        final Iterator<Entry<ImmutableBytesWritable, ImmutableBytesWritable>> entries = m
+            .entrySet().iterator();
+        return new Iterator<Entry<String, String>>() {
+
+          @Override
+          public boolean hasNext() {
+            return entries.hasNext();
+          }
+
+          @Override
+          public Entry<String, String> next() {
+            final Entry<ImmutableBytesWritable, ImmutableBytesWritable> e = entries.next();
+            return new Entry<String, String>() {
+
+              @Override
+              public String setValue(String value) {
+                throw new UnsupportedOperationException(
+                    "Cannot set value on entry from a CompoundConfiguration!");
+              }
+
+              @Override
+              public String getValue() {
+                ImmutableBytesWritable bytes = e.getValue();
+                // unlike regular configuration, ImmutableBytesWritableMaps can take a null value
+                if (bytes != null) {
+                  return Bytes.toString(bytes.get(), bytes.getOffset(), bytes.getLength());
+                }
+                return null;
+              }
+
+              @Override
+              public String getKey() {
+                ImmutableBytesWritable bytes = e.getKey();
+                return Bytes.toString(bytes.get(), bytes.getOffset(), bytes.getLength());
+              }
+            };
+          }
+
+          @Override
+          public void remove() {
+            throw new UnsupportedOperationException(
+                "Cannot remove an entry from a CompoundConfiguration iterator");
+          }
+        };
+
       }
     });
     return this;
@@ -225,6 +282,25 @@ class CompoundConfiguration extends Configuration {
       ret += m.size();
     }
     return ret;
+  }
+
+  @Override
+  public Iterator<Map.Entry<String, String>> iterator() {
+    Map<String, String> ret = new HashMap<String, String>();
+
+    // add in reverse order so that oldest get overridden.
+    if (!configs.isEmpty()) {
+      for (int i = configs.size() - 1; i >= 0; i--) {
+        ImmutableConfigMap map = configs.get(i);
+        Iterator<Map.Entry<String, String>> iter = map.iterator();
+        while (iter.hasNext()) {
+          Map.Entry<String, String> entry = iter.next();
+          ret.put(entry.getKey(), entry.getValue());
+        }
+      }
+    }
+
+    return UnmodifiableIterator.decorate(ret.entrySet().iterator());
   }
 
   /***************************************************************************
@@ -400,11 +476,6 @@ class CompoundConfiguration extends Configuration {
 
   @Override
   public void clear() {
-    throw new UnsupportedOperationException("Immutable Configuration");
-  }
-
-  @Override
-  public Iterator<Map.Entry<String, String>> iterator() {
     throw new UnsupportedOperationException("Immutable Configuration");
   }
 
