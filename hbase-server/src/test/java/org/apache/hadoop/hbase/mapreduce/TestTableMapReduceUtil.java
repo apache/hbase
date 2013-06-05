@@ -49,12 +49,6 @@ public class TestTableMapReduceUtil {
     assertEquals(Text.class, job.getOutputValueClass());
     assertNull(job.getCombinerClass());
     assertEquals("Table", job.getConfiguration().get(TableInputFormat.INPUT_TABLE));
-    assertEquals(
-        "org.apache.hadoop.io.serializer.WritableSerialization," +
-            "org.apache.hadoop.hbase.mapreduce.MutationSerialization," +
-            "org.apache.hadoop.hbase.mapreduce.ResultSerialization," +
-            "org.apache.hadoop.hbase.mapreduce.KeyValueSerialization",
-        job.getConfiguration().get("io.serializations"));
 
     configuration = new Configuration();
     job = new Job(configuration, "tableName");
@@ -66,12 +60,6 @@ public class TestTableMapReduceUtil {
     assertEquals(Text.class, job.getOutputValueClass());
     assertNull(job.getCombinerClass());
     assertEquals("Table", job.getConfiguration().get(TableInputFormat.INPUT_TABLE));
-    assertEquals(
-        "org.apache.hadoop.io.serializer.WritableSerialization," +
-            "org.apache.hadoop.hbase.mapreduce.MutationSerialization," +
-            "org.apache.hadoop.hbase.mapreduce.ResultSerialization," +
-            "org.apache.hadoop.hbase.mapreduce.KeyValueSerialization",
-        job.getConfiguration().get("io.serializations"));
 
     configuration = new Configuration();
     job = new Job(configuration, "tableName");
@@ -83,12 +71,6 @@ public class TestTableMapReduceUtil {
     assertEquals(Text.class, job.getOutputValueClass());
     assertNull(job.getCombinerClass());
     assertEquals("Table", job.getConfiguration().get(TableInputFormat.INPUT_TABLE));
-    assertEquals(
-        "org.apache.hadoop.io.serializer.WritableSerialization," +
-            "org.apache.hadoop.hbase.mapreduce.MutationSerialization," +
-            "org.apache.hadoop.hbase.mapreduce.ResultSerialization," +
-            "org.apache.hadoop.hbase.mapreduce.KeyValueSerialization",
-        job.getConfiguration().get("io.serializations"));
 
     configuration = new Configuration();
     job = new Job(configuration, "tableName");
@@ -100,11 +82,5 @@ public class TestTableMapReduceUtil {
     assertEquals(Text.class, job.getOutputValueClass());
     assertNull(job.getCombinerClass());
     assertEquals("Table", job.getConfiguration().get(TableInputFormat.INPUT_TABLE));
-    assertEquals(
-        "org.apache.hadoop.io.serializer.WritableSerialization," +
-            "org.apache.hadoop.hbase.mapreduce.MutationSerialization," +
-            "org.apache.hadoop.hbase.mapreduce.ResultSerialization," +
-            "org.apache.hadoop.hbase.mapreduce.KeyValueSerialization",
-        job.getConfiguration().get("io.serializations"));
   }
 }
