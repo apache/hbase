@@ -36,6 +36,7 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.client.HConnectionManager.HConnectable;
+import org.apache.hadoop.hbase.errorhandling.TimeoutException;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Writables;
 
@@ -411,27 +412,35 @@ public class MetaScanner {
         HTable metaTable = getMetaTable();
         long start = System.currentTimeMillis();
         if (splitA != null) {
-          Result resultA = getRegionResultBlocking(metaTable, blockingTimeout,
-              splitA.getRegionName());
-          if (resultA != null) {
-            processRow(resultA);
-            daughterRegions.add(splitA.getRegionName());
-          } else {
+          try {
+            Result resultA = getRegionResultBlocking(metaTable, blockingTimeout,
+              info.getRegionName(), splitA.getRegionName());
+            if (resultA != null) {
+              processRow(resultA);
+              daughterRegions.add(splitA.getRegionName());
+            }
+            // else parent is gone, so skip this daughter
+          } catch (TimeoutException e) {
             throw new RegionOfflineException("Split daughter region " +
-                splitA.getRegionNameAsString() + " cannot be found in META.");
+                splitA.getRegionNameAsString() + " cannot be found in META. Parent:" +
+                info.getRegionNameAsString());
           }
         }
         long rem = blockingTimeout - (System.currentTimeMillis() - start);
 
         if (splitB != null) {
-          Result resultB = getRegionResultBlocking(metaTable, rem,
-              splitB.getRegionName());
-          if (resultB != null) {
-            processRow(resultB);
-            daughterRegions.add(splitB.getRegionName());
-          } else {
+          try {
+            Result resultB = getRegionResultBlocking(metaTable, rem,
+              info.getRegionName(), splitB.getRegionName());
+            if (resultB != null) {
+              processRow(resultB);
+              daughterRegions.add(splitB.getRegionName());
+            }
+            // else parent is gone, so skip this daughter
+          } catch (TimeoutException e) {
             throw new RegionOfflineException("Split daughter region " +
-                splitB.getRegionNameAsString() + " cannot be found in META.");
+                splitB.getRegionNameAsString() + " cannot be found in META. Parent:" +
+                info.getRegionNameAsString());
           }
         }
       }
@@ -439,8 +448,15 @@ public class MetaScanner {
       return processRowInternal(rowResult);
     }
 
-    private Result getRegionResultBlocking(HTable metaTable, long timeout, byte[] regionName)
-        throws IOException {
+    /**
+     * Returns region Result by querying the META table for regionName. It will block until
+     * the region is found in META. It will also check for parent in META to make sure that
+     * if parent is deleted, we no longer have to wait, and should continue (HBASE-8590)
+     * @return Result object is daughter is found, or null if parent is gone from META
+     * @throws TimeoutException if timeout is reached
+     */
+    private Result getRegionResultBlocking(HTable metaTable, long timeout, byte[] parentRegionName, byte[] regionName)
+        throws IOException, TimeoutException {
       boolean logged = false;
       long start = System.currentTimeMillis();
       while (System.currentTimeMillis() - start < timeout) {
@@ -451,6 +467,17 @@ public class MetaScanner {
         if (info != null) {
           return result;
         }
+
+        // check whether parent is still there, if not it means we do not need to wait
+        Get parentGet = new Get(parentRegionName);
+        Result parentResult = metaTable.get(parentGet);
+        HRegionInfo parentInfo = Writables.getHRegionInfoOrNull(
+            parentResult.getValue(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER));
+        if (parentInfo == null) {
+          // this means that parent is no more (catalog janitor or somebody else deleted it)
+          return null;
+        }
+
         try {
           if (!logged) {
             if (LOG.isDebugEnabled()) {
@@ -464,7 +491,8 @@ public class MetaScanner {
           break;
         }
       }
-      return null;
+      throw new TimeoutException("getRegionResultBlocking", start, System.currentTimeMillis(),
+        timeout);
     }
   }
 
