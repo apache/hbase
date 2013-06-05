@@ -590,7 +590,24 @@ public class HTable implements HTableInterface {
   }
 
   public ResultScanner getLocalScanner(final Scan scan) throws IOException {
-    ClientLocalScanner s = new ClientLocalScanner(scan, this);
+    return getLocalScanner(scan, true);
+  }
+
+  /**
+   * Create a ClientLocalScanner to scan the HTable using the scan provided.
+   *
+   * @param scan The scan object that determines the way scanning is done.
+   * @param createNewHardlinks If true, tells to create a snapshot of the store
+   * by creating new hard links.
+   * Otherwise, we assume that the table hierarchy under the root directory
+   * is not going to change and hence we read directly from it; use with caution
+   * @return
+   * @throws IOException
+   */
+  public ResultScanner getLocalScanner(final Scan scan,
+      boolean createNewHardlinks) throws IOException {
+    ClientLocalScanner s =
+        new ClientLocalScanner(scan, this, createNewHardlinks);
     s.initialize();
     return s;
   }

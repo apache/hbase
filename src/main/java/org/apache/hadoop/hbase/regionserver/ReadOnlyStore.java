@@ -55,10 +55,14 @@ public class ReadOnlyStore extends Store {
    * @throws IOException
    */
   public ReadOnlyStore(Path basedir, HRegionInfo regionInfo, HColumnDescriptor family,
-      FileSystem fs, Configuration confParam)
+      FileSystem fs, Configuration confParam, final boolean createNewHardlinks)
   throws IOException {
     super(basedir, family, fs, confParam, null, regionInfo);
-    this.storefiles = sortAndClone(loadStoreFilesWithHardLinks());
+    if (createNewHardlinks) {
+      this.storefiles = sortAndClone(loadStoreFilesWithHardLinks());
+    } else {
+      this.storefiles = sortAndClone(loadStoreFiles(this.fs.listStatus(this.homedir)));
+    }
   }
 
   private List<StoreFile> loadStoreFilesWithHardLinks() throws IOException{

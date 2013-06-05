@@ -36,16 +36,13 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HServerAddress;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.filter.BinaryComparator;
 import org.apache.hadoop.hbase.filter.CompareFilter;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.RowFilter;
 import org.apache.hadoop.hbase.filter.WhileMatchFilter;
-import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.InjectionEvent;
 import org.apache.hadoop.hbase.util.InjectionHandler;
 import org.junit.AfterClass;
@@ -58,8 +55,6 @@ public class TestClientLocalScanner {
       new HBaseTestingUtility();
   private static byte [] FAMILY = Bytes.toBytes("testFamily");
   private static byte [] FAMILY2 = Bytes.toBytes("testFamily2");
-  private static byte [] QUALIFIER = Bytes.toBytes("testQualifier");
-  private static byte [] VALUE = Bytes.toBytes("testValue");
   private static int SLAVES = 3;
 
   /**
@@ -79,29 +74,6 @@ public class TestClientLocalScanner {
   }
 
   @Test
-  public void testInconsistentRegionDirectories() throws IOException {
-    byte [] tableName = Bytes.toBytes("testInconsistentRegionDirectories");
-    String rootDir = TEST_UTIL.getConfiguration().get("hbase.rootdir");
-    String tmpPath = "/tmp/testInconsistentRegionDirectories/";
-    FileSystem fs = FileSystem.get(TEST_UTIL.getConfiguration());
-    Path p = new Path(tmpPath);
-    fs.mkdirs(p);
-    assertTrue(fs.listStatus(p).length == 0);
-    TEST_UTIL.getConfiguration().set("hbase.rootdir", tmpPath);
-    HTable t = TEST_UTIL.createTable(tableName, FAMILY);
-    TEST_UTIL.loadTable(t, FAMILY);
-    try {
-      t.getLocalScanner(new Scan());
-    } catch (IOException e) {
-      assertTrue(fs.listStatus(p).length == 0);
-      return;
-    } finally {
-      TEST_UTIL.getConfiguration().set("hbase.rootdir", rootDir);
-    }
-    assertTrue(false);
-  }
-
-  @Test
   public void testCompareLocalScanToRemoteScan() throws IOException {
     byte [] name = Bytes.toBytes("testCompareLocalScanToRemoteScan");
     HTable t = TEST_UTIL.createTable(name, new byte[][] {FAMILY, FAMILY2});
@@ -114,11 +86,7 @@ public class TestClientLocalScanner {
     TEST_UTIL.flush(name);
     assertRowCount(t, rowCount);
 
-    Scan scan = new Scan();
-    scan.addFamily(FAMILY);
-    scan.setServerPrefetching(true);
-    scan.setCaching(100);
-    scan.setBatch(100);
+    Scan scan = getScan(100, 100, true, FAMILY);
     assertTrue(compareScanners(tmpTable.getScanner(scan),
         t.getLocalScanner(scan)));
     FileSystem fs = FileSystem.get(t.getConfiguration());
@@ -254,6 +222,69 @@ public class TestClientLocalScanner {
     countGreater = countRows(t, t.getLocalScanner(createScanWithRowFilter(endKey, endKey,
       CompareFilter.CompareOp.GREATER_OR_EQUAL)));
     assertEquals(rowCount - endKeyCount, countGreater);
+  }
+
+  @Test
+  public void testInconsistentRegionDirectories() throws IOException {
+    byte [] tableName = Bytes.toBytes("testInconsistentRegionDirectories");
+    String rootDir = TEST_UTIL.getConfiguration().get("hbase.rootdir");
+    String tmpPath = "/tmp/testInconsistentRegionDirectories/";
+    FileSystem fs = FileSystem.get(TEST_UTIL.getConfiguration());
+    Path p = new Path(tmpPath);
+    fs.mkdirs(p);
+    assertTrue(fs.listStatus(p).length == 0);
+    TEST_UTIL.getConfiguration().set("hbase.rootdir", tmpPath);
+    HTable t = TEST_UTIL.createTable(tableName, FAMILY);
+    TEST_UTIL.loadTable(t, FAMILY);
+    try {
+      t.getLocalScanner(new Scan());
+    } catch (IOException e) {
+      assertTrue(fs.listStatus(p).length == 0);
+      return;
+    } finally {
+      TEST_UTIL.getConfiguration().set("hbase.rootdir", rootDir);
+    }
+    assertTrue(false);
+  }
+
+  @Test
+  public void testLocalScannerWithoutHardlinks() throws IOException {
+    byte [] tableName = Bytes.toBytes("testLocalScannerWithoutHardlinks");
+    HTable t = TEST_UTIL.createTable(tableName, FAMILY);
+    HTable tmpTable = new HTable(TEST_UTIL.getConfiguration(), tableName);
+    int rowCount = TEST_UTIL.loadTable(t, FAMILY);
+    t.flushCommits();
+    TEST_UTIL.flush(tableName);
+    assertRowCount(t, rowCount);
+
+    Scan scan = getScan(100, 100, true, FAMILY);
+    FileSystem fs = FileSystem.get(TEST_UTIL.getConfiguration());
+    String hardLinkFolder = TEST_UTIL.getConfiguration().get(
+        HConstants.READ_ONLY_HARDLINKS_FOLDER,
+        HConstants.READ_ONLY_HARDLINKS_FOLDER_DEFAULT);
+    Path folder = new Path(hardLinkFolder);
+
+    ResultScanner scanner = t.getLocalScanner(scan);
+    assertTrue(fs.exists(folder));
+    assertTrue(fs.listStatus(folder).length > 0);
+    fs.delete(folder, true);
+
+    scanner = t.getLocalScanner(scan, false);
+    assertTrue(compareScanners(tmpTable.getScanner(scan),
+        scanner));
+    assertTrue(!fs.exists(folder));
+    scanner.close();
+    scanner.close();
+  }
+
+  public Scan getScan(int caching, int batching,
+      boolean serverPrefetching, byte[] family) {
+    Scan scan = new Scan();
+    scan.addFamily(family);
+    scan.setServerPrefetching(serverPrefetching);
+    scan.setCaching(caching);
+    scan.setBatch(batching);
+    return scan;
   }
 
   /**

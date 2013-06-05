@@ -72,6 +72,7 @@ public class ClientLocalScanner extends ResultScannerImpl {
    */
   public static ThreadPoolExecutor scanPrefetchThreadPool;
   private static int numHandlers = 20;
+  private final boolean areHardlinksCreated;
   // Initializing the numHandlers statically since the thread pool can be
   // reused across different scan operations on the same client.
   static {
@@ -80,11 +81,13 @@ public class ClientLocalScanner extends ResultScannerImpl {
             new DaemonThreadFactory("scan-prefetch-"));
   }
 
-  protected ClientLocalScanner(final Scan scan, HTable htable) {
+  protected ClientLocalScanner(final Scan scan, final HTable htable,
+      final boolean areHardlinksCreated) {
     super(scan, htable);
     // The seek + read functionality will be used in this case since
     // scanning large files is faster using seek + read.
     Store.isPread = false;
+    this.areHardlinksCreated = areHardlinksCreated;
   }
 
   /**
@@ -107,7 +110,7 @@ public class ClientLocalScanner extends ResultScannerImpl {
     families = filterFamilies(families, scan);
 
     HRegionUtilities.parallelStoreOpener(info, conf, families, tableDir,
-        fs, this.stores);
+        fs, this.stores, this.areHardlinksCreated);
   }
 
   private Collection<HColumnDescriptor> filterFamilies(

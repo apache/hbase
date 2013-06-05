@@ -75,9 +75,9 @@ public class HRegionUtilities {
   // TODO(manukranthk) : Refactor HRegion code to use this common code path.
   public static void parallelStoreOpener(final HRegionInfo info,
       final Configuration conf, Collection<HColumnDescriptor> families,
-      final Path tableDir, final FileSystem fs, Map<byte[], Store> stores)
-      throws IOException{
- // initialize the thread pool for opening stores in parallel.
+      final Path tableDir, final FileSystem fs, Map<byte[], Store> stores,
+      final boolean createNewHardlinks) throws IOException{
+    // initialize the thread pool for opening stores in parallel.
     ThreadPoolExecutor storeOpenerThreadPool =
       StoreThreadUtils.getStoreOpenAndCloseThreadPool("StoreOpenerThread-"
     + info.getRegionNameAsString(), info, conf);
@@ -88,7 +88,8 @@ public class HRegionUtilities {
     for (final HColumnDescriptor family : families) {
       completionService.submit(new Callable<Store>() {
         public Store call() throws IOException {
-          return new ReadOnlyStore(tableDir, info, family, fs, conf);
+          return new ReadOnlyStore(tableDir, info, family,
+              fs, conf, createNewHardlinks);
         }
       });
     }
