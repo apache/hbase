@@ -101,7 +101,7 @@ public class Replication implements WALActionsListener,
     this.replication = isReplication(this.conf);
     this.scheduleThreadPool = Executors.newScheduledThreadPool(1,
       new ThreadFactoryBuilder()
-        .setNameFormat(server.getServerName() + "Replication Statistics #%d")
+        .setNameFormat(server.getServerName().toShortString() + "Replication Statistics #%d")
         .setDaemon(true)
         .build());
     if (replication) {

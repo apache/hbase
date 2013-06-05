@@ -48,7 +48,7 @@ public class JVMClusterUtil {
     private final HRegionServer regionServer;
 
     public RegionServerThread(final HRegionServer r, final int index) {
-      super(r, "RegionServer:" + index + ";" + r.getServerName());
+      super(r, "RS:" + index + ";" + r.getServerName().toShortString());
       this.regionServer = r;
     }
 
@@ -109,7 +109,7 @@ public class JVMClusterUtil {
     private final HMaster master;
 
     public MasterThread(final HMaster m, final int index) {
-      super(m, "Master:" + index + ";" + m.getServerName());
+      super(m, "M:" + index + ";" + m.getServerName().toShortString());
       this.master = m;
     }
 

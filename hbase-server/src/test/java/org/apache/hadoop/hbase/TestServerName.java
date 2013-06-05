@@ -32,6 +32,30 @@ import org.junit.experimental.categories.Category;
 @Category(SmallTests.class)
 public class TestServerName {
   @Test
+  public void testGetHostNameMinusDomain() {
+    assertEquals("2607:f0d0:1002:51::4",
+      ServerName.getHostNameMinusDomain("2607:f0d0:1002:51::4"));
+    assertEquals("2607:f0d0:1002:0051:0000:0000:0000:0004",
+        ServerName.getHostNameMinusDomain("2607:f0d0:1002:0051:0000:0000:0000:0004"));
+    assertEquals("1.1.1.1", ServerName.getHostNameMinusDomain("1.1.1.1"));
+    assertEquals("x", ServerName.getHostNameMinusDomain("x"));
+    assertEquals("x", ServerName.getHostNameMinusDomain("x.y.z"));
+    assertEquals("asf000", ServerName.getHostNameMinusDomain("asf000.sp2.ygridcore.net"));
+    ServerName sn = new ServerName("asf000.sp2.ygridcore.net", 1, 1);
+    assertEquals("asf000.sp2.ygridcore.net,1,1", sn.toString());
+  }
+
+  @Test
+  public void testShortString() {
+    ServerName sn = new ServerName("asf000.sp2.ygridcore.net", 1, 1);
+    assertEquals("asf000:1", sn.toShortString());
+    sn = new ServerName("2607:f0d0:1002:0051:0000:0000:0000:0004", 1, 1);
+    assertEquals("2607:f0d0:1002:0051:0000:0000:0000:0004:1", sn.toShortString());
+    sn = new ServerName("1.1.1.1", 1, 1);
+    assertEquals("1.1.1.1:1", sn.toShortString());
+  }
+
+  @Test
   public void testRegexPatterns() {
     assertTrue(Pattern.matches(Addressing.VALID_PORT_REGEX, "123"));
     assertFalse(Pattern.matches(Addressing.VALID_PORT_REGEX, ""));
@@ -46,8 +70,8 @@ public class TestServerName {
     final String snStr = "www.example.org,1234,5678";
     ServerName sn = new ServerName(snStr);
     byte [] versionedBytes = sn.getVersionedBytes();
-    assertEquals(snStr, ServerName.parseVersionedServerName(versionedBytes).toString());
-    final String hostnamePortStr = "www.example.org:1234";
+    assertEquals(sn.toString(), ServerName.parseVersionedServerName(versionedBytes).toString());
+    final String hostnamePortStr = sn.getHostAndPort();
     byte [] bytes = Bytes.toBytes(hostnamePortStr);
     String expecting =
       hostnamePortStr.replace(":", ServerName.SERVERNAME_SEPARATOR) +
@@ -69,8 +93,8 @@ public class TestServerName {
     assertEquals(sn.toString(),
       ServerName.getServerName("www.example.org:1234", 5678));
     assertEquals(sn.toString(),
-      "www.example.org" + ServerName.SERVERNAME_SEPARATOR +
-      "1234" + ServerName.SERVERNAME_SEPARATOR + "5678");
+      "www.example.org" + ServerName.SERVERNAME_SEPARATOR + "1234" +
+      ServerName.SERVERNAME_SEPARATOR + "5678");
   }
 
   @Test
