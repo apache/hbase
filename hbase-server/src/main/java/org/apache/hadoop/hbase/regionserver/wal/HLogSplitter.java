@@ -1650,18 +1650,8 @@ public class HLogSplitter {
     private LogRecoveredEditsOutputSink logRecoveredEditsOutputSink;
     private boolean hasEditsInDisablingOrDisabledTables = false;
 
-    private Configuration sinkConf;
     public LogReplayOutputSink(int numWriters) {
       super(numWriters);
-      // set a smaller retries to fast fail otherwise splitlogworker could be blocked for
-      // quite a while inside HConnection layer. The worker won't available for other
-      // tasks even after current task is preempted after a split task times out.
-      sinkConf = HBaseConfiguration.create(conf);
-      sinkConf.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER,
-        HConstants.DEFAULT_HBASE_CLIENT_RETRIES_NUMBER - 2);
-      sinkConf.setInt(HConstants.HBASE_RPC_TIMEOUT_KEY, HConstants.DEFAULT_HBASE_RPC_TIMEOUT / 2);
-      sinkConf.setInt("hbase.client.serverside.retries.multiplier", 1);
-
       this.waitRegionOnlineTimeOut = conf.getInt("hbase.splitlog.manager.timeout", 
         SplitLogManager.DEFAULT_TIMEOUT);
       this.logRecoveredEditsOutputSink = new LogRecoveredEditsOutputSink(numWriters);
@@ -1809,9 +1799,6 @@ public class HLogSplitter {
                   // skip current kv if column family doesn't exist anymore or already flushed
                   continue;
                 }
-              } else {
-                LOG.warn("Can't find store max sequence ids map for region:"
-                    + loc.getRegionInfo().getEncodedName());
               }
             }
 
@@ -1861,13 +1848,22 @@ public class HLogSplitter {
      */
     private HRegionLocation locateRegionAndRefreshLastFlushedSequenceId(HConnection hconn,
         byte[] table, byte[] row, String originalEncodedRegionName) throws IOException {
+
+      // fetch location from cache
       HRegionLocation loc = onlineRegions.get(originalEncodedRegionName);
       if(loc != null) return loc;
-      
+      // fetch location from .META.
       loc = hconn.getRegionLocation(table, row, false);
       if (loc == null) {
         throw new IOException("Can't locate location for row:" + Bytes.toString(row)
             + " of table:" + Bytes.toString(table));
+      }
+      // check if current row moves to a different region due to region merge/split
+      if (!originalEncodedRegionName.equalsIgnoreCase(loc.getRegionInfo().getEncodedName())) {
+        // originalEncodedRegionName should have already flushed
+        lastFlushedSequenceIds.put(originalEncodedRegionName, Long.MAX_VALUE);
+        HRegionLocation tmpLoc = onlineRegions.get(loc.getRegionInfo().getEncodedName());
+        if (tmpLoc != null) return tmpLoc;
       }
 
       Long lastFlushedSequenceId = -1l;
@@ -1875,7 +1871,6 @@ public class HLogSplitter {
       Long cachedLastFlushedSequenceId = lastFlushedSequenceIds.get(loc.getRegionInfo()
           .getEncodedName());
 
-      onlineRegions.put(loc.getRegionInfo().getEncodedName(), loc);
       // retrieve last flushed sequence Id from ZK. Because region postOpenDeployTasks will
       // update the value for the region
       RegionStoreSequenceIds ids =
@@ -1901,7 +1896,8 @@ public class HLogSplitter {
         LOG.info("logReplay skip region: " + loc.getRegionInfo().getEncodedName()
             + " because it's not in recovering.");
       }
-      
+
+      onlineRegions.put(loc.getRegionInfo().getEncodedName(), loc);
       return loc;
     }
 
@@ -2068,6 +2064,7 @@ public class HLogSplitter {
             for (byte[] tableName : this.tableNameToHConnectionMap.keySet()) {
               HConnection hconn = this.tableNameToHConnectionMap.get(tableName);
               try {
+                hconn.clearRegionCache();
                 hconn.close();
               } catch (IOException ioe) {
                 result.add(ioe);
@@ -2128,7 +2125,7 @@ public class HLogSplitter {
         synchronized (this.tableNameToHConnectionMap) {
           hconn = this.tableNameToHConnectionMap.get(tableName);
           if (hconn == null) {
-            hconn = HConnectionManager.createConnection(sinkConf);
+            hconn = HConnectionManager.getConnection(conf);
             this.tableNameToHConnectionMap.put(tableName, hconn);
           }
         }

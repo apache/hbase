@@ -261,7 +261,9 @@ public class RegionStates {
     RegionState regionState = new RegionState(
       hri, state, System.currentTimeMillis(), newServerName);
     RegionState oldState = regionStates.put(regionName, regionState);
-    LOG.info("Region " + hri + " transitioned from " + oldState + " to " + regionState);
+    if (oldState == null || oldState.getState() != regionState.getState()) {
+      LOG.info("Region " + hri + " transitioned from " + oldState + " to " + regionState);
+    }
     if (state != State.SPLITTING && (newServerName != null
         || (state != State.PENDING_CLOSE && state != State.CLOSING))) {
       regionsInTransition.put(regionName, regionState);

@@ -1566,7 +1566,14 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
     this.rpcServer.start();
 
     // Create the log splitting worker and start it
-    this.splitLogWorker = new SplitLogWorker(this.zooKeeper, this.getConfiguration(), this, this);
+    // set a smaller retries to fast fail otherwise splitlogworker could be blocked for
+    // quite a while inside HConnection layer. The worker won't be available for other
+    // tasks even after current task is preempted after a split task times out.
+    Configuration sinkConf = HBaseConfiguration.create(conf);
+    sinkConf.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER,
+      HConstants.DEFAULT_HBASE_CLIENT_RETRIES_NUMBER - 2);
+    sinkConf.setInt("hbase.client.serverside.retries.multiplier", 1);
+    this.splitLogWorker = new SplitLogWorker(this.zooKeeper, sinkConf, this, this);
     splitLogWorker.start();
   }
 
