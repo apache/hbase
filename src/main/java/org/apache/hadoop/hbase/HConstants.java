@@ -696,6 +696,27 @@ public final class HConstants {
   public static final String CLIENT_SOCKED_CLOSED_EXC_MSG = "Interrupting the read request";
   public static final String SERVER_INTERRUPTED_CALLS_KEY = "serverInterruptedCalls";
 
+  /**
+   * Controls whether we use one or two throttles to control the insert in the queue
+   */
+  public static final String USE_MULTIPLE_THROTTLES = "hbase.server.multithrottler";
+
+  /**
+   * How much memory do we want for the blocking callqueue, used in HBaseServer
+   */
+   public static final long MAX_CALL_QUEUE_MEMORY_SIZE = 1024*1024*1024;
+   public static final String MAX_CALL_QUEUE_MEMORY_SIZE_STRING = "max.callqueue.memory.size";
+
+   /**
+    * Used in HBase Server, when we use the multithrottler for the callQueue
+    */
+   public static final long MAX_SMALLER_CALL_QUEUE_MEMORY_SIZE = 256*1024*1024;
+   public static final String MAX_SMALLER_CALL_QUEUE_MEMORY_SIZE_STRING = "max.smaller.callqueue.memory.size";
+   public static final long MAX_LARGER_CALL_QUEUE_MEMORY_SIZE = 768*1024*1024;
+   public static final String MAX_LARGER_CALL_QUEUE_MEMORY_SIZE_STRING = "max.larger.callqueue.memory.size";
+   public static final int SMALL_QUEUE_REQUEST_LIMIT = 25*1024*1024;
+   public static final String SMALL_QUEUE_REQUEST_LIMIT_STRING = "small.queue.request.limit";
+
   private HConstants() {
     // Can't be instantiated with this constructor.
   }

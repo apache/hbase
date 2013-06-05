@@ -50,7 +50,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.util.SizeBasedThrottler;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.io.WritableWithSize;
 import org.apache.hadoop.hbase.io.hfile.Compression;
 import org.apache.hadoop.hbase.io.hfile.Compression.Algorithm;
@@ -67,6 +67,9 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.hbase.util.HasThread;
+import org.apache.hadoop.hbase.util.throttles.SizeBasedMultiThrottler;
+import org.apache.hadoop.hbase.util.throttles.SizeBasedThrottler;
+import org.apache.hadoop.hbase.util.throttles.SizeBasedThrottlerInterface;
 
 /** An abstract IPC service.  IPC calls take a single {@link Writable} as a
  * parameter, and return a {@link Writable} as their value.  A service runs on
@@ -93,11 +96,7 @@ public abstract class HBaseServer {
 
   public static final byte CURRENT_VERSION = VERSION_RPCOPTIONS;
 
- /**
-  * How much memory do we want for the blocking queue
-  */
-  private static final int MAX_CALL_QUEUE_MEMORY_SIZE = 1024*1024*1024;
-  private SizeBasedThrottler callQueueThrottler;
+  private SizeBasedThrottlerInterface callQueueThrottler;
 
   public static final Log LOG = LogFactory.getLog(HBaseServer.class.getName());
 
@@ -1375,7 +1374,26 @@ public abstract class HBaseServer {
     this.handlerCount = handlerCount;
     this.socketSendBufferSize = 0;
     this.callQueue  = new LinkedBlockingQueue<RawCall>();
-    callQueueThrottler = new SizeBasedThrottler(MAX_CALL_QUEUE_MEMORY_SIZE);
+    long maxCallQueueMemorySize = conf.getLong(
+        HConstants.MAX_CALL_QUEUE_MEMORY_SIZE_STRING,
+        HConstants.MAX_CALL_QUEUE_MEMORY_SIZE);
+    long maxSmallerCallQueueMemorySize = conf.getLong(
+        HConstants.MAX_SMALLER_CALL_QUEUE_MEMORY_SIZE_STRING,
+        HConstants.MAX_SMALLER_CALL_QUEUE_MEMORY_SIZE);
+    long maxLargerCallQueueMemorySize = conf.getLong(
+        HConstants.MAX_LARGER_CALL_QUEUE_MEMORY_SIZE_STRING,
+        HConstants.MAX_LARGER_CALL_QUEUE_MEMORY_SIZE);
+    int smallQueueRequestLimit = conf.getInt(
+        HConstants.SMALL_QUEUE_REQUEST_LIMIT_STRING,
+        HConstants.SMALL_QUEUE_REQUEST_LIMIT);
+    if (conf.getBoolean(HConstants.USE_MULTIPLE_THROTTLES, false)) {
+      callQueueThrottler = new SizeBasedMultiThrottler(
+          maxSmallerCallQueueMemorySize,
+          maxLargerCallQueueMemorySize,
+          smallQueueRequestLimit);
+    } else {
+      callQueueThrottler = new SizeBasedThrottler(maxCallQueueMemorySize);
+    }
     this.maxIdleTime = 2*conf.getInt("ipc.client.connection.maxidletime", 1000);
     this.maxConnectionsToNuke = conf.getInt("ipc.client.kill.max", 10);
     this.thresholdIdleConnections = conf.getInt("ipc.client.idlethreshold", 4000);
