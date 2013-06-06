@@ -64,7 +64,8 @@ public class ClientScanner extends AbstractClientScanner {
     private final HConnection connection;
     private final byte[] tableName;
     private final int scannerTimeout;
-
+    private boolean scanMetricsPublished = false;
+    
     /**
      * Create a new ClientScanner for the specified table. An HConnection will be
      * retrieved using the passed Configuration.
@@ -243,12 +244,13 @@ public class ClientScanner extends AbstractClientScanner {
      *
      * scan.setAttribute(SCAN_ATTRIBUTES_METRICS_ENABLE, Bytes.toBytes(Boolean.TRUE))
      */
-    private void writeScanMetrics() throws IOException {
-      if (this.scanMetrics == null) {
+    private void writeScanMetrics() {
+      if (this.scanMetrics == null || scanMetricsPublished) {
         return;
       }
       MapReduceProtos.ScanMetrics pScanMetrics = ProtobufUtil.toScanMetrics(scanMetrics);
       scan.setAttribute(Scan.SCAN_ATTRIBUTES_METRICS_DATA, pScanMetrics.toByteArray());
+      scanMetricsPublished = true;
     }
 
     public Result next() throws IOException {
@@ -390,6 +392,7 @@ public class ClientScanner extends AbstractClientScanner {
     }
 
     public void close() {
+      if (!scanMetricsPublished) writeScanMetrics();
       if (callable != null) {
         callable.setClose();
         try {
@@ -399,13 +402,6 @@ public class ClientScanner extends AbstractClientScanner {
           // have since decided that it's not nice for a scanner's close to
           // throw exceptions. Chances are it was just an UnknownScanner
           // exception due to lease time out.
-        } finally {
-          // we want to output the scan metrics even if an error occurred on close
-          try {
-            writeScanMetrics();
-          } catch (IOException e) {
-            // As above, we still don't want the scanner close() method to throw.
-          }
         }
         callable = null;
       }
