@@ -180,13 +180,20 @@ mvn clean package -DskipTests
              checkout; the binary builds will have unchecked-in modifications to their pom adding the
              hadoop1/hadoop2 suffix to the version string).
              <programlisting>$ MAVEN_OPTS="-Xmx2g" mvn clean install javadoc:aggregate site assembly:single -DskipTests -Dassembly.file=hbase-assembly/src/main/assembly/src.xml -Prelease
-  $ mvn clean org.codehaus.mojo:versions-maven-plugin:1.3.1:set -DnewVersion=0.95.1-hadoop1
-  # Copy away the src tgz found in hbase-assembly/target after verifying the content of the tgz is good.
-  $ MAVEN_OPTS="-Xmx2g" mvn clean install javadoc:aggregate site assembly:single -DskipTests -Dassembly.file=hbase-assembly/src/main/assembly/hadoop-one-compat.xml -Dhadoop.profile=1.0 -Prelease
-  # Copy away the hadoop1 bing tgz found in hbase-assembly/target after verifying the content of the tgz is good.
-  $ mvn clean org.codehaus.mojo:versions-maven-plugin:1.3.1:set -DnewVersion=0.95.1-hadoop2
-  $  MAVEN_OPTS="-Xmx2g" mvn clean install javadoc:aggregate site assembly:single -DskipTests -Dassembly.file=hbase-assembly/src/main/assembly/hadoop-two-compat.xml -Dhadoop.profile=2.0 -Prelease
-  # Copy away the hadoop2 bing tgz found in hbase-assembly/target after verifying the content of the tgz is good.
+# Copy away the src tgz found in hbase-assembly/target after verifying the content of the tgz is good.
+# Now set the version in all poms to include -hadoop1
+$ mvn clean org.codehaus.mojo:versions-maven-plugin:1.3.1:set -DnewVersion=0.95.1-hadoop1
+# Create a tgz w/ this -hadoop1 appended to version.
+$ MAVEN_OPTS="-Xmx2g" mvn clean install javadoc:aggregate site assembly:single -DskipTests -Dassembly.file=hbase-assembly/src/main/assembly/hadoop-one-compat.xml -Dhadoop.profile=1.0 -Prelease
+# Copy away the hadoop1 bing tgz found in hbase-assembly/target after verifying the content of the tgz is good.
+# Here is how to do a publish of a 'snapshot' up to mvn repo of this -hadoop1 version.
+$ MAVEN_OPTS="-Xmx2g" mvn clean install deploy  -DskipTests -Dhadoop.profile=1.0 -Prelease
+# Now set the version to -hadoop2
+$ mvn clean org.codehaus.mojo:versions-maven-plugin:1.3.1:set -DnewVersion=0.95.1-hadoop2
+$ MAVEN_OPTS="-Xmx2g" mvn clean install javadoc:aggregate site assembly:single -DskipTests -Dassembly.file=hbase-assembly/src/main/assembly/hadoop-two-compat.xml -Dhadoop.profile=2.0 -Prelease
+# Copy away the hadoop2 bing tgz found in hbase-assembly/target after verifying the content of the tgz is good.
+# Here is how to do a publish of a 'snapshot' up to mvn repo of this -hadoop1 version.
+$ MAVEN_OPTS="-Xmx2g" mvn clean install deploy  -DskipTests -Dhadoop.profile=2.0 -Prelease
              </programlisting>
          </para>
          <para>Next sign the tgzs and deploy (see the hadoop how to release instructions for how).</para>
