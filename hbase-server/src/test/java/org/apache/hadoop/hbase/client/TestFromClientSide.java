@@ -4618,9 +4618,8 @@ public class TestFromClientSide {
     for (Result result : scanner.next(numRecords - 1)) {
     }
     scanner.close();
-    // need to have at one next roundtrip in order to collect metrics
-    // here we have less than <numRecord>+1 KVs, so no metrics were collected
-    assertNull(scan.getAttribute(Scan.SCAN_ATTRIBUTES_METRICS_DATA));
+    // closing the scanner will set the metrics.
+    assertNotNull(scan.getAttribute(Scan.SCAN_ATTRIBUTES_METRICS_DATA));
 
     // set caching to 1, becasue metrics are collected in each roundtrip only
     scan = new Scan();
