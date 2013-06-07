@@ -1474,7 +1474,9 @@ public abstract class FSUtils {
       status = filter == null ? fs.listStatus(dir) : fs.listStatus(dir, filter);
     } catch (FileNotFoundException fnfe) {
       // if directory doesn't exist, return null
-      LOG.debug(dir + " doesn't exist");
+      if (LOG.isTraceEnabled()) {
+        LOG.trace(dir + " doesn't exist");
+      }
     }
     if (status == null || status.length < 1) return null;
     return status;
