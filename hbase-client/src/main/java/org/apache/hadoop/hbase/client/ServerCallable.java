@@ -95,7 +95,7 @@ public abstract class ServerCallable<T> implements Callable<T> {
   public void prepare(final boolean reload) throws IOException {
     this.location = connection.getRegionLocation(tableName, row, reload);
     if (this.location == null) {
-      throw new IOException("Failed to find location, tableName=" + tableName + ", row=" +
+      throw new IOException("Failed to find location, tableName=" + Bytes.toString(tableName) + ", row=" +
         Bytes.toString(row) + ", reload=" + reload);
     }
     this.stub = connection.getClient(location.getServerName());
