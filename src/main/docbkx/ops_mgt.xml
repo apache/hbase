@@ -417,29 +417,35 @@ This turns the balancer OFF.  To reenable, do:
 false
 0 row(s) in 0.3590 seconds</programlisting>
             </para>
+            <para>The <command>graceful_stop</command> will check the balancer
+                and if enabled, will turn it off before it goes to work.  If it
+                exits prematurely because of error, it will not have reset the
+                balancer.  Hence, it is better to manage the balancer apart from
+                <command>graceful_stop</command> reenabling it after you are done
+                w/ graceful_stop.
+            </para>
         </note>
         </para>
         <section xml:id="draining.servers">
             <title>Decommissioning several Regions Servers concurrently</title>
             <para>If you have a large cluster, you may want to
-            decomission more than one machines at a time by gracefully
+            decommission more than one machine at a time by gracefully
             stopping mutiple RegionServers concurrently.
-	    </para>
-	    <para>To gracefully drain multiple regionservers at the
+            To gracefully drain multiple regionservers at the
 	    same time, RegionServers can be put into a "draining"
 	    state.  This is done by marking a RegionServer as a
 	    draining node by creating an entry in ZooKeeper under the
-	    hbase_root/draining znode.  This znode has format
-	    "name,port,startcode" just like the regionserver entries
-	    under hbase_root/rs znode.
+        <filename>hbase_root/draining</filename> znode.  This znode has format
+        <programlisting>name,port,startcode</programlisting> just like the regionserver entries
+        under <filename>hbase_root/rs</filename> znode.
 	    </para>
-	    <para>Without this, when decommissioning mulitple nodes
+	    <para>Without this facility, decommissioning mulitple nodes
 	    may be non-optimal because regions that are being drained
-	    from one region server may be moved to other regions that
+	    from one region server may be moved to other regionservers that
 	    are also draining.  Marking RegionServers to be in the
-	    draining state prevents this from happening.  <note>See
+        draining state prevents this from happening<footnote><para>See
 	    this <link xlink:href="http://inchoate-clatter.blogspot.com/2012/03/hbase-ops-automation.html">blog
-	    post</link> for more details. </note>
+            post</link> for more details.</para></footnote>.
 	    </para>
         </section>
 
@@ -456,6 +462,7 @@ false
             throw some errors in its logs as it recalibrates where to get its data from -- it will likely
             roll its WAL log too -- but in general but for some latency spikes, it should keep on chugging.
             <note>
+                <title>Short Circuit Reads</title>
                 <para>If you are doing short-circuit reads, you will have to move the regions off the regionserver
                     before you stop the datanode; when short-circuiting reading, though chmod'd so regionserver cannot
                     have access, because it already has the files open, it will be able to keep reading the file blocks
