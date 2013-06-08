@@ -25,6 +25,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.master.cleaner.BaseHFileCleanerDelegate;
@@ -54,12 +55,12 @@ public class SnapshotHFileCleaner extends BaseHFileCleanerDelegate {
   private SnapshotFileCache cache;
 
   @Override
-  public synchronized boolean isFileDeletable(Path filePath) {
+  public synchronized boolean isFileDeletable(FileStatus fStat) {
     try {
-      return !cache.contains(filePath.getName());
+      return !cache.contains(fStat.getPath().getName());
     } catch (IOException e) {
-      LOG.error("Exception while checking if:" + filePath + " was valid, keeping it just in case.",
-        e);
+      LOG.error("Exception while checking if:" + fStat.getPath()
+          + " was valid, keeping it just in case.", e);
       return false;
     }
   }
