@@ -4198,8 +4198,7 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
     String previousRSName = this.getLastFailedRSFromZK(region.getEncodedName());
     Map<byte[], Long> maxSeqIdInStores = r.getMaxStoreSeqIdForLogReplay();
     long minSeqIdForLogReplay = -1;
-    for (byte[] columnFamily : maxSeqIdInStores.keySet()) {
-      Long storeSeqIdForReplay = maxSeqIdInStores.get(columnFamily);
+    for (Long storeSeqIdForReplay : maxSeqIdInStores.values()) {
       if (minSeqIdForLogReplay == -1 || storeSeqIdForReplay < minSeqIdForLogReplay) {
         minSeqIdForLogReplay = storeSeqIdForReplay;
       }
