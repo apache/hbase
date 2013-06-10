@@ -79,6 +79,7 @@ public class CompactionTool extends Configured implements Tool {
 
   private final static String CONF_TMP_DIR = "hbase.tmp.dir";
   private final static String CONF_COMPACT_ONCE = "hbase.compactiontool.compact.once";
+  private final static String CONF_COMPACT_MAJOR = "hbase.compactiontool.compact.major";
   private final static String CONF_DELETE_COMPACTED = "hbase.compactiontool.delete";
   private final static String CONF_COMPLETE_COMPACTION = "hbase.hstore.compaction.complete";
 
@@ -104,41 +105,43 @@ public class CompactionTool extends Configured implements Tool {
     /**
      * Execute the compaction on the specified path.
      *
-     * @param path Directory path on which run a
+     * @param path Directory path on which to run compaction.
      * @param compactOnce Execute just a single step of compaction.
+     * @param major Request major compaction.
      */
-    public void compact(final Path path, final boolean compactOnce) throws IOException {
+    public void compact(final Path path, final boolean compactOnce, final boolean major) throws IOException {
       if (isFamilyDir(fs, path)) {
         Path regionDir = path.getParent();
         Path tableDir = regionDir.getParent();
         HTableDescriptor htd = FSTableDescriptors.getTableDescriptor(fs, tableDir);
         HRegionInfo hri = HRegionFileSystem.loadRegionInfoFileContent(fs, regionDir);
-        compactStoreFiles(tableDir, htd, hri, path.getName(), compactOnce);
+        compactStoreFiles(tableDir, htd, hri, path.getName(), compactOnce, major);
       } else if (isRegionDir(fs, path)) {
         Path tableDir = path.getParent();
         HTableDescriptor htd = FSTableDescriptors.getTableDescriptor(fs, tableDir);
-        compactRegion(tableDir, htd, path, compactOnce);
+        compactRegion(tableDir, htd, path, compactOnce, major);
       } else if (isTableDir(fs, path)) {
-        compactTable(path, compactOnce);
+        compactTable(path, compactOnce, major);
       } else {
         throw new IOException(
           "Specified path is not a table, region or family directory. path=" + path);
       }
     }
 
-    private void compactTable(final Path tableDir, final boolean compactOnce)
+    private void compactTable(final Path tableDir, final boolean compactOnce, final boolean major)
         throws IOException {
       HTableDescriptor htd = FSTableDescriptors.getTableDescriptor(fs, tableDir);
       for (Path regionDir: FSUtils.getRegionDirs(fs, tableDir)) {
-        compactRegion(tableDir, htd, regionDir, compactOnce);
+        compactRegion(tableDir, htd, regionDir, compactOnce, major);
       }
     }
 
     private void compactRegion(final Path tableDir, final HTableDescriptor htd,
-        final Path regionDir, final boolean compactOnce) throws IOException {
+        final Path regionDir, final boolean compactOnce, final boolean major)
+        throws IOException {
       HRegionInfo hri = HRegionFileSystem.loadRegionInfoFileContent(fs, regionDir);
       for (Path familyDir: FSUtils.getFamilyDirs(fs, regionDir)) {
-        compactStoreFiles(tableDir, htd, hri, familyDir.getName(), compactOnce);
+        compactStoreFiles(tableDir, htd, hri, familyDir.getName(), compactOnce, major);
       }
     }
 
@@ -148,14 +151,17 @@ public class CompactionTool extends Configured implements Tool {
      * no more compactions are needed. Uses the Configuration settings provided.
      */
     private void compactStoreFiles(final Path tableDir, final HTableDescriptor htd,
-        final HRegionInfo hri, final String familyName, final boolean compactOnce)
-        throws IOException {
+        final HRegionInfo hri, final String familyName, final boolean compactOnce,
+        final boolean major) throws IOException {
       HStore store = getStore(conf, fs, tableDir, htd, hri, familyName, tmpDir);
       LOG.info("Compact table=" + htd.getNameAsString() +
         " region=" + hri.getRegionNameAsString() +
         " family=" + familyName);
+      if (major) {
+        store.triggerMajorCompaction();
+      }
       do {
-        CompactionContext compaction = store.requestCompaction();
+        CompactionContext compaction = store.requestCompaction(Store.PRIORITY_USER, null);
         if (compaction == null) break;
         List<StoreFile> storeFiles = store.compact(compaction);
         if (storeFiles != null && !storeFiles.isEmpty()) {
@@ -203,11 +209,13 @@ public class CompactionTool extends Configured implements Tool {
       extends Mapper<LongWritable, Text, NullWritable, NullWritable> {
     private CompactionWorker compactor = null;
     private boolean compactOnce = false;
+    private boolean major = false;
 
     @Override
     public void setup(Context context) {
       Configuration conf = context.getConfiguration();
       compactOnce = conf.getBoolean(CONF_COMPACT_ONCE, false);
+      major = conf.getBoolean(CONF_COMPACT_MAJOR, false);
 
       try {
         FileSystem fs = FileSystem.get(conf);
@@ -221,7 +229,7 @@ public class CompactionTool extends Configured implements Tool {
     public void map(LongWritable key, Text value, Context context)
         throws InterruptedException, IOException {
       Path path = new Path(value.toString());
-      this.compactor.compact(path, compactOnce);
+      this.compactor.compact(path, compactOnce, major);
     }
   }
 
@@ -333,9 +341,10 @@ public class CompactionTool extends Configured implements Tool {
    * Execute compaction, using a Map-Reduce job.
    */
   private int doMapReduce(final FileSystem fs, final Set<Path> toCompactDirs,
-      final boolean compactOnce) throws Exception {
+      final boolean compactOnce, final boolean major) throws Exception {
     Configuration conf = getConf();
     conf.setBoolean(CONF_COMPACT_ONCE, compactOnce);
+    conf.setBoolean(CONF_COMPACT_MAJOR, major);
 
     Job job = new Job(conf);
     job.setJobName("CompactionTool");
@@ -367,10 +376,10 @@ public class CompactionTool extends Configured implements Tool {
    * Execute compaction, from this client, one path at the time.
    */
   private int doClient(final FileSystem fs, final Set<Path> toCompactDirs,
-      final boolean compactOnce) throws IOException {
+      final boolean compactOnce, final boolean major) throws IOException {
     CompactionWorker worker = new CompactionWorker(fs, getConf());
     for (Path path: toCompactDirs) {
-      worker.compact(path, compactOnce);
+      worker.compact(path, compactOnce, major);
     }
     return 0;
   }
@@ -379,6 +388,7 @@ public class CompactionTool extends Configured implements Tool {
   public int run(String[] args) throws Exception {
     Set<Path> toCompactDirs = new HashSet<Path>();
     boolean compactOnce = false;
+    boolean major = false;
     boolean mapred = false;
 
     Configuration conf = getConf();
@@ -389,6 +399,8 @@ public class CompactionTool extends Configured implements Tool {
         String opt = args[i];
         if (opt.equals("-compactOnce")) {
           compactOnce = true;
+        } else if (opt.equals("-major")) {
+          major = true;
         } else if (opt.equals("-mapred")) {
           mapred = true;
         } else if (!opt.startsWith("-")) {
@@ -415,9 +427,9 @@ public class CompactionTool extends Configured implements Tool {
 
     // Execute compaction!
     if (mapred) {
-      return doMapReduce(fs, toCompactDirs, compactOnce);
+      return doMapReduce(fs, toCompactDirs, compactOnce, major);
     } else {
-      return doClient(fs, toCompactDirs, compactOnce);
+      return doClient(fs, toCompactDirs, compactOnce, major);
     }
   }
 
@@ -430,11 +442,12 @@ public class CompactionTool extends Configured implements Tool {
       System.err.println(message);
     }
     System.err.println("Usage: java " + this.getClass().getName() + " \\");
-    System.err.println("  [-compactOnce] [-mapred] [-D<property=value>]* files...");
+    System.err.println("  [-compactOnce] [-major] [-mapred] [-D<property=value>]* files...");
     System.err.println();
     System.err.println("Options:");
     System.err.println(" mapred         Use MapReduce to run compaction.");
     System.err.println(" compactOnce    Execute just one compaction step. (default: while needed)");
+    System.err.println(" major          Trigger major compaction.");
     System.err.println();
     System.err.println("Note: -D properties will be applied to the conf used. ");
     System.err.println("For example: ");
