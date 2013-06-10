@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.test;
 import java.io.IOException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.IntegrationTestingUtility;
 import org.apache.hadoop.hbase.IntegrationTests;
 import org.apache.hadoop.hbase.util.ChaosMonkey;
@@ -44,8 +45,13 @@ public class IntegrationTestBigLinkedListWithChaosMonkey extends IntegrationTest
 
   public IntegrationTestBigLinkedListWithChaosMonkey() {
     super();
-    TABLE_NAME_KEY = "IntegrationTestBigLinkedListWithChaosMonkey.table";
-    DEFAULT_TABLE_NAME = "IntegrationTestBigLinkedListWithChaosMonkey";
+    Configuration conf = getConf();
+    if (conf != null) {
+      conf.set(TABLE_NAME_KEY, "IntegrationTestBigLinkedListWithChaosMonkey");
+    } else {
+      this.getTestingUtil().getConfiguration()
+          .set(TABLE_NAME_KEY, "IntegrationTestBigLinkedListWithChaosMonkey");
+    }
   }
 
   @Before
@@ -90,7 +96,7 @@ public class IntegrationTestBigLinkedListWithChaosMonkey extends IntegrationTest
     test.setUp();
 
     // run the test
-    int ret = ToolRunner.run(test.getConf(), test, args);
+    int ret = ToolRunner.run(test.getTestingUtil().getConfiguration(), test, args);
 
     test.tearDown();
     System.exit(ret);
