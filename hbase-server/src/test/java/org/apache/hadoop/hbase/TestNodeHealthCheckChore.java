@@ -17,9 +17,9 @@
  */
 package org.apache.hadoop.hbase;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.assertEquals;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -28,14 +28,11 @@ import java.io.PrintWriter;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.SmallTests;
-import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HealthChecker.HealthCheckerExitStatus;
+import org.apache.hadoop.util.Shell;
 import org.junit.After;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -46,7 +43,7 @@ public class TestNodeHealthCheckChore {
   private static final Log LOG = LogFactory.getLog(TestNodeHealthCheckChore.class);
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
   private File healthScriptFile;
-
+  private String eol = System.getProperty("line.separator");
 
   @After
   public void cleanUp() throws IOException {
@@ -69,17 +66,17 @@ public class TestNodeHealthCheckChore {
     String normalScript = "echo \"I am all fine\"";
     createScript(normalScript, true);
     HealthReport report = checker.checkHealth();
-    
+
     LOG.info("Health Status:" + report.getHealthReport());
     assertEquals(HealthCheckerExitStatus.SUCCESS, report.getStatus());
 
-    String errorScript = "echo ERROR\n echo \"Server not healthy\"";
+    String errorScript = "echo ERROR" + eol + "echo \"Server not healthy\"";
     createScript(errorScript, true);
     report = checker.checkHealth();
     LOG.info("Health Status:" + report.getHealthReport());
     assertEquals(HealthCheckerExitStatus.FAILED, report.getStatus());
 
-    String timeOutScript = "sleep 4\n echo\"I am fine\"";
+    String timeOutScript = "sleep 4" + eol + "echo \"I am fine\"";
     createScript(timeOutScript, true);
     report = checker.checkHealth();
     LOG.info("Health Status:" + report.getHealthReport());
@@ -92,7 +89,7 @@ public class TestNodeHealthCheckChore {
   public void testRSHealthChore() throws Exception{
     Stoppable stop = new StoppableImplementation();
     Configuration conf = getConfForNodeHealthScript();
-    String errorScript = "echo ERROR\n echo \"Server not healthy\"";
+    String errorScript = "echo ERROR" + eol + " echo \"Server not healthy\"";
     createScript(errorScript, true);
     HealthCheckChore rsChore = new HealthCheckChore(100, stop, conf);
     try {
@@ -133,7 +130,8 @@ public class TestNodeHealthCheckChore {
         throw new IOException("Failed mkdirs " + tempDir);
       }
     }
-    healthScriptFile = new File(tempDir.getAbsolutePath(), "HealthScript.sh");
+    String scriptName = Shell.WINDOWS ? "HealthScript.cmd" : "HealthScript.sh";
+    healthScriptFile = new File(tempDir.getAbsolutePath(), scriptName);
     conf.set(HConstants.HEALTH_SCRIPT_LOC, healthScriptFile.getAbsolutePath());
     conf.setLong(HConstants.HEALTH_FAILURE_THRESHOLD, 3);
     conf.setLong(HConstants.HEALTH_SCRIPT_TIMEOUT, 2000);
