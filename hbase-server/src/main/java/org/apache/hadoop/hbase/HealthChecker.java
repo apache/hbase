@@ -76,17 +76,16 @@ class HealthChecker {
       shexec.execute();
     } catch (ExitCodeException e) {
       // ignore the exit code of the script
-      LOG.warn("Caught exception : " + e);
+      LOG.warn("Caught exception : " + e + ",exit code:" + e.getExitCode());
       status = HealthCheckerExitStatus.FAILED_WITH_EXIT_CODE;
     } catch (IOException e) {
       LOG.warn("Caught exception : " + e);
-      if (!shexec.isTimedOut()) {
-        status = HealthCheckerExitStatus.FAILED_WITH_EXCEPTION;
-        exceptionStackTrace = org.apache.hadoop.util.StringUtils.stringifyException(e);
-      } else {
+      status = HealthCheckerExitStatus.FAILED_WITH_EXCEPTION;
+      exceptionStackTrace = org.apache.hadoop.util.StringUtils.stringifyException(e);
+    } finally {
+      if (shexec.isTimedOut()) {
         status = HealthCheckerExitStatus.TIMED_OUT;
       }
-    } finally {
       if (status == HealthCheckerExitStatus.SUCCESS) {
         if (hasErrors(shexec.getOutput())) {
           status = HealthCheckerExitStatus.FAILED;
