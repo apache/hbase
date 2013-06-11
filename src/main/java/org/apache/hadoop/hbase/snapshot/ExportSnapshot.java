@@ -79,13 +79,13 @@ import org.apache.hadoop.util.ToolRunner;
 public final class ExportSnapshot extends Configured implements Tool {
   private static final Log LOG = LogFactory.getLog(ExportSnapshot.class);
 
-  private static final String CONF_TMP_DIR = "hbase.tmp.dir";
   private static final String CONF_FILES_USER = "snapshot.export.files.attributes.user";
   private static final String CONF_FILES_GROUP = "snapshot.export.files.attributes.group";
   private static final String CONF_FILES_MODE = "snapshot.export.files.attributes.mode";
   private static final String CONF_CHECKSUM_VERIFY = "snapshot.export.checksum.verify";
   private static final String CONF_OUTPUT_ROOT = "snapshot.export.output.root";
   private static final String CONF_INPUT_ROOT = "snapshot.export.input.root";
+  private static final String CONF_STAGING_ROOT = "snapshot.export.staging.root";
 
   private static final String INPUT_FOLDER_PREFIX = "export-files.";
 
@@ -470,7 +470,8 @@ public final class ExportSnapshot extends Configured implements Tool {
   private static Path getInputFolderPath(final FileSystem fs, final Configuration conf)
       throws IOException, InterruptedException {
     String stagingName = "exportSnapshot-" + EnvironmentEdgeManager.currentTimeMillis();
-    Path stagingDir = new Path(conf.get(CONF_TMP_DIR), stagingName);
+    Path stagingDir = new Path(conf.get(CONF_STAGING_ROOT, fs.getWorkingDirectory().toString())
+        , stagingName);
     fs.mkdirs(stagingDir);
     return new Path(stagingDir, INPUT_FOLDER_PREFIX +
       String.valueOf(EnvironmentEdgeManager.currentTimeMillis()));
