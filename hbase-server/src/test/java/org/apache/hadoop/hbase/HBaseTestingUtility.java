@@ -1213,6 +1213,25 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
   }
 
   /**
+   * Create a table.
+   * @param tableName
+   * @param families
+   * @param splitRows
+   * @return An HTable instance for the created table.
+   * @throws IOException
+   */
+  public HTable createTable(byte[] tableName, byte[][] families, byte[][] splitRows)
+      throws IOException {
+    HTableDescriptor desc = new HTableDescriptor(tableName);
+    for(byte[] family:families) {
+      HColumnDescriptor hcd = new HColumnDescriptor(family);
+      desc.addFamily(hcd);
+    }
+    getHBaseAdmin().createTable(desc, splitRows);
+    return new HTable(getConfiguration(), tableName);
+  }
+
+  /**
    * Drop an existing table
    * @param tableName existing table
    */

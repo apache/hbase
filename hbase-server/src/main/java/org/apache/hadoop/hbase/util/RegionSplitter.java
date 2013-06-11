@@ -230,6 +230,18 @@ public class RegionSplitter {
      * @return the separator character to use when storing / printing the row
      */
     String separator();
+
+    /**
+     * Set the first row
+     * @param userInput byte array of the row key.
+     */
+    void setFirstRow(byte[] userInput);
+
+    /**
+     * Set the last row
+     * @param userInput byte array of the row key.
+     */
+    void setLastRow(byte[] userInput);
   }
 
   /**
@@ -872,6 +884,16 @@ public class RegionSplitter {
       return " ";
     }
 
+    @Override
+    public void setFirstRow(byte[] userInput) {
+      firstRow = Bytes.toString(userInput);
+    }
+
+    @Override
+    public void setLastRow(byte[] userInput) {
+      lastRow = Bytes.toString(userInput);
+    }
+
     /**
      * Divide 2 numbers in half (for split algorithm)
      *
@@ -990,6 +1012,17 @@ public class RegionSplitter {
     @Override
     public void setLastRow(String userInput) {
       lastRowBytes = Bytes.toBytesBinary(userInput);
+    }
+
+
+    @Override
+    public void setFirstRow(byte[] userInput) {
+      firstRowBytes = userInput;
+    }
+
+    @Override
+    public void setLastRow(byte[] userInput) {
+      lastRowBytes = userInput;
     }
 
     @Override
