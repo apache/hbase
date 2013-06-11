@@ -1330,8 +1330,8 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
             if (iteration % multiplier != 0) continue;
             if (s.needsCompaction()) {
               // Queue a compaction. Will recognize if major is needed.
-              this.instance.compactSplitThread.requestCompaction(r, s, getName()
-                  + " requests compaction", null);
+              this.instance.compactSplitThread.requestSystemCompaction(r, s, getName()
+                  + " requests compaction");
             } else if (s.isMajorCompaction()) {
               if (majorCompactPriority == DEFAULT_PRIORITY
                   || majorCompactPriority > r.getCompactPriority()) {
@@ -1690,7 +1690,7 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
     // Do checks to see if we need to compact (references or too many files)
     for (Store s : r.getStores().values()) {
       if (s.hasReferences() || s.needsCompaction()) {
-        getCompactionRequester().requestCompaction(r, s, "Opening Region", null);
+       this.compactSplitThread.requestSystemCompaction(r, s, "Opening Region");
       }
     }
     long openSeqNum = r.getOpenSeqNum();
@@ -3576,7 +3576,7 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
       if (shouldFlush) {
         boolean result = region.flushcache();
         if (result) {
-          this.compactSplitThread.requestCompaction(region,
+          this.compactSplitThread.requestSystemCompaction(region,
               "Compaction through user triggered flush");
         }
         builder.setFlushed(result);
