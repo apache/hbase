@@ -152,10 +152,10 @@
             <%if load != null %>
             <td><% load.getStores() %></td>
             <td><% load.getStorefiles() %></td>
-            <td><% load.getStoreUncompressedSizeMB() %>MB</td>
-            <td><% load.getStorefileSizeMB() %>MB</td>
-            <td><% load.getTotalStaticIndexSizeKB() %>KB</td>
-            <td><% load.getTotalStaticBloomSizeKB() %>KB</td>
+            <td><% load.getStoreUncompressedSizeMB() %>m</td>
+            <td><% load.getStorefileSizeMB() %>m</td>
+            <td><% load.getTotalStaticIndexSizeKB() %>k</td>
+            <td><% load.getTotalStaticBloomSizeKB() %>k</td>
             </%if>
         </tr>
         </%for>
@@ -215,7 +215,7 @@
         </%java>
             <td><% r.getRegionNameAsString() %></td>
             <%if load != null %>
-            <td><% load.getMemstoreSizeMB() %>MB</td>
+            <td><% load.getMemstoreSizeMB() %>m</td>
             </%if>
         </tr>
         </%for>
