@@ -67,12 +67,10 @@ Apache HBase is an open-source, distributed, versioned, column-oriented store mo
      <section name="News">
          <p>August 20th, 2013 <a href="http://www.meetup.com/hbaseusergroup/events/120534362/">HBase Meetup at Flurry</a>.in San Francisco</p>
          <p>July 16th, 2013 <a href="http://www.meetup.com/hbaseusergroup/events/119929152/">HBase Meetup at Twitter</a>.in San Francisco</p>
+         <p>June 25th, 2013 <a href="http://www.meetup.com/hbaseusergroup/events/119154442/">Hadoop Summit Meetup</a>.at San Jose Convention Center</p>
+         <p>June 14th, 2013 <a href="http://kijicon.eventbrite.com/">KijiCon: Building Big Data Apps</a> in San Francisco.</p>
          <p>June 13th, 2013 <a href="http://www.hbasecon.com/">HBaseCon2013</a> in San Francisco.  Submit an Abstract!</p>
          <p>June 12th, 2013 <a href="http://www.meetup.com/hackathon/events/123403802/">HBaseConHackAthon</a> at the Cloudera office in San Francisco.</p>
-         <p>April 11th, 2013 <a href="http://www.meetup.com/hbaseusergroup/events/103587852/">HBase Meetup at AdRoll</a> in San Francisco</p>
-         <p>February 28th, 2013 <a href="http://www.meetup.com/hbaseusergroup/events/96584102/">HBase Meetup at Intel Mission Campus</a></p>
-         <p>February 19th, 2013 <a href="http://www.meetup.com/hackathon/events/103633042/">Developers PowWow</a> at HortonWorks' new digs</p>
-         <p>January 23rd, 2013 <a href="http://www.meetup.com/hbaseusergroup/events/91381312/">HBase Meetup at WibiData World HQ!</a></p>
 
       <p><small><a href="old_news.html">Old News</a></small></p>
     </section>
