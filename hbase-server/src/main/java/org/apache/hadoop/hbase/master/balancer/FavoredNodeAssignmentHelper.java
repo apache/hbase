@@ -72,17 +72,17 @@ public class FavoredNodeAssignmentHelper {
   public final static short FAVORED_NODES_NUM = 3;
 
   public FavoredNodeAssignmentHelper(final List<ServerName> servers, Configuration conf) {
+    this(servers, new RackManager(conf));
+  }
+
+  public FavoredNodeAssignmentHelper(final List<ServerName> servers,
+      final RackManager rackManager) {
     this.servers = servers;
-    this.rackManager = new RackManager(conf);
+    this.rackManager = rackManager;
     this.rackToRegionServerMap = new HashMap<String, List<ServerName>>();
     this.regionServerToRackMap = new HashMap<ServerName, String>();
     this.uniqueRackList = new ArrayList<String>();
     this.random = new Random();
-  }
-
-  // For unit tests
-  void setRackManager(RackManager rackManager) {
-    this.rackManager = rackManager;
   }
 
   /**
@@ -204,25 +204,47 @@ public class FavoredNodeAssignmentHelper {
   }
 
   // Place the regions round-robin across the racks picking one server from each
-  // rack at a time. For example, if 2 racks (r1 and r2) with 8 servers (s1..s8) each, it will
-  // choose s1 from r1, s1 from r2, s2 from r1, s2 from r2, ...
+  // rack at a time. Start with a random rack, and a random server from every rack.
+  // If a rack doesn't have enough servers it will go to the next rack and so on.
+  // for choosing a primary.
+  // For example, if 4 racks (r1 .. r4) with 8 servers (s1..s8) each, one possible
+  // placement could be r2:s5, r3:s5, r4:s5, r1:s5, r2:s6, r3:s6..
+  // If there were fewer servers in one rack, say r3, which had 3 servers, one possible
+  // placement could be r2:s5, <skip-r3>, r4:s5, r1:s5, r2:s6, <skip-r3> ...
+  // The regions should be distributed proportionately to the racksizes
   void placePrimaryRSAsRoundRobin(Map<ServerName, List<HRegionInfo>> assignmentMap,
       Map<HRegionInfo, ServerName> primaryRSMap, List<HRegionInfo> regions) {
     List<String> rackList = new ArrayList<String>(rackToRegionServerMap.size());
     rackList.addAll(rackToRegionServerMap.keySet());
-    Map<String, Integer> currentProcessIndexMap = new HashMap<String, Integer>();
-    int rackIndex = 0;
-    for (HRegionInfo regionInfo : regions) {
-      String rackName = rackList.get(rackIndex);
-      // Initialize the current processing host index.
-      int serverIndex = 0;
-      // Restore the current process index from the currentProcessIndexMap
-      Integer currentProcessIndex = currentProcessIndexMap.get(rackName);
-      if (currentProcessIndex != null) {
-        serverIndex = currentProcessIndex.intValue();
+    int rackIndex = random.nextInt(rackList.size());
+    int maxRackSize = 0;
+    for (Map.Entry<String,List<ServerName>> r : rackToRegionServerMap.entrySet()) {
+      if (r.getValue().size() > maxRackSize) {
+        maxRackSize = r.getValue().size();
       }
-      // Get the server list for the current rack
-      List<ServerName> currentServerList = rackToRegionServerMap.get(rackName);
+    }
+    int numIterations = 0;
+    int firstServerIndex = random.nextInt(maxRackSize);
+    // Initialize the current processing host index.
+    int serverIndex = firstServerIndex;
+    for (HRegionInfo regionInfo : regions) {
+      List<ServerName> currentServerList;
+      String rackName;
+      while (true) {
+        rackName = rackList.get(rackIndex);
+        numIterations++;
+        // Get the server list for the current rack
+        currentServerList = rackToRegionServerMap.get(rackName);
+        
+        if (serverIndex >= currentServerList.size()) { //not enough machines in this rack
+          if (numIterations % rackList.size() == 0) {
+            if (++serverIndex >= maxRackSize) serverIndex = 0;
+          }
+          if ((++rackIndex) >= rackList.size()) {
+            rackIndex = 0; // reset the rack index to 0
+          }
+        } else break;
+      }
 
       // Get the current process region server
       ServerName currentServer = currentServerList.get(serverIndex);
@@ -237,12 +259,9 @@ public class FavoredNodeAssignmentHelper {
       regionsForServer.add(regionInfo);
 
       // Set the next processing index
-      if ((++serverIndex) >= currentServerList.size()) {
-        // Reset the server index for the current rack
-        serverIndex = 0;
+      if (numIterations % rackList.size() == 0) {
+        ++serverIndex;
       }
-      // Keep track of the next processing index
-      currentProcessIndexMap.put(rackName, serverIndex);
       if ((++rackIndex) >= rackList.size()) {
         rackIndex = 0; // reset the rack index to 0
       }
