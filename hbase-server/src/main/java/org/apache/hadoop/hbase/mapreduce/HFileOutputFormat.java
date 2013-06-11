@@ -336,6 +336,9 @@ public class HFileOutputFormat extends FileOutputFormat<ImmutableBytesWritable, 
       LOG.warn("Unknown map output value type:" + job.getMapOutputValueClass());
     }
 
+    conf.setStrings("io.serializations", conf.get("io.serializations"),
+        KeyValueSerialization.class.getName());
+
     // Use table's region boundaries for TOP split points.
     LOG.info("Looking up current regions for table " + table);
     List<ImmutableBytesWritable> startKeys = getRegionStartKeys(table);
@@ -349,6 +352,7 @@ public class HFileOutputFormat extends FileOutputFormat<ImmutableBytesWritable, 
     configureBloomType(table, conf);
     
     TableMapReduceUtil.addDependencyJars(job);
+    TableMapReduceUtil.initCredentials(job);
     LOG.info("Incremental table output configured.");
   }
 
