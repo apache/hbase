@@ -31,6 +31,7 @@ org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ServerInfo;
 org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionLoad;
 org.apache.hadoop.hbase.metrics.histogram.MetricsHistogram;
+org.apache.hadoop.util.StringUtils;
 com.yammer.metrics.stats.Snapshot;
 java.lang.management.ManagementFactory;
 </%import>
@@ -100,12 +101,12 @@ MetricsRegionServerWrapper mWrap;
 </tr>
 <tr>
     <td>
-        <% ManagementFactory.getMemoryMXBean().getHeapMemoryUsage().getUsed() %>
+        <% StringUtils.humanReadableInt(ManagementFactory.getMemoryMXBean().getHeapMemoryUsage().getUsed()) %>
     </td>
     <td>
-        <% ManagementFactory.getMemoryMXBean().getHeapMemoryUsage().getMax()%>
+        <% StringUtils.humanReadableInt(ManagementFactory.getMemoryMXBean().getHeapMemoryUsage().getMax()) %>
     </td>
-    <td><% mWrap.getMemstoreSize() %></td>
+    <td><% StringUtils.humanReadableInt(mWrap.getMemstoreSize()) %></td>
 </tr>
 </table>
 </%def>
@@ -147,7 +148,7 @@ MetricsRegionServerWrapper mWrap;
 <tr>
     <td><% mWrap.getRequestsPerSecond() %></td>
     <td><% mWrap.getReadRequestsCount() %></td>
-    <td><% mWrap.getWriteRequestsCount() %>KB</td>
+    <td><% mWrap.getWriteRequestsCount() %></td>
 </tr>
 </table>
 </%def>
