@@ -25,9 +25,11 @@ import static org.junit.Assert.assertTrue;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.commons.logging.Log;
@@ -62,12 +64,15 @@ import org.junit.experimental.categories.Category;
 public class TestRegionPlacement {
   final static Log LOG = LogFactory.getLog(TestRegionPlacement.class);
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
-  private final static int SLAVES = 4;
+  private final static int SLAVES = 10;
   private static HBaseAdmin admin;
   private static Position[] positions = Position.values();
   private int REGION_NUM = 10;
   private Map<HRegionInfo, ServerName[]> favoredNodesAssignmentPlan =
       new HashMap<HRegionInfo, ServerName[]>();
+  private final static int PRIMARY = Position.PRIMARY.ordinal();
+  private final static int SECONDARY = Position.SECONDARY.ordinal();
+  private final static int TERTIARY = Position.TERTIARY.ordinal();
 
   @BeforeClass
   public static void setupBeforeClass() throws Exception {
@@ -75,6 +80,7 @@ public class TestRegionPlacement {
     // Enable the favored nodes based load balancer
     conf.setClass(HConstants.HBASE_MASTER_LOADBALANCER_CLASS,
         FavoredNodeLoadBalancer.class, LoadBalancer.class);
+    conf.setBoolean("hbase.tests.use.shortcircuit.reads", false);
     TEST_UTIL.startMiniCluster(SLAVES);
     admin = new HBaseAdmin(conf);
   }
@@ -85,27 +91,108 @@ public class TestRegionPlacement {
   }
 
   @Test
-  public void testGetFavoredNodes() {
+  public void testFavoredNodesPresentForRoundRobinAssignment() {
     LoadBalancer balancer = LoadBalancerFactory.getLoadBalancer(TEST_UTIL.getConfiguration());
-    HRegionInfo regionInfo = new HRegionInfo("oneregion".getBytes());
+    balancer.setMasterServices(TEST_UTIL.getMiniHBaseCluster().getMaster());
     List<ServerName> servers = new ArrayList<ServerName>();
-    for (int i = 0; i < 10; i++) {
-      ServerName server = new ServerName("foo"+i+":1234",-1);
+    for (int i = 0; i < SLAVES; i++) {
+      ServerName server = TEST_UTIL.getMiniHBaseCluster().getRegionServer(i).getServerName();
       servers.add(server);
     }
-    // test that we have enough favored nodes after we call randomAssignment
-    balancer.randomAssignment(regionInfo, servers);
-    assertTrue(((FavoredNodeLoadBalancer)balancer).getFavoredNodes(regionInfo).size() == 3);
-    List<HRegionInfo> regions = new ArrayList<HRegionInfo>(100);
-    for (int i = 0; i < 100; i++) {
-      HRegionInfo region = new HRegionInfo(("foobar"+i).getBytes());
-      regions.add(region);
+    List<HRegionInfo> regions = new ArrayList<HRegionInfo>(1);
+    HRegionInfo region = new HRegionInfo(("foobar").getBytes());
+    regions.add(region);
+    Map<ServerName,List<HRegionInfo>> assignmentMap = balancer.roundRobinAssignment(regions,
+        servers);
+    Set<ServerName> serverBefore = assignmentMap.keySet();
+    List<ServerName> favoredNodesBefore =
+        ((FavoredNodeLoadBalancer)balancer).getFavoredNodes(region);
+    assertTrue(favoredNodesBefore.size() == 3);
+    // the primary RS should be the one that the balancer's assignment returns
+    assertTrue(ServerName.isSameHostnameAndPort(serverBefore.iterator().next(),
+        favoredNodesBefore.get(PRIMARY)));
+    // now remove the primary from the list of available servers
+    List<ServerName> removedServers = removeMatchingServers(serverBefore, servers);
+    // call roundRobinAssignment with the modified servers list
+    assignmentMap = balancer.roundRobinAssignment(regions, servers);
+    List<ServerName> favoredNodesAfter =
+        ((FavoredNodeLoadBalancer)balancer).getFavoredNodes(region);
+    assertTrue(favoredNodesAfter.size() == 3);
+    // We don't expect the favored nodes assignments to change in multiple calls
+    // to the roundRobinAssignment method in the balancer (relevant for AssignmentManager.assign
+    // failures)
+    assertTrue(favoredNodesAfter.containsAll(favoredNodesBefore));
+    Set<ServerName> serverAfter = assignmentMap.keySet();
+    // We expect the new RegionServer assignee to be one of the favored nodes
+    // chosen earlier.
+    assertTrue(ServerName.isSameHostnameAndPort(serverAfter.iterator().next(),
+                 favoredNodesBefore.get(SECONDARY)) ||
+               ServerName.isSameHostnameAndPort(serverAfter.iterator().next(),
+                 favoredNodesBefore.get(TERTIARY)));
+
+    // put back the primary in the list of available servers
+    servers.addAll(removedServers);
+    // now roundRobinAssignment with the modified servers list should return the primary
+    // as the regionserver assignee
+    assignmentMap = balancer.roundRobinAssignment(regions, servers);
+    Set<ServerName> serverWithPrimary = assignmentMap.keySet();
+    assertTrue(serverBefore.containsAll(serverWithPrimary));
+
+    // Make all the favored nodes unavailable for assignment
+    removeMatchingServers(favoredNodesAfter, servers);
+    // call roundRobinAssignment with the modified servers list
+    assignmentMap = balancer.roundRobinAssignment(regions, servers);
+    List<ServerName> favoredNodesNow =
+        ((FavoredNodeLoadBalancer)balancer).getFavoredNodes(region);
+    assertTrue(favoredNodesNow.size() == 3);
+    assertTrue(!favoredNodesNow.contains(favoredNodesAfter.get(PRIMARY)) &&
+        !favoredNodesNow.contains(favoredNodesAfter.get(SECONDARY)) &&
+        !favoredNodesNow.contains(favoredNodesAfter.get(TERTIARY)));
+  }
+
+  @Test
+  public void testFavoredNodesPresentForRandomAssignment() {
+    LoadBalancer balancer = LoadBalancerFactory.getLoadBalancer(TEST_UTIL.getConfiguration());
+    balancer.setMasterServices(TEST_UTIL.getMiniHBaseCluster().getMaster());
+    List<ServerName> servers = new ArrayList<ServerName>();
+    for (int i = 0; i < SLAVES; i++) {
+      ServerName server = TEST_UTIL.getMiniHBaseCluster().getRegionServer(i).getServerName();
+      servers.add(server);
     }
-    // test that we have enough favored nodes after we call roundRobinAssignment
-    balancer.roundRobinAssignment(regions, servers);
-    for (int i = 0; i < 100; i++) {
-      assertTrue(((FavoredNodeLoadBalancer)balancer).getFavoredNodes(regions.get(i)).size() == 3);
-    }
+    List<HRegionInfo> regions = new ArrayList<HRegionInfo>(1);
+    HRegionInfo region = new HRegionInfo(("foobar").getBytes());
+    regions.add(region);
+    ServerName serverBefore = balancer.randomAssignment(region, servers);
+    List<ServerName> favoredNodesBefore =
+        ((FavoredNodeLoadBalancer)balancer).getFavoredNodes(region);
+    assertTrue(favoredNodesBefore.size() == 3);
+    // the primary RS should be the one that the balancer's assignment returns
+    assertTrue(ServerName.isSameHostnameAndPort(serverBefore,favoredNodesBefore.get(PRIMARY)));
+    // now remove the primary from the list of servers
+    removeMatchingServers(serverBefore, servers);
+    // call randomAssignment with the modified servers list
+    ServerName serverAfter = balancer.randomAssignment(region, servers);
+    List<ServerName> favoredNodesAfter =
+        ((FavoredNodeLoadBalancer)balancer).getFavoredNodes(region);
+    assertTrue(favoredNodesAfter.size() == 3);
+    // We don't expect the favored nodes assignments to change in multiple calls
+    // to the randomAssignment method in the balancer (relevant for AssignmentManager.assign
+    // failures)
+    assertTrue(favoredNodesAfter.containsAll(favoredNodesBefore));
+    // We expect the new RegionServer assignee to be one of the favored nodes
+    // chosen earlier.
+    assertTrue(ServerName.isSameHostnameAndPort(serverAfter, favoredNodesBefore.get(SECONDARY)) ||
+               ServerName.isSameHostnameAndPort(serverAfter, favoredNodesBefore.get(TERTIARY)));
+    // Make all the favored nodes unavailable for assignment
+    removeMatchingServers(favoredNodesAfter, servers);
+    // call randomAssignment with the modified servers list
+    balancer.randomAssignment(region, servers);
+    List<ServerName> favoredNodesNow =
+        ((FavoredNodeLoadBalancer)balancer).getFavoredNodes(region);
+    assertTrue(favoredNodesNow.size() == 3);
+    assertTrue(!favoredNodesNow.contains(favoredNodesAfter.get(PRIMARY)) &&
+        !favoredNodesNow.contains(favoredNodesAfter.get(SECONDARY)) &&
+        !favoredNodesNow.contains(favoredNodesAfter.get(TERTIARY)));
   }
 
   @Test(timeout = 180000)
@@ -121,6 +208,27 @@ public class TestRegionPlacement {
 
     // Verify all the region server are update with the latest favored nodes
     verifyRegionServerUpdated();
+  }
+
+  private List<ServerName> removeMatchingServers(ServerName serverWithoutStartCode,
+      List<ServerName> servers) {
+    List<ServerName> serversToRemove = new ArrayList<ServerName>();
+    for (ServerName s : servers) {
+      if (ServerName.isSameHostnameAndPort(s, serverWithoutStartCode)) {
+        serversToRemove.add(s);
+      }
+    }
+    servers.removeAll(serversToRemove);
+    return serversToRemove;
+  }
+
+  private List<ServerName> removeMatchingServers(Collection<ServerName> serversWithoutStartCode,
+      List<ServerName> servers) {
+    List<ServerName> serversToRemove = new ArrayList<ServerName>();
+    for (ServerName s : serversWithoutStartCode) {
+      serversToRemove.addAll(removeMatchingServers(s, servers));
+    }
+    return serversToRemove;
   }
 
   /**
@@ -204,8 +312,6 @@ public class TestRegionPlacement {
           HRegionInfo info = MetaScanner.getHRegionInfo(result);
           byte[] server = result.getValue(HConstants.CATALOG_FAMILY,
               HConstants.SERVER_QUALIFIER);
-          byte[] startCode = result.getValue(HConstants.CATALOG_FAMILY,
-              HConstants.STARTCODE_QUALIFIER);
           byte[] favoredNodes = result.getValue(HConstants.CATALOG_FAMILY,
               FavoredNodeAssignmentHelper.FAVOREDNODES_QUALIFIER);
           // Add the favored nodes into assignment plan
@@ -218,7 +324,7 @@ public class TestRegionPlacement {
             totalRegionNum.incrementAndGet();
             if (server != null) {
               ServerName serverName =
-                  new ServerName(Bytes.toString(server),Bytes.toLong(startCode));
+                  new ServerName(Bytes.toString(server), -1);
               if (favoredNodes != null) {
                 String placement = "[NOT FAVORED NODE]";
                 for (int i = 0; i < favoredServerList.length; i++) {

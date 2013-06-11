@@ -73,4 +73,25 @@ public class FavoredNodes {
   public synchronized List<ServerName> getFavoredNodes(HRegionInfo region) {
     return favoredNodesMap.get(region);
   }
+
+  /**
+   * Return the position of the server in the favoredNodes list. Assumes the
+   * favoredNodes list is of size 3.
+   * @param favoredNodes
+   * @param server
+   * @return position
+   */
+  static Position getFavoredServerPosition(
+      List<ServerName> favoredNodes, ServerName server) {
+    if (favoredNodes == null || server == null ||
+        favoredNodes.size() != FavoredNodeAssignmentHelper.FAVORED_NODES_NUM) {
+      return null;
+    }
+    for (Position p : Position.values()) {
+      if (favoredNodes.get(p.ordinal()).equals(server)) {
+        return p;
+      }
+    }
+    return null;
+  }
 }

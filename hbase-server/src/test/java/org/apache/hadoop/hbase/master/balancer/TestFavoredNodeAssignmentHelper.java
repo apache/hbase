@@ -24,10 +24,12 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.SortedMap;
+import java.util.TreeMap;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.MediumTests;
+import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.master.RackManager;
 import org.apache.hadoop.hbase.util.Triple;
@@ -36,7 +38,7 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
 
-@Category(MediumTests.class)
+@Category(SmallTests.class)
 public class TestFavoredNodeAssignmentHelper {
 
   private static List<ServerName> servers = new ArrayList<ServerName>();
@@ -108,12 +110,29 @@ public class TestFavoredNodeAssignmentHelper {
   public void testPlacePrimaryRSAsRoundRobin() {
     // Test the regular case where there are many servers in different racks
     // Test once for few regions and once for many regions
-    primaryRSPlacement(6, null);
+    primaryRSPlacement(6, null, 10, 10, 10);
     // now create lots of regions and try to place them on the limited number of machines
-    primaryRSPlacement(600, null);
+    primaryRSPlacement(600, null, 10, 10, 10);
+  }
+  
+  @Test
+  public void testRoundRobinAssignmentsWithUnevenSizedRacks() {
+    //In the case of uneven racks, the regions should be distributed 
+    //proportionately to the rack sizes
+    primaryRSPlacement(6, null, 10, 10, 10);
+    primaryRSPlacement(600, null, 10, 10, 5);
+    primaryRSPlacement(600, null, 10, 5, 10);
+    primaryRSPlacement(600, null, 5, 10, 10);
+    primaryRSPlacement(500, null, 10, 10, 5);
+    primaryRSPlacement(500, null, 10, 5, 10);
+    primaryRSPlacement(500, null, 5, 10, 10);
+    primaryRSPlacement(500, null, 9, 7, 8);
+    primaryRSPlacement(500, null, 8, 7, 9);
+    primaryRSPlacement(500, null, 7, 9, 8);
+    primaryRSPlacement(459, null, 7, 9, 8);
   }
 
-  //@Test
+  @Test
   public void testSecondaryAndTertiaryPlacementWithSingleRack() {
     // Test the case where there is a single rack and we need to choose
     // Primary/Secondary/Tertiary from a single rack.
@@ -245,10 +264,9 @@ public class TestFavoredNodeAssignmentHelper {
     List<ServerName> servers = getServersFromRack(rackToServerCount);
     FavoredNodeAssignmentHelper helper = new FavoredNodeAssignmentHelper(servers,
         new Configuration());
-    helper = new FavoredNodeAssignmentHelper(servers, new Configuration());
+    helper = new FavoredNodeAssignmentHelper(servers, rackManager);
     Map<ServerName, List<HRegionInfo>> assignmentMap =
         new HashMap<ServerName, List<HRegionInfo>>();
-    helper.setRackManager(rackManager);
     helper.initialize();
     // create regions
     List<HRegionInfo> regions = new ArrayList<HRegionInfo>(regionCount);
@@ -262,15 +280,15 @@ public class TestFavoredNodeAssignmentHelper {
                    (primaryRSMap, helper, regions);
   }
 
-  private void primaryRSPlacement(int regionCount, Map<HRegionInfo, ServerName> primaryRSMap) {
+  private void primaryRSPlacement(int regionCount, Map<HRegionInfo, ServerName> primaryRSMap,
+      int firstRackSize, int secondRackSize, int thirdRackSize) {
     Map<String,Integer> rackToServerCount = new HashMap<String,Integer>();
-    rackToServerCount.put("rack1", 10);
-    rackToServerCount.put("rack2", 10);
-    rackToServerCount.put("rack3", 10);
+    rackToServerCount.put("rack1", firstRackSize);
+    rackToServerCount.put("rack2", secondRackSize);
+    rackToServerCount.put("rack3", thirdRackSize);
     List<ServerName> servers = getServersFromRack(rackToServerCount);
     FavoredNodeAssignmentHelper helper = new FavoredNodeAssignmentHelper(servers,
-        new Configuration());
-    helper.setRackManager(rackManager);
+        rackManager);
     helper.initialize();
 
     assertTrue(helper.canPlaceFavoredNodes());
@@ -291,21 +309,51 @@ public class TestFavoredNodeAssignmentHelper {
     int regionsOnRack1 = 0;
     int regionsOnRack2 = 0;
     int regionsOnRack3 = 0;
-    for (Map.Entry<HRegionInfo, ServerName> entry : primaryRSMap.entrySet()) {
-      if (rackManager.getRack(entry.getValue()).equals("rack1")) {
+    for (HRegionInfo region : regions) {
+      if (rackManager.getRack(primaryRSMap.get(region)).equals("rack1")) {
         regionsOnRack1++;
-      } else if (rackManager.getRack(entry.getValue()).equals("rack2")) {
+      } else if (rackManager.getRack(primaryRSMap.get(region)).equals("rack2")) {
         regionsOnRack2++;
-      } else if (rackManager.getRack(entry.getValue()).equals("rack3")) {
+      } else if (rackManager.getRack(primaryRSMap.get(region)).equals("rack3")) {
         regionsOnRack3++;
       }
     }
-    int numRegionsPerRack = (int)Math.ceil((double)regionCount/3); //since there are 3 servers
-    assertTrue(regionsOnRack1 == numRegionsPerRack && regionsOnRack2 == numRegionsPerRack
-        && regionsOnRack3 == numRegionsPerRack);
-    int numServersPerRack = (int)Math.ceil((double)regionCount/30); //since there are 30 servers
-    for (Map.Entry<ServerName, List<HRegionInfo>> entry : assignmentMap.entrySet()) {
-      assertTrue(entry.getValue().size() == numServersPerRack);
-    }
+    // Verify that the regions got placed in the way we expect (documented in
+    // FavoredNodeAssignmentHelper#placePrimaryRSAsRoundRobin)
+    checkNumRegions(regionCount, firstRackSize, secondRackSize, thirdRackSize, regionsOnRack1,
+        regionsOnRack2, regionsOnRack3, assignmentMap);
+  }
+
+  private void checkNumRegions(int regionCount, int firstRackSize, int secondRackSize,
+      int thirdRackSize, int regionsOnRack1, int regionsOnRack2, int regionsOnRack3,
+      Map<ServerName, List<HRegionInfo>> assignmentMap) {
+    //The regions should be distributed proportionately to the racksizes
+    //Verify the ordering was as expected by inserting the racks and regions
+    //in sorted maps. The keys being the racksize and numregions; values are
+    //the relative positions of the racksizes and numregions respectively
+    SortedMap<Integer, Integer> rackMap = new TreeMap<Integer, Integer>();
+    rackMap.put(firstRackSize, 1);
+    rackMap.put(secondRackSize, 2);
+    rackMap.put(thirdRackSize, 3);
+    SortedMap<Integer, Integer> regionMap = new TreeMap<Integer, Integer>();
+    regionMap.put(regionsOnRack1, 1);
+    regionMap.put(regionsOnRack2, 2);
+    regionMap.put(regionsOnRack3, 3);
+    assertTrue(printProportions(firstRackSize, secondRackSize, thirdRackSize,
+        regionsOnRack1, regionsOnRack2, regionsOnRack3),
+        rackMap.get(firstRackSize) == regionMap.get(regionsOnRack1));
+    assertTrue(printProportions(firstRackSize, secondRackSize, thirdRackSize,
+        regionsOnRack1, regionsOnRack2, regionsOnRack3),
+        rackMap.get(secondRackSize) == regionMap.get(regionsOnRack2));
+    assertTrue(printProportions(firstRackSize, secondRackSize, thirdRackSize,
+        regionsOnRack1, regionsOnRack2, regionsOnRack3),
+        rackMap.get(thirdRackSize) == regionMap.get(regionsOnRack3));
+  }
+
+  private String printProportions(int firstRackSize, int secondRackSize,
+      int thirdRackSize, int regionsOnRack1, int regionsOnRack2, int regionsOnRack3) {
+    return "The rack sizes" + firstRackSize + " " + secondRackSize
+        + " " + thirdRackSize + " " + regionsOnRack1 + " " + regionsOnRack2 +
+        " " + regionsOnRack3;
   }
 }
