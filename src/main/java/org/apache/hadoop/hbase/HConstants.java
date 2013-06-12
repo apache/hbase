@@ -530,11 +530,13 @@ public final class HConstants {
    * timeout for each RPC
    */
   public static String HBASE_RPC_TIMEOUT_KEY = "hbase.rpc.timeout";
+  public static String HBASE_RS_REPORT_TIMEOUT_KEY = "hbase.regionserverReport.timeout";
 
   /**
    * Default value of {@link #HBASE_RPC_TIMEOUT_KEY}
    */
   public static int DEFAULT_HBASE_RPC_TIMEOUT = 60000;
+  public static int DEFAULT_RS_REPORT_TIMEOUT = 3000;
 
   /**
    * pause between rpc or connect retries

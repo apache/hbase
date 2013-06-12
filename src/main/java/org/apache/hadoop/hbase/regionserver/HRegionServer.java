@@ -320,7 +320,7 @@ public class HRegionServer implements HRegionInterface,
   // A sleeper that sleeps for msgInterval.
   private final Sleeper sleeper;
 
-  private final int rpcTimeout;
+  private final int rpcTimeoutToMaster;
 
   // Address passed in to constructor.  This is not always the address we run
   // with.  For example, if passed port is 0, then we are to pick a port.  The
@@ -430,9 +430,9 @@ public class HRegionServer implements HRegionInterface,
     this.numRegionsToReport =
       conf.getInt("hbase.regionserver.numregionstoreport", 10);
 
-    this.rpcTimeout = conf.getInt(
-        HConstants.HBASE_RPC_TIMEOUT_KEY,
-        HConstants.DEFAULT_HBASE_RPC_TIMEOUT);
+    this.rpcTimeoutToMaster = conf.getInt(
+        HConstants.HBASE_RS_REPORT_TIMEOUT_KEY,
+        HConstants.DEFAULT_RS_REPORT_TIMEOUT);
 
     responseSizeLimit = conf.getLong("hbase.regionserver.results.size.max",
         (long)Integer.MAX_VALUE); // set the max to 2G
@@ -750,6 +750,7 @@ public class HRegionServer implements HRegionInterface,
               LOG.debug(HRegionServer.printFailedRegionserverReport(this.serverInfo,
                   outboundMessages.toArray(EMPTY_HMSG_ARRAY),
                   getMostLoadedRegions(), msgs, (Throwable)e));
+              throw e;
             }
             LOG.debug("Attempted regionserver report with the master");
             lastMsg = System.currentTimeMillis();
@@ -1961,7 +1962,7 @@ public class HRegionServer implements HRegionInterface,
         // should retry indefinitely.
         master = (HMasterRegionInterface)HBaseRPC.getProxy(
           HMasterRegionInterface.class, HBaseRPCProtocolVersion.versionID,
-          masterAddress.getInetSocketAddress(), this.conf, this.rpcTimeout,
+          masterAddress.getInetSocketAddress(), this.conf, this.rpcTimeoutToMaster,
           HBaseRPCOptions.DEFAULT);
       } catch (IOException e) {
         LOG.warn("Unable to connect to master. Retrying. Error was:", e);
