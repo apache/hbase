@@ -28,6 +28,7 @@ import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.ScannerTimeoutException;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -49,6 +50,10 @@ public class TableRecordReaderImpl {
   private ResultScanner scanner;
   private HTable htable;
   private byte [][] trrInputColumns;
+
+  private int timeoutRetryNum = 3;
+  private int timeoutRetrySleepBaseMs = 5000;
+  private int conseqTimeoutErrorNum = 0;
 
   /**
    * Restart from survivable exceptions by creating a new scanner.
@@ -135,6 +140,14 @@ public class TableRecordReaderImpl {
     this.scanner.close();
   }
 
+  public void setTimeoutRetryNumber(int retryNum) {
+    this.timeoutRetryNum = retryNum;
+  }
+
+  public void setTimeoutRetrySleepBaseMs(int sleepMs) {
+    this.timeoutRetrySleepBaseMs = sleepMs;
+  }
+
   /**
    * @return ImmutableBytesWritable
    *
@@ -173,18 +186,58 @@ public class TableRecordReaderImpl {
   public boolean next(ImmutableBytesWritable key, Result value)
   throws IOException {
     Result result = null;
-    try {
-      result = this.scanner.next();
-    } catch (UnknownScannerException e) {
-      LOG.debug("recovered from " + StringUtils.stringifyException(e));
-      if (lastRow == null) {
-        restart(startRow);
-      } else {
-        restart(lastRow);
-        this.scanner.next(); // skip presumed already mapped row
+
+    // retry if limited number of timeout errors are encountered
+    boolean shouldTryAgain = false;
+    do {
+      try {
+        result = this.scanner.next();
+
+        shouldTryAgain = false;
+        conseqTimeoutErrorNum = 0;
+      } catch (UnknownScannerException e) {
+        shouldTryAgain = false;
+
+        LOG.debug("recovered from " + StringUtils.stringifyException(e));
+        if (lastRow == null) {
+          restart(startRow);
+        } else {
+          restart(lastRow);
+          // skip presumed already mapped row
+          this.scanner.next();
+        }
+        result = this.scanner.next();
+      } catch (ScannerTimeoutException e) {
+        LOG.debug("Scanner time out:" + StringUtils.stringifyException(e));
+
+        if (++conseqTimeoutErrorNum <= timeoutRetryNum) {
+          shouldTryAgain = true;
+
+          int sleepMs = timeoutRetrySleepBaseMs * (1 << conseqTimeoutErrorNum);
+          LOG.debug("sleep "  + sleepMs + "ms in " + conseqTimeoutErrorNum + "-th retry");
+          try {
+            Thread.sleep(sleepMs);
+          } catch (InterruptedException ie) {
+            LOG.debug("Sleep interrupted - " + StringUtils.stringifyException(e));
+          }
+
+          if (lastRow == null) {
+            restart(startRow);
+          } else {
+            restart(lastRow);
+            // skip presumed already mapped row
+            this.scanner.next();
+          }
+
+          // no need to assign result, it will be assigned in next retry
+        } else {
+          shouldTryAgain = false;
+
+          LOG.debug("max timeout retry count:" + timeoutRetryNum + " reached, scan failed.");
+          result = null;
+        }
       }
-      result = this.scanner.next();
-    }
+    } while (shouldTryAgain);
 
     if (result != null && result.size() > 0) {
       key.set(result.getRow());

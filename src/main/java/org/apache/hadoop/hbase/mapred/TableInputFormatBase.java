@@ -24,6 +24,7 @@ import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
@@ -105,6 +106,10 @@ implements InputFormat<ImmutableBytesWritable, Result> {
     trr.setScan(scan);
     trr.setInputColumns(this.inputColumns);
     trr.setRowFilter(this.rowFilter);
+    trr.setTimeoutRetryNumber(
+      job.getInt("hbase.mapred.client.timeoutretry.number", 3));
+    trr.setTimeoutRetrySleepBaseMs(
+      job.getInt("hbase.mapred.client.timeoutretry.sleepbasems", 5000));
     trr.init();
     return trr;
   }

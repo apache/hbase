@@ -331,9 +331,13 @@ public class HTableMultiplexer {
         this.metrics.resetMultiPutMetrics(hostnameWithPort, worker);
         avgMultiPutBatchSizeSum += this.metrics.getAvgMultiPutBatchSizeForRs(hostnameWithPort);
       }
-      this.overallAverageLatency = averageCalcCount != 0 ?
-        averageCalcSum / averageCalcCount : 0;
-      this.overallAvgMultiPutSize = avgMultiPutBatchSizeSum / serverToFlushWorkerMap.size();
+      this.overallAverageLatency = averageCalcCount != 0
+                                   ? averageCalcSum / averageCalcCount
+                                   : 0;
+      int flushMapSize = serverToFlushWorkerMap.size();
+      this.overallAvgMultiPutSize = flushMapSize != 0
+                                    ? avgMultiPutBatchSizeSum / flushMapSize
+                                    : 0;
     }
 
     public long getTotalBufferedCounter() {

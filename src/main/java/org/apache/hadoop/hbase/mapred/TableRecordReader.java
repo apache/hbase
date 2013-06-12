@@ -140,4 +140,12 @@ implements RecordReader<ImmutableBytesWritable, Result> {
   public void setScan(Scan scan) {
     recordReaderImpl.setScan(scan);
   }
+
+  public void setTimeoutRetryNumber(int retryNum) {
+    recordReaderImpl.setTimeoutRetryNumber(retryNum);
+  }
+
+  public void setTimeoutRetrySleepBaseMs(int sleepMs) {
+    recordReaderImpl.setTimeoutRetrySleepBaseMs(sleepMs);
+  }
 }
