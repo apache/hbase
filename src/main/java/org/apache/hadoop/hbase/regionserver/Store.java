@@ -44,6 +44,8 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.WriteOptions;
+import org.apache.hadoop.io.nativeio.NativeIO;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -758,7 +760,7 @@ public class Store extends SchemaConfigured implements HeapSize {
       synchronized (flushLock) {
         status.setStatus("Flushing " + this + ": creating writer");
         // A. Write the map out to the disk
-        writer = createWriterInTmp(snapshot.size());
+        writer = createWriterInTmp(snapshot.size(), this.compression, false);
         writer.setTimeRangeTracker(snapshotTimeRangeTracker);
         fileName = writer.getPath().getName();
         try {
@@ -830,9 +832,19 @@ public class Store extends SchemaConfigured implements HeapSize {
   /*
    * @return Writer for a new StoreFile in the tmp dir.
    */
-  private StoreFile.Writer createWriterInTmp(long maxKeyCount)
-  throws IOException {
-    return createWriterInTmp(maxKeyCount, this.compression, false);
+  private StoreFile.Writer createWriterInTmp(long maxKeyCount,
+      Compression.Algorithm compression, boolean isCompaction)
+      throws IOException {
+    // This method is only invoked during write for flush/compaction and hence
+    // on the DFS level we have a sync_file_range(WAIT_AFTER) to throttle these
+    // background writers.
+    WriteOptions options = new WriteOptions();
+    if (conf.getBoolean("hbase.enable.syncfilerange.throttling", false)) {
+      options.setSyncFileRange(NativeIO.SYNC_FILE_RANGE_WAIT_AFTER
+          | NativeIO.SYNC_FILE_RANGE_WRITE);
+    }
+    return createWriterInTmp(maxKeyCount, compression, isCompaction,
+        options);
   }
 
   /*
@@ -842,7 +854,8 @@ public class Store extends SchemaConfigured implements HeapSize {
    * @return Writer for a new StoreFile in the tmp dir.
    */
   private StoreFile.Writer createWriterInTmp(long maxKeyCount,
-    Compression.Algorithm compression, boolean isCompaction)
+      Compression.Algorithm compression, boolean isCompaction,
+      WriteOptions options)
   throws IOException {
     final CacheConfig writerCacheConf;
     if (isCompaction) {
@@ -861,6 +874,7 @@ public class Store extends SchemaConfigured implements HeapSize {
             .withMaxKeyCount(maxKeyCount)
             .withFavoredNodes(region.getFavoredNodes())
             .withCompression(compression)
+            .withWriteOptions(options)
             .build();
     w.getHFileWriter().setCompactionWriter(isCompaction);
     // The store file writer's path does not include the CF name, so we need

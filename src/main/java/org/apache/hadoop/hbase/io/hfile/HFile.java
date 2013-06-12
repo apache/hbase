@@ -39,6 +39,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
+import org.apache.hadoop.io.WriteOptions;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue.KeyComparator;
@@ -308,6 +309,7 @@ public class HFile {
     protected HFileDataBlockEncoder encoder = NoOpDataBlockEncoder.INSTANCE;
     protected KeyComparator comparator;
     protected InetSocketAddress[] favoredNodes;
+    protected WriteOptions options = new WriteOptions();
 
     WriterFactory(Configuration conf, CacheConfig cacheConf) {
       this.conf = conf;
@@ -357,6 +359,12 @@ public class HFile {
       return this;
     }
 
+    public WriterFactory withWriteOptions(WriteOptions options) {
+      Preconditions.checkNotNull(options);
+      this.options = options;
+      return this;
+    }
+
     public WriterFactory withFavoredNodes(InetSocketAddress[] favoredNodes) {
       // Deliberately not checking for null here.
       this.favoredNodes = favoredNodes;
@@ -370,7 +378,8 @@ public class HFile {
       }
       if (path != null) {
         ostream = AbstractHFileWriter.createOutputStream(conf, fs, path,
-            HFile.getBytesPerChecksum(conf, fs.getConf()), favoredNodes);
+            HFile.getBytesPerChecksum(conf, fs.getConf()), favoredNodes,
+            options);
       }
       return createWriter();
     }

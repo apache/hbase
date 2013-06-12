@@ -39,6 +39,7 @@ import org.apache.hadoop.hbase.regionserver.metrics.SchemaConfigured;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.io.RawComparator;
+import org.apache.hadoop.io.WriteOptions;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.util.Progressable;
 
@@ -304,6 +305,15 @@ public abstract class AbstractHFileWriter extends SchemaConfigured
   protected static FSDataOutputStream createOutputStream(Configuration conf,
       FileSystem fs, Path path, int bytesPerChecksum,
       InetSocketAddress[] favoredNodes) throws IOException {
+    return createOutputStream(conf, fs, path, bytesPerChecksum, favoredNodes,
+        new WriteOptions());
+  }
+
+  /** A helper method to create HFile output streams in constructors */
+  protected static FSDataOutputStream createOutputStream(Configuration conf,
+      FileSystem fs, Path path, int bytesPerChecksum,
+      InetSocketAddress[] favoredNodes, WriteOptions options)
+      throws IOException {
     if (fs instanceof DistributedFileSystem) {
       // Try to use the favoredNodes version via reflection to allow backwards-
       // compatibility.
@@ -311,11 +321,12 @@ public abstract class AbstractHFileWriter extends SchemaConfigured
         return (FSDataOutputStream) DistributedFileSystem.class
             .getDeclaredMethod("create", Path.class, FsPermission.class,
                 boolean.class, int.class, short.class, long.class, int.class,
-                Progressable.class, InetSocketAddress[].class)
+                Progressable.class, InetSocketAddress[].class,
+                WriteOptions.class)
             .invoke(fs, path, FsPermission.getDefault(), true,
                 fs.getConf().getInt("io.file.buffer.size", 4096),
                 fs.getDefaultReplication(), fs.getDefaultBlockSize(),
-                bytesPerChecksum, null, favoredNodes);
+                bytesPerChecksum, null, favoredNodes, options);
       } catch (InvocationTargetException ite) {
         // Function was properly called, but threw it's own exception.
         throw new IOException(ite.getCause());

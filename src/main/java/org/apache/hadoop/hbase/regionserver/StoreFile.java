@@ -67,6 +67,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.io.RawComparator;
+import org.apache.hadoop.io.WriteOptions;
 import org.apache.hadoop.io.WritableUtils;
 
 import com.google.common.base.Function;
@@ -649,6 +650,7 @@ public class StoreFile extends SchemaConfigured {
     private Path filePath;
     private InetSocketAddress[] favoredNodes;
     private  float bloomErrorRate;
+    private WriteOptions options = new WriteOptions();
 
     public WriterBuilder(Configuration conf, CacheConfig cacheConf,
         FileSystem fs, int blockSize) {
@@ -657,6 +659,7 @@ public class StoreFile extends SchemaConfigured {
       this.fs = fs;
       this.blockSize = blockSize;
       bloomErrorRate = BloomFilterFactory.getErrorRate(conf);
+      options = new WriteOptions();
     }
 
     /**
@@ -669,6 +672,12 @@ public class StoreFile extends SchemaConfigured {
     public WriterBuilder withOutputDir(Path dir) {
       Preconditions.checkNotNull(dir);
       this.dir = dir;
+      return this;
+    }
+
+    public WriterBuilder withWriteOptions(WriteOptions options) {
+      Preconditions.checkNotNull(dir);
+      this.options = options;
       return this;
     }
 
@@ -891,6 +900,7 @@ public class StoreFile extends SchemaConfigured {
           .withDataBlockEncoder(wb.dataBlockEncoder)
           .withComparator(wb.comparator.getRawComparator())
           .withFavoredNodes(wb.favoredNodes)
+          .withWriteOptions(wb.options)
           .create();
 
       this.kvComparator = wb.comparator;
