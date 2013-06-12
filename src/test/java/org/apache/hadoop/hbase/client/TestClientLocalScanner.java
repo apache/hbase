@@ -33,15 +33,18 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HServerAddress;
+import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.filter.BinaryComparator;
 import org.apache.hadoop.hbase.filter.CompareFilter;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.RowFilter;
 import org.apache.hadoop.hbase.filter.WhileMatchFilter;
+import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.InjectionEvent;
 import org.apache.hadoop.hbase.util.InjectionHandler;
@@ -267,14 +270,26 @@ public class TestClientLocalScanner {
     ResultScanner scanner = t.getLocalScanner(scan);
     assertTrue(fs.exists(folder));
     assertTrue(fs.listStatus(folder).length > 0);
-    fs.delete(folder, true);
+    scanner.close();
+
+    Path rootdir = new Path(TEST_UTIL.getConfiguration().get("hbase.rootdir"));
+    HRegionInfo info = t.getRegionsInfo().keySet().iterator().next();
+    HColumnDescriptor family = info.getTableDesc().getFamily(FAMILY);
+    Path tableDir = HTableDescriptor.getTableDir(rootdir, info.getTableDesc().getName());
+    Path homedir = Store.getStoreHomedir(tableDir, info.getEncodedName(), family.getName());
+
+    assertTrue(fs.exists(homedir));
+    int files = fs.listStatus(homedir).length;
 
     scanner = t.getLocalScanner(scan, false);
     assertTrue(compareScanners(tmpTable.getScanner(scan),
         scanner));
-    assertTrue(!fs.exists(folder));
+    assertTrue(fs.exists(folder));
+    assertTrue(fs.listStatus(folder).length <= 0);
     scanner.close();
-    scanner.close();
+
+    assertTrue(fs.exists(homedir));
+    assertTrue(fs.listStatus(homedir).length == files);
   }
 
   public Scan getScan(int caching, int batching,

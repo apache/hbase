@@ -220,7 +220,7 @@ public class ClientLocalScanner extends ResultScannerImpl {
   protected void closeCurrentScanner() {
     try {
       for (Store store : stores.values()) {
-        store.close(true);
+        store.close(areHardlinksCreated);
       }
       stores.clear();
       if (currentScanner != null) {
