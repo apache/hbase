@@ -128,7 +128,7 @@ public class TestZKProcedure {
     // start running the controller
     ZKProcedureCoordinatorRpcs coordinatorComms = new ZKProcedureCoordinatorRpcs(
         coordZkw, opDescription, COORDINATOR_NODE_NAME);
-    ThreadPoolExecutor pool = ProcedureCoordinator.defaultPool(COORDINATOR_NODE_NAME, KEEP_ALIVE, POOL_SIZE, WAKE_FREQUENCY);
+    ThreadPoolExecutor pool = ProcedureCoordinator.defaultPool(COORDINATOR_NODE_NAME, POOL_SIZE, KEEP_ALIVE);
     ProcedureCoordinator coordinator = new ProcedureCoordinator(coordinatorComms, pool) {
       @Override
       public Procedure createProcedure(ForeignExceptionDispatcher fed, String procName, byte[] procArgs,
@@ -146,7 +146,7 @@ public class TestZKProcedure {
     for (String member : members) {
       ZooKeeperWatcher watcher = newZooKeeperWatcher();
       ZKProcedureMemberRpcs comms = new ZKProcedureMemberRpcs(watcher, opDescription, member);
-      ThreadPoolExecutor pool2 = ProcedureMember.defaultPool(WAKE_FREQUENCY, KEEP_ALIVE, 1, member);
+      ThreadPoolExecutor pool2 = ProcedureMember.defaultPool(member, 1, KEEP_ALIVE);
       ProcedureMember procMember = new ProcedureMember(comms, pool2, subprocFactory);
       procMembers.add(new Pair<ProcedureMember, ZKProcedureMemberRpcs>(procMember, comms));
       comms.start(procMember);
@@ -210,7 +210,7 @@ public class TestZKProcedure {
     ZooKeeperWatcher coordinatorWatcher = newZooKeeperWatcher();
     ZKProcedureCoordinatorRpcs coordinatorController = new ZKProcedureCoordinatorRpcs(
         coordinatorWatcher, opDescription, COORDINATOR_NODE_NAME);
-    ThreadPoolExecutor pool = ProcedureCoordinator.defaultPool(COORDINATOR_NODE_NAME, KEEP_ALIVE, POOL_SIZE, WAKE_FREQUENCY);
+    ThreadPoolExecutor pool = ProcedureCoordinator.defaultPool(COORDINATOR_NODE_NAME, POOL_SIZE, KEEP_ALIVE);
     ProcedureCoordinator coordinator = spy(new ProcedureCoordinator(coordinatorController, pool));
 
     // start a member for each node
@@ -220,7 +220,7 @@ public class TestZKProcedure {
     for (String member : expected) {
       ZooKeeperWatcher watcher = newZooKeeperWatcher();
       ZKProcedureMemberRpcs controller = new ZKProcedureMemberRpcs(watcher, opDescription, member);
-      ThreadPoolExecutor pool2 = ProcedureMember.defaultPool(WAKE_FREQUENCY, KEEP_ALIVE, 1, member);
+      ThreadPoolExecutor pool2 = ProcedureMember.defaultPool(member, 1, KEEP_ALIVE);
       ProcedureMember mem = new ProcedureMember(controller, pool2, subprocFactory);
       members.add(new Pair<ProcedureMember, ZKProcedureMemberRpcs>(mem, controller));
       controller.start(mem);
