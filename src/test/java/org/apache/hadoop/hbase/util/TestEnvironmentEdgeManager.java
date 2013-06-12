@@ -34,6 +34,7 @@ public class TestEnvironmentEdgeManager {
 
   @Test
   public void testManageSingleton() {
+    EnvironmentEdgeManager.reset();
     EnvironmentEdge edge = EnvironmentEdgeManager.getDelegate();
     assertNotNull(edge);
     assertTrue(edge instanceof DefaultEnvironmentEdge);
@@ -59,5 +60,6 @@ public class TestEnvironmentEdgeManager {
     long result = EnvironmentEdgeManager.currentTimeMillis();
     verify(mock).currentTimeMillis();
     assertEquals(expectation, result);
+    EnvironmentEdgeManager.reset();
   }
 }
