@@ -24,9 +24,9 @@ import java.util.concurrent.CountDownLatch;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.errorhandling.ForeignException;
-import org.apache.hadoop.hbase.errorhandling.ForeignExceptionSnare;
 import org.apache.hadoop.hbase.errorhandling.ForeignExceptionDispatcher;
 import org.apache.hadoop.hbase.errorhandling.ForeignExceptionListener;
+import org.apache.hadoop.hbase.errorhandling.ForeignExceptionSnare;
 import org.apache.hadoop.hbase.errorhandling.TimeoutExceptionInjector;
 
 /**
@@ -198,7 +198,6 @@ abstract public class Subprocedure implements Callable<Void> {
       } else {
         msg = "Subprocedure '" + barrierName + "' failed!";
       }
-      LOG.error(msg , e);
       cancel(msg, e);
 
       LOG.debug("Subprocedure '" + barrierName + "' running cleanup.");
