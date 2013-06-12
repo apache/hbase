@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.codec.BaseDecoder;
@@ -29,6 +30,7 @@ import org.apache.hadoop.hbase.codec.BaseEncoder;
 import org.apache.hadoop.hbase.codec.Codec;
 import org.apache.hadoop.hbase.codec.KeyValueCodec;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.ReflectionUtils;
 
 import com.google.common.base.Preconditions;
 import com.google.protobuf.ByteString;
@@ -39,6 +41,9 @@ import com.google.protobuf.ByteString;
  * This is a pure coincidence... they are independent and don't have to be compatible.
  */
 public class WALCellCodec implements Codec {
+  /** Configuration key for the class to use when encoding cells in the WAL */
+  public static final String WAL_CELL_CODEC_CLASS_KEY = "hbase.regionserver.wal.codec";
+
   private final CompressionContext compression;
   private final ByteStringUncompressor statelessUncompressor = new ByteStringUncompressor() {
     @Override
@@ -47,8 +52,31 @@ public class WALCellCodec implements Codec {
     }
   };
 
-  public WALCellCodec(CompressionContext compression) {
+  /**
+   * Default constructor - <b>all subclasses must implement a constructor with this signature </b>
+   * if they are to be dynamically loaded from the {@link Configuration}.
+   * @param conf configuration to configure <tt>this</tt>
+   * @param compression compression the codec should support, can be <tt>null</tt> to indicate no
+   *          compression
+   */
+  public WALCellCodec(Configuration conf, CompressionContext compression) {
     this.compression = compression;
+  }
+
+  /**
+   * Create and setup a {@link WALCellCodec} from the {@link Configuration} and CompressionContext,
+   * if they have been specified. Fully prepares the codec for use.
+   * @param conf {@link Configuration} to read for the user-specified codec. If none is specified,
+   *          uses a {@link WALCellCodec}.
+   * @param compression compression the codec should use
+   * @return a {@link WALCellCodec} ready for use.
+   * @throws UnsupportedOperationException if the codec cannot be instantiated
+   */
+  public static WALCellCodec create(Configuration conf, CompressionContext compression)
+      throws UnsupportedOperationException {
+    String className = conf.get(WAL_CELL_CODEC_CLASS_KEY, WALCellCodec.class.getName());
+    return ReflectionUtils.instantiateWithCustomCtor(className, new Class[] { Configuration.class,
+        CompressionContext.class }, new Object[] { conf, compression });
   }
 
   public interface ByteStringCompressor {

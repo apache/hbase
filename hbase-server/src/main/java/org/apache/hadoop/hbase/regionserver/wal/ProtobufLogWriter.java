@@ -80,7 +80,7 @@ public class ProtobufLogWriter implements HLog.Writer {
     output.write(ProtobufLogReader.PB_WAL_MAGIC);
     WALHeader.newBuilder().setHasCompression(doCompress).build().writeDelimitedTo(output);
 
-    WALCellCodec codec = new WALCellCodec(this.compressionContext);
+    WALCellCodec codec = WALCellCodec.create(conf, this.compressionContext);
     this.cellEncoder = codec.getEncoder(this.output);
     if (doCompress) {
       this.compressor = codec.getByteStringCompressor();
