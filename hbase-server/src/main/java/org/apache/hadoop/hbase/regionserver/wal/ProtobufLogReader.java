@@ -175,7 +175,7 @@ public class ProtobufLogReader extends ReaderBase {
 
   @Override
   protected void initAfterCompression() throws IOException {
-    WALCellCodec codec = new WALCellCodec(this.compressionContext);
+    WALCellCodec codec = WALCellCodec.create(this.conf, this.compressionContext);
     this.cellDecoder = codec.getDecoder(this.inputStream);
     if (this.hasCompression) {
       this.byteStringUncompressor = codec.getByteStringUncompressor();
