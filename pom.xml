@@ -39,7 +39,7 @@
   <groupId>org.apache.hbase</groupId>
   <artifactId>hbase</artifactId>
   <packaging>pom</packaging>
-  <version>0.95.1-hadoop1-SNAPSHOT</version>
+  <version>0.95.1-hadoop1</version>
   <name>HBase</name>
   <description>
     Apache HBase is the Hadoop database. Use it when you need
@@ -60,9 +60,9 @@
     <module>hbase-assembly</module>
   </modules>
   <scm>
-    <connection>scm:svn:http://svn.apache.org/repos/asf/hbase/tags/hbase-0.95.1-hadoop.mvnlabeling</connection>
-    <developerConnection>scm:svn:https://svn.apache.org/repos/asf/hbase/tags/hbase-0.95.1-hadoop.mvnlabeling</developerConnection>
-    <url>http://svn.apache.org/viewvc/hbase/tags/hbase-0.95.1-hadoop.mvnlabeling</url>
+    <connection>scm:svn:http://svn.apache.org/repos/asf/hbase/tags/hbase-0.95.1-hadoop1</connection>
+    <developerConnection>scm:svn:https://svn.apache.org/repos/asf/hbase/tags/hbase-0.95.1-hadoop1</developerConnection>
+    <url>http://svn.apache.org/viewvc/hbase/tags/hbase-0.95.1-hadoop1</url>
   </scm>
   <issueManagement>
     <system>JIRA</system>
