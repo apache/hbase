@@ -592,7 +592,7 @@ htable.put(put);
   <para>For more information about MapReduce (i.e., the framework in general), see the
    <link xlink:href="http://hadoop.apache.org/common/docs/current/mapred_tutorial.html">Hadoop MapReduce Tutorial</link>.</para>
   <section xml:id="splitter">
-    <title>Map-Task Spitting</title>
+    <title>Map-Task Splitting</title>
     <section xml:id="splitter.default">
     <title>The Default HBase MapReduce Splitter</title>
     <para>When <link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/mapreduce/TableInputFormat.html">TableInputFormat</link>
