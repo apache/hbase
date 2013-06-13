@@ -110,6 +110,7 @@ import org.apache.hadoop.hbase.client.ServerConnection;
 import org.apache.hadoop.hbase.client.ServerConnectionManager;
 import org.apache.hadoop.hbase.conf.ConfigurationManager;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
+import org.apache.hadoop.hbase.io.hfile.L2BucketCache;
 import org.apache.hadoop.hbase.io.hfile.LruBlockCache;
 import org.apache.hadoop.hbase.io.hfile.LruBlockCache.CacheStats;
 import org.apache.hadoop.hbase.ipc.HBaseRPC;
@@ -1052,6 +1053,10 @@ public class HRegionServer implements HRegionInterface,
       cacheConfig.getBlockCache().shutdown();
     }
 
+    if (cacheConfig.isL2CacheEnabled()) {
+      cacheConfig.getL2Cache().shutdown();
+    }
+
     // Send interrupts to wake up threads if sleeping so they notice shutdown.
     // TODO: Should we check they are alive?  If OOME could have exited already
     cacheFlusher.interruptIfNecessary();
@@ -1630,7 +1635,21 @@ public class HRegionServer implements HRegionInterface,
       int percent = (int) (ratio * 100);
       this.metrics.blockCacheHitRatio.set(percent);
     }
-    
+
+    L2BucketCache l2BucketCache = (L2BucketCache)cacheConfig.getL2Cache();
+    if (l2BucketCache != null) {
+      this.metrics.l2CacheCount.set(l2BucketCache.size());
+      this.metrics.l2CacheFree.set(l2BucketCache.getFreeSize());
+      this.metrics.l2CacheSize.set(l2BucketCache.getCurrentSize());
+      this.metrics.l2CacheEvictedCount.set(l2BucketCache.getEvictedCount());
+      CacheStats l2CacheStats = l2BucketCache.getStats();
+      this.metrics.l2CacheHitCount.set(l2CacheStats.getHitCount());
+      this.metrics.l2CacheMissCount.set(l2CacheStats.getMissCount());
+      double ratio = l2CacheStats.getIncrementalHitRatio();
+      int percent = (int) (ratio * 100);
+      this.metrics.l2CacheHitRatio.set(percent);
+    }
+
     long bytesRead = 0;
     long bytesLocalRead = 0;
     long bytesRackLocalRead = 0;

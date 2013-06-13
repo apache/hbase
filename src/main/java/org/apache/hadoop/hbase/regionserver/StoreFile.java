@@ -573,8 +573,13 @@ public class StoreFile extends SchemaConfigured {
    */
   public synchronized void closeReader(boolean evictOnClose)
       throws IOException {
+    closeReader(evictOnClose, evictOnClose);
+  }
+
+  public synchronized void closeReader(boolean evictL1OnClose,
+      boolean evictL2OnClose) throws IOException {
     if (this.reader != null) {
-      this.reader.close(evictOnClose);
+      this.reader.close(evictL1OnClose, evictL2OnClose);
       this.reader = null;
     }
   }
@@ -1337,6 +1342,11 @@ public class StoreFile extends SchemaConfigured {
 
     public void close(boolean evictOnClose) throws IOException {
       reader.close(evictOnClose);
+    }
+
+    public void close(boolean evictL1OnClose, boolean evictL2OnClose)
+      throws IOException {
+      reader.close(evictL1OnClose, evictL2OnClose);
     }
 
     public void close() throws IOException {

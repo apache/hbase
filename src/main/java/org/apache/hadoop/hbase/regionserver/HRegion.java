@@ -82,6 +82,7 @@ import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.io.Reference.Range;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
+import org.apache.hadoop.hbase.io.hfile.L2Cache;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
@@ -3901,7 +3902,12 @@ public class HRegion implements HeapSize {
        log.close();
        // TODO: is this still right?
        BlockCache bc = new CacheConfig(c).getBlockCache();
-       if (bc != null) bc.shutdown();
+       L2Cache l2c = new CacheConfig(c).getL2Cache();
+       try {
+         if (bc != null) bc.shutdown();
+       } finally {
+         if (l2c != null) l2c.shutdown();
+       }
      }
   }
 

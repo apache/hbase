@@ -124,7 +124,7 @@ public class TestHFileWriterV2 {
     assertEquals(ENTRY_COUNT, trailer.getEntryCount());
 
     HFileBlock.FSReader blockReader =
-        new HFileBlock.FSReaderV2(fsdis, COMPRESS_ALGO, fileSize);
+        new HFileBlock.FSReaderV2(fsdis, COMPRESS_ALGO, fileSize, null, null);
     // Comparator class name is stored in the trailer in version 2.
     RawComparator<byte []> comparator = trailer.createComparator();
     HFileBlockIndex.BlockIndexReader dataBlockIndexReader =
@@ -164,7 +164,7 @@ public class TestHFileWriterV2 {
     fsdis.seek(0);
     long curBlockPos = 0;
     while (curBlockPos <= trailer.getLastDataBlockOffset()) {
-      HFileBlock block = blockReader.readBlockData(curBlockPos, -1, -1);
+      HFileBlock block = blockReader.readBlockData(curBlockPos, -1, -1, false);
       assertEquals(BlockType.DATA, block.getBlockType());
       ByteBuffer buf = block.getBufferWithoutHeader();
       while (buf.hasRemaining()) {
@@ -207,7 +207,7 @@ public class TestHFileWriterV2 {
     while (curBlockPos < trailer.getLoadOnOpenDataOffset()) {
       LOG.info("Current offset: " + fsdis.getPos() + ", scanning until " +
           trailer.getLoadOnOpenDataOffset());
-      HFileBlock block = blockReader.readBlockData(curBlockPos, -1, -1);
+      HFileBlock block = blockReader.readBlockData(curBlockPos, -1, -1, false);
       assertEquals(BlockType.META, block.getBlockType());
       Text t = new Text();
       block.readInto(t);

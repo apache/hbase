@@ -44,6 +44,7 @@ import org.apache.hadoop.hbase.io.hfile.BlockType;
 import org.apache.hadoop.hbase.io.hfile.BlockType.BlockCategory;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.LruBlockCache;
+import org.apache.hadoop.hbase.io.hfile.LruBlockCacheFactory;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
@@ -995,7 +996,8 @@ public class SchemaMetrics {
 
   /** Validates metrics that keep track of the number of cached blocks for each category */ 
   private static void checkNumBlocksInCache() {
-    final LruBlockCache cache = (LruBlockCache) CacheConfig.getGlobalBlockCache();
+    final LruBlockCache cache =
+        LruBlockCacheFactory.getInstance().getCurrentBlockCacheInstance();
     if (cache == null) {
       // There is no global block cache instantiated. Most likely there is no mini-cluster running.
       return;

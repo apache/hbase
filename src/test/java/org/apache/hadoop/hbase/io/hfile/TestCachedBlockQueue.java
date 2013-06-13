@@ -23,6 +23,8 @@ import junit.framework.TestCase;
 
 import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics;
 
+import java.nio.ByteBuffer;
+
 public class TestCachedBlockQueue extends TestCase {
 
   public void testQueue() throws Exception {

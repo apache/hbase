@@ -761,12 +761,15 @@ public class HFileBlockIndex {
     /** Block cache, or null if cache-on-write is disabled */
     private BlockCache blockCache;
 
+    /** L2Cache, or null if cache-on-write is disabled */
+    private L2Cache l2Cache;
+
     /** Name to use for computing cache keys */
     private String nameForCaching;
 
     /** Creates a single-level block index writer */
     public BlockIndexWriter() {
-      this(null, null, null);
+      this(null, null, null, null);
       singleLevelOnly = true;
     }
 
@@ -776,14 +779,14 @@ public class HFileBlockIndex {
      * @param blockWriter the block writer to use to write index blocks
      */
     public BlockIndexWriter(HFileBlock.Writer blockWriter,
-        BlockCache blockCache, String nameForCaching) {
-      if ((blockCache == null) != (nameForCaching == null)) {
-        throw new IllegalArgumentException("Block cache and file name for " +
-            "caching must be both specified or both null");
+        BlockCache blockCache, L2Cache l2Cache, String nameForCaching) {
+      if (nameForCaching == null && (blockCache != null || l2Cache != null)) {
+          throw new IllegalArgumentException("If BlockCache OR L2Cache are  " +
+              " not null, then nameForCaching must NOT be null");
       }
-
       this.blockWriter = blockWriter;
       this.blockCache = blockCache;
+      this.l2Cache = l2Cache;
       this.nameForCaching = nameForCaching;
       this.maxChunkSize = HFileBlockIndex.DEFAULT_MAX_CHUNK_SIZE;
     }
@@ -938,6 +941,11 @@ public class HFileBlockIndex {
         blockCache.cacheBlock(new BlockCacheKey(nameForCaching,
             beginOffset, DataBlockEncoding.NONE,
             blockForCaching.getBlockType()), blockForCaching);
+      }
+
+      if (l2Cache != null) {
+        l2Cache.cacheRawBlock(nameForCaching,  beginOffset,
+            blockWriter.getHeaderAndData());
       }
 
       // Add intermediate index block size

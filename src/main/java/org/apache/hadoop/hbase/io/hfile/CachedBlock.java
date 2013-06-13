@@ -37,7 +37,7 @@ public class CachedBlock implements HeapSize, Comparable<CachedBlock> {
     ClassSize.OBJECT + (3 * ClassSize.REFERENCE) + 3 * Bytes.SIZEOF_LONG +
     ClassSize.STRING + ClassSize.BYTE_BUFFER);
 
-  static enum BlockPriority {
+  public static enum BlockPriority {
     /**
      * Accessed a single time (used for scan-resistance)
      */

@@ -767,13 +767,16 @@ public class LruBlockCache implements BlockCache, HeapSize {
       evictionCount.incrementAndGet();
     }
 
-    public void evicted(CachedBlock block) {
+    public void evicted(CachedBlock.BlockPriority priority) {
       evictedCount.incrementAndGet();
-      switch (block.getPriority()) {
+      switch (priority) {
         case SINGLE: evictedSingleCount.incrementAndGet(); break;
         case MULTI: evictedMultiCount.incrementAndGet(); break;
         case MEMORY: evictedMemoryCount.incrementAndGet(); break;
       }
+    }
+    public void evicted(CachedBlock block) {
+      evicted(block.getPriority());
     }
 
     public long getRequestCount() {
@@ -821,7 +824,13 @@ public class LruBlockCache implements BlockCache, HeapSize {
     }
 
     public double getHitRatio() {
-      return ((float)getHitCount()/(float)getRequestCount());
+      return getRequestCount() == 0 ? 0.0 :
+          ((double)getHitCount()/(double)getRequestCount());
+    }
+
+    public double getHitCachingRatio() {
+      return getRequestCachingCount() == 0 ? 0.0 :
+          ((double)getHitCachingCount()/(double)getRequestCachingCount());
     }
 
     public synchronized double getIncrementalHitRatio() {
@@ -838,11 +847,13 @@ public class LruBlockCache implements BlockCache, HeapSize {
     }
 
     public double getMissRatio() {
-      return ((float)getMissCount()/(float)getRequestCount());
+      return getRequestCount() == 0 ? 0.0 :
+          ((double)getMissCount()/(double)getRequestCount());
     }
 
     public double evictedPerEviction() {
-      return (float)((float)getEvictedCount()/(float)getEvictionCount());
+      return getEvictionCount() == 0 ? 0.0 :
+          ((double)getEvictedCount()/(double)getEvictionCount());
     }
   }
 

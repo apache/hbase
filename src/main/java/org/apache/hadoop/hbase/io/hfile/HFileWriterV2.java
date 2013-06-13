@@ -109,9 +109,11 @@ public class HFileWriterV2 extends AbstractHFileWriter {
 
     // Data block index writer
     boolean cacheIndexesOnWrite = cacheConf.shouldCacheIndexesOnWrite();
+    boolean cacheL2IndexesOnWrite = cacheConf.shouldL2CacheDataOnWrite();
     dataBlockIndexWriter = new HFileBlockIndex.BlockIndexWriter(fsBlockWriter,
         cacheIndexesOnWrite ? cacheConf.getBlockCache(): null,
-        cacheIndexesOnWrite ? name : null);
+        cacheL2IndexesOnWrite ? cacheConf.getL2Cache() : null,
+        (cacheIndexesOnWrite || cacheL2IndexesOnWrite) ? name : null);
     dataBlockIndexWriter.setMaxChunkSize(
         HFileBlockIndex.getMaxChunkSize(conf));
     inlineBlockWriters.add(dataBlockIndexWriter);
@@ -161,9 +163,14 @@ public class HFileWriterV2 extends AbstractHFileWriter {
     HFile.writeTimeNano.addAndGet(System.nanoTime() - startTimeNs);
     HFile.writeOps.incrementAndGet();
 
+    // If a write is succesfull, cached the written block in the L1 and L2
+    // caches
     boolean cacheOnCompaction = cacheCurrentBlockForCompaction();
     if (cacheConf.shouldCacheDataOnFlush() || cacheOnCompaction) {
       doCacheOnWrite(lastDataBlockOffset);
+    }
+    if (cacheConf.isL2CacheEnabled() && cacheConf.shouldL2CacheDataOnWrite()) {
+      doCacheInL2Cache(lastDataBlockOffset);
     }
   }
 
@@ -202,9 +209,13 @@ public class HFileWriterV2 extends AbstractHFileWriter {
         fsBlockWriter.writeHeaderAndData(outputStream);
         ibw.blockWritten(offset, fsBlockWriter.getOnDiskSizeWithHeader(),
             fsBlockWriter.getUncompressedSizeWithoutHeader());
-
+        // If a write is successful, cache the block in the L1 and L2 caches
         if (cacheThisBlock) {
           doCacheOnWrite(offset);
+        }
+        if (cacheConf.isL2CacheEnabled() &&
+            cacheConf.shouldL2CacheDataOnWrite()) {
+          doCacheInL2Cache(offset);
         }
       }
     }
@@ -223,6 +234,16 @@ public class HFileWriterV2 extends AbstractHFileWriter {
     cacheConf.getBlockCache().cacheBlock(
         new BlockCacheKey(name, offset, blockEncoder.getEncodingInCache(),
             cacheFormatBlock.getBlockType()), cacheFormatBlock);
+  }
+
+  /**
+   * Associates the compressed and encoded block at a specific offset in the
+   * current HFile in the L2 Cache.
+   * @param offset Offset at which the block has been written
+   */
+  private void doCacheInL2Cache(long offset) throws IOException {
+    cacheConf.getL2Cache().cacheRawBlock(name, offset,
+        fsBlockWriter.getHeaderAndData());
   }
 
   /**

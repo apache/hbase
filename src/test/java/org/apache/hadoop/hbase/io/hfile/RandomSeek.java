@@ -68,8 +68,11 @@ public class RandomSeek {
     long start = System.currentTimeMillis();
     SimpleBlockCache cache = new SimpleBlockCache();
     //LruBlockCache cache = new LruBlockCache();
-    CacheConfig cacheConf = new CacheConfig(cache, true, false, false, false,
-        false, false, false, false, 1);
+    CacheConfig cacheConf = new CacheConfig.CacheConfigBuilder()
+        .withBlockCache(cache)
+        .withCacheDataOnRead(true)
+        .withCacheOnCompactionThreshold(1)
+        .build();
     Reader reader = HFile.createReader(lfs, path, cacheConf);
     reader.loadFileInfo();
     System.out.println(reader.getTrailer());

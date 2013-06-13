@@ -240,7 +240,8 @@ public class HFileReaderV1 extends AbstractHFileReader {
       }
 
       HFileBlock hfileBlock = fsBlockReader.readBlockData(offset,
-          nextOffset - offset, metaBlockIndexReader.getRootBlockDataSize(block));
+          nextOffset - offset, metaBlockIndexReader.getRootBlockDataSize(block),
+          false);
       passSchemaMetricsTo(hfileBlock);
       hfileBlock.expectType(BlockType.META);
 
@@ -321,7 +322,7 @@ public class HFileReaderV1 extends AbstractHFileReader {
       }
 
       HFileBlock hfileBlock = fsBlockReader.readBlockData(offset, nextOffset
-          - offset, dataBlockIndexReader.getRootBlockDataSize(block));
+          - offset, dataBlockIndexReader.getRootBlockDataSize(block), false);
       passSchemaMetricsTo(hfileBlock);
       hfileBlock.expectType(BlockType.DATA);
 
@@ -401,6 +402,12 @@ public class HFileReaderV1 extends AbstractHFileReader {
       this.istream.close();
       this.istream = null;
     }
+  }
+
+  @Override
+  public void close(boolean evictL1OnClose, boolean evictL2OnClose)
+    throws IOException {
+    close(evictL1OnClose); // HFileReaderV1 does not support L2 cache
   }
 
   protected abstract static class AbstractScannerV1

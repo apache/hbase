@@ -19,6 +19,7 @@
  */
 package org.apache.hadoop.hbase.io.hfile;
 
+import java.nio.ByteBuffer;
 import java.util.Collection;
 import java.util.Map;
 import java.util.Random;

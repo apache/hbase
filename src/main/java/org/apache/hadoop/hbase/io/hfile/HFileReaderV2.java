@@ -100,7 +100,9 @@ public class HFileReaderV2 extends AbstractHFileReader {
     super(path, trailer, fsdis, size, closeIStream, cacheConf);
     trailer.expectVersion(2);
     HFileBlock.FSReaderV2 fsBlockReaderV2 = new HFileBlock.FSReaderV2(fsdis,
-        compressAlgo, fileSize);
+        compressAlgo, fileSize,
+        cacheConf.isL2CacheEnabled() ? cacheConf.getL2Cache() : null,
+        cacheConf.isL2CacheEnabled() ? name : null);
     this.fsBlockReader = fsBlockReaderV2; // upcast
 
     // Comparator class name is stored in the trailer in version 2.
@@ -205,6 +207,7 @@ public class HFileReaderV2 extends AbstractHFileReader {
       BlockCacheKey cacheKey = new BlockCacheKey(name, metaBlockOffset,
           DataBlockEncoding.NONE, BlockType.META);
 
+      boolean cacheInL2 = cacheBlock && cacheConf.isL2CacheEnabled();
       cacheBlock &= cacheConf.shouldCacheDataOnRead();
       if (cacheConf.isBlockCacheEnabled()) {
         HFileBlock cachedBlock =
@@ -219,7 +222,7 @@ public class HFileReaderV2 extends AbstractHFileReader {
       }
 
       HFileBlock metaBlock = fsBlockReader.readBlockData(metaBlockOffset,
-          blockSize, -1);
+          blockSize, -1, cacheInL2);
       passSchemaMetricsTo(metaBlock);
 
       long deltaNs = System.nanoTime() - startTimeNs;
@@ -303,10 +306,40 @@ public class HFileReaderV2 extends AbstractHFileReader {
         }
         return cachedBlock;
       }
-      // Load block from filesystem.
+      // First, check if the block exists in L2 cache
+      cachedBlock = null;
+      try {
+        cachedBlock = getBlockFromL2Cache(name, dataBlockOffset,
+            expectedBlockType, isCompaction);
+      } catch (Throwable t) {
+        // If exception is encountered when attempting to read from the L2
+        // cache, we should go on to try to read from disk and log the
+        // exception.
+        LOG.warn("Error occured attempting to retrieve from the L2 cache! " +
+           "[ hfileName = " + name + ", offset = " + dataBlockOffset +
+            ", expectedBlockType =" + expectedBlockType + ", isCompaction = " +
+            isCompaction + " ]", t);
+      }
+      if (cachedBlock != null) {
+        if (kvContext != null) {
+          kvContext.setObtainedFromCache(false);
+        }
+        if (cacheBlock && cacheConf.shouldCacheBlockOnRead(
+            cachedBlock.getBlockType().getCategory())) {
+          // If L1 BlockCache is configured to cache blocks on read, then
+          // cache the block in the L1 cache. Updates to the L1 cache need to
+          // happen under a lock, which is why this logic is located here.
+          // TODO (avf): implement "evict on promotion" to avoid double caching
+          cacheConf.getBlockCache().cacheBlock(cacheKey, cachedBlock,
+              cacheConf.isInMemory());
+        }
+        // Return early if a block exists in the L2 cache
+        return cachedBlock;
+      }
+      // In case of an L2 cache miss, load block from filesystem.
       long startTimeNs = System.nanoTime();
       HFileBlock hfileBlock = fsBlockReader.readBlockData(dataBlockOffset,
-          onDiskBlockSize, -1);
+          onDiskBlockSize, -1, cacheBlock && !isCompaction);
       hfileBlock = dataBlockEncoder.diskToCacheFormat(hfileBlock,
           isCompaction);
       validateBlockType(hfileBlock, expectedBlockType);
@@ -404,6 +437,43 @@ public class HFileReaderV2 extends AbstractHFileReader {
     }
     return null;
   }
+
+  /**
+   * If the L2 cache is enabled, retrieve the on-disk representation of a
+   * block (i.e., compressed and  encoded byte array) from the L2 cache,
+   * de-compress, decode, and then construct an in-memory representation of the
+   * block.
+   * @param hfileName Name of the HFile that contains the block (used as part
+   *                  of the cache key)
+   * @param offset Offset in the HFile containing the block (used as another
+   *               part of the cache key)
+   * @param expectedBlockType Expected type of the block
+   * @param isCompaction Indicates if this is a compaction related read. This
+   *                     value is passed along to
+   *                     {@link HFileDataBlockEncoder#diskToCacheFormat(
+   *                     HFileBlock, boolean)}
+   *
+   * @return The constructed and initiated block or null if the L2 cache is
+   *         disabled or if no block is associated with the given filename and
+   *         offset in the L2 cache.
+   * @throws IOException If we are unable to decompress and decode the block.
+   */
+  public HFileBlock getBlockFromL2Cache(String hfileName, long offset,
+      BlockType expectedBlockType, boolean isCompaction) throws IOException {
+    if (cacheConf.isL2CacheEnabled()) {
+      byte[] bytes = cacheConf.getL2Cache().getRawBlock(hfileName, offset);
+      if (bytes != null) {
+        HFileBlock hfileBlock = HFileBlock.fromBytes(bytes, compressAlgo,
+            includesMemstoreTS, offset);
+        hfileBlock = dataBlockEncoder.diskToCacheFormat(hfileBlock, isCompaction);
+        validateBlockType(hfileBlock, expectedBlockType);
+        passSchemaMetricsTo(hfileBlock);
+        return hfileBlock;
+      }
+    }
+    return null;
+  }
+
   /**
    * Compares the actual type of a block retrieved from cache or disk with its
    * expected type and throws an exception in case of a mismatch. Expected
@@ -458,13 +528,28 @@ public class HFileReaderV2 extends AbstractHFileReader {
 
   @Override
   public void close(boolean evictOnClose) throws IOException {
-    if (evictOnClose && cacheConf.isBlockCacheEnabled()) {
+    close(evictOnClose, cacheConf.shouldL2EvictOnClose());
+  }
+
+  @Override
+  public void close(boolean evictL1OnClose, boolean evictL2OnClose)
+    throws IOException {
+    if (evictL1OnClose && cacheConf.isBlockCacheEnabled()) {
       int numEvicted = cacheConf.getBlockCache().evictBlocksByHfileName(name);
       if (LOG.isTraceEnabled()) {
         LOG.trace("On close, file=" + name + " evicted=" + numEvicted
-          + " block(s)");
+            + " block(s) from L1 cache");
       }
     }
+
+    if (cacheConf.isL2CacheEnabled() && evictL2OnClose) {
+      int numEvicted = cacheConf.getL2Cache().evictBlocksByHfileName(name);
+      if (LOG.isTraceEnabled()) {
+        LOG.trace("On close, file=" + name + " evicted=" + numEvicted
+            + " block(s) from L2 cache");
+      }
+    }
+
     if (closeIStream && istream != null) {
       istream.close();
       istream = null;

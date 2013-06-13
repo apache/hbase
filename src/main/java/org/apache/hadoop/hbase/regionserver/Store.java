@@ -252,8 +252,10 @@ public class Store extends SchemaConfigured implements HeapSize {
     this.storeNameStr = getColumnFamilyName();
 
     // Setting up cache configuration for this family
-    this.cacheConf = new CacheConfig(conf, family);
-
+    this.cacheConf = new CacheConfig.CacheConfigBuilder(conf)
+        .withCacheDataOnRead(family.isBlockCacheEnabled())
+        .withInMemory(family.isInMemory())
+        .build();
     // By default we split region if a file > HConstants.DEFAULT_MAX_FILE_SIZE.
     long maxFileSize = info.getTableDesc().getMaxFileSize();
     if (maxFileSize == HConstants.DEFAULT_MAX_FILE_SIZE) {

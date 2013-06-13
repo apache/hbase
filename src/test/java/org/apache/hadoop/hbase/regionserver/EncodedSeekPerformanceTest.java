@@ -74,7 +74,8 @@ public class EncodedSeekPerformanceTest {
       allKeyValues.add(current);
     }
 
-    storeFile.closeReader(cacheConf.shouldEvictOnClose());
+    storeFile.closeReader(cacheConf.shouldEvictOnClose(),
+        cacheConf.shouldL2EvictOnClose());
 
     // pick seeks by random
     List<KeyValue> seeks = new ArrayList<KeyValue>();
@@ -135,7 +136,8 @@ public class EncodedSeekPerformanceTest {
     double seeksPerSec = (seeks.size() * NANOSEC_IN_SEC) /
         (finishSeeksTime - startSeeksTime);
 
-    storeFile.closeReader(cacheConf.shouldEvictOnClose());
+    storeFile.closeReader(cacheConf.shouldEvictOnClose(),
+        cacheConf.shouldL2EvictOnClose());
     clearBlockCache();
 
     System.out.println(blockEncoder);

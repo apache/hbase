@@ -110,7 +110,50 @@ public class RegionServerMetrics implements Updater {
   /**
    * Block hit ratio.
    */
-  public final MetricsIntValue blockCacheHitRatio = new MetricsIntValue("blockCacheHitRatio", registry);
+  public final MetricsIntValue blockCacheHitRatio =
+      new MetricsIntValue("blockCacheHitRatio", registry);
+
+  /**
+   * L2 cache size
+   */
+  public final MetricsLongValue l2CacheSize =
+      new MetricsLongValue("l2CacheSize", registry);
+
+  /**
+   * L2 cache free size
+   */
+  public final MetricsLongValue l2CacheFree =
+      new MetricsLongValue("l2CacheFree", registry);
+
+  /**
+   * L2 cache item count
+   */
+  public final MetricsLongValue l2CacheCount =
+      new MetricsLongValue("l2CacheCount", registry);
+
+  /**
+   * L2 cache hit count
+   */
+  public final MetricsLongValue l2CacheHitCount =
+      new MetricsLongValue("l2CacheHitCount", registry);
+
+  /**
+   * L2 cache miss count
+   */
+  public final MetricsLongValue l2CacheMissCount =
+      new MetricsLongValue("l2CacheMissCount", registry);
+
+  /**
+   * L2 evicted item count
+   */
+  public final MetricsLongValue l2CacheEvictedCount =
+      new MetricsLongValue("l2CacheEvictedCount", registry);
+
+  /**
+   * L2 cache hit ratio
+   */
+  public final MetricsIntValue l2CacheHitRatio =
+      new MetricsIntValue("l2CacheHitRatio", registry);
 
   /*
    * Count of rows read or updated to the regionservers since last call to metrics update
@@ -372,6 +415,13 @@ public class RegionServerMetrics implements Updater {
       this.blockCacheEvictedMultiCount.pushMetric(this.metricsRecord);
       this.blockCacheEvictedMemoryCount.pushMetric(this.metricsRecord);
       this.blockCacheHitRatio.pushMetric(this.metricsRecord);
+      this.l2CacheSize.pushMetric(this.metricsRecord);
+      this.l2CacheFree.pushMetric(this.metricsRecord);
+      this.l2CacheCount.pushMetric(this.metricsRecord);
+      this.l2CacheHitCount.pushMetric(this.metricsRecord);
+      this.l2CacheMissCount.pushMetric(this.metricsRecord);
+      this.l2CacheEvictedCount.pushMetric(this.metricsRecord);
+      this.l2CacheHitRatio.pushMetric(this.metricsRecord);
       this.rowReadCnt.pushMetric(this.metricsRecord);
       this.rowUpdatedCnt.pushMetric(this.metricsRecord);
       this.numOptimizedSeeks.pushMetric(this.metricsRecord);
@@ -598,7 +648,22 @@ public class RegionServerMetrics implements Updater {
         Long.valueOf(this.blockCacheEvictedMemoryCount.get()));
     sb = Strings.appendKeyValue(sb, this.blockCacheHitRatio.getName(),
         Long.valueOf(this.blockCacheHitRatio.get()));
-    
+
+    sb = Strings.appendKeyValue(sb, this.l2CacheSize.getName(),
+        this.l2CacheSize.get());
+    sb = Strings.appendKeyValue(sb, this.l2CacheFree.getName(),
+        this.l2CacheFree.get());
+    sb = Strings.appendKeyValue(sb, this.l2CacheCount.getName(),
+        this.l2CacheCount.get());
+    sb = Strings.appendKeyValue(sb, this.l2CacheHitCount.getName(),
+        this.l2CacheHitCount.get());
+    sb = Strings.appendKeyValue(sb, this.l2CacheMissCount.getName(),
+        this.l2CacheMissCount.get());
+    sb = Strings.appendKeyValue(sb, this.l2CacheEvictedCount.getName(),
+        this.l2CacheEvictedCount.get());
+    sb = Strings.appendKeyValue(sb, this.l2CacheHitRatio.getName(),
+        this.l2CacheHitRatio.get());
+
     sb = Strings.appendKeyValue(sb, this.bytesRead.getName(),
         Long.valueOf(this.bytesRead.get()));
     sb = Strings.appendKeyValue(sb, this.bytesLocalRead.getName(),

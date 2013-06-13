@@ -149,7 +149,7 @@ public class TestHFileBlockIndex {
       }
 
       missCount += 1;
-      prevBlock = realReader.readBlockData(offset, onDiskSize, -1);
+      prevBlock = realReader.readBlockData(offset, onDiskSize, -1, false);
       prevOffset = offset;
       prevOnDiskSize = onDiskSize;
       if (kvContext != null) {
@@ -165,7 +165,7 @@ public class TestHFileBlockIndex {
 
     FSDataInputStream istream = fs.open(path);
     HFileBlock.FSReader blockReader = new HFileBlock.FSReaderV2(istream,
-        compr, fs.getFileStatus(path).getLen());
+        compr, fs.getFileStatus(path).getLen(), null, null);
 
     BlockReaderWrapper brw = new BlockReaderWrapper(blockReader);
     HFileBlockIndex.BlockIndexReader indexReader =
@@ -216,7 +216,7 @@ public class TestHFileBlockIndex {
         includesMemstoreTS);
     FSDataOutputStream outputStream = fs.create(path);
     HFileBlockIndex.BlockIndexWriter biw =
-        new HFileBlockIndex.BlockIndexWriter(hbw, null, null);
+        new HFileBlockIndex.BlockIndexWriter(hbw, null, null, null);
 
     for (int i = 0; i < NUM_DATA_BLOCKS; ++i) {
       hbw.startWriting(BlockType.DATA);

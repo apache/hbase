@@ -268,7 +268,7 @@ public class TestHFileBlock {
       int numBlocksRead = 0;
       long pos = 0;
       while (pos < totalSize) {
-        b = hbr.readBlockData(pos, block.length, uncompressedSizeV1);
+        b = hbr.readBlockData(pos, block.length, uncompressedSizeV1, false);
         b.sanityCheck();
         pos += block.length;
         numBlocksRead++;
@@ -301,8 +301,8 @@ public class TestHFileBlock {
 
       FSDataInputStream is = fs.open(path);
       HFileBlock.FSReader hbr = new HFileBlock.FSReaderV2(is, algo,
-          totalSize);
-      HFileBlock b = hbr.readBlockData(0, -1, -1);
+          totalSize, null, null);
+      HFileBlock b = hbr.readBlockData(0, -1, -1, false);
       is.close();
 
       b.sanityCheck();
@@ -312,13 +312,13 @@ public class TestHFileBlock {
 
       if (algo == GZ) {
         is = fs.open(path);
-        hbr = new HFileBlock.FSReaderV2(is, algo, totalSize);
-        b = hbr.readBlockData(0, 2173 + HFileBlock.HEADER_SIZE, -1);
+        hbr = new HFileBlock.FSReaderV2(is, algo, totalSize, null, null);
+        b = hbr.readBlockData(0, 2173 + HFileBlock.HEADER_SIZE, -1, false);
         assertEquals(blockStr, b.toString());
         int wrongCompressedSize = 2172;
         try {
           b = hbr.readBlockData(0, wrongCompressedSize
-              + HFileBlock.HEADER_SIZE, -1);
+              + HFileBlock.HEADER_SIZE, -1, false);
           fail("Exception expected");
         } catch (IOException ex) {
           String expectedPrefix = "On-disk size without header provided is "
@@ -369,7 +369,7 @@ public class TestHFileBlock {
 
         FSDataInputStream is = fs.open(path);
         HFileBlock.FSReaderV2 hbr = new HFileBlock.FSReaderV2(is, algo,
-            totalSize);
+            totalSize, null, null);
         hbr.setDataBlockEncoder(dataBlockEncoder);
         hbr.setIncludesMemstoreTS(includesMemstoreTS);
 
@@ -377,7 +377,7 @@ public class TestHFileBlock {
         int pos = 0;
         LOG.info("\n\nStarting to read blocks\n");
         for (int blockId = 0; blockId < numBlocks; ++blockId) {
-          b = hbr.readBlockData(pos, -1, -1);
+          b = hbr.readBlockData(pos, -1, -1, false);
           b.sanityCheck();
           pos += b.getOnDiskSizeWithHeader();
 
@@ -462,12 +462,12 @@ public class TestHFileBlock {
 
         FSDataInputStream is = fs.open(path);
         HFileBlock.FSReader hbr = new HFileBlock.FSReaderV2(is, algo,
-            totalSize);
+            totalSize, null, null);
         long curOffset = 0;
         for (int i = 0; i < NUM_TEST_BLOCKS; ++i) {
           assertEquals(expectedOffsets.get(i).longValue(), curOffset);
           LOG.info("Reading block #" + i + " at offset " + curOffset);
-          HFileBlock b = hbr.readBlockData(curOffset, -1, -1);
+          HFileBlock b = hbr.readBlockData(curOffset, -1, -1, false);
           LOG.info("Block #" + i + ": " + b);
           assertEquals("Invalid block #" + i + "'s type:",
               expectedTypes.get(i), b.getBlockType());
@@ -480,7 +480,7 @@ public class TestHFileBlock {
           // Now re-load this block knowing the on-disk size. This tests a
           // different branch in the loader.
           HFileBlock b2 = hbr.readBlockData(curOffset,
-              b.getOnDiskSizeWithHeader(), -1);
+              b.getOnDiskSizeWithHeader(), -1, false);
           b2.sanityCheck();
 
           assertEquals(b.getBlockType(), b2.getBlockType());
@@ -568,7 +568,7 @@ public class TestHFileBlock {
         HFileBlock b;
         try {
           long onDiskSizeArg = withOnDiskSize ? expectedSize : -1;
-          b = hbr.readBlockData(offset, onDiskSizeArg, -1);
+          b = hbr.readBlockData(offset, onDiskSizeArg, -1, false);
         } catch (IOException ex) {
           LOG.error("Error in client " + clientId + " trying to read block at "
               + offset + ", pread=" + ", withOnDiskSize=" +
@@ -605,7 +605,7 @@ public class TestHFileBlock {
       FSDataInputStream is = fs.open(path);
       long fileSize = fs.getFileStatus(path).getLen();
       HFileBlock.FSReader hbr = new HFileBlock.FSReaderV2(is, compressAlgo,
-          fileSize);
+          fileSize, null, null);
 
       Executor exec = Executors.newFixedThreadPool(NUM_READER_THREADS);
       ExecutorCompletionService<Boolean> ecs =

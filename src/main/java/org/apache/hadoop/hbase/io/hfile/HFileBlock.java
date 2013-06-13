@@ -189,6 +189,49 @@ public class HFileBlock extends SchemaConfigured implements Cacheable {
     buf.rewind();
   }
 
+  /**
+   * A factory method to create an HFileBlock from a raw (compressed and
+   * encoded) byte array.
+   * </p>
+   * The reason that this is static member of HFileBlock is that it needs
+   * to be called by classes that read from {@link L2Cache}, but at the mean
+   * time needs to have access to private members of HFileBlock (such as the
+   * internal buffers).
+   *
+   * TODO (avf): re-factor HFileBlock such that this method could be
+   *             a non-static member of another class
+   * @param rawBytes The compressed and encoded byte array (essentially this
+   *                 is the block as it would appear on disk or in
+   *                 {@link L2Cache}
+   * @param compressAlgo Compression algorithm used to encode the block
+   * @param includeMemStoreTs Should memstore timestamp be included?
+   * @param offset Offset within the HFile at which the block is located
+   * @return An instantiated, uncompressed, decoded in-memory representation
+   *         of the HFileBlock that can be scanned through or cached in the
+   *         L1 block cache
+   * @throws IOException If there is an error de-compressed, de-coding, or
+   *         otherwise parsing the raw byte array encoding the block.
+   */
+  public static HFileBlock fromBytes(byte[] rawBytes, Algorithm compressAlgo,
+      boolean includeMemStoreTs, long offset) throws IOException {
+    HFileBlock b;
+    if (compressAlgo == Algorithm.NONE) {
+      b = new HFileBlock(ByteBuffer.wrap(rawBytes));
+      b.assumeUncompressed();
+    } else {
+      b = new HFileBlock(ByteBuffer.wrap(rawBytes, 0, HEADER_SIZE));
+      DataInputStream dis = new DataInputStream(new ByteArrayInputStream(
+          rawBytes, HEADER_SIZE, rawBytes.length - HEADER_SIZE));
+      b.allocateBuffer(true);
+      AbstractFSReader.decompress(compressAlgo, b.buf.array(),
+          b.buf.arrayOffset() + HEADER_SIZE, dis,
+          b.uncompressedSizeWithoutHeader);
+    }
+    b.includesMemstoreTS = includeMemStoreTs;
+    b.offset = offset;
+    return b;
+  }
+
   public BlockType getBlockType() {
     return blockType;
   }
@@ -996,10 +1039,11 @@ public class HFileBlock extends SchemaConfigured implements Cacheable {
      *          applicable headers, or -1 if unknown
      * @param uncompressedSize the uncompressed size of the compressed part of
      *          the block, or -1 if unknown
+     * @param addToL2Cache if true add the compressed block to L2 cache
      * @return the newly read block
      */
     HFileBlock readBlockData(long offset, long onDiskSize,
-        int uncompressedSize) throws IOException;
+        int uncompressedSize, boolean addToL2Cache) throws IOException;
 
     /**
      * Creates a block iterator over the given portion of the {@link HFile}.
@@ -1048,7 +1092,7 @@ public class HFileBlock extends SchemaConfigured implements Cacheable {
         public HFileBlock nextBlock() throws IOException {
           if (offset >= endOffset)
             return null;
-          HFileBlock b = readBlockData(offset, -1, -1);
+          HFileBlock b = readBlockData(offset, -1, -1, false);
           offset += b.getOnDiskSizeWithHeader();
           return b;
         }
@@ -1166,12 +1210,31 @@ public class HFileBlock extends SchemaConfigured implements Cacheable {
     protected void decompress(byte[] dest, int destOffset,
         InputStream bufferedBoundedStream,
         int uncompressedSize) throws IOException {
+      decompress(compressAlgo, dest, destOffset, bufferedBoundedStream,
+          uncompressedSize);
+    }
+
+    /**
+     * Decompresses a given stream using a specified compression algorithm.
+     * </p>
+     * This method is static so that it can be used by methods that construct
+     * an HFileBlock from a raw byte array.
+     * @param compressAlgo The specified compression algorithm
+     * @param dest Write decompressed bytes into this byte array
+     * @param destOffset  Offset within the dest byte array
+     * @param bufferedBoundedStream Input stream from which compressed data is
+     *                              read
+     * @param uncompressedSize The expected un-compressed size of the data
+     * @throws IOException If there is an error during de-compression
+     */
+    protected static void decompress(Algorithm compressAlgo, byte[] dest,
+        int destOffset, InputStream bufferedBoundedStream,
+        int uncompressedSize) throws IOException {
       Decompressor decompressor = null;
       try {
         decompressor = compressAlgo.getDecompressor();
         InputStream is = compressAlgo.createDecompressionStream(
             bufferedBoundedStream, decompressor, 0);
-
         IOUtils.readFully(is, dest, destOffset, uncompressedSize);
         is.close();
       } finally {
@@ -1235,7 +1298,8 @@ public class HFileBlock extends SchemaConfigured implements Cacheable {
      */
     @Override
     public HFileBlock readBlockData(long offset, long onDiskSizeWithMagic,
-        int uncompressedSizeWithMagic) throws IOException {
+        int uncompressedSizeWithMagic,
+        boolean addToL2Cache) throws IOException {
       if (uncompressedSizeWithMagic <= 0) {
         throw new IOException("Invalid uncompressedSize="
             + uncompressedSizeWithMagic + " for a version 1 " + "block");
@@ -1315,6 +1379,15 @@ public class HFileBlock extends SchemaConfigured implements Cacheable {
   /** Reads version 2 blocks from the filesystem. */
   public static class FSReaderV2 extends AbstractFSReader {
 
+    /** L2 cache instance or null if l2 cache is disabled */
+    private final L2Cache l2Cache;
+
+    /**
+     * Name of the current hfile. Used to compose the key in for the
+     * L2 cache if enabled.
+     */
+    private final String hfileNameForL2Cache;
+
     /** Whether we include memstore timestamp in data blocks */
     protected boolean includesMemstoreTS;
 
@@ -1331,8 +1404,10 @@ public class HFileBlock extends SchemaConfigured implements Cacheable {
         };
 
     public FSReaderV2(FSDataInputStream istream, Algorithm compressAlgo,
-        long fileSize) {
+        long fileSize, L2Cache l2Cache, String hfileNameForL2Cache) {
       super(istream, compressAlgo, fileSize);
+      this.l2Cache = l2Cache;
+      this.hfileNameForL2Cache = hfileNameForL2Cache;
     }
 
     /**
@@ -1344,10 +1419,12 @@ public class HFileBlock extends SchemaConfigured implements Cacheable {
      *          the header, or -1 if unknown
      * @param uncompressedSize the uncompressed size of the the block. Always
      *          expected to be -1. This parameter is only used in version 1.
+     * @param addToL2Cache if true, will cache the block on read in the L2
+     *                     cache, if the L2 cache is enabled.
      */
     @Override
     public HFileBlock readBlockData(long offset, long onDiskSizeWithHeaderL,
-        int uncompressedSize) throws IOException {
+        int uncompressedSize, boolean addToL2Cache) throws IOException {
       if (offset < 0) {
         throw new IOException("Invalid offset=" + offset + " trying to read "
             + "block (onDiskSize=" + onDiskSizeWithHeaderL
@@ -1408,7 +1485,9 @@ public class HFileBlock extends SchemaConfigured implements Cacheable {
               headerAndData.array(), headerAndData.arrayOffset()
                   + preReadHeaderSize, onDiskSizeWithHeader
                   - preReadHeaderSize, true, offset + preReadHeaderSize);
-
+          if (addToL2Cache) {
+            cacheBlockInL2Cache(offset, headerAndData.array());
+          }
           b = new HFileBlock(headerAndData);
           b.assumeUncompressed();
           b.validateOnDiskSizeWithoutHeader(onDiskSizeWithoutHeader);
@@ -1424,9 +1503,9 @@ public class HFileBlock extends SchemaConfigured implements Cacheable {
               preReadHeaderSize, onDiskSizeWithHeader - preReadHeaderSize,
               true, offset + preReadHeaderSize);
 
-          if (header == null)
+          if (header == null) {
             header = onDiskBlock;
-
+          }
           try {
             b = new HFileBlock(ByteBuffer.wrap(header, 0, HEADER_SIZE));
           } catch (IOException ex) {
@@ -1439,7 +1518,15 @@ public class HFileBlock extends SchemaConfigured implements Cacheable {
           }
           b.validateOnDiskSizeWithoutHeader(onDiskSizeWithoutHeader);
           b.nextBlockOnDiskSizeWithHeader = nextBlockOnDiskSize;
-
+          if (l2Cache != null && addToL2Cache) {
+            if (preReadHeaderSize > 0) {
+              // If we plan to add block to L2 cache, we need to copy the
+              // header information into the byte array so that it can be
+              // cached in the L2 cache.
+              System.arraycopy(header, 0, onDiskBlock, 0, preReadHeaderSize);
+            }
+            cacheBlockInL2Cache(offset, onDiskBlock);
+          }
           DataInputStream dis = new DataInputStream(new ByteArrayInputStream(
               onDiskBlock, HEADER_SIZE, onDiskSizeWithoutHeader));
 
@@ -1493,7 +1580,9 @@ public class HFileBlock extends SchemaConfigured implements Cacheable {
           b.nextBlockOnDiskSizeWithHeader = readAtOffset(b.buf.array(),
               b.buf.arrayOffset() + HEADER_SIZE,
               b.uncompressedSizeWithoutHeader, true, offset + HEADER_SIZE);
-
+          if (addToL2Cache) {
+            cacheBlockInL2Cache(offset, b.buf.array());
+          }
           if (b.nextBlockOnDiskSizeWithHeader > 0) {
             setNextBlockHeader(offset, b);
           }
@@ -1501,10 +1590,17 @@ public class HFileBlock extends SchemaConfigured implements Cacheable {
           // Allocate enough space for the block's header and compressed data.
           byte[] compressedBytes = new byte[b.getOnDiskSizeWithHeader()
               + HEADER_SIZE];
-
           b.nextBlockOnDiskSizeWithHeader = readAtOffset(compressedBytes,
               HEADER_SIZE, b.onDiskSizeWithoutHeader, true, offset
                   + HEADER_SIZE);
+          if (l2Cache != null && addToL2Cache) {
+            // If l2 cache is enabled, we need to copy the header bytes to
+            // the compressed bytes array, so that they can be cached in the
+            // L2 cache.
+            System.arraycopy(headerBuf.array(), 0, compressedBytes, 0,
+                HEADER_SIZE);
+            cacheBlockInL2Cache(offset, compressedBytes);
+          }
           DataInputStream dis = new DataInputStream(new ByteArrayInputStream(
               compressedBytes, HEADER_SIZE, b.onDiskSizeWithoutHeader));
 
@@ -1547,6 +1643,20 @@ public class HFileBlock extends SchemaConfigured implements Cacheable {
     void setDataBlockEncoder(HFileDataBlockEncoder encoder) {
       this.dataBlockEncoder = encoder;
     }
+
+    /**
+     * If L2 cache is enabled, associates current hfile name and
+     * offset with the specified byte array representing the
+     * compressed and encoded block.
+     * @param offset The block's offset within the hfile
+     * @param blockBytes The block's bytes as they appear on disk (i.e.,
+     *                   correctly encoded and compressed)
+     */
+    void cacheBlockInL2Cache(long offset, byte[] blockBytes) {
+      if (l2Cache != null) {
+        l2Cache.cacheRawBlock(hfileNameForL2Cache, offset, blockBytes);
+      }
+    }
   }
 
   public static long getNumSeekAndReadOperations() {
@@ -1566,6 +1676,47 @@ public class HFileBlock extends SchemaConfigured implements Cacheable {
       return DataBlockEncoding.getEncodingById(getDataBlockEncodingId());
     }
     return DataBlockEncoding.NONE;
+  }
+
+  @Override
+  public boolean equals(Object comparison) {
+    if (this == comparison) {
+      return true;
+    }
+    if (comparison == null) {
+      return false;
+    }
+    if (comparison.getClass() != this.getClass()) {
+      return false;
+    }
+
+    HFileBlock castedComparison = (HFileBlock) comparison;
+
+    if (castedComparison.blockType != this.blockType) {
+      return false;
+    }
+    if (castedComparison.offset != this.offset) {
+      return false;
+    }
+    if (castedComparison.onDiskSizeWithoutHeader != this.onDiskSizeWithoutHeader) {
+      return false;
+    }
+    if (castedComparison.prevBlockOffset != this.prevBlockOffset) {
+      return false;
+    }
+    if (castedComparison.uncompressedSizeWithoutHeader != this.uncompressedSizeWithoutHeader) {
+      return false;
+    }
+    if (this.buf.compareTo(castedComparison.buf) != 0) {
+      return false;
+    }
+    if (this.buf.position() != castedComparison.buf.position()){
+      return false;
+    }
+    if (this.buf.limit() != castedComparison.buf.limit()){
+      return false;
+    }
+    return true;
   }
 
 }

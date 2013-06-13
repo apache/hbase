@@ -507,6 +507,9 @@ public class HFile {
     /** Close method with optional evictOnClose */
     void close(boolean evictOnClose) throws IOException;
 
+    /** Close method with optional evictOnClose for L1 and L2 caches */
+    void close(boolean evictL1OnClose, boolean evictL2OnClose) throws IOException;
+
     DataBlockEncoding getEncodingOnDisk();
 
     String toShortString();
