@@ -81,7 +81,7 @@ public class WALEdit implements Writable, HeapSize {
   // default to decoding uncompressed data - needed for replication, which enforces that
   // uncompressed edits are sent across the wire. In the regular case (reading/writing WAL), the
   // codec will be setup by the reader/writer class, not here.
-  private WALEditCodec codec = new WALEditCodec(null);
+  private WALEditCodec codec = new WALEditCodec();
 
   public WALEdit() {
   }

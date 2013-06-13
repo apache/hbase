@@ -195,7 +195,8 @@ public class SequenceFileLogWriter implements HLog.Writer {
       LOG.debug("using new createWriter -- HADOOP-6840");
     }
 
-    this.codec = new WALEditCodec(compressionContext);
+    // setup the WALEditCodec
+    this.codec = WALEditCodec.create(conf, compressionContext);
     this.writer_out = getSequenceFilePrivateFSDataOutputStreamAccessible();
     this.syncFs = getSyncFs();
     this.hflush = getHFlush();

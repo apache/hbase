@@ -39,6 +39,8 @@ public class FaultySequenceFileLogReader extends SequenceFileLogReader {
     return FailureType.valueOf(conf.get("faultysequencefilelogreader.failuretype", "NONE"));
   }
 
+  WALEditCodec codec = new WALEditCodec();
+
   @Override
   public HLog.Entry next(HLog.Entry reuse) throws IOException {
     this.entryStart = this.reader.getPosition();
@@ -49,7 +51,8 @@ public class FaultySequenceFileLogReader extends SequenceFileLogReader {
         HLogKey key = HLog.newKey(conf);
         WALEdit val = new WALEdit();
         HLog.Entry e = new HLog.Entry(key, val);
-        e.getEdit().setCodec(new WALEditCodec(compressionContext));
+        codec.setCompression(compressionContext);
+        e.getEdit().setCodec(codec);
         if (compressionContext != null) {
           e.getKey().setCompressionContext(compressionContext);
         }

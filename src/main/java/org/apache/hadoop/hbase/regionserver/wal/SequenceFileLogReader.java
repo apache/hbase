@@ -194,7 +194,7 @@ public class SequenceFileLogReader implements HLog.Reader {
     }
 
     // setup the codec
-    this.codec = new WALEditCodec(compressionContext);
+    this.codec = WALEditCodec.create(conf, compressionContext);
   }
 
   @Override

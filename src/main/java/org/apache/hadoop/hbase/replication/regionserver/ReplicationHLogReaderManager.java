@@ -37,7 +37,7 @@ import java.io.IOException;
 public class ReplicationHLogReaderManager {
 
   private static final Log LOG = LogFactory.getLog(ReplicationHLogReaderManager.class);
-  private final WALEditCodec nonCompressingCodec = new WALEditCodec(null);
+  private final WALEditCodec nonCompressingCodec = new WALEditCodec();
   private final FileSystem fs;
   private final Configuration conf;
   private long position = 0;
