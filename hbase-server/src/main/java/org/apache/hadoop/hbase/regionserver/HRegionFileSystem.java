@@ -998,6 +998,6 @@ public class HRegionFileSystem {
       return;
     }
     LOG.debug(msg + ", sleeping " + baseSleepBeforeRetries + " times " + sleepMultiplier);
-    Threads.sleep(baseSleepBeforeRetries * sleepMultiplier);
+    Threads.sleep((long)baseSleepBeforeRetries * sleepMultiplier);
   }
 }
