@@ -453,10 +453,12 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
   }
 
   /*
+   * Setter for storing metadata as a (key, value) pair in {@link #values} map
+   *
    * @param key The key.
    * @param value The value.
    */
-  private void setValue(final ImmutableBytesWritable key,
+  public void setValue(final ImmutableBytesWritable key,
       final ImmutableBytesWritable value) {
     values.put(key, value);
   }
