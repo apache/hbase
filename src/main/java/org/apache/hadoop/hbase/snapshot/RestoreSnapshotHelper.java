@@ -44,6 +44,7 @@ import org.apache.hadoop.hbase.backup.HFileArchiver;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.errorhandling.ForeignExceptionDispatcher;
 import org.apache.hadoop.hbase.io.HFileLink;
+import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
@@ -593,6 +594,10 @@ public class RestoreSnapshotHelper {
     HTableDescriptor htd = new HTableDescriptor(tableName);
     for (HColumnDescriptor hcd: snapshotTableDescriptor.getColumnFamilies()) {
       htd.addFamily(hcd);
+    }
+    for (Map.Entry<ImmutableBytesWritable, ImmutableBytesWritable> e:
+        snapshotTableDescriptor.getValues().entrySet()) {
+      htd.setValue(e.getKey(), e.getValue());
     }
     return htd;
   }
