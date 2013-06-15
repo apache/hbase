@@ -73,8 +73,8 @@
       <directoryMode>0755</directoryMode>
     </fileSet>
     <fileSet>
-      <directory>${project.basedir}/../dev-tools</directory>
-      <outputDirectory>dev-tools</outputDirectory>
+      <directory>${project.basedir}/../src</directory>
+      <outputDirectory>src</outputDirectory>
       <fileMode>0644</fileMode>
       <directoryMode>0755</directoryMode>
     </fileSet>
