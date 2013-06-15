@@ -173,9 +173,10 @@ public class MetricsRegionServerSourceImpl
           .addGauge(Interns.info(STATIC_INDEX_SIZE, STATIC_INDEX_SIZE_DESC),
               rsWrap.getTotalStaticIndexSize())
           .addGauge(Interns.info(STATIC_BLOOM_SIZE, STATIC_BLOOM_SIZE_DESC),
-              rsWrap.getTotalStaticBloomSize())
-          .addGauge(Interns.info(NUMBER_OF_PUTS_WITHOUT_WAL, NUMBER_OF_PUTS_WITHOUT_WAL_DESC),
-              rsWrap.getNumPutsWithoutWAL())
+            rsWrap.getTotalStaticBloomSize())
+          .addGauge(
+            Interns.info(NUMBER_OF_MUTATIONS_WITHOUT_WAL, NUMBER_OF_MUTATIONS_WITHOUT_WAL_DESC),
+              rsWrap.getNumMutationsWithoutWAL())
           .addGauge(Interns.info(DATA_SIZE_WITHOUT_WAL, DATA_SIZE_WITHOUT_WAL_DESC),
               rsWrap.getDataInMemoryWithoutWAL())
           .addGauge(Interns.info(PERCENT_FILES_LOCAL, PERCENT_FILES_LOCAL_DESC),

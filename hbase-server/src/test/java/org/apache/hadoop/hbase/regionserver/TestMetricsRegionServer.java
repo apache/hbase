@@ -70,8 +70,8 @@ public class TestMetricsRegionServer {
     HELPER.assertGauge("storeFileIndexSize", 406, serverSource);
     HELPER.assertGauge("staticIndexSize", 407, serverSource);
     HELPER.assertGauge("staticBloomSize", 408, serverSource);
-    HELPER.assertGauge("putsWithoutWALCount", 409, serverSource);
-    HELPER.assertGauge("putsWithoutWALSize", 410, serverSource);
+    HELPER.assertGauge("mutationsWithoutWALCount", 409, serverSource);
+    HELPER.assertGauge("mutationsWithoutWALSize", 410, serverSource);
     HELPER.assertGauge("percentFilesLocal", 99, serverSource);
     HELPER.assertGauge("compactionQueueLength", 411, serverSource);
     HELPER.assertGauge("flushQueueLength", 412, serverSource);

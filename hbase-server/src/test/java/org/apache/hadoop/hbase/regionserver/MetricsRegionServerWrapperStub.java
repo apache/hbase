@@ -116,7 +116,7 @@ public class MetricsRegionServerWrapperStub implements MetricsRegionServerWrappe
   }
 
   @Override
-  public long getNumPutsWithoutWAL() {
+  public long getNumMutationsWithoutWAL() {
     return 409;
   }
 
