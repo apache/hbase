@@ -156,8 +156,8 @@ public class TestRegionServerMetrics {
   }
 
   @Test
-  public void testPutsWithoutWal() throws Exception {
-    byte[] tableName = Bytes.toBytes("testPutsWithoutWal");
+  public void testMutationsWithoutWal() throws Exception {
+    byte[] tableName = Bytes.toBytes("testMutationsWithoutWal");
     byte[] cf = Bytes.toBytes("d");
     byte[] row = Bytes.toBytes("rk");
     byte[] qualifier = Bytes.toBytes("qual");
@@ -177,9 +177,9 @@ public class TestRegionServerMetrics {
     t.flushCommits();
 
     metricsRegionServer.getRegionServerWrapper().forceRecompute();
-    metricsHelper.assertGauge("putsWithoutWALCount", 1, serverSource);
+    metricsHelper.assertGauge("mutationsWithoutWALCount", 1, serverSource);
     long minLength = row.length + cf.length + qualifier.length + val.length;
-    metricsHelper.assertGaugeGt("putsWithoutWALSize", minLength, serverSource);
+    metricsHelper.assertGaugeGt("mutationsWithoutWALSize", minLength, serverSource);
 
     t.close();
   }

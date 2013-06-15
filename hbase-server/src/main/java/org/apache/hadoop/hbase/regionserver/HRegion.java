@@ -232,7 +232,7 @@ public class HRegion implements HeapSize { // , Writable{
   public final AtomicLong memstoreSize = new AtomicLong(0);
 
   // Debug possible data loss due to WAL off
-  final Counter numPutsWithoutWAL = new Counter();
+  final Counter numMutationsWithoutWAL = new Counter();
   final Counter dataInMemoryWithoutWAL = new Counter();
 
   // Debug why CAS operations are taking a while.
@@ -502,7 +502,6 @@ public class HRegion implements HeapSize { // , Writable{
     // When hbase.regionserver.optionallogflushinterval <= 0 , deferred log sync is disabled.
     this.deferredLogSyncDisabled = conf.getLong("hbase.regionserver.optionallogflushinterval",
         1 * 1000) <= 0;
-
     if (rsServices != null) {
       this.rsAccounting = this.rsServices.getRegionServerAccounting();
       // don't initialize coprocessors if not running within a regionserver
@@ -1320,8 +1319,8 @@ public class HRegion implements HeapSize { // , Writable{
         status.setStatus("Running coprocessor pre-flush hooks");
         coprocessorHost.preFlush();
       }
-      if (numPutsWithoutWAL.get() > 0) {
-        numPutsWithoutWAL.set(0);
+      if (numMutationsWithoutWAL.get() > 0) {
+        numMutationsWithoutWAL.set(0);
         dataInMemoryWithoutWAL.set(0);
       }
       synchronized (writestate) {
@@ -2177,9 +2176,7 @@ public class HRegion implements HeapSize { // , Writable{
           durability = tmpDur;
         }
         if (tmpDur == Durability.SKIP_WAL) {
-          if (m instanceof Put) {
-            recordPutWithoutWal(m.getFamilyMap());
-          }
+          recordMutationWithoutWal(m.getFamilyMap());
           continue;
         }
 
@@ -4822,10 +4819,11 @@ public class HRegion implements HeapSize { // , Writable{
           // Using default cluster id, as this can only happen in the orginating
           // cluster. A slave cluster receives the final value (not the delta)
           // as a Put.
-          txid = this.log.appendNoSync(this.getRegionInfo(),
-              this.htableDescriptor.getName(), walEdits,
-              HConstants.DEFAULT_CLUSTER_ID, EnvironmentEdgeManager.currentTimeMillis(),
-              this.htableDescriptor);
+          txid = this.log.appendNoSync(this.getRegionInfo(), this.htableDescriptor.getName(),
+            walEdits, HConstants.DEFAULT_CLUSTER_ID, EnvironmentEdgeManager.currentTimeMillis(),
+            this.htableDescriptor);
+        } else {
+          recordMutationWithoutWal(append.getFamilyMap());
         }
 
         //Actually write to Memstore now
@@ -4970,8 +4968,9 @@ public class HRegion implements HeapSize { // , Writable{
           txid = this.log.appendNoSync(this.getRegionInfo(), this.htableDescriptor.getName(),
               walEdits, HConstants.DEFAULT_CLUSTER_ID, EnvironmentEdgeManager.currentTimeMillis(),
               this.htableDescriptor);
+        } else {
+          recordMutationWithoutWal(increment.getFamilyMap());
         }
-
         //Actually write to Memstore now
         for (Map.Entry<Store, List<KeyValue>> entry : tempMemstore.entrySet()) {
           Store store = entry.getKey();
@@ -5398,22 +5397,22 @@ public class HRegion implements HeapSize { // , Writable{
    * Update counters for numer of puts without wal and the size of possible data loss.
    * These information are exposed by the region server metrics.
    */
-  private void recordPutWithoutWal(final Map<byte [], List<? extends Cell>> familyMap) {
-    numPutsWithoutWAL.increment();
-    if (numPutsWithoutWAL.get() <= 1) {
+  private void recordMutationWithoutWal(final Map<byte [], List<? extends Cell>> familyMap) {
+    numMutationsWithoutWAL.increment();
+    if (numMutationsWithoutWAL.get() <= 1) {
       LOG.info("writing data to region " + this +
                " with WAL disabled. Data may be lost in the event of a crash.");
     }
 
-    long putSize = 0;
+    long mutationSize = 0;
     for (List<? extends Cell> cells: familyMap.values()) {
       for (Cell cell : cells) {
         KeyValue kv = KeyValueUtil.ensureKeyValue(cell);
-        putSize += kv.getKeyLength() + kv.getValueLength();
+        mutationSize += kv.getKeyLength() + kv.getValueLength();
       }
     }
 
-    dataInMemoryWithoutWAL.add(putSize);
+    dataInMemoryWithoutWAL.add(mutationSize);
   }
 
   private void lock(final Lock lock)

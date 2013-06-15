@@ -164,9 +164,9 @@ public class MetricsRegionServerSourceImpl
           .addGauge(STOREFILE_INDEX_SIZE, STOREFILE_INDEX_SIZE_DESC, rsWrap.getStoreFileIndexSize())
           .addGauge(STATIC_INDEX_SIZE, STATIC_INDEX_SIZE_DESC, rsWrap.getTotalStaticIndexSize())
           .addGauge(STATIC_BLOOM_SIZE, STATIC_BLOOM_SIZE_DESC, rsWrap.getTotalStaticBloomSize())
-          .addGauge(NUMBER_OF_PUTS_WITHOUT_WAL,
-              NUMBER_OF_PUTS_WITHOUT_WAL_DESC,
-              rsWrap.getNumPutsWithoutWAL())
+          .addGauge(NUMBER_OF_MUTATIONS_WITHOUT_WAL,
+              NUMBER_OF_MUTATIONS_WITHOUT_WAL_DESC,
+              rsWrap.getNumMutationsWithoutWAL())
           .addGauge(DATA_SIZE_WITHOUT_WAL,
               DATA_SIZE_WITHOUT_WAL_DESC,
               rsWrap.getDataInMemoryWithoutWAL())

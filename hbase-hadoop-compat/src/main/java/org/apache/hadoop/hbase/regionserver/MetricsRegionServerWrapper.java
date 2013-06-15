@@ -130,7 +130,7 @@ public interface MetricsRegionServerWrapper {
   /**
    * Number of mutations received with WAL explicitly turned off.
    */
-  long getNumPutsWithoutWAL();
+  long getNumMutationsWithoutWAL();
 
   /**
    * Ammount of data in the memstore but not in the WAL because mutations explicitly had their

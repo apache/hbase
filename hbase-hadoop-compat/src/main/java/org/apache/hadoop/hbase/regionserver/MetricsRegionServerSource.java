@@ -145,10 +145,10 @@ public interface MetricsRegionServerSource extends BaseSource {
   static final String STATIC_BLOOM_SIZE = "staticBloomSize";
   static final String STATIC_BLOOM_SIZE_DESC =
       "Uncompressed size of the static bloom filters.";
-  static final String NUMBER_OF_PUTS_WITHOUT_WAL = "putsWithoutWALCount";
-  static final String NUMBER_OF_PUTS_WITHOUT_WAL_DESC =
+  static final String NUMBER_OF_MUTATIONS_WITHOUT_WAL = "mutationsWithoutWALCount";
+  static final String NUMBER_OF_MUTATIONS_WITHOUT_WAL_DESC =
       "Number of mutations that have been sent by clients with the write ahead logging turned off.";
-  static final String DATA_SIZE_WITHOUT_WAL = "putsWithoutWALSize";
+  static final String DATA_SIZE_WITHOUT_WAL = "mutationsWithoutWALSize";
   static final String DATA_SIZE_WITHOUT_WAL_DESC =
       "Size of data that has been sent by clients with the write ahead logging turned off.";
   static final String PERCENT_FILES_LOCAL = "percentFilesLocal";

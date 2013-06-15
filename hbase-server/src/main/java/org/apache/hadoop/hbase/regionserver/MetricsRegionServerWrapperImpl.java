@@ -62,7 +62,7 @@ class MetricsRegionServerWrapperImpl
   private volatile long storefileIndexSize = 0;
   private volatile long totalStaticIndexSize = 0;
   private volatile long totalStaticBloomSize = 0;
-  private volatile long numPutsWithoutWAL = 0;
+  private volatile long numMutationsWithoutWAL = 0;
   private volatile long dataInMemoryWithoutWAL = 0;
   private volatile int percentFileLocal = 0;
 
@@ -292,8 +292,8 @@ class MetricsRegionServerWrapperImpl
   }
 
   @Override
-  public long getNumPutsWithoutWAL() {
-    return numPutsWithoutWAL;
+  public long getNumMutationsWithoutWAL() {
+    return numMutationsWithoutWAL;
   }
 
   @Override
@@ -344,13 +344,13 @@ class MetricsRegionServerWrapperImpl
       long tempStorefileIndexSize = 0;
       long tempTotalStaticIndexSize = 0;
       long tempTotalStaticBloomSize = 0;
-      long tempNumPutsWithoutWAL = 0;
+      long tempNumMutationsWithoutWAL = 0;
       long tempDataInMemoryWithoutWAL = 0;
       int tempPercentFileLocal = 0;
 
 
       for (HRegion r : regionServer.getOnlineRegionsLocalContext()) {
-        tempNumPutsWithoutWAL += r.numPutsWithoutWAL.get();
+        tempNumMutationsWithoutWAL += r.numMutationsWithoutWAL.get();
         tempDataInMemoryWithoutWAL += r.dataInMemoryWithoutWAL.get();
         tempReadRequestsCount += r.readRequestsCount.get();
         tempWriteRequestsCount += r.writeRequestsCount.get();
@@ -404,7 +404,7 @@ class MetricsRegionServerWrapperImpl
       storefileIndexSize = tempStorefileIndexSize;
       totalStaticIndexSize = tempTotalStaticIndexSize;
       totalStaticBloomSize = tempTotalStaticBloomSize;
-      numPutsWithoutWAL = tempNumPutsWithoutWAL;
+      numMutationsWithoutWAL = tempNumMutationsWithoutWAL;
       dataInMemoryWithoutWAL = tempDataInMemoryWithoutWAL;
       percentFileLocal = tempPercentFileLocal;
     }
