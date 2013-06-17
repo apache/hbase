@@ -259,9 +259,8 @@ public abstract class HBaseFileSystem {
    */
   public static boolean renameAndSetModifyTime(final FileSystem fs, Path src, Path dest)
       throws IOException {
-    if (!renameDirForFileSystem(fs, src, dest)) return false;
     // set the modify time for TimeToLive Cleaner
-    fs.setTimes(dest, EnvironmentEdgeManager.currentTimeMillis(), -1);
-    return true;
+    fs.setTimes(src, EnvironmentEdgeManager.currentTimeMillis(), -1);
+    return renameDirForFileSystem(fs, src, dest);
   }
 }
