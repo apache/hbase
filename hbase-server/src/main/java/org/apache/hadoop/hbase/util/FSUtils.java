@@ -1589,11 +1589,10 @@ public abstract class FSUtils {
     }
   }
 
-  public static boolean renameAndSetModifyTime(final FileSystem fs, Path src, Path dest)
+  public static boolean renameAndSetModifyTime(final FileSystem fs, final Path src, final Path dest)
       throws IOException {
-    if (!fs.rename(src, dest)) return false;
     // set the modify time for TimeToLive Cleaner
-    fs.setTimes(dest, EnvironmentEdgeManager.currentTimeMillis(), -1);
-    return true;
+    fs.setTimes(src, EnvironmentEdgeManager.currentTimeMillis(), -1);
+    return fs.rename(src, dest);
   }
 }
