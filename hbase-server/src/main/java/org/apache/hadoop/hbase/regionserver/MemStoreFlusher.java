@@ -408,8 +408,8 @@ class MemStoreFlusher implements FlushRequester {
             "store files; delaying flush up to " + this.blockingWaitTime + "ms");
           if (!this.server.compactSplitThread.requestSplit(region)) {
             try {
-              this.server.compactSplitThread.requestCompaction(region, Thread
-                  .currentThread().getName());
+              this.server.compactSplitThread.requestSystemCompaction(
+                  region, Thread.currentThread().getName());
             } catch (IOException e) {
               LOG.error(
                 "Cache flush failed for region " + Bytes.toStringBinary(region.getRegionName()),
@@ -457,7 +457,8 @@ class MemStoreFlusher implements FlushRequester {
       if (shouldSplit) {
         this.server.compactSplitThread.requestSplit(region);
       } else if (shouldCompact) {
-        server.compactSplitThread.requestCompaction(region, Thread.currentThread().getName());
+        server.compactSplitThread.requestSystemCompaction(
+            region, Thread.currentThread().getName());
       }
 
     } catch (DroppedSnapshotException ex) {

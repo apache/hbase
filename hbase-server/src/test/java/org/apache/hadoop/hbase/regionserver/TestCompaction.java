@@ -18,8 +18,9 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import static org.mockito.Mockito.doAnswer;
-import static org.mockito.Mockito.spy;
+import static org.mockito.AdditionalMatchers.aryEq;
+import static org.mockito.Matchers.*;
+import static org.mockito.Mockito.*;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -33,10 +34,12 @@ import java.util.concurrent.CountDownLatch;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestCase;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
@@ -53,6 +56,7 @@ import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.HFileDataBlockEncoder;
 import org.apache.hadoop.hbase.io.hfile.HFileDataBlockEncoderImpl;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
+import org.apache.hadoop.hbase.regionserver.compactions.CompactionContext;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionProgress;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
 import org.apache.hadoop.hbase.regionserver.compactions.Compactor;
@@ -60,6 +64,8 @@ import org.apache.hadoop.hbase.regionserver.compactions.RatioBasedCompactionPoli
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hadoop.hbase.util.Threads;
+import org.junit.Assume;
 import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
@@ -730,6 +736,227 @@ public class TestCompaction extends HBaseTestCase {
     thread.interruptIfNecessary();
   }
 
+  private class StoreMockMaker extends StatefulStoreMockMaker {
+    public ArrayList<StoreFile> compacting = new ArrayList<StoreFile>();
+    public ArrayList<StoreFile> notCompacting = new ArrayList<StoreFile>();
+    private ArrayList<Integer> results;
+
+    public StoreMockMaker(ArrayList<Integer> results) {
+      this.results = results;
+    }
+
+    public class TestCompactionContext extends CompactionContext {
+      private List<StoreFile> selectedFiles;
+      public TestCompactionContext(List<StoreFile> selectedFiles) {
+        super();
+        this.selectedFiles = selectedFiles;
+      }
+
+      @Override
+      public List<StoreFile> preSelect(List<StoreFile> filesCompacting) {
+        return new ArrayList<StoreFile>();
+      }
+
+      @Override
+      public boolean select(List<StoreFile> filesCompacting, boolean isUserCompaction,
+          boolean mayUseOffPeak, boolean forceMajor) throws IOException {
+        this.request = new CompactionRequest(selectedFiles);
+        this.request.setPriority(getPriority());
+        return true;
+      }
+
+      @Override
+      public List<Path> compact() throws IOException {
+        finishCompaction(this.selectedFiles);
+        return new ArrayList<Path>();
+      }
+    }
+
+    @Override
+    public synchronized CompactionContext selectCompaction() {
+      CompactionContext ctx = new TestCompactionContext(new ArrayList<StoreFile>(notCompacting));
+      compacting.addAll(notCompacting);
+      notCompacting.clear();
+      try {
+        ctx.select(null, false, false, false);
+      } catch (IOException ex) {
+        fail("Shouldn't happen");
+      }
+      return ctx;
+    }
+
+    @Override
+    public synchronized void cancelCompaction(Object object) {
+      TestCompactionContext ctx = (TestCompactionContext)object;
+      compacting.removeAll(ctx.selectedFiles);
+      notCompacting.addAll(ctx.selectedFiles);
+    }
+
+    public synchronized void finishCompaction(List<StoreFile> sfs) {
+      if (sfs.isEmpty()) return;
+      synchronized (results) {
+        results.add(sfs.size());
+      }
+      compacting.removeAll(sfs);
+    }
+
+    @Override
+    public int getPriority() {
+      return 7 - compacting.size() - notCompacting.size();
+    }
+  }
+
+  public class BlockingStoreMockMaker extends StatefulStoreMockMaker {
+    BlockingCompactionContext blocked = null;
+
+    public class BlockingCompactionContext extends CompactionContext {
+      public volatile boolean isInCompact = false;
+
+      public void unblock() {
+        synchronized (this) { this.notifyAll(); }
+      }
+
+      @Override
+      public List<Path> compact() throws IOException {
+        try {
+          isInCompact = true;
+          synchronized (this) { this.wait(); }
+        } catch (InterruptedException e) {
+           Assume.assumeNoException(e);
+        }
+        return new ArrayList<Path>();
+      }
+
+      @Override
+      public List<StoreFile> preSelect(List<StoreFile> filesCompacting) {
+        return new ArrayList<StoreFile>();
+      }
+
+      @Override
+      public boolean select(List<StoreFile> f, boolean i, boolean m, boolean e)
+          throws IOException {
+        this.request = new CompactionRequest(new ArrayList<StoreFile>());
+        return true;
+      }
+    }
+
+    @Override
+    public CompactionContext selectCompaction() {
+      this.blocked = new BlockingCompactionContext();
+      try {
+        this.blocked.select(null, false, false, false);
+      } catch (IOException ex) {
+        fail("Shouldn't happen");
+      }
+      return this.blocked;
+    }
+
+    @Override
+    public void cancelCompaction(Object object) {}
+
+    public int getPriority() {
+      return Integer.MIN_VALUE; // some invalid value, see createStoreMock
+    }
+
+    public BlockingCompactionContext waitForBlocking() {
+      while (this.blocked == null || !this.blocked.isInCompact) {
+        Threads.sleepWithoutInterrupt(50);
+      }
+      BlockingCompactionContext ctx = this.blocked;
+      this.blocked = null;
+      return ctx;
+    }
+
+    @Override
+    public Store createStoreMock(String name) throws Exception {
+      return createStoreMock(Integer.MIN_VALUE, name);
+    }
+
+    public Store createStoreMock(int priority, String name) throws Exception {
+      // Override the mock to always return the specified priority.
+      Store s = super.createStoreMock(name);
+      when(s.getCompactPriority()).thenReturn(priority);
+      return s;
+    }
+  }
+
+  /** Test compaction priority management and multiple compactions per store (HBASE-8665). */
+  public void testCompactionQueuePriorities() throws Exception {
+    // Setup a compact/split thread on a mock server.
+    final Configuration conf = HBaseConfiguration.create();
+    HRegionServer mockServer = mock(HRegionServer.class);
+    when(mockServer.isStopped()).thenReturn(false);
+    when(mockServer.getConfiguration()).thenReturn(conf);
+    CompactSplitThread cst = new CompactSplitThread(mockServer);
+    when(mockServer.getCompactSplitThread()).thenReturn(cst);
+
+    // Set up the region mock that redirects compactions.
+    HRegion r = mock(HRegion.class);
+    when(r.compact(any(CompactionContext.class), any(Store.class))).then(new Answer<Boolean>() {
+      public Boolean answer(InvocationOnMock invocation) throws Throwable {
+        ((CompactionContext)invocation.getArguments()[0]).compact();
+        return true;
+      }
+    });
+
+    // Set up store mocks for 2 "real" stores and the one we use for blocking CST.
+    ArrayList<Integer> results = new ArrayList<Integer>();
+    StoreMockMaker sm = new StoreMockMaker(results), sm2 = new StoreMockMaker(results);
+    Store store = sm.createStoreMock("store1"), store2 = sm2.createStoreMock("store2");
+    BlockingStoreMockMaker blocker = new BlockingStoreMockMaker();
+
+    // First, block the compaction thread so that we could muck with queue.
+    cst.requestSystemCompaction(r, blocker.createStoreMock(1, "b-pri1"), "b-pri1");
+    BlockingStoreMockMaker.BlockingCompactionContext currentBlock = blocker.waitForBlocking();
+
+    // Add 4 files to store1, 3 to store2, and queue compactions; pri 3 and 4 respectively.
+    for (int i = 0; i < 4; ++i) {
+      sm.notCompacting.add(createFile());
+    }
+    cst.requestSystemCompaction(r, store, "s1-pri3");
+    for (int i = 0; i < 3; ++i) {
+      sm2.notCompacting.add(createFile());
+    }
+    cst.requestSystemCompaction(r, store2, "s2-pri4");
+    // Now add 2 more files to store1 and queue compaction - pri 1.
+    for (int i = 0; i < 2; ++i) {
+      sm.notCompacting.add(createFile());
+    }
+    cst.requestSystemCompaction(r, store, "s1-pri1");
+    // Finally add blocking compaction with priority 2.
+    cst.requestSystemCompaction(r, blocker.createStoreMock(2, "b-pri2"), "b-pri2");
+
+    // Unblock the blocking compaction; we should run pri1 and become block again in pri2.
+    currentBlock.unblock();
+    currentBlock = blocker.waitForBlocking();
+    // Pri1 should have "compacted" all 6 files.
+    assertEquals(1, results.size());
+    assertEquals(6, results.get(0).intValue());
+    // Add 2 files to store 1 (it has 2 files now).
+    for (int i = 0; i < 2; ++i) {
+      sm.notCompacting.add(createFile());
+    }
+    // Now we have pri4 for store 2 in queue, and pri3 for store1; store1's current priority
+    // is 5, however, so it must not preempt store 2. Add blocking compaction at the end.
+    cst.requestSystemCompaction(r, blocker.createStoreMock(7, "b-pri7"), "b-pri7");
+    currentBlock.unblock();
+    currentBlock = blocker.waitForBlocking();
+    assertEquals(3, results.size());
+    assertEquals(3, results.get(1).intValue()); // 3 files should go before 2 files.
+    assertEquals(2, results.get(2).intValue());
+
+    currentBlock.unblock();
+    cst.interruptIfNecessary();
+  }
+
+  private static StoreFile createFile() throws Exception {
+    StoreFile sf = mock(StoreFile.class);
+    when(sf.getPath()).thenReturn(new Path("file"));
+    StoreFile.Reader r = mock(StoreFile.Reader.class);
+    when(r.length()).thenReturn(10L);
+    when(sf.getReader()).thenReturn(r);
+    return sf;
+  }
 
   /**
    * Simple {@link CompactionRequest} on which you can wait until the requested compaction finishes.
