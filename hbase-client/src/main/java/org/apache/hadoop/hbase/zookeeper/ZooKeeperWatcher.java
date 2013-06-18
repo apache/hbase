@@ -400,10 +400,11 @@ public class ZooKeeperWatcher implements Watcher, Abortable, Closeable {
         break;
 
       case ConnectedReadOnly:
+      case SaslAuthenticated:
         break;
 
       default:
-        throw new IllegalStateException("Received event is not valid.");
+        throw new IllegalStateException("Received event is not valid: " + event.getState());
     }
   }
 
