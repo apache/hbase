@@ -26,7 +26,6 @@ import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
@@ -43,7 +42,6 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.PrefixFilter;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.util.GenericOptionsParser;
 import org.junit.After;
@@ -66,11 +64,12 @@ public class TestImportExport {
   private static final byte[] QUAL = Bytes.toBytes("q");
   private static final String OUTPUT_DIR = "outputdir";
 
+  private static MiniHBaseCluster cluster;
   private static long now = System.currentTimeMillis();
 
   @BeforeClass
   public static void beforeClass() throws Exception {
-    UTIL.startMiniCluster();
+    cluster = UTIL.startMiniCluster();
     UTIL.startMiniMapReduceCluster();
   }
 
@@ -112,15 +111,15 @@ public class TestImportExport {
         "1000"
     };
 
-    GenericOptionsParser opts = new GenericOptionsParser(new Configuration(UTIL.getConfiguration()), args);
+    GenericOptionsParser opts = new GenericOptionsParser(new Configuration(cluster.getConfiguration()), args);
     Configuration conf = opts.getConfiguration();
     args = opts.getRemainingArgs();
 
-    JobConf jobConf = UTIL.getMRCluster().createJobConf();
-    HBaseConfiguration.merge(jobConf, conf);
-    Job job = Export.createSubmittableJob(jobConf, args);
+    Job job = Export.createSubmittableJob(conf, args);
+    job.getConfiguration().set("mapreduce.framework.name", "yarn");
     job.waitForCompletion(false);
     assertTrue(job.isSuccessful());
+
 
     String IMPORT_TABLE = "importTableSimpleCase";
     t = UTIL.createTable(Bytes.toBytes(IMPORT_TABLE), FAMILYB);
@@ -130,13 +129,12 @@ public class TestImportExport {
         OUTPUT_DIR
     };
 
-    opts = new GenericOptionsParser(new Configuration(UTIL.getConfiguration()), args);
+    opts = new GenericOptionsParser(new Configuration(cluster.getConfiguration()), args);
     conf = opts.getConfiguration();
     args = opts.getRemainingArgs();
 
-    jobConf = UTIL.getMRCluster().createJobConf();
-    HBaseConfiguration.merge(jobConf, conf);
-    job = Import.createSubmittableJob(jobConf, args);
+    job = Import.createSubmittableJob(conf, args);
+    job.getConfiguration().set("mapreduce.framework.name", "yarn");
     job.waitForCompletion(false);
     assertTrue(job.isSuccessful());
 
@@ -160,13 +158,12 @@ public class TestImportExport {
     String EXPORT_TABLE = ".META.";
     String[] args = new String[] { EXPORT_TABLE, OUTPUT_DIR, "1", "0", "0" };
     GenericOptionsParser opts = new GenericOptionsParser(new Configuration(
-        UTIL.getConfiguration()), args);
+        cluster.getConfiguration()), args);
     Configuration conf = opts.getConfiguration();
     args = opts.getRemainingArgs();
 
-    JobConf jobConf = UTIL.getMRCluster().createJobConf();
-    HBaseConfiguration.merge(jobConf, conf);
-    Job job = Export.createSubmittableJob(jobConf, args);
+    Job job = Export.createSubmittableJob(conf, args);
+    job.getConfiguration().set("mapreduce.framework.name", "yarn");
     job.waitForCompletion(false);
     assertTrue(job.isSuccessful());
   }
@@ -203,13 +200,12 @@ public class TestImportExport {
         "1000"
     };
 
-    GenericOptionsParser opts = new GenericOptionsParser(new Configuration(UTIL.getConfiguration()), args);
+    GenericOptionsParser opts = new GenericOptionsParser(new Configuration(cluster.getConfiguration()), args);
     Configuration conf = opts.getConfiguration();
     args = opts.getRemainingArgs();
 
-    JobConf jobConf = UTIL.getMRCluster().createJobConf();
-    HBaseConfiguration.merge(jobConf, conf);
-    Job job = Export.createSubmittableJob(jobConf, args);
+    Job job = Export.createSubmittableJob(conf, args);
+    job.getConfiguration().set("mapreduce.framework.name", "yarn");
     job.waitForCompletion(false);
     assertTrue(job.isSuccessful());
 
@@ -228,13 +224,12 @@ public class TestImportExport {
         OUTPUT_DIR
     };
 
-    opts = new GenericOptionsParser(new Configuration(UTIL.getConfiguration()), args);
+    opts = new GenericOptionsParser(new Configuration(cluster.getConfiguration()), args);
     conf = opts.getConfiguration();
     args = opts.getRemainingArgs();
 
-    jobConf = UTIL.getMRCluster().createJobConf();
-    HBaseConfiguration.merge(jobConf, conf);
-    job = Import.createSubmittableJob(jobConf, args);
+    job = Import.createSubmittableJob(conf, args);
+    job.getConfiguration().set("mapreduce.framework.name", "yarn");
     job.waitForCompletion(false);
     assertTrue(job.isSuccessful());
 
@@ -273,13 +268,12 @@ public class TestImportExport {
     String[] args = new String[] { EXPORT_TABLE, OUTPUT_DIR, "1000" };
 
     GenericOptionsParser opts = new GenericOptionsParser(new Configuration(
-        UTIL.getConfiguration()), args);
+        cluster.getConfiguration()), args);
     Configuration conf = opts.getConfiguration();
     args = opts.getRemainingArgs();
 
-    JobConf jobConf = UTIL.getMRCluster().createJobConf();
-    HBaseConfiguration.merge(jobConf, conf);
-    Job job = Export.createSubmittableJob(jobConf, args);
+    Job job = Export.createSubmittableJob(conf, args);
+    job.getConfiguration().set("mapreduce.framework.name", "yarn");
     job.waitForCompletion(false);
     assertTrue(job.isSuccessful());
 
@@ -293,13 +287,12 @@ public class TestImportExport {
         "-D" + Import.FILTER_ARGS_CONF_KEY + "=" + Bytes.toString(ROW1), IMPORT_TABLE, OUTPUT_DIR,
         "1000" };
 
-    opts = new GenericOptionsParser(new Configuration(UTIL.getConfiguration()), args);
+    opts = new GenericOptionsParser(new Configuration(cluster.getConfiguration()), args);
     conf = opts.getConfiguration();
     args = opts.getRemainingArgs();
 
-    jobConf = UTIL.getMRCluster().createJobConf();
-    HBaseConfiguration.merge(jobConf, conf);
-    job = Import.createSubmittableJob(jobConf, args);
+    job = Import.createSubmittableJob(conf, args);
+    job.getConfiguration().set("mapreduce.framework.name", "yarn");
     job.waitForCompletion(false);
     assertTrue(job.isSuccessful());
 
@@ -317,15 +310,14 @@ public class TestImportExport {
         "-D" + Import.FILTER_ARGS_CONF_KEY + "=" + Bytes.toString(ROW1) + "", EXPORT_TABLE,
         OUTPUT_DIR, "1000" };
 
-    opts = new GenericOptionsParser(new Configuration(UTIL.getConfiguration()), args);
+    opts = new GenericOptionsParser(new Configuration(cluster.getConfiguration()), args);
     conf = opts.getConfiguration();
     args = opts.getRemainingArgs();
 
-    jobConf = UTIL.getMRCluster().createJobConf();
-    HBaseConfiguration.merge(jobConf, conf);
-    job = Import.createSubmittableJob(jobConf, args);
+    job = Import.createSubmittableJob(conf, args);
+    job.getConfiguration().set("mapreduce.framework.name", "yarn");
     job.waitForCompletion(false);
-    assertFalse("Job succeeded, but it had a non-instantiable filter!", job.isSuccessful());
+    assertFalse("Job succeeedd, but it had a non-instantiable filter!", job.isSuccessful());
 
     // cleanup
     exportTable.close();

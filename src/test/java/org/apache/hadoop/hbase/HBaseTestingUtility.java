@@ -1663,10 +1663,6 @@ public class HBaseTestingUtility {
     this.dfsCluster = cluster;
   }
 
-  public MiniMRCluster getMRCluster() {
-    return mrCluster;
-  }
-
   public FileSystem getTestFileSystem() throws IOException {
     return HFileSystem.get(conf);
   }
