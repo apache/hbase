@@ -2044,6 +2044,10 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
     return dfsCluster;
   }
 
+  public MiniMRCluster getMRCluster() {
+    return mrCluster;
+  }
+
   public void setDFSCluster(MiniDFSCluster cluster) throws IOException {
     if (dfsCluster != null && dfsCluster.isClusterUp()) {
       throw new IOException("DFSCluster is already running! Shut it down first.");
