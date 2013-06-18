@@ -26,7 +26,6 @@ import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
@@ -44,7 +43,6 @@ import org.apache.hadoop.hbase.filter.PrefixFilter;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.util.GenericOptionsParser;
-import org.apache.hadoop.mapred.JobConf;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -105,9 +103,7 @@ public class TestImportExport {
     GenericOptionsParser opts = new GenericOptionsParser(new Configuration(UTIL.getConfiguration()), args);
     Configuration conf = opts.getConfiguration();
     args = opts.getRemainingArgs();
-    JobConf jobConf = UTIL.getMRCluster().createJobConf();
-    HBaseConfiguration.merge(jobConf, conf);
-    Job job = Export.createSubmittableJob(jobConf, args);
+    Job job = Export.createSubmittableJob(conf, args);
     job.waitForCompletion(false);
     return job.isSuccessful();
   }
@@ -125,9 +121,7 @@ public class TestImportExport {
     GenericOptionsParser opts = new GenericOptionsParser(new Configuration(UTIL.getConfiguration()), args);
     Configuration conf = opts.getConfiguration();
     args = opts.getRemainingArgs();
-    JobConf jobConf = UTIL.getMRCluster().createJobConf();
-    HBaseConfiguration.merge(jobConf, conf);
-    Job job = Import.createSubmittableJob(jobConf, args);
+    Job job = Import.createSubmittableJob(conf, args);
     job.waitForCompletion(false);
     return job.isSuccessful();
   }
@@ -179,7 +173,7 @@ public class TestImportExport {
 
   /**
    * Test export .META. table
-   *
+   * 
    * @throws Exception
    */
   @Test
