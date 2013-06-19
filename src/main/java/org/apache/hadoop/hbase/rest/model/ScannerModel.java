@@ -56,8 +56,8 @@ import com.sun.jersey.api.json.JSONUnmarshaller;
  * &lt;complexType name="Scanner"&gt;
  *   &lt;sequence>
  *     &lt;element name="column" type="base64Binary" minOccurs="0" maxOccurs="unbounded"/&gt;
+ *     &lt;element name="filter" type="string" minOccurs="0" maxOccurs="1"&gt;&lt;/element&gt;
  *   &lt;/sequence&gt;
- *   &lt;element name="filter" type="string" minOccurs="0" maxOccurs="1"&gt;&lt;/element&gt;
  *   &lt;attribute name="startRow" type="base64Binary"&gt;&lt;/attribute&gt;
  *   &lt;attribute name="endRow" type="base64Binary"&gt;&lt;/attribute&gt;
  *   &lt;attribute name="batch" type="int"&gt;&lt;/attribute&gt;
