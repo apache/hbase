@@ -1484,9 +1484,6 @@ public class Store extends SchemaConfigured implements HeapSize {
 
     if (!majorcompaction &&
         !hasReferences(compactSelection.getFilesToCompact())) {
-      // we're doing a minor compaction, let's see what files are applicable
-      int start = 0;
-      double r = compactSelection.getCompactSelectionRatio();
 
       // remove bulk import files that request to be excluded from minors
       compactSelection.getFilesToCompact().removeAll(Collections2.filter(
@@ -1507,59 +1504,10 @@ public class Store extends SchemaConfigured implements HeapSize {
         compactSelection.emptyFileList();
         return compactSelection;
       }
-
-      /* TODO: add sorting + unit test back in when HBASE-2856 is fixed
-      // Sort files by size to correct when normal skew is altered by bulk load.
-      Collections.sort(filesToCompact, StoreFile.Comparators.FILE_SIZE);
-       */
-
-      // get store file sizes for incremental compacting selection.
-      int countOfFiles = compactSelection.getFilesToCompact().size();
-      long [] fileSizes = new long[countOfFiles];
-      long [] sumSize = new long[countOfFiles];
-      for (int i = countOfFiles-1; i >= 0; --i) {
-        StoreFile file = compactSelection.getFilesToCompact().get(i);
-        fileSizes[i] = file.getReader().length();
-        // calculate the sum of fileSizes[i,i+maxFilesToCompact-1) for algo
-        int tooFar = i + this.maxFilesToCompact - 1;
-        sumSize[i] = fileSizes[i]
-                   + ((i+1    < countOfFiles) ? sumSize[i+1]      : 0)
-                   - ((tooFar < countOfFiles) ? fileSizes[tooFar] : 0);
-      }
-
-      /* Start at the oldest file and stop when you find the first file that
-       * meets compaction criteria:
-       *   (1) a recently-flushed, small file (i.e. <= minCompactSize)
-       *      OR
-       *   (2) within the compactRatio of sum(newer_files)
-       * Given normal skew, any newer files will also meet this criteria
-       *
-       * Additional Note:
-       * If fileSizes.size() >> maxFilesToCompact, we will recurse on
-       * compact().  Consider the oldest files first to avoid a
-       * situation where we always compact [end-threshold,end).  Then, the
-       * last file becomes an aggregate of the previous compactions.
-       */
-      while(countOfFiles - start >= this.minFilesToCompact &&
-            fileSizes[start] >
-              Math.max(minCompactSize, (long)(sumSize[start+1] * r))) {
-        ++start;
-      }
-      int end = Math.min(countOfFiles, start + this.maxFilesToCompact);
-      long totalSize = fileSizes[start]
-                     + ((start+1 < countOfFiles) ? sumSize[start+1] : 0);
-      compactSelection = compactSelection.getSubList(start, end);
-
-      // if we don't have enough files to compact, just wait
-      if (compactSelection.getFilesToCompact().size() < this.minFilesToCompact) {
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Skipped compaction of " + this
-            + ".  Only " + (end - start) + " file(s) of size "
-            + StringUtils.humanReadableInt(totalSize)
-            + " have met compaction criteria.");
-        }
-        compactSelection.emptyFileList();
-        return compactSelection;
+      if (conf.getBoolean("hbase.hstore.useExploringCompation", false)) {
+        compactSelection = exploringCompactionSelection(compactSelection);
+      } else {
+        compactSelection = defaultCompactionSelection(compactSelection);
       }
     } else {
       if(majorcompaction) {
@@ -1577,6 +1525,178 @@ public class Store extends SchemaConfigured implements HeapSize {
       }
     }
     return compactSelection;
+  }
+
+  private CompactSelection defaultCompactionSelection(CompactSelection compactSelection) {
+    // we're doing a minor compaction, let's see what files are applicable
+    int start = 0;
+
+    double r = compactSelection.getCompactSelectionRatio();
+
+    // get store file sizes for incremental compacting selection.
+    int countOfFiles = compactSelection.getFilesToCompact().size();
+    long [] fileSizes = new long[countOfFiles];
+    long [] sumSize = new long[countOfFiles];
+    for (int i = countOfFiles-1; i >= 0; --i) {
+      StoreFile file = compactSelection.getFilesToCompact().get(i);
+      fileSizes[i] = file.getReader().length();
+      // calculate the sum of fileSizes[i,i+maxFilesToCompact-1) for algo
+      int tooFar = i + this.maxFilesToCompact - 1;
+      sumSize[i] = fileSizes[i]
+          + ((i+1    < countOfFiles) ? sumSize[i+1]      : 0)
+          - ((tooFar < countOfFiles) ? fileSizes[tooFar] : 0);
+    }
+
+      /* Start at the oldest file and stop when you find the first file that
+       * meets compaction criteria:
+       *   (1) a recently-flushed, small file (i.e. <= minCompactSize)
+       *      OR
+       *   (2) within the compactRatio of sum(newer_files)
+       * Given normal skew, any newer files will also meet this criteria
+       *
+       * Additional Note:
+       * If fileSizes.size() >> maxFilesToCompact, we will recurse on
+       * compact().  Consider the oldest files first to avoid a
+       * situation where we always compact [end-threshold,end).  Then, the
+       * last file becomes an aggregate of the previous compactions.
+       */
+    while(countOfFiles - start >= this.minFilesToCompact &&
+        fileSizes[start] >
+            Math.max(minCompactSize, (long)(sumSize[start+1] * r))) {
+      ++start;
+    }
+    int end = Math.min(countOfFiles, start + this.maxFilesToCompact);
+    long totalSize = fileSizes[start]
+        + ((start+1 < countOfFiles) ? sumSize[start+1] : 0);
+    compactSelection = compactSelection.getSubList(start, end);
+
+    // if we don't have enough files to compact, just wait
+    if (compactSelection.getFilesToCompact().size() < this.minFilesToCompact) {
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Skipped compaction of " + this
+            + ".  Only " + (end - start) + " file(s) of size "
+            + StringUtils.humanReadableInt(totalSize)
+            + " have met compaction criteria.");
+      }
+      compactSelection.emptyFileList();
+      return compactSelection;
+    }
+    return compactSelection;
+  }
+
+  private CompactSelection exploringCompactionSelection(CompactSelection compactSelection) {
+
+    List<StoreFile> candidates = compactSelection.getFilesToCompact();
+    int futureFiles = filesCompacting.isEmpty() ? 0 : 1;
+    boolean mayBeStuck = (candidates.size() - filesCompacting.size() + futureFiles)
+        >= blockingStoreFileCount;
+    // Start off choosing nothing.
+    List<StoreFile> bestSelection = new ArrayList<StoreFile>(0);
+    List<StoreFile> smallest = new ArrayList<StoreFile>(0);
+    long bestSize = 0;
+    long smallestSize = Long.MAX_VALUE;
+    double r = compactSelection.getCompactSelectionRatio();
+
+    // Consider every starting place.
+    for (int startIndex = 0; startIndex < candidates.size(); startIndex++) {
+      // Consider every different sub list permutation in between start and end with min files.
+      for (int currentEnd = startIndex + minFilesToCompact - 1;
+           currentEnd < candidates.size(); currentEnd++) {
+        List<StoreFile> potentialMatchFiles = candidates.subList(startIndex, currentEnd + 1);
+
+        // Sanity checks
+        if (potentialMatchFiles.size() < minFilesToCompact) {
+          continue;
+        }
+        if (potentialMatchFiles.size() > maxFilesToCompact) {
+          continue;
+        }
+
+        // Compute the total size of files that will
+        // have to be read if this set of files is compacted.
+        long size = getCompactionSize(potentialMatchFiles);
+
+        // Store the smallest set of files.  This stored set of files will be used
+        // if it looks like the algorithm is stuck.
+        if (size < smallestSize) {
+          smallest = potentialMatchFiles;
+          smallestSize = size;
+        }
+
+        if (size >= minCompactSize
+            && !filesInRatio(potentialMatchFiles, r)) {
+          continue;
+        }
+
+        if (size > maxCompactSize) {
+          continue;
+        }
+
+        // Keep if this gets rid of more files.  Or the same number of files for less io.
+        if (potentialMatchFiles.size() > bestSelection.size()
+            || (potentialMatchFiles.size() == bestSelection.size() && size < bestSize)) {
+          bestSelection = potentialMatchFiles;
+          bestSize = size;
+        }
+      }
+    }
+
+    if (bestSelection.size() == 0 && mayBeStuck) {
+      smallest = new ArrayList<StoreFile>(smallest);
+      compactSelection.getFilesToCompact().clear();
+      compactSelection.getFilesToCompact().addAll(smallest);
+    } else {
+      bestSelection = new ArrayList<StoreFile>(bestSelection);
+      compactSelection.getFilesToCompact().clear();
+      compactSelection.getFilesToCompact().addAll(bestSelection);
+    }
+
+    return compactSelection;
+
+  }
+
+  /**
+   * Check that all files satisfy the ratio
+   *
+   * @param files set of files to examine.
+   * @param currentRatio The raio
+   * @return if all files are in ratio.
+   */
+  private boolean filesInRatio(final List<StoreFile> files, final double currentRatio) {
+    if (files.size() < 2) {
+      return true;
+    }
+    long totalFileSize = 0;
+    for (int i = 0; i < files.size(); i++) {
+      totalFileSize += files.get(i).getReader().length();
+    }
+    for (int i = 0; i < files.size(); i++) {
+      long singleFileSize = files.get(i).getReader().length();
+      long sumAllOtherFilesize = totalFileSize - singleFileSize;
+
+      if ((singleFileSize > sumAllOtherFilesize * currentRatio)
+          && (sumAllOtherFilesize >= this.minCompactSize)) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  /**
+   * Get the number of bytes a proposed compaction would have to read.
+   *
+   * @param files Set of files in a proposed compaction.
+   * @return size in bytes.
+   */
+  private long getCompactionSize(final List<StoreFile> files) {
+    long size = 0;
+    if (files == null) {
+      return size;
+    }
+    for (StoreFile f : files) {
+      size += f.getReader().length();
+    }
+    return size;
   }
 
   /**
