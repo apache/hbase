@@ -209,7 +209,8 @@ public class HRegion implements HeapSize { // , Writable{
    * startRegionOperation
    */
   protected enum Operation {
-    ANY, GET, PUT, DELETE, SCAN, APPEND, INCREMENT, SPLIT_REGION, MERGE_REGION
+    ANY, GET, PUT, DELETE, SCAN, APPEND, INCREMENT, SPLIT_REGION, MERGE_REGION, BATCH_MUTATE,
+    REPLAY_BATCH_MUTATE
   }
 
   //////////////////////////////////////////////////////////////////////////////
@@ -299,6 +300,11 @@ public class HRegion implements HeapSize { // , Writable{
   // are equal to or lower than maxSeqId for each store.
   // The following map is populated when opening the region
   Map<byte[], Long> maxSeqIdInStores = new TreeMap<byte[], Long>(Bytes.BYTES_COMPARATOR);
+
+  /**
+   * Config setting for whether to allow writes when a region is in recovering or not.
+   */
+  private boolean disallowWritesInRecovering = false;
 
   /**
    * @return The smallest mvcc readPoint across all the scanners in this
@@ -517,6 +523,11 @@ public class HRegion implements HeapSize { // , Writable{
       // Write out region name as string and its encoded name.
       LOG.debug("Instantiated " + this);
     }
+
+    // by default, we allow writes against a region when it's in recovering
+    this.disallowWritesInRecovering =
+        conf.getBoolean(HConstants.DISALLOW_WRITES_IN_RECOVERING,
+          HConstants.DEFAULT_DISALLOW_WRITES_IN_RECOVERING_CONFIG);
   }
 
   void setHTableSpecificConf() {
@@ -1918,7 +1929,11 @@ public class HRegion implements HeapSize { // , Writable{
       checkResources();
 
       long newSize;
-      startRegionOperation();
+      if (isReplay) {
+        startRegionOperation(Operation.REPLAY_BATCH_MUTATE);
+      } else {
+        startRegionOperation(Operation.BATCH_MUTATE);
+      }
 
       try {
         if (!initialized) {
@@ -5029,7 +5044,7 @@ public class HRegion implements HeapSize { // , Writable{
       ClassSize.ARRAY +
       39 * ClassSize.REFERENCE + 2 * Bytes.SIZEOF_INT +
       (11 * Bytes.SIZEOF_LONG) +
-      Bytes.SIZEOF_BOOLEAN);
+      2 * Bytes.SIZEOF_BOOLEAN);
 
   public static final long DEEP_OVERHEAD = FIXED_OVERHEAD +
       ClassSize.OBJECT + // closeLock
@@ -5327,14 +5342,17 @@ public class HRegion implements HeapSize { // , Writable{
     case SCAN:
     case SPLIT_REGION:
     case MERGE_REGION:
+    case PUT:
+    case DELETE:
+    case BATCH_MUTATE:
       // when a region is in recovering state, no read, split or merge is allowed
-      if (this.isRecovering()) {
-        throw new RegionInRecoveryException(this.getRegionNameAsString()
-            + " is recovering");
+      if (this.isRecovering() && (this.disallowWritesInRecovering || 
+              (op != Operation.PUT && op != Operation.DELETE && op != Operation.BATCH_MUTATE))) {
+        throw new RegionInRecoveryException(this.getRegionNameAsString() + " is recovering");
       }
       break;
-      default:
-        break;
+    default:
+      break;
     }
     if (op == Operation.MERGE_REGION || op == Operation.SPLIT_REGION) {
       // split or merge region doesn't need to check the closing/closed state or lock the region
