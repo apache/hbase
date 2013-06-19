@@ -145,7 +145,7 @@ Access restriction: The method getLong(Object, long) from the type Unsafe is not
         </section>
     </section>
 
-        <section xml:id="build">
+    <section xml:id="build">
        <title>Building Apache HBase</title>
       <section xml:id="build.basic">
        <title>Basic Compile</title>
@@ -208,7 +208,7 @@ $ MAVEN_OPTS="-Xmx2g" mvn clean install deploy  -DskipTests -Dhadoop.profile=2.0
            </para>
       </section>
     </section> <!--  build -->
-      <section xml:id="mvn_repo">
+    <section xml:id="mvn_repo">
         <title>Adding an Apache HBase release to Apache's Maven Repository</title>
         <para>Follow the instructions at
         <link xlink:href="http://www.apache.org/dev/publishing-maven-artifacts.html">Publishing Maven Artifacts</link> after
@@ -343,7 +343,7 @@ What is the new development version for "HBase"? (org.apache.hbase:hbase) 0.92.3
 [INFO] -----------------------------------------------------------------------</programlisting>
         </para>
       </section>
-      <section xml:id="documentation">
+    <section xml:id="documentation">
           <title>Generating the HBase Reference Guide</title>
           <para>The manual is marked up using <link xlink:href="http://www.docbook.org/">docbook</link>.
               We then use the <link xlink:href="http://code.google.com/p/docbkx-tools/">docbkx maven plugin</link>
@@ -1010,6 +1010,42 @@ mvn compile
            <para>to ensure that maven can find the correct classpath and dependencies. Generally, the above command
            is just a good thing to try running first, if maven is acting oddly.</para>
            </section> <!-- run.insitu -->
+
+          <section xml:id="add.metrics">
+              <title>Adding Metrics</title>
+              <para>
+                  After adding a new feature a developer might want to add metrics.  HBase exposes
+                  metrics using the Hadoop Metrics 2 system, so adding a new metric involves
+                  exposing that metric to the hadoop system.  Unfortunately the API of metrics2
+                  changed from hadoop 1 to hadoop 2.  In order to get around this a set of
+                  interfaces and implementations have to be loaded at runtime.  To get an in-depth
+                  look at the reasoning and structure of these classes you can read the blog post
+                  located <link xlink:href="https://blogs.apache.org/hbase/entry/migration_to_the_new_metrics">here</link>.
+                  To add a metric to an existing MBean follow the short guide below:
+              </para>
+              <section>
+                  <title>Add Metric name and Function to Hadoop Compat Interface.</title>
+                  <para>
+                     Inside of the source interface the corresponds to where the metrics are
+                     generated (eg MetricsMasterSource for things coming from HMaster) create new
+                     static strings for metric name and description.  Then add a new method that
+                     will be called to add new reading.
+                  </para>
+              </section>
+              <section>
+                  <title>Add the Implementation to Both Hadoop 1 and Hadoop 2 Compat modules.</title>
+                  <para>
+                      Inside of the implementation of the source (eg. MetricsMasterSourceImpl
+                      in the above example) create a new histogram, counter, gauge, or stat in the
+                      init method.  Then in the method that was added to the interface wire up the
+                      parameter passed in to the histogram.
+                  </para>
+                  <para>
+                      Now add tests that make sure the data is correctly exported to the metrics 2
+                      system. For this the MetricsAssertHelper is provided.
+                  </para>
+              </section>
+          </section>
 
       </section>  <!--  developing -->
 
