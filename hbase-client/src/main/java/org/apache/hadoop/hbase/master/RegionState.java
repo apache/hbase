@@ -51,7 +51,7 @@ public class RegionState implements org.apache.hadoop.io.Writable {
 
   // Many threads can update the state at the stamp at the same time
   private final AtomicLong stamp;
-  private HRegionInfo region;
+  private HRegionInfo hri;
 
   private volatile ServerName serverName;
   private volatile State state;
@@ -66,7 +66,7 @@ public class RegionState implements org.apache.hadoop.io.Writable {
 
   public RegionState(HRegionInfo region,
       State state, long stamp, ServerName serverName) {
-    this.region = region;
+    this.hri = region;
     this.state = state;
     this.stamp = new AtomicLong(stamp);
     this.serverName = serverName;
@@ -85,7 +85,7 @@ public class RegionState implements org.apache.hadoop.io.Writable {
   }
 
   public HRegionInfo getRegion() {
-    return region;
+    return hri;
   }
 
   public ServerName getServerName() {
@@ -150,7 +150,7 @@ public class RegionState implements org.apache.hadoop.io.Writable {
 
   @Override
   public String toString() {
-    return "{" + region.getRegionNameAsString()
+    return "{" + hri.getShortNameToLog()
       + " state=" + state
       + ", ts=" + stamp
       + ", server=" + serverName + "}";
@@ -163,7 +163,7 @@ public class RegionState implements org.apache.hadoop.io.Writable {
     long lstamp = stamp.get();
     long relTime = System.currentTimeMillis() - lstamp;
     
-    return region.getRegionNameAsString()
+    return hri.getRegionNameAsString()
       + " state=" + state
       + ", ts=" + new Date(lstamp) + " (" + (relTime/1000) + "s ago)"
       + ", server=" + serverName;
@@ -214,7 +214,7 @@ public class RegionState implements org.apache.hadoop.io.Writable {
     default:
       throw new IllegalStateException("");
     }
-    regionState.setRegionInfo(HRegionInfo.convert(region));
+    regionState.setRegionInfo(HRegionInfo.convert(hri));
     regionState.setState(rs);
     regionState.setStamp(getStamp());
     return regionState.build();
@@ -278,8 +278,8 @@ public class RegionState implements org.apache.hadoop.io.Writable {
   @Deprecated
   @Override
   public void readFields(DataInput in) throws IOException {
-    region = new HRegionInfo();
-    region.readFields(in);
+    hri = new HRegionInfo();
+    hri.readFields(in);
     state = State.valueOf(in.readUTF());
     stamp.set(in.readLong());
   }
@@ -290,7 +290,7 @@ public class RegionState implements org.apache.hadoop.io.Writable {
   @Deprecated
   @Override
   public void write(DataOutput out) throws IOException {
-    region.write(out);
+    hri.write(out);
     out.writeUTF(state.name());
     out.writeLong(stamp.get());
   }

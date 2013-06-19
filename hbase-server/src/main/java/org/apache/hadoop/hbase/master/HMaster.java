@@ -69,7 +69,6 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.exceptions.MasterNotRunningException;
-import org.apache.hadoop.hbase.exceptions.NotAllMetaRegionsOnlineException;
 import org.apache.hadoop.hbase.exceptions.PleaseHoldException;
 import org.apache.hadoop.hbase.exceptions.TableNotDisabledException;
 import org.apache.hadoop.hbase.exceptions.TableNotFoundException;
@@ -736,7 +735,7 @@ MasterServices, Server {
     ZKClusterId.setClusterId(this.zooKeeper, fileSystemManager.getClusterId());
 
     if (!masterRecovery) {
-      this.executorService = new ExecutorService(getServerName().toString());
+      this.executorService = new ExecutorService(getServerName().toShortString());
       this.serverManager = createServerManager(this, this);
     }
 

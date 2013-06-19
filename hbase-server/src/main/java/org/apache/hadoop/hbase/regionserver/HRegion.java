@@ -605,7 +605,8 @@ public class HRegion implements HeapSize { // , Writable{
     // Use maximum of log sequenceid or that which was found in stores
     // (particularly if no recovered edits, seqid will be -1).
     long nextSeqid = maxSeqId + 1;
-    LOG.info("Onlined " + this.toString() + "; next sequenceid=" + nextSeqid);
+    LOG.info("Onlined " + this.getRegionInfo().getShortNameToLog() +
+      "; next sequenceid=" + nextSeqid);
 
     // A region can be reopened if failed a split; reset flags
     this.closing.set(false);
@@ -631,8 +632,7 @@ public class HRegion implements HeapSize { // , Writable{
     if (!htableDescriptor.getFamilies().isEmpty()) {
       // initialize the thread pool for opening stores in parallel.
       ThreadPoolExecutor storeOpenerThreadPool =
-        getStoreOpenAndCloseThreadPool(
-          "StoreOpenerThread-" + this.getRegionNameAsString());
+        getStoreOpenAndCloseThreadPool("StoreOpener-" + this.getRegionInfo().getShortNameToLog());
       CompletionService<HStore> completionService =
         new ExecutorCompletionService<HStore>(storeOpenerThreadPool);
 
@@ -4180,10 +4180,7 @@ public class HRegion implements HeapSize { // , Writable{
       final RegionServerServices rsServices, final CancelableProgressable reporter)
       throws IOException {
     if (info == null) throw new NullPointerException("Passed region info is null");
-    LOG.info("HRegion.openHRegion Region name ==" + info.getRegionNameAsString());
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Opening region: " + info);
-    }
+    LOG.info("Open " + info);
     Path dir = HTableDescriptor.getTableDir(rootDir, info.getTableName());
     HRegion r = HRegion.newHRegion(dir, wal, fs, conf, info, htd, rsServices);
     return r.openHRegion(reporter);

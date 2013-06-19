@@ -63,7 +63,11 @@ public class HBaseClusterManager extends ClusterManager {
     }
     sshOptions = (sshOptions == null) ? "" : sshOptions;
     tunnelCmd = conf.get("hbase.it.clustermanager.ssh.cmd", DEFAULT_TUNNEL_CMD);
-    LOG.info("Running with SSH user [" + sshUserName + "] and options [" + sshOptions + "]");
+    // Print out ssh special config if any.
+    if ((sshUserName != null && sshUserName.length() > 0) ||
+        (sshOptions != null && sshOptions.length() > 0)) {
+      LOG.info("Running with SSH user [" + sshUserName + "] and options [" + sshOptions + "]");
+    }
   }
 
   /**

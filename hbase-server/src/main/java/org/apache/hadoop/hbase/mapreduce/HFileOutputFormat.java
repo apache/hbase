@@ -70,7 +70,7 @@ import org.apache.hadoop.mapreduce.lib.partition.TotalOrderPartitioner;
  * attribute on created hfiles. Calling write(null,null) will forceably roll
  * all HFiles being written.
  * <p>
- * Using this class as part of a MapReduce job is best done 
+ * Using this class as part of a MapReduce job is best done
  * using {@link #configureIncrementalLoad(Job, HTable)}.
  * @see KeyValueSortReducer
  */
@@ -211,7 +211,7 @@ public class HFileOutputFormat extends FileOutputFormat<ImmutableBytesWritable, 
             .withChecksumType(HStore.getChecksumType(conf))
             .withBytesPerChecksum(HStore.getBytesPerChecksum(conf))
             .build();
-        
+
         this.writers.put(family, wl);
         return wl;
       }
@@ -340,7 +340,7 @@ public class HFileOutputFormat extends FileOutputFormat<ImmutableBytesWritable, 
         KeyValueSerialization.class.getName());
 
     // Use table's region boundaries for TOP split points.
-    LOG.info("Looking up current regions for table " + table);
+    LOG.info("Looking up current regions for table " + Bytes.toString(table.getTableName()));
     List<ImmutableBytesWritable> startKeys = getRegionStartKeys(table);
     LOG.info("Configuring " + startKeys.size() + " reduce partitions " +
         "to match current region count");
@@ -350,10 +350,10 @@ public class HFileOutputFormat extends FileOutputFormat<ImmutableBytesWritable, 
     // Set compression algorithms based on column families
     configureCompression(table, conf);
     configureBloomType(table, conf);
-    
+
     TableMapReduceUtil.addDependencyJars(job);
     TableMapReduceUtil.initCredentials(job);
-    LOG.info("Incremental table output configured.");
+    LOG.info("Incremental table " + Bytes.toString(table.getTableName()) + " output configured.");
   }
 
   /**
@@ -373,10 +373,10 @@ public class HFileOutputFormat extends FileOutputFormat<ImmutableBytesWritable, 
   private static Map<byte[], String> createFamilyBloomMap(Configuration conf) {
     return createFamilyConfValueMap(conf, BLOOM_TYPE_CONF_KEY);
   }
-  
+
   /**
    * Run inside the task to deserialize column family to given conf value map.
-   * 
+   *
    * @param conf
    * @param confName
    * @return a map of column family to the given configuration value
@@ -450,7 +450,7 @@ public class HFileOutputFormat extends FileOutputFormat<ImmutableBytesWritable, 
     // Get rid of the last ampersand
     conf.set(COMPRESSION_CONF_KEY, compressionConfigValue.toString());
   }
-  
+
   /**
    * Serialize column family to bloom type map to configuration.
    * Invoked while configuring the MR job for incremental load.

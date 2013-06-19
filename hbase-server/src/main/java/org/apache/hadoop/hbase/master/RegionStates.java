@@ -194,9 +194,8 @@ public class RegionStates {
     String regionName = hri.getEncodedName();
     RegionState regionState = regionStates.get(regionName);
     if (regionState != null) {
-      LOG.warn("Tried to create a state of a region already in RegionStates "
-        + hri + ", used existing state: " + regionState
-        + ", ignored new state: state=OFFLINE, server=null");
+      LOG.warn("Tried to create a state of a region already in RegionStates, " +
+        "used existing state: " + regionState + ", ignored new state: state=OFFLINE, server=null");
     } else {
       regionState = new RegionState(hri, State.OFFLINE);
       regionStates.put(regionName, regionState);
@@ -225,7 +224,7 @@ public class RegionStates {
    */
   public synchronized RegionState updateRegionState(
       final RegionTransition transition, final State state) {
-    byte[] regionName = transition.getRegionName();
+    byte [] regionName = transition.getRegionName();
     HRegionInfo regionInfo = getRegionInfo(regionName);
     if (regionInfo == null) {
       String prettyRegionName = HRegionInfo.prettyPrint(
@@ -248,13 +247,14 @@ public class RegionStates {
     ServerName newServerName = serverName;
     if (serverName != null &&
         (state == State.CLOSED || state == State.OFFLINE)) {
-      LOG.warn("Closed region " + hri + " still on "
+      LOG.warn("Closed region " + hri.getShortNameToLog() + " still on "
         + serverName + "? Ignored, reset it to null");
       newServerName = null;
     }
 
     if (state == State.FAILED_CLOSE || state == State.FAILED_OPEN) {
-      LOG.warn("Failed to transition " + hri + " on " + serverName + ": " + state);
+      LOG.warn("Failed to transition " + hri.getShortNameToLog() + " on " + serverName + ": " +
+        state);
     }
 
     String regionName = hri.getEncodedName();
@@ -262,7 +262,7 @@ public class RegionStates {
       hri, state, System.currentTimeMillis(), newServerName);
     RegionState oldState = regionStates.put(regionName, regionState);
     if (oldState == null || oldState.getState() != regionState.getState()) {
-      LOG.info("Region " + hri + " transitioned from " + oldState + " to " + regionState);
+      LOG.info("Region transitioned from " + oldState + " to " + regionState);
     }
     if (state != State.SPLITTING && (newServerName != null
         || (state != State.PENDING_CLOSE && state != State.CLOSING))) {
@@ -284,13 +284,13 @@ public class RegionStates {
     String regionName = hri.getEncodedName();
     RegionState oldState = regionStates.get(regionName);
     if (oldState == null) {
-      LOG.warn("Online a region not in RegionStates: " + hri);
+      LOG.warn("Online a region not in RegionStates: " + hri.getShortNameToLog());
     } else {
       State state = oldState.getState();
       ServerName sn = oldState.getServerName();
       if (state != State.OPEN || sn == null || !sn.equals(serverName)) {
-        LOG.debug("Online a region with current state=" + state + ", expected state=OPEN"
-          + ", assigned to server: " + sn + " expected " + serverName);
+        LOG.debug("Online a region " + hri.getShortNameToLog() + " with current state=" + state +
+          ", expected state=OPEN" + ", assigned to server: " + sn + " expected " + serverName);
       }
     }
     updateRegionState(hri, State.OPEN, serverName);
@@ -298,7 +298,7 @@ public class RegionStates {
 
     ServerName oldServerName = regionAssignments.put(hri, serverName);
     if (!serverName.equals(oldServerName)) {
-      LOG.info("Onlined region " + hri + " on " + serverName);
+      LOG.info("Onlined region " + hri.getShortNameToLog() + " on " + serverName);
       Set<HRegionInfo> regions = serverHoldings.get(serverName);
       if (regions == null) {
         regions = new HashSet<HRegionInfo>();
@@ -306,7 +306,7 @@ public class RegionStates {
       }
       regions.add(hri);
       if (oldServerName != null) {
-        LOG.info("Offlined region " + hri + " from " + oldServerName);
+        LOG.info("Offlined region " + hri.getShortNameToLog() + " from " + oldServerName);
         serverHoldings.get(oldServerName).remove(hri);
       }
     }
@@ -319,13 +319,13 @@ public class RegionStates {
     String regionName = hri.getEncodedName();
     RegionState oldState = regionStates.get(regionName);
     if (oldState == null) {
-      LOG.warn("Offline a region not in RegionStates: " + hri);
+      LOG.warn("Offline a region not in RegionStates: " + hri.getShortNameToLog());
     } else {
       State state = oldState.getState();
       ServerName sn = oldState.getServerName();
       if (state != State.OFFLINE || sn != null) {
-        LOG.debug("Offline a region with current state=" + state + ", expected state=OFFLINE"
-          + ", assigned to server: " + sn + ", expected null");
+        LOG.debug("Offline a region " + hri.getShortNameToLog() + " with current state=" + state +
+          ", expected state=OFFLINE" + ", assigned to server: " + sn + ", expected null");
       }
     }
     updateRegionState(hri, State.OFFLINE);
@@ -333,7 +333,7 @@ public class RegionStates {
 
     ServerName oldServerName = regionAssignments.remove(hri);
     if (oldServerName != null) {
-      LOG.info("Offlined region " + hri + " from " + oldServerName);
+      LOG.info("Offlined region " + hri.getShortNameToLog() + " from " + oldServerName);
       serverHoldings.get(oldServerName).remove(hri);
     }
   }
@@ -360,16 +360,14 @@ public class RegionStates {
         // Region is open on this region server, but in transition.
         // This region must be moving away from this server.
         // SSH will handle it, either skip assigning, or re-assign.
-        LOG.info("Transitioning region "
-          + state + " will be handled by SSH for " + sn);
+        LOG.info("Transitioning region " + state + " will be handled by SSH for " + sn);
       } else if (sn.equals(state.getServerName())) {
         // Region is in transition on this region server, and this
         // region is not open on this server. So the region must be
         // moving to this server from another one (i.e. opening or
         // pending open on this server, was open on another one
         if (state.isPendingOpen() || state.isOpening()) {
-          LOG.info("Found opening region "
-            + state + " to be reassigned by SSH for " + sn);
+          LOG.info("Found opening region " + state + " to be reassigned by SSH for " + sn);
           rits.add(hri);
         } else {
           LOG.warn("THIS SHOULD NOT HAPPEN: unexpected state "

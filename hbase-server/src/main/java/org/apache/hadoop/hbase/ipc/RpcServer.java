@@ -156,7 +156,7 @@ public class RpcServer implements RpcServerInterface {
   private static final int DEFAULT_MAX_CALLQUEUE_LENGTH_PER_HANDLER = 10;
 
   /**
-   * The maximum size that we can hold in the IPC queue
+   * The maximum size that we can hold in the RPC queue
    */
   private static final int DEFAULT_MAX_CALLQUEUE_SIZE = 1024 * 1024 * 1024;
 
@@ -497,7 +497,7 @@ public class RpcServer implements RpcServerInterface {
       readers = new Reader[readThreads];
       readPool = Executors.newFixedThreadPool(readThreads,
         new ThreadFactoryBuilder().setNameFormat(
-          "IPC Reader %d on port " + port).setDaemon(true).build());
+          "RpcServer.reader=%d,port=" + port).setDaemon(true).build());
       for (int i = 0; i < readThreads; ++i) {
         Reader reader = new Reader();
         readers[i] = reader;
@@ -507,7 +507,7 @@ public class RpcServer implements RpcServerInterface {
 
       // Register accepts on the server socket with the selector.
       acceptChannel.register(selector, SelectionKey.OP_ACCEPT);
-      this.setName("IPC Server listener on " + port);
+      this.setName("RpcServer.listener,port=" + port);
       this.setDaemon(true);
     }
 
@@ -802,7 +802,7 @@ public class RpcServer implements RpcServerInterface {
     private int pending;         // connections waiting to register
 
     Responder() throws IOException {
-      this.setName("IPC Server Responder");
+      this.setName("RpcServer.responder");
       this.setDaemon(true);
       writeSelector = Selector.open(); // create a selector
       pending = 0;
@@ -1782,12 +1782,12 @@ public class RpcServer implements RpcServerInterface {
       this.myCallQueue = cq;
       this.setDaemon(true);
 
-      String threadName = "IPC Server handler " + instanceNumber + " on " + port;
+      String threadName = "RpcServer.handler=" + instanceNumber + ",port=" + port;
       if (cq == priorityCallQueue) {
         // this is just an amazing hack, but it works.
-        threadName = "PRI " + threadName;
+        threadName = "Priority." + threadName;
       } else if (cq == replicationQueue) {
-        threadName = "REPL " + threadName;
+        threadName = "Replication." + threadName;
       }
       this.setName(threadName);
       this.status = TaskMonitor.get().createRPCStatus(threadName);
@@ -1995,7 +1995,7 @@ public class RpcServer implements RpcServerInterface {
   }
 
   /**
-   * Setup response for the IPC Call.
+   * Setup response for the RPC Call.
    *
    * @param response buffer to serialize the response into
    * @param call {@link Call} to which we are setting up the response
