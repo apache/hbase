@@ -273,10 +273,7 @@ elif [ "$COMMAND" = "hlog" ] ; then
 elif [ "$COMMAND" = "hfile" ] ; then
   CLASS='org.apache.hadoop.hbase.io.hfile.HFile'
 elif [ "$COMMAND" = "zkcli" ] ; then
-  # ZooKeeperMainServerArg returns '-server HOST:PORT' or empty string.
-  SERVER_ARG=`"$bin"/hbase org.apache.hadoop.hbase.zookeeper.ZooKeeperMainServerArg`
-  CLASS="org.apache.zookeeper.ZooKeeperMain ${SERVER_ARG}"
-
+  CLASS="org.apache.hadoop.hbase.zookeeper.ZooKeeperMainServer"
 elif [ "$COMMAND" = "master" ] ; then
   CLASS='org.apache.hadoop.hbase.master.HMaster'
   if [ "$1" != "stop" ] ; then
