@@ -46,9 +46,9 @@ public abstract class IngestIntegrationTestBase {
   protected void setUp(int numSlavesBase, Configuration conf) throws Exception {
     tableName = this.getClass().getSimpleName();
     util = getTestingUtil(conf);
-    LOG.info("Initializing cluster with " + numSlavesBase + " servers");
+    LOG.debug("Initializing/checking cluster has " + numSlavesBase + " servers");
     util.initializeCluster(numSlavesBase);
-    LOG.info("Done initializing cluster");
+    LOG.debug("Done initializing/checking cluster");
     cluster = util.getHBaseClusterInterface();
     deleteTableIfNecessary();
     loadTool = new LoadTestTool();
@@ -75,9 +75,9 @@ public abstract class IngestIntegrationTestBase {
   }
 
   protected void tearDown() throws Exception {
-    LOG.info("Restoring the cluster");
+    LOG.debug("Restoring the cluster");
     util.restoreCluster();
-    LOG.info("Done restoring the cluster");
+    LOG.debug("Done restoring the cluster");
   }
 
   private void deleteTableIfNecessary() throws IOException {

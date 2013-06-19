@@ -101,18 +101,17 @@ public class OpenedRegionHandler extends EventHandler implements TotesHRegionInf
     if (regionState != null && regionState.isOpened()) {
       openedNodeDeleted = deleteOpenedNode(expectedVersion);
       if (!openedNodeDeleted) {
-        LOG.error("The znode of region " + regionInfo.getRegionNameAsString()
-            + " could not be deleted.");
+        LOG.error("Znode of region " + regionInfo.getShortNameToLog() + " could not be deleted.");
       }
     } else {
-      LOG.warn("Skipping the onlining of " + regionInfo.getRegionNameAsString() +
+      LOG.warn("Skipping the onlining of " + regionInfo.getShortNameToLog() +
         " because regions is NOT in RIT -- presuming this is because it SPLIT");
     }
     if (!openedNodeDeleted) {
       if (this.assignmentManager.getZKTable().isDisablingOrDisabledTable(
           regionInfo.getTableNameAsString())) {
         debugLog(regionInfo, "Opened region "
-            + regionInfo.getRegionNameAsString() + " but "
+            + regionInfo.getShortNameToLog() + " but "
             + "this table is disabled, triggering close of region");
         assignmentManager.unassign(regionInfo);
       }
@@ -121,7 +120,7 @@ public class OpenedRegionHandler extends EventHandler implements TotesHRegionInf
 
   private boolean deleteOpenedNode(int expectedVersion) {
     debugLog(regionInfo, "Handling OPENED event for " +
-      this.regionInfo.getRegionNameAsString() + " from " + this.sn.toString() +
+      this.regionInfo.getShortNameToLog() + " from " + this.sn.toString() +
       "; deleting unassigned node");
     try {
       // delete the opened znode only if the version matches.
@@ -129,7 +128,7 @@ public class OpenedRegionHandler extends EventHandler implements TotesHRegionInf
           regionInfo.getEncodedName(), EventType.RS_ZK_REGION_OPENED, expectedVersion);
     } catch(KeeperException.NoNodeException e){
       // Getting no node exception here means that already the region has been opened.
-      LOG.warn("The znode of the region " + regionInfo.getRegionNameAsString() +
+      LOG.warn("The znode of the region " + regionInfo.getShortNameToLog() +
         " would have already been deleted");
       return false;
     } catch (KeeperException e) {

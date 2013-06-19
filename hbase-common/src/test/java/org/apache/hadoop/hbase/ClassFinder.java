@@ -223,12 +223,12 @@ public class ClassFinder {
       if (!proceedOnExceptions) {
         throw classNotFoundEx;
       }
-      LOG.error("Failed to instantiate or check " + className + ": " + classNotFoundEx);
+      LOG.debug("Failed to instantiate or check " + className + ": " + classNotFoundEx);
     } catch (LinkageError linkageEx) {
       if (!proceedOnExceptions) {
         throw linkageEx;
       }
-      LOG.error("Failed to instantiate or check " + className + ": " + linkageEx);
+      LOG.debug("Failed to instantiate or check " + className + ": " + linkageEx);
     }
     return null;
   }

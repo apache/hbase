@@ -153,6 +153,13 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
   }
 
   /**
+   * @return Return a short, printable name for this region (usually encoded name) for us logging.
+   */
+  public String getShortNameToLog() {
+    return prettyPrint(this.getEncodedName());
+  }
+
+  /**
    * Use logging.
    * @param encodedRegionName The encoded regionname.
    * @return <code>.META.</code> if passed <code>1028785192</code> else returns
@@ -648,14 +655,13 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
    */
   @Override
   public String toString() {
-    return "{" + HConstants.NAME + " => '" +
-      this.regionNameStr
+    return "{ENCODED => " + getEncodedName() + ", " +
+      HConstants.NAME + " => '" + this.regionNameStr
       + "', STARTKEY => '" +
       Bytes.toStringBinary(this.startKey) + "', ENDKEY => '" +
-      Bytes.toStringBinary(this.endKey) +
-      "', ENCODED => " + getEncodedName() + "," +
-      (isOffline()? " OFFLINE => true,": "") +
-      (isSplit()? " SPLIT => true,": "") + "}";
+      Bytes.toStringBinary(this.endKey) + "'" +
+      (isOffline()? ", OFFLINE => true": "") +
+      (isSplit()? ", SPLIT => true": "") + "}";
   }
 
   /**

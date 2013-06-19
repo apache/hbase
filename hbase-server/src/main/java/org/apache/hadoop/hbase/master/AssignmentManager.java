@@ -1465,15 +1465,12 @@ public class AssignmentManager extends ZooKeeperListener {
    * @param regions Regions to assign.
    * @return true if successful
    */
-  boolean assign(final ServerName destination,
-      final List<HRegionInfo> regions) {
+  boolean assign(final ServerName destination, final List<HRegionInfo> regions) {
     int regionCount = regions.size();
     if (regionCount == 0) {
       return true;
     }
-    LOG.debug("Bulk assigning " + regionCount + " region(s) to " +
-      destination.toString());
-
+    LOG.debug("Assigning " + regionCount + " region(s) to " + destination.toString());
     Set<String> encodedNames = new HashSet<String>(regionCount);
     for (HRegionInfo region : regions) {
       encodedNames.add(region.getEncodedName());
@@ -2408,9 +2405,10 @@ public class AssignmentManager extends ZooKeeperListener {
 
       // Not use bulk assignment.  This could be more efficient in small
       // cluster, especially mini cluster for testing, so that tests won't time out
-      LOG.info("Not use bulk assigning since we are assigning only "
-        + regions + " region(s) to " + servers + " server(s)");
-
+      if (LOG.isTraceEnabled()) {
+        LOG.trace("Not using bulk assignment since we are assigning only " + regions +
+          " region(s) to " + servers + " server(s)");
+      }
       for (Map.Entry<ServerName, List<HRegionInfo>> plan: bulkPlan.entrySet()) {
         assign(plan.getKey(), plan.getValue());
       }

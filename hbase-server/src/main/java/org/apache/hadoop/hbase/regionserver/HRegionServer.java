@@ -1145,10 +1145,9 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
           String hostnameFromMasterPOV = e.getValue();
           this.serverNameFromMasterPOV = new ServerName(hostnameFromMasterPOV,
             this.isa.getPort(), this.startcode);
-          if (!this.serverNameFromMasterPOV.equals(this.isa.getHostName())) {
+          if (!hostnameFromMasterPOV.equals(this.isa.getHostName())) {
             LOG.info("Master passed us a different hostname to use; was=" +
-              this.isa.getHostName() + ", but now=" +
-              this.serverNameFromMasterPOV.getHostname());
+              this.isa.getHostName() + ", but now=" + hostnameFromMasterPOV);
           }
           continue;
         }
@@ -1186,7 +1185,7 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
       this.metricsRegionServer = new MetricsRegionServer(new MetricsRegionServerWrapperImpl(this));
       startServiceThreads();
       LOG.info("Serving as " + this.serverNameFromMasterPOV +
-        ", RPC listening on " + this.isa +
+        ", RpcServer on " + this.isa +
         ", sessionid=0x" +
         Long.toHexString(this.zooKeeper.getRecoverableZooKeeper().getSessionId()));
       isOnline = true;
@@ -1308,7 +1307,7 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
         final Stoppable stopper) {
       super("CompactionChecker", sleepTime, h);
       this.instance = h;
-      LOG.info("Runs every " + StringUtils.formatTime(sleepTime));
+      LOG.info(this.getName() + " runs every " + StringUtils.formatTime(sleepTime));
 
       /* MajorCompactPriority is configurable.
        * If not set, the compaction will use default priority.
@@ -1864,9 +1863,6 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
       }
 
       new InetSocketAddress(sn.getHostname(), sn.getPort());
-
-      LOG.info("Attempting connect to Master server at " +
-        this.masterAddressManager.getMasterAddress());
       try {
         BlockingRpcChannel channel = this.rpcClient.createBlockingRpcChannel(sn,
             User.getCurrent(), this.rpcTimeout);
@@ -1919,8 +1915,8 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
     if (masterServerName == null) return result;
     try {
       this.requestCount.set(0);
-      LOG.info("Telling master at " + masterServerName + " that we are up " +
-        "with port=" + this.isa.getPort() + ", startcode=" + this.startcode);
+      LOG.info("reportForDuty to master=" + masterServerName + " with port=" + this.isa.getPort() +
+        ", startcode=" + this.startcode);
       long now = EnvironmentEdgeManager.currentTimeMillis();
       int port = this.isa.getPort();
       RegionServerStartupRequest.Builder request = RegionServerStartupRequest.newBuilder();
@@ -3418,8 +3414,7 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
             removeFromOnlineRegions(onlineRegion, null);
           }
         }
-        LOG.info("Received request to open region: " + region.getRegionNameAsString() + " on "
-            + this.serverNameFromMasterPOV);
+        LOG.info("Open " + region.getRegionNameAsString());
         htd = htds.get(region.getTableNameAsString());
         if (htd == null) {
           htd = this.tableDescriptors.get(region.getTableName());

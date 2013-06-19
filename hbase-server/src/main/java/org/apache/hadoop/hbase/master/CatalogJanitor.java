@@ -63,7 +63,7 @@ public class CatalogJanitor extends Chore {
   private AtomicBoolean alreadyRunning = new AtomicBoolean(false);
 
   CatalogJanitor(final Server server, final MasterServices services) {
-    super(server.getServerName() + "-CatalogJanitor",
+    super("CatalogJanitor-" + server.getServerName().toShortString(),
       server.getConfiguration().getInt("hbase.catalogjanitor.interval", 300000),
       server);
     this.server = server;
@@ -338,7 +338,7 @@ public class CatalogJanitor extends Chore {
         this.services.getAssignmentManager().regionOffline(parent);
       }
       FileSystem fs = this.services.getMasterFileSystem().getFileSystem();
-      LOG.debug("Archiving parent region:" + parent);
+      if (LOG.isTraceEnabled()) LOG.trace("Archiving parent region: " + parent);
       HFileArchiver.archiveRegion(this.services.getConfiguration(), fs, parent);
       MetaEditor.deleteRegion(this.server.getCatalogTracker(), parent);
       result = true;

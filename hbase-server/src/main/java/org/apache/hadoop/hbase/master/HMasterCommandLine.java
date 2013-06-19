@@ -53,8 +53,11 @@ public class HMasterCommandLine extends ServerCommandLine {
     " stop   Start cluster shutdown; Master signals RegionServer shutdown\n" +
     " clear  Delete the master znode in ZooKeeper after a master crashes\n "+
     " where [opts] are:\n" +
-    "   --minServers=<servers>    Minimum RegionServers needed to host user tables.\n" +
-    "   --backup                  Master should start in backup mode";
+    "   --minRegionServers=<servers>   Minimum RegionServers needed to host user tables.\n" +
+    "   --localRegionServers=<servers> " +
+      "RegionServers to start in master process when in standalone mode.\n" +
+    "   --masters=<servers>            Masters to start in this process.\n" +
+    "   --backup                       Master should start in backup mode";
 
   private final Class<? extends HMaster> masterClass;
 
@@ -69,9 +72,11 @@ public class HMasterCommandLine extends ServerCommandLine {
 
   public int run(String args[]) throws Exception {
     Options opt = new Options();
-    opt.addOption("minServers", true, "Minimum RegionServers needed to host user tables");
+    opt.addOption("localRegionServers", true,
+      "RegionServers to start in master process when running standalone");
+    opt.addOption("masters", true, "Masters to start in this process");
+    opt.addOption("minRegionServers", true, "Minimum RegionServers needed to host user tables");
     opt.addOption("backup", false, "Do not try to become HMaster until the primary fails");
-
 
     CommandLine cmd;
     try {
@@ -83,6 +88,14 @@ public class HMasterCommandLine extends ServerCommandLine {
     }
 
 
+    if (cmd.hasOption("minRegionServers")) {
+      String val = cmd.getOptionValue("minRegionServers");
+      getConf().setInt("hbase.regions.server.count.min",
+                  Integer.valueOf(val));
+      LOG.debug("minRegionServers set to " + val);
+    }
+
+    // minRegionServers used to be minServers.  Support it too.
     if (cmd.hasOption("minServers")) {
       String val = cmd.getOptionValue("minServers");
       getConf().setInt("hbase.regions.server.count.min",
@@ -93,6 +106,20 @@ public class HMasterCommandLine extends ServerCommandLine {
     // check if we are the backup master - override the conf if so
     if (cmd.hasOption("backup")) {
       getConf().setBoolean(HConstants.MASTER_TYPE_BACKUP, true);
+    }
+
+    // How many regionservers to startup in this process (we run regionservers in same process as
+    // master when we are in local/standalone mode. Useful testing)
+    if (cmd.hasOption("localRegionServers")) {
+      String val = cmd.getOptionValue("localRegionServers");
+      getConf().setInt("hbase.regionservers", Integer.valueOf(val));
+      LOG.debug("localRegionServers set to " + val);
+    }
+    // How many masters to startup inside this process; useful testing
+    if (cmd.hasOption("masters")) {
+      String val = cmd.getOptionValue("masters");
+      getConf().setInt("hbase.masters", Integer.valueOf(val));
+      LOG.debug("masters set to " + val);
     }
 
     List<String> remainingArgs = cmd.getArgList();
@@ -147,8 +174,8 @@ public class HMasterCommandLine extends ServerCommandLine {
                  Integer.toString(clientPort));
         // Need to have the zk cluster shutdown when master is shutdown.
         // Run a subclass that does the zk cluster shutdown on its way out.
-        LocalHBaseCluster cluster = new LocalHBaseCluster(conf, 1, 1,
-                                                          LocalHMaster.class, HRegionServer.class);
+        LocalHBaseCluster cluster = new LocalHBaseCluster(conf, conf.getInt("hbase.masters", 1),
+          conf.getInt("hbase.regionservers", 1), LocalHMaster.class, HRegionServer.class);
         ((LocalHMaster)cluster.getMaster(0)).setZKCluster(zooKeeperCluster);
         cluster.startup();
         waitOnMasterThreads(cluster);
@@ -199,8 +226,8 @@ public class HMasterCommandLine extends ServerCommandLine {
   private void waitOnMasterThreads(LocalHBaseCluster cluster) throws InterruptedException{
     List<JVMClusterUtil.MasterThread> masters = cluster.getMasters();
     List<JVMClusterUtil.RegionServerThread> regionservers = cluster.getRegionServers();
-	  
-    if (masters != null) { 
+
+    if (masters != null) {
       for (JVMClusterUtil.MasterThread t : masters) {
         t.join();
         if(t.getMaster().isAborted()) {
@@ -216,7 +243,7 @@ public class HMasterCommandLine extends ServerCommandLine {
       t.getRegionServer().stop("HMaster Aborted; Bringing down regions servers");
     }
   }
-  
+
   /*
    * Version of master that will shutdown the passed zk cluster on its way out.
    */

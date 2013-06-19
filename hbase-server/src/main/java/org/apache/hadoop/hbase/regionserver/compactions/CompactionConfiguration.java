@@ -82,7 +82,7 @@ public class CompactionConfiguration {
     // Make it 0.5 so jitter has us fall evenly either side of when the compaction should run
     majorCompactionJitter = conf.getFloat("hbase.hregion.majorcompaction.jitter", 0.50F);
 
-    LOG.info("Compaction configuration " + this.toString());
+    LOG.info(this);
   }
 
   @Override
