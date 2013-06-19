@@ -98,7 +98,7 @@
     <complexType name="Cell">
         <sequence>
             <element name="value" maxOccurs="1" minOccurs="1">
-                <simpleType><restriction base="base64Binary">
+                <simpleType><restriction base="base64Binary" />
                 </simpleType>
             </element>
         </sequence>
@@ -111,8 +111,6 @@
     <complexType name="Scanner">
         <sequence>
             <element name="column" type="base64Binary" minOccurs="0" maxOccurs="unbounded"></element>
-        </sequence>
-        <sequence>
             <element name="filter" type="string" minOccurs="0" maxOccurs="1"></element>
         </sequence>
         <attribute name="startRow" type="base64Binary"></attribute>
