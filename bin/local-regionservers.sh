@@ -27,11 +27,13 @@ bin=`cd "$bin" >/dev/null && pwd`
 
 if [ $# -lt 2 ]; then
   S=`basename "${BASH_SOURCE-$0}"`
-  echo "Usage: $S [start|stop] offset(s)"
+  echo "Usage: $S [--config <conf-dir>] [start|stop] offset(s)"
   echo ""
   echo "    e.g. $S start 1 2"
   exit
 fi
+
+. "$bin"/hbase-config.sh
 
 # sanity check: make sure your regionserver opts don't use ports [i.e. JMX/DBG]
 export HBASE_REGIONSERVER_OPTS=" "
@@ -42,7 +44,7 @@ run_regionserver () {
   HBASE_REGIONSERVER_ARGS="\
     -D hbase.regionserver.port=`expr 60200 + $DN` \
     -D hbase.regionserver.info.port=`expr 60300 + $DN`"
-  "$bin"/hbase-daemon.sh $1 regionserver $HBASE_REGIONSERVER_ARGS
+  "$bin"/hbase-daemon.sh  --config "${HBASE_CONF_DIR}" $1 regionserver $HBASE_REGIONSERVER_ARGS
 }
 
 cmd=$1
