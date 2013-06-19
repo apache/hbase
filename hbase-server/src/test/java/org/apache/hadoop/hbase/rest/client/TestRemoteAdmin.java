@@ -116,9 +116,6 @@ public class TestRemoteAdmin {
     assertEquals(
         "Dead server count from cluster status and returned status did not match up. ",
         status.getDeadServers(), returnedStatus.getDeadNodes().size());
-    assertEquals(
-        "Number of requests from cluster status and returned status did not match up. ",
-        status.getRequestsCount(), returnedStatus.getRequests());
   }
 
   @Test
