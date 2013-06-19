@@ -723,6 +723,9 @@ public class HTable implements HTableInterface {
    */
   @Override
   public Result[] get(List<Get> gets) throws IOException {
+    if (gets.size() == 1) {
+      return new Result[]{get(gets.get(0))};
+    }
     try {
       Object [] r1 = batch((List)gets);
 
