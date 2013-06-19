@@ -314,7 +314,7 @@ public class KeyValueHeap extends NonLazyKeyValueScanner
       }
 
       boolean seekResult;
-      if (isLazy && heap.size() > 0) {
+      if (isLazy) {
         seekResult = scanner.requestSeek(seekKey, forward, useBloom);
       } else {
         seekResult = NonLazyKeyValueScanner.doRealSeek(
