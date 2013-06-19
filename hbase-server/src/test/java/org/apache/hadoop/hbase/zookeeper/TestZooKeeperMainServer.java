@@ -27,8 +27,8 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 @Category(SmallTests.class)
-public class TestZooKeeperMainServerArg {
-  private final ZooKeeperMainServerArg parser = new ZooKeeperMainServerArg();
+public class TestZooKeeperMainServer {
+  private final ZooKeeperMainServer parser = new ZooKeeperMainServer();
 
   @Test public void test() {
     Configuration c = HBaseConfiguration.create();
@@ -42,6 +42,5 @@ public class TestZooKeeperMainServerArg {
     assertTrue(port,
         parser.parse(c).matches("(example[1-3]\\.com,){2}example[1-3]\\.com:" + port));
   }
-
 }
 

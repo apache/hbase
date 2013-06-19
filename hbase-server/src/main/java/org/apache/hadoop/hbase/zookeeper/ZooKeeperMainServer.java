@@ -26,15 +26,13 @@ import java.util.Properties;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.zookeeper.ZooKeeperMain;
 
 /**
- * Tool for reading a ZooKeeper server from HBase XML configuration producing
- * the '-server host:port' argument to pass ZooKeeperMain.  This program
- * emits either '-server HOST:PORT" where HOST is one of the zk ensemble
- * members plus zk client port OR it emits '' if no zk servers found (Yes,
- * it emits '-server' too).
+ * Tool for running ZookeeperMain from HBase by  reading a ZooKeeper server
+ * from HBase XML configuration.
  */
-public class ZooKeeperMainServerArg {
+public class ZooKeeperMainServer {
   public String parse(final Configuration c) {
     // Note that we do not simply grab the property
     // HConstants.ZOOKEEPER_QUORUM from the HBaseConfiguration because the
@@ -68,10 +66,10 @@ public class ZooKeeperMainServerArg {
    * Run the tool.
    * @param args Command line arguments. First arg is path to zookeepers file.
    */
-  public static void main(String args[]) {
+  public static void main(String args[]) throws Exception {
     Configuration conf = HBaseConfiguration.create();
-    String hostport = new ZooKeeperMainServerArg().parse(conf);
-    System.out.println((hostport == null || hostport.length() == 0)? "":
-      "-server " + hostport);
+    String hostport = new ZooKeeperMainServer().parse(conf);
+    String zkArg = (hostport == null || hostport.length() == 0)? "": "-server " + hostport;
+    ZooKeeperMain.main(new String[] {zkArg});
   }
 }

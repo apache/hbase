@@ -337,9 +337,7 @@ goto :eof
   goto :eof
 
 :zkcli
-  rem ZooKeeperMainServerArg returns '-server HOST:PORT' or empty string.
-  set SERVER_ARG=%HADOOP_BIN_PATH%\hbase org.apache.hadoop.hbase.zookeeper.ZooKeeperMainServerArg
-  set CLASS=org.apache.zookeeper.ZooKeeperMain %SERVER_ARG%
+  set CLASS=org.apache.hadoop.hbase.zookeeper.ZooKeeperMainServer
   goto :eof
 
 :makeServiceXml
