@@ -126,6 +126,8 @@ public class RpcClient {
   protected final SocketFactory socketFactory;           // how to create sockets
   protected String clusterId;
 
+  private final boolean fallbackAllowed;
+
   final private static String PING_INTERVAL_NAME = "ipc.ping.interval";
   final private static String SOCKET_TIMEOUT = "ipc.socket.timeout";
   final static int DEFAULT_PING_INTERVAL = 60000;  // 1 min
@@ -134,6 +136,10 @@ public class RpcClient {
 
   public final static String FAILED_SERVER_EXPIRY_KEY = "hbase.ipc.client.failed.servers.expiry";
   public final static int FAILED_SERVER_EXPIRY_DEFAULT = 2000;
+
+  public static final String IPC_CLIENT_FALLBACK_TO_SIMPLE_AUTH_ALLOWED_KEY =
+      "hbase.ipc.client.fallback-to-simple-auth-allowed";
+  public static final boolean IPC_CLIENT_FALLBACK_TO_SIMPLE_AUTH_ALLOWED_DEFAULT = false;
 
   // thread-specific RPC timeout, which may override that of what was passed in.
   // TODO: Verify still being used.
@@ -711,7 +717,7 @@ public class RpcClient {
 
     private synchronized boolean setupSaslConnection(final InputStream in2,
         final OutputStream out2) throws IOException {
-      saslRpcClient = new HBaseSaslRpcClient(authMethod, token, serverPrincipal);
+      saslRpcClient = new HBaseSaslRpcClient(authMethod, token, serverPrincipal, fallbackAllowed);
       return saslRpcClient.saslConnect(in2, out2);
     }
 
@@ -1179,12 +1185,15 @@ public class RpcClient {
     this.clusterId = clusterId != null ? clusterId : HConstants.CLUSTER_ID_DEFAULT;
     this.connections = new PoolMap<ConnectionId, Connection>(getPoolType(conf), getPoolSize(conf));
     this.failedServers = new FailedServers(conf);
+    this.fallbackAllowed = conf.getBoolean(IPC_CLIENT_FALLBACK_TO_SIMPLE_AUTH_ALLOWED_KEY,
+        IPC_CLIENT_FALLBACK_TO_SIMPLE_AUTH_ALLOWED_DEFAULT);
     if (LOG.isDebugEnabled()) {
       LOG.debug("Codec=" + this.codec + ", compressor=" + this.compressor +
         ", tcpKeepAlive=" + this.tcpKeepAlive +
         ", tcpNoDelay=" + this.tcpNoDelay +
         ", maxIdleTime=" + this.maxIdleTime +
         ", maxRetries=" + this.maxRetries +
+        ", fallbackAllowed=" + this.fallbackAllowed +
         ", ping interval=" + this.pingInterval + "ms.");
     }
   }
