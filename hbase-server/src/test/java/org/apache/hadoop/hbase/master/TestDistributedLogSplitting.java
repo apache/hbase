@@ -67,6 +67,8 @@ import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.RetriesExhaustedWithDetailsException;
+import org.apache.hadoop.hbase.exceptions.RegionInRecoveryException;
 import org.apache.hadoop.hbase.master.SplitLogManager.TaskBatch;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.regionserver.HRegion;
@@ -89,6 +91,7 @@ import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.apache.zookeeper.KeeperException;
 import org.junit.After;
+import org.junit.Assert;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
@@ -677,14 +680,6 @@ public class TestDistributedLogSplitting {
       break;
     }
 
-    LOG.info("#regions = " + regions.size());
-    Iterator<HRegionInfo> it = regions.iterator();
-    while (it.hasNext()) {
-      HRegionInfo region = it.next();
-      if (region.isMetaTable()) {
-        it.remove();
-      }
-    }
     this.prepareData(ht, Bytes.toBytes("family"), Bytes.toBytes("c1"));
     String originalCheckSum = TEST_UTIL.checksumRows(ht);
     
@@ -809,6 +804,91 @@ public class TestDistributedLogSplitting {
       fs.delete(editsdir, true);
     }
     disablingHT.close();
+    ht.close();
+  }
+
+  @Test(timeout = 300000)
+  public void testDisallowWritesInRecovering() throws Exception {
+    LOG.info("testDisallowWritesInRecovering");
+    Configuration curConf = HBaseConfiguration.create();
+    curConf.setBoolean(HConstants.DISTRIBUTED_LOG_REPLAY_KEY, true);
+    curConf.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 1);
+    curConf.setBoolean(HConstants.DISALLOW_WRITES_IN_RECOVERING, true);
+    startCluster(NUM_RS, curConf);
+    final int NUM_REGIONS_TO_CREATE = 40;
+    final int NUM_LOG_LINES = 20000;
+    // turn off load balancing to prevent regions from moving around otherwise
+    // they will consume recovered.edits
+    master.balanceSwitch(false);
+
+    List<RegionServerThread> rsts = cluster.getLiveRegionServerThreads();
+    final ZooKeeperWatcher zkw = new ZooKeeperWatcher(conf, "table-creation", null);
+    HTable ht = installTable(zkw, "table", "family", NUM_REGIONS_TO_CREATE);
+
+    List<HRegionInfo> regions = null;
+    HRegionServer hrs = null;
+    for (int i = 0; i < NUM_RS; i++) {
+      boolean isCarryingMeta = false;
+      hrs = rsts.get(i).getRegionServer();
+      regions = ProtobufUtil.getOnlineRegions(hrs);
+      for (HRegionInfo region : regions) {
+        if (region.isMetaRegion()) {
+          isCarryingMeta = true;
+          break;
+        }
+      }
+      if (isCarryingMeta) {
+        continue;
+      }
+      break;
+    }
+
+    LOG.info("#regions = " + regions.size());
+    Iterator<HRegionInfo> it = regions.iterator();
+    while (it.hasNext()) {
+      HRegionInfo region = it.next();
+      if (region.isMetaTable()) {
+        it.remove();
+      }
+    }
+    makeHLog(hrs.getWAL(), regions, "table", "family", NUM_LOG_LINES, 100);
+    
+    // abort RS
+    LOG.info("Aborting region server: " + hrs.getServerName());
+    hrs.abort("testing");
+    
+    // wait for abort completes
+    TEST_UTIL.waitFor(120000, 200, new Waiter.Predicate<Exception>() {
+      @Override
+      public boolean evaluate() throws Exception {
+        return (cluster.getLiveRegionServerThreads().size() <= (NUM_RS - 1));
+      }
+    });
+    
+    // wait for regions come online
+    TEST_UTIL.waitFor(180000, 100, new Waiter.Predicate<Exception>() {
+      @Override
+      public boolean evaluate() throws Exception {
+        return (getAllOnlineRegions(cluster).size() >= (NUM_REGIONS_TO_CREATE + 1));
+      }
+    });
+
+    try {
+      HRegionInfo region = regions.get(0);
+      byte[] key = region.getStartKey();
+      if (key == null || key.length == 0) {
+        key = new byte[] { 0, 0, 0, 0, 1 };
+      }
+      ht.setAutoFlush(true);
+      Put put = new Put(key);
+      put.add(Bytes.toBytes("family"), Bytes.toBytes("c1"), new byte[]{'b'});
+      ht.put(put);
+    } catch (IOException ioe) {
+      Assert.assertTrue(ioe instanceof RetriesExhaustedWithDetailsException);
+      RetriesExhaustedWithDetailsException re = (RetriesExhaustedWithDetailsException) ioe;
+      Assert.assertTrue(re.getCause(0) instanceof RegionInRecoveryException);
+    }
+
     ht.close();
   }
 

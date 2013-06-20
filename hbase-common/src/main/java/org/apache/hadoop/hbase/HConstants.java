@@ -724,6 +724,9 @@ public final class HConstants {
   /** Conf key that enables unflushed WAL edits directly being replayed to region servers */
   public static final String DISTRIBUTED_LOG_REPLAY_KEY = "hbase.master.distributed.log.replay";
   public static final boolean DEFAULT_DISTRIBUTED_LOG_REPLAY_CONFIG = false;
+  public static final String DISALLOW_WRITES_IN_RECOVERING =
+      "hbase.regionserver.disallow.writes.when.recovering";
+  public static final boolean DEFAULT_DISALLOW_WRITES_IN_RECOVERING_CONFIG = false;
 
   /** Conf key that specifies timeout value to wait for a region ready */
   public static final String LOG_REPLAY_WAIT_REGION_TIMEOUT = 
