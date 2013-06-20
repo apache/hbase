@@ -56,6 +56,7 @@ public class HBaseSaslRpcClient {
   public static final Log LOG = LogFactory.getLog(HBaseSaslRpcClient.class);
 
   private final SaslClient saslClient;
+  private final boolean fallbackAllowed;
 
   /**
    * Create a HBaseSaslRpcClient for an authentication method
@@ -66,8 +67,9 @@ public class HBaseSaslRpcClient {
    *          token to use if needed by the authentication method
    */
   public HBaseSaslRpcClient(AuthMethod method,
-      Token<? extends TokenIdentifier> token, String serverPrincipal)
-      throws IOException {
+      Token<? extends TokenIdentifier> token, String serverPrincipal,
+      boolean fallbackAllowed) throws IOException {
+    this.fallbackAllowed = fallbackAllowed;
     switch (method) {
     case DIGEST:
       if (LOG.isDebugEnabled())
@@ -148,8 +150,14 @@ public class HBaseSaslRpcClient {
         readStatus(inStream);
         int len = inStream.readInt();
         if (len == HBaseSaslRpcServer.SWITCH_TO_SIMPLE_AUTH) {
-          if (LOG.isDebugEnabled())
+          if (!fallbackAllowed) {
+            throw new IOException("Server asks us to fall back to SIMPLE auth,"
+              + " but this client is configured to only allow secure"
+              + " connections.");
+          }
+          if (LOG.isDebugEnabled()) {
             LOG.debug("Server asks us to fall back to simple auth.");
+          }
           saslClient.dispose();
           return false;
         }
