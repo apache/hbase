@@ -345,4 +345,18 @@ public class TestDefaultCompactSelection extends TestCase {
     compactEquals(sfCreate(999, 50, 12, 12, 1), false, true, 50, 12, 12, 1);
     compactEquals(sfCreate(999, 50, 12, 12, 1), 12, 12, 1);
   }
+
+  public void testStuckStoreCompaction() throws IOException {
+    // Select the smallest compaction if the store is stuck.
+    compactEquals(sfCreate(99,99,99,99,99,99, 30,30,30,30), 30, 30, 30);
+    // If not stuck, standard policy applies.
+    compactEquals(sfCreate(99,99,99,99,99, 30,30,30,30), 99, 30, 30, 30, 30);
+
+    // Add sufficiently small files to compaction, though
+    compactEquals(sfCreate(99,99,99,99,99,99, 30,30,30,15), 30, 30, 30, 15);
+    // Prefer earlier compaction to latter if the benefit is not significant
+    compactEquals(sfCreate(99,99,99,99, 30,26,26,29,25,25), 30, 26, 26);
+    // Prefer later compaction if the benefit is significant.
+    compactEquals(sfCreate(99,99,99,99, 27,27,27,20,20,20), 20, 20, 20);
+  }
 }
