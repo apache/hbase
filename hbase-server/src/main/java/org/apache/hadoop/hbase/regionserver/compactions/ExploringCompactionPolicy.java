@@ -97,9 +97,7 @@ public class ExploringCompactionPolicy extends RatioBasedCompactionPolicy {
         }
 
         ++optsInRatio;
-        // Keep if this gets rid of more files.  Or the same number of files for less io.
-        if (potentialMatchFiles.size() > bestSelection.size()
-            || (potentialMatchFiles.size() == bestSelection.size() && size < bestSize)) {
+        if (isBetterSelection(bestSelection, bestSize, potentialMatchFiles, size, mightBeStuck)) {
           bestSelection = potentialMatchFiles;
           bestSize = size;
           bestStart = start;
@@ -115,6 +113,22 @@ public class ExploringCompactionPolicy extends RatioBasedCompactionPolicy {
         + " files of size " + bestSize + " starting at candidate #" + bestStart +
         " after considering " + opts + " permutations with " + optsInRatio + " in ratio");
     return new ArrayList<StoreFile>(bestSelection);
+  }
+
+  private boolean isBetterSelection(List<StoreFile> bestSelection,
+      long bestSize, List<StoreFile> selection, long size, boolean mightBeStuck) {
+    if (mightBeStuck && bestSize > 0 && size > 0) {
+      // Keep the selection that removes most files for least size. That penaltizes adding
+      // large files to compaction, but not small files, so we don't become totally inefficient
+      // (might want to tweak that in future). Also, given the current order of looking at
+      // permutations, prefer earlier files and smaller selection if the difference is small.
+      final double REPLACE_IF_BETTER_BY = 1.05;
+      double thresholdQuality = ((double)bestSelection.size() / bestSize) * REPLACE_IF_BETTER_BY;
+      return thresholdQuality < ((double)selection.size() / size);
+    }
+    // Keep if this gets rid of more files.  Or the same number of files for less io.
+    return selection.size() > bestSelection.size()
+      || (selection.size() == bestSelection.size() && size < bestSize);
   }
 
   /**
