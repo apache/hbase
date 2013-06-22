@@ -344,6 +344,43 @@ public class TestRegionMergeTransaction {
     assertTrue(TEST_UTIL.getTestFileSystem().exists(mergedRegionDir));
   }
 
+  @Test
+  public void testMeregedRegionBoundary() {
+    byte[] tableName = Bytes.toBytes("testMeregedRegionBoundary");
+    byte[] a = Bytes.toBytes("a");
+    byte[] b = Bytes.toBytes("b");
+    byte[] z = Bytes.toBytes("z");
+    HRegionInfo r1 = new HRegionInfo(tableName);
+    HRegionInfo r2 = new HRegionInfo(tableName, a, z);
+    HRegionInfo m = RegionMergeTransaction.getMergedRegionInfo(r1, r2);
+    assertTrue(Bytes.equals(m.getStartKey(), r1.getStartKey())
+      && Bytes.equals(m.getEndKey(), r1.getEndKey()));
+
+    r1 = new HRegionInfo(tableName, null, a);
+    r2 = new HRegionInfo(tableName, a, z);
+    m = RegionMergeTransaction.getMergedRegionInfo(r1, r2);
+    assertTrue(Bytes.equals(m.getStartKey(), r1.getStartKey())
+      && Bytes.equals(m.getEndKey(), r2.getEndKey()));
+
+    r1 = new HRegionInfo(tableName, null, a);
+    r2 = new HRegionInfo(tableName, z, null);
+    m = RegionMergeTransaction.getMergedRegionInfo(r1, r2);
+    assertTrue(Bytes.equals(m.getStartKey(), r1.getStartKey())
+      && Bytes.equals(m.getEndKey(), r2.getEndKey()));
+
+    r1 = new HRegionInfo(tableName, a, z);
+    r2 = new HRegionInfo(tableName, z, null);
+    m = RegionMergeTransaction.getMergedRegionInfo(r1, r2);
+    assertTrue(Bytes.equals(m.getStartKey(), r1.getStartKey())
+      && Bytes.equals(m.getEndKey(), r2.getEndKey()));
+
+    r1 = new HRegionInfo(tableName, a, b);
+    r2 = new HRegionInfo(tableName, b, z);
+    m = RegionMergeTransaction.getMergedRegionInfo(r1, r2);
+    assertTrue(Bytes.equals(m.getStartKey(), r1.getStartKey())
+      && Bytes.equals(m.getEndKey(), r2.getEndKey()));
+  }
+
   /**
    * Exception used in this class only.
    */
