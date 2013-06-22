@@ -410,10 +410,9 @@ public class RegionMergeTransaction {
       startKey = b.getStartKey();
     }
     // Choose the bigger as end key
-    if (a.getComparator().matchingRows(a.getEndKey(), 0, a.getEndKey().length,
-        HConstants.EMPTY_BYTE_ARRAY, 0, HConstants.EMPTY_BYTE_ARRAY.length)
-        || a.getComparator().compareRows(a.getEndKey(), 0,
-            a.getEndKey().length, b.getEndKey(), 0, b.getEndKey().length) > 0) {
+    if (Bytes.equals(a.getEndKey(), HConstants.EMPTY_BYTE_ARRAY)
+        || (!Bytes.equals(b.getEndKey(), HConstants.EMPTY_BYTE_ARRAY)
+            && Bytes.compareTo(a.getEndKey(), b.getEndKey()) > 0)) {
       endKey = a.getEndKey();
     } else {
       endKey = b.getEndKey();
