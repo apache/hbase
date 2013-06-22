@@ -235,6 +235,13 @@ public class CatalogTracker {
   }
 
   /**
+   * Checks whether meta regionserver znode has some non null data.
+   * @return true if data is not null, false otherwise.
+   */
+  public boolean isMetaLocationAvailable() {
+    return this.metaRegionTracker.isLocationAvailable();
+  }
+  /**
    * Gets the current location for <code>.META.</code> if available and waits
    * for up to the specified timeout if not immediately available.  Returns null
    * if the timeout elapses before root is available.
