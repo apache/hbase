@@ -134,6 +134,12 @@ public class AssignmentManager extends ZooKeeperListener {
    * See below in {@link #assign()} and {@link #unassign()}.
    */
   private final int maximumAttempts;
+  
+  /**
+   * The sleep time for which the assignment will wait before retrying in case of META assignment
+   * failure due to lack of availability of region plan
+   */
+  private final long sleepTimeBeforeRetryingMetaAssignment;
 
   /** Plans for region movement. Key is the encoded version of a region name*/
   // TODO: When do plans get cleaned out?  Ever? In server open and in server
@@ -246,6 +252,8 @@ public class AssignmentManager extends ZooKeeperListener {
     this.zkTable = new ZKTable(this.watcher);
     this.maximumAttempts =
       this.server.getConfiguration().getInt("hbase.assignment.maximum.attempts", 10);
+    this.sleepTimeBeforeRetryingMetaAssignment = this.server.getConfiguration().getLong(
+        "hbase.meta.assignment.retry.sleeptime", 1000l);
     this.balancer = balancer;
     int maxThreads = conf.getInt("hbase.assignment.threads.max", 30);
     this.threadPoolExecutorService = Threads.getBoundedCachedThreadPool(
@@ -1769,6 +1777,19 @@ public class AssignmentManager extends ZooKeeperListener {
         if (tomActivated){
           this.timeoutMonitor.setAllRegionServersOffline(true);
         } else {
+          if (region.isMetaRegion()) {
+            try {
+              if (i != maximumAttempts) {
+                Thread.sleep(this.sleepTimeBeforeRetryingMetaAssignment);
+                continue;
+              }
+              // TODO : Ensure HBCK fixes this
+              LOG.error("Unable to determine a plan to assign META even after repeated attempts. Run HBCK to fix this");
+            } catch (InterruptedException e) {
+              LOG.error("Got exception while waiting for META assignment");
+              Thread.currentThread().interrupt();
+            }
+          }
           regionStates.updateRegionState(region, RegionState.State.FAILED_OPEN);
         }
         return;
