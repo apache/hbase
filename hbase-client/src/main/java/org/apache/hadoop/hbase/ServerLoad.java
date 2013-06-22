@@ -22,6 +22,7 @@ package org.apache.hadoop.hbase;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Coprocessor;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -53,9 +54,9 @@ public class ServerLoad {
   private long totalCompactingKVs = 0;
   private long currentCompactedKVs = 0;
   
-  public ServerLoad(HBaseProtos.ServerLoad serverLoad) {
+  public ServerLoad(ClusterStatusProtos.ServerLoad serverLoad) {
     this.serverLoad = serverLoad;
-    for (HBaseProtos.RegionLoad rl: serverLoad.getRegionLoadsList()) {
+    for (ClusterStatusProtos.RegionLoad rl: serverLoad.getRegionLoadsList()) {
       stores += rl.getStores();
       storefiles += rl.getStorefiles();
       storeUncompressedSizeMB += rl.getStoreUncompressedSizeMB();
@@ -76,11 +77,11 @@ public class ServerLoad {
   // NOTE: Function name cannot start with "get" because then an OpenDataException is thrown because
   // HBaseProtos.ServerLoad cannot be converted to an open data type(see HBASE-5967).
   /* @return the underlying ServerLoad protobuf object */
-  public HBaseProtos.ServerLoad obtainServerLoadPB() {
+  public ClusterStatusProtos.ServerLoad obtainServerLoadPB() {
     return serverLoad;
   }
 
-  protected HBaseProtos.ServerLoad serverLoad;
+  protected ClusterStatusProtos.ServerLoad serverLoad;
 
   /* @return number of requests  since last report. */
   public int getNumberOfRequests() {
@@ -200,7 +201,7 @@ public class ServerLoad {
   public Map<byte[], RegionLoad> getRegionsLoad() {
     Map<byte[], RegionLoad> regionLoads =
       new TreeMap<byte[], RegionLoad>(Bytes.BYTES_COMPARATOR);
-    for (HBaseProtos.RegionLoad rl : serverLoad.getRegionLoadsList()) {
+    for (ClusterStatusProtos.RegionLoad rl : serverLoad.getRegionLoadsList()) {
       RegionLoad regionLoad = new RegionLoad(rl);
       regionLoads.put(regionLoad.getName(), regionLoad);
     }
@@ -299,5 +300,5 @@ public class ServerLoad {
   }
 
   public static final ServerLoad EMPTY_SERVERLOAD =
-    new ServerLoad(HBaseProtos.ServerLoad.newBuilder().build());
+    new ServerLoad(ClusterStatusProtos.ServerLoad.newBuilder().build());
 }

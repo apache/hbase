@@ -8,7 +8,7 @@ public final class ZooKeeperProtos {
   public static void registerAllExtensions(
       com.google.protobuf.ExtensionRegistry registry) {
   }
-  public interface RootRegionServerOrBuilder
+  public interface MetaRegionServerOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
     
     // required .ServerName server = 1;
@@ -16,32 +16,32 @@ public final class ZooKeeperProtos {
     org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName getServer();
     org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerNameOrBuilder getServerOrBuilder();
   }
-  public static final class RootRegionServer extends
+  public static final class MetaRegionServer extends
       com.google.protobuf.GeneratedMessage
-      implements RootRegionServerOrBuilder {
-    // Use RootRegionServer.newBuilder() to construct.
-    private RootRegionServer(Builder builder) {
+      implements MetaRegionServerOrBuilder {
+    // Use MetaRegionServer.newBuilder() to construct.
+    private MetaRegionServer(Builder builder) {
       super(builder);
     }
-    private RootRegionServer(boolean noInit) {}
+    private MetaRegionServer(boolean noInit) {}
     
-    private static final RootRegionServer defaultInstance;
-    public static RootRegionServer getDefaultInstance() {
+    private static final MetaRegionServer defaultInstance;
+    public static MetaRegionServer getDefaultInstance() {
       return defaultInstance;
     }
     
-    public RootRegionServer getDefaultInstanceForType() {
+    public MetaRegionServer getDefaultInstanceForType() {
       return defaultInstance;
     }
     
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.internal_static_RootRegionServer_descriptor;
+      return org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.internal_static_MetaRegionServer_descriptor;
     }
     
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.internal_static_RootRegionServer_fieldAccessorTable;
+      return org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.internal_static_MetaRegionServer_fieldAccessorTable;
     }
     
     private int bitField0_;
@@ -114,10 +114,10 @@ public final class ZooKeeperProtos {
       if (obj == this) {
        return true;
       }
-      if (!(obj instanceof org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.RootRegionServer)) {
+      if (!(obj instanceof org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.MetaRegionServer)) {
         return super.equals(obj);
       }
-      org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.RootRegionServer other = (org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.RootRegionServer) obj;
+      org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.MetaRegionServer other = (org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.MetaRegionServer) obj;
       
       boolean result = true;
       result = result && (hasServer() == other.hasServer());
@@ -142,41 +142,41 @@ public final class ZooKeeperProtos {
       return hash;
     }
     
-    public static org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.RootRegionServer parseFrom(
+    public static org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.MetaRegionServer parseFrom(
         com.google.protobuf.ByteString data)
         throws com.google.protobuf.InvalidProtocolBufferException {
       return newBuilder().mergeFrom(data).buildParsed();
     }
-    public static org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.RootRegionServer parseFrom(
+    public static org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.MetaRegionServer parseFrom(
         com.google.protobuf.ByteString data,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
       return newBuilder().mergeFrom(data, extensionRegistry)
                .buildParsed();
     }
-    public static org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.RootRegionServer parseFrom(byte[] data)
+    public static org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.MetaRegionServer parseFrom(byte[] data)
         throws com.google.protobuf.InvalidProtocolBufferException {
       return newBuilder().mergeFrom(data).buildParsed();
     }
-    public static org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.RootRegionServer parseFrom(
+    public static org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.MetaRegionServer parseFrom(
         byte[] data,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
       return newBuilder().mergeFrom(data, extensionRegistry)
                .buildParsed();
     }
-    public static org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.RootRegionServer parseFrom(java.io.InputStream input)
+    public static org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.MetaRegionServer parseFrom(java.io.InputStream input)
         throws java.io.IOException {
       return newBuilder().mergeFrom(input).buildParsed();
     }
-    public static org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.RootRegionServer parseFrom(
+    public static org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.MetaRegionServer parseFrom(
         java.io.InputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
       return newBuilder().mergeFrom(input, extensionRegistry)
                .buildParsed();
     }
-    public static org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.RootRegionServer parseDelimitedFrom(java.io.InputStream input)
+    public static org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.MetaRegionServer parseDelimitedFrom(java.io.InputStream input)
         throws java.io.IOException {
       Builder builder = newBuilder();
       if (builder.mergeDelimitedFrom(input)) {
@@ -185,7 +185,7 @@ public final class ZooKeeperProtos {
         return null;
       }
     }
-    public static org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.RootRegionServer parseDelimitedFrom(
+    public static org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.MetaRegionServer parseDelimitedFrom(
         java.io.InputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
@@ -196,12 +196,12 @@ public final class ZooKeeperProtos {
         return null;
       }
     }
-    public static org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.RootRegionServer parseFrom(
+    public static org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.MetaRegionServer parseFrom(
         com.google.protobuf.CodedInputStream input)
         throws java.io.IOException {
       return newBuilder().mergeFrom(input).buildParsed();
     }
-    public static org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.RootRegionServer parseFrom(
+    public static org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.MetaRegionServer parseFrom(
         com.google.protobuf.CodedInputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
@@ -211,7 +211,7 @@ public final class ZooKeeperProtos {
     
     public static Builder newBuilder() { return Builder.create(); }
     public Builder newBuilderForType() { return newBuilder(); }
-    public static Builder newBuilder(org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.RootRegionServer prototype) {
+    public static Builder newBuilder(org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.MetaRegionServer prototype) {
       return newBuilder().mergeFrom(prototype);
     }
     public Builder toBuilder() { return newBuilder(this); }
@@ -224,18 +224,18 @@ public final class ZooKeeperProtos {
     }
     public static final class Builder extends
         com.google.protobuf.GeneratedMessage.Builder<Builder>
-       implements org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.RootRegionServerOrBuilder {
+       implements org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.MetaRegionServerOrBuilder {
       public static final com.google.protobuf.Descriptors.Descriptor
           getDescriptor() {
-        return org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.internal_static_RootRegionServer_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.internal_static_MetaRegionServer_descriptor;
       }
       
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.internal_static_RootRegionServer_fieldAccessorTable;
+        return org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.internal_static_MetaRegionServer_fieldAccessorTable;
       }
       
-      // Construct using org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.RootRegionServer.newBuilder()
+      // Construct using org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.MetaRegionServer.newBuilder()
       private Builder() {
         maybeForceBuilderInitialization();
       }
@@ -270,24 +270,24 @@ public final class ZooKeeperProtos {
       
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.RootRegionServer.getDescriptor();
+        return org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.MetaRegionServer.getDescriptor();
       }
       
-      public org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.RootRegionServer getDefaultInstanceForType() {
-        return org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.RootRegionServer.getDefaultInstance();
+      public org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.MetaRegionServer getDefaultInstanceForType() {
+        return org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.MetaRegionServer.getDefaultInstance();
       }
       
-      public org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.RootRegionServer build() {
-        org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.RootRegionServer result = buildPartial();
+      public org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.MetaRegionServer build() {
+        org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.MetaRegionServer result = buildPartial();
         if (!result.isInitialized()) {
           throw newUninitializedMessageException(result);
         }
         return result;
       }
       
-      private org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.RootRegionServer buildParsed()
+      private org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.MetaRegionServer buildParsed()
           throws com.google.protobuf.InvalidProtocolBufferException {
-        org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.RootRegionServer result = buildPartial();
+        org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.MetaRegionServer result = buildPartial();
         if (!result.isInitialized()) {
           throw newUninitializedMessageException(
             result).asInvalidProtocolBufferException();
@@ -295,8 +295,8 @@ public final class ZooKeeperProtos {
         return result;
       }
       
-      public org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.RootRegionServer buildPartial() {
-        org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.RootRegionServer result = new org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.RootRegionServer(this);
+      public org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.MetaRegionServer buildPartial() {
+        org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.MetaRegionServer result = new org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.MetaRegionServer(this);
         int from_bitField0_ = bitField0_;
         int to_bitField0_ = 0;
         if (((from_bitField0_ & 0x00000001) == 0x00000001)) {
@@ -313,16 +313,16 @@ public final class ZooKeeperProtos {
       }
       
       public Builder mergeFrom(com.google.protobuf.Message other) {
-        if (other instanceof org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.RootRegionServer) {
-          return mergeFrom((org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.RootRegionServer)other);
+        if (other instanceof org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.MetaRegionServer) {
+          return mergeFrom((org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.MetaRegionServer)other);
         } else {
           super.mergeFrom(other);
           return this;
         }
       }
       
-      public Builder mergeFrom(org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.RootRegionServer other) {
-        if (other == org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.RootRegionServer.getDefaultInstance()) return this;
+      public Builder mergeFrom(org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.MetaRegionServer other) {
+        if (other == org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.MetaRegionServer.getDefaultInstance()) return this;
         if (other.hasServer()) {
           mergeServer(other.getServer());
         }
@@ -470,15 +470,15 @@ public final class ZooKeeperProtos {
         return serverBuilder_;
       }
       
-      // @@protoc_insertion_point(builder_scope:RootRegionServer)
+      // @@protoc_insertion_point(builder_scope:MetaRegionServer)
     }
     
     static {
-      defaultInstance = new RootRegionServer(true);
+      defaultInstance = new MetaRegionServer(true);
       defaultInstance.initFields();
     }
     
-    // @@protoc_insertion_point(class_scope:RootRegionServer)
+    // @@protoc_insertion_point(class_scope:MetaRegionServer)
   }
   
   public interface MasterOrBuilder
@@ -6868,10 +6868,10 @@ public final class ZooKeeperProtos {
   }
   
   private static com.google.protobuf.Descriptors.Descriptor
-    internal_static_RootRegionServer_descriptor;
+    internal_static_MetaRegionServer_descriptor;
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
-      internal_static_RootRegionServer_fieldAccessorTable;
+      internal_static_MetaRegionServer_fieldAccessorTable;
   private static com.google.protobuf.Descriptors.Descriptor
     internal_static_Master_descriptor;
   private static
@@ -6941,7 +6941,7 @@ public final class ZooKeeperProtos {
       descriptor;
   static {
     java.lang.String[] descriptorData = {
-      "\n\017ZooKeeper.proto\032\013hbase.proto\"/\n\020RootRe" +
+      "\n\017ZooKeeper.proto\032\013hbase.proto\"/\n\020MetaRe" +
       "gionServer\022\033\n\006server\030\001 \002(\0132\013.ServerName\"" +
       "%\n\006Master\022\033\n\006master\030\001 \002(\0132\013.ServerName\"\036" +
       "\n\tClusterUp\022\021\n\tstartDate\030\001 \002(\t\"\203\001\n\020Regio" +
@@ -6976,14 +6976,14 @@ public final class ZooKeeperProtos {
         public com.google.protobuf.ExtensionRegistry assignDescriptors(
             com.google.protobuf.Descriptors.FileDescriptor root) {
           descriptor = root;
-          internal_static_RootRegionServer_descriptor =
+          internal_static_MetaRegionServer_descriptor =
             getDescriptor().getMessageTypes().get(0);
-          internal_static_RootRegionServer_fieldAccessorTable = new
+          internal_static_MetaRegionServer_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
-              internal_static_RootRegionServer_descriptor,
+              internal_static_MetaRegionServer_descriptor,
               new java.lang.String[] { "Server", },
-              org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.RootRegionServer.class,
-              org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.RootRegionServer.Builder.class);
+              org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.MetaRegionServer.class,
+              org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.MetaRegionServer.Builder.class);
           internal_static_Master_descriptor =
             getDescriptor().getMessageTypes().get(1);
           internal_static_Master_fieldAccessorTable = new

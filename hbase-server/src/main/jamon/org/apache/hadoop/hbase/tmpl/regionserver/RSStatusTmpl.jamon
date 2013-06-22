@@ -30,7 +30,7 @@ org.apache.hadoop.hbase.ServerName;
 org.apache.hadoop.hbase.HBaseConfiguration;
 org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ServerInfo;
-org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionLoad;
+org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionLoad;
 </%import>
 <%if format.equals("json") %>
   <& ../common/TaskMonitorTmpl; filter = filter; format = "json" &>

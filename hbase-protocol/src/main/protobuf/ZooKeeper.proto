@@ -28,10 +28,10 @@ option optimize_for = SPEED;
 import "hbase.proto";
 
 /**
- * Content of the root-region-server znode.
+ * Content of the meta-region-server znode.
  */
-message RootRegionServer {
-  // The ServerName hosting the root region currently.
+message MetaRegionServer {
+  // The ServerName hosting the meta region currently.
   required ServerName server = 1;
 }
 

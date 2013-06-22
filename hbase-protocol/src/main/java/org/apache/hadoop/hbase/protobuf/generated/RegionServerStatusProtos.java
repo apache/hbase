@@ -1138,8 +1138,8 @@ public final class RegionServerStatusProtos {
     
     // optional .ServerLoad load = 2;
     boolean hasLoad();
-    org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerLoad getLoad();
-    org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerLoadOrBuilder getLoadOrBuilder();
+    org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ServerLoad getLoad();
+    org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ServerLoadOrBuilder getLoadOrBuilder();
   }
   public static final class RegionServerReportRequest extends
       com.google.protobuf.GeneratedMessage
@@ -1185,20 +1185,20 @@ public final class RegionServerStatusProtos {
     
     // optional .ServerLoad load = 2;
     public static final int LOAD_FIELD_NUMBER = 2;
-    private org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerLoad load_;
+    private org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ServerLoad load_;
     public boolean hasLoad() {
       return ((bitField0_ & 0x00000002) == 0x00000002);
     }
-    public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerLoad getLoad() {
+    public org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ServerLoad getLoad() {
       return load_;
     }
-    public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerLoadOrBuilder getLoadOrBuilder() {
+    public org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ServerLoadOrBuilder getLoadOrBuilder() {
       return load_;
     }
     
     private void initFields() {
       server_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.getDefaultInstance();
-      load_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerLoad.getDefaultInstance();
+      load_ = org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ServerLoad.getDefaultInstance();
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
@@ -1424,7 +1424,7 @@ public final class RegionServerStatusProtos {
         }
         bitField0_ = (bitField0_ & ~0x00000001);
         if (loadBuilder_ == null) {
-          load_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerLoad.getDefaultInstance();
+          load_ = org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ServerLoad.getDefaultInstance();
         } else {
           loadBuilder_.clear();
         }
@@ -1560,7 +1560,7 @@ public final class RegionServerStatusProtos {
               break;
             }
             case 18: {
-              org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerLoad.Builder subBuilder = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerLoad.newBuilder();
+              org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ServerLoad.Builder subBuilder = org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ServerLoad.newBuilder();
               if (hasLoad()) {
                 subBuilder.mergeFrom(getLoad());
               }
@@ -1665,20 +1665,20 @@ public final class RegionServerStatusProtos {
       }
       
       // optional .ServerLoad load = 2;
-      private org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerLoad load_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerLoad.getDefaultInstance();
+      private org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ServerLoad load_ = org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ServerLoad.getDefaultInstance();
       private com.google.protobuf.SingleFieldBuilder<
-          org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerLoad, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerLoad.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerLoadOrBuilder> loadBuilder_;
+          org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ServerLoad, org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ServerLoad.Builder, org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ServerLoadOrBuilder> loadBuilder_;
       public boolean hasLoad() {
         return ((bitField0_ & 0x00000002) == 0x00000002);
       }
-      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerLoad getLoad() {
+      public org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ServerLoad getLoad() {
         if (loadBuilder_ == null) {
           return load_;
         } else {
           return loadBuilder_.getMessage();
         }
       }
-      public Builder setLoad(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerLoad value) {
+      public Builder setLoad(org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ServerLoad value) {
         if (loadBuilder_ == null) {
           if (value == null) {
             throw new NullPointerException();
@@ -1692,7 +1692,7 @@ public final class RegionServerStatusProtos {
         return this;
       }
       public Builder setLoad(
-          org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerLoad.Builder builderForValue) {
+          org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ServerLoad.Builder builderForValue) {
         if (loadBuilder_ == null) {
           load_ = builderForValue.build();
           onChanged();
@@ -1702,12 +1702,12 @@ public final class RegionServerStatusProtos {
         bitField0_ |= 0x00000002;
         return this;
       }
-      public Builder mergeLoad(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerLoad value) {
+      public Builder mergeLoad(org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ServerLoad value) {
         if (loadBuilder_ == null) {
           if (((bitField0_ & 0x00000002) == 0x00000002) &&
-              load_ != org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerLoad.getDefaultInstance()) {
+              load_ != org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ServerLoad.getDefaultInstance()) {
             load_ =
-              org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerLoad.newBuilder(load_).mergeFrom(value).buildPartial();
+              org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ServerLoad.newBuilder(load_).mergeFrom(value).buildPartial();
           } else {
             load_ = value;
           }
@@ -1720,7 +1720,7 @@ public final class RegionServerStatusProtos {
       }
       public Builder clearLoad() {
         if (loadBuilder_ == null) {
-          load_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerLoad.getDefaultInstance();
+          load_ = org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ServerLoad.getDefaultInstance();
           onChanged();
         } else {
           loadBuilder_.clear();
@@ -1728,12 +1728,12 @@ public final class RegionServerStatusProtos {
         bitField0_ = (bitField0_ & ~0x00000002);
         return this;
       }
-      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerLoad.Builder getLoadBuilder() {
+      public org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ServerLoad.Builder getLoadBuilder() {
         bitField0_ |= 0x00000002;
         onChanged();
         return getLoadFieldBuilder().getBuilder();
       }
-      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerLoadOrBuilder getLoadOrBuilder() {
+      public org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ServerLoadOrBuilder getLoadOrBuilder() {
         if (loadBuilder_ != null) {
           return loadBuilder_.getMessageOrBuilder();
         } else {
@@ -1741,11 +1741,11 @@ public final class RegionServerStatusProtos {
         }
       }
       private com.google.protobuf.SingleFieldBuilder<
-          org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerLoad, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerLoad.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerLoadOrBuilder> 
+          org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ServerLoad, org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ServerLoad.Builder, org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ServerLoadOrBuilder> 
           getLoadFieldBuilder() {
         if (loadBuilder_ == null) {
           loadBuilder_ = new com.google.protobuf.SingleFieldBuilder<
-              org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerLoad, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerLoad.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerLoadOrBuilder>(
+              org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ServerLoad, org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ServerLoad.Builder, org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ServerLoadOrBuilder>(
                   load_,
                   getParentForChildren(),
                   isClean());
@@ -4175,31 +4175,32 @@ public final class RegionServerStatusProtos {
       descriptor;
   static {
     java.lang.String[] descriptorData = {
-      "\n\030RegionServerStatus.proto\032\013hbase.proto\"" +
-      "^\n\032RegionServerStartupRequest\022\014\n\004port\030\001 " +
-      "\002(\r\022\027\n\017serverStartCode\030\002 \002(\004\022\031\n\021serverCu" +
-      "rrentTime\030\003 \002(\004\"B\n\033RegionServerStartupRe" +
-      "sponse\022#\n\nmapEntries\030\001 \003(\0132\017.NameStringP" +
-      "air\"S\n\031RegionServerReportRequest\022\033\n\006serv" +
-      "er\030\001 \002(\0132\013.ServerName\022\031\n\004load\030\002 \001(\0132\013.Se" +
-      "rverLoad\"\034\n\032RegionServerReportResponse\"N" +
-      "\n\031ReportRSFatalErrorRequest\022\033\n\006server\030\001 " +
-      "\002(\0132\013.ServerName\022\024\n\014errorMessage\030\002 \002(\t\"\034",
-      "\n\032ReportRSFatalErrorResponse\"5\n\037GetLastF" +
-      "lushedSequenceIdRequest\022\022\n\nregionName\030\001 " +
-      "\002(\014\"A\n GetLastFlushedSequenceIdResponse\022" +
-      "\035\n\025lastFlushedSequenceId\030\001 \002(\0042\354\002\n\031Regio" +
-      "nServerStatusService\022P\n\023regionServerStar" +
-      "tup\022\033.RegionServerStartupRequest\032\034.Regio" +
-      "nServerStartupResponse\022M\n\022regionServerRe" +
-      "port\022\032.RegionServerReportRequest\032\033.Regio" +
-      "nServerReportResponse\022M\n\022reportRSFatalEr" +
-      "ror\022\032.ReportRSFatalErrorRequest\032\033.Report",
-      "RSFatalErrorResponse\022_\n\030getLastFlushedSe" +
-      "quenceId\022 .GetLastFlushedSequenceIdReque" +
-      "st\032!.GetLastFlushedSequenceIdResponseBN\n" +
-      "*org.apache.hadoop.hbase.protobuf.genera" +
-      "tedB\030RegionServerStatusProtosH\001\210\001\001\240\001\001"
+      "\n\030RegionServerStatus.proto\032\013hbase.proto\032" +
+      "\023ClusterStatus.proto\"^\n\032RegionServerStar" +
+      "tupRequest\022\014\n\004port\030\001 \002(\r\022\027\n\017serverStartC" +
+      "ode\030\002 \002(\004\022\031\n\021serverCurrentTime\030\003 \002(\004\"B\n\033" +
+      "RegionServerStartupResponse\022#\n\nmapEntrie" +
+      "s\030\001 \003(\0132\017.NameStringPair\"S\n\031RegionServer" +
+      "ReportRequest\022\033\n\006server\030\001 \002(\0132\013.ServerNa" +
+      "me\022\031\n\004load\030\002 \001(\0132\013.ServerLoad\"\034\n\032RegionS" +
+      "erverReportResponse\"N\n\031ReportRSFatalErro" +
+      "rRequest\022\033\n\006server\030\001 \002(\0132\013.ServerName\022\024\n",
+      "\014errorMessage\030\002 \002(\t\"\034\n\032ReportRSFatalErro" +
+      "rResponse\"5\n\037GetLastFlushedSequenceIdReq" +
+      "uest\022\022\n\nregionName\030\001 \002(\014\"A\n GetLastFlush" +
+      "edSequenceIdResponse\022\035\n\025lastFlushedSeque" +
+      "nceId\030\001 \002(\0042\354\002\n\031RegionServerStatusServic" +
+      "e\022P\n\023regionServerStartup\022\033.RegionServerS" +
+      "tartupRequest\032\034.RegionServerStartupRespo" +
+      "nse\022M\n\022regionServerReport\022\032.RegionServer" +
+      "ReportRequest\032\033.RegionServerReportRespon" +
+      "se\022M\n\022reportRSFatalError\022\032.ReportRSFatal",
+      "ErrorRequest\032\033.ReportRSFatalErrorRespons" +
+      "e\022_\n\030getLastFlushedSequenceId\022 .GetLastF" +
+      "lushedSequenceIdRequest\032!.GetLastFlushed" +
+      "SequenceIdResponseBN\n*org.apache.hadoop." +
+      "hbase.protobuf.generatedB\030RegionServerSt" +
+      "atusProtosH\001\210\001\001\240\001\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -4277,6 +4278,7 @@ public final class RegionServerStatusProtos {
       .internalBuildGeneratedFileFrom(descriptorData,
         new com.google.protobuf.Descriptors.FileDescriptor[] {
           org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.getDescriptor(),
+          org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.getDescriptor(),
         }, assigner);
   }
   

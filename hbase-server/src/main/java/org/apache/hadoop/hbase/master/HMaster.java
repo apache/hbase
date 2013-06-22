@@ -102,7 +102,7 @@ import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.protobuf.ResponseConverter;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
-import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
+import org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier.RegionSpecifierType;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
@@ -1244,7 +1244,7 @@ MasterServices, Server {
   public RegionServerReportResponse regionServerReport(
       RpcController controller, RegionServerReportRequest request) throws ServiceException {
     try {
-      HBaseProtos.ServerLoad sl = request.getLoad();
+      ClusterStatusProtos.ServerLoad sl = request.getLoad();
       this.serverManager.regionServerReport(ProtobufUtil.toServerName(request.getServer()), new ServerLoad(sl));
       if (sl != null && this.metricsMaster != null) {
         // Up our metrics.

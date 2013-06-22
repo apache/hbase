@@ -29,7 +29,7 @@
         org.apache.hadoop.hbase.HBaseConfiguration;
         org.apache.hadoop.hbase.protobuf.ProtobufUtil;
         org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ServerInfo;
-        org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionLoad;
+        org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionLoad;
 </%import>
 <%if (onlineRegions != null && onlineRegions.size() > 0) %>
 

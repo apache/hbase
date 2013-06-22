@@ -21,7 +21,7 @@
 package org.apache.hadoop.hbase;
 
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
+import org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Strings;
 
@@ -31,9 +31,9 @@ import org.apache.hadoop.hbase.util.Strings;
 @InterfaceAudience.Private
 public class RegionLoad {
 
-  protected HBaseProtos.RegionLoad regionLoadPB;
+  protected ClusterStatusProtos.RegionLoad regionLoadPB;
 
-  public RegionLoad(HBaseProtos.RegionLoad regionLoadPB) {
+  public RegionLoad(ClusterStatusProtos.RegionLoad regionLoadPB) {
     this.regionLoadPB = regionLoadPB;
   }
 

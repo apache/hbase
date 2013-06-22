@@ -22,6 +22,7 @@ package org.apache.hadoop.hbase;
 
 import static org.junit.Assert.*;
 
+import org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -56,7 +57,7 @@ public class TestServerLoad {
     assertTrue(slToString.contains("coprocessors=[]"));
   }
 
-  private HBaseProtos.ServerLoad createServerLoadProto() {
+  private ClusterStatusProtos.ServerLoad createServerLoadProto() {
     HBaseProtos.RegionSpecifier rSpecOne =
         HBaseProtos.RegionSpecifier.newBuilder()
             .setType(HBaseProtos.RegionSpecifier.RegionSpecifierType.ENCODED_REGION_NAME)
@@ -66,17 +67,18 @@ public class TestServerLoad {
             .setType(HBaseProtos.RegionSpecifier.RegionSpecifierType.ENCODED_REGION_NAME)
             .setValue(ByteString.copyFromUtf8("QWERTYUIOP")).build();
 
-    HBaseProtos.RegionLoad rlOne =
-        HBaseProtos.RegionLoad.newBuilder().setRegionSpecifier(rSpecOne).setStores(10)
+    ClusterStatusProtos.RegionLoad rlOne =
+        ClusterStatusProtos.RegionLoad.newBuilder().setRegionSpecifier(rSpecOne).setStores(10)
             .setStorefiles(101).setStoreUncompressedSizeMB(106).setStorefileSizeMB(520)
             .setStorefileIndexSizeMB(42).setRootIndexSizeKB(201).build();
-    HBaseProtos.RegionLoad rlTwo =
-        HBaseProtos.RegionLoad.newBuilder().setRegionSpecifier(rSpecTwo).setStores(3)
+    ClusterStatusProtos.RegionLoad rlTwo =
+        ClusterStatusProtos.RegionLoad.newBuilder().setRegionSpecifier(rSpecTwo).setStores(3)
             .setStorefiles(13).setStoreUncompressedSizeMB(23).setStorefileSizeMB(300)
             .setStorefileIndexSizeMB(40).setRootIndexSizeKB(303).build();
 
-    HBaseProtos.ServerLoad sl =
-        HBaseProtos.ServerLoad.newBuilder().addRegionLoads(rlOne).addRegionLoads(rlTwo).build();
+    ClusterStatusProtos.ServerLoad sl =
+        ClusterStatusProtos.ServerLoad.newBuilder().addRegionLoads(rlOne).
+          addRegionLoads(rlTwo).build();
     return sl;
   }
 

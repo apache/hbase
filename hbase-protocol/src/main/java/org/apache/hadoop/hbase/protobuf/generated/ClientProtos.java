@@ -530,8 +530,8 @@ public final class ClientProtos {
     
     // optional .Filter filter = 4;
     boolean hasFilter();
-    org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Filter getFilter();
-    org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.FilterOrBuilder getFilterOrBuilder();
+    org.apache.hadoop.hbase.protobuf.generated.FilterProtos.Filter getFilter();
+    org.apache.hadoop.hbase.protobuf.generated.FilterProtos.FilterOrBuilder getFilterOrBuilder();
     
     // optional .TimeRange timeRange = 5;
     boolean hasTimeRange();
@@ -637,14 +637,14 @@ public final class ClientProtos {
     
     // optional .Filter filter = 4;
     public static final int FILTER_FIELD_NUMBER = 4;
-    private org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Filter filter_;
+    private org.apache.hadoop.hbase.protobuf.generated.FilterProtos.Filter filter_;
     public boolean hasFilter() {
       return ((bitField0_ & 0x00000002) == 0x00000002);
     }
-    public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Filter getFilter() {
+    public org.apache.hadoop.hbase.protobuf.generated.FilterProtos.Filter getFilter() {
       return filter_;
     }
-    public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.FilterOrBuilder getFilterOrBuilder() {
+    public org.apache.hadoop.hbase.protobuf.generated.FilterProtos.FilterOrBuilder getFilterOrBuilder() {
       return filter_;
     }
     
@@ -705,7 +705,7 @@ public final class ClientProtos {
       row_ = com.google.protobuf.ByteString.EMPTY;
       column_ = java.util.Collections.emptyList();
       attribute_ = java.util.Collections.emptyList();
-      filter_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Filter.getDefaultInstance();
+      filter_ = org.apache.hadoop.hbase.protobuf.generated.FilterProtos.Filter.getDefaultInstance();
       timeRange_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TimeRange.getDefaultInstance();
       maxVersions_ = 1;
       cacheBlocks_ = true;
@@ -1060,7 +1060,7 @@ public final class ClientProtos {
           attributeBuilder_.clear();
         }
         if (filterBuilder_ == null) {
-          filter_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Filter.getDefaultInstance();
+          filter_ = org.apache.hadoop.hbase.protobuf.generated.FilterProtos.Filter.getDefaultInstance();
         } else {
           filterBuilder_.clear();
         }
@@ -1331,7 +1331,7 @@ public final class ClientProtos {
               break;
             }
             case 34: {
-              org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Filter.Builder subBuilder = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Filter.newBuilder();
+              org.apache.hadoop.hbase.protobuf.generated.FilterProtos.Filter.Builder subBuilder = org.apache.hadoop.hbase.protobuf.generated.FilterProtos.Filter.newBuilder();
               if (hasFilter()) {
                 subBuilder.mergeFrom(getFilter());
               }
@@ -1771,20 +1771,20 @@ public final class ClientProtos {
       }
       
       // optional .Filter filter = 4;
-      private org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Filter filter_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Filter.getDefaultInstance();
+      private org.apache.hadoop.hbase.protobuf.generated.FilterProtos.Filter filter_ = org.apache.hadoop.hbase.protobuf.generated.FilterProtos.Filter.getDefaultInstance();
       private com.google.protobuf.SingleFieldBuilder<
-          org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Filter, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Filter.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.FilterOrBuilder> filterBuilder_;
+          org.apache.hadoop.hbase.protobuf.generated.FilterProtos.Filter, org.apache.hadoop.hbase.protobuf.generated.FilterProtos.Filter.Builder, org.apache.hadoop.hbase.protobuf.generated.FilterProtos.FilterOrBuilder> filterBuilder_;
       public boolean hasFilter() {
         return ((bitField0_ & 0x00000008) == 0x00000008);
       }
-      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Filter getFilter() {
+      public org.apache.hadoop.hbase.protobuf.generated.FilterProtos.Filter getFilter() {
         if (filterBuilder_ == null) {
           return filter_;
         } else {
           return filterBuilder_.getMessage();
         }
       }
-      public Builder setFilter(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Filter value) {
+      public Builder setFilter(org.apache.hadoop.hbase.protobuf.generated.FilterProtos.Filter value) {
         if (filterBuilder_ == null) {
           if (value == null) {
             throw new NullPointerException();
@@ -1798,7 +1798,7 @@ public final class ClientProtos {
         return this;
       }
       public Builder setFilter(
-          org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Filter.Builder builderForValue) {
+          org.apache.hadoop.hbase.protobuf.generated.FilterProtos.Filter.Builder builderForValue) {
         if (filterBuilder_ == null) {
           filter_ = builderForValue.build();
           onChanged();
@@ -1808,12 +1808,12 @@ public final class ClientProtos {
         bitField0_ |= 0x00000008;
         return this;
       }
-      public Builder mergeFilter(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Filter value) {
+      public Builder mergeFilter(org.apache.hadoop.hbase.protobuf.generated.FilterProtos.Filter value) {
         if (filterBuilder_ == null) {
           if (((bitField0_ & 0x00000008) == 0x00000008) &&
-              filter_ != org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Filter.getDefaultInstance()) {
+              filter_ != org.apache.hadoop.hbase.protobuf.generated.FilterProtos.Filter.getDefaultInstance()) {
             filter_ =
-              org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Filter.newBuilder(filter_).mergeFrom(value).buildPartial();
+              org.apache.hadoop.hbase.protobuf.generated.FilterProtos.Filter.newBuilder(filter_).mergeFrom(value).buildPartial();
           } else {
             filter_ = value;
           }
@@ -1826,7 +1826,7 @@ public final class ClientProtos {
       }
       public Builder clearFilter() {
         if (filterBuilder_ == null) {
-          filter_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Filter.getDefaultInstance();
+          filter_ = org.apache.hadoop.hbase.protobuf.generated.FilterProtos.Filter.getDefaultInstance();
           onChanged();
         } else {
           filterBuilder_.clear();
@@ -1834,12 +1834,12 @@ public final class ClientProtos {
         bitField0_ = (bitField0_ & ~0x00000008);
         return this;
       }
-      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Filter.Builder getFilterBuilder() {
+      public org.apache.hadoop.hbase.protobuf.generated.FilterProtos.Filter.Builder getFilterBuilder() {
         bitField0_ |= 0x00000008;
         onChanged();
         return getFilterFieldBuilder().getBuilder();
       }
-      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.FilterOrBuilder getFilterOrBuilder() {
+      public org.apache.hadoop.hbase.protobuf.generated.FilterProtos.FilterOrBuilder getFilterOrBuilder() {
         if (filterBuilder_ != null) {
           return filterBuilder_.getMessageOrBuilder();
         } else {
@@ -1847,11 +1847,11 @@ public final class ClientProtos {
         }
       }
       private com.google.protobuf.SingleFieldBuilder<
-          org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Filter, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Filter.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.FilterOrBuilder> 
+          org.apache.hadoop.hbase.protobuf.generated.FilterProtos.Filter, org.apache.hadoop.hbase.protobuf.generated.FilterProtos.Filter.Builder, org.apache.hadoop.hbase.protobuf.generated.FilterProtos.FilterOrBuilder> 
           getFilterFieldBuilder() {
         if (filterBuilder_ == null) {
           filterBuilder_ = new com.google.protobuf.SingleFieldBuilder<
-              org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Filter, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Filter.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.FilterOrBuilder>(
+              org.apache.hadoop.hbase.protobuf.generated.FilterProtos.Filter, org.apache.hadoop.hbase.protobuf.generated.FilterProtos.Filter.Builder, org.apache.hadoop.hbase.protobuf.generated.FilterProtos.FilterOrBuilder>(
                   filter_,
                   getParentForChildren(),
                   isClean());
@@ -2049,13 +2049,13 @@ public final class ClientProtos {
       extends com.google.protobuf.MessageOrBuilder {
     
     // repeated .Cell cell = 1;
-    java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Cell> 
+    java.util.List<org.apache.hadoop.hbase.protobuf.generated.CellProtos.Cell> 
         getCellList();
-    org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Cell getCell(int index);
+    org.apache.hadoop.hbase.protobuf.generated.CellProtos.Cell getCell(int index);
     int getCellCount();
-    java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.CellOrBuilder> 
+    java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.CellProtos.CellOrBuilder> 
         getCellOrBuilderList();
-    org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.CellOrBuilder getCellOrBuilder(
+    org.apache.hadoop.hbase.protobuf.generated.CellProtos.CellOrBuilder getCellOrBuilder(
         int index);
     
     // optional int32 associatedCellCount = 2;
@@ -2093,21 +2093,21 @@ public final class ClientProtos {
     private int bitField0_;
     // repeated .Cell cell = 1;
     public static final int CELL_FIELD_NUMBER = 1;
-    private java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Cell> cell_;
-    public java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Cell> getCellList() {
+    private java.util.List<org.apache.hadoop.hbase.protobuf.generated.CellProtos.Cell> cell_;
+    public java.util.List<org.apache.hadoop.hbase.protobuf.generated.CellProtos.Cell> getCellList() {
       return cell_;
     }
-    public java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.CellOrBuilder> 
+    public java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.CellProtos.CellOrBuilder> 
         getCellOrBuilderList() {
       return cell_;
     }
     public int getCellCount() {
       return cell_.size();
     }
-    public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Cell getCell(int index) {
+    public org.apache.hadoop.hbase.protobuf.generated.CellProtos.Cell getCell(int index) {
       return cell_.get(index);
     }
-    public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.CellOrBuilder getCellOrBuilder(
+    public org.apache.hadoop.hbase.protobuf.generated.CellProtos.CellOrBuilder getCellOrBuilder(
         int index) {
       return cell_.get(index);
     }
@@ -2461,7 +2461,7 @@ public final class ClientProtos {
               break;
             }
             case 10: {
-              org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Cell.Builder subBuilder = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Cell.newBuilder();
+              org.apache.hadoop.hbase.protobuf.generated.CellProtos.Cell.Builder subBuilder = org.apache.hadoop.hbase.protobuf.generated.CellProtos.Cell.newBuilder();
               input.readMessage(subBuilder, extensionRegistry);
               addCell(subBuilder.buildPartial());
               break;
@@ -2478,19 +2478,19 @@ public final class ClientProtos {
       private int bitField0_;
       
       // repeated .Cell cell = 1;
-      private java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Cell> cell_ =
+      private java.util.List<org.apache.hadoop.hbase.protobuf.generated.CellProtos.Cell> cell_ =
         java.util.Collections.emptyList();
       private void ensureCellIsMutable() {
         if (!((bitField0_ & 0x00000001) == 0x00000001)) {
-          cell_ = new java.util.ArrayList<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Cell>(cell_);
+          cell_ = new java.util.ArrayList<org.apache.hadoop.hbase.protobuf.generated.CellProtos.Cell>(cell_);
           bitField0_ |= 0x00000001;
          }
       }
       
       private com.google.protobuf.RepeatedFieldBuilder<
-          org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Cell, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Cell.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.CellOrBuilder> cellBuilder_;
+          org.apache.hadoop.hbase.protobuf.generated.CellProtos.Cell, org.apache.hadoop.hbase.protobuf.generated.CellProtos.Cell.Builder, org.apache.hadoop.hbase.protobuf.generated.CellProtos.CellOrBuilder> cellBuilder_;
       
-      public java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Cell> getCellList() {
+      public java.util.List<org.apache.hadoop.hbase.protobuf.generated.CellProtos.Cell> getCellList() {
         if (cellBuilder_ == null) {
           return java.util.Collections.unmodifiableList(cell_);
         } else {
@@ -2504,7 +2504,7 @@ public final class ClientProtos {
           return cellBuilder_.getCount();
         }
       }
-      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Cell getCell(int index) {
+      public org.apache.hadoop.hbase.protobuf.generated.CellProtos.Cell getCell(int index) {
         if (cellBuilder_ == null) {
           return cell_.get(index);
         } else {
@@ -2512,7 +2512,7 @@ public final class ClientProtos {
         }
       }
       public Builder setCell(
-          int index, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Cell value) {
+          int index, org.apache.hadoop.hbase.protobuf.generated.CellProtos.Cell value) {
         if (cellBuilder_ == null) {
           if (value == null) {
             throw new NullPointerException();
@@ -2526,7 +2526,7 @@ public final class ClientProtos {
         return this;
       }
       public Builder setCell(
-          int index, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Cell.Builder builderForValue) {
+          int index, org.apache.hadoop.hbase.protobuf.generated.CellProtos.Cell.Builder builderForValue) {
         if (cellBuilder_ == null) {
           ensureCellIsMutable();
           cell_.set(index, builderForValue.build());
@@ -2536,7 +2536,7 @@ public final class ClientProtos {
         }
         return this;
       }
-      public Builder addCell(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Cell value) {
+      public Builder addCell(org.apache.hadoop.hbase.protobuf.generated.CellProtos.Cell value) {
         if (cellBuilder_ == null) {
           if (value == null) {
             throw new NullPointerException();
@@ -2550,7 +2550,7 @@ public final class ClientProtos {
         return this;
       }
       public Builder addCell(
-          int index, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Cell value) {
+          int index, org.apache.hadoop.hbase.protobuf.generated.CellProtos.Cell value) {
         if (cellBuilder_ == null) {
           if (value == null) {
             throw new NullPointerException();
@@ -2564,7 +2564,7 @@ public final class ClientProtos {
         return this;
       }
       public Builder addCell(
-          org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Cell.Builder builderForValue) {
+          org.apache.hadoop.hbase.protobuf.generated.CellProtos.Cell.Builder builderForValue) {
         if (cellBuilder_ == null) {
           ensureCellIsMutable();
           cell_.add(builderForValue.build());
@@ -2575,7 +2575,7 @@ public final class ClientProtos {
         return this;
       }
       public Builder addCell(
-          int index, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Cell.Builder builderForValue) {
+          int index, org.apache.hadoop.hbase.protobuf.generated.CellProtos.Cell.Builder builderForValue) {
         if (cellBuilder_ == null) {
           ensureCellIsMutable();
           cell_.add(index, builderForValue.build());
@@ -2586,7 +2586,7 @@ public final class ClientProtos {
         return this;
       }
       public Builder addAllCell(
-          java.lang.Iterable<? extends org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Cell> values) {
+          java.lang.Iterable<? extends org.apache.hadoop.hbase.protobuf.generated.CellProtos.Cell> values) {
         if (cellBuilder_ == null) {
           ensureCellIsMutable();
           super.addAll(values, cell_);
@@ -2616,18 +2616,18 @@ public final class ClientProtos {
         }
         return this;
       }
-      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Cell.Builder getCellBuilder(
+      public org.apache.hadoop.hbase.protobuf.generated.CellProtos.Cell.Builder getCellBuilder(
           int index) {
         return getCellFieldBuilder().getBuilder(index);
       }
-      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.CellOrBuilder getCellOrBuilder(
+      public org.apache.hadoop.hbase.protobuf.generated.CellProtos.CellOrBuilder getCellOrBuilder(
           int index) {
         if (cellBuilder_ == null) {
           return cell_.get(index);  } else {
           return cellBuilder_.getMessageOrBuilder(index);
         }
       }
-      public java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.CellOrBuilder> 
+      public java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.CellProtos.CellOrBuilder> 
            getCellOrBuilderList() {
         if (cellBuilder_ != null) {
           return cellBuilder_.getMessageOrBuilderList();
@@ -2635,25 +2635,25 @@ public final class ClientProtos {
           return java.util.Collections.unmodifiableList(cell_);
         }
       }
-      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Cell.Builder addCellBuilder() {
+      public org.apache.hadoop.hbase.protobuf.generated.CellProtos.Cell.Builder addCellBuilder() {
         return getCellFieldBuilder().addBuilder(
-            org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Cell.getDefaultInstance());
+            org.apache.hadoop.hbase.protobuf.generated.CellProtos.Cell.getDefaultInstance());
       }
-      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Cell.Builder addCellBuilder(
+      public org.apache.hadoop.hbase.protobuf.generated.CellProtos.Cell.Builder addCellBuilder(
           int index) {
         return getCellFieldBuilder().addBuilder(
-            index, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Cell.getDefaultInstance());
+            index, org.apache.hadoop.hbase.protobuf.generated.CellProtos.Cell.getDefaultInstance());
       }
-      public java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Cell.Builder> 
+      public java.util.List<org.apache.hadoop.hbase.protobuf.generated.CellProtos.Cell.Builder> 
            getCellBuilderList() {
         return getCellFieldBuilder().getBuilderList();
       }
       private com.google.protobuf.RepeatedFieldBuilder<
-          org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Cell, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Cell.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.CellOrBuilder> 
+          org.apache.hadoop.hbase.protobuf.generated.CellProtos.Cell, org.apache.hadoop.hbase.protobuf.generated.CellProtos.Cell.Builder, org.apache.hadoop.hbase.protobuf.generated.CellProtos.CellOrBuilder> 
           getCellFieldBuilder() {
         if (cellBuilder_ == null) {
           cellBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
-              org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Cell, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Cell.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.CellOrBuilder>(
+              org.apache.hadoop.hbase.protobuf.generated.CellProtos.Cell, org.apache.hadoop.hbase.protobuf.generated.CellProtos.Cell.Builder, org.apache.hadoop.hbase.protobuf.generated.CellProtos.CellOrBuilder>(
                   cell_,
                   ((bitField0_ & 0x00000001) == 0x00000001),
                   getParentForChildren(),
@@ -10587,8 +10587,8 @@ public final class ClientProtos {
     
     // optional .Filter filter = 5;
     boolean hasFilter();
-    org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Filter getFilter();
-    org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.FilterOrBuilder getFilterOrBuilder();
+    org.apache.hadoop.hbase.protobuf.generated.FilterProtos.Filter getFilter();
+    org.apache.hadoop.hbase.protobuf.generated.FilterProtos.FilterOrBuilder getFilterOrBuilder();
     
     // optional .TimeRange timeRange = 6;
     boolean hasTimeRange();
@@ -10724,14 +10724,14 @@ public final class ClientProtos {
     
     // optional .Filter filter = 5;
     public static final int FILTER_FIELD_NUMBER = 5;
-    private org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Filter filter_;
+    private org.apache.hadoop.hbase.protobuf.generated.FilterProtos.Filter filter_;
     public boolean hasFilter() {
       return ((bitField0_ & 0x00000004) == 0x00000004);
     }
-    public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Filter getFilter() {
+    public org.apache.hadoop.hbase.protobuf.generated.FilterProtos.Filter getFilter() {
       return filter_;
     }
-    public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.FilterOrBuilder getFilterOrBuilder() {
+    public org.apache.hadoop.hbase.protobuf.generated.FilterProtos.FilterOrBuilder getFilterOrBuilder() {
       return filter_;
     }
     
@@ -10843,7 +10843,7 @@ public final class ClientProtos {
       attribute_ = java.util.Collections.emptyList();
       startRow_ = com.google.protobuf.ByteString.EMPTY;
       stopRow_ = com.google.protobuf.ByteString.EMPTY;
-      filter_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Filter.getDefaultInstance();
+      filter_ = org.apache.hadoop.hbase.protobuf.generated.FilterProtos.Filter.getDefaultInstance();
       timeRange_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TimeRange.getDefaultInstance();
       maxVersions_ = 1;
       cacheBlocks_ = true;
@@ -11297,7 +11297,7 @@ public final class ClientProtos {
         stopRow_ = com.google.protobuf.ByteString.EMPTY;
         bitField0_ = (bitField0_ & ~0x00000008);
         if (filterBuilder_ == null) {
-          filter_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Filter.getDefaultInstance();
+          filter_ = org.apache.hadoop.hbase.protobuf.generated.FilterProtos.Filter.getDefaultInstance();
         } else {
           filterBuilder_.clear();
         }
@@ -11621,7 +11621,7 @@ public final class ClientProtos {
               break;
             }
             case 42: {
-              org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Filter.Builder subBuilder = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Filter.newBuilder();
+              org.apache.hadoop.hbase.protobuf.generated.FilterProtos.Filter.Builder subBuilder = org.apache.hadoop.hbase.protobuf.generated.FilterProtos.Filter.newBuilder();
               if (hasFilter()) {
                 subBuilder.mergeFrom(getFilter());
               }
@@ -12110,20 +12110,20 @@ public final class ClientProtos {
       }
       
       // optional .Filter filter = 5;
-      private org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Filter filter_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Filter.getDefaultInstance();
+      private org.apache.hadoop.hbase.protobuf.generated.FilterProtos.Filter filter_ = org.apache.hadoop.hbase.protobuf.generated.FilterProtos.Filter.getDefaultInstance();
       private com.google.protobuf.SingleFieldBuilder<
-          org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Filter, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Filter.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.FilterOrBuilder> filterBuilder_;
+          org.apache.hadoop.hbase.protobuf.generated.FilterProtos.Filter, org.apache.hadoop.hbase.protobuf.generated.FilterProtos.Filter.Builder, org.apache.hadoop.hbase.protobuf.generated.FilterProtos.FilterOrBuilder> filterBuilder_;
       public boolean hasFilter() {
         return ((bitField0_ & 0x00000010) == 0x00000010);
       }
-      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Filter getFilter() {
+      public org.apache.hadoop.hbase.protobuf.generated.FilterProtos.Filter getFilter() {
         if (filterBuilder_ == null) {
           return filter_;
         } else {
           return filterBuilder_.getMessage();
         }
       }
-      public Builder setFilter(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Filter value) {
+      public Builder setFilter(org.apache.hadoop.hbase.protobuf.generated.FilterProtos.Filter value) {
         if (filterBuilder_ == null) {
           if (value == null) {
             throw new NullPointerException();
@@ -12137,7 +12137,7 @@ public final class ClientProtos {
         return this;
       }
       public Builder setFilter(
-          org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Filter.Builder builderForValue) {
+          org.apache.hadoop.hbase.protobuf.generated.FilterProtos.Filter.Builder builderForValue) {
         if (filterBuilder_ == null) {
           filter_ = builderForValue.build();
           onChanged();
@@ -12147,12 +12147,12 @@ public final class ClientProtos {
         bitField0_ |= 0x00000010;
         return this;
       }
-      public Builder mergeFilter(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Filter value) {
+      public Builder mergeFilter(org.apache.hadoop.hbase.protobuf.generated.FilterProtos.Filter value) {
         if (filterBuilder_ == null) {
           if (((bitField0_ & 0x00000010) == 0x00000010) &&
-              filter_ != org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Filter.getDefaultInstance()) {
+              filter_ != org.apache.hadoop.hbase.protobuf.generated.FilterProtos.Filter.getDefaultInstance()) {
             filter_ =
-              org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Filter.newBuilder(filter_).mergeFrom(value).buildPartial();
+              org.apache.hadoop.hbase.protobuf.generated.FilterProtos.Filter.newBuilder(filter_).mergeFrom(value).buildPartial();
           } else {
             filter_ = value;
           }
@@ -12165,7 +12165,7 @@ public final class ClientProtos {
       }
       public Builder clearFilter() {
         if (filterBuilder_ == null) {
-          filter_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Filter.getDefaultInstance();
+          filter_ = org.apache.hadoop.hbase.protobuf.generated.FilterProtos.Filter.getDefaultInstance();
           onChanged();
         } else {
           filterBuilder_.clear();
@@ -12173,12 +12173,12 @@ public final class ClientProtos {
         bitField0_ = (bitField0_ & ~0x00000010);
         return this;
       }
-      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Filter.Builder getFilterBuilder() {
+      public org.apache.hadoop.hbase.protobuf.generated.FilterProtos.Filter.Builder getFilterBuilder() {
         bitField0_ |= 0x00000010;
         onChanged();
         return getFilterFieldBuilder().getBuilder();
       }
-      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.FilterOrBuilder getFilterOrBuilder() {
+      public org.apache.hadoop.hbase.protobuf.generated.FilterProtos.FilterOrBuilder getFilterOrBuilder() {
         if (filterBuilder_ != null) {
           return filterBuilder_.getMessageOrBuilder();
         } else {
@@ -12186,11 +12186,11 @@ public final class ClientProtos {
         }
       }
       private com.google.protobuf.SingleFieldBuilder<
-          org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Filter, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Filter.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.FilterOrBuilder> 
+          org.apache.hadoop.hbase.protobuf.generated.FilterProtos.Filter, org.apache.hadoop.hbase.protobuf.generated.FilterProtos.Filter.Builder, org.apache.hadoop.hbase.protobuf.generated.FilterProtos.FilterOrBuilder> 
           getFilterFieldBuilder() {
         if (filterBuilder_ == null) {
           filterBuilder_ = new com.google.protobuf.SingleFieldBuilder<
-              org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Filter, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Filter.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.FilterOrBuilder>(
+              org.apache.hadoop.hbase.protobuf.generated.FilterProtos.Filter, org.apache.hadoop.hbase.protobuf.generated.FilterProtos.Filter.Builder, org.apache.hadoop.hbase.protobuf.generated.FilterProtos.FilterOrBuilder>(
                   filter_,
                   getParentForChildren(),
                   isClean());
@@ -21554,99 +21554,100 @@ public final class ClientProtos {
       descriptor;
   static {
     java.lang.String[] descriptorData = {
-      "\n\014Client.proto\032\013hbase.proto\032\020Comparator." +
-      "proto\"+\n\006Column\022\016\n\006family\030\001 \002(\014\022\021\n\tquali" +
-      "fier\030\002 \003(\014\"\342\001\n\003Get\022\013\n\003row\030\001 \002(\014\022\027\n\006colum" +
-      "n\030\002 \003(\0132\007.Column\022!\n\tattribute\030\003 \003(\0132\016.Na" +
-      "meBytesPair\022\027\n\006filter\030\004 \001(\0132\007.Filter\022\035\n\t" +
-      "timeRange\030\005 \001(\0132\n.TimeRange\022\026\n\013maxVersio" +
-      "ns\030\006 \001(\r:\0011\022\031\n\013cacheBlocks\030\007 \001(\010:\004true\022\022" +
-      "\n\nstoreLimit\030\010 \001(\r\022\023\n\013storeOffset\030\t \001(\r\"" +
-      ":\n\006Result\022\023\n\004cell\030\001 \003(\0132\005.Cell\022\033\n\023associ" +
-      "atedCellCount\030\002 \001(\005\"r\n\nGetRequest\022 \n\006reg",
-      "ion\030\001 \002(\0132\020.RegionSpecifier\022\021\n\003get\030\002 \002(\013" +
-      "2\004.Get\022\030\n\020closestRowBefore\030\003 \001(\010\022\025\n\rexis" +
-      "tenceOnly\030\004 \001(\010\"w\n\017MultiGetRequest\022 \n\006re" +
-      "gion\030\001 \002(\0132\020.RegionSpecifier\022\021\n\003get\030\002 \003(" +
-      "\0132\004.Get\022\030\n\020closestRowBefore\030\003 \001(\010\022\025\n\rexi" +
-      "stenceOnly\030\004 \001(\010\"6\n\013GetResponse\022\027\n\006resul" +
-      "t\030\001 \001(\0132\007.Result\022\016\n\006exists\030\002 \001(\010\";\n\020Mult" +
-      "iGetResponse\022\027\n\006result\030\001 \003(\0132\007.Result\022\016\n" +
-      "\006exists\030\002 \003(\010\"\177\n\tCondition\022\013\n\003row\030\001 \002(\014\022" +
-      "\016\n\006family\030\002 \002(\014\022\021\n\tqualifier\030\003 \002(\014\022!\n\013co",
-      "mpareType\030\004 \002(\0162\014.CompareType\022\037\n\ncompara" +
-      "tor\030\005 \002(\0132\013.Comparator\"\365\005\n\rMutationProto" +
-      "\022\013\n\003row\030\001 \001(\014\022/\n\nmutateType\030\002 \001(\0162\033.Muta" +
-      "tionProto.MutationType\022/\n\013columnValue\030\003 " +
-      "\003(\0132\032.MutationProto.ColumnValue\022\021\n\ttimes" +
-      "tamp\030\004 \001(\004\022!\n\tattribute\030\005 \003(\0132\016.NameByte" +
-      "sPair\022:\n\ndurability\030\006 \001(\0162\031.MutationProt" +
-      "o.Durability:\013USE_DEFAULT\022\035\n\ttimeRange\030\007" +
-      " \001(\0132\n.TimeRange\022\033\n\023associatedCellCount\030" +
-      "\010 \001(\005\032\326\001\n\013ColumnValue\022\016\n\006family\030\001 \002(\014\022A\n",
-      "\016qualifierValue\030\002 \003(\0132).MutationProto.Co" +
-      "lumnValue.QualifierValue\032t\n\016QualifierVal" +
-      "ue\022\021\n\tqualifier\030\001 \001(\014\022\r\n\005value\030\002 \001(\014\022\021\n\t" +
-      "timestamp\030\003 \001(\004\022-\n\ndeleteType\030\004 \001(\0162\031.Mu" +
-      "tationProto.DeleteType\"W\n\nDurability\022\017\n\013" +
-      "USE_DEFAULT\020\000\022\014\n\010SKIP_WAL\020\001\022\r\n\tASYNC_WAL" +
-      "\020\002\022\014\n\010SYNC_WAL\020\003\022\r\n\tFSYNC_WAL\020\004\">\n\014Mutat" +
-      "ionType\022\n\n\006APPEND\020\000\022\r\n\tINCREMENT\020\001\022\007\n\003PU" +
-      "T\020\002\022\n\n\006DELETE\020\003\"U\n\nDeleteType\022\026\n\022DELETE_" +
-      "ONE_VERSION\020\000\022\034\n\030DELETE_MULTIPLE_VERSION",
-      "S\020\001\022\021\n\rDELETE_FAMILY\020\002\"r\n\rMutateRequest\022" +
-      " \n\006region\030\001 \002(\0132\020.RegionSpecifier\022 \n\010mut" +
-      "ation\030\002 \002(\0132\016.MutationProto\022\035\n\tcondition" +
-      "\030\003 \001(\0132\n.Condition\"<\n\016MutateResponse\022\027\n\006" +
-      "result\030\001 \001(\0132\007.Result\022\021\n\tprocessed\030\002 \001(\010" +
-      "\"\362\002\n\004Scan\022\027\n\006column\030\001 \003(\0132\007.Column\022!\n\tat" +
-      "tribute\030\002 \003(\0132\016.NameBytesPair\022\020\n\010startRo" +
-      "w\030\003 \001(\014\022\017\n\007stopRow\030\004 \001(\014\022\027\n\006filter\030\005 \001(\013" +
-      "2\007.Filter\022\035\n\ttimeRange\030\006 \001(\0132\n.TimeRange" +
-      "\022\026\n\013maxVersions\030\007 \001(\r:\0011\022\031\n\013cacheBlocks\030",
-      "\010 \001(\010:\004true\022\021\n\tbatchSize\030\t \001(\r\022\025\n\rmaxRes" +
-      "ultSize\030\n \001(\004\022\022\n\nstoreLimit\030\013 \001(\r\022\023\n\013sto" +
-      "reOffset\030\014 \001(\r\022\"\n\032loadColumnFamiliesOnDe" +
-      "mand\030\r \001(\010\022\024\n\014cachingCount\030\016 \001(\r\022\023\n\013pref" +
-      "etching\030\017 \001(\010\"\230\001\n\013ScanRequest\022 \n\006region\030" +
-      "\001 \001(\0132\020.RegionSpecifier\022\023\n\004scan\030\002 \001(\0132\005." +
-      "Scan\022\021\n\tscannerId\030\003 \001(\004\022\024\n\014numberOfRows\030" +
-      "\004 \001(\r\022\024\n\014closeScanner\030\005 \001(\010\022\023\n\013nextCallS" +
-      "eq\030\006 \001(\004\"l\n\014ScanResponse\022\'\n\016resultCellMe" +
-      "ta\030\001 \001(\0132\017.ResultCellMeta\022\021\n\tscannerId\030\002",
-      " \001(\004\022\023\n\013moreResults\030\003 \001(\010\022\013\n\003ttl\030\004 \001(\r\"%" +
-      "\n\016ResultCellMeta\022\023\n\013cellsLength\030\001 \003(\r\"\260\001" +
-      "\n\024BulkLoadHFileRequest\022 \n\006region\030\001 \002(\0132\020" +
-      ".RegionSpecifier\0224\n\nfamilyPath\030\002 \003(\0132 .B" +
-      "ulkLoadHFileRequest.FamilyPath\022\024\n\014assign" +
-      "SeqNum\030\003 \001(\010\032*\n\nFamilyPath\022\016\n\006family\030\001 \002" +
-      "(\014\022\014\n\004path\030\002 \002(\t\"\'\n\025BulkLoadHFileRespons" +
-      "e\022\016\n\006loaded\030\001 \002(\010\"_\n\026CoprocessorServiceC" +
-      "all\022\013\n\003row\030\001 \002(\014\022\023\n\013serviceName\030\002 \002(\t\022\022\n" +
-      "\nmethodName\030\003 \002(\t\022\017\n\007request\030\004 \002(\014\"d\n\031Co",
-      "processorServiceRequest\022 \n\006region\030\001 \002(\0132" +
-      "\020.RegionSpecifier\022%\n\004call\030\002 \002(\0132\027.Coproc" +
-      "essorServiceCall\"]\n\032CoprocessorServiceRe" +
-      "sponse\022 \n\006region\030\001 \002(\0132\020.RegionSpecifier" +
-      "\022\035\n\005value\030\002 \002(\0132\016.NameBytesPair\"B\n\013Multi" +
-      "Action\022 \n\010mutation\030\001 \001(\0132\016.MutationProto" +
-      "\022\021\n\003get\030\002 \001(\0132\004.Get\"I\n\014ActionResult\022\026\n\005v" +
-      "alue\030\001 \001(\0132\007.Result\022!\n\texception\030\002 \001(\0132\016" +
-      ".NameBytesPair\"^\n\014MultiRequest\022 \n\006region" +
-      "\030\001 \002(\0132\020.RegionSpecifier\022\034\n\006action\030\002 \003(\013",
-      "2\014.MultiAction\022\016\n\006atomic\030\003 \001(\010\".\n\rMultiR" +
-      "esponse\022\035\n\006result\030\001 \003(\0132\r.ActionResult2\342" +
-      "\002\n\rClientService\022 \n\003get\022\013.GetRequest\032\014.G" +
-      "etResponse\022/\n\010multiGet\022\020.MultiGetRequest" +
-      "\032\021.MultiGetResponse\022)\n\006mutate\022\016.MutateRe" +
-      "quest\032\017.MutateResponse\022#\n\004scan\022\014.ScanReq" +
-      "uest\032\r.ScanResponse\022>\n\rbulkLoadHFile\022\025.B" +
-      "ulkLoadHFileRequest\032\026.BulkLoadHFileRespo" +
-      "nse\022F\n\013execService\022\032.CoprocessorServiceR" +
-      "equest\032\033.CoprocessorServiceResponse\022&\n\005m",
-      "ulti\022\r.MultiRequest\032\016.MultiResponseBB\n*o" +
-      "rg.apache.hadoop.hbase.protobuf.generate" +
-      "dB\014ClientProtosH\001\210\001\001\240\001\001"
+      "\n\014Client.proto\032\013hbase.proto\032\014Filter.prot" +
+      "o\032\nCell.proto\032\020Comparator.proto\"+\n\006Colum" +
+      "n\022\016\n\006family\030\001 \002(\014\022\021\n\tqualifier\030\002 \003(\014\"\342\001\n" +
+      "\003Get\022\013\n\003row\030\001 \002(\014\022\027\n\006column\030\002 \003(\0132\007.Colu" +
+      "mn\022!\n\tattribute\030\003 \003(\0132\016.NameBytesPair\022\027\n" +
+      "\006filter\030\004 \001(\0132\007.Filter\022\035\n\ttimeRange\030\005 \001(" +
+      "\0132\n.TimeRange\022\026\n\013maxVersions\030\006 \001(\r:\0011\022\031\n" +
+      "\013cacheBlocks\030\007 \001(\010:\004true\022\022\n\nstoreLimit\030\010" +
+      " \001(\r\022\023\n\013storeOffset\030\t \001(\r\":\n\006Result\022\023\n\004c" +
+      "ell\030\001 \003(\0132\005.Cell\022\033\n\023associatedCellCount\030",
+      "\002 \001(\005\"r\n\nGetRequest\022 \n\006region\030\001 \002(\0132\020.Re" +
+      "gionSpecifier\022\021\n\003get\030\002 \002(\0132\004.Get\022\030\n\020clos" +
+      "estRowBefore\030\003 \001(\010\022\025\n\rexistenceOnly\030\004 \001(" +
+      "\010\"w\n\017MultiGetRequest\022 \n\006region\030\001 \002(\0132\020.R" +
+      "egionSpecifier\022\021\n\003get\030\002 \003(\0132\004.Get\022\030\n\020clo" +
+      "sestRowBefore\030\003 \001(\010\022\025\n\rexistenceOnly\030\004 \001" +
+      "(\010\"6\n\013GetResponse\022\027\n\006result\030\001 \001(\0132\007.Resu" +
+      "lt\022\016\n\006exists\030\002 \001(\010\";\n\020MultiGetResponse\022\027" +
+      "\n\006result\030\001 \003(\0132\007.Result\022\016\n\006exists\030\002 \003(\010\"" +
+      "\177\n\tCondition\022\013\n\003row\030\001 \002(\014\022\016\n\006family\030\002 \002(",
+      "\014\022\021\n\tqualifier\030\003 \002(\014\022!\n\013compareType\030\004 \002(" +
+      "\0162\014.CompareType\022\037\n\ncomparator\030\005 \002(\0132\013.Co" +
+      "mparator\"\365\005\n\rMutationProto\022\013\n\003row\030\001 \001(\014\022" +
+      "/\n\nmutateType\030\002 \001(\0162\033.MutationProto.Muta" +
+      "tionType\022/\n\013columnValue\030\003 \003(\0132\032.Mutation" +
+      "Proto.ColumnValue\022\021\n\ttimestamp\030\004 \001(\004\022!\n\t" +
+      "attribute\030\005 \003(\0132\016.NameBytesPair\022:\n\ndurab" +
+      "ility\030\006 \001(\0162\031.MutationProto.Durability:\013" +
+      "USE_DEFAULT\022\035\n\ttimeRange\030\007 \001(\0132\n.TimeRan" +
+      "ge\022\033\n\023associatedCellCount\030\010 \001(\005\032\326\001\n\013Colu",
+      "mnValue\022\016\n\006family\030\001 \002(\014\022A\n\016qualifierValu" +
+      "e\030\002 \003(\0132).MutationProto.ColumnValue.Qual" +
+      "ifierValue\032t\n\016QualifierValue\022\021\n\tqualifie" +
+      "r\030\001 \001(\014\022\r\n\005value\030\002 \001(\014\022\021\n\ttimestamp\030\003 \001(" +
+      "\004\022-\n\ndeleteType\030\004 \001(\0162\031.MutationProto.De" +
+      "leteType\"W\n\nDurability\022\017\n\013USE_DEFAULT\020\000\022" +
+      "\014\n\010SKIP_WAL\020\001\022\r\n\tASYNC_WAL\020\002\022\014\n\010SYNC_WAL" +
+      "\020\003\022\r\n\tFSYNC_WAL\020\004\">\n\014MutationType\022\n\n\006APP" +
+      "END\020\000\022\r\n\tINCREMENT\020\001\022\007\n\003PUT\020\002\022\n\n\006DELETE\020" +
+      "\003\"U\n\nDeleteType\022\026\n\022DELETE_ONE_VERSION\020\000\022",
+      "\034\n\030DELETE_MULTIPLE_VERSIONS\020\001\022\021\n\rDELETE_" +
+      "FAMILY\020\002\"r\n\rMutateRequest\022 \n\006region\030\001 \002(" +
+      "\0132\020.RegionSpecifier\022 \n\010mutation\030\002 \002(\0132\016." +
+      "MutationProto\022\035\n\tcondition\030\003 \001(\0132\n.Condi" +
+      "tion\"<\n\016MutateResponse\022\027\n\006result\030\001 \001(\0132\007" +
+      ".Result\022\021\n\tprocessed\030\002 \001(\010\"\362\002\n\004Scan\022\027\n\006c" +
+      "olumn\030\001 \003(\0132\007.Column\022!\n\tattribute\030\002 \003(\0132" +
+      "\016.NameBytesPair\022\020\n\010startRow\030\003 \001(\014\022\017\n\007sto" +
+      "pRow\030\004 \001(\014\022\027\n\006filter\030\005 \001(\0132\007.Filter\022\035\n\tt" +
+      "imeRange\030\006 \001(\0132\n.TimeRange\022\026\n\013maxVersion",
+      "s\030\007 \001(\r:\0011\022\031\n\013cacheBlocks\030\010 \001(\010:\004true\022\021\n" +
+      "\tbatchSize\030\t \001(\r\022\025\n\rmaxResultSize\030\n \001(\004\022" +
+      "\022\n\nstoreLimit\030\013 \001(\r\022\023\n\013storeOffset\030\014 \001(\r" +
+      "\022\"\n\032loadColumnFamiliesOnDemand\030\r \001(\010\022\024\n\014" +
+      "cachingCount\030\016 \001(\r\022\023\n\013prefetching\030\017 \001(\010\"" +
+      "\230\001\n\013ScanRequest\022 \n\006region\030\001 \001(\0132\020.Region" +
+      "Specifier\022\023\n\004scan\030\002 \001(\0132\005.Scan\022\021\n\tscanne" +
+      "rId\030\003 \001(\004\022\024\n\014numberOfRows\030\004 \001(\r\022\024\n\014close" +
+      "Scanner\030\005 \001(\010\022\023\n\013nextCallSeq\030\006 \001(\004\"l\n\014Sc" +
+      "anResponse\022\'\n\016resultCellMeta\030\001 \001(\0132\017.Res",
+      "ultCellMeta\022\021\n\tscannerId\030\002 \001(\004\022\023\n\013moreRe" +
+      "sults\030\003 \001(\010\022\013\n\003ttl\030\004 \001(\r\"%\n\016ResultCellMe" +
+      "ta\022\023\n\013cellsLength\030\001 \003(\r\"\260\001\n\024BulkLoadHFil" +
+      "eRequest\022 \n\006region\030\001 \002(\0132\020.RegionSpecifi" +
+      "er\0224\n\nfamilyPath\030\002 \003(\0132 .BulkLoadHFileRe" +
+      "quest.FamilyPath\022\024\n\014assignSeqNum\030\003 \001(\010\032*" +
+      "\n\nFamilyPath\022\016\n\006family\030\001 \002(\014\022\014\n\004path\030\002 \002" +
+      "(\t\"\'\n\025BulkLoadHFileResponse\022\016\n\006loaded\030\001 " +
+      "\002(\010\"_\n\026CoprocessorServiceCall\022\013\n\003row\030\001 \002" +
+      "(\014\022\023\n\013serviceName\030\002 \002(\t\022\022\n\nmethodName\030\003 ",
+      "\002(\t\022\017\n\007request\030\004 \002(\014\"d\n\031CoprocessorServi" +
+      "ceRequest\022 \n\006region\030\001 \002(\0132\020.RegionSpecif" +
+      "ier\022%\n\004call\030\002 \002(\0132\027.CoprocessorServiceCa" +
+      "ll\"]\n\032CoprocessorServiceResponse\022 \n\006regi" +
+      "on\030\001 \002(\0132\020.RegionSpecifier\022\035\n\005value\030\002 \002(" +
+      "\0132\016.NameBytesPair\"B\n\013MultiAction\022 \n\010muta" +
+      "tion\030\001 \001(\0132\016.MutationProto\022\021\n\003get\030\002 \001(\0132" +
+      "\004.Get\"I\n\014ActionResult\022\026\n\005value\030\001 \001(\0132\007.R" +
+      "esult\022!\n\texception\030\002 \001(\0132\016.NameBytesPair" +
+      "\"^\n\014MultiRequest\022 \n\006region\030\001 \002(\0132\020.Regio",
+      "nSpecifier\022\034\n\006action\030\002 \003(\0132\014.MultiAction" +
+      "\022\016\n\006atomic\030\003 \001(\010\".\n\rMultiResponse\022\035\n\006res" +
+      "ult\030\001 \003(\0132\r.ActionResult2\342\002\n\rClientServi" +
+      "ce\022 \n\003get\022\013.GetRequest\032\014.GetResponse\022/\n\010" +
+      "multiGet\022\020.MultiGetRequest\032\021.MultiGetRes" +
+      "ponse\022)\n\006mutate\022\016.MutateRequest\032\017.Mutate" +
+      "Response\022#\n\004scan\022\014.ScanRequest\032\r.ScanRes" +
+      "ponse\022>\n\rbulkLoadHFile\022\025.BulkLoadHFileRe" +
+      "quest\032\026.BulkLoadHFileResponse\022F\n\013execSer" +
+      "vice\022\032.CoprocessorServiceRequest\032\033.Copro",
+      "cessorServiceResponse\022&\n\005multi\022\r.MultiRe" +
+      "quest\032\016.MultiResponseBB\n*org.apache.hado" +
+      "op.hbase.protobuf.generatedB\014ClientProto" +
+      "sH\001\210\001\001\240\001\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -21876,6 +21877,8 @@ public final class ClientProtos {
       .internalBuildGeneratedFileFrom(descriptorData,
         new com.google.protobuf.Descriptors.FileDescriptor[] {
           org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.getDescriptor(),
+          org.apache.hadoop.hbase.protobuf.generated.FilterProtos.getDescriptor(),
+          org.apache.hadoop.hbase.protobuf.generated.CellProtos.getDescriptor(),
           org.apache.hadoop.hbase.protobuf.generated.ComparatorProtos.getDescriptor(),
         }, assigner);
   }
