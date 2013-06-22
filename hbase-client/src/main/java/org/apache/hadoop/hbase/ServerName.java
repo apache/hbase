@@ -24,7 +24,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.RootRegionServer;
+import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.MetaRegionServer;
 import org.apache.hadoop.hbase.util.Addressing;
 import org.apache.hadoop.hbase.util.Bytes;
 
@@ -339,8 +339,8 @@ public class ServerName implements Comparable<ServerName> {
     if (ProtobufUtil.isPBMagicPrefix(data)) {
       int prefixLen = ProtobufUtil.lengthOfPBMagic();
       try {
-        RootRegionServer rss =
-          RootRegionServer.newBuilder().mergeFrom(data, prefixLen, data.length - prefixLen).build();
+        MetaRegionServer rss =
+          MetaRegionServer.newBuilder().mergeFrom(data, prefixLen, data.length - prefixLen).build();
         org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName sn = rss.getServer();
         return new ServerName(sn.getHostName(), sn.getPort(), sn.getStartCode());
       } catch (InvalidProtocolBufferException e) {

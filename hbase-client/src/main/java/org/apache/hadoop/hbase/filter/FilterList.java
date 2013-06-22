@@ -25,13 +25,10 @@ import java.util.List;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.FilterProtos;
-import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
 
 import com.google.protobuf.InvalidProtocolBufferException;
 
@@ -55,7 +52,6 @@ public class FilterList extends Filter {
     MUST_PASS_ONE
   }
 
-  private static final Configuration conf = HBaseConfiguration.create();
   private static final int MAX_LOG_FILTERS = 5;
   private Operator operator = Operator.MUST_PASS_ALL;
   private List<Filter> filters = new ArrayList<Filter>();
@@ -306,7 +302,7 @@ public class FilterList extends Filter {
 
     List<Filter> rowFilters = new ArrayList<Filter>(proto.getFiltersCount());
     try {
-      for (HBaseProtos.Filter filter : proto.getFiltersList()) {
+      for (FilterProtos.Filter filter : proto.getFiltersList()) {
         rowFilters.add(ProtobufUtil.toFilter(filter));
       }
     } catch (IOException ioe) {

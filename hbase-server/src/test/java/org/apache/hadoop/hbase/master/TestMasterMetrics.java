@@ -24,7 +24,7 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
+import org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.test.MetricsAssertHelper;
@@ -72,7 +72,7 @@ public class TestMasterMetrics {
     HRegionServer rs = cluster.getRegionServer(0);
     request.setServer(ProtobufUtil.toServerName(rs.getServerName()));
 
-    HBaseProtos.ServerLoad sl = HBaseProtos.ServerLoad.newBuilder()
+    ClusterStatusProtos.ServerLoad sl = ClusterStatusProtos.ServerLoad.newBuilder()
                                            .setTotalNumberOfRequests(10000)
                                            .build();
     master.getMetrics().getMetricsSource().init();

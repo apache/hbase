@@ -141,8 +141,8 @@ public class MetaRegionTracker extends ZooKeeperNodeTracker {
     HBaseProtos.ServerName pbsn =
       HBaseProtos.ServerName.newBuilder().setHostName(sn.getHostname()).
       setPort(sn.getPort()).setStartCode(sn.getStartcode()).build();
-    ZooKeeperProtos.RootRegionServer pbrsr =
-      ZooKeeperProtos.RootRegionServer.newBuilder().setServer(pbsn).build();
+    ZooKeeperProtos.MetaRegionServer pbrsr =
+      ZooKeeperProtos.MetaRegionServer.newBuilder().setServer(pbsn).build();
     return ProtobufUtil.prependPBMagic(pbrsr.toByteArray());
   }
 

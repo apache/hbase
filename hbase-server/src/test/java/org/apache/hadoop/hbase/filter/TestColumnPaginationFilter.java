@@ -18,22 +18,16 @@
  */
 package org.apache.hadoop.hbase.filter;
 
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
+import static org.junit.Assert.assertTrue;
 
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
+import org.apache.hadoop.hbase.protobuf.generated.FilterProtos;
 import org.apache.hadoop.hbase.util.Bytes;
-
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-
-import static org.junit.Assert.assertTrue;
 
 /**
  * Test for the ColumnPaginationFilter, used mainly to test the successful serialization of the filter.
@@ -65,7 +59,7 @@ public class TestColumnPaginationFilter
     }
 
     private Filter serializationTest(Filter filter) throws Exception {
-      HBaseProtos.Filter filterProto = ProtobufUtil.toFilter(filter);
+      FilterProtos.Filter filterProto = ProtobufUtil.toFilter(filter);
       Filter newFilter = ProtobufUtil.toFilter(filterProto);
 
       return newFilter;

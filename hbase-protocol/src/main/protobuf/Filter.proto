@@ -27,6 +27,11 @@ option optimize_for = SPEED;
 import "hbase.proto";
 import "Comparator.proto";
 
+message Filter {
+  required string name = 1;
+  optional bytes serializedFilter = 2;
+}
+
 message ColumnCountGetFilter {
   required int32 limit = 1;
 }

@@ -27,7 +27,7 @@ import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.codec.BaseDecoder;
 import org.apache.hadoop.hbase.codec.BaseEncoder;
 import org.apache.hadoop.hbase.codec.Codec;
-import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
+import org.apache.hadoop.hbase.protobuf.generated.CellProtos;
 
 import com.google.protobuf.ByteString;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -47,7 +47,7 @@ public class MessageCodec implements Codec {
     @Override
     public void write(Cell cell) throws IOException {
       checkFlushed();
-      HBaseProtos.Cell.Builder builder = HBaseProtos.Cell.newBuilder();
+      CellProtos.Cell.Builder builder = CellProtos.Cell.newBuilder();
       // This copies bytes from Cell to ByteString.  I don't see anyway around the copy.
       // ByteString is final.
       builder.setRow(ByteString.copyFrom(cell.getRowArray(), cell.getRowOffset(),
@@ -57,10 +57,10 @@ public class MessageCodec implements Codec {
       builder.setQualifier(ByteString.copyFrom(cell.getQualifierArray(), cell.getQualifierOffset(),
           cell.getQualifierLength()));
       builder.setTimestamp(cell.getTimestamp());
-      builder.setCellType(HBaseProtos.CellType.valueOf(cell.getTypeByte()));
+      builder.setCellType(CellProtos.CellType.valueOf(cell.getTypeByte()));
       builder.setValue(ByteString.copyFrom(cell.getValueArray(), cell.getValueOffset(),
           cell.getValueLength()));
-      HBaseProtos.Cell pbcell = builder.build();
+      CellProtos.Cell pbcell = builder.build();
       pbcell.writeDelimitedTo(this.out);
     }
   }
@@ -71,7 +71,7 @@ public class MessageCodec implements Codec {
     }
 
     protected Cell parseCell() throws IOException {
-      HBaseProtos.Cell pbcell = HBaseProtos.Cell.parseDelimitedFrom(this.in);
+      CellProtos.Cell pbcell = CellProtos.Cell.parseDelimitedFrom(this.in);
       return CellUtil.createCell(pbcell.getRow().toByteArray(),
         pbcell.getFamily().toByteArray(), pbcell.getQualifier().toByteArray(),
         pbcell.getTimestamp(), (byte)pbcell.getCellType().getNumber(),

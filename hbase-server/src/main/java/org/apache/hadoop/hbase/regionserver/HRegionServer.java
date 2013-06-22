@@ -170,10 +170,10 @@ import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.Mut
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ResultCellMeta;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ScanRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ScanResponse;
-import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
+import org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Coprocessor;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair;
-import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionLoad;
+import org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionLoad;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier.RegionSpecifierType;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.GetLastFlushedSequenceIdRequest;
@@ -978,7 +978,7 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
 
   void tryRegionServerReport(long reportStartTime, long reportEndTime)
   throws IOException {
-    HBaseProtos.ServerLoad sl = buildServerLoad(reportStartTime, reportEndTime);
+    ClusterStatusProtos.ServerLoad sl = buildServerLoad(reportStartTime, reportEndTime);
     try {
       RegionServerReportRequest.Builder request = RegionServerReportRequest.newBuilder();
       ServerName sn = ServerName.parseVersionedServerName(
@@ -1000,7 +1000,7 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
     }
   }
 
-  HBaseProtos.ServerLoad buildServerLoad(long reportStartTime, long reportEndTime) {
+  ClusterStatusProtos.ServerLoad buildServerLoad(long reportStartTime, long reportEndTime) {
     // We're getting the MetricsRegionServerWrapper here because the wrapper computes requests
     // per second, and other metrics  As long as metrics are part of ServerLoad it's best to use
     // the wrapper to compute those numbers in one place.
@@ -1013,7 +1013,8 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
     MemoryUsage memory =
       ManagementFactory.getMemoryMXBean().getHeapMemoryUsage();
 
-    HBaseProtos.ServerLoad.Builder serverLoad = HBaseProtos.ServerLoad.newBuilder();
+    ClusterStatusProtos.ServerLoad.Builder serverLoad =
+      ClusterStatusProtos.ServerLoad.newBuilder();
     serverLoad.setNumberOfRequests((int) regionServerWrapper.getRequestsPerSecond());
     serverLoad.setTotalNumberOfRequests((int) regionServerWrapper.getTotalRequestCount());
     serverLoad.setUsedHeapMB((int)(memory.getUsed() / 1024 / 1024));

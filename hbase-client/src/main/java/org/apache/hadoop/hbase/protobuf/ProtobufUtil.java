@@ -80,6 +80,7 @@ import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.OpenRegionRequest;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ServerInfo;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.SplitRegionRequest;
 import org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos;
+import org.apache.hadoop.hbase.protobuf.generated.CellProtos;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.BulkLoadHFileRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.BulkLoadHFileResponse;
@@ -97,10 +98,11 @@ import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.Del
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.MutationType;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ScanRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ComparatorProtos;
+import org.apache.hadoop.hbase.protobuf.generated.FilterProtos;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameBytesPair;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo;
-import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionLoad;
+import org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionLoad;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier.RegionSpecifierType;
 import org.apache.hadoop.hbase.protobuf.generated.MapReduceProtos;
@@ -383,7 +385,7 @@ public final class ProtobufUtil {
       get.setTimeRange(minStamp, maxStamp);
     }
     if (proto.hasFilter()) {
-      HBaseProtos.Filter filter = proto.getFilter();
+      FilterProtos.Filter filter = proto.getFilter();
       get.setFilter(ProtobufUtil.toFilter(filter));
     }
     for (NameBytesPair attribute: proto.getAttributeList()) {
@@ -822,7 +824,7 @@ public final class ProtobufUtil {
       scan.setTimeRange(minStamp, maxStamp);
     }
     if (proto.hasFilter()) {
-      HBaseProtos.Filter filter = proto.getFilter();
+      FilterProtos.Filter filter = proto.getFilter();
       scan.setFilter(ProtobufUtil.toFilter(filter));
     }
     if (proto.hasBatchSize()) {
@@ -1058,9 +1060,9 @@ public final class ProtobufUtil {
    * @return the converted client Result
    */
   public static Result toResult(final ClientProtos.Result proto) {
-    List<HBaseProtos.Cell> values = proto.getCellList();
+    List<CellProtos.Cell> values = proto.getCellList();
     List<Cell> cells = new ArrayList<Cell>(values.size());
-    for (HBaseProtos.Cell c: values) {
+    for (CellProtos.Cell c: values) {
       cells.add(toCell(c));
     }
     return new Result(cells);
@@ -1086,9 +1088,9 @@ public final class ProtobufUtil {
         cells.add(scanner.current());
       }
     }
-    List<HBaseProtos.Cell> values = proto.getCellList();
+    List<CellProtos.Cell> values = proto.getCellList();
     if (cells == null) cells = new ArrayList<Cell>(values.size());
-    for (HBaseProtos.Cell c: values) {
+    for (CellProtos.Cell c: values) {
       cells.add(toCell(c));
     }
     return new Result(cells);
@@ -1139,7 +1141,7 @@ public final class ProtobufUtil {
    * @return the converted Filter
    */
   @SuppressWarnings("unchecked")
-  public static Filter toFilter(HBaseProtos.Filter proto) throws IOException {
+  public static Filter toFilter(FilterProtos.Filter proto) throws IOException {
     String type = proto.getName();
     final byte [] value = proto.getSerializedFilter().toByteArray();
     String funcName = "parseFrom";
@@ -1162,8 +1164,8 @@ public final class ProtobufUtil {
    * @param filter the Filter to convert
    * @return the converted protocol buffer Filter
    */
-  public static HBaseProtos.Filter toFilter(Filter filter) throws IOException {
-    HBaseProtos.Filter.Builder builder = HBaseProtos.Filter.newBuilder();
+  public static FilterProtos.Filter toFilter(Filter filter) throws IOException {
+    FilterProtos.Filter.Builder builder = FilterProtos.Filter.newBuilder();
     builder.setName(filter.getClass().getName());
     builder.setSerializedFilter(ByteString.copyFrom(filter.toByteArray()));
     return builder.build();
@@ -1960,23 +1962,23 @@ public final class ProtobufUtil {
     throw new IOException(se);
   }
 
-  public static HBaseProtos.Cell toCell(final Cell kv) {
+  public static CellProtos.Cell toCell(final Cell kv) {
     // Doing this is going to kill us if we do it for all data passed.
     // St.Ack 20121205
-    HBaseProtos.Cell.Builder kvbuilder = HBaseProtos.Cell.newBuilder();
+    CellProtos.Cell.Builder kvbuilder = CellProtos.Cell.newBuilder();
     kvbuilder.setRow(ByteString.copyFrom(kv.getRowArray(), kv.getRowOffset(),
       kv.getRowLength()));
     kvbuilder.setFamily(ByteString.copyFrom(kv.getFamilyArray(),
       kv.getFamilyOffset(), kv.getFamilyLength()));
     kvbuilder.setQualifier(ByteString.copyFrom(kv.getQualifierArray(),
       kv.getQualifierOffset(), kv.getQualifierLength()));
-    kvbuilder.setCellType(HBaseProtos.CellType.valueOf(kv.getTypeByte()));
+    kvbuilder.setCellType(CellProtos.CellType.valueOf(kv.getTypeByte()));
     kvbuilder.setTimestamp(kv.getTimestamp());
     kvbuilder.setValue(ByteString.copyFrom(kv.getValueArray(), kv.getValueOffset(), kv.getValueLength()));
     return kvbuilder.build();
   }
 
-  public static Cell toCell(final HBaseProtos.Cell cell) {
+  public static Cell toCell(final CellProtos.Cell cell) {
     // Doing this is going to kill us if we do it for all data passed.
     // St.Ack 20121205
     return CellUtil.createCell(cell.getRow().toByteArray(),

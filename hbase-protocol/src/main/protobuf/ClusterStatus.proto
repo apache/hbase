@@ -51,10 +51,109 @@ message RegionInTransition {
   required RegionState regionState = 2;
 }
 
+message RegionLoad {
+  /** the region specifier */
+  required RegionSpecifier regionSpecifier = 1;
+
+  /** the number of stores for the region */
+  optional uint32 stores = 2;
+
+  /** the number of storefiles for the region */
+  optional uint32 storefiles = 3;
+
+  /** the total size of the store files for the region, uncompressed, in MB */
+  optional uint32 storeUncompressedSizeMB = 4;
+
+  /** the current total size of the store files for the region, in MB */
+  optional uint32 storefileSizeMB = 5;
+
+  /** the current size of the memstore for the region, in MB */
+  optional uint32 memstoreSizeMB = 6;
+
+  /**
+   * The current total size of root-level store file indexes for the region,
+   * in MB. The same as {@link #rootIndexSizeKB} but in MB.
+   */
+  optional uint32 storefileIndexSizeMB = 7;
+
+  /** the current total read requests made to region */
+  optional uint64 readRequestsCount = 8;
+
+  /** the current total write requests made to region */
+  optional uint64 writeRequestsCount = 9;
+
+  /** the total compacting key values in currently running compaction */
+  optional uint64 totalCompactingKVs = 10;
+
+  /** the completed count of key values in currently running compaction */
+  optional uint64 currentCompactedKVs = 11;
+
+   /** The current total size of root-level indexes for the region, in KB. */
+  optional uint32 rootIndexSizeKB = 12;
+
+  /** The total size of all index blocks, not just the root level, in KB. */
+  optional uint32 totalStaticIndexSizeKB = 13;
+
+  /**
+   * The total size of all Bloom filter blocks, not just loaded into the
+   * block cache, in KB.
+   */
+  optional uint32 totalStaticBloomSizeKB = 14;
+
+  /** the most recent sequence Id from cache flush */
+  optional uint64 completeSequenceId = 15;
+}
+
+/* Server-level protobufs */
+
+message ServerLoad {
+  /** Number of requests since last report. */
+  optional uint32 numberOfRequests = 1;
+
+  /** Total Number of requests from the start of the region server. */
+  optional uint32 totalNumberOfRequests = 2;
+
+  /** the amount of used heap, in MB. */
+  optional uint32 usedHeapMB = 3;
+
+  /** the maximum allowable size of the heap, in MB. */
+  optional uint32 maxHeapMB = 4;
+
+  /** Information on the load of individual regions. */
+  repeated RegionLoad regionLoads = 5;
+
+  /**
+   * Regionserver-level coprocessors, e.g., WALObserver implementations.
+   * Region-level coprocessors, on the other hand, are stored inside RegionLoad
+   * objects.
+   */
+  repeated Coprocessor coprocessors = 6;
+
+  /**
+   * Time when incremental (non-total) counts began being calculated (e.g. numberOfRequests)
+   * time is measured as the difference, measured in milliseconds, between the current time
+   * and midnight, January 1, 1970 UTC.
+   */
+  optional uint64 reportStartTime = 7;
+
+  /**
+   * Time when report was generated.
+   * time is measured as the difference, measured in milliseconds, between the current time
+   * and midnight, January 1, 1970 UTC.
+   */
+  optional uint64 reportEndTime = 8;
+
+  /**
+   * The port number that this region server is hosing an info server on.
+   */
+  optional uint32 infoServerPort = 9;
+}
+
 message LiveServerInfo {
   required ServerName server = 1;
   required ServerLoad serverLoad = 2;
 }
+
 
 message ClusterStatus {
   optional HBaseVersionFileContent hbaseVersion = 1;
