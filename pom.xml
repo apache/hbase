@@ -876,7 +876,7 @@
     <buildDate>${maven.build.timestamp}</buildDate>
     <compileSource>1.6</compileSource>
     <!-- Dependencies -->
-    <hadoop-two.version>2.0.2-alpha</hadoop-two.version>
+    <hadoop-two.version>2.0.5-alpha</hadoop-two.version>
     <hadoop-one.version>1.1.2</hadoop-one.version>
     <commons-cli.version>1.2</commons-cli.version>
     <commons-codec.version>1.7</commons-codec.version>
