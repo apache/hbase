@@ -591,19 +591,14 @@ public class HBaseAdmin implements Abortable, Closeable {
           MasterMonitorKeepAliveConnection master = connection.getKeepAliveMasterMonitorService();
           try {
             GetTableDescriptorsRequest req =
-              RequestConverter.buildGetTableDescriptorsRequest(null);
+              RequestConverter.buildGetTableDescriptorsRequest(tableName);
             htds = master.getTableDescriptors(null, req);
           } catch (ServiceException se) {
             throw ProtobufUtil.getRemoteException(se);
           } finally {
             master.close();
           }
-          for (TableSchema ts : htds.getTableSchemaList()) {
-            if (Bytes.equals(tableName, ts.getName().toByteArray())) {
-              tableExists = true;
-              break;
-            }
-          }
+          tableExists = !htds.getTableSchemaList().isEmpty();
           if (!tableExists) {
             break;
           }

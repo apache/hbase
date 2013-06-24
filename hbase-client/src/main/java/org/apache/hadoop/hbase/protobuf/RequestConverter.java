@@ -1115,6 +1115,19 @@ public final class RequestConverter {
   }
 
   /**
+   * Creates a protocol buffer GetTableDescriptorsRequest for a single table
+   *
+   * @param tableName the table name
+   * @return a GetTableDescriptorsRequest
+   */
+  public static GetTableDescriptorsRequest buildGetTableDescriptorsRequest(
+      final byte[] tableName) {
+    return GetTableDescriptorsRequest.newBuilder()
+      .addTableNames(Bytes.toString(tableName))
+      .build();
+  }
+
+  /**
    * Creates a protocol buffer IsMasterRunningRequest
    *
    * @return a IsMasterRunningRequest

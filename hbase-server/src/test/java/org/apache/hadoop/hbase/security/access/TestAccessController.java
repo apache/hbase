@@ -78,6 +78,7 @@ import org.apache.hadoop.hbase.regionserver.RegionCoprocessorHost;
 import org.apache.hadoop.hbase.regionserver.RegionServerCoprocessorHost;
 import org.apache.hadoop.hbase.regionserver.ScanType;
 import org.apache.hadoop.hbase.exceptions.AccessDeniedException;
+import org.apache.hadoop.hbase.exceptions.TableNotFoundException;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.access.AccessControlLists;
 import org.apache.hadoop.hbase.security.access.Permission;
@@ -223,7 +224,12 @@ public class TestAccessController {
   @After
   public void tearDown() throws Exception {
     // Clean the _acl_ table
-    TEST_UTIL.deleteTable(TEST_TABLE.getTableName());
+    try {
+      TEST_UTIL.deleteTable(TEST_TABLE.getTableName());
+    } catch (TableNotFoundException ex) {
+      // Test deleted the table, no problem
+      LOG.info("Test deleted table " + Bytes.toString(TEST_TABLE.getTableName()));
+    }
     assertEquals(0, AccessControlLists.getTablePermissions(conf, TEST_TABLE.getTableName()).size());
   }
 
@@ -1980,4 +1986,85 @@ public class TestAccessController {
       table.close();
     }
   }
+
+  @Test
+  public void testTableDescriptorsEnumeration() throws Exception {
+    User TABLE_ADMIN = User.createUserForTesting(conf, "UserA", new String[0]);
+
+    // Grant TABLE ADMIN privs
+    HTable acl = new HTable(conf, AccessControlLists.ACL_TABLE_NAME);
+    try {
+      BlockingRpcChannel service = acl.coprocessorService(TEST_TABLE.getTableName());
+      AccessControlService.BlockingInterface protocol =
+        AccessControlService.newBlockingStub(service);
+      ProtobufUtil.grant(protocol, TABLE_ADMIN.getShortName(), TEST_TABLE.getTableName(),
+        null, null, Permission.Action.ADMIN);
+    } finally {
+      acl.close();
+    }
+
+    PrivilegedExceptionAction listTablesAction = new PrivilegedExceptionAction() {
+      public Object run() throws Exception {
+        HBaseAdmin admin = new HBaseAdmin(TEST_UTIL.getConfiguration());
+        try {
+          admin.listTables();
+        } finally {
+          admin.close();
+        }
+        return null;
+      }
+    };
+
+    PrivilegedExceptionAction getTableDescAction = new PrivilegedExceptionAction() {
+      public Object run() throws Exception {
+        HBaseAdmin admin = new HBaseAdmin(TEST_UTIL.getConfiguration());
+        try {
+          admin.getTableDescriptor(TEST_TABLE.getTableName());
+        } finally {
+          admin.close();
+        }
+        return null;
+      }
+    };
+
+    verifyAllowed(listTablesAction, SUPERUSER, USER_ADMIN);
+    verifyDenied(listTablesAction, USER_CREATE, USER_RW, USER_RO, USER_NONE, TABLE_ADMIN);
+
+    verifyAllowed(getTableDescAction, SUPERUSER, USER_ADMIN, USER_CREATE, TABLE_ADMIN);
+    verifyDenied(getTableDescAction, USER_RW, USER_RO, USER_NONE);
+  }
+
+  @Test
+  public void testTableDeletion() throws Exception {
+    User TABLE_ADMIN = User.createUserForTesting(conf, "TestUser", new String[0]);
+
+    // Grant TABLE ADMIN privs
+    HTable acl = new HTable(conf, AccessControlLists.ACL_TABLE_NAME);
+    try {
+      BlockingRpcChannel service = acl.coprocessorService(TEST_TABLE.getTableName());
+      AccessControlService.BlockingInterface protocol =
+        AccessControlService.newBlockingStub(service);
+      ProtobufUtil.grant(protocol, TABLE_ADMIN.getShortName(), TEST_TABLE.getTableName(),
+        null, null, Permission.Action.ADMIN);
+    } finally {
+      acl.close();
+    }
+
+    PrivilegedExceptionAction deleteTableAction = new PrivilegedExceptionAction() {
+      public Object run() throws Exception {
+        HBaseAdmin admin = new HBaseAdmin(TEST_UTIL.getConfiguration());
+        try {
+          admin.disableTable(TEST_TABLE.getTableName());
+          admin.deleteTable(TEST_TABLE.getTableName());
+        } finally {
+          admin.close();
+        }
+        return null;
+      }
+    };
+
+    verifyDenied(deleteTableAction, USER_RW, USER_RO, USER_NONE);
+    verifyAllowed(deleteTableAction, TABLE_ADMIN);
+  }
+
 }

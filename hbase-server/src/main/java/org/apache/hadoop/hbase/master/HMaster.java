@@ -1426,6 +1426,7 @@ MasterServices, Server {
     SYNC,
     ASYNC
   }
+
   /**
    * Assigns balancer switch according to BalanceSwitchMode
    * @param b new balancer switch
@@ -2409,32 +2410,54 @@ MasterServices, Server {
    */
   public GetTableDescriptorsResponse getTableDescriptors(
 	      RpcController controller, GetTableDescriptorsRequest req) throws ServiceException {
-    GetTableDescriptorsResponse.Builder builder = GetTableDescriptorsResponse.newBuilder();
-    if (req.getTableNamesCount() == 0) {
-      // request for all TableDescriptors
-      Map<String, HTableDescriptor> descriptors = null;
+    List<HTableDescriptor> descriptors = new ArrayList<HTableDescriptor>();
+
+    boolean bypass = false;
+    if (this.cpHost != null) {
       try {
-        descriptors = this.tableDescriptors.getAll();
-      } catch (IOException e) {
-          LOG.warn("Failed getting all descriptors", e);
+        bypass = this.cpHost.preGetTableDescriptors(req.getTableNamesList(), descriptors);
+      } catch (IOException ioe) {
+        throw new ServiceException(ioe);
       }
-      if (descriptors != null) {
-        for (HTableDescriptor htd : descriptors.values()) {
-          builder.addTableSchema(htd.convert());
+    }
+
+    if (!bypass) {
+      if (req.getTableNamesCount() == 0) {
+        // request for all TableDescriptors
+        Map<String, HTableDescriptor> descriptorMap = null;
+        try {
+          descriptorMap = this.tableDescriptors.getAll();
+        } catch (IOException e) {
+          LOG.warn("Failed getting all descriptors", e);
+        }
+        if (descriptorMap != null) {
+          descriptors.addAll(descriptorMap.values());
+        }
+      } else {
+        for (String s: req.getTableNamesList()) {
+          try {
+            HTableDescriptor desc = this.tableDescriptors.get(s);
+            if (desc != null) {
+              descriptors.add(desc);
+            }
+          } catch (IOException e) {
+            LOG.warn("Failed getting descriptor for " + s, e);
+          }
+        }
+      }
+
+      if (this.cpHost != null) {
+        try {
+          this.cpHost.postGetTableDescriptors(descriptors);
+        } catch (IOException ioe) {
+          throw new ServiceException(ioe);
         }
       }
     }
-    else {
-      for (String s: req.getTableNamesList()) {
-        HTableDescriptor htd = null;
-        try {
-          htd = this.tableDescriptors.get(s);
-        } catch (IOException e) {
-          LOG.warn("Failed getting descriptor for " + s, e);
-        }
-        if (htd == null) continue;
-        builder.addTableSchema(htd.convert());
-      }
+
+    GetTableDescriptorsResponse.Builder builder = GetTableDescriptorsResponse.newBuilder();
+    for (HTableDescriptor htd: descriptors) {
+      builder.addTableSchema(htd.convert());
     }
     return builder.build();
   }

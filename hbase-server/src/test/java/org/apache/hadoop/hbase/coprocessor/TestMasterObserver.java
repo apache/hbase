@@ -31,8 +31,6 @@ import java.util.Map;
 import java.util.NavigableMap;
 import java.util.concurrent.CountDownLatch;
 
-import junit.framework.Assert;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -45,6 +43,7 @@ import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.master.RegionPlan;
 import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
+import org.apache.hadoop.hbase.protobuf.generated.MasterMonitorProtos.GetTableDescriptorsRequest;
 import org.apache.hadoop.hbase.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
@@ -125,6 +124,8 @@ public class TestMasterObserver {
     private boolean postDisableTableHandlerCalled;
     private boolean preModifyTableHandlerCalled;
     private boolean postModifyTableHandlerCalled;
+    private boolean preGetTableDescriptorsCalled;
+    private boolean postGetTableDescriptorsCalled;
 
     public void enableBypass(boolean bypass) {
       this.bypass = bypass;
@@ -183,6 +184,10 @@ public class TestMasterObserver {
       postEnableTableHandlerCalled = false;
       preDisableTableHandlerCalled = false;
       postDisableTableHandlerCalled = false;
+      preModifyTableHandlerCalled = false;
+      postModifyTableHandlerCalled = false;
+      preGetTableDescriptorsCalled = false;
+      postGetTableDescriptorsCalled = false;
     }
 
     @Override
@@ -818,6 +823,22 @@ public class TestMasterObserver {
     public boolean preDisableTableHandlerCalledOnly() {
       return preDisableTableHandlerCalled && !postDisableTableHandlerCalled;
     }
+
+    @Override
+    public void preGetTableDescriptors(ObserverContext<MasterCoprocessorEnvironment> ctx,
+        List<String> tableNamesList, List<HTableDescriptor> descriptors) throws IOException {
+      preGetTableDescriptorsCalled = true;
+    }
+
+    @Override
+    public void postGetTableDescriptors(ObserverContext<MasterCoprocessorEnvironment> ctx,
+        List<HTableDescriptor> descriptors) throws IOException {
+      postGetTableDescriptorsCalled = true;
+    }
+
+    public boolean wasGetTableDescriptorsCalled() {
+      return preGetTableDescriptorsCalled && postGetTableDescriptorsCalled;
+    }
   }
 
   private static HBaseTestingUtility UTIL = new HBaseTestingUtility();
@@ -1196,5 +1217,22 @@ public class TestMasterObserver {
     }
   }
 
-}
+  @Test
+  public void testTableDescriptorsEnumeration() throws Exception {
+    MiniHBaseCluster cluster = UTIL.getHBaseCluster();
 
+    HMaster master = cluster.getMaster();
+    MasterCoprocessorHost host = master.getCoprocessorHost();
+    CPMasterObserver cp = (CPMasterObserver)host.findCoprocessor(
+        CPMasterObserver.class.getName());
+    cp.resetStates();
+
+    GetTableDescriptorsRequest req =
+        RequestConverter.buildGetTableDescriptorsRequest((List<String>)null);
+    master.getTableDescriptors(null, req);
+
+    assertTrue("Coprocessor should be called on table descriptors request",
+      cp.wasGetTableDescriptorsCalled());
+  }
+
+}
