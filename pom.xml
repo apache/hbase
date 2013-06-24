@@ -115,6 +115,15 @@
         <otherArchive>http://hbase.apache.org/mail/issues/</otherArchive>
       </otherArchives>
     </mailingList>
+    <mailingList>
+      <name>Builds List</name>
+      <subscribe>builds-subscribe@hbase.apache.org</subscribe>
+      <unsubscribe>builds-unsubscribe@hbase.apache.org</unsubscribe>
+      <archive>http://mail-archives.apache.org/mod_mbox/hbase-builds/</archive>
+      <otherArchives>
+        <otherArchive>http://hbase.apache.org/mail/builds/</otherArchive>
+      </otherArchives>
+    </mailingList>
   </mailingLists>
   <developers>
     <developer>
