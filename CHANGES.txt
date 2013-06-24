@@ -14,6 +14,7 @@ Bug
     [HBASE-8639] - Poor performance of htable#getscanner in multithreaded environment due to DNS.getDefaultHost() being called in ScannerCallable#prepare()
     [HBASE-8640] - ServerName in master may not initialize with the configured ipc address of hbase.master.ipc.address
     [HBASE-8655] - Backport to 94 - HBASE-8346(Prefetching .META. rows in case only when useCache is set to true)
+    [HBASE-8656] - Rpc call may not be notified in SecureClient
     [HBASE-8671] - Per-region WAL breaks CP backwards compatibility in 0.94 for non-enabled case
     [HBASE-8684] - Table Coprocessor can't access external HTable by default
     [HBASE-8700] - IntegrationTestBigLinkedList can fail due to random number collision
