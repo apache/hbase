@@ -26,6 +26,8 @@ Set<ServerName> deadServers = null;
 boolean catalogJanitorEnabled = true;
 String filter = "general";
 String format = "html";
+ServerManager serverManager = null;
+AssignmentManager assignmentManager = null;
 </%args>
 <%import>
 java.util.*;
@@ -34,6 +36,8 @@ org.apache.hadoop.hbase.util.Bytes;
 org.apache.hadoop.hbase.util.JvmVersion;
 org.apache.hadoop.hbase.util.FSUtils;
 org.apache.hadoop.hbase.master.HMaster;
+org.apache.hadoop.hbase.master.AssignmentManager;
+org.apache.hadoop.hbase.master.ServerManager;
 org.apache.hadoop.hbase.HConstants;
 org.apache.hadoop.hbase.ServerLoad;
 org.apache.hadoop.hbase.ServerName;
@@ -47,6 +51,11 @@ org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
   <& ../common/TaskMonitorTmpl; filter = filter; format = "json" &>
   <%java return; %>
 </%if>
+<%java>
+ServerManager serverManager = master.getServerManager();
+AssignmentManager assignmentManager = master.getAssignmentManager();
+</%java>
+
 <!--[if IE]>
 <!DOCTYPE html>
 <![endif]-->
@@ -94,6 +103,7 @@ org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
     </div>
 
     <div class="container">
+	<%if master.isActiveMaster() %>
         <div class="row inner_header">
             <div class="page-header">
                 <h1>Master <small><% master.getServerName().getHostname() %> </small></h1>
@@ -125,12 +135,9 @@ org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
                 <& deadRegionServers &>
             </%if>
         </section>
-
         <section>
-            <h2>Backup Masters</h2>
-            <& BackupMasterListTmpl; master = master &>
+            <& BackupMasterStatusTmpl; master = master &>
         </section>
-
         <section>
             <h2>Tables</h2>
             <div class="tabbable">
@@ -162,8 +169,13 @@ org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
                 </div>
             </div>
         </section>
-
         <& AssignmentManagerStatusTmpl; assignmentManager=master.getAssignmentManager()&>
+	<%else>
+        <section>
+            <& BackupMasterStatusTmpl; master = master &>
+        </section>
+	</%if>    
+
 
         <section>
             <& ../common/TaskMonitorTmpl; filter = filter &>
@@ -197,47 +209,49 @@ org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
                     <td>When Hadoop version was compiled and by whom</td>
                 </tr>
                 <tr>
-                    <td>HBase Root Directory</td>
-                    <td><% FSUtils.getRootDir(master.getConfiguration()).toString() %></td>
-                    <td>Location of HBase home directory</td>
-                </tr>
-                <tr>
-                    <td>HBase Cluster ID</td>
-                    <td><% master.getClusterId() != null ? master.getClusterId() : "Not set" %></td>
-                    <td>Unique identifier generated for each HBase cluster</td>
-                </tr>
-                <tr>
-                    <td>Load average</td>
-                    <td><% StringUtils.limitDecimalTo2(master.getServerManager().getAverageLoad()) %></td>
-                    <td>Average number of regions per regionserver. Naive computation.</td>
-                </tr>
-                <%if frags != null %>
-                <tr>
-                    <td>Fragmentation</td>
-                    <td><% frags.get("-TOTAL-") != null ? frags.get("-TOTAL-").intValue() + "%" : "n/a" %></td>
-                    <td>Overall fragmentation of all tables, including .META.</td>
-                </tr>
-                </%if>
-                <tr>
                     <td>Zookeeper Quorum</td>
                     <td><% master.getZooKeeperWatcher().getQuorum() %></td>
                     <td>Addresses of all registered ZK servers. For more, see <a href="/zk.jsp">zk dump</a>.</td>
                 </tr>
                 <tr>
-                    <td>Coprocessors</td>
-                    <td><% java.util.Arrays.toString(master.getCoprocessors()) %></td>
-                    <td>Coprocessors currently loaded by the master</td>
+                    <td>HBase Root Directory</td>
+                    <td><% FSUtils.getRootDir(master.getConfiguration()).toString() %></td>
+                    <td>Location of HBase home directory</td>
                 </tr>
                 <tr>
                     <td>HMaster Start Time</td>
                     <td><% new Date(master.getMasterStartTime()) %></td>
                     <td>Date stamp of when this HMaster was started</td>
                 </tr>
-                <tr>
-                    <td>HMaster Active Time</td>
-                    <td><% new Date(master.getMasterActiveTime()) %></td>
-                    <td>Date stamp of when this HMaster became active</td>
-                </tr>
+                <%if master.isActiveMaster() %>
+	                <tr>
+	                    <td>HMaster Active Time</td>
+	                    <td><% new Date(master.getMasterActiveTime()) %></td>
+	                    <td>Date stamp of when this HMaster became active</td>
+	                </tr>
+	                <tr>
+	                    <td>HBase Cluster ID</td>
+	                    <td><% master.getClusterId() != null ? master.getClusterId() : "Not set" %></td>
+	                    <td>Unique identifier generated for each HBase cluster</td>
+	                </tr>
+	                <tr>
+	                    <td>Load average</td>
+	                    <td><% StringUtils.limitDecimalTo2(master.getServerManager().getAverageLoad()) %></td>
+	                    <td>Average number of regions per regionserver. Naive computation.</td>
+	                </tr>
+	                <%if frags != null %>
+	                <tr>
+	                    <td>Fragmentation</td>
+	                    <td><% frags.get("-TOTAL-") != null ? frags.get("-TOTAL-").intValue() + "%" : "n/a" %></td>
+	                    <td>Overall fragmentation of all tables, including .META.</td>
+	                </tr>
+	                </%if>
+	                <tr>
+	                    <td>Coprocessors</td>
+	                    <td><% java.util.Arrays.toString(master.getCoprocessors()) %></td>
+	                    <td>Coprocessors currently loaded by the master</td>
+	                </tr>
+                </%if>
             </table>
         </section>
         </div>

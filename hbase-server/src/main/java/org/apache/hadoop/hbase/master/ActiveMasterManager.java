@@ -49,7 +49,7 @@ import org.apache.zookeeper.KeeperException;
  * the active master of the cluster.
  */
 @InterfaceAudience.Private
-class ActiveMasterManager extends ZooKeeperListener {
+public class ActiveMasterManager extends ZooKeeperListener {
   private static final Log LOG = LogFactory.getLog(ActiveMasterManager.class);
 
   final AtomicBoolean clusterHasActiveMaster = new AtomicBoolean(false);
