@@ -42,6 +42,9 @@ org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionLoad;
   List<HRegionInfo> onlineRegions = ProtobufUtil.getOnlineRegions(regionServer);
   int masterInfoPort = regionServer.getConfiguration().getInt("hbase.master.info.port", 60010);
 </%java>
+<!--[if IE]>
+<!DOCTYPE html>
+<![endif]-->
 <?xml version="1.0" encoding="UTF-8" ?>
 <html lang="en">
   <head>

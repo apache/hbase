@@ -52,13 +52,10 @@
   // This port might be wrong if RS actually ended up using something else.
   int infoPort = conf.getInt("hbase.regionserver.info.port", 60030);
 %>
-
+<!--[if IE]>
+<!DOCTYPE html>
+<![endif]-->
 <?xml version="1.0" encoding="UTF-8" ?>
-<!-- Commenting out DOCTYPE so our blue outline shows on hadoop 0.20.205.0, etc.
-     See tail of HBASE-2110 for explaination.
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
-  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
--->
 <html xmlns="http://www.w3.org/1999/xhtml">
 
 <%
@@ -166,7 +163,7 @@
             <span class="icon-bar"></span>
             <span class="icon-bar"></span>
           </a>
-          <a class="brand" href="/master-status">HBase Master</a>
+          <a class="brand" href="/master-status"><img src="/static/hbase_logo_small.png" alt="HBase Logo"/></a>
           <div class="nav-collapse">
             <ul class="nav">
                 <li><a href="/">Home</a></li>
@@ -213,11 +210,12 @@
 <%} else {
   try { %>
 <h2>Table Attributes</h2>
-<table>
+<table class="table table-striped">
   <tr>
       <th>Attribute Name</th>
       <th>Value</th>
-      <th>Description</th></tr>
+      <th>Description</th>
+  </tr>
   <tr>
       <td>Enabled</td>
       <td><%= hbadmin.isTableEnabled(table.getTableName()) %></td>
@@ -287,7 +285,7 @@
 <% } %>
 </table>
 <h2>Regions by Region Server</h2>
-<table class="table"><tr><th>Region Server</th><th>Region Count</th></tr>
+<table class="table table-striped"><tr><th>Region Server</th><th>Region Count</th></tr>
 <%
   for (Map.Entry<String, Integer> rdEntry : regDistribution.entrySet()) {
 %>
