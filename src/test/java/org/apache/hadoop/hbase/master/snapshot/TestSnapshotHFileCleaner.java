@@ -84,6 +84,6 @@ public class TestSnapshotHFileCleaner {
     fs.createNewFile(new Path(archivedHfileDir, hfile));
 
     // make sure that the file isn't deletable
-    assertFalse(cleaner.isFileDeletable(new Path(hfile)));
+    assertFalse(cleaner.isFileDeletable(fs.getFileStatus(refFile)));
   }
 }

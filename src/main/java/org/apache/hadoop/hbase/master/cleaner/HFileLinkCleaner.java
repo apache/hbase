@@ -25,6 +25,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 
@@ -48,9 +49,9 @@ public class HFileLinkCleaner extends BaseHFileCleanerDelegate {
   private FileSystem fs = null;
 
   @Override
-  public synchronized boolean isFileDeletable(Path filePath) {
+  public synchronized boolean isFileDeletable(FileStatus fStat) {
     if (this.fs == null) return false;
-
+    Path filePath = fStat.getPath();
     // HFile Link is always deletable
     if (HFileLink.isHFileLink(filePath)) return true;
 

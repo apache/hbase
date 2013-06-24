@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.master.cleaner;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.BaseConfigurable;
 
@@ -40,17 +41,19 @@ import org.apache.hadoop.hbase.BaseConfigurable;
 public abstract class BaseLogCleanerDelegate extends BaseConfigurable implements FileCleanerDelegate {
 
   @Override
-  public boolean isFileDeletable(Path file) {
-    return isLogDeletable(file);
+  public boolean isFileDeletable(FileStatus fStat) {
+    return isLogDeletable(fStat);
   }
 
   /**
    * Should the master delete the log or keep it?
    * <p>
-   * Implementing classes should override {@link #isFileDeletable(Path)} instead.
-   * @param filePath full path to log.
+   * Implementing classes should override {@link #isFileDeletable(FileStatus)} instead.
+   * @param fStat file status of the file
    * @return true if the log is deletable, false if not
    */
   @Deprecated
-  public abstract boolean isLogDeletable(Path filePath);
+  public boolean isLogDeletable(FileStatus fStat) {
+    return false;
+  }
 }

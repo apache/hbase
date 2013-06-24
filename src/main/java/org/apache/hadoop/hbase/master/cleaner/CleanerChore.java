@@ -123,7 +123,7 @@ public abstract class CleanerChore<T extends FileCleanerDelegate> extends Chore 
       for (FileStatus file : files) {
         try {
           if (file.isDir()) checkAndDeleteDirectory(file.getPath());
-          else checkAndDelete(file.getPath());
+          else checkAndDelete(file);
         } catch (IOException e) {
           e = RemoteExceptionHandler.checkIOException(e);
           LOG.warn("Error while cleaning the logs", e);
@@ -174,7 +174,7 @@ public abstract class CleanerChore<T extends FileCleanerDelegate> extends Chore 
         }
       }
       // otherwise we can just check the file
-      else if (!checkAndDelete(path)) {
+      else if (!checkAndDelete(child)) {
         canDeleteThis = false;
       }
     }
@@ -200,11 +200,12 @@ public abstract class CleanerChore<T extends FileCleanerDelegate> extends Chore 
   /**
    * Run the given file through each of the cleaners to see if it should be deleted, deleting it if
    * necessary.
-   * @param filePath path of the file to check (and possibly delete)
+   * @param fStat path of the file to check (and possibly delete)
    * @throws IOException if cann't delete a file because of a filesystem issue
    * @throws IllegalArgumentException if the file is a directory and has children
    */
-  private boolean checkAndDelete(Path filePath) throws IOException, IllegalArgumentException {
+  private boolean checkAndDelete(FileStatus fStat) throws IOException, IllegalArgumentException {
+    Path filePath = fStat.getPath();
     // first check to see if the path is valid
     if (!validate(filePath)) {
       LOG.warn("Found a wrongly formatted file: " + filePath.getName() + " deleting it.");
@@ -222,7 +223,7 @@ public abstract class CleanerChore<T extends FileCleanerDelegate> extends Chore 
         return false;
       }
 
-      if (!cleaner.isFileDeletable(filePath)) {
+      if (!cleaner.isFileDeletable(fStat)) {
         // this file is not deletable, then we are done
         if (LOG.isTraceEnabled()) {
           LOG.trace(filePath + " is not deletable according to:" + cleaner);
