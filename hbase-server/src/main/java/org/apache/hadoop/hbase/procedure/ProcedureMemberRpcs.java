@@ -35,7 +35,7 @@ public interface ProcedureMemberRpcs extends Closeable {
   /**
    * Initialize and start any threads or connections the member needs.
    */
-  public void start(ProcedureMember member);
+  public void start(final String memberName, final ProcedureMember member);
 
   /**
    * Each subprocedure is being executed on a member.  This is the identifier for the member.

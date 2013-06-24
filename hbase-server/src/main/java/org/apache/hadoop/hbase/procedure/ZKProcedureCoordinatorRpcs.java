@@ -164,7 +164,7 @@ public class ZKProcedureCoordinatorRpcs implements ProcedureCoordinatorRpcs {
     this.coordinator = coordinator;
 
     try {
-      this.zkProc = new ZKProcedureUtil(watcher, procedureType, coordName) {
+      this.zkProc = new ZKProcedureUtil(watcher, procedureType) {
         @Override
         public void nodeCreated(String path) {
           if (!isInProcedurePath(path)) return;
@@ -191,7 +191,7 @@ public class ZKProcedureCoordinatorRpcs implements ProcedureCoordinatorRpcs {
       return false;
     }
 
-    LOG.debug("Starting the controller for procedure member:" + zkProc.getMemberName());
+    LOG.debug("Starting the controller for procedure member:" + coordName);
     return true;
   }
 
