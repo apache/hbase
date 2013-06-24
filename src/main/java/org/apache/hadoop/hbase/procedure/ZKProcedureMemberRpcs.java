@@ -54,24 +54,23 @@ import com.google.protobuf.InvalidProtocolBufferException;
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
 public class ZKProcedureMemberRpcs implements ProcedureMemberRpcs {
-
   private static final Log LOG = LogFactory.getLog(ZKProcedureMemberRpcs.class);
-  private final String memberName;
+
+  private final ZKProcedureUtil zkController;
 
   protected ProcedureMember member;
-  private ZKProcedureUtil zkController;
+  private String memberName;
 
   /**
-   * Must call {@link #start(ProcedureMember)} before this can be used.
+   * Must call {@link #start(String, ProcedureMember)} before this can be used.
    * @param watcher {@link ZooKeeperWatcher} to be owned by <tt>this</tt>. Closed via
    *          {@link #close()}.
    * @param procType name of the znode describing the procedure type
-   * @param memberName name of the member to join the procedure
    * @throws KeeperException if we can't reach zookeeper
    */
-  public ZKProcedureMemberRpcs(ZooKeeperWatcher watcher,
-      String procType, String memberName) throws KeeperException {
-    this.zkController = new ZKProcedureUtil(watcher, procType, memberName) {
+  public ZKProcedureMemberRpcs(final ZooKeeperWatcher watcher, final String procType)
+      throws KeeperException {
+    this.zkController = new ZKProcedureUtil(watcher, procType) {
       @Override
       public void nodeCreated(String path) {
         if (!isInProcedurePath(path)) {
@@ -113,7 +112,6 @@ public class ZKProcedureMemberRpcs implements ProcedureMemberRpcs {
         }
       }
     };
-    this.memberName = memberName;
   }
 
   public ZKProcedureUtil getZkController() {
@@ -335,9 +333,10 @@ public class ZKProcedureMemberRpcs implements ProcedureMemberRpcs {
     }
   }
 
-  public void start(ProcedureMember listener) {
+  public void start(final String memberName, final ProcedureMember listener) {
     LOG.debug("Starting procedure member '" + this.memberName + "'");
     this.member = listener;
+    this.memberName = memberName;
     watchForAbortedProcedures();
     waitForNewProcedures();
   }

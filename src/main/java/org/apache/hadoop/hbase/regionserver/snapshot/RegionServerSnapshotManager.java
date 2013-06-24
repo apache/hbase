@@ -119,9 +119,8 @@ public class RegionServerSnapshotManager {
       throws KeeperException {
     this.rss = rss;
     ZooKeeperWatcher zkw = rss.getZooKeeper();
-    String nodeName = rss.getServerName().toString();
     this.memberRpcs = new ZKProcedureMemberRpcs(zkw,
-        SnapshotManager.ONLINE_SNAPSHOT_CONTROLLER_DESCRIPTION, nodeName);
+        SnapshotManager.ONLINE_SNAPSHOT_CONTROLLER_DESCRIPTION);
 
     // read in the snapshot request configuration properties
     Configuration conf = rss.getConfiguration();
@@ -129,7 +128,8 @@ public class RegionServerSnapshotManager {
     int opThreads = conf.getInt(SNAPSHOT_REQUEST_THREADS_KEY, SNAPSHOT_REQUEST_THREADS_DEFAULT);
 
     // create the actual snapshot procedure member
-    ThreadPoolExecutor pool = ProcedureMember.defaultPool(nodeName, opThreads, keepAlive);
+    ThreadPoolExecutor pool = ProcedureMember.defaultPool(rss.getServerName().toString(),
+      opThreads, keepAlive);
     this.member = new ProcedureMember(memberRpcs, pool, new SnapshotSubprocedureBuilder());
   }
 
@@ -137,7 +137,8 @@ public class RegionServerSnapshotManager {
    * Start accepting snapshot requests.
    */
   public void start() {
-    this.memberRpcs.start(member);
+    LOG.debug("Start Snapshot Manager " + rss.getServerName().toString());
+    this.memberRpcs.start(rss.getServerName().toString(), member);
   }
 
   /**
