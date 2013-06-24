@@ -29,6 +29,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.exceptions.DoNotRetryIOException;
 import org.apache.hadoop.hbase.exceptions.NotServingRegionException;
+import org.apache.hadoop.hbase.exceptions.RegionMovedException;
 import org.apache.hadoop.hbase.ipc.RpcClient;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ClientService;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -187,6 +188,8 @@ public abstract class ServerCallable<T> implements Callable<T> {
           // map to that slow/dead server; otherwise, let cache miss and ask
           // .META. again to find the new location
           getConnection().clearCaches(location.getServerName());
+        } else if (t instanceof RegionMovedException) {
+          getConnection().updateCachedLocations(tableName, row, t, location);
         } else if (t instanceof NotServingRegionException && numRetries == 1) {
           // Purge cache entries for this specific region from META cache
           // since we don't call connect(true) when number of retries is 1.

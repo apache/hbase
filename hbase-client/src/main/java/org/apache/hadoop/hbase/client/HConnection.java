@@ -172,6 +172,17 @@ public interface HConnection extends Abortable, Closeable {
   throws IOException;
 
   /**
+   * Update the location cache. This is used internally by HBase, in most cases it should not be
+   *  used by the client application.
+   * @param tableName the table name
+   * @param rowkey the row
+   * @param exception the exception if any. Can be null.
+   * @param source the previous location
+   */
+  public void updateCachedLocations(byte[] tableName, byte[] rowkey,
+                                    Object exception, HRegionLocation source);
+
+  /**
    * Gets the location of the region of <i>regionName</i>.
    * @param regionName name of the region to locate
    * @return HRegionLocation that describes where to find the region in
@@ -354,7 +365,7 @@ public interface HConnection extends Abortable, Closeable {
 
 
   /**
-   * Clear any caches that pertain to server name <code>sn</code>
+   * Clear any caches that pertain to server name <code>sn</code>.
    * @param sn A server name
    */
   public void clearCaches(final ServerName sn);

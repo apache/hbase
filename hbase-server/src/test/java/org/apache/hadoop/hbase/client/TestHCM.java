@@ -24,7 +24,6 @@ import java.io.IOException;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -87,6 +86,7 @@ public class TestHCM {
         ClusterStatusPublisher.MulticastPublisher.class, ClusterStatusPublisher.Publisher.class);
     TEST_UTIL.getConfiguration().setClass(ClusterStatusListener.STATUS_LISTENER_CLASS,
         ClusterStatusListener.MultiCastListener.class, ClusterStatusListener.Listener.class);
+
     TEST_UTIL.startMiniCluster(2);
   }
 
@@ -209,10 +209,15 @@ public class TestHCM {
    * that we really delete it.
    * @throws Exception
    */
-  @Test(timeout = 60000)
+  @Test
   public void testRegionCaching() throws Exception{
-    HTable table = TEST_UTIL.createTable(TABLE_NAME, FAM_NAM);
+    TEST_UTIL.createTable(TABLE_NAME, FAM_NAM).close();
+    Configuration conf =  new Configuration(TEST_UTIL.getConfiguration());
+    conf.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 1);
+    HTable table = new HTable(conf, TABLE_NAME);
+
     TEST_UTIL.createMultiRegions(table, FAM_NAM);
+    TEST_UTIL.waitUntilAllRegionsAssigned(table.getTableName());
     Put put = new Put(ROW);
     put.add(FAM_NAM, ROW, ROW);
     table.put(put);
@@ -303,30 +308,18 @@ public class TestHCM {
     Assert.assertFalse(
         conn.getCachedLocation(TABLE_NAME, ROW).getPort() == destServerName.getPort());
 
-    // Hijack the number of retry to fail immediately instead of retrying: there will be no new
-    //  connection to the master
-    Field numTries = conn.getClass().getDeclaredField("numTries");
-    numTries.setAccessible(true);
-    Field modifiersField = Field.class.getDeclaredField("modifiers");
-    modifiersField.setAccessible(true);
-    modifiersField.setInt(numTries, numTries.getModifiers() & ~Modifier.FINAL);
-    final int prevNumRetriesVal = (Integer)numTries.get(conn);
-    numTries.set(conn, 1);
-
+    // This part relies on a number of tries equals to 1.
     // We do a put and expect the cache to be updated, even if we don't retry
     LOG.info("Put starting");
     Put put3 = new Put(ROW);
     put3.add(FAM_NAM, ROW, ROW);
     try {
       table.put(put3);
-      Assert.assertFalse("Unreachable point", true);
-    }catch (Throwable e){
-      LOG.info("Put done, exception caught: "+e.getClass());
-      // Now check that we have the exception we wanted
-      Assert.assertTrue(e instanceof RetriesExhaustedWithDetailsException);
-      RetriesExhaustedWithDetailsException re = (RetriesExhaustedWithDetailsException)e;
-      Assert.assertTrue(re.getNumExceptions() == 1);
-      Assert.assertTrue(Arrays.equals(re.getRow(0).getRow(), ROW));
+      Assert.fail("Unreachable point");
+    }catch (RetriesExhaustedWithDetailsException e){
+      LOG.info("Put done, exception caught: " + e.getClass());
+      Assert.assertEquals(1, e.getNumExceptions());
+      Assert.assertArrayEquals(e.getRow(0).getRow(), ROW);
     }
     Assert.assertNotNull(conn.getCachedLocation(TABLE_NAME, ROW));
     Assert.assertEquals(
@@ -360,17 +353,20 @@ public class TestHCM {
     Assert.assertFalse(conn.getCachedLocation(TABLE_NAME, ROW).getPort() ==
       curServer.getServerName().getPort());
 
-
     Scan sc = new Scan();
     sc.setStopRow(ROW);
-    sc.setStopRow(ROW);
+    sc.setStartRow(ROW);
+
+    // The scanner takes the max retries from the connection configuration, not the table as
+    // the put.
+    TEST_UTIL.getConfiguration().setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 1);
 
     try {
       ResultScanner rs = table.getScanner(sc);
       while (rs.next() != null) {
       }
-      Assert.assertFalse("Unreachable point", true);
-    } catch (Throwable e) {
+      Assert.fail("Unreachable point");
+    } catch (RetriesExhaustedException e) {
       LOG.info("Scan done, expected exception caught: " + e.getClass());
     }
 
@@ -380,7 +376,8 @@ public class TestHCM {
       "Previous server was "+destServer.getServerName().getHostAndPort(),
       curServer.getServerName().getPort(), conn.getCachedLocation(TABLE_NAME, ROW).getPort());
 
-    numTries.set(conn, prevNumRetriesVal);
+    TEST_UTIL.getConfiguration().setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER,
+        HConstants.DEFAULT_HBASE_CLIENT_RETRIES_NUMBER);
     table.close();
   }
 
@@ -740,8 +737,8 @@ public class TestHCM {
     try {
       long timeBase = timeMachine.currentTimeMillis();
       long largeAmountOfTime = ANY_PAUSE * 1000;
-      HConnectionImplementation.ServerErrorTracker tracker =
-          new HConnectionImplementation.ServerErrorTracker(largeAmountOfTime);
+      HConnectionManager.ServerErrorTracker tracker =
+          new HConnectionManager.ServerErrorTracker(largeAmountOfTime);
 
       // The default backoff is 0.
       assertEquals(0, tracker.calculateBackoffTime(location, ANY_PAUSE));
