@@ -323,4 +323,16 @@ public class HalfStoreFileReader extends StoreFile.Reader {
     }
     return this.firstKey;
   }
+
+  @Override
+  public long getEntries() {
+    // Estimate the number of entries as half the original file; this may be wildly inaccurate.
+    return super.getEntries() / 2;
+  }
+
+  @Override
+  public long getFilterEntries() {
+    // Estimate the number of entries as half the original file; this may be wildly inaccurate.
+    return super.getFilterEntries() / 2;
+  }
 }
