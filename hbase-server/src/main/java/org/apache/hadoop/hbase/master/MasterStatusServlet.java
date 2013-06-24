@@ -59,12 +59,17 @@ public class MasterStatusServlet extends HttpServlet {
     HBaseAdmin admin = new HBaseAdmin(conf);
 
     Map<String, Integer> frags = getFragmentationInfo(master, conf);
-
-    ServerName metaLocation = getMetaLocationOrNull(master);
-    //ServerName metaLocation = master.getCatalogTracker().getMetaLocation();
-    List<ServerName> servers = master.getServerManager().getOnlineServersList();
-    Set<ServerName> deadServers = master.getServerManager().getDeadServers().copyServerNames();
-
+    ServerName metaLocation = null;
+    List<ServerName> servers = null;
+    Set<ServerName> deadServers = null;
+    
+    if(master.isActiveMaster()){
+      metaLocation = getMetaLocationOrNull(master);
+      //ServerName metaLocation = master.getCatalogTracker().getMetaLocation();
+      servers = master.getServerManager().getOnlineServersList();
+      deadServers = master.getServerManager().getDeadServers().copyServerNames();
+    }
+    
     response.setContentType("text/html");
     MasterStatusTmpl tmpl;
     try {
@@ -76,6 +81,7 @@ public class MasterStatusServlet extends HttpServlet {
       .setCatalogJanitorEnabled(master.isCatalogJanitorEnabled(null,
           RequestConverter.buildIsCatalogJanitorEnabledRequest()).getValue());
     } catch (ServiceException s) {
+      admin.close();
       throw new IOException(s);
     }
     if (request.getParameter("filter") != null)
@@ -88,7 +94,7 @@ public class MasterStatusServlet extends HttpServlet {
 
   private ServerName getMetaLocationOrNull(HMaster master) {
     try {
-      return master.getCatalogTracker().getMetaLocation();
+      return (master.getCatalogTracker() == null) ? null : master.getCatalogTracker().getMetaLocation();
     } catch (InterruptedException e) {
       LOG.warn("Unable to get meta location", e);
       return null;

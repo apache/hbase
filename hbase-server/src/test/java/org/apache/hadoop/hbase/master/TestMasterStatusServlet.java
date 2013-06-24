@@ -33,6 +33,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.zookeeper.MasterAddressTracker;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.hadoop.hbase.tmpl.master.AssignmentManagerStatusTmpl;
 import org.apache.hadoop.hbase.tmpl.master.MasterStatusTmpl;
@@ -89,6 +90,11 @@ public class TestMasterStatusServlet {
     ZooKeeperWatcher zkw = Mockito.mock(ZooKeeperWatcher.class);
     Mockito.doReturn("fakequorum").when(zkw).getQuorum();
     Mockito.doReturn(zkw).when(master).getZooKeeperWatcher();
+
+    // Fake MasterAddressTracker
+    MasterAddressTracker tracker = Mockito.mock(MasterAddressTracker.class);
+    Mockito.doReturn(tracker).when(master).getMasterAddressManager();
+    Mockito.doReturn(FAKE_HOST).when(tracker).getMasterAddress();
 
     // Mock admin
     admin = Mockito.mock(HBaseAdmin.class); 

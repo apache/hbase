@@ -197,6 +197,7 @@ import org.apache.hadoop.hbase.util.VersionInfo;
 import org.apache.hadoop.hbase.zookeeper.ClusterStatusTracker;
 import org.apache.hadoop.hbase.zookeeper.DrainingServerTracker;
 import org.apache.hadoop.hbase.zookeeper.LoadBalancerTracker;
+import org.apache.hadoop.hbase.zookeeper.MasterAddressTracker;
 import org.apache.hadoop.hbase.zookeeper.RegionServerTracker;
 import org.apache.hadoop.hbase.zookeeper.ZKClusterId;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
@@ -258,6 +259,8 @@ MasterServices, Server {
   private DrainingServerTracker drainingServerTracker;
   // Tracker for load balancer state
   private LoadBalancerTracker loadBalancerTracker;
+  // master address manager and watcher
+  private MasterAddressTracker masterAddressManager;
 
   // RPC server for the HMaster
   private final RpcServerInterface rpcServer;
@@ -528,6 +531,20 @@ MasterServices, Server {
     masterStartTime = System.currentTimeMillis();
     try {
       this.registeredZKListenersBeforeRecovery = this.zooKeeper.getListeners();
+      this.masterAddressManager = new MasterAddressTracker(getZooKeeperWatcher(), this);
+      this.masterAddressManager.start();
+
+      // Put up info server.
+      int port = this.conf.getInt("hbase.master.info.port", 60010);
+      if (port >= 0) {
+        String a = this.conf.get("hbase.master.info.bindAddress", "0.0.0.0");
+        this.infoServer = new InfoServer(MASTER, a, port, false, this.conf);
+        this.infoServer.addServlet("status", "/master-status", MasterStatusServlet.class);
+        this.infoServer.addServlet("dump", "/dump", MasterDumpServlet.class);
+        this.infoServer.setAttribute(MASTER, this);
+        this.infoServer.start();
+      }
+
       /*
        * Block on becoming the active master.
        *
@@ -1057,6 +1074,14 @@ MasterServices, Server {
     return this.zooKeeper;
   }
 
+  public ActiveMasterManager getActiveMasterManager() {
+    return this.activeMasterManager;
+  }
+  
+  public MasterAddressTracker getMasterAddressManager() {
+    return this.masterAddressManager;
+  }
+  
   /*
    * Start up all services. If any of these threads gets an unhandled exception
    * then they just die with a logged message.  This should be fine because
@@ -1094,17 +1119,6 @@ MasterServices, Server {
     this.hfileCleaner = new HFileCleaner(cleanerInterval, this, conf, getMasterFileSystem()
         .getFileSystem(), archiveDir);
     Threads.setDaemonThreadRunning(hfileCleaner.getThread(), n + ".archivedHFileCleaner");
-
-   // Put up info server.
-   int port = this.conf.getInt(HConstants.MASTER_INFO_PORT, 60010);
-   if (port >= 0) {
-     String a = this.conf.get("hbase.master.info.bindAddress", "0.0.0.0");
-     this.infoServer = new InfoServer(MASTER, a, port, false, this.conf);
-     this.infoServer.addServlet("status", "/master-status", MasterStatusServlet.class);
-     this.infoServer.addServlet("dump", "/dump", MasterDumpServlet.class);
-     this.infoServer.setAttribute(MASTER, this);
-     this.infoServer.start();
-    }
 
     // Start the health checker
     if (this.healthCheckChore != null) {
