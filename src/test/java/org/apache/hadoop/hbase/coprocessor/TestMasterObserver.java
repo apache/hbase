@@ -31,8 +31,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.NavigableMap;
 
-import junit.framework.Assert;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -102,6 +100,8 @@ public class TestMasterObserver {
     private boolean postRestoreSnapshotCalled;
     private boolean preDeleteSnapshotCalled;
     private boolean postDeleteSnapshotCalled;
+    private boolean preGetTableDescriptorsCalled;
+    private boolean postGetTableDescriptorsCalled;
 
     public void enableBypass(boolean bypass) {
       this.bypass = bypass;
@@ -142,6 +142,8 @@ public class TestMasterObserver {
       postRestoreSnapshotCalled = false;
       preDeleteSnapshotCalled = false;
       postDeleteSnapshotCalled = false;
+      preGetTableDescriptorsCalled = false;
+      postGetTableDescriptorsCalled = false;
     }
 
     @Override
@@ -551,6 +553,22 @@ public class TestMasterObserver {
     public boolean wasDeleteSnapshotCalled() {
       return preDeleteSnapshotCalled && postDeleteSnapshotCalled;
     }
+
+    @Override
+    public void preGetTableDescriptors(ObserverContext<MasterCoprocessorEnvironment> ctx,
+        List<String> tableNamesList, List<HTableDescriptor> descriptors) throws IOException {
+      preGetTableDescriptorsCalled = true;
+    }
+
+    @Override
+    public void postGetTableDescriptors(ObserverContext<MasterCoprocessorEnvironment> ctx,
+        List<HTableDescriptor> descriptors) throws IOException {
+      postGetTableDescriptorsCalled = true;
+    }
+
+    public boolean wasGetTableDescriptorsCalled() {
+      return preGetTableDescriptorsCalled && postGetTableDescriptorsCalled;
+    }
   }
 
   private static HBaseTestingUtility UTIL = new HBaseTestingUtility();
@@ -876,6 +894,22 @@ public class TestMasterObserver {
     for (AssignmentManager.RegionState state : transRegions) {
       mgr.waitOnRegionToClearRegionsInTransition(state.getRegion());
     }
+  }
+
+  @Test
+  public void testTableDescriptorsEnumeration() throws Exception {
+    MiniHBaseCluster cluster = UTIL.getHBaseCluster();
+
+    HMaster master = cluster.getMaster();
+    MasterCoprocessorHost host = master.getCoprocessorHost();
+    CPMasterObserver cp = (CPMasterObserver)host.findCoprocessor(
+        CPMasterObserver.class.getName());
+    cp.resetStates();
+
+    master.getHTableDescriptors();
+
+    assertTrue("Coprocessor should be called on table descriptors request",
+      cp.wasGetTableDescriptorsCalled());
   }
 
   @org.junit.Rule

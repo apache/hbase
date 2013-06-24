@@ -79,6 +79,7 @@ import org.apache.hadoop.hbase.security.access.UserPermission;
 import org.apache.hadoop.hbase.security.access.Permission.Action;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
+import org.apache.hadoop.ipc.RemoteException;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -238,6 +239,9 @@ public class TestAccessController {
           }
         }
         else {
+          if (e instanceof RemoteException) {
+            e = ((RemoteException)e).unwrapRemoteException();
+          }
           // For doBulkLoad calls AccessDeniedException
           // is buried in the stack trace
           Throwable ex = e;
@@ -1867,6 +1871,93 @@ public class TestAccessController {
     } finally {
       table.close();
     }
+  }
+
+  @Test
+  public void testTableDescriptorsEnumeration() throws Exception {
+    User TABLE_ADMIN = User.createUserForTesting(conf, "UserA", new String[0]);
+
+    // Grant TABLE ADMIN privs on test table to UserA
+    HTable acl = new HTable(conf, AccessControlLists.ACL_TABLE_NAME);
+    try {
+      AccessControllerProtocol protocol = acl.coprocessorProxy(
+          AccessControllerProtocol.class, TEST_TABLE);
+      protocol.grant(new UserPermission(Bytes.toBytes(TABLE_ADMIN.getShortName()),
+        TEST_TABLE, null, Permission.Action.ADMIN));
+    } finally {
+      acl.close();
+    }
+
+    PrivilegedExceptionAction listTablesAction = new PrivilegedExceptionAction() {
+      public Object run() throws Exception {
+        HBaseAdmin admin = new HBaseAdmin(TEST_UTIL.getConfiguration());
+        try {
+          admin.listTables();
+        } finally {
+          admin.close();
+        }
+        return null;
+      }
+    };
+
+    PrivilegedExceptionAction getTableDescAction = new PrivilegedExceptionAction() {
+      public Object run() throws Exception {
+        HBaseAdmin admin = new HBaseAdmin(TEST_UTIL.getConfiguration());
+        try {
+          admin.getTableDescriptor(TEST_TABLE);
+        } finally {
+          admin.close();
+        }
+        return null;
+      }
+    };
+
+    verifyAllowed(listTablesAction, SUPERUSER, USER_ADMIN);
+    verifyDenied(listTablesAction, USER_CREATE, USER_RW, USER_RO, USER_NONE, TABLE_ADMIN);
+
+    verifyAllowed(getTableDescAction, SUPERUSER, USER_ADMIN, USER_CREATE, TABLE_ADMIN);
+    verifyDenied(getTableDescAction, USER_RW, USER_RO, USER_NONE);
+  }
+
+  @Test
+  public void testTableDeletion() throws Exception {
+    final User tableAdmin = User.createUserForTesting(conf, "TestUser", new String[0]);
+
+    // We need to create a new table here because we will be testing what
+    // happens when it is deleted
+    final byte[] tableName = Bytes.toBytes("testTableDeletion");
+    HBaseAdmin admin = TEST_UTIL.getHBaseAdmin();
+    HTableDescriptor htd = new HTableDescriptor(tableName);
+    htd.addFamily(new HColumnDescriptor(TEST_FAMILY));
+    admin.createTable(htd);
+    TEST_UTIL.waitTableEnabled(tableName, 5000);
+
+    // Grant TABLE ADMIN privs
+    HTable acl = new HTable(conf, AccessControlLists.ACL_TABLE_NAME);
+    try {
+      AccessControllerProtocol protocol = acl.coprocessorProxy(
+          AccessControllerProtocol.class, tableName);
+      protocol.grant(new UserPermission(Bytes.toBytes(tableAdmin.getShortName()),
+        tableName, null, Permission.Action.ADMIN));
+    } finally {
+      acl.close();
+    }
+
+    PrivilegedExceptionAction deleteTableAction = new PrivilegedExceptionAction() {
+      public Object run() throws Exception {
+        HBaseAdmin admin = new HBaseAdmin(TEST_UTIL.getConfiguration());
+        try {
+          admin.disableTable(tableName);
+          admin.deleteTable(tableName);
+        } finally {
+          admin.close();
+        }
+        return null;
+      }
+    };
+
+    verifyDenied(deleteTableAction, USER_RW, USER_RO, USER_NONE);
+    verifyAllowed(deleteTableAction, tableAdmin);
   }
 
 }

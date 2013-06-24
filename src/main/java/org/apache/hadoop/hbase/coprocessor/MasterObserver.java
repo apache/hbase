@@ -24,6 +24,7 @@ import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
 
 import java.io.IOException;
+import java.util.List;
 
 /**
  * Defines coprocessor hooks for interacting with operations on the
@@ -386,4 +387,23 @@ public interface MasterObserver extends Coprocessor {
    */
   void postDeleteSnapshot(final ObserverContext<MasterCoprocessorEnvironment> ctx,
       final SnapshotDescription snapshot) throws IOException;
+
+  /**
+   * Called before a getTableDescriptors request has been processed.
+   * @param ctx the environment to interact with the framework and master
+   * @param tableNamesList the list of table names, or null if querying for all
+   * @param descriptors an empty list, can be filled with what to return if bypassing
+   * @throws IOException
+   */
+  void preGetTableDescriptors(ObserverContext<MasterCoprocessorEnvironment> ctx,
+      List<String> tableNamesList, List<HTableDescriptor> descriptors) throws IOException;
+
+  /**
+   * Called after a getTableDescriptors request has been processed.
+   * @param ctx the environment to interact with the framework and master
+   * @param descriptors the list of descriptors about to be returned
+   * @throws IOException
+   */
+  void postGetTableDescriptors(ObserverContext<MasterCoprocessorEnvironment> ctx,
+      List<HTableDescriptor> descriptors) throws IOException;
 }

@@ -1923,20 +1923,34 @@ Server {
    * @param tableNames
    * @return HTableDescriptor[]
    */
-  public HTableDescriptor[] getHTableDescriptors(List<String> tableNames) {
-    List<HTableDescriptor> list =
+  public HTableDescriptor[] getHTableDescriptors(List<String> tableNames)
+      throws IOException {
+    List<HTableDescriptor> descriptors =
       new ArrayList<HTableDescriptor>(tableNames.size());
-    for (String s: tableNames) {
-      HTableDescriptor htd = null;
-      try {
-        htd = this.tableDescriptors.get(s);
-      } catch (IOException e) {
-        LOG.warn("Failed getting descriptor for " + s, e);
-      }
-      if (htd == null) continue;
-      list.add(htd);
+    
+    boolean bypass = false;
+    if (this.cpHost != null) {
+      bypass = this.cpHost.preGetTableDescriptors(tableNames, descriptors);
     }
-    return list.toArray(new HTableDescriptor [] {});
+
+    if (!bypass) {
+      for (String s: tableNames) {
+        HTableDescriptor htd = null;
+        try {
+          htd = this.tableDescriptors.get(s);
+        } catch (IOException e) {
+          LOG.warn("Failed getting descriptor for " + s, e);
+        }
+        if (htd == null) continue;
+        descriptors.add(htd);
+      }
+    }
+
+    if (this.cpHost != null) {
+      this.cpHost.postGetTableDescriptors(descriptors);
+    }
+
+    return descriptors.toArray(new HTableDescriptor [] {});
   }
 
   @Override
@@ -2014,16 +2028,21 @@ Server {
   /**
    * Get all table descriptors
    * @return All descriptors or null if none.
+   * @throws IOException
    */
-  public HTableDescriptor [] getHTableDescriptors() {
-    Map<String, HTableDescriptor> descriptors = null;
-    try {
-      descriptors = this.tableDescriptors.getAll();
-    } catch (IOException e) {
-      LOG.warn("Failed getting all descriptors", e);
+  public HTableDescriptor [] getHTableDescriptors() throws IOException {
+    List<HTableDescriptor> descriptors = new ArrayList<HTableDescriptor>();
+    boolean bypass = false;
+    if (this.cpHost != null) {
+      bypass = this.cpHost.preGetTableDescriptors(null, descriptors);
     }
-    return descriptors == null?
-      null: descriptors.values().toArray(new HTableDescriptor [] {});
+    if (!bypass) {
+      descriptors.addAll(this.tableDescriptors.getAll().values());
+    }
+    if (this.cpHost != null) {
+      this.cpHost.postGetTableDescriptors(descriptors);
+    }
+    return descriptors.toArray(new HTableDescriptor [] {});
   }
 
   /**

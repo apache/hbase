@@ -161,7 +161,7 @@ module Hbase
     #-------------------------------------------------------------------------------
 
     define_test "describe should fail for non-existent tables" do
-      assert_raise(ArgumentError) do
+      assert_raise(NativeException) do
         admin.describe('.NOT.EXISTS.')
       end
     end

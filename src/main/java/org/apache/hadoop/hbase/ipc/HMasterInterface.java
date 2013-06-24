@@ -166,9 +166,9 @@ public interface HMasterInterface extends VersionedProtocol {
   /**
    * Return cluster status.
    * @return status object
+   * @throws IOException
    */
   public ClusterStatus getClusterStatus();
-
 
   /**
    * Move the region <code>r</code> to <code>dest</code>.
@@ -259,16 +259,29 @@ public interface HMasterInterface extends VersionedProtocol {
 
   /**
    * Get array of all HTDs.
+   * <p>
+   * NOTE: This interface up to and including 0.94.8 included a getHTableDescriptors which
+   * did not throw IOE. Adding and deleting checked exceptions declared as thrown by a method
+   * does not break binary compatibility, so rolling restart scenarios will work; however,
+   * it will break contract compatibility possibly requiring source code changes upon
+   * next recompilation.
    * @return array of HTableDescriptor
    */
-  public HTableDescriptor[] getHTableDescriptors();
+  public HTableDescriptor[] getHTableDescriptors() throws IOException;
 
   /**
    * Get array of HTDs for requested tables.
+   * <p>
+   * NOTE: This interface up to and including 0.94.8 included a getHTableDescriptors which
+   * did not throw IOE. Adding and deleting checked exceptions declared as thrown by a method
+   * does not break binary compatibility, so rolling restart scenarios will work; however,
+   * it will break contract compatibility possibly requiring source code changes upon
+   * next recompilation.
    * @param tableNames
    * @return array of HTableDescriptor
+   * @throws IOException 
    */
-  public HTableDescriptor[] getHTableDescriptors(List<String> tableNames);
+  public HTableDescriptor[] getHTableDescriptors(List<String> tableNames) throws IOException;
 
   /**
    * Executes a single {@link org.apache.hadoop.hbase.ipc.CoprocessorProtocol}

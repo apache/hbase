@@ -25,6 +25,7 @@ import java.io.InterruptedIOException;
 import java.lang.reflect.Proxy;
 import java.lang.reflect.UndeclaredThrowableException;
 import java.net.SocketTimeoutException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
@@ -564,6 +565,8 @@ public class HBaseAdmin implements Abortable, Closeable {
     // Wait until all regions deleted
     HRegionInterface server =
       connection.getHRegionConnection(firstMetaServer.getHostname(), firstMetaServer.getPort());
+    List<String> tableNameAsList = new ArrayList<String>(1);
+    tableNameAsList.add(Bytes.toString(tableName));
     for (int tries = 0; tries < (this.numRetries * this.retryLongerMultiplier); tries++) {
       long scannerId = -1L;
       try {
@@ -580,15 +583,8 @@ public class HBaseAdmin implements Abortable, Closeable {
         // HMaster removes the table from its HTableDescriptors
         if (values == null) {
           tableExists = false;
-          HTableDescriptor[] htds = getMaster().getHTableDescriptors();
-          if (htds != null && htds.length > 0) {
-            for (HTableDescriptor htd: htds) {
-              if (Bytes.equals(tableName, htd.getName())) {
-                tableExists = true;
-                break;
-              }
-            }
-          }
+          HTableDescriptor[] htds = getMaster().getHTableDescriptors(tableNameAsList);
+          tableExists = (htds != null && htds.length > 0);
           if (!tableExists) {
             break;
           }

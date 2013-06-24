@@ -1889,17 +1889,14 @@ public class HConnectionManager {
       if (Bytes.equals(tableName, HConstants.META_TABLE_NAME)) {
         return HTableDescriptor.META_TABLEDESC;
       }
+      List<String> tableNameList = new ArrayList<String>(1);
+      tableNameList.add(Bytes.toString(tableName));
       if (this.master == null) {
         this.master = getMaster();
       }
-
-      HTableDescriptor[] htds = master.getHTableDescriptors();
+      HTableDescriptor[] htds = master.getHTableDescriptors(tableNameList);
       if (htds != null && htds.length > 0) {
-        for (HTableDescriptor htd: htds) {
-          if (Bytes.equals(tableName, htd.getName())) {
-            return htd;
-          }
-        }
+        return htds[0];
       }
       throw new TableNotFoundException(Bytes.toString(tableName));
     }

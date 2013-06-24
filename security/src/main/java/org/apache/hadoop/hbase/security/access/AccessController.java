@@ -35,6 +35,8 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.TableNotDisabledException;
+import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.client.Append;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
@@ -56,6 +58,7 @@ import org.apache.hadoop.hbase.filter.WritableByteArrayComparable;
 import org.apache.hadoop.hbase.ipc.HBaseRPC;
 import org.apache.hadoop.hbase.ipc.ProtocolSignature;
 import org.apache.hadoop.hbase.ipc.RequestContext;
+import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
@@ -1329,5 +1332,39 @@ public class AccessController extends BaseRegionObserver
   public void preStopRegionServer(ObserverContext<RegionServerCoprocessorEnvironment> env)
       throws IOException {
     requirePermission("stop", Permission.Action.ADMIN);
+  }
+
+  @Override
+  public void preGetTableDescriptors(ObserverContext<MasterCoprocessorEnvironment> ctx,
+      List<String> tableNamesList, List<HTableDescriptor> descriptors) throws IOException {
+    // If the list is empty, this is a request for all table descriptors and requires GLOBAL
+    // ADMIN privs.
+    if (tableNamesList == null || tableNamesList.isEmpty()) {
+      requirePermission("getTableDescriptors", Permission.Action.ADMIN);
+    }
+    // Otherwise, if the requestor has ADMIN or CREATE privs for all listed tables, the
+    // request can be granted.
+    else {
+      MasterServices masterServices = ctx.getEnvironment().getMasterServices();
+      for (String tableName: tableNamesList) {
+        // Do not deny if the table does not exist
+        byte[] nameAsBytes = Bytes.toBytes(tableName);
+        try {
+          masterServices.checkTableModifiable(nameAsBytes);
+        } catch (TableNotFoundException ex) {
+          // Skip checks for a table that does not exist
+          continue;
+        } catch (TableNotDisabledException ex) {
+          // We don't care about this
+        }
+        requirePermission("getTableDescriptors", nameAsBytes, null, null,
+          Permission.Action.ADMIN, Permission.Action.CREATE);
+      }
+    }
+  }
+
+  @Override
+  public void postGetTableDescriptors(ObserverContext<MasterCoprocessorEnvironment> ctx,
+      List<HTableDescriptor> descriptors) throws IOException {
   }
 }
