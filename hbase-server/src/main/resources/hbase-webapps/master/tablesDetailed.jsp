@@ -28,6 +28,9 @@
   HMaster master = (HMaster)getServletContext().getAttribute(HMaster.MASTER);
   Configuration conf = master.getConfiguration();
 %>
+<!--[if IE]>
+<!DOCTYPE html>
+<![endif]-->
 <?xml version="1.0" encoding="UTF-8" ?>
 <html lang="en">
   <head>
@@ -88,7 +91,7 @@
 <%   for(HTableDescriptor htDesc : tables ) { %>
 <tr>
     <td><a href="/table.jsp?name=<%= escapeXml(htDesc.getNameAsString()) %>"><%= escapeXml(htDesc.getNameAsString()) %></a></td>
-    <td><%= escapeXml(htDesc.toString()) %></td>
+    <td><%= htDesc.toString() %></td>
 </tr>
 <%   }  %>
 

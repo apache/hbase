@@ -33,7 +33,9 @@ String implType = conf.get("hbase.regionserver.thrift.server.type", "threadpool"
 String compact = conf.get("hbase.regionserver.thrift.compact", "false");
 String framed = conf.get("hbase.regionserver.thrift.framed", "false");
 %>
-
+<!--[if IE]>
+<!DOCTYPE html>
+<![endif]-->
 <?xml version="1.0" encoding="UTF-8" ?>
 <html lang="en">
   <head>

@@ -56,13 +56,10 @@
   String cloneName = request.getParameter("cloneName");
   boolean isActionResultPage = (!readOnly && action != null);
 %>
-
+<!--[if IE]>
+<!DOCTYPE html>
+<![endif]-->
 <?xml version="1.0" encoding="UTF-8" ?>
-<!-- Commenting out DOCTYPE so our blue outline shows on hadoop 0.20.205.0, etc.
-     See tail of HBASE-2110 for explaination.
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
-  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
--->
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
     <meta charset="utf-8">
@@ -156,7 +153,7 @@
       </div>
   </div>
   <h2>Snapshot Attributes</h2>
-  <table class="table" width="90%" >
+  <table class="table table-striped" width="90%" >
     <tr>
         <th>Table</th>
         <th>Creation Time</th>
@@ -212,7 +209,7 @@ HConnectionManager.deleteConnection(hbadmin.getConfiguration());
 Actions:
 <p>
 <center>
-<table class="table" width="90%" >
+<table class="table table-striped" width="90%" >
 <tr>
   <form method="get">
   <input type="hidden" name="action" value="clone">

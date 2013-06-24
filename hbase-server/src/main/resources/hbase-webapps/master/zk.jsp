@@ -32,7 +32,9 @@
   HMaster master = (HMaster)getServletContext().getAttribute(HMaster.MASTER);
   ZooKeeperWatcher watcher = master.getZooKeeperWatcher();
 %>
-
+<!--[if IE]>
+<!DOCTYPE html>
+<![endif]-->
 <?xml version="1.0" encoding="UTF-8" ?>
 <!-- Dont put a doctype jetty doesnt serve the css/js out correctly so we need quirks mode on -->
 <html xmlns="http://www.w3.org/1999/xhtml">
