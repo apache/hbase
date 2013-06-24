@@ -51,4 +51,19 @@ public class CompactionProgress {
   public float getProgressPct() {
     return (float)currentCompactedKVs / totalCompactingKVs;
   }
+
+  /**
+   * Cancels the compaction progress, setting things to 0.
+   */
+  public void cancel() {
+    this.currentCompactedKVs = this.totalCompactingKVs = 0;
+  }
+
+  /**
+   * Marks the compaction as complete by setting total to current KV count;
+   * Total KV count is an estimate, so there might be a discrepancy otherwise.
+   */
+  public void complete() {
+    this.totalCompactingKVs = this.currentCompactedKVs;
+  }
 }

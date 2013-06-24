@@ -209,7 +209,6 @@ public abstract class Compactor {
           kv.setMemstoreTS(0);
         }
         writer.append(kv);
-        // update progress per key
         ++progress.currentCompactedKVs;
 
         // check periodically to see if a system stop is requested
@@ -217,12 +216,16 @@ public abstract class Compactor {
           bytesWritten += kv.getLength();
           if (bytesWritten > closeCheckInterval) {
             bytesWritten = 0;
-            if (!store.areWritesEnabled()) return false;
+            if (!store.areWritesEnabled()) {
+              progress.cancel();
+              return false;
+            }
           }
         }
       }
       kvs.clear();
     } while (hasMore);
+    progress.complete();
     return true;
   }
 
