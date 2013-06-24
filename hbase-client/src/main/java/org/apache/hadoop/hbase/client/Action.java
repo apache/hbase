@@ -32,7 +32,6 @@ public class Action<R> implements Comparable<R> {
   // TODO: This class should not be visible outside of the client package.
   private Row action;
   private int originalIndex;
-  private R result;
 
   public Action(Row action, int originalIndex) {
     super();
@@ -40,13 +39,6 @@ public class Action<R> implements Comparable<R> {
     this.originalIndex = originalIndex;    
   }
 
-  public R getResult() {
-    return result;
-  }
-
-  public void setResult(R result) {
-    this.result = result;
-  }
 
   public Row getAction() {
     return action;

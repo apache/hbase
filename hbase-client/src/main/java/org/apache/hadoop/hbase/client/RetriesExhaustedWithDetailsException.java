@@ -48,11 +48,11 @@ import java.util.Set;
 public class RetriesExhaustedWithDetailsException
 extends RetriesExhaustedException {
   List<Throwable> exceptions;
-  List<Row> actions;
+  List<? extends Row> actions;
   List<String> hostnameAndPort;
 
   public RetriesExhaustedWithDetailsException(List<Throwable> exceptions,
-                                              List<Row> actions,
+                                              List<? extends Row> actions,
                                               List<String> hostnameAndPort) {
     super("Failed " + exceptions.size() + " action" +
         pluralize(exceptions) + ": " +
@@ -105,7 +105,7 @@ extends RetriesExhaustedException {
   }
 
   public static String getDesc(List<Throwable> exceptions,
-                               List<Row> actions,
+                               List<? extends Row> actions,
                                List<String> hostnamePort) {
     String s = getDesc(classifyExs(exceptions));
     StringBuilder addrs = new StringBuilder(s);

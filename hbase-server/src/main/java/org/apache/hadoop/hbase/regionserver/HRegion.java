@@ -688,38 +688,7 @@ public class HRegion implements HeapSize { // , Writable{
     // Recover any edits if available.
     maxSeqId = Math.max(maxSeqId, replayRecoveredEditsIfAny(
         this.fs.getRegionDir(), maxSeqIdInStores, reporter, status));
-
-    status.setStatus("Cleaning up detritus from prior splits");
-    // Get rid of any splits or merges that were lost in-progress.  Clean out
-    // these directories here on open.  We may be opening a region that was
-    // being split but we crashed in the middle of it all.
-    fs.cleanupAnySplitDetritus();
-    fs.cleanupMergesDir();
-    this.writestate.setReadOnly(this.htableDescriptor.isReadOnly());
-
-    this.writestate.flushRequested = false;
-    this.writestate.compacting = 0;
-
-    // Initialize split policy
-    this.splitPolicy = RegionSplitPolicy.create(this, conf);
-
-    this.lastFlushTime = EnvironmentEdgeManager.currentTimeMillis();
-    // Use maximum of log sequenceid or that which was found in stores
-    // (particularly if no recovered edits, seqid will be -1).
-    long nextSeqid = maxSeqId + 1;
-    LOG.info("Onlined " + this.toString() + "; next sequenceid=" + nextSeqid);
-
-    // A region can be reopened if failed a split; reset flags
-    this.closing.set(false);
-    this.closed.set(false);
-
-    if (coprocessorHost != null) {
-      status.setStatus("Running coprocessor post-open hooks");
-      coprocessorHost.postOpen();
-    }
-
-    status.markComplete("Region opened successfully");
-    return nextSeqid;
+    return maxSeqId;
   }
 
   /*
