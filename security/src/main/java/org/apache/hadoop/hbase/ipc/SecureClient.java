@@ -367,7 +367,11 @@ public class SecureClient extends HBaseClient {
         if (LOG.isDebugEnabled())
           LOG.debug(getName() + " got value #" + id);
 
-        Call call = calls.remove(id);
+        // we first get the call by id, then remove it from call map after processed.
+        // If we remove the call here, thread waiting on the call can not be notified
+        // if any we encounter any exception in the 'try' block. Refer to 'receiveResponse'
+        // in org.apache.hadoop.hbase.ipc.HBaseClient.java
+        Call call = calls.get(id);
 
         int state = in.readInt();     // read call status
         if (LOG.isDebugEnabled()) {
@@ -390,10 +394,17 @@ public class SecureClient extends HBaseClient {
                 .readString(in)));
           }
         } else if (state == Status.FATAL.state) {
+          RemoteException exception = new RemoteException(WritableUtils.readString(in),
+              WritableUtils.readString(in));
+          // the call will be removed from call map, we must set Exception here to notify
+          // the thread waited on the call
+          if (call != null) {
+            call.setException(exception);
+          }
           // Close the connection
-          markClosed(new RemoteException(WritableUtils.readString(in),
-                                         WritableUtils.readString(in)));
+          markClosed(exception);
         }
+        calls.remove(id);
       } catch (IOException e) {
         if (e instanceof SocketTimeoutException && remoteId.rpcTimeout > 0) {
           // Clean up open calls but don't treat this as a fatal condition,
