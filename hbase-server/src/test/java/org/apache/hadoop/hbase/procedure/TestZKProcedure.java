@@ -145,11 +145,11 @@ public class TestZKProcedure {
     // start each member
     for (String member : members) {
       ZooKeeperWatcher watcher = newZooKeeperWatcher();
-      ZKProcedureMemberRpcs comms = new ZKProcedureMemberRpcs(watcher, opDescription, member);
+      ZKProcedureMemberRpcs comms = new ZKProcedureMemberRpcs(watcher, opDescription);
       ThreadPoolExecutor pool2 = ProcedureMember.defaultPool(member, 1, KEEP_ALIVE);
       ProcedureMember procMember = new ProcedureMember(comms, pool2, subprocFactory);
       procMembers.add(new Pair<ProcedureMember, ZKProcedureMemberRpcs>(procMember, comms));
-      comms.start(procMember);
+      comms.start(member, procMember);
     }
 
     // setup mock member subprocedures
@@ -219,11 +219,11 @@ public class TestZKProcedure {
         expected.size());
     for (String member : expected) {
       ZooKeeperWatcher watcher = newZooKeeperWatcher();
-      ZKProcedureMemberRpcs controller = new ZKProcedureMemberRpcs(watcher, opDescription, member);
+      ZKProcedureMemberRpcs controller = new ZKProcedureMemberRpcs(watcher, opDescription);
       ThreadPoolExecutor pool2 = ProcedureMember.defaultPool(member, 1, KEEP_ALIVE);
       ProcedureMember mem = new ProcedureMember(controller, pool2, subprocFactory);
       members.add(new Pair<ProcedureMember, ZKProcedureMemberRpcs>(mem, controller));
-      controller.start(mem);
+      controller.start(member, mem);
     }
 
     // setup mock subprocedures
@@ -311,7 +311,7 @@ public class TestZKProcedure {
     try {
       task.waitForCompleted();
     } catch (ForeignException fe) {
-      // this may get caught or may not 
+      // this may get caught or may not
     }
 
     // -------------
