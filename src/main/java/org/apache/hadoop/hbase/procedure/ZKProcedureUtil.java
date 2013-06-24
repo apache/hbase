@@ -64,8 +64,6 @@ public abstract class ZKProcedureUtil
   protected final String reachedZnode;
   protected final String abortZnode;
 
-  protected final String memberName;
-
   /**
    * Top-level watcher/controller for procedures across the cluster.
    * <p>
@@ -74,13 +72,11 @@ public abstract class ZKProcedureUtil
    * @param watcher watcher for the cluster ZK. Owned by <tt>this</tt> and closed via
    *          {@link #close()}
    * @param procDescription name of the znode describing the procedure to run
-   * @param memberName name of the member from which we are interacting with running procedures
    * @throws KeeperException when the procedure znodes cannot be created
    */
-  public ZKProcedureUtil(ZooKeeperWatcher watcher, String procDescription,
-      String memberName) throws KeeperException {
+  public ZKProcedureUtil(ZooKeeperWatcher watcher, String procDescription)
+      throws KeeperException {
     super(watcher);
-    this.memberName = memberName;
     // make sure we are listening for events
     watcher.registerListener(this);
     // setup paths for the zknodes used in procedures
@@ -125,10 +121,6 @@ public abstract class ZKProcedureUtil
 
   public String getAcquiredBarrier() {
     return acquiredZnode;
-  }
-
-  public String getMemberName() {
-    return memberName;
   }
 
   /**
@@ -189,7 +181,7 @@ public abstract class ZKProcedureUtil
     return path.equals(acquiredZnode);
   }
 
-  
+
   /**
    * Is this in the procedure barrier acquired znode path
    */

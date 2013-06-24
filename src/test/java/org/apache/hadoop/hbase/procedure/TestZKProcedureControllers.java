@@ -88,7 +88,7 @@ public class TestZKProcedureControllers {
 
     final ForeignExceptionDispatcher monitor = spy(new ForeignExceptionDispatcher());
     final ZKProcedureMemberRpcs controller = new ZKProcedureMemberRpcs(
-        watcher, "testSimple", COHORT_NODE_NAME);
+        watcher, "testSimple");
 
     // mock out cohort member callbacks
     final ProcedureMember member = Mockito
@@ -112,7 +112,7 @@ public class TestZKProcedureControllers {
     }).when(member).receivedReachedGlobalBarrier(operationName);
 
     // start running the listener
-    controller.start(member);
+    controller.start(COHORT_NODE_NAME, member);
 
     // set a prepare node from a 'coordinator'
     String prepare = ZKProcedureUtil.getAcquireBarrierNode(controller.getZkController(), operationName);
@@ -386,9 +386,8 @@ public class TestZKProcedureControllers {
 
       List<ZKProcedureMemberRpcs> cohortControllers = new ArrayList<ZKProcedureMemberRpcs>();
       for (String nodeName : expected) {
-        ZKProcedureMemberRpcs cc = new ZKProcedureMemberRpcs(
-            watcher, operationName, nodeName);
-        cc.start(member);
+        ZKProcedureMemberRpcs cc = new ZKProcedureMemberRpcs(watcher, operationName);
+        cc.start(nodeName, member);
         cohortControllers.add(cc);
       }
       return new Pair<ZKProcedureCoordinatorRpcs, List<ZKProcedureMemberRpcs>>(
@@ -411,9 +410,8 @@ public class TestZKProcedureControllers {
       // make a cohort controller for each expected node
       List<ZKProcedureMemberRpcs> cohortControllers = new ArrayList<ZKProcedureMemberRpcs>();
       for (String nodeName : expected) {
-        ZKProcedureMemberRpcs cc = new ZKProcedureMemberRpcs(
-            watcher, operationName, nodeName);
-        cc.start(member);
+        ZKProcedureMemberRpcs cc = new ZKProcedureMemberRpcs(watcher, operationName);
+        cc.start(nodeName, member);
         cohortControllers.add(cc);
       }
 
