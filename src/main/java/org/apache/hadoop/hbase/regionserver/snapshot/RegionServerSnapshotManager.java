@@ -125,12 +125,11 @@ public class RegionServerSnapshotManager {
 
     // read in the snapshot request configuration properties
     Configuration conf = rss.getConfiguration();
-    long wakeMillis = conf.getLong(SNAPSHOT_REQUEST_WAKE_MILLIS_KEY, SNAPSHOT_REQUEST_WAKE_MILLIS_DEFAULT);
     long keepAlive = conf.getLong(SNAPSHOT_TIMEOUT_MILLIS_KEY, SNAPSHOT_TIMEOUT_MILLIS_DEFAULT);
     int opThreads = conf.getInt(SNAPSHOT_REQUEST_THREADS_KEY, SNAPSHOT_REQUEST_THREADS_DEFAULT);
 
     // create the actual snapshot procedure member
-    ThreadPoolExecutor pool = ProcedureMember.defaultPool(wakeMillis, keepAlive, opThreads, nodeName);
+    ThreadPoolExecutor pool = ProcedureMember.defaultPool(nodeName, opThreads, keepAlive);
     this.member = new ProcedureMember(memberRpcs, pool, new SnapshotSubprocedureBuilder());
   }
 
@@ -191,7 +190,7 @@ public class RegionServerSnapshotManager {
 
     LOG.debug("Launching subprocedure for snapshot " + snapshot.getName() + " from table "
         + snapshot.getTable());
-    ForeignExceptionDispatcher exnDispatcher = new ForeignExceptionDispatcher();
+    ForeignExceptionDispatcher exnDispatcher = new ForeignExceptionDispatcher(snapshot.getName());
     Configuration conf = rss.getConfiguration();
     long timeoutMillis = conf.getLong(SNAPSHOT_TIMEOUT_MILLIS_KEY,
         SNAPSHOT_TIMEOUT_MILLIS_DEFAULT);
@@ -283,7 +282,7 @@ public class RegionServerSnapshotManager {
     boolean hasTasks() {
       return futures.size() != 0;
     }
-    
+
     /**
      * Submit a task to the pool.
      *
@@ -355,7 +354,6 @@ public class RegionServerSnapshotManager {
       }
 
       // evict remaining tasks and futures from taskPool.
-      LOG.debug(taskPool);
       while (!futures.isEmpty()) {
         // block to remove cancelled futures;
         LOG.warn("Removing cancelled elements from taskPool");

@@ -88,7 +88,7 @@ public class TestProcedureMember {
    */
   private ProcedureMember buildCohortMember() {
     String name = "node";
-    ThreadPoolExecutor pool = ProcedureMember.defaultPool(WAKE_FREQUENCY, POOL_KEEP_ALIVE, 1, name);
+    ThreadPoolExecutor pool = ProcedureMember.defaultPool(name, 1, POOL_KEEP_ALIVE);
     return new ProcedureMember(mockMemberComms, pool, mockBuilder);
   }
 
@@ -98,7 +98,7 @@ public class TestProcedureMember {
   private void buildCohortMemberPair() throws IOException {
     dispatcher = new ForeignExceptionDispatcher();
     String name = "node";
-    ThreadPoolExecutor pool = ProcedureMember.defaultPool(WAKE_FREQUENCY, POOL_KEEP_ALIVE, 1, name);
+    ThreadPoolExecutor pool = ProcedureMember.defaultPool(name, 1, POOL_KEEP_ALIVE);
     member = new ProcedureMember(mockMemberComms, pool, mockBuilder);
     when(mockMemberComms.getMemberName()).thenReturn("membername"); // needed for generating exception
     Subprocedure subproc = new EmptySubprocedure(member, dispatcher);

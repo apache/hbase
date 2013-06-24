@@ -97,7 +97,7 @@ public abstract class TakeSnapshotHandler extends EventHandler implements Snapsh
     this.rootDir = this.master.getMasterFileSystem().getRootDir();
     this.snapshotDir = SnapshotDescriptionUtils.getCompletedSnapshotDir(snapshot, rootDir);
     this.workingDir = SnapshotDescriptionUtils.getWorkingSnapshotDir(snapshot, rootDir);
-    this.monitor =  new ForeignExceptionDispatcher();
+    this.monitor = new ForeignExceptionDispatcher(snapshot.getName());
 
     // prepare the verify
     this.verifier = new MasterSnapshotVerifier(masterServices, snapshot, rootDir);
@@ -147,6 +147,7 @@ public abstract class TakeSnapshotHandler extends EventHandler implements Snapsh
 
       // run the snapshot
       snapshotRegions(regionsAndLocations);
+      monitor.rethrowException();
 
       // extract each pair to separate lists
       Set<String> serverNames = new HashSet<String>();

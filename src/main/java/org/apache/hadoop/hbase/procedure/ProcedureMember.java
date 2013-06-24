@@ -51,6 +51,8 @@ import com.google.common.collect.MapMaker;
 public class ProcedureMember implements Closeable {
   private static final Log LOG = LogFactory.getLog(ProcedureMember.class);
 
+  final static long KEEP_ALIVE_MILLIS_DEFAULT = 5000;
+
   private final SubprocedureFactory builder;
   private final ProcedureMemberRpcs rpcs;
 
@@ -72,9 +74,26 @@ public class ProcedureMember implements Closeable {
     this.builder = factory;
   }
 
-  public static ThreadPoolExecutor defaultPool(long wakeFrequency, long keepAlive,
-      int procThreads, String memberName) {
-    return new ThreadPoolExecutor(1, procThreads, keepAlive, TimeUnit.SECONDS,
+  /**
+   * Default thread pool for the procedure
+   *
+   * @param memberName
+   * @param procThreads the maximum number of threads to allow in the pool
+   */
+  public static ThreadPoolExecutor defaultPool(String memberName, int procThreads) {
+    return defaultPool(memberName, procThreads, KEEP_ALIVE_MILLIS_DEFAULT);
+  }
+
+  /**
+   * Default thread pool for the procedure
+   *
+   * @param memberName
+   * @param procThreads the maximum number of threads to allow in the pool
+   * @param keepAliveMillis the maximum time (ms) that excess idle threads will wait for new tasks
+   */
+  public static ThreadPoolExecutor defaultPool(String memberName, int procThreads,
+      long keepAliveMillis) {
+    return new ThreadPoolExecutor(1, procThreads, keepAliveMillis, TimeUnit.MILLISECONDS,
         new SynchronousQueue<Runnable>(),
         new DaemonThreadFactory("member: '" + memberName + "' subprocedure-pool"));
   }
@@ -85,7 +104,7 @@ public class ProcedureMember implements Closeable {
    * @return reference to the Procedure member's rpcs object
    */
   ProcedureMemberRpcs getRpcs() {
-     return rpcs;
+    return rpcs;
   }
 
 
