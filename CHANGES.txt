@@ -1,5 +1,46 @@
 HBase Change Log
 
+Release 0.94.9 - 6/24/2013
+Sub-task
+
+    [HBASE-8453] - TestImportExport failing again due to configuration issues
+
+Bug
+
+    [HBASE-8494] - TestRemoteAdmin#testClusterStatus should not assume 'requests' does not change
+    [HBASE-8522] - Archived hfiles and old hlogs may be deleted immediately by HFileCleaner, LogCleaner in HMaster
+    [HBASE-8555] - FilterList correctness may be affected by random ordering of sub-filter(list)
+    [HBASE-8590] - [0.94] BlockingMetaScannerVisitor should check for parent meta entry while waiting for split daughter
+    [HBASE-8639] - Poor performance of htable#getscanner in multithreaded environment due to DNS.getDefaultHost() being called in ScannerCallable#prepare()
+    [HBASE-8640] - ServerName in master may not initialize with the configured ipc address of hbase.master.ipc.address
+    [HBASE-8655] - Backport to 94 - HBASE-8346(Prefetching .META. rows in case only when useCache is set to true)
+    [HBASE-8671] - Per-region WAL breaks CP backwards compatibility in 0.94 for non-enabled case
+    [HBASE-8684] - Table Coprocessor can't access external HTable by default
+    [HBASE-8700] - IntegrationTestBigLinkedList can fail due to random number collision
+    [HBASE-8724] - [0.94] ExportSnapshot should not use hbase.tmp.dir as a staging dir on hdfs
+    [HBASE-8742] - HTableDescriptor Properties not preserved when cloning
+    [HBASE-8743] - upgrade hadoop-23 version to 0.23.7
+    [HBASE-8749] - Potential race condition between FSUtils.renameAndSetModifyTime() and HFile/LogCleaner
+    [HBASE-8762] - Performance/operational penalty when calling HTable.get with a list of one Get
+    [HBASE-8783] - RSSnapshotManager.ZKProcedureMemberRpcs may be initialized with the wrong server name
+
+Improvement
+
+    [HBASE-5083] - Backup HMaster should have http infoport open with link to the active master
+    [HBASE-8609] - Make the CopyTable support startRow, stopRow options
+    [HBASE-8636] - Backport KeyValue Codec to 0.94 (HBASE-7413)
+    [HBASE-8683] - Add major compaction support in CompactionTool
+    [HBASE-8702] - Make WALEditCodec pluggable
+
+New Feature
+
+    [HBASE-8504] - HTable.getRegionsInRange() should provide a non-cached API
+
+Task
+
+    [HBASE-8603] - Backport HBASE-6921 to 0.94
+
+
 Release 0.94.8 - 5/22/2013
 Sub-task
 
