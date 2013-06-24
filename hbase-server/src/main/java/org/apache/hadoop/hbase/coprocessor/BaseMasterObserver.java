@@ -343,4 +343,15 @@ public class BaseMasterObserver implements MasterObserver {
   public void postDeleteSnapshot(final ObserverContext<MasterCoprocessorEnvironment> ctx,
       final SnapshotDescription snapshot) throws IOException {
   }
+
+  @Override
+  public void preGetTableDescriptors(ObserverContext<MasterCoprocessorEnvironment> ctx,
+      List<String> tableNamesList, List<HTableDescriptor> descriptors) throws IOException {
+  }
+
+  @Override
+  public void postGetTableDescriptors(ObserverContext<MasterCoprocessorEnvironment> ctx,
+      List<HTableDescriptor> descriptors) throws IOException {
+  }
+
 }

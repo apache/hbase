@@ -2309,7 +2309,7 @@ public class HConnectionManager {
       MasterMonitorKeepAliveConnection master = getKeepAliveMasterMonitorService();
       try {
         GetTableDescriptorsRequest req =
-          RequestConverter.buildGetTableDescriptorsRequest(null);
+          RequestConverter.buildGetTableDescriptorsRequest((List<String>)null);
         return ProtobufUtil.getHTableDescriptorArray(master.getTableDescriptors(null, req));
       } catch (ServiceException se) {
         throw ProtobufUtil.getRemoteException(se);
@@ -2351,17 +2351,15 @@ public class HConnectionManager {
       GetTableDescriptorsResponse htds;
       try {
         GetTableDescriptorsRequest req =
-          RequestConverter.buildGetTableDescriptorsRequest(null);
+          RequestConverter.buildGetTableDescriptorsRequest(tableName);
         htds = master.getTableDescriptors(null, req);
       } catch (ServiceException se) {
         throw ProtobufUtil.getRemoteException(se);
       } finally {
         master.close();
       }
-      for (TableSchema ts : htds.getTableSchemaList()) {
-        if (Bytes.equals(tableName, ts.getName().toByteArray())) {
-          return HTableDescriptor.convert(ts);
-        }
+      if (!htds.getTableSchemaList().isEmpty()) {
+        return HTableDescriptor.convert(htds.getTableSchemaList().get(0));
       }
       throw new TableNotFoundException(Bytes.toString(tableName));
     }

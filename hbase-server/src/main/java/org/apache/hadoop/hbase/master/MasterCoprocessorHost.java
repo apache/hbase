@@ -1113,4 +1113,44 @@ public class MasterCoprocessorHost
       }
     }
   }
+
+  public boolean preGetTableDescriptors(final List<String> tableNamesList,
+      final List<HTableDescriptor> descriptors) throws IOException {
+    boolean bypass = false;
+    ObserverContext<MasterCoprocessorEnvironment> ctx = null;
+    for (MasterEnvironment env : coprocessors) {
+      if (env.getInstance() instanceof MasterObserver) {
+        ctx = ObserverContext.createAndPrepare(env, ctx);
+        try {
+          ((MasterObserver) env.getInstance()).preGetTableDescriptors(ctx,
+            tableNamesList, descriptors);
+        } catch (Throwable e) {
+          handleCoprocessorThrowable(env, e);
+        }
+        bypass |= ctx.shouldBypass();
+        if (ctx.shouldComplete()) {
+          break;
+        }
+      }
+    }
+    return bypass;
+  }
+
+  public void postGetTableDescriptors(List<HTableDescriptor> descriptors) throws IOException {
+    ObserverContext<MasterCoprocessorEnvironment> ctx = null;
+    for (MasterEnvironment env: coprocessors) {
+      if (env.getInstance() instanceof MasterObserver) {
+        ctx = ObserverContext.createAndPrepare(env, ctx);
+        try {
+          ((MasterObserver)env.getInstance()).postGetTableDescriptors(ctx, descriptors);
+        } catch (Throwable e) {
+          handleCoprocessorThrowable(env, e);
+        }
+        if (ctx.shouldComplete()) {
+          break;
+        }
+      }
+    }
+  }
+
 }

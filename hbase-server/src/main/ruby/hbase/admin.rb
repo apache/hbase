@@ -319,15 +319,7 @@ module Hbase
     #----------------------------------------------------------------------------------------------
     # Returns table's structure description
     def describe(table_name)
-      tables = @admin.listTables.to_a
-      tables << org.apache.hadoop.hbase.HTableDescriptor::META_TABLEDESC
-
-      tables.each do |t|
-        # Found the table
-        return t.to_s if t.getNameAsString == table_name
-      end
-
-      raise(ArgumentError, "Failed to find table named #{table_name}")
+      @admin.getTableDescriptor(table_name.to_java_bytes).to_s
     end
 
     #----------------------------------------------------------------------------------------------
