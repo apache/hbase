@@ -100,9 +100,9 @@ import org.apache.hadoop.hbase.monitoring.TaskMonitor;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.replication.regionserver.Replication;
+import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.snapshot.HSnapshotDescription;
 import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
-import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
 import org.apache.hadoop.hbase.util.HFileArchiveUtil;
@@ -130,6 +130,7 @@ import org.apache.zookeeper.Watcher;
 import com.google.common.collect.ClassToInstanceMap;
 import com.google.common.collect.Maps;
 import com.google.common.collect.MutableClassToInstanceMap;
+import com.google.protobuf.ServiceException;
 
 /**
  * HMaster is the "master server" for HBase. An HBase cluster has one active
@@ -389,6 +390,18 @@ Server {
     masterStartTime = System.currentTimeMillis();
     try {
       this.registeredZKListenersBeforeRecovery = this.zooKeeper.getListeners();
+
+      // Put up info server.
+      int port = this.conf.getInt("hbase.master.info.port", 60010);
+      if (port >= 0) {
+        String a = this.conf.get("hbase.master.info.bindAddress", "0.0.0.0");
+        this.infoServer = new InfoServer(MASTER, a, port, false, this.conf);
+        this.infoServer.addServlet("status", "/master-status", MasterStatusServlet.class);
+        this.infoServer.addServlet("dump", "/dump", MasterDumpServlet.class);
+        this.infoServer.setAttribute(MASTER, this);
+        this.infoServer.start();
+      }
+
       /*
        * Block on becoming the active master.
        *
@@ -943,6 +956,10 @@ Server {
     return this.zooKeeper;
   }
 
+  public ActiveMasterManager getActiveMasterManager() {
+    return this.activeMasterManager;
+  }
+
   /*
    * Start up all services. If any of these threads gets an unhandled exception
    * then they just die with a logged message.  This should be fine because
@@ -981,17 +998,6 @@ Server {
     this.hfileCleaner = new HFileCleaner(cleanerInterval, this, conf, getMasterFileSystem()
         .getFileSystem(), archiveDir);
     Threads.setDaemonThreadRunning(hfileCleaner.getThread(), n + ".archivedHFileCleaner");
-
-   // Put up info server.
-   int port = this.conf.getInt("hbase.master.info.port", 60010);
-   if (port >= 0) {
-     String a = this.conf.get("hbase.master.info.bindAddress", "0.0.0.0");
-     this.infoServer = new InfoServer(MASTER, a, port, false, this.conf);
-     this.infoServer.addServlet("status", "/master-status", MasterStatusServlet.class);
-     this.infoServer.addServlet("dump", "/dump", MasterDumpServlet.class);
-     this.infoServer.setAttribute(MASTER, this);
-     this.infoServer.start();
-    }
 
    // Start the health checker
    if (this.healthCheckChore != null) {
@@ -1551,7 +1557,7 @@ Server {
   }
 
   public String getClusterId() {
-    return fileSystemManager.getClusterId();
+    return (fileSystemManager == null) ? null : fileSystemManager.getClusterId();
   }
 
   /**
@@ -1583,9 +1589,12 @@ Server {
    * @return array of coprocessor SimpleNames.
    */
   public String[] getCoprocessors() {
-    Set<String> masterCoprocessors =
-        getCoprocessorHost().getCoprocessors();
-    return masterCoprocessors.toArray(new String[0]);
+    MasterCoprocessorHost cp = getCoprocessorHost();
+    String[] cpList = new String[0];
+    if (cp == null) return cpList;
+
+    Set<String> masterCoprocessors = cp.getCoprocessors();
+    return masterCoprocessors.toArray(cpList);
   }
 
   @Override

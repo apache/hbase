@@ -20,7 +20,6 @@
 package org.apache.hadoop.hbase.master;
 
 import java.io.IOException;
-
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -34,8 +33,8 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
-import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.tmpl.master.MasterStatusTmpl;
+import org.apache.hadoop.hbase.util.FSUtils;
 
 /**
  * The servlet responsible for rendering the index page of the
@@ -54,13 +53,19 @@ public class MasterStatusServlet extends HttpServlet {
     
     Configuration conf = master.getConfiguration();
     HBaseAdmin admin = new HBaseAdmin(conf);    
-        
+    ServerName metaLocation = null;
+    List<ServerName> servers = null;
+    Set<ServerName> deadServers = null;
+
     Map<String, Integer> frags = getFragmentationInfo(master, conf);
     
     ServerName rootLocation = getRootLocationOrNull(master);
-    ServerName metaLocation = master.getCatalogTracker().getMetaLocation();
-    List<ServerName> servers = master.getServerManager().getOnlineServersList();
-    Set<ServerName> deadServers = master.getServerManager().getDeadServers();
+
+    if (master.isActiveMaster()) {
+      metaLocation = master.getCatalogTracker().getMetaLocation();
+      servers = master.getServerManager().getOnlineServersList();
+      deadServers = master.getServerManager().getDeadServers();
+    }
 
     response.setContentType("text/html");
     MasterStatusTmpl tmpl = new MasterStatusTmpl()
@@ -80,7 +85,8 @@ public class MasterStatusServlet extends HttpServlet {
 
   private ServerName getRootLocationOrNull(HMaster master) {
     try {
-      return master.getCatalogTracker().getRootLocation();
+      return (master.getCatalogTracker() == null) ? null : master.getCatalogTracker()
+          .getRootLocation();
     } catch (InterruptedException e) {
       LOG.warn("Unable to get root location", e);
       return null;

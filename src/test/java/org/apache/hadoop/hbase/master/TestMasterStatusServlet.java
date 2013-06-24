@@ -19,7 +19,8 @@
  */
 package org.apache.hadoop.hbase.master;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.io.StringWriter;
@@ -31,15 +32,17 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.*;
+import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.MediumTests;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.master.AssignmentManager.RegionState;
-import org.apache.hadoop.hbase.master.HMaster;
-import org.apache.hadoop.hbase.master.ServerManager;
-import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.hadoop.hbase.tmpl.master.AssignmentManagerStatusTmpl;
 import org.apache.hadoop.hbase.tmpl.master.MasterStatusTmpl;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -73,6 +76,11 @@ public class TestMasterStatusServlet {
     Mockito.doReturn(FAKE_HOST).when(master).getServerName();
     Mockito.doReturn(conf).when(master).getConfiguration();
     
+    // Fake ActiveMasterManager
+    ActiveMasterManager amm = Mockito.mock(ActiveMasterManager.class);
+    Mockito.doReturn(amm).when(master).getActiveMasterManager();
+    Mockito.doReturn(FAKE_HOST).when(amm).getActiveMaster();
+
     // Fake serverManager
     ServerManager serverManager = Mockito.mock(ServerManager.class);
     Mockito.doReturn(1.0).when(serverManager).getAverageLoad();

@@ -23,16 +23,14 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
-import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.zookeeper.ClusterStatusTracker;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperListener;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.zookeeper.KeeperException;
-import org.apache.hadoop.hbase.zookeeper.ClusterStatusTracker;
 
 /**
  * Handles everything on master-side related to master election.
@@ -47,7 +45,7 @@ import org.apache.hadoop.hbase.zookeeper.ClusterStatusTracker;
  * #blockUntilBecomingActiveMaster() is called to wait until becoming
  * the active master of the cluster.
  */
-class ActiveMasterManager extends ZooKeeperListener {
+public class ActiveMasterManager extends ZooKeeperListener {
   private static final Log LOG = LogFactory.getLog(ActiveMasterManager.class);
 
   final AtomicBoolean clusterHasActiveMaster = new AtomicBoolean(false);
@@ -241,5 +239,26 @@ class ActiveMasterManager extends ZooKeeperListener {
     } catch (KeeperException e) {
       LOG.error(this.watcher.prefix("Error deleting our own master address node"), e);
     }
+  }
+
+  /**
+   * @return the ServerName for the current active master
+   */
+  public ServerName getActiveMaster() {
+    ServerName sn = null;
+    String msg;
+    try {
+      byte[] bytes = ZKUtil.getDataAndWatch(this.watcher, this.watcher.masterAddressZNode);
+      if (bytes == null) {
+        msg = "A master was detected, but went down before its address.";
+        LOG.info(msg);
+      } else {
+        sn = ServerName.parseVersionedServerName(bytes);
+      }
+    } catch (KeeperException e) {
+      msg = "Could not find active master";
+      LOG.info(msg);
+    }
+    return sn;
   }
 }
