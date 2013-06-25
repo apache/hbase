@@ -69,7 +69,13 @@ public class ZooKeeperMainServer {
   public static void main(String args[]) throws Exception {
     Configuration conf = HBaseConfiguration.create();
     String hostport = new ZooKeeperMainServer().parse(conf);
-    String zkArg = (hostport == null || hostport.length() == 0)? "": "-server " + hostport;
-    ZooKeeperMain.main(new String[] {zkArg});
+    String[] newArgs = args;
+    if (hostport != null && hostport.length() > 0) {
+      newArgs = new String[args.length + 2];
+      System.arraycopy(args, 0, newArgs, 2, args.length);
+      newArgs[0] = "-server";
+      newArgs[1] = hostport;
+    }
+    ZooKeeperMain.main(newArgs);
   }
 }
