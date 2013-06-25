@@ -50,7 +50,7 @@ module Shell
 
             hbase> alter 't1', {NAME => 'f1'}, {NAME => 'f2', METHOD => 'delete'}
 
-          You can also specify the wait interval, in milliseconds, to pause for in between region restarts:
+          You can also specify the wait interval, in milliseconds, to pause for in-between region restarts:
 
             hbase> alter 't1', NAME => 'f1', METHOD => 'delete', WAIT_INTERVAL => 1000, NUM_CONCURRENT_CLOSE => 1
         EOF

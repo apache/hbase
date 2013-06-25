@@ -101,7 +101,7 @@ public class RegionManager {
    * An entry is created in the map before an alter operation is performed on the
    * table. It is cleared when all the regions have reopened.   
    */
-  private final Map<String, ThrottledRegionReopener> tablesReopeningRegions = 
+  private final Map<String, ThrottledRegionReopener> tablesReopeningRegions =
       new ConcurrentHashMap<String, ThrottledRegionReopener>();
   /**
    * Map of region name to RegionState for regions that are in transition such as
@@ -2590,15 +2590,23 @@ public class RegionManager {
   }
 
   /**
-   * Create a reopener for this table, if one exists, return the existing throttler. 
-   * @param tableName
+   * Get the current ThrottledRegionReopener for a given table if it already exists. Create one with
+   * the specified wait interval and maxNumRegionsClosed if it doesn't exists yet.
+   * @param tableName The table this re-opener will work on.
+   * @param waitInterval The amount of time to spread the close of regions over.
+   * @param maxNumRegionsClosed The maximum number of regions to have closed at a time.
    * @return
    */
-  public ThrottledRegionReopener createThrottledReopener(String tableName) {
+  public ThrottledRegionReopener createThrottledReopener(String tableName, int waitInterval, int maxNumRegionsClosed) {
     if (!tablesReopeningRegions.containsKey(tableName)) {
-      ThrottledRegionReopener throttledReopener = new ThrottledRegionReopener(tableName, this.master, this);
+      ThrottledRegionReopener throttledReopener = new ThrottledRegionReopener(
+          tableName,
+          this.master,
+          this,
+          waitInterval,
+          maxNumRegionsClosed);
       tablesReopeningRegions.put(tableName, throttledReopener);
-    }  
+    }
     return tablesReopeningRegions.get(tableName);
   }
   
@@ -2619,6 +2627,18 @@ public class RegionManager {
     // if tablesReopeningRegions.contains do something
     if (tablesReopeningRegions.containsKey(tableName)) {
       tablesReopeningRegions.remove(tableName);
+
+      //The table was locked by the master before the alter table command
+      //was issued. Now that the reopen of the regions is done the table should
+      //be unlocked.
+      try {
+        master.unlockTable(Bytes.toBytes(tableName));
+      } catch (IllegalStateException ise) {
+        LOG.warn("RegionManager tried to unlock " + tableName + " and it was not locked.");
+      } catch (IOException e) {
+        LOG.warn("An exception was encountered while RegionManager was trying to unlock " + tableName +
+            ". " + e.getStackTrace());
+      }
       LOG.debug("Removed throttler for " + tableName);
     } else {
       LOG.debug("Tried to delete a throttled reopener, but it does not exist.");

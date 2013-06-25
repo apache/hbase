@@ -605,28 +605,6 @@ public class HBaseAdmin {
   }
 
   /**
-   * Sets the wait interval to wait between closing and reopening of Regions.
-   * Asynchronous operation.
-   *
-   * @param waitInterval The interval in milliseconds to wait
-   *                     in between closing and reopening regions
-   */
-  public void setCloseRegionWaitInterval(final String tableName, int waitInterval) {
-    this.master.setCloseRegionWaitInterval(tableName, waitInterval);
-  }
-
-  /**
-   * Sets the number of Regions to close concurrently.
-   * Asynchronous operation.
-   *
-   * @param numConcurrentClose The number of Regions to close at the same time
-   *
-   */
-  public void setNumConcurrentCloseRegions(final String tableName, int numConcurrentClose) {
-    this.master.setNumConcurrentCloseRegions(tableName, numConcurrentClose);
-  }
-
-  /**
    * Batch alter a table. Only takes regions offline once and performs a single
    * update to .META.
    * Asynchronous operation.
@@ -641,23 +619,56 @@ public class HBaseAdmin {
       List<HColumnDescriptor> columnAdditions,
       List<Pair<String, HColumnDescriptor>> columnModifications,
       List<String> columnDeletions) throws IOException {
+
+    //Use default values since none were specified
+    int waitInterval = conf.getInt(HConstants.MASTER_SCHEMA_CHANGES_WAIT_INTERVAL_MS,
+        HConstants.DEFAULT_MASTER_SCHEMA_CHANGES_WAIT_INTERVAL_MS);
+
+    int maxClosedRegions = conf.getInt(HConstants.MASTER_SCHEMA_CHANGES_MAX_CONCURRENT_REGION_CLOSE,
+        HConstants.DEFAULT_MASTER_SCHEMA_CHANGES_MAX_CONCURRENT_REGION_CLOSE);
+
+    alterTable(tableName, columnAdditions, columnModifications,
+        columnDeletions, waitInterval, maxClosedRegions);
+  }
+
+  /**
+   * Batch alter a table. Only takes regions offline once and performs a single
+   * update to .META.
+   * Asynchronous operation.
+   *
+   * @param tableName name of the table to add column to
+   * @param columnAdditions column descriptors to add to the table
+   * @param columnModifications pairs of column names with new descriptors
+   * @param columnDeletions column names to delete from the table
+   * @param waitInterval the interval of time to spread the close of
+   *                     numConcurrentRegionsClosed over
+   * @param maxConcurrentRegionsClosed the max number of regions to have closed
+   *                                   at a time.
+   * @throws IOException if a remote or network exception occurs
+   */
+  public void alterTable(final String tableName,
+                         List<HColumnDescriptor> columnAdditions,
+                         List<Pair<String, HColumnDescriptor>> columnModifications,
+                         List<String> columnDeletions,
+                         int waitInterval,
+                         int maxConcurrentRegionsClosed) throws IOException {
     // convert all of the strings to bytes and pass to the bytes method
-    List<Pair<byte [], HColumnDescriptor>> modificationsBytes = 
-      new ArrayList<Pair<byte [], HColumnDescriptor>>(
-          columnModifications.size());
-    List<byte []> deletionsBytes = 
-      new ArrayList<byte []>(columnDeletions.size());
+    List<Pair<byte [], HColumnDescriptor>> modificationsBytes =
+        new ArrayList<Pair<byte [], HColumnDescriptor>>(
+            columnModifications.size());
+    List<byte []> deletionsBytes =
+        new ArrayList<byte []>(columnDeletions.size());
 
     for(Pair<String, HColumnDescriptor> c : columnModifications) {
       modificationsBytes.add(new Pair<byte [], HColumnDescriptor>(
-            Bytes.toBytes(c.getFirst()), c.getSecond()));
+          Bytes.toBytes(c.getFirst()), c.getSecond()));
     }
     for(String c : columnDeletions) {
       deletionsBytes.add(Bytes.toBytes(c));
     }
 
     alterTable(Bytes.toBytes(tableName), columnAdditions, modificationsBytes,
-        deletionsBytes);
+        deletionsBytes, waitInterval, maxConcurrentRegionsClosed);
   }
 
   /**
@@ -680,10 +691,45 @@ public class HBaseAdmin {
     if (this.master == null) {
       throw new MasterNotRunningException("master has been shut down");
     }
+    int waitInterval = conf.getInt(HConstants.MASTER_SCHEMA_CHANGES_WAIT_INTERVAL_MS,
+        HConstants.DEFAULT_MASTER_SCHEMA_CHANGES_WAIT_INTERVAL_MS);
+
+    int maxClosedRegions = conf.getInt(HConstants.MASTER_SCHEMA_CHANGES_MAX_CONCURRENT_REGION_CLOSE,
+        HConstants.DEFAULT_MASTER_SCHEMA_CHANGES_MAX_CONCURRENT_REGION_CLOSE);
+
+    alterTable(tableName, columnAdditions, columnModifications, columnDeletions, waitInterval, maxClosedRegions);
+  }
+
+  /**
+   * Batch alter a table. Only takes regions offline once and performs a single
+   * update to .META.
+   * Any of the three lists can be null, in which case those types of
+   * alterations will be ignored.
+   * Asynchronous operation.
+   *
+   * @param tableName name of the table to add column to
+   * @param columnAdditions column descriptors to add to the table
+   * @param columnModifications pairs of column names with new descriptors
+   * @param columnDeletions column names to delete from the table
+   * @param waitInterval the interval of time to spread the close of
+   *                     numConcurrentRegionsClosed over
+   * @param maxConcurrentRegionsClosed the max number of regions to have closed
+   *                                   at a time.
+   * @throws IOException if a remote or network exception occurs
+   */
+  public void alterTable(final byte [] tableName,
+                         List<HColumnDescriptor> columnAdditions,
+                         List<Pair<byte[], HColumnDescriptor>> columnModifications,
+                         List<byte[]> columnDeletions,
+                         int waitInterval,
+                         int maxConcurrentRegionsClosed) throws IOException {
+    if (this.master == null) {
+      throw new MasterNotRunningException("master has been shut down");
+    }
     HTableDescriptor.isLegalTableName(tableName);
     try {
       this.master.alterTable(tableName, columnAdditions, columnModifications,
-          columnDeletions);
+          columnDeletions, waitInterval, maxConcurrentRegionsClosed);
     } catch (RemoteException e) {
       throw RemoteExceptionHandler.decodeRemoteException(e);
     }

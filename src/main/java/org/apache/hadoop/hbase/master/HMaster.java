@@ -79,6 +79,7 @@ import org.apache.hadoop.hbase.MiniZooKeeperCluster;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.StopStatus;
 import org.apache.hadoop.hbase.TableExistsException;
+import org.apache.hadoop.hbase.TableLockTimeoutException;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.MetaScanner;
@@ -257,6 +258,8 @@ public class HMaster extends HasThread implements HMasterInterface,
   private ConfigurationManager configurationManager =
       new ConfigurationManager();
   
+  private long schemaChangeTryLockTimeoutMs;
+
   /**
    * Constructor
    * @param conf configuration
@@ -386,6 +389,11 @@ public class HMaster extends HasThread implements HMasterInterface,
         HConstants.DEFAULT_MASTER_SCHEMA_CHANGES_LOCK_TIMEOUT_MS);
       tableLockManager = new TableLockManager(zooKeeperWrapper,
         address, schemaChangeLockTimeoutMs);
+
+      this.schemaChangeTryLockTimeoutMs = conf.getInt(
+          HConstants.MASTER_SCHEMA_CHANGES_TRY_LOCK_TIMEOUT_MS,
+          HConstants.DEFAULT_MASTER_SCHEMA_CHANGES_TRY_LOCK_TIMEOUT_MS);
+
     } else {
       tableLockManager = null;
     }
@@ -1372,6 +1380,22 @@ public class HMaster extends HasThread implements HMasterInterface,
     return tableLockManager != null;
   }
 
+  public boolean isTableLocked(byte[] tableName) {
+    if (isTableLockEnabled()) {
+      return tableLockManager.isTableLocked(tableName);
+    }
+    return false;
+  }
+
+
+  protected boolean tryLockTable(byte[] tableName, String purpose, long timeout)
+      throws IOException {
+    if (isTableLockEnabled()) {
+      return tableLockManager.tryLockTable(tableName, purpose, timeout);
+    }
+    return false;
+  }
+
   protected void lockTable(byte[] tableName, String purpose)
   throws IOException {
     if (isTableLockEnabled()) {
@@ -1549,19 +1573,37 @@ public class HMaster extends HasThread implements HMasterInterface,
   public void alterTable(final byte [] tableName,
                          List<HColumnDescriptor> columnAdditions,
                          List<Pair<byte [], HColumnDescriptor>> columnModifications,
-                         List<byte []> columnDeletions) throws IOException {
-    lockTable(tableName, "alter");
-    try {
-      InjectionHandler.processEvent(InjectionEvent.HMASTER_ALTER_TABLE);
-      ThrottledRegionReopener reopener = this.regionManager.
-        createThrottledReopener(Bytes.toString(tableName));
-      // Regions are added to the reopener in MultiColumnOperation
-      new MultiColumnOperation(this, tableName, columnAdditions,
-                               columnModifications, columnDeletions).process();
-      reopener.reOpenRegionsThrottle();
-    } finally {
-      unlockTable(tableName);
+                         List<byte []> columnDeletions,
+                         int waitInterval,
+                         int maxConcurrentRegionsClosed) throws IOException {
+    //This lock will be released when the ThrottledRegionReopener is done.
+    if (!tryLockTable(tableName, "alter", schemaChangeTryLockTimeoutMs)) {
+      throw new TableLockTimeoutException("Timed out acquiring " +
+          "lock for " + Bytes.toString(tableName) + " after " + schemaChangeTryLockTimeoutMs + " ms.");
     }
+
+    InjectionHandler.processEvent(InjectionEvent.HMASTER_ALTER_TABLE);
+    ThrottledRegionReopener reopener = this.regionManager.
+        createThrottledReopener(Bytes.toString(tableName), waitInterval, maxConcurrentRegionsClosed);
+    // Regions are added to the reopener in MultiColumnOperation
+    new MultiColumnOperation(this, tableName, columnAdditions,
+        columnModifications, columnDeletions).process();
+    reopener.startRegionsReopening();
+  }
+
+  @Override
+  public void alterTable(final byte [] tableName,
+                         List<HColumnDescriptor> columnAdditions,
+                         List<Pair<byte [], HColumnDescriptor>> columnModifications,
+                         List<byte []> columnDeletions) throws IOException {
+
+    int waitInterval = conf.getInt(HConstants.MASTER_SCHEMA_CHANGES_WAIT_INTERVAL_MS,
+        HConstants.DEFAULT_MASTER_SCHEMA_CHANGES_WAIT_INTERVAL_MS);
+
+    int maxClosedRegions = conf.getInt(HConstants.MASTER_SCHEMA_CHANGES_MAX_CONCURRENT_REGION_CLOSE,
+        HConstants.DEFAULT_MASTER_SCHEMA_CHANGES_MAX_CONCURRENT_REGION_CLOSE);
+
+    alterTable(tableName, columnAdditions, columnModifications, columnDeletions, waitInterval, maxClosedRegions);
   }
 
   public Pair<Integer, Integer> getAlterStatus(byte [] tableName)
@@ -2279,18 +2321,6 @@ public class HMaster extends HasThread implements HMasterInterface,
       return flushedSequenceIdByRegion.get(regionName);
     }
     return -1;
-  }
-
-  @Override
-  public void setCloseRegionWaitInterval(String tableName, int waitInterval) {
-    ThrottledRegionReopener reopener = this.regionManager.createThrottledReopener(tableName);
-    reopener.setRegionCloseWaitInterval(waitInterval);
-  }
-
-  @Override
-  public void setNumConcurrentCloseRegions(String tableName, int numConcurrentClose) {
-    ThrottledRegionReopener reopener = this.regionManager.createThrottledReopener(tableName);
-    reopener.setNumConcurrentCloseRegions(numConcurrentClose);
   }
 
   String getZKWrapperName() {

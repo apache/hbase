@@ -79,6 +79,40 @@ public class TableLockManager {
   }
 
   /**
+   * Try to lock a table, given a purpose.
+   * @param tableName Table to lock
+   * @param purpose Human readable reason for locking the table
+   * @return True if the table was locked before the timeout false otherwise
+   * @throws TableLockTimeoutException If unable to acquire a lock within a
+   *                                   specified time period (if any)
+   * @throws IOException If unrecoverable ZooKeeper error occurs
+   */
+  public boolean tryLockTable(byte[] tableName, String purpose, long timeout)
+      throws IOException {
+    boolean result;
+    String tableNameStr = Bytes.toString(tableName);
+    HLock lock = createTableLock(tableNameStr, purpose);
+    try {
+      result = lock.tryAcquire(timeout);
+    } catch (InterruptedException e) {
+      LOG.warn("Interrupted acquiring a lock for " + tableNameStr, e);
+      throw new InterruptedIOException("Interrupted acquiring a lock");
+    }
+
+    if (result &&
+        acquiredTableLocks.putIfAbsent(tableNameStr, lock) != null) {
+      // This should never execute if DistributedLock is implemented
+      // correctly.
+      LOG.error("Lock for " + tableNameStr + " acquired by multiple owners!");
+      LOG.error("Currently held locks: " + acquiredTableLocks);
+      throw new IllegalStateException("Lock for " + tableNameStr +
+          " was acquired by multiple owners!");
+    }
+
+    return result;
+  }
+
+  /**
    * Lock a table, given a purpose.
    * @param tableName Table to lock
    * @param purpose Human readable reason for locking the table
@@ -88,31 +122,9 @@ public class TableLockManager {
    */
   public void lockTable(byte[] tableName, String purpose)
   throws IOException {
-    String tableNameStr = Bytes.toString(tableName);
-    HLock lock = createTableLock(tableNameStr, purpose);
-    try {
-      if (lockTimeoutMs == -1) {
-        // Wait indefinitely
-        lock.acquire();
-      } else {
-        if (!lock.tryAcquire(lockTimeoutMs)) {
-          throw new TableLockTimeoutException("Timed out acquiring " +
-            "lock for " + tableNameStr + " after " + lockTimeoutMs + " ms.");
-        }
-      }
-    } catch (InterruptedException e) {
-      LOG.warn("Interrupted acquiring a lock for " + tableNameStr, e);
-      Thread.currentThread().interrupt();
-      throw new InterruptedIOException("Interrupted acquiring a lock");
-    }
-
-    if (acquiredTableLocks.putIfAbsent(tableNameStr, lock) != null) {
-      // This should never execute if DistributedLock is implemented
-      // correctly.
-      LOG.error("Lock for " + tableNameStr + " acquired by multiple owners!");
-      LOG.error("Currently held locks: " + acquiredTableLocks);
-      throw new IllegalStateException("Lock for " + tableNameStr +
-        " was acquired by multiple owners!");
+    if(!tryLockTable(tableName, purpose, lockTimeoutMs)) {
+      throw new TableLockTimeoutException("Timed out acquiring " +
+          "lock for " + Bytes.toString(tableName) + " after " + lockTimeoutMs + " ms.");
     }
   }
 
@@ -144,5 +156,15 @@ public class TableLockManager {
       Thread.currentThread().interrupt();
       throw new InterruptedIOException();
     }
+  }
+
+  /**
+   * Used to determine if a table is currently locked from this table lock manager.
+   *
+   * @param tableName
+   * @return True if the table was locked by this table manager false otherwise.
+   */
+  public boolean isTableLocked(byte[] tableName) {
+    return acquiredTableLocks.containsKey(Bytes.toString(tableName));
   }
 }

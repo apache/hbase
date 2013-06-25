@@ -81,6 +81,24 @@ public interface HMasterInterface extends HBaseRPCProtocolVersion {
                          List<byte []> columnDeletions) throws IOException;
 
   /**
+   * Batch adds, modifies, and deletes columns from the specified table.
+   * Any of the lists may be null, in which case those types of alterations
+   * will not occur.
+   *
+   * @param tableName table to modify
+   * @param columnAdditions column descriptors to add to the table
+   * @param columnModifications pairs of column names with new descriptors
+   * @param columnDeletions column names to delete from the table
+   * @throws IOException e
+   */
+  public void alterTable(final byte [] tableName,
+                         List<HColumnDescriptor> columnAdditions,
+                         List<Pair<byte [], HColumnDescriptor>> columnModifications,
+                         List<byte []> columnDeletions,
+                         int waitInterval,
+                         int numConcurentRegionsClosed) throws IOException;
+
+  /**
    * Adds a column to the specified table
    * @param tableName table to modify
    * @param column column descriptor
@@ -134,22 +152,6 @@ public interface HMasterInterface extends HBaseRPCProtocolVersion {
    */
   public void modifyTable(byte [] tableName, HConstants.Modify op, Writable [] args)
     throws IOException;
-
-  /**
-   * Set wait interval for close and reopen of regions
-   *
-   * @param tableName table to modify
-   * @param waitInterval the interval to wait in milliseconds
-   */
-  public void setCloseRegionWaitInterval(String tableName, int waitInterval);
-
-  /**
-   * Set the number of Regions to close concurrently.
-   *
-   * @param tableName table to modify
-   * @param numConcurrentClose the number of Regions to close at the same time.
-   */
-  void setNumConcurrentCloseRegions(String tableName, int numConcurrentClose);
 
   /**
    * Shutdown an HBase cluster.

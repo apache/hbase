@@ -108,6 +108,27 @@ public final class HConstants {
   public static final int DEFAULT_MASTER_SCHEMA_CHANGES_LOCK_TIMEOUT_MS =
     60 * 1000;
 
+  /** Configuration key for time out for schema modification try lock */
+  public static final String MASTER_SCHEMA_CHANGES_TRY_LOCK_TIMEOUT_MS =
+      "hbase.master.schemaChanges.trylock.timeout.ms";
+
+  public static final int DEFAULT_MASTER_SCHEMA_CHANGES_TRY_LOCK_TIMEOUT_MS =
+      5 * 1000;
+
+  /** Configuration key for for schema modification wait interval. */
+  public static final String MASTER_SCHEMA_CHANGES_WAIT_INTERVAL_MS =
+      "hbase.regionserver.alterTable.waitInterval.ms";
+
+  public static final int DEFAULT_MASTER_SCHEMA_CHANGES_WAIT_INTERVAL_MS =
+      1000;
+
+  /** Configuration key for for schema modification max concurrent regions closed. */
+  public static final String MASTER_SCHEMA_CHANGES_MAX_CONCURRENT_REGION_CLOSE =
+      "hbase.regionserver.alterTable.maxConcurrentClose";
+
+  public static final int DEFAULT_MASTER_SCHEMA_CHANGES_MAX_CONCURRENT_REGION_CLOSE =
+      5;
+
   /** Name of ZooKeeper quorum configuration parameter. */
   public static final String ZOOKEEPER_QUORUM = "hbase.zookeeper.quorum";
 
@@ -230,7 +251,6 @@ public final class HConstants {
    * the .oldlogs directory by default */
   public static final boolean HREGION_OLDLOGDIR_USE_SUBDIR_STRUCTURE_DEFAULT =
     true;
-
 
   /** Used to construct the name of the compaction directory during compaction */
   public static final String HREGION_COMPACTIONDIR_NAME = "compaction.dir";

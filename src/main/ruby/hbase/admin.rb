@@ -329,6 +329,12 @@ module Hbase
       columnsToAdd = ArrayList.new()
       columnsToMod = ArrayList.new()
       columnsToDel = ArrayList.new()
+
+      waitInterval = @conf.getInt(HConstants::MASTER_SCHEMA_CHANGES_WAIT_INTERVAL_MS,
+                                         HConstants::DEFAULT_MASTER_SCHEMA_CHANGES_WAIT_INTERVAL_MS);
+      numConcurrentRegionsClosed =  @conf.getInt(HConstants::MASTER_SCHEMA_CHANGES_MAX_CONCURRENT_REGION_CLOSE,
+                                         HConstants::DEFAULT_MASTER_SCHEMA_CHANGES_MAX_CONCURRENT_REGION_CLOSE);
+
       args.each do |arg|
         # Normalize args to support column name only alter specs
         arg = { NAME => arg } if arg.kind_of?(String)
@@ -338,12 +344,12 @@ module Hbase
 
         # Now set regionCloseWaitInterval if specified
         if arg[WAIT_INTERVAL]
-          @admin.setCloseRegionWaitInterval(table_name, arg[WAIT_INTERVAL])
+          waitInterval = arg[WAIT_INTERVAL]
         end
 
         # Now set the NumConcurrentCloseRegions if specified
         if arg[NUM_CONCURRENT_CLOSE]
-          @admin.setNumConcurrentCloseRegions(table_name, arg[NUM_CONCURRENT_CLOSE])
+          numConcurrentRegionsClosed = arg[NUM_CONCURRENT_CLOSE]
         end
 
         # No method parameter, try to use the args as a column definition
@@ -391,7 +397,7 @@ module Hbase
       end
 
       # now batch process alter requests
-      @admin.alterTable(table_name, columnsToAdd, columnsToMod, columnsToDel)
+      @admin.alterTable(table_name, columnsToAdd, columnsToMod, columnsToDel, waitInterval, numConcurrentRegionsClosed)
       if wait == true
         puts "Updating all regions with the new schema..."
         alter_status(table_name)

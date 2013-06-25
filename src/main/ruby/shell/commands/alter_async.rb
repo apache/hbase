@@ -52,7 +52,7 @@ module Shell
 
             hbase> alter_async 't1', {NAME => 'f1'}, {NAME => 'f2', METHOD => 'delete'}
 
-          You can also specify the wait interval, in milliseconds, to pause for in between region restarts
+          You can also specify the wait interval, in milliseconds, to pause for in-between region restarts
           and the simultaneous number of regions to close at a time:
 
             hbase> alter_async 't1', NAME => 'f1', METHOD => 'delete', WAIT_INTERVAL => 1000, NUM_CONCURRENT_CLOSE => 1
