@@ -841,9 +841,15 @@ public class Store extends SchemaConfigured implements HeapSize {
     // on the DFS level we have a sync_file_range(WAIT_AFTER) to throttle these
     // background writers.
     WriteOptions options = new WriteOptions();
-    if (conf.getBoolean("hbase.enable.syncfilerange.throttling", false)) {
+    if (conf.getBoolean(HConstants.HBASE_ENABLE_SYNCFILERANGE_THROTTLING_KEY,
+        false)) {
       options.setSyncFileRange(NativeIO.SYNC_FILE_RANGE_WAIT_AFTER
           | NativeIO.SYNC_FILE_RANGE_WRITE);
+    }
+    if (conf.getBoolean(HConstants.HBASE_ENABLE_QOS_KEY, false)) {
+      int priority = (isCompaction) ? HConstants.COMPACT_PRIORITY
+          : HConstants.FLUSH_PRIORITY;
+      options.setIoprio(HConstants.IOPRIO_CLASSOF_SERVICE, priority);
     }
     return createWriterInTmp(maxKeyCount, compression, isCompaction,
         options);

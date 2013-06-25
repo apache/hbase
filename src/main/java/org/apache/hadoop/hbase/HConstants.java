@@ -25,6 +25,7 @@ import org.apache.hadoop.hbase.io.hfile.Compression;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.regionserver.CompactionManager;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.io.nativeio.NativeIO;
 
 /**
  * HConstants holds a bunch of HBase-related constants
@@ -718,6 +719,32 @@ public final class HConstants {
    public static final String MAX_LARGER_CALL_QUEUE_MEMORY_SIZE_STRING = "max.larger.callqueue.memory.size";
    public static final int SMALL_QUEUE_REQUEST_LIMIT = 25*1024*1024;
    public static final String SMALL_QUEUE_REQUEST_LIMIT_STRING = "small.queue.request.limit";
+
+  // These are the IO priority values for various regionserver operations. Note
+  // that these are priorities relative to each other. See the man page for
+  // ioprio_set for more details. The default priority for a process with nice
+  // value 0 is 4. The priorities range from 0 (highest) to 7 (lowest).
+  //
+  // The thinking behind the various priorities are as follows :
+  // 1. PREAD priority is the highest since client reads are extremely critical.
+  // 2. Although HLOG sync is as important as a pread (since the client
+  // blocks on it.). But the HLOG sync never hits disk in the critical path
+  // and these priorities are when the kernel scheduler writes data to the
+  // persistent store. This priority will only be considered when we close the
+  // HLOG and help in reducing any stalls while closing the hlog.
+  // 3. The priority for flush is more than compaction since if we don't flush
+  // quickly enough, the memstore might grow too much and block client updates.
+  public static final int PREAD_PRIORITY = 0;
+  public static final int HLOG_PRIORITY = 1;
+  public static final int FLUSH_PRIORITY = 2;
+  public static final int COMPACT_PRIORITY = 3;
+
+  // We use the Best Effort class always since RealTime and Idle are too
+  // extreme. Again check man pages for ioprio_set for more details.
+  public static final int IOPRIO_CLASSOF_SERVICE = NativeIO.IOPRIO_CLASS_BE;
+
+  public static final String HBASE_ENABLE_QOS_KEY = "hbase.enable.qos";
+  public static final String HBASE_ENABLE_SYNCFILERANGE_THROTTLING_KEY = "hbase.enable.syncfilerange.throttling";
 
   private HConstants() {
     // Can't be instantiated with this constructor.

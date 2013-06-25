@@ -27,6 +27,7 @@ import java.nio.ByteBuffer;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.KeyValue;
@@ -65,8 +66,9 @@ public class HFileReaderV1 extends AbstractHFileReader {
   public HFileReaderV1(Path path, FixedFileTrailer trailer,
       final FSDataInputStream fsdis, final long size,
       final boolean closeIStream,
-      final CacheConfig cacheConf) {
-    super(path, trailer, fsdis, size, closeIStream, cacheConf);
+ final CacheConfig cacheConf,
+      Configuration conf) {
+    super(path, trailer, fsdis, size, closeIStream, cacheConf, conf);
 
 
     trailer.expectVersion(1);
@@ -322,7 +324,8 @@ public class HFileReaderV1 extends AbstractHFileReader {
       }
 
       HFileBlock hfileBlock = fsBlockReader.readBlockData(offset, nextOffset
-          - offset, dataBlockIndexReader.getRootBlockDataSize(block), false);
+          - offset, dataBlockIndexReader.getRootBlockDataSize(block), false,
+          getReadOptions(isCompaction));
       passSchemaMetricsTo(hfileBlock);
       hfileBlock.expectType(BlockType.DATA);
 

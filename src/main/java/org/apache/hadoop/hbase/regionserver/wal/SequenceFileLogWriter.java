@@ -30,13 +30,17 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdfs.DFSClient;
+import org.apache.hadoop.hdfs.profiling.DFSWriteProfilingData;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.io.hfile.Compression;
 import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.io.SequenceFile.CompressionType;
 import org.apache.hadoop.io.SequenceFile.Metadata;
+import org.apache.hadoop.io.WriteOptions;
 import org.apache.hadoop.io.compress.CompressionCodec;
 import org.apache.hadoop.io.compress.DefaultCodec;
 
@@ -197,50 +201,41 @@ public class SequenceFileLogWriter implements HLog.Writer {
   throws InvocationTargetException, Exception {
        boolean forceSync =
                conf.getBoolean("hbase.regionserver.hlog.writer.forceSync", false);
+    WriteOptions options = new WriteOptions();
+    if (conf.getBoolean(HConstants.HBASE_ENABLE_QOS_KEY, false)) {
+      options.setIoprio(HConstants.IOPRIO_CLASSOF_SERVICE,
+          HConstants.HLOG_PRIORITY);
+    }
+    long slowSyncProfileThreshold =
+      conf.getLong("hbase.hlog.slow.sync.profile.threshold", 0);
+    if (slowSyncProfileThreshold != 0) {
+      options.setLogSlowWriteProfileDataThreshold(slowSyncProfileThreshold);
+      DFSWriteProfilingData pData = new DFSWriteProfilingData();
+      DFSClient.setProfileDataForNextOutputStream(pData);
+    }
 
-  	if (forceSync) {
-      // call the new create api with force sync flag
-      this.writer = (SequenceFile.Writer) SequenceFile.class
-        .getMethod("createWriter", new Class[] {FileSystem.class,
-            Configuration.class, Path.class, Class.class, Class.class,
-            Integer.TYPE, Short.TYPE, Long.TYPE, Boolean.TYPE,
-            CompressionType.class, CompressionCodec.class, Metadata.class, 
-            Boolean.TYPE})
-        .invoke(null, new Object[] {fs, conf, path, HLog.getKeyClass(conf),
-            WALEdit.class,
-            new Integer(fs.getConf().getInt("io.file.buffer.size", 4096)),
-            new Short((short)
-              conf.getInt("hbase.regionserver.hlog.replication",
-              fs.getDefaultReplication())),
-            new Long(conf.getLong("hbase.regionserver.hlog.blocksize",
-                fs.getDefaultBlockSize())),
-            new Boolean(false) /*createParent*/,
-            this.compressionType, this.codec,
-            new Metadata(),
-            forceSync
-            });
-
-  	} else {
-  		// still need to keep old interface to be backward compatible
-      // reflection for a version of SequenceFile.createWriter that doesn't
-      // automatically create the parent directory (see HBASE-2312)
-      this.writer = (SequenceFile.Writer) SequenceFile.class
-        .getMethod("createWriter", new Class[] {FileSystem.class,
-            Configuration.class, Path.class, Class.class, Class.class,
-            Integer.TYPE, Short.TYPE, Long.TYPE, Boolean.TYPE,
-            CompressionType.class, CompressionCodec.class, Metadata.class})
-        .invoke(null, new Object[] {fs, conf, path, HLog.getKeyClass(conf),
-            WALEdit.class,
-            new Integer(fs.getConf().getInt("io.file.buffer.size", 4096)),
-            new Short((short)
-              conf.getInt("hbase.regionserver.hlog.replication",
-              fs.getDefaultReplication())),
-            new Long(conf.getLong("hbase.regionserver.hlog.blocksize",
-                fs.getDefaultBlockSize())),
-            new Boolean(false) /*createParent*/,
-            this.compressionType, this.codec,
-            new Metadata()
-            });
-  	}
+    boolean parallelWrites =
+      conf.getBoolean("hbase.regionserver.hlog.writer.parallelwrites", false);
+    this.writer = (SequenceFile.Writer) SequenceFile.class
+      .getMethod("createWriter", new Class[] {FileSystem.class,
+          Configuration.class, Path.class, Class.class, Class.class,
+          Integer.TYPE, Short.TYPE, Long.TYPE, Boolean.TYPE,
+          CompressionType.class, CompressionCodec.class, Metadata.class,
+        Boolean.TYPE, Boolean.TYPE, WriteOptions.class})
+      .invoke(null, new Object[] {fs, conf, path, HLog.getKeyClass(conf),
+          WALEdit.class,
+          new Integer(fs.getConf().getInt("io.file.buffer.size", 4096)),
+          new Short((short)
+            conf.getInt("hbase.regionserver.hlog.replication",
+            fs.getDefaultReplication())),
+          new Long(conf.getLong("hbase.regionserver.hlog.blocksize",
+              fs.getDefaultBlockSize())),
+          new Boolean(false) /*createParent*/,
+          this.compressionType, this.codec,
+          new Metadata(),
+          forceSync,
+          parallelWrites,
+          options,
+          });
   }
 }

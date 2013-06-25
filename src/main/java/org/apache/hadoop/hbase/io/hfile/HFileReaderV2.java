@@ -28,6 +28,7 @@ import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HConstants;
@@ -95,9 +96,9 @@ public class HFileReaderV2 extends AbstractHFileReader {
   public HFileReaderV2(Path path, FixedFileTrailer trailer,
       final FSDataInputStream fsdis, final long size,
       final boolean closeIStream, final CacheConfig cacheConf,
-      DataBlockEncoding preferredEncodingInCache)
+      DataBlockEncoding preferredEncodingInCache, Configuration conf)
       throws IOException {
-    super(path, trailer, fsdis, size, closeIStream, cacheConf);
+    super(path, trailer, fsdis, size, closeIStream, cacheConf, conf);
     trailer.expectVersion(2);
     HFileBlock.FSReaderV2 fsBlockReaderV2 = new HFileBlock.FSReaderV2(fsdis,
         compressAlgo, fileSize,
@@ -339,7 +340,8 @@ public class HFileReaderV2 extends AbstractHFileReader {
       // In case of an L2 cache miss, load block from filesystem.
       long startTimeNs = System.nanoTime();
       HFileBlock hfileBlock = fsBlockReader.readBlockData(dataBlockOffset,
-          onDiskBlockSize, -1, cacheBlock && !isCompaction);
+          onDiskBlockSize, -1, cacheBlock && !isCompaction,
+          getReadOptions(isCompaction));
       hfileBlock = dataBlockEncoder.diskToCacheFormat(hfileBlock,
           isCompaction);
       validateBlockType(hfileBlock, expectedBlockType);

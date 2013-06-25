@@ -35,6 +35,8 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.io.ReadOptions;
+import org.apache.hadoop.hdfs.DFSClient.DFSDataInputStream;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoder;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.Compression.Algorithm;
@@ -1046,6 +1048,23 @@ public class HFileBlock extends SchemaConfigured implements Cacheable {
         int uncompressedSize, boolean addToL2Cache) throws IOException;
 
     /**
+     * Reads the block at the given offset in the file with the given on-disk
+     * size and uncompressed size.
+     *
+     * @param offset
+     * @param onDiskSize the on-disk size of the entire block, including all
+     *          applicable headers, or -1 if unknown
+     * @param uncompressedSize the uncompressed size of the compressed part of
+     *          the block, or -1 if unknown
+     * @param addToL2Cache if true add the compressed block to L2 cache
+     * @param options the options for reading
+     * @return the newly read block
+     */
+    HFileBlock readBlockData(long offset, long onDiskSize,
+        int uncompressedSize, boolean addToL2Cache, ReadOptions options)
+        throws IOException;
+
+    /**
      * Creates a block iterator over the given portion of the {@link HFile}.
      * The iterator returns blocks starting with offset such that offset <=
      * startOffset < endOffset.
@@ -1092,7 +1111,7 @@ public class HFileBlock extends SchemaConfigured implements Cacheable {
         public HFileBlock nextBlock() throws IOException {
           if (offset >= endOffset)
             return null;
-          HFileBlock b = readBlockData(offset, -1, -1, false);
+          HFileBlock b = readBlockData(offset, -1, -1, false, new ReadOptions());
           offset += b.getOnDiskSizeWithHeader();
           return b;
         }
@@ -1124,7 +1143,7 @@ public class HFileBlock extends SchemaConfigured implements Cacheable {
      * @throws IOException
      */
     protected int readAtOffset(byte[] dest, int destOffset, int size,
-        boolean peekIntoNextBlock, long fileOffset)
+        boolean peekIntoNextBlock, long fileOffset, ReadOptions options)
             throws IOException {
       if (peekIntoNextBlock &&
           destOffset + size + HEADER_SIZE > dest.length) {
@@ -1149,7 +1168,12 @@ public class HFileBlock extends SchemaConfigured implements Cacheable {
         int sizeToRead = size + extraSize;
         int sizeRead = 0;
         if (sizeToRead > 0) {
-          sizeRead = istream.read(fileOffset, dest, destOffset, sizeToRead);
+          if (istream instanceof DFSDataInputStream) {
+            sizeRead = ((DFSDataInputStream) istream).read(fileOffset, dest,
+                destOffset, sizeToRead, options);
+          } else {
+            sizeRead = istream.read(fileOffset, dest, destOffset, sizeToRead);
+          }
           if (pData != null) {
             t1 = EnvironmentEdgeManager.currentTimeMillis();
             timeToRead = t1 - t0;
@@ -1278,6 +1302,14 @@ public class HFileBlock extends SchemaConfigured implements Cacheable {
       super(istream, compressAlgo, fileSize);
     }
 
+    @Override
+    public HFileBlock readBlockData(long offset, long onDiskSizeWithMagic,
+        int uncompressedSizeWithMagic, boolean addToL2Cache)
+      throws IOException {
+      return readBlockData(offset, onDiskSizeWithMagic,
+          uncompressedSizeWithMagic, addToL2Cache, new ReadOptions());
+    }
+
     /**
      * Read a version 1 block. There is no uncompressed header, and the block
      * type (the magic record) is part of the compressed data. This
@@ -1295,11 +1327,12 @@ public class HFileBlock extends SchemaConfigured implements Cacheable {
      *          data if using compression
      * @param uncompressedSizeWithMagic uncompressed size of the version 1
      *          block, including the magic record
+     * @param options the options for reading
      */
     @Override
     public HFileBlock readBlockData(long offset, long onDiskSizeWithMagic,
         int uncompressedSizeWithMagic,
-        boolean addToL2Cache) throws IOException {
+        boolean addToL2Cache, ReadOptions options) throws IOException {
       if (uncompressedSizeWithMagic <= 0) {
         throw new IOException("Invalid uncompressedSize="
             + uncompressedSizeWithMagic + " for a version 1 " + "block");
@@ -1336,7 +1369,7 @@ public class HFileBlock extends SchemaConfigured implements Cacheable {
         // The first MAGIC_LENGTH bytes of what this will read will be
         // overwritten.
         readAtOffset(buf.array(), buf.arrayOffset() + HEADER_DELTA,
-            onDiskSize, false, offset);
+            onDiskSize, false, offset, options);
 
         onDiskSizeWithoutHeader = uncompressedSizeWithMagic - MAGIC_LENGTH;
       } else {
@@ -1410,21 +1443,35 @@ public class HFileBlock extends SchemaConfigured implements Cacheable {
       this.hfileNameForL2Cache = hfileNameForL2Cache;
     }
 
+    @Override
+    public HFileBlock readBlockData(long offset, long onDiskSizeWithHeaderL,
+        int uncompressedSize, boolean addToL2Cache) throws IOException {
+      return readBlockData(offset, onDiskSizeWithHeaderL, uncompressedSize,
+          addToL2Cache, new ReadOptions());
+    }
+
     /**
      * Reads a version 2 block. Tries to do as little memory allocation as
      * possible, using the provided on-disk size.
      *
-     * @param offset the offset in the stream to read at
-     * @param onDiskSizeWithHeaderL the on-disk size of the block, including
-     *          the header, or -1 if unknown
-     * @param uncompressedSize the uncompressed size of the the block. Always
-     *          expected to be -1. This parameter is only used in version 1.
-     * @param addToL2Cache if true, will cache the block on read in the L2
-     *                     cache, if the L2 cache is enabled.
+     * @param offset
+     *          the offset in the stream to read at
+     * @param onDiskSizeWithHeaderL
+     *          the on-disk size of the block, including the header, or -1 if
+     *          unknown
+     * @param uncompressedSize
+     *          the uncompressed size of the the block. Always expected to be
+     *          -1. This parameter is only used in version 1.
+     * @param addToL2Cache
+     *          if true, will cache the block on read in the L2
+     *          cache, if the L2 cache is enabled.
+     * @param options
+     *          the options for reading
      */
     @Override
     public HFileBlock readBlockData(long offset, long onDiskSizeWithHeaderL,
-        int uncompressedSize, boolean addToL2Cache) throws IOException {
+        int uncompressedSize, boolean addToL2Cache,
+        ReadOptions options) throws IOException {
       if (offset < 0) {
         throw new IOException("Invalid offset=" + offset + " trying to read "
             + "block (onDiskSize=" + onDiskSizeWithHeaderL
@@ -1484,7 +1531,7 @@ public class HFileBlock extends SchemaConfigured implements Cacheable {
           int nextBlockOnDiskSizeWithHeader = readAtOffset(
               headerAndData.array(), headerAndData.arrayOffset()
                   + preReadHeaderSize, onDiskSizeWithHeader
-                  - preReadHeaderSize, true, offset + preReadHeaderSize);
+                  - preReadHeaderSize, true, offset + preReadHeaderSize, options);
           if (addToL2Cache) {
             cacheBlockInL2Cache(offset, headerAndData.array());
           }
@@ -1501,7 +1548,7 @@ public class HFileBlock extends SchemaConfigured implements Cacheable {
 
           int nextBlockOnDiskSize = readAtOffset(onDiskBlock,
               preReadHeaderSize, onDiskSizeWithHeader - preReadHeaderSize,
-              true, offset + preReadHeaderSize);
+              true, offset + preReadHeaderSize, options);
 
           if (header == null) {
             header = onDiskBlock;
@@ -1564,7 +1611,7 @@ public class HFileBlock extends SchemaConfigured implements Cacheable {
           // read the header.
           headerBuf = ByteBuffer.allocate(HEADER_SIZE);;
           readAtOffset(headerBuf.array(), headerBuf.arrayOffset(), HEADER_SIZE,
-              false, offset);
+              false, offset, options);
         }
 
         b = new HFileBlock(headerBuf);
@@ -1579,7 +1626,8 @@ public class HFileBlock extends SchemaConfigured implements Cacheable {
           b.assumeUncompressed();
           b.nextBlockOnDiskSizeWithHeader = readAtOffset(b.buf.array(),
               b.buf.arrayOffset() + HEADER_SIZE,
-              b.uncompressedSizeWithoutHeader, true, offset + HEADER_SIZE);
+              b.uncompressedSizeWithoutHeader, true, offset + HEADER_SIZE,
+              options);
           if (addToL2Cache) {
             cacheBlockInL2Cache(offset, b.buf.array());
           }
@@ -1592,7 +1640,7 @@ public class HFileBlock extends SchemaConfigured implements Cacheable {
               + HEADER_SIZE];
           b.nextBlockOnDiskSizeWithHeader = readAtOffset(compressedBytes,
               HEADER_SIZE, b.onDiskSizeWithoutHeader, true, offset
-                  + HEADER_SIZE);
+                  + HEADER_SIZE, options);
           if (l2Cache != null && addToL2Cache) {
             // If l2 cache is enabled, we need to copy the header bytes to
             // the compressed bytes array, so that they can be cached in the

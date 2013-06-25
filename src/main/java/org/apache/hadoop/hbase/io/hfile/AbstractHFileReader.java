@@ -23,8 +23,11 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.concurrent.atomic.AtomicLong;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.ReadOptions;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueContext;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
@@ -98,10 +101,13 @@ public abstract class AbstractHFileReader extends SchemaConfigured
 
   protected FileInfo fileInfo;
 
+  protected final Configuration conf;
+
   protected AbstractHFileReader(Path path, FixedFileTrailer trailer,
       final FSDataInputStream fsdis, final long fileSize,
       final boolean closeIStream,
-      final CacheConfig cacheConf) {
+      final CacheConfig cacheConf,
+      final Configuration conf) {
     super(null, path);  // We don't have configuration to pass to super.
     this.trailer = trailer;
     this.compressAlgo = trailer.getCompressionCodec();
@@ -111,6 +117,7 @@ public abstract class AbstractHFileReader extends SchemaConfigured
     this.closeIStream = closeIStream;
     this.path = path;
     this.name = path.getName();
+    this.conf = conf;
   }
 
   @SuppressWarnings("serial")
@@ -118,6 +125,15 @@ public abstract class AbstractHFileReader extends SchemaConfigured
     public BlockIndexNotLoadedException() {
       super("Block index not loaded");
     }
+  }
+
+  protected ReadOptions getReadOptions(boolean isCompaction) {
+    ReadOptions options = new ReadOptions();
+    if (conf.getBoolean(HConstants.HBASE_ENABLE_QOS_KEY, false)) {
+      int priority = (isCompaction) ? HConstants.COMPACT_PRIORITY : HConstants.PREAD_PRIORITY;
+      options.setIoprio(HConstants.IOPRIO_CLASSOF_SERVICE, priority);
+    }
+    return options;
   }
 
   protected String toStringFirstKey() {

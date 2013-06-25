@@ -40,6 +40,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.io.WriteOptions;
+import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue.KeyComparator;
@@ -517,29 +518,29 @@ public class HFile {
 
   private static Reader pickReaderVersion(Path path, FSDataInputStream fsdis,
       long size, boolean closeIStream, CacheConfig cacheConf,
-      DataBlockEncoding preferredEncodingInCache)
+      DataBlockEncoding preferredEncodingInCache, Configuration conf)
       throws IOException {
     FixedFileTrailer trailer = FixedFileTrailer.readFromStream(fsdis, size);
     switch (trailer.getVersion()) {
     case 1:
       return new HFileReaderV1(path, trailer, fsdis, size, closeIStream,
-          cacheConf);
+          cacheConf, conf);
     case 2:
       return new HFileReaderV2(path, trailer, fsdis, size, closeIStream,
-          cacheConf, preferredEncodingInCache);
+          cacheConf, preferredEncodingInCache, conf);
     default:
       throw new IOException("Cannot instantiate reader for HFile version " +
           trailer.getVersion());
     }
   }
 
-  public static Reader createReaderWithEncoding(
-      FileSystem fs, Path path, CacheConfig cacheConf,
-      DataBlockEncoding preferredEncodingInCache) throws IOException {
+  public static Reader createReaderWithEncoding(FileSystem fs, Path path,
+      CacheConfig cacheConf, DataBlockEncoding preferredEncodingInCache)
+      throws IOException {
     final boolean closeIStream = true;
     return pickReaderVersion(path, fs.open(path),
         fs.getFileStatus(path).getLen(), closeIStream, cacheConf,
-        preferredEncodingInCache);
+        preferredEncodingInCache, fs.getConf());
   }
 
   public static Reader createReader(
@@ -548,12 +549,15 @@ public class HFile {
         DataBlockEncoding.NONE);
   }
 
+  /**
+   * Currently used only for testing.
+   */
   public static Reader createReaderFromStream(Path path,
       FSDataInputStream fsdis, long size, CacheConfig cacheConf)
       throws IOException {
     final boolean closeIStream = false;
     return pickReaderVersion(path, fsdis, size, closeIStream, cacheConf,
-        DataBlockEncoding.NONE);
+        DataBlockEncoding.NONE, HBaseConfiguration.create());
   }
 
   /*

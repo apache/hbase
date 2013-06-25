@@ -8,6 +8,7 @@ import org.apache.hadoop.util.InjectionEventI;
 import org.apache.hadoop.util.InjectionHandler;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.io.nativeio.NativeIO;
 
@@ -26,7 +27,7 @@ public class TestSyncFileRangeThrottling {
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
     Configuration conf = HBaseConfiguration.create();
-    conf.setBoolean("hbase.enable.syncfilerange.throttling", true);
+    conf.setBoolean(HConstants.HBASE_ENABLE_SYNCFILERANGE_THROTTLING_KEY, true);
     TEST_UTIL = new HBaseTestingUtility(conf);
     TEST_UTIL.startMiniCluster(1);
     InjectionHandler.set(new TestSyncFileRangeThrottlingHandler());
@@ -62,6 +63,7 @@ public class TestSyncFileRangeThrottling {
         continue;
       }
       Store store = region.getStore(family);
+      region.flushcache();
       store.compactRecentForTesting(-1);
     }
     long start = System.currentTimeMillis();
