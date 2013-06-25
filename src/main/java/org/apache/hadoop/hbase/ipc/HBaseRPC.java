@@ -567,10 +567,6 @@ public class HBaseRPC {
               "cause is a version mismatch between client and server.");
         }
         Call callInfo = HRegionServer.callContext.get();
-        ProfilingData pData = callInfo == null ? null : callInfo.getProfilingData();
-        if (pData != null) {
-          pData.addString(ProfilingData.RPC_METHOD_NAME, call.getMethodName ());
-        }
         if (verbose) trace("Call: " + call);
         Method method = implementation.getMethod(call.getMethodName(),
                 call.getParameterClasses());
@@ -579,6 +575,11 @@ public class HBaseRPC {
         status.resume("Servicing call");
         startTime = System.currentTimeMillis();
         qTime = (int) (startTime - receivedTime);
+        ProfilingData pData = callInfo == null ? null : callInfo.getProfilingData();
+        if (pData != null) {
+          pData.addString(ProfilingData.RPC_METHOD_NAME, call.getMethodName ());
+          pData.addLong(ProfilingData.QUEUED_TIME_MS, qTime);
+        }
         Object value = method.invoke(instance, call.getParameters());
         int processingTime = (int) (System.currentTimeMillis() - startTime);
         if (LOG.isTraceEnabled()) {

@@ -26,6 +26,7 @@ public class ProfilingData implements Writable {
    *  total amount of time spent server-side by the RPC
    */
   public static final String TOTAL_SERVER_TIME_MS = "total_server_time.ms";
+  public static final String QUEUED_TIME_MS = "queued_time.ms";
   
   /**
    *  client reported network latency
