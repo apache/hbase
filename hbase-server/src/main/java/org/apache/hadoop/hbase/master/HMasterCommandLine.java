@@ -84,7 +84,7 @@ public class HMasterCommandLine extends ServerCommandLine {
     } catch (ParseException e) {
       LOG.error("Could not parse: ", e);
       usage(null);
-      return -1;
+      return 1;
     }
 
 
@@ -125,7 +125,7 @@ public class HMasterCommandLine extends ServerCommandLine {
     List<String> remainingArgs = cmd.getArgList();
     if (remainingArgs.size() != 1) {
       usage(null);
-      return -1;
+      return 1;
     }
 
     String command = remainingArgs.get(0);
@@ -135,10 +135,10 @@ public class HMasterCommandLine extends ServerCommandLine {
     } else if ("stop".equals(command)) {
       return stopMaster();
     } else if ("clear".equals(command)) {
-      return (ZNodeClearer.clear(getConf()) ? 0 : -1);
+      return (ZNodeClearer.clear(getConf()) ? 0 : 1);
     } else {
       usage("Invalid command: " + command);
-      return -1;
+      return 1;
     }
   }
 
@@ -183,7 +183,7 @@ public class HMasterCommandLine extends ServerCommandLine {
         HMaster master = HMaster.constructMaster(masterClass, conf);
         if (master.isStopped()) {
           LOG.info("Won't bring the Master up as a shutdown is requested");
-          return -1;
+          return 1;
         }
         master.start();
         master.join();
@@ -191,8 +191,8 @@ public class HMasterCommandLine extends ServerCommandLine {
           throw new RuntimeException("HMaster Aborted");
       }
     } catch (Throwable t) {
-      LOG.error("Failed to start master", t);
-      return -1;
+      LOG.error("Master exiting", t);
+      return 1;
     }
     return 0;
   }
@@ -206,19 +206,19 @@ public class HMasterCommandLine extends ServerCommandLine {
       adm = new HBaseAdmin(getConf());
     } catch (MasterNotRunningException e) {
       LOG.error("Master not running");
-      return -1;
+      return 1;
     } catch (ZooKeeperConnectionException e) {
       LOG.error("ZooKeeper not available");
-      return -1;
+      return 1;
     } catch (IOException e) {
       LOG.error("Got IOException: " +e.getMessage(), e);
-      return -1;
+      return 1;
     }
     try {
       adm.shutdown();
     } catch (Throwable t) {
       LOG.error("Failed to stop master", t);
-      return -1;
+      return 1;
     }
     return 0;
   }
