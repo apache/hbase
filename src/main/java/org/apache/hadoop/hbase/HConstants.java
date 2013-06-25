@@ -220,6 +220,30 @@ public final class HConstants {
   /** Default compaction manager class name. */
   public static final String DEFAULT_COMPACTION_MANAGER_CLASS = CompactionManager.class.getName();
 
+  /** Parameter name for the number of large compaction threads */
+  public static final String LARGE_COMPACTION_THREADS =
+          "hbase.regionserver.thread.compaction.large";
+
+  /** Default number of large compaction threads */
+  public static final int DEFAULT_LARGE_COMPACTION_THREADS = 1;
+
+  /** Parameter name for the number of large compaction threads */
+  public static final String SMALL_COMPACTION_THREADS =
+          "hbase.regionserver.thread.compaction.small";
+
+  /** Default number of small compaction threads */
+  public static final int DEFAULT_SMALL_COMPACTION_THREADS = 1;
+
+  /** Prefix for Compaction related configurations in Store */
+  public static final String HSTORE_COMPACTION_PREFIX =
+          "hbase.hstore.compaction.";
+
+  /** Parameter name for the number of split threads */
+  public static final String SPLIT_THREADS = "hbase.regionserver.thread.split";
+
+  /** Default number of split threads */
+  public static final int DEFAULT_SPLIT_THREADS = 1;
+
   /** Parameter name for what master implementation to use. */
   public static final String MASTER_IMPL = "hbase.master.impl";
 

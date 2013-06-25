@@ -50,6 +50,14 @@ public class CompactionManager {
   }
 
   /**
+   * Update the configuration when it changes on-the-fly.
+   * @param conf
+   */
+  protected void updateConfiguration(Configuration conf) {
+    comConf.updateConfiguration(conf);
+  }
+
+  /**
    * @param candidateFiles candidate files, ordered from oldest to newest
    * @return subset copy of candidate list that meets compaction criteria
    * @throws java.io.IOException

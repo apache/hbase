@@ -860,7 +860,10 @@ public class HRegion implements HeapSize {
               completionService
                   .submit(new Callable<ImmutableList<StoreFile>>() {
                     public ImmutableList<StoreFile> call() throws IOException {
-                      return store.close();
+                      ImmutableList<StoreFile> result = store.close();
+                      HRegionServer.configurationManager.
+                              deregisterObserver(store);
+                      return result;
                     }
                   });
             }
@@ -2674,7 +2677,10 @@ public class HRegion implements HeapSize {
 
   protected Store instantiateHStore(Path tableDir, HColumnDescriptor c)
   throws IOException {
-    return new Store(tableDir, this, c, this.fs, this.conf);
+    Store store = new Store(tableDir, this, c, this.fs, this.conf);
+    // Register this store with the configuration manager.
+    HRegionServer.configurationManager.registerObserver(store);
+    return store;
   }
 
   /**

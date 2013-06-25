@@ -911,6 +911,19 @@ public class HBaseTestingUtility {
   }
 
   /**
+   * Get the RegionServer which hosts a region with the given region name.
+   * @param regionName
+   * @return
+   */
+  public HRegionServer getRSWithRegion(byte[] regionName) {
+    int index = hbaseCluster.getServerWith(regionName);
+    if (index == -1) {
+      return null;
+    }
+    return hbaseCluster.getRegionServerThreads().get(index).getRegionServer();
+  }
+
+  /**
    * Starts a <code>MiniMRCluster</code> with a default number of
    * <code>TaskTracker</code>'s.
    *

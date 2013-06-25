@@ -44,6 +44,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.conf.ConfigurationObserver;
 import org.apache.hadoop.io.WriteOptions;
 import org.apache.hadoop.io.nativeio.NativeIO;
 import org.apache.hadoop.hbase.HColumnDescriptor;
@@ -101,7 +102,8 @@ import com.google.common.collect.Lists;
  * <p>Locking and transactions are handled at a higher level.  This API should
  * not be called directly but by an HRegion manager.
  */
-public class Store extends SchemaConfigured implements HeapSize {
+public class Store extends SchemaConfigured implements HeapSize,
+        ConfigurationObserver {
   static final Log LOG = LogFactory.getLog(Store.class);
   protected final MemStore memstore;
   // This stores directory in the filesystem.
@@ -110,7 +112,7 @@ public class Store extends SchemaConfigured implements HeapSize {
   private final HColumnDescriptor family;
   CompactionManager compactionManager;
   final FileSystem fs;
-  final Configuration conf;
+  Configuration conf;
   final CacheConfig cacheConf;
   // ttl in milliseconds.
   protected long ttl;
@@ -1295,8 +1297,8 @@ public class Store extends SchemaConfigured implements HeapSize {
         // we have to use a do/while loop.
         ArrayList<KeyValue> kvs = new ArrayList<KeyValue>();
         boolean hasMore;
-        // Create the writer whether or not there are output KVs, 
-        // iff the maxSequenceID among the compaction candidates is 
+        // Create the writer whether or not there are output KVs,
+        // iff the maxSequenceID among the compaction candidates is
         // equal to the maxSequenceID among all the on-disk hfiles. [HBASE-7267]
         if (maxCompactingSequcenceId == this.getMaxSequenceId(true)) {
           writer = createWriterInTmp(maxKeyCount, compression, true);
@@ -1328,7 +1330,7 @@ public class Store extends SchemaConfigured implements HeapSize {
                 bytesWritten += kv.getLength();
                 if (bytesWritten > Store.closeCheckInterval) {
                   getSchemaMetrics().updatePersistentStoreMetric(
-                    SchemaMetrics.StoreMetricType.COMPACTION_WRITE_SIZE, 
+                    SchemaMetrics.StoreMetricType.COMPACTION_WRITE_SIZE,
                     bytesWritten);
                   bytesWritten = 0;
                   if (!this.region.areWritesEnabled()) {
@@ -2004,4 +2006,12 @@ public class Store extends SchemaConfigured implements HeapSize {
    }
   }
 
+  @Override
+  public void notifyOnChange(Configuration conf) {
+    this.conf = new CompoundConfiguration()
+            .add(conf)
+            .add(family.getValues());
+
+    compactionManager.updateConfiguration(conf);
+  }
 }

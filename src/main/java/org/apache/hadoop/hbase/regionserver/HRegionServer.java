@@ -377,7 +377,8 @@ public class HRegionServer implements HRegionInterface,
 
   // This object lets classes register themselves to get notified on
   // Configuration changes.
-  public ConfigurationManager configurationManager;
+  public static final ConfigurationManager configurationManager =
+          new ConfigurationManager();
 
   public static long getResponseSizeLimit() {
     return responseSizeLimit;
@@ -411,7 +412,6 @@ public class HRegionServer implements HRegionInterface,
     this.abortRequested = false;
     this.fsOk = true;
     this.conf = conf;
-    this.configurationManager = new ConfigurationManager();
     this.connection = ServerConnectionManager.getConnection(conf);
 
     this.isOnline = false;
@@ -558,6 +558,8 @@ public class HRegionServer implements HRegionInterface,
 
     // Compaction thread
     this.compactSplitThread = new CompactSplitThread(this);
+    // Registering the compactSplitThread object with the ConfigurationManager.
+    configurationManager.registerObserver(this.compactSplitThread);
 
     // Log rolling thread
     int hlogCntPerServer = this.conf.getInt(HConstants.HLOG_CNT_PER_SERVER, 2);
@@ -1463,14 +1465,6 @@ public class HRegionServer implements HRegionInterface,
    */
   public boolean isOnline() {
     return isOnline;
-  }
-
-  /**
-   * Return the ConfigurationManager object.
-   * @return
-   */
-  public ConfigurationManager getConfigurationManager() {
-    return this.configurationManager;
   }
 
   private void setupHLog(Path logDir, Path oldLogDir, int totalHLogCnt) throws IOException {
@@ -3829,12 +3823,9 @@ public class HRegionServer implements HRegionInterface,
    */
   public void updateConfiguration() {
     LOG.info("Reloading the configuration from disk.");
+    // Reload the configuration from disk.
     conf.reloadConfiguration();
-    // TODO @gauravm
-    // Move this to the notifyOnChange() method in HRegionServer
-    for (HRegion r : onlineRegions.values()) {
-      r.updateConfiguration();
-    }
+
     // Notify all the observers that the configuration has changed.
     configurationManager.notifyAllObservers(conf);
   }

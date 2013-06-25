@@ -30,15 +30,17 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 
 import com.google.common.base.Preconditions;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.conf.ConfigurationObserver;
 
 /**
  * Compact region on request and then run split if appropriate
  */
-public class CompactSplitThread {
+public class CompactSplitThread implements ConfigurationObserver {
   static final Log LOG = LogFactory.getLog(CompactSplitThread.class);
 
   private final HRegionServer server;
-  private final Configuration conf;
+  private Configuration conf;
 
   private final ThreadPoolExecutor largeCompactions;
   private final ThreadPoolExecutor smallCompactions;
@@ -58,10 +60,12 @@ public class CompactSplitThread {
     Preconditions.checkArgument(this.server != null && this.conf != null);
 
     int largeThreads = Math.max(1, conf.getInt(
-        "hbase.regionserver.thread.compaction.large", 1));
-    int smallThreads = conf.getInt(
-        "hbase.regionserver.thread.compaction.small", 1);
-    int splitThreads = conf.getInt("hbase.regionserver.thread.split", 1);
+            HConstants.LARGE_COMPACTION_THREADS,
+            HConstants.DEFAULT_LARGE_COMPACTION_THREADS));
+    int smallThreads = conf.getInt(HConstants.SMALL_COMPACTION_THREADS,
+            HConstants.DEFAULT_SMALL_COMPACTION_THREADS);
+    int splitThreads = conf.getInt(HConstants.SPLIT_THREADS,
+            HConstants.DEFAULT_SPLIT_THREADS);
 
     Preconditions.checkArgument(largeThreads > 0 && smallThreads > 0);
 
@@ -207,5 +211,56 @@ public class CompactSplitThread {
     if (smallCompactions != null)
       size += smallCompactions.getQueue().size();
     return size;
+  }
+
+  @Override
+  public void notifyOnChange(Configuration newConf) {
+    // Check if number of large / small compaction threads has changed, and then
+    // adjust the core pool size of the thread pools, by using the
+    // setCorePoolSize() method. According to the javadocs, it is safe to
+    // change the core pool size on-the-fly. We need to reset the maximum
+    // pool size, as well.
+    int largeThreads = Math.max(1, newConf.getInt(
+            HConstants.LARGE_COMPACTION_THREADS,
+            HConstants.DEFAULT_LARGE_COMPACTION_THREADS));
+    if (this.largeCompactions.getCorePoolSize() != largeThreads) {
+      LOG.info("Changing the value of " + HConstants.LARGE_COMPACTION_THREADS +
+              " from " + this.largeCompactions.getCorePoolSize() + " to " +
+              largeThreads);
+      this.largeCompactions.setMaximumPoolSize(largeThreads);
+      this.largeCompactions.setCorePoolSize(largeThreads);
+    }
+
+    int smallThreads = newConf.getInt(HConstants.SMALL_COMPACTION_THREADS,
+            HConstants.DEFAULT_SMALL_COMPACTION_THREADS);
+    if (this.smallCompactions.getCorePoolSize() != smallThreads) {
+      LOG.info("Changing the value of " + HConstants.SMALL_COMPACTION_THREADS +
+                " from " + this.smallCompactions.getCorePoolSize() + " to " +
+                smallThreads);
+      this.smallCompactions.setMaximumPoolSize(smallThreads);
+      this.smallCompactions.setCorePoolSize(smallThreads);
+    }
+
+    this.conf = newConf;
+  }
+
+  /**
+   * Helper method for tests to check if the number of small compaction threads
+   * change on-the-fly.
+   *
+   * @return
+   */
+  protected int getSmallCompactionThreadNum() {
+    return this.smallCompactions.getCorePoolSize();
+  }
+
+  /**
+   * Helper method for tests to check if the number of large compaction threads
+   * change on-the-fly.
+   *
+   * @return
+   */
+  protected int getLargeCompactionThreadNum() {
+    return this.largeCompactions.getCorePoolSize();
   }
 }
