@@ -59,7 +59,6 @@ public class HRegionServerCommandLine extends ServerCommandLine {
       } else {
         logJVMInfo();
         HRegionServer hrs = HRegionServer.constructRegionServer(regionServerClass, conf);
-        HRegionServer.startRegionServer(hrs);
         Thread rsThread = HRegionServer.startRegionServer(hrs);
 
         rsThread.join();
