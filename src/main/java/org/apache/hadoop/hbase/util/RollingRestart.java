@@ -484,11 +484,6 @@ public class RollingRestart {
     boolean useHadoopCtl = true;
     boolean drainAndStopOnly = false;
 
-    if (cmd.hasOption("c")) {
-      RollingRestart.clearAll();
-      return;
-    }
-
     if (!cmd.hasOption("s")) {
       HelpFormatter formatter = new HelpFormatter();
       formatter.printHelp("RollingRestart", options, true);
@@ -539,6 +534,11 @@ public class RollingRestart {
     Logger.getLogger("org.apache.zookeeper").setLevel(Level.ERROR);
     Logger.getLogger("org.apache.hadoop.hbase").setLevel(Level.INFO);
 
+    if (cmd.hasOption("c")) {
+      rr.clear();
+      return;
+    }
+
     try  {
       rr.setup();
       rr.drainServer();
@@ -572,7 +572,9 @@ public class RollingRestart {
          default:
        }
     } finally {
-      rr.clear();
+      if (!drainAndStopOnly) {
+        rr.clear();
+      }
     }
   }
 }

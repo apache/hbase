@@ -15,7 +15,8 @@ Logger.getLogger("org.apache.zookeeper").setLevel(Level.ERROR);
 Logger.getLogger("org.apache.hadoop.hbase").setLevel(Level.INFO);
 
 def restartRegionServer(HBaseAdmin admin, HServerInfo regionserver,
-    Configuration conf, String rollingRestartArgs, String logsFolder) {
+    Configuration conf, String rollingRestartArgs, String logsFolder,
+    boolean verifyRSRestart) {
   long startCode = regionserver.getStartCode()/1000;
   String host = regionserver.getHostname();
 
@@ -39,6 +40,11 @@ def restartRegionServer(HBaseAdmin admin, HServerInfo regionserver,
   proc.waitForOrKill(30 * 60 * 1000)
 
   ostream.close();
+
+  if (!verifyRSRestart) {
+    return;
+  }
+
   long newStartCode = admin.getConnection().
     getHRegionConnection(regionserver.getServerAddress()).getHServerInfo().getStartCode()/1000;
 
@@ -86,6 +92,7 @@ CommandLine cmd = parser.parse(options, args);
 String rollingRestartArgs = "";
 String logsFolder = "/tmp";
 hosts = null;
+boolean verifyRSRestart = true;
 
 if (cmd.hasOption('r')) {
   rollingRestartArgs += " -r " + cmd.getOptionValue('r');
@@ -103,13 +110,15 @@ if (cmd.hasOption('g')) {
   rollingRestartArgs += " -g " + cmd.getOptionValue('g');
 }
 if (cmd.hasOption('c')) {
-  rollingRestartArgs += " -c " + cmd.getOptionValue('c');
+  verifyRSRestart = false;
+  rollingRestartArgs += " -c ";
 }
 if (cmd.hasOption('h')) {
-  rollingRestartArgs += " -h " + cmd.getOptionValue('h');
+  rollingRestartArgs += " -h ";
 }
 if (cmd.hasOption('o')) {
-  rollingRestartArgs += " -o " + cmd.getOptionValue('o');
+  verifyRSRestart = false;
+  rollingRestartArgs += " -o ";
 }
 if (cmd.hasOption('f')) {
   logsFolder = cmd.getOptionValue('f');
@@ -137,7 +146,7 @@ if (hosts != null) {
     try {
       HServerInfo host = 
         admin.getConnection().getHRegionConnection(serverAddr).getHServerInfo();
-      restartRegionServer(admin, host, conf, rollingRestartArgs, logsFolder);
+      restartRegionServer(admin, host, conf, rollingRestartArgs, logsFolder, verifyRSRestart);
     } catch (Exception e) {
       e.printStackTrace();
       println "\nERROR: "+ server + " Failed.";
@@ -148,7 +157,7 @@ if (hosts != null) {
 
   for (host in admin.getClusterStatus().getServerInfo()) { 
     try {
-      restartRegionServer(admin, host, conf, rollingRestartArgs, logsFolder);
+      restartRegionServer(admin, host, conf, rollingRestartArgs, logsFolder, verifyRSRestart);
     } catch (Exception e) {
       e.printStackTrace();
       println "\nERROR: "+ host + " Failed.";
