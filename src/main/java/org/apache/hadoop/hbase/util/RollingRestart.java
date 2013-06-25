@@ -161,8 +161,9 @@ public class RollingRestart {
    * a dependency on the hadoopctl script.
    * @throws IOException
    * @throws InterruptedException
+   * @param drainAndStopOnly
    */
-  void restart() throws IOException, InterruptedException {
+  void restart(boolean drainAndStopOnly) throws IOException, InterruptedException {
     System.out.println("Shutting down the region server after sleep of " +
         this.sleepIntervalBeforeRestart);
     Thread.sleep(this.sleepIntervalBeforeRestart);
@@ -171,18 +172,36 @@ public class RollingRestart {
 
     try {
       if (this.useHadoopCtl) {
-        sshCmd += " hadoopctl restart regionserver";
-        LOG.info("Executing " + sshCmd);
-        Process p = Runtime.getRuntime().exec(sshCmd);
+        String sshCmdToStopRS = sshCmd + " hadoopctl stop regionserver";
+        LOG.info("Executing " + sshCmdToStopRS);
+        Process stop = Runtime.getRuntime().exec(sshCmdToStopRS);
 
-        p.waitFor();
+        stop.waitFor();
 
-        LOG.info("Exit value for the region server restart " + p.exitValue());
+        LOG.info("Exit value for the region server stop " + stop.exitValue());
 
-        if (p.exitValue() != 0) {
-          LOG.error("Failed to restart. regionserver. Aborting..");
-          throw new IOException("Failed to restart regionserver. Aborting..");
+        if (stop.exitValue() != 0) {
+          LOG.error("Failed to stop regionserver. Aborting..");
+          throw new IOException("Failed to stop regionserver. Aborting..");
         }
+        if(drainAndStopOnly) {
+          LOG.info("Only told to stop the region server. Returning..");
+          return;
+        }
+
+        String sshCmdToStartRS = sshCmd + " hadoopctl start regionserver";
+        LOG.info("Executing " + sshCmdToStartRS);
+        Process start = Runtime.getRuntime().exec(sshCmdToStartRS);
+
+        start.waitFor();
+
+        LOG.info("Exit value for the region server start " + start.exitValue());
+
+        if (start.exitValue() != 0) {
+          LOG.error("Failed to start regionserver. Aborting..");
+          throw new IOException("Failed to start regionserver. Aborting..");
+        }
+
       } else {
         String sshCmdToStopRS = sshCmd + " /usr/local/hadoop/" +
             cellName + "-HBASE/bin/hbase-daemon.sh stop regionserver";
@@ -443,7 +462,9 @@ public class RollingRestart {
     options.addOption("c", "clear", false,
         "Clear all the regionserver from blacklist. Default : false");
     options.addOption("h", "dont_use_hadoopctl", false,
-        "Don't hadoopctl to restart the regionserver. Default : true");
+        "Don't use hadoopctl to restart the regionserver. Default : true");
+    options.addOption("o", "drain_and_stop_only", false,
+      "Drain and stop the region server(Works only with hadoopctl). Default : false");
 
     if (args.length == 0) {
       HelpFormatter formatter = new HelpFormatter();
@@ -461,6 +482,7 @@ public class RollingRestart {
     int getOpFrequency = RollingRestart.DEFAULT_GETOP_FREQUENCY;
     int sleepIntervalBeforeRestart = RollingRestart.DEFAULT_SLEEP_BEFORE_RESTART_INTERVAL;
     boolean useHadoopCtl = true;
+    boolean drainAndStopOnly = false;
 
     if (cmd.hasOption("c")) {
       RollingRestart.clearAll();
@@ -485,6 +507,10 @@ public class RollingRestart {
 
     if (cmd.hasOption("h")) {
       useHadoopCtl = false;
+    }
+
+    if (cmd.hasOption("o")) {
+      drainAndStopOnly = true;
     }
 
     if (cmd.hasOption("d")) {
@@ -516,9 +542,14 @@ public class RollingRestart {
     try  {
       rr.setup();
       rr.drainServer();
-      rr.restart();
-      rr.undrainServer();
-      LOG.info("Rolling restart complete for " + serverName);
+      rr.restart(drainAndStopOnly);
+      if (!drainAndStopOnly) {
+        rr.undrainServer();
+        LOG.info("Rolling restart complete for " + serverName);
+      } else {
+        LOG.info("Drain complete for " + serverName);
+      }
+      
     } catch (Exception e) {
       e.printStackTrace();
       LOG.error("Rolling restart failed for " + serverName + " at stage " + rr.currentState.name());

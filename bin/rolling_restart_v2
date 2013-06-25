@@ -69,6 +69,8 @@ options.addOption("c", "clear", false,
  		  "Clear all the regionserver from blacklist. Default : false");
 options.addOption("h", "dont_use_hadoopctl", false,
 		  "Don't hadoopctl to restart the regionserver. Default : true");
+options.addOption("o", "drain_and_stop_only", false,
+      		  "Drain and stop the region server(Works only with hadoopctl). Default : false");
 options.addOption("f", "log_file_folder", true,
 		  "Default location where logs for rolling restart should be stored. Default : /tmp");
 
@@ -105,6 +107,9 @@ if (cmd.hasOption('c')) {
 }
 if (cmd.hasOption('h')) {
   rollingRestartArgs += " -h " + cmd.getOptionValue('h');
+}
+if (cmd.hasOption('o')) {
+  rollingRestartArgs += " -o " + cmd.getOptionValue('o');
 }
 if (cmd.hasOption('f')) {
   logsFolder = cmd.getOptionValue('f');
