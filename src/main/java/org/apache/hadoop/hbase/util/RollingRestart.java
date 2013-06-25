@@ -330,13 +330,18 @@ public class RollingRestart {
     LOG.info("Setup Complete");
   }
 
-  public void clear() {
+  public void clear(boolean drainAndRestartOnly) {
 
     for (RegionChecker r : this.regionCheckers) {
       r.stop();
       r.printInfo();
     }
     this.regionCheckers.clear();
+
+    if (drainAndRestartOnly) {
+      LOG.warn("Not removing the regionserver from the blacklist.");
+      return;
+    }
 
     try {
       admin.getMaster().clearBlacklistedServer(
@@ -535,7 +540,7 @@ public class RollingRestart {
     Logger.getLogger("org.apache.hadoop.hbase").setLevel(Level.INFO);
 
     if (cmd.hasOption("c")) {
-      rr.clear();
+      rr.clear(false);
       return;
     }
 
@@ -572,9 +577,7 @@ public class RollingRestart {
          default:
        }
     } finally {
-      if (!drainAndStopOnly) {
-        rr.clear();
-      }
+      rr.clear(drainAndStopOnly);
     }
   }
 }
