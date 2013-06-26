@@ -108,7 +108,7 @@ public abstract class Compactor {
   /** The sole reason this class exists is that java has no ref/out/pointer parameters. */
   protected static class FileDetails {
     /** Maximum key count after compaction (for blooms) */
-    public int maxKeyCount = 0;
+    public long maxKeyCount = 0;
     /** Earliest put timestamp if major compaction */
     public long earliestPutTs = HConstants.LATEST_TIMESTAMP;
     /** The last key in the files we're compacting. */
