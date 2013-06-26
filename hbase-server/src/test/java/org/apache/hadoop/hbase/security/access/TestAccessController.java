@@ -238,7 +238,8 @@ public class TestAccessController {
       try {
         user.runAs(action);
       } catch (AccessDeniedException ade) {
-        fail("Expected action to pass for user '" + user.getShortName() + "' but was denied");
+        fail("Expected action to pass for user '" + user.getShortName() + "' but was denied: " +
+          ade.toString());
       }
     }
   }
