@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
   <groupId>org.apache.hbase</groupId>
   <artifactId>hbase</artifactId>
@@ -233,6 +233,27 @@
     <pluginManagement>
       <plugins>
         <plugin>
+          <groupId>org.jacoco</groupId>
+          <artifactId>jacoco-maven-plugin</artifactId>
+          <!-- <version>0.6.4-SNAPSHOT</version> -->
+          <version>0.6.2.201302030002</version>
+          <executions>
+            <execution>
+              <id>prepare-agent</id>
+              <goals>
+                <goal>prepare-agent</goal>
+              </goals>
+            </execution>
+            <execution>
+              <id>report</id>
+              <phase>prepare-package</phase>
+              <goals>
+                <goal>report</goal>
+              </goals>
+            </execution>
+          </executions>
+        </plugin>
+        <plugin>
           <artifactId>maven-compiler-plugin</artifactId>
           <version>2.1</version>
           <configuration>
@@ -261,6 +282,9 @@
             <forkedProcessTimeoutInSeconds>900</forkedProcessTimeoutInSeconds>
             <argLine>-enableassertions -Xmx1024m</argLine>
             <redirectTestOutputToFile>true</redirectTestOutputToFile>
+            <systemPropertyVariables>
+              <jacoco-agent.destfile>target/jacoco.exec</jacoco-agent.destfile>
+            </systemPropertyVariables>
           </configuration>
         </plugin>
         <plugin>
@@ -301,8 +325,11 @@
         </includes>
       </resource>
     </resources>
-
     <plugins>
+      <plugin>
+        <groupId>org.jacoco</groupId>
+        <artifactId>jacoco-maven-plugin</artifactId>
+      </plugin>
       <plugin>
         <artifactId>maven-assembly-plugin</artifactId>
         <!-- THIS might not be doable
@@ -371,6 +398,7 @@
             <exclude>**/SoftValueSortedMapTest.java</exclude>
             <exclude>**/*$*</exclude>
           </excludes>
+          <argLine>${argLine}</argLine>
         </configuration>
       </plugin>
       <plugin>
@@ -902,7 +930,7 @@
         </reportSets>
 
       </plugin>
-      <!-- Disabled for now.
+      
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-pmd-plugin</artifactId>
@@ -926,7 +954,7 @@
           <xmlOutput>true</xmlOutput>
         </configuration>
       </plugin>
-      -->
+      
       <plugin>
         <artifactId>maven-site-plugin</artifactId>
         <version>2.1</version>
