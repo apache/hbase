@@ -1049,12 +1049,13 @@ possible configurations would overwhelm and obscure the important.
   </property>
   <property>
     <name>hbase.lease.recovery.dfs.timeout</name>
-    <value>61000</value>
+    <value>64000</value>
     <description>
-        How long between dfs recover lease invocations. Should be just larger than how long
-        it takes the namenode to timeout trying to reach a datanode; usually
-        dfs.socket.timeout.  If HBase asked hdfs its cluster configs, we would not need
-        this config.  See the end of HBASE-8389 for more.
+        How long between dfs recover lease invocations. Should be larger than the sum of
+        the time it takes for the namenode to issue a block recovery command as part of
+        datanode; dfs.heartbeat.interval and the time it takes for the primary
+        datanode, performing block recovery to timeout on a dead datanode; usually
+        dfs.socket.timeout. See the end of HBASE-8389 for more.
     </description>
   </property>
 </configuration>
