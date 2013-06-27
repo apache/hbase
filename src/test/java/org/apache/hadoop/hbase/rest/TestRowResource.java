@@ -667,6 +667,23 @@ public class TestRowResource {
     }
   }
 
+  @Test
+  public void testInvalidCheckParam() throws IOException, JAXBException {
+    CellSetModel cellSetModel = new CellSetModel();
+    RowModel rowModel = new RowModel(ROW_1);
+    rowModel.addCell(new CellModel(Bytes.toBytes(COLUMN_1),
+      Bytes.toBytes(VALUE_1)));
+    cellSetModel.addRow(rowModel);
+    StringWriter writer = new StringWriter();
+    marshaller.marshal(cellSetModel, writer);
+
+    final String path = "/" + TABLE + "/" + ROW_1 + "/" + COLUMN_1 + "?check=blah";
+
+    Response response = client.put(path, Constants.MIMETYPE_XML,
+      Bytes.toBytes(writer.toString()));
+    assertEquals(response.getCode(), 400);
+  }
+
   @org.junit.Rule
   public org.apache.hadoop.hbase.ResourceCheckerJUnitRule cu =
     new org.apache.hadoop.hbase.ResourceCheckerJUnitRule();

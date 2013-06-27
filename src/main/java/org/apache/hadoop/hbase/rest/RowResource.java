@@ -181,7 +181,9 @@ public class RowResource extends ResourceBase {
     } else if (CHECK_DELETE.equalsIgnoreCase(check)) {
       return checkAndDelete(model);
     } else if (check != null && check.length() > 0) {
-      LOG.warn("Unknown check value: " + check + ", ignored");
+      return Response.status(Response.Status.BAD_REQUEST)
+        .type(MIMETYPE_TEXT).entity("Invalid check value '" + check + "'" + CRLF)
+        .build();
     }
 
     HTablePool pool = servlet.getTablePool();
