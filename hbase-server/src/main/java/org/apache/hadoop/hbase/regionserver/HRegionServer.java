@@ -978,6 +978,10 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
 
   void tryRegionServerReport(long reportStartTime, long reportEndTime)
   throws IOException {
+    if (this.rssStub == null) {
+      // the current server is stopping.
+      return;
+    }
     ClusterStatusProtos.ServerLoad sl = buildServerLoad(reportStartTime, reportEndTime);
     try {
       RegionServerReportRequest.Builder request = RegionServerReportRequest.newBuilder();
