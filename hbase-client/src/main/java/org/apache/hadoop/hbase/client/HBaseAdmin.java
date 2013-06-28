@@ -181,7 +181,8 @@ public class HBaseAdmin implements Abortable, Closeable {
     this.connection = connection;
 
     this.pause = this.conf.getLong("hbase.client.pause", 1000);
-    this.numRetries = this.conf.getInt("hbase.client.retries.number", 10);
+    this.numRetries = this.conf.getInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER,
+        HConstants.DEFAULT_HBASE_CLIENT_RETRIES_NUMBER);
     this.retryLongerMultiplier = this.conf.getInt(
         "hbase.client.retries.longer.multiplier", 10);
   }

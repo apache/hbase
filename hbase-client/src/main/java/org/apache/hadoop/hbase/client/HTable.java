@@ -806,6 +806,10 @@ public class HTable implements HTableInterface {
       }
 
       if (synchronous || ap.hasError()) {
+        if (ap.hasError() && LOG.isDebugEnabled()) {
+          LOG.debug(Bytes.toString(tableName) + ": One or more of the operations have failed -" +
+              " waiting for all operation in progress to finish (successfully or not)");
+        }
         ap.waitUntilDone();
       }
 
