@@ -410,8 +410,8 @@ class AsyncProcess<CResult> {
             try {
               res = callable.withoutRetries();
             } catch (IOException e) {
-              LOG.warn("The call to the RS failed, we don't know where we stand. regionName="
-                  + regionName, e);
+              LOG.warn("The call to the RS failed, we don't know where we stand. location="
+                  + loc, e);
               resubmitAll(initialActions, multi, loc, numAttempt + 1, e, errorsByServer);
               return;
             }
@@ -430,7 +430,7 @@ class AsyncProcess<CResult> {
         //  this a little.
         decTaskCounters(regionName);
         LOG.warn("The task was rejected by the pool. This is unexpected. " +
-            "regionName=" + regionName, ree);
+            "location=" + loc, ree);
         // We're likely to fail again, but this will increment the attempt counter, so it will
         //  finish.
         resubmitAll(initialActions, multi, loc, numAttempt + 1, ree, errorsByServer);
@@ -515,7 +515,13 @@ class AsyncProcess<CResult> {
       }
     }
 
-    submit(initialActions, toReplay, numAttempt, true, errorsByServer);
+    if (toReplay.isEmpty()) {
+      LOG.warn("Attempt #" + numAttempt + "/" + numTries + " failed for all (" +
+          initialActions.size() + ") operations on server " + location.getServerName() +
+          " NOT resubmitting, tableName=" + Bytes.toString(tableName) + ", location=" + location);
+    } else {
+      submit(initialActions, toReplay, numAttempt, true, errorsByServer);
+    }
   }
 
   /**
@@ -533,8 +539,9 @@ class AsyncProcess<CResult> {
                                   HConnectionManager.ServerErrorTracker errorsByServer) {
 
     if (responses == null) {
-      LOG.info("Attempt #" + numAttempt + " failed for all operations on server " +
-          location.getServerName() + " , trying to resubmit.");
+      LOG.info("Attempt #" + numAttempt + "/" + numTries + " failed for all operations" +
+          " on server " + location.getServerName() + " , trying to resubmit," +
+          " tableName=" + Bytes.toString(tableName) + ", location=" + location);
       resubmitAll(initialActions, rsActions, location, numAttempt + 1, null, errorsByServer);
       return;
     }
@@ -587,31 +594,32 @@ class AsyncProcess<CResult> {
     }
 
     if (!toReplay.isEmpty()) {
-      if (numAttempt > 2) {
-        // We use this value to have some logs when we have multiple failures, but not too many
-        //  logs as errors are to be expected wehn region moves, split and so on
-        LOG.debug("Attempt #" + numAttempt + " failed for " + failureCount +
-            " operations on server " + location.getServerName() + ", resubmitting " +
-            toReplay.size() + ", tableName=" + Bytes.toString(tableName) +
-            ", last exception was: " + throwable);
-      }
       long backOffTime = (errorsByServer != null ?
           errorsByServer.calculateBackoffTime(location, pause) :
           ConnectionUtils.getPauseTime(pause, numAttempt));
+      if (numAttempt > 3 && LOG.isDebugEnabled()) {
+        // We use this value to have some logs when we have multiple failures, but not too many
+        //  logs as errors are to be expected wehn region moves, split and so on
+        LOG.debug("Attempt #" + numAttempt + "/" + numTries + " failed for " + failureCount +
+            " operations on server " + location.getServerName() + ", resubmitting " +
+            toReplay.size() + ", tableName=" + Bytes.toString(tableName) + ", location=" +
+            location + ", last exception was: " + throwable +
+            " - sleeping " + backOffTime + " ms.");
+      }
       try {
         Thread.sleep(backOffTime);
       } catch (InterruptedException e) {
         LOG.warn("Not sent: " + toReplay.size() +
-            " operations,  tableName=" + Bytes.toString(tableName), e);
+            " operations,  tableName=" + Bytes.toString(tableName) + ", location=" + location, e);
         Thread.interrupted();
         return;
       }
 
       submit(initialActions, toReplay, numAttempt + 1, true, errorsByServer);
     } else if (failureCount != 0) {
-      LOG.warn("Attempt #" + numAttempt + " failed for " + failureCount +
+      LOG.warn("Attempt #" + numAttempt + "/" + numTries + " failed for " + failureCount +
           " operations on server " + location.getServerName() + " NOT resubmitting." +
-          ", tableName=" + Bytes.toString(tableName));
+          ", tableName=" + Bytes.toString(tableName) + ", location=" + location);
     }
   }
 
@@ -637,16 +645,16 @@ class AsyncProcess<CResult> {
    * Wait until the async does not have more than max tasks in progress.
    */
   private long waitForMaximumCurrentTasks(int max) throws InterruptedIOException {
-    long lastLog = 0;
+    long lastLog = EnvironmentEdgeManager.currentTimeMillis();
     long currentTasksDone = this.tasksDone.get();
 
     while ((tasksSent.get() - currentTasksDone) > max) {
       long now = EnvironmentEdgeManager.currentTimeMillis();
-      if (now > lastLog + 5000) {
+      if (now > lastLog + 10000) {
         lastLog = now;
-        LOG.info(Bytes.toString(tableName) +
-            ": Waiting for the global number of tasks to be equals or less than " + max +
-            ", currently it's " + this.tasksDone.get());
+        LOG.info(": Waiting for the global number of running tasks to be equals or less than "
+            + max + ", tasksSent=" + tasksSent.get() + ", tasksDone=" + tasksDone.get() +
+            ", currentTasksDone=" + currentTasksDone + ", tableName=" + Bytes.toString(tableName));
       }
       waitForNextTaskDone(currentTasksDone);
       currentTasksDone = this.tasksDone.get();
