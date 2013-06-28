@@ -201,7 +201,8 @@ public class TestMetaScanner {
                 endKey = Bytes.toLong(hri.getEndKey());
               }
               LOG.info("start:" + startKey + " end:" + endKey + " hri:" + hri);
-              Assert.assertTrue(Bytes.equals(lastEndKey, hri.getStartKey()));
+              Assert.assertTrue("lastEndKey=" + Bytes.toString(lastEndKey) + ", startKey=" +
+                Bytes.toString(hri.getStartKey()), Bytes.equals(lastEndKey, hri.getStartKey()));
               lastEndKey = hri.getEndKey();
             }
             Assert.assertTrue(Bytes.equals(lastEndKey, HConstants.EMPTY_END_ROW));
