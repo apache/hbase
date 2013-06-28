@@ -72,6 +72,10 @@ public class SecureClient extends HBaseClient {
   private static final Log LOG =
     LogFactory.getLog("org.apache.hadoop.ipc.SecureClient");
 
+  public static final String IPC_CLIENT_FALLBACK_TO_SIMPLE_AUTH_ALLOWED_KEY =
+      "hbase.ipc.client.fallback-to-simple-auth-allowed";
+  public static final boolean IPC_CLIENT_FALLBACK_TO_SIMPLE_AUTH_ALLOWED_DEFAULT = false;
+
   protected static Map<String,TokenSelector<? extends TokenIdentifier>> tokenHandlers =
       new HashMap<String,TokenSelector<? extends TokenIdentifier>>();
   static {
@@ -173,7 +177,7 @@ public class SecureClient extends HBaseClient {
     private synchronized boolean setupSaslConnection(final InputStream in2,
         final OutputStream out2)
         throws IOException {
-      saslRpcClient = new HBaseSaslRpcClient(authMethod, token, serverPrincipal);
+      saslRpcClient = new HBaseSaslRpcClient(authMethod, token, serverPrincipal, fallbackAllowed);
       return saslRpcClient.saslConnect(in2, out2);
     }
 
@@ -451,6 +455,8 @@ public class SecureClient extends HBaseClient {
     }
   }
 
+  private final boolean fallbackAllowed;
+
   /**
    * Construct an IPC client whose values are of the given {@link org.apache.hadoop.io.Writable}
    * class.
@@ -461,6 +467,12 @@ public class SecureClient extends HBaseClient {
   public SecureClient(Class<? extends Writable> valueClass, Configuration conf,
       SocketFactory factory) {
     super(valueClass, conf, factory);
+    this.fallbackAllowed =
+      conf.getBoolean(IPC_CLIENT_FALLBACK_TO_SIMPLE_AUTH_ALLOWED_KEY,
+        IPC_CLIENT_FALLBACK_TO_SIMPLE_AUTH_ALLOWED_DEFAULT);
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("fallbackAllowed=" + this.fallbackAllowed);
+    }
   }
 
   /**
