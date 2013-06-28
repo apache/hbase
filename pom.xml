@@ -252,6 +252,9 @@
               </goals>
             </execution>
           </executions>
+          <configuration>
+            <skip>${hbase.skip-jacoco}</skip>
+          </configuration>
         </plugin>
         <plugin>
           <artifactId>maven-compiler-plugin</artifactId>
@@ -523,6 +526,7 @@
     </plugins>
   </build>
 
+    <hbase.skip-jacoco>false</hbase.skip-jacoco>
   <properties>
     <compileSource>1.6</compileSource>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
