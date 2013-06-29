@@ -1335,13 +1335,19 @@ public class HLog implements Syncable {
     return outputfiles.size();
   }
 
+
   /**
-   * By acquiring a log sequence ID, we can allow log messages to continue while
-   * we flush the cache.
-   *
    * Acquire a lock so that we do not roll the log between the start and
    * completion of a cache-flush. Otherwise the log-seq-id for the flush will
    * not appear in the correct logfile.
+   */
+  public void startCacheFlush() {
+    this.cacheFlushLock.readLock().lock();
+  }
+
+  /**
+   * By acquiring a log sequence ID, we can allow log messages to continue while
+   * we flush the cache.
    *
    * In this method, by removing the entry in firstSeqWritten for the region
    * being flushed we ensure that the next edit inserted in this region will be
@@ -1354,8 +1360,7 @@ public class HLog implements Syncable {
    * @see #completeCacheFlush(byte[], byte[], long, boolean)
    * @see #abortCacheFlush()
    */
-  public long startCacheFlush(final byte [] regionName) {
-    this.cacheFlushLock.readLock().lock();
+  public long getStartCacheFlushSeqNum(final byte [] regionName) {
     if (this.firstSeqWrittenInSnapshotMemstore.containsKey(regionName)) {
       LOG.warn("Requested a startCacheFlush while firstSeqWrittenInSnapshotMemstore still"
           + " contains " + Bytes.toString(regionName) + " . Did the previous flush fail?"

@@ -420,7 +420,8 @@ public class TestWALReplay {
     }
 
     // Add a cache flush, shouldn't have any effect
-    long logSeqId = wal.startCacheFlush(regionName);
+    wal.startCacheFlush();
+    long logSeqId = wal.getStartCacheFlushSeqNum(regionName);
     wal.completeCacheFlush(regionName, tableName, logSeqId, hri.isMetaRegion());
 
     // Add an edit to another family, should be skipped.

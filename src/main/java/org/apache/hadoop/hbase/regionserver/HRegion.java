@@ -1386,6 +1386,12 @@ public class HRegion implements HeapSize {
     // rows then)
     status.setStatus("Obtaining lock to block concurrent updates");
     long t0, t1;
+
+    if (wal != null) {
+      // We will ask the WAL to avoid rolling the log, until the flush is done.
+      // This may stall. So, doing this before we get the updatesLock.
+        wal.startCacheFlush();
+    }
     this.updatesLock.writeLock().lock();
     t0 = EnvironmentEdgeManager.currentTimeMillis();
     status.setStatus("Preparing to flush by snapshotting stores");
@@ -1395,7 +1401,7 @@ public class HRegion implements HeapSize {
         stores.size());
     try {
       sequenceId = (wal == null)? myseqid :
-        wal.startCacheFlush(this.regionInfo.getRegionName());
+        wal.getStartCacheFlushSeqNum(this.regionInfo.getRegionName());
       completeSequenceId = this.getCompleteCacheFlushSequenceId(sequenceId);
       for (Store s : stores.values()) {
         storeFlushers.add(s.getStoreFlusher(completeSequenceId));

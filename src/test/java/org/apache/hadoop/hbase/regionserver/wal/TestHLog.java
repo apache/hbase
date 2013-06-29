@@ -461,7 +461,8 @@ public class TestHLog  {
         row,Bytes.toBytes(Bytes.toString(row) + "1"), false);
       final byte [] regionName = info.getRegionName();
       log.append(info, tableName, cols, System.currentTimeMillis());
-      long logSeqId = log.startCacheFlush(info.getRegionName());
+      log.startCacheFlush();
+      long logSeqId = log.getStartCacheFlushSeqNum(info.getRegionName());
       log.completeCacheFlush(regionName, tableName, logSeqId, info.isMetaRegion());
       log.close();
       Path filename = log.computeFilename();
@@ -519,7 +520,8 @@ public class TestHLog  {
       HRegionInfo hri = new HRegionInfo(new HTableDescriptor(tableName),
           HConstants.EMPTY_START_ROW, HConstants.EMPTY_END_ROW);
       log.append(hri, tableName, cols, System.currentTimeMillis());
-      long logSeqId = log.startCacheFlush(hri.getRegionName());
+      log.startCacheFlush();
+      long logSeqId = log.getStartCacheFlushSeqNum(hri.getRegionName());
       log.completeCacheFlush(hri.getRegionName(), tableName, logSeqId, false);
       log.close();
       Path filename = log.computeFilename();
@@ -583,7 +585,8 @@ public class TestHLog  {
     // Flush the first region, we expect to see the first two files getting
     // archived
     addEdits(log, hri, tableName, 1);
-    long seqId = log.startCacheFlush(hri.getRegionName());
+    log.startCacheFlush();
+    long seqId = log.getStartCacheFlushSeqNum(hri.getRegionName());
     log.completeCacheFlush(hri.getRegionName(), tableName, seqId, false);
     log.rollWriter();
     assertEquals(2, log.getNumLogFiles());
@@ -591,7 +594,8 @@ public class TestHLog  {
     // Flush the second region, which removes all the remaining output files
     // since the oldest was completely flushed.
     addEdits(log, hri2, tableName2, 1);
-    seqId = log.startCacheFlush(hri2.getRegionName());
+    log.startCacheFlush();
+    seqId = log.getStartCacheFlushSeqNum(hri2.getRegionName());
     log.completeCacheFlush(hri2.getRegionName(), tableName2, seqId, false);
     log.rollWriter();
     assertEquals(0, log.getNumLogFiles());
