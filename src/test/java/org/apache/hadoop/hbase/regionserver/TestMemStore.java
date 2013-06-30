@@ -20,6 +20,8 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
+import java.lang.management.ManagementFactory;
+import java.lang.management.MemoryMXBean;
 import java.rmi.UnexpectedException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -32,6 +34,7 @@ import junit.framework.TestCase;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
@@ -475,7 +478,7 @@ public class TestMemStore extends TestCase {
   }
 
   public void testMultipleVersionsSimple() throws Exception {
-    MemStore m = new MemStore(KeyValue.COMPARATOR);
+    MemStore m = new MemStore(HBaseConfiguration.create() , KeyValue.COMPARATOR);
     byte [] row = Bytes.toBytes("testRow");
     byte [] family = Bytes.toBytes("testFamily");
     byte [] qf = Bytes.toBytes("testQualifier");
@@ -495,7 +498,7 @@ public class TestMemStore extends TestCase {
   }
 
   public void testBinary() throws IOException {
-    MemStore mc = new MemStore(KeyValue.ROOT_COMPARATOR);
+    MemStore mc = new MemStore(HBaseConfiguration.create(), KeyValue.ROOT_COMPARATOR);
     final int start = 43;
     final int end = 46;
     for (int k = start; k <= end; k++) {
@@ -763,7 +766,6 @@ public class TestMemStore extends TestCase {
     assertEquals(delete, memstore.kvset.first());
   }
 
-
   ////////////////////////////////////
   //Test for timestamps
   ////////////////////////////////////
@@ -794,6 +796,52 @@ public class TestMemStore extends TestCase {
      * timestamp range optimization is on*/
     //scan.setTimeRange(28, 42);
     //assertTrue(!memstore.shouldSeek(scan));
+  }
+
+  ////////////////////////////////////
+  //Test for OOM with MSLAB
+  ////////////////////////////////////
+
+  /**
+   * Test a pathological pattern that shows why we can't currently
+   * use the MSLAB for upsert workloads. This test inserts data
+   * in the following pattern:
+   *
+   * - row0001 through row1000 (fills up one 2M Chunk)
+   * - row0002 through row1001 (fills up another 2M chunk, leaves one reference
+   *   to the first chunk
+   * - row0003 through row1002 (another chunk, another dangling reference)
+   *
+   * This causes OOME pretty quickly if we use MSLAB for upsert
+   * since each 2M chunk is held onto by a single reference.
+   */
+  public void testUpsertMSLAB() throws Exception {
+    Configuration conf = HBaseConfiguration.create();
+    conf.setBoolean(MemStore.USE_MSLAB_KEY, true);
+    memstore = new MemStore(conf, KeyValue.COMPARATOR);
+
+    int ROW_SIZE = 2048;
+    byte[] qualifier = new byte[ROW_SIZE - 4];
+
+    MemoryMXBean bean = ManagementFactory.getMemoryMXBean();
+    for (int i = 0; i < 3; i++) { System.gc(); }
+    long usageBefore = bean.getHeapMemoryUsage().getUsed();
+
+    long size = 0;
+    long ts=0;
+
+    for (int newValue = 0; newValue < 1000; newValue++) {
+      for (int row = newValue; row < newValue + 1000; row++) {
+        byte[] rowBytes = Bytes.toBytes(row);
+        size += memstore.updateColumnValue(rowBytes, FAMILY, qualifier, newValue, ++ts);
+      }
+    }
+    System.out.println("Wrote " + ts + " vals");
+    for (int i = 0; i < 3; i++) { System.gc(); }
+    long usageAfter = bean.getHeapMemoryUsage().getUsed();
+    System.out.println("Memory used: " + (usageAfter - usageBefore)
+        + " (heapsize: " + memstore.heapSize() +
+        " size: " + size + ")");
   }
 
 

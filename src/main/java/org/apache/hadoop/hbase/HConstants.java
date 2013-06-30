@@ -790,6 +790,26 @@ public final class HConstants {
   public static final String HBASE_ENABLE_QOS_KEY = "hbase.enable.qos";
   public static final String HBASE_ENABLE_SYNCFILERANGE_THROTTLING_KEY = "hbase.enable.syncfilerange.throttling";
 
+  /*
+   * MSLAB Constants
+   */
+  public final static String MSLAB_CHUNK_POOL_MAX_SIZE_KEY = "hbase.hregion.memstore.chunkpool.maxsize";
+  public final static String MSLAB_CHUNK_POOL_INITIAL_SIZE_KEY = "hbase.hregion.memstore.chunkpool.initialsize";
+  public final static float MSLAB_POOL_MAX_SIZE_DEFAULT = 0.0f;
+  public final static float MSLAB_POOL_INITIAL_SIZE_DEFAULT = 0.0f;
+
+  public final static String MSLAB_CHUNK_SIZE_KEY = "hbase.hregion.memstore.mslab.chunksize";
+  public final static int MSLAB_CHUNK_SIZE_DEFAULT = 2 * 1024 * 1024;
+
+  public final static String MSLAB_MAX_ALLOC_KEY = "hbase.hregion.memstore.mslab.max.allocation";
+  public final static int MSLAB_MAX_ALLOC_DEFAULT = 256  * 1024; // allocs bigger than this don't go through allocator
+
+  public final static String MSLAB_MAX_SIZE_KEY = "hbase.hregion.memstore.mslab.max.size";
+  public final static float MSLAB_MAX_SIZE_DEFAULT = 1.25f; // Stop using SLAB if larger than this percentage of memstore size
+
+  public final static float MSLAB_PCT_LOWER_LIMIT = 0.0f;
+  public final static float MSLAB_PCT_UPPER_LIMIT = 2.0f;
+
   private HConstants() {
     // Can't be instantiated with this constructor.
   }

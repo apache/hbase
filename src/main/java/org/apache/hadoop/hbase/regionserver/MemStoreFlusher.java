@@ -68,9 +68,9 @@ class MemStoreFlusher implements FlushRequester {
   protected final long globalMemStoreLimit;
   protected final long globalMemStoreLimitLowMark;
 
-  private static final float DEFAULT_UPPER = 0.4f;
+  protected static final float DEFAULT_UPPER = 0.4f;
   private static final float DEFAULT_LOWER = 0.25f;
-  private static final String UPPER_KEY =
+  protected static final String UPPER_KEY =
     "hbase.regionserver.global.memstore.upperLimit";
   private static final String LOWER_KEY =
     "hbase.regionserver.global.memstore.lowerLimit";

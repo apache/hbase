@@ -188,7 +188,7 @@ public class Store extends SchemaConfigured implements HeapSize,
    * @param region
    * @param family HColumnDescriptor for this column
    * @param fs file system object
-   * @param conf configuration object
+   * @param confParam configuration object
    * failed.  Can be null.
    * @throws IOException
    */
@@ -250,7 +250,7 @@ public class Store extends SchemaConfigured implements HeapSize,
     LOG.info("time to purge deletes set to " + timeToPurgeDeletes +
         "ms in store " + this);
 
-    this.memstore = new MemStore(this.comparator);
+    this.memstore = new MemStore(conf, this.comparator);
     this.storeNameStr = getColumnFamilyName();
 
     // Setting up cache configuration for this family
@@ -698,7 +698,9 @@ public class Store extends SchemaConfigured implements HeapSize,
 
   /**
    * Snapshot this stores memstore.  Call before running
-   * {@link #flushCache(long, SortedSet<KeyValue>)} so it has some work to do.
+   * {@link #flushCache(long, java.util.SortedSet, TimeRangeTracker,
+   *                    org.apache.hadoop.hbase.monitoring.MonitoredTask)}
+   * so it has some work to do.
    */
   void snapshot() {
     this.memstore.snapshot();
@@ -999,18 +1001,18 @@ public class Store extends SchemaConfigured implements HeapSize,
    * Existing StoreFiles are not destroyed until the new compacted StoreFile is
    * completely written-out to disk.
    *
-   * @param CompactionRequest
+   * @param compactionRequest
    *          compaction details obtained from requestCompaction()
    * @throws IOException
    */
-  void compact(CompactionRequest cr) throws IOException {
-    if (cr == null || cr.getFiles().isEmpty()) {
+  void compact(CompactionRequest compactionRequest) throws IOException {
+    if (compactionRequest == null || compactionRequest.getFiles().isEmpty()) {
       return;
     }
-    Preconditions.checkArgument(cr.getStore().toString()
+    Preconditions.checkArgument(compactionRequest.getStore().toString()
         .equals(this.toString()));
 
-    List<StoreFile> filesToCompact = cr.getFiles();
+    List<StoreFile> filesToCompact = compactionRequest.getFiles();
 
     synchronized (filesCompacting) {
       // sanity check: we're compacting files that this store knows about
@@ -1023,31 +1025,32 @@ public class Store extends SchemaConfigured implements HeapSize,
 
     // Ready to go. Have list of files to compact.
     MonitoredTask status = TaskMonitor.get().createStatus(
-        (cr.isMajor() ? "Major " : "") + "Compaction (ID: " + cr.getCompactSelectionID() + ") of "
+        (compactionRequest.isMajor() ? "Major " : "")
+        + "Compaction (ID: " + compactionRequest.getCompactSelectionID() + ") of "
         + this.storeNameStr + " on "
         + this.region.getRegionInfo().getRegionNameAsString());
-    LOG.info("Starting compaction (ID: " + cr.getCompactSelectionID() + ") of "
+    LOG.info("Starting compaction (ID: " + compactionRequest.getCompactSelectionID() + ") of "
         + filesToCompact.size() + " file(s) in " + this.storeNameStr + " of "
         + this.region.getRegionInfo().getRegionNameAsString()
         + " into " + region.getTmpDir() + ", seqid=" + maxId + ", totalSize="
-        + StringUtils.humanReadableInt(cr.getSize()));
+        + StringUtils.humanReadableInt(compactionRequest.getSize()));
 
     StoreFile sf = null;
     try {
       status.setStatus("Compacting " + filesToCompact.size() + " file(s)");
       long compactionStartTime = EnvironmentEdgeManager.currentTimeMillis();
-      StoreFile.Writer writer = compactStores(filesToCompact, cr.isMajor(), maxId);
+      StoreFile.Writer writer = compactStores(filesToCompact, compactionRequest.isMajor(), maxId);
       // Move the compaction into place.
       sf = completeCompaction(filesToCompact, writer);
 
       // Report that the compaction is complete.
       status.markComplete("Completed compaction");
-      LOG.info("Completed" + (cr.isMajor() ? " major " : " ")
-          + "compaction (ID: " + cr.getCompactSelectionID() + ") of "
+      LOG.info("Completed" + (compactionRequest.isMajor() ? " major " : " ")
+          + "compaction (ID: " + compactionRequest.getCompactSelectionID() + ") of "
           + filesToCompact.size() + " file(s) in " + this.storeNameStr + " of "
           + this.region.getRegionInfo().getRegionNameAsString()
           + "; This selection was in queue for "
-          + StringUtils.formatTimeDiff(compactionStartTime, cr.getSelectionTime()) + ", and took "
+          + StringUtils.formatTimeDiff(compactionStartTime, compactionRequest.getSelectionTime()) + ", and took "
           + StringUtils.formatTimeDiff(EnvironmentEdgeManager.currentTimeMillis(),
                                        compactionStartTime)
           + " to execute. New storefile name="

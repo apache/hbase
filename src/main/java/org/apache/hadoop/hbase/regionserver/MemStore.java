@@ -33,6 +33,8 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Scan;
@@ -54,6 +56,12 @@ import org.apache.hadoop.hbase.util.CollectionBackedScanner;
  */
 public class MemStore implements HeapSize {
   private static final Log LOG = LogFactory.getLog(MemStore.class);
+
+  static final String USE_MSLAB_KEY =
+      "hbase.hregion.memstore.mslab.enabled";
+  private static final boolean USE_MSLAB_DEFAULT = false;
+
+  private Configuration conf;
 
   // MemStore.  Use a KeyValueSkipListSet rather than SkipListSet because of the
   // better semantics.  The Map will overwrite if passed a key it already had
@@ -84,18 +92,28 @@ public class MemStore implements HeapSize {
   TimeRangeTracker timeRangeTracker;
   TimeRangeTracker snapshotTimeRangeTracker;
 
+  MemStoreChunkPool chunkPool;
+  volatile MemStoreLAB allocator;
+  volatile MemStoreLAB snapshotAllocator;
+
+  // Keep track of the total size of KVs not just the
+  // bytes stored in the MSLAB
+  private final AtomicLong successfullyAllocatedKvBytes;
+
   /**
    * Default constructor. Used for tests.
    */
   public MemStore() {
-    this(KeyValue.COMPARATOR);
+    this(HBaseConfiguration.create(), KeyValue.COMPARATOR);
   }
 
   /**
    * Constructor.
    * @param c Comparator
    */
-  public MemStore(final KeyValue.KVComparator c) {
+  public MemStore(final Configuration conf,
+      final KeyValue.KVComparator c) {
+    this.conf = conf;
     this.comparator = c;
     this.comparatorIgnoreTimestamp =
       this.comparator.getComparatorIgnoringTimestamps();
@@ -107,6 +125,17 @@ public class MemStore implements HeapSize {
     this.size = new AtomicLong(DEEP_OVERHEAD);
     this.numDeletesInKvSet = new AtomicLong(0);
     this.numDeletesInSnapshot = new AtomicLong(0);
+
+    this.successfullyAllocatedKvBytes = new AtomicLong(0);
+
+    if (conf.getBoolean(USE_MSLAB_KEY, USE_MSLAB_DEFAULT)) {
+      this.chunkPool = MemStoreChunkPool.getPool(conf);
+      this.allocator = new MemStoreLAB(conf, chunkPool);
+    } else {
+      this.allocator = null;
+      this.chunkPool = null;
+    }
+
   }
 
   void dump() {
@@ -137,6 +166,13 @@ public class MemStore implements HeapSize {
           this.kvset = new KeyValueSkipListSet(this.comparator);
           this.snapshotTimeRangeTracker = this.timeRangeTracker;
           this.timeRangeTracker = new TimeRangeTracker();
+
+          this.snapshotAllocator = this.allocator;
+          // Reset allocator so we get a fresh buffer for the new memstore
+          if (allocator != null) {
+            this.allocator = new MemStoreLAB(conf, chunkPool);
+          }
+
           // Reset heap to not include any keys
           this.size.set(DEEP_OVERHEAD);
           this.numDeletesInSnapshot = numDeletesInKvSet;
@@ -168,6 +204,7 @@ public class MemStore implements HeapSize {
    */
   void clearSnapshot(final SortedSet<KeyValue> ss)
   throws UnexpectedException {
+    MemStoreLAB tmpAllocator = null;
     this.lock.writeLock().lock();
     try {
       if (this.snapshot != ss) {
@@ -180,8 +217,15 @@ public class MemStore implements HeapSize {
         this.snapshot = new KeyValueSkipListSet(this.comparator);
         this.snapshotTimeRangeTracker = new TimeRangeTracker();
       }
+      if (this.snapshotAllocator != null) {
+        tmpAllocator = this.snapshotAllocator;
+        this.snapshotAllocator = null;
+      }
     } finally {
       this.lock.writeLock().unlock();
+    }
+    if (tmpAllocator != null) {
+      tmpAllocator.close();
     }
   }
 
@@ -194,10 +238,11 @@ public class MemStore implements HeapSize {
     long s = -1;
     this.lock.readLock().lock();
     try {
-      s = heapSizeChange(kv, this.kvset.add(kv));
-      timeRangeTracker.includeTimestamp(kv);
+      KeyValue toAdd = maybeCloneWithAllocator(kv);
+      s = heapSizeChange(toAdd, this.kvset.add(toAdd));
+      timeRangeTracker.includeTimestamp(toAdd);
       this.size.addAndGet(s);
-      if (kv.isDelete()) {
+      if (toAdd.isDelete()) {
         this.numDeletesInKvSet.incrementAndGet();
       }
     } finally {
@@ -206,25 +251,33 @@ public class MemStore implements HeapSize {
     return s;
   }
 
+  private KeyValue maybeCloneWithAllocator(KeyValue kv) {
+    if (allocator == null) {
+      return kv;
+    }
+
+    int len = kv.getLength();
+    MemStoreLAB.Allocation alloc = allocator.allocateBytes(len);
+    if (alloc == null) {
+      // The allocator decided not to do anything.
+      return kv;
+    }
+    System.arraycopy(kv.getBuffer(), kv.getOffset(), alloc.getData(), alloc.getOffset(), len);
+    KeyValue newKv = new KeyValue(alloc.getData(), alloc.getOffset(), len);
+    newKv.setMemstoreTS(kv.getMemstoreTS());
+    this.successfullyAllocatedKvBytes.addAndGet(newKv.heapSize());
+    return newKv;
+
+  }
+
+
   /**
    * Write a delete
    * @param delete
    * @return approximate size of the passed key and value.
    */
   long delete(final KeyValue delete) {
-    long s = 0;
-    this.lock.readLock().lock();
-    try {
-      s += heapSizeChange(delete, this.kvset.add(delete));
-      timeRangeTracker.includeTimestamp(delete);
-    } finally {
-      this.lock.readLock().unlock();
-    }
-    if (delete.isDelete()) {
-      this.numDeletesInKvSet.incrementAndGet();
-    }
-    this.size.addAndGet(s);
-    return s;
+    return add(delete);
   }
 
   /**
@@ -524,6 +577,10 @@ public class MemStore implements HeapSize {
     volatile KeyValueSkipListSet kvsetAtCreation;
     volatile KeyValueSkipListSet snapshotAtCreation;
 
+    // The allocator and snapshot allocator at the time of creating this scanner
+    volatile MemStoreLAB allocatorAtCreation;
+    volatile MemStoreLAB snapshotAllocatorAtCreation;
+
     /*
     Some notes...
 
@@ -547,6 +604,15 @@ public class MemStore implements HeapSize {
 
       kvsetAtCreation = kvset;
       snapshotAtCreation = snapshot;
+
+      if (allocator != null) {
+        this.allocatorAtCreation = allocator;
+        this.allocatorAtCreation.incScannerCount();
+      }
+      if (snapshotAllocator != null) {
+        this.snapshotAllocatorAtCreation = snapshotAllocator;
+        this.snapshotAllocatorAtCreation.incScannerCount();
+      }
 
       //DebugPrint.println(" MS new@" + hashCode());
     }
@@ -664,6 +730,15 @@ public class MemStore implements HeapSize {
 
       this.kvsetIt = null;
       this.snapshotIt = null;
+
+      if (allocatorAtCreation != null) {
+        this.allocatorAtCreation.decScannerCount();
+        this.allocatorAtCreation = null;
+      }
+      if (snapshotAllocatorAtCreation != null) {
+        this.snapshotAllocatorAtCreation.decScannerCount();
+        this.snapshotAllocatorAtCreation = null;
+      }
     }
 
     /**
@@ -719,7 +794,7 @@ public class MemStore implements HeapSize {
   }
 
   /**
-   * Get the entire heap usage for this MemStore not including keys in the
+   * Get the entire heap successfullyAllocatedBytes for this MemStore not including keys in the
    * snapshot.
    */
   @Override
@@ -728,7 +803,7 @@ public class MemStore implements HeapSize {
   }
 
   /**
-   * Get the heap usage of KVs in this MemStore.
+   * Get the heap successfullyAllocatedBytes of KVs in this MemStore.
    */
   public long keySize() {
     return heapSize() - DEEP_OVERHEAD;
