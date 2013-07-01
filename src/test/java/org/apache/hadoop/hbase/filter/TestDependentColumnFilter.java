@@ -243,6 +243,31 @@ public class TestDependentColumnFilter extends TestCase {
       assertEquals("check cell retention", 2, accepted.size());
   }
 
+  /**
+   * Test for HBASE-8794. Avoid NullPointerException in DependentColumnFilter.toString().
+   */
+  public void testToStringWithNullComparator() {
+    // Test constructor that implicitly sets a null comparator
+    Filter filter = new DependentColumnFilter(FAMILIES[0], QUALIFIER);
+    assertNotNull(filter.toString());
+    assertTrue("check string contains 'null' as compatator is null",
+      filter.toString().contains("null"));
+
+    // Test constructor with explicit null comparator
+    filter = new DependentColumnFilter(FAMILIES[0], QUALIFIER, true, CompareOp.EQUAL, null);
+    assertNotNull(filter.toString());
+    assertTrue("check string contains 'null' as compatator is null",
+      filter.toString().contains("null"));
+  }
+
+  public void testToStringWithNonNullComparator() {
+    Filter filter =
+        new DependentColumnFilter(FAMILIES[0], QUALIFIER, true, CompareOp.EQUAL,
+            new BinaryComparator(MATCH_VAL));
+    assertNotNull(filter.toString());
+    assertTrue("check string contains comparator value", filter.toString().contains("match"));
+  }
+
   @org.junit.Rule
   public org.apache.hadoop.hbase.ResourceCheckerJUnitRule cu =
     new org.apache.hadoop.hbase.ResourceCheckerJUnitRule();
