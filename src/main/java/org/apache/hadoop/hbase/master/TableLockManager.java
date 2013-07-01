@@ -83,8 +83,6 @@ public class TableLockManager {
    * @param tableName Table to lock
    * @param purpose Human readable reason for locking the table
    * @return True if the table was locked before the timeout false otherwise
-   * @throws TableLockTimeoutException If unable to acquire a lock within a
-   *                                   specified time period (if any)
    * @throws IOException If unrecoverable ZooKeeper error occurs
    */
   public boolean tryLockTable(byte[] tableName, String purpose, long timeout)
@@ -116,16 +114,12 @@ public class TableLockManager {
    * Lock a table, given a purpose.
    * @param tableName Table to lock
    * @param purpose Human readable reason for locking the table
-   * @throws TableLockTimeoutException If unable to acquire a lock within a
-   *                                   specified time period (if any)
    * @throws IOException If unrecoverable ZooKeeper error occurs
    */
   public void lockTable(byte[] tableName, String purpose)
   throws IOException {
-    if(!tryLockTable(tableName, purpose, lockTimeoutMs)) {
-      throw new TableLockTimeoutException("Timed out acquiring " +
-          "lock for " + Bytes.toString(tableName) + " after " + lockTimeoutMs + " ms.");
-    }
+    long waitIndefinitely = -1;
+    tryLockTable(tableName, purpose, waitIndefinitely);
   }
 
   private HLock createTableLock(String tableName, String purpose) {
