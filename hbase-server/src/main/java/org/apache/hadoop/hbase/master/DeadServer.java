@@ -26,6 +26,7 @@ import org.apache.hadoop.hbase.util.Pair;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -159,6 +160,16 @@ public class DeadServer {
 
     Collections.sort(res, ServerNameDeathDateComparator);
     return res;
+  }
+  
+  /**
+   * Get the time when a server died
+   * @param deadServerName the dead server name
+   * @return the date when the server died 
+   */
+  public synchronized Date getTimeOfDeath(final ServerName deadServerName){
+    Long time = deadServers.get(deadServerName);
+    return time == null ? null : new Date(time);
   }
 
   private static Comparator<Pair<ServerName, Long>> ServerNameDeathDateComparator =

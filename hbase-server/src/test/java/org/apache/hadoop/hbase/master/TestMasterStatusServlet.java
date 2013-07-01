@@ -70,10 +70,13 @@ public class TestMasterStatusServlet {
     Mockito.doReturn(FAKE_HOST).when(master).getServerName();
     Mockito.doReturn(conf).when(master).getConfiguration();
 
+    //Fake DeadServer
+    DeadServer deadServer = Mockito.mock(DeadServer.class);
     // Fake serverManager
     ServerManager serverManager = Mockito.mock(ServerManager.class);
     Mockito.doReturn(1.0).when(serverManager).getAverageLoad();
     Mockito.doReturn(serverManager).when(master).getServerManager();
+    Mockito.doReturn(deadServer).when(serverManager).getDeadServers();
 
     // Fake AssignmentManager and RIT
     AssignmentManager am = Mockito.mock(AssignmentManager.class);
@@ -85,6 +88,7 @@ public class TestMasterStatusServlet {
     Mockito.doReturn(rs).when(am).getRegionStates();
     Mockito.doReturn(regionsInTransition).when(rs).getRegionsInTransition();
     Mockito.doReturn(am).when(master).getAssignmentManager();
+    Mockito.doReturn(serverManager).when(master).getServerManager();
 
     // Fake ZKW
     ZooKeeperWatcher zkw = Mockito.mock(ZooKeeperWatcher.class);

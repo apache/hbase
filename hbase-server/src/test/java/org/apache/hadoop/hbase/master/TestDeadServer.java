@@ -27,6 +27,7 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 import java.util.List;
+import java.util.Set;
 
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -62,6 +63,10 @@ public class TestDeadServer {
     assertFalse(ds.cleanPreviousInstance(deadServer));
     ds.add(deadServer);
     assertTrue(ds.isDeadServer(deadServer));
+    Set<ServerName> deadServerNames = ds.copyServerNames();
+    for (ServerName eachDeadServer : deadServerNames) {
+      Assert.assertNotNull(ds.getTimeOfDeath(eachDeadServer));
+    }
     final ServerName deadServerHostComingAlive =
       new ServerName("127.0.0.1", 9090, 223341L);
     assertTrue(ds.cleanPreviousInstance(deadServerHostComingAlive));
