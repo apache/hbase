@@ -39,6 +39,7 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
 import org.junit.experimental.categories.Category;
@@ -245,6 +246,33 @@ public class TestDependentColumnFilter {
 
       filter.filterRow(accepted);
       assertEquals("check cell retention", 2, accepted.size());
+  }
+
+  /**
+   * Test for HBASE-8794. Avoid NullPointerException in DependentColumnFilter.toString().
+   */
+  @Test
+  public void testToStringWithNullComparator() {
+    // Test constructor that implicitly sets a null comparator
+    Filter filter = new DependentColumnFilter(FAMILIES[0], QUALIFIER);
+    assertNotNull(filter.toString());
+    assertTrue("check string contains 'null' as compatator is null",
+      filter.toString().contains("null"));
+
+    // Test constructor with explicit null comparator
+    filter = new DependentColumnFilter(FAMILIES[0], QUALIFIER, true, CompareOp.EQUAL, null);
+    assertNotNull(filter.toString());
+    assertTrue("check string contains 'null' as compatator is null",
+      filter.toString().contains("null"));
+  }
+
+  @Test
+  public void testToStringWithNonNullComparator() {
+    Filter filter =
+        new DependentColumnFilter(FAMILIES[0], QUALIFIER, true, CompareOp.EQUAL,
+            new BinaryComparator(MATCH_VAL));
+    assertNotNull(filter.toString());
+    assertTrue("check string contains comparator value", filter.toString().contains("match"));
   }
 
 }
