@@ -296,7 +296,11 @@ public class ScanQueryMatcher {
           || kv.getMemstoreTS() > maxReadPointToTrackVersions) {
         // always include or it is not time yet to check whether it is OK
         // to purge deltes or not
-        return MatchCode.INCLUDE;
+        if (!isUserScan) {
+          // if this is not a user scan (compaction), we can filter this deletemarker right here
+          // otherwise (i.e. a "raw" scan) we fall through to normal version and timerange checking
+          return MatchCode.INCLUDE;
+        }
       } else if (keepDeletedCells) {
         if (timestamp < earliestPutTs) {
           // keeping delete rows, but there are no puts older than
