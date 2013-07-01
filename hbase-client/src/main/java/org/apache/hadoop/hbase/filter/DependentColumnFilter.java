@@ -285,6 +285,6 @@ public class DependentColumnFilter extends CompareFilter {
         Bytes.toStringBinary(this.columnQualifier),
         this.dropDependentColumn,
         this.compareOp.name(),
-        Bytes.toStringBinary(this.comparator.getValue()));
+        this.comparator != null ? Bytes.toStringBinary(this.comparator.getValue()) : "null");
   }
 }
