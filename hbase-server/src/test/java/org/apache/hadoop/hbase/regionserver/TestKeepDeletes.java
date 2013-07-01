@@ -318,12 +318,55 @@ public class TestKeepDeletes extends HBaseTestCase {
     InternalScanner scan = region.getScanner(s);
     List<KeyValue> kvs = new ArrayList<KeyValue>();
     scan.next(kvs);
+    assertEquals(8, kvs.size());
     assertTrue(kvs.get(0).isDeleteFamily());
     assertEquals(kvs.get(1).getValue(), T3);
     assertTrue(kvs.get(2).isDelete());
     assertTrue(kvs.get(3).isDeleteType());
     assertEquals(kvs.get(4).getValue(), T2);
     assertEquals(kvs.get(5).getValue(), T1);
+    // we have 3 CFs, so there are two more delete markers
+    assertTrue(kvs.get(6).isDeleteFamily());
+    assertTrue(kvs.get(7).isDeleteFamily());
+
+    // verify that raw scans honor the passed timerange
+    s = new Scan();
+    s.setRaw(true);
+    s.setMaxVersions();
+    s.setTimeRange(0, 1);
+    scan = region.getScanner(s);
+    kvs = new ArrayList<KeyValue>();
+    scan.next(kvs);
+    // nothing in this interval, not even delete markers
+    assertTrue(kvs.isEmpty());
+
+    // filter new delete markers
+    s = new Scan();
+    s.setRaw(true);
+    s.setMaxVersions();
+    s.setTimeRange(0, ts+2);
+    scan = region.getScanner(s);
+    kvs = new ArrayList<KeyValue>();
+    scan.next(kvs);
+    assertEquals(4, kvs.size());
+    assertTrue(kvs.get(0).isDeleteFamily());
+    assertEquals(kvs.get(1).getValue(), T1);
+    // we have 3 CFs
+    assertTrue(kvs.get(2).isDeleteFamily());
+    assertTrue(kvs.get(3).isDeleteFamily());
+
+    // filter old delete markers
+    s = new Scan();
+    s.setRaw(true);
+    s.setMaxVersions();
+    s.setTimeRange(ts+3, ts+5);
+    scan = region.getScanner(s);
+    kvs = new ArrayList<KeyValue>();
+    scan.next(kvs);
+    assertEquals(2, kvs.size());
+    assertEquals(kvs.get(0).getValue(), T3);
+    assertTrue(kvs.get(1).isDelete());
+
 
     HRegion.closeHRegion(region);
   }
