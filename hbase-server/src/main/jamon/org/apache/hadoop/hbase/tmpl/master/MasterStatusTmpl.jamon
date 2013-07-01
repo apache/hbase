@@ -46,6 +46,7 @@ org.apache.hadoop.hbase.client.HConnectionManager;
 org.apache.hadoop.hbase.HTableDescriptor;
 org.apache.hadoop.hbase.HBaseConfiguration;
 org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
+org.apache.hadoop.hbase.master.DeadServer;
 </%import>
 <%if format.equals("json") %>
   <& ../common/TaskMonitorTmpl; filter = filter; format = "json" &>
@@ -346,17 +347,21 @@ AssignmentManager assignmentManager = master.getAssignmentManager();
 <h2>Dead Region Servers</h2>
 <table class="table table-striped">
     <tr>
-        <th rowspan="<% deadServers.size() + 1%>"></th>
+        <th></th>
         <th>ServerName</th>
+        <th>Stop time</th>
     </tr>
     <%java>
+       DeadServer deadServerUtil = master.getServerManager().getDeadServers();
        ServerName [] deadServerNames = deadServers.toArray(new ServerName[deadServers.size()]);
          Arrays.sort(deadServerNames);
          for (ServerName deadServerName: deadServerNames) {
            int infoPort = master.getConfiguration().getInt("hbase.regionserver.info.port", 60030);
     </%java>
     <tr>
+    	<th rowspan="<% deadServers.size() %>"></th>
         <td><% deadServerName %></td>
+        <td><% deadServerUtil.getTimeOfDeath(deadServerName) %></td>
     </tr>
     <%java>
         }
@@ -364,6 +369,7 @@ AssignmentManager assignmentManager = master.getAssignmentManager();
     <tr>
         <th>Total: </th>
         <td>servers: <% deadServers.size() %></td>
+        <th></th>
     </tr>
 </table>
 </%if>
