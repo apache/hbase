@@ -162,6 +162,7 @@ public class TestIOFencing {
         HTableDescriptor htd, RegionServerServices rsServices) {
       super(tableDir, log, fs, confParam, info, htd, rsServices);
     }
+    @Override
     protected HStore instantiateHStore(final HColumnDescriptor family) throws IOException {
       return new BlockCompactionsInCompletionHStore(this, family, this.conf);
     }
@@ -263,10 +264,10 @@ public class TestIOFencing {
       long startWaitTime = System.currentTimeMillis();
       while (newRegion == null) {
         LOG.info("Waiting for the new server to pick up the region " + Bytes.toString(REGION_NAME));
-        Thread.sleep(100);
+        Thread.sleep(1000);
         newRegion = (CompactionBlockerRegion)newServer.getOnlineRegion(REGION_NAME);
         assertTrue("Timed out waiting for new server to open region",
-          System.currentTimeMillis() - startWaitTime < 60000);
+          System.currentTimeMillis() - startWaitTime < 300000);
       }
       LOG.info("Allowing compaction to proceed");
       compactingRegion.allowCompactions();
@@ -289,7 +290,7 @@ public class TestIOFencing {
       startWaitTime = System.currentTimeMillis();
       while (newRegion.compactCount == 0) {
         Thread.sleep(1000);
-        assertTrue("New region never compacted", System.currentTimeMillis() - startWaitTime < 30000);
+        assertTrue("New region never compacted", System.currentTimeMillis() - startWaitTime < 180000);
       }
       assertEquals(FIRST_BATCH_COUNT + SECOND_BATCH_COUNT, TEST_UTIL.countRows(table));
     } finally {
