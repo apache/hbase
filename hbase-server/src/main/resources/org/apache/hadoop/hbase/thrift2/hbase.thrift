@@ -89,8 +89,6 @@ enum TDeleteType {
  *
  * If you specify a time range and a timestamp the range is ignored.
  * Timestamps on TColumns are ignored.
- *
- * TODO: Filter, Locks
  */
 struct TGet {
   1: required binary row,
@@ -100,6 +98,7 @@ struct TGet {
   4: optional TTimeRange timeRange,
 
   5: optional i32 maxVersions,
+  6: optional binary filterString
 }
 
 /**
@@ -174,6 +173,8 @@ struct TScan {
   4: optional i32 caching,
   5: optional i32 maxVersions=1,
   6: optional TTimeRange timeRange,
+  7: optional binary filterString,
+  8: optional i32 batchSize
 }
 
 //
