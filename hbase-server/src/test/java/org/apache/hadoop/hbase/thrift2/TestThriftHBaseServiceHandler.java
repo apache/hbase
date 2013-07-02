@@ -325,7 +325,7 @@ public class TestThriftHBaseServiceHandler {
 
     long timestamp1 = System.currentTimeMillis() - 10;
     long timestamp2 = System.currentTimeMillis();
-    
+
     List<TColumnValue> columnValues = new ArrayList<TColumnValue>();
     TColumnValue columnValueA = new TColumnValue(ByteBuffer.wrap(familyAname), ByteBuffer.wrap(qualifierAname),
         ByteBuffer.wrap(valueAname));
@@ -392,7 +392,7 @@ public class TestThriftHBaseServiceHandler {
   /**
    * check that checkAndPut fails if the cell does not exist, then put in the cell, then check that the checkAndPut
    * succeeds.
-   * 
+   *
    * @throws Exception
    */
   @Test
@@ -439,7 +439,7 @@ public class TestThriftHBaseServiceHandler {
   /**
    * check that checkAndDelete fails if the cell does not exist, then put in the cell, then check that the
    * checkAndDelete succeeds.
-   * 
+   *
    * @throws Exception
    */
   @Test
@@ -498,6 +498,8 @@ public class TestThriftHBaseServiceHandler {
     columns.add(column);
     scan.setColumns(columns);
     scan.setStartRow("testScan".getBytes());
+    // only get the key part
+    scan.setFilterString(ByteBuffer.wrap(("KeyOnlyFilter()").getBytes()));
 
     TColumnValue columnValue = new TColumnValue(ByteBuffer.wrap(familyAname), ByteBuffer.wrap(qualifierAname),
         ByteBuffer.wrap(valueAname));
@@ -513,6 +515,7 @@ public class TestThriftHBaseServiceHandler {
     assertEquals(10, results.size());
     for (int i = 0; i < 10; i++) {
       assertArrayEquals(("testScan" + i).getBytes(), results.get(i).getRow());
+      assertArrayEquals(("").getBytes(), results.get(i).getColumnValues().get(0).getValue());
     }
 
     results = handler.getScannerRows(scanId, 10);

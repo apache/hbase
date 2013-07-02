@@ -52,7 +52,7 @@ struct TColumnValue {
 
 /**
  * Represents a single cell and the amount to increment it by
- */ 
+ */
 struct TColumnIncrement {
   1: required binary family,
   2: required binary qualifier,
@@ -89,8 +89,6 @@ enum TDeleteType {
  *
  * If you specify a time range and a timestamp the range is ignored.
  * Timestamps on TColumns are ignored.
- *
- * TODO: Filter, Locks
  */
 struct TGet {
   1: required binary row,
@@ -100,6 +98,7 @@ struct TGet {
   4: optional TTimeRange timeRange,
 
   5: optional i32 maxVersions,
+  6: optional binary filterString
 }
 
 /**
@@ -153,7 +152,7 @@ struct TDelete {
 
 /**
  * Used to perform Increment operations for a single row.
- * 
+ *
  * You can specify if this Increment should be written
  * to the write-ahead Log (WAL) or not. It defaults to true.
  */
@@ -174,6 +173,8 @@ struct TScan {
   4: optional i32 caching,
   5: optional i32 maxVersions=1,
   6: optional TTimeRange timeRange,
+  7: optional binary filterString,
+  8: optional i32 batchSize
 }
 
 //
@@ -353,7 +354,7 @@ service THBaseService {
     /** the TDelete to execute if the check succeeds */
     6: required TDelete deleteSingle
   ) throws (1: TIOError io)
-  
+
   TResult increment(
     /** the table to increment the value on */
     1: required binary table,
