@@ -19,9 +19,11 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
+import java.util.List;
 
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.regionserver.wal.HLog;
+import org.apache.hadoop.hbase.CellScanner;
+import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.WALEntry;
 
 /**
  * A sink for a replication stream has to expose this service.
@@ -30,11 +32,11 @@ import org.apache.hadoop.hbase.regionserver.wal.HLog;
  */
 @InterfaceAudience.Private
 public interface ReplicationSinkService extends ReplicationService {
-
- /**
+  /**
    * Carry on the list of log entries down to the sink
-   * @param entries list of entries to replicate
+   * @param entries list of WALEntries to replicate
+   * @param cells Cells that the WALEntries refer to (if cells is non-null)
    * @throws IOException
    */
-  public void replicateLogEntries(HLog.Entry[] entries) throws IOException;
+  public void replicateLogEntries(List<WALEntry> entries, CellScanner cells) throws IOException;
 }

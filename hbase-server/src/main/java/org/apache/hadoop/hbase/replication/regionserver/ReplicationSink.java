@@ -34,19 +34,23 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellScanner;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.HTableInterface;
+import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Row;
-import org.apache.hadoop.hbase.regionserver.wal.HLog;
-import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
+import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.WALEntry;
+import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Threads;
 
@@ -108,17 +112,17 @@ public class ReplicationSink {
    }
 
   /**
-   * Replicate this array of entries directly into the local cluster
-   * using the native client.
+   * Replicate this array of entries directly into the local cluster using the native client.
+   * Like {@link #replicateEntries(org.apache.hadoop.hbase.regionserver.wal.HLog.Entry[])} only
+   * operates against raw protobuf type saving on a convertion from pb to pojo.
    *
    * @param entries
+   * @param cells
    * @throws IOException
    */
-  public void replicateEntries(HLog.Entry[] entries)
-      throws IOException {
-    if (entries.length == 0) {
-      return;
-    }
+  public void replicateEntries(List<WALEntry> entries, final CellScanner cells) throws IOException {
+    if (entries.isEmpty()) return;
+    if (cells == null) throw new NullPointerException("TODO: Add handling of null CellScanner");
     // Very simple optimization where we batch sequences of rows going
     // to the same table.
     try {
@@ -126,45 +130,60 @@ public class ReplicationSink {
       // Map of table => list of Rows, we only want to flushCommits once per
       // invocation of this method per table.
       Map<byte[], List<Row>> rows = new TreeMap<byte[], List<Row>>(Bytes.BYTES_COMPARATOR);
-      for (HLog.Entry entry : entries) {
-        WALEdit edit = entry.getEdit();
-        byte[] table = entry.getKey().getTablename();
-        Put put = null;
-        Delete del = null;
-        KeyValue lastKV = null;
-        List<KeyValue> kvs = edit.getKeyValues();
-        for (KeyValue kv : kvs) {
-          if (lastKV == null || lastKV.getType() != kv.getType() || !lastKV.matchingRow(kv)) {
-            if (kv.isDelete()) {
-              del = new Delete(kv.getRow());
-              del.setClusterId(entry.getKey().getClusterId());
-              addToMultiMap(rows, table, del);
-            } else {
-              put = new Put(kv.getRow());
-              put.setClusterId(entry.getKey().getClusterId());
-              addToMultiMap(rows, table, put);
-            }
+      for (WALEntry entry : entries) {
+        byte[] table = entry.getKey().getTableName().toByteArray();
+        Cell previousCell = null;
+        Mutation m = null;
+        java.util.UUID uuid = toUUID(entry.getKey().getClusterId());
+        int count = entry.getAssociatedCellCount();
+        for (int i = 0; i < count; i++) {
+          // Throw index out of bounds if our cell count is off
+          if (!cells.advance()) {
+            throw new ArrayIndexOutOfBoundsException("Expected=" + count + ", index=" + i);
           }
-          if (kv.isDelete()) {
-            del.addDeleteMarker(kv);
+          Cell cell = cells.current();
+          if (isNewRowOrType(previousCell, cell)) {
+            // Create new mutation
+            m = CellUtil.isDelete(cell)?
+              new Delete(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength()):
+              new Put(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength());
+            m.setClusterId(uuid);
+            addToMultiMap(rows, table, m);
+          }
+          if (CellUtil.isDelete(cell)) {
+            ((Delete)m).addDeleteMarker(KeyValueUtil.ensureKeyValue(cell));
           } else {
-            put.add(kv);
+            ((Put)m).add(KeyValueUtil.ensureKeyValue(cell));
           }
-          lastKV = kv;
+          previousCell = cell;
         }
         totalReplicated++;
       }
       for (Entry<byte[], List<Row>> entry : rows.entrySet()) {
         batch(entry.getKey(), entry.getValue());
       }
-      this.metrics.setAgeOfLastAppliedOp(
-          entries[entries.length-1].getKey().getWriteTime());
-      this.metrics.applyBatch(entries.length);
+      int size = entries.size();
+      this.metrics.setAgeOfLastAppliedOp(entries.get(size - 1).getKey().getWriteTime());
+      this.metrics.applyBatch(size);
       this.totalReplicatedEdits.addAndGet(totalReplicated);
     } catch (IOException ex) {
       LOG.error("Unable to accept edit because:", ex);
       throw ex;
     }
+  }
+
+  /**
+   * @param previousCell
+   * @param cell
+   * @return True if we have crossed over onto a new row or type
+   */
+  private boolean isNewRowOrType(final Cell previousCell, final Cell cell) {
+    return previousCell == null || previousCell.getTypeByte() != cell.getTypeByte() ||
+        !CellUtil.matchingRow(previousCell, cell);
+  }
+
+  private java.util.UUID toUUID(final HBaseProtos.UUID uuid) {
+    return new java.util.UUID(uuid.getMostSigBits(), uuid.getLeastSigBits());
   }
 
   /**

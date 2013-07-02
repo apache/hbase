@@ -33,10 +33,9 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.codec.Codec;
 import org.apache.hadoop.hbase.io.ByteBufferOutputStream;
-import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ScanRequest;
-import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerReportRequest;
-import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerStartupRequest;
+import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.hadoop.io.compress.CodecPool;
 import org.apache.hadoop.io.compress.CompressionCodec;
 import org.apache.hadoop.io.compress.CompressionInputStream;
@@ -47,49 +46,61 @@ import com.google.common.base.Preconditions;
 import com.google.protobuf.CodedInputStream;
 import com.google.protobuf.CodedOutputStream;
 import com.google.protobuf.Message;
-import com.google.protobuf.TextFormat;
 
 /**
  * Utility to help ipc'ing.
  */
 class IPCUtil {
   public static final Log LOG = LogFactory.getLog(IPCUtil.class);
-  private final int cellBlockBuildingInitialBufferSize;
   /**
    * How much we think the decompressor will expand the original compressed content.
    */
   private final int cellBlockDecompressionMultiplier;
+  private final int cellBlockBuildingInitialBufferSize;
   private final Configuration conf;
 
   IPCUtil(final Configuration conf) {
     super();
     this.conf = conf;
-    this.cellBlockBuildingInitialBufferSize =
-      conf.getInt("hbase.ipc.cellblock.building.initial.buffersize", 16 * 1024);
     this.cellBlockDecompressionMultiplier =
         conf.getInt("hbase.ipc.cellblock.decompression.buffersize.multiplier", 3);
+    // Guess that 16k is a good size for rpc buffer.  Could go bigger.  See the TODO below in
+    // #buildCellBlock.
+    this.cellBlockBuildingInitialBufferSize =
+      ClassSize.align(conf.getInt("hbase.ipc.cellblock.building.initial.buffersize", 16 * 1024));
   }
 
   /**
-   * Build a cell block using passed in <code>codec</code>
+   * Puts CellScanner Cells into a cell block using passed in <code>codec</code> and/or
+   * <code>compressor</code>.
    * @param codec
    * @param compressor
-   * @Param cells
-   * @return Null or byte buffer filled with passed-in Cells encoded using passed in
-   * <code>codec</code>; the returned buffer has been flipped and is ready for
-   * reading.  Use limit to find total size.
+   * @Param cellScanner
+   * @return Null or byte buffer filled with a cellblock filled with passed-in Cells encoded using
+   * passed in <code>codec</code> and/or <code>compressor</code>; the returned buffer has been
+   * flipped and is ready for reading.  Use limit to find total size.
    * @throws IOException
    */
   @SuppressWarnings("resource")
   ByteBuffer buildCellBlock(final Codec codec, final CompressionCodec compressor,
-      final CellScanner cells)
+    final CellScanner cellScanner)
   throws IOException {
-    if (cells == null) return null;
-    // TOOD: Reuse buffers?
-    // Presizing doesn't work because can't tell what size will be when serialized.
-    // BBOS will resize itself.
-    ByteBufferOutputStream baos =
-      new ByteBufferOutputStream(this.cellBlockBuildingInitialBufferSize);
+    if (cellScanner == null) return null;
+    int bufferSize = this.cellBlockBuildingInitialBufferSize;
+    if (cellScanner instanceof HeapSize) {
+      long longSize = ((HeapSize)cellScanner).heapSize();
+      // Just make sure we don't have a size bigger than an int.
+      if (longSize > Integer.MAX_VALUE) {
+        throw new IOException("Size " + longSize + " > " + Integer.MAX_VALUE);
+      }
+      bufferSize = ClassSize.align((int)longSize);
+    } // TODO: Else, get estimate on size of buffer rather than have the buffer resize.
+    // See TestIPCUtil main for experiment where we spin through the Cells getting estimate of
+    // total size before creating the buffer.  It costs somw small percentage.  If we are usually
+    // within the estimated buffer size, then the cost is not worth it.  If we are often well
+    // outside the guesstimated buffer size, the processing can be done in half the time if we
+    // go w/ the estimated size rather than let the buffer resize.
+    ByteBufferOutputStream baos = new ByteBufferOutputStream(bufferSize);
     OutputStream os = baos;
     Compressor poolCompressor = null;
     try {
@@ -99,8 +110,8 @@ class IPCUtil {
         os = compressor.createOutputStream(os, poolCompressor);
       }
       Codec.Encoder encoder = codec.getEncoder(os);
-      while (cells.advance()) {
-        encoder.write(cells.current());
+      while (cellScanner.advance()) {
+        encoder.write(cellScanner.current());
       }
       encoder.flush();
     } finally {
@@ -108,9 +119,9 @@ class IPCUtil {
       if (poolCompressor != null) CodecPool.returnCompressor(poolCompressor);
     }
     if (LOG.isTraceEnabled()) {
-      if (this.cellBlockBuildingInitialBufferSize < baos.size()) {
-        LOG.trace("Buffer grew from " + this.cellBlockBuildingInitialBufferSize +
-        " to " + baos.size());
+      if (bufferSize < baos.size()) {
+        LOG.trace("Buffer grew from initial bufferSize=" + bufferSize + " to " + baos.size() +
+          "; up hbase.ipc.cellblock.building.initial.buffersize?");
       }
     }
     return baos.getByteBuffer();

@@ -161,14 +161,18 @@ message MergeRegionsResponse {
 // Protocol buffer version of WAL for replication
 message WALEntry {
   required WALKey key = 1;
+  // Following may be null if the KVs/Cells are carried along the side in a cellblock (See
+  // RPC for more on cellblocks). If Cells/KVs are in a cellblock, this next field is null
+  // and associatedCellCount has count of Cells associated w/ this WALEntry
   repeated bytes keyValueBytes = 2;
+  // If Cell data is carried alongside in a cellblock, this is count of Cells in the cellblock.
+  optional int32 associatedCellCount = 3;
 }
 
 /**
  * Replicates the given entries. The guarantee is that the given entries
  * will be durable on the slave cluster if this method returns without
- * any exception.
- * hbase.replication has to be set to true for this to work.
+ * any exception.  hbase.replication has to be set to true for this to work.
  */
 message ReplicateWALEntryRequest {
   repeated WALEntry entry = 1;

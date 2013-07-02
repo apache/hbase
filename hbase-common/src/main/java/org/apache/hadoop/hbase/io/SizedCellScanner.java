@@ -1,6 +1,4 @@
 /**
- * Copyright The Apache Software Foundation
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,32 +16,16 @@
  * limitations under the License.
  */
 package org.apache.hadoop.hbase.io;
-
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+
+import org.apache.hadoop.hbase.CellScanner;
 
 /**
- * Implementations can be asked for an estimate of their size in bytes.
- * <p>
- * Useful for sizing caches.  Its a given that implementation approximations
- * do not account for 32 vs 64 bit nor for different VM implementations.
- * <p>
- * An Object's size is determined by the non-static data members in it,
- * as well as the fixed {@link Object} overhead.
- * <p>
- * For example:
- * <pre>
- * public class SampleObject implements HeapSize {
- *
- *   int [] numbers;
- *   int x;
- * }
- * </pre>
+ * A CellScanner that knows its size in memory in bytes.
+ * Used playing the CellScanner into an in-memory buffer; knowing the size ahead of time saves
+ * on background buffer resizings.
  */
 @InterfaceAudience.Private
-public interface HeapSize {
-  /**
-   * @return Approximate 'exclusive deep size' of implementing object.  Includes
-   * count of payload and hosting object sizings.
-  */
-  public long heapSize();
-}
+@InterfaceStability.Unstable
+public interface SizedCellScanner extends CellScanner, HeapSize {}

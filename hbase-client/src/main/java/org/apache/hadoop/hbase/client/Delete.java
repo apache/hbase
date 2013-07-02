@@ -106,6 +106,23 @@ public class Delete extends Mutation implements Comparable<Row> {
    * @param rowArray We make a local copy of this passed in row.
    * @param rowOffset
    * @param rowLength
+   */
+  public Delete(final byte [] rowArray, final int rowOffset, final int rowLength) {
+    this(rowArray, rowOffset, rowLength, HConstants.LATEST_TIMESTAMP);
+  }
+
+  /**
+   * Create a Delete operation for the specified row and timestamp.<p>
+   *
+   * If no further operations are done, this will delete all columns in all
+   * families of the specified row with a timestamp less than or equal to the
+   * specified timestamp.<p>
+   *
+   * This timestamp is ONLY used for a delete row operation.  If specifying
+   * families or columns, you must specify each timestamp individually.
+   * @param rowArray We make a local copy of this passed in row.
+   * @param rowOffset
+   * @param rowLength
    * @param ts maximum version timestamp (only for delete row)
    */
   public Delete(final byte [] rowArray, final int rowOffset, final int rowLength, long ts) {
