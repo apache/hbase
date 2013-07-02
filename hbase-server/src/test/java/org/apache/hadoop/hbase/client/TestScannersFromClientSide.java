@@ -508,7 +508,8 @@ public class TestScannersFromClientSide {
       // and there was still room before it's scheduled
       long sizeBefore = RegionScannerHolder.getPrefetchedResultSize()
         - rsh.currentPrefetchedResultSize();
-      assertTrue("There should have room before prefetching is submitted",
+      assertTrue("There should have room before prefetching is submitted, maxSize=" +
+        this.maxSize + ", prefetching=" + prefetching + ", sizeBefore=" + sizeBefore,
         prefetching && sizeBefore < this.maxSize);
     }
     if (isPrefetchSubmitted && rsh.waitForPrefetchingDone()) {
