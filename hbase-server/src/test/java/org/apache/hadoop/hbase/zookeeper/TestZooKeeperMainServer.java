@@ -32,15 +32,13 @@ public class TestZooKeeperMainServer {
 
   @Test public void test() {
     Configuration c = HBaseConfiguration.create();
-    assertEquals("localhost:" + c.get(HConstants.ZOOKEEPER_CLIENT_PORT),
-      parser.parse(c));
+    assertEquals("localhost:" + c.get(HConstants.ZOOKEEPER_CLIENT_PORT), parser.parse(c));
     final String port = "1234";
     c.set(HConstants.ZOOKEEPER_CLIENT_PORT, port);
     c.set("hbase.zookeeper.quorum", "example.com");
     assertEquals("example.com:" + port, parser.parse(c));
     c.set("hbase.zookeeper.quorum", "example1.com,example2.com,example3.com");
-    assertTrue(port,
-        parser.parse(c).matches("(example[1-3]\\.com,){2}example[1-3]\\.com:" + port));
+    String ensemble = parser.parse(c);
+    assertTrue(port, ensemble.matches("(example[1-3]\\.com:1234,){2}example[1-3]\\.com:" + port));
   }
 }
-

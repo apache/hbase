@@ -38,7 +38,6 @@ public class ZooKeeperMainServer {
     // HConstants.ZOOKEEPER_QUORUM from the HBaseConfiguration because the
     // user may be using a zoo.cfg file.
     Properties zkProps = ZKConfig.makeZKProps(c);
-    String host = null;
     String clientPort = null;
     List<String> hosts = new ArrayList<String>();
     for (Entry<Object, Object> entry: zkProps.entrySet()) {
@@ -51,15 +50,15 @@ public class ZooKeeperMainServer {
         clientPort = value;
       }
     }
-    if (hosts.isEmpty() || clientPort == null)
-      return null;
+    if (hosts.isEmpty() || clientPort == null) return null;
+    StringBuilder host = new StringBuilder();
     for (int i = 0; i < hosts.size(); i++) {
-      if (i > 0)
-        host += "," + hosts.get(i);
-      else
-        host = hosts.get(i);
+      if (i > 0)  host.append("," + hosts.get(i));
+      else host.append(hosts.get(i));
+      host.append(":");
+      host.append(clientPort);
     }
-    return host != null ? host + ":" + clientPort : null;
+    return host.toString();
   }
 
   /**
