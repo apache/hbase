@@ -18,6 +18,11 @@
 
 package org.apache.hadoop.hbase.util;
 
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.InterruptedIOException;
+import java.lang.reflect.Method;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -27,11 +32,6 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.server.namenode.LeaseExpiredException;
-
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.io.InterruptedIOException;
-import java.lang.reflect.Method;
 
 
 /**
@@ -77,7 +77,7 @@ public class FSHDFSUtils extends FSUtils {
    * (configurable) and then try again.
    * 6. If it returns true, break.
    * 7. If it returns false, repeat starting at step 5. above.
-   * 
+   *
    * If HDFS-4525 is available, call it every second and we might be able to exit early.
    */
   boolean recoverDFSFileLease(final DistributedFileSystem dfs, final Path p,
@@ -89,8 +89,8 @@ public class FSHDFSUtils extends FSUtils {
     // usually needs 10 minutes before marking the nodes as dead. So we're putting ourselves
     // beyond that limit 'to be safe'.
     long recoveryTimeout = conf.getInt("hbase.lease.recovery.timeout", 900000) + startWaiting;
-    // This setting should be what the cluster dfs heartbeat is set to.
-    long firstPause = conf.getInt("hbase.lease.recovery.first.pause", 3000);
+    // This setting should be a little bit above what the cluster dfs heartbeat is set to.
+    long firstPause = conf.getInt("hbase.lease.recovery.first.pause", 4000);
     // This should be set to how long it'll take for us to timeout against primary datanode if it
     // is dead.  We set it to 61 seconds, 1 second than the default READ_TIMEOUT in HDFS, the
     // default value for DFS_CLIENT_SOCKET_TIMEOUT_KEY.
