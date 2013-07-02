@@ -39,8 +39,6 @@ import org.slf4j.LoggerFactory;
  * 
  * If you specify a time range and a timestamp the range is ignored.
  * Timestamps on TColumns are ignored.
- * 
- * TODO: Filter, Locks
  */
 public class TGet implements org.apache.thrift.TBase<TGet, TGet._Fields>, java.io.Serializable, Cloneable {
   private static final org.apache.thrift.protocol.TStruct STRUCT_DESC = new org.apache.thrift.protocol.TStruct("TGet");
@@ -50,6 +48,7 @@ public class TGet implements org.apache.thrift.TBase<TGet, TGet._Fields>, java.i
   private static final org.apache.thrift.protocol.TField TIMESTAMP_FIELD_DESC = new org.apache.thrift.protocol.TField("timestamp", org.apache.thrift.protocol.TType.I64, (short)3);
   private static final org.apache.thrift.protocol.TField TIME_RANGE_FIELD_DESC = new org.apache.thrift.protocol.TField("timeRange", org.apache.thrift.protocol.TType.STRUCT, (short)4);
   private static final org.apache.thrift.protocol.TField MAX_VERSIONS_FIELD_DESC = new org.apache.thrift.protocol.TField("maxVersions", org.apache.thrift.protocol.TType.I32, (short)5);
+  private static final org.apache.thrift.protocol.TField FILTER_STRING_FIELD_DESC = new org.apache.thrift.protocol.TField("filterString", org.apache.thrift.protocol.TType.STRING, (short)6);
 
   private static final Map<Class<? extends IScheme>, SchemeFactory> schemes = new HashMap<Class<? extends IScheme>, SchemeFactory>();
   static {
@@ -62,6 +61,7 @@ public class TGet implements org.apache.thrift.TBase<TGet, TGet._Fields>, java.i
   public long timestamp; // optional
   public TTimeRange timeRange; // optional
   public int maxVersions; // optional
+  public ByteBuffer filterString; // optional
 
   /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
   public enum _Fields implements org.apache.thrift.TFieldIdEnum {
@@ -69,7 +69,8 @@ public class TGet implements org.apache.thrift.TBase<TGet, TGet._Fields>, java.i
     COLUMNS((short)2, "columns"),
     TIMESTAMP((short)3, "timestamp"),
     TIME_RANGE((short)4, "timeRange"),
-    MAX_VERSIONS((short)5, "maxVersions");
+    MAX_VERSIONS((short)5, "maxVersions"),
+    FILTER_STRING((short)6, "filterString");
 
     private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
 
@@ -94,6 +95,8 @@ public class TGet implements org.apache.thrift.TBase<TGet, TGet._Fields>, java.i
           return TIME_RANGE;
         case 5: // MAX_VERSIONS
           return MAX_VERSIONS;
+        case 6: // FILTER_STRING
+          return FILTER_STRING;
         default:
           return null;
       }
@@ -137,7 +140,7 @@ public class TGet implements org.apache.thrift.TBase<TGet, TGet._Fields>, java.i
   private static final int __TIMESTAMP_ISSET_ID = 0;
   private static final int __MAXVERSIONS_ISSET_ID = 1;
   private BitSet __isset_bit_vector = new BitSet(2);
-  private _Fields optionals[] = {_Fields.COLUMNS,_Fields.TIMESTAMP,_Fields.TIME_RANGE,_Fields.MAX_VERSIONS};
+  private _Fields optionals[] = {_Fields.COLUMNS,_Fields.TIMESTAMP,_Fields.TIME_RANGE,_Fields.MAX_VERSIONS,_Fields.FILTER_STRING};
   public static final Map<_Fields, org.apache.thrift.meta_data.FieldMetaData> metaDataMap;
   static {
     Map<_Fields, org.apache.thrift.meta_data.FieldMetaData> tmpMap = new EnumMap<_Fields, org.apache.thrift.meta_data.FieldMetaData>(_Fields.class);
@@ -152,6 +155,8 @@ public class TGet implements org.apache.thrift.TBase<TGet, TGet._Fields>, java.i
         new org.apache.thrift.meta_data.StructMetaData(org.apache.thrift.protocol.TType.STRUCT, TTimeRange.class)));
     tmpMap.put(_Fields.MAX_VERSIONS, new org.apache.thrift.meta_data.FieldMetaData("maxVersions", org.apache.thrift.TFieldRequirementType.OPTIONAL, 
         new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.I32)));
+    tmpMap.put(_Fields.FILTER_STRING, new org.apache.thrift.meta_data.FieldMetaData("filterString", org.apache.thrift.TFieldRequirementType.OPTIONAL, 
+        new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.STRING        , true)));
     metaDataMap = Collections.unmodifiableMap(tmpMap);
     org.apache.thrift.meta_data.FieldMetaData.addStructMetaDataMap(TGet.class, metaDataMap);
   }
@@ -188,6 +193,10 @@ public class TGet implements org.apache.thrift.TBase<TGet, TGet._Fields>, java.i
       this.timeRange = new TTimeRange(other.timeRange);
     }
     this.maxVersions = other.maxVersions;
+    if (other.isSetFilterString()) {
+      this.filterString = org.apache.thrift.TBaseHelper.copyBinary(other.filterString);
+;
+    }
   }
 
   public TGet deepCopy() {
@@ -203,6 +212,7 @@ public class TGet implements org.apache.thrift.TBase<TGet, TGet._Fields>, java.i
     this.timeRange = null;
     setMaxVersionsIsSet(false);
     this.maxVersions = 0;
+    this.filterString = null;
   }
 
   public byte[] getRow() {
@@ -348,6 +358,40 @@ public class TGet implements org.apache.thrift.TBase<TGet, TGet._Fields>, java.i
     __isset_bit_vector.set(__MAXVERSIONS_ISSET_ID, value);
   }
 
+  public byte[] getFilterString() {
+    setFilterString(org.apache.thrift.TBaseHelper.rightSize(filterString));
+    return filterString == null ? null : filterString.array();
+  }
+
+  public ByteBuffer bufferForFilterString() {
+    return filterString;
+  }
+
+  public TGet setFilterString(byte[] filterString) {
+    setFilterString(filterString == null ? (ByteBuffer)null : ByteBuffer.wrap(filterString));
+    return this;
+  }
+
+  public TGet setFilterString(ByteBuffer filterString) {
+    this.filterString = filterString;
+    return this;
+  }
+
+  public void unsetFilterString() {
+    this.filterString = null;
+  }
+
+  /** Returns true if field filterString is set (has been assigned a value) and false otherwise */
+  public boolean isSetFilterString() {
+    return this.filterString != null;
+  }
+
+  public void setFilterStringIsSet(boolean value) {
+    if (!value) {
+      this.filterString = null;
+    }
+  }
+
   public void setFieldValue(_Fields field, Object value) {
     switch (field) {
     case ROW:
@@ -390,6 +434,14 @@ public class TGet implements org.apache.thrift.TBase<TGet, TGet._Fields>, java.i
       }
       break;
 
+    case FILTER_STRING:
+      if (value == null) {
+        unsetFilterString();
+      } else {
+        setFilterString((ByteBuffer)value);
+      }
+      break;
+
     }
   }
 
@@ -409,6 +461,9 @@ public class TGet implements org.apache.thrift.TBase<TGet, TGet._Fields>, java.i
 
     case MAX_VERSIONS:
       return Integer.valueOf(getMaxVersions());
+
+    case FILTER_STRING:
+      return getFilterString();
 
     }
     throw new IllegalStateException();
@@ -431,6 +486,8 @@ public class TGet implements org.apache.thrift.TBase<TGet, TGet._Fields>, java.i
       return isSetTimeRange();
     case MAX_VERSIONS:
       return isSetMaxVersions();
+    case FILTER_STRING:
+      return isSetFilterString();
     }
     throw new IllegalStateException();
   }
@@ -490,6 +547,15 @@ public class TGet implements org.apache.thrift.TBase<TGet, TGet._Fields>, java.i
       if (!(this_present_maxVersions && that_present_maxVersions))
         return false;
       if (this.maxVersions != that.maxVersions)
+        return false;
+    }
+
+    boolean this_present_filterString = true && this.isSetFilterString();
+    boolean that_present_filterString = true && that.isSetFilterString();
+    if (this_present_filterString || that_present_filterString) {
+      if (!(this_present_filterString && that_present_filterString))
+        return false;
+      if (!this.filterString.equals(that.filterString))
         return false;
     }
 
@@ -559,6 +625,16 @@ public class TGet implements org.apache.thrift.TBase<TGet, TGet._Fields>, java.i
         return lastComparison;
       }
     }
+    lastComparison = Boolean.valueOf(isSetFilterString()).compareTo(typedOther.isSetFilterString());
+    if (lastComparison != 0) {
+      return lastComparison;
+    }
+    if (isSetFilterString()) {
+      lastComparison = org.apache.thrift.TBaseHelper.compareTo(this.filterString, typedOther.filterString);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+    }
     return 0;
   }
 
@@ -616,6 +692,16 @@ public class TGet implements org.apache.thrift.TBase<TGet, TGet._Fields>, java.i
       if (!first) sb.append(", ");
       sb.append("maxVersions:");
       sb.append(this.maxVersions);
+      first = false;
+    }
+    if (isSetFilterString()) {
+      if (!first) sb.append(", ");
+      sb.append("filterString:");
+      if (this.filterString == null) {
+        sb.append("null");
+      } else {
+        org.apache.thrift.TBaseHelper.toString(this.filterString, sb);
+      }
       first = false;
     }
     sb.append(")");
@@ -680,7 +766,7 @@ public class TGet implements org.apache.thrift.TBase<TGet, TGet._Fields>, java.i
                 struct.columns = new ArrayList<TColumn>(_list8.size);
                 for (int _i9 = 0; _i9 < _list8.size; ++_i9)
                 {
-                  TColumn _elem10; // optional
+                  TColumn _elem10; // required
                   _elem10 = new TColumn();
                   _elem10.read(iprot);
                   struct.columns.add(_elem10);
@@ -713,6 +799,14 @@ public class TGet implements org.apache.thrift.TBase<TGet, TGet._Fields>, java.i
             if (schemeField.type == org.apache.thrift.protocol.TType.I32) {
               struct.maxVersions = iprot.readI32();
               struct.setMaxVersionsIsSet(true);
+            } else { 
+              org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
+            }
+            break;
+          case 6: // FILTER_STRING
+            if (schemeField.type == org.apache.thrift.protocol.TType.STRING) {
+              struct.filterString = iprot.readBinary();
+              struct.setFilterStringIsSet(true);
             } else { 
               org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
             }
@@ -768,6 +862,13 @@ public class TGet implements org.apache.thrift.TBase<TGet, TGet._Fields>, java.i
         oprot.writeI32(struct.maxVersions);
         oprot.writeFieldEnd();
       }
+      if (struct.filterString != null) {
+        if (struct.isSetFilterString()) {
+          oprot.writeFieldBegin(FILTER_STRING_FIELD_DESC);
+          oprot.writeBinary(struct.filterString);
+          oprot.writeFieldEnd();
+        }
+      }
       oprot.writeFieldStop();
       oprot.writeStructEnd();
     }
@@ -799,7 +900,10 @@ public class TGet implements org.apache.thrift.TBase<TGet, TGet._Fields>, java.i
       if (struct.isSetMaxVersions()) {
         optionals.set(3);
       }
-      oprot.writeBitSet(optionals, 4);
+      if (struct.isSetFilterString()) {
+        optionals.set(4);
+      }
+      oprot.writeBitSet(optionals, 5);
       if (struct.isSetColumns()) {
         {
           oprot.writeI32(struct.columns.size());
@@ -818,6 +922,9 @@ public class TGet implements org.apache.thrift.TBase<TGet, TGet._Fields>, java.i
       if (struct.isSetMaxVersions()) {
         oprot.writeI32(struct.maxVersions);
       }
+      if (struct.isSetFilterString()) {
+        oprot.writeBinary(struct.filterString);
+      }
     }
 
     @Override
@@ -825,14 +932,14 @@ public class TGet implements org.apache.thrift.TBase<TGet, TGet._Fields>, java.i
       TTupleProtocol iprot = (TTupleProtocol) prot;
       struct.row = iprot.readBinary();
       struct.setRowIsSet(true);
-      BitSet incoming = iprot.readBitSet(4);
+      BitSet incoming = iprot.readBitSet(5);
       if (incoming.get(0)) {
         {
           org.apache.thrift.protocol.TList _list13 = new org.apache.thrift.protocol.TList(org.apache.thrift.protocol.TType.STRUCT, iprot.readI32());
           struct.columns = new ArrayList<TColumn>(_list13.size);
           for (int _i14 = 0; _i14 < _list13.size; ++_i14)
           {
-            TColumn _elem15; // optional
+            TColumn _elem15; // required
             _elem15 = new TColumn();
             _elem15.read(iprot);
             struct.columns.add(_elem15);
@@ -852,6 +959,10 @@ public class TGet implements org.apache.thrift.TBase<TGet, TGet._Fields>, java.i
       if (incoming.get(3)) {
         struct.maxVersions = iprot.readI32();
         struct.setMaxVersionsIsSet(true);
+      }
+      if (incoming.get(4)) {
+        struct.filterString = iprot.readBinary();
+        struct.setFilterStringIsSet(true);
       }
     }
   }

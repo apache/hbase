@@ -527,7 +527,7 @@ public class TIncrement implements org.apache.thrift.TBase<TIncrement, TIncremen
                 struct.columns = new ArrayList<TColumnIncrement>(_list32.size);
                 for (int _i33 = 0; _i33 < _list32.size; ++_i33)
                 {
-                  TColumnIncrement _elem34; // optional
+                  TColumnIncrement _elem34; // required
                   _elem34 = new TColumnIncrement();
                   _elem34.read(iprot);
                   struct.columns.add(_elem34);
@@ -629,7 +629,7 @@ public class TIncrement implements org.apache.thrift.TBase<TIncrement, TIncremen
         struct.columns = new ArrayList<TColumnIncrement>(_list37.size);
         for (int _i38 = 0; _i38 < _list37.size; ++_i38)
         {
-          TColumnIncrement _elem39; // optional
+          TColumnIncrement _elem39; // required
           _elem39 = new TColumnIncrement();
           _elem39.read(iprot);
           struct.columns.add(_elem39);

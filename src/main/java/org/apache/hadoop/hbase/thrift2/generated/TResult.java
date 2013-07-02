@@ -442,7 +442,7 @@ public class TResult implements org.apache.thrift.TBase<TResult, TResult._Fields
                 struct.columnValues = new ArrayList<TColumnValue>(_list0.size);
                 for (int _i1 = 0; _i1 < _list0.size; ++_i1)
                 {
-                  TColumnValue _elem2; // optional
+                  TColumnValue _elem2; // required
                   _elem2 = new TColumnValue();
                   _elem2.read(iprot);
                   struct.columnValues.add(_elem2);
@@ -530,7 +530,7 @@ public class TResult implements org.apache.thrift.TBase<TResult, TResult._Fields
         struct.columnValues = new ArrayList<TColumnValue>(_list5.size);
         for (int _i6 = 0; _i6 < _list5.size; ++_i6)
         {
-          TColumnValue _elem7; // optional
+          TColumnValue _elem7; // required
           _elem7 = new TColumnValue();
           _elem7.read(iprot);
           struct.columnValues.add(_elem7);

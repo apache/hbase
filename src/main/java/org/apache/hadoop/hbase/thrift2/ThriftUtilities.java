@@ -22,6 +22,7 @@ package org.apache.hadoop.hbase.thrift2;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.*;
+import org.apache.hadoop.hbase.filter.ParseFilter;
 import org.apache.hadoop.hbase.thrift2.generated.*;
 
 import java.io.IOException;
@@ -69,6 +70,11 @@ public class ThriftUtilities {
       } else {
         out.addFamily(column.getFamily());
       }
+    }
+
+    if (in.isSetFilterString()) {
+      ParseFilter parseFilter = new ParseFilter();
+      out.setFilter(parseFilter.parseFilterString(in.getFilterString()));
     }
 
     return out;
@@ -320,6 +326,15 @@ public class ThriftUtilities {
     if (timeRange != null &&
         timeRange.isSetMinStamp() && timeRange.isSetMaxStamp()) {
       out.setTimeRange(timeRange.getMinStamp(), timeRange.getMaxStamp());
+    }
+
+    if (in.isSetBatchSize()) {
+      out.setBatch(in.getBatchSize());
+    }
+
+    if (in.isSetFilterString()) {
+      ParseFilter parseFilter = new ParseFilter();
+      out.setFilter(parseFilter.parseFilterString(in.getFilterString()));
     }
 
     return out;

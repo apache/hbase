@@ -604,7 +604,7 @@ public class TPut implements org.apache.thrift.TBase<TPut, TPut._Fields>, java.i
                 struct.columnValues = new ArrayList<TColumnValue>(_list16.size);
                 for (int _i17 = 0; _i17 < _list16.size; ++_i17)
                 {
-                  TColumnValue _elem18; // optional
+                  TColumnValue _elem18; // required
                   _elem18 = new TColumnValue();
                   _elem18.read(iprot);
                   struct.columnValues.add(_elem18);
@@ -725,7 +725,7 @@ public class TPut implements org.apache.thrift.TBase<TPut, TPut._Fields>, java.i
         struct.columnValues = new ArrayList<TColumnValue>(_list21.size);
         for (int _i22 = 0; _i22 < _list21.size; ++_i22)
         {
-          TColumnValue _elem23; // optional
+          TColumnValue _elem23; // required
           _elem23 = new TColumnValue();
           _elem23.read(iprot);
           struct.columnValues.add(_elem23);

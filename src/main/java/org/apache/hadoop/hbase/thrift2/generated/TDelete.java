@@ -709,7 +709,7 @@ public class TDelete implements org.apache.thrift.TBase<TDelete, TDelete._Fields
                 struct.columns = new ArrayList<TColumn>(_list24.size);
                 for (int _i25 = 0; _i25 < _list24.size; ++_i25)
                 {
-                  TColumn _elem26; // optional
+                  TColumn _elem26; // required
                   _elem26 = new TColumn();
                   _elem26.read(iprot);
                   struct.columns.add(_elem26);
@@ -860,7 +860,7 @@ public class TDelete implements org.apache.thrift.TBase<TDelete, TDelete._Fields
           struct.columns = new ArrayList<TColumn>(_list29.size);
           for (int _i30 = 0; _i30 < _list29.size; ++_i30)
           {
-            TColumn _elem31; // optional
+            TColumn _elem31; // required
             _elem31 = new TColumn();
             _elem31.read(iprot);
             struct.columns.add(_elem31);
