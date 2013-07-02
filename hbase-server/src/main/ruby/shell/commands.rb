@@ -86,8 +86,8 @@ module Shell
       rescue org.apache.hadoop.hbase.exceptions.NoSuchColumnFamilyException
         valid_cols = table(args.first).get_all_columns.map { |c| c + '*' }
         raise "Unknown column family! Valid column names: #{valid_cols.join(", ")}"
-      rescue org.apache.hadoop.hbase.exceptions.TableExistsException
-        raise "Table already exists: #{args.first}!"
+      rescue org.apache.hadoop.hbase.exceptions.TableExistsException => e
+        raise "Table already exists: #{e.message}!"
       end
     end
   end
