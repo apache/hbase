@@ -84,6 +84,12 @@ import org.junit.experimental.categories.Category;
  */
 @Category(MediumTests.class)
 public class TestTokenAuthentication {
+  static {
+    // Setting whatever system properties after recommendation from
+    // http://docs.oracle.com/javase/6/docs/technotes/guides/security/jgss/tutorials/KerberosReq.html
+    System.setProperty("java.security.krb5.realm", "hbase");
+    System.setProperty("java.security.krb5.kdc", "blah");
+  }
   private static Log LOG = LogFactory.getLog(TestTokenAuthentication.class);
 
   public static interface AuthenticationServiceSecurityInfo {}
