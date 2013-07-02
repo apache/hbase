@@ -25,6 +25,7 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.util.UUID;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -55,32 +56,38 @@ public class TestNodeHealthCheckChore {
   }
 
   @Test
-  public void testHealthChecker() throws Exception {
+  public void testHealthCheckerSuccess() throws Exception {
+    String normalScript = "echo \"I am all fine\"";
+    healthCheckerTest(normalScript, HealthCheckerExitStatus.SUCCESS);
+  }
+
+  @Test
+  public void testHealthCheckerFail() throws Exception {
+    String errorScript = "echo ERROR" + eol + "echo \"Node not healthy\"";
+    healthCheckerTest(errorScript, HealthCheckerExitStatus.FAILED);
+  }
+
+  @Test
+  public void testHealthCheckerTimeout() throws Exception {
+    String timeOutScript = "sleep 4" + eol + "echo \"I am fine\"";
+    healthCheckerTest(timeOutScript, HealthCheckerExitStatus.TIMED_OUT);
+  }
+
+  public void healthCheckerTest(String script, HealthCheckerExitStatus expectedStatus)
+      throws Exception {
     Configuration config = getConfForNodeHealthScript();
     config.addResource(healthScriptFile.getName());
     String location = healthScriptFile.getAbsolutePath();
     long timeout = config.getLong(HConstants.HEALTH_SCRIPT_TIMEOUT, 2000);
+
     HealthChecker checker = new HealthChecker();
     checker.init(location, timeout);
 
-    String normalScript = "echo \"I am all fine\"";
-    createScript(normalScript, true);
+    createScript(script, true);
     HealthReport report = checker.checkHealth();
+    assertEquals(expectedStatus, report.getStatus());
 
     LOG.info("Health Status:" + report.getHealthReport());
-    assertEquals(HealthCheckerExitStatus.SUCCESS, report.getStatus());
-
-    String errorScript = "echo ERROR" + eol + "echo \"Server not healthy\"";
-    createScript(errorScript, true);
-    report = checker.checkHealth();
-    LOG.info("Health Status:" + report.getHealthReport());
-    assertEquals(HealthCheckerExitStatus.FAILED, report.getStatus());
-
-    String timeOutScript = "sleep 4" + eol + "echo \"I am fine\"";
-    createScript(timeOutScript, true);
-    report = checker.checkHealth();
-    LOG.info("Health Status:" + report.getHealthReport());
-    assertEquals(HealthCheckerExitStatus.TIMED_OUT, report.getStatus());
 
     this.healthScriptFile.delete();
   }
@@ -130,7 +137,8 @@ public class TestNodeHealthCheckChore {
         throw new IOException("Failed mkdirs " + tempDir);
       }
     }
-    String scriptName = Shell.WINDOWS ? "HealthScript.cmd" : "HealthScript.sh";
+    String scriptName = "HealthScript" + UUID.randomUUID().toString()
+        + (Shell.WINDOWS ? ".cmd" : ".sh");
     healthScriptFile = new File(tempDir.getAbsolutePath(), scriptName);
     conf.set(HConstants.HEALTH_SCRIPT_LOC, healthScriptFile.getAbsolutePath());
     conf.setLong(HConstants.HEALTH_FAILURE_THRESHOLD, 3);
