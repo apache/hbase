@@ -19,6 +19,7 @@
 package org.apache.hadoop.hbase.replication.regionserver;
 
 import java.io.IOException;
+import java.util.List;
 import java.util.NavigableMap;
 import java.util.TreeMap;
 import java.util.concurrent.Executors;
@@ -33,13 +34,14 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.Server;
+import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.WALEntry;
 import org.apache.hadoop.hbase.regionserver.ReplicationSourceService;
 import org.apache.hadoop.hbase.regionserver.ReplicationSinkService;
-import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
@@ -163,11 +165,14 @@ public class Replication implements WALActionsListener,
   /**
    * Carry on the list of log entries down to the sink
    * @param entries list of entries to replicate
+   * @param cells The data -- the cells -- that <code>entries</code> describes (the entries
+   * do not contain the Cells we are replicating; they are passed here on the side in this
+   * CellScanner).
    * @throws IOException
    */
-  public void replicateLogEntries(HLog.Entry[] entries) throws IOException {
+  public void replicateLogEntries(List<WALEntry> entries, CellScanner cells) throws IOException {
     if (this.replication) {
-      this.replicationSink.replicateEntries(entries);
+      this.replicationSink.replicateEntries(entries, cells);
     }
   }
 

@@ -70,6 +70,17 @@ public class Put extends Mutation implements HeapSize, Comparable<Row> {
    * @param rowLength
    * @param ts
    */
+  public Put(byte [] rowArray, int rowOffset, int rowLength) {
+    this(rowArray, rowOffset, rowLength, HConstants.LATEST_TIMESTAMP);
+  }
+
+  /**
+   * We make a copy of the passed in row key to keep local.
+   * @param rowArray
+   * @param rowOffset
+   * @param rowLength
+   * @param ts
+   */
   public Put(byte [] rowArray, int rowOffset, int rowLength, long ts) {
     checkRow(rowArray, rowOffset, rowLength);
     this.row = Bytes.copy(rowArray, rowOffset, rowLength);

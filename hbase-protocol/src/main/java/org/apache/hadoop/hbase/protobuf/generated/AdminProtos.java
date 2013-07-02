@@ -9894,6 +9894,10 @@ public final class AdminProtos {
     java.util.List<com.google.protobuf.ByteString> getKeyValueBytesList();
     int getKeyValueBytesCount();
     com.google.protobuf.ByteString getKeyValueBytes(int index);
+    
+    // optional int32 associatedCellCount = 3;
+    boolean hasAssociatedCellCount();
+    int getAssociatedCellCount();
   }
   public static final class WALEntry extends
       com.google.protobuf.GeneratedMessage
@@ -9951,9 +9955,20 @@ public final class AdminProtos {
       return keyValueBytes_.get(index);
     }
     
+    // optional int32 associatedCellCount = 3;
+    public static final int ASSOCIATEDCELLCOUNT_FIELD_NUMBER = 3;
+    private int associatedCellCount_;
+    public boolean hasAssociatedCellCount() {
+      return ((bitField0_ & 0x00000002) == 0x00000002);
+    }
+    public int getAssociatedCellCount() {
+      return associatedCellCount_;
+    }
+    
     private void initFields() {
       key_ = org.apache.hadoop.hbase.protobuf.generated.WALProtos.WALKey.getDefaultInstance();
       keyValueBytes_ = java.util.Collections.emptyList();;
+      associatedCellCount_ = 0;
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
@@ -9981,6 +9996,9 @@ public final class AdminProtos {
       for (int i = 0; i < keyValueBytes_.size(); i++) {
         output.writeBytes(2, keyValueBytes_.get(i));
       }
+      if (((bitField0_ & 0x00000002) == 0x00000002)) {
+        output.writeInt32(3, associatedCellCount_);
+      }
       getUnknownFields().writeTo(output);
     }
     
@@ -10002,6 +10020,10 @@ public final class AdminProtos {
         }
         size += dataSize;
         size += 1 * getKeyValueBytesList().size();
+      }
+      if (((bitField0_ & 0x00000002) == 0x00000002)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeInt32Size(3, associatedCellCount_);
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
@@ -10033,6 +10055,11 @@ public final class AdminProtos {
       }
       result = result && getKeyValueBytesList()
           .equals(other.getKeyValueBytesList());
+      result = result && (hasAssociatedCellCount() == other.hasAssociatedCellCount());
+      if (hasAssociatedCellCount()) {
+        result = result && (getAssociatedCellCount()
+            == other.getAssociatedCellCount());
+      }
       result = result &&
           getUnknownFields().equals(other.getUnknownFields());
       return result;
@@ -10049,6 +10076,10 @@ public final class AdminProtos {
       if (getKeyValueBytesCount() > 0) {
         hash = (37 * hash) + KEYVALUEBYTES_FIELD_NUMBER;
         hash = (53 * hash) + getKeyValueBytesList().hashCode();
+      }
+      if (hasAssociatedCellCount()) {
+        hash = (37 * hash) + ASSOCIATEDCELLCOUNT_FIELD_NUMBER;
+        hash = (53 * hash) + getAssociatedCellCount();
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
       return hash;
@@ -10175,6 +10206,8 @@ public final class AdminProtos {
         bitField0_ = (bitField0_ & ~0x00000001);
         keyValueBytes_ = java.util.Collections.emptyList();;
         bitField0_ = (bitField0_ & ~0x00000002);
+        associatedCellCount_ = 0;
+        bitField0_ = (bitField0_ & ~0x00000004);
         return this;
       }
       
@@ -10226,6 +10259,10 @@ public final class AdminProtos {
           bitField0_ = (bitField0_ & ~0x00000002);
         }
         result.keyValueBytes_ = keyValueBytes_;
+        if (((from_bitField0_ & 0x00000004) == 0x00000004)) {
+          to_bitField0_ |= 0x00000002;
+        }
+        result.associatedCellCount_ = associatedCellCount_;
         result.bitField0_ = to_bitField0_;
         onBuilt();
         return result;
@@ -10254,6 +10291,9 @@ public final class AdminProtos {
             keyValueBytes_.addAll(other.keyValueBytes_);
           }
           onChanged();
+        }
+        if (other.hasAssociatedCellCount()) {
+          setAssociatedCellCount(other.getAssociatedCellCount());
         }
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
@@ -10306,6 +10346,11 @@ public final class AdminProtos {
             case 18: {
               ensureKeyValueBytesIsMutable();
               keyValueBytes_.add(input.readBytes());
+              break;
+            }
+            case 24: {
+              bitField0_ |= 0x00000004;
+              associatedCellCount_ = input.readInt32();
               break;
             }
           }
@@ -10451,6 +10496,27 @@ public final class AdminProtos {
       public Builder clearKeyValueBytes() {
         keyValueBytes_ = java.util.Collections.emptyList();;
         bitField0_ = (bitField0_ & ~0x00000002);
+        onChanged();
+        return this;
+      }
+      
+      // optional int32 associatedCellCount = 3;
+      private int associatedCellCount_ ;
+      public boolean hasAssociatedCellCount() {
+        return ((bitField0_ & 0x00000004) == 0x00000004);
+      }
+      public int getAssociatedCellCount() {
+        return associatedCellCount_;
+      }
+      public Builder setAssociatedCellCount(int value) {
+        bitField0_ |= 0x00000004;
+        associatedCellCount_ = value;
+        onChanged();
+        return this;
+      }
+      public Builder clearAssociatedCellCount() {
+        bitField0_ = (bitField0_ & ~0x00000004);
+        associatedCellCount_ = 0;
         onChanged();
         return this;
       }
@@ -15359,41 +15425,41 @@ public final class AdminProtos {
       "gionsRequest\022!\n\007regionA\030\001 \002(\0132\020.RegionSp" +
       "ecifier\022!\n\007regionB\030\002 \002(\0132\020.RegionSpecifi" +
       "er\022\027\n\010forcible\030\003 \001(\010:\005false\"\026\n\024MergeRegi" +
-      "onsResponse\"7\n\010WALEntry\022\024\n\003key\030\001 \002(\0132\007.W",
-      "ALKey\022\025\n\rkeyValueBytes\030\002 \003(\014\"4\n\030Replicat" +
-      "eWALEntryRequest\022\030\n\005entry\030\001 \003(\0132\t.WALEnt" +
-      "ry\"\033\n\031ReplicateWALEntryResponse\"\026\n\024RollW" +
-      "ALWriterRequest\".\n\025RollWALWriterResponse" +
-      "\022\025\n\rregionToFlush\030\001 \003(\014\"#\n\021StopServerReq" +
-      "uest\022\016\n\006reason\030\001 \002(\t\"\024\n\022StopServerRespon" +
-      "se\"\026\n\024GetServerInfoRequest\"@\n\nServerInfo" +
-      "\022\037\n\nserverName\030\001 \002(\0132\013.ServerName\022\021\n\tweb" +
-      "uiPort\030\002 \001(\r\"8\n\025GetServerInfoResponse\022\037\n" +
-      "\nserverInfo\030\001 \002(\0132\013.ServerInfo2\337\006\n\014Admin",
-      "Service\022>\n\rgetRegionInfo\022\025.GetRegionInfo" +
-      "Request\032\026.GetRegionInfoResponse\022;\n\014getSt" +
-      "oreFile\022\024.GetStoreFileRequest\032\025.GetStore" +
-      "FileResponse\022D\n\017getOnlineRegion\022\027.GetOnl" +
-      "ineRegionRequest\032\030.GetOnlineRegionRespon" +
-      "se\0225\n\nopenRegion\022\022.OpenRegionRequest\032\023.O" +
-      "penRegionResponse\0228\n\013closeRegion\022\023.Close" +
-      "RegionRequest\032\024.CloseRegionResponse\0228\n\013f" +
-      "lushRegion\022\023.FlushRegionRequest\032\024.FlushR" +
-      "egionResponse\0228\n\013splitRegion\022\023.SplitRegi",
-      "onRequest\032\024.SplitRegionResponse\022>\n\rcompa" +
-      "ctRegion\022\025.CompactRegionRequest\032\026.Compac" +
-      "tRegionResponse\022;\n\014mergeRegions\022\024.MergeR" +
-      "egionsRequest\032\025.MergeRegionsResponse\022J\n\021" +
-      "replicateWALEntry\022\031.ReplicateWALEntryReq" +
-      "uest\032\032.ReplicateWALEntryResponse\022\'\n\006repl" +
-      "ay\022\r.MultiRequest\032\016.MultiResponse\022>\n\rrol" +
-      "lWALWriter\022\025.RollWALWriterRequest\032\026.Roll" +
-      "WALWriterResponse\022>\n\rgetServerInfo\022\025.Get" +
-      "ServerInfoRequest\032\026.GetServerInfoRespons",
-      "e\0225\n\nstopServer\022\022.StopServerRequest\032\023.St" +
-      "opServerResponseBA\n*org.apache.hadoop.hb" +
-      "ase.protobuf.generatedB\013AdminProtosH\001\210\001\001" +
-      "\240\001\001"
+      "onsResponse\"T\n\010WALEntry\022\024\n\003key\030\001 \002(\0132\007.W",
+      "ALKey\022\025\n\rkeyValueBytes\030\002 \003(\014\022\033\n\023associat" +
+      "edCellCount\030\003 \001(\005\"4\n\030ReplicateWALEntryRe" +
+      "quest\022\030\n\005entry\030\001 \003(\0132\t.WALEntry\"\033\n\031Repli" +
+      "cateWALEntryResponse\"\026\n\024RollWALWriterReq" +
+      "uest\".\n\025RollWALWriterResponse\022\025\n\rregionT" +
+      "oFlush\030\001 \003(\014\"#\n\021StopServerRequest\022\016\n\006rea" +
+      "son\030\001 \002(\t\"\024\n\022StopServerResponse\"\026\n\024GetSe" +
+      "rverInfoRequest\"@\n\nServerInfo\022\037\n\nserverN" +
+      "ame\030\001 \002(\0132\013.ServerName\022\021\n\twebuiPort\030\002 \001(" +
+      "\r\"8\n\025GetServerInfoResponse\022\037\n\nserverInfo",
+      "\030\001 \002(\0132\013.ServerInfo2\337\006\n\014AdminService\022>\n\r" +
+      "getRegionInfo\022\025.GetRegionInfoRequest\032\026.G" +
+      "etRegionInfoResponse\022;\n\014getStoreFile\022\024.G" +
+      "etStoreFileRequest\032\025.GetStoreFileRespons" +
+      "e\022D\n\017getOnlineRegion\022\027.GetOnlineRegionRe" +
+      "quest\032\030.GetOnlineRegionResponse\0225\n\nopenR" +
+      "egion\022\022.OpenRegionRequest\032\023.OpenRegionRe" +
+      "sponse\0228\n\013closeRegion\022\023.CloseRegionReque" +
+      "st\032\024.CloseRegionResponse\0228\n\013flushRegion\022" +
+      "\023.FlushRegionRequest\032\024.FlushRegionRespon",
+      "se\0228\n\013splitRegion\022\023.SplitRegionRequest\032\024" +
+      ".SplitRegionResponse\022>\n\rcompactRegion\022\025." +
+      "CompactRegionRequest\032\026.CompactRegionResp" +
+      "onse\022;\n\014mergeRegions\022\024.MergeRegionsReque" +
+      "st\032\025.MergeRegionsResponse\022J\n\021replicateWA" +
+      "LEntry\022\031.ReplicateWALEntryRequest\032\032.Repl" +
+      "icateWALEntryResponse\022\'\n\006replay\022\r.MultiR" +
+      "equest\032\016.MultiResponse\022>\n\rrollWALWriter\022" +
+      "\025.RollWALWriterRequest\032\026.RollWALWriterRe" +
+      "sponse\022>\n\rgetServerInfo\022\025.GetServerInfoR",
+      "equest\032\026.GetServerInfoResponse\0225\n\nstopSe" +
+      "rver\022\022.StopServerRequest\032\023.StopServerRes" +
+      "ponseBA\n*org.apache.hadoop.hbase.protobu" +
+      "f.generatedB\013AdminProtosH\001\210\001\001\240\001\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -15557,7 +15623,7 @@ public final class AdminProtos {
           internal_static_WALEntry_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_WALEntry_descriptor,
-              new java.lang.String[] { "Key", "KeyValueBytes", },
+              new java.lang.String[] { "Key", "KeyValueBytes", "AssociatedCellCount", },
               org.apache.hadoop.hbase.protobuf.generated.AdminProtos.WALEntry.class,
               org.apache.hadoop.hbase.protobuf.generated.AdminProtos.WALEntry.Builder.class);
           internal_static_ReplicateWALEntryRequest_descriptor =

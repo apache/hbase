@@ -20,26 +20,32 @@
 package org.apache.hadoop.hbase.protobuf;
 
 
-import com.google.protobuf.ByteString;
-import com.google.protobuf.ServiceException;
-
-import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.protobuf.generated.AdminProtos;
-import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
-import org.apache.hadoop.hbase.protobuf.generated.WALProtos;
-import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.AdminService;
-import org.apache.hadoop.hbase.regionserver.wal.HLog;
-import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
-import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
-import org.apache.hadoop.hbase.util.Bytes;
-
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableMap;
 import java.util.TreeMap;
 import java.util.UUID;
+
+import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellScanner;
+import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.io.SizedCellScanner;
+import org.apache.hadoop.hbase.ipc.PayloadCarryingRpcController;
+import org.apache.hadoop.hbase.protobuf.generated.AdminProtos;
+import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.AdminService;
+import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
+import org.apache.hadoop.hbase.protobuf.generated.WALProtos;
+import org.apache.hadoop.hbase.regionserver.wal.HLog;
+import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
+import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.Pair;
+
+import com.google.protobuf.ByteString;
+import com.google.protobuf.ServiceException;
 
 public class ReplicationProtbufUtil {
   /**
@@ -81,10 +87,11 @@ public class ReplicationProtbufUtil {
    */
   public static void replicateWALEntry(final AdminService.BlockingInterface admin,
       final HLog.Entry[] entries) throws IOException {
-    AdminProtos.ReplicateWALEntryRequest request =
+    Pair<AdminProtos.ReplicateWALEntryRequest, CellScanner> p =
       buildReplicateWALEntryRequest(entries);
     try {
-      admin.replicateWALEntry(null, request);
+      PayloadCarryingRpcController controller = new PayloadCarryingRpcController(p.getSecond());
+      admin.replicateWALEntry(controller, p.getFirst());
     } catch (ServiceException se) {
       throw ProtobufUtil.getRemoteException(se);
     }
@@ -94,10 +101,14 @@ public class ReplicationProtbufUtil {
    * Create a new ReplicateWALEntryRequest from a list of HLog entries
    *
    * @param entries the HLog entries to be replicated
-   * @return a ReplicateWALEntryRequest
+   * @return a pair of ReplicateWALEntryRequest and a CellScanner over all the WALEdit values
+   * found.
    */
-  public static AdminProtos.ReplicateWALEntryRequest
+  public static Pair<AdminProtos.ReplicateWALEntryRequest, CellScanner>
       buildReplicateWALEntryRequest(final HLog.Entry[] entries) {
+    // Accumulate all the KVs seen in here.
+    List<List<? extends Cell>> allkvs = new ArrayList<List<? extends Cell>>(entries.length);
+    int size = 0;
     WALProtos.FamilyScope.Builder scopeBuilder = WALProtos.FamilyScope.newBuilder();
     AdminProtos.WALEntry.Builder entryBuilder = AdminProtos.WALEntry.newBuilder();
     AdminProtos.ReplicateWALEntryRequest.Builder builder =
@@ -128,13 +139,55 @@ public class ReplicationProtbufUtil {
           keyBuilder.addScopes(scopeBuilder.build());
         }
       }
-      List<KeyValue> keyValues = edit.getKeyValues();
-      for (KeyValue value: keyValues) {
-        entryBuilder.addKeyValueBytes(ByteString.copyFrom(
-          value.getBuffer(), value.getOffset(), value.getLength()));
+      List<KeyValue> kvs = edit.getKeyValues();
+      // Add up the size.  It is used later serializing out the kvs.
+      for (KeyValue kv: kvs) {
+        size += kv.getLength();
       }
+      // Collect up the kvs
+      allkvs.add(kvs);
+      // Write out how many kvs associated with this entry.
+      entryBuilder.setAssociatedCellCount(kvs.size());
       builder.addEntry(entryBuilder.build());
     }
-    return builder.build();
+    return new Pair<AdminProtos.ReplicateWALEntryRequest, CellScanner>(builder.build(),
+      getCellScanner(allkvs, size));
+  }
+
+  /**
+   * @param cells
+   * @return <code>cells</code> packaged as a CellScanner
+   */
+  static CellScanner getCellScanner(final List<List<? extends Cell>> cells, final int size) {
+    return new SizedCellScanner() {
+      private final Iterator<List<? extends Cell>> entries = cells.iterator();
+      private Iterator<? extends Cell> currentIterator = null;
+      private Cell currentCell;
+
+      @Override
+      public Cell current() {
+        return this.currentCell;
+      }
+
+      @Override
+      public boolean advance() {
+        if (this.currentIterator == null) {
+          if (!this.entries.hasNext()) return false;
+          this.currentIterator = this.entries.next().iterator();
+        }
+        if (this.currentIterator.hasNext()) {
+          this.currentCell = this.currentIterator.next();
+          return true;
+        }
+        this.currentCell = null;
+        this.currentIterator = null;
+        return advance();
+      }
+
+      @Override
+      public long heapSize() {
+        return size;
+      }
+    };
   }
 }

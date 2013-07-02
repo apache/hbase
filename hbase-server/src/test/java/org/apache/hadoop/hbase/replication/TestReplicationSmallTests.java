@@ -449,13 +449,14 @@ public class TestReplicationSmallTests extends TestReplicationBase {
 
     scan = new Scan();
 
+    long start = System.currentTimeMillis();
     for (int i = 0; i < NB_RETRIES; i++) {
 
       scanner = htable2.getScanner(scan);
       res = scanner.next(NB_ROWS_IN_BIG_BATCH);
       scanner.close();
       if (res.length != NB_ROWS_IN_BIG_BATCH) {
-        if (i == NB_RETRIES-1) {
+        if (i == NB_RETRIES - 1) {
           int lastRow = -1;
           for (Result result : res) {
             int currentRow = Bytes.toInt(result.getRow());
@@ -465,8 +466,9 @@ public class TestReplicationSmallTests extends TestReplicationBase {
             lastRow = currentRow;
           }
           LOG.error("Last row: " + lastRow);
-          fail("Waited too much time for normal batch replication, "
-              + res.length + " instead of " + NB_ROWS_IN_BIG_BATCH);
+          fail("Waited too much time for normal batch replication, " +
+            res.length + " instead of " + NB_ROWS_IN_BIG_BATCH + "; waited=" +
+            (System.currentTimeMillis() - start) + "ms");
         } else {
           LOG.info("Only got " + res.length + " rows");
           Thread.sleep(SLEEP_TIME);

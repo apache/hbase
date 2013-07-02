@@ -28,6 +28,7 @@ import java.util.NavigableMap;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.util.ByteRange;
+import org.apache.hadoop.hbase.util.Bytes;
 
 /**
  * Utility methods helpful slinging {@link Cell} instances.
@@ -241,5 +242,45 @@ public final class CellUtil {
         return advance();
       }
     };
+  }
+
+  /**
+   * @param left
+   * @param right
+   * @return True if the rows in <code>left</code> and <code>right</code> Cells match
+   */
+  public static boolean matchingRow(final Cell left, final Cell right) {
+    return Bytes.equals(left.getRowArray(),  left.getRowOffset(), left.getRowLength(),
+      right.getRowArray(), right.getRowOffset(), right.getRowLength());
+  }
+
+  /**
+   * @return True if a delete type, a {@link KeyValue.Type#Delete} or
+   * a {KeyValue.Type#DeleteFamily} or a {@link KeyValue.Type#DeleteColumn}
+   * KeyValue type.
+   */
+  public static boolean isDelete(final Cell cell) {
+    return KeyValue.isDelete(cell.getTypeByte());
+  }
+
+  /**
+   * @param cell
+   * @return Estimate of the <code>cell</code> size in bytes.
+   */
+  public static int estimatedSizeOf(final Cell cell) {
+    // If a KeyValue, we can give a good estimate of size.
+    if (cell instanceof KeyValue) {
+      return ((KeyValue)cell).getLength() + Bytes.SIZEOF_INT;
+    }
+    // TODO: Should we add to Cell a sizeOf?  Would it help? Does it make sense if Cell is
+    // prefix encoded or compressed?
+    return cell.getRowLength() + cell.getFamilyLength() +
+      cell.getQualifierLength() +
+      cell.getValueLength() +
+      // Use the KeyValue's infrastructure size presuming that another implementation would have
+      // same basic cost.
+      KeyValue.KEY_INFRASTRUCTURE_SIZE +
+      // Serialization is probably preceded by a length (it is in the KeyValueCodec at least).
+      Bytes.SIZEOF_INT;
   }
 }

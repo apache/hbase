@@ -177,6 +177,9 @@ public class ReplicationSource extends Thread
         new PriorityBlockingQueue<Path>(
             conf.getInt("hbase.regionserver.maxlogs", 32),
             new LogsComparator());
+    // TODO: This connection is replication specific or we should make it particular to
+    // replication and make replication specific settings such as compression or codec to use
+    // passing Cells.
     this.conn = HConnectionManager.getConnection(conf);
     this.zkHelper = manager.getRepZkWrapper();
     this.ratio = this.conf.getFloat("replication.source.ratio", 0.1f);
@@ -456,7 +459,6 @@ public class ReplicationSource extends Thread
 
     // Connect to peer cluster first, unless we have to stop
     while (this.isActive() && this.currentPeers.size() == 0) {
-
       chooseSinks();
       if (this.isActive() && this.currentPeers.size() == 0) {
         if (sleepForRetries("Waiting for peers", sleepMultiplier)) {

@@ -2219,8 +2219,7 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
                                          conf, server, fs, logDir, oldLogDir);
       server.replicationSinkHandler = (ReplicationSinkService)
                                          server.replicationSourceHandler;
-    }
-    else {
+    } else {
       server.replicationSourceHandler = (ReplicationSourceService)
                                          newReplicationInstance(sourceClassname,
                                          conf, server, fs, logDir, oldLogDir);
@@ -3715,15 +3714,14 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
   @Override
   @QosPriority(priority=HConstants.REPLICATION_QOS)
   public ReplicateWALEntryResponse replicateWALEntry(final RpcController controller,
-      final ReplicateWALEntryRequest request) throws ServiceException {
+      final ReplicateWALEntryRequest request)
+  throws ServiceException {
     try {
       if (replicationSinkHandler != null) {
         checkOpen();
         requestCount.increment();
-        HLog.Entry[] entries = ReplicationProtbufUtil.toHLogEntries(request.getEntryList());
-        if (entries != null && entries.length > 0) {
-          replicationSinkHandler.replicateLogEntries(entries);
-        }
+        this.replicationSinkHandler.replicateLogEntries(request.getEntryList(),
+          ((PayloadCarryingRpcController)controller).cellScanner());
       }
       return ReplicateWALEntryResponse.newBuilder().build();
     } catch (IOException ie) {

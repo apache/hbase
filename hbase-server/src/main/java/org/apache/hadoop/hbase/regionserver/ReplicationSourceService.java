@@ -18,8 +18,6 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import java.io.IOException;
-
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
 
@@ -30,7 +28,6 @@ import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
  */
 @InterfaceAudience.Private
 public interface ReplicationSourceService extends ReplicationService {
-
   /**
    * Returns a WALObserver for the service. This is needed to 
    * observe log rolls and log archival events.
