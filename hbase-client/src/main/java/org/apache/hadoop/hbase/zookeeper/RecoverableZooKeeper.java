@@ -108,6 +108,7 @@ public class RecoverableZooKeeper {
   public RecoverableZooKeeper(String quorumServers, int sessionTimeout,
       Watcher watcher, int maxRetries, int retryIntervalMillis, String identifier)
   throws IOException {
+    // TODO: Add support for zk 'chroot'; we don't add it to the quorumServers String as we should.
     this.zk = new ZooKeeper(quorumServers, sessionTimeout, watcher);
     this.retryCounterFactory =
       new RetryCounterFactory(maxRetries, retryIntervalMillis);
