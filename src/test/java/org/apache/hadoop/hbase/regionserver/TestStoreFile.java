@@ -37,6 +37,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestCase;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.SmallTests;
@@ -620,6 +621,33 @@ public class TestStoreFile extends HBaseTestCase {
     int maxFalsePos = (int) (2 * 2000 * err);
     assertTrue("Too many false positives: " + falsePos + " (err=" + err
         + ", expected no more than " + maxFalsePos, falsePos <= maxFalsePos);
+  }
+
+  /**
+   * Test for HBASE-8012
+   */
+  public void testReseek() throws Exception {
+    // write the file
+    Path f = new Path(ROOT_DIR, getName());
+
+    // Make a store file and write data to it.
+    StoreFile.Writer writer = new StoreFile.WriterBuilder(conf, cacheConf,
+         this.fs, 8 * 1024)
+            .withFilePath(f)
+            .build();
+
+    writeStoreFile(writer);
+    writer.close();
+
+    StoreFile.Reader reader = new StoreFile.Reader(fs, f, cacheConf, DataBlockEncoding.NONE);
+
+    // Now do reseek with empty KV to position to the beginning of the file
+
+    KeyValue k = KeyValue.createFirstOnRow(HConstants.EMPTY_BYTE_ARRAY);
+    StoreFileScanner s = reader.getStoreFileScanner(false, false);
+    s.reseek(k);
+
+    assertNotNull("Intial reseek should position at the beginning of the file", s.peek());
   }
 
   public void testBloomTypes() throws Exception {
