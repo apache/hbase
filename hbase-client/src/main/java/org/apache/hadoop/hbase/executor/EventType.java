@@ -85,7 +85,7 @@ public enum EventType {
    * 
    * RS region merge has completed.
    */
-  RS_ZK_REGION_MERGE        (9, ExecutorType.MASTER_SERVER_OPERATIONS),
+  RS_ZK_REGION_MERGED       (9, ExecutorType.MASTER_SERVER_OPERATIONS),
 
   /**
    * Messages originating from Master to RS.<br>

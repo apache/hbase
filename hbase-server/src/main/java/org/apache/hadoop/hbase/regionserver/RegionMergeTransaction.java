@@ -259,7 +259,7 @@ public class RegionMergeTransaction {
     if (server != null && server.getZooKeeper() != null) {
       try {
         createNodeMerging(server.getZooKeeper(), this.mergedRegionInfo,
-            server.getServerName());
+          server.getServerName(), region_a.getRegionInfo(), region_b.getRegionInfo());
       } catch (KeeperException e) {
         throw new IOException("Failed creating MERGING znode on "
             + this.mergedRegionInfo.getRegionNameAsString(), e);
@@ -274,7 +274,8 @@ public class RegionMergeTransaction {
         // Note that if the transition fails then the rollback will delete the
         // created znode as the journal entry SET_MERGING_IN_ZK is added.
         this.znodeVersion = transitionNodeMerging(server.getZooKeeper(),
-            this.mergedRegionInfo, server.getServerName(), -1);
+            this.mergedRegionInfo, server.getServerName(), -1,
+            region_a.getRegionInfo(), region_b.getRegionInfo());
       } catch (KeeperException e) {
         throw new IOException("Failed setting MERGING znode on "
             + this.mergedRegionInfo.getRegionNameAsString(), e);
@@ -297,6 +298,19 @@ public class RegionMergeTransaction {
     // Nothing to unroll here if failure -- clean up of CREATE_MERGE_DIR will
     // clean this up.
     mergeStoreFiles(hstoreFilesOfRegionA, hstoreFilesOfRegionB);
+
+    if (server != null && server.getZooKeeper() != null) {
+      try {
+        // Do one more check on the merging znode (before it is too late) in case
+        // any merging region is moved somehow. If so, the znode transition will fail.
+        this.znodeVersion = transitionNodeMerging(server.getZooKeeper(),
+            this.mergedRegionInfo, server.getServerName(), this.znodeVersion,
+            region_a.getRegionInfo(), region_b.getRegionInfo());
+      } catch (KeeperException e) {
+        throw new IOException("Failed setting MERGING znode on "
+            + this.mergedRegionInfo.getRegionNameAsString(), e);
+      }
+    }
 
     // Log to the journal that we are creating merged region. We could fail
     // halfway through. If we do, we could have left
@@ -665,18 +679,20 @@ public class RegionMergeTransaction {
    * @throws IOException
    */
   int createNodeMerging(final ZooKeeperWatcher zkw, final HRegionInfo region,
-      final ServerName serverName) throws KeeperException, IOException {
+      final ServerName serverName, final HRegionInfo a,
+      final HRegionInfo b) throws KeeperException, IOException {
     LOG.debug(zkw.prefix("Creating ephemeral node for "
         + region.getEncodedName() + " in MERGING state"));
+    byte [] payload = HRegionInfo.toDelimitedByteArray(a, b);
     RegionTransition rt = RegionTransition.createRegionTransition(
-        EventType.RS_ZK_REGION_MERGING, region.getRegionName(), serverName);
+        EventType.RS_ZK_REGION_MERGING, region.getRegionName(), serverName, payload);
     String node = ZKAssign.getNodeName(zkw, region.getEncodedName());
     if (!ZKUtil.createEphemeralNodeAndWatch(zkw, node, rt.toByteArray())) {
       throw new IOException("Failed create of ephemeral " + node);
     }
     // Transition node from MERGING to MERGING and pick up version so we
     // can be sure this znode is ours; version is needed deleting.
-    return transitionNodeMerging(zkw, region, serverName, -1);
+    return transitionNodeMerging(zkw, region, serverName, -1, a, b);
   }
 
   /**
@@ -723,7 +739,7 @@ public class RegionMergeTransaction {
       final int znodeVersion) throws KeeperException, IOException {
     byte[] payload = HRegionInfo.toDelimitedByteArray(merged, a, b);
     return ZKAssign.transitionNode(zkw, merged, serverName,
-        EventType.RS_ZK_REGION_MERGING, EventType.RS_ZK_REGION_MERGE,
+        EventType.RS_ZK_REGION_MERGING, EventType.RS_ZK_REGION_MERGED,
         znodeVersion, payload);
   }
 
@@ -738,11 +754,12 @@ public class RegionMergeTransaction {
    * @throws IOException
    */
   int transitionNodeMerging(final ZooKeeperWatcher zkw,
-      final HRegionInfo parent, final ServerName serverName, final int version)
-      throws KeeperException, IOException {
+      final HRegionInfo parent, final ServerName serverName, final int version,
+      final HRegionInfo a, final HRegionInfo b) throws KeeperException, IOException {
+    byte[] payload = HRegionInfo.toDelimitedByteArray(a, b);
     return ZKAssign.transitionNode(zkw, parent, serverName,
             EventType.RS_ZK_REGION_MERGING, EventType.RS_ZK_REGION_MERGING,
-        version);
+        version, payload);
   }
 
   private static int tickleNodeMerge(ZooKeeperWatcher zkw, HRegionInfo merged,
@@ -750,7 +767,7 @@ public class RegionMergeTransaction {
       final int znodeVersion) throws KeeperException, IOException {
     byte[] payload = HRegionInfo.toDelimitedByteArray(a, b);
     return ZKAssign.transitionNode(zkw, merged, serverName,
-        EventType.RS_ZK_REGION_MERGE, EventType.RS_ZK_REGION_MERGE,
+        EventType.RS_ZK_REGION_MERGED, EventType.RS_ZK_REGION_MERGED,
         znodeVersion, payload);
   }
 

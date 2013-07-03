@@ -1215,4 +1215,28 @@ public class TestAssignmentManager {
     t.start();
     while (!t.isAlive()) Threads.sleep(1);
   }
+
+  @Test
+  public void testForceAssignMergingRegion() throws Exception {
+    // Region to use in test.
+    final HRegionInfo hri = HRegionInfo.FIRST_META_REGIONINFO;
+    // Need a mocked catalog tracker.
+    CatalogTracker ct = Mockito.mock(CatalogTracker.class);
+    LoadBalancer balancer = LoadBalancerFactory.getLoadBalancer(
+      server.getConfiguration());
+    // Create an AM.
+    AssignmentManager am = new AssignmentManager(this.server,
+      this.serverManager, ct, balancer, null, null, master.getTableLockManager());
+    RegionStates regionStates = am.getRegionStates();
+    try {
+      // First set the state of the region to merging
+      regionStates.updateRegionState(hri, RegionState.State.MERGING);
+      // Now, try to assign it with force new plan
+      am.assign(hri, true, true);
+      assertEquals("The region should be still in merging state",
+        RegionState.State.MERGING, regionStates.getRegionState(hri).getState());
+    } finally {
+      am.shutdown();
+    }
+  }
 }
