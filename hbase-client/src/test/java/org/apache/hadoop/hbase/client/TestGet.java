@@ -19,6 +19,7 @@
 
 package org.apache.hadoop.hbase.client;
 
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.fail;
 
 import java.io.File;
@@ -138,6 +139,13 @@ public class TestGet {
 
   @Test
   public void testDynamicFilter() throws Exception {
+    Configuration conf = HBaseConfiguration.create();
+    String localPath = conf.get("hbase.local.dir")
+      + File.separator + "jars" + File.separator;
+    File jarFile = new File(localPath, "MockFilter.jar");
+    jarFile.delete();
+    assertFalse("Should be deleted: " + jarFile.getPath(), jarFile.exists());
+
     ClientProtos.Get getProto = ClientProtos.Get.parseFrom(Base64.decode(PB_GET));
     try {
       ProtobufUtil.toGet(getProto);
@@ -145,13 +153,6 @@ public class TestGet {
     } catch (IOException ioe) {
       Assert.assertTrue(ioe.getCause() instanceof ClassNotFoundException);
     }
-
-    Configuration conf = HBaseConfiguration.create();
-    String localPath = conf.get("hbase.local.dir")
-      + File.separator + "jars" + File.separator;
-    File jarFile = new File(localPath, "MockFilter.jar");
-    jarFile.deleteOnExit();
-
     FileOutputStream fos = new FileOutputStream(jarFile);
     fos.write(Base64.decode(MOCK_FILTER_JAR));
     fos.close();
