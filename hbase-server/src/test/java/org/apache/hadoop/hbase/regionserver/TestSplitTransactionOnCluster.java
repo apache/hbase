@@ -40,8 +40,10 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.LargeTests;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.RegionTransition;
@@ -52,6 +54,9 @@ import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.ResultScanner;
+import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.exceptions.MasterNotRunningException;
 import org.apache.hadoop.hbase.exceptions.UnknownRegionException;
@@ -75,6 +80,7 @@ import org.apache.zookeeper.KeeperException.NodeExistsException;
 import org.apache.zookeeper.data.Stat;
 import org.junit.After;
 import org.junit.AfterClass;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -424,6 +430,69 @@ public class TestSplitTransactionOnCluster {
       admin.setBalancerRunning(true, false);
       cluster.getMaster().setCatalogJanitorEnabled(true);
       t.close();
+    }
+  }
+
+  @Test(timeout = 180000)
+  public void testSplitShouldNotThrowNPEEvenARegionHasEmptySplitFiles() throws Exception {
+    Configuration conf = TESTING_UTIL.getConfiguration();
+    ZooKeeperWatcher zkw = HBaseTestingUtility.getZooKeeperWatcher(TESTING_UTIL);
+    String userTableName = "testSplitShouldNotThrowNPEEvenARegionHasEmptySplitFiles";
+    HTableDescriptor htd = new HTableDescriptor(userTableName);
+    HColumnDescriptor hcd = new HColumnDescriptor("col");
+    htd.addFamily(hcd);
+    admin.createTable(htd);
+    ZKAssign.blockUntilNoRIT(zkw);
+    HTable table = new HTable(conf, userTableName);
+    try {
+      for (int i = 0; i <= 5; i++) {
+        String row = "row" + i;
+        Put p = new Put(row.getBytes());
+        String val = "Val" + i;
+        p.add("col".getBytes(), "ql".getBytes(), val.getBytes());
+        table.put(p);
+        admin.flush(userTableName);
+        Delete d = new Delete(row.getBytes());
+        // Do a normal delete
+        table.delete(d);
+        admin.flush(userTableName);
+      }
+      admin.majorCompact(userTableName);
+      List<HRegionInfo> regionsOfTable = TESTING_UTIL.getMiniHBaseCluster()
+          .getMaster().getAssignmentManager().getRegionStates()
+          .getRegionsOfTable(userTableName.getBytes());
+      HRegionInfo hRegionInfo = regionsOfTable.get(0);
+      Put p = new Put("row6".getBytes());
+      p.add("col".getBytes(), "ql".getBytes(), "val".getBytes());
+      table.put(p);
+      p = new Put("row7".getBytes());
+      p.add("col".getBytes(), "ql".getBytes(), "val".getBytes());
+      table.put(p);
+      p = new Put("row8".getBytes());
+      p.add("col".getBytes(), "ql".getBytes(), "val".getBytes());
+      table.put(p);
+      admin.flush(userTableName);
+      admin.split(hRegionInfo.getRegionName(), "row7".getBytes());
+      regionsOfTable = TESTING_UTIL.getMiniHBaseCluster().getMaster()
+          .getAssignmentManager().getRegionStates()
+          .getRegionsOfTable(userTableName.getBytes());
+
+      while (regionsOfTable.size() != 2) {
+        Thread.sleep(2000);
+        regionsOfTable = TESTING_UTIL.getMiniHBaseCluster().getMaster()
+            .getAssignmentManager().getRegionStates()
+            .getRegionsOfTable(userTableName.getBytes());
+      }
+      Assert.assertEquals(2, regionsOfTable.size());
+      Scan s = new Scan();
+      ResultScanner scanner = table.getScanner(s);
+      int mainTableCount = 0;
+      for (Result rr = scanner.next(); rr != null; rr = scanner.next()) {
+        mainTableCount++;
+      }
+      Assert.assertEquals(3, mainTableCount);
+    } finally {
+      table.close();
     }
   }
 
