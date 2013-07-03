@@ -46,7 +46,9 @@ public class RegionState implements org.apache.hadoop.io.Writable {
     SPLITTING,      // server started split of a region
     SPLIT,          // server completed split of a region
     FAILED_OPEN,    // failed to open, and won't retry any more
-    FAILED_CLOSE    // failed to close, and won't retry any more
+    FAILED_CLOSE,   // failed to close, and won't retry any more
+    MERGING,        // server started merge a region
+    MERGED          // server completed merge a region
   }
 
   // Many threads can update the state at the stamp at the same time
@@ -124,16 +126,20 @@ public class RegionState implements org.apache.hadoop.io.Writable {
     return state == State.SPLITTING;
   }
 
-  public boolean isSplit() {
-    return state == State.SPLIT;
-  }
-
   public boolean isFailedOpen() {
     return state == State.FAILED_OPEN;
   }
 
   public boolean isFailedClose() {
     return state == State.FAILED_CLOSE;
+  }
+
+  public boolean isMerging() {
+    return state == State.MERGING;
+  }
+
+  public boolean isOpenOrMergingOnServer(final ServerName sn) {
+    return isOnServer(sn) && (isOpened() || isMerging());
   }
 
   public boolean isPendingOpenOrOpeningOnServer(final ServerName sn) {
@@ -211,6 +217,12 @@ public class RegionState implements org.apache.hadoop.io.Writable {
     case FAILED_CLOSE:
       rs = ClusterStatusProtos.RegionState.State.FAILED_CLOSE;
       break;
+    case MERGING:
+      rs = ClusterStatusProtos.RegionState.State.MERGING;
+      break;
+    case MERGED:
+      rs = ClusterStatusProtos.RegionState.State.MERGED;
+      break;
     default:
       throw new IllegalStateException("");
     }
@@ -260,6 +272,12 @@ public class RegionState implements org.apache.hadoop.io.Writable {
       break;
     case FAILED_CLOSE:
       state = State.FAILED_CLOSE;
+      break;
+    case MERGING:
+      state = State.MERGING;
+      break;
+    case MERGED:
+      state = State.MERGED;
       break;
     default:
       throw new IllegalStateException("");

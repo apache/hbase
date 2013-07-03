@@ -35,7 +35,7 @@ import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.KeeperException.NoNodeException;
 
 /**
- * Handles MERGE regions event on Master, master receive the merge report from
+ * Handles MERGED regions event on Master, master receive the merge report from
  * the regionserver, then offline the merging regions and online the merged
  * region.Here region_a sorts before region_b.
  */
@@ -52,7 +52,7 @@ public class MergedRegionHandler extends EventHandler implements
   public MergedRegionHandler(Server server,
       AssignmentManager assignmentManager, ServerName sn,
       final List<HRegionInfo> mergeRegions) {
-    super(server, EventType.RS_ZK_REGION_MERGE);
+    super(server, EventType.RS_ZK_REGION_MERGED);
     assert mergeRegions.size() == 3;
     this.assignmentManager = assignmentManager;
     this.merged = mergeRegions.get(0);
@@ -96,7 +96,7 @@ public class MergedRegionHandler extends EventHandler implements
         // It's possible that the RS tickles in between the reading of the
         // znode and the deleting, so it's safe to retry.
         successful = ZKAssign.deleteNode(this.server.getZooKeeper(),
-            encodedRegionName, EventType.RS_ZK_REGION_MERGE);
+            encodedRegionName, EventType.RS_ZK_REGION_MERGED);
       }
     } catch (KeeperException e) {
       if (e instanceof NoNodeException) {
@@ -105,11 +105,11 @@ public class MergedRegionHandler extends EventHandler implements
         LOG.debug("The znode " + znodePath
             + " does not exist.  May be deleted already.");
       } else {
-        server.abort("Error deleting MERGE node in ZK for transition ZK node ("
+        server.abort("Error deleting MERGED node in ZK for transition ZK node ("
             + merged.getEncodedName() + ")", e);
       }
     }
-    LOG.info("Handled MERGE event; merged="
+    LOG.info("Handled MERGED event; merged="
         + this.merged.getRegionNameAsString() + " region_a="
         + this.region_a.getRegionNameAsString() + "region_b="
         + this.region_b.getRegionNameAsString());

@@ -43,6 +43,8 @@ message RegionState {
     SPLIT = 8;         // server completed split of a region
     FAILED_OPEN = 9;   // failed to open, and won't retry any more
     FAILED_CLOSE = 10; // failed to close, and won't retry any more
+    MERGING = 11;      // server started merge a region
+    MERGED = 12;       // server completed merge of a region
   }
 }
 

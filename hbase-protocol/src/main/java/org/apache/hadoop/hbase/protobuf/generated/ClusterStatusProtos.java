@@ -65,6 +65,8 @@ public final class ClusterStatusProtos {
       SPLIT(8, 8),
       FAILED_OPEN(9, 9),
       FAILED_CLOSE(10, 10),
+      MERGING(11, 11),
+      MERGED(12, 12),
       ;
       
       public static final int OFFLINE_VALUE = 0;
@@ -78,6 +80,8 @@ public final class ClusterStatusProtos {
       public static final int SPLIT_VALUE = 8;
       public static final int FAILED_OPEN_VALUE = 9;
       public static final int FAILED_CLOSE_VALUE = 10;
+      public static final int MERGING_VALUE = 11;
+      public static final int MERGED_VALUE = 12;
       
       
       public final int getNumber() { return value; }
@@ -95,6 +99,8 @@ public final class ClusterStatusProtos {
           case 8: return SPLIT;
           case 9: return FAILED_OPEN;
           case 10: return FAILED_CLOSE;
+          case 11: return MERGING;
+          case 12: return MERGED;
           default: return null;
         }
       }
@@ -125,7 +131,7 @@ public final class ClusterStatusProtos {
       }
       
       private static final State[] VALUES = {
-        OFFLINE, PENDING_OPEN, OPENING, OPEN, PENDING_CLOSE, CLOSING, CLOSED, SPLITTING, SPLIT, FAILED_OPEN, FAILED_CLOSE, 
+        OFFLINE, PENDING_OPEN, OPENING, OPEN, PENDING_CLOSE, CLOSING, CLOSED, SPLITTING, SPLIT, FAILED_OPEN, FAILED_CLOSE, MERGING, MERGED, 
       };
       
       public static State valueOf(
@@ -7112,46 +7118,46 @@ public final class ClusterStatusProtos {
   static {
     java.lang.String[] descriptorData = {
       "\n\023ClusterStatus.proto\032\013hbase.proto\032\017Clus" +
-      "terId.proto\032\010FS.proto\"\211\002\n\013RegionState\022\037\n" +
+      "terId.proto\032\010FS.proto\"\242\002\n\013RegionState\022\037\n" +
       "\nregionInfo\030\001 \002(\0132\013.RegionInfo\022!\n\005state\030" +
       "\002 \002(\0162\022.RegionState.State\022\r\n\005stamp\030\003 \001(\004" +
-      "\"\246\001\n\005State\022\013\n\007OFFLINE\020\000\022\020\n\014PENDING_OPEN\020" +
+      "\"\277\001\n\005State\022\013\n\007OFFLINE\020\000\022\020\n\014PENDING_OPEN\020" +
       "\001\022\013\n\007OPENING\020\002\022\010\n\004OPEN\020\003\022\021\n\rPENDING_CLOS" +
       "E\020\004\022\013\n\007CLOSING\020\005\022\n\n\006CLOSED\020\006\022\r\n\tSPLITTIN" +
       "G\020\007\022\t\n\005SPLIT\020\010\022\017\n\013FAILED_OPEN\020\t\022\020\n\014FAILE" +
-      "D_CLOSE\020\n\"W\n\022RegionInTransition\022\036\n\004spec\030" +
-      "\001 \002(\0132\020.RegionSpecifier\022!\n\013regionState\030\002",
-      " \002(\0132\014.RegionState\"\260\003\n\nRegionLoad\022)\n\017reg" +
-      "ionSpecifier\030\001 \002(\0132\020.RegionSpecifier\022\016\n\006" +
-      "stores\030\002 \001(\r\022\022\n\nstorefiles\030\003 \001(\r\022\037\n\027stor" +
-      "eUncompressedSizeMB\030\004 \001(\r\022\027\n\017storefileSi" +
-      "zeMB\030\005 \001(\r\022\026\n\016memstoreSizeMB\030\006 \001(\r\022\034\n\024st" +
-      "orefileIndexSizeMB\030\007 \001(\r\022\031\n\021readRequests" +
-      "Count\030\010 \001(\004\022\032\n\022writeRequestsCount\030\t \001(\004\022" +
-      "\032\n\022totalCompactingKVs\030\n \001(\004\022\033\n\023currentCo" +
-      "mpactedKVs\030\013 \001(\004\022\027\n\017rootIndexSizeKB\030\014 \001(" +
-      "\r\022\036\n\026totalStaticIndexSizeKB\030\r \001(\r\022\036\n\026tot",
-      "alStaticBloomSizeKB\030\016 \001(\r\022\032\n\022completeSeq" +
-      "uenceId\030\017 \001(\004\"\372\001\n\nServerLoad\022\030\n\020numberOf" +
-      "Requests\030\001 \001(\r\022\035\n\025totalNumberOfRequests\030" +
-      "\002 \001(\r\022\022\n\nusedHeapMB\030\003 \001(\r\022\021\n\tmaxHeapMB\030\004" +
-      " \001(\r\022 \n\013regionLoads\030\005 \003(\0132\013.RegionLoad\022\"" +
-      "\n\014coprocessors\030\006 \003(\0132\014.Coprocessor\022\027\n\017re" +
-      "portStartTime\030\007 \001(\004\022\025\n\rreportEndTime\030\010 \001" +
-      "(\004\022\026\n\016infoServerPort\030\t \001(\r\"N\n\016LiveServer" +
-      "Info\022\033\n\006server\030\001 \002(\0132\013.ServerName\022\037\n\nser" +
-      "verLoad\030\002 \002(\0132\013.ServerLoad\"\327\002\n\rClusterSt",
-      "atus\022.\n\014hbaseVersion\030\001 \001(\0132\030.HBaseVersio" +
-      "nFileContent\022$\n\013liveServers\030\002 \003(\0132\017.Live" +
-      "ServerInfo\022 \n\013deadServers\030\003 \003(\0132\013.Server" +
-      "Name\0220\n\023regionsInTransition\030\004 \003(\0132\023.Regi" +
-      "onInTransition\022\035\n\tclusterId\030\005 \001(\0132\n.Clus" +
-      "terId\022(\n\022masterCoprocessors\030\006 \003(\0132\014.Copr" +
-      "ocessor\022\033\n\006master\030\007 \001(\0132\013.ServerName\022\"\n\r" +
-      "backupMasters\030\010 \003(\0132\013.ServerName\022\022\n\nbala" +
-      "ncerOn\030\t \001(\010BF\n*org.apache.hadoop.hbase." +
-      "protobuf.generatedB\023ClusterStatusProtosH",
-      "\001\240\001\001"
+      "D_CLOSE\020\n\022\013\n\007MERGING\020\013\022\n\n\006MERGED\020\014\"W\n\022Re" +
+      "gionInTransition\022\036\n\004spec\030\001 \002(\0132\020.RegionS",
+      "pecifier\022!\n\013regionState\030\002 \002(\0132\014.RegionSt" +
+      "ate\"\260\003\n\nRegionLoad\022)\n\017regionSpecifier\030\001 " +
+      "\002(\0132\020.RegionSpecifier\022\016\n\006stores\030\002 \001(\r\022\022\n" +
+      "\nstorefiles\030\003 \001(\r\022\037\n\027storeUncompressedSi" +
+      "zeMB\030\004 \001(\r\022\027\n\017storefileSizeMB\030\005 \001(\r\022\026\n\016m" +
+      "emstoreSizeMB\030\006 \001(\r\022\034\n\024storefileIndexSiz" +
+      "eMB\030\007 \001(\r\022\031\n\021readRequestsCount\030\010 \001(\004\022\032\n\022" +
+      "writeRequestsCount\030\t \001(\004\022\032\n\022totalCompact" +
+      "ingKVs\030\n \001(\004\022\033\n\023currentCompactedKVs\030\013 \001(" +
+      "\004\022\027\n\017rootIndexSizeKB\030\014 \001(\r\022\036\n\026totalStati",
+      "cIndexSizeKB\030\r \001(\r\022\036\n\026totalStaticBloomSi" +
+      "zeKB\030\016 \001(\r\022\032\n\022completeSequenceId\030\017 \001(\004\"\372" +
+      "\001\n\nServerLoad\022\030\n\020numberOfRequests\030\001 \001(\r\022" +
+      "\035\n\025totalNumberOfRequests\030\002 \001(\r\022\022\n\nusedHe" +
+      "apMB\030\003 \001(\r\022\021\n\tmaxHeapMB\030\004 \001(\r\022 \n\013regionL" +
+      "oads\030\005 \003(\0132\013.RegionLoad\022\"\n\014coprocessors\030" +
+      "\006 \003(\0132\014.Coprocessor\022\027\n\017reportStartTime\030\007" +
+      " \001(\004\022\025\n\rreportEndTime\030\010 \001(\004\022\026\n\016infoServe" +
+      "rPort\030\t \001(\r\"N\n\016LiveServerInfo\022\033\n\006server\030" +
+      "\001 \002(\0132\013.ServerName\022\037\n\nserverLoad\030\002 \002(\0132\013",
+      ".ServerLoad\"\327\002\n\rClusterStatus\022.\n\014hbaseVe" +
+      "rsion\030\001 \001(\0132\030.HBaseVersionFileContent\022$\n" +
+      "\013liveServers\030\002 \003(\0132\017.LiveServerInfo\022 \n\013d" +
+      "eadServers\030\003 \003(\0132\013.ServerName\0220\n\023regions" +
+      "InTransition\030\004 \003(\0132\023.RegionInTransition\022" +
+      "\035\n\tclusterId\030\005 \001(\0132\n.ClusterId\022(\n\022master" +
+      "Coprocessors\030\006 \003(\0132\014.Coprocessor\022\033\n\006mast" +
+      "er\030\007 \001(\0132\013.ServerName\022\"\n\rbackupMasters\030\010" +
+      " \003(\0132\013.ServerName\022\022\n\nbalancerOn\030\t \001(\010BF\n" +
+      "*org.apache.hadoop.hbase.protobuf.genera",
+      "tedB\023ClusterStatusProtosH\001\240\001\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {

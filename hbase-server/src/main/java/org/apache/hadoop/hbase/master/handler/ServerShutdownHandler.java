@@ -230,9 +230,9 @@ public class ServerShutdownHandler extends EventHandler {
             }
             if (rit != null) {
               if (!rit.isOnServer(serverName)
-                  || rit.isClosed() || rit.isOpened() || rit.isSplit()) {
+                  || rit.isClosed() || rit.isOpened()) {
                 // Skip regions that are in transition on other server,
-                // or in state closed/opened/split
+                // or in state closed/opened
                 LOG.info("Skip assigning region " + rit);
                 continue;
               }
@@ -247,15 +247,7 @@ public class ServerShutdownHandler extends EventHandler {
             }
             toAssignRegions.add(hri);
           } else if (rit != null) {
-            if (rit.isSplitting() || rit.isSplit()) {
-              // This will happen when the RS went down and the call back for the SPLIITING or SPLIT
-              // has not yet happened for node Deleted event. In that case if the region was actually
-              // split
-              // but the RS had gone down before completing the split process then will not try to
-              // assign the parent region again. In that case we should make the region offline and
-              // also delete the region from RIT.
-              am.regionOffline(hri);
-            } else if ((rit.isClosing() || rit.isPendingClose())
+            if ((rit.isClosing() || rit.isPendingClose())
                 && am.getZKTable().isDisablingOrDisabledTable(hri.getTableNameAsString())) {
               // If the table was partially disabled and the RS went down, we should clear the RIT
               // and remove the node for the region.

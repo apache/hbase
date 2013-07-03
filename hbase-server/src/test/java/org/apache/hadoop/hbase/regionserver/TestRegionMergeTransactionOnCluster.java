@@ -113,7 +113,6 @@ public class TestRegionMergeTransactionOnCluster {
     verifyRowCount(table, ROWSIZE);
 
     table.close();
-
   }
 
   @Test
@@ -189,8 +188,6 @@ public class TestRegionMergeTransactionOnCluster {
     } finally {
       admin.enableCatalogJanitor(true);
     }
-
-
   }
 
   private void mergeRegionsAndVerifyRegionNum(HMaster master, byte[] tablename,
@@ -293,5 +290,4 @@ public class TestRegionMergeTransactionOnCluster {
     assertEquals(expectedRegionNum, rowCount);
     scanner.close();
   }
-
 }

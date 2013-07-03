@@ -38,6 +38,9 @@ import org.apache.hadoop.hbase.catalog.MetaReader;
 import org.apache.hadoop.hbase.master.RegionState.State;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hadoop.hbase.zookeeper.ZKAssign;
+import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
+import org.apache.zookeeper.KeeperException;
 
 /**
  * Region state accountant. It holds the states of all regions in the memory.
@@ -204,8 +207,7 @@ public class RegionStates {
   }
 
   /**
-   * Update a region state. If it is not splitting,
-   * it will be put in transition if not already there.
+   * Update a region state. It will be put in transition if not already there.
    */
   public synchronized RegionState updateRegionState(
       final HRegionInfo hri, final State state) {
@@ -216,8 +218,7 @@ public class RegionStates {
   }
 
   /**
-   * Update a region state. If it is not splitting,
-   * it will be put in transition if not already there.
+   * Update a region state. It will be put in transition if not already there.
    *
    * If we can't find the region info based on the region name in
    * the transition, log a warning and return null.
@@ -239,8 +240,7 @@ public class RegionStates {
   }
 
   /**
-   * Update a region state. If it is not splitting,
-   * it will be put in transition if not already there.
+   * Update a region state. It will be put in transition if not already there.
    */
   public synchronized RegionState updateRegionState(
       final HRegionInfo hri, final State state, final ServerName serverName) {
@@ -253,8 +253,8 @@ public class RegionStates {
     }
 
     if (state == State.FAILED_CLOSE || state == State.FAILED_OPEN) {
-      LOG.warn("Failed to transition " + hri.getShortNameToLog() + " on " + serverName + ": " +
-        state);
+      LOG.warn("Failed to transition " + hri.getShortNameToLog()
+        + " on " + serverName + ": " + state);
     }
 
     String regionName = hri.getEncodedName();
@@ -264,8 +264,8 @@ public class RegionStates {
     if (oldState == null || oldState.getState() != regionState.getState()) {
       LOG.info("Region transitioned from " + oldState + " to " + regionState);
     }
-    if (state != State.SPLITTING && (newServerName != null
-        || (state != State.PENDING_CLOSE && state != State.CLOSING))) {
+    if (newServerName != null || (
+        state != State.PENDING_CLOSE && state != State.CLOSING)) {
       regionsInTransition.put(regionName, regionState);
     }
 
@@ -341,7 +341,8 @@ public class RegionStates {
   /**
    * A server is offline, all regions on it are dead.
    */
-  public synchronized List<HRegionInfo> serverOffline(final ServerName sn) {
+  public synchronized List<HRegionInfo> serverOffline(
+      final ZooKeeperWatcher watcher, final ServerName sn) {
     // Clean up this server from map of servers to regions, and remove all regions
     // of this server from online map of regions.
     List<HRegionInfo> rits = new ArrayList<HRegionInfo>();
@@ -358,9 +359,19 @@ public class RegionStates {
       HRegionInfo hri = state.getRegion();
       if (assignedRegions.contains(hri)) {
         // Region is open on this region server, but in transition.
-        // This region must be moving away from this server.
+        // This region must be moving away from this server, or splitting/merging.
         // SSH will handle it, either skip assigning, or re-assign.
         LOG.info("Transitioning region " + state + " will be handled by SSH for " + sn);
+        if (state.isSplitting() || state.isMerging()) {
+          LOG.info("Offline splitting/merging region " + state);
+          try {
+            // Delete the ZNode if exists
+            ZKAssign.deleteNodeFailSilent(watcher, hri);
+            regionOffline(hri);
+          } catch (KeeperException ke) {
+            server.abort("Unexpected ZK exception deleting node " + hri, ke);
+          }
+        }
       } else if (sn.equals(state.getServerName())) {
         // Region is in transition on this region server, and this
         // region is not open on this server. So the region must be

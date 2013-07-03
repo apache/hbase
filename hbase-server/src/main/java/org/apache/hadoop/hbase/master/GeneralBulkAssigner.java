@@ -131,7 +131,7 @@ public class GeneralBulkAssigner extends BulkAssigner {
         HRegionInfo hri = regionInfoIterator.next();
         RegionState state = regionStates.getRegionState(hri);
         if ((!regionStates.isRegionInTransition(hri) && regionStates.isRegionAssigned(hri))
-            || state.isSplit() || state.isSplitting()) {
+            || state.isSplitting() || state.isMerging()) {
           regionInfoIterator.remove();
         }
       }
