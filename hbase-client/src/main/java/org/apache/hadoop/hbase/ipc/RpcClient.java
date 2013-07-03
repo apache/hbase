@@ -571,14 +571,38 @@ public class RpcClient {
     }
 
     protected void closeConnection() {
-      // close the current connection
-      if (socket != null) {
-        try {
-          socket.close();
-        } catch (IOException e) {
-          LOG.warn("Not able to close a socket", e);
-        }
+      if (socket == null) {
+        return;
       }
+
+      // close the current connection
+      try {
+        if (socket.getOutputStream() != null) {
+          socket.getOutputStream().close();
+        }
+      } catch (IOException e) {
+        LOG.warn("Not able to close an output stream", e);
+      }
+      try {
+        if (socket.getInputStream() != null) {
+          socket.getInputStream().close();
+        }
+      } catch (IOException e) {
+        LOG.warn("Not able to close an input stream", e);
+      }
+      try {
+        if (socket.getChannel() != null) {
+          socket.getChannel().close();
+        }
+      } catch (IOException e) {
+        LOG.warn("Not able to close a channel", e);
+      }
+      try {
+        socket.close();
+      } catch (IOException e) {
+        LOG.warn("Not able to close a socket", e);
+      }
+
       // set socket to null so that the next call to setupIOstreams
       // can start the process of connect all over again.
       socket = null;

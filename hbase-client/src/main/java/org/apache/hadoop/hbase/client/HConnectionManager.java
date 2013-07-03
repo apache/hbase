@@ -520,11 +520,12 @@ public class HConnectionManager {
               public void newDead(ServerName sn) {
                 clearCaches(sn);
                 rpcClient.cancelConnections(sn.getHostname(), sn.getPort(),
-                  new SocketException(sn.getServerName() + " is dead: closing its connection."));
+                    new SocketException(sn.getServerName() + " is dead: closing its connection."));
               }
             }, conf, listenerClass);
       }
     }
+
 
     /**
      * For tests.

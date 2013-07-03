@@ -62,7 +62,7 @@ import java.util.concurrent.Executors;
 class ClusterStatusListener implements Closeable {
   private static final Log LOG = LogFactory.getLog(ClusterStatusListener.class);
   private final List<ServerName> deadServers = new ArrayList<ServerName>();
-  private final DeadServerHandler deadServerHandler;
+  protected final DeadServerHandler deadServerHandler;
   private final Listener listener;
 
   /**
