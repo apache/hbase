@@ -442,7 +442,6 @@ public class TestSplitTransactionOnCluster {
     HColumnDescriptor hcd = new HColumnDescriptor("col");
     htd.addFamily(hcd);
     admin.createTable(htd);
-    ZKAssign.blockUntilNoRIT(zkw);
     HTable table = new HTable(conf, userTableName);
     try {
       for (int i = 0; i <= 5; i++) {
@@ -678,12 +677,14 @@ public class TestSplitTransactionOnCluster {
 
   @Test(timeout = 60000)
   public void testTableExistsIfTheSpecifiedTableRegionIsSplitParent() throws Exception {
+    ZooKeeperWatcher zkw = HBaseTestingUtility.getZooKeeperWatcher(TESTING_UTIL);
     final byte[] tableName =
         Bytes.toBytes("testTableExistsIfTheSpecifiedTableRegionIsSplitParent");
     // Create table then get the single region for our new table.
     HTable t = createTableAndWait(tableName, Bytes.toBytes("cf"));
+    List<HRegion> regions = null;
     try {
-      List<HRegion> regions = cluster.getRegions(tableName);
+      regions = cluster.getRegions(tableName);
       int regionServerIndex = cluster.getServerWith(regions.get(0).getRegionName());
       HRegionServer regionServer = cluster.getRegionServer(regionServerIndex);
       insertData(tableName, admin, t);
@@ -707,6 +708,11 @@ public class TestSplitTransactionOnCluster {
           Bytes.toString(tableName));
       assertEquals("The specified table should present.", true, tableExists);
     } finally {
+      if (regions != null) {
+        String node = ZKAssign.getNodeName(zkw, regions.get(0).getRegionInfo()
+            .getEncodedName());
+        ZKUtil.deleteNodeFailSilent(zkw, node);
+      }
       admin.setBalancerRunning(true, false);
       cluster.getMaster().setCatalogJanitorEnabled(true);
       t.close();
