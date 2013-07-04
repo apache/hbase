@@ -108,10 +108,9 @@ public class CompactionRequest implements Comparable<CompactionRequest> {
    * priorities are the same it will first compare priority then date
    * to maintain a FIFO functionality.
    *
-   * <p>Note: The date is only accurate to the millisecond which means it is
-   * possible that two requests were inserted into the queue within a
-   * millisecond.  When that is the case this function will break the tie
-   * arbitrarily.
+   * <p>Note: The enqueue timestamp is accurate to the nanosecond. if two
+   * requests have same timestamp then this function will break the tie
+   * arbitrarily with hashCode() comparing.
    */
   @Override
   public int compareTo(CompactionRequest request) {
