@@ -388,7 +388,7 @@ AssignmentManager assignmentManager = master.getAssignmentManager();
            int infoPort = master.getConfiguration().getInt("hbase.regionserver.info.port", 60030);
     </%java>
     <tr>
-    	<th rowspan="<% deadServers.size() %>"></th>
+    	<th></th>
         <td><% deadServerName %></td>
         <td><% deadServerUtil.getTimeOfDeath(deadServerName) %></td>
     </tr>
