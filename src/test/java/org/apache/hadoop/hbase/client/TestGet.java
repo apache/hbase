@@ -40,6 +40,7 @@ import org.apache.hadoop.hbase.util.Base64;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Assert;
 import org.junit.Test;
+import org.junit.Ignore;
 import org.junit.experimental.categories.Category;
 import org.mortbay.log.Log;
 
@@ -140,15 +141,13 @@ public class TestGet {
     Assert.assertNull(get.getAttributesMap().get("attribute1"));
   }
 
-  @Test
+  @Ignore @Test
   public void testDynamicFilter() throws Exception {
     DataInput dis = ByteStreams.newDataInput(Base64.decode(WRITABLE_GET));
     Get get = new Get();
     try {
       get.readFields(dis);
       fail("Should not be able to load the filter class");
-    } catch (AbstractMethodError ame) {
-      Log.warn("Why has this started to show up recently? See note in HBASE-1936");
     } catch (RuntimeException re) {
       String msg = re.getMessage();
       Assert.assertTrue(msg != null
