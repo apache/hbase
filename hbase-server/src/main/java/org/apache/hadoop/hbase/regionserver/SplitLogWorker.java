@@ -171,9 +171,8 @@ public class SplitLogWorker extends ZooKeeperListener implements Runnable {
       this.watcher.registerListener(this);
       // initialize a new connection for splitlogworker configuration
       HConnectionManager.getConnection(conf);
-      int res;
       // wait for master to create the splitLogZnode
-      res = -1;
+      int res = -1;
       while (res == -1 && !exitWorker) {
         try {
           res = ZKUtil.checkExists(watcher, watcher.splitLogZNode);
@@ -386,12 +385,9 @@ public class SplitLogWorker extends ZooKeeperListener implements Runnable {
         case RESIGNED:
           if (exitWorker) {
             LOG.info("task execution interrupted because worker is exiting " + path);
-            endTask(new SplitLogTask.Resigned(this.serverName),
-              SplitLogCounters.tot_wkr_task_resigned);
-          } else {
-            SplitLogCounters.tot_wkr_preempt_task.incrementAndGet();
-            LOG.info("task execution interrupted via zk by manager " + path);
           }
+          endTask(new SplitLogTask.Resigned(this.serverName), 
+            SplitLogCounters.tot_wkr_task_resigned);
           break;
       }
     } finally {

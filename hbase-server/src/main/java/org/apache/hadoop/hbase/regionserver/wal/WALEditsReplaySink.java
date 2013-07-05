@@ -38,6 +38,8 @@ import org.apache.hadoop.hbase.client.Row;
 import org.apache.hadoop.hbase.client.ServerCallable;
 import org.apache.hadoop.hbase.exceptions.DoNotRetryIOException;
 import org.apache.hadoop.hbase.exceptions.NoSuchColumnFamilyException;
+import org.apache.hadoop.hbase.ipc.RpcClient;
+import org.apache.hadoop.hbase.master.SplitLogManager;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
@@ -60,6 +62,7 @@ import com.google.protobuf.ServiceException;
 public class WALEditsReplaySink {
 
   private static final Log LOG = LogFactory.getLog(WALEditsReplaySink.class);
+  private static final int MAX_BATCH_SIZE = 3000;
 
   private final Configuration conf;
   private final HConnection conn;
@@ -67,6 +70,7 @@ public class WALEditsReplaySink {
   private final MetricsWALEditsReplay metrics;
   private final AtomicLong totalReplayedEdits = new AtomicLong();
   private final boolean skipErrors;
+  private final int replayTimeout;
 
   /**
    * Create a sink for WAL log entries replay
@@ -83,6 +87,8 @@ public class WALEditsReplaySink {
     this.tableName = tableName;
     this.skipErrors = conf.getBoolean(HConstants.HREGION_EDITS_REPLAY_SKIP_ERRORS,
       HConstants.DEFAULT_HREGION_EDITS_REPLAY_SKIP_ERRORS);
+    // a single replay operation time out and default is 60 seconds
+    this.replayTimeout = conf.getInt("hbase.regionserver.logreplay.timeout", 60000);
   }
 
   /**
@@ -121,7 +127,18 @@ public class WALEditsReplaySink {
 
     // replaying edits by region
     for (HRegionInfo curRegion : actionsByRegion.keySet()) {
-      replayEdits(loc, curRegion, actionsByRegion.get(curRegion));
+      List<Action<Row>> allActions = actionsByRegion.get(curRegion);
+      // send edits in chunks
+      int totalActions = allActions.size();
+      int replayedActions = 0;
+      int curBatchSize = 0;
+      for (; replayedActions < totalActions;) {
+        curBatchSize = (totalActions > (MAX_BATCH_SIZE + replayedActions)) ? MAX_BATCH_SIZE
+                : (totalActions - replayedActions);
+        replayEdits(loc, curRegion, allActions.subList(replayedActions, 
+          replayedActions + curBatchSize));
+        replayedActions += curBatchSize;
+      }
     }
 
     long endTime = EnvironmentEdgeManager.currentTimeMillis() - startTime;
@@ -173,7 +190,7 @@ public class WALEditsReplaySink {
     ReplayServerCallable(final HConnection connection, final byte [] tableName, 
         final HRegionLocation regionLoc, final HRegionInfo regionInfo,
         final List<Action<Row>> actions) {
-      super(connection, tableName, null);
+      super(connection, tableName, null, replayTimeout);
       this.actions = actions;
       this.regionInfo = regionInfo;
       this.location = regionLoc;

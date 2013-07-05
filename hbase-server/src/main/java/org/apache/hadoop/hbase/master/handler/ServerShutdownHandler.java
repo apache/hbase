@@ -115,6 +115,7 @@ public class ServerShutdownHandler extends EventHandler {
 
   @Override
   public void process() throws IOException {
+    boolean hasLogReplayWork = false;
     final ServerName serverName = this.serverName;
     try {
 
@@ -280,7 +281,10 @@ public class ServerShutdownHandler extends EventHandler {
                   + " didn't complete assignment in time");
             }
           }
-          this.services.getMasterFileSystem().splitLog(serverName);
+          // submit logReplay work
+          this.services.getExecutorService().submit(
+            new LogReplayHandler(this.server, this.services, this.deadServers, this.serverName));
+          hasLogReplayWork = true;
         }
       } catch (Exception ex) {
         if (ex instanceof IOException) {
@@ -293,7 +297,9 @@ public class ServerShutdownHandler extends EventHandler {
       this.deadServers.finish(serverName);
     }
 
-    LOG.info("Finished processing of shutdown of " + serverName);
+    if (!hasLogReplayWork) {
+      LOG.info("Finished processing of shutdown of " + serverName);
+    }
   }
 
   private void resubmit(final ServerName serverName, IOException ex) throws IOException {

@@ -64,6 +64,7 @@ import org.apache.hadoop.hbase.Chore;
 import org.apache.hadoop.hbase.DaemonThreadFactory;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HConstants.OperationStatusCode;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.HealthCheckChore;
@@ -1577,8 +1578,10 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
     // quite a while inside HConnection layer. The worker won't be available for other
     // tasks even after current task is preempted after a split task times out.
     Configuration sinkConf = HBaseConfiguration.create(conf);
-    sinkConf.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER,
-      HConstants.DEFAULT_HBASE_CLIENT_RETRIES_NUMBER - 2);
+    sinkConf.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 
+      conf.getInt("hbase.log.replay.retries.number", 8)); // 8 retries take about 23 seconds
+    sinkConf.setInt(HConstants.HBASE_RPC_TIMEOUT_KEY,
+      conf.getInt("hbase.log.replay.rpc.timeout", 30000)); // default 30 seconds
     sinkConf.setInt("hbase.client.serverside.retries.multiplier", 1);
     this.splitLogWorker = new SplitLogWorker(this.zooKeeper, sinkConf, this, this);
     splitLogWorker.start();
@@ -3976,11 +3979,21 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
           case SUCCESS:
             break;
         }
+        if (isReplay && codes[i].getOperationStatusCode() != OperationStatusCode.SUCCESS) {
+          // in replay mode, we only need to catpure the first error because we will retry the whole
+          // batch when an error happens
+          break;
+        }
       }
     } catch (IOException ie) {
       ActionResult result = ResponseConverter.buildActionResult(ie);
       for (int i = 0; i < mutations.size(); i++) {
         builder.setResult(i, result);
+        if (isReplay) {
+          // in replay mode, we only need to catpure the first error because we will retry the whole
+          // batch when an error happens
+          break;
+        }
       }
     }
     long after = EnvironmentEdgeManager.currentTimeMillis();

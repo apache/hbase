@@ -35,6 +35,7 @@ public enum ExecutorType {
   MASTER_TABLE_OPERATIONS    (4),
   MASTER_RS_SHUTDOWN         (5),
   MASTER_META_SERVER_OPERATIONS (6),
+  M_LOG_REPLAY_OPS           (7),
 
   // RegionServer executor services
   RS_OPEN_REGION             (20),
