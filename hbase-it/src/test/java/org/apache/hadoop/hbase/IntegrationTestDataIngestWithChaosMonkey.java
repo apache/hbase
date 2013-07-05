@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.hbase;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.util.ChaosMonkey;
 import org.junit.After;
 import org.junit.Before;
@@ -43,8 +44,18 @@ public class IntegrationTestDataIngestWithChaosMonkey extends IngestIntegrationT
   @Before
   public void setUp() throws Exception {
     util= getTestingUtil(null);
+    Configuration conf = util.getConfiguration();
+    conf.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 25);
+    if (conf.getBoolean(HConstants.DISTRIBUTED_LOG_REPLAY_KEY,
+      HConstants.DEFAULT_DISTRIBUTED_LOG_REPLAY_CONFIG)) {
+      // when distributedLogReplay is enabled, we need to make sure rpc timeout & retires are
+      // smaller enough in order for the replay can complete before ChaosMonkey kills another region
+      // server
+      conf.setInt("hbase.regionserver.handler.count", 20);
+      conf.setInt("hbase.log.replay.retries.number", 2);
+      conf.setBoolean(HConstants.DISALLOW_WRITES_IN_RECOVERING, true);
+    } 
     if(!util.isDistributedCluster()) {
-      // In MiniCluster mode, we increase number of RS a little bit to speed the test
       NUM_SLAVES_BASE = 5;
     }
     super.setUp(NUM_SLAVES_BASE);

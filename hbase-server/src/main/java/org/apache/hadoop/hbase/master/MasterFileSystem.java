@@ -319,21 +319,33 @@ public class MasterFileSystem {
 
   private List<Path> getLogDirs(final Set<ServerName> serverNames) throws IOException {
     List<Path> logDirs = new ArrayList<Path>();
-    for (ServerName serverName: serverNames) {
-      Path logDir = new Path(this.rootdir, HLogUtil.getHLogDirectoryName(serverName.toString()));
-      Path splitDir = logDir.suffix(HLog.SPLITTING_EXT);
-      // Rename the directory so a rogue RS doesn't create more HLogs
-      if (fs.exists(logDir)) {
-        if (!this.fs.rename(logDir, splitDir)) {
-          throw new IOException("Failed fs.rename for log split: " + logDir);
+    boolean needReleaseLock = false;
+    if (!this.services.isInitialized()) {
+      // during master initialization, we could have multiple places splitting a same wal
+      this.splitLogLock.lock();
+      needReleaseLock = true;
+    }
+    try {
+      for (ServerName serverName : serverNames) {
+        Path logDir = new Path(this.rootdir, HLogUtil.getHLogDirectoryName(serverName.toString()));
+        Path splitDir = logDir.suffix(HLog.SPLITTING_EXT);
+        // Rename the directory so a rogue RS doesn't create more HLogs
+        if (fs.exists(logDir)) {
+          if (!this.fs.rename(logDir, splitDir)) {
+            throw new IOException("Failed fs.rename for log split: " + logDir);
+          }
+          logDir = splitDir;
+          LOG.debug("Renamed region directory: " + splitDir);
+        } else if (!fs.exists(splitDir)) {
+          LOG.info("Log dir for server " + serverName + " does not exist");
+          continue;
         }
-        logDir = splitDir;
-        LOG.debug("Renamed region directory: " + splitDir);
-      } else if (!fs.exists(splitDir)) {
-        LOG.info("Log dir for server " + serverName + " does not exist");
-        continue;
+        logDirs.add(splitDir);
       }
-      logDirs.add(splitDir);
+    } finally {
+      if (needReleaseLock) {
+        this.splitLogLock.unlock();
+      }
     }
     return logDirs;
   }

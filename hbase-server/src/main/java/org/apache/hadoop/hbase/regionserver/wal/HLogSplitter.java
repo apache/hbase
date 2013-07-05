@@ -546,7 +546,6 @@ public class HLogSplitter {
         lastFlushedSequenceId = lastFlushedSequenceIds.get(key);
         if (lastFlushedSequenceId == null) {
           if (this.distributedLogReplay) {
-            lastFlushedSequenceId = -1L;
             RegionStoreSequenceIds ids =
                 SplitLogManager.getRegionFlushedSequenceId(this.watcher, failedServerName, key);
             if (ids != null) {
@@ -555,11 +554,10 @@ public class HLogSplitter {
           } else if (sequenceIdChecker != null) {
             lastFlushedSequenceId = sequenceIdChecker.getLastSequenceId(region);
           }
-          if (lastFlushedSequenceId != null && lastFlushedSequenceId >= 0) {
-            lastFlushedSequenceIds.put(key, lastFlushedSequenceId);
-          } else {
+          if (lastFlushedSequenceId == null) {
             lastFlushedSequenceId = -1L;
           }
+          lastFlushedSequenceIds.put(key, lastFlushedSequenceId);
         }
         if (lastFlushedSequenceId >= entry.getKey().getLogSeqNum()) {
           editsSkipped++;

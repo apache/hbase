@@ -223,6 +223,13 @@ public enum EventType {
    * Master is processing recovery of regions found in ZK RIT
    */
   M_MASTER_RECOVERY         (73, ExecutorType.MASTER_SERVER_OPERATIONS),
+  /**
+   * Master controlled events to be executed on the master.<br>
+   * 
+   * M_LOG_REPLAY<br>
+   * Master is processing log replay of failed region server
+   */
+  M_LOG_REPLAY              (74, ExecutorType.M_LOG_REPLAY_OPS),
 
   /**
    * RS controlled events to be executed on the RS.<br>
