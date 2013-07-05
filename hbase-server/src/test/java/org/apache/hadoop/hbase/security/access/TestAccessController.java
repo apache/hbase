@@ -92,7 +92,6 @@ import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
-import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -210,11 +209,15 @@ public class TestAccessController {
         AccessControlProtos.Permission.Action.READ,
         AccessControlProtos.Permission.Action.WRITE));
 
+      // USER_CREATE is USER_RW plus CREATE permissions
+      protocol.grant(null, RequestConverter.buildGrantRequest(USER_CREATE.getShortName(),
+        TEST_TABLE.getTableName(), null, null,
+        AccessControlProtos.Permission.Action.CREATE,
+        AccessControlProtos.Permission.Action.READ,
+        AccessControlProtos.Permission.Action.WRITE));
+
       protocol.grant(null, RequestConverter.buildGrantRequest(USER_RO.getShortName(), TEST_TABLE.getTableName(),
         TEST_FAMILY, null, AccessControlProtos.Permission.Action.READ));
-
-      protocol.grant(null, RequestConverter.buildGrantRequest(USER_CREATE.getShortName(),
-        TEST_TABLE.getTableName(), null, null, AccessControlProtos.Permission.Action.CREATE));
 
       assertEquals(4, AccessControlLists.getTablePermissions(conf, TEST_TABLE.getTableName()).size());
     } finally {
@@ -585,8 +588,8 @@ public class TestAccessController {
   }
 
   private void verifyWrite(PrivilegedExceptionAction action) throws Exception {
-    verifyAllowed(action, SUPERUSER, USER_ADMIN, USER_OWNER, USER_RW);
-    verifyDenied(action, USER_NONE, USER_CREATE, USER_RO);
+    verifyAllowed(action, SUPERUSER, USER_ADMIN, USER_OWNER, USER_CREATE, USER_RW);
+    verifyDenied(action, USER_NONE, USER_RO);
   }
 
   @Test
@@ -659,13 +662,13 @@ public class TestAccessController {
   }
 
   private void verifyRead(PrivilegedExceptionAction action) throws Exception {
-    verifyAllowed(action, SUPERUSER, USER_ADMIN, USER_OWNER, USER_RW, USER_RO);
-    verifyDenied(action, USER_NONE, USER_CREATE);
+    verifyAllowed(action, SUPERUSER, USER_ADMIN, USER_OWNER, USER_CREATE, USER_RW, USER_RO);
+    verifyDenied(action, USER_NONE);
   }
 
   private void verifyReadWrite(PrivilegedExceptionAction action) throws Exception {
-    verifyAllowed(action, SUPERUSER, USER_ADMIN, USER_OWNER, USER_RW);
-    verifyDenied(action, USER_NONE, USER_CREATE, USER_RO);
+    verifyAllowed(action, SUPERUSER, USER_ADMIN, USER_OWNER, USER_CREATE, USER_RW);
+    verifyDenied(action, USER_NONE, USER_RO);
   }
 
   @Test
@@ -801,7 +804,7 @@ public class TestAccessController {
     verifyReadWrite(checkAndPut);
   }
 
-  @Ignore("Broke by https://issues.apache.org/jira/browse/HBASE-8692") @Test
+  @Test
   public void testBulkLoad() throws Exception {
     FileSystem fs = TEST_UTIL.getTestFileSystem();
     final Path dir = TEST_UTIL.getDataTestDir("testBulkLoad");
@@ -824,7 +827,11 @@ public class TestAccessController {
         return null;
       }
     };
-    verifyWrite(bulkLoadAction);
+
+    // User performing bulk loads must have privilege to read table metadata
+    // (ADMIN or CREATE)
+    verifyAllowed(bulkLoadAction, SUPERUSER, USER_ADMIN, USER_OWNER, USER_CREATE);
+    verifyDenied(bulkLoadAction, USER_RW, USER_NONE, USER_RO);
 
     // Reinit after the bulk upload
     TEST_UTIL.getHBaseAdmin().disableTable(TEST_TABLE.getTableName());
@@ -929,8 +936,8 @@ public class TestAccessController {
       }
     };
 
-    verifyAllowed(appendAction, SUPERUSER, USER_ADMIN, USER_OWNER, USER_RW);
-    verifyDenied(appendAction, USER_CREATE, USER_RO, USER_NONE);
+    verifyAllowed(appendAction, SUPERUSER, USER_ADMIN, USER_OWNER, USER_CREATE, USER_RW);
+    verifyDenied(appendAction, USER_RO, USER_NONE);
   }
 
   @Test
@@ -1797,8 +1804,8 @@ public class TestAccessController {
       }
     };
 
-    verifyAllowed(familyReadWrite, SUPERUSER, USER_OWNER, USER_RW);
-    verifyDenied(familyReadWrite, USER_NONE, USER_CREATE, USER_RO);
+    verifyAllowed(familyReadWrite, SUPERUSER, USER_OWNER, USER_CREATE, USER_RW);
+    verifyDenied(familyReadWrite, USER_NONE, USER_RO);
 
     // --------------------------------------
     // check for wrong table region
