@@ -89,7 +89,7 @@ public class ZKConfig {
     Properties zkProperties = new Properties();
 
     // Directly map all of the hbase.zookeeper.property.KEY properties.
-    for (Entry<String, String> entry : conf) {
+    for (Entry<String, String> entry : new Configuration(conf)) { // copy for mt safety
       String key = entry.getKey();
       if (key.startsWith(HConstants.ZK_CFG_PROPERTY_PREFIX)) {
         String zkKey = key.substring(HConstants.ZK_CFG_PROPERTY_PREFIX_LEN);
