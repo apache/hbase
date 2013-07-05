@@ -159,14 +159,8 @@ public class HLogUtil {
       return null;
     }
 
-    final String serverName = serverNameAndFile.substring(0,
-        serverNameAndFile.indexOf('/') - 1);
-
-    if (!ServerName.isFullServerName(serverName)) {
-      return null;
-    }
-
-    return ServerName.parseServerName(serverName);
+    Path p = new Path(path);
+    return getServerNameFromHLogDirectoryName(p);
   }
 
   /**
