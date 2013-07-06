@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.zookeeper;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.Abortable;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
@@ -152,6 +153,7 @@ public class MasterAddressTracker extends ZooKeeperNodeTracker {
      snbuilder.setPort(sn.getPort());
      snbuilder.setStartCode(sn.getStartcode());
      mbuilder.setMaster(snbuilder.build());
+     mbuilder.setRpcVersion(HConstants.RPC_CURRENT_VERSION);
      return ProtobufUtil.prependPBMagic(mbuilder.build().toByteArray());
    }
 
