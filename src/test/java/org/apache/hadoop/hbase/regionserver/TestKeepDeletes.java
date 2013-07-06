@@ -770,7 +770,8 @@ public class TestKeepDeletes extends HBaseTestCase {
   private int countDeleteMarkers(HRegion region) throws IOException {
     Scan s = new Scan();
     s.setRaw(true);
-    s.setMaxVersions();
+    // use max versions from the store(s)
+    s.setMaxVersions(region.getStores().values().iterator().next().getScanInfo().getMaxVersions());
     InternalScanner scan = region.getScanner(s);
     List<KeyValue> kvs = new ArrayList<KeyValue>();
     int res = 0;
