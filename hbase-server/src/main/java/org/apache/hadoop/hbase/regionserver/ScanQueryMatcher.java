@@ -164,7 +164,10 @@ public class ScanQueryMatcher {
     // seePastDeleteMarker: user initiated scans
     this.seePastDeleteMarkers = scanInfo.getKeepDeletedCells() && isUserScan;
 
-    int maxVersions = Math.min(scan.getMaxVersions(), scanInfo.getMaxVersions());
+    int maxVersions =
+        scan.isRaw() ? scan.getMaxVersions() : Math.min(scan.getMaxVersions(),
+          scanInfo.getMaxVersions());
+
     // Single branch to deal with two types of reads (columns vs all in family)
     if (columns == null || columns.size() == 0) {
       // there is always a null column in the wildcard column query.

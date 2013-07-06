@@ -45,6 +45,7 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
+import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.commons.logging.impl.Log4JLogger;
@@ -4949,5 +4950,79 @@ public class TestFromClientSide {
     assertEquals(1, bar.length);
     assertEquals(2, bar[0].size());
   }
-}
 
+  @Test
+  public void testRawScanRespectsVersions() throws Exception {
+    byte[] TABLE = Bytes.toBytes("testRawScan");
+    HTable table = TEST_UTIL.createTable(TABLE, new byte[][] { FAMILY });
+    byte[] row = Bytes.toBytes("row");
+
+    // put the same row 4 times, with different values
+    Put p = new Put(row);
+    p.add(FAMILY, QUALIFIER, 10, VALUE);
+    table.put(p);
+    table.flushCommits();
+
+    p = new Put(row);
+    p.add(FAMILY, QUALIFIER, 11, ArrayUtils.add(VALUE, (byte) 2));
+    table.put(p);
+    table.flushCommits();
+
+    p = new Put(row);
+    p.add(FAMILY, QUALIFIER, 12, ArrayUtils.add(VALUE, (byte) 3));
+    table.put(p);
+    table.flushCommits();
+
+    p = new Put(row);
+    p.add(FAMILY, QUALIFIER, 13, ArrayUtils.add(VALUE, (byte) 4));
+    table.put(p);
+    table.flushCommits();
+
+    int versions = 4;
+    Scan s = new Scan(row);
+    // get all the possible versions
+    s.setMaxVersions();
+    s.setRaw(true);
+
+    ResultScanner scanner = table.getScanner(s);
+    int count = 0;
+    for (Result r : scanner) {
+      assertEquals("Found an unexpected number of results for the row!", versions, r.list().size());
+      count++;
+    }
+    assertEquals("Found more than a single row when raw scanning the table with a single row!", 1,
+      count);
+    scanner.close();
+
+    // then if we decrease the number of versions, but keep the scan raw, we should see exactly that
+    // number of versions
+    versions = 2;
+    s.setMaxVersions(versions);
+    scanner = table.getScanner(s);
+    count = 0;
+    for (Result r : scanner) {
+      assertEquals("Found an unexpected number of results for the row!", versions, r.list().size());
+      count++;
+    }
+    assertEquals("Found more than a single row when raw scanning the table with a single row!", 1,
+      count);
+    scanner.close();
+
+    // finally, if we turn off raw scanning, but max out the number of versions, we should go back
+    // to seeing just three
+    versions = 3;
+    s.setMaxVersions(versions);
+    scanner = table.getScanner(s);
+    count = 0;
+    for (Result r : scanner) {
+      assertEquals("Found an unexpected number of results for the row!", versions, r.list().size());
+      count++;
+    }
+    assertEquals("Found more than a single row when raw scanning the table with a single row!", 1,
+      count);
+    scanner.close();
+
+    table.close();
+    TEST_UTIL.deleteTable(TABLE);
+  }
+}
