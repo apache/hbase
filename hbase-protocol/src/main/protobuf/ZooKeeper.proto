@@ -33,6 +33,10 @@ import "hbase.proto";
 message MetaRegionServer {
   // The ServerName hosting the meta region currently.
   required ServerName server = 1;
+  // The major version of the rpc the server speaks.  This is used so that
+  // clients connecting to the cluster can have prior knowledge of what version
+  // to send to a RegionServer.  AsyncHBase will use this to detect versions.
+  optional uint32 rpcVersion = 2;
 }
 
 /**
@@ -41,6 +45,8 @@ message MetaRegionServer {
 message Master {
   // The ServerName of the current Master
   required ServerName master = 1;
+  // Major RPC version so that clients can know what version the master can accept.
+  optional uint32 rpcVersion = 2;
 }
 
 /**

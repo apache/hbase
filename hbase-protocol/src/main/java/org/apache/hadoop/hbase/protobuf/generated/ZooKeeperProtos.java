@@ -15,6 +15,10 @@ public final class ZooKeeperProtos {
     boolean hasServer();
     org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName getServer();
     org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerNameOrBuilder getServerOrBuilder();
+    
+    // optional uint32 rpcVersion = 2;
+    boolean hasRpcVersion();
+    int getRpcVersion();
   }
   public static final class MetaRegionServer extends
       com.google.protobuf.GeneratedMessage
@@ -58,8 +62,19 @@ public final class ZooKeeperProtos {
       return server_;
     }
     
+    // optional uint32 rpcVersion = 2;
+    public static final int RPCVERSION_FIELD_NUMBER = 2;
+    private int rpcVersion_;
+    public boolean hasRpcVersion() {
+      return ((bitField0_ & 0x00000002) == 0x00000002);
+    }
+    public int getRpcVersion() {
+      return rpcVersion_;
+    }
+    
     private void initFields() {
       server_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.getDefaultInstance();
+      rpcVersion_ = 0;
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
@@ -84,6 +99,9 @@ public final class ZooKeeperProtos {
       if (((bitField0_ & 0x00000001) == 0x00000001)) {
         output.writeMessage(1, server_);
       }
+      if (((bitField0_ & 0x00000002) == 0x00000002)) {
+        output.writeUInt32(2, rpcVersion_);
+      }
       getUnknownFields().writeTo(output);
     }
     
@@ -96,6 +114,10 @@ public final class ZooKeeperProtos {
       if (((bitField0_ & 0x00000001) == 0x00000001)) {
         size += com.google.protobuf.CodedOutputStream
           .computeMessageSize(1, server_);
+      }
+      if (((bitField0_ & 0x00000002) == 0x00000002)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeUInt32Size(2, rpcVersion_);
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
@@ -125,6 +147,11 @@ public final class ZooKeeperProtos {
         result = result && getServer()
             .equals(other.getServer());
       }
+      result = result && (hasRpcVersion() == other.hasRpcVersion());
+      if (hasRpcVersion()) {
+        result = result && (getRpcVersion()
+            == other.getRpcVersion());
+      }
       result = result &&
           getUnknownFields().equals(other.getUnknownFields());
       return result;
@@ -137,6 +164,10 @@ public final class ZooKeeperProtos {
       if (hasServer()) {
         hash = (37 * hash) + SERVER_FIELD_NUMBER;
         hash = (53 * hash) + getServer().hashCode();
+      }
+      if (hasRpcVersion()) {
+        hash = (37 * hash) + RPCVERSION_FIELD_NUMBER;
+        hash = (53 * hash) + getRpcVersion();
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
       return hash;
@@ -261,6 +292,8 @@ public final class ZooKeeperProtos {
           serverBuilder_.clear();
         }
         bitField0_ = (bitField0_ & ~0x00000001);
+        rpcVersion_ = 0;
+        bitField0_ = (bitField0_ & ~0x00000002);
         return this;
       }
       
@@ -307,6 +340,10 @@ public final class ZooKeeperProtos {
         } else {
           result.server_ = serverBuilder_.build();
         }
+        if (((from_bitField0_ & 0x00000002) == 0x00000002)) {
+          to_bitField0_ |= 0x00000002;
+        }
+        result.rpcVersion_ = rpcVersion_;
         result.bitField0_ = to_bitField0_;
         onBuilt();
         return result;
@@ -325,6 +362,9 @@ public final class ZooKeeperProtos {
         if (other == org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.MetaRegionServer.getDefaultInstance()) return this;
         if (other.hasServer()) {
           mergeServer(other.getServer());
+        }
+        if (other.hasRpcVersion()) {
+          setRpcVersion(other.getRpcVersion());
         }
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
@@ -372,6 +412,11 @@ public final class ZooKeeperProtos {
               }
               input.readMessage(subBuilder, extensionRegistry);
               setServer(subBuilder.buildPartial());
+              break;
+            }
+            case 16: {
+              bitField0_ |= 0x00000002;
+              rpcVersion_ = input.readUInt32();
               break;
             }
           }
@@ -470,6 +515,27 @@ public final class ZooKeeperProtos {
         return serverBuilder_;
       }
       
+      // optional uint32 rpcVersion = 2;
+      private int rpcVersion_ ;
+      public boolean hasRpcVersion() {
+        return ((bitField0_ & 0x00000002) == 0x00000002);
+      }
+      public int getRpcVersion() {
+        return rpcVersion_;
+      }
+      public Builder setRpcVersion(int value) {
+        bitField0_ |= 0x00000002;
+        rpcVersion_ = value;
+        onChanged();
+        return this;
+      }
+      public Builder clearRpcVersion() {
+        bitField0_ = (bitField0_ & ~0x00000002);
+        rpcVersion_ = 0;
+        onChanged();
+        return this;
+      }
+      
       // @@protoc_insertion_point(builder_scope:MetaRegionServer)
     }
     
@@ -488,6 +554,10 @@ public final class ZooKeeperProtos {
     boolean hasMaster();
     org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName getMaster();
     org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerNameOrBuilder getMasterOrBuilder();
+    
+    // optional uint32 rpcVersion = 2;
+    boolean hasRpcVersion();
+    int getRpcVersion();
   }
   public static final class Master extends
       com.google.protobuf.GeneratedMessage
@@ -531,8 +601,19 @@ public final class ZooKeeperProtos {
       return master_;
     }
     
+    // optional uint32 rpcVersion = 2;
+    public static final int RPCVERSION_FIELD_NUMBER = 2;
+    private int rpcVersion_;
+    public boolean hasRpcVersion() {
+      return ((bitField0_ & 0x00000002) == 0x00000002);
+    }
+    public int getRpcVersion() {
+      return rpcVersion_;
+    }
+    
     private void initFields() {
       master_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.getDefaultInstance();
+      rpcVersion_ = 0;
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
@@ -557,6 +638,9 @@ public final class ZooKeeperProtos {
       if (((bitField0_ & 0x00000001) == 0x00000001)) {
         output.writeMessage(1, master_);
       }
+      if (((bitField0_ & 0x00000002) == 0x00000002)) {
+        output.writeUInt32(2, rpcVersion_);
+      }
       getUnknownFields().writeTo(output);
     }
     
@@ -569,6 +653,10 @@ public final class ZooKeeperProtos {
       if (((bitField0_ & 0x00000001) == 0x00000001)) {
         size += com.google.protobuf.CodedOutputStream
           .computeMessageSize(1, master_);
+      }
+      if (((bitField0_ & 0x00000002) == 0x00000002)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeUInt32Size(2, rpcVersion_);
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
@@ -598,6 +686,11 @@ public final class ZooKeeperProtos {
         result = result && getMaster()
             .equals(other.getMaster());
       }
+      result = result && (hasRpcVersion() == other.hasRpcVersion());
+      if (hasRpcVersion()) {
+        result = result && (getRpcVersion()
+            == other.getRpcVersion());
+      }
       result = result &&
           getUnknownFields().equals(other.getUnknownFields());
       return result;
@@ -610,6 +703,10 @@ public final class ZooKeeperProtos {
       if (hasMaster()) {
         hash = (37 * hash) + MASTER_FIELD_NUMBER;
         hash = (53 * hash) + getMaster().hashCode();
+      }
+      if (hasRpcVersion()) {
+        hash = (37 * hash) + RPCVERSION_FIELD_NUMBER;
+        hash = (53 * hash) + getRpcVersion();
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
       return hash;
@@ -734,6 +831,8 @@ public final class ZooKeeperProtos {
           masterBuilder_.clear();
         }
         bitField0_ = (bitField0_ & ~0x00000001);
+        rpcVersion_ = 0;
+        bitField0_ = (bitField0_ & ~0x00000002);
         return this;
       }
       
@@ -780,6 +879,10 @@ public final class ZooKeeperProtos {
         } else {
           result.master_ = masterBuilder_.build();
         }
+        if (((from_bitField0_ & 0x00000002) == 0x00000002)) {
+          to_bitField0_ |= 0x00000002;
+        }
+        result.rpcVersion_ = rpcVersion_;
         result.bitField0_ = to_bitField0_;
         onBuilt();
         return result;
@@ -798,6 +901,9 @@ public final class ZooKeeperProtos {
         if (other == org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.Master.getDefaultInstance()) return this;
         if (other.hasMaster()) {
           mergeMaster(other.getMaster());
+        }
+        if (other.hasRpcVersion()) {
+          setRpcVersion(other.getRpcVersion());
         }
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
@@ -845,6 +951,11 @@ public final class ZooKeeperProtos {
               }
               input.readMessage(subBuilder, extensionRegistry);
               setMaster(subBuilder.buildPartial());
+              break;
+            }
+            case 16: {
+              bitField0_ |= 0x00000002;
+              rpcVersion_ = input.readUInt32();
               break;
             }
           }
@@ -941,6 +1052,27 @@ public final class ZooKeeperProtos {
           master_ = null;
         }
         return masterBuilder_;
+      }
+      
+      // optional uint32 rpcVersion = 2;
+      private int rpcVersion_ ;
+      public boolean hasRpcVersion() {
+        return ((bitField0_ & 0x00000002) == 0x00000002);
+      }
+      public int getRpcVersion() {
+        return rpcVersion_;
+      }
+      public Builder setRpcVersion(int value) {
+        bitField0_ |= 0x00000002;
+        rpcVersion_ = value;
+        onChanged();
+        return this;
+      }
+      public Builder clearRpcVersion() {
+        bitField0_ = (bitField0_ & ~0x00000002);
+        rpcVersion_ = 0;
+        onChanged();
+        return this;
       }
       
       // @@protoc_insertion_point(builder_scope:Master)
@@ -6941,16 +7073,17 @@ public final class ZooKeeperProtos {
       descriptor;
   static {
     java.lang.String[] descriptorData = {
-      "\n\017ZooKeeper.proto\032\013hbase.proto\"/\n\020MetaRe" +
-      "gionServer\022\033\n\006server\030\001 \002(\0132\013.ServerName\"" +
-      "%\n\006Master\022\033\n\006master\030\001 \002(\0132\013.ServerName\"\036" +
+      "\n\017ZooKeeper.proto\032\013hbase.proto\"C\n\020MetaRe" +
+      "gionServer\022\033\n\006server\030\001 \002(\0132\013.ServerName\022" +
+      "\022\n\nrpcVersion\030\002 \001(\r\"9\n\006Master\022\033\n\006master\030" +
+      "\001 \002(\0132\013.ServerName\022\022\n\nrpcVersion\030\002 \001(\r\"\036" +
       "\n\tClusterUp\022\021\n\tstartDate\030\001 \002(\t\"\203\001\n\020Regio" +
       "nTransition\022\025\n\reventTypeCode\030\001 \002(\r\022\022\n\nre" +
       "gionName\030\002 \002(\014\022\022\n\ncreateTime\030\003 \002(\004\022\037\n\nse" +
       "rverName\030\004 \002(\0132\013.ServerName\022\017\n\007payload\030\005" +
       " \001(\014\"\230\001\n\014SplitLogTask\022\"\n\005state\030\001 \002(\0162\023.S" +
-      "plitLogTask.State\022\037\n\nserverName\030\002 \002(\0132\013." +
-      "ServerName\"C\n\005State\022\016\n\nUNASSIGNED\020\000\022\t\n\005O",
+      "plitLogTask.State\022\037\n\nserverName\030\002 \002(\0132\013.",
+      "ServerName\"C\n\005State\022\016\n\nUNASSIGNED\020\000\022\t\n\005O" +
       "WNED\020\001\022\014\n\010RESIGNED\020\002\022\010\n\004DONE\020\003\022\007\n\003ERR\020\004\"" +
       "n\n\005Table\022$\n\005state\030\001 \002(\0162\014.Table.State:\007E" +
       "NABLED\"?\n\005State\022\013\n\007ENABLED\020\000\022\014\n\010DISABLED" +
@@ -6959,8 +7092,8 @@ public final class ZooKeeperProtos {
       "ationState\022&\n\005state\030\001 \002(\0162\027.ReplicationS" +
       "tate.State\"\"\n\005State\022\013\n\007ENABLED\020\000\022\014\n\010DISA" +
       "BLED\020\001\"+\n\027ReplicationHLogPosition\022\020\n\010pos" +
-      "ition\030\001 \002(\003\"$\n\017ReplicationLock\022\021\n\tlockOw" +
-      "ner\030\001 \002(\t\"\207\001\n\tTableLock\022\021\n\ttableName\030\001 \001",
+      "ition\030\001 \002(\003\"$\n\017ReplicationLock\022\021\n\tlockOw",
+      "ner\030\001 \002(\t\"\207\001\n\tTableLock\022\021\n\ttableName\030\001 \001" +
       "(\014\022\036\n\tlockOwner\030\002 \001(\0132\013.ServerName\022\020\n\010th" +
       "readId\030\003 \001(\003\022\020\n\010isShared\030\004 \001(\010\022\017\n\007purpos" +
       "e\030\005 \001(\t\022\022\n\ncreateTime\030\006 \001(\003\"9\n\017StoreSequ" +
@@ -6981,7 +7114,7 @@ public final class ZooKeeperProtos {
           internal_static_MetaRegionServer_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_MetaRegionServer_descriptor,
-              new java.lang.String[] { "Server", },
+              new java.lang.String[] { "Server", "RpcVersion", },
               org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.MetaRegionServer.class,
               org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.MetaRegionServer.Builder.class);
           internal_static_Master_descriptor =
@@ -6989,7 +7122,7 @@ public final class ZooKeeperProtos {
           internal_static_Master_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_Master_descriptor,
-              new java.lang.String[] { "Master", },
+              new java.lang.String[] { "Master", "RpcVersion", },
               org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.Master.class,
               org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.Master.Builder.class);
           internal_static_ClusterUp_descriptor =

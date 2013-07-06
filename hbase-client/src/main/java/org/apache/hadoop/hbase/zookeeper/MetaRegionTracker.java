@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.zookeeper;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.Abortable;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
@@ -137,12 +138,19 @@ public class MetaRegionTracker extends ZooKeeperNodeTracker {
    * @return The content of the meta-region-server znode
    */
   static byte [] toByteArray(final ServerName sn) {
-    // ZNode content is a pb message preceeded by some pb magic.
+    // ZNode content is a pb message preceded by some pb magic.
     HBaseProtos.ServerName pbsn =
-      HBaseProtos.ServerName.newBuilder().setHostName(sn.getHostname()).
-      setPort(sn.getPort()).setStartCode(sn.getStartcode()).build();
+      HBaseProtos.ServerName.newBuilder()
+                            .setHostName(sn.getHostname())
+                            .setPort(sn.getPort())
+                            .setStartCode(sn.getStartcode())
+                            .build();
+
     ZooKeeperProtos.MetaRegionServer pbrsr =
-      ZooKeeperProtos.MetaRegionServer.newBuilder().setServer(pbsn).build();
+      ZooKeeperProtos.MetaRegionServer.newBuilder()
+                                      .setServer(pbsn)
+                                      .setRpcVersion(HConstants.RPC_CURRENT_VERSION)
+                                      .build();
     return ProtobufUtil.prependPBMagic(pbrsr.toByteArray());
   }
 
