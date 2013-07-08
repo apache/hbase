@@ -175,6 +175,7 @@ message MutationProto {
     DELETE_ONE_VERSION = 0;
     DELETE_MULTIPLE_VERSIONS = 1;
     DELETE_FAMILY = 2;
+    DELETE_FAMILY_VERSION = 3;
   }
 
   message ColumnValue {

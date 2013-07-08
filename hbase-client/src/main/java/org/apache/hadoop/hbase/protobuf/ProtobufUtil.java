@@ -548,6 +548,8 @@ public final class ProtobufUtil {
             delete.deleteColumn(family, qualifier, ts);
           } else if (deleteType == DeleteType.DELETE_MULTIPLE_VERSIONS) {
             delete.deleteColumns(family, qualifier, ts);
+          } else if (deleteType == DeleteType.DELETE_FAMILY_VERSION) {
+            delete.deleteFamilyVersion(family, ts);
           } else {
             delete.deleteFamily(family, ts);
           }
@@ -1187,7 +1189,9 @@ public final class ProtobufUtil {
       return DeleteType.DELETE_MULTIPLE_VERSIONS;
     case DeleteFamily:
       return DeleteType.DELETE_FAMILY;
-      default:
+    case DeleteFamilyVersion:
+      return DeleteType.DELETE_FAMILY_VERSION;
+    default:
         throw new IOException("Unknown delete type: " + type);
     }
   }

@@ -212,6 +212,25 @@ public class Delete extends Mutation implements Comparable<Row> {
   }
 
   /**
+   * Delete all columns of the specified family with a timestamp equal to
+   * the specified timestamp.
+   * @param family family name
+   * @param timestamp version timestamp
+   * @return this for invocation chaining
+   */
+  public Delete deleteFamilyVersion(byte [] family, long timestamp) {
+    List<? extends Cell> list = familyMap.get(family);
+    if(list == null) {
+      list = new ArrayList<Cell>();
+    }
+    ((List<KeyValue>)list).add(new KeyValue(row, family, null, timestamp,
+          KeyValue.Type.DeleteFamilyVersion));
+    familyMap.put(family, list);
+    return this;
+  }
+
+
+  /**
    * Delete all versions of the specified column.
    * @param family family name
    * @param qualifier column qualifier

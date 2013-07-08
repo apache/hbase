@@ -6600,11 +6600,13 @@ public final class ClientProtos {
       DELETE_ONE_VERSION(0, 0),
       DELETE_MULTIPLE_VERSIONS(1, 1),
       DELETE_FAMILY(2, 2),
+      DELETE_FAMILY_VERSION(3, 3),
       ;
       
       public static final int DELETE_ONE_VERSION_VALUE = 0;
       public static final int DELETE_MULTIPLE_VERSIONS_VALUE = 1;
       public static final int DELETE_FAMILY_VALUE = 2;
+      public static final int DELETE_FAMILY_VERSION_VALUE = 3;
       
       
       public final int getNumber() { return value; }
@@ -6614,6 +6616,7 @@ public final class ClientProtos {
           case 0: return DELETE_ONE_VERSION;
           case 1: return DELETE_MULTIPLE_VERSIONS;
           case 2: return DELETE_FAMILY;
+          case 3: return DELETE_FAMILY_VERSION;
           default: return null;
         }
       }
@@ -6644,7 +6647,7 @@ public final class ClientProtos {
       }
       
       private static final DeleteType[] VALUES = {
-        DELETE_ONE_VERSION, DELETE_MULTIPLE_VERSIONS, DELETE_FAMILY, 
+        DELETE_ONE_VERSION, DELETE_MULTIPLE_VERSIONS, DELETE_FAMILY, DELETE_FAMILY_VERSION, 
       };
       
       public static DeleteType valueOf(
@@ -21576,7 +21579,7 @@ public final class ClientProtos {
       "\177\n\tCondition\022\013\n\003row\030\001 \002(\014\022\016\n\006family\030\002 \002(",
       "\014\022\021\n\tqualifier\030\003 \002(\014\022!\n\013compareType\030\004 \002(" +
       "\0162\014.CompareType\022\037\n\ncomparator\030\005 \002(\0132\013.Co" +
-      "mparator\"\365\005\n\rMutationProto\022\013\n\003row\030\001 \001(\014\022" +
+      "mparator\"\220\006\n\rMutationProto\022\013\n\003row\030\001 \001(\014\022" +
       "/\n\nmutateType\030\002 \001(\0162\033.MutationProto.Muta" +
       "tionType\022/\n\013columnValue\030\003 \003(\0132\032.Mutation" +
       "Proto.ColumnValue\022\021\n\ttimestamp\030\004 \001(\004\022!\n\t" +
@@ -21593,61 +21596,61 @@ public final class ClientProtos {
       "\014\n\010SKIP_WAL\020\001\022\r\n\tASYNC_WAL\020\002\022\014\n\010SYNC_WAL" +
       "\020\003\022\r\n\tFSYNC_WAL\020\004\">\n\014MutationType\022\n\n\006APP" +
       "END\020\000\022\r\n\tINCREMENT\020\001\022\007\n\003PUT\020\002\022\n\n\006DELETE\020" +
-      "\003\"U\n\nDeleteType\022\026\n\022DELETE_ONE_VERSION\020\000\022",
+      "\003\"p\n\nDeleteType\022\026\n\022DELETE_ONE_VERSION\020\000\022",
       "\034\n\030DELETE_MULTIPLE_VERSIONS\020\001\022\021\n\rDELETE_" +
-      "FAMILY\020\002\"r\n\rMutateRequest\022 \n\006region\030\001 \002(" +
-      "\0132\020.RegionSpecifier\022 \n\010mutation\030\002 \002(\0132\016." +
-      "MutationProto\022\035\n\tcondition\030\003 \001(\0132\n.Condi" +
-      "tion\"<\n\016MutateResponse\022\027\n\006result\030\001 \001(\0132\007" +
-      ".Result\022\021\n\tprocessed\030\002 \001(\010\"\362\002\n\004Scan\022\027\n\006c" +
-      "olumn\030\001 \003(\0132\007.Column\022!\n\tattribute\030\002 \003(\0132" +
-      "\016.NameBytesPair\022\020\n\010startRow\030\003 \001(\014\022\017\n\007sto" +
-      "pRow\030\004 \001(\014\022\027\n\006filter\030\005 \001(\0132\007.Filter\022\035\n\tt" +
-      "imeRange\030\006 \001(\0132\n.TimeRange\022\026\n\013maxVersion",
-      "s\030\007 \001(\r:\0011\022\031\n\013cacheBlocks\030\010 \001(\010:\004true\022\021\n" +
-      "\tbatchSize\030\t \001(\r\022\025\n\rmaxResultSize\030\n \001(\004\022" +
-      "\022\n\nstoreLimit\030\013 \001(\r\022\023\n\013storeOffset\030\014 \001(\r" +
-      "\022\"\n\032loadColumnFamiliesOnDemand\030\r \001(\010\022\024\n\014" +
-      "cachingCount\030\016 \001(\r\022\023\n\013prefetching\030\017 \001(\010\"" +
-      "\230\001\n\013ScanRequest\022 \n\006region\030\001 \001(\0132\020.Region" +
-      "Specifier\022\023\n\004scan\030\002 \001(\0132\005.Scan\022\021\n\tscanne" +
-      "rId\030\003 \001(\004\022\024\n\014numberOfRows\030\004 \001(\r\022\024\n\014close" +
-      "Scanner\030\005 \001(\010\022\023\n\013nextCallSeq\030\006 \001(\004\"l\n\014Sc" +
-      "anResponse\022\'\n\016resultCellMeta\030\001 \001(\0132\017.Res",
-      "ultCellMeta\022\021\n\tscannerId\030\002 \001(\004\022\023\n\013moreRe" +
-      "sults\030\003 \001(\010\022\013\n\003ttl\030\004 \001(\r\"%\n\016ResultCellMe" +
-      "ta\022\023\n\013cellsLength\030\001 \003(\r\"\260\001\n\024BulkLoadHFil" +
-      "eRequest\022 \n\006region\030\001 \002(\0132\020.RegionSpecifi" +
-      "er\0224\n\nfamilyPath\030\002 \003(\0132 .BulkLoadHFileRe" +
-      "quest.FamilyPath\022\024\n\014assignSeqNum\030\003 \001(\010\032*" +
-      "\n\nFamilyPath\022\016\n\006family\030\001 \002(\014\022\014\n\004path\030\002 \002" +
-      "(\t\"\'\n\025BulkLoadHFileResponse\022\016\n\006loaded\030\001 " +
-      "\002(\010\"_\n\026CoprocessorServiceCall\022\013\n\003row\030\001 \002" +
-      "(\014\022\023\n\013serviceName\030\002 \002(\t\022\022\n\nmethodName\030\003 ",
-      "\002(\t\022\017\n\007request\030\004 \002(\014\"d\n\031CoprocessorServi" +
-      "ceRequest\022 \n\006region\030\001 \002(\0132\020.RegionSpecif" +
-      "ier\022%\n\004call\030\002 \002(\0132\027.CoprocessorServiceCa" +
-      "ll\"]\n\032CoprocessorServiceResponse\022 \n\006regi" +
-      "on\030\001 \002(\0132\020.RegionSpecifier\022\035\n\005value\030\002 \002(" +
-      "\0132\016.NameBytesPair\"B\n\013MultiAction\022 \n\010muta" +
-      "tion\030\001 \001(\0132\016.MutationProto\022\021\n\003get\030\002 \001(\0132" +
-      "\004.Get\"I\n\014ActionResult\022\026\n\005value\030\001 \001(\0132\007.R" +
-      "esult\022!\n\texception\030\002 \001(\0132\016.NameBytesPair" +
-      "\"^\n\014MultiRequest\022 \n\006region\030\001 \002(\0132\020.Regio",
-      "nSpecifier\022\034\n\006action\030\002 \003(\0132\014.MultiAction" +
-      "\022\016\n\006atomic\030\003 \001(\010\".\n\rMultiResponse\022\035\n\006res" +
-      "ult\030\001 \003(\0132\r.ActionResult2\342\002\n\rClientServi" +
-      "ce\022 \n\003get\022\013.GetRequest\032\014.GetResponse\022/\n\010" +
-      "multiGet\022\020.MultiGetRequest\032\021.MultiGetRes" +
-      "ponse\022)\n\006mutate\022\016.MutateRequest\032\017.Mutate" +
-      "Response\022#\n\004scan\022\014.ScanRequest\032\r.ScanRes" +
-      "ponse\022>\n\rbulkLoadHFile\022\025.BulkLoadHFileRe" +
-      "quest\032\026.BulkLoadHFileResponse\022F\n\013execSer" +
-      "vice\022\032.CoprocessorServiceRequest\032\033.Copro",
-      "cessorServiceResponse\022&\n\005multi\022\r.MultiRe" +
-      "quest\032\016.MultiResponseBB\n*org.apache.hado" +
-      "op.hbase.protobuf.generatedB\014ClientProto" +
-      "sH\001\210\001\001\240\001\001"
+      "FAMILY\020\002\022\031\n\025DELETE_FAMILY_VERSION\020\003\"r\n\rM" +
+      "utateRequest\022 \n\006region\030\001 \002(\0132\020.RegionSpe" +
+      "cifier\022 \n\010mutation\030\002 \002(\0132\016.MutationProto" +
+      "\022\035\n\tcondition\030\003 \001(\0132\n.Condition\"<\n\016Mutat" +
+      "eResponse\022\027\n\006result\030\001 \001(\0132\007.Result\022\021\n\tpr" +
+      "ocessed\030\002 \001(\010\"\362\002\n\004Scan\022\027\n\006column\030\001 \003(\0132\007" +
+      ".Column\022!\n\tattribute\030\002 \003(\0132\016.NameBytesPa" +
+      "ir\022\020\n\010startRow\030\003 \001(\014\022\017\n\007stopRow\030\004 \001(\014\022\027\n" +
+      "\006filter\030\005 \001(\0132\007.Filter\022\035\n\ttimeRange\030\006 \001(",
+      "\0132\n.TimeRange\022\026\n\013maxVersions\030\007 \001(\r:\0011\022\031\n" +
+      "\013cacheBlocks\030\010 \001(\010:\004true\022\021\n\tbatchSize\030\t " +
+      "\001(\r\022\025\n\rmaxResultSize\030\n \001(\004\022\022\n\nstoreLimit" +
+      "\030\013 \001(\r\022\023\n\013storeOffset\030\014 \001(\r\022\"\n\032loadColum" +
+      "nFamiliesOnDemand\030\r \001(\010\022\024\n\014cachingCount\030" +
+      "\016 \001(\r\022\023\n\013prefetching\030\017 \001(\010\"\230\001\n\013ScanReque" +
+      "st\022 \n\006region\030\001 \001(\0132\020.RegionSpecifier\022\023\n\004" +
+      "scan\030\002 \001(\0132\005.Scan\022\021\n\tscannerId\030\003 \001(\004\022\024\n\014" +
+      "numberOfRows\030\004 \001(\r\022\024\n\014closeScanner\030\005 \001(\010" +
+      "\022\023\n\013nextCallSeq\030\006 \001(\004\"l\n\014ScanResponse\022\'\n",
+      "\016resultCellMeta\030\001 \001(\0132\017.ResultCellMeta\022\021" +
+      "\n\tscannerId\030\002 \001(\004\022\023\n\013moreResults\030\003 \001(\010\022\013" +
+      "\n\003ttl\030\004 \001(\r\"%\n\016ResultCellMeta\022\023\n\013cellsLe" +
+      "ngth\030\001 \003(\r\"\260\001\n\024BulkLoadHFileRequest\022 \n\006r" +
+      "egion\030\001 \002(\0132\020.RegionSpecifier\0224\n\nfamilyP" +
+      "ath\030\002 \003(\0132 .BulkLoadHFileRequest.FamilyP" +
+      "ath\022\024\n\014assignSeqNum\030\003 \001(\010\032*\n\nFamilyPath\022" +
+      "\016\n\006family\030\001 \002(\014\022\014\n\004path\030\002 \002(\t\"\'\n\025BulkLoa" +
+      "dHFileResponse\022\016\n\006loaded\030\001 \002(\010\"_\n\026Coproc" +
+      "essorServiceCall\022\013\n\003row\030\001 \002(\014\022\023\n\013service",
+      "Name\030\002 \002(\t\022\022\n\nmethodName\030\003 \002(\t\022\017\n\007reques" +
+      "t\030\004 \002(\014\"d\n\031CoprocessorServiceRequest\022 \n\006" +
+      "region\030\001 \002(\0132\020.RegionSpecifier\022%\n\004call\030\002" +
+      " \002(\0132\027.CoprocessorServiceCall\"]\n\032Coproce" +
+      "ssorServiceResponse\022 \n\006region\030\001 \002(\0132\020.Re" +
+      "gionSpecifier\022\035\n\005value\030\002 \002(\0132\016.NameBytes" +
+      "Pair\"B\n\013MultiAction\022 \n\010mutation\030\001 \001(\0132\016." +
+      "MutationProto\022\021\n\003get\030\002 \001(\0132\004.Get\"I\n\014Acti" +
+      "onResult\022\026\n\005value\030\001 \001(\0132\007.Result\022!\n\texce" +
+      "ption\030\002 \001(\0132\016.NameBytesPair\"^\n\014MultiRequ",
+      "est\022 \n\006region\030\001 \002(\0132\020.RegionSpecifier\022\034\n" +
+      "\006action\030\002 \003(\0132\014.MultiAction\022\016\n\006atomic\030\003 " +
+      "\001(\010\".\n\rMultiResponse\022\035\n\006result\030\001 \003(\0132\r.A" +
+      "ctionResult2\342\002\n\rClientService\022 \n\003get\022\013.G" +
+      "etRequest\032\014.GetResponse\022/\n\010multiGet\022\020.Mu" +
+      "ltiGetRequest\032\021.MultiGetResponse\022)\n\006muta" +
+      "te\022\016.MutateRequest\032\017.MutateResponse\022#\n\004s" +
+      "can\022\014.ScanRequest\032\r.ScanResponse\022>\n\rbulk" +
+      "LoadHFile\022\025.BulkLoadHFileRequest\032\026.BulkL" +
+      "oadHFileResponse\022F\n\013execService\022\032.Coproc",
+      "essorServiceRequest\032\033.CoprocessorService" +
+      "Response\022&\n\005multi\022\r.MultiRequest\032\016.Multi" +
+      "ResponseBB\n*org.apache.hadoop.hbase.prot" +
+      "obuf.generatedB\014ClientProtosH\001\210\001\001\240\001\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {

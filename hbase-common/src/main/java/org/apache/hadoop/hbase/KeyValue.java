@@ -205,6 +205,7 @@ public class KeyValue implements Cell, HeapSize, Cloneable {
     Put((byte)4),
 
     Delete((byte)8),
+    DeleteFamilyVersion((byte)10),
     DeleteColumn((byte)12),
     DeleteFamily((byte)14),
 
@@ -1369,6 +1370,13 @@ public class KeyValue implements Cell, HeapSize, Cloneable {
    */
   public boolean isDeleteFamily() {
     return getType() == Type.DeleteFamily.getCode();
+  }
+
+  /**
+   * @return True if this KV is a delete family-version type.
+   */
+  public boolean isDeleteFamilyVersion() {
+    return getType() == Type.DeleteFamilyVersion.getCode();
   }
 
   /**
