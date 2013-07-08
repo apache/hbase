@@ -26,6 +26,7 @@ import java.util.List;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.LargeTests;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -47,7 +48,7 @@ public class TestShell {
     TEST_UTIL.getConfiguration().setBoolean("hbase.online.schema.update.enable", true);
     TEST_UTIL.getConfiguration().setInt("hbase.regionserver.msginterval", 100);
     TEST_UTIL.getConfiguration().setInt("hbase.client.pause", 250);
-    TEST_UTIL.getConfiguration().setInt("hbase.client.retries.number", 6);
+    TEST_UTIL.getConfiguration().setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 6);
     TEST_UTIL.startMiniCluster();
 
     // Configure jruby runtime

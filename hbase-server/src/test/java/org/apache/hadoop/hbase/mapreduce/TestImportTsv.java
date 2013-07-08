@@ -39,6 +39,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.LargeTests;
 import org.apache.hadoop.hbase.client.HTable;
@@ -258,7 +259,7 @@ public class TestImportTsv implements Configurable {
     HTable table = new HTable(conf, tableName);
     boolean verified = false;
     long pause = conf.getLong("hbase.client.pause", 5 * 1000);
-    int numRetries = conf.getInt("hbase.client.retries.number", 5);
+    int numRetries = conf.getInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 5);
     for (int i = 0; i < numRetries; i++) {
       try {
         Scan scan = new Scan();

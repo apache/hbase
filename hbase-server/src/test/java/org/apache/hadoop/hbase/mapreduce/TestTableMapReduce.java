@@ -30,6 +30,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.LargeTests;
 import org.apache.hadoop.hbase.client.HTable;
@@ -175,7 +176,7 @@ public class TestTableMapReduce {
     HTable table = new HTable(new Configuration(UTIL.getConfiguration()), tableName);
     boolean verified = false;
     long pause = UTIL.getConfiguration().getLong("hbase.client.pause", 5 * 1000);
-    int numRetries = UTIL.getConfiguration().getInt("hbase.client.retries.number", 5);
+    int numRetries = UTIL.getConfiguration().getInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 5);
     for (int i = 0; i < numRetries; i++) {
       try {
         LOG.info("Verification attempt #" + i);

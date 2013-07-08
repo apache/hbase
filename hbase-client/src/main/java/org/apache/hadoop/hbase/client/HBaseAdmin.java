@@ -1977,7 +1977,7 @@ public class HBaseAdmin implements Abortable, Closeable {
     Configuration copyOfConf = HBaseConfiguration.create(conf);
 
     // We set it to make it fail as soon as possible if HBase is not available
-    copyOfConf.setInt("hbase.client.retries.number", 1);
+    copyOfConf.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 1);
     copyOfConf.setInt("zookeeper.recovery.retry", 0);
 
     HConnectionManager.HConnectionImplementation connection

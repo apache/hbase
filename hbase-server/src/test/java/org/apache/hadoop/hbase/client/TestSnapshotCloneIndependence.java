@@ -85,7 +85,7 @@ public class TestSnapshotCloneIndependence {
     // drop the number of attempts for the hbase admin
     conf.setInt("hbase.regionserver.msginterval", 100);
     conf.setInt("hbase.client.pause", 250);
-    conf.setInt("hbase.client.retries.number", 6);
+    conf.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 6);
     conf.setBoolean("hbase.master.enabletable.roundrobin", true);
     // Avoid potentially aggressive splitting which would cause snapshot to fail
     conf.set(HConstants.HBASE_REGION_SPLIT_POLICY_KEY,

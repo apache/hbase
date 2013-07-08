@@ -86,7 +86,7 @@ public class TestSnapshotFromClient {
     // block writes if we get to 12 store files
     conf.setInt("hbase.hstore.blockingStoreFiles", 12);
     // drop the number of attempts for the hbase admin
-    conf.setInt("hbase.client.retries.number", 1);
+    conf.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 1);
     // Enable snapshot
     conf.setBoolean(SnapshotManager.HBASE_SNAPSHOT_ENABLED, true);
     conf.set(HConstants.HBASE_REGION_SPLIT_POLICY_KEY,

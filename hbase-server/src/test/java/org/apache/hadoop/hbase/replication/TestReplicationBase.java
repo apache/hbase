@@ -102,7 +102,7 @@ public class TestReplicationBase {
     // Base conf2 on conf1 so it gets the right zk cluster.
     conf2 = HBaseConfiguration.create(conf1);
     conf2.set(HConstants.ZOOKEEPER_ZNODE_PARENT, "/2");
-    conf2.setInt("hbase.client.retries.number", 6);
+    conf2.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 6);
     conf2.setBoolean(HConstants.REPLICATION_ENABLE_KEY, true);
     conf2.setBoolean("dfs.support.append", true);
 
