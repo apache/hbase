@@ -79,7 +79,7 @@ public class TestRegionServerCoprocessorExceptionWithRemove {
 
   @Test(timeout=30000)
   public void testExceptionFromCoprocessorDuringPut()
-      throws IOException {
+      throws IOException, InterruptedException {
     // Set watches on the zookeeper nodes for all of the regionservers in the
     // cluster. When we try to write to TEST_TABLE, the buggy coprocessor will
     // cause a NullPointerException, which will cause the regionserver (which

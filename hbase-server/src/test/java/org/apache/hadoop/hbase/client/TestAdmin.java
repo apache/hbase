@@ -1582,7 +1582,7 @@ public class TestAdmin {
   }
 
   private HRegionServer startAndWriteData(String tableName, byte[] value)
-      throws IOException {
+  throws IOException, InterruptedException {
     // When the META table can be opened, the region servers are running
     new HTable(
       TEST_UTIL.getConfiguration(), HConstants.META_TABLE_NAME).close();

@@ -44,6 +44,7 @@ import java.util.NavigableSet;
 import java.util.Random;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -91,6 +92,7 @@ import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.MasterThread;
 import org.apache.hadoop.hbase.util.RegionSplitter;
+import org.apache.hadoop.hbase.util.RetryCounter;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.zookeeper.EmptyWatcher;
 import org.apache.hadoop.hbase.zookeeper.MiniZooKeeperCluster;
@@ -1633,9 +1635,10 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
    * @param tableName user table to lookup in .META.
    * @return region server that holds it, null if the row doesn't exist
    * @throws IOException
+   * @throws InterruptedException 
    */
   public HRegionServer getRSForFirstRegionInTable(byte[] tableName)
-      throws IOException {
+  throws IOException, InterruptedException {
     List<byte[]> metaRows = getMetaTableRows(tableName);
     if (metaRows == null || metaRows.isEmpty()) {
       return null;
@@ -1644,8 +1647,20 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
       Bytes.toString(tableName));
     byte [] firstrow = metaRows.get(0);
     LOG.debug("FirstRow=" + Bytes.toString(firstrow));
-    int index = getMiniHBaseCluster().getServerWith(firstrow);
-    return getMiniHBaseCluster().getRegionServerThreads().get(index).getRegionServer();
+    long pause = getConfiguration().getLong(HConstants.HBASE_CLIENT_PAUSE,
+      HConstants.DEFAULT_HBASE_CLIENT_PAUSE);
+    int numRetries = getConfiguration().getInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER,
+      HConstants.DEFAULT_HBASE_CLIENT_RETRIES_NUMBER);
+    RetryCounter retrier = new RetryCounter(numRetries, (int)pause, TimeUnit.MICROSECONDS);
+    while(retrier.shouldRetry()) {
+      int index = getMiniHBaseCluster().getServerWith(firstrow);
+      if (index != -1) {
+        return getMiniHBaseCluster().getRegionServerThreads().get(index).getRegionServer();
+      }
+      // Came back -1.  Region may not be online yet.  Sleep a while.
+      retrier.sleepUntilNextRetry();
+    }
+    return null;
   }
 
   /**

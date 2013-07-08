@@ -68,7 +68,7 @@ public class TestRegionServerCoprocessorExceptionWithAbort {
 
   @Test
   public void testExceptionFromCoprocessorDuringPut()
-    throws IOException {
+    throws IOException, InterruptedException {
     // When we try to write to TEST_TABLE, the buggy coprocessor will
     // cause a NullPointerException, which will cause the regionserver (which
     // hosts the region we attempted to write to) to abort.

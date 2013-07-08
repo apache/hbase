@@ -189,7 +189,7 @@ public class TestLogRolling  {
     TEST_UTIL.shutdownMiniCluster();
   }
 
-  private void startAndWriteData() throws IOException {
+  private void startAndWriteData() throws IOException, InterruptedException {
     // When the META table can be opened, the region servers are running
     new HTable(TEST_UTIL.getConfiguration(), HConstants.META_TABLE_NAME);
     this.server = cluster.getRegionServerThreads().get(0).getRegionServer();
