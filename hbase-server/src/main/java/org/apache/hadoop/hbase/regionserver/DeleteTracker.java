@@ -104,6 +104,7 @@ public interface DeleteTracker {
    */
   public static enum DeleteResult {
     FAMILY_DELETED, // The KeyValue is deleted by a delete family.
+    FAMILY_VERSION_DELETED, // The KeyValue is deleted by a delete family version.
     COLUMN_DELETED, // The KeyValue is deleted by a delete column.
     VERSION_DELETED, // The KeyValue is deleted by a version delete.
     NOT_DELETED

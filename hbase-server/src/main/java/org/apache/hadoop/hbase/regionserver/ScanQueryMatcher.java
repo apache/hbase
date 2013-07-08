@@ -352,6 +352,7 @@ public class ScanQueryMatcher {
         case COLUMN_DELETED:
           return columns.getNextRowOrNextColumn(bytes, offset, qualLength);
         case VERSION_DELETED:
+        case FAMILY_VERSION_DELETED:
           return MatchCode.SKIP;
         case NOT_DELETED:
           break;

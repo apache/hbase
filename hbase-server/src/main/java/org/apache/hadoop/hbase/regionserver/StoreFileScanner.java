@@ -292,7 +292,7 @@ public class StoreFileScanner implements KeyValueScanner {
             kv.getRowOffset(), kv.getRowLength(), kv.getBuffer(),
             kv.getQualifierOffset(), kv.getQualifierLength());
       } else if (this.matcher != null && !matcher.hasNullColumnInQuery() &&
-          kv.isDeleteFamily()) {
+          (kv.isDeleteFamily() || kv.isDeleteFamilyVersion())) {
         // if there is no such delete family kv in the store file,
         // then no need to seek.
         haveToSeek = reader.passesDeleteFamilyBloomFilter(kv.getBuffer(),

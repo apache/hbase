@@ -19,6 +19,9 @@
 
 package org.apache.hadoop.hbase.regionserver;
 
+import java.util.SortedSet;
+import java.util.TreeSet;
+
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -43,6 +46,7 @@ public class ScanDeleteTracker implements DeleteTracker {
 
   private boolean hasFamilyStamp = false;
   private long familyStamp = 0L;
+  private SortedSet<Long> familyVersionStamps = new TreeSet<Long>();
   private byte [] deleteBuffer = null;
   private int deleteOffset = 0;
   private int deleteLength = 0;
@@ -74,6 +78,9 @@ public class ScanDeleteTracker implements DeleteTracker {
       if (type == KeyValue.Type.DeleteFamily.getCode()) {
         hasFamilyStamp = true;
         familyStamp = timestamp;
+        return;
+      } else if (type == KeyValue.Type.DeleteFamilyVersion.getCode()) {
+        familyVersionStamps.add(timestamp);
         return;
       }
 
@@ -111,6 +118,10 @@ public class ScanDeleteTracker implements DeleteTracker {
       return DeleteResult.FAMILY_DELETED;
     }
 
+    if (familyVersionStamps.contains(Long.valueOf(timestamp))) {
+        return DeleteResult.FAMILY_VERSION_DELETED;
+    }
+
     if (deleteBuffer != null) {
       int ret = Bytes.compareTo(deleteBuffer, deleteOffset, deleteLength,
           buffer, qualifierOffset, qualifierLength);
@@ -146,7 +157,8 @@ public class ScanDeleteTracker implements DeleteTracker {
 
   @Override
   public boolean isEmpty() {
-    return deleteBuffer == null && !hasFamilyStamp;
+    return deleteBuffer == null && !hasFamilyStamp &&
+           familyVersionStamps.isEmpty();
   }
 
   @Override
@@ -154,6 +166,7 @@ public class ScanDeleteTracker implements DeleteTracker {
   public void reset() {
     hasFamilyStamp = false;
     familyStamp = 0L;
+    familyVersionStamps.clear();
     deleteBuffer = null;
   }
 
