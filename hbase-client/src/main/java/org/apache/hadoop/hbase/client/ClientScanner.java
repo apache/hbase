@@ -93,8 +93,8 @@ public class ClientScanner extends AbstractClientScanner {
      */
     public ClientScanner(final Configuration conf, final Scan scan,
       final byte[] tableName, HConnection connection) throws IOException {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Scan table=" + Bytes.toString(tableName)
+      if (LOG.isTraceEnabled()) {
+        LOG.trace("Scan table=" + Bytes.toString(tableName)
             + ", startRow=" + Bytes.toStringBinary(scan.getStartRow()));
       }
       this.scan = scan;
