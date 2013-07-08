@@ -167,7 +167,7 @@ public class TestTableMapReduce {
     HTable table = new HTable(UTIL.getConfiguration(), tableName);
     boolean verified = false;
     long pause = UTIL.getConfiguration().getLong("hbase.client.pause", 5 * 1000);
-    int numRetries = UTIL.getConfiguration().getInt("hbase.client.retries.number", 5);
+    int numRetries = UTIL.getConfiguration().getInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 5);
     for (int i = 0; i < numRetries; i++) {
       try {
         LOG.info("Verification attempt #" + i);

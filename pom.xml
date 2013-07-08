@@ -531,7 +531,7 @@
               using method parallelization class ! -->
             <testFailureIgnore>false</testFailureIgnore>
             <forkedProcessTimeoutInSeconds>${surefire.timeout}</forkedProcessTimeoutInSeconds>
-            <argLine>-enableassertions -Xmx1900m
+            <argLine>-enableassertions -Xmx3g -XX:+CMSClassUnloadingEnabled -XX:+CMSPermGenSweepingEnabled -XX:MaxPermSize=1g
               -Djava.security.egd=file:/dev/./urandom -Djava.net.preferIPv4Stack=true</argLine>
             <redirectTestOutputToFile>${test.output.tofile}</redirectTestOutputToFile>
           </configuration>
@@ -1387,7 +1387,7 @@
               <groupId>org.apache.maven.plugins</groupId>
               <artifactId>maven-surefire-plugin</artifactId>
               <configuration>
-                <argLine>-enableassertions -Xmx1900m -Djava.security.egd=file:/dev/./urandom -Djava.net.preferIPv4Stack=true</argLine>
+                <argLine>-enableassertions -Xmx3gm -XX:+CMSClassUnloadingEnabled -XX:+CMSPermGenSweepingEnabled -XX:MaxPermSize=1g -Djava.security.egd=file:/dev/./urandom -Djava.net.preferIPv4Stack=true</argLine>
                 <systemProperties>
                   <property>
                     <name>java.net.preferIPv4Stack</name>

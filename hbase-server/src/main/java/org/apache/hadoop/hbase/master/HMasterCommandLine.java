@@ -202,7 +202,7 @@ public class HMasterCommandLine extends ServerCommandLine {
     try {
       Configuration conf = getConf();
       // Don't try more than once
-      conf.setInt("hbase.client.retries.number", 1);
+      conf.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 1);
       adm = new HBaseAdmin(getConf());
     } catch (MasterNotRunningException e) {
       LOG.error("Master not running");

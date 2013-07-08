@@ -73,7 +73,7 @@ public class TestSnapshotFromAdmin {
         .mock(HConnectionManager.HConnectionImplementation.class);
     Configuration conf = HBaseConfiguration.create();
     // setup the conf to match the expected properties
-    conf.setInt("hbase.client.retries.number", numRetries);
+    conf.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, numRetries);
     conf.setLong("hbase.client.pause", pauseTime);
     // mock the master admin to our mock
     MasterAdminKeepAliveConnection mockMaster = Mockito.mock(MasterAdminKeepAliveConnection.class);

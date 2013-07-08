@@ -92,7 +92,7 @@ public class TestZooKeeperTableArchiveClient {
     // only compact with 3 files
     conf.setInt("hbase.hstore.compaction.min", 3);
     // drop the number of attempts for the hbase admin
-    conf.setInt("hbase.client.retries.number", 1);
+    conf.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 1);
   }
 
   @After

@@ -77,7 +77,7 @@ public class TestMetaReaderEditor {
     // Tests to 4 retries every 5 seconds. Make it try every 1 second so more
     // responsive.  1 second is default as is ten retries.
     c.setLong("hbase.client.pause", 1000);
-    c.setInt("hbase.client.retries.number", 10);
+    c.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 10);
     zkw = new ZooKeeperWatcher(c, "TestMetaReaderEditor", ABORTABLE);
     CT = new CatalogTracker(zkw, c, ABORTABLE);
     CT.start();

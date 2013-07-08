@@ -23,8 +23,8 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.RetryCounter;
-import org.apache.hadoop.hbase.util.RetryCounterFactory;
+import org.apache.hadoop.hbase.util.BasicRetryAccountant;
+import org.apache.hadoop.hbase.util.RetryAccountant;
 import org.apache.zookeeper.AsyncCallback;
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.KeeperException;
@@ -76,7 +76,7 @@ public class RecoverableZooKeeper {
   private static final Log LOG = LogFactory.getLog(RecoverableZooKeeper.class);
   // the actual ZooKeeper client instance
   volatile private ZooKeeper zk;
-  private final RetryCounterFactory retryCounterFactory;
+  private final BasicRetryAccountantFactory retryCounterFactory;
   // An identifier of this process in the cluster
   private final String identifier;
   private final byte[] id;
@@ -111,7 +111,7 @@ public class RecoverableZooKeeper {
     // TODO: Add support for zk 'chroot'; we don't add it to the quorumServers String as we should.
     this.zk = new ZooKeeper(quorumServers, sessionTimeout, watcher);
     this.retryCounterFactory =
-      new RetryCounterFactory(maxRetries, retryIntervalMillis);
+      new BasicRetryAccountantFactory(maxRetries, retryIntervalMillis);
 
     if (identifier == null || identifier.length() == 0) {
       // the identifier = processID@hostName
@@ -146,7 +146,7 @@ public class RecoverableZooKeeper {
    */
   public void delete(String path, int version)
   throws InterruptedException, KeeperException {
-    RetryCounter retryCounter = retryCounterFactory.create();
+    RetryAccountant retryCounter = retryCounterFactory.create();
     boolean isRetry = false; // False for first attempt, true for all retries.
     while (true) {
       try {
@@ -173,8 +173,7 @@ public class RecoverableZooKeeper {
             throw e;
         }
       }
-      retryCounter.sleepUntilNextRetry();
-      retryCounter.useRetry();
+      retryCounter.sleep();
       isRetry = true;
     }
   }
@@ -185,7 +184,7 @@ public class RecoverableZooKeeper {
    */
   public Stat exists(String path, Watcher watcher)
   throws KeeperException, InterruptedException {
-    RetryCounter retryCounter = retryCounterFactory.create();
+    RetryAccountant retryCounter = retryCounterFactory.create();
     while (true) {
       try {
         return zk.exists(path, watcher);
@@ -201,8 +200,7 @@ public class RecoverableZooKeeper {
             throw e;
         }
       }
-      retryCounter.sleepUntilNextRetry();
-      retryCounter.useRetry();
+      retryCounter.sleep();
     }
   }
 
@@ -212,7 +210,7 @@ public class RecoverableZooKeeper {
    */
   public Stat exists(String path, boolean watch)
   throws KeeperException, InterruptedException {
-    RetryCounter retryCounter = retryCounterFactory.create();
+    RetryAccountant retryCounter = retryCounterFactory.create();
     while (true) {
       try {
         return zk.exists(path, watch);
@@ -228,17 +226,15 @@ public class RecoverableZooKeeper {
             throw e;
         }
       }
-      retryCounter.sleepUntilNextRetry();
-      retryCounter.useRetry();
+      retryCounter.sleep();
     }
   }
 
-  private void retryOrThrow(RetryCounter retryCounter, KeeperException e,
+  private void retryOrThrow(RetryAccountant retryCounter, KeeperException e,
       String opName) throws KeeperException {
     LOG.warn("Possibly transient ZooKeeper, quorum=" + quorumServers + ", exception=" + e);
-    if (!retryCounter.shouldRetry()) {
-      LOG.error("ZooKeeper " + opName + " failed after "
-        + retryCounter.getMaxRetries() + " retries");
+    if (!retryCounter.retry()) {
+      LOG.error("ZooKeeper " + opName + " failed " + retryCounter);
       throw e;
     }
   }
@@ -249,7 +245,7 @@ public class RecoverableZooKeeper {
    */
   public List<String> getChildren(String path, Watcher watcher)
     throws KeeperException, InterruptedException {
-    RetryCounter retryCounter = retryCounterFactory.create();
+    RetryAccountant retryCounter = retryCounterFactory.create();
     while (true) {
       try {
         return zk.getChildren(path, watcher);
@@ -265,8 +261,7 @@ public class RecoverableZooKeeper {
             throw e;
         }
       }
-      retryCounter.sleepUntilNextRetry();
-      retryCounter.useRetry();
+      retryCounter.sleep();
     }
   }
 
@@ -276,7 +271,7 @@ public class RecoverableZooKeeper {
    */
   public List<String> getChildren(String path, boolean watch)
   throws KeeperException, InterruptedException {
-    RetryCounter retryCounter = retryCounterFactory.create();
+    RetryAccountant retryCounter = retryCounterFactory.create();
     while (true) {
       try {
         return zk.getChildren(path, watch);
@@ -292,8 +287,7 @@ public class RecoverableZooKeeper {
             throw e;
         }
       }
-      retryCounter.sleepUntilNextRetry();
-      retryCounter.useRetry();
+      retryCounter.sleep();
     }
   }
 
@@ -303,7 +297,7 @@ public class RecoverableZooKeeper {
    */
   public byte[] getData(String path, Watcher watcher, Stat stat)
   throws KeeperException, InterruptedException {
-    RetryCounter retryCounter = retryCounterFactory.create();
+    RetryAccountant retryCounter = retryCounterFactory.create();
     while (true) {
       try {
         byte[] revData = zk.getData(path, watcher, stat);
@@ -320,8 +314,7 @@ public class RecoverableZooKeeper {
             throw e;
         }
       }
-      retryCounter.sleepUntilNextRetry();
-      retryCounter.useRetry();
+      retryCounter.sleep();
     }
   }
 
@@ -331,7 +324,7 @@ public class RecoverableZooKeeper {
    */
   public byte[] getData(String path, boolean watch, Stat stat)
   throws KeeperException, InterruptedException {
-    RetryCounter retryCounter = retryCounterFactory.create();
+    RetryAccountant retryCounter = retryCounterFactory.create();
     while (true) {
       try {
         byte[] revData = zk.getData(path, watch, stat);
@@ -348,8 +341,7 @@ public class RecoverableZooKeeper {
             throw e;
         }
       }
-      retryCounter.sleepUntilNextRetry();
-      retryCounter.useRetry();
+      retryCounter.sleep();
     }
   }
 
@@ -361,7 +353,7 @@ public class RecoverableZooKeeper {
    */
   public Stat setData(String path, byte[] data, int version)
   throws KeeperException, InterruptedException {
-    RetryCounter retryCounter = retryCounterFactory.create();
+    RetryAccountant retryCounter = retryCounterFactory.create();
     byte[] newData = appendMetaData(data);
     boolean isRetry = false;
     while (true) {
@@ -394,8 +386,7 @@ public class RecoverableZooKeeper {
             throw e;
         }
       }
-      retryCounter.sleepUntilNextRetry();
-      retryCounter.useRetry();
+      retryCounter.sleep();
       isRetry = true;
     }
   }
@@ -436,7 +427,7 @@ public class RecoverableZooKeeper {
 
   private String createNonSequential(String path, byte[] data, List<ACL> acl,
       CreateMode createMode) throws KeeperException, InterruptedException {
-    RetryCounter retryCounter = retryCounterFactory.create();
+    RetryAccountant retryCounter = retryCounterFactory.create();
     boolean isRetry = false; // False for first attempt, true for all retries.
     while (true) {
       try {
@@ -473,8 +464,7 @@ public class RecoverableZooKeeper {
             throw e;
         }
       }
-      retryCounter.sleepUntilNextRetry();
-      retryCounter.useRetry();
+      retryCounter.sleep();
       isRetry = true;
     }
   }
@@ -482,7 +472,7 @@ public class RecoverableZooKeeper {
   private String createSequential(String path, byte[] data,
       List<ACL> acl, CreateMode createMode)
   throws KeeperException, InterruptedException {
-    RetryCounter retryCounter = retryCounterFactory.create();
+    RetryAccountant retryCounter = retryCounterFactory.create();
     boolean first = true;
     String newPath = path+this.identifier;
     while (true) {
@@ -508,8 +498,7 @@ public class RecoverableZooKeeper {
             throw e;
         }
       }
-      retryCounter.sleepUntilNextRetry();
-      retryCounter.useRetry();
+      retryCounter.sleep();
     }
   }
   /**
@@ -545,7 +534,7 @@ public class RecoverableZooKeeper {
    */
   public List<OpResult> multi(Iterable<Op> ops)
   throws KeeperException, InterruptedException {
-    RetryCounter retryCounter = retryCounterFactory.create();
+    RetryAccountant retryCounter = retryCounterFactory.create();
     Iterable<Op> multiOps = prepareZKMulti(ops);
     while (true) {
       try {
@@ -562,8 +551,7 @@ public class RecoverableZooKeeper {
             throw e;
         }
       }
-      retryCounter.sleepUntilNextRetry();
-      retryCounter.useRetry();
+      retryCounter.sleep();
     }
   }
 
@@ -670,5 +658,23 @@ public class RecoverableZooKeeper {
 
   public String getIdentifier() {
     return identifier;
+  }
+
+  /**
+   * Factory to create {@link BasicRetryAccountant}s.  Saves having to have maxRetries and
+   * retryIntervalMillis available everywhere.
+   */
+  static class BasicRetryAccountantFactory {
+    private final int maxRetries;
+    private final int retryIntervalMillis;
+
+    BasicRetryAccountantFactory(int maxRetries, int retryIntervalMillis) {
+      this.maxRetries = maxRetries;
+      this.retryIntervalMillis = retryIntervalMillis;
+    }
+
+    RetryAccountant create() {
+      return new BasicRetryAccountant(maxRetries, retryIntervalMillis);
+    }
   }
 }

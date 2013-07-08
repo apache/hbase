@@ -115,7 +115,7 @@ public class TestSnapshotFromMaster {
     // block writes if we get to 12 store files
     conf.setInt("hbase.hstore.blockingStoreFiles", 12);
     // drop the number of attempts for the hbase admin
-    conf.setInt("hbase.client.retries.number", 1);
+    conf.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 1);
     // Ensure no extra cleaners on by default (e.g. TimeToLiveHFileCleaner)
     conf.set(HFileCleaner.MASTER_HFILE_CLEANER_PLUGINS, "");
     conf.set(HConstants.HBASE_MASTER_LOGCLEANER_PLUGINS, "");

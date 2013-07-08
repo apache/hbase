@@ -173,7 +173,7 @@ public class TestFSErrorsExposed {
       util.getConfiguration().setInt(
           "hbase.regionserver.optionallogflushinterval", Integer.MAX_VALUE);
 
-      util.getConfiguration().setInt("hbase.client.retries.number", 3);
+      util.getConfiguration().setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 3);
 
       util.startMiniCluster(1);
       byte[] tableName = Bytes.toBytes("table");
@@ -187,7 +187,7 @@ public class TestFSErrorsExposed {
       );
       admin.createTable(desc);
       // Make it fail faster.
-      util.getConfiguration().setInt("hbase.client.retries.number", 1);
+      util.getConfiguration().setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 1);
       // Make a new Configuration so it makes a new connection that has the
       // above configuration on it; else we use the old one w/ 10 as default.
       HTable table = new HTable(new Configuration(util.getConfiguration()), tableName);

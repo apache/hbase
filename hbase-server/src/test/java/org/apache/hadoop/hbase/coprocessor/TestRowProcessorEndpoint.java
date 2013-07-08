@@ -35,6 +35,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HTable;
@@ -111,7 +112,7 @@ public class TestRowProcessorEndpoint {
     Configuration conf = util.getConfiguration();
     conf.setStrings(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY,
         RowProcessorEndpoint.class.getName());
-    conf.setInt("hbase.client.retries.number", 1);
+    conf.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 1);
     conf.setLong("hbase.hregion.row.processor.timeout", 1000L);
     util.startMiniCluster();
   }
