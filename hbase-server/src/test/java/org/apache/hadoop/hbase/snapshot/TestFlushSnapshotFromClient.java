@@ -427,7 +427,8 @@ public class TestFlushSnapshotFromClient {
     FSUtils.logFileSystemState(UTIL.getDFSCluster().getFileSystem(), root, LOG);
   }
 
-  private void waitForTableToBeOnline(final byte[] tableName) throws IOException {
+  private void waitForTableToBeOnline(final byte[] tableName)
+  throws IOException, InterruptedException {
     HRegionServer rs = UTIL.getRSForFirstRegionInTable(tableName);
     List<HRegion> onlineRegions = rs.getOnlineRegions(tableName);
     for (HRegion region : onlineRegions) {
