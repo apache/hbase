@@ -38,7 +38,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.catalog.CatalogTracker;
@@ -52,8 +51,6 @@ import org.apache.hadoop.hbase.exceptions.TableNotEnabledException;
 import org.apache.hadoop.hbase.exceptions.TableNotFoundException;
 import org.apache.hadoop.hbase.exceptions.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.executor.EventHandler;
-import org.apache.hadoop.hbase.ipc.RpcClient;
-import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.master.AssignmentManager;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
@@ -64,7 +61,6 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.zookeeper.ZKTableReadOnly;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
-import org.apache.log4j.Level;
 import org.junit.*;
 import org.junit.experimental.categories.Category;
 
@@ -977,6 +973,9 @@ public class TestAdmin {
     // Scan first row so we are into first region before split happens.
     scanner.next();
 
+    // Split the table
+    this.admin.split(tableName, splitPoint);
+
     final AtomicInteger count = new AtomicInteger(0);
     Thread t = new Thread("CheckForSplit") {
       public void run() {
@@ -998,11 +997,11 @@ public class TestAdmin {
           if (count.get() >= 2) break;
           LOG.debug("Cycle waiting on split");
         }
+        LOG.debug("CheckForSplit thread exited, current region count: " + count.get());
       }
     };
+    t.setPriority(Thread.NORM_PRIORITY - 2);
     t.start();
-    // Split the table
-    this.admin.split(tableName, splitPoint);
     t.join();
 
     // Verify row count
@@ -1039,9 +1038,14 @@ public class TestAdmin {
         // check if splitKey is based on the largest column family
         // in terms of it store size
         int deltaForLargestFamily = Math.abs(rowCount/2 - splitKey);
+        LOG.debug("SplitKey=" + splitKey + "&deltaForLargestFamily=" + deltaForLargestFamily);
         for (int index = 0; index < familyNames.length; index++) {
           int delta = Math.abs(rowCounts[index]/2 - splitKey);
-          assertTrue(delta >= deltaForLargestFamily);
+          if (delta < deltaForLargestFamily) {
+            assertTrue("Delta " + delta + " for family " + index
+              + " should be at least deltaForLargestFamily " + deltaForLargestFamily,
+              false);
+          }
         }
       }
     }
