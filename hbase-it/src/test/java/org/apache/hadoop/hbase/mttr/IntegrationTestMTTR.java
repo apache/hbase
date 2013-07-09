@@ -26,6 +26,7 @@ import org.apache.hadoop.hbase.ClusterStatus;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.IntegrationTestingUtility;
+import org.apache.hadoop.hbase.IntegrationTests;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
@@ -39,6 +40,7 @@ import org.apache.hadoop.hbase.util.LoadTestTool;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -87,7 +89,9 @@ import static junit.framework.Assert.assertEquals;
  * </ul>
  * <p/>
  * At the end of the test a log line is output on the INFO level containing the timing data that was
+ * collected.
  */
+@Category(IntegrationTests.class)
 public class IntegrationTestMTTR {
   /**
    * Constants.
