@@ -98,12 +98,9 @@ if "%in_dev_env%"=="true" (
   for /f %%i in ('dir /b %HBASE_HOME%\hbase-*') do (
     if exist %%i\target\test-classes set CLASSPATH=!CLASSPATH!;%%i\target\test-classes
   )
-  rem Need to generate classpath from maven pom. This is costly so generate it
-  rem and cache it. Save the file into our target dir so a mvn clean will get
-  rem clean it up and force us create a new one.
 
   if NOT exist "%cached_classpath_filename%" (
-      echo "As this is a development environment, we need %cached_classpath_filename% to be generated from maven (command: mvn compile)"
+      echo "As this is a development environment, we need %cached_classpath_filename% to be generated from maven (command: mvn install -DskipTests)"
 	  goto :eof
   )
 
