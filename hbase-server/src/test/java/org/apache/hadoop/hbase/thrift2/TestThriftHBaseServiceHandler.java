@@ -27,6 +27,7 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
+import org.apache.hadoop.hbase.filter.ParseFilter;
 import org.apache.hadoop.hbase.test.MetricsAssertHelper;
 import org.apache.hadoop.hbase.thrift.ThriftMetrics;
 import org.apache.hadoop.hbase.thrift2.generated.TColumn;
@@ -55,6 +56,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 
 import static org.junit.Assert.*;
 import static java.nio.ByteBuffer.wrap;
@@ -625,7 +627,6 @@ public class TestThriftHBaseServiceHandler {
     int scanId = handler.openScanner(table, scan);
     List<TResult> results = null;
     for (int i = 0; i < 10; i++) {
-      System.out.println("batch: " + i);
       // get batch for single row (10x10 is what we expect)
       results = handler.getScannerRows(scanId, 1);
       assertEquals(1, results.size());
@@ -636,7 +637,6 @@ public class TestThriftHBaseServiceHandler {
       for (int y = 0; y < 10; y++) {
         int colNum = y + (10 * i);
         String colNumPad = pad(colNum, (byte) 3);
-        System.out.println("col" + colNumPad + ": " + new String(cols.get(y).getQualifier()));
         assertArrayEquals(("col" + colNumPad).getBytes(), cols.get(y).getQualifier());
       }
     }
@@ -652,6 +652,15 @@ public class TestThriftHBaseServiceHandler {
       fail("Scanner id should be invalid");
     } catch (TIllegalArgument e) {
     }
+  }
+
+  @Test
+  public void testFilterRegistration() throws Exception {
+    Configuration conf = UTIL.getConfiguration();
+    conf.set("hbase.thrift.filters", "MyFilter:filterclass");
+    ThriftServer.registerFilters(conf);
+    Map<String, String> registeredFilters = ParseFilter.getAllFilters();
+    assertEquals("filterclass", registeredFilters.get("MyFilter"));
   }
 
   @Test
