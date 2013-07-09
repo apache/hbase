@@ -297,15 +297,13 @@ Shell.load_command_group(
 Shell.load_command_group(
   'replication',
   :full_name => 'CLUSTER REPLICATION TOOLS',
-  :comment => "In order to use these tools, hbase.replication must be true. enabling/disabling is currently unsupported",
+  :comment => "In order to use these tools, hbase.replication must be true.",
   :commands => %w[
     add_peer
     remove_peer
     list_peers
     enable_peer
     disable_peer
-    start_replication
-    stop_replication
   ]
 )
 

@@ -111,7 +111,6 @@ public class TestReplicationBase {
     zkw2 = new ZooKeeperWatcher(conf2, "cluster2", null, true);
 
     admin.addPeer("2", utility2.getClusterKey());
-    setIsReplication(true);
 
     LOG.info("Setup second Zk");
     CONF_WITH_LOCALFS = HBaseConfiguration.create(conf1);
@@ -132,12 +131,6 @@ public class TestReplicationBase {
     htable1 = new HTable(conf1, tableName);
     htable1.setWriteBufferSize(1024);
     htable2 = new HTable(conf2, tableName);
-  }
-
-  protected static void setIsReplication(boolean rep) throws Exception {
-    LOG.info("Set rep " + rep);
-    admin.setReplicating(rep);
-    Thread.sleep(SLEEP_TIME);
   }
 
   /**

@@ -23,15 +23,12 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.master.cleaner.BaseLogCleanerDelegate;
 import org.apache.hadoop.hbase.replication.ReplicationQueuesClient;
 import org.apache.hadoop.hbase.replication.ReplicationQueuesClientZKImpl;
-import org.apache.hadoop.hbase.replication.ReplicationStateImpl;
-import org.apache.hadoop.hbase.replication.ReplicationStateInterface;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.zookeeper.KeeperException;
 
@@ -49,7 +46,6 @@ public class ReplicationLogCleaner extends BaseLogCleanerDelegate implements Abo
   private static final Log LOG = LogFactory.getLog(ReplicationLogCleaner.class);
   private ZooKeeperWatcher zkw;
   private ReplicationQueuesClient replicationQueues;
-  private ReplicationStateInterface replicationState;
   private final Set<String> hlogs = new HashSet<String>();
   private boolean stopped = false;
   private boolean aborted;
@@ -57,15 +53,6 @@ public class ReplicationLogCleaner extends BaseLogCleanerDelegate implements Abo
 
   @Override
   public boolean isLogDeletable(FileStatus fStat) {
-
-    try {
-      if (!replicationState.getState()) {
-        return false;
-      }
-    } catch (KeeperException e) {
-      abort("Cannot get the state of replication", e);
-      return false;
-    }
 
     // all members of this class are null if replication is disabled, and we
     // return true since false would render the LogsCleaner useless
@@ -136,8 +123,6 @@ public class ReplicationLogCleaner extends BaseLogCleanerDelegate implements Abo
     try {
       this.zkw = new ZooKeeperWatcher(conf, "replicationLogCleaner", null);
       this.replicationQueues = new ReplicationQueuesClientZKImpl(zkw, conf, this);
-      this.replicationState = new ReplicationStateImpl(zkw, conf, this);
-      this.replicationState.init();
     } catch (KeeperException e) {
       LOG.error("Error while configuring " + this.getClass().getName(), e);
     } catch (IOException e) {
@@ -154,14 +139,6 @@ public class ReplicationLogCleaner extends BaseLogCleanerDelegate implements Abo
     if (this.zkw != null) {
       LOG.info("Stopping " + this.zkw);
       this.zkw.close();
-    }
-    if (this.replicationState != null) {
-      LOG.info("Stopping " + this.replicationState);
-      try {
-        this.replicationState.close();
-      } catch (IOException e) {
-        LOG.error("Error while stopping " + this.replicationState, e);
-      }
     }
     // Not sure why we're deleting a connection that we never acquired or used
     HConnectionManager.deleteConnection(this.getConf());

@@ -65,17 +65,5 @@ module Hbase
     def disable_peer(id)
       @replication_admin.disablePeer(id)
     end
-
-    #----------------------------------------------------------------------------------------------
-    # Restart the replication, in an unknown state
-    def start_replication
-      @replication_admin.setReplicating(true)
-    end
-
-    #----------------------------------------------------------------------------------------------
-    # Kill switch for replication, stops all its features
-    def stop_replication
-      @replication_admin.setReplicating(false)
-    end
   end
 end
