@@ -86,9 +86,7 @@ public class RemoteHTable implements HTableInterface {
     Set families = familyMap.entrySet();
     if (families != null) {
       Iterator i = familyMap.entrySet().iterator();
-      if (i.hasNext()) {
-        sb.append('/');
-      }
+      sb.append('/');
       while (i.hasNext()) {
         Map.Entry e = (Map.Entry)i.next();
         Collection quals = (Collection)e.getValue();

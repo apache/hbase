@@ -303,6 +303,7 @@ public class TestRemoteTable {
     assertTrue(Bytes.equals(VALUE_2, value));
   }
 
+  @Test
   public void testDelete() throws IOException {
     Put put = new Put(ROW_3);
     put.add(COLUMN_1, QUALIFIER_1, VALUE_1);
@@ -323,7 +324,21 @@ public class TestRemoteTable {
     Delete delete = new Delete(ROW_3);
     delete.deleteColumn(COLUMN_2, QUALIFIER_2);
     remoteTable.delete(delete);
-    
+
+    get = new Get(ROW_3);
+    get.addFamily(COLUMN_1);
+    get.addFamily(COLUMN_2);
+    result = remoteTable.get(get);
+    value1 = result.getValue(COLUMN_1, QUALIFIER_1);
+    value2 = result.getValue(COLUMN_2, QUALIFIER_2);
+    assertNotNull(value1);
+    assertTrue(Bytes.equals(VALUE_1, value1));
+    assertNull(value2);
+
+    delete = new Delete(ROW_3);
+    delete.setTimestamp(1L);
+    remoteTable.delete(delete);
+
     get = new Get(ROW_3);
     get.addFamily(COLUMN_1);
     get.addFamily(COLUMN_2);
