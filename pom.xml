@@ -683,12 +683,14 @@
               <exclude>**/control</exclude>
               <exclude>**/conffile</exclude>
               <exclude>docs/*</exclude>
+              <exclude>logs/*</exclude>
               <!-- auto-gen docs -->
               <!--It don't like freebsd license-->
               <exclude>**/src/main/site/resources/css/freebsd_docbook.css</exclude>
               <!--  exclude source control files -->
               <exclude>.git/**</exclude>
               <exclude>.svn/**</exclude>
+              <exclude>**/.settings/**</exclude>
             </excludes>
           </configuration>
         </plugin>

@@ -117,22 +117,6 @@
     </pluginManagement>
 
     <plugins>
-      <plugin>
-        <artifactId>maven-dependency-plugin</artifactId>
-        <executions>
-          <execution>
-	    <!-- generates the file that will be used by the bin/hbase script in the dev env -->
-            <id>create-hbase-generated-classpath</id>
-            <phase>test</phase>
-            <goals>
-              <goal>build-classpath</goal>
-            </goals>
-            <configuration>
-              <outputFile>${project.build.directory}/../../target/cached_classpath.txt</outputFile>
-            </configuration>
-          </execution>
-        </executions>
-      </plugin>
       <!--  Run integration tests with mvn verify -->
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>

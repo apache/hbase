@@ -141,13 +141,10 @@ if [ -d "$HBASE_HOME/hbase-server/target/hbase-webapps" ]; then
 fi
 
 add_maven_deps_to_classpath() {
-  # Need to generate classpath from maven pom. This is costly so generate it
-  # and cache it. Save the file into our target dir so a mvn clean will get
-  # clean it up and force us create a new one.
   f="${HBASE_HOME}/target/cached_classpath.txt"
   if [ ! -f "${f}" ]
   then
-      echo "As this is a development environment, we need ${f} to be generated from maven (command: mvn compile)"
+      echo "As this is a development environment, we need ${f} to be generated from maven (command: mvn install -DskipTests)"
       exit 1
   fi
   CLASSPATH=${CLASSPATH}:`cat "${f}"`
