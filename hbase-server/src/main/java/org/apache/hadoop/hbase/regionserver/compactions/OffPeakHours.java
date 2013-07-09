@@ -37,6 +37,13 @@ public abstract class OffPeakHours {
     return getInstance(startHour, endHour);
   }
 
+  public static OffPeakHours getInstance(Configuration conf, String start,
+      String end) {
+    int startHour = conf.getInt(start, -1);
+    int endHour = conf.getInt(end, -1);
+    return getInstance(startHour, endHour);
+  }
+
   /**
    * @param startHour inclusive
    * @param endHour exclusive
