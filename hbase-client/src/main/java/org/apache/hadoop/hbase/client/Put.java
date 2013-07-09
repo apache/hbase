@@ -68,7 +68,6 @@ public class Put extends Mutation implements HeapSize, Comparable<Row> {
    * @param rowArray
    * @param rowOffset
    * @param rowLength
-   * @param ts
    */
   public Put(byte [] rowArray, int rowOffset, int rowLength) {
     this(rowArray, rowOffset, rowLength, HConstants.LATEST_TIMESTAMP);
