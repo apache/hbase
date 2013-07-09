@@ -22,6 +22,7 @@ import com.google.common.base.Objects;
 import org.apache.commons.lang.RandomStringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.commons.math.stat.descriptive.DescriptiveStatistics;
 import org.apache.hadoop.hbase.ClusterStatus;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
@@ -37,6 +38,9 @@ import org.apache.hadoop.hbase.filter.KeyOnlyFilter;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ChaosMonkey;
 import org.apache.hadoop.hbase.util.LoadTestTool;
+import org.cloudera.htrace.Sampler;
+import org.cloudera.htrace.Span;
+import org.cloudera.htrace.Trace;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -106,6 +110,7 @@ public class IntegrationTestMTTR {
   private static String tableName;
   private static byte[] tableNameBytes;
   private static String loadTableName;
+  private static byte[] loadTableNameBytes;
 
   /**
    * Util to get at the cluster.
@@ -129,6 +134,7 @@ public class IntegrationTestMTTR {
    * The load test tool used to create load and make sure that HLogs aren't empty.
    */
   private static LoadTestTool loadTool;
+
 
   @BeforeClass
   public static void setUp() throws Exception {
@@ -185,20 +191,21 @@ public class IntegrationTestMTTR {
 
     loadTableName = util.getConfiguration()
         .get("hbase.IntegrationTestMTTR.loadTableName", "IntegrationTestMTTRLoadTestTool");
+    loadTableNameBytes = Bytes.toBytes(loadTableName);
 
     if (util.getHBaseAdmin().tableExists(tableNameBytes)) {
       util.deleteTable(tableNameBytes);
     }
 
-    if (util.getHBaseAdmin().tableExists(loadTableName)) {
-      util.deleteTable(loadTableName);
+    if (util.getHBaseAdmin().tableExists(loadTableNameBytes)) {
+      util.deleteTable(loadTableNameBytes);
     }
 
     // Create the table.  If this fails then fail everything.
     HTableDescriptor tableDescriptor = new HTableDescriptor(tableNameBytes);
 
     // Make the max file size huge so that splits don't happen during the test.
-    tableDescriptor.setMaxFileSize(2 * 1024 * 1024 * 1024);
+    tableDescriptor.setMaxFileSize(Long.MAX_VALUE);
 
     HColumnDescriptor descriptor = new HColumnDescriptor(FAMILY);
     descriptor.setMaxVersions(1);
@@ -253,9 +260,9 @@ public class IntegrationTestMTTR {
     int maxIters = util.getHBaseClusterInterface().isDistributedCluster() ? 10 : 3;
 
     // Array to keep track of times.
-    ArrayList<Long> timesPutMs = new ArrayList<Long>(maxIters);
-    ArrayList<Long> timesScanMs = new ArrayList<Long>(maxIters);
-    ArrayList<Long> timesAdminMs = new ArrayList<Long>(maxIters);
+    ArrayList<TimingResult> resultPuts = new ArrayList<TimingResult>(maxIters);
+    ArrayList<TimingResult> resultScan = new ArrayList<TimingResult>(maxIters);
+    ArrayList<TimingResult> resultAdmin = new ArrayList<TimingResult>(maxIters);
     long start = System.nanoTime();
 
     // We're going to try this multiple times
@@ -264,9 +271,9 @@ public class IntegrationTestMTTR {
       Future<Boolean> monkeyFuture = executorService.submit(monkeyCallable);
 
       // Pass that future to the timing Callables.
-      Future<Long> putFuture = executorService.submit(new PutCallable(monkeyFuture));
-      Future<Long> scanFuture = executorService.submit(new ScanCallable(monkeyFuture));
-      Future<Long> adminFuture = executorService.submit(new AdminCallable(monkeyFuture));
+      Future<TimingResult> putFuture = executorService.submit(new PutCallable(monkeyFuture));
+      Future<TimingResult> scanFuture = executorService.submit(new ScanCallable(monkeyFuture));
+      Future<TimingResult> adminFuture = executorService.submit(new AdminCallable(monkeyFuture));
 
       Future<Boolean> loadFuture = executorService.submit(new LoadCallable(monkeyFuture));
 
@@ -274,14 +281,14 @@ public class IntegrationTestMTTR {
       loadFuture.get();
 
       // Get the values from the futures.
-      long putTime = TimeUnit.MILLISECONDS.convert(putFuture.get(), TimeUnit.NANOSECONDS);
-      long scanTime = TimeUnit.MILLISECONDS.convert(scanFuture.get(), TimeUnit.NANOSECONDS);
-      long adminTime = TimeUnit.MILLISECONDS.convert(adminFuture.get(), TimeUnit.NANOSECONDS);
+      TimingResult putTime = putFuture.get();
+      TimingResult scanTime = scanFuture.get();
+      TimingResult adminTime = adminFuture.get();
 
       // Store the times to display later.
-      timesPutMs.add(putTime);
-      timesScanMs.add(scanTime);
-      timesAdminMs.add(adminTime);
+      resultPuts.add(putTime);
+      resultScan.add(scanTime);
+      resultAdmin.add(adminTime);
 
       // Wait some time for everything to settle down.
       Thread.sleep(5000l);
@@ -290,9 +297,9 @@ public class IntegrationTestMTTR {
     long runtimeMs = TimeUnit.MILLISECONDS.convert(System.nanoTime() - start, TimeUnit.NANOSECONDS);
 
     Objects.ToStringHelper helper = Objects.toStringHelper("MTTRResults")
-        .add("timesPutMs", timesPutMs)
-        .add("timesScanMs", timesScanMs)
-        .add("timesAdminMs", timesAdminMs)
+        .add("putResults", resultPuts)
+        .add("scanResults", resultScan)
+        .add("adminResults", resultAdmin)
         .add("totalRuntimeMs", runtimeMs)
         .add("name", testName);
 
@@ -301,9 +308,49 @@ public class IntegrationTestMTTR {
   }
 
   /**
+   * Class to store results of TimingCallable.
+   *
+   * Stores times and trace id.
+   */
+  private class TimingResult {
+    DescriptiveStatistics stats = new DescriptiveStatistics();
+    ArrayList<Long> traces = new ArrayList<Long>(10);
+
+    /**
+     * Add a result to this aggregate result.
+     * @param time Time in nanoseconds
+     * @param span Span.  To be kept if the time taken was over 1 second
+     */
+    public void addResult(long time, Span span) {
+      stats.addValue(TimeUnit.MILLISECONDS.convert(time, TimeUnit.NANOSECONDS));
+      if (TimeUnit.SECONDS.convert(time, TimeUnit.NANOSECONDS) >= 1) {
+        traces.add(span.getTraceId());
+      }
+    }
+
+    public String toString() {
+      Objects.ToStringHelper helper = Objects.toStringHelper(this)
+          .add("numResults", stats.getN())
+          .add("minTime", stats.getMin())
+          .add("meanTime", stats.getMean())
+          .add("maxTime", stats.getMax())
+          .add("25th", stats.getPercentile(25))
+          .add("50th", stats.getPercentile(50))
+          .add("75th", stats.getPercentile(75))
+          .add("90th", stats.getPercentile(90))
+          .add("95th", stats.getPercentile(95))
+          .add("99th", stats.getPercentile(99))
+          .add("99.9th", stats.getPercentile(99.9))
+          .add("99.99th", stats.getPercentile(99.99))
+          .add("traces", traces);
+      return helper.toString();
+    }
+  }
+
+  /**
    * Base class for actions that need to record the time needed to recover from a failure.
    */
-  public abstract class TimingCallable implements Callable<Long> {
+  public abstract class TimingCallable implements Callable<TimingResult> {
     protected final Future future;
 
     public TimingCallable(Future f) {
@@ -311,27 +358,36 @@ public class IntegrationTestMTTR {
     }
 
     @Override
-    public Long call() throws Exception {
-      // TODO(eclark): Do more than just max.  Full histogram support.
-      long maxTime = 0;
+    public TimingResult call() throws Exception {
+      TimingResult result = new TimingResult();
       int numAfterDone = 0;
       // Keep trying until the rs is back up and we've gotten a put through
       while (numAfterDone < 10) {
         long start = System.nanoTime();
+        Span span = null;
         try {
-          boolean result = doAction();
-          if (result && future.isDone()) {
+          span = Trace.startSpan(getSpanName(), Sampler.ALWAYS);
+          boolean actionResult = doAction();
+          if (actionResult && future.isDone()) {
             numAfterDone ++;
           }
         } catch (Exception e) {
           numAfterDone = 0;
+        } finally {
+          if (span != null) {
+            span.stop();
+          }
         }
-        maxTime = Math.max(maxTime, System.nanoTime() - start);
+        result.addResult(System.nanoTime() - start, span);
       }
-      return maxTime;
+      return result;
     }
 
     protected abstract boolean doAction() throws Exception;
+
+    protected String getSpanName() {
+      return this.getClass().getSimpleName();
+    }
   }
 
   /**
@@ -354,6 +410,11 @@ public class IntegrationTestMTTR {
       table.put(p);
       table.flushCommits();
       return true;
+    }
+
+    @Override
+    protected String getSpanName() {
+      return "MTTR Put Test";
     }
   }
 
@@ -388,6 +449,10 @@ public class IntegrationTestMTTR {
         }
       }
     }
+    @Override
+    protected String getSpanName() {
+      return "MTTR Scan Test";
+    }
   }
 
   /**
@@ -405,6 +470,11 @@ public class IntegrationTestMTTR {
       ClusterStatus status = admin.getClusterStatus();
       return status != null;
     }
+
+    @Override
+    protected String getSpanName() {
+      return "MTTR Admin Test";
+    }
   }
 
 
@@ -412,7 +482,6 @@ public class IntegrationTestMTTR {
     private final ChaosMonkey.Action action;
 
     public ActionCallable(ChaosMonkey.Action action) {
-
       this.action = action;
     }
 
