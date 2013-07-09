@@ -74,7 +74,7 @@ public class IntegrationTestRebalanceAndKillServersTargeted extends IngestIntegr
     private static final long WAIT_AFTER_BALANCE_MS = 5 * 1000;
 
     @Override
-    protected void perform() throws Exception {
+    public void perform() throws Exception {
       ClusterStatus status = this.cluster.getClusterStatus();
       List<ServerName> victimServers = new LinkedList<ServerName>(status.getServers());
       int liveCount = (int)Math.ceil(FRC_SERVERS_THAT_HOARD_AND_LIVE * victimServers.size());

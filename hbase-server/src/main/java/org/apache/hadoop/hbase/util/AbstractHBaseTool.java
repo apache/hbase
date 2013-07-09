@@ -16,6 +16,7 @@
  */
 package org.apache.hadoop.hbase.util;
 
+import java.io.IOException;
 import java.util.Set;
 import java.util.TreeSet;
 
@@ -79,7 +80,7 @@ public abstract class AbstractHBaseTool implements Tool {
   }
 
   @Override
-  public final int run(String[] args) throws Exception {
+  public final int run(String[] args) throws IOException {
     if (conf == null) {
       LOG.error("Tool configuration is not initialized");
       throw new NullPointerException("conf");

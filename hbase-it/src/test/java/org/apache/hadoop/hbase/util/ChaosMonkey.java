@@ -29,6 +29,7 @@ import java.util.Queue;
 import java.util.Random;
 
 import org.apache.commons.cli.CommandLine;
+import org.apache.commons.lang.math.RandomUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -42,6 +43,7 @@ import org.apache.hadoop.hbase.ServerLoad;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
+import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.ToolRunner;
 
@@ -110,10 +112,10 @@ public class ChaosMonkey extends AbstractHBaseTool implements Stoppable {
   /**
    * Context for Action's
    */
-  private static class ActionContext {
+  public static class ActionContext {
     private IntegrationTestingUtility util;
 
-    ActionContext(IntegrationTestingUtility util) {
+    public ActionContext(IntegrationTestingUtility util) {
       this.util = util;
     }
 
@@ -141,7 +143,7 @@ public class ChaosMonkey extends AbstractHBaseTool implements Stoppable {
     protected ServerName[] initialServers;
     protected Random random = new Random();
 
-    void init(ActionContext context) throws Exception {
+    public void init(ActionContext context) throws IOException {
       this.context = context;
       cluster = context.getHBaseCluster();
       initialStatus = cluster.getInitialClusterStatus();
@@ -149,7 +151,7 @@ public class ChaosMonkey extends AbstractHBaseTool implements Stoppable {
       initialServers = regionServers.toArray(new ServerName[regionServers.size()]);
     }
 
-    protected void perform() throws Exception { };
+    public void perform() throws Exception { };
 
     // TODO: perhaps these methods should be elsewhere?
     /** Returns current region servers */
@@ -254,7 +256,7 @@ public class ChaosMonkey extends AbstractHBaseTool implements Stoppable {
       super(sleepTime);
     }
     @Override
-    protected void perform() throws Exception {
+    public void perform() throws Exception {
       LOG.info("Performing action: Restart active master");
 
       ServerName master = cluster.getClusterStatus().getMaster();
@@ -268,7 +270,7 @@ public class ChaosMonkey extends AbstractHBaseTool implements Stoppable {
     }
 
     @Override
-    protected void perform() throws Exception {
+    public void perform() throws Exception {
       LOG.info("Performing action: Restart random region server");
       ServerName server = selectRandomItem(getCurrentServers());
 
@@ -276,12 +278,12 @@ public class ChaosMonkey extends AbstractHBaseTool implements Stoppable {
     }
   }
 
-  public static class RestartRsHoldingMeta extends RestartRandomRs {
+  public static class RestartRsHoldingMeta extends RestartActionBase {
     public RestartRsHoldingMeta(long sleepTime) {
       super(sleepTime);
     }
     @Override
-    protected void perform() throws Exception {
+    public void perform() throws Exception {
       LOG.info("Performing action: Restart region server holding META");
       ServerName server = cluster.getServerHoldingMeta();
       if (server == null) {
@@ -292,6 +294,62 @@ public class ChaosMonkey extends AbstractHBaseTool implements Stoppable {
     }
   }
 
+  public static class RestartRsHoldingTable extends RestartActionBase {
+
+    private final String tableName;
+
+    public RestartRsHoldingTable(long sleepTime, String tableName) {
+      super(sleepTime);
+      this.tableName = tableName;
+    }
+
+    @Override
+    public void perform() throws Exception {
+      HTable table = null;
+      try {
+        Configuration conf = context.getHaseIntegrationTestingUtility().getConfiguration();
+        table = new HTable(conf, tableName);
+      } catch (IOException e) {
+        LOG.debug("Error creating HTable used to get list of region locations.", e);
+        return;
+      }
+
+      Collection<ServerName> serverNames = table.getRegionLocations().values();
+      ServerName[] nameArray = serverNames.toArray(new ServerName[serverNames.size()]);
+
+      restartRs(nameArray[random.nextInt(nameArray.length)], sleepTime);
+    }
+  }
+
+  public static class MoveRegionsOfTable extends Action {
+    private final long sleepTime;
+    private final byte[] tableNameBytes;
+
+    public MoveRegionsOfTable(long sleepTime, String tableName) {
+      this.sleepTime = sleepTime;
+      this.tableNameBytes = Bytes.toBytes(tableName);
+    }
+
+    @Override
+    public void perform() throws Exception {
+      HBaseAdmin admin = this.context.getHaseIntegrationTestingUtility().getHBaseAdmin();
+
+      List<HRegionInfo> regions = admin.getTableRegions(tableNameBytes);
+      Collection<ServerName> serversList = admin.getClusterStatus().getServers();
+      ServerName[] servers = serversList.toArray(new ServerName[serversList.size()]);
+
+      for (HRegionInfo regionInfo:regions) {
+        try {
+          byte[] destServerName =
+              Bytes.toBytes(servers[RandomUtils.nextInt(servers.length)].getServerName());
+          admin.move(regionInfo.getRegionName(), destServerName);
+        } catch (Exception e) {
+          LOG.debug("Error moving region", e);
+        }
+      }
+      Thread.sleep(sleepTime);
+    }
+  }
   /**
    * Restarts a ratio of the running regionservers at the same time
    */
@@ -304,7 +362,7 @@ public class ChaosMonkey extends AbstractHBaseTool implements Stoppable {
     }
 
     @Override
-    protected void perform() throws Exception {
+    public void perform() throws Exception {
       LOG.info(String.format("Performing action: Batch restarting %d%% of region servers",
           (int)(ratio * 100)));
       List<ServerName> selectedServers = selectRandomItems(getCurrentServers(), ratio);
@@ -346,7 +404,7 @@ public class ChaosMonkey extends AbstractHBaseTool implements Stoppable {
     }
 
     @Override
-    protected void perform() throws Exception {
+    public void perform() throws Exception {
       LOG.info(String.format("Performing action: Rolling batch restarting %d%% of region servers",
           (int)(ratio * 100)));
       List<ServerName> selectedServers = selectRandomItems(getCurrentServers(), ratio);
@@ -394,7 +452,7 @@ public class ChaosMonkey extends AbstractHBaseTool implements Stoppable {
     }
 
     @Override
-    protected void perform() throws Exception {
+    public void perform() throws Exception {
       LOG.info("Unbalancing regions");
       ClusterStatus status = this.cluster.getClusterStatus();
       List<ServerName> victimServers = new LinkedList<ServerName>(status.getServers());
@@ -410,7 +468,7 @@ public class ChaosMonkey extends AbstractHBaseTool implements Stoppable {
 
   public static class ForceBalancerAction extends Action {
     @Override
-    protected void perform() throws Exception {
+    public void perform() throws Exception {
       LOG.info("Balancing regions");
       forceBalancer();
     }
