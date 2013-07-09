@@ -21,6 +21,9 @@ package org.apache.hadoop.hbase.client;
 import java.util.ArrayList;
 import java.util.List;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -64,19 +67,23 @@ public class TestSnapshotMetadata {
   private static final String BLOOMFILTER_FAM_STR = "fam_bloomfilter";
   private static final byte[] BLOOMFILTER_FAM = Bytes.toBytes(BLOOMFILTER_FAM_STR);
 
-  byte[][] families = { MAX_VERSIONS_FAM, BLOOMFILTER_FAM, COMPRESSED_FAM, BLOCKSIZE_FAM };
+  private static final String TEST_CONF_CUSTOM_VALUE = "TestCustomConf";
+  private static final String TEST_CUSTOM_VALUE = "TestCustomValue";
+
+  private static final byte[][] families = {
+    MAX_VERSIONS_FAM, BLOOMFILTER_FAM, COMPRESSED_FAM, BLOCKSIZE_FAM
+  };
 
   private static final DataBlockEncoding DATA_BLOCK_ENCODING_TYPE = DataBlockEncoding.FAST_DIFF;
   private static final BloomType BLOOM_TYPE = BloomType.ROW;
   private static final int BLOCK_SIZE = 98;
   private static final int MAX_VERSIONS = 8;
 
-  HBaseAdmin admin;
-
+  private HBaseAdmin admin;
   private String originalTableDescription;
   private HTableDescriptor originalTableDescriptor;
-  byte[] originalTableName;
-  String originalTableNameAsString;
+  private byte[] originalTableName;
+  private String originalTableNameAsString;
 
   private static FileSystem fs;
   private static Path rootDir;
@@ -87,7 +94,6 @@ public class TestSnapshotMetadata {
     UTIL.startMiniCluster(NUM_RS);
 
     fs = UTIL.getHBaseCluster().getMaster().getMasterFileSystem().getFileSystem();
-
     rootDir = UTIL.getHBaseCluster().getMaster().getMasterFileSystem().getRootDir();
   }
 
@@ -151,13 +157,16 @@ public class TestSnapshotMetadata {
     htd.addFamily(bloomFilterColumn);
     htd.addFamily(dataBlockColumn);
     htd.addFamily(blockSizeColumn);
+    htd.setValue(TEST_CUSTOM_VALUE, TEST_CUSTOM_VALUE);
+    htd.setConfiguration(TEST_CONF_CUSTOM_VALUE, TEST_CONF_CUSTOM_VALUE);
+    assertTrue(htd.getConfiguration().size() > 0);
 
     admin.createTable(htd);
     HTable original = new HTable(UTIL.getConfiguration(), originalTableName);
 
     originalTableNameAsString = sourceTableNameAsString;
-    originalTableDescriptor = original.getTableDescriptor();
-    originalTableDescription = originalTableDescriptor.toString();
+    originalTableDescriptor = admin.getTableDescriptor(originalTableName);
+    originalTableDescription = originalTableDescriptor.toStringCustomizedValues();
 
     original.close();
   }
@@ -178,7 +187,6 @@ public class TestSnapshotMetadata {
     // restore the snapshot into a cloned table and examine the output
     List<byte[]> familiesList = new ArrayList<byte[]>();
     for (byte[] family : families) {
-
       familiesList.add(family);
     }
 
@@ -188,9 +196,20 @@ public class TestSnapshotMetadata {
 
     admin.cloneSnapshot(snapshotName, clonedTableName);
     HTable clonedTable = new HTable(UTIL.getConfiguration(), clonedTableName);
-    Assert.assertEquals(
+    HTableDescriptor cloneHtd = admin.getTableDescriptor(clonedTableName);
+    assertEquals(
       originalTableDescription.replace(originalTableNameAsString, clonedTableNameAsString),
-      clonedTable.getTableDescriptor().toString());
+      cloneHtd.toStringCustomizedValues());
+
+    // Verify the custom fields
+    assertEquals(originalTableDescriptor.getValues().size(),
+                        cloneHtd.getValues().size());
+    assertEquals(originalTableDescriptor.getConfiguration().size(),
+                        cloneHtd.getConfiguration().size());
+    assertEquals(cloneHtd.getValue(TEST_CUSTOM_VALUE), TEST_CUSTOM_VALUE);
+    assertEquals(cloneHtd.getConfigurationValue(TEST_CONF_CUSTOM_VALUE), TEST_CONF_CUSTOM_VALUE);
+    assertEquals(originalTableDescriptor.getValues(), cloneHtd.getValues());
+    assertEquals(originalTableDescriptor.getConfiguration(), cloneHtd.getConfiguration());
 
     admin.enableTable(originalTableName);
     clonedTable.close();
@@ -246,7 +265,6 @@ public class TestSnapshotMetadata {
 
       for (byte[] family : families) {
         if (family != familyForUpdate) {
-
           emptyFamiliesList.add(family);
         }
       }
@@ -274,9 +292,10 @@ public class TestSnapshotMetadata {
       admin.disableTable(originalTableName);
       HColumnDescriptor hcd = new HColumnDescriptor(newFamilyName);
       admin.addColumn(originalTableName, hcd);
-      Assert.assertTrue("New column family was not added.",
+      assertTrue("New column family was not added.",
         admin.getTableDescriptor(originalTableName).toString().contains(newFamilyNameAsString));
     }
+
     // restore it
     if (!admin.isTableDisabled(originalTableName)) {
       admin.disableTable(originalTableName);
@@ -285,13 +304,11 @@ public class TestSnapshotMetadata {
     admin.restoreSnapshot(snapshotName);
     admin.enableTable(originalTableName);
 
-    HTable original = new HTable(UTIL.getConfiguration(), originalTableName);
-
     // verify that the descrption is reverted
+    HTable original = new HTable(UTIL.getConfiguration(), originalTableName);
     try {
-      Assert
-          .assertTrue(originalTableDescriptor.equals(admin.getTableDescriptor(originalTableName)));
-      Assert.assertTrue(originalTableDescriptor.equals(original.getTableDescriptor()));
+      assertTrue(originalTableDescriptor.equals(admin.getTableDescriptor(originalTableName)));
+      assertTrue(originalTableDescriptor.equals(original.getTableDescriptor()));
     } finally {
       original.close();
     }
