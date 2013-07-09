@@ -40,6 +40,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.filter.ParseFilter;
 import org.apache.hadoop.hbase.thrift.CallQueue;
 import org.apache.hadoop.hbase.thrift.CallQueue.Call;
 import org.apache.hadoop.hbase.thrift.ThriftMetrics;
@@ -193,6 +194,25 @@ public class ThriftServer {
   }
 
   /**
+   * Adds the option to pre-load filters at startup.
+   *
+   * @param conf  The current configuration instance.
+   */
+  protected static void registerFilters(Configuration conf) {
+    String[] filters = conf.getStrings("hbase.thrift.filters");
+    if(filters != null) {
+      for(String filterClass: filters) {
+        String[] filterPart = filterClass.split(":");
+        if(filterPart.length != 2) {
+          log.warn("Invalid filter specification " + filterClass + " - skipping");
+        } else {
+          ParseFilter.registerFilter(filterPart[0], filterPart[1]);
+        }
+      }
+    }
+  }
+
+  /**
    * Start up the Thrift2 server.
    * 
    * @param args
@@ -237,6 +257,7 @@ public class ThriftServer {
 
       conf.set("hbase.regionserver.thrift.server.type", implType);
       conf.setInt("hbase.regionserver.thrift.port", listenPort);
+      registerFilters(conf);
 
       // Construct correct ProtocolFactory
       boolean compact = cmd.hasOption("compact");
