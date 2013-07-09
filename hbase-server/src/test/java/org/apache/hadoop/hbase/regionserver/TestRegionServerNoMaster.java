@@ -19,16 +19,15 @@
 
 package org.apache.hadoop.hbase.regionserver;
 
-import com.google.protobuf.ServiceException;
-import junit.framework.Assert;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MediumTests;
-import org.apache.hadoop.hbase.exceptions.NotServingRegionException;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.exceptions.NotServingRegionException;
+import org.apache.hadoop.hbase.exceptions.RegionAlreadyInTransitionException;
 import org.apache.hadoop.hbase.executor.EventType;
 import org.apache.hadoop.hbase.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos;
@@ -37,9 +36,12 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.zookeeper.ZKAssign;
 import org.junit.After;
 import org.junit.AfterClass;
+import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+
+import com.google.protobuf.ServiceException;
 
 
 /**
@@ -232,6 +234,24 @@ public class TestRegionServerNoMaster {
     }
 
     checkRegionIsOpened();
+  }
+
+  @Test
+  public void testOpenClosingRegion() throws Exception {
+    Assert.assertTrue(getRS().getRegion(regionName).isAvailable());
+
+    try {
+      // fake region to be closing now, need to clear state afterwards
+      getRS().regionsInTransitionInRS.put(hri.getEncodedNameAsBytes(), Boolean.FALSE);
+      AdminProtos.OpenRegionRequest orr = RequestConverter.buildOpenRegionRequest(hri, 0, null);
+      getRS().openRegion(null, orr);
+      Assert.fail("The closing region should not be opened");
+    } catch (ServiceException se) {
+      Assert.assertTrue("The region should be already in transition",
+        se.getCause() instanceof RegionAlreadyInTransitionException);
+    } finally {
+      getRS().regionsInTransitionInRS.remove(hri.getEncodedNameAsBytes());
+    }
   }
 
   @Test(timeout = 60000)
