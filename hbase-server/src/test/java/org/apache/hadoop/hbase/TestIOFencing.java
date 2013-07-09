@@ -87,6 +87,7 @@ public class TestIOFencing {
     volatile CountDownLatch compactionsBlocked = new CountDownLatch(0);
     volatile CountDownLatch compactionsWaiting = new CountDownLatch(0);
 
+    @SuppressWarnings("deprecation")
     public CompactionBlockerRegion(Path tableDir, HLog log,
         FileSystem fs, Configuration confParam, HRegionInfo info,
         HTableDescriptor htd, RegionServerServices rsServices) {
@@ -247,8 +248,18 @@ public class TestIOFencing {
       compactingRegion = (CompactionBlockerRegion)testRegions.get(0);
       LOG.info("Blocking compactions");
       compactingRegion.stopCompactions();
+      long lastFlushTime = compactingRegion.getLastFlushTime();
       // Load some rows
       TEST_UTIL.loadNumericRows(table, FAMILY, 0, FIRST_BATCH_COUNT);
+
+      // Wait till flush has happened, otherwise there won't be multiple store files
+      long startWaitTime = System.currentTimeMillis();
+      while (compactingRegion.getLastFlushTime() <= lastFlushTime) {
+        LOG.info("Waiting for the region to flush " + compactingRegion.getRegionNameAsString());
+        Thread.sleep(1000);
+        assertTrue("Timed out waiting for the region to flush",
+          System.currentTimeMillis() - startWaitTime < 30000);
+      }
       assertTrue(compactingRegion.countStoreFiles() > 1);
       final byte REGION_NAME[] = compactingRegion.getRegionName();
       LOG.info("Asking for compaction");
@@ -261,7 +272,7 @@ public class TestIOFencing {
       LOG.info("Killing region server ZK lease");
       TEST_UTIL.expireRegionServerSession(0);
       CompactionBlockerRegion newRegion = null;
-      long startWaitTime = System.currentTimeMillis();
+      startWaitTime = System.currentTimeMillis();
       while (newRegion == null) {
         LOG.info("Waiting for the new server to pick up the region " + Bytes.toString(REGION_NAME));
         Thread.sleep(1000);
