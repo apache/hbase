@@ -118,7 +118,6 @@ import org.apache.hadoop.hbase.ipc.ServerRpcController;
 import org.apache.hadoop.hbase.master.SplitLogManager;
 import org.apache.hadoop.hbase.master.TableLockManager;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.protobuf.ReplicationProtbufUtil;
 import org.apache.hadoop.hbase.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.protobuf.ResponseConverter;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos;
@@ -3414,10 +3413,18 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
           Pair<HRegionInfo, ServerName> p = MetaReader.getRegion(
               this.catalogTracker, region.getRegionName());
           if (this.getServerName().equals(p.getSecond())) {
-            LOG.warn("Attempted open of " + region.getEncodedName()
+            Boolean closing = regionsInTransitionInRS.get(region.getEncodedNameAsBytes());
+            // Map regionsInTransitionInRSOnly has an entry for a region only if the region
+            // is in transition on this RS, so here closing can be null. If not null, it can
+            // be true or false. True means the region is opening on this RS; while false
+            // means the region is closing. Only return ALREADY_OPENED if not closing (i.e.
+            // not in transition any more, or still transition to open.
+            if (!Boolean.FALSE.equals(closing)) {
+              LOG.warn("Attempted open of " + region.getEncodedName()
                 + " but already online on this server");
-            builder.addOpeningState(RegionOpeningState.ALREADY_OPENED);
-            continue;
+              builder.addOpeningState(RegionOpeningState.ALREADY_OPENED);
+              continue;
+            }
           } else {
             LOG.warn("The region " + region.getEncodedName() + " is online on this server" +
                 " but META does not have this server - continue opening.");
