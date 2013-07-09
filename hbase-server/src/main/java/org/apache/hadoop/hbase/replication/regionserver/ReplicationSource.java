@@ -93,8 +93,6 @@ public class ReplicationSource extends Thread
   // ratio of region servers to chose from a slave cluster
   private float ratio;
   private Random random;
-  // should we replicate or not?
-  private AtomicBoolean replicating;
   private ReplicationQueueInfo replicationQueueInfo;
   // id of the peer cluster this source replicates to
   private String peerId;
@@ -149,7 +147,6 @@ public class ReplicationSource extends Thread
    * @param fs file system to use
    * @param manager replication manager to ping to
    * @param stopper     the atomic boolean to use to stop the regionserver
-   * @param replicating the atomic boolean that starts/stops replication
    * @param peerClusterZnode the name of our znode
    * @throws IOException
    */
@@ -157,7 +154,6 @@ public class ReplicationSource extends Thread
                    final FileSystem fs,
                    final ReplicationSourceManager manager,
                    final Stoppable stopper,
-                   final AtomicBoolean replicating,
                    final String peerClusterZnode)
       throws IOException {
     this.stopper = stopper;
@@ -185,7 +181,6 @@ public class ReplicationSource extends Thread
     this.ratio = this.conf.getFloat("replication.source.ratio", 0.1f);
     this.currentPeers = new ArrayList<ServerName>();
     this.random = new Random();
-    this.replicating = replicating;
     this.manager = manager;
     this.sleepForRetries =
         this.conf.getLong("replication.source.sleepforretries", 1000);
@@ -417,9 +412,8 @@ public class ReplicationSource extends Thread
         removeNonReplicableEdits(entry);
         // Don't replicate catalog entries, if the WALEdit wasn't
         // containing anything to replicate and if we're currently not set to replicate
-        if (!(Bytes.equals(logKey.getTablename(), HConstants.ROOT_TABLE_NAME) ||
-            Bytes.equals(logKey.getTablename(), HConstants.META_TABLE_NAME)) &&
-            edit.size() != 0 && replicating.get()) {
+        if (!(Bytes.equals(logKey.getTablename(), HConstants.ROOT_TABLE_NAME) || Bytes.equals(
+          logKey.getTablename(), HConstants.META_TABLE_NAME)) && edit.size() != 0) {
           // Only set the clusterId if is a local key.
           // This ensures that the originator sets the cluster id
           // and all replicas retain the initial cluster id.
@@ -714,8 +708,7 @@ public class ReplicationSource extends Thread
    * @return true if the peer is enabled, otherwise false
    */
   protected boolean isPeerEnabled() {
-    return this.replicating.get() &&
-        this.zkHelper.getPeerEnabled(this.peerId);
+    return this.zkHelper.getPeerEnabled(this.peerId);
   }
 
   /**

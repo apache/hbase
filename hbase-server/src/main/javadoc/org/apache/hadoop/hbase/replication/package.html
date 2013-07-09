@@ -132,16 +132,6 @@ Choosing peer 10.10.1.49:62020</pre>
 
 In this case it indicates that 1 region server from the slave cluster
 was chosen for replication.<br><br>
-
-Should you want to stop the replication while the clusters are running, open
-the shell on the master cluster and issue this command:
-<pre>
-hbase(main):001:0> stop_replication</pre>
-
-Replication of already queued edits will still happen after you
-issued that command but new entries won't be. To start it back, simply replace
-"false" with "true" in the command. 
-
 <p>
 
 <a name="verify">

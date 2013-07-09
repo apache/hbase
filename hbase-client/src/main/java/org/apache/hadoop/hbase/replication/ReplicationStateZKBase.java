@@ -39,8 +39,6 @@ public abstract class ReplicationStateZKBase {
    * cluster.
    */
   protected final String peerStateNodeName;
-  /** The name of the znode that contains the replication status of the local cluster. */
-  protected final String stateZNode;
   /** The name of the base znode that contains all replication state. */
   protected final String replicationZNode;
   /** The name of the znode that contains a list of all remote slave (i.e. peer) clusters. */
@@ -68,11 +66,9 @@ public abstract class ReplicationStateZKBase {
     String replicationZNodeName = conf.get("zookeeper.znode.replication", "replication");
     String peersZNodeName = conf.get("zookeeper.znode.replication.peers", "peers");
     String queuesZNodeName = conf.get("zookeeper.znode.replication.rs", "rs");
-    String stateZNodeName = conf.get("zookeeper.znode.replication.state", "state");
     this.peerStateNodeName = conf.get("zookeeper.znode.replication.peers.state", "peer-state");
     this.ourClusterKey = ZKUtil.getZooKeeperClusterKey(this.conf);
     this.replicationZNode = ZKUtil.joinZNode(this.zookeeper.baseZNode, replicationZNodeName);
-    this.stateZNode = ZKUtil.joinZNode(replicationZNode, stateZNodeName);
     this.peersZNode = ZKUtil.joinZNode(replicationZNode, peersZNodeName);
     this.queuesZNode = ZKUtil.joinZNode(replicationZNode, queuesZNodeName);
   }
@@ -90,9 +86,8 @@ public abstract class ReplicationStateZKBase {
   /**
    * @param state
    * @return Serialized protobuf of <code>state</code> with pb magic prefix prepended suitable for
-   *         use as content of either the cluster state znode -- whether or not we should be
-   *         replicating kept in /hbase/replication/state -- or as content of a peer-state znode
-   *         under a peer cluster id as in /hbase/replication/peers/PEER_ID/peer-state.
+   *         use as content of a peer-state znode under a peer cluster id as in
+   *         /hbase/replication/peers/PEER_ID/peer-state.
    */
   protected static byte[] toByteArray(final ZooKeeperProtos.ReplicationState.State state) {
     byte[] bytes =

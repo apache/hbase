@@ -70,7 +70,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * </pre>
  */
 @InterfaceAudience.Private
-public class ReplicationZookeeper extends ReplicationStateZKBase implements Closeable {
+public class ReplicationZookeeper extends ReplicationStateZKBase {
   private static final Log LOG = LogFactory.getLog(ReplicationZookeeper.class);
 
   // Our handle on zookeeper
@@ -79,7 +79,6 @@ public class ReplicationZookeeper extends ReplicationStateZKBase implements Clos
   private final Configuration conf;
   // Abortable
   private Abortable abortable;
-  private final ReplicationStateInterface replicationState;
   private final ReplicationPeers replicationPeers;
   private final ReplicationQueues replicationQueues;
 
@@ -95,8 +94,6 @@ public class ReplicationZookeeper extends ReplicationStateZKBase implements Clos
     this.conf = conf;
     this.zookeeper = zk;
     setZNodes(abortable);
-    this.replicationState = new ReplicationStateImpl(this.zookeeper, conf, abortable);
-    this.replicationState.init();
     // TODO This interface is no longer used by anyone using this constructor. When this class goes
     // away, we will no longer have this null initialization business
     this.replicationQueues = null;
@@ -108,19 +105,16 @@ public class ReplicationZookeeper extends ReplicationStateZKBase implements Clos
    * Constructor used by region servers, connects to the peer cluster right away.
    *
    * @param server
-   * @param replicating    atomic boolean to start/stop replication
    * @throws IOException
    * @throws KeeperException
    */
-  public ReplicationZookeeper(final Server server, final AtomicBoolean replicating)
+  public ReplicationZookeeper(final Server server)
   throws IOException, KeeperException {
     super(server.getZooKeeper(), server.getConfiguration(), server);
     this.abortable = server;
     this.zookeeper = server.getZooKeeper();
     this.conf = server.getConfiguration();
     setZNodes(server);
-    this.replicationState = new ReplicationStateImpl(this.zookeeper, conf, server, replicating);
-    this.replicationState.init();
     this.replicationQueues = new ReplicationQueuesZKImpl(this.zookeeper, this.conf, server);
     this.replicationQueues.init(server.getServerName().toString());
     this.replicationPeers = new ReplicationPeersZKImpl(this.zookeeper, this.conf, server);
@@ -225,25 +219,6 @@ public class ReplicationZookeeper extends ReplicationStateZKBase implements Clos
    */
   public boolean getPeerEnabled(String id) {
     return this.replicationPeers.getStatusOfConnectedPeer(id);
-  }
-
-  /**
-   * Get the replication status of this cluster. If the state znode doesn't exist it will also
-   * create it and set it true.
-   * @return returns true when it's enabled, else false
-   * @throws KeeperException
-   */
-  public boolean getReplication() throws KeeperException {
-    return this.replicationState.getState();
-  }
-
-  /**
-   * Set the new replication state for this cluster
-   * @param newState
-   * @throws KeeperException
-   */
-  public void setReplication(boolean newState) throws KeeperException {
-    this.replicationState.setState(newState);
   }
 
   /**
@@ -387,10 +362,5 @@ public class ReplicationZookeeper extends ReplicationStateZKBase implements Clos
    */
   public String getPeersZNode() {
     return peersZNode;
-  }
-
-  @Override
-  public void close() throws IOException {
-    if (replicationState != null) replicationState.close();
   }
 }

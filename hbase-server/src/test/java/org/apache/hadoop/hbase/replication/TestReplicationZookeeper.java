@@ -62,7 +62,7 @@ public class TestReplicationZookeeper {
     conf = utility.getConfiguration();
     zkw = HBaseTestingUtility.getZooKeeperWatcher(utility);
     DummyServer server = new DummyServer();
-    repZk = new ReplicationZookeeper(server, new AtomicBoolean());
+    repZk = new ReplicationZookeeper(server);
     slaveClusterKey = conf.get(HConstants.ZOOKEEPER_QUORUM) + ":" +
       conf.get("hbase.zookeeper.property.clientPort") + ":/1";
     String replicationZNodeName = conf.get("zookeeper.znode.replication", "replication");

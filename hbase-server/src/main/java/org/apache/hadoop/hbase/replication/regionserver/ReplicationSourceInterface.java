@@ -19,7 +19,6 @@
 package org.apache.hadoop.hbase.replication.regionserver;
 
 import java.io.IOException;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
@@ -39,7 +38,6 @@ public interface ReplicationSourceInterface {
    * @param fs the file system to use
    * @param manager the manager to use
    * @param stopper the stopper object for this region server
-   * @param replicating the status of the replication on this cluster
    * @param peerClusterId the id of the peer cluster
    * @throws IOException
    */
@@ -47,7 +45,6 @@ public interface ReplicationSourceInterface {
                    final FileSystem fs,
                    final ReplicationSourceManager manager,
                    final Stoppable stopper,
-                   final AtomicBoolean replicating,
                    final String peerClusterId) throws IOException;
 
   /**

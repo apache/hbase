@@ -69,10 +69,6 @@ public class TestReplicationStateZKImpl extends TestReplicationStateBasic {
     Configuration testConf = new Configuration(conf);
     testConf.set(HConstants.ZOOKEEPER_ZNODE_PARENT, baseZKNode);
     ZooKeeperWatcher zkw1 = new ZooKeeperWatcher(testConf, "test1", null);
-    ReplicationStateInterface rsi = new ReplicationStateImpl(zkw1, testConf, zkw1);
-    rsi.init();
-    rsi.setState(true);
-    rsi.close();
     String fakeRs = ZKUtil.joinZNode(zkw1.rsZNode, "hostname1.example.org:1234");
     ZKUtil.createWithParents(zkw1, fakeRs);
     ZKClusterId.setClusterId(zkw1, new ClusterId());

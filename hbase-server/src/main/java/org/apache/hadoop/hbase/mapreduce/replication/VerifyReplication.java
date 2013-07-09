@@ -111,7 +111,6 @@ public class VerifyReplication {
           @Override
           public Void connect(HConnection conn) throws IOException {
             ZooKeeperWatcher localZKW = null;
-            ReplicationZookeeper zk = null;
             ReplicationPeer peer = null;
             try {
               localZKW = new ZooKeeperWatcher(
@@ -133,9 +132,6 @@ public class VerifyReplication {
             } finally {
               if (peer != null) {
                 peer.close();
-              }
-              if (zk != null) {
-                zk.close();
               }
               if (localZKW != null) {
                 localZKW.close();

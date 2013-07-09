@@ -52,16 +52,6 @@ import java.util.Map;
  * used to keep track of the replication state.
  * </p>
  * <p>
- * Enabling and disabling peers is currently not supported.
- * </p>
- * <p>
- * As cluster replication is still experimental, a kill switch is provided
- * in order to stop all replication-related operations, see
- * {@link #setReplicating(boolean)}. When setting it back to true, the new
- * state of all the replication streams will be unknown and may have holes.
- * Use at your own risk.
- * </p>
- * <p>
  * To see which commands are available in the shell, type
  * <code>replication</code>.
  * </p>
@@ -160,36 +150,6 @@ public class ReplicationAdmin implements Closeable {
    */
   public Map<String, String> listPeers() {
     return this.replicationZk.listPeers();
-  }
-
-  /**
-   * Get the current status of the kill switch, if the cluster is replicating
-   * or not.
-   * @return true if the cluster is replicated, otherwise false
-   */
-  public boolean getReplicating() throws IOException {
-    try {
-      return this.replicationZk.getReplication();
-    } catch (KeeperException e) {
-      throw new IOException("Couldn't get the replication status");
-    }
-  }
-
-  /**
-   * Kill switch for all replication-related features
-   * @param newState true to start replication, false to stop it.
-   * completely
-   * @return the previous state
-   */
-  public boolean setReplicating(boolean newState) throws IOException {
-    boolean prev = true;
-    try {
-      prev = getReplicating();
-      this.replicationZk.setReplication(newState);
-    } catch (KeeperException e) {
-      throw new IOException("Unable to set the replication state", e);
-    }
-    return prev;
   }
 
   /**

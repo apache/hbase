@@ -69,8 +69,6 @@ public class ReplicationSourceManager {
   private final List<ReplicationSourceInterface> sources;
   // List of all the sources we got from died RSs
   private final List<ReplicationSourceInterface> oldsources;
-  // Indicates if we are currently replicating
-  private final AtomicBoolean replicating;
   // Helper for zookeeper
   private final ReplicationZookeeper zkHelper;
   private final ReplicationQueues replicationQueues;
@@ -103,16 +101,13 @@ public class ReplicationSourceManager {
    * @param conf the configuration to use
    * @param stopper the stopper object for this region server
    * @param fs the file system to use
-   * @param replicating the status of the replication on this cluster
    * @param logDir the directory that contains all hlog directories of live RSs
    * @param oldLogDir the directory where old logs are archived
    */
   public ReplicationSourceManager(final ReplicationZookeeper zkHelper,
       final ReplicationQueues replicationQueues, final Configuration conf, final Stoppable stopper,
-      final FileSystem fs, final AtomicBoolean replicating, final Path logDir,
-      final Path oldLogDir) {
+      final FileSystem fs, final Path logDir, final Path oldLogDir) {
     this.sources = new ArrayList<ReplicationSourceInterface>();
-    this.replicating = replicating;
     this.zkHelper = zkHelper;
     this.replicationQueues = replicationQueues;
     this.stopper = stopper;
@@ -206,8 +201,7 @@ public class ReplicationSourceManager {
    * @throws IOException
    */
   public ReplicationSourceInterface addSource(String id) throws IOException {
-    ReplicationSourceInterface src =
-        getReplicationSource(this.conf, this.fs, this, stopper, replicating, id);
+    ReplicationSourceInterface src = getReplicationSource(this.conf, this.fs, this, stopper, id);
     synchronized (this.hlogsById) {
       this.sources.add(src);
       this.hlogsById.put(id, new TreeSet<String>());
@@ -260,10 +254,6 @@ public class ReplicationSourceManager {
   }
 
   void preLogRoll(Path newLog) throws IOException {
-    if (!this.replicating.get()) {
-      LOG.warn("Replication stopped, won't add new log");
-      return;
-    }
 
     synchronized (this.hlogsById) {
       String name = newLog.getName();
@@ -288,14 +278,9 @@ public class ReplicationSourceManager {
   }
 
   void postLogRoll(Path newLog) throws IOException {
-    if (!this.replicating.get()) {
-      LOG.warn("Replication stopped, won't add new log");
-      return;
-    }
-
     // This only updates the sources we own, not the recovered ones
     for (ReplicationSourceInterface source : this.sources) {
-      source.enqueueLog(newLog);    
+      source.enqueueLog(newLog);
     }
   }
 
@@ -313,7 +298,6 @@ public class ReplicationSourceManager {
    * @param fs the file system to use
    * @param manager the manager to use
    * @param stopper the stopper object for this region server
-   * @param replicating the status of the replication on this cluster
    * @param peerId the id of the peer cluster
    * @return the created source
    * @throws IOException
@@ -323,7 +307,6 @@ public class ReplicationSourceManager {
       final FileSystem fs,
       final ReplicationSourceManager manager,
       final Stoppable stopper,
-      final AtomicBoolean replicating,
       final String peerId) throws IOException {
     ReplicationSourceInterface src;
     try {
@@ -337,7 +320,7 @@ public class ReplicationSourceManager {
       src = new ReplicationSource();
 
     }
-    src.init(conf, fs, manager, stopper, replicating, peerId);
+    src.init(conf, fs, manager, stopper, peerId);
     return src;
   }
 
@@ -599,8 +582,8 @@ public class ReplicationSourceManager {
       for (Map.Entry<String, SortedSet<String>> entry : newQueues.entrySet()) {
         String peerId = entry.getKey();
         try {
-          ReplicationSourceInterface src = getReplicationSource(conf,
-              fs, ReplicationSourceManager.this, stopper, replicating, peerId);
+          ReplicationSourceInterface src =
+              getReplicationSource(conf, fs, ReplicationSourceManager.this, stopper, peerId);
           if (!zkHelper.getPeerClusters().contains((src.getPeerClusterId()))) {
             src.terminate("Recovered queue doesn't belong to any current peer");
             break;

@@ -38,10 +38,8 @@ public class ReplicationSourceDummy implements ReplicationSourceInterface {
   Path currentPath;
 
   @Override
-  public void init(Configuration conf, FileSystem fs,
-                   ReplicationSourceManager manager, Stoppable stopper,
-                   AtomicBoolean replicating, String peerClusterId)
-      throws IOException {
+  public void init(Configuration conf, FileSystem fs, ReplicationSourceManager manager,
+      Stoppable stopper, String peerClusterId) throws IOException {
     this.manager = manager;
     this.peerClusterId = peerClusterId;
   }

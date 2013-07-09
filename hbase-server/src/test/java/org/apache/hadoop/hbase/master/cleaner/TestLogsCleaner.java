@@ -68,8 +68,7 @@ public class TestLogsCleaner {
     conf.setBoolean(HConstants.REPLICATION_ENABLE_KEY, true);
     Replication.decorateMasterConfiguration(conf);
     Server server = new DummyServer();
-    ReplicationZookeeper zkHelper =
-        new ReplicationZookeeper(server, new AtomicBoolean(true));
+    ReplicationZookeeper zkHelper = new ReplicationZookeeper(server);
 
     Path oldLogDir = new Path(TEST_UTIL.getDataTestDir(),
         HConstants.HREGION_OLDLOGDIR_NAME);

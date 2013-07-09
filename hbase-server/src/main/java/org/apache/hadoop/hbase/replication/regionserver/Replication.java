@@ -66,7 +66,6 @@ public class Replication implements WALActionsListener,
       LogFactory.getLog(Replication.class);
   private boolean replication;
   private ReplicationSourceManager replicationManager;
-  private final AtomicBoolean replicating = new AtomicBoolean(true);
   private ReplicationZookeeper zkHelper;
   private ReplicationQueues replicationQueues;
   private Configuration conf;
@@ -108,17 +107,16 @@ public class Replication implements WALActionsListener,
         .build());
     if (replication) {
       try {
-        this.zkHelper = new ReplicationZookeeper(server, this.replicating);
+        this.zkHelper = new ReplicationZookeeper(server);
         this.replicationQueues =
             new ReplicationQueuesZKImpl(server.getZooKeeper(), this.conf, this.server);
         this.replicationQueues.init(this.server.getServerName().toString());
       } catch (KeeperException ke) {
-        throw new IOException("Failed replication handler create " +
-           "(replicating=" + this.replicating, ke);
+        throw new IOException("Failed replication handler create", ke);
       }
       this.replicationManager =
-          new ReplicationSourceManager(zkHelper, replicationQueues, conf, this.server, fs,
-              this.replicating, logDir, oldLogDir);
+          new ReplicationSourceManager(zkHelper, replicationQueues, conf, this.server, fs, logDir,
+              oldLogDir);
       this.statsThreadPeriod =
           this.conf.getInt("replication.stats.thread.period.seconds", 5 * 60);
       LOG.debug("ReplicationStatisticsThread " + this.statsThreadPeriod);
