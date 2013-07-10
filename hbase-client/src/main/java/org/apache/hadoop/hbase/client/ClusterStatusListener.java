@@ -82,19 +82,19 @@ class ClusterStatusListener implements Closeable {
      *
      * @param sn - the server name
      */
-    public void newDead(ServerName sn);
+    void newDead(ServerName sn);
   }
 
 
   /**
    * The interface to be implented by a listener of a cluster status event.
    */
-  static interface Listener extends Closeable {
+  interface Listener extends Closeable {
     /**
      * Called to close the resources, if any. Cannot throw an exception.
      */
     @Override
-    public void close();
+    void close();
 
     /**
      * Called to connect.
@@ -102,7 +102,7 @@ class ClusterStatusListener implements Closeable {
      * @param conf Configuration to use.
      * @throws IOException
      */
-    public void connect(Configuration conf) throws IOException;
+    void connect(Configuration conf) throws IOException;
   }
 
   public ClusterStatusListener(DeadServerHandler dsh, Configuration conf,

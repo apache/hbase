@@ -41,26 +41,26 @@ import org.apache.hadoop.io.Writable;
 
 @InterfaceAudience.Private
 public interface HLog {
-  public static final Log LOG = LogFactory.getLog(HLog.class);
+  Log LOG = LogFactory.getLog(HLog.class);
 
   /** File Extension used while splitting an HLog into regions (HBASE-2312) */
-  public static final String SPLITTING_EXT = "-splitting";
-  public static final boolean SPLIT_SKIP_ERRORS_DEFAULT = false;
+  String SPLITTING_EXT = "-splitting";
+  boolean SPLIT_SKIP_ERRORS_DEFAULT = false;
   /** The META region's HLog filename extension */
-  public static final String META_HLOG_FILE_EXTN = ".meta";
+  String META_HLOG_FILE_EXTN = ".meta";
 
   /**
    * Configuration name of HLog Trailer's warning size. If a waltrailer's size is greater than the
    * configured size, a warning is logged. This is used with Protobuf reader/writer.
    */
-  public static final String WAL_TRAILER_WARN_SIZE =
+  String WAL_TRAILER_WARN_SIZE =
     "hbase.regionserver.waltrailer.warn.size";
-  public static final int DEFAULT_WAL_TRAILER_WARN_SIZE = 1024*1024; // 1MB
+  int DEFAULT_WAL_TRAILER_WARN_SIZE = 1024*1024; // 1MB
 
-  static final Pattern EDITFILES_NAME_PATTERN = Pattern.compile("-?[0-9]+");
-  public static final String RECOVERED_LOG_TMPFILE_SUFFIX = ".temp";
+  Pattern EDITFILES_NAME_PATTERN = Pattern.compile("-?[0-9]+");
+  String RECOVERED_LOG_TMPFILE_SUFFIX = ".temp";
 
-  public interface Reader {
+  interface Reader {
 
     /**
      * @param fs File system.
@@ -88,7 +88,7 @@ public interface HLog {
     WALTrailer getWALTrailer();
   }
 
-  public interface Writer {
+  interface Writer {
     void init(FileSystem fs, Path path, Configuration c) throws IOException;
 
     void close() throws IOException;
@@ -110,7 +110,7 @@ public interface HLog {
    * Utility class that lets us keep track of the edit with it's key Only used
    * when splitting logs
    */
-  public static class Entry implements Writable {
+  class Entry implements Writable {
     private WALEdit edit;
     private HLogKey key;
 
@@ -185,19 +185,19 @@ public interface HLog {
    *
    * @param listener
    */
-  public void registerWALActionsListener(final WALActionsListener listener);
+  void registerWALActionsListener(final WALActionsListener listener);
 
   /**
    * unregisters WALActionsListener
    *
    * @param listener
    */
-  public boolean unregisterWALActionsListener(final WALActionsListener listener);
+  boolean unregisterWALActionsListener(final WALActionsListener listener);
 
   /**
    * @return Current state of the monotonically increasing file id.
    */
-  public long getFilenum();
+  long getFilenum();
 
   /**
    * Called by HRegionServer when it opens a new region to ensure that log
@@ -208,12 +208,12 @@ public interface HLog {
    *          We'll set log edit/sequence number to this value if it is greater
    *          than the current value.
    */
-  public void setSequenceNumber(final long newvalue);
+  void setSequenceNumber(final long newvalue);
 
   /**
    * @return log sequence number
    */
-  public long getSequenceNumber();
+  long getSequenceNumber();
 
   /**
    * Roll the log writer. That is, start writing log messages to a new file.
@@ -228,7 +228,7 @@ public interface HLog {
    * @throws org.apache.hadoop.hbase.exceptions.FailedLogCloseException
    * @throws IOException
    */
-  public byte[][] rollWriter() throws FailedLogCloseException, IOException;
+  byte[][] rollWriter() throws FailedLogCloseException, IOException;
 
   /**
    * Roll the log writer. That is, start writing log messages to a new file.
@@ -246,7 +246,7 @@ public interface HLog {
    * @throws org.apache.hadoop.hbase.exceptions.FailedLogCloseException
    * @throws IOException
    */
-  public byte[][] rollWriter(boolean force) throws FailedLogCloseException,
+  byte[][] rollWriter(boolean force) throws FailedLogCloseException,
       IOException;
 
   /**
@@ -254,21 +254,22 @@ public interface HLog {
    *
    * @throws IOException
    */
-  public void close() throws IOException;
+  void close() throws IOException;
 
   /**
    * Shut down the log and delete the log directory
    *
    * @throws IOException
    */
-  public void closeAndDelete() throws IOException;
+  void closeAndDelete() throws IOException;
 
   /**
    * Same as {@link #appendNoSync(HRegionInfo, byte[], WALEdit, UUID, long, HTableDescriptor)},
    * except it causes a sync on the log
    */
-  public void append(HRegionInfo info, byte[] tableName, WALEdit edits,
-      final long now, HTableDescriptor htd) throws IOException;
+  void append(
+    HRegionInfo info, byte[] tableName, WALEdit edits, final long now, HTableDescriptor htd
+  ) throws IOException;
 
   /**
    * Append a set of edits to the log. Log edits are keyed by (encoded)
@@ -281,8 +282,14 @@ public interface HLog {
    * @param htd
    * @param isInMemstore Whether the record is in memstore. False for system records.
    */
-  public void append(HRegionInfo info, byte[] tableName, WALEdit edits,
-      final long now, HTableDescriptor htd, boolean isInMemstore) throws IOException;
+  void append(
+    HRegionInfo info,
+    byte[] tableName,
+    WALEdit edits,
+    final long now,
+    HTableDescriptor htd,
+    boolean isInMemstore
+  ) throws IOException;
 
   /**
    * Append a set of edits to the log. Log edits are keyed by (encoded)
@@ -299,21 +306,27 @@ public interface HLog {
    * @return txid of this transaction
    * @throws IOException
    */
-  public long appendNoSync(HRegionInfo info, byte[] tableName, WALEdit edits,
-      UUID clusterId, final long now, HTableDescriptor htd) throws IOException;
+  long appendNoSync(
+    HRegionInfo info,
+    byte[] tableName,
+    WALEdit edits,
+    UUID clusterId,
+    final long now,
+    HTableDescriptor htd
+  ) throws IOException;
 
-  public void hsync() throws IOException;
+  void hsync() throws IOException;
 
-  public void hflush() throws IOException;
+  void hflush() throws IOException;
 
-  public void sync() throws IOException;
+  void sync() throws IOException;
 
-  public void sync(long txid) throws IOException;
+  void sync(long txid) throws IOException;
 
   /**
    * Obtain a log sequence number.
    */
-  public long obtainSeqNum();
+  long obtainSeqNum();
 
   /**
    * WAL keeps track of the sequence numbers that were not yet flushed from memstores
@@ -330,13 +343,13 @@ public interface HLog {
    *         the resulting file as an upper-bound seqNum for that file), or NULL if flush
    *         should not be started.
    */
-  public Long startCacheFlush(final byte[] encodedRegionName);
+  Long startCacheFlush(final byte[] encodedRegionName);
 
   /**
    * Complete the cache flush.
    * @param encodedRegionName Encoded region name.
    */
-  public void completeCacheFlush(final byte[] encodedRegionName);
+  void completeCacheFlush(final byte[] encodedRegionName);
 
   /**
    * Abort a cache flush. Call if the flush fails. Note that the only recovery
@@ -344,24 +357,24 @@ public interface HLog {
    * snapshot content dropped by the failure gets restored to the memstore.v
    * @param encodedRegionName Encoded region name.
    */
-  public void abortCacheFlush(byte[] encodedRegionName);
+  void abortCacheFlush(byte[] encodedRegionName);
 
   /**
    * @return Coprocessor host.
    */
-  public WALCoprocessorHost getCoprocessorHost();
+  WALCoprocessorHost getCoprocessorHost();
 
   /**
    * Get LowReplication-Roller status
    *
    * @return lowReplicationRollEnabled
    */
-  public boolean isLowReplicationRollEnabled();
+  boolean isLowReplicationRollEnabled();
 
   /** Gets the earliest sequence number in the memstore for this particular region.
    * This can serve as best-effort "recent" WAL number for this region.
    * @param encodedRegionName The region to get the number for.
    * @return The number if present, HConstants.NO_SEQNUM if absent.
    */
-  public long getEarliestMemstoreSeqNum(byte[] encodedRegionName);
+  long getEarliestMemstoreSeqNum(byte[] encodedRegionName);
 }

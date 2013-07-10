@@ -28,21 +28,21 @@ public interface MetricsReplicationSource extends BaseSource {
   /**
    * The name of the metrics
    */
-  static final String METRICS_NAME = "Replication";
+  String METRICS_NAME = "Replication";
 
   /**
    * The name of the metrics context that metrics will be under.
    */
-  static final String METRICS_CONTEXT = "regionserver";
+  String METRICS_CONTEXT = "regionserver";
 
   /**
    * The name of the metrics context that metrics will be under.
    */
-  static final String METRICS_JMX_CONTEXT = "RegionServer,sub=" + METRICS_NAME;
+  String METRICS_JMX_CONTEXT = "RegionServer,sub=" + METRICS_NAME;
 
   /**
    * A description.
    */
-  static final String METRICS_DESCRIPTION = "Metrics about HBase replication";
+  String METRICS_DESCRIPTION = "Metrics about HBase replication";
 
 }

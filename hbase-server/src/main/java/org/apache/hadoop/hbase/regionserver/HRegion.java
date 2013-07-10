@@ -5602,7 +5602,7 @@ public class HRegion implements HeapSize { // , Writable{
    * bulkLoadHFile() to perform any necessary
    * pre/post processing of a given bulkload call
    */
-  public static interface BulkLoadListener {
+  public interface BulkLoadListener {
 
     /**
      * Called before an HFile is actually loaded

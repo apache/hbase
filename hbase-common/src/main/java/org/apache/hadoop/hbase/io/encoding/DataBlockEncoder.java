@@ -57,9 +57,9 @@ public interface DataBlockEncoder {
    * @throws IOException
    *           If there is an error writing to output stream.
    */
-  public void encodeKeyValues(
-      ByteBuffer in, boolean includesMemstoreTS,
-      HFileBlockEncodingContext encodingContext) throws IOException;
+  void encodeKeyValues(
+    ByteBuffer in, boolean includesMemstoreTS, HFileBlockEncodingContext encodingContext
+  ) throws IOException;
 
   /**
    * Decode.
@@ -69,8 +69,9 @@ public interface DataBlockEncoder {
    * @return Uncompressed block of KeyValues.
    * @throws IOException If there is an error in source.
    */
-  public ByteBuffer decodeKeyValues(DataInputStream source,
-      boolean includesMemstoreTS) throws IOException;
+  ByteBuffer decodeKeyValues(
+    DataInputStream source, boolean includesMemstoreTS
+  ) throws IOException;
 
   /**
    * Uncompress.
@@ -82,8 +83,9 @@ public interface DataBlockEncoder {
    * @return Uncompressed block of KeyValues.
    * @throws IOException If there is an error in source.
    */
-  public ByteBuffer decodeKeyValues(DataInputStream source,
-      int allocateHeaderLength, int skipLastBytes, boolean includesMemstoreTS)
+  ByteBuffer decodeKeyValues(
+    DataInputStream source, int allocateHeaderLength, int skipLastBytes, boolean includesMemstoreTS
+  )
       throws IOException;
 
   /**
@@ -94,7 +96,7 @@ public interface DataBlockEncoder {
    * @param block encoded block we want index, the position will not change
    * @return First key in block.
    */
-  public ByteBuffer getFirstKeyInBlock(ByteBuffer block);
+  ByteBuffer getFirstKeyInBlock(ByteBuffer block);
 
   /**
    * Create a HFileBlock seeker which find KeyValues within a block.
@@ -103,8 +105,9 @@ public interface DataBlockEncoder {
    *          key-value pair
    * @return A newly created seeker.
    */
-  public EncodedSeeker createSeeker(RawComparator<byte[]> comparator,
-      boolean includesMemstoreTS);
+  EncodedSeeker createSeeker(
+    RawComparator<byte[]> comparator, boolean includesMemstoreTS
+  );
 
   /**
    * Creates a encoder specific encoding context
@@ -119,9 +122,9 @@ public interface DataBlockEncoder {
    *          is unknown
    * @return a newly created encoding context
    */
-  public HFileBlockEncodingContext newDataBlockEncodingContext(
-      Algorithm compressionAlgorithm, DataBlockEncoding encoding,
-      byte[] headerBytes);
+  HFileBlockEncodingContext newDataBlockEncodingContext(
+    Algorithm compressionAlgorithm, DataBlockEncoding encoding, byte[] headerBytes
+  );
 
   /**
    * Creates an encoder specific decoding context, which will prepare the data
@@ -131,8 +134,9 @@ public interface DataBlockEncoder {
    *          compression algorithm used if the data needs to be decompressed
    * @return a newly created decoding context
    */
-  public HFileBlockDecodingContext newDataBlockDecodingContext(
-      Algorithm compressionAlgorithm);
+  HFileBlockDecodingContext newDataBlockDecodingContext(
+    Algorithm compressionAlgorithm
+  );
 
   /**
    * An interface which enable to seek while underlying data is encoded.
@@ -140,19 +144,19 @@ public interface DataBlockEncoder {
    * It works on one HFileBlock, but it is reusable. See
    * {@link #setCurrentBuffer(ByteBuffer)}.
    */
-  public static interface EncodedSeeker {
+  interface EncodedSeeker {
     /**
      * Set on which buffer there will be done seeking.
      * @param buffer Used for seeking.
      */
-    public void setCurrentBuffer(ByteBuffer buffer);
+    void setCurrentBuffer(ByteBuffer buffer);
 
     /**
      * Does a deep copy of the key at the current position. A deep copy is
      * necessary because buffers are reused in the decoder.
      * @return key at current position
      */
-    public ByteBuffer getKeyDeepCopy();
+    ByteBuffer getKeyDeepCopy();
 
     /**
      * Does a shallow copy of the value at the current position. A shallow
@@ -160,25 +164,25 @@ public interface DataBlockEncoder {
      * of the original encoded buffer.
      * @return value at current position
      */
-    public ByteBuffer getValueShallowCopy();
+    ByteBuffer getValueShallowCopy();
 
     /** @return key value at current position with position set to limit */
-    public ByteBuffer getKeyValueBuffer();
+    ByteBuffer getKeyValueBuffer();
 
     /**
      * @return the KeyValue object at the current position. Includes memstore
      *         timestamp.
      */
-    public KeyValue getKeyValue();
+    KeyValue getKeyValue();
 
     /** Set position to beginning of given block */
-    public void rewind();
+    void rewind();
 
     /**
      * Move to next position
      * @return true on success, false if there is no more positions.
      */
-    public boolean next();
+    boolean next();
 
     /**
      * Moves the seeker position within the current block to:
@@ -197,7 +201,8 @@ public interface DataBlockEncoder {
      *          of an exact match. Does not matter in case of an inexact match.
      * @return 0 on exact match, 1 on inexact match.
      */
-    public int seekToKeyInBlock(byte[] key, int offset, int length,
-        boolean seekBefore);
+    int seekToKeyInBlock(
+      byte[] key, int offset, int length, boolean seekBefore
+    );
   }
 }

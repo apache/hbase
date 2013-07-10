@@ -216,17 +216,17 @@ public class PoolMap<K, V> implements Map<K, V> {
   }
 
   protected interface Pool<R> {
-    public R get();
+    R get();
 
-    public R put(R resource);
+    R put(R resource);
 
-    public boolean remove(R resource);
+    boolean remove(R resource);
 
-    public void clear();
+    void clear();
 
-    public Collection<R> values();
+    Collection<R> values();
 
-    public int size();
+    int size();
   }
 
   public enum PoolType {

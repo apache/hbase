@@ -25,14 +25,14 @@ package org.apache.hadoop.metrics2;
 public interface MetricHistogram {
 
   //Strings used to create metrics names.
-  static final String NUM_OPS_METRIC_NAME = "_num_ops";
-  static final String MIN_METRIC_NAME = "_min";
-  static final String MAX_METRIC_NAME = "_max";
-  static final String MEAN_METRIC_NAME = "_mean";
-  static final String MEDIAN_METRIC_NAME = "_median";
-  static final String SEVENTY_FIFTH_PERCENTILE_METRIC_NAME = "_75th_percentile";
-  static final String NINETY_FIFTH_PERCENTILE_METRIC_NAME = "_95th_percentile";
-  static final String NINETY_NINETH_PERCENTILE_METRIC_NAME = "_99th_percentile";
+  String NUM_OPS_METRIC_NAME = "_num_ops";
+  String MIN_METRIC_NAME = "_min";
+  String MAX_METRIC_NAME = "_max";
+  String MEAN_METRIC_NAME = "_mean";
+  String MEDIAN_METRIC_NAME = "_median";
+  String SEVENTY_FIFTH_PERCENTILE_METRIC_NAME = "_75th_percentile";
+  String NINETY_FIFTH_PERCENTILE_METRIC_NAME = "_95th_percentile";
+  String NINETY_NINETH_PERCENTILE_METRIC_NAME = "_99th_percentile";
 
   /**
    * Add a single value to a histogram's stream of values.

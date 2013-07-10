@@ -28,60 +28,60 @@ public interface MetricsMasterSource extends BaseSource {
   /**
    * The name of the metrics
    */
-  static final String METRICS_NAME = "Server";
+  String METRICS_NAME = "Server";
 
   /**
    * The context metrics will be under.
    */
-  static final String METRICS_CONTEXT = "master";
+  String METRICS_CONTEXT = "master";
 
   /**
    * The name of the metrics context that metrics will be under in jmx
    */
-  static final String METRICS_JMX_CONTEXT = "Master,sub=" + METRICS_NAME;
+  String METRICS_JMX_CONTEXT = "Master,sub=" + METRICS_NAME;
 
   /**
    * Description
    */
-  static final String METRICS_DESCRIPTION = "Metrics about HBase master server";
+  String METRICS_DESCRIPTION = "Metrics about HBase master server";
 
   // Strings used for exporting to metrics system.
-  static final String MASTER_ACTIVE_TIME_NAME = "masterActiveTime";
-  static final String MASTER_START_TIME_NAME = "masterStartTime";
-  static final String AVERAGE_LOAD_NAME = "averageLoad";
-  static final String NUM_REGION_SERVERS_NAME = "numRegionServers";
-  static final String NUM_DEAD_REGION_SERVERS_NAME = "numDeadRegionServers";
-  static final String ZOOKEEPER_QUORUM_NAME = "zookeeperQuorum";
-  static final String SERVER_NAME_NAME = "serverName";
-  static final String CLUSTER_ID_NAME = "clusterId";
-  static final String IS_ACTIVE_MASTER_NAME = "isActiveMaster";
-  static final String SPLIT_TIME_NAME = "hlogSplitTime";
-  static final String SPLIT_SIZE_NAME = "hlogSplitSize";
-  static final String SNAPSHOT_TIME_NAME = "snapshotTime";
-  static final String SNAPSHOT_RESTORE_TIME_NAME = "snapshotRestoreTime";
-  static final String SNAPSHOT_CLONE_TIME_NAME = "snapshotCloneTime";
-  static final String META_SPLIT_TIME_NAME = "metaHlogSplitTime";
-  static final String META_SPLIT_SIZE_NAME = "metaHlogSplitSize";
-  static final String CLUSTER_REQUESTS_NAME = "clusterRequests";
-  static final String RIT_COUNT_NAME = "ritCount";
-  static final String RIT_COUNT_OVER_THRESHOLD_NAME = "ritCountOverThreshold";
-  static final String RIT_OLDEST_AGE_NAME = "ritOldestAge";
-  static final String MASTER_ACTIVE_TIME_DESC = "Master Active Time";
-  static final String MASTER_START_TIME_DESC = "Master Start Time";
-  static final String AVERAGE_LOAD_DESC = "AverageLoad";
-  static final String NUMBER_OF_REGION_SERVERS_DESC = "Number of RegionServers";
-  static final String NUMBER_OF_DEAD_REGION_SERVERS_DESC = "Number of dead RegionServers";
-  static final String ZOOKEEPER_QUORUM_DESC = "Zookeeper Quorum";
-  static final String SERVER_NAME_DESC = "Server Name";
-  static final String CLUSTER_ID_DESC = "Cluster Id";
-  static final String IS_ACTIVE_MASTER_DESC = "Is Active Master";
-  static final String SPLIT_TIME_DESC = "Time it takes to finish HLog.splitLog()";
-  static final String SPLIT_SIZE_DESC = "Size of HLog files being split";
-  static final String SNAPSHOT_TIME_DESC = "Time it takes to finish snapshot()";
-  static final String SNAPSHOT_RESTORE_TIME_DESC = "Time it takes to finish restoreSnapshot()";
-  static final String SNAPSHOT_CLONE_TIME_DESC = "Time it takes to finish cloneSnapshot()";
-  static final String META_SPLIT_TIME_DESC = "Time it takes to finish splitMetaLog()";
-  static final String META_SPLIT_SIZE_DESC = "Size of META HLog files being split";
+  String MASTER_ACTIVE_TIME_NAME = "masterActiveTime";
+  String MASTER_START_TIME_NAME = "masterStartTime";
+  String AVERAGE_LOAD_NAME = "averageLoad";
+  String NUM_REGION_SERVERS_NAME = "numRegionServers";
+  String NUM_DEAD_REGION_SERVERS_NAME = "numDeadRegionServers";
+  String ZOOKEEPER_QUORUM_NAME = "zookeeperQuorum";
+  String SERVER_NAME_NAME = "serverName";
+  String CLUSTER_ID_NAME = "clusterId";
+  String IS_ACTIVE_MASTER_NAME = "isActiveMaster";
+  String SPLIT_TIME_NAME = "hlogSplitTime";
+  String SPLIT_SIZE_NAME = "hlogSplitSize";
+  String SNAPSHOT_TIME_NAME = "snapshotTime";
+  String SNAPSHOT_RESTORE_TIME_NAME = "snapshotRestoreTime";
+  String SNAPSHOT_CLONE_TIME_NAME = "snapshotCloneTime";
+  String META_SPLIT_TIME_NAME = "metaHlogSplitTime";
+  String META_SPLIT_SIZE_NAME = "metaHlogSplitSize";
+  String CLUSTER_REQUESTS_NAME = "clusterRequests";
+  String RIT_COUNT_NAME = "ritCount";
+  String RIT_COUNT_OVER_THRESHOLD_NAME = "ritCountOverThreshold";
+  String RIT_OLDEST_AGE_NAME = "ritOldestAge";
+  String MASTER_ACTIVE_TIME_DESC = "Master Active Time";
+  String MASTER_START_TIME_DESC = "Master Start Time";
+  String AVERAGE_LOAD_DESC = "AverageLoad";
+  String NUMBER_OF_REGION_SERVERS_DESC = "Number of RegionServers";
+  String NUMBER_OF_DEAD_REGION_SERVERS_DESC = "Number of dead RegionServers";
+  String ZOOKEEPER_QUORUM_DESC = "Zookeeper Quorum";
+  String SERVER_NAME_DESC = "Server Name";
+  String CLUSTER_ID_DESC = "Cluster Id";
+  String IS_ACTIVE_MASTER_DESC = "Is Active Master";
+  String SPLIT_TIME_DESC = "Time it takes to finish HLog.splitLog()";
+  String SPLIT_SIZE_DESC = "Size of HLog files being split";
+  String SNAPSHOT_TIME_DESC = "Time it takes to finish snapshot()";
+  String SNAPSHOT_RESTORE_TIME_DESC = "Time it takes to finish restoreSnapshot()";
+  String SNAPSHOT_CLONE_TIME_DESC = "Time it takes to finish cloneSnapshot()";
+  String META_SPLIT_TIME_DESC = "Time it takes to finish splitMetaLog()";
+  String META_SPLIT_SIZE_DESC = "Size of META HLog files being split";
 
   /**
    * Increment the number of requests the cluster has seen.

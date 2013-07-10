@@ -34,5 +34,5 @@ public interface WritableWithSize {
    *
    * @return the size of the writable
    */
-  public long getWritableSize();
+  long getWritableSize();
 }

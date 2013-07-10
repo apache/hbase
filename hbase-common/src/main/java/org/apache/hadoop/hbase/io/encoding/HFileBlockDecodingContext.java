@@ -32,7 +32,7 @@ public interface HFileBlockDecodingContext {
   /**
    * @return the compression algorithm used by this decoding context
    */
-  public Compression.Algorithm getCompression();
+  Compression.Algorithm getCompression();
 
   /**
    * Perform all actions that need to be done before the encoder's real decoding process.
@@ -47,7 +47,12 @@ public interface HFileBlockDecodingContext {
    * @param offset data start offset in onDiskBlock
    * @throws IOException
    */
-  public void prepareDecoding(int onDiskSizeWithoutHeader, int uncompressedSizeWithoutHeader,
-      ByteBuffer blockBufferWithoutHeader, byte[] onDiskBlock, int offset) throws IOException;
+  void prepareDecoding(
+    int onDiskSizeWithoutHeader,
+    int uncompressedSizeWithoutHeader,
+    ByteBuffer blockBufferWithoutHeader,
+    byte[] onDiskBlock,
+    int offset
+  ) throws IOException;
 
 }

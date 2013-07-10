@@ -36,14 +36,14 @@ public interface BlockCache {
    * @param buf The block contents wrapped in a ByteBuffer.
    * @param inMemory Whether block should be treated as in-memory
    */
-  public void cacheBlock(BlockCacheKey cacheKey, Cacheable buf, boolean inMemory);
+  void cacheBlock(BlockCacheKey cacheKey, Cacheable buf, boolean inMemory);
 
   /**
    * Add block to cache (defaults to not in-memory).
    * @param cacheKey The block's cache key.
    * @param buf The object to cache.
    */
-  public void cacheBlock(BlockCacheKey cacheKey, Cacheable buf);
+  void cacheBlock(BlockCacheKey cacheKey, Cacheable buf);
 
   /**
    * Fetch block from cache.
@@ -54,62 +54,62 @@ public interface BlockCache {
    * @return Block or null if block is not in 2 cache.
    * @see HFileReaderV2#readBlock(long, long, boolean, boolean, boolean, BlockType)
    */
-  public Cacheable getBlock(BlockCacheKey cacheKey, boolean caching, boolean repeat);
+  Cacheable getBlock(BlockCacheKey cacheKey, boolean caching, boolean repeat);
 
   /**
    * Evict block from cache.
    * @param cacheKey Block to evict
    * @return true if block existed and was evicted, false if not
    */
-  public boolean evictBlock(BlockCacheKey cacheKey);
+  boolean evictBlock(BlockCacheKey cacheKey);
 
   /**
    * Evicts all blocks for the given HFile.
    *
    * @return the number of blocks evicted
    */
-  public int evictBlocksByHfileName(String hfileName);
+  int evictBlocksByHfileName(String hfileName);
 
   /**
    * Get the statistics for this block cache.
    * @return Stats
    */
-  public CacheStats getStats();
+  CacheStats getStats();
 
   /**
    * Shutdown the cache.
    */
-  public void shutdown();
+  void shutdown();
 
   /**
    * Returns the total size of the block cache, in bytes.
    * @return size of cache, in bytes
    */
-  public long size();
+  long size();
 
   /**
    * Returns the free size of the block cache, in bytes.
    * @return free space in cache, in bytes
    */
-  public long getFreeSize();
+  long getFreeSize();
 
   /**
    * Returns the occupied size of the block cache, in bytes.
    * @return occupied space in cache, in bytes
    */
-  public long getCurrentSize();
+  long getCurrentSize();
 
   /**
    * Returns the number of evictions that have occurred.
    * @return number of evictions
    */
-  public long getEvictedCount();
+  long getEvictedCount();
 
   /**
    * Returns the number of blocks currently cached in the block cache.
    * @return number of blocks in the cache
    */
-  public long getBlockCount();
+  long getBlockCount();
 
   /**
    * Performs a BlockCache summary and returns a List of BlockCacheColumnFamilySummary objects.
@@ -123,5 +123,5 @@ public interface BlockCache {
    * @return List of BlockCacheColumnFamilySummary
    * @throws IOException exception
    */
-  public List<BlockCacheColumnFamilySummary> getBlockCacheColumnFamilySummaries(Configuration conf) throws IOException;
+  List<BlockCacheColumnFamilySummary> getBlockCacheColumnFamilySummaries(Configuration conf) throws IOException;
 }

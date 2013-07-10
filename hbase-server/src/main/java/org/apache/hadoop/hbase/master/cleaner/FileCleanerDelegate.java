@@ -35,5 +35,5 @@ public interface FileCleanerDelegate extends Configurable, Stoppable {
    * @param fStat file status of the file to check
    * @return <tt>true</tt> if the file is deletable, <tt>false</tt> if not
    */
-  public boolean isFileDeletable(FileStatus fStat);
+  boolean isFileDeletable(FileStatus fStat);
 }

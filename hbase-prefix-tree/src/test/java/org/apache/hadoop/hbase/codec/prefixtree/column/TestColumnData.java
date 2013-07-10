@@ -32,7 +32,7 @@ public interface TestColumnData {
   List<ByteRange> getInputs();
   List<ByteRange> getOutputs();
 
-  public static class InMemory {
+  class InMemory {
     public Collection<Object[]> getAllAsObjectArray() {
       List<Object[]> all = Lists.newArrayList();
       all.add(new Object[] { new TestColumnDataSimple() });

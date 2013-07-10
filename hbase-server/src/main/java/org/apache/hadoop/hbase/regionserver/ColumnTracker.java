@@ -56,25 +56,26 @@ public interface ColumnTracker {
    * @throws IOException in case there is an internal consistency problem
    *      caused by a data corruption.
    */
-  public ScanQueryMatcher.MatchCode checkColumn(byte[] bytes, int offset,
-      int length, long ttl, byte type, boolean ignoreCount)
+  ScanQueryMatcher.MatchCode checkColumn(
+    byte[] bytes, int offset, int length, long ttl, byte type, boolean ignoreCount
+  )
       throws IOException;
 
   /**
    * Updates internal variables in between files
    */
-  public void update();
+  void update();
 
   /**
    * Resets the Matcher
    */
-  public void reset();
+  void reset();
 
   /**
    *
    * @return <code>true</code> when done.
    */
-  public boolean done();
+  boolean done();
 
   /**
    * Used by matcher and scan/get to get a hint of the next column
@@ -87,13 +88,14 @@ public interface ColumnTracker {
    *
    * @return null, or a ColumnCount that we should seek to
    */
-  public ColumnCount getColumnHint();
+  ColumnCount getColumnHint();
 
   /**
    * Retrieve the MatchCode for the next row or column
    */
-  public MatchCode getNextRowOrNextColumn(byte[] bytes, int offset,
-      int qualLength);
+  MatchCode getNextRowOrNextColumn(
+    byte[] bytes, int offset, int qualLength
+  );
 
   /**
    * Give the tracker a chance to declare it's done based on only the timestamp
@@ -102,5 +104,5 @@ public interface ColumnTracker {
    * @param timestamp
    * @return <code>true</code> to early out based on timestamp.
    */
-  public boolean isDone(long timestamp);
+  boolean isDone(long timestamp);
 }

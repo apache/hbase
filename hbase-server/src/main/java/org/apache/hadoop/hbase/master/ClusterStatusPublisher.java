@@ -220,14 +220,14 @@ public class ClusterStatusPublisher extends Chore {
   }
 
 
-  public static interface Publisher extends Closeable {
+  public interface Publisher extends Closeable {
 
-    public void connect(Configuration conf) throws IOException;
+    void connect(Configuration conf) throws IOException;
 
-    public void publish(ClusterStatus cs);
+    void publish(ClusterStatus cs);
 
     @Override
-    public void close();
+    void close();
   }
 
   public static class MulticastPublisher implements Publisher {

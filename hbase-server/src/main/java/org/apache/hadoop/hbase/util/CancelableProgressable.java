@@ -34,6 +34,6 @@ public interface CancelableProgressable {
    * operation should be canceled and rolled back.
    * @return whether to continue (true) or cancel (false) the operation
    */
-  public boolean progress();
+  boolean progress();
 
 }

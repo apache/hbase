@@ -33,7 +33,7 @@ public interface TestTimestampData {
   long getMinimum();
   List<Long> getOutputs();
 
-  public static class InMemory {
+  class InMemory {
     public Collection<Object[]> getAllAsObjectArray() {
       List<Object[]> all = Lists.newArrayList();
       all.add(new Object[] { new TestTimestampDataBasic() });

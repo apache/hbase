@@ -30,5 +30,5 @@ public interface Row extends Comparable<Row> {
   /**
    * @return The row.
    */
-  public byte [] getRow();
+  byte [] getRow();
 }
