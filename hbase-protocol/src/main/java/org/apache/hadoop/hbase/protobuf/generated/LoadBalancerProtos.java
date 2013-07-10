@@ -11,7 +11,7 @@ public final class LoadBalancerProtos {
   public interface LoadBalancerStateOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
     
-    // optional bool balancerOn = 1;
+    // optional bool balancer_on = 1;
     boolean hasBalancerOn();
     boolean getBalancerOn();
   }
@@ -44,8 +44,8 @@ public final class LoadBalancerProtos {
     }
     
     private int bitField0_;
-    // optional bool balancerOn = 1;
-    public static final int BALANCERON_FIELD_NUMBER = 1;
+    // optional bool balancer_on = 1;
+    public static final int BALANCER_ON_FIELD_NUMBER = 1;
     private boolean balancerOn_;
     public boolean hasBalancerOn() {
       return ((bitField0_ & 0x00000001) == 0x00000001);
@@ -123,7 +123,7 @@ public final class LoadBalancerProtos {
       int hash = 41;
       hash = (19 * hash) + getDescriptorForType().hashCode();
       if (hasBalancerOn()) {
-        hash = (37 * hash) + BALANCERON_FIELD_NUMBER;
+        hash = (37 * hash) + BALANCER_ON_FIELD_NUMBER;
         hash = (53 * hash) + hashBoolean(getBalancerOn());
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
@@ -347,7 +347,7 @@ public final class LoadBalancerProtos {
       
       private int bitField0_;
       
-      // optional bool balancerOn = 1;
+      // optional bool balancer_on = 1;
       private boolean balancerOn_ ;
       public boolean hasBalancerOn() {
         return ((bitField0_ & 0x00000001) == 0x00000001);
@@ -393,10 +393,10 @@ public final class LoadBalancerProtos {
       descriptor;
   static {
     java.lang.String[] descriptorData = {
-      "\n\022LoadBalancer.proto\"\'\n\021LoadBalancerStat" +
-      "e\022\022\n\nbalancerOn\030\001 \001(\010BE\n*org.apache.hado" +
-      "op.hbase.protobuf.generatedB\022LoadBalance" +
-      "rProtosH\001\240\001\001"
+      "\n\022LoadBalancer.proto\"(\n\021LoadBalancerStat" +
+      "e\022\023\n\013balancer_on\030\001 \001(\010BE\n*org.apache.had" +
+      "oop.hbase.protobuf.generatedB\022LoadBalanc" +
+      "erProtosH\001\240\001\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {

@@ -30,12 +30,12 @@ import "WAL.proto";
 
 message GetRegionInfoRequest {
   required RegionSpecifier region = 1;
-  optional bool compactionState = 2;
+  optional bool compaction_state = 2;
 }
 
 message GetRegionInfoResponse {
-  required RegionInfo regionInfo = 1;
-  optional CompactionState compactionState = 2;
+  required RegionInfo region_info = 1;
+  optional CompactionState compaction_state = 2;
 
   enum CompactionState {
     NONE = 0;
@@ -55,28 +55,28 @@ message GetStoreFileRequest {
 }
 
 message GetStoreFileResponse {
-  repeated string storeFile = 1;
+  repeated string store_file = 1;
 }
 
 message GetOnlineRegionRequest {
 }
 
 message GetOnlineRegionResponse {
-  repeated RegionInfo regionInfo = 1;
+  repeated RegionInfo region_info = 1;
 }
 
 message OpenRegionRequest {
-  repeated RegionOpenInfo openInfo = 1;
+  repeated RegionOpenInfo open_info = 1;
 
   message RegionOpenInfo {
     required RegionInfo region = 1;
-    optional uint32 versionOfOfflineNode = 2;
-    repeated ServerName favoredNodes = 3;
+    optional uint32 version_of_offline_node = 2;
+    repeated ServerName favored_nodes = 3;
   }
 }
 
 message OpenRegionResponse {
-  repeated RegionOpeningState openingState = 1;
+  repeated RegionOpeningState opening_state = 1;
 
   enum RegionOpeningState {
     OPENED = 0;
@@ -91,9 +91,9 @@ message OpenRegionResponse {
  */
 message CloseRegionRequest {
   required RegionSpecifier region = 1;
-  optional uint32 versionOfClosingNode = 2;
-  optional bool transitionInZK = 3 [default = true];
-  optional ServerName destinationServer = 4;
+  optional uint32 version_of_closing_node = 2;
+  optional bool transition_in_ZK = 3 [default = true];
+  optional ServerName destination_server = 4;
 }
 
 message CloseRegionResponse {
@@ -107,11 +107,11 @@ message CloseRegionResponse {
  */
 message FlushRegionRequest {
   required RegionSpecifier region = 1;
-  optional uint64 ifOlderThanTs = 2;
+  optional uint64 if_older_than_ts = 2;
 }
 
 message FlushRegionResponse {
-  required uint64 lastFlushTime = 1;
+  required uint64 last_flush_time = 1;
   optional bool flushed = 2;
 }
 
@@ -124,7 +124,7 @@ message FlushRegionResponse {
  */
 message SplitRegionRequest {
   required RegionSpecifier region = 1;
-  optional bytes splitPoint = 2;
+  optional bytes split_point = 2;
 }
 
 message SplitRegionResponse {
@@ -150,8 +150,8 @@ message CompactRegionResponse {
  * This method currently closes the regions and then merges them
  */
 message MergeRegionsRequest {
-  required RegionSpecifier regionA = 1;
-  required RegionSpecifier regionB = 2;
+  required RegionSpecifier region_a = 1;
+  required RegionSpecifier region_b = 2;
   optional bool forcible = 3 [default = false];
 }
 
@@ -163,10 +163,10 @@ message WALEntry {
   required WALKey key = 1;
   // Following may be null if the KVs/Cells are carried along the side in a cellblock (See
   // RPC for more on cellblocks). If Cells/KVs are in a cellblock, this next field is null
-  // and associatedCellCount has count of Cells associated w/ this WALEntry
-  repeated bytes keyValueBytes = 2;
+  // and associated_cell_count has count of Cells associated w/ this WALEntry
+  repeated bytes key_value_bytes = 2;
   // If Cell data is carried alongside in a cellblock, this is count of Cells in the cellblock.
-  optional int32 associatedCellCount = 3;
+  optional int32 associated_cell_count = 3;
 }
 
 /**
@@ -186,7 +186,7 @@ message RollWALWriterRequest {
 
 message RollWALWriterResponse {
   // A list of encoded name of regions to flush
-  repeated bytes regionToFlush = 1;
+  repeated bytes region_to_flush = 1;
 }
 
 message StopServerRequest {
@@ -200,54 +200,54 @@ message GetServerInfoRequest {
 }
 
 message ServerInfo {
-  required ServerName serverName = 1;
-  optional uint32 webuiPort = 2;
+  required ServerName server_name = 1;
+  optional uint32 webui_port = 2;
 }
 
 message GetServerInfoResponse {
-  required ServerInfo serverInfo = 1;
+  required ServerInfo server_info = 1;
 }
 
 service AdminService {
-  rpc getRegionInfo(GetRegionInfoRequest)
+  rpc GetRegionInfo(GetRegionInfoRequest)
     returns(GetRegionInfoResponse);
 
-  rpc getStoreFile(GetStoreFileRequest)
+  rpc GetStoreFile(GetStoreFileRequest)
     returns(GetStoreFileResponse);
 
-  rpc getOnlineRegion(GetOnlineRegionRequest)
+  rpc GetOnlineRegion(GetOnlineRegionRequest)
     returns(GetOnlineRegionResponse);
 
-  rpc openRegion(OpenRegionRequest)
+  rpc OpenRegion(OpenRegionRequest)
     returns(OpenRegionResponse);
 
-  rpc closeRegion(CloseRegionRequest)
+  rpc CloseRegion(CloseRegionRequest)
     returns(CloseRegionResponse);
 
-  rpc flushRegion(FlushRegionRequest)
+  rpc FlushRegion(FlushRegionRequest)
     returns(FlushRegionResponse);
 
-  rpc splitRegion(SplitRegionRequest)
+  rpc SplitRegion(SplitRegionRequest)
     returns(SplitRegionResponse);
 
-  rpc compactRegion(CompactRegionRequest)
+  rpc CompactRegion(CompactRegionRequest)
     returns(CompactRegionResponse);
-    
-  rpc mergeRegions(MergeRegionsRequest)
+
+  rpc MergeRegions(MergeRegionsRequest)
     returns(MergeRegionsResponse);
 
-  rpc replicateWALEntry(ReplicateWALEntryRequest)
+  rpc ReplicateWALEntry(ReplicateWALEntryRequest)
     returns(ReplicateWALEntryResponse);
-    
-  rpc replay(MultiRequest)
-    returns(MultiResponse);    
 
-  rpc rollWALWriter(RollWALWriterRequest)
+  rpc Replay(MultiRequest)
+    returns(MultiResponse);
+
+  rpc RollWALWriter(RollWALWriterRequest)
     returns(RollWALWriterResponse);
 
-  rpc getServerInfo(GetServerInfoRequest)
+  rpc GetServerInfo(GetServerInfoRequest)
     returns(GetServerInfoResponse);
 
-  rpc stopServer(StopServerRequest)
+  rpc StopServer(StopServerRequest)
     returns(StopServerResponse);
 }

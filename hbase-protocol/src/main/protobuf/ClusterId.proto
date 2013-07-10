@@ -29,5 +29,5 @@ option optimize_for = SPEED;
  */
 message ClusterId {
   // This is the cluster id, a uuid as a String
-  required string clusterId = 1;
+  required string cluster_id = 1;
 }

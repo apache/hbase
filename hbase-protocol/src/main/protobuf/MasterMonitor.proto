@@ -29,42 +29,42 @@ import "hbase.proto";
 import "ClusterStatus.proto";
 
 message GetSchemaAlterStatusRequest {
-  required bytes tableName = 1;
+  required bytes table_name = 1;
 }
 
 message GetSchemaAlterStatusResponse {
-  optional uint32 yetToUpdateRegions = 1;
-  optional uint32 totalRegions = 2;
+  optional uint32 yet_to_update_regions = 1;
+  optional uint32 total_regions = 2;
 }
 
 message GetTableDescriptorsRequest {
-  repeated string tableNames = 1;
+  repeated string table_names = 1;
 }
 
 message GetTableDescriptorsResponse {
-  repeated TableSchema tableSchema = 1;
+  repeated TableSchema table_schema = 1;
 }
 
 message GetClusterStatusRequest {
 }
 
 message GetClusterStatusResponse {
-  required ClusterStatus clusterStatus = 1;
+  required ClusterStatus cluster_status = 1;
 }
 
 service MasterMonitorService {
   /** Used by the client to get the number of regions that have received the updated schema */
-  rpc getSchemaAlterStatus(GetSchemaAlterStatusRequest)
+  rpc GetSchemaAlterStatus(GetSchemaAlterStatusRequest)
     returns(GetSchemaAlterStatusResponse);
 
   /** Get list of TableDescriptors for requested tables. */
-  rpc getTableDescriptors(GetTableDescriptorsRequest)
+  rpc GetTableDescriptors(GetTableDescriptorsRequest)
     returns(GetTableDescriptorsResponse);
 
   /** Return cluster status. */
-  rpc getClusterStatus(GetClusterStatusRequest)
+  rpc GetClusterStatus(GetClusterStatusRequest)
     returns(GetClusterStatusResponse);
 
   /** return true if master is available */
-  rpc isMasterRunning(IsMasterRunningRequest) returns(IsMasterRunningResponse);
+  rpc IsMasterRunning(IsMasterRunningRequest) returns(IsMasterRunningResponse);
 }

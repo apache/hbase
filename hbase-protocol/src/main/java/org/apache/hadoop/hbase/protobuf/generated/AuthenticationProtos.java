@@ -15,7 +15,7 @@ public final class AuthenticationProtos {
     boolean hasId();
     int getId();
     
-    // required int64 expirationDate = 2;
+    // required int64 expiration_date = 2;
     boolean hasExpirationDate();
     long getExpirationDate();
     
@@ -62,8 +62,8 @@ public final class AuthenticationProtos {
       return id_;
     }
     
-    // required int64 expirationDate = 2;
-    public static final int EXPIRATIONDATE_FIELD_NUMBER = 2;
+    // required int64 expiration_date = 2;
+    public static final int EXPIRATION_DATE_FIELD_NUMBER = 2;
     private long expirationDate_;
     public boolean hasExpirationDate() {
       return ((bitField0_ & 0x00000002) == 0x00000002);
@@ -193,7 +193,7 @@ public final class AuthenticationProtos {
         hash = (53 * hash) + getId();
       }
       if (hasExpirationDate()) {
-        hash = (37 * hash) + EXPIRATIONDATE_FIELD_NUMBER;
+        hash = (37 * hash) + EXPIRATION_DATE_FIELD_NUMBER;
         hash = (53 * hash) + hashLong(getExpirationDate());
       }
       if (hasKey()) {
@@ -482,7 +482,7 @@ public final class AuthenticationProtos {
         return this;
       }
       
-      // required int64 expirationDate = 2;
+      // required int64 expiration_date = 2;
       private long expirationDate_ ;
       public boolean hasExpirationDate() {
         return ((bitField0_ & 0x00000002) == 0x00000002);
@@ -549,19 +549,19 @@ public final class AuthenticationProtos {
     boolean hasUsername();
     com.google.protobuf.ByteString getUsername();
     
-    // required int32 keyId = 3;
+    // required int32 key_id = 3;
     boolean hasKeyId();
     int getKeyId();
     
-    // optional int64 issueDate = 4;
+    // optional int64 issue_date = 4;
     boolean hasIssueDate();
     long getIssueDate();
     
-    // optional int64 expirationDate = 5;
+    // optional int64 expiration_date = 5;
     boolean hasExpirationDate();
     long getExpirationDate();
     
-    // optional int64 sequenceNumber = 6;
+    // optional int64 sequence_number = 6;
     boolean hasSequenceNumber();
     long getSequenceNumber();
   }
@@ -680,8 +680,8 @@ public final class AuthenticationProtos {
       return username_;
     }
     
-    // required int32 keyId = 3;
-    public static final int KEYID_FIELD_NUMBER = 3;
+    // required int32 key_id = 3;
+    public static final int KEY_ID_FIELD_NUMBER = 3;
     private int keyId_;
     public boolean hasKeyId() {
       return ((bitField0_ & 0x00000004) == 0x00000004);
@@ -690,8 +690,8 @@ public final class AuthenticationProtos {
       return keyId_;
     }
     
-    // optional int64 issueDate = 4;
-    public static final int ISSUEDATE_FIELD_NUMBER = 4;
+    // optional int64 issue_date = 4;
+    public static final int ISSUE_DATE_FIELD_NUMBER = 4;
     private long issueDate_;
     public boolean hasIssueDate() {
       return ((bitField0_ & 0x00000008) == 0x00000008);
@@ -700,8 +700,8 @@ public final class AuthenticationProtos {
       return issueDate_;
     }
     
-    // optional int64 expirationDate = 5;
-    public static final int EXPIRATIONDATE_FIELD_NUMBER = 5;
+    // optional int64 expiration_date = 5;
+    public static final int EXPIRATION_DATE_FIELD_NUMBER = 5;
     private long expirationDate_;
     public boolean hasExpirationDate() {
       return ((bitField0_ & 0x00000010) == 0x00000010);
@@ -710,8 +710,8 @@ public final class AuthenticationProtos {
       return expirationDate_;
     }
     
-    // optional int64 sequenceNumber = 6;
-    public static final int SEQUENCENUMBER_FIELD_NUMBER = 6;
+    // optional int64 sequence_number = 6;
+    public static final int SEQUENCE_NUMBER_FIELD_NUMBER = 6;
     private long sequenceNumber_;
     public boolean hasSequenceNumber() {
       return ((bitField0_ & 0x00000020) == 0x00000020);
@@ -874,19 +874,19 @@ public final class AuthenticationProtos {
         hash = (53 * hash) + getUsername().hashCode();
       }
       if (hasKeyId()) {
-        hash = (37 * hash) + KEYID_FIELD_NUMBER;
+        hash = (37 * hash) + KEY_ID_FIELD_NUMBER;
         hash = (53 * hash) + getKeyId();
       }
       if (hasIssueDate()) {
-        hash = (37 * hash) + ISSUEDATE_FIELD_NUMBER;
+        hash = (37 * hash) + ISSUE_DATE_FIELD_NUMBER;
         hash = (53 * hash) + hashLong(getIssueDate());
       }
       if (hasExpirationDate()) {
-        hash = (37 * hash) + EXPIRATIONDATE_FIELD_NUMBER;
+        hash = (37 * hash) + EXPIRATION_DATE_FIELD_NUMBER;
         hash = (53 * hash) + hashLong(getExpirationDate());
       }
       if (hasSequenceNumber()) {
-        hash = (37 * hash) + SEQUENCENUMBER_FIELD_NUMBER;
+        hash = (37 * hash) + SEQUENCE_NUMBER_FIELD_NUMBER;
         hash = (53 * hash) + hashLong(getSequenceNumber());
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
@@ -1246,7 +1246,7 @@ public final class AuthenticationProtos {
         return this;
       }
       
-      // required int32 keyId = 3;
+      // required int32 key_id = 3;
       private int keyId_ ;
       public boolean hasKeyId() {
         return ((bitField0_ & 0x00000004) == 0x00000004);
@@ -1267,7 +1267,7 @@ public final class AuthenticationProtos {
         return this;
       }
       
-      // optional int64 issueDate = 4;
+      // optional int64 issue_date = 4;
       private long issueDate_ ;
       public boolean hasIssueDate() {
         return ((bitField0_ & 0x00000008) == 0x00000008);
@@ -1288,7 +1288,7 @@ public final class AuthenticationProtos {
         return this;
       }
       
-      // optional int64 expirationDate = 5;
+      // optional int64 expiration_date = 5;
       private long expirationDate_ ;
       public boolean hasExpirationDate() {
         return ((bitField0_ & 0x00000010) == 0x00000010);
@@ -1309,7 +1309,7 @@ public final class AuthenticationProtos {
         return this;
       }
       
-      // optional int64 sequenceNumber = 6;
+      // optional int64 sequence_number = 6;
       private long sequenceNumber_ ;
       public boolean hasSequenceNumber() {
         return ((bitField0_ & 0x00000020) == 0x00000020);
@@ -2917,7 +2917,7 @@ public final class AuthenticationProtos {
     boolean hasUsername();
     String getUsername();
     
-    // optional string authMethod = 2;
+    // optional string auth_method = 2;
     boolean hasAuthMethod();
     String getAuthMethod();
   }
@@ -2982,8 +2982,8 @@ public final class AuthenticationProtos {
       }
     }
     
-    // optional string authMethod = 2;
-    public static final int AUTHMETHOD_FIELD_NUMBER = 2;
+    // optional string auth_method = 2;
+    public static final int AUTH_METHOD_FIELD_NUMBER = 2;
     private java.lang.Object authMethod_;
     public boolean hasAuthMethod() {
       return ((bitField0_ & 0x00000002) == 0x00000002);
@@ -3100,7 +3100,7 @@ public final class AuthenticationProtos {
         hash = (53 * hash) + getUsername().hashCode();
       }
       if (hasAuthMethod()) {
-        hash = (37 * hash) + AUTHMETHOD_FIELD_NUMBER;
+        hash = (37 * hash) + AUTH_METHOD_FIELD_NUMBER;
         hash = (53 * hash) + getAuthMethod().hashCode();
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
@@ -3374,7 +3374,7 @@ public final class AuthenticationProtos {
         onChanged();
       }
       
-      // optional string authMethod = 2;
+      // optional string auth_method = 2;
       private java.lang.Object authMethod_ = "";
       public boolean hasAuthMethod() {
         return ((bitField0_ & 0x00000002) == 0x00000002);
@@ -3431,7 +3431,7 @@ public final class AuthenticationProtos {
           org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.TokenRequest request,
           com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.TokenResponse> done);
       
-      public abstract void whoami(
+      public abstract void whoAmI(
           com.google.protobuf.RpcController controller,
           org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.WhoAmIRequest request,
           com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.WhoAmIResponse> done);
@@ -3450,11 +3450,11 @@ public final class AuthenticationProtos {
         }
         
         @java.lang.Override
-        public  void whoami(
+        public  void whoAmI(
             com.google.protobuf.RpcController controller,
             org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.WhoAmIRequest request,
             com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.WhoAmIResponse> done) {
-          impl.whoami(controller, request, done);
+          impl.whoAmI(controller, request, done);
         }
         
       };
@@ -3482,7 +3482,7 @@ public final class AuthenticationProtos {
             case 0:
               return impl.getAuthenticationToken(controller, (org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.TokenRequest)request);
             case 1:
-              return impl.whoami(controller, (org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.WhoAmIRequest)request);
+              return impl.whoAmI(controller, (org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.WhoAmIRequest)request);
             default:
               throw new java.lang.AssertionError("Can't get here.");
           }
@@ -3532,7 +3532,7 @@ public final class AuthenticationProtos {
         org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.TokenRequest request,
         com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.TokenResponse> done);
     
-    public abstract void whoami(
+    public abstract void whoAmI(
         com.google.protobuf.RpcController controller,
         org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.WhoAmIRequest request,
         com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.WhoAmIResponse> done);
@@ -3565,7 +3565,7 @@ public final class AuthenticationProtos {
               done));
           return;
         case 1:
-          this.whoami(controller, (org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.WhoAmIRequest)request,
+          this.whoAmI(controller, (org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.WhoAmIRequest)request,
             com.google.protobuf.RpcUtil.<org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.WhoAmIResponse>specializeCallback(
               done));
           return;
@@ -3641,7 +3641,7 @@ public final class AuthenticationProtos {
             org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.TokenResponse.getDefaultInstance()));
       }
       
-      public  void whoami(
+      public  void whoAmI(
           com.google.protobuf.RpcController controller,
           org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.WhoAmIRequest request,
           com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.WhoAmIResponse> done) {
@@ -3668,7 +3668,7 @@ public final class AuthenticationProtos {
           org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.TokenRequest request)
           throws com.google.protobuf.ServiceException;
       
-      public org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.WhoAmIResponse whoami(
+      public org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.WhoAmIResponse whoAmI(
           com.google.protobuf.RpcController controller,
           org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.WhoAmIRequest request)
           throws com.google.protobuf.ServiceException;
@@ -3693,7 +3693,7 @@ public final class AuthenticationProtos {
       }
       
       
-      public org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.WhoAmIResponse whoami(
+      public org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.WhoAmIResponse whoAmI(
           com.google.protobuf.RpcController controller,
           org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.WhoAmIRequest request)
           throws com.google.protobuf.ServiceException {
@@ -3751,23 +3751,23 @@ public final class AuthenticationProtos {
       descriptor;
   static {
     java.lang.String[] descriptorData = {
-      "\n\024Authentication.proto\"D\n\021Authentication" +
-      "Key\022\n\n\002id\030\001 \002(\005\022\026\n\016expirationDate\030\002 \002(\003\022" +
-      "\013\n\003key\030\003 \002(\014\"\270\001\n\017TokenIdentifier\022#\n\004kind" +
-      "\030\001 \002(\0162\025.TokenIdentifier.Kind\022\020\n\010usernam" +
-      "e\030\002 \002(\014\022\r\n\005keyId\030\003 \002(\005\022\021\n\tissueDate\030\004 \001(" +
-      "\003\022\026\n\016expirationDate\030\005 \001(\003\022\026\n\016sequenceNum" +
-      "ber\030\006 \001(\003\"\034\n\004Kind\022\024\n\020HBASE_AUTH_TOKEN\020\000\"" +
-      ">\n\005Token\022\022\n\nidentifier\030\001 \001(\014\022\020\n\010password" +
-      "\030\002 \001(\014\022\017\n\007service\030\003 \001(\014\"\016\n\014TokenRequest\"" +
-      "&\n\rTokenResponse\022\025\n\005token\030\001 \001(\0132\006.Token\"",
-      "\017\n\rWhoAmIRequest\"6\n\016WhoAmIResponse\022\020\n\010us" +
-      "ername\030\001 \001(\t\022\022\n\nauthMethod\030\002 \001(\t2{\n\025Auth" +
-      "enticationService\0227\n\026getAuthenticationTo" +
-      "ken\022\r.TokenRequest\032\016.TokenResponse\022)\n\006wh" +
-      "oami\022\016.WhoAmIRequest\032\017.WhoAmIResponseBJ\n" +
-      "*org.apache.hadoop.hbase.protobuf.genera" +
-      "tedB\024AuthenticationProtosH\001\210\001\001\240\001\001"
+      "\n\024Authentication.proto\"E\n\021Authentication" +
+      "Key\022\n\n\002id\030\001 \002(\005\022\027\n\017expiration_date\030\002 \002(\003" +
+      "\022\013\n\003key\030\003 \002(\014\"\274\001\n\017TokenIdentifier\022#\n\004kin" +
+      "d\030\001 \002(\0162\025.TokenIdentifier.Kind\022\020\n\010userna" +
+      "me\030\002 \002(\014\022\016\n\006key_id\030\003 \002(\005\022\022\n\nissue_date\030\004" +
+      " \001(\003\022\027\n\017expiration_date\030\005 \001(\003\022\027\n\017sequenc" +
+      "e_number\030\006 \001(\003\"\034\n\004Kind\022\024\n\020HBASE_AUTH_TOK" +
+      "EN\020\000\">\n\005Token\022\022\n\nidentifier\030\001 \001(\014\022\020\n\010pas" +
+      "sword\030\002 \001(\014\022\017\n\007service\030\003 \001(\014\"\016\n\014TokenReq" +
+      "uest\"&\n\rTokenResponse\022\025\n\005token\030\001 \001(\0132\006.T",
+      "oken\"\017\n\rWhoAmIRequest\"7\n\016WhoAmIResponse\022" +
+      "\020\n\010username\030\001 \001(\t\022\023\n\013auth_method\030\002 \001(\t2{" +
+      "\n\025AuthenticationService\0227\n\026GetAuthentica" +
+      "tionToken\022\r.TokenRequest\032\016.TokenResponse" +
+      "\022)\n\006WhoAmI\022\016.WhoAmIRequest\032\017.WhoAmIRespo" +
+      "nseBJ\n*org.apache.hadoop.hbase.protobuf." +
+      "generatedB\024AuthenticationProtosH\001\210\001\001\240\001\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {

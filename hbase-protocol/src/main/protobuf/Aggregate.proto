@@ -31,32 +31,32 @@ message AggregateArgument {
    *  (3) any bytes required to construct the ColumnInterpreter object
    *      properly
    */
-  required string interpreterClassName = 1;
+  required string interpreter_class_name = 1;
   required Scan scan = 2;
-  optional bytes  interpreterSpecificBytes = 3;
+  optional bytes  interpreter_specific_bytes = 3;
 }
 
 message AggregateResponse {
   /**
    * The AggregateService methods all have a response that either is a Pair
-   * or a simple object. When it is a Pair both firstPart and secondPart
-   * have defined values (and the secondPart is not present in the response 
+   * or a simple object. When it is a Pair both first_part and second_part
+   * have defined values (and the second_part is not present in the response
    * when the response is not a pair). Refer to the AggregateImplementation 
    * class for an overview of the AggregateResponse object constructions. 
    */ 
-  repeated bytes firstPart = 1;
-  optional bytes secondPart = 2;  
+  repeated bytes first_part = 1;
+  optional bytes second_part = 2;
 }
 
 /** Refer to the AggregateImplementation class for an overview of the 
  *  AggregateService method implementations and their functionality.
  */
 service AggregateService {
-  rpc getMax (AggregateArgument) returns (AggregateResponse);
-  rpc getMin (AggregateArgument) returns (AggregateResponse);
-  rpc getSum (AggregateArgument) returns (AggregateResponse);
-  rpc getRowNum (AggregateArgument) returns (AggregateResponse);
-  rpc getAvg (AggregateArgument) returns (AggregateResponse);
-  rpc getStd (AggregateArgument) returns (AggregateResponse);
-  rpc getMedian (AggregateArgument) returns (AggregateResponse);
+  rpc GetMax (AggregateArgument) returns (AggregateResponse);
+  rpc GetMin (AggregateArgument) returns (AggregateResponse);
+  rpc GetSum (AggregateArgument) returns (AggregateResponse);
+  rpc GetRowNum (AggregateArgument) returns (AggregateResponse);
+  rpc GetAvg (AggregateArgument) returns (AggregateResponse);
+  rpc GetStd (AggregateArgument) returns (AggregateResponse);
+  rpc GetMedian (AggregateArgument) returns (AggregateResponse);
 }

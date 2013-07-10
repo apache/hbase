@@ -108,7 +108,7 @@ public final class CellProtos {
     boolean hasTimestamp();
     long getTimestamp();
     
-    // optional .CellType cellType = 5;
+    // optional .CellType cell_type = 5;
     boolean hasCellType();
     org.apache.hadoop.hbase.protobuf.generated.CellProtos.CellType getCellType();
     
@@ -185,8 +185,8 @@ public final class CellProtos {
       return timestamp_;
     }
     
-    // optional .CellType cellType = 5;
-    public static final int CELLTYPE_FIELD_NUMBER = 5;
+    // optional .CellType cell_type = 5;
+    public static final int CELL_TYPE_FIELD_NUMBER = 5;
     private org.apache.hadoop.hbase.protobuf.generated.CellProtos.CellType cellType_;
     public boolean hasCellType() {
       return ((bitField0_ & 0x00000010) == 0x00000010);
@@ -355,7 +355,7 @@ public final class CellProtos {
         hash = (53 * hash) + hashLong(getTimestamp());
       }
       if (hasCellType()) {
-        hash = (37 * hash) + CELLTYPE_FIELD_NUMBER;
+        hash = (37 * hash) + CELL_TYPE_FIELD_NUMBER;
         hash = (53 * hash) + hashEnum(getCellType());
       }
       if (hasValue()) {
@@ -752,7 +752,7 @@ public final class CellProtos {
         return this;
       }
       
-      // optional .CellType cellType = 5;
+      // optional .CellType cell_type = 5;
       private org.apache.hadoop.hbase.protobuf.generated.CellProtos.CellType cellType_ = org.apache.hadoop.hbase.protobuf.generated.CellProtos.CellType.MINIMUM;
       public boolean hasCellType() {
         return ((bitField0_ & 0x00000010) == 0x00000010);
@@ -830,7 +830,7 @@ public final class CellProtos {
     boolean hasTimestamp();
     long getTimestamp();
     
-    // optional .CellType keyType = 5;
+    // optional .CellType key_type = 5;
     boolean hasKeyType();
     org.apache.hadoop.hbase.protobuf.generated.CellProtos.CellType getKeyType();
     
@@ -907,8 +907,8 @@ public final class CellProtos {
       return timestamp_;
     }
     
-    // optional .CellType keyType = 5;
-    public static final int KEYTYPE_FIELD_NUMBER = 5;
+    // optional .CellType key_type = 5;
+    public static final int KEY_TYPE_FIELD_NUMBER = 5;
     private org.apache.hadoop.hbase.protobuf.generated.CellProtos.CellType keyType_;
     public boolean hasKeyType() {
       return ((bitField0_ & 0x00000010) == 0x00000010);
@@ -1089,7 +1089,7 @@ public final class CellProtos {
         hash = (53 * hash) + hashLong(getTimestamp());
       }
       if (hasKeyType()) {
-        hash = (37 * hash) + KEYTYPE_FIELD_NUMBER;
+        hash = (37 * hash) + KEY_TYPE_FIELD_NUMBER;
         hash = (53 * hash) + hashEnum(getKeyType());
       }
       if (hasValue()) {
@@ -1498,7 +1498,7 @@ public final class CellProtos {
         return this;
       }
       
-      // optional .CellType keyType = 5;
+      // optional .CellType key_type = 5;
       private org.apache.hadoop.hbase.protobuf.generated.CellProtos.CellType keyType_ = org.apache.hadoop.hbase.protobuf.generated.CellProtos.CellType.MINIMUM;
       public boolean hasKeyType() {
         return ((bitField0_ & 0x00000010) == 0x00000010);
@@ -1576,17 +1576,17 @@ public final class CellProtos {
       descriptor;
   static {
     java.lang.String[] descriptorData = {
-      "\n\nCell.proto\"u\n\004Cell\022\013\n\003row\030\001 \001(\014\022\016\n\006fam" +
+      "\n\nCell.proto\"v\n\004Cell\022\013\n\003row\030\001 \001(\014\022\016\n\006fam" +
       "ily\030\002 \001(\014\022\021\n\tqualifier\030\003 \001(\014\022\021\n\ttimestam" +
-      "p\030\004 \001(\004\022\033\n\010cellType\030\005 \001(\0162\t.CellType\022\r\n\005" +
-      "value\030\006 \001(\014\"x\n\010KeyValue\022\013\n\003row\030\001 \002(\014\022\016\n\006" +
-      "family\030\002 \002(\014\022\021\n\tqualifier\030\003 \002(\014\022\021\n\ttimes" +
-      "tamp\030\004 \001(\004\022\032\n\007keyType\030\005 \001(\0162\t.CellType\022\r" +
-      "\n\005value\030\006 \001(\014*`\n\010CellType\022\013\n\007MINIMUM\020\000\022\007" +
-      "\n\003PUT\020\004\022\n\n\006DELETE\020\010\022\021\n\rDELETE_COLUMN\020\014\022\021" +
-      "\n\rDELETE_FAMILY\020\016\022\014\n\007MAXIMUM\020\377\001B=\n*org.a" +
-      "pache.hadoop.hbase.protobuf.generatedB\nC",
-      "ellProtosH\001\240\001\001"
+      "p\030\004 \001(\004\022\034\n\tcell_type\030\005 \001(\0162\t.CellType\022\r\n" +
+      "\005value\030\006 \001(\014\"y\n\010KeyValue\022\013\n\003row\030\001 \002(\014\022\016\n" +
+      "\006family\030\002 \002(\014\022\021\n\tqualifier\030\003 \002(\014\022\021\n\ttime" +
+      "stamp\030\004 \001(\004\022\033\n\010key_type\030\005 \001(\0162\t.CellType" +
+      "\022\r\n\005value\030\006 \001(\014*`\n\010CellType\022\013\n\007MINIMUM\020\000" +
+      "\022\007\n\003PUT\020\004\022\n\n\006DELETE\020\010\022\021\n\rDELETE_COLUMN\020\014" +
+      "\022\021\n\rDELETE_FAMILY\020\016\022\014\n\007MAXIMUM\020\377\001B=\n*org" +
+      ".apache.hadoop.hbase.protobuf.generatedB",
+      "\nCellProtosH\001\240\001\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {

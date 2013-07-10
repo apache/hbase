@@ -45,11 +45,11 @@ message Get {
   repeated Column column = 2;
   repeated NameBytesPair attribute = 3;
   optional Filter filter = 4;
-  optional TimeRange timeRange = 5;
-  optional uint32 maxVersions = 6 [default = 1];
-  optional bool cacheBlocks = 7 [default = true];
-  optional uint32 storeLimit = 8;
-  optional uint32 storeOffset = 9;
+  optional TimeRange time_range = 5;
+  optional uint32 max_versions = 6 [default = 1];
+  optional bool cache_blocks = 7 [default = true];
+  optional uint32 store_limit = 8;
+  optional uint32 store_offset = 9;
 }
 
 message Result {
@@ -60,18 +60,18 @@ message Result {
   // not part of this protobuf message; they are passed alongside
   // and then this Message is just a placeholder with metadata.
   // The count is needed to know how many to peel off the block of Cells as
-  // ours.  NOTE: This is different from the pb managed cellCount of the
+  // ours.  NOTE: This is different from the pb managed cell_count of the
   // 'cell' field above which is non-null when the cells are pb'd.
-  optional int32 associatedCellCount = 2;
+  optional int32 associated_cell_count = 2;
 }
 
 /**
  * The get request. Perform a single Get operation.
- * Unless existenceOnly is specified, return all the requested data
+ * Unless existence_only is specified, return all the requested data
  * for the row that matches exactly, or the one that immediately
- * precedes it if closestRowBefore is specified.
+ * precedes it if closest_row_before is specified.
  *
- * If existenceOnly is set, only the existence will be returned.
+ * If existence_only is set, only the existence will be returned.
  */
 message GetRequest {
   required RegionSpecifier region = 1;
@@ -79,12 +79,12 @@ message GetRequest {
 
   // If the row to get doesn't exist, return the
   // closest row before.
-  optional bool closestRowBefore = 3;
+  optional bool closest_row_before = 3;
 
   // The result isn't asked for, just check for
-  // the existence. If closestRowBefore specified,
+  // the existence. If closest_row_before specified,
   // this will be ignored
-  optional bool existenceOnly = 4;
+  optional bool existence_only = 4;
 }
 
 message MultiGetRequest {
@@ -93,12 +93,12 @@ message MultiGetRequest {
 
   // If the row to get doesn't exist, return the
   // closest row before.
-  optional bool closestRowBefore = 3;
+  optional bool closest_row_before = 3;
 
   // The result isn't asked for, just check for
-  // the existence. If closestRowBefore specified,
+  // the existence. If closest_row_before specified,
   // this will be ignored
-  optional bool existenceOnly = 4;
+  optional bool existence_only = 4;
 }
 
 message GetResponse {
@@ -125,7 +125,7 @@ message Condition {
   required bytes row = 1;
   required bytes family = 2;
   required bytes qualifier = 3;
-  required CompareType compareType = 4;
+  required CompareType compare_type = 4;
   required Comparator comparator = 5;
 }
 
@@ -139,22 +139,22 @@ message Condition {
  */
 message MutationProto {
   optional bytes row = 1;
-  optional MutationType mutateType = 2;
-  repeated ColumnValue columnValue = 3;
+  optional MutationType mutate_type = 2;
+  repeated ColumnValue column_value = 3;
   optional uint64 timestamp = 4;
   repeated NameBytesPair attribute = 5;
   optional Durability durability = 6 [default = USE_DEFAULT];
 
   // For some mutations, a result may be returned, in which case,
   // time range can be specified for potential performance gain
-  optional TimeRange timeRange = 7;
+  optional TimeRange time_range = 7;
   // The below count is set when the associated cells are NOT
   // part of this protobuf message; they are passed alongside
   // and then this Message is a placeholder with metadata.  The
   // count is needed to know how many to peel off the block of Cells as
-  // ours.  NOTE: This is different from the pb managed cellCount of the
+  // ours.  NOTE: This is different from the pb managed cell_count of the
   // 'cell' field above which is non-null when the cells are pb'd.
-  optional int32 associatedCellCount = 8;
+  optional int32 associated_cell_count = 8;
 
   enum Durability {
     USE_DEFAULT  = 0;
@@ -180,13 +180,13 @@ message MutationProto {
 
   message ColumnValue {
     required bytes family = 1;
-    repeated QualifierValue qualifierValue = 2;
+    repeated QualifierValue qualifier_value = 2;
 
     message QualifierValue {
       optional bytes qualifier = 1;
       optional bytes value = 2;
       optional uint64 timestamp = 3;
-      optional DeleteType deleteType = 4;
+      optional DeleteType delete_type = 4;
     }
   }
 }
@@ -225,18 +225,18 @@ message MutateResponse {
 message Scan {
   repeated Column column = 1;
   repeated NameBytesPair attribute = 2;
-  optional bytes startRow = 3;
-  optional bytes stopRow = 4;
+  optional bytes start_row = 3;
+  optional bytes stop_row = 4;
   optional Filter filter = 5;
-  optional TimeRange timeRange = 6;
-  optional uint32 maxVersions = 7 [default = 1];
-  optional bool cacheBlocks = 8 [default = true];
-  optional uint32 batchSize = 9;
-  optional uint64 maxResultSize = 10;
-  optional uint32 storeLimit = 11;
-  optional uint32 storeOffset = 12;
-  optional bool loadColumnFamiliesOnDemand = 13; /* DO NOT add defaults to loadColumnFamiliesOnDemand. */
-  optional uint32 cachingCount = 14;
+  optional TimeRange time_range = 6;
+  optional uint32 max_versions = 7 [default = 1];
+  optional bool cache_blocks = 8 [default = true];
+  optional uint32 batch_size = 9;
+  optional uint64 max_result_size = 10;
+  optional uint32 store_limit = 11;
+  optional uint32 store_offset = 12;
+  optional bool load_column_families_on_demand = 13; /* DO NOT add defaults to load_column_families_on_demand. */
+  optional uint32 caching_count = 14;
   optional bool prefetching = 15;
 }
 
@@ -254,25 +254,25 @@ message Scan {
 message ScanRequest {
   optional RegionSpecifier region = 1;
   optional Scan scan = 2;
-  optional uint64 scannerId = 3;
-  optional uint32 numberOfRows = 4;
-  optional bool closeScanner = 5;
-  optional uint64 nextCallSeq = 6;
+  optional uint64 scanner_id = 3;
+  optional uint32 number_of_rows = 4;
+  optional bool close_scanner = 5;
+  optional uint64 next_call_seq = 6;
 }
 
 /**
- * The scan response. If there are no more results, moreResults will
+ * The scan response. If there are no more results, more_results will
  * be false.  If it is not specified, it means there are more.
  */
 message ScanResponse {
-  optional ResultCellMeta resultCellMeta = 1;
-  optional uint64 scannerId = 2;
-  optional bool moreResults = 3;
+  optional ResultCellMeta result_cell_meta = 1;
+  optional uint64 scanner_id = 2;
+  optional bool more_results = 3;
   optional uint32 ttl = 4;
 }
 
 message ResultCellMeta {
-  repeated uint32 cellsLength = 1;
+  repeated uint32 cells_length = 1;
 }
 
 /**
@@ -281,8 +281,8 @@ message ResultCellMeta {
  */
 message BulkLoadHFileRequest {
   required RegionSpecifier region = 1;
-  repeated FamilyPath familyPath = 2;
-  optional bool assignSeqNum = 3;
+  repeated FamilyPath family_path = 2;
+  optional bool assign_seq_num = 3;
 
   message FamilyPath {
     required bytes family = 1;
@@ -296,8 +296,8 @@ message BulkLoadHFileResponse {
 
 message CoprocessorServiceCall {
   required bytes row = 1;
-  required string serviceName = 2;
-  required string methodName = 3;
+  required string service_name = 2;
+  required string method_name = 3;
   required bytes request = 4;
 }
 
@@ -352,24 +352,24 @@ message MultiResponse {
 
 
 service ClientService {
-  rpc get(GetRequest)
+  rpc Get(GetRequest)
     returns(GetResponse);
 
-  rpc multiGet(MultiGetRequest)
+  rpc MultiGet(MultiGetRequest)
     returns(MultiGetResponse);
 
-  rpc mutate(MutateRequest)
+  rpc Mutate(MutateRequest)
     returns(MutateResponse);
 
-  rpc scan(ScanRequest)
+  rpc Scan(ScanRequest)
     returns(ScanResponse);
 
-  rpc bulkLoadHFile(BulkLoadHFileRequest)
+  rpc BulkLoadHFile(BulkLoadHFileRequest)
     returns(BulkLoadHFileResponse);
 
-  rpc execService(CoprocessorServiceRequest)
+  rpc ExecService(CoprocessorServiceRequest)
     returns(CoprocessorServiceResponse);
 
-  rpc multi(MultiRequest)
+  rpc Multi(MultiRequest)
     returns(MultiResponse);
 }

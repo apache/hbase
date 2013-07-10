@@ -32,7 +32,7 @@ import "Cell.proto";
 message TableSchema {
   optional bytes name = 1;
   repeated BytesBytesPair attributes = 2;
-  repeated ColumnFamilySchema columnFamilies = 3;
+  repeated ColumnFamilySchema column_families = 3;
   repeated NameStringPair configuration = 4;
 }
 
@@ -50,10 +50,10 @@ message ColumnFamilySchema {
  * Protocol buffer version of HRegionInfo.
  */
 message RegionInfo {
-  required uint64 regionId = 1;
-  required bytes tableName = 2;
-  optional bytes startKey = 3;
-  optional bytes endKey = 4;
+  required uint64 region_id = 1;
+  required bytes table_name = 2;
+  optional bytes start_key = 3;
+  optional bytes end_key = 4;
   optional bool offline = 5;
   optional bool split = 6;
   optional bool recovering = 7;
@@ -63,7 +63,7 @@ message RegionInfo {
  * Protocol buffer for favored nodes
  */
 message FavoredNodes {
-  repeated ServerName favoredNode = 1;
+  repeated ServerName favored_node = 1;
 }
 
 /**
@@ -111,9 +111,9 @@ enum CompareType {
  * Protocol buffer version of ServerName
  */
 message ServerName {
-  required string hostName = 1;
+  required string host_name = 1;
   optional uint32 port = 2;
-  optional uint64 startCode = 3;
+  optional uint64 start_code = 3;
 }
 
 // Comment data structures
@@ -148,7 +148,7 @@ message NameInt64Pair {
 message SnapshotDescription {
   required string name = 1;
   optional string table = 2; // not needed for delete, but checked for in taking snapshot
-  optional int64 creationTime = 3 [default = 0];
+  optional int64 creation_time = 3 [default = 0];
   enum Type {
     DISABLED = 0;
     FLUSH = 1;
@@ -161,15 +161,15 @@ message EmptyMsg {
 }
 
 message LongMsg {
-  required int64 longMsg = 1;
+  required int64 long_msg = 1;
 
 }
 
 message BigDecimalMsg {
-  required bytes bigdecimalMsg = 1;
+  required bytes bigdecimal_msg = 1;
 }
 
 message UUID {
-  required uint64 leastSigBits = 1;
-  required uint64 mostSigBits = 2;
+  required uint64 least_sig_bits = 1;
+  required uint64 most_sig_bits = 2;
 }

@@ -28,7 +28,7 @@ option optimize_for = SPEED;
 
 message Comparator {
   required string name = 1;
-  optional bytes serializedComparator = 2;
+  optional bytes serialized_comparator = 2;
 }
 
 message ByteArrayComparable {
@@ -45,7 +45,7 @@ message BinaryPrefixComparator {
 
 message BitComparator {
   required ByteArrayComparable comparable = 1;
-  required BitwiseOp bitwiseOp = 2;
+  required BitwiseOp bitwise_op = 2;
 
   enum BitwiseOp {
     AND = 1;
@@ -59,7 +59,7 @@ message NullComparator {
 
 message RegexStringComparator {
   required string pattern = 1;
-  required int32 patternFlags = 2;
+  required int32 pattern_flags = 2;
   required string charset = 3;
 }
 

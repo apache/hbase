@@ -133,7 +133,7 @@ public class TokenProvider implements AuthenticationProtos.AuthenticationService
   }
 
   @Override
-  public void whoami(RpcController controller, AuthenticationProtos.WhoAmIRequest request,
+  public void whoAmI(RpcController controller, AuthenticationProtos.WhoAmIRequest request,
                      RpcCallback<AuthenticationProtos.WhoAmIResponse> done) {
     User requestUser = RequestContext.getRequestUser();
     AuthenticationProtos.WhoAmIResponse.Builder response =

@@ -15,7 +15,7 @@ public final class ComparatorProtos {
     boolean hasName();
     String getName();
     
-    // optional bytes serializedComparator = 2;
+    // optional bytes serialized_comparator = 2;
     boolean hasSerializedComparator();
     com.google.protobuf.ByteString getSerializedComparator();
   }
@@ -80,8 +80,8 @@ public final class ComparatorProtos {
       }
     }
     
-    // optional bytes serializedComparator = 2;
-    public static final int SERIALIZEDCOMPARATOR_FIELD_NUMBER = 2;
+    // optional bytes serialized_comparator = 2;
+    public static final int SERIALIZED_COMPARATOR_FIELD_NUMBER = 2;
     private com.google.protobuf.ByteString serializedComparator_;
     public boolean hasSerializedComparator() {
       return ((bitField0_ & 0x00000002) == 0x00000002);
@@ -180,7 +180,7 @@ public final class ComparatorProtos {
         hash = (53 * hash) + getName().hashCode();
       }
       if (hasSerializedComparator()) {
-        hash = (37 * hash) + SERIALIZEDCOMPARATOR_FIELD_NUMBER;
+        hash = (37 * hash) + SERIALIZED_COMPARATOR_FIELD_NUMBER;
         hash = (53 * hash) + getSerializedComparator().hashCode();
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
@@ -458,7 +458,7 @@ public final class ComparatorProtos {
         onChanged();
       }
       
-      // optional bytes serializedComparator = 2;
+      // optional bytes serialized_comparator = 2;
       private com.google.protobuf.ByteString serializedComparator_ = com.google.protobuf.ByteString.EMPTY;
       public boolean hasSerializedComparator() {
         return ((bitField0_ & 0x00000002) == 0x00000002);
@@ -1805,7 +1805,7 @@ public final class ComparatorProtos {
     org.apache.hadoop.hbase.protobuf.generated.ComparatorProtos.ByteArrayComparable getComparable();
     org.apache.hadoop.hbase.protobuf.generated.ComparatorProtos.ByteArrayComparableOrBuilder getComparableOrBuilder();
     
-    // required .BitComparator.BitwiseOp bitwiseOp = 2;
+    // required .BitComparator.BitwiseOp bitwise_op = 2;
     boolean hasBitwiseOp();
     org.apache.hadoop.hbase.protobuf.generated.ComparatorProtos.BitComparator.BitwiseOp getBitwiseOp();
   }
@@ -1923,8 +1923,8 @@ public final class ComparatorProtos {
       return comparable_;
     }
     
-    // required .BitComparator.BitwiseOp bitwiseOp = 2;
-    public static final int BITWISEOP_FIELD_NUMBER = 2;
+    // required .BitComparator.BitwiseOp bitwise_op = 2;
+    public static final int BITWISE_OP_FIELD_NUMBER = 2;
     private org.apache.hadoop.hbase.protobuf.generated.ComparatorProtos.BitComparator.BitwiseOp bitwiseOp_;
     public boolean hasBitwiseOp() {
       return ((bitField0_ & 0x00000002) == 0x00000002);
@@ -2027,7 +2027,7 @@ public final class ComparatorProtos {
         hash = (53 * hash) + getComparable().hashCode();
       }
       if (hasBitwiseOp()) {
-        hash = (37 * hash) + BITWISEOP_FIELD_NUMBER;
+        hash = (37 * hash) + BITWISE_OP_FIELD_NUMBER;
         hash = (53 * hash) + hashEnum(getBitwiseOp());
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
@@ -2382,7 +2382,7 @@ public final class ComparatorProtos {
         return comparableBuilder_;
       }
       
-      // required .BitComparator.BitwiseOp bitwiseOp = 2;
+      // required .BitComparator.BitwiseOp bitwise_op = 2;
       private org.apache.hadoop.hbase.protobuf.generated.ComparatorProtos.BitComparator.BitwiseOp bitwiseOp_ = org.apache.hadoop.hbase.protobuf.generated.ComparatorProtos.BitComparator.BitwiseOp.AND;
       public boolean hasBitwiseOp() {
         return ((bitField0_ & 0x00000002) == 0x00000002);
@@ -2724,7 +2724,7 @@ public final class ComparatorProtos {
     boolean hasPattern();
     String getPattern();
     
-    // required int32 patternFlags = 2;
+    // required int32 pattern_flags = 2;
     boolean hasPatternFlags();
     int getPatternFlags();
     
@@ -2793,8 +2793,8 @@ public final class ComparatorProtos {
       }
     }
     
-    // required int32 patternFlags = 2;
-    public static final int PATTERNFLAGS_FIELD_NUMBER = 2;
+    // required int32 pattern_flags = 2;
+    public static final int PATTERN_FLAGS_FIELD_NUMBER = 2;
     private int patternFlags_;
     public boolean hasPatternFlags() {
       return ((bitField0_ & 0x00000002) == 0x00000002);
@@ -2946,7 +2946,7 @@ public final class ComparatorProtos {
         hash = (53 * hash) + getPattern().hashCode();
       }
       if (hasPatternFlags()) {
-        hash = (37 * hash) + PATTERNFLAGS_FIELD_NUMBER;
+        hash = (37 * hash) + PATTERN_FLAGS_FIELD_NUMBER;
         hash = (53 * hash) + getPatternFlags();
       }
       if (hasCharset()) {
@@ -3250,7 +3250,7 @@ public final class ComparatorProtos {
         onChanged();
       }
       
-      // required int32 patternFlags = 2;
+      // required int32 pattern_flags = 2;
       private int patternFlags_ ;
       public boolean hasPatternFlags() {
         return ((bitField0_ & 0x00000002) == 0x00000002);
@@ -3783,21 +3783,22 @@ public final class ComparatorProtos {
       descriptor;
   static {
     java.lang.String[] descriptorData = {
-      "\n\020Comparator.proto\"8\n\nComparator\022\014\n\004name" +
-      "\030\001 \002(\t\022\034\n\024serializedComparator\030\002 \001(\014\"$\n\023" +
-      "ByteArrayComparable\022\r\n\005value\030\001 \001(\014\"<\n\020Bi" +
-      "naryComparator\022(\n\ncomparable\030\001 \002(\0132\024.Byt" +
-      "eArrayComparable\"B\n\026BinaryPrefixComparat" +
-      "or\022(\n\ncomparable\030\001 \002(\0132\024.ByteArrayCompar" +
-      "able\"\215\001\n\rBitComparator\022(\n\ncomparable\030\001 \002" +
-      "(\0132\024.ByteArrayComparable\022+\n\tbitwiseOp\030\002 " +
-      "\002(\0162\030.BitComparator.BitwiseOp\"%\n\tBitwise" +
-      "Op\022\007\n\003AND\020\001\022\006\n\002OR\020\002\022\007\n\003XOR\020\003\"\020\n\016NullComp",
-      "arator\"O\n\025RegexStringComparator\022\017\n\007patte" +
-      "rn\030\001 \002(\t\022\024\n\014patternFlags\030\002 \002(\005\022\017\n\007charse" +
-      "t\030\003 \002(\t\"%\n\023SubstringComparator\022\016\n\006substr" +
-      "\030\001 \002(\tBF\n*org.apache.hadoop.hbase.protob" +
-      "uf.generatedB\020ComparatorProtosH\001\210\001\001\240\001\001"
+      "\n\020Comparator.proto\"9\n\nComparator\022\014\n\004name" +
+      "\030\001 \002(\t\022\035\n\025serialized_comparator\030\002 \001(\014\"$\n" +
+      "\023ByteArrayComparable\022\r\n\005value\030\001 \001(\014\"<\n\020B" +
+      "inaryComparator\022(\n\ncomparable\030\001 \002(\0132\024.By" +
+      "teArrayComparable\"B\n\026BinaryPrefixCompara" +
+      "tor\022(\n\ncomparable\030\001 \002(\0132\024.ByteArrayCompa" +
+      "rable\"\216\001\n\rBitComparator\022(\n\ncomparable\030\001 " +
+      "\002(\0132\024.ByteArrayComparable\022,\n\nbitwise_op\030" +
+      "\002 \002(\0162\030.BitComparator.BitwiseOp\"%\n\tBitwi" +
+      "seOp\022\007\n\003AND\020\001\022\006\n\002OR\020\002\022\007\n\003XOR\020\003\"\020\n\016NullCo",
+      "mparator\"P\n\025RegexStringComparator\022\017\n\007pat" +
+      "tern\030\001 \002(\t\022\025\n\rpattern_flags\030\002 \002(\005\022\017\n\007cha" +
+      "rset\030\003 \002(\t\"%\n\023SubstringComparator\022\016\n\006sub" +
+      "str\030\001 \002(\tBF\n*org.apache.hadoop.hbase.pro" +
+      "tobuf.generatedB\020ComparatorProtosH\001\210\001\001\240\001" +
+      "\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {

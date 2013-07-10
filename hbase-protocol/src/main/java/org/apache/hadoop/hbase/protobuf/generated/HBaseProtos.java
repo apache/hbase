@@ -109,7 +109,7 @@ public final class HBaseProtos {
     org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPairOrBuilder getAttributesOrBuilder(
         int index);
     
-    // repeated .ColumnFamilySchema columnFamilies = 3;
+    // repeated .ColumnFamilySchema column_families = 3;
     java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ColumnFamilySchema> 
         getColumnFamiliesList();
     org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ColumnFamilySchema getColumnFamilies(int index);
@@ -189,8 +189,8 @@ public final class HBaseProtos {
       return attributes_.get(index);
     }
     
-    // repeated .ColumnFamilySchema columnFamilies = 3;
-    public static final int COLUMNFAMILIES_FIELD_NUMBER = 3;
+    // repeated .ColumnFamilySchema column_families = 3;
+    public static final int COLUMN_FAMILIES_FIELD_NUMBER = 3;
     private java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ColumnFamilySchema> columnFamilies_;
     public java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ColumnFamilySchema> getColumnFamiliesList() {
       return columnFamilies_;
@@ -356,7 +356,7 @@ public final class HBaseProtos {
         hash = (53 * hash) + getAttributesList().hashCode();
       }
       if (getColumnFamiliesCount() > 0) {
-        hash = (37 * hash) + COLUMNFAMILIES_FIELD_NUMBER;
+        hash = (37 * hash) + COLUMN_FAMILIES_FIELD_NUMBER;
         hash = (53 * hash) + getColumnFamiliesList().hashCode();
       }
       if (getConfigurationCount() > 0) {
@@ -956,7 +956,7 @@ public final class HBaseProtos {
         return attributesBuilder_;
       }
       
-      // repeated .ColumnFamilySchema columnFamilies = 3;
+      // repeated .ColumnFamilySchema column_families = 3;
       private java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ColumnFamilySchema> columnFamilies_ =
         java.util.Collections.emptyList();
       private void ensureColumnFamiliesIsMutable() {
@@ -2306,19 +2306,19 @@ public final class HBaseProtos {
   public interface RegionInfoOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
     
-    // required uint64 regionId = 1;
+    // required uint64 region_id = 1;
     boolean hasRegionId();
     long getRegionId();
     
-    // required bytes tableName = 2;
+    // required bytes table_name = 2;
     boolean hasTableName();
     com.google.protobuf.ByteString getTableName();
     
-    // optional bytes startKey = 3;
+    // optional bytes start_key = 3;
     boolean hasStartKey();
     com.google.protobuf.ByteString getStartKey();
     
-    // optional bytes endKey = 4;
+    // optional bytes end_key = 4;
     boolean hasEndKey();
     com.google.protobuf.ByteString getEndKey();
     
@@ -2363,8 +2363,8 @@ public final class HBaseProtos {
     }
     
     private int bitField0_;
-    // required uint64 regionId = 1;
-    public static final int REGIONID_FIELD_NUMBER = 1;
+    // required uint64 region_id = 1;
+    public static final int REGION_ID_FIELD_NUMBER = 1;
     private long regionId_;
     public boolean hasRegionId() {
       return ((bitField0_ & 0x00000001) == 0x00000001);
@@ -2373,8 +2373,8 @@ public final class HBaseProtos {
       return regionId_;
     }
     
-    // required bytes tableName = 2;
-    public static final int TABLENAME_FIELD_NUMBER = 2;
+    // required bytes table_name = 2;
+    public static final int TABLE_NAME_FIELD_NUMBER = 2;
     private com.google.protobuf.ByteString tableName_;
     public boolean hasTableName() {
       return ((bitField0_ & 0x00000002) == 0x00000002);
@@ -2383,8 +2383,8 @@ public final class HBaseProtos {
       return tableName_;
     }
     
-    // optional bytes startKey = 3;
-    public static final int STARTKEY_FIELD_NUMBER = 3;
+    // optional bytes start_key = 3;
+    public static final int START_KEY_FIELD_NUMBER = 3;
     private com.google.protobuf.ByteString startKey_;
     public boolean hasStartKey() {
       return ((bitField0_ & 0x00000004) == 0x00000004);
@@ -2393,8 +2393,8 @@ public final class HBaseProtos {
       return startKey_;
     }
     
-    // optional bytes endKey = 4;
-    public static final int ENDKEY_FIELD_NUMBER = 4;
+    // optional bytes end_key = 4;
+    public static final int END_KEY_FIELD_NUMBER = 4;
     private com.google.protobuf.ByteString endKey_;
     public boolean hasEndKey() {
       return ((bitField0_ & 0x00000008) == 0x00000008);
@@ -2588,19 +2588,19 @@ public final class HBaseProtos {
       int hash = 41;
       hash = (19 * hash) + getDescriptorForType().hashCode();
       if (hasRegionId()) {
-        hash = (37 * hash) + REGIONID_FIELD_NUMBER;
+        hash = (37 * hash) + REGION_ID_FIELD_NUMBER;
         hash = (53 * hash) + hashLong(getRegionId());
       }
       if (hasTableName()) {
-        hash = (37 * hash) + TABLENAME_FIELD_NUMBER;
+        hash = (37 * hash) + TABLE_NAME_FIELD_NUMBER;
         hash = (53 * hash) + getTableName().hashCode();
       }
       if (hasStartKey()) {
-        hash = (37 * hash) + STARTKEY_FIELD_NUMBER;
+        hash = (37 * hash) + START_KEY_FIELD_NUMBER;
         hash = (53 * hash) + getStartKey().hashCode();
       }
       if (hasEndKey()) {
-        hash = (37 * hash) + ENDKEY_FIELD_NUMBER;
+        hash = (37 * hash) + END_KEY_FIELD_NUMBER;
         hash = (53 * hash) + getEndKey().hashCode();
       }
       if (hasOffline()) {
@@ -2928,7 +2928,7 @@ public final class HBaseProtos {
       
       private int bitField0_;
       
-      // required uint64 regionId = 1;
+      // required uint64 region_id = 1;
       private long regionId_ ;
       public boolean hasRegionId() {
         return ((bitField0_ & 0x00000001) == 0x00000001);
@@ -2949,7 +2949,7 @@ public final class HBaseProtos {
         return this;
       }
       
-      // required bytes tableName = 2;
+      // required bytes table_name = 2;
       private com.google.protobuf.ByteString tableName_ = com.google.protobuf.ByteString.EMPTY;
       public boolean hasTableName() {
         return ((bitField0_ & 0x00000002) == 0x00000002);
@@ -2973,7 +2973,7 @@ public final class HBaseProtos {
         return this;
       }
       
-      // optional bytes startKey = 3;
+      // optional bytes start_key = 3;
       private com.google.protobuf.ByteString startKey_ = com.google.protobuf.ByteString.EMPTY;
       public boolean hasStartKey() {
         return ((bitField0_ & 0x00000004) == 0x00000004);
@@ -2997,7 +2997,7 @@ public final class HBaseProtos {
         return this;
       }
       
-      // optional bytes endKey = 4;
+      // optional bytes end_key = 4;
       private com.google.protobuf.ByteString endKey_ = com.google.protobuf.ByteString.EMPTY;
       public boolean hasEndKey() {
         return ((bitField0_ & 0x00000008) == 0x00000008);
@@ -3098,7 +3098,7 @@ public final class HBaseProtos {
   public interface FavoredNodesOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
     
-    // repeated .ServerName favoredNode = 1;
+    // repeated .ServerName favored_node = 1;
     java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName> 
         getFavoredNodeList();
     org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName getFavoredNode(int index);
@@ -3136,8 +3136,8 @@ public final class HBaseProtos {
       return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_FavoredNodes_fieldAccessorTable;
     }
     
-    // repeated .ServerName favoredNode = 1;
-    public static final int FAVOREDNODE_FIELD_NUMBER = 1;
+    // repeated .ServerName favored_node = 1;
+    public static final int FAVORED_NODE_FIELD_NUMBER = 1;
     private java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName> favoredNode_;
     public java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName> getFavoredNodeList() {
       return favoredNode_;
@@ -3229,7 +3229,7 @@ public final class HBaseProtos {
       int hash = 41;
       hash = (19 * hash) + getDescriptorForType().hashCode();
       if (getFavoredNodeCount() > 0) {
-        hash = (37 * hash) + FAVOREDNODE_FIELD_NUMBER;
+        hash = (37 * hash) + FAVORED_NODE_FIELD_NUMBER;
         hash = (53 * hash) + getFavoredNodeList().hashCode();
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
@@ -3491,7 +3491,7 @@ public final class HBaseProtos {
       
       private int bitField0_;
       
-      // repeated .ServerName favoredNode = 1;
+      // repeated .ServerName favored_node = 1;
       private java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName> favoredNode_ =
         java.util.Collections.emptyList();
       private void ensureFavoredNodeIsMutable() {
@@ -4662,7 +4662,7 @@ public final class HBaseProtos {
   public interface ServerNameOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
     
-    // required string hostName = 1;
+    // required string host_name = 1;
     boolean hasHostName();
     String getHostName();
     
@@ -4670,7 +4670,7 @@ public final class HBaseProtos {
     boolean hasPort();
     int getPort();
     
-    // optional uint64 startCode = 3;
+    // optional uint64 start_code = 3;
     boolean hasStartCode();
     long getStartCode();
   }
@@ -4703,8 +4703,8 @@ public final class HBaseProtos {
     }
     
     private int bitField0_;
-    // required string hostName = 1;
-    public static final int HOSTNAME_FIELD_NUMBER = 1;
+    // required string host_name = 1;
+    public static final int HOST_NAME_FIELD_NUMBER = 1;
     private java.lang.Object hostName_;
     public boolean hasHostName() {
       return ((bitField0_ & 0x00000001) == 0x00000001);
@@ -4745,8 +4745,8 @@ public final class HBaseProtos {
       return port_;
     }
     
-    // optional uint64 startCode = 3;
-    public static final int STARTCODE_FIELD_NUMBER = 3;
+    // optional uint64 start_code = 3;
+    public static final int START_CODE_FIELD_NUMBER = 3;
     private long startCode_;
     public boolean hasStartCode() {
       return ((bitField0_ & 0x00000004) == 0x00000004);
@@ -4854,7 +4854,7 @@ public final class HBaseProtos {
       int hash = 41;
       hash = (19 * hash) + getDescriptorForType().hashCode();
       if (hasHostName()) {
-        hash = (37 * hash) + HOSTNAME_FIELD_NUMBER;
+        hash = (37 * hash) + HOST_NAME_FIELD_NUMBER;
         hash = (53 * hash) + getHostName().hashCode();
       }
       if (hasPort()) {
@@ -4862,7 +4862,7 @@ public final class HBaseProtos {
         hash = (53 * hash) + getPort();
       }
       if (hasStartCode()) {
-        hash = (37 * hash) + STARTCODE_FIELD_NUMBER;
+        hash = (37 * hash) + START_CODE_FIELD_NUMBER;
         hash = (53 * hash) + hashLong(getStartCode());
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
@@ -5118,7 +5118,7 @@ public final class HBaseProtos {
       
       private int bitField0_;
       
-      // required string hostName = 1;
+      // required string host_name = 1;
       private java.lang.Object hostName_ = "";
       public boolean hasHostName() {
         return ((bitField0_ & 0x00000001) == 0x00000001);
@@ -5175,7 +5175,7 @@ public final class HBaseProtos {
         return this;
       }
       
-      // optional uint64 startCode = 3;
+      // optional uint64 start_code = 3;
       private long startCode_ ;
       public boolean hasStartCode() {
         return ((bitField0_ & 0x00000004) == 0x00000004);
@@ -7579,7 +7579,7 @@ public final class HBaseProtos {
     boolean hasTable();
     String getTable();
     
-    // optional int64 creationTime = 3 [default = 0];
+    // optional int64 creation_time = 3 [default = 0];
     boolean hasCreationTime();
     long getCreationTime();
     
@@ -7753,8 +7753,8 @@ public final class HBaseProtos {
       }
     }
     
-    // optional int64 creationTime = 3 [default = 0];
-    public static final int CREATIONTIME_FIELD_NUMBER = 3;
+    // optional int64 creation_time = 3 [default = 0];
+    public static final int CREATION_TIME_FIELD_NUMBER = 3;
     private long creationTime_;
     public boolean hasCreationTime() {
       return ((bitField0_ & 0x00000004) == 0x00000004);
@@ -7916,7 +7916,7 @@ public final class HBaseProtos {
         hash = (53 * hash) + getTable().hashCode();
       }
       if (hasCreationTime()) {
-        hash = (37 * hash) + CREATIONTIME_FIELD_NUMBER;
+        hash = (37 * hash) + CREATION_TIME_FIELD_NUMBER;
         hash = (53 * hash) + hashLong(getCreationTime());
       }
       if (hasType()) {
@@ -8286,7 +8286,7 @@ public final class HBaseProtos {
         onChanged();
       }
       
-      // optional int64 creationTime = 3 [default = 0];
+      // optional int64 creation_time = 3 [default = 0];
       private long creationTime_ ;
       public boolean hasCreationTime() {
         return ((bitField0_ & 0x00000004) == 0x00000004);
@@ -8666,7 +8666,7 @@ public final class HBaseProtos {
   public interface LongMsgOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
     
-    // required int64 longMsg = 1;
+    // required int64 long_msg = 1;
     boolean hasLongMsg();
     long getLongMsg();
   }
@@ -8699,8 +8699,8 @@ public final class HBaseProtos {
     }
     
     private int bitField0_;
-    // required int64 longMsg = 1;
-    public static final int LONGMSG_FIELD_NUMBER = 1;
+    // required int64 long_msg = 1;
+    public static final int LONG_MSG_FIELD_NUMBER = 1;
     private long longMsg_;
     public boolean hasLongMsg() {
       return ((bitField0_ & 0x00000001) == 0x00000001);
@@ -8782,7 +8782,7 @@ public final class HBaseProtos {
       int hash = 41;
       hash = (19 * hash) + getDescriptorForType().hashCode();
       if (hasLongMsg()) {
-        hash = (37 * hash) + LONGMSG_FIELD_NUMBER;
+        hash = (37 * hash) + LONG_MSG_FIELD_NUMBER;
         hash = (53 * hash) + hashLong(getLongMsg());
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
@@ -9010,7 +9010,7 @@ public final class HBaseProtos {
       
       private int bitField0_;
       
-      // required int64 longMsg = 1;
+      // required int64 long_msg = 1;
       private long longMsg_ ;
       public boolean hasLongMsg() {
         return ((bitField0_ & 0x00000001) == 0x00000001);
@@ -9045,7 +9045,7 @@ public final class HBaseProtos {
   public interface BigDecimalMsgOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
     
-    // required bytes bigdecimalMsg = 1;
+    // required bytes bigdecimal_msg = 1;
     boolean hasBigdecimalMsg();
     com.google.protobuf.ByteString getBigdecimalMsg();
   }
@@ -9078,8 +9078,8 @@ public final class HBaseProtos {
     }
     
     private int bitField0_;
-    // required bytes bigdecimalMsg = 1;
-    public static final int BIGDECIMALMSG_FIELD_NUMBER = 1;
+    // required bytes bigdecimal_msg = 1;
+    public static final int BIGDECIMAL_MSG_FIELD_NUMBER = 1;
     private com.google.protobuf.ByteString bigdecimalMsg_;
     public boolean hasBigdecimalMsg() {
       return ((bitField0_ & 0x00000001) == 0x00000001);
@@ -9161,7 +9161,7 @@ public final class HBaseProtos {
       int hash = 41;
       hash = (19 * hash) + getDescriptorForType().hashCode();
       if (hasBigdecimalMsg()) {
-        hash = (37 * hash) + BIGDECIMALMSG_FIELD_NUMBER;
+        hash = (37 * hash) + BIGDECIMAL_MSG_FIELD_NUMBER;
         hash = (53 * hash) + getBigdecimalMsg().hashCode();
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
@@ -9389,7 +9389,7 @@ public final class HBaseProtos {
       
       private int bitField0_;
       
-      // required bytes bigdecimalMsg = 1;
+      // required bytes bigdecimal_msg = 1;
       private com.google.protobuf.ByteString bigdecimalMsg_ = com.google.protobuf.ByteString.EMPTY;
       public boolean hasBigdecimalMsg() {
         return ((bitField0_ & 0x00000001) == 0x00000001);
@@ -9427,11 +9427,11 @@ public final class HBaseProtos {
   public interface UUIDOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
     
-    // required uint64 leastSigBits = 1;
+    // required uint64 least_sig_bits = 1;
     boolean hasLeastSigBits();
     long getLeastSigBits();
     
-    // required uint64 mostSigBits = 2;
+    // required uint64 most_sig_bits = 2;
     boolean hasMostSigBits();
     long getMostSigBits();
   }
@@ -9464,8 +9464,8 @@ public final class HBaseProtos {
     }
     
     private int bitField0_;
-    // required uint64 leastSigBits = 1;
-    public static final int LEASTSIGBITS_FIELD_NUMBER = 1;
+    // required uint64 least_sig_bits = 1;
+    public static final int LEAST_SIG_BITS_FIELD_NUMBER = 1;
     private long leastSigBits_;
     public boolean hasLeastSigBits() {
       return ((bitField0_ & 0x00000001) == 0x00000001);
@@ -9474,8 +9474,8 @@ public final class HBaseProtos {
       return leastSigBits_;
     }
     
-    // required uint64 mostSigBits = 2;
-    public static final int MOSTSIGBITS_FIELD_NUMBER = 2;
+    // required uint64 most_sig_bits = 2;
+    public static final int MOST_SIG_BITS_FIELD_NUMBER = 2;
     private long mostSigBits_;
     public boolean hasMostSigBits() {
       return ((bitField0_ & 0x00000002) == 0x00000002);
@@ -9574,11 +9574,11 @@ public final class HBaseProtos {
       int hash = 41;
       hash = (19 * hash) + getDescriptorForType().hashCode();
       if (hasLeastSigBits()) {
-        hash = (37 * hash) + LEASTSIGBITS_FIELD_NUMBER;
+        hash = (37 * hash) + LEAST_SIG_BITS_FIELD_NUMBER;
         hash = (53 * hash) + hashLong(getLeastSigBits());
       }
       if (hasMostSigBits()) {
-        hash = (37 * hash) + MOSTSIGBITS_FIELD_NUMBER;
+        hash = (37 * hash) + MOST_SIG_BITS_FIELD_NUMBER;
         hash = (53 * hash) + hashLong(getMostSigBits());
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
@@ -9824,7 +9824,7 @@ public final class HBaseProtos {
       
       private int bitField0_;
       
-      // required uint64 leastSigBits = 1;
+      // required uint64 least_sig_bits = 1;
       private long leastSigBits_ ;
       public boolean hasLeastSigBits() {
         return ((bitField0_ & 0x00000001) == 0x00000001);
@@ -9845,7 +9845,7 @@ public final class HBaseProtos {
         return this;
       }
       
-      // required uint64 mostSigBits = 2;
+      // required uint64 most_sig_bits = 2;
       private long mostSigBits_ ;
       public boolean hasMostSigBits() {
         return ((bitField0_ & 0x00000002) == 0x00000002);
@@ -9971,42 +9971,43 @@ public final class HBaseProtos {
       descriptor;
   static {
     java.lang.String[] descriptorData = {
-      "\n\013hbase.proto\032\nCell.proto\"\225\001\n\013TableSchem" +
+      "\n\013hbase.proto\032\nCell.proto\"\226\001\n\013TableSchem" +
       "a\022\014\n\004name\030\001 \001(\014\022#\n\nattributes\030\002 \003(\0132\017.By" +
-      "tesBytesPair\022+\n\016columnFamilies\030\003 \003(\0132\023.C" +
-      "olumnFamilySchema\022&\n\rconfiguration\030\004 \003(\013" +
-      "2\017.NameStringPair\"o\n\022ColumnFamilySchema\022" +
-      "\014\n\004name\030\001 \002(\014\022#\n\nattributes\030\002 \003(\0132\017.Byte" +
-      "sBytesPair\022&\n\rconfiguration\030\003 \003(\0132\017.Name" +
-      "StringPair\"\207\001\n\nRegionInfo\022\020\n\010regionId\030\001 " +
-      "\002(\004\022\021\n\ttableName\030\002 \002(\014\022\020\n\010startKey\030\003 \001(\014" +
-      "\022\016\n\006endKey\030\004 \001(\014\022\017\n\007offline\030\005 \001(\010\022\r\n\005spl",
-      "it\030\006 \001(\010\022\022\n\nrecovering\030\007 \001(\010\"0\n\014FavoredN" +
-      "odes\022 \n\013favoredNode\030\001 \003(\0132\013.ServerName\"\225" +
-      "\001\n\017RegionSpecifier\0222\n\004type\030\001 \002(\0162$.Regio" +
-      "nSpecifier.RegionSpecifierType\022\r\n\005value\030" +
-      "\002 \002(\014\"?\n\023RegionSpecifierType\022\017\n\013REGION_N" +
-      "AME\020\001\022\027\n\023ENCODED_REGION_NAME\020\002\"%\n\tTimeRa" +
-      "nge\022\014\n\004from\030\001 \001(\004\022\n\n\002to\030\002 \001(\004\"?\n\nServerN" +
-      "ame\022\020\n\010hostName\030\001 \002(\t\022\014\n\004port\030\002 \001(\r\022\021\n\ts" +
-      "tartCode\030\003 \001(\004\"\033\n\013Coprocessor\022\014\n\004name\030\001 " +
-      "\002(\t\"-\n\016NameStringPair\022\014\n\004name\030\001 \002(\t\022\r\n\005v",
-      "alue\030\002 \002(\t\",\n\rNameBytesPair\022\014\n\004name\030\001 \002(" +
-      "\t\022\r\n\005value\030\002 \001(\014\"/\n\016BytesBytesPair\022\r\n\005fi" +
-      "rst\030\001 \002(\014\022\016\n\006second\030\002 \002(\014\",\n\rNameInt64Pa" +
-      "ir\022\014\n\004name\030\001 \001(\t\022\r\n\005value\030\002 \001(\003\"\255\001\n\023Snap" +
-      "shotDescription\022\014\n\004name\030\001 \002(\t\022\r\n\005table\030\002" +
-      " \001(\t\022\027\n\014creationTime\030\003 \001(\003:\0010\022.\n\004type\030\004 " +
-      "\001(\0162\031.SnapshotDescription.Type:\005FLUSH\022\017\n" +
-      "\007version\030\005 \001(\005\"\037\n\004Type\022\014\n\010DISABLED\020\000\022\t\n\005" +
-      "FLUSH\020\001\"\n\n\010EmptyMsg\"\032\n\007LongMsg\022\017\n\007longMs" +
-      "g\030\001 \002(\003\"&\n\rBigDecimalMsg\022\025\n\rbigdecimalMs",
-      "g\030\001 \002(\014\"1\n\004UUID\022\024\n\014leastSigBits\030\001 \002(\004\022\023\n" +
-      "\013mostSigBits\030\002 \002(\004*r\n\013CompareType\022\010\n\004LES" +
-      "S\020\000\022\021\n\rLESS_OR_EQUAL\020\001\022\t\n\005EQUAL\020\002\022\r\n\tNOT" +
-      "_EQUAL\020\003\022\024\n\020GREATER_OR_EQUAL\020\004\022\013\n\007GREATE" +
-      "R\020\005\022\t\n\005NO_OP\020\006B>\n*org.apache.hadoop.hbas" +
-      "e.protobuf.generatedB\013HBaseProtosH\001\240\001\001"
+      "tesBytesPair\022,\n\017column_families\030\003 \003(\0132\023." +
+      "ColumnFamilySchema\022&\n\rconfiguration\030\004 \003(" +
+      "\0132\017.NameStringPair\"o\n\022ColumnFamilySchema" +
+      "\022\014\n\004name\030\001 \002(\014\022#\n\nattributes\030\002 \003(\0132\017.Byt" +
+      "esBytesPair\022&\n\rconfiguration\030\003 \003(\0132\017.Nam" +
+      "eStringPair\"\213\001\n\nRegionInfo\022\021\n\tregion_id\030" +
+      "\001 \002(\004\022\022\n\ntable_name\030\002 \002(\014\022\021\n\tstart_key\030\003" +
+      " \001(\014\022\017\n\007end_key\030\004 \001(\014\022\017\n\007offline\030\005 \001(\010\022\r",
+      "\n\005split\030\006 \001(\010\022\022\n\nrecovering\030\007 \001(\010\"1\n\014Fav" +
+      "oredNodes\022!\n\014favored_node\030\001 \003(\0132\013.Server" +
+      "Name\"\225\001\n\017RegionSpecifier\0222\n\004type\030\001 \002(\0162$" +
+      ".RegionSpecifier.RegionSpecifierType\022\r\n\005" +
+      "value\030\002 \002(\014\"?\n\023RegionSpecifierType\022\017\n\013RE" +
+      "GION_NAME\020\001\022\027\n\023ENCODED_REGION_NAME\020\002\"%\n\t" +
+      "TimeRange\022\014\n\004from\030\001 \001(\004\022\n\n\002to\030\002 \001(\004\"A\n\nS" +
+      "erverName\022\021\n\thost_name\030\001 \002(\t\022\014\n\004port\030\002 \001" +
+      "(\r\022\022\n\nstart_code\030\003 \001(\004\"\033\n\013Coprocessor\022\014\n" +
+      "\004name\030\001 \002(\t\"-\n\016NameStringPair\022\014\n\004name\030\001 ",
+      "\002(\t\022\r\n\005value\030\002 \002(\t\",\n\rNameBytesPair\022\014\n\004n" +
+      "ame\030\001 \002(\t\022\r\n\005value\030\002 \001(\014\"/\n\016BytesBytesPa" +
+      "ir\022\r\n\005first\030\001 \002(\014\022\016\n\006second\030\002 \002(\014\",\n\rNam" +
+      "eInt64Pair\022\014\n\004name\030\001 \001(\t\022\r\n\005value\030\002 \001(\003\"" +
+      "\256\001\n\023SnapshotDescription\022\014\n\004name\030\001 \002(\t\022\r\n" +
+      "\005table\030\002 \001(\t\022\030\n\rcreation_time\030\003 \001(\003:\0010\022." +
+      "\n\004type\030\004 \001(\0162\031.SnapshotDescription.Type:" +
+      "\005FLUSH\022\017\n\007version\030\005 \001(\005\"\037\n\004Type\022\014\n\010DISAB" +
+      "LED\020\000\022\t\n\005FLUSH\020\001\"\n\n\010EmptyMsg\"\033\n\007LongMsg\022" +
+      "\020\n\010long_msg\030\001 \002(\003\"\'\n\rBigDecimalMsg\022\026\n\016bi",
+      "gdecimal_msg\030\001 \002(\014\"5\n\004UUID\022\026\n\016least_sig_" +
+      "bits\030\001 \002(\004\022\025\n\rmost_sig_bits\030\002 \002(\004*r\n\013Com" +
+      "pareType\022\010\n\004LESS\020\000\022\021\n\rLESS_OR_EQUAL\020\001\022\t\n" +
+      "\005EQUAL\020\002\022\r\n\tNOT_EQUAL\020\003\022\024\n\020GREATER_OR_EQ" +
+      "UAL\020\004\022\013\n\007GREATER\020\005\022\t\n\005NO_OP\020\006B>\n*org.apa" +
+      "che.hadoop.hbase.protobuf.generatedB\013HBa" +
+      "seProtosH\001\240\001\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {

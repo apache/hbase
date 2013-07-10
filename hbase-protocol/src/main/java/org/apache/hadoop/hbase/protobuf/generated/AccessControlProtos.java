@@ -6422,11 +6422,11 @@ public final class AccessControlProtos {
       "Permission\":\n\027CheckPermissionsRequest\022\037\n" +
       "\npermission\030\001 \003(\0132\013.Permission\"\032\n\030CheckP" +
       "ermissionsResponse2\373\001\n\024AccessControlServ" +
-      "ice\022&\n\005grant\022\r.GrantRequest\032\016.GrantRespo",
-      "nse\022)\n\006revoke\022\016.RevokeRequest\032\017.RevokeRe" +
-      "sponse\022G\n\022getUserPermissions\022\027.UserPermi" +
+      "ice\022&\n\005Grant\022\r.GrantRequest\032\016.GrantRespo",
+      "nse\022)\n\006Revoke\022\016.RevokeRequest\032\017.RevokeRe" +
+      "sponse\022G\n\022GetUserPermissions\022\027.UserPermi" +
       "ssionsRequest\032\030.UserPermissionsResponse\022" +
-      "G\n\020checkPermissions\022\030.CheckPermissionsRe" +
+      "G\n\020CheckPermissions\022\030.CheckPermissionsRe" +
       "quest\032\031.CheckPermissionsResponseBI\n*org." +
       "apache.hadoop.hbase.protobuf.generatedB\023" +
       "AccessControlProtosH\001\210\001\001\240\001\001"

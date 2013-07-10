@@ -16,7 +16,7 @@ public final class ZooKeeperProtos {
     org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName getServer();
     org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerNameOrBuilder getServerOrBuilder();
     
-    // optional uint32 rpcVersion = 2;
+    // optional uint32 rpc_version = 2;
     boolean hasRpcVersion();
     int getRpcVersion();
   }
@@ -62,8 +62,8 @@ public final class ZooKeeperProtos {
       return server_;
     }
     
-    // optional uint32 rpcVersion = 2;
-    public static final int RPCVERSION_FIELD_NUMBER = 2;
+    // optional uint32 rpc_version = 2;
+    public static final int RPC_VERSION_FIELD_NUMBER = 2;
     private int rpcVersion_;
     public boolean hasRpcVersion() {
       return ((bitField0_ & 0x00000002) == 0x00000002);
@@ -166,7 +166,7 @@ public final class ZooKeeperProtos {
         hash = (53 * hash) + getServer().hashCode();
       }
       if (hasRpcVersion()) {
-        hash = (37 * hash) + RPCVERSION_FIELD_NUMBER;
+        hash = (37 * hash) + RPC_VERSION_FIELD_NUMBER;
         hash = (53 * hash) + getRpcVersion();
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
@@ -515,7 +515,7 @@ public final class ZooKeeperProtos {
         return serverBuilder_;
       }
       
-      // optional uint32 rpcVersion = 2;
+      // optional uint32 rpc_version = 2;
       private int rpcVersion_ ;
       public boolean hasRpcVersion() {
         return ((bitField0_ & 0x00000002) == 0x00000002);
@@ -555,7 +555,7 @@ public final class ZooKeeperProtos {
     org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName getMaster();
     org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerNameOrBuilder getMasterOrBuilder();
     
-    // optional uint32 rpcVersion = 2;
+    // optional uint32 rpc_version = 2;
     boolean hasRpcVersion();
     int getRpcVersion();
   }
@@ -601,8 +601,8 @@ public final class ZooKeeperProtos {
       return master_;
     }
     
-    // optional uint32 rpcVersion = 2;
-    public static final int RPCVERSION_FIELD_NUMBER = 2;
+    // optional uint32 rpc_version = 2;
+    public static final int RPC_VERSION_FIELD_NUMBER = 2;
     private int rpcVersion_;
     public boolean hasRpcVersion() {
       return ((bitField0_ & 0x00000002) == 0x00000002);
@@ -705,7 +705,7 @@ public final class ZooKeeperProtos {
         hash = (53 * hash) + getMaster().hashCode();
       }
       if (hasRpcVersion()) {
-        hash = (37 * hash) + RPCVERSION_FIELD_NUMBER;
+        hash = (37 * hash) + RPC_VERSION_FIELD_NUMBER;
         hash = (53 * hash) + getRpcVersion();
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
@@ -1054,7 +1054,7 @@ public final class ZooKeeperProtos {
         return masterBuilder_;
       }
       
-      // optional uint32 rpcVersion = 2;
+      // optional uint32 rpc_version = 2;
       private int rpcVersion_ ;
       public boolean hasRpcVersion() {
         return ((bitField0_ & 0x00000002) == 0x00000002);
@@ -1089,7 +1089,7 @@ public final class ZooKeeperProtos {
   public interface ClusterUpOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
     
-    // required string startDate = 1;
+    // required string start_date = 1;
     boolean hasStartDate();
     String getStartDate();
   }
@@ -1122,8 +1122,8 @@ public final class ZooKeeperProtos {
     }
     
     private int bitField0_;
-    // required string startDate = 1;
-    public static final int STARTDATE_FIELD_NUMBER = 1;
+    // required string start_date = 1;
+    public static final int START_DATE_FIELD_NUMBER = 1;
     private java.lang.Object startDate_;
     public boolean hasStartDate() {
       return ((bitField0_ & 0x00000001) == 0x00000001);
@@ -1227,7 +1227,7 @@ public final class ZooKeeperProtos {
       int hash = 41;
       hash = (19 * hash) + getDescriptorForType().hashCode();
       if (hasStartDate()) {
-        hash = (37 * hash) + STARTDATE_FIELD_NUMBER;
+        hash = (37 * hash) + START_DATE_FIELD_NUMBER;
         hash = (53 * hash) + getStartDate().hashCode();
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
@@ -1455,7 +1455,7 @@ public final class ZooKeeperProtos {
       
       private int bitField0_;
       
-      // required string startDate = 1;
+      // required string start_date = 1;
       private java.lang.Object startDate_ = "";
       public boolean hasStartDate() {
         return ((bitField0_ & 0x00000001) == 0x00000001);
@@ -1505,19 +1505,19 @@ public final class ZooKeeperProtos {
   public interface RegionTransitionOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
     
-    // required uint32 eventTypeCode = 1;
+    // required uint32 event_type_code = 1;
     boolean hasEventTypeCode();
     int getEventTypeCode();
     
-    // required bytes regionName = 2;
+    // required bytes region_name = 2;
     boolean hasRegionName();
     com.google.protobuf.ByteString getRegionName();
     
-    // required uint64 createTime = 3;
+    // required uint64 create_time = 3;
     boolean hasCreateTime();
     long getCreateTime();
     
-    // required .ServerName serverName = 4;
+    // required .ServerName server_name = 4;
     boolean hasServerName();
     org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName getServerName();
     org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerNameOrBuilder getServerNameOrBuilder();
@@ -1555,8 +1555,8 @@ public final class ZooKeeperProtos {
     }
     
     private int bitField0_;
-    // required uint32 eventTypeCode = 1;
-    public static final int EVENTTYPECODE_FIELD_NUMBER = 1;
+    // required uint32 event_type_code = 1;
+    public static final int EVENT_TYPE_CODE_FIELD_NUMBER = 1;
     private int eventTypeCode_;
     public boolean hasEventTypeCode() {
       return ((bitField0_ & 0x00000001) == 0x00000001);
@@ -1565,8 +1565,8 @@ public final class ZooKeeperProtos {
       return eventTypeCode_;
     }
     
-    // required bytes regionName = 2;
-    public static final int REGIONNAME_FIELD_NUMBER = 2;
+    // required bytes region_name = 2;
+    public static final int REGION_NAME_FIELD_NUMBER = 2;
     private com.google.protobuf.ByteString regionName_;
     public boolean hasRegionName() {
       return ((bitField0_ & 0x00000002) == 0x00000002);
@@ -1575,8 +1575,8 @@ public final class ZooKeeperProtos {
       return regionName_;
     }
     
-    // required uint64 createTime = 3;
-    public static final int CREATETIME_FIELD_NUMBER = 3;
+    // required uint64 create_time = 3;
+    public static final int CREATE_TIME_FIELD_NUMBER = 3;
     private long createTime_;
     public boolean hasCreateTime() {
       return ((bitField0_ & 0x00000004) == 0x00000004);
@@ -1585,8 +1585,8 @@ public final class ZooKeeperProtos {
       return createTime_;
     }
     
-    // required .ServerName serverName = 4;
-    public static final int SERVERNAME_FIELD_NUMBER = 4;
+    // required .ServerName server_name = 4;
+    public static final int SERVER_NAME_FIELD_NUMBER = 4;
     private org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName serverName_;
     public boolean hasServerName() {
       return ((bitField0_ & 0x00000008) == 0x00000008);
@@ -1749,19 +1749,19 @@ public final class ZooKeeperProtos {
       int hash = 41;
       hash = (19 * hash) + getDescriptorForType().hashCode();
       if (hasEventTypeCode()) {
-        hash = (37 * hash) + EVENTTYPECODE_FIELD_NUMBER;
+        hash = (37 * hash) + EVENT_TYPE_CODE_FIELD_NUMBER;
         hash = (53 * hash) + getEventTypeCode();
       }
       if (hasRegionName()) {
-        hash = (37 * hash) + REGIONNAME_FIELD_NUMBER;
+        hash = (37 * hash) + REGION_NAME_FIELD_NUMBER;
         hash = (53 * hash) + getRegionName().hashCode();
       }
       if (hasCreateTime()) {
-        hash = (37 * hash) + CREATETIME_FIELD_NUMBER;
+        hash = (37 * hash) + CREATE_TIME_FIELD_NUMBER;
         hash = (53 * hash) + hashLong(getCreateTime());
       }
       if (hasServerName()) {
-        hash = (37 * hash) + SERVERNAME_FIELD_NUMBER;
+        hash = (37 * hash) + SERVER_NAME_FIELD_NUMBER;
         hash = (53 * hash) + getServerName().hashCode();
       }
       if (hasPayload()) {
@@ -2078,7 +2078,7 @@ public final class ZooKeeperProtos {
       
       private int bitField0_;
       
-      // required uint32 eventTypeCode = 1;
+      // required uint32 event_type_code = 1;
       private int eventTypeCode_ ;
       public boolean hasEventTypeCode() {
         return ((bitField0_ & 0x00000001) == 0x00000001);
@@ -2099,7 +2099,7 @@ public final class ZooKeeperProtos {
         return this;
       }
       
-      // required bytes regionName = 2;
+      // required bytes region_name = 2;
       private com.google.protobuf.ByteString regionName_ = com.google.protobuf.ByteString.EMPTY;
       public boolean hasRegionName() {
         return ((bitField0_ & 0x00000002) == 0x00000002);
@@ -2123,7 +2123,7 @@ public final class ZooKeeperProtos {
         return this;
       }
       
-      // required uint64 createTime = 3;
+      // required uint64 create_time = 3;
       private long createTime_ ;
       public boolean hasCreateTime() {
         return ((bitField0_ & 0x00000004) == 0x00000004);
@@ -2144,7 +2144,7 @@ public final class ZooKeeperProtos {
         return this;
       }
       
-      // required .ServerName serverName = 4;
+      // required .ServerName server_name = 4;
       private org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName serverName_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.getDefaultInstance();
       private com.google.protobuf.SingleFieldBuilder<
           org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerNameOrBuilder> serverNameBuilder_;
@@ -2276,7 +2276,7 @@ public final class ZooKeeperProtos {
     boolean hasState();
     org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.SplitLogTask.State getState();
     
-    // required .ServerName serverName = 2;
+    // required .ServerName server_name = 2;
     boolean hasServerName();
     org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName getServerName();
     org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerNameOrBuilder getServerNameOrBuilder();
@@ -2398,8 +2398,8 @@ public final class ZooKeeperProtos {
       return state_;
     }
     
-    // required .ServerName serverName = 2;
-    public static final int SERVERNAME_FIELD_NUMBER = 2;
+    // required .ServerName server_name = 2;
+    public static final int SERVER_NAME_FIELD_NUMBER = 2;
     private org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName serverName_;
     public boolean hasServerName() {
       return ((bitField0_ & 0x00000002) == 0x00000002);
@@ -2509,7 +2509,7 @@ public final class ZooKeeperProtos {
         hash = (53 * hash) + hashEnum(getState());
       }
       if (hasServerName()) {
-        hash = (37 * hash) + SERVERNAME_FIELD_NUMBER;
+        hash = (37 * hash) + SERVER_NAME_FIELD_NUMBER;
         hash = (53 * hash) + getServerName().hashCode();
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
@@ -2802,7 +2802,7 @@ public final class ZooKeeperProtos {
         return this;
       }
       
-      // required .ServerName serverName = 2;
+      // required .ServerName server_name = 2;
       private org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName serverName_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.getDefaultInstance();
       private com.google.protobuf.SingleFieldBuilder<
           org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerNameOrBuilder> serverNameBuilder_;
@@ -4621,7 +4621,7 @@ public final class ZooKeeperProtos {
   public interface ReplicationLockOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
     
-    // required string lockOwner = 1;
+    // required string lock_owner = 1;
     boolean hasLockOwner();
     String getLockOwner();
   }
@@ -4654,8 +4654,8 @@ public final class ZooKeeperProtos {
     }
     
     private int bitField0_;
-    // required string lockOwner = 1;
-    public static final int LOCKOWNER_FIELD_NUMBER = 1;
+    // required string lock_owner = 1;
+    public static final int LOCK_OWNER_FIELD_NUMBER = 1;
     private java.lang.Object lockOwner_;
     public boolean hasLockOwner() {
       return ((bitField0_ & 0x00000001) == 0x00000001);
@@ -4759,7 +4759,7 @@ public final class ZooKeeperProtos {
       int hash = 41;
       hash = (19 * hash) + getDescriptorForType().hashCode();
       if (hasLockOwner()) {
-        hash = (37 * hash) + LOCKOWNER_FIELD_NUMBER;
+        hash = (37 * hash) + LOCK_OWNER_FIELD_NUMBER;
         hash = (53 * hash) + getLockOwner().hashCode();
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
@@ -4987,7 +4987,7 @@ public final class ZooKeeperProtos {
       
       private int bitField0_;
       
-      // required string lockOwner = 1;
+      // required string lock_owner = 1;
       private java.lang.Object lockOwner_ = "";
       public boolean hasLockOwner() {
         return ((bitField0_ & 0x00000001) == 0x00000001);
@@ -5037,20 +5037,20 @@ public final class ZooKeeperProtos {
   public interface TableLockOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
     
-    // optional bytes tableName = 1;
+    // optional bytes table_name = 1;
     boolean hasTableName();
     com.google.protobuf.ByteString getTableName();
     
-    // optional .ServerName lockOwner = 2;
+    // optional .ServerName lock_owner = 2;
     boolean hasLockOwner();
     org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName getLockOwner();
     org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerNameOrBuilder getLockOwnerOrBuilder();
     
-    // optional int64 threadId = 3;
+    // optional int64 thread_id = 3;
     boolean hasThreadId();
     long getThreadId();
     
-    // optional bool isShared = 4;
+    // optional bool is_shared = 4;
     boolean hasIsShared();
     boolean getIsShared();
     
@@ -5058,7 +5058,7 @@ public final class ZooKeeperProtos {
     boolean hasPurpose();
     String getPurpose();
     
-    // optional int64 createTime = 6;
+    // optional int64 create_time = 6;
     boolean hasCreateTime();
     long getCreateTime();
   }
@@ -5091,8 +5091,8 @@ public final class ZooKeeperProtos {
     }
     
     private int bitField0_;
-    // optional bytes tableName = 1;
-    public static final int TABLENAME_FIELD_NUMBER = 1;
+    // optional bytes table_name = 1;
+    public static final int TABLE_NAME_FIELD_NUMBER = 1;
     private com.google.protobuf.ByteString tableName_;
     public boolean hasTableName() {
       return ((bitField0_ & 0x00000001) == 0x00000001);
@@ -5101,8 +5101,8 @@ public final class ZooKeeperProtos {
       return tableName_;
     }
     
-    // optional .ServerName lockOwner = 2;
-    public static final int LOCKOWNER_FIELD_NUMBER = 2;
+    // optional .ServerName lock_owner = 2;
+    public static final int LOCK_OWNER_FIELD_NUMBER = 2;
     private org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName lockOwner_;
     public boolean hasLockOwner() {
       return ((bitField0_ & 0x00000002) == 0x00000002);
@@ -5114,8 +5114,8 @@ public final class ZooKeeperProtos {
       return lockOwner_;
     }
     
-    // optional int64 threadId = 3;
-    public static final int THREADID_FIELD_NUMBER = 3;
+    // optional int64 thread_id = 3;
+    public static final int THREAD_ID_FIELD_NUMBER = 3;
     private long threadId_;
     public boolean hasThreadId() {
       return ((bitField0_ & 0x00000004) == 0x00000004);
@@ -5124,8 +5124,8 @@ public final class ZooKeeperProtos {
       return threadId_;
     }
     
-    // optional bool isShared = 4;
-    public static final int ISSHARED_FIELD_NUMBER = 4;
+    // optional bool is_shared = 4;
+    public static final int IS_SHARED_FIELD_NUMBER = 4;
     private boolean isShared_;
     public boolean hasIsShared() {
       return ((bitField0_ & 0x00000008) == 0x00000008);
@@ -5166,8 +5166,8 @@ public final class ZooKeeperProtos {
       }
     }
     
-    // optional int64 createTime = 6;
-    public static final int CREATETIME_FIELD_NUMBER = 6;
+    // optional int64 create_time = 6;
+    public static final int CREATE_TIME_FIELD_NUMBER = 6;
     private long createTime_;
     public boolean hasCreateTime() {
       return ((bitField0_ & 0x00000020) == 0x00000020);
@@ -5316,19 +5316,19 @@ public final class ZooKeeperProtos {
       int hash = 41;
       hash = (19 * hash) + getDescriptorForType().hashCode();
       if (hasTableName()) {
-        hash = (37 * hash) + TABLENAME_FIELD_NUMBER;
+        hash = (37 * hash) + TABLE_NAME_FIELD_NUMBER;
         hash = (53 * hash) + getTableName().hashCode();
       }
       if (hasLockOwner()) {
-        hash = (37 * hash) + LOCKOWNER_FIELD_NUMBER;
+        hash = (37 * hash) + LOCK_OWNER_FIELD_NUMBER;
         hash = (53 * hash) + getLockOwner().hashCode();
       }
       if (hasThreadId()) {
-        hash = (37 * hash) + THREADID_FIELD_NUMBER;
+        hash = (37 * hash) + THREAD_ID_FIELD_NUMBER;
         hash = (53 * hash) + hashLong(getThreadId());
       }
       if (hasIsShared()) {
-        hash = (37 * hash) + ISSHARED_FIELD_NUMBER;
+        hash = (37 * hash) + IS_SHARED_FIELD_NUMBER;
         hash = (53 * hash) + hashBoolean(getIsShared());
       }
       if (hasPurpose()) {
@@ -5336,7 +5336,7 @@ public final class ZooKeeperProtos {
         hash = (53 * hash) + getPurpose().hashCode();
       }
       if (hasCreateTime()) {
-        hash = (37 * hash) + CREATETIME_FIELD_NUMBER;
+        hash = (37 * hash) + CREATE_TIME_FIELD_NUMBER;
         hash = (53 * hash) + hashLong(getCreateTime());
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
@@ -5649,7 +5649,7 @@ public final class ZooKeeperProtos {
       
       private int bitField0_;
       
-      // optional bytes tableName = 1;
+      // optional bytes table_name = 1;
       private com.google.protobuf.ByteString tableName_ = com.google.protobuf.ByteString.EMPTY;
       public boolean hasTableName() {
         return ((bitField0_ & 0x00000001) == 0x00000001);
@@ -5673,7 +5673,7 @@ public final class ZooKeeperProtos {
         return this;
       }
       
-      // optional .ServerName lockOwner = 2;
+      // optional .ServerName lock_owner = 2;
       private org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName lockOwner_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.getDefaultInstance();
       private com.google.protobuf.SingleFieldBuilder<
           org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerNameOrBuilder> lockOwnerBuilder_;
@@ -5763,7 +5763,7 @@ public final class ZooKeeperProtos {
         return lockOwnerBuilder_;
       }
       
-      // optional int64 threadId = 3;
+      // optional int64 thread_id = 3;
       private long threadId_ ;
       public boolean hasThreadId() {
         return ((bitField0_ & 0x00000004) == 0x00000004);
@@ -5784,7 +5784,7 @@ public final class ZooKeeperProtos {
         return this;
       }
       
-      // optional bool isShared = 4;
+      // optional bool is_shared = 4;
       private boolean isShared_ ;
       public boolean hasIsShared() {
         return ((bitField0_ & 0x00000008) == 0x00000008);
@@ -5841,7 +5841,7 @@ public final class ZooKeeperProtos {
         onChanged();
       }
       
-      // optional int64 createTime = 6;
+      // optional int64 create_time = 6;
       private long createTime_ ;
       public boolean hasCreateTime() {
         return ((bitField0_ & 0x00000020) == 0x00000020);
@@ -5876,11 +5876,11 @@ public final class ZooKeeperProtos {
   public interface StoreSequenceIdOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
     
-    // required bytes familyName = 1;
+    // required bytes family_name = 1;
     boolean hasFamilyName();
     com.google.protobuf.ByteString getFamilyName();
     
-    // required uint64 sequenceId = 2;
+    // required uint64 sequence_id = 2;
     boolean hasSequenceId();
     long getSequenceId();
   }
@@ -5913,8 +5913,8 @@ public final class ZooKeeperProtos {
     }
     
     private int bitField0_;
-    // required bytes familyName = 1;
-    public static final int FAMILYNAME_FIELD_NUMBER = 1;
+    // required bytes family_name = 1;
+    public static final int FAMILY_NAME_FIELD_NUMBER = 1;
     private com.google.protobuf.ByteString familyName_;
     public boolean hasFamilyName() {
       return ((bitField0_ & 0x00000001) == 0x00000001);
@@ -5923,8 +5923,8 @@ public final class ZooKeeperProtos {
       return familyName_;
     }
     
-    // required uint64 sequenceId = 2;
-    public static final int SEQUENCEID_FIELD_NUMBER = 2;
+    // required uint64 sequence_id = 2;
+    public static final int SEQUENCE_ID_FIELD_NUMBER = 2;
     private long sequenceId_;
     public boolean hasSequenceId() {
       return ((bitField0_ & 0x00000002) == 0x00000002);
@@ -6023,11 +6023,11 @@ public final class ZooKeeperProtos {
       int hash = 41;
       hash = (19 * hash) + getDescriptorForType().hashCode();
       if (hasFamilyName()) {
-        hash = (37 * hash) + FAMILYNAME_FIELD_NUMBER;
+        hash = (37 * hash) + FAMILY_NAME_FIELD_NUMBER;
         hash = (53 * hash) + getFamilyName().hashCode();
       }
       if (hasSequenceId()) {
-        hash = (37 * hash) + SEQUENCEID_FIELD_NUMBER;
+        hash = (37 * hash) + SEQUENCE_ID_FIELD_NUMBER;
         hash = (53 * hash) + hashLong(getSequenceId());
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
@@ -6273,7 +6273,7 @@ public final class ZooKeeperProtos {
       
       private int bitField0_;
       
-      // required bytes familyName = 1;
+      // required bytes family_name = 1;
       private com.google.protobuf.ByteString familyName_ = com.google.protobuf.ByteString.EMPTY;
       public boolean hasFamilyName() {
         return ((bitField0_ & 0x00000001) == 0x00000001);
@@ -6297,7 +6297,7 @@ public final class ZooKeeperProtos {
         return this;
       }
       
-      // required uint64 sequenceId = 2;
+      // required uint64 sequence_id = 2;
       private long sequenceId_ ;
       public boolean hasSequenceId() {
         return ((bitField0_ & 0x00000002) == 0x00000002);
@@ -6332,11 +6332,11 @@ public final class ZooKeeperProtos {
   public interface RegionStoreSequenceIdsOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
     
-    // required uint64 lastFlushedSequenceId = 1;
+    // required uint64 last_flushed_sequence_id = 1;
     boolean hasLastFlushedSequenceId();
     long getLastFlushedSequenceId();
     
-    // repeated .StoreSequenceId storeSequenceId = 2;
+    // repeated .StoreSequenceId store_sequence_id = 2;
     java.util.List<org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.StoreSequenceId> 
         getStoreSequenceIdList();
     org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.StoreSequenceId getStoreSequenceId(int index);
@@ -6375,8 +6375,8 @@ public final class ZooKeeperProtos {
     }
     
     private int bitField0_;
-    // required uint64 lastFlushedSequenceId = 1;
-    public static final int LASTFLUSHEDSEQUENCEID_FIELD_NUMBER = 1;
+    // required uint64 last_flushed_sequence_id = 1;
+    public static final int LAST_FLUSHED_SEQUENCE_ID_FIELD_NUMBER = 1;
     private long lastFlushedSequenceId_;
     public boolean hasLastFlushedSequenceId() {
       return ((bitField0_ & 0x00000001) == 0x00000001);
@@ -6385,8 +6385,8 @@ public final class ZooKeeperProtos {
       return lastFlushedSequenceId_;
     }
     
-    // repeated .StoreSequenceId storeSequenceId = 2;
-    public static final int STORESEQUENCEID_FIELD_NUMBER = 2;
+    // repeated .StoreSequenceId store_sequence_id = 2;
+    public static final int STORE_SEQUENCE_ID_FIELD_NUMBER = 2;
     private java.util.List<org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.StoreSequenceId> storeSequenceId_;
     public java.util.List<org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.StoreSequenceId> getStoreSequenceIdList() {
       return storeSequenceId_;
@@ -6495,11 +6495,11 @@ public final class ZooKeeperProtos {
       int hash = 41;
       hash = (19 * hash) + getDescriptorForType().hashCode();
       if (hasLastFlushedSequenceId()) {
-        hash = (37 * hash) + LASTFLUSHEDSEQUENCEID_FIELD_NUMBER;
+        hash = (37 * hash) + LAST_FLUSHED_SEQUENCE_ID_FIELD_NUMBER;
         hash = (53 * hash) + hashLong(getLastFlushedSequenceId());
       }
       if (getStoreSequenceIdCount() > 0) {
-        hash = (37 * hash) + STORESEQUENCEID_FIELD_NUMBER;
+        hash = (37 * hash) + STORE_SEQUENCE_ID_FIELD_NUMBER;
         hash = (53 * hash) + getStoreSequenceIdList().hashCode();
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
@@ -6781,7 +6781,7 @@ public final class ZooKeeperProtos {
       
       private int bitField0_;
       
-      // required uint64 lastFlushedSequenceId = 1;
+      // required uint64 last_flushed_sequence_id = 1;
       private long lastFlushedSequenceId_ ;
       public boolean hasLastFlushedSequenceId() {
         return ((bitField0_ & 0x00000001) == 0x00000001);
@@ -6802,7 +6802,7 @@ public final class ZooKeeperProtos {
         return this;
       }
       
-      // repeated .StoreSequenceId storeSequenceId = 2;
+      // repeated .StoreSequenceId store_sequence_id = 2;
       private java.util.List<org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.StoreSequenceId> storeSequenceId_ =
         java.util.Collections.emptyList();
       private void ensureStoreSequenceIdIsMutable() {
@@ -7073,36 +7073,36 @@ public final class ZooKeeperProtos {
       descriptor;
   static {
     java.lang.String[] descriptorData = {
-      "\n\017ZooKeeper.proto\032\013hbase.proto\"C\n\020MetaRe" +
+      "\n\017ZooKeeper.proto\032\013hbase.proto\"D\n\020MetaRe" +
       "gionServer\022\033\n\006server\030\001 \002(\0132\013.ServerName\022" +
-      "\022\n\nrpcVersion\030\002 \001(\r\"9\n\006Master\022\033\n\006master\030" +
-      "\001 \002(\0132\013.ServerName\022\022\n\nrpcVersion\030\002 \001(\r\"\036" +
-      "\n\tClusterUp\022\021\n\tstartDate\030\001 \002(\t\"\203\001\n\020Regio" +
-      "nTransition\022\025\n\reventTypeCode\030\001 \002(\r\022\022\n\nre" +
-      "gionName\030\002 \002(\014\022\022\n\ncreateTime\030\003 \002(\004\022\037\n\nse" +
-      "rverName\030\004 \002(\0132\013.ServerName\022\017\n\007payload\030\005" +
-      " \001(\014\"\230\001\n\014SplitLogTask\022\"\n\005state\030\001 \002(\0162\023.S" +
-      "plitLogTask.State\022\037\n\nserverName\030\002 \002(\0132\013.",
-      "ServerName\"C\n\005State\022\016\n\nUNASSIGNED\020\000\022\t\n\005O" +
-      "WNED\020\001\022\014\n\010RESIGNED\020\002\022\010\n\004DONE\020\003\022\007\n\003ERR\020\004\"" +
-      "n\n\005Table\022$\n\005state\030\001 \002(\0162\014.Table.State:\007E" +
-      "NABLED\"?\n\005State\022\013\n\007ENABLED\020\000\022\014\n\010DISABLED" +
-      "\020\001\022\r\n\tDISABLING\020\002\022\014\n\010ENABLING\020\003\"%\n\017Repli" +
-      "cationPeer\022\022\n\nclusterkey\030\001 \002(\t\"^\n\020Replic" +
-      "ationState\022&\n\005state\030\001 \002(\0162\027.ReplicationS" +
-      "tate.State\"\"\n\005State\022\013\n\007ENABLED\020\000\022\014\n\010DISA" +
-      "BLED\020\001\"+\n\027ReplicationHLogPosition\022\020\n\010pos" +
-      "ition\030\001 \002(\003\"$\n\017ReplicationLock\022\021\n\tlockOw",
-      "ner\030\001 \002(\t\"\207\001\n\tTableLock\022\021\n\ttableName\030\001 \001" +
-      "(\014\022\036\n\tlockOwner\030\002 \001(\0132\013.ServerName\022\020\n\010th" +
-      "readId\030\003 \001(\003\022\020\n\010isShared\030\004 \001(\010\022\017\n\007purpos" +
-      "e\030\005 \001(\t\022\022\n\ncreateTime\030\006 \001(\003\"9\n\017StoreSequ" +
-      "enceId\022\022\n\nfamilyName\030\001 \002(\014\022\022\n\nsequenceId" +
-      "\030\002 \002(\004\"b\n\026RegionStoreSequenceIds\022\035\n\025last" +
-      "FlushedSequenceId\030\001 \002(\004\022)\n\017storeSequence" +
-      "Id\030\002 \003(\0132\020.StoreSequenceIdBE\n*org.apache" +
-      ".hadoop.hbase.protobuf.generatedB\017ZooKee" +
-      "perProtosH\001\210\001\001\240\001\001"
+      "\023\n\013rpc_version\030\002 \001(\r\":\n\006Master\022\033\n\006master" +
+      "\030\001 \002(\0132\013.ServerName\022\023\n\013rpc_version\030\002 \001(\r" +
+      "\"\037\n\tClusterUp\022\022\n\nstart_date\030\001 \002(\t\"\210\001\n\020Re" +
+      "gionTransition\022\027\n\017event_type_code\030\001 \002(\r\022" +
+      "\023\n\013region_name\030\002 \002(\014\022\023\n\013create_time\030\003 \002(" +
+      "\004\022 \n\013server_name\030\004 \002(\0132\013.ServerName\022\017\n\007p" +
+      "ayload\030\005 \001(\014\"\231\001\n\014SplitLogTask\022\"\n\005state\030\001" +
+      " \002(\0162\023.SplitLogTask.State\022 \n\013server_name",
+      "\030\002 \002(\0132\013.ServerName\"C\n\005State\022\016\n\nUNASSIGN" +
+      "ED\020\000\022\t\n\005OWNED\020\001\022\014\n\010RESIGNED\020\002\022\010\n\004DONE\020\003\022" +
+      "\007\n\003ERR\020\004\"n\n\005Table\022$\n\005state\030\001 \002(\0162\014.Table" +
+      ".State:\007ENABLED\"?\n\005State\022\013\n\007ENABLED\020\000\022\014\n" +
+      "\010DISABLED\020\001\022\r\n\tDISABLING\020\002\022\014\n\010ENABLING\020\003" +
+      "\"%\n\017ReplicationPeer\022\022\n\nclusterkey\030\001 \002(\t\"" +
+      "^\n\020ReplicationState\022&\n\005state\030\001 \002(\0162\027.Rep" +
+      "licationState.State\"\"\n\005State\022\013\n\007ENABLED\020" +
+      "\000\022\014\n\010DISABLED\020\001\"+\n\027ReplicationHLogPositi" +
+      "on\022\020\n\010position\030\001 \002(\003\"%\n\017ReplicationLock\022",
+      "\022\n\nlock_owner\030\001 \002(\t\"\214\001\n\tTableLock\022\022\n\ntab" +
+      "le_name\030\001 \001(\014\022\037\n\nlock_owner\030\002 \001(\0132\013.Serv" +
+      "erName\022\021\n\tthread_id\030\003 \001(\003\022\021\n\tis_shared\030\004" +
+      " \001(\010\022\017\n\007purpose\030\005 \001(\t\022\023\n\013create_time\030\006 \001" +
+      "(\003\";\n\017StoreSequenceId\022\023\n\013family_name\030\001 \002" +
+      "(\014\022\023\n\013sequence_id\030\002 \002(\004\"g\n\026RegionStoreSe" +
+      "quenceIds\022 \n\030last_flushed_sequence_id\030\001 " +
+      "\002(\004\022+\n\021store_sequence_id\030\002 \003(\0132\020.StoreSe" +
+      "quenceIdBE\n*org.apache.hadoop.hbase.prot" +
+      "obuf.generatedB\017ZooKeeperProtosH\001\210\001\001\240\001\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {

@@ -24,7 +24,7 @@ option optimize_for = SPEED;
 
 message AuthenticationKey {
     required int32 id = 1;
-    required int64 expirationDate = 2;
+    required int64 expiration_date = 2;
     required bytes key = 3;
 }
 
@@ -35,10 +35,10 @@ message TokenIdentifier {
     }
     required Kind kind = 1;
     required bytes username = 2;
-    required int32 keyId = 3;
-    optional int64 issueDate = 4;
-    optional int64 expirationDate = 5;
-    optional int64 sequenceNumber = 6;
+    required int32 key_id = 3;
+    optional int64 issue_date = 4;
+    optional int64 expiration_date = 5;
+    optional int64 sequence_number = 6;
 }
 
 
@@ -67,15 +67,15 @@ message WhoAmIRequest {
 
 message WhoAmIResponse {
     optional string username = 1;
-    optional string authMethod = 2;
+    optional string auth_method = 2;
 }
 
 
 // RPC service
 service AuthenticationService {
-    rpc getAuthenticationToken(TokenRequest)
+    rpc GetAuthenticationToken(TokenRequest)
         returns (TokenResponse);
 
-    rpc whoami(WhoAmIRequest)
+    rpc WhoAmI(WhoAmIRequest)
         returns (WhoAmIResponse);
 }

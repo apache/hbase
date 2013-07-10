@@ -11,11 +11,11 @@ public final class MasterAdminProtos {
   public interface AddColumnRequestOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
     
-    // required bytes tableName = 1;
+    // required bytes table_name = 1;
     boolean hasTableName();
     com.google.protobuf.ByteString getTableName();
     
-    // required .ColumnFamilySchema columnFamilies = 2;
+    // required .ColumnFamilySchema column_families = 2;
     boolean hasColumnFamilies();
     org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ColumnFamilySchema getColumnFamilies();
     org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ColumnFamilySchemaOrBuilder getColumnFamiliesOrBuilder();
@@ -49,8 +49,8 @@ public final class MasterAdminProtos {
     }
     
     private int bitField0_;
-    // required bytes tableName = 1;
-    public static final int TABLENAME_FIELD_NUMBER = 1;
+    // required bytes table_name = 1;
+    public static final int TABLE_NAME_FIELD_NUMBER = 1;
     private com.google.protobuf.ByteString tableName_;
     public boolean hasTableName() {
       return ((bitField0_ & 0x00000001) == 0x00000001);
@@ -59,8 +59,8 @@ public final class MasterAdminProtos {
       return tableName_;
     }
     
-    // required .ColumnFamilySchema columnFamilies = 2;
-    public static final int COLUMNFAMILIES_FIELD_NUMBER = 2;
+    // required .ColumnFamilySchema column_families = 2;
+    public static final int COLUMN_FAMILIES_FIELD_NUMBER = 2;
     private org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ColumnFamilySchema columnFamilies_;
     public boolean hasColumnFamilies() {
       return ((bitField0_ & 0x00000002) == 0x00000002);
@@ -166,11 +166,11 @@ public final class MasterAdminProtos {
       int hash = 41;
       hash = (19 * hash) + getDescriptorForType().hashCode();
       if (hasTableName()) {
-        hash = (37 * hash) + TABLENAME_FIELD_NUMBER;
+        hash = (37 * hash) + TABLE_NAME_FIELD_NUMBER;
         hash = (53 * hash) + getTableName().hashCode();
       }
       if (hasColumnFamilies()) {
-        hash = (37 * hash) + COLUMNFAMILIES_FIELD_NUMBER;
+        hash = (37 * hash) + COLUMN_FAMILIES_FIELD_NUMBER;
         hash = (53 * hash) + getColumnFamilies().hashCode();
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
@@ -433,7 +433,7 @@ public final class MasterAdminProtos {
       
       private int bitField0_;
       
-      // required bytes tableName = 1;
+      // required bytes table_name = 1;
       private com.google.protobuf.ByteString tableName_ = com.google.protobuf.ByteString.EMPTY;
       public boolean hasTableName() {
         return ((bitField0_ & 0x00000001) == 0x00000001);
@@ -457,7 +457,7 @@ public final class MasterAdminProtos {
         return this;
       }
       
-      // required .ColumnFamilySchema columnFamilies = 2;
+      // required .ColumnFamilySchema column_families = 2;
       private org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ColumnFamilySchema columnFamilies_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ColumnFamilySchema.getDefaultInstance();
       private com.google.protobuf.SingleFieldBuilder<
           org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ColumnFamilySchema, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ColumnFamilySchema.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ColumnFamilySchemaOrBuilder> columnFamiliesBuilder_;
@@ -861,11 +861,11 @@ public final class MasterAdminProtos {
   public interface DeleteColumnRequestOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
     
-    // required bytes tableName = 1;
+    // required bytes table_name = 1;
     boolean hasTableName();
     com.google.protobuf.ByteString getTableName();
     
-    // required bytes columnName = 2;
+    // required bytes column_name = 2;
     boolean hasColumnName();
     com.google.protobuf.ByteString getColumnName();
   }
@@ -898,8 +898,8 @@ public final class MasterAdminProtos {
     }
     
     private int bitField0_;
-    // required bytes tableName = 1;
-    public static final int TABLENAME_FIELD_NUMBER = 1;
+    // required bytes table_name = 1;
+    public static final int TABLE_NAME_FIELD_NUMBER = 1;
     private com.google.protobuf.ByteString tableName_;
     public boolean hasTableName() {
       return ((bitField0_ & 0x00000001) == 0x00000001);
@@ -908,8 +908,8 @@ public final class MasterAdminProtos {
       return tableName_;
     }
     
-    // required bytes columnName = 2;
-    public static final int COLUMNNAME_FIELD_NUMBER = 2;
+    // required bytes column_name = 2;
+    public static final int COLUMN_NAME_FIELD_NUMBER = 2;
     private com.google.protobuf.ByteString columnName_;
     public boolean hasColumnName() {
       return ((bitField0_ & 0x00000002) == 0x00000002);
@@ -1008,11 +1008,11 @@ public final class MasterAdminProtos {
       int hash = 41;
       hash = (19 * hash) + getDescriptorForType().hashCode();
       if (hasTableName()) {
-        hash = (37 * hash) + TABLENAME_FIELD_NUMBER;
+        hash = (37 * hash) + TABLE_NAME_FIELD_NUMBER;
         hash = (53 * hash) + getTableName().hashCode();
       }
       if (hasColumnName()) {
-        hash = (37 * hash) + COLUMNNAME_FIELD_NUMBER;
+        hash = (37 * hash) + COLUMN_NAME_FIELD_NUMBER;
         hash = (53 * hash) + getColumnName().hashCode();
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
@@ -1258,7 +1258,7 @@ public final class MasterAdminProtos {
       
       private int bitField0_;
       
-      // required bytes tableName = 1;
+      // required bytes table_name = 1;
       private com.google.protobuf.ByteString tableName_ = com.google.protobuf.ByteString.EMPTY;
       public boolean hasTableName() {
         return ((bitField0_ & 0x00000001) == 0x00000001);
@@ -1282,7 +1282,7 @@ public final class MasterAdminProtos {
         return this;
       }
       
-      // required bytes columnName = 2;
+      // required bytes column_name = 2;
       private com.google.protobuf.ByteString columnName_ = com.google.protobuf.ByteString.EMPTY;
       public boolean hasColumnName() {
         return ((bitField0_ & 0x00000002) == 0x00000002);
@@ -1620,11 +1620,11 @@ public final class MasterAdminProtos {
   public interface ModifyColumnRequestOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
     
-    // required bytes tableName = 1;
+    // required bytes table_name = 1;
     boolean hasTableName();
     com.google.protobuf.ByteString getTableName();
     
-    // required .ColumnFamilySchema columnFamilies = 2;
+    // required .ColumnFamilySchema column_families = 2;
     boolean hasColumnFamilies();
     org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ColumnFamilySchema getColumnFamilies();
     org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ColumnFamilySchemaOrBuilder getColumnFamiliesOrBuilder();
@@ -1658,8 +1658,8 @@ public final class MasterAdminProtos {
     }
     
     private int bitField0_;
-    // required bytes tableName = 1;
-    public static final int TABLENAME_FIELD_NUMBER = 1;
+    // required bytes table_name = 1;
+    public static final int TABLE_NAME_FIELD_NUMBER = 1;
     private com.google.protobuf.ByteString tableName_;
     public boolean hasTableName() {
       return ((bitField0_ & 0x00000001) == 0x00000001);
@@ -1668,8 +1668,8 @@ public final class MasterAdminProtos {
       return tableName_;
     }
     
-    // required .ColumnFamilySchema columnFamilies = 2;
-    public static final int COLUMNFAMILIES_FIELD_NUMBER = 2;
+    // required .ColumnFamilySchema column_families = 2;
+    public static final int COLUMN_FAMILIES_FIELD_NUMBER = 2;
     private org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ColumnFamilySchema columnFamilies_;
     public boolean hasColumnFamilies() {
       return ((bitField0_ & 0x00000002) == 0x00000002);
@@ -1775,11 +1775,11 @@ public final class MasterAdminProtos {
       int hash = 41;
       hash = (19 * hash) + getDescriptorForType().hashCode();
       if (hasTableName()) {
-        hash = (37 * hash) + TABLENAME_FIELD_NUMBER;
+        hash = (37 * hash) + TABLE_NAME_FIELD_NUMBER;
         hash = (53 * hash) + getTableName().hashCode();
       }
       if (hasColumnFamilies()) {
-        hash = (37 * hash) + COLUMNFAMILIES_FIELD_NUMBER;
+        hash = (37 * hash) + COLUMN_FAMILIES_FIELD_NUMBER;
         hash = (53 * hash) + getColumnFamilies().hashCode();
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
@@ -2042,7 +2042,7 @@ public final class MasterAdminProtos {
       
       private int bitField0_;
       
-      // required bytes tableName = 1;
+      // required bytes table_name = 1;
       private com.google.protobuf.ByteString tableName_ = com.google.protobuf.ByteString.EMPTY;
       public boolean hasTableName() {
         return ((bitField0_ & 0x00000001) == 0x00000001);
@@ -2066,7 +2066,7 @@ public final class MasterAdminProtos {
         return this;
       }
       
-      // required .ColumnFamilySchema columnFamilies = 2;
+      // required .ColumnFamilySchema column_families = 2;
       private org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ColumnFamilySchema columnFamilies_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ColumnFamilySchema.getDefaultInstance();
       private com.google.protobuf.SingleFieldBuilder<
           org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ColumnFamilySchema, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ColumnFamilySchema.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ColumnFamilySchemaOrBuilder> columnFamiliesBuilder_;
@@ -2475,7 +2475,7 @@ public final class MasterAdminProtos {
     org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier getRegion();
     org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifierOrBuilder getRegionOrBuilder();
     
-    // optional .ServerName destServerName = 2;
+    // optional .ServerName dest_server_name = 2;
     boolean hasDestServerName();
     org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName getDestServerName();
     org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerNameOrBuilder getDestServerNameOrBuilder();
@@ -2522,8 +2522,8 @@ public final class MasterAdminProtos {
       return region_;
     }
     
-    // optional .ServerName destServerName = 2;
-    public static final int DESTSERVERNAME_FIELD_NUMBER = 2;
+    // optional .ServerName dest_server_name = 2;
+    public static final int DEST_SERVER_NAME_FIELD_NUMBER = 2;
     private org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName destServerName_;
     public boolean hasDestServerName() {
       return ((bitField0_ & 0x00000002) == 0x00000002);
@@ -2635,7 +2635,7 @@ public final class MasterAdminProtos {
         hash = (53 * hash) + getRegion().hashCode();
       }
       if (hasDestServerName()) {
-        hash = (37 * hash) + DESTSERVERNAME_FIELD_NUMBER;
+        hash = (37 * hash) + DEST_SERVER_NAME_FIELD_NUMBER;
         hash = (53 * hash) + getDestServerName().hashCode();
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
@@ -3003,7 +3003,7 @@ public final class MasterAdminProtos {
         return regionBuilder_;
       }
       
-      // optional .ServerName destServerName = 2;
+      // optional .ServerName dest_server_name = 2;
       private org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName destServerName_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.getDefaultInstance();
       private com.google.protobuf.SingleFieldBuilder<
           org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerNameOrBuilder> destServerNameBuilder_;
@@ -3407,12 +3407,12 @@ public final class MasterAdminProtos {
   public interface DispatchMergingRegionsRequestOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
     
-    // required .RegionSpecifier regionA = 1;
+    // required .RegionSpecifier region_a = 1;
     boolean hasRegionA();
     org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier getRegionA();
     org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifierOrBuilder getRegionAOrBuilder();
     
-    // required .RegionSpecifier regionB = 2;
+    // required .RegionSpecifier region_b = 2;
     boolean hasRegionB();
     org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier getRegionB();
     org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifierOrBuilder getRegionBOrBuilder();
@@ -3450,8 +3450,8 @@ public final class MasterAdminProtos {
     }
     
     private int bitField0_;
-    // required .RegionSpecifier regionA = 1;
-    public static final int REGIONA_FIELD_NUMBER = 1;
+    // required .RegionSpecifier region_a = 1;
+    public static final int REGION_A_FIELD_NUMBER = 1;
     private org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier regionA_;
     public boolean hasRegionA() {
       return ((bitField0_ & 0x00000001) == 0x00000001);
@@ -3463,8 +3463,8 @@ public final class MasterAdminProtos {
       return regionA_;
     }
     
-    // required .RegionSpecifier regionB = 2;
-    public static final int REGIONB_FIELD_NUMBER = 2;
+    // required .RegionSpecifier region_b = 2;
+    public static final int REGION_B_FIELD_NUMBER = 2;
     private org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier regionB_;
     public boolean hasRegionB() {
       return ((bitField0_ & 0x00000002) == 0x00000002);
@@ -3597,11 +3597,11 @@ public final class MasterAdminProtos {
       int hash = 41;
       hash = (19 * hash) + getDescriptorForType().hashCode();
       if (hasRegionA()) {
-        hash = (37 * hash) + REGIONA_FIELD_NUMBER;
+        hash = (37 * hash) + REGION_A_FIELD_NUMBER;
         hash = (53 * hash) + getRegionA().hashCode();
       }
       if (hasRegionB()) {
-        hash = (37 * hash) + REGIONB_FIELD_NUMBER;
+        hash = (37 * hash) + REGION_B_FIELD_NUMBER;
         hash = (53 * hash) + getRegionB().hashCode();
       }
       if (hasForcible()) {
@@ -3899,7 +3899,7 @@ public final class MasterAdminProtos {
       
       private int bitField0_;
       
-      // required .RegionSpecifier regionA = 1;
+      // required .RegionSpecifier region_a = 1;
       private org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier regionA_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier.getDefaultInstance();
       private com.google.protobuf.SingleFieldBuilder<
           org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifierOrBuilder> regionABuilder_;
@@ -3989,7 +3989,7 @@ public final class MasterAdminProtos {
         return regionABuilder_;
       }
       
-      // required .RegionSpecifier regionB = 2;
+      // required .RegionSpecifier region_b = 2;
       private org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier regionB_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier.getDefaultInstance();
       private com.google.protobuf.SingleFieldBuilder<
           org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifierOrBuilder> regionBBuilder_;
@@ -6799,12 +6799,12 @@ public final class MasterAdminProtos {
   public interface CreateTableRequestOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
     
-    // required .TableSchema tableSchema = 1;
+    // required .TableSchema table_schema = 1;
     boolean hasTableSchema();
     org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableSchema getTableSchema();
     org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableSchemaOrBuilder getTableSchemaOrBuilder();
     
-    // repeated bytes splitKeys = 2;
+    // repeated bytes split_keys = 2;
     java.util.List<com.google.protobuf.ByteString> getSplitKeysList();
     int getSplitKeysCount();
     com.google.protobuf.ByteString getSplitKeys(int index);
@@ -6838,8 +6838,8 @@ public final class MasterAdminProtos {
     }
     
     private int bitField0_;
-    // required .TableSchema tableSchema = 1;
-    public static final int TABLESCHEMA_FIELD_NUMBER = 1;
+    // required .TableSchema table_schema = 1;
+    public static final int TABLE_SCHEMA_FIELD_NUMBER = 1;
     private org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableSchema tableSchema_;
     public boolean hasTableSchema() {
       return ((bitField0_ & 0x00000001) == 0x00000001);
@@ -6851,8 +6851,8 @@ public final class MasterAdminProtos {
       return tableSchema_;
     }
     
-    // repeated bytes splitKeys = 2;
-    public static final int SPLITKEYS_FIELD_NUMBER = 2;
+    // repeated bytes split_keys = 2;
+    public static final int SPLIT_KEYS_FIELD_NUMBER = 2;
     private java.util.List<com.google.protobuf.ByteString> splitKeys_;
     public java.util.List<com.google.protobuf.ByteString>
         getSplitKeysList() {
@@ -6957,11 +6957,11 @@ public final class MasterAdminProtos {
       int hash = 41;
       hash = (19 * hash) + getDescriptorForType().hashCode();
       if (hasTableSchema()) {
-        hash = (37 * hash) + TABLESCHEMA_FIELD_NUMBER;
+        hash = (37 * hash) + TABLE_SCHEMA_FIELD_NUMBER;
         hash = (53 * hash) + getTableSchema().hashCode();
       }
       if (getSplitKeysCount() > 0) {
-        hash = (37 * hash) + SPLITKEYS_FIELD_NUMBER;
+        hash = (37 * hash) + SPLIT_KEYS_FIELD_NUMBER;
         hash = (53 * hash) + getSplitKeysList().hashCode();
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
@@ -7228,7 +7228,7 @@ public final class MasterAdminProtos {
       
       private int bitField0_;
       
-      // required .TableSchema tableSchema = 1;
+      // required .TableSchema table_schema = 1;
       private org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableSchema tableSchema_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableSchema.getDefaultInstance();
       private com.google.protobuf.SingleFieldBuilder<
           org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableSchema, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableSchema.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableSchemaOrBuilder> tableSchemaBuilder_;
@@ -7318,7 +7318,7 @@ public final class MasterAdminProtos {
         return tableSchemaBuilder_;
       }
       
-      // repeated bytes splitKeys = 2;
+      // repeated bytes split_keys = 2;
       private java.util.List<com.google.protobuf.ByteString> splitKeys_ = java.util.Collections.emptyList();;
       private void ensureSplitKeysIsMutable() {
         if (!((bitField0_ & 0x00000002) == 0x00000002)) {
@@ -7683,7 +7683,7 @@ public final class MasterAdminProtos {
   public interface DeleteTableRequestOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
     
-    // required bytes tableName = 1;
+    // required bytes table_name = 1;
     boolean hasTableName();
     com.google.protobuf.ByteString getTableName();
   }
@@ -7716,8 +7716,8 @@ public final class MasterAdminProtos {
     }
     
     private int bitField0_;
-    // required bytes tableName = 1;
-    public static final int TABLENAME_FIELD_NUMBER = 1;
+    // required bytes table_name = 1;
+    public static final int TABLE_NAME_FIELD_NUMBER = 1;
     private com.google.protobuf.ByteString tableName_;
     public boolean hasTableName() {
       return ((bitField0_ & 0x00000001) == 0x00000001);
@@ -7799,7 +7799,7 @@ public final class MasterAdminProtos {
       int hash = 41;
       hash = (19 * hash) + getDescriptorForType().hashCode();
       if (hasTableName()) {
-        hash = (37 * hash) + TABLENAME_FIELD_NUMBER;
+        hash = (37 * hash) + TABLE_NAME_FIELD_NUMBER;
         hash = (53 * hash) + getTableName().hashCode();
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
@@ -8027,7 +8027,7 @@ public final class MasterAdminProtos {
       
       private int bitField0_;
       
-      // required bytes tableName = 1;
+      // required bytes table_name = 1;
       private com.google.protobuf.ByteString tableName_ = com.google.protobuf.ByteString.EMPTY;
       public boolean hasTableName() {
         return ((bitField0_ & 0x00000001) == 0x00000001);
@@ -8365,7 +8365,7 @@ public final class MasterAdminProtos {
   public interface EnableTableRequestOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
     
-    // required bytes tableName = 1;
+    // required bytes table_name = 1;
     boolean hasTableName();
     com.google.protobuf.ByteString getTableName();
   }
@@ -8398,8 +8398,8 @@ public final class MasterAdminProtos {
     }
     
     private int bitField0_;
-    // required bytes tableName = 1;
-    public static final int TABLENAME_FIELD_NUMBER = 1;
+    // required bytes table_name = 1;
+    public static final int TABLE_NAME_FIELD_NUMBER = 1;
     private com.google.protobuf.ByteString tableName_;
     public boolean hasTableName() {
       return ((bitField0_ & 0x00000001) == 0x00000001);
@@ -8481,7 +8481,7 @@ public final class MasterAdminProtos {
       int hash = 41;
       hash = (19 * hash) + getDescriptorForType().hashCode();
       if (hasTableName()) {
-        hash = (37 * hash) + TABLENAME_FIELD_NUMBER;
+        hash = (37 * hash) + TABLE_NAME_FIELD_NUMBER;
         hash = (53 * hash) + getTableName().hashCode();
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
@@ -8709,7 +8709,7 @@ public final class MasterAdminProtos {
       
       private int bitField0_;
       
-      // required bytes tableName = 1;
+      // required bytes table_name = 1;
       private com.google.protobuf.ByteString tableName_ = com.google.protobuf.ByteString.EMPTY;
       public boolean hasTableName() {
         return ((bitField0_ & 0x00000001) == 0x00000001);
@@ -9047,7 +9047,7 @@ public final class MasterAdminProtos {
   public interface DisableTableRequestOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
     
-    // required bytes tableName = 1;
+    // required bytes table_name = 1;
     boolean hasTableName();
     com.google.protobuf.ByteString getTableName();
   }
@@ -9080,8 +9080,8 @@ public final class MasterAdminProtos {
     }
     
     private int bitField0_;
-    // required bytes tableName = 1;
-    public static final int TABLENAME_FIELD_NUMBER = 1;
+    // required bytes table_name = 1;
+    public static final int TABLE_NAME_FIELD_NUMBER = 1;
     private com.google.protobuf.ByteString tableName_;
     public boolean hasTableName() {
       return ((bitField0_ & 0x00000001) == 0x00000001);
@@ -9163,7 +9163,7 @@ public final class MasterAdminProtos {
       int hash = 41;
       hash = (19 * hash) + getDescriptorForType().hashCode();
       if (hasTableName()) {
-        hash = (37 * hash) + TABLENAME_FIELD_NUMBER;
+        hash = (37 * hash) + TABLE_NAME_FIELD_NUMBER;
         hash = (53 * hash) + getTableName().hashCode();
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
@@ -9391,7 +9391,7 @@ public final class MasterAdminProtos {
       
       private int bitField0_;
       
-      // required bytes tableName = 1;
+      // required bytes table_name = 1;
       private com.google.protobuf.ByteString tableName_ = com.google.protobuf.ByteString.EMPTY;
       public boolean hasTableName() {
         return ((bitField0_ & 0x00000001) == 0x00000001);
@@ -9729,11 +9729,11 @@ public final class MasterAdminProtos {
   public interface ModifyTableRequestOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
     
-    // required bytes tableName = 1;
+    // required bytes table_name = 1;
     boolean hasTableName();
     com.google.protobuf.ByteString getTableName();
     
-    // required .TableSchema tableSchema = 2;
+    // required .TableSchema table_schema = 2;
     boolean hasTableSchema();
     org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableSchema getTableSchema();
     org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableSchemaOrBuilder getTableSchemaOrBuilder();
@@ -9767,8 +9767,8 @@ public final class MasterAdminProtos {
     }
     
     private int bitField0_;
-    // required bytes tableName = 1;
-    public static final int TABLENAME_FIELD_NUMBER = 1;
+    // required bytes table_name = 1;
+    public static final int TABLE_NAME_FIELD_NUMBER = 1;
     private com.google.protobuf.ByteString tableName_;
     public boolean hasTableName() {
       return ((bitField0_ & 0x00000001) == 0x00000001);
@@ -9777,8 +9777,8 @@ public final class MasterAdminProtos {
       return tableName_;
     }
     
-    // required .TableSchema tableSchema = 2;
-    public static final int TABLESCHEMA_FIELD_NUMBER = 2;
+    // required .TableSchema table_schema = 2;
+    public static final int TABLE_SCHEMA_FIELD_NUMBER = 2;
     private org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableSchema tableSchema_;
     public boolean hasTableSchema() {
       return ((bitField0_ & 0x00000002) == 0x00000002);
@@ -9884,11 +9884,11 @@ public final class MasterAdminProtos {
       int hash = 41;
       hash = (19 * hash) + getDescriptorForType().hashCode();
       if (hasTableName()) {
-        hash = (37 * hash) + TABLENAME_FIELD_NUMBER;
+        hash = (37 * hash) + TABLE_NAME_FIELD_NUMBER;
         hash = (53 * hash) + getTableName().hashCode();
       }
       if (hasTableSchema()) {
-        hash = (37 * hash) + TABLESCHEMA_FIELD_NUMBER;
+        hash = (37 * hash) + TABLE_SCHEMA_FIELD_NUMBER;
         hash = (53 * hash) + getTableSchema().hashCode();
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
@@ -10151,7 +10151,7 @@ public final class MasterAdminProtos {
       
       private int bitField0_;
       
-      // required bytes tableName = 1;
+      // required bytes table_name = 1;
       private com.google.protobuf.ByteString tableName_ = com.google.protobuf.ByteString.EMPTY;
       public boolean hasTableName() {
         return ((bitField0_ & 0x00000001) == 0x00000001);
@@ -10175,7 +10175,7 @@ public final class MasterAdminProtos {
         return this;
       }
       
-      // required .TableSchema tableSchema = 2;
+      // required .TableSchema table_schema = 2;
       private org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableSchema tableSchema_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableSchema.getDefaultInstance();
       private com.google.protobuf.SingleFieldBuilder<
           org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableSchema, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableSchema.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableSchemaOrBuilder> tableSchemaBuilder_;
@@ -12079,7 +12079,7 @@ public final class MasterAdminProtos {
   public interface BalanceResponseOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
     
-    // required bool balancerRan = 1;
+    // required bool balancer_ran = 1;
     boolean hasBalancerRan();
     boolean getBalancerRan();
   }
@@ -12112,8 +12112,8 @@ public final class MasterAdminProtos {
     }
     
     private int bitField0_;
-    // required bool balancerRan = 1;
-    public static final int BALANCERRAN_FIELD_NUMBER = 1;
+    // required bool balancer_ran = 1;
+    public static final int BALANCER_RAN_FIELD_NUMBER = 1;
     private boolean balancerRan_;
     public boolean hasBalancerRan() {
       return ((bitField0_ & 0x00000001) == 0x00000001);
@@ -12195,7 +12195,7 @@ public final class MasterAdminProtos {
       int hash = 41;
       hash = (19 * hash) + getDescriptorForType().hashCode();
       if (hasBalancerRan()) {
-        hash = (37 * hash) + BALANCERRAN_FIELD_NUMBER;
+        hash = (37 * hash) + BALANCER_RAN_FIELD_NUMBER;
         hash = (53 * hash) + hashBoolean(getBalancerRan());
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
@@ -12423,7 +12423,7 @@ public final class MasterAdminProtos {
       
       private int bitField0_;
       
-      // required bool balancerRan = 1;
+      // required bool balancer_ran = 1;
       private boolean balancerRan_ ;
       public boolean hasBalancerRan() {
         return ((bitField0_ & 0x00000001) == 0x00000001);
@@ -12903,7 +12903,7 @@ public final class MasterAdminProtos {
   public interface SetBalancerRunningResponseOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
     
-    // optional bool prevBalanceValue = 1;
+    // optional bool prev_balance_value = 1;
     boolean hasPrevBalanceValue();
     boolean getPrevBalanceValue();
   }
@@ -12936,8 +12936,8 @@ public final class MasterAdminProtos {
     }
     
     private int bitField0_;
-    // optional bool prevBalanceValue = 1;
-    public static final int PREVBALANCEVALUE_FIELD_NUMBER = 1;
+    // optional bool prev_balance_value = 1;
+    public static final int PREV_BALANCE_VALUE_FIELD_NUMBER = 1;
     private boolean prevBalanceValue_;
     public boolean hasPrevBalanceValue() {
       return ((bitField0_ & 0x00000001) == 0x00000001);
@@ -13015,7 +13015,7 @@ public final class MasterAdminProtos {
       int hash = 41;
       hash = (19 * hash) + getDescriptorForType().hashCode();
       if (hasPrevBalanceValue()) {
-        hash = (37 * hash) + PREVBALANCEVALUE_FIELD_NUMBER;
+        hash = (37 * hash) + PREV_BALANCE_VALUE_FIELD_NUMBER;
         hash = (53 * hash) + hashBoolean(getPrevBalanceValue());
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
@@ -13239,7 +13239,7 @@ public final class MasterAdminProtos {
       
       private int bitField0_;
       
-      // optional bool prevBalanceValue = 1;
+      // optional bool prev_balance_value = 1;
       private boolean prevBalanceValue_ ;
       public boolean hasPrevBalanceValue() {
         return ((bitField0_ & 0x00000001) == 0x00000001);
@@ -13574,7 +13574,7 @@ public final class MasterAdminProtos {
   public interface CatalogScanResponseOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
     
-    // optional int32 scanResult = 1;
+    // optional int32 scan_result = 1;
     boolean hasScanResult();
     int getScanResult();
   }
@@ -13607,8 +13607,8 @@ public final class MasterAdminProtos {
     }
     
     private int bitField0_;
-    // optional int32 scanResult = 1;
-    public static final int SCANRESULT_FIELD_NUMBER = 1;
+    // optional int32 scan_result = 1;
+    public static final int SCAN_RESULT_FIELD_NUMBER = 1;
     private int scanResult_;
     public boolean hasScanResult() {
       return ((bitField0_ & 0x00000001) == 0x00000001);
@@ -13686,7 +13686,7 @@ public final class MasterAdminProtos {
       int hash = 41;
       hash = (19 * hash) + getDescriptorForType().hashCode();
       if (hasScanResult()) {
-        hash = (37 * hash) + SCANRESULT_FIELD_NUMBER;
+        hash = (37 * hash) + SCAN_RESULT_FIELD_NUMBER;
         hash = (53 * hash) + getScanResult();
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
@@ -13910,7 +13910,7 @@ public final class MasterAdminProtos {
       
       private int bitField0_;
       
-      // optional int32 scanResult = 1;
+      // optional int32 scan_result = 1;
       private int scanResult_ ;
       public boolean hasScanResult() {
         return ((bitField0_ & 0x00000001) == 0x00000001);
@@ -14324,7 +14324,7 @@ public final class MasterAdminProtos {
   public interface EnableCatalogJanitorResponseOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
     
-    // optional bool prevValue = 1;
+    // optional bool prev_value = 1;
     boolean hasPrevValue();
     boolean getPrevValue();
   }
@@ -14357,8 +14357,8 @@ public final class MasterAdminProtos {
     }
     
     private int bitField0_;
-    // optional bool prevValue = 1;
-    public static final int PREVVALUE_FIELD_NUMBER = 1;
+    // optional bool prev_value = 1;
+    public static final int PREV_VALUE_FIELD_NUMBER = 1;
     private boolean prevValue_;
     public boolean hasPrevValue() {
       return ((bitField0_ & 0x00000001) == 0x00000001);
@@ -14436,7 +14436,7 @@ public final class MasterAdminProtos {
       int hash = 41;
       hash = (19 * hash) + getDescriptorForType().hashCode();
       if (hasPrevValue()) {
-        hash = (37 * hash) + PREVVALUE_FIELD_NUMBER;
+        hash = (37 * hash) + PREV_VALUE_FIELD_NUMBER;
         hash = (53 * hash) + hashBoolean(getPrevValue());
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
@@ -14660,7 +14660,7 @@ public final class MasterAdminProtos {
       
       private int bitField0_;
       
-      // optional bool prevValue = 1;
+      // optional bool prev_value = 1;
       private boolean prevValue_ ;
       public boolean hasPrevValue() {
         return ((bitField0_ & 0x00000001) == 0x00000001);
@@ -15847,7 +15847,7 @@ public final class MasterAdminProtos {
   public interface TakeSnapshotResponseOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
     
-    // required int64 expectedTimeout = 1;
+    // required int64 expected_timeout = 1;
     boolean hasExpectedTimeout();
     long getExpectedTimeout();
   }
@@ -15880,8 +15880,8 @@ public final class MasterAdminProtos {
     }
     
     private int bitField0_;
-    // required int64 expectedTimeout = 1;
-    public static final int EXPECTEDTIMEOUT_FIELD_NUMBER = 1;
+    // required int64 expected_timeout = 1;
+    public static final int EXPECTED_TIMEOUT_FIELD_NUMBER = 1;
     private long expectedTimeout_;
     public boolean hasExpectedTimeout() {
       return ((bitField0_ & 0x00000001) == 0x00000001);
@@ -15963,7 +15963,7 @@ public final class MasterAdminProtos {
       int hash = 41;
       hash = (19 * hash) + getDescriptorForType().hashCode();
       if (hasExpectedTimeout()) {
-        hash = (37 * hash) + EXPECTEDTIMEOUT_FIELD_NUMBER;
+        hash = (37 * hash) + EXPECTED_TIMEOUT_FIELD_NUMBER;
         hash = (53 * hash) + hashLong(getExpectedTimeout());
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
@@ -16191,7 +16191,7 @@ public final class MasterAdminProtos {
       
       private int bitField0_;
       
-      // required int64 expectedTimeout = 1;
+      // required int64 expected_timeout = 1;
       private long expectedTimeout_ ;
       public boolean hasExpectedTimeout() {
         return ((bitField0_ & 0x00000001) == 0x00000001);
@@ -22752,116 +22752,116 @@ public final class MasterAdminProtos {
   static {
     java.lang.String[] descriptorData = {
       "\n\021MasterAdmin.proto\032\014Master.proto\032\013hbase" +
-      ".proto\032\014Client.proto\"R\n\020AddColumnRequest" +
-      "\022\021\n\ttableName\030\001 \002(\014\022+\n\016columnFamilies\030\002 " +
-      "\002(\0132\023.ColumnFamilySchema\"\023\n\021AddColumnRes" +
-      "ponse\"<\n\023DeleteColumnRequest\022\021\n\ttableNam" +
-      "e\030\001 \002(\014\022\022\n\ncolumnName\030\002 \002(\014\"\026\n\024DeleteCol" +
-      "umnResponse\"U\n\023ModifyColumnRequest\022\021\n\tta" +
-      "bleName\030\001 \002(\014\022+\n\016columnFamilies\030\002 \002(\0132\023." +
-      "ColumnFamilySchema\"\026\n\024ModifyColumnRespon" +
-      "se\"Z\n\021MoveRegionRequest\022 \n\006region\030\001 \002(\0132",
-      "\020.RegionSpecifier\022#\n\016destServerName\030\002 \001(" +
-      "\0132\013.ServerName\"\024\n\022MoveRegionResponse\"~\n\035" +
-      "DispatchMergingRegionsRequest\022!\n\007regionA" +
-      "\030\001 \002(\0132\020.RegionSpecifier\022!\n\007regionB\030\002 \002(" +
-      "\0132\020.RegionSpecifier\022\027\n\010forcible\030\003 \001(\010:\005f" +
-      "alse\" \n\036DispatchMergingRegionsResponse\"7" +
-      "\n\023AssignRegionRequest\022 \n\006region\030\001 \002(\0132\020." +
-      "RegionSpecifier\"\026\n\024AssignRegionResponse\"" +
-      "O\n\025UnassignRegionRequest\022 \n\006region\030\001 \002(\013" +
-      "2\020.RegionSpecifier\022\024\n\005force\030\002 \001(\010:\005false",
-      "\"\030\n\026UnassignRegionResponse\"8\n\024OfflineReg" +
-      "ionRequest\022 \n\006region\030\001 \002(\0132\020.RegionSpeci" +
-      "fier\"\027\n\025OfflineRegionResponse\"J\n\022CreateT" +
-      "ableRequest\022!\n\013tableSchema\030\001 \002(\0132\014.Table" +
-      "Schema\022\021\n\tsplitKeys\030\002 \003(\014\"\025\n\023CreateTable" +
-      "Response\"\'\n\022DeleteTableRequest\022\021\n\ttableN" +
-      "ame\030\001 \002(\014\"\025\n\023DeleteTableResponse\"\'\n\022Enab" +
-      "leTableRequest\022\021\n\ttableName\030\001 \002(\014\"\025\n\023Ena" +
-      "bleTableResponse\"(\n\023DisableTableRequest\022" +
-      "\021\n\ttableName\030\001 \002(\014\"\026\n\024DisableTableRespon",
-      "se\"J\n\022ModifyTableRequest\022\021\n\ttableName\030\001 " +
-      "\002(\014\022!\n\013tableSchema\030\002 \002(\0132\014.TableSchema\"\025" +
-      "\n\023ModifyTableResponse\"\021\n\017ShutdownRequest" +
-      "\"\022\n\020ShutdownResponse\"\023\n\021StopMasterReques" +
-      "t\"\024\n\022StopMasterResponse\"\020\n\016BalanceReques" +
-      "t\"&\n\017BalanceResponse\022\023\n\013balancerRan\030\001 \002(" +
-      "\010\"<\n\031SetBalancerRunningRequest\022\n\n\002on\030\001 \002" +
-      "(\010\022\023\n\013synchronous\030\002 \001(\010\"6\n\032SetBalancerRu" +
-      "nningResponse\022\030\n\020prevBalanceValue\030\001 \001(\010\"" +
-      "\024\n\022CatalogScanRequest\")\n\023CatalogScanResp",
-      "onse\022\022\n\nscanResult\030\001 \001(\005\"-\n\033EnableCatalo" +
-      "gJanitorRequest\022\016\n\006enable\030\001 \002(\010\"1\n\034Enabl" +
-      "eCatalogJanitorResponse\022\021\n\tprevValue\030\001 \001" +
-      "(\010\" \n\036IsCatalogJanitorEnabledRequest\"0\n\037" +
-      "IsCatalogJanitorEnabledResponse\022\r\n\005value" +
-      "\030\001 \002(\010\"=\n\023TakeSnapshotRequest\022&\n\010snapsho" +
-      "t\030\001 \002(\0132\024.SnapshotDescription\"/\n\024TakeSna" +
-      "pshotResponse\022\027\n\017expectedTimeout\030\001 \002(\003\"\025" +
-      "\n\023ListSnapshotRequest\"?\n\024ListSnapshotRes" +
-      "ponse\022\'\n\tsnapshots\030\001 \003(\0132\024.SnapshotDescr",
-      "iption\"?\n\025DeleteSnapshotRequest\022&\n\010snaps" +
-      "hot\030\001 \002(\0132\024.SnapshotDescription\"\030\n\026Delet" +
-      "eSnapshotResponse\"@\n\026RestoreSnapshotRequ" +
-      "est\022&\n\010snapshot\030\001 \002(\0132\024.SnapshotDescript" +
-      "ion\"\031\n\027RestoreSnapshotResponse\"?\n\025IsSnap" +
-      "shotDoneRequest\022&\n\010snapshot\030\001 \001(\0132\024.Snap" +
-      "shotDescription\"U\n\026IsSnapshotDoneRespons" +
-      "e\022\023\n\004done\030\001 \001(\010:\005false\022&\n\010snapshot\030\002 \001(\013" +
-      "2\024.SnapshotDescription\"F\n\034IsRestoreSnaps" +
-      "hotDoneRequest\022&\n\010snapshot\030\001 \001(\0132\024.Snaps",
-      "hotDescription\"3\n\035IsRestoreSnapshotDoneR" +
-      "esponse\022\022\n\004done\030\001 \001(\010:\004true2\305\016\n\022MasterAd" +
-      "minService\0222\n\taddColumn\022\021.AddColumnReque" +
-      "st\032\022.AddColumnResponse\022;\n\014deleteColumn\022\024" +
-      ".DeleteColumnRequest\032\025.DeleteColumnRespo" +
-      "nse\022;\n\014modifyColumn\022\024.ModifyColumnReques" +
-      "t\032\025.ModifyColumnResponse\0225\n\nmoveRegion\022\022" +
-      ".MoveRegionRequest\032\023.MoveRegionResponse\022" +
-      "Y\n\026dispatchMergingRegions\022\036.DispatchMerg" +
-      "ingRegionsRequest\032\037.DispatchMergingRegio",
-      "nsResponse\022;\n\014assignRegion\022\024.AssignRegio" +
-      "nRequest\032\025.AssignRegionResponse\022A\n\016unass" +
-      "ignRegion\022\026.UnassignRegionRequest\032\027.Unas" +
-      "signRegionResponse\022>\n\rofflineRegion\022\025.Of" +
-      "flineRegionRequest\032\026.OfflineRegionRespon" +
-      "se\0228\n\013deleteTable\022\023.DeleteTableRequest\032\024" +
-      ".DeleteTableResponse\0228\n\013enableTable\022\023.En" +
-      "ableTableRequest\032\024.EnableTableResponse\022;" +
-      "\n\014disableTable\022\024.DisableTableRequest\032\025.D" +
-      "isableTableResponse\0228\n\013modifyTable\022\023.Mod",
-      "ifyTableRequest\032\024.ModifyTableResponse\0228\n" +
-      "\013createTable\022\023.CreateTableRequest\032\024.Crea" +
-      "teTableResponse\022/\n\010shutdown\022\020.ShutdownRe" +
-      "quest\032\021.ShutdownResponse\0225\n\nstopMaster\022\022" +
-      ".StopMasterRequest\032\023.StopMasterResponse\022" +
-      ",\n\007balance\022\017.BalanceRequest\032\020.BalanceRes" +
-      "ponse\022M\n\022setBalancerRunning\022\032.SetBalance" +
-      "rRunningRequest\032\033.SetBalancerRunningResp" +
-      "onse\022;\n\016runCatalogScan\022\023.CatalogScanRequ" +
-      "est\032\024.CatalogScanResponse\022S\n\024enableCatal",
-      "ogJanitor\022\034.EnableCatalogJanitorRequest\032" +
-      "\035.EnableCatalogJanitorResponse\022\\\n\027isCata" +
-      "logJanitorEnabled\022\037.IsCatalogJanitorEnab" +
-      "ledRequest\032 .IsCatalogJanitorEnabledResp" +
-      "onse\022L\n\021execMasterService\022\032.CoprocessorS" +
-      "erviceRequest\032\033.CoprocessorServiceRespon" +
-      "se\0227\n\010snapshot\022\024.TakeSnapshotRequest\032\025.T" +
-      "akeSnapshotResponse\022D\n\025getCompletedSnaps" +
-      "hots\022\024.ListSnapshotRequest\032\025.ListSnapsho" +
-      "tResponse\022A\n\016deleteSnapshot\022\026.DeleteSnap",
-      "shotRequest\032\027.DeleteSnapshotResponse\022A\n\016" +
-      "isSnapshotDone\022\026.IsSnapshotDoneRequest\032\027" +
-      ".IsSnapshotDoneResponse\022D\n\017restoreSnapsh" +
-      "ot\022\027.RestoreSnapshotRequest\032\030.RestoreSna" +
-      "pshotResponse\022V\n\025isRestoreSnapshotDone\022\035" +
-      ".IsRestoreSnapshotDoneRequest\032\036.IsRestor" +
-      "eSnapshotDoneResponse\022D\n\017isMasterRunning" +
-      "\022\027.IsMasterRunningRequest\032\030.IsMasterRunn" +
-      "ingResponseBG\n*org.apache.hadoop.hbase.p" +
-      "rotobuf.generatedB\021MasterAdminProtosH\001\210\001",
-      "\001\240\001\001"
+      ".proto\032\014Client.proto\"T\n\020AddColumnRequest" +
+      "\022\022\n\ntable_name\030\001 \002(\014\022,\n\017column_families\030" +
+      "\002 \002(\0132\023.ColumnFamilySchema\"\023\n\021AddColumnR" +
+      "esponse\">\n\023DeleteColumnRequest\022\022\n\ntable_" +
+      "name\030\001 \002(\014\022\023\n\013column_name\030\002 \002(\014\"\026\n\024Delet" +
+      "eColumnResponse\"W\n\023ModifyColumnRequest\022\022" +
+      "\n\ntable_name\030\001 \002(\014\022,\n\017column_families\030\002 " +
+      "\002(\0132\023.ColumnFamilySchema\"\026\n\024ModifyColumn" +
+      "Response\"\\\n\021MoveRegionRequest\022 \n\006region\030",
+      "\001 \002(\0132\020.RegionSpecifier\022%\n\020dest_server_n" +
+      "ame\030\002 \001(\0132\013.ServerName\"\024\n\022MoveRegionResp" +
+      "onse\"\200\001\n\035DispatchMergingRegionsRequest\022\"" +
+      "\n\010region_a\030\001 \002(\0132\020.RegionSpecifier\022\"\n\010re" +
+      "gion_b\030\002 \002(\0132\020.RegionSpecifier\022\027\n\010forcib" +
+      "le\030\003 \001(\010:\005false\" \n\036DispatchMergingRegion" +
+      "sResponse\"7\n\023AssignRegionRequest\022 \n\006regi" +
+      "on\030\001 \002(\0132\020.RegionSpecifier\"\026\n\024AssignRegi" +
+      "onResponse\"O\n\025UnassignRegionRequest\022 \n\006r" +
+      "egion\030\001 \002(\0132\020.RegionSpecifier\022\024\n\005force\030\002",
+      " \001(\010:\005false\"\030\n\026UnassignRegionResponse\"8\n" +
+      "\024OfflineRegionRequest\022 \n\006region\030\001 \002(\0132\020." +
+      "RegionSpecifier\"\027\n\025OfflineRegionResponse" +
+      "\"L\n\022CreateTableRequest\022\"\n\014table_schema\030\001" +
+      " \002(\0132\014.TableSchema\022\022\n\nsplit_keys\030\002 \003(\014\"\025" +
+      "\n\023CreateTableResponse\"(\n\022DeleteTableRequ" +
+      "est\022\022\n\ntable_name\030\001 \002(\014\"\025\n\023DeleteTableRe" +
+      "sponse\"(\n\022EnableTableRequest\022\022\n\ntable_na" +
+      "me\030\001 \002(\014\"\025\n\023EnableTableResponse\")\n\023Disab" +
+      "leTableRequest\022\022\n\ntable_name\030\001 \002(\014\"\026\n\024Di",
+      "sableTableResponse\"L\n\022ModifyTableRequest" +
+      "\022\022\n\ntable_name\030\001 \002(\014\022\"\n\014table_schema\030\002 \002" +
+      "(\0132\014.TableSchema\"\025\n\023ModifyTableResponse\"" +
+      "\021\n\017ShutdownRequest\"\022\n\020ShutdownResponse\"\023" +
+      "\n\021StopMasterRequest\"\024\n\022StopMasterRespons" +
+      "e\"\020\n\016BalanceRequest\"\'\n\017BalanceResponse\022\024" +
+      "\n\014balancer_ran\030\001 \002(\010\"<\n\031SetBalancerRunni" +
+      "ngRequest\022\n\n\002on\030\001 \002(\010\022\023\n\013synchronous\030\002 \001" +
+      "(\010\"8\n\032SetBalancerRunningResponse\022\032\n\022prev" +
+      "_balance_value\030\001 \001(\010\"\024\n\022CatalogScanReque",
+      "st\"*\n\023CatalogScanResponse\022\023\n\013scan_result" +
+      "\030\001 \001(\005\"-\n\033EnableCatalogJanitorRequest\022\016\n" +
+      "\006enable\030\001 \002(\010\"2\n\034EnableCatalogJanitorRes" +
+      "ponse\022\022\n\nprev_value\030\001 \001(\010\" \n\036IsCatalogJa" +
+      "nitorEnabledRequest\"0\n\037IsCatalogJanitorE" +
+      "nabledResponse\022\r\n\005value\030\001 \002(\010\"=\n\023TakeSna" +
+      "pshotRequest\022&\n\010snapshot\030\001 \002(\0132\024.Snapsho" +
+      "tDescription\"0\n\024TakeSnapshotResponse\022\030\n\020" +
+      "expected_timeout\030\001 \002(\003\"\025\n\023ListSnapshotRe" +
+      "quest\"?\n\024ListSnapshotResponse\022\'\n\tsnapsho",
+      "ts\030\001 \003(\0132\024.SnapshotDescription\"?\n\025Delete" +
+      "SnapshotRequest\022&\n\010snapshot\030\001 \002(\0132\024.Snap" +
+      "shotDescription\"\030\n\026DeleteSnapshotRespons" +
+      "e\"@\n\026RestoreSnapshotRequest\022&\n\010snapshot\030" +
+      "\001 \002(\0132\024.SnapshotDescription\"\031\n\027RestoreSn" +
+      "apshotResponse\"?\n\025IsSnapshotDoneRequest\022" +
+      "&\n\010snapshot\030\001 \001(\0132\024.SnapshotDescription\"" +
+      "U\n\026IsSnapshotDoneResponse\022\023\n\004done\030\001 \001(\010:" +
+      "\005false\022&\n\010snapshot\030\002 \001(\0132\024.SnapshotDescr" +
+      "iption\"F\n\034IsRestoreSnapshotDoneRequest\022&",
+      "\n\010snapshot\030\001 \001(\0132\024.SnapshotDescription\"3" +
+      "\n\035IsRestoreSnapshotDoneResponse\022\022\n\004done\030" +
+      "\001 \001(\010:\004true2\305\016\n\022MasterAdminService\0222\n\tAd" +
+      "dColumn\022\021.AddColumnRequest\032\022.AddColumnRe" +
+      "sponse\022;\n\014DeleteColumn\022\024.DeleteColumnReq" +
+      "uest\032\025.DeleteColumnResponse\022;\n\014ModifyCol" +
+      "umn\022\024.ModifyColumnRequest\032\025.ModifyColumn" +
+      "Response\0225\n\nMoveRegion\022\022.MoveRegionReque" +
+      "st\032\023.MoveRegionResponse\022Y\n\026DispatchMergi" +
+      "ngRegions\022\036.DispatchMergingRegionsReques",
+      "t\032\037.DispatchMergingRegionsResponse\022;\n\014As" +
+      "signRegion\022\024.AssignRegionRequest\032\025.Assig" +
+      "nRegionResponse\022A\n\016UnassignRegion\022\026.Unas" +
+      "signRegionRequest\032\027.UnassignRegionRespon" +
+      "se\022>\n\rOfflineRegion\022\025.OfflineRegionReque" +
+      "st\032\026.OfflineRegionResponse\0228\n\013DeleteTabl" +
+      "e\022\023.DeleteTableRequest\032\024.DeleteTableResp" +
+      "onse\0228\n\013EnableTable\022\023.EnableTableRequest" +
+      "\032\024.EnableTableResponse\022;\n\014DisableTable\022\024" +
+      ".DisableTableRequest\032\025.DisableTableRespo",
+      "nse\0228\n\013ModifyTable\022\023.ModifyTableRequest\032" +
+      "\024.ModifyTableResponse\0228\n\013CreateTable\022\023.C" +
+      "reateTableRequest\032\024.CreateTableResponse\022" +
+      "/\n\010Shutdown\022\020.ShutdownRequest\032\021.Shutdown" +
+      "Response\0225\n\nStopMaster\022\022.StopMasterReque" +
+      "st\032\023.StopMasterResponse\022,\n\007Balance\022\017.Bal" +
+      "anceRequest\032\020.BalanceResponse\022M\n\022SetBala" +
+      "ncerRunning\022\032.SetBalancerRunningRequest\032" +
+      "\033.SetBalancerRunningResponse\022;\n\016RunCatal" +
+      "ogScan\022\023.CatalogScanRequest\032\024.CatalogSca",
+      "nResponse\022S\n\024EnableCatalogJanitor\022\034.Enab" +
+      "leCatalogJanitorRequest\032\035.EnableCatalogJ" +
+      "anitorResponse\022\\\n\027IsCatalogJanitorEnable" +
+      "d\022\037.IsCatalogJanitorEnabledRequest\032 .IsC" +
+      "atalogJanitorEnabledResponse\022L\n\021ExecMast" +
+      "erService\022\032.CoprocessorServiceRequest\032\033." +
+      "CoprocessorServiceResponse\0227\n\010Snapshot\022\024" +
+      ".TakeSnapshotRequest\032\025.TakeSnapshotRespo" +
+      "nse\022D\n\025GetCompletedSnapshots\022\024.ListSnaps" +
+      "hotRequest\032\025.ListSnapshotResponse\022A\n\016Del",
+      "eteSnapshot\022\026.DeleteSnapshotRequest\032\027.De" +
+      "leteSnapshotResponse\022A\n\016IsSnapshotDone\022\026" +
+      ".IsSnapshotDoneRequest\032\027.IsSnapshotDoneR" +
+      "esponse\022D\n\017RestoreSnapshot\022\027.RestoreSnap" +
+      "shotRequest\032\030.RestoreSnapshotResponse\022V\n" +
+      "\025IsRestoreSnapshotDone\022\035.IsRestoreSnapsh" +
+      "otDoneRequest\032\036.IsRestoreSnapshotDoneRes" +
+      "ponse\022D\n\017IsMasterRunning\022\027.IsMasterRunni" +
+      "ngRequest\032\030.IsMasterRunningResponseBG\n*o" +
+      "rg.apache.hadoop.hbase.protobuf.generate",
+      "dB\021MasterAdminProtosH\001\210\001\001\240\001\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {

@@ -72,20 +72,20 @@ option optimize_for = SPEED;
 
 // User Information proto.  Included in ConnectionHeader on connection setup
 message UserInformation {
-  required string effectiveUser = 1;
-  optional string realUser = 2;
+  required string effective_user = 1;
+  optional string real_user = 2;
 }
 
 // This is sent on connection setup after the connection preamble is sent.
 message ConnectionHeader {
-  optional UserInformation userInfo = 1;
-  optional string serviceName = 2;
+  optional UserInformation user_info = 1;
+  optional string service_name = 2;
   // Cell block codec we will use sending over optional cell blocks.  Server throws exception
   // if cannot deal.
-  optional string cellBlockCodecClass = 3 [default = "org.apache.hadoop.hbase.codec.KeyValueCodec"];
+  optional string cell_block_codec_class = 3 [default = "org.apache.hadoop.hbase.codec.KeyValueCodec"];
   // Compressor we will use if cell block is compressed.  Server will throw exception if not supported.
   // Class must implement hadoop's CompressionCodec Interface
-  optional string cellBlockCompressorClass = 4;
+  optional string cell_block_compressor_class = 4;
 }
 
 // Optional Cell block Message.  Included in client RequestHeader
@@ -98,34 +98,34 @@ message CellBlockMeta {
 // the server side exception to the RPC client.
 message ExceptionResponse {
   // Class name of the exception thrown from the server
-  optional string exceptionClassName = 1;
+  optional string exception_class_name = 1;
   // Exception stack trace from the server side
-  optional string stackTrace = 2;
+  optional string stack_trace = 2;
   // Optional hostname.  Filled in for some exceptions such as region moved
   // where exception gives clue on where the region may have moved.
   optional string hostname = 3;
   optional int32 port = 4;
   // Set if we are NOT to retry on receipt of this exception
-  optional bool doNotRetry = 5;
+  optional bool do_not_retry = 5;
 }
 
 // Header sent making a request.
 message RequestHeader {
-  // Monotonically increasing callId to keep track of RPC requests and their response
-  optional uint32 callId = 1;
-  optional RPCTInfo traceInfo = 2;
-  optional string methodName = 3;
+  // Monotonically increasing call_id to keep track of RPC requests and their response
+  optional uint32 call_id = 1;
+  optional RPCTInfo trace_info = 2;
+  optional string method_name = 3;
   // If true, then a pb Message param follows.
-  optional bool requestParam = 4;
+  optional bool request_param = 4;
   // If present, then an encoded data block follows.
-  optional CellBlockMeta cellBlockMeta = 5; 
+  optional CellBlockMeta cell_block_meta = 5;
   // TODO: Have client specify priority
 }
 
 message ResponseHeader {
-  optional uint32 callId = 1;
+  optional uint32 call_id = 1;
   // If present, then request threw an exception and no response message (else we presume one)
   optional ExceptionResponse exception = 2;
   // If present, then an encoded data block follows.
-  optional CellBlockMeta cellBlockMeta = 3; 
+  optional CellBlockMeta cell_block_meta = 3;
 }

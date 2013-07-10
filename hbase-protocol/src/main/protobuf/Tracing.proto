@@ -26,6 +26,6 @@ option optimize_for = SPEED;
 //the id of the current span when this message was sent, so we know 
 //what span caused the new span we will create when this message is received.
 message RPCTInfo {
-  optional int64 traceId = 1;
-  optional int64 parentId = 2;
+  optional int64 trace_id = 1;
+  optional int64 parent_id = 2;
 }

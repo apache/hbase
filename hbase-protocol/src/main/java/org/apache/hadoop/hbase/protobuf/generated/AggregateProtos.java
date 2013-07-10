@@ -11,7 +11,7 @@ public final class AggregateProtos {
   public interface AggregateArgumentOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
     
-    // required string interpreterClassName = 1;
+    // required string interpreter_class_name = 1;
     boolean hasInterpreterClassName();
     String getInterpreterClassName();
     
@@ -20,7 +20,7 @@ public final class AggregateProtos {
     org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Scan getScan();
     org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ScanOrBuilder getScanOrBuilder();
     
-    // optional bytes interpreterSpecificBytes = 3;
+    // optional bytes interpreter_specific_bytes = 3;
     boolean hasInterpreterSpecificBytes();
     com.google.protobuf.ByteString getInterpreterSpecificBytes();
   }
@@ -53,8 +53,8 @@ public final class AggregateProtos {
     }
     
     private int bitField0_;
-    // required string interpreterClassName = 1;
-    public static final int INTERPRETERCLASSNAME_FIELD_NUMBER = 1;
+    // required string interpreter_class_name = 1;
+    public static final int INTERPRETER_CLASS_NAME_FIELD_NUMBER = 1;
     private java.lang.Object interpreterClassName_;
     public boolean hasInterpreterClassName() {
       return ((bitField0_ & 0x00000001) == 0x00000001);
@@ -98,8 +98,8 @@ public final class AggregateProtos {
       return scan_;
     }
     
-    // optional bytes interpreterSpecificBytes = 3;
-    public static final int INTERPRETERSPECIFICBYTES_FIELD_NUMBER = 3;
+    // optional bytes interpreter_specific_bytes = 3;
+    public static final int INTERPRETER_SPECIFIC_BYTES_FIELD_NUMBER = 3;
     private com.google.protobuf.ByteString interpreterSpecificBytes_;
     public boolean hasInterpreterSpecificBytes() {
       return ((bitField0_ & 0x00000004) == 0x00000004);
@@ -215,7 +215,7 @@ public final class AggregateProtos {
       int hash = 41;
       hash = (19 * hash) + getDescriptorForType().hashCode();
       if (hasInterpreterClassName()) {
-        hash = (37 * hash) + INTERPRETERCLASSNAME_FIELD_NUMBER;
+        hash = (37 * hash) + INTERPRETER_CLASS_NAME_FIELD_NUMBER;
         hash = (53 * hash) + getInterpreterClassName().hashCode();
       }
       if (hasScan()) {
@@ -223,7 +223,7 @@ public final class AggregateProtos {
         hash = (53 * hash) + getScan().hashCode();
       }
       if (hasInterpreterSpecificBytes()) {
-        hash = (37 * hash) + INTERPRETERSPECIFICBYTES_FIELD_NUMBER;
+        hash = (37 * hash) + INTERPRETER_SPECIFIC_BYTES_FIELD_NUMBER;
         hash = (53 * hash) + getInterpreterSpecificBytes().hashCode();
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
@@ -500,7 +500,7 @@ public final class AggregateProtos {
       
       private int bitField0_;
       
-      // required string interpreterClassName = 1;
+      // required string interpreter_class_name = 1;
       private java.lang.Object interpreterClassName_ = "";
       public boolean hasInterpreterClassName() {
         return ((bitField0_ & 0x00000001) == 0x00000001);
@@ -626,7 +626,7 @@ public final class AggregateProtos {
         return scanBuilder_;
       }
       
-      // optional bytes interpreterSpecificBytes = 3;
+      // optional bytes interpreter_specific_bytes = 3;
       private com.google.protobuf.ByteString interpreterSpecificBytes_ = com.google.protobuf.ByteString.EMPTY;
       public boolean hasInterpreterSpecificBytes() {
         return ((bitField0_ & 0x00000004) == 0x00000004);
@@ -664,12 +664,12 @@ public final class AggregateProtos {
   public interface AggregateResponseOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
     
-    // repeated bytes firstPart = 1;
+    // repeated bytes first_part = 1;
     java.util.List<com.google.protobuf.ByteString> getFirstPartList();
     int getFirstPartCount();
     com.google.protobuf.ByteString getFirstPart(int index);
     
-    // optional bytes secondPart = 2;
+    // optional bytes second_part = 2;
     boolean hasSecondPart();
     com.google.protobuf.ByteString getSecondPart();
   }
@@ -702,8 +702,8 @@ public final class AggregateProtos {
     }
     
     private int bitField0_;
-    // repeated bytes firstPart = 1;
-    public static final int FIRSTPART_FIELD_NUMBER = 1;
+    // repeated bytes first_part = 1;
+    public static final int FIRST_PART_FIELD_NUMBER = 1;
     private java.util.List<com.google.protobuf.ByteString> firstPart_;
     public java.util.List<com.google.protobuf.ByteString>
         getFirstPartList() {
@@ -716,8 +716,8 @@ public final class AggregateProtos {
       return firstPart_.get(index);
     }
     
-    // optional bytes secondPart = 2;
-    public static final int SECONDPART_FIELD_NUMBER = 2;
+    // optional bytes second_part = 2;
+    public static final int SECOND_PART_FIELD_NUMBER = 2;
     private com.google.protobuf.ByteString secondPart_;
     public boolean hasSecondPart() {
       return ((bitField0_ & 0x00000001) == 0x00000001);
@@ -810,11 +810,11 @@ public final class AggregateProtos {
       int hash = 41;
       hash = (19 * hash) + getDescriptorForType().hashCode();
       if (getFirstPartCount() > 0) {
-        hash = (37 * hash) + FIRSTPART_FIELD_NUMBER;
+        hash = (37 * hash) + FIRST_PART_FIELD_NUMBER;
         hash = (53 * hash) + getFirstPartList().hashCode();
       }
       if (hasSecondPart()) {
-        hash = (37 * hash) + SECONDPART_FIELD_NUMBER;
+        hash = (37 * hash) + SECOND_PART_FIELD_NUMBER;
         hash = (53 * hash) + getSecondPart().hashCode();
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
@@ -1060,7 +1060,7 @@ public final class AggregateProtos {
       
       private int bitField0_;
       
-      // repeated bytes firstPart = 1;
+      // repeated bytes first_part = 1;
       private java.util.List<com.google.protobuf.ByteString> firstPart_ = java.util.Collections.emptyList();;
       private void ensureFirstPartIsMutable() {
         if (!((bitField0_ & 0x00000001) == 0x00000001)) {
@@ -1111,7 +1111,7 @@ public final class AggregateProtos {
         return this;
       }
       
-      // optional bytes secondPart = 2;
+      // optional bytes second_part = 2;
       private com.google.protobuf.ByteString secondPart_ = com.google.protobuf.ByteString.EMPTY;
       public boolean hasSecondPart() {
         return ((bitField0_ & 0x00000002) == 0x00000002);
@@ -1776,23 +1776,23 @@ public final class AggregateProtos {
       descriptor;
   static {
     java.lang.String[] descriptorData = {
-      "\n\017Aggregate.proto\032\014Client.proto\"h\n\021Aggre" +
-      "gateArgument\022\034\n\024interpreterClassName\030\001 \002" +
-      "(\t\022\023\n\004scan\030\002 \002(\0132\005.Scan\022 \n\030interpreterSp" +
-      "ecificBytes\030\003 \001(\014\":\n\021AggregateResponse\022\021" +
-      "\n\tfirstPart\030\001 \003(\014\022\022\n\nsecondPart\030\002 \001(\0142\366\002" +
-      "\n\020AggregateService\0220\n\006getMax\022\022.Aggregate" +
-      "Argument\032\022.AggregateResponse\0220\n\006getMin\022\022" +
-      ".AggregateArgument\032\022.AggregateResponse\0220" +
-      "\n\006getSum\022\022.AggregateArgument\032\022.Aggregate" +
-      "Response\0223\n\tgetRowNum\022\022.AggregateArgumen",
-      "t\032\022.AggregateResponse\0220\n\006getAvg\022\022.Aggreg" +
-      "ateArgument\032\022.AggregateResponse\0220\n\006getSt" +
-      "d\022\022.AggregateArgument\032\022.AggregateRespons" +
-      "e\0223\n\tgetMedian\022\022.AggregateArgument\032\022.Agg" +
-      "regateResponseBE\n*org.apache.hadoop.hbas" +
-      "e.protobuf.generatedB\017AggregateProtosH\001\210" +
-      "\001\001\240\001\001"
+      "\n\017Aggregate.proto\032\014Client.proto\"l\n\021Aggre" +
+      "gateArgument\022\036\n\026interpreter_class_name\030\001" +
+      " \002(\t\022\023\n\004scan\030\002 \002(\0132\005.Scan\022\"\n\032interpreter" +
+      "_specific_bytes\030\003 \001(\014\"<\n\021AggregateRespon" +
+      "se\022\022\n\nfirst_part\030\001 \003(\014\022\023\n\013second_part\030\002 " +
+      "\001(\0142\366\002\n\020AggregateService\0220\n\006GetMax\022\022.Agg" +
+      "regateArgument\032\022.AggregateResponse\0220\n\006Ge" +
+      "tMin\022\022.AggregateArgument\032\022.AggregateResp" +
+      "onse\0220\n\006GetSum\022\022.AggregateArgument\032\022.Agg" +
+      "regateResponse\0223\n\tGetRowNum\022\022.AggregateA",
+      "rgument\032\022.AggregateResponse\0220\n\006GetAvg\022\022." +
+      "AggregateArgument\032\022.AggregateResponse\0220\n" +
+      "\006GetStd\022\022.AggregateArgument\032\022.AggregateR" +
+      "esponse\0223\n\tGetMedian\022\022.AggregateArgument" +
+      "\032\022.AggregateResponseBE\n*org.apache.hadoo" +
+      "p.hbase.protobuf.generatedB\017AggregatePro" +
+      "tosH\001\210\001\001\240\001\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
