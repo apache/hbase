@@ -37,6 +37,7 @@ import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ClientService.Blo
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.Ignore;
 import org.mockito.Mockito;
 
 import com.google.protobuf.RpcController;
@@ -92,6 +93,36 @@ public class TestClientNoCluster {
   }
 
   /**
+   * Remove the @Ignore to try out timeout and retry asettings
+   * @throws IOException
+   */
+  @Ignore 
+  @Test
+  public void testTimeoutAndRetries() throws IOException {
+    Configuration localConfig = HBaseConfiguration.create(this.conf);
+    // This override mocks up our exists/get call to throw a RegionServerStoppedException.
+    localConfig.set("hbase.client.connection.impl", RpcTimeoutConnection.class.getName());
+    HTable table = new HTable(localConfig, HConstants.META_TABLE_NAME);
+    Throwable t = null;
+    LOG.info("Start");
+    try {
+      // An exists call turns into a get w/ a flag.
+      table.exists(new Get(Bytes.toBytes("abc")));
+    } catch (SocketTimeoutException e) {
+      // I expect this exception.
+      LOG.info("Got expected exception", e);
+      t = e;
+    } catch (RetriesExhaustedException e) {
+      // This is the old, unwanted behavior.  If we get here FAIL!!!
+      fail();
+    } finally {
+      table.close();
+    }
+    LOG.info("Stop");
+    assertTrue(t != null);
+  }
+
+  /**
    * Test that operation timeout prevails over rpc default timeout and retries, etc.
    * @throws IOException
    */
@@ -102,7 +133,7 @@ public class TestClientNoCluster {
     localConfig.set("hbase.client.connection.impl", RpcTimeoutConnection.class.getName());
     int pause = 10;
     localConfig.setInt("hbase.client.pause", pause);
-    localConfig.setInt("hbase.client.retries.number", 10);
+    localConfig.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 10);
     // Set the operation timeout to be < the pause.  Expectation is that after first pause, we will
     // fail out of the rpc because the rpc timeout will have been set to the operation tiemout
     // and it has expired.  Otherwise, if this functionality is broke, all retries will be run --
