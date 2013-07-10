@@ -72,7 +72,7 @@ public class HLogPrettyPrinter {
   // useful for programatic capture of JSON output
   private PrintStream out;
   // for JSON encoding
-  private ObjectMapper mapper;
+  private static final ObjectMapper MAPPER = new ObjectMapper();
 
   /**
    * Basic constructor that simply initializes values to reasonable defaults.
@@ -86,7 +86,6 @@ public class HLogPrettyPrinter {
     persistentOutput = false;
     firstTxn = true;
     out = System.out;
-    mapper = new ObjectMapper();
   }
 
   /**
@@ -277,7 +276,7 @@ public class HLogPrettyPrinter {
           else
             out.print(",");
           // encode and print JSON
-          out.print(mapper.writeValueAsString(txn));
+          out.print(MAPPER.writeValueAsString(txn));
         } else {
           // Pretty output, complete with indentation by atomic action
           out.println("Sequence " + txn.get("sequence") + " "

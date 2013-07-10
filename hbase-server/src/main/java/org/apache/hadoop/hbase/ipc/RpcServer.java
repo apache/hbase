@@ -213,7 +213,7 @@ public class RpcServer implements RpcServerInterface {
   protected final boolean tcpKeepAlive; // if T then use keepalives
   protected final long purgeTimeout;    // in milliseconds
 
-  volatile protected boolean running = true;         // true while server runs
+  protected volatile boolean running = true;         // true while server runs
   protected BlockingQueue<Call> callQueue; // queued calls
   protected final Counter callQueueSize = new Counter();
   protected BlockingQueue<Call> priorityCallQueue;
@@ -242,6 +242,8 @@ public class RpcServer implements RpcServerInterface {
   /** Default value for above params */
   private static final int DEFAULT_WARN_RESPONSE_TIME = 10000; // milliseconds
   private static final int DEFAULT_WARN_RESPONSE_SIZE = 100 * 1024 * 1024;
+
+  private static final ObjectMapper MAPPER = new ObjectMapper();
 
   private final int warnResponseTime;
   private final int warnResponseSize;
@@ -2179,8 +2181,6 @@ public class RpcServer implements RpcServerInterface {
       String clientAddress, long startTime, int processingTime, int qTime,
       long responseSize)
           throws IOException {
-    // for JSON encoding
-    ObjectMapper mapper = new ObjectMapper();
     // base information that is reported regardless of type of call
     Map<String, Object> responseInfo = new HashMap<String, Object>();
     responseInfo.put("starttimems", startTime);
@@ -2202,19 +2202,19 @@ public class RpcServer implements RpcServerInterface {
       responseInfo.putAll(((Operation) params[1]).toMap());
       // report to the log file
       LOG.warn("(operation" + tag + "): " +
-          mapper.writeValueAsString(responseInfo));
+               MAPPER.writeValueAsString(responseInfo));
     } else if (params.length == 1 && serverInstance instanceof HRegionServer &&
         params[0] instanceof Operation) {
       // annotate the response map with operation details
       responseInfo.putAll(((Operation) params[0]).toMap());
       // report to the log file
       LOG.warn("(operation" + tag + "): " +
-          mapper.writeValueAsString(responseInfo));
+               MAPPER.writeValueAsString(responseInfo));
     } else {
       // can't get JSON details, so just report call.toString() along with
       // a more generic tag.
       responseInfo.put("call", call);
-      LOG.warn("(response" + tag + "): " + mapper.writeValueAsString(responseInfo));
+      LOG.warn("(response" + tag + "): " + MAPPER.writeValueAsString(responseInfo));
     }
   }
 
