@@ -24,6 +24,9 @@ import java.nio.ByteBuffer;
 import java.util.Arrays;
 
 import org.apache.commons.lang.time.StopWatch;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellScanner;
@@ -39,15 +42,16 @@ import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.hadoop.io.compress.CompressionCodec;
 import org.apache.hadoop.io.compress.DefaultCodec;
 import org.apache.hadoop.io.compress.GzipCodec;
+import org.apache.log4j.Level;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-import org.mortbay.log.Log;
-import org.apache.commons.logging.impl.Log4JLogger;
-import org.apache.log4j.Level;
 
 @Category(SmallTests.class) 
 public class TestIPCUtil {
+
+  public static final Log LOG = LogFactory.getLog(IPCUtil.class);
+
   IPCUtil util;
   @Before
   public void before() {
@@ -148,7 +152,7 @@ public class TestIPCUtil {
       timerTest(util, timer, count, size, codec, compressor, false);
     }
     timer.stop();
-    Log.info("Codec=" + codec + ", compression=" + compressor + ", sized=" + false +
+    LOG.info("Codec=" + codec + ", compression=" + compressor + ", sized=" + false +
         ", count=" + count + ", size=" + size + ", + took=" + timer.getTime() + "ms");
     timer.reset();
     timer.start();
@@ -156,7 +160,7 @@ public class TestIPCUtil {
       timerTest(util, timer, count, size, codec, compressor, true);
     }
     timer.stop();
-    Log.info("Codec=" + codec + ", compression=" + compressor + ", sized=" + true +
+    LOG.info("Codec=" + codec + ", compression=" + compressor + ", sized=" + true +
       ", count=" + count + ", size=" + size + ", + took=" + timer.getTime() + "ms");
   }
 

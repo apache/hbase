@@ -694,7 +694,7 @@
             </excludes>
           </configuration>
         </plugin>
-      <plugin>
+        <plugin>
           <artifactId>maven-assembly-plugin</artifactId>
           <version>${maven.assembly.version}</version>
           <configuration>
@@ -704,7 +704,7 @@
             <!--Do not attach assembly to project.-->
             <attach>false</attach>
           </configuration>
-      </plugin>
+        </plugin>
       </plugins>
     </pluginManagement>
     <plugins>
@@ -871,7 +871,7 @@
           </dependency>
         </dependencies>
         <configuration>
-            <siteDirectory>${basedir}/src/main/site</siteDirectory>
+          <siteDirectory>${basedir}/src/main/site</siteDirectory>
           <inputEncoding>UTF-8</inputEncoding>
           <outputEncoding>UTF-8</outputEncoding>
           <templateFile>${basedir}/src/main/site/site.vm</templateFile>
