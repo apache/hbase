@@ -260,14 +260,16 @@ public class ThriftServer {
       registerFilters(conf);
 
       // Construct correct ProtocolFactory
-      boolean compact = cmd.hasOption("compact");
+      boolean compact = cmd.hasOption("compact") ||
+        conf.getBoolean("hbase.regionserver.thrift.compact", false);
       TProtocolFactory protocolFactory = getTProtocolFactory(compact);
       THBaseService.Iface handler =
           ThriftHBaseServiceHandler.newInstance(conf, metrics);
       THBaseService.Processor processor = new THBaseService.Processor(handler);
       conf.setBoolean("hbase.regionserver.thrift.compact", compact);
 
-      boolean framed = cmd.hasOption("framed") || nonblocking || hsha;
+      boolean framed = cmd.hasOption("framed") ||
+        conf.getBoolean("hbase.regionserver.thrift.framed", false) || nonblocking || hsha;
       TTransportFactory transportFactory = getTTransportFactory(framed);
       conf.setBoolean("hbase.regionserver.thrift.framed", framed);
 
