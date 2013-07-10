@@ -25,7 +25,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
  */
 @InterfaceAudience.Private
 public interface KeyRange {
-  byte[] getStartKey();
+  abstract byte[] getStartKey();
 
-  byte[] getEndKey();
+  abstract byte[] getEndKey();
 }

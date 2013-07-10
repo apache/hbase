@@ -2514,14 +2514,14 @@ public class KeyValue implements Cell, HeapSize, Cloneable {
   /**
    * Avoids redundant comparisons for better performance.
    */
-  public interface SamePrefixComparator<T> {
+  public static interface SamePrefixComparator<T> {
     /**
      * Compare two keys assuming that the first n bytes are the same.
      * @param commonPrefix How many bytes are the same.
      */
-    int compareIgnoringPrefix(
-      int commonPrefix, T left, int loffset, int llength, T right, int roffset, int rlength
-    );
+    public int compareIgnoringPrefix(int commonPrefix,
+        T left, int loffset, int llength,
+        T right, int roffset, int rlength);
   }
 
   /**

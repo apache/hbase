@@ -29,5 +29,5 @@ public interface LastSequenceId {
    * @param regionName Encoded region name
    * @return Last flushed sequence Id for regionName or -1 if it can't be determined
    */
-  long getLastSequenceId(byte[] regionName);
+  public long getLastSequenceId(byte[] regionName);
 }

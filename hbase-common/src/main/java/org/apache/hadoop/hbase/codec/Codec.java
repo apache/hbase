@@ -37,14 +37,14 @@ public interface Codec {
    * Call flush when done.  Some encoders may not put anything on the stream until flush is called.
    * On flush, let go of any resources used by the encoder.
    */
-  interface Encoder extends CellOutputStream {}
+  public interface Encoder extends CellOutputStream {}
 
   /**
    * Implementations should implicitly clean up any resources allocated when the
    * Decoder/CellScanner runs off the end of the cell block. Do this rather than require the user
    * call close explicitly.
    */
-  interface Decoder extends CellScanner {};
+  public interface Decoder extends CellScanner {};
 
   Decoder getDecoder(InputStream is);
   Encoder getEncoder(OutputStream os);

@@ -86,14 +86,14 @@ public final class Waiter {
    * {@link Waiter#waitFor(Configuration, long, long, boolean, Predicate) methods.
    */
   @InterfaceAudience.Private
-  public interface Predicate<E extends Exception> {
+  public static interface Predicate<E extends Exception> {
 
     /**
      * Perform a predicate evaluation.
      * @return the boolean result of the evaluation.
      * @throws Exception thrown if the predicate evaluation could not evaluate.
      */
-    boolean evaluate() throws E;
+    public boolean evaluate() throws E;
 
   }
 

@@ -38,5 +38,5 @@ public interface ReplicationSinkService extends ReplicationService {
    * @param cells Cells that the WALEntries refer to (if cells is non-null)
    * @throws IOException
    */
-  void replicateLogEntries(List<WALEntry> entries, CellScanner cells) throws IOException;
+  public void replicateLogEntries(List<WALEntry> entries, CellScanner cells) throws IOException;
 }

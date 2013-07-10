@@ -140,7 +140,7 @@ public class TestSplitLogManager {
   }
 
   private interface Expr {
-    long eval();
+    public long eval();
   }
 
   private void waitForCounter(final AtomicLong ctr, long oldval, long newval, long timems)

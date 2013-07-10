@@ -54,8 +54,8 @@ public interface HFileScanner {
    * false when it is called.
    * @throws IOException
    */
-  int seekTo(byte[] key) throws IOException;
-  int seekTo(byte[] key, int offset, int length) throws IOException;
+  public int seekTo(byte[] key) throws IOException;
+  public int seekTo(byte[] key, int offset, int length) throws IOException;
   /**
    * Reseek to or just before the passed <code>key</code>. Similar to seekTo
    * except that this can be called even if the scanner is not at the beginning
@@ -76,8 +76,8 @@ public interface HFileScanner {
    * 1, such that k[i] < key, and scanner is left in position i.
    * @throws IOException
    */
-  int reseekTo(byte[] key) throws IOException;
-  int reseekTo(byte[] key, int offset, int length) throws IOException;
+  public int reseekTo(byte[] key) throws IOException;
+  public int reseekTo(byte[] key, int offset, int length) throws IOException;
   /**
    * Consider the key stream of all the keys in the file,
    * <code>k[0] .. k[n]</code>, where there are n keys in the file.
@@ -88,28 +88,28 @@ public interface HFileScanner {
    * return false (EOF).
    * @throws IOException
    */
-  boolean seekBefore(byte[] key) throws IOException;
-  boolean seekBefore(byte[] key, int offset, int length) throws IOException;
+  public boolean seekBefore(byte [] key) throws IOException;
+  public boolean seekBefore(byte []key, int offset, int length) throws IOException;
   /**
    * Positions this scanner at the start of the file.
    * @return False if empty file; i.e. a call to next would return false and
    * the current key and value are undefined.
    * @throws IOException
    */
-  boolean seekTo() throws IOException;
+  public boolean seekTo() throws IOException;
   /**
    * Scans to the next entry in the file.
    * @return Returns false if you are at the end otherwise true if more in file.
    * @throws IOException
    */
-  boolean next() throws IOException;
+  public boolean next() throws IOException;
   /**
    * Gets a buffer view to the current key. You must call
    * {@link #seekTo(byte[])} before this method.
    * @return byte buffer for the key. The limit is set to the key size, and the
    * position is 0, the start of the buffer view.
    */
-  ByteBuffer getKey();
+  public ByteBuffer getKey();
   /**
    * Gets a buffer view to the current value.  You must call
    * {@link #seekTo(byte[])} before this method.
@@ -117,31 +117,31 @@ public interface HFileScanner {
    * @return byte buffer for the value. The limit is set to the value size, and
    * the position is 0, the start of the buffer view.
    */
-  ByteBuffer getValue();
+  public ByteBuffer getValue();
   /**
    * @return Instance of {@link KeyValue}.
    */
-  KeyValue getKeyValue();
+  public KeyValue getKeyValue();
   /**
    * Convenience method to get a copy of the key as a string - interpreting the
    * bytes as UTF8. You must call {@link #seekTo(byte[])} before this method.
    * @return key as a string
    */
-  String getKeyString();
+  public String getKeyString();
   /**
    * Convenience method to get a copy of the value as a string - interpreting
    * the bytes as UTF8. You must call {@link #seekTo(byte[])} before this method.
    * @return value as a string
    */
-  String getValueString();
+  public String getValueString();
   /**
    * @return Reader that underlies this Scanner instance.
    */
-  HFile.Reader getReader();
+  public HFile.Reader getReader();
   /**
    * @return True is scanner has had one of the seek calls invoked; i.e.
    * {@link #seekBefore(byte[])} or {@link #seekTo()} or {@link #seekTo(byte[])}.
    * Otherwise returns false.
    */
-  boolean isSeeked();
+  public boolean isSeeked();
 }

@@ -29,11 +29,11 @@ import org.apache.hadoop.classification.InterfaceAudience;
  * ProtobufMessageBodyProducer adapters. 
  */
 @InterfaceAudience.Private
-public interface ProtobufMessageHandler {
+public abstract interface ProtobufMessageHandler {
   /**
    * @return the protobuf represention of the model
    */
-  byte[] createProtobufOutput();
+  public byte[] createProtobufOutput();
 
   /**
    * Initialize the model from a protobuf representation.
@@ -41,6 +41,6 @@ public interface ProtobufMessageHandler {
    * @return reference to self for convenience
    * @throws IOException
    */
-  ProtobufMessageHandler getObjectFromMessage(byte[] message)
+  public ProtobufMessageHandler getObjectFromMessage(byte[] message)
     throws IOException;
 }

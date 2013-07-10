@@ -38,18 +38,17 @@ public interface ReplicationService {
    * Initializes the replication service object.
    * @throws IOException
    */
-  void initialize(
-    Server rs, FileSystem fs, Path logdir, Path oldLogDir
-  ) throws IOException;
+  public void initialize(Server rs, FileSystem fs, Path logdir,
+                         Path oldLogDir) throws IOException;
 
   /**
    * Start replication services.
    * @throws IOException
    */
-  void startReplicationService() throws IOException;
+  public void startReplicationService() throws IOException;
 
   /**
    * Stops replication service.
    */
-  void stopReplicationService();
+  public void stopReplicationService();
 }

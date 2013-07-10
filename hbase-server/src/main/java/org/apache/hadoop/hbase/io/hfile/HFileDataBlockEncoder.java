@@ -49,9 +49,8 @@ public interface HFileDataBlockEncoder {
    *          generated).
    * @return non null block which is coded according to the settings.
    */
-  HFileBlock diskToCacheFormat(
-    HFileBlock block, boolean isCompaction
-  );
+  public HFileBlock diskToCacheFormat(HFileBlock block,
+      boolean isCompaction);
 
   /**
    * Should be called before an encoded or unencoded data block is written to
@@ -61,39 +60,37 @@ public interface HFileDataBlockEncoder {
    * @param blockType block type
    * @throws IOException
    */
-  void beforeWriteToDisk(
-    ByteBuffer in,
-    boolean includesMemstoreTS,
-    HFileBlockEncodingContext encodingResult,
-    BlockType blockType
-  ) throws IOException;
+  public void beforeWriteToDisk(
+      ByteBuffer in, boolean includesMemstoreTS,
+      HFileBlockEncodingContext encodingResult,
+      BlockType blockType) throws IOException;
 
   /**
    * Decides whether we should use a scanner over encoded blocks.
    * @param isCompaction whether we are in a compaction.
    * @return Whether to use encoded scanner.
    */
-  boolean useEncodedScanner(boolean isCompaction);
+  public boolean useEncodedScanner(boolean isCompaction);
 
   /**
    * Save metadata in HFile which will be written to disk
    * @param writer writer for a given HFile
    * @exception IOException on disk problems
    */
-  void saveMetadata(HFile.Writer writer)
+  public void saveMetadata(HFile.Writer writer)
       throws IOException;
 
   /** @return the on-disk data block encoding */
-  DataBlockEncoding getEncodingOnDisk();
+  public DataBlockEncoding getEncodingOnDisk();
 
   /** @return the preferred in-cache data block encoding for normal reads */
-  DataBlockEncoding getEncodingInCache();
+  public DataBlockEncoding getEncodingInCache();
 
   /**
    * @return the effective in-cache data block encoding, taking into account
    *         whether we are doing a compaction.
    */
-  DataBlockEncoding getEffectiveEncodingInCache(boolean isCompaction);
+  public DataBlockEncoding getEffectiveEncodingInCache(boolean isCompaction);
 
   /**
    * Create an encoder specific encoding context object for writing. And the
@@ -104,9 +101,8 @@ public interface HFileDataBlockEncoder {
    * @param headerBytes header bytes
    * @return a new {@link HFileBlockEncodingContext} object
    */
-  HFileBlockEncodingContext newOnDiskDataBlockEncodingContext(
-    Algorithm compressionAlgorithm, byte[] headerBytes
-  );
+  public HFileBlockEncodingContext newOnDiskDataBlockEncodingContext(
+      Algorithm compressionAlgorithm, byte[] headerBytes);
 
   /**
    * create a encoder specific decoding context for reading. And the
@@ -116,8 +112,7 @@ public interface HFileDataBlockEncoder {
    * @param compressionAlgorithm
    * @return a new {@link HFileBlockDecodingContext} object
    */
-  HFileBlockDecodingContext newOnDiskDataBlockDecodingContext(
-    Algorithm compressionAlgorithm
-  );
+  public HFileBlockDecodingContext newOnDiskDataBlockDecodingContext(
+      Algorithm compressionAlgorithm);
 
 }

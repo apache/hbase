@@ -66,7 +66,7 @@ public class CompoundConfiguration extends Configuration {
 
   // Devs: these APIs are the same contract as their counterparts in
   // Configuration.java
-  private interface ImmutableConfigMap extends Iterable<Map.Entry<String,String>> {
+  private static interface ImmutableConfigMap extends Iterable<Map.Entry<String,String>> {
     String get(String key);
     String getRaw(String key);
     Class<?> getClassByName(String name) throws ClassNotFoundException;

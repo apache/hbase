@@ -147,7 +147,7 @@ public class RegionSplitter {
    * {@link RegionSplitter#rollingSplit(String, SplitAlgorithm, Configuration)} with the
    * argument splitClassName giving the name of your class.
    */
-  public interface SplitAlgorithm {
+  public static interface SplitAlgorithm {
     /**
      * Split a pre-existing region into 2 regions.
      *

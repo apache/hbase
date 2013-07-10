@@ -35,17 +35,17 @@ public interface Delayable {
    * should be set when ending the delay or right away.  There are cases when
    * the return value can be set right away, even if the call is delayed.
    */
-  void startDelay(boolean delayReturnValue);
+  public void startDelay(boolean delayReturnValue);
 
   /**
    * @return is the call delayed?
    */
-  boolean isDelayed();
+  public boolean isDelayed();
 
   /**
    * @return is the return value delayed?
    */
-  boolean isReturnValueDelayed();
+  public boolean isReturnValueDelayed();
 
   /**
    * Signal that the  RPC server is now allowed to send the response.
@@ -54,14 +54,14 @@ public interface Delayable {
    * not be delayed, this parameter must be null.
    * @throws IOException
    */
-  void endDelay(Object result) throws IOException;
+  public void endDelay(Object result) throws IOException;
 
   /**
    * Signal the end of a delayed RPC, without specifying the return value.  Use
    * this only if the return value was not delayed
    * @throws IOException
    */
-  void endDelay() throws IOException;
+  public void endDelay() throws IOException;
 
   /**
    * End the call, throwing and exception to the caller.  This works regardless
@@ -69,5 +69,5 @@ public interface Delayable {
    * @param t Object to throw to the client.
    * @throws IOException
    */
-  void endDelayThrowing(Throwable t) throws IOException;
+  public void endDelayThrowing(Throwable t) throws IOException;
 }

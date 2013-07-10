@@ -50,13 +50,14 @@ public interface Store extends HeapSize, StoreConfigInformation {
 
   /* The default priority for user-specified compaction requests.
    * The user gets top priority unless we have blocking compactions. (Pri <= 0)
-   */ int PRIORITY_USER = 1;
-  int NO_PRIORITY = Integer.MIN_VALUE;
+   */
+  public static final int PRIORITY_USER = 1;
+  public static final int NO_PRIORITY = Integer.MIN_VALUE;
 
   // General Accessors
-  KeyValue.KVComparator getComparator();
+  public KeyValue.KVComparator getComparator();
 
-  Collection<StoreFile> getStorefiles();
+  public Collection<StoreFile> getStorefiles();
 
   /**
    * Close all the readers We don't need to worry about subsequent requests because the HRegion
@@ -64,7 +65,7 @@ public interface Store extends HeapSize, StoreConfigInformation {
    * @return the {@link StoreFile StoreFiles} that were previously being used.
    * @throws IOException on failure
    */
-  Collection<StoreFile> close() throws IOException;
+  public Collection<StoreFile> close() throws IOException;
 
   /**
    * Return a scanner for both the memstore and the HStore files. Assumes we are not in a
@@ -74,7 +75,7 @@ public interface Store extends HeapSize, StoreConfigInformation {
    * @return a scanner over the current key values
    * @throws IOException on failure
    */
-  KeyValueScanner getScanner(Scan scan, final NavigableSet<byte[]> targetCols)
+  public KeyValueScanner getScanner(Scan scan, final NavigableSet<byte[]> targetCols)
       throws IOException;
 
   /**
@@ -88,16 +89,11 @@ public interface Store extends HeapSize, StoreConfigInformation {
    * @param stopRow
    * @return all scanners for this store
    */
-  List<KeyValueScanner> getScanners(
-    boolean cacheBlocks,
-    boolean isGet,
-    boolean isCompaction,
-    ScanQueryMatcher matcher,
-    byte[] startRow,
-    byte[] stopRow
-  ) throws IOException;
+  public List<KeyValueScanner> getScanners(boolean cacheBlocks,
+      boolean isGet, boolean isCompaction, ScanQueryMatcher matcher, byte[] startRow,
+      byte[] stopRow) throws IOException;
 
-  ScanInfo getScanInfo();
+  public ScanInfo getScanInfo();
 
   /**
    * Adds or replaces the specified KeyValues.
@@ -112,14 +108,14 @@ public interface Store extends HeapSize, StoreConfigInformation {
    * @return memstore size delta
    * @throws IOException
    */
-  long upsert(Iterable<? extends Cell> cells, long readpoint) throws IOException;
+  public long upsert(Iterable<? extends Cell> cells, long readpoint) throws IOException;
 
   /**
    * Adds a value to the memstore
    * @param kv
    * @return memstore size delta
    */
-  long add(KeyValue kv);
+  public long add(KeyValue kv);
 
   /**
    * When was the last edit done in the memstore
@@ -131,7 +127,7 @@ public interface Store extends HeapSize, StoreConfigInformation {
    * key & memstoreTS value of the kv parameter.
    * @param kv
    */
-  void rollback(final KeyValue kv);
+  public void rollback(final KeyValue kv);
 
   /**
    * Find the key that matches <i>row</i> exactly, or the one that immediately precedes it. WARNING:
@@ -145,9 +141,9 @@ public interface Store extends HeapSize, StoreConfigInformation {
    * @return Found keyvalue or null if none found.
    * @throws IOException
    */
-  KeyValue getRowKeyAtOrBefore(final byte[] row) throws IOException;
+  public KeyValue getRowKeyAtOrBefore(final byte[] row) throws IOException;
 
-  FileSystem getFileSystem();
+  public FileSystem getFileSystem();
 
   /*
    * @param maxKeyCount
@@ -156,48 +152,44 @@ public interface Store extends HeapSize, StoreConfigInformation {
    * @param includeMVCCReadpoint whether we should out the MVCC readpoint
    * @return Writer for a new StoreFile in the tmp dir.
    */
-  StoreFile.Writer createWriterInTmp(
-    long maxKeyCount,
-    Compression.Algorithm compression,
-    boolean isCompaction,
-    boolean includeMVCCReadpoint
-  ) throws IOException;
+  public StoreFile.Writer createWriterInTmp(long maxKeyCount, Compression.Algorithm compression,
+      boolean isCompaction, boolean includeMVCCReadpoint) throws IOException;
 
   // Compaction oriented methods
 
-  boolean throttleCompaction(long compactionSize);
+  public boolean throttleCompaction(long compactionSize);
 
   /**
    * getter for CompactionProgress object
    * @return CompactionProgress object; can be null
    */
-  CompactionProgress getCompactionProgress();
+  public CompactionProgress getCompactionProgress();
 
-  CompactionContext requestCompaction() throws IOException;
+  public CompactionContext requestCompaction() throws IOException;
 
-  CompactionContext requestCompaction(int priority, CompactionRequest baseRequest)
+  public CompactionContext requestCompaction(int priority, CompactionRequest baseRequest)
       throws IOException;
 
-  void cancelRequestedCompaction(CompactionContext compaction);
+  public void cancelRequestedCompaction(CompactionContext compaction);
 
-  List<StoreFile> compact(CompactionContext compaction) throws IOException;
+  public List<StoreFile> compact(CompactionContext compaction) throws IOException;
 
   /**
    * @return true if we should run a major compaction.
    */
-  boolean isMajorCompaction() throws IOException;
+  public boolean isMajorCompaction() throws IOException;
 
-  void triggerMajorCompaction();
+  public void triggerMajorCompaction();
 
   /**
    * See if there's too much store files in this store
    * @return true if number of store files is greater than the number defined in minFilesToCompact
    */
-  boolean needsCompaction();
+  public boolean needsCompaction();
 
-  int getCompactPriority();
+  public int getCompactPriority();
 
-  StoreFlushContext createFlushContext(long cacheFlushId);
+  public StoreFlushContext createFlushContext(long cacheFlushId);
 
   /**
    * Call to complete a compaction. Its for the case where we find in the WAL a compaction
@@ -205,18 +197,18 @@ public interface Store extends HeapSize, StoreConfigInformation {
    * See HBASE-2331.
    * @param compaction
    */
-  void completeCompactionMarker(CompactionDescriptor compaction)
+  public void completeCompactionMarker(CompactionDescriptor compaction)
       throws IOException;
 
   // Split oriented methods
 
-  boolean canSplit();
+  public boolean canSplit();
 
   /**
    * Determines if Store should be split
    * @return byte[] if store should be split, null otherwise.
    */
-  byte[] getSplitPoint();
+  public byte[] getSplitPoint();
 
   // Bulk Load methods
 
@@ -224,7 +216,7 @@ public interface Store extends HeapSize, StoreConfigInformation {
    * This throws a WrongRegionException if the HFile does not fit in this region, or an
    * InvalidHFileException if the HFile is not valid.
    */
-  void assertBulkLoadHFileOk(Path srcPath) throws IOException;
+  public void assertBulkLoadHFileOk(Path srcPath) throws IOException;
 
   /**
    * This method should only be called from HRegion. It is assumed that the ranges of values in the
@@ -233,7 +225,7 @@ public interface Store extends HeapSize, StoreConfigInformation {
    * @param srcPathStr
    * @param sequenceId sequence Id associated with the HFile
    */
-  void bulkLoadHFile(String srcPathStr, long sequenceId) throws IOException;
+  public void bulkLoadHFile(String srcPathStr, long sequenceId) throws IOException;
 
   // General accessors into the state of the store
   // TODO abstract some of this out into a metrics class
@@ -241,50 +233,50 @@ public interface Store extends HeapSize, StoreConfigInformation {
   /**
    * @return <tt>true</tt> if the store has any underlying reference files to older HFiles
    */
-  boolean hasReferences();
+  public boolean hasReferences();
 
   /**
    * @return The size of this store's memstore, in bytes
    */
-  long getMemStoreSize();
+  public long getMemStoreSize();
 
-  HColumnDescriptor getFamily();
+  public HColumnDescriptor getFamily();
 
   /**
    * @return The maximum memstoreTS in all store files.
    */
-  long getMaxMemstoreTS();
+  public long getMaxMemstoreTS();
 
   /**
    * @return the data block encoder
    */
-  HFileDataBlockEncoder getDataBlockEncoder();
+  public HFileDataBlockEncoder getDataBlockEncoder();
 
   /** @return aggregate size of all HStores used in the last compaction */
-  long getLastCompactSize();
+  public long getLastCompactSize();
 
   /** @return aggregate size of HStore */
-  long getSize();
+  public long getSize();
 
   /**
    * @return Count of store files
    */
-  int getStorefilesCount();
+  public int getStorefilesCount();
 
   /**
    * @return The size of the store files, in bytes, uncompressed.
    */
-  long getStoreSizeUncompressed();
+  public long getStoreSizeUncompressed();
 
   /**
    * @return The size of the store files, in bytes.
    */
-  long getStorefilesSize();
+  public long getStorefilesSize();
 
   /**
    * @return The size of the store file indexes, in bytes.
    */
-  long getStorefilesIndexSize();
+  public long getStorefilesIndexSize();
 
   /**
    * Returns the total size of all index blocks in the data block indexes, including the root level,
@@ -292,14 +284,14 @@ public interface Store extends HeapSize, StoreConfigInformation {
    * single-level indexes.
    * @return the total size of block indexes in the store
    */
-  long getTotalStaticIndexSize();
+  public long getTotalStaticIndexSize();
 
   /**
    * Returns the total byte size of all Bloom filter bit arrays. For compound Bloom filters even the
    * Bloom blocks currently not loaded into the block cache are counted.
    * @return the total size of all Bloom filters in the store
    */
-  long getTotalStaticBloomSize();
+  public long getTotalStaticBloomSize();
 
   // Test-helper methods
 
@@ -307,40 +299,40 @@ public interface Store extends HeapSize, StoreConfigInformation {
    * Used for tests.
    * @return cache configuration for this Store.
    */
-  CacheConfig getCacheConfig();
+  public CacheConfig getCacheConfig();
 
   /**
    * @return the parent region info hosting this store
    */
-  HRegionInfo getRegionInfo();
+  public HRegionInfo getRegionInfo();
 
-  RegionCoprocessorHost getCoprocessorHost();
+  public RegionCoprocessorHost getCoprocessorHost();
 
-  boolean areWritesEnabled();
+  public boolean areWritesEnabled();
 
   /**
    * @return The smallest mvcc readPoint across all the scanners in this
    * region. Writes older than this readPoint, are included  in every
    * read operation.
    */
-  long getSmallestReadPoint();
+  public long getSmallestReadPoint();
 
-  String getColumnFamilyName();
+  public String getColumnFamilyName();
 
-  String getTableName();
+  public String getTableName();
 
   /*
    * @param o Observer who wants to know about changes in set of Readers
    */
-  void addChangedReaderObserver(ChangedReadersObserver o);
+  public void addChangedReaderObserver(ChangedReadersObserver o);
 
   /*
    * @param o Observer no longer interested in changes in set of Readers.
    */
-  void deleteChangedReaderObserver(ChangedReadersObserver o);
+  public void deleteChangedReaderObserver(ChangedReadersObserver o);
 
   /**
    * @return Whether this store has too many store files.
    */
-  boolean hasTooManyStoreFiles();
+  public boolean hasTooManyStoreFiles();
 }

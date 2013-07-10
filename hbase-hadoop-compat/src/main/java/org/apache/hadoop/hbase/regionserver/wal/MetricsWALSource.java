@@ -29,34 +29,34 @@ public interface MetricsWALSource extends BaseSource {
   /**
    * The name of the metrics
    */
-  String METRICS_NAME = "WAL";
+  static final String METRICS_NAME = "WAL";
 
   /**
    * The name of the metrics context that metrics will be under.
    */
-  String METRICS_CONTEXT = "regionserver";
+  static final String METRICS_CONTEXT = "regionserver";
 
   /**
    * Description
    */
-  String METRICS_DESCRIPTION = "Metrics about HBase RegionServer HLog";
+  static final String METRICS_DESCRIPTION = "Metrics about HBase RegionServer HLog";
 
   /**
    * The name of the metrics context that metrics will be under in jmx
    */
-  String METRICS_JMX_CONTEXT = "RegionServer,sub=" + METRICS_NAME;
+  static final String METRICS_JMX_CONTEXT = "RegionServer,sub=" + METRICS_NAME;
 
 
-  String APPEND_TIME = "appendTime";
-  String APPEND_TIME_DESC = "Time an append to the log took.";
-  String APPEND_COUNT = "appendCount";
-  String APPEND_COUNT_DESC = "Number of appends to the write ahead log.";
-  String APPEND_SIZE = "appendSize";
-  String APPEND_SIZE_DESC = "Size (in bytes) of the data appended to the HLog.";
-  String SLOW_APPEND_COUNT = "slowAppendCount";
-  String SLOW_APPEND_COUNT_DESC = "Number of appends that were slow.";
-  String SYNC_TIME = "syncTime";
-  String SYNC_TIME_DESC = "The time it took to sync the HLog to HDFS.";
+  static final String APPEND_TIME = "appendTime";
+  static final String APPEND_TIME_DESC = "Time an append to the log took.";
+  static final String APPEND_COUNT = "appendCount";
+  static final String APPEND_COUNT_DESC = "Number of appends to the write ahead log.";
+  static final String APPEND_SIZE = "appendSize";
+  static final String APPEND_SIZE_DESC = "Size (in bytes) of the data appended to the HLog.";
+  static final String SLOW_APPEND_COUNT = "slowAppendCount";
+  static final String SLOW_APPEND_COUNT_DESC = "Number of appends that were slow.";
+  static final String SYNC_TIME = "syncTime";
+  static final String SYNC_TIME_DESC = "The time it took to sync the HLog to HDFS.";
 
   /**
    * Add the append size.

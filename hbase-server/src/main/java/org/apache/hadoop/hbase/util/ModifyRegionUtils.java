@@ -60,7 +60,7 @@ public abstract class ModifyRegionUtils {
   }
 
   public interface RegionFillTask {
-    void fillRegion(final HRegion region) throws IOException;
+    public void fillRegion(final HRegion region) throws IOException;
   }
 
   /**

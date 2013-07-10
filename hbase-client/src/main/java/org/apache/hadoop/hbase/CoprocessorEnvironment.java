@@ -30,26 +30,26 @@ import java.io.IOException;
 public interface CoprocessorEnvironment {
 
   /** @return the Coprocessor interface version */
-  int getVersion();
+  public int getVersion();
 
   /** @return the HBase version as a string (e.g. "0.21.0") */
-  String getHBaseVersion();
+  public String getHBaseVersion();
 
   /** @return the loaded coprocessor instance */
-  Coprocessor getInstance();
+  public Coprocessor getInstance();
 
   /** @return the priority assigned to the loaded coprocessor */
-  int getPriority();
+  public int getPriority();
 
   /** @return the load sequence number */
-  int getLoadSequence();
+  public int getLoadSequence();
 
   /** @return the configuration */
-  Configuration getConfiguration();
+  public Configuration getConfiguration();
 
   /**
    * @return an interface for accessing the given table
    * @throws IOException
    */
-  HTableInterface getTable(byte[] tableName) throws IOException;
+  public HTableInterface getTable(byte[] tableName) throws IOException;
 }

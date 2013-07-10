@@ -33,13 +33,13 @@ public class RandomDistribution {
   /**
    * Interface for discrete (integer) random distributions.
    */
-  public interface DiscreteRNG {
+  public static interface DiscreteRNG {
     /**
      * Get the next random number
      *
      * @return the next random number.
      */
-    int nextInt();
+    public int nextInt();
   }
 
   /**

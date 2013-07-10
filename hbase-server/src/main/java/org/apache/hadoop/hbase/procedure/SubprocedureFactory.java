@@ -36,5 +36,5 @@ public interface SubprocedureFactory {
    *           request
    * @throws IllegalStateException if the current runner cannot accept any more new requests
    */
-  Subprocedure buildSubprocedure(String procName, byte[] procArgs);
+  public Subprocedure buildSubprocedure(String procName, byte[] procArgs);
 }

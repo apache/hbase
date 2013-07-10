@@ -31,12 +31,12 @@ import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 @InterfaceStability.Evolving
 public interface RegionCoprocessorEnvironment extends CoprocessorEnvironment {
   /** @return the region associated with this coprocessor */
-  HRegion getRegion();
+  public HRegion getRegion();
 
   /** @return reference to the region server services */
-  RegionServerServices getRegionServerServices();
+  public RegionServerServices getRegionServerServices();
 
   /** @return shared data between all instances of this coprocessor */
-  ConcurrentMap<String, Object> getSharedData();
+  public ConcurrentMap<String, Object> getSharedData();
 
 }

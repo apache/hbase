@@ -297,7 +297,7 @@ public class MetaScanner {
      * @return A boolean to know if it should continue to loop in the region
      * @throws IOException e
      */
-    boolean processRow(Result rowResult) throws IOException;
+    public boolean processRow(Result rowResult) throws IOException;
   }
 
   public static abstract class MetaScannerVisitorBase implements MetaScannerVisitor {

@@ -34,7 +34,7 @@ public interface CompactionRequestor {
    *         compactions were started
    * @throws IOException
    */
-  List<CompactionRequest> requestCompaction(final HRegion r, final String why)
+  public List<CompactionRequest> requestCompaction(final HRegion r, final String why)
       throws IOException;
 
   /**
@@ -47,9 +47,8 @@ public interface CompactionRequestor {
    *         compactions were started
    * @throws IOException
    */
-  List<CompactionRequest> requestCompaction(
-    final HRegion r, final String why, List<Pair<CompactionRequest, Store>> requests
-  )
+  public List<CompactionRequest> requestCompaction(final HRegion r, final String why,
+      List<Pair<CompactionRequest, Store>> requests)
       throws IOException;
 
   /**
@@ -61,9 +60,8 @@ public interface CompactionRequestor {
    * @return The created {@link CompactionRequest} or <tt>null</tt> if no compaction was started.
    * @throws IOException
    */
-  CompactionRequest requestCompaction(
-    final HRegion r, final Store s, final String why, CompactionRequest request
-  ) throws IOException;
+  public CompactionRequest requestCompaction(final HRegion r, final Store s, final String why,
+      CompactionRequest request) throws IOException;
 
   /**
    * @param r Region to compact
@@ -76,9 +74,8 @@ public interface CompactionRequestor {
    *         compactions were started.
    * @throws IOException
    */
-  List<CompactionRequest> requestCompaction(
-    final HRegion r, final String why, int pri, List<Pair<CompactionRequest, Store>> requests
-  ) throws IOException;
+  public List<CompactionRequest> requestCompaction(final HRegion r, final String why, int pri,
+      List<Pair<CompactionRequest, Store>> requests) throws IOException;
 
   /**
    * @param r Region to compact
@@ -90,7 +87,6 @@ public interface CompactionRequestor {
    * @return The created {@link CompactionRequest} or <tt>null</tt> if no compaction was started
    * @throws IOException
    */
-  CompactionRequest requestCompaction(
-    final HRegion r, final Store s, final String why, int pri, CompactionRequest request
-  ) throws IOException;
+  public CompactionRequest requestCompaction(final HRegion r, final Store s, final String why,
+      int pri, CompactionRequest request) throws IOException;
 }

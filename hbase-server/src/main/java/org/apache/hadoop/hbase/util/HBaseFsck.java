@@ -2903,7 +2903,7 @@ public class HBaseFsck extends Configured implements Tool {
   }
 
   public interface ErrorReporter {
-    enum ERROR_CODE {
+    public static enum ERROR_CODE {
       UNKNOWN, NO_META_REGION, NULL_META_REGION, NO_VERSION_FILE, NOT_IN_META_HDFS, NOT_IN_META,
       NOT_IN_META_OR_DEPLOYED, NOT_IN_HDFS_OR_DEPLOYED, NOT_IN_HDFS, SERVER_DOES_NOT_MATCH_META, NOT_DEPLOYED,
       MULTI_DEPLOYED, SHOULD_NOT_BE_DEPLOYED, MULTI_META_REGION, RS_CONNECT_FAILURE,
@@ -2912,26 +2912,20 @@ public class HBaseFsck extends Configured implements Tool {
       ORPHAN_HDFS_REGION, LINGERING_SPLIT_PARENT, NO_TABLEINFO_FILE, LINGERING_REFERENCE_HFILE,
       WRONG_USAGE, EMPTY_META_CELL, EXPIRED_TABLE_LOCK
     }
-    void clear();
-    void report(String message);
-    void reportError(String message);
-    void reportError(ERROR_CODE errorCode, String message);
-    void reportError(ERROR_CODE errorCode, String message, TableInfo table);
-    void reportError(ERROR_CODE errorCode, String message, TableInfo table, HbckInfo info);
-    void reportError(
-      ERROR_CODE errorCode,
-      String message,
-      TableInfo table,
-      HbckInfo info1,
-      HbckInfo info2
-    );
-    int summarize();
-    void detail(String details);
-    ArrayList<ERROR_CODE> getErrorList();
-    void progress();
-    void print(String message);
-    void resetErrors();
-    boolean tableHasErrors(TableInfo table);
+    public void clear();
+    public void report(String message);
+    public void reportError(String message);
+    public void reportError(ERROR_CODE errorCode, String message);
+    public void reportError(ERROR_CODE errorCode, String message, TableInfo table);
+    public void reportError(ERROR_CODE errorCode, String message, TableInfo table, HbckInfo info);
+    public void reportError(ERROR_CODE errorCode, String message, TableInfo table, HbckInfo info1, HbckInfo info2);
+    public int summarize();
+    public void detail(String details);
+    public ArrayList<ERROR_CODE> getErrorList();
+    public void progress();
+    public void print(String message);
+    public void resetErrors();
+    public boolean tableHasErrors(TableInfo table);
   }
 
   static class PrintingErrorReporter implements ErrorReporter {

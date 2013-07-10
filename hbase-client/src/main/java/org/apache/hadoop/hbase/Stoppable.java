@@ -29,10 +29,10 @@ public interface Stoppable {
    * Stop this service.
    * @param why Why we're stopping.
    */
-  void stop(String why);
+  public void stop(String why);
 
   /**
    * @return True if {@link #stop(String)} has been closed.
    */
-  boolean isStopped();
+  public boolean isStopped();
 }

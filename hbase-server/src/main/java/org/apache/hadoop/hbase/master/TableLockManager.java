@@ -82,20 +82,20 @@ public abstract class TableLockManager {
    * A distributed lock for a table.
    */
   @InterfaceAudience.Private
-  public interface TableLock {
+  public static interface TableLock {
     /**
      * Acquire the lock, with the configured lock timeout.
      * @throws LockTimeoutException If unable to acquire a lock within a specified
      * time period (if any)
      * @throws IOException If unrecoverable error occurs
      */
-    void acquire() throws IOException;
+    public void acquire() throws IOException;
 
     /**
      * Release the lock already held.
      * @throws IOException If there is an unrecoverable error releasing the lock
      */
-    void release() throws IOException;
+    public void release() throws IOException;
   }
 
   /**

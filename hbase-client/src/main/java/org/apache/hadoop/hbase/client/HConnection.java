@@ -62,10 +62,10 @@ public interface HConnection extends Abortable, Closeable {
   /**
    * @return Configuration instance being used by this HConnection instance.
    */
-  Configuration getConfiguration();
+  public Configuration getConfiguration();
 
   /** @return - true if the master server is running */
-  boolean isMasterRunning()
+  public boolean isMasterRunning()
   throws MasterNotRunningException, ZooKeeperConnectionException;
 
   /**
@@ -76,21 +76,21 @@ public interface HConnection extends Abortable, Closeable {
    * @return true if the table is enabled, false otherwise
    * @throws IOException if a remote or network exception occurs
    */
-  boolean isTableEnabled(byte[] tableName) throws IOException;
+  public boolean isTableEnabled(byte[] tableName) throws IOException;
 
   /**
    * @param tableName table name
    * @return true if the table is disabled, false otherwise
    * @throws IOException if a remote or network exception occurs
    */
-  boolean isTableDisabled(byte[] tableName) throws IOException;
+  public boolean isTableDisabled(byte[] tableName) throws IOException;
 
   /**
    * @param tableName table name
    * @return true if all regions of the table are available, false otherwise
    * @throws IOException if a remote or network exception occurs
    */
-  boolean isTableAvailable(byte[] tableName) throws IOException;
+  public boolean isTableAvailable(byte[] tableName) throws IOException;
 
   /**
    * Use this api to check if the table has been created with the specified number of
@@ -104,7 +104,7 @@ public interface HConnection extends Abortable, Closeable {
    * @throws IOException
    *           if a remote or network exception occurs
    */
-  boolean isTableAvailable(byte[] tableName, byte[][] splitKeys) throws IOException;
+  public boolean isTableAvailable(byte[] tableName, byte[][] splitKeys) throws IOException;
 
   /**
    * List all the userspace tables.  In other words, scan the META table.
@@ -116,14 +116,14 @@ public interface HConnection extends Abortable, Closeable {
    * @return - returns an array of HTableDescriptors
    * @throws IOException if a remote or network exception occurs
    */
-  HTableDescriptor[] listTables() throws IOException;
+  public HTableDescriptor[] listTables() throws IOException;
 
   /**
    * @param tableName table name
    * @return table metadata
    * @throws IOException if a remote or network exception occurs
    */
-  HTableDescriptor getHTableDescriptor(byte[] tableName)
+  public HTableDescriptor getHTableDescriptor(byte[] tableName)
   throws IOException;
 
   /**
@@ -135,15 +135,14 @@ public interface HConnection extends Abortable, Closeable {
    * question
    * @throws IOException if a remote or network exception occurs
    */
-  HRegionLocation locateRegion(
-    final byte[] tableName, final byte[] row
-  )
+  public HRegionLocation locateRegion(final byte [] tableName,
+      final byte [] row)
   throws IOException;
 
   /**
    * Allows flushing the region cache.
    */
-  void clearRegionCache();
+  public void clearRegionCache();
 
   /**
    * Allows flushing the region cache of all locations that pertain to
@@ -151,13 +150,13 @@ public interface HConnection extends Abortable, Closeable {
    * @param tableName Name of the table whose regions we are to remove from
    * cache.
    */
-  void clearRegionCache(final byte[] tableName);
+  public void clearRegionCache(final byte [] tableName);
 
   /**
    * Deletes cached locations for the specific region.
    * @param location The location object for the region, to be purged from cache.
    */
-  void deleteCachedRegionLocation(final HRegionLocation location);
+  public void deleteCachedRegionLocation(final HRegionLocation location);
 
   /**
    * Find the location of the region of <i>tableName</i> that <i>row</i>
@@ -168,9 +167,8 @@ public interface HConnection extends Abortable, Closeable {
    * question
    * @throws IOException if a remote or network exception occurs
    */
-  HRegionLocation relocateRegion(
-    final byte[] tableName, final byte[] row
-  )
+  public HRegionLocation relocateRegion(final byte [] tableName,
+      final byte [] row)
   throws IOException;
 
   /**
@@ -181,9 +179,8 @@ public interface HConnection extends Abortable, Closeable {
    * @param exception the exception if any. Can be null.
    * @param source the previous location
    */
-  void updateCachedLocations(
-    byte[] tableName, byte[] rowkey, Object exception, HRegionLocation source
-  );
+  public void updateCachedLocations(byte[] tableName, byte[] rowkey,
+                                    Object exception, HRegionLocation source);
 
   /**
    * Gets the location of the region of <i>regionName</i>.
@@ -192,7 +189,7 @@ public interface HConnection extends Abortable, Closeable {
    * question
    * @throws IOException if a remote or network exception occurs
    */
-  HRegionLocation locateRegion(final byte[] regionName)
+  public HRegionLocation locateRegion(final byte [] regionName)
   throws IOException;
 
   /**
@@ -201,7 +198,7 @@ public interface HConnection extends Abortable, Closeable {
    * @return list of region locations for all regions of table
    * @throws IOException
    */
-  List<HRegionLocation> locateRegions(final byte[] tableName)
+  public List<HRegionLocation> locateRegions(final byte[] tableName)
   throws IOException;
 
   /**
@@ -213,19 +210,18 @@ public interface HConnection extends Abortable, Closeable {
    * @return list of region locations for all regions of table
    * @throws IOException
    */
-  List<HRegionLocation> locateRegions(
-    final byte[] tableName, final boolean useCache, final boolean offlined
-  ) throws IOException;
+  public List<HRegionLocation> locateRegions(final byte[] tableName, final boolean useCache,
+      final boolean offlined) throws IOException;
 
   /**
    * Returns a {@link MasterAdminKeepAliveConnection} to the active master
    */
-  MasterAdminService.BlockingInterface getMasterAdmin() throws IOException;
+  public MasterAdminService.BlockingInterface getMasterAdmin() throws IOException;
 
   /**
    * Returns an {@link MasterMonitorKeepAliveConnection} to the active master
    */
-  MasterMonitorService.BlockingInterface getMasterMonitor() throws IOException;
+  public MasterMonitorService.BlockingInterface getMasterMonitor() throws IOException;
 
   /**
    * Establishes a connection to the region server at the specified address.
@@ -233,7 +229,7 @@ public interface HConnection extends Abortable, Closeable {
    * @return proxy for HRegionServer
    * @throws IOException if a remote or network exception occurs
    */
-  AdminService.BlockingInterface getAdmin(final ServerName serverName) throws IOException;
+  public AdminService.BlockingInterface getAdmin(final ServerName serverName) throws IOException;
 
   /**
    * Establishes a connection to the region server at the specified address, and returns
@@ -244,7 +240,7 @@ public interface HConnection extends Abortable, Closeable {
    * @throws IOException if a remote or network exception occurs
    *
    */
-  ClientService.BlockingInterface getClient(final ServerName serverName) throws IOException;
+  public ClientService.BlockingInterface getClient(final ServerName serverName) throws IOException;
 
   /**
    * Establishes a connection to the region server at the specified address.
@@ -254,7 +250,7 @@ public interface HConnection extends Abortable, Closeable {
    * @throws IOException if a remote or network exception occurs
    * @deprecated You can pass master flag but nothing special is done.
    */
-  AdminService.BlockingInterface getAdmin(final ServerName serverName, boolean getMaster)
+  public AdminService.BlockingInterface getAdmin(final ServerName serverName, boolean getMaster)
       throws IOException;
 
   /**
@@ -281,7 +277,7 @@ public interface HConnection extends Abortable, Closeable {
    * @throws RuntimeException other unspecified error
    */
   @Deprecated
-  <T> T getRegionServerWithRetries(ServerCallable<T> callable)
+  public <T> T getRegionServerWithRetries(ServerCallable<T> callable)
   throws IOException, RuntimeException;
 
   /**
@@ -294,7 +290,7 @@ public interface HConnection extends Abortable, Closeable {
    * @throws RuntimeException other unspecified error
    */
   @Deprecated
-  <T> T getRegionServerWithoutRetries(ServerCallable<T> callable)
+  public <T> T getRegionServerWithoutRetries(ServerCallable<T> callable)
   throws IOException, RuntimeException;
 
   /**
@@ -313,9 +309,8 @@ public interface HConnection extends Abortable, Closeable {
    * @deprecated since 0.96 - Use {@link HTableInterface#batch} instead
    */
   @Deprecated
-  void processBatch(
-    List<? extends Row> actions, final byte[] tableName, ExecutorService pool, Object[] results
-  )
+  public void processBatch(List<? extends Row> actions, final byte[] tableName,
+      ExecutorService pool, Object[] results)
       throws IOException, InterruptedException;
 
   /**
@@ -324,13 +319,11 @@ public interface HConnection extends Abortable, Closeable {
    * @deprecated since 0.96 - Use {@link HTableInterface#batchCallback} instead
    */
   @Deprecated
-  <R> void processBatchCallback(
-    List<? extends Row> list,
-    byte[] tableName,
-    ExecutorService pool,
-    Object[] results,
-    Batch.Callback<R> callback
-  ) throws IOException, InterruptedException;
+  public <R> void processBatchCallback(List<? extends Row> list,
+      byte[] tableName,
+      ExecutorService pool,
+      Object[] results,
+      Batch.Callback<R> callback) throws IOException, InterruptedException;
 
   /**
    * Enable or disable region cache prefetch for the table. It will be
@@ -339,9 +332,8 @@ public interface HConnection extends Abortable, Closeable {
    * @param tableName name of table to configure.
    * @param enable Set to true to enable region cache prefetch.
    */
-  void setRegionCachePrefetch(
-    final byte[] tableName, final boolean enable
-  );
+  public void setRegionCachePrefetch(final byte[] tableName,
+      final boolean enable);
 
   /**
    * Check whether region cache prefetch is enabled or not.
@@ -349,34 +341,34 @@ public interface HConnection extends Abortable, Closeable {
    * @return true if table's region cache prefetch is enabled. Otherwise
    * it is disabled.
    */
-  boolean getRegionCachePrefetch(final byte[] tableName);
+  public boolean getRegionCachePrefetch(final byte[] tableName);
 
   /**
    * @return the number of region servers that are currently running
    * @throws IOException if a remote or network exception occurs
    * @deprecated This method will be changed from public to package protected.
    */
-  int getCurrentNrHRS() throws IOException;
+  public int getCurrentNrHRS() throws IOException;
 
   /**
    * @param tableNames List of table names
    * @return HTD[] table metadata
    * @throws IOException if a remote or network exception occurs
    */
-  HTableDescriptor[] getHTableDescriptors(List<String> tableNames)
+  public HTableDescriptor[] getHTableDescriptors(List<String> tableNames)
   throws IOException;
 
   /**
    * @return true if this connection is closed
    */
-  boolean isClosed();
+  public boolean isClosed();
 
 
   /**
    * Clear any caches that pertain to server name <code>sn</code>.
    * @param sn A server name
    */
-  void clearCaches(final ServerName sn);
+  public void clearCaches(final ServerName sn);
 
   /**
    * This function allows HBaseAdmin and potentially others to get a shared MasterMonitor
@@ -385,7 +377,7 @@ public interface HConnection extends Abortable, Closeable {
    * @throws MasterNotRunningException
    */
   // TODO: Why is this in the public interface when the returned type is shutdown package access?
-  MasterMonitorKeepAliveConnection getKeepAliveMasterMonitorService()
+  public MasterMonitorKeepAliveConnection getKeepAliveMasterMonitorService()
   throws MasterNotRunningException;
 
   /**
@@ -395,11 +387,11 @@ public interface HConnection extends Abortable, Closeable {
    * @throws MasterNotRunningException
    */
   // TODO: Why is this in the public interface when the returned type is shutdown package access?
-  MasterAdminKeepAliveConnection getKeepAliveMasterAdminService() throws MasterNotRunningException;
+  public MasterAdminKeepAliveConnection getKeepAliveMasterAdminService() throws MasterNotRunningException;
 
   /**
    * @param serverName
    * @return true if the server is known as dead, false otherwise.
    */
-  boolean isDeadServer(ServerName serverName);
+  public boolean isDeadServer(ServerName serverName);
 }
