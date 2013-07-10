@@ -158,6 +158,7 @@ public class Replication implements WALActionsListener,
         this.replicationSink.stopReplicationSinkServices();
       }
     }
+    scheduleThreadPool.shutdown();
   }
 
   /**

@@ -796,7 +796,7 @@ public class ReplicationSource extends Thread
           if (ex instanceof RemoteException) {
             ex = ((RemoteException) ex).unwrapRemoteException();
           }
-          LOG.info("Slave cluster looks down: " + ex.getMessage());
+          LOG.info("Slave cluster looks down: " + ex.getMessage(), ex);
         }
       }
     };
