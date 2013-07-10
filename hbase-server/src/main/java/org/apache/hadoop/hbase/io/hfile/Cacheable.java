@@ -42,23 +42,23 @@ public interface Cacheable extends HeapSize {
    * @return int length in bytes of the serialized form.
    */
 
-  public int getSerializedLength();
+  int getSerializedLength();
 
   /**
    * Serializes its data into destination.
    */
-  public void serialize(ByteBuffer destination);
+  void serialize(ByteBuffer destination);
 
   /**
    * Returns CacheableDeserializer instance which reconstructs original object from ByteBuffer.
    *
    * @return CacheableDeserialzer instance.
    */
-  public CacheableDeserializer<Cacheable> getDeserializer();
+  CacheableDeserializer<Cacheable> getDeserializer();
 
   /**
    * @return the block type of this cached HFile block
    */
-  public BlockType getBlockType();
+  BlockType getBlockType();
 
 }

@@ -35,7 +35,7 @@ public interface TableDescriptors {
    * @return HTableDescriptor for tablename
    * @throws IOException
    */
-  public HTableDescriptor get(final String tablename)
+  HTableDescriptor get(final String tablename)
   throws IOException;
 
   /**
@@ -43,7 +43,7 @@ public interface TableDescriptors {
    * @return HTableDescriptor for tablename
    * @throws IOException
    */
-  public HTableDescriptor get(final byte[] tablename)
+  HTableDescriptor get(final byte[] tablename)
   throws IOException;
 
   /**
@@ -52,7 +52,7 @@ public interface TableDescriptors {
    * @return Map of all descriptors.
    * @throws IOException
    */
-  public Map<String, HTableDescriptor> getAll()
+  Map<String, HTableDescriptor> getAll()
   throws IOException;
 
   /**
@@ -60,7 +60,7 @@ public interface TableDescriptors {
    * @param htd Descriptor to set into TableDescriptors
    * @throws IOException
    */
-  public void add(final HTableDescriptor htd)
+  void add(final HTableDescriptor htd)
   throws IOException;
 
   /**
@@ -68,6 +68,6 @@ public interface TableDescriptors {
    * @return Instance of table descriptor or null if none found.
    * @throws IOException
    */
-  public HTableDescriptor remove(final String tablename)
+  HTableDescriptor remove(final String tablename)
   throws IOException;
 }

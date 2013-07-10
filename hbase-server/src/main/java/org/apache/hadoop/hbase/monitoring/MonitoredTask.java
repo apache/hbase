@@ -32,47 +32,47 @@ public interface MonitoredTask extends Cloneable {
     ABORTED;
   }
 
-  public abstract long getStartTime();
-  public abstract String getDescription();
-  public abstract String getStatus();
-  public abstract long getStatusTime();
-  public abstract State getState();
-  public abstract long getStateTime();
-  public abstract long getCompletionTimestamp();
+  long getStartTime();
+  String getDescription();
+  String getStatus();
+  long getStatusTime();
+  State getState();
+  long getStateTime();
+  long getCompletionTimestamp();
 
-  public abstract void markComplete(String msg);
-  public abstract void pause(String msg);
-  public abstract void resume(String msg);
-  public abstract void abort(String msg);
-  public abstract void expireNow();
+  void markComplete(String msg);
+  void pause(String msg);
+  void resume(String msg);
+  void abort(String msg);
+  void expireNow();
 
-  public abstract void setStatus(String status);
-  public abstract void setDescription(String description);
+  void setStatus(String status);
+  void setDescription(String description);
 
   /**
    * Explicitly mark this status as able to be cleaned up,
    * even though it might not be complete.
    */
-  public abstract void cleanup();
+  void cleanup();
 
   /**
    * Public exposure of Object.clone() in order to allow clients to easily 
    * capture current state.
    * @return a copy of the object whose references will not change
    */
-  public abstract MonitoredTask clone();
+  MonitoredTask clone();
 
   /**
    * Creates a string map of internal details for extensible exposure of 
    * monitored tasks.
    * @return A Map containing information for this task.
    */
-  public abstract Map<String, Object> toMap() throws IOException;
+  Map<String, Object> toMap() throws IOException;
 
   /**
    * Creates a JSON object for parseable exposure of monitored tasks.
    * @return An encoded JSON object containing information for this task.
    */
-  public abstract String toJSON() throws IOException;
+  String toJSON() throws IOException;
 
 }

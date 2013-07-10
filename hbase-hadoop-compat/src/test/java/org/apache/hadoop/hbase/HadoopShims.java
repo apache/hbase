@@ -32,6 +32,6 @@ public interface HadoopShims {
    * TaskAttemptId.forName()
    * @return a concrete TaskAttemptContext instance of o.a.h.mapreduce.TaskAttemptContext
    */
-  public <T,J> T createTestTaskAttemptContext(final J job, final String taskId);
+  <T,J> T createTestTaskAttemptContext(final J job, final String taskId);
 
 }

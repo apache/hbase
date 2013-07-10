@@ -34,20 +34,20 @@ public interface KeyValueScanner {
    * Look at the next KeyValue in this scanner, but do not iterate scanner.
    * @return the next KeyValue
    */
-  public KeyValue peek();
+  KeyValue peek();
 
   /**
    * Return the next KeyValue in this scanner, iterating the scanner
    * @return the next KeyValue
    */
-  public KeyValue next() throws IOException;
+  KeyValue next() throws IOException;
 
   /**
    * Seek the scanner at or after the specified KeyValue.
    * @param key seek value
    * @return true if scanner has values left, false if end of scanner
    */
-  public boolean seek(KeyValue key) throws IOException;
+  boolean seek(KeyValue key) throws IOException;
 
   /**
    * Reseek the scanner at or after the specified KeyValue.
@@ -57,7 +57,7 @@ public interface KeyValueScanner {
    * @param key seek value (should be non-null)
    * @return true if scanner has values left, false if end of scanner
    */
-  public boolean reseek(KeyValue key) throws IOException;
+  boolean reseek(KeyValue key) throws IOException;
 
   /**
    * Get the sequence id associated with this KeyValueScanner. This is required
@@ -65,12 +65,12 @@ public interface KeyValueScanner {
    * The default implementation for this would be to return 0. A file having
    * lower sequence id will be considered to be the older one.
    */
-  public long getSequenceID();
+  long getSequenceID();
 
   /**
    * Close the KeyValue scanner.
    */
-  public void close();
+  void close();
 
   /**
    * Allows to filter out scanners (both StoreFile and memstore) that we don't
@@ -82,8 +82,9 @@ public interface KeyValueScanner {
    *          this query, based on TTL
    * @return true if the scanner should be included in the query
    */
-  public boolean shouldUseScanner(Scan scan, SortedSet<byte[]> columns,
-      long oldestUnexpiredTS);
+  boolean shouldUseScanner(
+    Scan scan, SortedSet<byte[]> columns, long oldestUnexpiredTS
+  );
 
   // "Lazy scanner" optimizations
 
@@ -97,7 +98,7 @@ public interface KeyValueScanner {
    * @param forward do a forward-only "reseek" instead of a random-access seek
    * @param useBloom whether to enable multi-column Bloom filter optimization
    */
-  public boolean requestSeek(KeyValue kv, boolean forward, boolean useBloom)
+  boolean requestSeek(KeyValue kv, boolean forward, boolean useBloom)
       throws IOException;
 
   /**
@@ -106,7 +107,7 @@ public interface KeyValueScanner {
    * store scanner bubbles up to the top of the key-value heap. This method is
    * then used to ensure the top store file scanner has done a seek operation.
    */
-  public boolean realSeekDone();
+  boolean realSeekDone();
 
   /**
    * Does the real seek operation in case it was skipped by
@@ -115,11 +116,11 @@ public interface KeyValueScanner {
    * of the scanners). The easiest way to achieve this is to call
    * {@link #realSeekDone()} first.
    */
-  public void enforceSeek() throws IOException;
+  void enforceSeek() throws IOException;
 
   /**
    * @return true if this is a file scanner. Otherwise a memory scanner is
    *         assumed.
    */
-  public boolean isFileScanner();  
+  boolean isFileScanner();
 }

@@ -39,13 +39,13 @@ interface CodeToClassAndBackFor96Migration {
   /**
    * Static map that contains mapping from code to class
    */
-  static final Map<Byte, Class<?>> CODE_TO_CLASS =
+  Map<Byte, Class<?>> CODE_TO_CLASS =
     new HashMap<Byte, Class<?>>();
 
   /**
    * Static map that contains mapping from class to code
    */
-  static final Map<Class<?>, Byte> CLASS_TO_CODE =
+  Map<Class<?>, Byte> CLASS_TO_CODE =
     new HashMap<Class<?>, Byte>();
 
   /**

@@ -50,8 +50,8 @@ public abstract class Batch {
    * {@link Batch.Call#call(Object)}
    * @param <R> the return type from {@link Batch.Call#call(Object)}
    */
-  public static interface Call<T,R> {
-    public R call(T instance) throws IOException;
+  public interface Call<T,R> {
+    R call(T instance) throws IOException;
   }
 
   /**
@@ -68,7 +68,7 @@ public abstract class Batch {
    * @param <R> the return type from the associated {@link Batch.Call#call(Object)}
    * @see org.apache.hadoop.hbase.client.HTable#coprocessorService(Class, byte[], byte[], org.apache.hadoop.hbase.client.coprocessor.Batch.Call)
    */
-  public static interface Callback<R> {
-    public void update(byte[] region, byte[] row, R result);
+  public interface Callback<R> {
+    void update(byte[] region, byte[] row, R result);
   }
 }

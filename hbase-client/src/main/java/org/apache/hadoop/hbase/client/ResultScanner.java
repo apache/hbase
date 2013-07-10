@@ -38,17 +38,17 @@ public interface ResultScanner extends Closeable, Iterable<Result> {
    * exhausted.
    * @throws IOException e
    */
-  public Result next() throws IOException;
+  Result next() throws IOException;
 
   /**
    * @param nbRows number of rows to return
    * @return Between zero and <param>nbRows</param> Results
    * @throws IOException e
    */
-  public Result [] next(int nbRows) throws IOException;
+  Result [] next(int nbRows) throws IOException;
 
   /**
    * Closes the scanner and releases any resources it has allocated
    */
-  public void close();
+  void close();
 }

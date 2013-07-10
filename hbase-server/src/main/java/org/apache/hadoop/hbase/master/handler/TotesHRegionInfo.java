@@ -33,5 +33,5 @@ public interface TotesHRegionInfo {
   /**
    * @return HRegionInfo instance.
    */
-  public HRegionInfo getHRegionInfo();
+  HRegionInfo getHRegionInfo();
 }

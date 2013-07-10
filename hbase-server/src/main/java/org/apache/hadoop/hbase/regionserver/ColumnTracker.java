@@ -88,13 +88,14 @@ public interface ColumnTracker {
    *
    * @return null, or a ColumnCount that we should seek to
    */
-  public ColumnCount getColumnHint();
+  ColumnCount getColumnHint();
 
   /**
    * Retrieve the MatchCode for the next row or column
    */
-  public MatchCode getNextRowOrNextColumn(byte[] bytes, int offset,
-      int qualLength);
+  MatchCode getNextRowOrNextColumn(
+    byte[] bytes, int offset, int qualLength
+  );
 
   /**
    * Give the tracker a chance to declare it's done based on only the timestamp
@@ -103,5 +104,5 @@ public interface ColumnTracker {
    * @param timestamp
    * @return <code>true</code> to early out based on timestamp.
    */
-  public boolean isDone(long timestamp);
+  boolean isDone(long timestamp);
 }

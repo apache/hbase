@@ -127,8 +127,9 @@ public interface HTableInterface extends Closeable {
    * Same as {@link #batch(List, Object[])}, but with a callback.
    * @since 0.96.0
    */
-  public <R> void batchCallback(
-    final List<? extends Row> actions, final Object[] results, final Batch.Callback<R> callback)
+  <R> void batchCallback(
+    final List<? extends Row> actions, final Object[] results, final Batch.Callback<R> callback
+  )
     throws IOException, InterruptedException;
 
 
@@ -136,8 +137,9 @@ public interface HTableInterface extends Closeable {
    * Same as {@link #batch(List)}, but with a callback.
    * @since 0.96.0
    */
-  public <R> Object[] batchCallback(
-    List<? extends Row> actions, Batch.Callback<R> callback) throws IOException,
+  <R> Object[] batchCallback(
+    List<? extends Row> actions, Batch.Callback<R> callback
+  ) throws IOException,
     InterruptedException;
 
   /**
@@ -309,7 +311,7 @@ public interface HTableInterface extends Closeable {
    * @param rm object that specifies the set of mutations to perform atomically
    * @throws IOException
    */
-  public void mutateRow(final RowMutations rm) throws IOException;
+  void mutateRow(final RowMutations rm) throws IOException;
 
   /**
    * Appends values to one or more columns within a single row.
@@ -324,7 +326,7 @@ public interface HTableInterface extends Closeable {
    * @throws IOException e
    * @return values of columns after the append operation (maybe null)
    */
-  public Result append(final Append append) throws IOException;
+  Result append(final Append append) throws IOException;
 
   /**
    * Increments one or more columns within a single row.
@@ -339,7 +341,7 @@ public interface HTableInterface extends Closeable {
    * @throws IOException e
    * @return values of columns after the increment
    */
-  public Result increment(final Increment increment) throws IOException;
+  Result increment(final Increment increment) throws IOException;
 
   /**
    * See {@link #incrementColumnValue(byte[], byte[], byte[], long, Durability)}
@@ -493,7 +495,7 @@ public interface HTableInterface extends Closeable {
    * @param autoFlush
    *        Whether or not to enable 'auto-flush'.
    */
-  public void setAutoFlush(boolean autoFlush);
+  void setAutoFlush(boolean autoFlush);
 
   /**
    * Turns 'auto-flush' on or off.
@@ -522,7 +524,7 @@ public interface HTableInterface extends Closeable {
    *        Whether to keep Put failures in the writeBuffer
    * @see #flushCommits
    */
-  public void setAutoFlush(boolean autoFlush, boolean clearBufferOnFail);
+  void setAutoFlush(boolean autoFlush, boolean clearBufferOnFail);
 
   /**
    * Returns the maximum size in bytes of the write buffer for this HTable.
@@ -531,7 +533,7 @@ public interface HTableInterface extends Closeable {
    * {@code hbase.client.write.buffer}.
    * @return The size of the write buffer in bytes.
    */
-  public long getWriteBufferSize();
+  long getWriteBufferSize();
 
   /**
    * Sets the size of the buffer in bytes.
@@ -541,5 +543,5 @@ public interface HTableInterface extends Closeable {
    * @param writeBufferSize The new write buffer size, in bytes.
    * @throws IOException if a remote or network exception occurs.
    */
-  public void setWriteBufferSize(long writeBufferSize) throws IOException;
+  void setWriteBufferSize(long writeBufferSize) throws IOException;
 }

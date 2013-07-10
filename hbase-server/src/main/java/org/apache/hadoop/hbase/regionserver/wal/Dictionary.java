@@ -28,7 +28,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
  */
 @InterfaceAudience.Private
 interface Dictionary {
-  static final byte NOT_IN_DICTIONARY = -1;
+  byte NOT_IN_DICTIONARY = -1;
 
   /**
    * Gets an entry from the dictionary.
@@ -36,7 +36,7 @@ interface Dictionary {
    * @param idx index of the entry
    * @return the entry, or null if non existent
    */
-  public byte[] getEntry(short idx);
+  byte[] getEntry(short idx);
 
   /**
    * Finds the index of an entry.
@@ -47,7 +47,7 @@ interface Dictionary {
    * @param length Length beyond <code>offset</code> that comprises entry; must be > 0.
    * @return the index of the entry, or {@link #NOT_IN_DICTIONARY} if not found
    */
-  public short findEntry(byte[] data, int offset, int length);
+  short findEntry(byte[] data, int offset, int length);
 
   /**
    * Adds an entry to the dictionary.
@@ -62,10 +62,10 @@ interface Dictionary {
    * @return the index of the entry
    */
 
-  public short addEntry(byte[] data, int offset, int length);
+  short addEntry(byte[] data, int offset, int length);
 
   /**
    * Flushes the dictionary, empties all values.
    */
-  public void clear();
+  void clear();
 }

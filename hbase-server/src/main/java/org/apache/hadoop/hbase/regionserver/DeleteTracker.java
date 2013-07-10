@@ -43,8 +43,9 @@ public interface DeleteTracker {
    * @param timestamp timestamp
    * @param type delete type as byte
    */
-  public void add(byte [] buffer, int qualifierOffset, int qualifierLength,
-      long timestamp, byte type);
+  void add(
+    byte[] buffer, int qualifierOffset, int qualifierLength, long timestamp, byte type
+  );
 
   /**
    * Check if the specified KeyValue buffer has been deleted by a previously
@@ -55,13 +56,14 @@ public interface DeleteTracker {
    * @param timestamp timestamp
    * @return deleteResult The result tells whether the KeyValue is deleted and why
    */
-  public DeleteResult isDeleted(byte [] buffer, int qualifierOffset,
-      int qualifierLength, long timestamp);
+  DeleteResult isDeleted(
+    byte[] buffer, int qualifierOffset, int qualifierLength, long timestamp
+  );
 
   /**
    * @return true if there are no current delete, false otherwise
    */
-  public boolean isEmpty();
+  boolean isEmpty();
 
   /**
    * Called at the end of every StoreFile.
@@ -69,14 +71,14 @@ public interface DeleteTracker {
    * Many optimized implementations of Trackers will require an update at
    * when the end of each StoreFile is reached.
    */
-  public void update();
+  void update();
 
   /**
    * Called between rows.
    * <p>
    * This clears everything as if a new DeleteTracker was instantiated.
    */
-  public void reset();
+  void reset();
 
 
   /**
@@ -102,7 +104,7 @@ public interface DeleteTracker {
    * Based on the delete result, the ScanQueryMatcher will decide the next
    * operation
    */
-  public static enum DeleteResult {
+  enum DeleteResult {
     FAMILY_DELETED, // The KeyValue is deleted by a delete family.
     FAMILY_VERSION_DELETED, // The KeyValue is deleted by a delete family version.
     COLUMN_DELETED, // The KeyValue is deleted by a delete column.

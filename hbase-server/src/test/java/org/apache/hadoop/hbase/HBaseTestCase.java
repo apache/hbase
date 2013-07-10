@@ -382,11 +382,11 @@ public abstract class HBaseTestCase extends TestCase {
   /**
    * Implementors can flushcache.
    */
-  public static interface FlushCache {
+  public interface FlushCache {
     /**
      * @throws IOException
      */
-    public void flushcache() throws IOException;
+    void flushcache() throws IOException;
   }
 
   /**
@@ -395,23 +395,23 @@ public abstract class HBaseTestCase extends TestCase {
    *
    * TOOD: Come up w/ a better name for this interface.
    */
-  public static interface Incommon {
+  public interface Incommon {
     /**
      *
      * @param delete
      * @param writeToWAL
      * @throws IOException
      */
-    public void delete(Delete delete,  boolean writeToWAL)
+    void delete(Delete delete, boolean writeToWAL)
     throws IOException;
 
     /**
      * @param put
      * @throws IOException
      */
-    public void put(Put put) throws IOException;
+    void put(Put put) throws IOException;
 
-    public Result get(Get get) throws IOException;
+    Result get(Get get) throws IOException;
 
     /**
      * @param family
@@ -421,8 +421,9 @@ public abstract class HBaseTestCase extends TestCase {
      * @return scanner for specified columns, first row and timestamp
      * @throws IOException
      */
-    public ScannerIncommon getScanner(byte [] family, byte [][] qualifiers,
-        byte [] firstRow, long ts)
+    ScannerIncommon getScanner(
+      byte[] family, byte[][] qualifiers, byte[] firstRow, long ts
+    )
     throws IOException;
   }
 
@@ -520,10 +521,10 @@ public abstract class HBaseTestCase extends TestCase {
 
   public interface ScannerIncommon
   extends Iterable<Result> {
-    public boolean next(List<KeyValue> values)
+    boolean next(List<KeyValue> values)
     throws IOException;
 
-    public void close() throws IOException;
+    void close() throws IOException;
   }
 
   public static class ClientScannerIncommon implements ScannerIncommon {

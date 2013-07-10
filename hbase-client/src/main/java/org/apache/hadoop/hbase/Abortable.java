@@ -35,11 +35,11 @@ public interface Abortable {
    * @param why Why we're aborting.
    * @param e Throwable that caused abort. Can be null.
    */
-  public void abort(String why, Throwable e);
+  void abort(String why, Throwable e);
   
   /**
    * Check if the server or client was aborted. 
    * @return true if the server or client was aborted, false otherwise
    */
-  public boolean isAborted();
+  boolean isAborted();
 }
