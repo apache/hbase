@@ -927,7 +927,12 @@ public class TestAdmin {
 
   void splitTest(byte[] splitPoint, byte[][] familyNames, int[] rowCounts,
     int numVersions, int blockSize) throws Exception {
-    byte [] tableName = Bytes.toBytes("testForceSplit");
+    StringBuilder sb = new StringBuilder();
+    // Add tail to String so can see better in logs where a test is running.
+    for (int i = 0; i < rowCounts.length; i++) {
+      sb.append("_").append(Integer.toString(rowCounts[i]));
+    }
+    byte [] tableName = Bytes.toBytes("testForceSplit" + sb.toString());
     assertFalse(admin.tableExists(tableName));
     final HTable table = TEST_UTIL.createTable(tableName, familyNames,
       numVersions, blockSize);
@@ -954,7 +959,7 @@ public class TestAdmin {
 
     // get the initial layout (should just be one region)
     Map<HRegionInfo, ServerName> m = table.getRegionLocations();
-    System.out.println("Initial regions (" + m.size() + "): " + m);
+    LOG.info("Initial regions (" + m.size() + "): " + m);
     assertTrue(m.size() == 1);
 
     // Verify row count
@@ -994,7 +999,10 @@ public class TestAdmin {
           }
           if (regions == null) continue;
           count.set(regions.size());
-          if (count.get() >= 2) break;
+          if (count.get() >= 2) {
+            LOG.info("Found: " + regions);
+            break;
+          }
           LOG.debug("Cycle waiting on split");
         }
         LOG.debug("CheckForSplit thread exited, current region count: " + count.get());
@@ -1038,7 +1046,8 @@ public class TestAdmin {
         // check if splitKey is based on the largest column family
         // in terms of it store size
         int deltaForLargestFamily = Math.abs(rowCount/2 - splitKey);
-        LOG.debug("SplitKey=" + splitKey + "&deltaForLargestFamily=" + deltaForLargestFamily);
+        LOG.debug("SplitKey=" + splitKey + "&deltaForLargestFamily=" + deltaForLargestFamily +
+          ", r=" + r[0]);
         for (int index = 0; index < familyNames.length; index++) {
           int delta = Math.abs(rowCounts[index]/2 - splitKey);
           if (delta < deltaForLargestFamily) {
