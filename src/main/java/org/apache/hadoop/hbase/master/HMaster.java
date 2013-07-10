@@ -1690,7 +1690,7 @@ Server {
    * @return true if we should proceed with abort operation, false other wise.
    */
   private boolean abortNow(final String msg, final Throwable t) {
-    if (!this.isActiveMaster) {
+    if (!this.isActiveMaster || this.stopped) {
       return true;
     }
     if (t != null && t instanceof KeeperException.SessionExpiredException) {
