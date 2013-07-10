@@ -40,32 +40,32 @@ public interface MasterServices extends Server {
   /**
    * @return Master's instance of the {@link AssignmentManager}
    */
-  AssignmentManager getAssignmentManager();
+  public AssignmentManager getAssignmentManager();
 
   /**
    * @return Master's filesystem {@link MasterFileSystem} utility class.
    */
-  MasterFileSystem getMasterFileSystem();
+  public MasterFileSystem getMasterFileSystem();
 
   /**
    * @return Master's {@link ServerManager} instance.
    */
-  ServerManager getServerManager();
+  public ServerManager getServerManager();
 
   /**
    * @return Master's instance of {@link ExecutorService}
    */
-  ExecutorService getExecutorService();
+  public ExecutorService getExecutorService();
 
   /**
    * @return Master's instance of {@link TableLockManager}
    */
-  TableLockManager getTableLockManager();
+  public TableLockManager getTableLockManager();
 
   /**
    * @return Master's instance of {@link MasterCoprocessorHost}
    */
-  MasterCoprocessorHost getCoprocessorHost();
+  public MasterCoprocessorHost getCoprocessorHost();
 
   /**
    * Check table is modifiable; i.e. exists and is offline.
@@ -75,7 +75,7 @@ public interface MasterServices extends Server {
    * @throws IOException
    */
   // We actually throw the exceptions mentioned in the
-  void checkTableModifiable(final byte[] tableName)
+  public void checkTableModifiable(final byte [] tableName)
       throws IOException, TableNotFoundException, TableNotDisabledException;
 
   /**
@@ -84,7 +84,7 @@ public interface MasterServices extends Server {
    * @param splitKeys Starting row keys for the initial table regions.  If null
    *     a single region is created.
    */
-  void createTable(HTableDescriptor desc, byte[][] splitKeys)
+  public void createTable(HTableDescriptor desc, byte [][] splitKeys)
       throws IOException;
 
   /**
@@ -92,7 +92,7 @@ public interface MasterServices extends Server {
    * @param tableName The table name
    * @throws IOException
    */
-  void deleteTable(final byte[] tableName) throws IOException;
+  public void deleteTable(final byte[] tableName) throws IOException;
 
   /**
    * Modify the descriptor of an existing table
@@ -100,7 +100,7 @@ public interface MasterServices extends Server {
    * @param descriptor The updated table descriptor
    * @throws IOException
    */
-  void modifyTable(final byte[] tableName, final HTableDescriptor descriptor)
+  public void modifyTable(final byte[] tableName, final HTableDescriptor descriptor)
       throws IOException;
 
   /**
@@ -108,14 +108,14 @@ public interface MasterServices extends Server {
    * @param tableName The table name
    * @throws IOException
    */
-  void enableTable(final byte[] tableName) throws IOException;
+  public void enableTable(final byte[] tableName) throws IOException;
 
   /**
    * Disable an existing table
    * @param tableName The table name
    * @throws IOException
    */
-  void disableTable(final byte[] tableName) throws IOException;
+  public void disableTable(final byte[] tableName) throws IOException;
 
   /**
    * Add a new column to an existing table
@@ -123,7 +123,7 @@ public interface MasterServices extends Server {
    * @param column The column definition
    * @throws IOException
    */
-  void addColumn(final byte[] tableName, final HColumnDescriptor column)
+  public void addColumn(final byte[] tableName, final HColumnDescriptor column)
       throws IOException;
 
   /**
@@ -132,7 +132,7 @@ public interface MasterServices extends Server {
    * @param descriptor The updated column definition
    * @throws IOException
    */
-  void modifyColumn(byte[] tableName, HColumnDescriptor descriptor)
+  public void modifyColumn(byte[] tableName, HColumnDescriptor descriptor)
       throws IOException;
 
   /**
@@ -141,18 +141,18 @@ public interface MasterServices extends Server {
    * @param columnName The column name
    * @throws IOException
    */
-  void deleteColumn(final byte[] tableName, final byte[] columnName)
+  public void deleteColumn(final byte[] tableName, final byte[] columnName)
       throws IOException;
 
   /**
    * @return Return table descriptors implementation.
    */
-  TableDescriptors getTableDescriptors();
+  public TableDescriptors getTableDescriptors();
 
   /**
    * @return true if master enables ServerShutdownHandler;
    */
-  boolean isServerShutdownHandlerEnabled();
+  public boolean isServerShutdownHandlerEnabled();
 
   /**
    * Registers a new protocol buffer {@link Service} subclass as a master coprocessor endpoint.
@@ -167,7 +167,7 @@ public interface MasterServices extends Server {
    * @return {@code true} if the registration was successful, {@code false}
    * otherwise
    */
-  boolean registerService(Service instance);
+  public boolean registerService(Service instance);
 
   /**
    * Merge two regions. The real implementation is on the regionserver, master
@@ -178,13 +178,12 @@ public interface MasterServices extends Server {
    *          two adjacent regions
    * @throws IOException
    */
-  void dispatchMergingRegions(
-    final HRegionInfo region_a, final HRegionInfo region_b, final boolean forcible
-  ) throws IOException;
+  public void dispatchMergingRegions(final HRegionInfo region_a,
+      final HRegionInfo region_b, final boolean forcible) throws IOException;
 
   /**
    * @return true if master is initialized
    */
-  boolean isInitialized();
+  public boolean isInitialized();
 
 }

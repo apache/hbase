@@ -87,12 +87,12 @@ public abstract class EventHandler implements Runnable, Comparable<Runnable> {
      * Called before any event is processed
      * @param event The event handler whose process method is about to be called.
      */
-    void beforeProcess(EventHandler event);
+    public void beforeProcess(EventHandler event);
     /**
      * Called after any event is processed
      * @param event The event handler whose process method is about to be called.
      */
-    void afterProcess(EventHandler event);
+    public void afterProcess(EventHandler event);
   }
 
   /**

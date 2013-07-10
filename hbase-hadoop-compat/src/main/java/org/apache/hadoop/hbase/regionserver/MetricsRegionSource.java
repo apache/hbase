@@ -25,8 +25,8 @@ package org.apache.hadoop.hbase.regionserver;
  */
 public interface MetricsRegionSource extends Comparable<MetricsRegionSource> {
 
-  String OPS_SAMPLE_NAME = "ops";
-  String SIZE_VALUE_NAME = "size";
+  public static final String OPS_SAMPLE_NAME = "ops";
+  public static final String SIZE_VALUE_NAME = "size";
 
   /**
    * Close the region's metrics as this region is closing.

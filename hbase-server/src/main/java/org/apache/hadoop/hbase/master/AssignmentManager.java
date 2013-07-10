@@ -1145,11 +1145,11 @@ public class AssignmentManager extends ZooKeeperListener {
   /**
    * A specific runnable that works only on a region.
    */
-  private interface RegionRunnable extends Runnable{
+  private static interface RegionRunnable extends Runnable{
     /**
      * @return - the name of the region it works on.
      */
-    String getRegionName();
+    public String getRegionName();
   }
 
   /**

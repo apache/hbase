@@ -36,7 +36,7 @@ public interface InterProcessLock {
    * @throws InterruptedException If current thread is interrupted while
    *                              waiting for the lock
    */
-  void acquire() throws IOException, InterruptedException;
+  public void acquire() throws IOException, InterruptedException;
 
   /**
    * Acquire the lock within a wait time.
@@ -50,7 +50,7 @@ public interface InterProcessLock {
    * @throws InterruptedException If the thread is interrupted while waiting to
    *                              acquire the lock
    */
-  boolean tryAcquire(long timeoutMs)
+  public boolean tryAcquire(long timeoutMs)
   throws IOException, InterruptedException;
 
   /**
@@ -59,7 +59,7 @@ public interface InterProcessLock {
    * @throws InterruptedException If the thread is interrupted while releasing
    *                              the lock
    */
-  void release() throws IOException, InterruptedException;
+  public void release() throws IOException, InterruptedException;
 
   /**
    * If supported, attempts to reap all the locks of this type by forcefully
@@ -69,7 +69,7 @@ public interface InterProcessLock {
    * lock holder is still alive.
    * @throws IOException If there is an unrecoverable error reaping the locks
    */
-  void reapExpiredLocks(long expireTimeoutMs) throws IOException;
+  public void reapExpiredLocks(long expireTimeoutMs) throws IOException;
 
   /**
    * If supported, attempts to reap all the locks of this type by forcefully
@@ -80,12 +80,12 @@ public interface InterProcessLock {
    * with timeout=0.
    * @throws IOException If there is an unrecoverable error reaping the locks
    */
-  void reapAllLocks() throws IOException;
+  public void reapAllLocks() throws IOException;
 
   /**
    * An interface for objects that process lock metadata.
    */
-  interface MetadataHandler {
+  public static interface MetadataHandler {
 
     /**
      * Called after lock metadata is successfully read from a distributed
@@ -93,7 +93,7 @@ public interface InterProcessLock {
      * printing the metadata in a humanly-readable format.
      * @param metadata The metadata
      */
-    void handleMetadata(byte[] metadata);
+    public void handleMetadata(byte[] metadata);
   }
 
   /**
@@ -101,5 +101,5 @@ public interface InterProcessLock {
    * {@link MetadataHandler}.
    * @throws InterruptedException If there is an unrecoverable error
    */
-  void visitLocks(MetadataHandler handler) throws IOException;
+  public void visitLocks(MetadataHandler handler) throws IOException;
 }

@@ -34,7 +34,7 @@ public interface InterProcessReadWriteLock {
    *                 which the lock was acquired).
    * @return An instantiated InterProcessLock instance
    */
-  InterProcessLock readLock(byte[] metadata);
+  public InterProcessLock readLock(byte[] metadata);
 
   /**
    * Obtain a write lock containing given metadata.
@@ -43,5 +43,5 @@ public interface InterProcessReadWriteLock {
    *                 which the lock was acquired).
    * @return An instantiated InterProcessLock instance
    */
-  InterProcessLock writeLock(byte[] metadata);
+  public InterProcessLock writeLock(byte[] metadata);
 }

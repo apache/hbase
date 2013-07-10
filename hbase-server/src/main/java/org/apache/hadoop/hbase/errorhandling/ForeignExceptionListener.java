@@ -36,5 +36,5 @@ public interface ForeignExceptionListener {
    * Implementers must ensure that this method is thread-safe.
    * @param e exception causing the error. Implementations must accept and handle null here.
    */
-  void receive(ForeignException e);
+  public void receive(ForeignException e);
 }

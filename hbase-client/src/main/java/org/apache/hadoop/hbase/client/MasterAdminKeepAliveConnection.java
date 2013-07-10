@@ -40,5 +40,5 @@ extends MasterAdminProtos.MasterAdminService.BlockingInterface {
    */
   // The Closeable Interface wants to throw an IOE out of a close.
   //  Thats a PITA.  Do this below instead of Closeable.
-  void close();
+  public void close();
 }

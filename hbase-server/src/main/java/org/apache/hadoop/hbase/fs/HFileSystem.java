@@ -296,7 +296,7 @@ public class HFileSystem extends FilterFileSystem {
   /**
    * Interface to implement to add a specific reordering logic in hdfs.
    */
-  interface ReorderBlocks {
+  static interface ReorderBlocks {
     /**
      *
      * @param conf - the conf to use
@@ -304,7 +304,7 @@ public class HFileSystem extends FilterFileSystem {
      * @param src - the file name currently read
      * @throws IOException - if something went wrong
      */
-    void reorderBlocks(Configuration conf, LocatedBlocks lbs, String src) throws IOException;
+    public void reorderBlocks(Configuration conf, LocatedBlocks lbs, String src) throws IOException;
   }
 
   /**

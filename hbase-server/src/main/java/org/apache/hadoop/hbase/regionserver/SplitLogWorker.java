@@ -640,13 +640,13 @@ public class SplitLogWorker extends ZooKeeperListener implements Runnable {
    * is better to have workers prepare the task and then have the
    * {@link SplitLogManager} commit the work in SplitLogManager.TaskFinisher
    */
-  public interface TaskExecutor {
-    enum Status {
+  static public interface TaskExecutor {
+    static public enum Status {
       DONE(),
       ERR(),
       RESIGNED(),
       PREEMPTED()
     }
-    Status exec(String name, CancelableProgressable p);
+    public Status exec(String name, CancelableProgressable p);
   }
 }

@@ -34,30 +34,30 @@ public interface SnapshotSentinel {
    * @return <tt>false</tt> if the snapshot is still in progress, <tt>true</tt> if the snapshot has
    *         finished
    */
-  boolean isFinished();
+  public boolean isFinished();
 
   /**
    * @return -1 if the snapshot is in progress, otherwise the completion timestamp.
    */
-  long getCompletionTimestamp();
+  public long getCompletionTimestamp();
 
   /**
    * Actively cancel a running snapshot.
    * @param why Reason for cancellation.
    */
-  void cancel(String why);
+  public void cancel(String why);
 
   /**
    * @return the description of the snapshot being run
    */
-  SnapshotDescription getSnapshot();
+  public SnapshotDescription getSnapshot();
 
   /**
    * Get the exception that caused the snapshot to fail, if the snapshot has failed.
    * @return {@link ForeignException} that caused the snapshot to fail, or <tt>null</tt> if the
    *  snapshot is still in progress or has succeeded
    */
-  ForeignException getExceptionIfFailed();
+  public ForeignException getExceptionIfFailed();
 
   /**
    * Rethrow the exception returned by {@link SnapshotSentinel#getExceptionIfFailed}.
@@ -65,5 +65,5 @@ public interface SnapshotSentinel {
    *
    * @throws ForeignException all exceptions from remote sources are procedure exceptions
    */
-  void rethrowExceptionIfFailed() throws ForeignException;
+  public void rethrowExceptionIfFailed() throws ForeignException;
 }

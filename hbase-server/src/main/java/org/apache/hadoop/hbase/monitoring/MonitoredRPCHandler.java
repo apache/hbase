@@ -29,16 +29,16 @@ import com.google.protobuf.Message;
  */
 @InterfaceAudience.Private
 public interface MonitoredRPCHandler extends MonitoredTask {
-  String getRPC();
-  String getRPC(boolean withParams);
-  long getRPCPacketLength();
-  String getClient();
-  long getRPCStartTime();
-  long getRPCQueueTime();
-  boolean isRPCRunning();
-  boolean isOperationRunning();
+  public abstract String getRPC();
+  public abstract String getRPC(boolean withParams);
+  public abstract long getRPCPacketLength();
+  public abstract String getClient();
+  public abstract long getRPCStartTime();
+  public abstract long getRPCQueueTime();
+  public abstract boolean isRPCRunning();
+  public abstract boolean isOperationRunning();
 
-  void setRPC(String methodName, Object[] params, long queueTime);
-  void setRPCPacket(Message param);
-  void setConnection(String clientAddress, int remotePort);
+  public abstract void setRPC(String methodName, Object [] params, long queueTime);
+  public abstract void setRPCPacket(Message param);
+  public abstract void setConnection(String clientAddress, int remotePort);
 }

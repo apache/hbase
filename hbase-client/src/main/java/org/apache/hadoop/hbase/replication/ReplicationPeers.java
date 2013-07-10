@@ -46,7 +46,7 @@ public interface ReplicationPeers {
    * Initialize the ReplicationPeers interface.
    * @throws KeeperException
    */
-  void init() throws IOException, KeeperException;
+  public void init() throws IOException, KeeperException;
 
   /**
    * Add a new remote slave cluster for replication.
@@ -54,65 +54,65 @@ public interface ReplicationPeers {
    * @param clusterKey the concatenation of the slave cluster's:
    *          hbase.zookeeper.quorum:hbase.zookeeper.property.clientPort:zookeeper.znode.parent
    */
-  void addPeer(String peerId, String clusterKey) throws IOException;
+  public void addPeer(String peerId, String clusterKey) throws IOException;
 
   /**
    * Removes a remote slave cluster and stops the replication to it.
    * @param peerId a short that identifies the cluster
    */
-  void removePeer(String peerId) throws IOException;
+  public void removePeer(String peerId) throws IOException;
 
   /**
    * Restart the replication to the specified remote slave cluster.
    * @param peerId a short that identifies the cluster
    */
-  void enablePeer(String peerId) throws IOException;
+  public void enablePeer(String peerId) throws IOException;
 
   /**
    * Stop the replication to the specified remote slave cluster.
    * @param peerId a short that identifies the cluster
    */
-  void disablePeer(String peerId) throws IOException;
+  public void disablePeer(String peerId) throws IOException;
 
   /**
    * Get the replication status for the specified connected remote slave cluster.
    * @param peerId a short that identifies the cluster
    * @return true if replication is enabled, false otherwise.
    */
-  boolean getStatusOfConnectedPeer(String peerId);
+  public boolean getStatusOfConnectedPeer(String peerId);
 
   /**
    * Get a set of all connected remote slave clusters.
    * @return set of peer ids
    */
-  Set<String> getConnectedPeers();
+  public Set<String> getConnectedPeers();
 
   /**
    * List the cluster keys of all remote slave clusters (whether they are enabled/disabled or
    * connected/disconnected).
    * @return A map of peer ids to peer cluster keys
    */
-  Map<String, String> getAllPeerClusterKeys();
+  public Map<String, String> getAllPeerClusterKeys();
 
   /**
    * List the peer ids of all remote slave clusters (whether they are enabled/disabled or
    * connected/disconnected).
    * @return A list of peer ids
    */
-  List<String> getAllPeerIds();
+  public List<String> getAllPeerIds();
 
   /**
    * Attempt to connect to a new remote slave cluster.
    * @param peerId a short that identifies the cluster
    * @return true if a new connection was made, false if no new connection was made.
    */
-  boolean connectToPeer(String peerId) throws IOException, KeeperException;
+  public boolean connectToPeer(String peerId) throws IOException, KeeperException;
 
   /**
    * Disconnect from a remote slave cluster.
    * @param peerId a short that identifies the cluster
    */
-  void disconnectFromPeer(String peerId);
+  public void disconnectFromPeer(String peerId);
 
   /**
    * Returns all region servers from given connected remote slave cluster.
@@ -120,19 +120,19 @@ public interface ReplicationPeers {
    * @return addresses of all region servers in the peer cluster. Returns an empty list if the peer
    *         cluster is unavailable or there are no region servers in the cluster.
    */
-  List<ServerName> getRegionServersOfConnectedPeer(String peerId);
+  public List<ServerName> getRegionServersOfConnectedPeer(String peerId);
 
   /**
    * Returns the UUID of the provided peer id.
    * @param peerId the peer's ID that will be converted into a UUID
    * @return a UUID or null if the peer cluster does not exist or is not connected.
    */
-  UUID getPeerUUID(String peerId);
+  public UUID getPeerUUID(String peerId);
 
   /**
    * Returns the configuration needed to talk to the remote slave cluster.
    * @param peerId a short that identifies the cluster
    * @return the configuration for the peer cluster, null if it was unable to get the configuration
    */
-  Configuration getPeerConf(String peerId) throws KeeperException;
+  public Configuration getPeerConf(String peerId) throws KeeperException;
 }

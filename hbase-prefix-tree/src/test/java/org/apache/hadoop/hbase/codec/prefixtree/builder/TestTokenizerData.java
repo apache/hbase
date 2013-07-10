@@ -31,7 +31,7 @@ public interface TestTokenizerData {
   List<byte[]> getInputs();
   List<byte[]> getOutputs();
 
-  class InMemory {
+  public static class InMemory {
     public Collection<Object[]> getAllAsObjectArray() {
       List<Object[]> all = Lists.newArrayList();
       all.add(new Object[] { new TestTokenizerDataBasic() });

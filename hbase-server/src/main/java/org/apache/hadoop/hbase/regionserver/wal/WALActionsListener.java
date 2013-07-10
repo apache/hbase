@@ -38,7 +38,7 @@ public interface WALActionsListener {
    * @param oldPath the path to the old hlog
    * @param newPath the path to the new hlog
    */
-  void preLogRoll(Path oldPath, Path newPath) throws IOException;
+  public void preLogRoll(Path oldPath, Path newPath) throws IOException;
 
   /**
    * The WAL has been rolled. The oldPath can be null if this is
@@ -46,31 +46,31 @@ public interface WALActionsListener {
    * @param oldPath the path to the old hlog
    * @param newPath the path to the new hlog
    */
-  void postLogRoll(Path oldPath, Path newPath) throws IOException;
+  public void postLogRoll(Path oldPath, Path newPath) throws IOException;
 
   /**
    * The WAL is going to be archived.
    * @param oldPath the path to the old hlog
    * @param newPath the path to the new hlog
    */
-  void preLogArchive(Path oldPath, Path newPath) throws IOException;
+  public void preLogArchive(Path oldPath, Path newPath) throws IOException;
 
   /**
    * The WAL has been archived.
    * @param oldPath the path to the old hlog
    * @param newPath the path to the new hlog
    */
-  void postLogArchive(Path oldPath, Path newPath) throws IOException;
+  public void postLogArchive(Path oldPath, Path newPath) throws IOException;
 
   /**
    * A request was made that the WAL be rolled.
    */
-  void logRollRequested();
+  public void logRollRequested();
 
   /**
    * The WAL is about to close.
    */
-  void logCloseRequested();
+  public void logCloseRequested();
 
   /**
   * Called before each write.
@@ -78,9 +78,8 @@ public interface WALActionsListener {
   * @param logKey
   * @param logEdit
   */
-  void visitLogEntryBeforeWrite(
-    HRegionInfo info, HLogKey logKey, WALEdit logEdit
-  );
+ public void visitLogEntryBeforeWrite(HRegionInfo info, HLogKey logKey,
+   WALEdit logEdit);
 
   /**
    *
@@ -88,8 +87,7 @@ public interface WALActionsListener {
    * @param logKey
    * @param logEdit
    */
-  void visitLogEntryBeforeWrite(
-    HTableDescriptor htd, HLogKey logKey, WALEdit logEdit
-  );
+ public void visitLogEntryBeforeWrite(HTableDescriptor htd, HLogKey logKey,
+   WALEdit logEdit);
 
 }

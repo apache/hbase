@@ -25,12 +25,12 @@ import org.apache.hadoop.hbase.metrics.BaseSource;
  */
 public interface MetricsThriftServerSource extends BaseSource {
 
-  String BATCH_GET_KEY = "batchGet";
-  String BATCH_MUTATE_KEY = "batchMutate";
-  String TIME_IN_QUEUE_KEY = "timeInQueue";
-  String THRIFT_CALL_KEY = "thriftCall";
-  String SLOW_THRIFT_CALL_KEY = "slowThriftCall";
-  String CALL_QUEUE_LEN_KEY = "callQueueLen";
+  static final String BATCH_GET_KEY = "batchGet";
+  static final String BATCH_MUTATE_KEY = "batchMutate";
+  static final String TIME_IN_QUEUE_KEY = "timeInQueue";
+  static final String THRIFT_CALL_KEY = "thriftCall";
+  static final String SLOW_THRIFT_CALL_KEY = "slowThriftCall";
+  static final String CALL_QUEUE_LEN_KEY = "callQueueLen";
 
   /**
    * Add how long an operation was in the queue.

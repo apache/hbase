@@ -37,13 +37,13 @@ public interface ReplicationQueues {
    * @param serverName The server name of the region server that owns the replication queues this
    *          interface manages.
    */
-  void init(String serverName) throws KeeperException;
+  public void init(String serverName) throws KeeperException;
 
   /**
    * Remove a replication queue.
    * @param queueId a String that identifies the queue.
    */
-  void removeQueue(String queueId);
+  public void removeQueue(String queueId);
 
   /**
    * Add a new HLog file to the given queue. If the queue does not exist it is created.
@@ -51,14 +51,14 @@ public interface ReplicationQueues {
    * @param filename name of the HLog
    * @throws KeeperException
    */
-  void addLog(String queueId, String filename) throws KeeperException;
+  public void addLog(String queueId, String filename) throws KeeperException;
 
   /**
    * Remove an HLog file from the given queue.
    * @param queueId a String that identifies the queue.
    * @param filename name of the HLog
    */
-  void removeLog(String queueId, String filename);
+  public void removeLog(String queueId, String filename);
 
   /**
    * Set the current position for a specific HLog in a given queue.
@@ -66,7 +66,7 @@ public interface ReplicationQueues {
    * @param filename name of the HLog
    * @param position the current position in the file
    */
-  void setLogPosition(String queueId, String filename, long position);
+  public void setLogPosition(String queueId, String filename, long position);
 
   /**
    * Get the current position for a specific HLog in a given queue.
@@ -74,25 +74,25 @@ public interface ReplicationQueues {
    * @param filename name of the HLog
    * @return the current position in the file
    */
-  long getLogPosition(String queueId, String filename) throws KeeperException;
+  public long getLogPosition(String queueId, String filename) throws KeeperException;
 
   /**
    * Remove all replication queues for this region server.
    */
-  void removeAllQueues();
+  public void removeAllQueues();
 
   /**
    * Get a list of all HLogs in the given queue.
    * @param queueId a String that identifies the queue
    * @return a list of HLogs, null if this region server is dead and has no outstanding queues
    */
-  List<String> getLogsInQueue(String queueId);
+  public List<String> getLogsInQueue(String queueId);
 
   /**
    * Get a list of all queues for this region server.
    * @return a list of queueIds, null if this region server is dead and has no outstanding queues
    */
-  List<String> getAllQueues();
+  public List<String> getAllQueues();
 
   /**
    * Take ownership for the set of queues belonging to a dead region server.
@@ -100,12 +100,12 @@ public interface ReplicationQueues {
    * @return A SortedMap of the queues that have been claimed, including a SortedSet of HLogs in
    *         each queue. Returns an empty map if no queues were failed-over.
    */
-  SortedMap<String, SortedSet<String>> claimQueues(String regionserver);
+  public SortedMap<String, SortedSet<String>> claimQueues(String regionserver);
 
   /**
    * Get a list of all region servers that have outstanding replication queues. These servers could
    * be alive, dead or from a previous run of the cluster.
    * @return a list of server names
    */
-  List<String> getListOfReplicators();
+  public List<String> getListOfReplicators();
 }

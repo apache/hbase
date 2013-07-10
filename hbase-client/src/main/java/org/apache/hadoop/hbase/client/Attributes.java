@@ -34,18 +34,18 @@ public interface Attributes {
    * @param name attribute name
    * @param value attribute value
    */
-  void setAttribute(String name, byte[] value);
+  public void setAttribute(String name, byte[] value);
 
   /**
    * Gets an attribute
    * @param name attribute name
    * @return attribute value if attribute is set, <tt>null</tt> otherwise
    */
-  byte[] getAttribute(String name);
+  public byte[] getAttribute(String name);
 
   /**
    * Gets all attributes
    * @return unmodifiable map of all attributes
    */
-  Map<String, byte[]> getAttributesMap();
+  public Map<String, byte[]> getAttributesMap();
 }

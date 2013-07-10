@@ -29,30 +29,30 @@ public interface MetricsEditsReplaySource extends BaseSource {
   /**
    * The name of the metrics
    */
-  String METRICS_NAME = "replay";
+  static final String METRICS_NAME = "replay";
 
   /**
    * The name of the metrics context that metrics will be under.
    */
-  String METRICS_CONTEXT = "regionserver";
+  static final String METRICS_CONTEXT = "regionserver";
 
   /**
    * Description
    */
-  String METRICS_DESCRIPTION = "Metrics about HBase RegionServer HLog Edits Replay";
+  static final String METRICS_DESCRIPTION = "Metrics about HBase RegionServer HLog Edits Replay";
 
   /**
    * The name of the metrics context that metrics will be under in jmx
    */
-  String METRICS_JMX_CONTEXT = "RegionServer,sub=" + METRICS_NAME;
+  static final String METRICS_JMX_CONTEXT = "RegionServer,sub=" + METRICS_NAME;
 
 
-  String REPLAY_TIME_NAME = "replayTime";
-  String REPLAY_TIME_DESC = "Time an replay operation took.";
-  String REPLAY_BATCH_SIZE_NAME = "replayBatchSize";
-  String REPLAY_BATCH_SIZE_DESC = "Number of changes in each replay batch.";
-  String REPLAY_DATA_SIZE_NAME = "replayDataSize";
-  String REPLAY_DATA_SIZE_DESC = "Size (in bytes) of the data of each replay.";
+  static final String REPLAY_TIME_NAME = "replayTime";
+  static final String REPLAY_TIME_DESC = "Time an replay operation took.";
+  static final String REPLAY_BATCH_SIZE_NAME = "replayBatchSize";
+  static final String REPLAY_BATCH_SIZE_DESC = "Number of changes in each replay batch.";
+  static final String REPLAY_DATA_SIZE_NAME = "replayDataSize";
+  static final String REPLAY_DATA_SIZE_DESC = "Size (in bytes) of the data of each replay.";
 
   /**
    * Add the time a replay command took

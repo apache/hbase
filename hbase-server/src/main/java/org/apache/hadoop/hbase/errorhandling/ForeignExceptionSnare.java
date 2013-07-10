@@ -47,7 +47,7 @@ public interface ForeignExceptionSnare {
    * @throws ForeignException
    *           all exceptions from remote sources are procedure exceptions
    */
-  void rethrowException() throws ForeignException;
+  public void rethrowException() throws ForeignException;
 
   /**
    * Non-exceptional form of {@link #rethrowException()}. Checks to see if any
@@ -56,12 +56,12 @@ public interface ForeignExceptionSnare {
    *
    * @return <tt>true</tt> if there has been an error,<tt>false</tt> otherwise
    */
-  boolean hasException();
+  public boolean hasException();
 
   /**
    * Get the value of the captured exception.
    *
    * @return the captured foreign exception or null if no exception captured.
    */
-  ForeignException getException();
+  public ForeignException getException();
 }

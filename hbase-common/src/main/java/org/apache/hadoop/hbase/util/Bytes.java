@@ -1000,9 +1000,8 @@ public class Bytes {
   }
 
   interface Comparer<T> {
-    int compareTo(
-      T buffer1, int offset1, int length1, T buffer2, int offset2, int length2
-    );
+    abstract public int compareTo(T buffer1, int offset1, int length1,
+        T buffer2, int offset2, int length2);
   }
 
   @VisibleForTesting

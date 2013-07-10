@@ -40,31 +40,31 @@ public interface RegionServerServices extends OnlineRegions, FavoredNodesForRegi
   /**
    * @return True if this regionserver is stopping.
    */
-  boolean isStopping();
+  public boolean isStopping();
 
   /** @return the HLog for a particular region. Pass null for getting the
    * default (common) WAL */
-  HLog getWAL(HRegionInfo regionInfo) throws IOException;
+  public HLog getWAL(HRegionInfo regionInfo) throws IOException;
 
   /**
    * @return Implementation of {@link CompactionRequestor} or null.
    */
-  CompactionRequestor getCompactionRequester();
+  public CompactionRequestor getCompactionRequester();
 
   /**
    * @return Implementation of {@link FlushRequester} or null.
    */
-  FlushRequester getFlushRequester();
+  public FlushRequester getFlushRequester();
 
   /**
    * @return the RegionServerAccounting for this Region Server
    */
-  RegionServerAccounting getRegionServerAccounting();
+  public RegionServerAccounting getRegionServerAccounting();
 
   /**
    * @return RegionServer's instance of {@link TableLockManager}
    */
-  TableLockManager getTableLockManager();
+  public TableLockManager getTableLockManager();
 
   /**
    * Tasks to perform after region open to complete deploy of region on
@@ -75,42 +75,42 @@ public interface RegionServerServices extends OnlineRegions, FavoredNodesForRegi
    * @throws KeeperException
    * @throws IOException
    */
-  void postOpenDeployTasks(final HRegion r, final CatalogTracker ct)
+  public void postOpenDeployTasks(final HRegion r, final CatalogTracker ct)
   throws KeeperException, IOException;
 
   /**
    * Returns a reference to the region server's RPC server
    */
-  RpcServerInterface getRpcServer();
+  public RpcServerInterface getRpcServer();
 
   /**
    * Get the regions that are currently being opened or closed in the RS
    * @return map of regions in transition in this RS
    */
-  ConcurrentMap<byte[], Boolean> getRegionsInTransitionInRS();
+  public ConcurrentMap<byte[], Boolean> getRegionsInTransitionInRS();
 
   /**
    * @return Return the FileSystem object used by the regionserver
    */
-  FileSystem getFileSystem();
+  public FileSystem getFileSystem();
 
   /**
    * @return The RegionServer's "Leases" service
    */
-  Leases getLeases();
+  public Leases getLeases();
 
   /**
    * @return hbase executor service
    */
-  ExecutorService getExecutorService();
+  public ExecutorService getExecutorService();
 
   /**
    * @return The RegionServer's CatalogTracker
    */
-  CatalogTracker getCatalogTracker();
+  public CatalogTracker getCatalogTracker();
 
   /**
    * @return set of recovering regions on the hosting region server
    */
-  Map<String, HRegion> getRecoveringRegions();
+  public Map<String, HRegion> getRecoveringRegions();
 }

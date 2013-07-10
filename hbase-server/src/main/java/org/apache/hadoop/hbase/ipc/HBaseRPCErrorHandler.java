@@ -31,5 +31,5 @@ public interface HBaseRPCErrorHandler {
 	 * @param e the throwable
 	 * @return if the server should be shut down
 	 */
-  boolean checkOOME(final Throwable e) ;
+	public boolean checkOOME(final Throwable e) ;
 }

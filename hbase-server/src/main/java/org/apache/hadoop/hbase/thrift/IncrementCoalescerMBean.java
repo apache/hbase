@@ -19,31 +19,31 @@
 package org.apache.hadoop.hbase.thrift;
 
 public interface IncrementCoalescerMBean {
-  int getQueueSize();
+  public int getQueueSize();
 
-  int getMaxQueueSize();
+  public int getMaxQueueSize();
 
-  void setMaxQueueSize(int newSize);
+  public void setMaxQueueSize(int newSize);
 
-  long getPoolCompletedTaskCount();
+  public long getPoolCompletedTaskCount();
 
-  long getPoolTaskCount();
+  public long getPoolTaskCount();
 
-  int getPoolLargestPoolSize();
+  public int getPoolLargestPoolSize();
 
-  int getCorePoolSize();
+  public int getCorePoolSize();
 
-  void setCorePoolSize(int newCoreSize);
+  public void setCorePoolSize(int newCoreSize);
 
-  int getMaxPoolSize();
+  public int getMaxPoolSize();
 
-  void setMaxPoolSize(int newMaxSize);
+  public void setMaxPoolSize(int newMaxSize);
 
-  long getFailedIncrements();
+  public long getFailedIncrements();
 
-  long getSuccessfulCoalescings();
+  public long getSuccessfulCoalescings();
 
-  long getTotalIncrements();
+  public long getTotalIncrements();
 
-  long getCountersMapSize();
+  public long getCountersMapSize();
 }
