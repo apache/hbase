@@ -58,7 +58,6 @@ public abstract class Compactor {
 
   private int compactionKVMax;
   protected Compression.Algorithm compactionCompression;
-  private PeakCompactionsThrottle peakCompactionsThrottle;
 
   //TODO: depending on Store is not good but, realistically, all compactors currently do.
   Compactor(final Configuration conf, final Store store) {
@@ -67,7 +66,6 @@ public abstract class Compactor {
     this.compactionKVMax = this.conf.getInt(HConstants.COMPACTION_KV_MAX, 10);
     this.compactionCompression = (this.store.getFamily() == null) ?
         Compression.Algorithm.NONE : this.store.getFamily().getCompactionCompression();
-    this.peakCompactionsThrottle = new PeakCompactionsThrottle(conf);
   }
 
   /**
@@ -203,7 +201,6 @@ public abstract class Compactor {
     // Limit to "hbase.hstore.compaction.kv.max" (default 10) to avoid OOME
     int closeCheckInterval = HStore.getCloseCheckInterval();
     boolean hasMore;
-    peakCompactionsThrottle.startCompaction();
     do {
       hasMore = scanner.next(kvs, compactionKVMax);
       // output to writer:
@@ -225,12 +222,9 @@ public abstract class Compactor {
             }
           }
         }
-        peakCompactionsThrottle.throttle(kv.getLength());
       }
       kvs.clear();
     } while (hasMore);
-    peakCompactionsThrottle.finishCompaction(this.store.getRegionInfo()
-        .getRegionNameAsString(), this.store.getFamily().getNameAsString());
     progress.complete();
     return true;
   }
