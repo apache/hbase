@@ -492,10 +492,13 @@ public final class HConstants {
   public static final String CONFIGURATION = "CONFIGURATION";
 
   /**
-   * This is a retry backoff multiplier table similar to the BSD TCP syn
-   * backoff table, a bit more aggressive than simple exponential backoff.
+   * Retrying we multiply hbase.client.pause setting by what we have in this array until we
+   * run out of array items.  Retries beyond this use the last number in the array.  So, for
+   * example, if hbase.client.pause is 1 second, and maximum retries count
+   * hbase.client.retries.number is 10, we will retry at the following intervals:
+   * 1, 2, 3, 10, 100, 100, 100, 100, 100, 100.
    */
-  public static int RETRY_BACKOFF[] = { 1, 1, 1, 2, 2, 4, 4, 8, 16, 32, 64 };
+  public static int RETRY_BACKOFF[] = { 1, 2, 3, 5, 10, 100 };
 
   public static final String REGION_IMPL = "hbase.hregion.impl";
 
@@ -574,7 +577,7 @@ public final class HConstants {
   /**
    * Default value of {@link #HBASE_CLIENT_RETRIES_NUMBER}.
    */
-  public static int DEFAULT_HBASE_CLIENT_RETRIES_NUMBER = 20;
+  public static int DEFAULT_HBASE_CLIENT_RETRIES_NUMBER = 31;
 
   /**
    * Parameter name for client prefetch limit, used as the maximum number of regions
@@ -729,7 +732,7 @@ public final class HConstants {
   public static final boolean DEFAULT_DISALLOW_WRITES_IN_RECOVERING_CONFIG = false;
 
   /** Conf key that specifies timeout value to wait for a region ready */
-  public static final String LOG_REPLAY_WAIT_REGION_TIMEOUT = 
+  public static final String LOG_REPLAY_WAIT_REGION_TIMEOUT =
       "hbase.master.log.replay.wait.region.timeout";
 
   /**
@@ -796,7 +799,7 @@ public final class HConstants {
 
   /* Name of old snapshot directory. See HBASE-8352 for details on why it needs to be renamed */
   public static final String OLD_SNAPSHOT_DIR_NAME = ".snapshot";
-  
+
   /** Temporary directory used for table creation and deletion */
   public static final String HBASE_TEMP_DIRECTORY = ".tmp";
 

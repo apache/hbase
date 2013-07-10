@@ -54,13 +54,14 @@ public class TestSnapshotFromAdmin {
    */
   @Test(timeout = 60000)
   public void testBackoffLogic() throws Exception {
-    final int maxWaitTime = 7500;
-    final int numRetries = 10;
-    final int pauseTime = 500;
+    final int pauseTime = 100;
+    final int maxWaitTime =
+      HConstants.RETRY_BACKOFF[HConstants.RETRY_BACKOFF.length - 1] * pauseTime;
+    final int numRetries = HConstants.RETRY_BACKOFF.length;
     // calculate the wait time, if we just do straight backoff (ignoring the expected time from
     // master)
     long ignoreExpectedTime = 0;
-    for (int i = 0; i < 6; i++) {
+    for (int i = 0; i < HConstants.RETRY_BACKOFF.length; i++) {
       ignoreExpectedTime += HConstants.RETRY_BACKOFF[i] * pauseTime;
     }
     // the correct wait time, capping at the maxTime/tries + fudge room

@@ -68,6 +68,7 @@ public class TestClientScannerRPCTimeout {
     conf.setInt(HConstants.HBASE_RPC_TIMEOUT_KEY, rpcTimeout);
     conf.setStrings(HConstants.REGION_SERVER_IMPL, RegionServerWithScanTimeout.class.getName());
     conf.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, CLIENT_RETRIES_NUMBER);
+    conf.setInt(HConstants.HBASE_CLIENT_PAUSE, 1000);
     TEST_UTIL.startMiniCluster(1);
   }
 
