@@ -35,7 +35,9 @@ class MonitoredTaskImpl implements MonitoredTask {
   private volatile String description;
   
   protected volatile State state = State.RUNNING;
-  
+
+  private static final ObjectMapper MAPPER = new ObjectMapper();
+
   public MonitoredTaskImpl() {
     startTime = System.currentTimeMillis();
     statusTime = startTime;
@@ -158,8 +160,7 @@ class MonitoredTaskImpl implements MonitoredTask {
 
   @Override
   public String toJSON() throws IOException {
-    ObjectMapper mapper = new ObjectMapper();
-    return mapper.writeValueAsString(toMap());
+    return MAPPER.writeValueAsString(toMap());
   }
 
   @Override

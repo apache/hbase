@@ -37,6 +37,8 @@ public abstract class Operation {
   // TODO Do we need this anymore now we have protobuffed it all?
   private static final int DEFAULT_MAX_COLS = 5;
 
+  private static final ObjectMapper MAPPER = new ObjectMapper();
+
   /**
    * Produces a Map containing a fingerprint which identifies the type and 
    * the static schema components of a query (i.e. column families)
@@ -67,8 +69,7 @@ public abstract class Operation {
    * @return a JSONObject containing this Operation's information, as a string
    */
   public String toJSON(int maxCols) throws IOException {
-    ObjectMapper mapper = new ObjectMapper();
-    return mapper.writeValueAsString(toMap(maxCols));
+    return MAPPER.writeValueAsString(toMap(maxCols));
   }
 
   /**
