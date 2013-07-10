@@ -15,7 +15,7 @@ public final class FilterProtos {
     boolean hasName();
     String getName();
     
-    // optional bytes serializedFilter = 2;
+    // optional bytes serialized_filter = 2;
     boolean hasSerializedFilter();
     com.google.protobuf.ByteString getSerializedFilter();
   }
@@ -80,8 +80,8 @@ public final class FilterProtos {
       }
     }
     
-    // optional bytes serializedFilter = 2;
-    public static final int SERIALIZEDFILTER_FIELD_NUMBER = 2;
+    // optional bytes serialized_filter = 2;
+    public static final int SERIALIZED_FILTER_FIELD_NUMBER = 2;
     private com.google.protobuf.ByteString serializedFilter_;
     public boolean hasSerializedFilter() {
       return ((bitField0_ & 0x00000002) == 0x00000002);
@@ -180,7 +180,7 @@ public final class FilterProtos {
         hash = (53 * hash) + getName().hashCode();
       }
       if (hasSerializedFilter()) {
-        hash = (37 * hash) + SERIALIZEDFILTER_FIELD_NUMBER;
+        hash = (37 * hash) + SERIALIZED_FILTER_FIELD_NUMBER;
         hash = (53 * hash) + getSerializedFilter().hashCode();
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
@@ -458,7 +458,7 @@ public final class FilterProtos {
         onChanged();
       }
       
-      // optional bytes serializedFilter = 2;
+      // optional bytes serialized_filter = 2;
       private com.google.protobuf.ByteString serializedFilter_ = com.google.protobuf.ByteString.EMPTY;
       public boolean hasSerializedFilter() {
         return ((bitField0_ & 0x00000002) == 0x00000002);
@@ -883,7 +883,7 @@ public final class FilterProtos {
     boolean hasOffset();
     int getOffset();
     
-    // optional bytes columnOffset = 3;
+    // optional bytes column_offset = 3;
     boolean hasColumnOffset();
     com.google.protobuf.ByteString getColumnOffset();
   }
@@ -936,8 +936,8 @@ public final class FilterProtos {
       return offset_;
     }
     
-    // optional bytes columnOffset = 3;
-    public static final int COLUMNOFFSET_FIELD_NUMBER = 3;
+    // optional bytes column_offset = 3;
+    public static final int COLUMN_OFFSET_FIELD_NUMBER = 3;
     private com.google.protobuf.ByteString columnOffset_;
     public boolean hasColumnOffset() {
       return ((bitField0_ & 0x00000004) == 0x00000004);
@@ -1053,7 +1053,7 @@ public final class FilterProtos {
         hash = (53 * hash) + getOffset();
       }
       if (hasColumnOffset()) {
-        hash = (37 * hash) + COLUMNOFFSET_FIELD_NUMBER;
+        hash = (37 * hash) + COLUMN_OFFSET_FIELD_NUMBER;
         hash = (53 * hash) + getColumnOffset().hashCode();
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
@@ -1351,7 +1351,7 @@ public final class FilterProtos {
         return this;
       }
       
-      // optional bytes columnOffset = 3;
+      // optional bytes column_offset = 3;
       private com.google.protobuf.ByteString columnOffset_ = com.google.protobuf.ByteString.EMPTY;
       public boolean hasColumnOffset() {
         return ((bitField0_ & 0x00000004) == 0x00000004);
@@ -1771,19 +1771,19 @@ public final class FilterProtos {
   public interface ColumnRangeFilterOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
     
-    // optional bytes minColumn = 1;
+    // optional bytes min_column = 1;
     boolean hasMinColumn();
     com.google.protobuf.ByteString getMinColumn();
     
-    // optional bool minColumnInclusive = 2;
+    // optional bool min_column_inclusive = 2;
     boolean hasMinColumnInclusive();
     boolean getMinColumnInclusive();
     
-    // optional bytes maxColumn = 3;
+    // optional bytes max_column = 3;
     boolean hasMaxColumn();
     com.google.protobuf.ByteString getMaxColumn();
     
-    // optional bool maxColumnInclusive = 4;
+    // optional bool max_column_inclusive = 4;
     boolean hasMaxColumnInclusive();
     boolean getMaxColumnInclusive();
   }
@@ -1816,8 +1816,8 @@ public final class FilterProtos {
     }
     
     private int bitField0_;
-    // optional bytes minColumn = 1;
-    public static final int MINCOLUMN_FIELD_NUMBER = 1;
+    // optional bytes min_column = 1;
+    public static final int MIN_COLUMN_FIELD_NUMBER = 1;
     private com.google.protobuf.ByteString minColumn_;
     public boolean hasMinColumn() {
       return ((bitField0_ & 0x00000001) == 0x00000001);
@@ -1826,8 +1826,8 @@ public final class FilterProtos {
       return minColumn_;
     }
     
-    // optional bool minColumnInclusive = 2;
-    public static final int MINCOLUMNINCLUSIVE_FIELD_NUMBER = 2;
+    // optional bool min_column_inclusive = 2;
+    public static final int MIN_COLUMN_INCLUSIVE_FIELD_NUMBER = 2;
     private boolean minColumnInclusive_;
     public boolean hasMinColumnInclusive() {
       return ((bitField0_ & 0x00000002) == 0x00000002);
@@ -1836,8 +1836,8 @@ public final class FilterProtos {
       return minColumnInclusive_;
     }
     
-    // optional bytes maxColumn = 3;
-    public static final int MAXCOLUMN_FIELD_NUMBER = 3;
+    // optional bytes max_column = 3;
+    public static final int MAX_COLUMN_FIELD_NUMBER = 3;
     private com.google.protobuf.ByteString maxColumn_;
     public boolean hasMaxColumn() {
       return ((bitField0_ & 0x00000004) == 0x00000004);
@@ -1846,8 +1846,8 @@ public final class FilterProtos {
       return maxColumn_;
     }
     
-    // optional bool maxColumnInclusive = 4;
-    public static final int MAXCOLUMNINCLUSIVE_FIELD_NUMBER = 4;
+    // optional bool max_column_inclusive = 4;
+    public static final int MAX_COLUMN_INCLUSIVE_FIELD_NUMBER = 4;
     private boolean maxColumnInclusive_;
     public boolean hasMaxColumnInclusive() {
       return ((bitField0_ & 0x00000008) == 0x00000008);
@@ -1964,19 +1964,19 @@ public final class FilterProtos {
       int hash = 41;
       hash = (19 * hash) + getDescriptorForType().hashCode();
       if (hasMinColumn()) {
-        hash = (37 * hash) + MINCOLUMN_FIELD_NUMBER;
+        hash = (37 * hash) + MIN_COLUMN_FIELD_NUMBER;
         hash = (53 * hash) + getMinColumn().hashCode();
       }
       if (hasMinColumnInclusive()) {
-        hash = (37 * hash) + MINCOLUMNINCLUSIVE_FIELD_NUMBER;
+        hash = (37 * hash) + MIN_COLUMN_INCLUSIVE_FIELD_NUMBER;
         hash = (53 * hash) + hashBoolean(getMinColumnInclusive());
       }
       if (hasMaxColumn()) {
-        hash = (37 * hash) + MAXCOLUMN_FIELD_NUMBER;
+        hash = (37 * hash) + MAX_COLUMN_FIELD_NUMBER;
         hash = (53 * hash) + getMaxColumn().hashCode();
       }
       if (hasMaxColumnInclusive()) {
-        hash = (37 * hash) + MAXCOLUMNINCLUSIVE_FIELD_NUMBER;
+        hash = (37 * hash) + MAX_COLUMN_INCLUSIVE_FIELD_NUMBER;
         hash = (53 * hash) + hashBoolean(getMaxColumnInclusive());
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
@@ -2242,7 +2242,7 @@ public final class FilterProtos {
       
       private int bitField0_;
       
-      // optional bytes minColumn = 1;
+      // optional bytes min_column = 1;
       private com.google.protobuf.ByteString minColumn_ = com.google.protobuf.ByteString.EMPTY;
       public boolean hasMinColumn() {
         return ((bitField0_ & 0x00000001) == 0x00000001);
@@ -2266,7 +2266,7 @@ public final class FilterProtos {
         return this;
       }
       
-      // optional bool minColumnInclusive = 2;
+      // optional bool min_column_inclusive = 2;
       private boolean minColumnInclusive_ ;
       public boolean hasMinColumnInclusive() {
         return ((bitField0_ & 0x00000002) == 0x00000002);
@@ -2287,7 +2287,7 @@ public final class FilterProtos {
         return this;
       }
       
-      // optional bytes maxColumn = 3;
+      // optional bytes max_column = 3;
       private com.google.protobuf.ByteString maxColumn_ = com.google.protobuf.ByteString.EMPTY;
       public boolean hasMaxColumn() {
         return ((bitField0_ & 0x00000004) == 0x00000004);
@@ -2311,7 +2311,7 @@ public final class FilterProtos {
         return this;
       }
       
-      // optional bool maxColumnInclusive = 4;
+      // optional bool max_column_inclusive = 4;
       private boolean maxColumnInclusive_ ;
       public boolean hasMaxColumnInclusive() {
         return ((bitField0_ & 0x00000008) == 0x00000008);
@@ -2346,7 +2346,7 @@ public final class FilterProtos {
   public interface CompareFilterOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
     
-    // required .CompareType compareOp = 1;
+    // required .CompareType compare_op = 1;
     boolean hasCompareOp();
     org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.CompareType getCompareOp();
     
@@ -2384,8 +2384,8 @@ public final class FilterProtos {
     }
     
     private int bitField0_;
-    // required .CompareType compareOp = 1;
-    public static final int COMPAREOP_FIELD_NUMBER = 1;
+    // required .CompareType compare_op = 1;
+    public static final int COMPARE_OP_FIELD_NUMBER = 1;
     private org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.CompareType compareOp_;
     public boolean hasCompareOp() {
       return ((bitField0_ & 0x00000001) == 0x00000001);
@@ -2499,7 +2499,7 @@ public final class FilterProtos {
       int hash = 41;
       hash = (19 * hash) + getDescriptorForType().hashCode();
       if (hasCompareOp()) {
-        hash = (37 * hash) + COMPAREOP_FIELD_NUMBER;
+        hash = (37 * hash) + COMPARE_OP_FIELD_NUMBER;
         hash = (53 * hash) + hashEnum(getCompareOp());
       }
       if (hasComparator()) {
@@ -2770,7 +2770,7 @@ public final class FilterProtos {
       
       private int bitField0_;
       
-      // required .CompareType compareOp = 1;
+      // required .CompareType compare_op = 1;
       private org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.CompareType compareOp_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.CompareType.LESS;
       public boolean hasCompareOp() {
         return ((bitField0_ & 0x00000001) == 0x00000001);
@@ -2898,20 +2898,20 @@ public final class FilterProtos {
   public interface DependentColumnFilterOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
     
-    // required .CompareFilter compareFilter = 1;
+    // required .CompareFilter compare_filter = 1;
     boolean hasCompareFilter();
     org.apache.hadoop.hbase.protobuf.generated.FilterProtos.CompareFilter getCompareFilter();
     org.apache.hadoop.hbase.protobuf.generated.FilterProtos.CompareFilterOrBuilder getCompareFilterOrBuilder();
     
-    // optional bytes columnFamily = 2;
+    // optional bytes column_family = 2;
     boolean hasColumnFamily();
     com.google.protobuf.ByteString getColumnFamily();
     
-    // optional bytes columnQualifier = 3;
+    // optional bytes column_qualifier = 3;
     boolean hasColumnQualifier();
     com.google.protobuf.ByteString getColumnQualifier();
     
-    // optional bool dropDependentColumn = 4;
+    // optional bool drop_dependent_column = 4;
     boolean hasDropDependentColumn();
     boolean getDropDependentColumn();
   }
@@ -2944,8 +2944,8 @@ public final class FilterProtos {
     }
     
     private int bitField0_;
-    // required .CompareFilter compareFilter = 1;
-    public static final int COMPAREFILTER_FIELD_NUMBER = 1;
+    // required .CompareFilter compare_filter = 1;
+    public static final int COMPARE_FILTER_FIELD_NUMBER = 1;
     private org.apache.hadoop.hbase.protobuf.generated.FilterProtos.CompareFilter compareFilter_;
     public boolean hasCompareFilter() {
       return ((bitField0_ & 0x00000001) == 0x00000001);
@@ -2957,8 +2957,8 @@ public final class FilterProtos {
       return compareFilter_;
     }
     
-    // optional bytes columnFamily = 2;
-    public static final int COLUMNFAMILY_FIELD_NUMBER = 2;
+    // optional bytes column_family = 2;
+    public static final int COLUMN_FAMILY_FIELD_NUMBER = 2;
     private com.google.protobuf.ByteString columnFamily_;
     public boolean hasColumnFamily() {
       return ((bitField0_ & 0x00000002) == 0x00000002);
@@ -2967,8 +2967,8 @@ public final class FilterProtos {
       return columnFamily_;
     }
     
-    // optional bytes columnQualifier = 3;
-    public static final int COLUMNQUALIFIER_FIELD_NUMBER = 3;
+    // optional bytes column_qualifier = 3;
+    public static final int COLUMN_QUALIFIER_FIELD_NUMBER = 3;
     private com.google.protobuf.ByteString columnQualifier_;
     public boolean hasColumnQualifier() {
       return ((bitField0_ & 0x00000004) == 0x00000004);
@@ -2977,8 +2977,8 @@ public final class FilterProtos {
       return columnQualifier_;
     }
     
-    // optional bool dropDependentColumn = 4;
-    public static final int DROPDEPENDENTCOLUMN_FIELD_NUMBER = 4;
+    // optional bool drop_dependent_column = 4;
+    public static final int DROP_DEPENDENT_COLUMN_FIELD_NUMBER = 4;
     private boolean dropDependentColumn_;
     public boolean hasDropDependentColumn() {
       return ((bitField0_ & 0x00000008) == 0x00000008);
@@ -3103,19 +3103,19 @@ public final class FilterProtos {
       int hash = 41;
       hash = (19 * hash) + getDescriptorForType().hashCode();
       if (hasCompareFilter()) {
-        hash = (37 * hash) + COMPAREFILTER_FIELD_NUMBER;
+        hash = (37 * hash) + COMPARE_FILTER_FIELD_NUMBER;
         hash = (53 * hash) + getCompareFilter().hashCode();
       }
       if (hasColumnFamily()) {
-        hash = (37 * hash) + COLUMNFAMILY_FIELD_NUMBER;
+        hash = (37 * hash) + COLUMN_FAMILY_FIELD_NUMBER;
         hash = (53 * hash) + getColumnFamily().hashCode();
       }
       if (hasColumnQualifier()) {
-        hash = (37 * hash) + COLUMNQUALIFIER_FIELD_NUMBER;
+        hash = (37 * hash) + COLUMN_QUALIFIER_FIELD_NUMBER;
         hash = (53 * hash) + getColumnQualifier().hashCode();
       }
       if (hasDropDependentColumn()) {
-        hash = (37 * hash) + DROPDEPENDENTCOLUMN_FIELD_NUMBER;
+        hash = (37 * hash) + DROP_DEPENDENT_COLUMN_FIELD_NUMBER;
         hash = (53 * hash) + hashBoolean(getDropDependentColumn());
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
@@ -3402,7 +3402,7 @@ public final class FilterProtos {
       
       private int bitField0_;
       
-      // required .CompareFilter compareFilter = 1;
+      // required .CompareFilter compare_filter = 1;
       private org.apache.hadoop.hbase.protobuf.generated.FilterProtos.CompareFilter compareFilter_ = org.apache.hadoop.hbase.protobuf.generated.FilterProtos.CompareFilter.getDefaultInstance();
       private com.google.protobuf.SingleFieldBuilder<
           org.apache.hadoop.hbase.protobuf.generated.FilterProtos.CompareFilter, org.apache.hadoop.hbase.protobuf.generated.FilterProtos.CompareFilter.Builder, org.apache.hadoop.hbase.protobuf.generated.FilterProtos.CompareFilterOrBuilder> compareFilterBuilder_;
@@ -3492,7 +3492,7 @@ public final class FilterProtos {
         return compareFilterBuilder_;
       }
       
-      // optional bytes columnFamily = 2;
+      // optional bytes column_family = 2;
       private com.google.protobuf.ByteString columnFamily_ = com.google.protobuf.ByteString.EMPTY;
       public boolean hasColumnFamily() {
         return ((bitField0_ & 0x00000002) == 0x00000002);
@@ -3516,7 +3516,7 @@ public final class FilterProtos {
         return this;
       }
       
-      // optional bytes columnQualifier = 3;
+      // optional bytes column_qualifier = 3;
       private com.google.protobuf.ByteString columnQualifier_ = com.google.protobuf.ByteString.EMPTY;
       public boolean hasColumnQualifier() {
         return ((bitField0_ & 0x00000004) == 0x00000004);
@@ -3540,7 +3540,7 @@ public final class FilterProtos {
         return this;
       }
       
-      // optional bool dropDependentColumn = 4;
+      // optional bool drop_dependent_column = 4;
       private boolean dropDependentColumn_ ;
       public boolean hasDropDependentColumn() {
         return ((bitField0_ & 0x00000008) == 0x00000008);
@@ -3575,7 +3575,7 @@ public final class FilterProtos {
   public interface FamilyFilterOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
     
-    // required .CompareFilter compareFilter = 1;
+    // required .CompareFilter compare_filter = 1;
     boolean hasCompareFilter();
     org.apache.hadoop.hbase.protobuf.generated.FilterProtos.CompareFilter getCompareFilter();
     org.apache.hadoop.hbase.protobuf.generated.FilterProtos.CompareFilterOrBuilder getCompareFilterOrBuilder();
@@ -3609,8 +3609,8 @@ public final class FilterProtos {
     }
     
     private int bitField0_;
-    // required .CompareFilter compareFilter = 1;
-    public static final int COMPAREFILTER_FIELD_NUMBER = 1;
+    // required .CompareFilter compare_filter = 1;
+    public static final int COMPARE_FILTER_FIELD_NUMBER = 1;
     private org.apache.hadoop.hbase.protobuf.generated.FilterProtos.CompareFilter compareFilter_;
     public boolean hasCompareFilter() {
       return ((bitField0_ & 0x00000001) == 0x00000001);
@@ -3699,7 +3699,7 @@ public final class FilterProtos {
       int hash = 41;
       hash = (19 * hash) + getDescriptorForType().hashCode();
       if (hasCompareFilter()) {
-        hash = (37 * hash) + COMPAREFILTER_FIELD_NUMBER;
+        hash = (37 * hash) + COMPARE_FILTER_FIELD_NUMBER;
         hash = (53 * hash) + getCompareFilter().hashCode();
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
@@ -3944,7 +3944,7 @@ public final class FilterProtos {
       
       private int bitField0_;
       
-      // required .CompareFilter compareFilter = 1;
+      // required .CompareFilter compare_filter = 1;
       private org.apache.hadoop.hbase.protobuf.generated.FilterProtos.CompareFilter compareFilter_ = org.apache.hadoop.hbase.protobuf.generated.FilterProtos.CompareFilter.getDefaultInstance();
       private com.google.protobuf.SingleFieldBuilder<
           org.apache.hadoop.hbase.protobuf.generated.FilterProtos.CompareFilter, org.apache.hadoop.hbase.protobuf.generated.FilterProtos.CompareFilter.Builder, org.apache.hadoop.hbase.protobuf.generated.FilterProtos.CompareFilterOrBuilder> compareFilterBuilder_;
@@ -5982,7 +5982,7 @@ public final class FilterProtos {
   public interface FuzzyRowFilterOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
     
-    // repeated .BytesBytesPair fuzzyKeysData = 1;
+    // repeated .BytesBytesPair fuzzy_keys_data = 1;
     java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPair> 
         getFuzzyKeysDataList();
     org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPair getFuzzyKeysData(int index);
@@ -6020,8 +6020,8 @@ public final class FilterProtos {
       return org.apache.hadoop.hbase.protobuf.generated.FilterProtos.internal_static_FuzzyRowFilter_fieldAccessorTable;
     }
     
-    // repeated .BytesBytesPair fuzzyKeysData = 1;
-    public static final int FUZZYKEYSDATA_FIELD_NUMBER = 1;
+    // repeated .BytesBytesPair fuzzy_keys_data = 1;
+    public static final int FUZZY_KEYS_DATA_FIELD_NUMBER = 1;
     private java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPair> fuzzyKeysData_;
     public java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPair> getFuzzyKeysDataList() {
       return fuzzyKeysData_;
@@ -6113,7 +6113,7 @@ public final class FilterProtos {
       int hash = 41;
       hash = (19 * hash) + getDescriptorForType().hashCode();
       if (getFuzzyKeysDataCount() > 0) {
-        hash = (37 * hash) + FUZZYKEYSDATA_FIELD_NUMBER;
+        hash = (37 * hash) + FUZZY_KEYS_DATA_FIELD_NUMBER;
         hash = (53 * hash) + getFuzzyKeysDataList().hashCode();
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
@@ -6375,7 +6375,7 @@ public final class FilterProtos {
       
       private int bitField0_;
       
-      // repeated .BytesBytesPair fuzzyKeysData = 1;
+      // repeated .BytesBytesPair fuzzy_keys_data = 1;
       private java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPair> fuzzyKeysData_ =
         java.util.Collections.emptyList();
       private void ensureFuzzyKeysDataIsMutable() {
@@ -6575,7 +6575,7 @@ public final class FilterProtos {
   public interface InclusiveStopFilterOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
     
-    // optional bytes stopRowKey = 1;
+    // optional bytes stop_row_key = 1;
     boolean hasStopRowKey();
     com.google.protobuf.ByteString getStopRowKey();
   }
@@ -6608,8 +6608,8 @@ public final class FilterProtos {
     }
     
     private int bitField0_;
-    // optional bytes stopRowKey = 1;
-    public static final int STOPROWKEY_FIELD_NUMBER = 1;
+    // optional bytes stop_row_key = 1;
+    public static final int STOP_ROW_KEY_FIELD_NUMBER = 1;
     private com.google.protobuf.ByteString stopRowKey_;
     public boolean hasStopRowKey() {
       return ((bitField0_ & 0x00000001) == 0x00000001);
@@ -6687,7 +6687,7 @@ public final class FilterProtos {
       int hash = 41;
       hash = (19 * hash) + getDescriptorForType().hashCode();
       if (hasStopRowKey()) {
-        hash = (37 * hash) + STOPROWKEY_FIELD_NUMBER;
+        hash = (37 * hash) + STOP_ROW_KEY_FIELD_NUMBER;
         hash = (53 * hash) + getStopRowKey().hashCode();
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
@@ -6911,7 +6911,7 @@ public final class FilterProtos {
       
       private int bitField0_;
       
-      // optional bytes stopRowKey = 1;
+      // optional bytes stop_row_key = 1;
       private com.google.protobuf.ByteString stopRowKey_ = com.google.protobuf.ByteString.EMPTY;
       public boolean hasStopRowKey() {
         return ((bitField0_ & 0x00000001) == 0x00000001);
@@ -6949,7 +6949,7 @@ public final class FilterProtos {
   public interface KeyOnlyFilterOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
     
-    // required bool lenAsVal = 1;
+    // required bool len_as_val = 1;
     boolean hasLenAsVal();
     boolean getLenAsVal();
   }
@@ -6982,8 +6982,8 @@ public final class FilterProtos {
     }
     
     private int bitField0_;
-    // required bool lenAsVal = 1;
-    public static final int LENASVAL_FIELD_NUMBER = 1;
+    // required bool len_as_val = 1;
+    public static final int LEN_AS_VAL_FIELD_NUMBER = 1;
     private boolean lenAsVal_;
     public boolean hasLenAsVal() {
       return ((bitField0_ & 0x00000001) == 0x00000001);
@@ -7065,7 +7065,7 @@ public final class FilterProtos {
       int hash = 41;
       hash = (19 * hash) + getDescriptorForType().hashCode();
       if (hasLenAsVal()) {
-        hash = (37 * hash) + LENASVAL_FIELD_NUMBER;
+        hash = (37 * hash) + LEN_AS_VAL_FIELD_NUMBER;
         hash = (53 * hash) + hashBoolean(getLenAsVal());
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
@@ -7293,7 +7293,7 @@ public final class FilterProtos {
       
       private int bitField0_;
       
-      // required bool lenAsVal = 1;
+      // required bool len_as_val = 1;
       private boolean lenAsVal_ ;
       public boolean hasLenAsVal() {
         return ((bitField0_ & 0x00000001) == 0x00000001);
@@ -7328,7 +7328,7 @@ public final class FilterProtos {
   public interface MultipleColumnPrefixFilterOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
     
-    // repeated bytes sortedPrefixes = 1;
+    // repeated bytes sorted_prefixes = 1;
     java.util.List<com.google.protobuf.ByteString> getSortedPrefixesList();
     int getSortedPrefixesCount();
     com.google.protobuf.ByteString getSortedPrefixes(int index);
@@ -7361,8 +7361,8 @@ public final class FilterProtos {
       return org.apache.hadoop.hbase.protobuf.generated.FilterProtos.internal_static_MultipleColumnPrefixFilter_fieldAccessorTable;
     }
     
-    // repeated bytes sortedPrefixes = 1;
-    public static final int SORTEDPREFIXES_FIELD_NUMBER = 1;
+    // repeated bytes sorted_prefixes = 1;
+    public static final int SORTED_PREFIXES_FIELD_NUMBER = 1;
     private java.util.List<com.google.protobuf.ByteString> sortedPrefixes_;
     public java.util.List<com.google.protobuf.ByteString>
         getSortedPrefixesList() {
@@ -7446,7 +7446,7 @@ public final class FilterProtos {
       int hash = 41;
       hash = (19 * hash) + getDescriptorForType().hashCode();
       if (getSortedPrefixesCount() > 0) {
-        hash = (37 * hash) + SORTEDPREFIXES_FIELD_NUMBER;
+        hash = (37 * hash) + SORTED_PREFIXES_FIELD_NUMBER;
         hash = (53 * hash) + getSortedPrefixesList().hashCode();
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
@@ -7676,7 +7676,7 @@ public final class FilterProtos {
       
       private int bitField0_;
       
-      // repeated bytes sortedPrefixes = 1;
+      // repeated bytes sorted_prefixes = 1;
       private java.util.List<com.google.protobuf.ByteString> sortedPrefixes_ = java.util.Collections.emptyList();;
       private void ensureSortedPrefixesIsMutable() {
         if (!((bitField0_ & 0x00000001) == 0x00000001)) {
@@ -7741,7 +7741,7 @@ public final class FilterProtos {
   public interface PageFilterOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
     
-    // required int64 pageSize = 1;
+    // required int64 page_size = 1;
     boolean hasPageSize();
     long getPageSize();
   }
@@ -7774,8 +7774,8 @@ public final class FilterProtos {
     }
     
     private int bitField0_;
-    // required int64 pageSize = 1;
-    public static final int PAGESIZE_FIELD_NUMBER = 1;
+    // required int64 page_size = 1;
+    public static final int PAGE_SIZE_FIELD_NUMBER = 1;
     private long pageSize_;
     public boolean hasPageSize() {
       return ((bitField0_ & 0x00000001) == 0x00000001);
@@ -7857,7 +7857,7 @@ public final class FilterProtos {
       int hash = 41;
       hash = (19 * hash) + getDescriptorForType().hashCode();
       if (hasPageSize()) {
-        hash = (37 * hash) + PAGESIZE_FIELD_NUMBER;
+        hash = (37 * hash) + PAGE_SIZE_FIELD_NUMBER;
         hash = (53 * hash) + hashLong(getPageSize());
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
@@ -8085,7 +8085,7 @@ public final class FilterProtos {
       
       private int bitField0_;
       
-      // required int64 pageSize = 1;
+      // required int64 page_size = 1;
       private long pageSize_ ;
       public boolean hasPageSize() {
         return ((bitField0_ & 0x00000001) == 0x00000001);
@@ -8494,7 +8494,7 @@ public final class FilterProtos {
   public interface QualifierFilterOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
     
-    // required .CompareFilter compareFilter = 1;
+    // required .CompareFilter compare_filter = 1;
     boolean hasCompareFilter();
     org.apache.hadoop.hbase.protobuf.generated.FilterProtos.CompareFilter getCompareFilter();
     org.apache.hadoop.hbase.protobuf.generated.FilterProtos.CompareFilterOrBuilder getCompareFilterOrBuilder();
@@ -8528,8 +8528,8 @@ public final class FilterProtos {
     }
     
     private int bitField0_;
-    // required .CompareFilter compareFilter = 1;
-    public static final int COMPAREFILTER_FIELD_NUMBER = 1;
+    // required .CompareFilter compare_filter = 1;
+    public static final int COMPARE_FILTER_FIELD_NUMBER = 1;
     private org.apache.hadoop.hbase.protobuf.generated.FilterProtos.CompareFilter compareFilter_;
     public boolean hasCompareFilter() {
       return ((bitField0_ & 0x00000001) == 0x00000001);
@@ -8618,7 +8618,7 @@ public final class FilterProtos {
       int hash = 41;
       hash = (19 * hash) + getDescriptorForType().hashCode();
       if (hasCompareFilter()) {
-        hash = (37 * hash) + COMPAREFILTER_FIELD_NUMBER;
+        hash = (37 * hash) + COMPARE_FILTER_FIELD_NUMBER;
         hash = (53 * hash) + getCompareFilter().hashCode();
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
@@ -8863,7 +8863,7 @@ public final class FilterProtos {
       
       private int bitField0_;
       
-      // required .CompareFilter compareFilter = 1;
+      // required .CompareFilter compare_filter = 1;
       private org.apache.hadoop.hbase.protobuf.generated.FilterProtos.CompareFilter compareFilter_ = org.apache.hadoop.hbase.protobuf.generated.FilterProtos.CompareFilter.getDefaultInstance();
       private com.google.protobuf.SingleFieldBuilder<
           org.apache.hadoop.hbase.protobuf.generated.FilterProtos.CompareFilter, org.apache.hadoop.hbase.protobuf.generated.FilterProtos.CompareFilter.Builder, org.apache.hadoop.hbase.protobuf.generated.FilterProtos.CompareFilterOrBuilder> compareFilterBuilder_;
@@ -9346,7 +9346,7 @@ public final class FilterProtos {
   public interface RowFilterOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
     
-    // required .CompareFilter compareFilter = 1;
+    // required .CompareFilter compare_filter = 1;
     boolean hasCompareFilter();
     org.apache.hadoop.hbase.protobuf.generated.FilterProtos.CompareFilter getCompareFilter();
     org.apache.hadoop.hbase.protobuf.generated.FilterProtos.CompareFilterOrBuilder getCompareFilterOrBuilder();
@@ -9380,8 +9380,8 @@ public final class FilterProtos {
     }
     
     private int bitField0_;
-    // required .CompareFilter compareFilter = 1;
-    public static final int COMPAREFILTER_FIELD_NUMBER = 1;
+    // required .CompareFilter compare_filter = 1;
+    public static final int COMPARE_FILTER_FIELD_NUMBER = 1;
     private org.apache.hadoop.hbase.protobuf.generated.FilterProtos.CompareFilter compareFilter_;
     public boolean hasCompareFilter() {
       return ((bitField0_ & 0x00000001) == 0x00000001);
@@ -9470,7 +9470,7 @@ public final class FilterProtos {
       int hash = 41;
       hash = (19 * hash) + getDescriptorForType().hashCode();
       if (hasCompareFilter()) {
-        hash = (37 * hash) + COMPAREFILTER_FIELD_NUMBER;
+        hash = (37 * hash) + COMPARE_FILTER_FIELD_NUMBER;
         hash = (53 * hash) + getCompareFilter().hashCode();
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
@@ -9715,7 +9715,7 @@ public final class FilterProtos {
       
       private int bitField0_;
       
-      // required .CompareFilter compareFilter = 1;
+      // required .CompareFilter compare_filter = 1;
       private org.apache.hadoop.hbase.protobuf.generated.FilterProtos.CompareFilter compareFilter_ = org.apache.hadoop.hbase.protobuf.generated.FilterProtos.CompareFilter.getDefaultInstance();
       private com.google.protobuf.SingleFieldBuilder<
           org.apache.hadoop.hbase.protobuf.generated.FilterProtos.CompareFilter, org.apache.hadoop.hbase.protobuf.generated.FilterProtos.CompareFilter.Builder, org.apache.hadoop.hbase.protobuf.generated.FilterProtos.CompareFilterOrBuilder> compareFilterBuilder_;
@@ -9819,7 +9819,7 @@ public final class FilterProtos {
   public interface SingleColumnValueExcludeFilterOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
     
-    // required .SingleColumnValueFilter singleColumnValueFilter = 1;
+    // required .SingleColumnValueFilter single_column_value_filter = 1;
     boolean hasSingleColumnValueFilter();
     org.apache.hadoop.hbase.protobuf.generated.FilterProtos.SingleColumnValueFilter getSingleColumnValueFilter();
     org.apache.hadoop.hbase.protobuf.generated.FilterProtos.SingleColumnValueFilterOrBuilder getSingleColumnValueFilterOrBuilder();
@@ -9853,8 +9853,8 @@ public final class FilterProtos {
     }
     
     private int bitField0_;
-    // required .SingleColumnValueFilter singleColumnValueFilter = 1;
-    public static final int SINGLECOLUMNVALUEFILTER_FIELD_NUMBER = 1;
+    // required .SingleColumnValueFilter single_column_value_filter = 1;
+    public static final int SINGLE_COLUMN_VALUE_FILTER_FIELD_NUMBER = 1;
     private org.apache.hadoop.hbase.protobuf.generated.FilterProtos.SingleColumnValueFilter singleColumnValueFilter_;
     public boolean hasSingleColumnValueFilter() {
       return ((bitField0_ & 0x00000001) == 0x00000001);
@@ -9943,7 +9943,7 @@ public final class FilterProtos {
       int hash = 41;
       hash = (19 * hash) + getDescriptorForType().hashCode();
       if (hasSingleColumnValueFilter()) {
-        hash = (37 * hash) + SINGLECOLUMNVALUEFILTER_FIELD_NUMBER;
+        hash = (37 * hash) + SINGLE_COLUMN_VALUE_FILTER_FIELD_NUMBER;
         hash = (53 * hash) + getSingleColumnValueFilter().hashCode();
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
@@ -10188,7 +10188,7 @@ public final class FilterProtos {
       
       private int bitField0_;
       
-      // required .SingleColumnValueFilter singleColumnValueFilter = 1;
+      // required .SingleColumnValueFilter single_column_value_filter = 1;
       private org.apache.hadoop.hbase.protobuf.generated.FilterProtos.SingleColumnValueFilter singleColumnValueFilter_ = org.apache.hadoop.hbase.protobuf.generated.FilterProtos.SingleColumnValueFilter.getDefaultInstance();
       private com.google.protobuf.SingleFieldBuilder<
           org.apache.hadoop.hbase.protobuf.generated.FilterProtos.SingleColumnValueFilter, org.apache.hadoop.hbase.protobuf.generated.FilterProtos.SingleColumnValueFilter.Builder, org.apache.hadoop.hbase.protobuf.generated.FilterProtos.SingleColumnValueFilterOrBuilder> singleColumnValueFilterBuilder_;
@@ -10292,15 +10292,15 @@ public final class FilterProtos {
   public interface SingleColumnValueFilterOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
     
-    // optional bytes columnFamily = 1;
+    // optional bytes column_family = 1;
     boolean hasColumnFamily();
     com.google.protobuf.ByteString getColumnFamily();
     
-    // optional bytes columnQualifier = 2;
+    // optional bytes column_qualifier = 2;
     boolean hasColumnQualifier();
     com.google.protobuf.ByteString getColumnQualifier();
     
-    // required .CompareType compareOp = 3;
+    // required .CompareType compare_op = 3;
     boolean hasCompareOp();
     org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.CompareType getCompareOp();
     
@@ -10309,11 +10309,11 @@ public final class FilterProtos {
     org.apache.hadoop.hbase.protobuf.generated.ComparatorProtos.Comparator getComparator();
     org.apache.hadoop.hbase.protobuf.generated.ComparatorProtos.ComparatorOrBuilder getComparatorOrBuilder();
     
-    // optional bool filterIfMissing = 5;
+    // optional bool filter_if_missing = 5;
     boolean hasFilterIfMissing();
     boolean getFilterIfMissing();
     
-    // optional bool latestVersionOnly = 6;
+    // optional bool latest_version_only = 6;
     boolean hasLatestVersionOnly();
     boolean getLatestVersionOnly();
   }
@@ -10346,8 +10346,8 @@ public final class FilterProtos {
     }
     
     private int bitField0_;
-    // optional bytes columnFamily = 1;
-    public static final int COLUMNFAMILY_FIELD_NUMBER = 1;
+    // optional bytes column_family = 1;
+    public static final int COLUMN_FAMILY_FIELD_NUMBER = 1;
     private com.google.protobuf.ByteString columnFamily_;
     public boolean hasColumnFamily() {
       return ((bitField0_ & 0x00000001) == 0x00000001);
@@ -10356,8 +10356,8 @@ public final class FilterProtos {
       return columnFamily_;
     }
     
-    // optional bytes columnQualifier = 2;
-    public static final int COLUMNQUALIFIER_FIELD_NUMBER = 2;
+    // optional bytes column_qualifier = 2;
+    public static final int COLUMN_QUALIFIER_FIELD_NUMBER = 2;
     private com.google.protobuf.ByteString columnQualifier_;
     public boolean hasColumnQualifier() {
       return ((bitField0_ & 0x00000002) == 0x00000002);
@@ -10366,8 +10366,8 @@ public final class FilterProtos {
       return columnQualifier_;
     }
     
-    // required .CompareType compareOp = 3;
-    public static final int COMPAREOP_FIELD_NUMBER = 3;
+    // required .CompareType compare_op = 3;
+    public static final int COMPARE_OP_FIELD_NUMBER = 3;
     private org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.CompareType compareOp_;
     public boolean hasCompareOp() {
       return ((bitField0_ & 0x00000004) == 0x00000004);
@@ -10389,8 +10389,8 @@ public final class FilterProtos {
       return comparator_;
     }
     
-    // optional bool filterIfMissing = 5;
-    public static final int FILTERIFMISSING_FIELD_NUMBER = 5;
+    // optional bool filter_if_missing = 5;
+    public static final int FILTER_IF_MISSING_FIELD_NUMBER = 5;
     private boolean filterIfMissing_;
     public boolean hasFilterIfMissing() {
       return ((bitField0_ & 0x00000010) == 0x00000010);
@@ -10399,8 +10399,8 @@ public final class FilterProtos {
       return filterIfMissing_;
     }
     
-    // optional bool latestVersionOnly = 6;
-    public static final int LATESTVERSIONONLY_FIELD_NUMBER = 6;
+    // optional bool latest_version_only = 6;
+    public static final int LATEST_VERSION_ONLY_FIELD_NUMBER = 6;
     private boolean latestVersionOnly_;
     public boolean hasLatestVersionOnly() {
       return ((bitField0_ & 0x00000020) == 0x00000020);
@@ -10555,15 +10555,15 @@ public final class FilterProtos {
       int hash = 41;
       hash = (19 * hash) + getDescriptorForType().hashCode();
       if (hasColumnFamily()) {
-        hash = (37 * hash) + COLUMNFAMILY_FIELD_NUMBER;
+        hash = (37 * hash) + COLUMN_FAMILY_FIELD_NUMBER;
         hash = (53 * hash) + getColumnFamily().hashCode();
       }
       if (hasColumnQualifier()) {
-        hash = (37 * hash) + COLUMNQUALIFIER_FIELD_NUMBER;
+        hash = (37 * hash) + COLUMN_QUALIFIER_FIELD_NUMBER;
         hash = (53 * hash) + getColumnQualifier().hashCode();
       }
       if (hasCompareOp()) {
-        hash = (37 * hash) + COMPAREOP_FIELD_NUMBER;
+        hash = (37 * hash) + COMPARE_OP_FIELD_NUMBER;
         hash = (53 * hash) + hashEnum(getCompareOp());
       }
       if (hasComparator()) {
@@ -10571,11 +10571,11 @@ public final class FilterProtos {
         hash = (53 * hash) + getComparator().hashCode();
       }
       if (hasFilterIfMissing()) {
-        hash = (37 * hash) + FILTERIFMISSING_FIELD_NUMBER;
+        hash = (37 * hash) + FILTER_IF_MISSING_FIELD_NUMBER;
         hash = (53 * hash) + hashBoolean(getFilterIfMissing());
       }
       if (hasLatestVersionOnly()) {
-        hash = (37 * hash) + LATESTVERSIONONLY_FIELD_NUMBER;
+        hash = (37 * hash) + LATEST_VERSION_ONLY_FIELD_NUMBER;
         hash = (53 * hash) + hashBoolean(getLatestVersionOnly());
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
@@ -10900,7 +10900,7 @@ public final class FilterProtos {
       
       private int bitField0_;
       
-      // optional bytes columnFamily = 1;
+      // optional bytes column_family = 1;
       private com.google.protobuf.ByteString columnFamily_ = com.google.protobuf.ByteString.EMPTY;
       public boolean hasColumnFamily() {
         return ((bitField0_ & 0x00000001) == 0x00000001);
@@ -10924,7 +10924,7 @@ public final class FilterProtos {
         return this;
       }
       
-      // optional bytes columnQualifier = 2;
+      // optional bytes column_qualifier = 2;
       private com.google.protobuf.ByteString columnQualifier_ = com.google.protobuf.ByteString.EMPTY;
       public boolean hasColumnQualifier() {
         return ((bitField0_ & 0x00000002) == 0x00000002);
@@ -10948,7 +10948,7 @@ public final class FilterProtos {
         return this;
       }
       
-      // required .CompareType compareOp = 3;
+      // required .CompareType compare_op = 3;
       private org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.CompareType compareOp_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.CompareType.LESS;
       public boolean hasCompareOp() {
         return ((bitField0_ & 0x00000004) == 0x00000004);
@@ -11062,7 +11062,7 @@ public final class FilterProtos {
         return comparatorBuilder_;
       }
       
-      // optional bool filterIfMissing = 5;
+      // optional bool filter_if_missing = 5;
       private boolean filterIfMissing_ ;
       public boolean hasFilterIfMissing() {
         return ((bitField0_ & 0x00000010) == 0x00000010);
@@ -11083,7 +11083,7 @@ public final class FilterProtos {
         return this;
       }
       
-      // optional bool latestVersionOnly = 6;
+      // optional bool latest_version_only = 6;
       private boolean latestVersionOnly_ ;
       public boolean hasLatestVersionOnly() {
         return ((bitField0_ & 0x00000020) == 0x00000020);
@@ -12017,7 +12017,7 @@ public final class FilterProtos {
   public interface ValueFilterOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
     
-    // required .CompareFilter compareFilter = 1;
+    // required .CompareFilter compare_filter = 1;
     boolean hasCompareFilter();
     org.apache.hadoop.hbase.protobuf.generated.FilterProtos.CompareFilter getCompareFilter();
     org.apache.hadoop.hbase.protobuf.generated.FilterProtos.CompareFilterOrBuilder getCompareFilterOrBuilder();
@@ -12051,8 +12051,8 @@ public final class FilterProtos {
     }
     
     private int bitField0_;
-    // required .CompareFilter compareFilter = 1;
-    public static final int COMPAREFILTER_FIELD_NUMBER = 1;
+    // required .CompareFilter compare_filter = 1;
+    public static final int COMPARE_FILTER_FIELD_NUMBER = 1;
     private org.apache.hadoop.hbase.protobuf.generated.FilterProtos.CompareFilter compareFilter_;
     public boolean hasCompareFilter() {
       return ((bitField0_ & 0x00000001) == 0x00000001);
@@ -12141,7 +12141,7 @@ public final class FilterProtos {
       int hash = 41;
       hash = (19 * hash) + getDescriptorForType().hashCode();
       if (hasCompareFilter()) {
-        hash = (37 * hash) + COMPAREFILTER_FIELD_NUMBER;
+        hash = (37 * hash) + COMPARE_FILTER_FIELD_NUMBER;
         hash = (53 * hash) + getCompareFilter().hashCode();
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
@@ -12386,7 +12386,7 @@ public final class FilterProtos {
       
       private int bitField0_;
       
-      // required .CompareFilter compareFilter = 1;
+      // required .CompareFilter compare_filter = 1;
       private org.apache.hadoop.hbase.protobuf.generated.FilterProtos.CompareFilter compareFilter_ = org.apache.hadoop.hbase.protobuf.generated.FilterProtos.CompareFilter.getDefaultInstance();
       private com.google.protobuf.SingleFieldBuilder<
           org.apache.hadoop.hbase.protobuf.generated.FilterProtos.CompareFilter, org.apache.hadoop.hbase.protobuf.generated.FilterProtos.CompareFilter.Builder, org.apache.hadoop.hbase.protobuf.generated.FilterProtos.CompareFilterOrBuilder> compareFilterBuilder_;
@@ -13105,51 +13105,52 @@ public final class FilterProtos {
   static {
     java.lang.String[] descriptorData = {
       "\n\014Filter.proto\032\013hbase.proto\032\020Comparator." +
-      "proto\"0\n\006Filter\022\014\n\004name\030\001 \002(\t\022\030\n\020seriali" +
-      "zedFilter\030\002 \001(\014\"%\n\024ColumnCountGetFilter\022" +
-      "\r\n\005limit\030\001 \002(\005\"M\n\026ColumnPaginationFilter" +
-      "\022\r\n\005limit\030\001 \002(\005\022\016\n\006offset\030\002 \001(\005\022\024\n\014colum" +
-      "nOffset\030\003 \001(\014\"$\n\022ColumnPrefixFilter\022\016\n\006p" +
-      "refix\030\001 \002(\014\"q\n\021ColumnRangeFilter\022\021\n\tminC" +
-      "olumn\030\001 \001(\014\022\032\n\022minColumnInclusive\030\002 \001(\010\022" +
-      "\021\n\tmaxColumn\030\003 \001(\014\022\032\n\022maxColumnInclusive" +
-      "\030\004 \001(\010\"Q\n\rCompareFilter\022\037\n\tcompareOp\030\001 \002",
-      "(\0162\014.CompareType\022\037\n\ncomparator\030\002 \001(\0132\013.C" +
-      "omparator\"\212\001\n\025DependentColumnFilter\022%\n\rc" +
-      "ompareFilter\030\001 \002(\0132\016.CompareFilter\022\024\n\014co" +
-      "lumnFamily\030\002 \001(\014\022\027\n\017columnQualifier\030\003 \001(" +
-      "\014\022\033\n\023dropDependentColumn\030\004 \001(\010\"5\n\014Family" +
-      "Filter\022%\n\rcompareFilter\030\001 \002(\0132\016.CompareF" +
-      "ilter\"\200\001\n\nFilterList\022&\n\010operator\030\001 \002(\0162\024" +
-      ".FilterList.Operator\022\030\n\007filters\030\002 \003(\0132\007." +
-      "Filter\"0\n\010Operator\022\021\n\rMUST_PASS_ALL\020\001\022\021\n" +
-      "\rMUST_PASS_ONE\020\002\"(\n\rFilterWrapper\022\027\n\006fil",
-      "ter\030\001 \002(\0132\007.Filter\"\024\n\022FirstKeyOnlyFilter" +
-      "\";\n%FirstKeyValueMatchingQualifiersFilte" +
-      "r\022\022\n\nqualifiers\030\001 \003(\014\"8\n\016FuzzyRowFilter\022" +
-      "&\n\rfuzzyKeysData\030\001 \003(\0132\017.BytesBytesPair\"" +
-      ")\n\023InclusiveStopFilter\022\022\n\nstopRowKey\030\001 \001" +
-      "(\014\"!\n\rKeyOnlyFilter\022\020\n\010lenAsVal\030\001 \002(\010\"4\n" +
-      "\032MultipleColumnPrefixFilter\022\026\n\016sortedPre" +
-      "fixes\030\001 \003(\014\"\036\n\nPageFilter\022\020\n\010pageSize\030\001 " +
-      "\002(\003\"\036\n\014PrefixFilter\022\016\n\006prefix\030\001 \001(\014\"8\n\017Q" +
-      "ualifierFilter\022%\n\rcompareFilter\030\001 \002(\0132\016.",
-      "CompareFilter\"!\n\017RandomRowFilter\022\016\n\006chan" +
-      "ce\030\001 \002(\002\"2\n\tRowFilter\022%\n\rcompareFilter\030\001" +
-      " \002(\0132\016.CompareFilter\"[\n\036SingleColumnValu" +
-      "eExcludeFilter\0229\n\027singleColumnValueFilte" +
-      "r\030\001 \002(\0132\030.SingleColumnValueFilter\"\276\001\n\027Si" +
-      "ngleColumnValueFilter\022\024\n\014columnFamily\030\001 " +
-      "\001(\014\022\027\n\017columnQualifier\030\002 \001(\014\022\037\n\tcompareO" +
-      "p\030\003 \002(\0162\014.CompareType\022\037\n\ncomparator\030\004 \002(" +
-      "\0132\013.Comparator\022\027\n\017filterIfMissing\030\005 \001(\010\022" +
-      "\031\n\021latestVersionOnly\030\006 \001(\010\"%\n\nSkipFilter",
-      "\022\027\n\006filter\030\001 \002(\0132\007.Filter\"*\n\020TimestampsF" +
-      "ilter\022\026\n\ntimestamps\030\001 \003(\003B\002\020\001\"4\n\013ValueFi" +
-      "lter\022%\n\rcompareFilter\030\001 \002(\0132\016.CompareFil" +
-      "ter\"+\n\020WhileMatchFilter\022\027\n\006filter\030\001 \002(\0132" +
-      "\007.FilterBB\n*org.apache.hadoop.hbase.prot" +
-      "obuf.generatedB\014FilterProtosH\001\210\001\001\240\001\001"
+      "proto\"1\n\006Filter\022\014\n\004name\030\001 \002(\t\022\031\n\021seriali" +
+      "zed_filter\030\002 \001(\014\"%\n\024ColumnCountGetFilter" +
+      "\022\r\n\005limit\030\001 \002(\005\"N\n\026ColumnPaginationFilte" +
+      "r\022\r\n\005limit\030\001 \002(\005\022\016\n\006offset\030\002 \001(\005\022\025\n\rcolu" +
+      "mn_offset\030\003 \001(\014\"$\n\022ColumnPrefixFilter\022\016\n" +
+      "\006prefix\030\001 \002(\014\"w\n\021ColumnRangeFilter\022\022\n\nmi" +
+      "n_column\030\001 \001(\014\022\034\n\024min_column_inclusive\030\002" +
+      " \001(\010\022\022\n\nmax_column\030\003 \001(\014\022\034\n\024max_column_i" +
+      "nclusive\030\004 \001(\010\"R\n\rCompareFilter\022 \n\ncompa",
+      "re_op\030\001 \002(\0162\014.CompareType\022\037\n\ncomparator\030" +
+      "\002 \001(\0132\013.Comparator\"\217\001\n\025DependentColumnFi" +
+      "lter\022&\n\016compare_filter\030\001 \002(\0132\016.CompareFi" +
+      "lter\022\025\n\rcolumn_family\030\002 \001(\014\022\030\n\020column_qu" +
+      "alifier\030\003 \001(\014\022\035\n\025drop_dependent_column\030\004" +
+      " \001(\010\"6\n\014FamilyFilter\022&\n\016compare_filter\030\001" +
+      " \002(\0132\016.CompareFilter\"\200\001\n\nFilterList\022&\n\010o" +
+      "perator\030\001 \002(\0162\024.FilterList.Operator\022\030\n\007f" +
+      "ilters\030\002 \003(\0132\007.Filter\"0\n\010Operator\022\021\n\rMUS" +
+      "T_PASS_ALL\020\001\022\021\n\rMUST_PASS_ONE\020\002\"(\n\rFilte",
+      "rWrapper\022\027\n\006filter\030\001 \002(\0132\007.Filter\"\024\n\022Fir" +
+      "stKeyOnlyFilter\";\n%FirstKeyValueMatching" +
+      "QualifiersFilter\022\022\n\nqualifiers\030\001 \003(\014\":\n\016" +
+      "FuzzyRowFilter\022(\n\017fuzzy_keys_data\030\001 \003(\0132" +
+      "\017.BytesBytesPair\"+\n\023InclusiveStopFilter\022" +
+      "\024\n\014stop_row_key\030\001 \001(\014\"#\n\rKeyOnlyFilter\022\022" +
+      "\n\nlen_as_val\030\001 \002(\010\"5\n\032MultipleColumnPref" +
+      "ixFilter\022\027\n\017sorted_prefixes\030\001 \003(\014\"\037\n\nPag" +
+      "eFilter\022\021\n\tpage_size\030\001 \002(\003\"\036\n\014PrefixFilt" +
+      "er\022\016\n\006prefix\030\001 \001(\014\"9\n\017QualifierFilter\022&\n",
+      "\016compare_filter\030\001 \002(\0132\016.CompareFilter\"!\n" +
+      "\017RandomRowFilter\022\016\n\006chance\030\001 \002(\002\"3\n\tRowF" +
+      "ilter\022&\n\016compare_filter\030\001 \002(\0132\016.CompareF" +
+      "ilter\"^\n\036SingleColumnValueExcludeFilter\022" +
+      "<\n\032single_column_value_filter\030\001 \002(\0132\030.Si" +
+      "ngleColumnValueFilter\"\305\001\n\027SingleColumnVa" +
+      "lueFilter\022\025\n\rcolumn_family\030\001 \001(\014\022\030\n\020colu" +
+      "mn_qualifier\030\002 \001(\014\022 \n\ncompare_op\030\003 \002(\0162\014" +
+      ".CompareType\022\037\n\ncomparator\030\004 \002(\0132\013.Compa" +
+      "rator\022\031\n\021filter_if_missing\030\005 \001(\010\022\033\n\023late",
+      "st_version_only\030\006 \001(\010\"%\n\nSkipFilter\022\027\n\006f" +
+      "ilter\030\001 \002(\0132\007.Filter\"*\n\020TimestampsFilter" +
+      "\022\026\n\ntimestamps\030\001 \003(\003B\002\020\001\"5\n\013ValueFilter\022" +
+      "&\n\016compare_filter\030\001 \002(\0132\016.CompareFilter\"" +
+      "+\n\020WhileMatchFilter\022\027\n\006filter\030\001 \002(\0132\007.Fi" +
+      "lterBB\n*org.apache.hadoop.hbase.protobuf" +
+      ".generatedB\014FilterProtosH\001\210\001\001\240\001\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {

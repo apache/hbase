@@ -24,21 +24,21 @@ option optimize_for = SPEED;
 import "hbase.proto";
 
 message WALHeader {
-  optional bool hasCompression = 1;
+  optional bool has_compression = 1;
 }
 
 // Protocol buffer version of HLogKey; see HLogKey comment, not really a key but WALEdit header for some KVs
 message WALKey {
-  required bytes encodedRegionName = 1;
-  required bytes tableName = 2;
-  required uint64 logSequenceNumber = 3;
-  required uint64 writeTime = 4;
-  optional UUID clusterId = 5;
+  required bytes encoded_region_name = 1;
+  required bytes table_name = 2;
+  required uint64 log_sequence_number = 3;
+  required uint64 write_time = 4;
+  optional UUID cluster_id = 5;
   
   repeated FamilyScope scopes = 6;
-  optional uint32 followingKvCount = 7;
+  optional uint32 following_kv_count = 7;
 /*
-  optional CustomEntryType customEntryType = 8;
+  optional CustomEntryType custom_entry_type = 8;
 
   enum CustomEntryType {
     COMPACTION = 0;
@@ -53,7 +53,7 @@ enum ScopeType {
 
 message FamilyScope {
   required bytes family = 1;
-  required ScopeType scopeType = 2;
+  required ScopeType scope_type = 2;
 }
 
 /**
@@ -67,12 +67,12 @@ message FamilyScope {
  * the * compaction should we fail the WAL write.
  */
 message CompactionDescriptor {
-  required bytes tableName = 1; // TODO: WALKey already stores these, might remove
-  required bytes encodedRegionName = 2;
-  required bytes familyName = 3;
-  repeated string compactionInput = 4;
-  repeated string compactionOutput = 5;
-  required string storeHomeDir = 6;
+  required bytes table_name = 1; // TODO: WALKey already stores these, might remove
+  required bytes encoded_region_name = 2;
+  required bytes family_name = 3;
+  repeated string compaction_input = 4;
+  repeated string compaction_output = 5;
+  required string store_home_dir = 6;
 }
 
 /**

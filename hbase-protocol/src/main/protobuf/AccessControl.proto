@@ -85,15 +85,15 @@ message CheckPermissionsResponse {
 }
 
 service AccessControlService {
-    rpc grant(GrantRequest)
+    rpc Grant(GrantRequest)
       returns (GrantResponse);
 
-    rpc revoke(RevokeRequest)
+    rpc Revoke(RevokeRequest)
       returns (RevokeResponse);
 
-    rpc getUserPermissions(UserPermissionsRequest)
+    rpc GetUserPermissions(UserPermissionsRequest)
       returns (UserPermissionsResponse);
 
-    rpc checkPermissions(CheckPermissionsRequest)
+    rpc CheckPermissions(CheckPermissionsRequest)
       returns (CheckPermissionsResponse);
 }

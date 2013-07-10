@@ -11,7 +11,7 @@ public final class SecureBulkLoadProtos {
   public interface SecureBulkLoadHFilesRequestOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
     
-    // repeated .BulkLoadHFileRequest.FamilyPath familyPath = 1;
+    // repeated .BulkLoadHFileRequest.FamilyPath family_path = 1;
     java.util.List<org.apache.hadoop.hbase.protobuf.generated.ClientProtos.BulkLoadHFileRequest.FamilyPath> 
         getFamilyPathList();
     org.apache.hadoop.hbase.protobuf.generated.ClientProtos.BulkLoadHFileRequest.FamilyPath getFamilyPath(int index);
@@ -21,16 +21,16 @@ public final class SecureBulkLoadProtos {
     org.apache.hadoop.hbase.protobuf.generated.ClientProtos.BulkLoadHFileRequest.FamilyPathOrBuilder getFamilyPathOrBuilder(
         int index);
     
-    // optional bool assignSeqNum = 2;
+    // optional bool assign_seq_num = 2;
     boolean hasAssignSeqNum();
     boolean getAssignSeqNum();
     
-    // required .DelegationTokenProto fsToken = 3;
+    // required .DelegationTokenProto fs_token = 3;
     boolean hasFsToken();
     org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationTokenProto getFsToken();
     org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationTokenProtoOrBuilder getFsTokenOrBuilder();
     
-    // required string bulkToken = 4;
+    // required string bulk_token = 4;
     boolean hasBulkToken();
     String getBulkToken();
   }
@@ -63,8 +63,8 @@ public final class SecureBulkLoadProtos {
     }
     
     private int bitField0_;
-    // repeated .BulkLoadHFileRequest.FamilyPath familyPath = 1;
-    public static final int FAMILYPATH_FIELD_NUMBER = 1;
+    // repeated .BulkLoadHFileRequest.FamilyPath family_path = 1;
+    public static final int FAMILY_PATH_FIELD_NUMBER = 1;
     private java.util.List<org.apache.hadoop.hbase.protobuf.generated.ClientProtos.BulkLoadHFileRequest.FamilyPath> familyPath_;
     public java.util.List<org.apache.hadoop.hbase.protobuf.generated.ClientProtos.BulkLoadHFileRequest.FamilyPath> getFamilyPathList() {
       return familyPath_;
@@ -84,8 +84,8 @@ public final class SecureBulkLoadProtos {
       return familyPath_.get(index);
     }
     
-    // optional bool assignSeqNum = 2;
-    public static final int ASSIGNSEQNUM_FIELD_NUMBER = 2;
+    // optional bool assign_seq_num = 2;
+    public static final int ASSIGN_SEQ_NUM_FIELD_NUMBER = 2;
     private boolean assignSeqNum_;
     public boolean hasAssignSeqNum() {
       return ((bitField0_ & 0x00000001) == 0x00000001);
@@ -94,8 +94,8 @@ public final class SecureBulkLoadProtos {
       return assignSeqNum_;
     }
     
-    // required .DelegationTokenProto fsToken = 3;
-    public static final int FSTOKEN_FIELD_NUMBER = 3;
+    // required .DelegationTokenProto fs_token = 3;
+    public static final int FS_TOKEN_FIELD_NUMBER = 3;
     private org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationTokenProto fsToken_;
     public boolean hasFsToken() {
       return ((bitField0_ & 0x00000002) == 0x00000002);
@@ -107,8 +107,8 @@ public final class SecureBulkLoadProtos {
       return fsToken_;
     }
     
-    // required string bulkToken = 4;
-    public static final int BULKTOKEN_FIELD_NUMBER = 4;
+    // required string bulk_token = 4;
+    public static final int BULK_TOKEN_FIELD_NUMBER = 4;
     private java.lang.Object bulkToken_;
     public boolean hasBulkToken() {
       return ((bitField0_ & 0x00000004) == 0x00000004);
@@ -258,19 +258,19 @@ public final class SecureBulkLoadProtos {
       int hash = 41;
       hash = (19 * hash) + getDescriptorForType().hashCode();
       if (getFamilyPathCount() > 0) {
-        hash = (37 * hash) + FAMILYPATH_FIELD_NUMBER;
+        hash = (37 * hash) + FAMILY_PATH_FIELD_NUMBER;
         hash = (53 * hash) + getFamilyPathList().hashCode();
       }
       if (hasAssignSeqNum()) {
-        hash = (37 * hash) + ASSIGNSEQNUM_FIELD_NUMBER;
+        hash = (37 * hash) + ASSIGN_SEQ_NUM_FIELD_NUMBER;
         hash = (53 * hash) + hashBoolean(getAssignSeqNum());
       }
       if (hasFsToken()) {
-        hash = (37 * hash) + FSTOKEN_FIELD_NUMBER;
+        hash = (37 * hash) + FS_TOKEN_FIELD_NUMBER;
         hash = (53 * hash) + getFsToken().hashCode();
       }
       if (hasBulkToken()) {
-        hash = (37 * hash) + BULKTOKEN_FIELD_NUMBER;
+        hash = (37 * hash) + BULK_TOKEN_FIELD_NUMBER;
         hash = (53 * hash) + getBulkToken().hashCode();
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
@@ -597,7 +597,7 @@ public final class SecureBulkLoadProtos {
       
       private int bitField0_;
       
-      // repeated .BulkLoadHFileRequest.FamilyPath familyPath = 1;
+      // repeated .BulkLoadHFileRequest.FamilyPath family_path = 1;
       private java.util.List<org.apache.hadoop.hbase.protobuf.generated.ClientProtos.BulkLoadHFileRequest.FamilyPath> familyPath_ =
         java.util.Collections.emptyList();
       private void ensureFamilyPathIsMutable() {
@@ -783,7 +783,7 @@ public final class SecureBulkLoadProtos {
         return familyPathBuilder_;
       }
       
-      // optional bool assignSeqNum = 2;
+      // optional bool assign_seq_num = 2;
       private boolean assignSeqNum_ ;
       public boolean hasAssignSeqNum() {
         return ((bitField0_ & 0x00000002) == 0x00000002);
@@ -804,7 +804,7 @@ public final class SecureBulkLoadProtos {
         return this;
       }
       
-      // required .DelegationTokenProto fsToken = 3;
+      // required .DelegationTokenProto fs_token = 3;
       private org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationTokenProto fsToken_ = org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationTokenProto.getDefaultInstance();
       private com.google.protobuf.SingleFieldBuilder<
           org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationTokenProto, org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationTokenProto.Builder, org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationTokenProtoOrBuilder> fsTokenBuilder_;
@@ -894,7 +894,7 @@ public final class SecureBulkLoadProtos {
         return fsTokenBuilder_;
       }
       
-      // required string bulkToken = 4;
+      // required string bulk_token = 4;
       private java.lang.Object bulkToken_ = "";
       public boolean hasBulkToken() {
         return ((bitField0_ & 0x00000008) == 0x00000008);
@@ -1972,7 +1972,7 @@ public final class SecureBulkLoadProtos {
   public interface PrepareBulkLoadRequestOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
     
-    // required bytes tableName = 1;
+    // required bytes table_name = 1;
     boolean hasTableName();
     com.google.protobuf.ByteString getTableName();
   }
@@ -2005,8 +2005,8 @@ public final class SecureBulkLoadProtos {
     }
     
     private int bitField0_;
-    // required bytes tableName = 1;
-    public static final int TABLENAME_FIELD_NUMBER = 1;
+    // required bytes table_name = 1;
+    public static final int TABLE_NAME_FIELD_NUMBER = 1;
     private com.google.protobuf.ByteString tableName_;
     public boolean hasTableName() {
       return ((bitField0_ & 0x00000001) == 0x00000001);
@@ -2088,7 +2088,7 @@ public final class SecureBulkLoadProtos {
       int hash = 41;
       hash = (19 * hash) + getDescriptorForType().hashCode();
       if (hasTableName()) {
-        hash = (37 * hash) + TABLENAME_FIELD_NUMBER;
+        hash = (37 * hash) + TABLE_NAME_FIELD_NUMBER;
         hash = (53 * hash) + getTableName().hashCode();
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
@@ -2316,7 +2316,7 @@ public final class SecureBulkLoadProtos {
       
       private int bitField0_;
       
-      // required bytes tableName = 1;
+      // required bytes table_name = 1;
       private com.google.protobuf.ByteString tableName_ = com.google.protobuf.ByteString.EMPTY;
       public boolean hasTableName() {
         return ((bitField0_ & 0x00000001) == 0x00000001);
@@ -2354,7 +2354,7 @@ public final class SecureBulkLoadProtos {
   public interface PrepareBulkLoadResponseOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
     
-    // required string bulkToken = 1;
+    // required string bulk_token = 1;
     boolean hasBulkToken();
     String getBulkToken();
   }
@@ -2387,8 +2387,8 @@ public final class SecureBulkLoadProtos {
     }
     
     private int bitField0_;
-    // required string bulkToken = 1;
-    public static final int BULKTOKEN_FIELD_NUMBER = 1;
+    // required string bulk_token = 1;
+    public static final int BULK_TOKEN_FIELD_NUMBER = 1;
     private java.lang.Object bulkToken_;
     public boolean hasBulkToken() {
       return ((bitField0_ & 0x00000001) == 0x00000001);
@@ -2492,7 +2492,7 @@ public final class SecureBulkLoadProtos {
       int hash = 41;
       hash = (19 * hash) + getDescriptorForType().hashCode();
       if (hasBulkToken()) {
-        hash = (37 * hash) + BULKTOKEN_FIELD_NUMBER;
+        hash = (37 * hash) + BULK_TOKEN_FIELD_NUMBER;
         hash = (53 * hash) + getBulkToken().hashCode();
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
@@ -2720,7 +2720,7 @@ public final class SecureBulkLoadProtos {
       
       private int bitField0_;
       
-      // required string bulkToken = 1;
+      // required string bulk_token = 1;
       private java.lang.Object bulkToken_ = "";
       public boolean hasBulkToken() {
         return ((bitField0_ & 0x00000001) == 0x00000001);
@@ -2770,7 +2770,7 @@ public final class SecureBulkLoadProtos {
   public interface CleanupBulkLoadRequestOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
     
-    // required string bulkToken = 1;
+    // required string bulk_token = 1;
     boolean hasBulkToken();
     String getBulkToken();
   }
@@ -2803,8 +2803,8 @@ public final class SecureBulkLoadProtos {
     }
     
     private int bitField0_;
-    // required string bulkToken = 1;
-    public static final int BULKTOKEN_FIELD_NUMBER = 1;
+    // required string bulk_token = 1;
+    public static final int BULK_TOKEN_FIELD_NUMBER = 1;
     private java.lang.Object bulkToken_;
     public boolean hasBulkToken() {
       return ((bitField0_ & 0x00000001) == 0x00000001);
@@ -2908,7 +2908,7 @@ public final class SecureBulkLoadProtos {
       int hash = 41;
       hash = (19 * hash) + getDescriptorForType().hashCode();
       if (hasBulkToken()) {
-        hash = (37 * hash) + BULKTOKEN_FIELD_NUMBER;
+        hash = (37 * hash) + BULK_TOKEN_FIELD_NUMBER;
         hash = (53 * hash) + getBulkToken().hashCode();
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
@@ -3136,7 +3136,7 @@ public final class SecureBulkLoadProtos {
       
       private int bitField0_;
       
-      // required string bulkToken = 1;
+      // required string bulk_token = 1;
       private java.lang.Object bulkToken_ = "";
       public boolean hasBulkToken() {
         return ((bitField0_ & 0x00000001) == 0x00000001);
@@ -3879,27 +3879,27 @@ public final class SecureBulkLoadProtos {
   static {
     java.lang.String[] descriptorData = {
       "\n\024SecureBulkLoad.proto\032\013hbase.proto\032\014Cli" +
-      "ent.proto\"\244\001\n\033SecureBulkLoadHFilesReques" +
-      "t\0224\n\nfamilyPath\030\001 \003(\0132 .BulkLoadHFileReq" +
-      "uest.FamilyPath\022\024\n\014assignSeqNum\030\002 \001(\010\022&\n" +
-      "\007fsToken\030\003 \002(\0132\025.DelegationTokenProto\022\021\n" +
-      "\tbulkToken\030\004 \002(\t\".\n\034SecureBulkLoadHFiles" +
-      "Response\022\016\n\006loaded\030\001 \002(\010\"[\n\024DelegationTo" +
-      "kenProto\022\022\n\nidentifier\030\001 \001(\014\022\020\n\010password" +
-      "\030\002 \001(\014\022\014\n\004kind\030\003 \001(\t\022\017\n\007service\030\004 \001(\t\"+\n" +
-      "\026PrepareBulkLoadRequest\022\021\n\ttableName\030\001 \002",
-      "(\014\",\n\027PrepareBulkLoadResponse\022\021\n\tbulkTok" +
-      "en\030\001 \002(\t\"+\n\026CleanupBulkLoadRequest\022\021\n\tbu" +
-      "lkToken\030\001 \002(\t\"\031\n\027CleanupBulkLoadResponse" +
-      "2\370\001\n\025SecureBulkLoadService\022D\n\017prepareBul" +
-      "kLoad\022\027.PrepareBulkLoadRequest\032\030.Prepare" +
-      "BulkLoadResponse\022S\n\024secureBulkLoadHFiles" +
-      "\022\034.SecureBulkLoadHFilesRequest\032\035.SecureB" +
-      "ulkLoadHFilesResponse\022D\n\017cleanupBulkLoad" +
-      "\022\027.CleanupBulkLoadRequest\032\030.CleanupBulkL" +
-      "oadResponseBJ\n*org.apache.hadoop.hbase.p",
-      "rotobuf.generatedB\024SecureBulkLoadProtosH" +
-      "\001\210\001\001\240\001\001"
+      "ent.proto\"\251\001\n\033SecureBulkLoadHFilesReques" +
+      "t\0225\n\013family_path\030\001 \003(\0132 .BulkLoadHFileRe" +
+      "quest.FamilyPath\022\026\n\016assign_seq_num\030\002 \001(\010" +
+      "\022\'\n\010fs_token\030\003 \002(\0132\025.DelegationTokenProt" +
+      "o\022\022\n\nbulk_token\030\004 \002(\t\".\n\034SecureBulkLoadH" +
+      "FilesResponse\022\016\n\006loaded\030\001 \002(\010\"[\n\024Delegat" +
+      "ionTokenProto\022\022\n\nidentifier\030\001 \001(\014\022\020\n\010pas" +
+      "sword\030\002 \001(\014\022\014\n\004kind\030\003 \001(\t\022\017\n\007service\030\004 \001" +
+      "(\t\",\n\026PrepareBulkLoadRequest\022\022\n\ntable_na",
+      "me\030\001 \002(\014\"-\n\027PrepareBulkLoadResponse\022\022\n\nb" +
+      "ulk_token\030\001 \002(\t\",\n\026CleanupBulkLoadReques" +
+      "t\022\022\n\nbulk_token\030\001 \002(\t\"\031\n\027CleanupBulkLoad" +
+      "Response2\370\001\n\025SecureBulkLoadService\022D\n\017Pr" +
+      "epareBulkLoad\022\027.PrepareBulkLoadRequest\032\030" +
+      ".PrepareBulkLoadResponse\022S\n\024SecureBulkLo" +
+      "adHFiles\022\034.SecureBulkLoadHFilesRequest\032\035" +
+      ".SecureBulkLoadHFilesResponse\022D\n\017Cleanup" +
+      "BulkLoad\022\027.CleanupBulkLoadRequest\032\030.Clea" +
+      "nupBulkLoadResponseBJ\n*org.apache.hadoop",
+      ".hbase.protobuf.generatedB\024SecureBulkLoa" +
+      "dProtosH\001\210\001\001\240\001\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {

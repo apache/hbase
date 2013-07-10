@@ -11,7 +11,7 @@ public final class HFileProtos {
   public interface FileInfoProtoOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
     
-    // repeated .BytesBytesPair mapEntry = 1;
+    // repeated .BytesBytesPair map_entry = 1;
     java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPair> 
         getMapEntryList();
     org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPair getMapEntry(int index);
@@ -49,8 +49,8 @@ public final class HFileProtos {
       return org.apache.hadoop.hbase.protobuf.generated.HFileProtos.internal_static_FileInfoProto_fieldAccessorTable;
     }
     
-    // repeated .BytesBytesPair mapEntry = 1;
-    public static final int MAPENTRY_FIELD_NUMBER = 1;
+    // repeated .BytesBytesPair map_entry = 1;
+    public static final int MAP_ENTRY_FIELD_NUMBER = 1;
     private java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPair> mapEntry_;
     public java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPair> getMapEntryList() {
       return mapEntry_;
@@ -142,7 +142,7 @@ public final class HFileProtos {
       int hash = 41;
       hash = (19 * hash) + getDescriptorForType().hashCode();
       if (getMapEntryCount() > 0) {
-        hash = (37 * hash) + MAPENTRY_FIELD_NUMBER;
+        hash = (37 * hash) + MAP_ENTRY_FIELD_NUMBER;
         hash = (53 * hash) + getMapEntryList().hashCode();
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
@@ -404,7 +404,7 @@ public final class HFileProtos {
       
       private int bitField0_;
       
-      // repeated .BytesBytesPair mapEntry = 1;
+      // repeated .BytesBytesPair map_entry = 1;
       private java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPair> mapEntry_ =
         java.util.Collections.emptyList();
       private void ensureMapEntryIsMutable() {
@@ -604,51 +604,51 @@ public final class HFileProtos {
   public interface FileTrailerProtoOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
     
-    // optional uint64 fileInfoOffset = 1;
+    // optional uint64 file_info_offset = 1;
     boolean hasFileInfoOffset();
     long getFileInfoOffset();
     
-    // optional uint64 loadOnOpenDataOffset = 2;
+    // optional uint64 load_on_open_data_offset = 2;
     boolean hasLoadOnOpenDataOffset();
     long getLoadOnOpenDataOffset();
     
-    // optional uint64 uncompressedDataIndexSize = 3;
+    // optional uint64 uncompressed_data_index_size = 3;
     boolean hasUncompressedDataIndexSize();
     long getUncompressedDataIndexSize();
     
-    // optional uint64 totalUncompressedBytes = 4;
+    // optional uint64 total_uncompressed_bytes = 4;
     boolean hasTotalUncompressedBytes();
     long getTotalUncompressedBytes();
     
-    // optional uint32 dataIndexCount = 5;
+    // optional uint32 data_index_count = 5;
     boolean hasDataIndexCount();
     int getDataIndexCount();
     
-    // optional uint32 metaIndexCount = 6;
+    // optional uint32 meta_index_count = 6;
     boolean hasMetaIndexCount();
     int getMetaIndexCount();
     
-    // optional uint64 entryCount = 7;
+    // optional uint64 entry_count = 7;
     boolean hasEntryCount();
     long getEntryCount();
     
-    // optional uint32 numDataIndexLevels = 8;
+    // optional uint32 num_data_index_levels = 8;
     boolean hasNumDataIndexLevels();
     int getNumDataIndexLevels();
     
-    // optional uint64 firstDataBlockOffset = 9;
+    // optional uint64 first_data_block_offset = 9;
     boolean hasFirstDataBlockOffset();
     long getFirstDataBlockOffset();
     
-    // optional uint64 lastDataBlockOffset = 10;
+    // optional uint64 last_data_block_offset = 10;
     boolean hasLastDataBlockOffset();
     long getLastDataBlockOffset();
     
-    // optional string comparatorClassName = 11;
+    // optional string comparator_class_name = 11;
     boolean hasComparatorClassName();
     String getComparatorClassName();
     
-    // optional uint32 compressionCodec = 12;
+    // optional uint32 compression_codec = 12;
     boolean hasCompressionCodec();
     int getCompressionCodec();
   }
@@ -681,8 +681,8 @@ public final class HFileProtos {
     }
     
     private int bitField0_;
-    // optional uint64 fileInfoOffset = 1;
-    public static final int FILEINFOOFFSET_FIELD_NUMBER = 1;
+    // optional uint64 file_info_offset = 1;
+    public static final int FILE_INFO_OFFSET_FIELD_NUMBER = 1;
     private long fileInfoOffset_;
     public boolean hasFileInfoOffset() {
       return ((bitField0_ & 0x00000001) == 0x00000001);
@@ -691,8 +691,8 @@ public final class HFileProtos {
       return fileInfoOffset_;
     }
     
-    // optional uint64 loadOnOpenDataOffset = 2;
-    public static final int LOADONOPENDATAOFFSET_FIELD_NUMBER = 2;
+    // optional uint64 load_on_open_data_offset = 2;
+    public static final int LOAD_ON_OPEN_DATA_OFFSET_FIELD_NUMBER = 2;
     private long loadOnOpenDataOffset_;
     public boolean hasLoadOnOpenDataOffset() {
       return ((bitField0_ & 0x00000002) == 0x00000002);
@@ -701,8 +701,8 @@ public final class HFileProtos {
       return loadOnOpenDataOffset_;
     }
     
-    // optional uint64 uncompressedDataIndexSize = 3;
-    public static final int UNCOMPRESSEDDATAINDEXSIZE_FIELD_NUMBER = 3;
+    // optional uint64 uncompressed_data_index_size = 3;
+    public static final int UNCOMPRESSED_DATA_INDEX_SIZE_FIELD_NUMBER = 3;
     private long uncompressedDataIndexSize_;
     public boolean hasUncompressedDataIndexSize() {
       return ((bitField0_ & 0x00000004) == 0x00000004);
@@ -711,8 +711,8 @@ public final class HFileProtos {
       return uncompressedDataIndexSize_;
     }
     
-    // optional uint64 totalUncompressedBytes = 4;
-    public static final int TOTALUNCOMPRESSEDBYTES_FIELD_NUMBER = 4;
+    // optional uint64 total_uncompressed_bytes = 4;
+    public static final int TOTAL_UNCOMPRESSED_BYTES_FIELD_NUMBER = 4;
     private long totalUncompressedBytes_;
     public boolean hasTotalUncompressedBytes() {
       return ((bitField0_ & 0x00000008) == 0x00000008);
@@ -721,8 +721,8 @@ public final class HFileProtos {
       return totalUncompressedBytes_;
     }
     
-    // optional uint32 dataIndexCount = 5;
-    public static final int DATAINDEXCOUNT_FIELD_NUMBER = 5;
+    // optional uint32 data_index_count = 5;
+    public static final int DATA_INDEX_COUNT_FIELD_NUMBER = 5;
     private int dataIndexCount_;
     public boolean hasDataIndexCount() {
       return ((bitField0_ & 0x00000010) == 0x00000010);
@@ -731,8 +731,8 @@ public final class HFileProtos {
       return dataIndexCount_;
     }
     
-    // optional uint32 metaIndexCount = 6;
-    public static final int METAINDEXCOUNT_FIELD_NUMBER = 6;
+    // optional uint32 meta_index_count = 6;
+    public static final int META_INDEX_COUNT_FIELD_NUMBER = 6;
     private int metaIndexCount_;
     public boolean hasMetaIndexCount() {
       return ((bitField0_ & 0x00000020) == 0x00000020);
@@ -741,8 +741,8 @@ public final class HFileProtos {
       return metaIndexCount_;
     }
     
-    // optional uint64 entryCount = 7;
-    public static final int ENTRYCOUNT_FIELD_NUMBER = 7;
+    // optional uint64 entry_count = 7;
+    public static final int ENTRY_COUNT_FIELD_NUMBER = 7;
     private long entryCount_;
     public boolean hasEntryCount() {
       return ((bitField0_ & 0x00000040) == 0x00000040);
@@ -751,8 +751,8 @@ public final class HFileProtos {
       return entryCount_;
     }
     
-    // optional uint32 numDataIndexLevels = 8;
-    public static final int NUMDATAINDEXLEVELS_FIELD_NUMBER = 8;
+    // optional uint32 num_data_index_levels = 8;
+    public static final int NUM_DATA_INDEX_LEVELS_FIELD_NUMBER = 8;
     private int numDataIndexLevels_;
     public boolean hasNumDataIndexLevels() {
       return ((bitField0_ & 0x00000080) == 0x00000080);
@@ -761,8 +761,8 @@ public final class HFileProtos {
       return numDataIndexLevels_;
     }
     
-    // optional uint64 firstDataBlockOffset = 9;
-    public static final int FIRSTDATABLOCKOFFSET_FIELD_NUMBER = 9;
+    // optional uint64 first_data_block_offset = 9;
+    public static final int FIRST_DATA_BLOCK_OFFSET_FIELD_NUMBER = 9;
     private long firstDataBlockOffset_;
     public boolean hasFirstDataBlockOffset() {
       return ((bitField0_ & 0x00000100) == 0x00000100);
@@ -771,8 +771,8 @@ public final class HFileProtos {
       return firstDataBlockOffset_;
     }
     
-    // optional uint64 lastDataBlockOffset = 10;
-    public static final int LASTDATABLOCKOFFSET_FIELD_NUMBER = 10;
+    // optional uint64 last_data_block_offset = 10;
+    public static final int LAST_DATA_BLOCK_OFFSET_FIELD_NUMBER = 10;
     private long lastDataBlockOffset_;
     public boolean hasLastDataBlockOffset() {
       return ((bitField0_ & 0x00000200) == 0x00000200);
@@ -781,8 +781,8 @@ public final class HFileProtos {
       return lastDataBlockOffset_;
     }
     
-    // optional string comparatorClassName = 11;
-    public static final int COMPARATORCLASSNAME_FIELD_NUMBER = 11;
+    // optional string comparator_class_name = 11;
+    public static final int COMPARATOR_CLASS_NAME_FIELD_NUMBER = 11;
     private java.lang.Object comparatorClassName_;
     public boolean hasComparatorClassName() {
       return ((bitField0_ & 0x00000400) == 0x00000400);
@@ -813,8 +813,8 @@ public final class HFileProtos {
       }
     }
     
-    // optional uint32 compressionCodec = 12;
-    public static final int COMPRESSIONCODEC_FIELD_NUMBER = 12;
+    // optional uint32 compression_codec = 12;
+    public static final int COMPRESSION_CODEC_FIELD_NUMBER = 12;
     private int compressionCodec_;
     public boolean hasCompressionCodec() {
       return ((bitField0_ & 0x00000800) == 0x00000800);
@@ -1035,51 +1035,51 @@ public final class HFileProtos {
       int hash = 41;
       hash = (19 * hash) + getDescriptorForType().hashCode();
       if (hasFileInfoOffset()) {
-        hash = (37 * hash) + FILEINFOOFFSET_FIELD_NUMBER;
+        hash = (37 * hash) + FILE_INFO_OFFSET_FIELD_NUMBER;
         hash = (53 * hash) + hashLong(getFileInfoOffset());
       }
       if (hasLoadOnOpenDataOffset()) {
-        hash = (37 * hash) + LOADONOPENDATAOFFSET_FIELD_NUMBER;
+        hash = (37 * hash) + LOAD_ON_OPEN_DATA_OFFSET_FIELD_NUMBER;
         hash = (53 * hash) + hashLong(getLoadOnOpenDataOffset());
       }
       if (hasUncompressedDataIndexSize()) {
-        hash = (37 * hash) + UNCOMPRESSEDDATAINDEXSIZE_FIELD_NUMBER;
+        hash = (37 * hash) + UNCOMPRESSED_DATA_INDEX_SIZE_FIELD_NUMBER;
         hash = (53 * hash) + hashLong(getUncompressedDataIndexSize());
       }
       if (hasTotalUncompressedBytes()) {
-        hash = (37 * hash) + TOTALUNCOMPRESSEDBYTES_FIELD_NUMBER;
+        hash = (37 * hash) + TOTAL_UNCOMPRESSED_BYTES_FIELD_NUMBER;
         hash = (53 * hash) + hashLong(getTotalUncompressedBytes());
       }
       if (hasDataIndexCount()) {
-        hash = (37 * hash) + DATAINDEXCOUNT_FIELD_NUMBER;
+        hash = (37 * hash) + DATA_INDEX_COUNT_FIELD_NUMBER;
         hash = (53 * hash) + getDataIndexCount();
       }
       if (hasMetaIndexCount()) {
-        hash = (37 * hash) + METAINDEXCOUNT_FIELD_NUMBER;
+        hash = (37 * hash) + META_INDEX_COUNT_FIELD_NUMBER;
         hash = (53 * hash) + getMetaIndexCount();
       }
       if (hasEntryCount()) {
-        hash = (37 * hash) + ENTRYCOUNT_FIELD_NUMBER;
+        hash = (37 * hash) + ENTRY_COUNT_FIELD_NUMBER;
         hash = (53 * hash) + hashLong(getEntryCount());
       }
       if (hasNumDataIndexLevels()) {
-        hash = (37 * hash) + NUMDATAINDEXLEVELS_FIELD_NUMBER;
+        hash = (37 * hash) + NUM_DATA_INDEX_LEVELS_FIELD_NUMBER;
         hash = (53 * hash) + getNumDataIndexLevels();
       }
       if (hasFirstDataBlockOffset()) {
-        hash = (37 * hash) + FIRSTDATABLOCKOFFSET_FIELD_NUMBER;
+        hash = (37 * hash) + FIRST_DATA_BLOCK_OFFSET_FIELD_NUMBER;
         hash = (53 * hash) + hashLong(getFirstDataBlockOffset());
       }
       if (hasLastDataBlockOffset()) {
-        hash = (37 * hash) + LASTDATABLOCKOFFSET_FIELD_NUMBER;
+        hash = (37 * hash) + LAST_DATA_BLOCK_OFFSET_FIELD_NUMBER;
         hash = (53 * hash) + hashLong(getLastDataBlockOffset());
       }
       if (hasComparatorClassName()) {
-        hash = (37 * hash) + COMPARATORCLASSNAME_FIELD_NUMBER;
+        hash = (37 * hash) + COMPARATOR_CLASS_NAME_FIELD_NUMBER;
         hash = (53 * hash) + getComparatorClassName().hashCode();
       }
       if (hasCompressionCodec()) {
-        hash = (37 * hash) + COMPRESSIONCODEC_FIELD_NUMBER;
+        hash = (37 * hash) + COMPRESSION_CODEC_FIELD_NUMBER;
         hash = (53 * hash) + getCompressionCodec();
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
@@ -1457,7 +1457,7 @@ public final class HFileProtos {
       
       private int bitField0_;
       
-      // optional uint64 fileInfoOffset = 1;
+      // optional uint64 file_info_offset = 1;
       private long fileInfoOffset_ ;
       public boolean hasFileInfoOffset() {
         return ((bitField0_ & 0x00000001) == 0x00000001);
@@ -1478,7 +1478,7 @@ public final class HFileProtos {
         return this;
       }
       
-      // optional uint64 loadOnOpenDataOffset = 2;
+      // optional uint64 load_on_open_data_offset = 2;
       private long loadOnOpenDataOffset_ ;
       public boolean hasLoadOnOpenDataOffset() {
         return ((bitField0_ & 0x00000002) == 0x00000002);
@@ -1499,7 +1499,7 @@ public final class HFileProtos {
         return this;
       }
       
-      // optional uint64 uncompressedDataIndexSize = 3;
+      // optional uint64 uncompressed_data_index_size = 3;
       private long uncompressedDataIndexSize_ ;
       public boolean hasUncompressedDataIndexSize() {
         return ((bitField0_ & 0x00000004) == 0x00000004);
@@ -1520,7 +1520,7 @@ public final class HFileProtos {
         return this;
       }
       
-      // optional uint64 totalUncompressedBytes = 4;
+      // optional uint64 total_uncompressed_bytes = 4;
       private long totalUncompressedBytes_ ;
       public boolean hasTotalUncompressedBytes() {
         return ((bitField0_ & 0x00000008) == 0x00000008);
@@ -1541,7 +1541,7 @@ public final class HFileProtos {
         return this;
       }
       
-      // optional uint32 dataIndexCount = 5;
+      // optional uint32 data_index_count = 5;
       private int dataIndexCount_ ;
       public boolean hasDataIndexCount() {
         return ((bitField0_ & 0x00000010) == 0x00000010);
@@ -1562,7 +1562,7 @@ public final class HFileProtos {
         return this;
       }
       
-      // optional uint32 metaIndexCount = 6;
+      // optional uint32 meta_index_count = 6;
       private int metaIndexCount_ ;
       public boolean hasMetaIndexCount() {
         return ((bitField0_ & 0x00000020) == 0x00000020);
@@ -1583,7 +1583,7 @@ public final class HFileProtos {
         return this;
       }
       
-      // optional uint64 entryCount = 7;
+      // optional uint64 entry_count = 7;
       private long entryCount_ ;
       public boolean hasEntryCount() {
         return ((bitField0_ & 0x00000040) == 0x00000040);
@@ -1604,7 +1604,7 @@ public final class HFileProtos {
         return this;
       }
       
-      // optional uint32 numDataIndexLevels = 8;
+      // optional uint32 num_data_index_levels = 8;
       private int numDataIndexLevels_ ;
       public boolean hasNumDataIndexLevels() {
         return ((bitField0_ & 0x00000080) == 0x00000080);
@@ -1625,7 +1625,7 @@ public final class HFileProtos {
         return this;
       }
       
-      // optional uint64 firstDataBlockOffset = 9;
+      // optional uint64 first_data_block_offset = 9;
       private long firstDataBlockOffset_ ;
       public boolean hasFirstDataBlockOffset() {
         return ((bitField0_ & 0x00000100) == 0x00000100);
@@ -1646,7 +1646,7 @@ public final class HFileProtos {
         return this;
       }
       
-      // optional uint64 lastDataBlockOffset = 10;
+      // optional uint64 last_data_block_offset = 10;
       private long lastDataBlockOffset_ ;
       public boolean hasLastDataBlockOffset() {
         return ((bitField0_ & 0x00000200) == 0x00000200);
@@ -1667,7 +1667,7 @@ public final class HFileProtos {
         return this;
       }
       
-      // optional string comparatorClassName = 11;
+      // optional string comparator_class_name = 11;
       private java.lang.Object comparatorClassName_ = "";
       public boolean hasComparatorClassName() {
         return ((bitField0_ & 0x00000400) == 0x00000400);
@@ -1703,7 +1703,7 @@ public final class HFileProtos {
         onChanged();
       }
       
-      // optional uint32 compressionCodec = 12;
+      // optional uint32 compression_codec = 12;
       private int compressionCodec_ ;
       public boolean hasCompressionCodec() {
         return ((bitField0_ & 0x00000800) == 0x00000800);
@@ -1754,19 +1754,20 @@ public final class HFileProtos {
       descriptor;
   static {
     java.lang.String[] descriptorData = {
-      "\n\013HFile.proto\032\013hbase.proto\"2\n\rFileInfoPr" +
-      "oto\022!\n\010mapEntry\030\001 \003(\0132\017.BytesBytesPair\"\335" +
-      "\002\n\020FileTrailerProto\022\026\n\016fileInfoOffset\030\001 " +
-      "\001(\004\022\034\n\024loadOnOpenDataOffset\030\002 \001(\004\022!\n\031unc" +
-      "ompressedDataIndexSize\030\003 \001(\004\022\036\n\026totalUnc" +
-      "ompressedBytes\030\004 \001(\004\022\026\n\016dataIndexCount\030\005" +
-      " \001(\r\022\026\n\016metaIndexCount\030\006 \001(\r\022\022\n\nentryCou" +
-      "nt\030\007 \001(\004\022\032\n\022numDataIndexLevels\030\010 \001(\r\022\034\n\024" +
-      "firstDataBlockOffset\030\t \001(\004\022\033\n\023lastDataBl" +
-      "ockOffset\030\n \001(\004\022\033\n\023comparatorClassName\030\013",
-      " \001(\t\022\030\n\020compressionCodec\030\014 \001(\rBA\n*org.ap" +
-      "ache.hadoop.hbase.protobuf.generatedB\013HF" +
-      "ileProtosH\001\210\001\001\240\001\001"
+      "\n\013HFile.proto\032\013hbase.proto\"3\n\rFileInfoPr" +
+      "oto\022\"\n\tmap_entry\030\001 \003(\0132\017.BytesBytesPair\"" +
+      "\371\002\n\020FileTrailerProto\022\030\n\020file_info_offset" +
+      "\030\001 \001(\004\022 \n\030load_on_open_data_offset\030\002 \001(\004" +
+      "\022$\n\034uncompressed_data_index_size\030\003 \001(\004\022 " +
+      "\n\030total_uncompressed_bytes\030\004 \001(\004\022\030\n\020data" +
+      "_index_count\030\005 \001(\r\022\030\n\020meta_index_count\030\006" +
+      " \001(\r\022\023\n\013entry_count\030\007 \001(\004\022\035\n\025num_data_in" +
+      "dex_levels\030\010 \001(\r\022\037\n\027first_data_block_off" +
+      "set\030\t \001(\004\022\036\n\026last_data_block_offset\030\n \001(",
+      "\004\022\035\n\025comparator_class_name\030\013 \001(\t\022\031\n\021comp" +
+      "ression_codec\030\014 \001(\rBA\n*org.apache.hadoop" +
+      ".hbase.protobuf.generatedB\013HFileProtosH\001" +
+      "\210\001\001\240\001\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {

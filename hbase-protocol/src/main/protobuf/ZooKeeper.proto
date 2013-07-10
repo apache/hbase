@@ -36,7 +36,7 @@ message MetaRegionServer {
   // The major version of the rpc the server speaks.  This is used so that
   // clients connecting to the cluster can have prior knowledge of what version
   // to send to a RegionServer.  AsyncHBase will use this to detect versions.
-  optional uint32 rpcVersion = 2;
+  optional uint32 rpc_version = 2;
 }
 
 /**
@@ -46,7 +46,7 @@ message Master {
   // The ServerName of the current Master
   required ServerName master = 1;
   // Major RPC version so that clients can know what version the master can accept.
-  optional uint32 rpcVersion = 2;
+  optional uint32 rpc_version = 2;
 }
 
 /**
@@ -54,8 +54,8 @@ message Master {
  */
 message ClusterUp {
   // If this znode is present, cluster is up.  Currently
-  // the data is cluster startDate.
-  required string startDate = 1;
+  // the data is cluster start_date.
+  required string start_date = 1;
 }
 
 /**
@@ -64,12 +64,12 @@ message ClusterUp {
  */
 message RegionTransition {
   // Code for EventType gotten by doing o.a.h.h.EventHandler.EventType.getCode()
-  required uint32 eventTypeCode = 1;
+  required uint32 event_type_code = 1;
   // Full regionname in bytes
-  required bytes regionName = 2;
-  required uint64 createTime = 3;
+  required bytes region_name = 2;
+  required uint64 create_time = 3;
   // The region server where the transition will happen or is happening
-  required ServerName serverName = 4;
+  required ServerName server_name = 4;
   optional bytes payload = 5;
 }
 
@@ -86,7 +86,7 @@ message SplitLogTask {
     ERR = 4;
   }
   required State state = 1;
-  required ServerName serverName = 2;
+  required ServerName server_name = 2;
 }
 
 /**
@@ -110,7 +110,7 @@ message Table {
  * Used by replication. Holds a replication peer key.
  */
 message ReplicationPeer {
-  // clusterKey is the concatenation of the slave cluster's
+  // clusterkey is the concatenation of the slave cluster's
   // hbase.zookeeper.quorum:hbase.zookeeper.property.clientPort:zookeeper.znode.parent
   required string clusterkey = 1;
 }
@@ -137,27 +137,27 @@ message ReplicationHLogPosition {
  * Used by replication. Used to lock a region server during failover.
  */
 message ReplicationLock {
-  required string lockOwner = 1;
+  required string lock_owner = 1;
 }
 
 /**
  * Metadata associated with a table lock in zookeeper
  */
 message TableLock {
-  optional bytes tableName = 1;
-  optional ServerName lockOwner = 2;
-  optional int64 threadId = 3;
-  optional bool isShared = 4;
+  optional bytes table_name = 1;
+  optional ServerName lock_owner = 2;
+  optional int64 thread_id = 3;
+  optional bool is_shared = 4;
   optional string purpose = 5;
-  optional int64 createTime = 6;
+  optional int64 create_time = 6;
 }
 
 /**
  * sequence Id of a store
  */
 message StoreSequenceId {
-  required bytes familyName = 1;
-  required uint64 sequenceId = 2;
+  required bytes family_name = 1;
+  required uint64 sequence_id = 2;
 }
 
 /**
@@ -165,6 +165,6 @@ message StoreSequenceId {
  * list sequence ids of the region's stores
  */
 message RegionStoreSequenceIds {
-  required uint64 lastFlushedSequenceId = 1;
-  repeated StoreSequenceId storeSequenceId = 2;
+  required uint64 last_flushed_sequence_id = 1;
+  repeated StoreSequenceId store_sequence_id = 2;
 }

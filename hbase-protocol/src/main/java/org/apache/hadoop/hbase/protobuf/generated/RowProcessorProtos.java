@@ -11,15 +11,15 @@ public final class RowProcessorProtos {
   public interface RowProcessorRequestOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
     
-    // required string rowProcessorClassName = 1;
+    // required string row_processor_class_name = 1;
     boolean hasRowProcessorClassName();
     String getRowProcessorClassName();
     
-    // optional string rowProcessorInitializerMessageName = 2;
+    // optional string row_processor_initializer_message_name = 2;
     boolean hasRowProcessorInitializerMessageName();
     String getRowProcessorInitializerMessageName();
     
-    // optional bytes rowProcessorInitializerMessage = 3;
+    // optional bytes row_processor_initializer_message = 3;
     boolean hasRowProcessorInitializerMessage();
     com.google.protobuf.ByteString getRowProcessorInitializerMessage();
   }
@@ -52,8 +52,8 @@ public final class RowProcessorProtos {
     }
     
     private int bitField0_;
-    // required string rowProcessorClassName = 1;
-    public static final int ROWPROCESSORCLASSNAME_FIELD_NUMBER = 1;
+    // required string row_processor_class_name = 1;
+    public static final int ROW_PROCESSOR_CLASS_NAME_FIELD_NUMBER = 1;
     private java.lang.Object rowProcessorClassName_;
     public boolean hasRowProcessorClassName() {
       return ((bitField0_ & 0x00000001) == 0x00000001);
@@ -84,8 +84,8 @@ public final class RowProcessorProtos {
       }
     }
     
-    // optional string rowProcessorInitializerMessageName = 2;
-    public static final int ROWPROCESSORINITIALIZERMESSAGENAME_FIELD_NUMBER = 2;
+    // optional string row_processor_initializer_message_name = 2;
+    public static final int ROW_PROCESSOR_INITIALIZER_MESSAGE_NAME_FIELD_NUMBER = 2;
     private java.lang.Object rowProcessorInitializerMessageName_;
     public boolean hasRowProcessorInitializerMessageName() {
       return ((bitField0_ & 0x00000002) == 0x00000002);
@@ -116,8 +116,8 @@ public final class RowProcessorProtos {
       }
     }
     
-    // optional bytes rowProcessorInitializerMessage = 3;
-    public static final int ROWPROCESSORINITIALIZERMESSAGE_FIELD_NUMBER = 3;
+    // optional bytes row_processor_initializer_message = 3;
+    public static final int ROW_PROCESSOR_INITIALIZER_MESSAGE_FIELD_NUMBER = 3;
     private com.google.protobuf.ByteString rowProcessorInitializerMessage_;
     public boolean hasRowProcessorInitializerMessage() {
       return ((bitField0_ & 0x00000004) == 0x00000004);
@@ -225,15 +225,15 @@ public final class RowProcessorProtos {
       int hash = 41;
       hash = (19 * hash) + getDescriptorForType().hashCode();
       if (hasRowProcessorClassName()) {
-        hash = (37 * hash) + ROWPROCESSORCLASSNAME_FIELD_NUMBER;
+        hash = (37 * hash) + ROW_PROCESSOR_CLASS_NAME_FIELD_NUMBER;
         hash = (53 * hash) + getRowProcessorClassName().hashCode();
       }
       if (hasRowProcessorInitializerMessageName()) {
-        hash = (37 * hash) + ROWPROCESSORINITIALIZERMESSAGENAME_FIELD_NUMBER;
+        hash = (37 * hash) + ROW_PROCESSOR_INITIALIZER_MESSAGE_NAME_FIELD_NUMBER;
         hash = (53 * hash) + getRowProcessorInitializerMessageName().hashCode();
       }
       if (hasRowProcessorInitializerMessage()) {
-        hash = (37 * hash) + ROWPROCESSORINITIALIZERMESSAGE_FIELD_NUMBER;
+        hash = (37 * hash) + ROW_PROCESSOR_INITIALIZER_MESSAGE_FIELD_NUMBER;
         hash = (53 * hash) + getRowProcessorInitializerMessage().hashCode();
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
@@ -489,7 +489,7 @@ public final class RowProcessorProtos {
       
       private int bitField0_;
       
-      // required string rowProcessorClassName = 1;
+      // required string row_processor_class_name = 1;
       private java.lang.Object rowProcessorClassName_ = "";
       public boolean hasRowProcessorClassName() {
         return ((bitField0_ & 0x00000001) == 0x00000001);
@@ -525,7 +525,7 @@ public final class RowProcessorProtos {
         onChanged();
       }
       
-      // optional string rowProcessorInitializerMessageName = 2;
+      // optional string row_processor_initializer_message_name = 2;
       private java.lang.Object rowProcessorInitializerMessageName_ = "";
       public boolean hasRowProcessorInitializerMessageName() {
         return ((bitField0_ & 0x00000002) == 0x00000002);
@@ -561,7 +561,7 @@ public final class RowProcessorProtos {
         onChanged();
       }
       
-      // optional bytes rowProcessorInitializerMessage = 3;
+      // optional bytes row_processor_initializer_message = 3;
       private com.google.protobuf.ByteString rowProcessorInitializerMessage_ = com.google.protobuf.ByteString.EMPTY;
       public boolean hasRowProcessorInitializerMessage() {
         return ((bitField0_ & 0x00000004) == 0x00000004);
@@ -599,7 +599,7 @@ public final class RowProcessorProtos {
   public interface RowProcessorResultOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
     
-    // required bytes rowProcessorResult = 1;
+    // required bytes row_processor_result = 1;
     boolean hasRowProcessorResult();
     com.google.protobuf.ByteString getRowProcessorResult();
   }
@@ -632,8 +632,8 @@ public final class RowProcessorProtos {
     }
     
     private int bitField0_;
-    // required bytes rowProcessorResult = 1;
-    public static final int ROWPROCESSORRESULT_FIELD_NUMBER = 1;
+    // required bytes row_processor_result = 1;
+    public static final int ROW_PROCESSOR_RESULT_FIELD_NUMBER = 1;
     private com.google.protobuf.ByteString rowProcessorResult_;
     public boolean hasRowProcessorResult() {
       return ((bitField0_ & 0x00000001) == 0x00000001);
@@ -715,7 +715,7 @@ public final class RowProcessorProtos {
       int hash = 41;
       hash = (19 * hash) + getDescriptorForType().hashCode();
       if (hasRowProcessorResult()) {
-        hash = (37 * hash) + ROWPROCESSORRESULT_FIELD_NUMBER;
+        hash = (37 * hash) + ROW_PROCESSOR_RESULT_FIELD_NUMBER;
         hash = (53 * hash) + getRowProcessorResult().hashCode();
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
@@ -943,7 +943,7 @@ public final class RowProcessorProtos {
       
       private int bitField0_;
       
-      // required bytes rowProcessorResult = 1;
+      // required bytes row_processor_result = 1;
       private com.google.protobuf.ByteString rowProcessorResult_ = com.google.protobuf.ByteString.EMPTY;
       public boolean hasRowProcessorResult() {
         return ((bitField0_ & 0x00000001) == 0x00000001);
@@ -1218,15 +1218,16 @@ public final class RowProcessorProtos {
       descriptor;
   static {
     java.lang.String[] descriptorData = {
-      "\n\022RowProcessor.proto\"\210\001\n\023RowProcessorReq" +
-      "uest\022\035\n\025rowProcessorClassName\030\001 \002(\t\022*\n\"r" +
-      "owProcessorInitializerMessageName\030\002 \001(\t\022" +
-      "&\n\036rowProcessorInitializerMessage\030\003 \001(\014\"" +
-      "0\n\022RowProcessorResult\022\032\n\022rowProcessorRes" +
-      "ult\030\001 \002(\0142K\n\023RowProcessorService\0224\n\007proc" +
-      "ess\022\024.RowProcessorRequest\032\023.RowProcessor" +
-      "ResultBH\n*org.apache.hadoop.hbase.protob" +
-      "uf.generatedB\022RowProcessorProtosH\001\210\001\001\240\001\001"
+      "\n\022RowProcessor.proto\"\222\001\n\023RowProcessorReq" +
+      "uest\022 \n\030row_processor_class_name\030\001 \002(\t\022." +
+      "\n&row_processor_initializer_message_name" +
+      "\030\002 \001(\t\022)\n!row_processor_initializer_mess" +
+      "age\030\003 \001(\014\"2\n\022RowProcessorResult\022\034\n\024row_p" +
+      "rocessor_result\030\001 \002(\0142K\n\023RowProcessorSer" +
+      "vice\0224\n\007Process\022\024.RowProcessorRequest\032\023." +
+      "RowProcessorResultBH\n*org.apache.hadoop." +
+      "hbase.protobuf.generatedB\022RowProcessorPr" +
+      "otosH\001\210\001\001\240\001\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {

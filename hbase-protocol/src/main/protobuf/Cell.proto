@@ -46,7 +46,7 @@ message Cell {
   optional bytes family = 2;
   optional bytes qualifier = 3;
   optional uint64 timestamp = 4;
-  optional CellType cellType = 5;
+  optional CellType cell_type = 5;
   optional bytes value = 6;
 }
 
@@ -59,6 +59,6 @@ message KeyValue {
   required bytes family = 2;
   required bytes qualifier = 3;
   optional uint64 timestamp = 4;
-  optional CellType keyType = 5;
+  optional CellType key_type = 5;
   optional bytes value = 6;
 }

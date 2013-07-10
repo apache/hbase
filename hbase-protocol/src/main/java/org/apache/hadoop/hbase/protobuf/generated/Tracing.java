@@ -11,11 +11,11 @@ public final class Tracing {
   public interface RPCTInfoOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
     
-    // optional int64 traceId = 1;
+    // optional int64 trace_id = 1;
     boolean hasTraceId();
     long getTraceId();
     
-    // optional int64 parentId = 2;
+    // optional int64 parent_id = 2;
     boolean hasParentId();
     long getParentId();
   }
@@ -48,8 +48,8 @@ public final class Tracing {
     }
     
     private int bitField0_;
-    // optional int64 traceId = 1;
-    public static final int TRACEID_FIELD_NUMBER = 1;
+    // optional int64 trace_id = 1;
+    public static final int TRACE_ID_FIELD_NUMBER = 1;
     private long traceId_;
     public boolean hasTraceId() {
       return ((bitField0_ & 0x00000001) == 0x00000001);
@@ -58,8 +58,8 @@ public final class Tracing {
       return traceId_;
     }
     
-    // optional int64 parentId = 2;
-    public static final int PARENTID_FIELD_NUMBER = 2;
+    // optional int64 parent_id = 2;
+    public static final int PARENT_ID_FIELD_NUMBER = 2;
     private long parentId_;
     public boolean hasParentId() {
       return ((bitField0_ & 0x00000002) == 0x00000002);
@@ -150,11 +150,11 @@ public final class Tracing {
       int hash = 41;
       hash = (19 * hash) + getDescriptorForType().hashCode();
       if (hasTraceId()) {
-        hash = (37 * hash) + TRACEID_FIELD_NUMBER;
+        hash = (37 * hash) + TRACE_ID_FIELD_NUMBER;
         hash = (53 * hash) + hashLong(getTraceId());
       }
       if (hasParentId()) {
-        hash = (37 * hash) + PARENTID_FIELD_NUMBER;
+        hash = (37 * hash) + PARENT_ID_FIELD_NUMBER;
         hash = (53 * hash) + hashLong(getParentId());
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
@@ -392,7 +392,7 @@ public final class Tracing {
       
       private int bitField0_;
       
-      // optional int64 traceId = 1;
+      // optional int64 trace_id = 1;
       private long traceId_ ;
       public boolean hasTraceId() {
         return ((bitField0_ & 0x00000001) == 0x00000001);
@@ -413,7 +413,7 @@ public final class Tracing {
         return this;
       }
       
-      // optional int64 parentId = 2;
+      // optional int64 parent_id = 2;
       private long parentId_ ;
       public boolean hasParentId() {
         return ((bitField0_ & 0x00000002) == 0x00000002);
@@ -459,10 +459,10 @@ public final class Tracing {
       descriptor;
   static {
     java.lang.String[] descriptorData = {
-      "\n\rTracing.proto\"-\n\010RPCTInfo\022\017\n\007traceId\030\001" +
-      " \001(\003\022\020\n\010parentId\030\002 \001(\003B:\n*org.apache.had" +
-      "oop.hbase.protobuf.generatedB\007TracingH\001\240" +
-      "\001\001"
+      "\n\rTracing.proto\"/\n\010RPCTInfo\022\020\n\010trace_id\030" +
+      "\001 \001(\003\022\021\n\tparent_id\030\002 \001(\003B:\n*org.apache.h" +
+      "adoop.hbase.protobuf.generatedB\007TracingH" +
+      "\001\240\001\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {

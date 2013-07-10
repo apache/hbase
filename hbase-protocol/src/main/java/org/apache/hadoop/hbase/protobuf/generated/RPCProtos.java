@@ -11,11 +11,11 @@ public final class RPCProtos {
   public interface UserInformationOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
     
-    // required string effectiveUser = 1;
+    // required string effective_user = 1;
     boolean hasEffectiveUser();
     String getEffectiveUser();
     
-    // optional string realUser = 2;
+    // optional string real_user = 2;
     boolean hasRealUser();
     String getRealUser();
   }
@@ -48,8 +48,8 @@ public final class RPCProtos {
     }
     
     private int bitField0_;
-    // required string effectiveUser = 1;
-    public static final int EFFECTIVEUSER_FIELD_NUMBER = 1;
+    // required string effective_user = 1;
+    public static final int EFFECTIVE_USER_FIELD_NUMBER = 1;
     private java.lang.Object effectiveUser_;
     public boolean hasEffectiveUser() {
       return ((bitField0_ & 0x00000001) == 0x00000001);
@@ -80,8 +80,8 @@ public final class RPCProtos {
       }
     }
     
-    // optional string realUser = 2;
-    public static final int REALUSER_FIELD_NUMBER = 2;
+    // optional string real_user = 2;
+    public static final int REAL_USER_FIELD_NUMBER = 2;
     private java.lang.Object realUser_;
     public boolean hasRealUser() {
       return ((bitField0_ & 0x00000002) == 0x00000002);
@@ -198,11 +198,11 @@ public final class RPCProtos {
       int hash = 41;
       hash = (19 * hash) + getDescriptorForType().hashCode();
       if (hasEffectiveUser()) {
-        hash = (37 * hash) + EFFECTIVEUSER_FIELD_NUMBER;
+        hash = (37 * hash) + EFFECTIVE_USER_FIELD_NUMBER;
         hash = (53 * hash) + getEffectiveUser().hashCode();
       }
       if (hasRealUser()) {
-        hash = (37 * hash) + REALUSER_FIELD_NUMBER;
+        hash = (37 * hash) + REAL_USER_FIELD_NUMBER;
         hash = (53 * hash) + getRealUser().hashCode();
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
@@ -444,7 +444,7 @@ public final class RPCProtos {
       
       private int bitField0_;
       
-      // required string effectiveUser = 1;
+      // required string effective_user = 1;
       private java.lang.Object effectiveUser_ = "";
       public boolean hasEffectiveUser() {
         return ((bitField0_ & 0x00000001) == 0x00000001);
@@ -480,7 +480,7 @@ public final class RPCProtos {
         onChanged();
       }
       
-      // optional string realUser = 2;
+      // optional string real_user = 2;
       private java.lang.Object realUser_ = "";
       public boolean hasRealUser() {
         return ((bitField0_ & 0x00000002) == 0x00000002);
@@ -530,20 +530,20 @@ public final class RPCProtos {
   public interface ConnectionHeaderOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
     
-    // optional .UserInformation userInfo = 1;
+    // optional .UserInformation user_info = 1;
     boolean hasUserInfo();
     org.apache.hadoop.hbase.protobuf.generated.RPCProtos.UserInformation getUserInfo();
     org.apache.hadoop.hbase.protobuf.generated.RPCProtos.UserInformationOrBuilder getUserInfoOrBuilder();
     
-    // optional string serviceName = 2;
+    // optional string service_name = 2;
     boolean hasServiceName();
     String getServiceName();
     
-    // optional string cellBlockCodecClass = 3 [default = "org.apache.hadoop.hbase.codec.KeyValueCodec"];
+    // optional string cell_block_codec_class = 3 [default = "org.apache.hadoop.hbase.codec.KeyValueCodec"];
     boolean hasCellBlockCodecClass();
     String getCellBlockCodecClass();
     
-    // optional string cellBlockCompressorClass = 4;
+    // optional string cell_block_compressor_class = 4;
     boolean hasCellBlockCompressorClass();
     String getCellBlockCompressorClass();
   }
@@ -576,8 +576,8 @@ public final class RPCProtos {
     }
     
     private int bitField0_;
-    // optional .UserInformation userInfo = 1;
-    public static final int USERINFO_FIELD_NUMBER = 1;
+    // optional .UserInformation user_info = 1;
+    public static final int USER_INFO_FIELD_NUMBER = 1;
     private org.apache.hadoop.hbase.protobuf.generated.RPCProtos.UserInformation userInfo_;
     public boolean hasUserInfo() {
       return ((bitField0_ & 0x00000001) == 0x00000001);
@@ -589,8 +589,8 @@ public final class RPCProtos {
       return userInfo_;
     }
     
-    // optional string serviceName = 2;
-    public static final int SERVICENAME_FIELD_NUMBER = 2;
+    // optional string service_name = 2;
+    public static final int SERVICE_NAME_FIELD_NUMBER = 2;
     private java.lang.Object serviceName_;
     public boolean hasServiceName() {
       return ((bitField0_ & 0x00000002) == 0x00000002);
@@ -621,8 +621,8 @@ public final class RPCProtos {
       }
     }
     
-    // optional string cellBlockCodecClass = 3 [default = "org.apache.hadoop.hbase.codec.KeyValueCodec"];
-    public static final int CELLBLOCKCODECCLASS_FIELD_NUMBER = 3;
+    // optional string cell_block_codec_class = 3 [default = "org.apache.hadoop.hbase.codec.KeyValueCodec"];
+    public static final int CELL_BLOCK_CODEC_CLASS_FIELD_NUMBER = 3;
     private java.lang.Object cellBlockCodecClass_;
     public boolean hasCellBlockCodecClass() {
       return ((bitField0_ & 0x00000004) == 0x00000004);
@@ -653,8 +653,8 @@ public final class RPCProtos {
       }
     }
     
-    // optional string cellBlockCompressorClass = 4;
-    public static final int CELLBLOCKCOMPRESSORCLASS_FIELD_NUMBER = 4;
+    // optional string cell_block_compressor_class = 4;
+    public static final int CELL_BLOCK_COMPRESSOR_CLASS_FIELD_NUMBER = 4;
     private java.lang.Object cellBlockCompressorClass_;
     public boolean hasCellBlockCompressorClass() {
       return ((bitField0_ & 0x00000008) == 0x00000008);
@@ -799,19 +799,19 @@ public final class RPCProtos {
       int hash = 41;
       hash = (19 * hash) + getDescriptorForType().hashCode();
       if (hasUserInfo()) {
-        hash = (37 * hash) + USERINFO_FIELD_NUMBER;
+        hash = (37 * hash) + USER_INFO_FIELD_NUMBER;
         hash = (53 * hash) + getUserInfo().hashCode();
       }
       if (hasServiceName()) {
-        hash = (37 * hash) + SERVICENAME_FIELD_NUMBER;
+        hash = (37 * hash) + SERVICE_NAME_FIELD_NUMBER;
         hash = (53 * hash) + getServiceName().hashCode();
       }
       if (hasCellBlockCodecClass()) {
-        hash = (37 * hash) + CELLBLOCKCODECCLASS_FIELD_NUMBER;
+        hash = (37 * hash) + CELL_BLOCK_CODEC_CLASS_FIELD_NUMBER;
         hash = (53 * hash) + getCellBlockCodecClass().hashCode();
       }
       if (hasCellBlockCompressorClass()) {
-        hash = (37 * hash) + CELLBLOCKCOMPRESSORCLASS_FIELD_NUMBER;
+        hash = (37 * hash) + CELL_BLOCK_COMPRESSOR_CLASS_FIELD_NUMBER;
         hash = (53 * hash) + getCellBlockCompressorClass().hashCode();
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
@@ -1096,7 +1096,7 @@ public final class RPCProtos {
       
       private int bitField0_;
       
-      // optional .UserInformation userInfo = 1;
+      // optional .UserInformation user_info = 1;
       private org.apache.hadoop.hbase.protobuf.generated.RPCProtos.UserInformation userInfo_ = org.apache.hadoop.hbase.protobuf.generated.RPCProtos.UserInformation.getDefaultInstance();
       private com.google.protobuf.SingleFieldBuilder<
           org.apache.hadoop.hbase.protobuf.generated.RPCProtos.UserInformation, org.apache.hadoop.hbase.protobuf.generated.RPCProtos.UserInformation.Builder, org.apache.hadoop.hbase.protobuf.generated.RPCProtos.UserInformationOrBuilder> userInfoBuilder_;
@@ -1186,7 +1186,7 @@ public final class RPCProtos {
         return userInfoBuilder_;
       }
       
-      // optional string serviceName = 2;
+      // optional string service_name = 2;
       private java.lang.Object serviceName_ = "";
       public boolean hasServiceName() {
         return ((bitField0_ & 0x00000002) == 0x00000002);
@@ -1222,7 +1222,7 @@ public final class RPCProtos {
         onChanged();
       }
       
-      // optional string cellBlockCodecClass = 3 [default = "org.apache.hadoop.hbase.codec.KeyValueCodec"];
+      // optional string cell_block_codec_class = 3 [default = "org.apache.hadoop.hbase.codec.KeyValueCodec"];
       private java.lang.Object cellBlockCodecClass_ = "org.apache.hadoop.hbase.codec.KeyValueCodec";
       public boolean hasCellBlockCodecClass() {
         return ((bitField0_ & 0x00000004) == 0x00000004);
@@ -1258,7 +1258,7 @@ public final class RPCProtos {
         onChanged();
       }
       
-      // optional string cellBlockCompressorClass = 4;
+      // optional string cell_block_compressor_class = 4;
       private java.lang.Object cellBlockCompressorClass_ = "";
       public boolean hasCellBlockCompressorClass() {
         return ((bitField0_ & 0x00000008) == 0x00000008);
@@ -1679,11 +1679,11 @@ public final class RPCProtos {
   public interface ExceptionResponseOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
     
-    // optional string exceptionClassName = 1;
+    // optional string exception_class_name = 1;
     boolean hasExceptionClassName();
     String getExceptionClassName();
     
-    // optional string stackTrace = 2;
+    // optional string stack_trace = 2;
     boolean hasStackTrace();
     String getStackTrace();
     
@@ -1695,7 +1695,7 @@ public final class RPCProtos {
     boolean hasPort();
     int getPort();
     
-    // optional bool doNotRetry = 5;
+    // optional bool do_not_retry = 5;
     boolean hasDoNotRetry();
     boolean getDoNotRetry();
   }
@@ -1728,8 +1728,8 @@ public final class RPCProtos {
     }
     
     private int bitField0_;
-    // optional string exceptionClassName = 1;
-    public static final int EXCEPTIONCLASSNAME_FIELD_NUMBER = 1;
+    // optional string exception_class_name = 1;
+    public static final int EXCEPTION_CLASS_NAME_FIELD_NUMBER = 1;
     private java.lang.Object exceptionClassName_;
     public boolean hasExceptionClassName() {
       return ((bitField0_ & 0x00000001) == 0x00000001);
@@ -1760,8 +1760,8 @@ public final class RPCProtos {
       }
     }
     
-    // optional string stackTrace = 2;
-    public static final int STACKTRACE_FIELD_NUMBER = 2;
+    // optional string stack_trace = 2;
+    public static final int STACK_TRACE_FIELD_NUMBER = 2;
     private java.lang.Object stackTrace_;
     public boolean hasStackTrace() {
       return ((bitField0_ & 0x00000002) == 0x00000002);
@@ -1834,8 +1834,8 @@ public final class RPCProtos {
       return port_;
     }
     
-    // optional bool doNotRetry = 5;
-    public static final int DONOTRETRY_FIELD_NUMBER = 5;
+    // optional bool do_not_retry = 5;
+    public static final int DO_NOT_RETRY_FIELD_NUMBER = 5;
     private boolean doNotRetry_;
     public boolean hasDoNotRetry() {
       return ((bitField0_ & 0x00000010) == 0x00000010);
@@ -1965,11 +1965,11 @@ public final class RPCProtos {
       int hash = 41;
       hash = (19 * hash) + getDescriptorForType().hashCode();
       if (hasExceptionClassName()) {
-        hash = (37 * hash) + EXCEPTIONCLASSNAME_FIELD_NUMBER;
+        hash = (37 * hash) + EXCEPTION_CLASS_NAME_FIELD_NUMBER;
         hash = (53 * hash) + getExceptionClassName().hashCode();
       }
       if (hasStackTrace()) {
-        hash = (37 * hash) + STACKTRACE_FIELD_NUMBER;
+        hash = (37 * hash) + STACK_TRACE_FIELD_NUMBER;
         hash = (53 * hash) + getStackTrace().hashCode();
       }
       if (hasHostname()) {
@@ -1981,7 +1981,7 @@ public final class RPCProtos {
         hash = (53 * hash) + getPort();
       }
       if (hasDoNotRetry()) {
-        hash = (37 * hash) + DONOTRETRY_FIELD_NUMBER;
+        hash = (37 * hash) + DO_NOT_RETRY_FIELD_NUMBER;
         hash = (53 * hash) + hashBoolean(getDoNotRetry());
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
@@ -2261,7 +2261,7 @@ public final class RPCProtos {
       
       private int bitField0_;
       
-      // optional string exceptionClassName = 1;
+      // optional string exception_class_name = 1;
       private java.lang.Object exceptionClassName_ = "";
       public boolean hasExceptionClassName() {
         return ((bitField0_ & 0x00000001) == 0x00000001);
@@ -2297,7 +2297,7 @@ public final class RPCProtos {
         onChanged();
       }
       
-      // optional string stackTrace = 2;
+      // optional string stack_trace = 2;
       private java.lang.Object stackTrace_ = "";
       public boolean hasStackTrace() {
         return ((bitField0_ & 0x00000002) == 0x00000002);
@@ -2390,7 +2390,7 @@ public final class RPCProtos {
         return this;
       }
       
-      // optional bool doNotRetry = 5;
+      // optional bool do_not_retry = 5;
       private boolean doNotRetry_ ;
       public boolean hasDoNotRetry() {
         return ((bitField0_ & 0x00000010) == 0x00000010);
@@ -2425,24 +2425,24 @@ public final class RPCProtos {
   public interface RequestHeaderOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
     
-    // optional uint32 callId = 1;
+    // optional uint32 call_id = 1;
     boolean hasCallId();
     int getCallId();
     
-    // optional .RPCTInfo traceInfo = 2;
+    // optional .RPCTInfo trace_info = 2;
     boolean hasTraceInfo();
     org.apache.hadoop.hbase.protobuf.generated.Tracing.RPCTInfo getTraceInfo();
     org.apache.hadoop.hbase.protobuf.generated.Tracing.RPCTInfoOrBuilder getTraceInfoOrBuilder();
     
-    // optional string methodName = 3;
+    // optional string method_name = 3;
     boolean hasMethodName();
     String getMethodName();
     
-    // optional bool requestParam = 4;
+    // optional bool request_param = 4;
     boolean hasRequestParam();
     boolean getRequestParam();
     
-    // optional .CellBlockMeta cellBlockMeta = 5;
+    // optional .CellBlockMeta cell_block_meta = 5;
     boolean hasCellBlockMeta();
     org.apache.hadoop.hbase.protobuf.generated.RPCProtos.CellBlockMeta getCellBlockMeta();
     org.apache.hadoop.hbase.protobuf.generated.RPCProtos.CellBlockMetaOrBuilder getCellBlockMetaOrBuilder();
@@ -2476,8 +2476,8 @@ public final class RPCProtos {
     }
     
     private int bitField0_;
-    // optional uint32 callId = 1;
-    public static final int CALLID_FIELD_NUMBER = 1;
+    // optional uint32 call_id = 1;
+    public static final int CALL_ID_FIELD_NUMBER = 1;
     private int callId_;
     public boolean hasCallId() {
       return ((bitField0_ & 0x00000001) == 0x00000001);
@@ -2486,8 +2486,8 @@ public final class RPCProtos {
       return callId_;
     }
     
-    // optional .RPCTInfo traceInfo = 2;
-    public static final int TRACEINFO_FIELD_NUMBER = 2;
+    // optional .RPCTInfo trace_info = 2;
+    public static final int TRACE_INFO_FIELD_NUMBER = 2;
     private org.apache.hadoop.hbase.protobuf.generated.Tracing.RPCTInfo traceInfo_;
     public boolean hasTraceInfo() {
       return ((bitField0_ & 0x00000002) == 0x00000002);
@@ -2499,8 +2499,8 @@ public final class RPCProtos {
       return traceInfo_;
     }
     
-    // optional string methodName = 3;
-    public static final int METHODNAME_FIELD_NUMBER = 3;
+    // optional string method_name = 3;
+    public static final int METHOD_NAME_FIELD_NUMBER = 3;
     private java.lang.Object methodName_;
     public boolean hasMethodName() {
       return ((bitField0_ & 0x00000004) == 0x00000004);
@@ -2531,8 +2531,8 @@ public final class RPCProtos {
       }
     }
     
-    // optional bool requestParam = 4;
-    public static final int REQUESTPARAM_FIELD_NUMBER = 4;
+    // optional bool request_param = 4;
+    public static final int REQUEST_PARAM_FIELD_NUMBER = 4;
     private boolean requestParam_;
     public boolean hasRequestParam() {
       return ((bitField0_ & 0x00000008) == 0x00000008);
@@ -2541,8 +2541,8 @@ public final class RPCProtos {
       return requestParam_;
     }
     
-    // optional .CellBlockMeta cellBlockMeta = 5;
-    public static final int CELLBLOCKMETA_FIELD_NUMBER = 5;
+    // optional .CellBlockMeta cell_block_meta = 5;
+    public static final int CELL_BLOCK_META_FIELD_NUMBER = 5;
     private org.apache.hadoop.hbase.protobuf.generated.RPCProtos.CellBlockMeta cellBlockMeta_;
     public boolean hasCellBlockMeta() {
       return ((bitField0_ & 0x00000010) == 0x00000010);
@@ -2675,23 +2675,23 @@ public final class RPCProtos {
       int hash = 41;
       hash = (19 * hash) + getDescriptorForType().hashCode();
       if (hasCallId()) {
-        hash = (37 * hash) + CALLID_FIELD_NUMBER;
+        hash = (37 * hash) + CALL_ID_FIELD_NUMBER;
         hash = (53 * hash) + getCallId();
       }
       if (hasTraceInfo()) {
-        hash = (37 * hash) + TRACEINFO_FIELD_NUMBER;
+        hash = (37 * hash) + TRACE_INFO_FIELD_NUMBER;
         hash = (53 * hash) + getTraceInfo().hashCode();
       }
       if (hasMethodName()) {
-        hash = (37 * hash) + METHODNAME_FIELD_NUMBER;
+        hash = (37 * hash) + METHOD_NAME_FIELD_NUMBER;
         hash = (53 * hash) + getMethodName().hashCode();
       }
       if (hasRequestParam()) {
-        hash = (37 * hash) + REQUESTPARAM_FIELD_NUMBER;
+        hash = (37 * hash) + REQUEST_PARAM_FIELD_NUMBER;
         hash = (53 * hash) + hashBoolean(getRequestParam());
       }
       if (hasCellBlockMeta()) {
-        hash = (37 * hash) + CELLBLOCKMETA_FIELD_NUMBER;
+        hash = (37 * hash) + CELL_BLOCK_META_FIELD_NUMBER;
         hash = (53 * hash) + getCellBlockMeta().hashCode();
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
@@ -2997,7 +2997,7 @@ public final class RPCProtos {
       
       private int bitField0_;
       
-      // optional uint32 callId = 1;
+      // optional uint32 call_id = 1;
       private int callId_ ;
       public boolean hasCallId() {
         return ((bitField0_ & 0x00000001) == 0x00000001);
@@ -3018,7 +3018,7 @@ public final class RPCProtos {
         return this;
       }
       
-      // optional .RPCTInfo traceInfo = 2;
+      // optional .RPCTInfo trace_info = 2;
       private org.apache.hadoop.hbase.protobuf.generated.Tracing.RPCTInfo traceInfo_ = org.apache.hadoop.hbase.protobuf.generated.Tracing.RPCTInfo.getDefaultInstance();
       private com.google.protobuf.SingleFieldBuilder<
           org.apache.hadoop.hbase.protobuf.generated.Tracing.RPCTInfo, org.apache.hadoop.hbase.protobuf.generated.Tracing.RPCTInfo.Builder, org.apache.hadoop.hbase.protobuf.generated.Tracing.RPCTInfoOrBuilder> traceInfoBuilder_;
@@ -3108,7 +3108,7 @@ public final class RPCProtos {
         return traceInfoBuilder_;
       }
       
-      // optional string methodName = 3;
+      // optional string method_name = 3;
       private java.lang.Object methodName_ = "";
       public boolean hasMethodName() {
         return ((bitField0_ & 0x00000004) == 0x00000004);
@@ -3144,7 +3144,7 @@ public final class RPCProtos {
         onChanged();
       }
       
-      // optional bool requestParam = 4;
+      // optional bool request_param = 4;
       private boolean requestParam_ ;
       public boolean hasRequestParam() {
         return ((bitField0_ & 0x00000008) == 0x00000008);
@@ -3165,7 +3165,7 @@ public final class RPCProtos {
         return this;
       }
       
-      // optional .CellBlockMeta cellBlockMeta = 5;
+      // optional .CellBlockMeta cell_block_meta = 5;
       private org.apache.hadoop.hbase.protobuf.generated.RPCProtos.CellBlockMeta cellBlockMeta_ = org.apache.hadoop.hbase.protobuf.generated.RPCProtos.CellBlockMeta.getDefaultInstance();
       private com.google.protobuf.SingleFieldBuilder<
           org.apache.hadoop.hbase.protobuf.generated.RPCProtos.CellBlockMeta, org.apache.hadoop.hbase.protobuf.generated.RPCProtos.CellBlockMeta.Builder, org.apache.hadoop.hbase.protobuf.generated.RPCProtos.CellBlockMetaOrBuilder> cellBlockMetaBuilder_;
@@ -3269,7 +3269,7 @@ public final class RPCProtos {
   public interface ResponseHeaderOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
     
-    // optional uint32 callId = 1;
+    // optional uint32 call_id = 1;
     boolean hasCallId();
     int getCallId();
     
@@ -3278,7 +3278,7 @@ public final class RPCProtos {
     org.apache.hadoop.hbase.protobuf.generated.RPCProtos.ExceptionResponse getException();
     org.apache.hadoop.hbase.protobuf.generated.RPCProtos.ExceptionResponseOrBuilder getExceptionOrBuilder();
     
-    // optional .CellBlockMeta cellBlockMeta = 3;
+    // optional .CellBlockMeta cell_block_meta = 3;
     boolean hasCellBlockMeta();
     org.apache.hadoop.hbase.protobuf.generated.RPCProtos.CellBlockMeta getCellBlockMeta();
     org.apache.hadoop.hbase.protobuf.generated.RPCProtos.CellBlockMetaOrBuilder getCellBlockMetaOrBuilder();
@@ -3312,8 +3312,8 @@ public final class RPCProtos {
     }
     
     private int bitField0_;
-    // optional uint32 callId = 1;
-    public static final int CALLID_FIELD_NUMBER = 1;
+    // optional uint32 call_id = 1;
+    public static final int CALL_ID_FIELD_NUMBER = 1;
     private int callId_;
     public boolean hasCallId() {
       return ((bitField0_ & 0x00000001) == 0x00000001);
@@ -3335,8 +3335,8 @@ public final class RPCProtos {
       return exception_;
     }
     
-    // optional .CellBlockMeta cellBlockMeta = 3;
-    public static final int CELLBLOCKMETA_FIELD_NUMBER = 3;
+    // optional .CellBlockMeta cell_block_meta = 3;
+    public static final int CELL_BLOCK_META_FIELD_NUMBER = 3;
     private org.apache.hadoop.hbase.protobuf.generated.RPCProtos.CellBlockMeta cellBlockMeta_;
     public boolean hasCellBlockMeta() {
       return ((bitField0_ & 0x00000004) == 0x00000004);
@@ -3443,7 +3443,7 @@ public final class RPCProtos {
       int hash = 41;
       hash = (19 * hash) + getDescriptorForType().hashCode();
       if (hasCallId()) {
-        hash = (37 * hash) + CALLID_FIELD_NUMBER;
+        hash = (37 * hash) + CALL_ID_FIELD_NUMBER;
         hash = (53 * hash) + getCallId();
       }
       if (hasException()) {
@@ -3451,7 +3451,7 @@ public final class RPCProtos {
         hash = (53 * hash) + getException().hashCode();
       }
       if (hasCellBlockMeta()) {
-        hash = (37 * hash) + CELLBLOCKMETA_FIELD_NUMBER;
+        hash = (37 * hash) + CELL_BLOCK_META_FIELD_NUMBER;
         hash = (53 * hash) + getCellBlockMeta().hashCode();
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
@@ -3729,7 +3729,7 @@ public final class RPCProtos {
       
       private int bitField0_;
       
-      // optional uint32 callId = 1;
+      // optional uint32 call_id = 1;
       private int callId_ ;
       public boolean hasCallId() {
         return ((bitField0_ & 0x00000001) == 0x00000001);
@@ -3840,7 +3840,7 @@ public final class RPCProtos {
         return exceptionBuilder_;
       }
       
-      // optional .CellBlockMeta cellBlockMeta = 3;
+      // optional .CellBlockMeta cell_block_meta = 3;
       private org.apache.hadoop.hbase.protobuf.generated.RPCProtos.CellBlockMeta cellBlockMeta_ = org.apache.hadoop.hbase.protobuf.generated.RPCProtos.CellBlockMeta.getDefaultInstance();
       private com.google.protobuf.SingleFieldBuilder<
           org.apache.hadoop.hbase.protobuf.generated.RPCProtos.CellBlockMeta, org.apache.hadoop.hbase.protobuf.generated.RPCProtos.CellBlockMeta.Builder, org.apache.hadoop.hbase.protobuf.generated.RPCProtos.CellBlockMetaOrBuilder> cellBlockMetaBuilder_;
@@ -3981,24 +3981,25 @@ public final class RPCProtos {
   static {
     java.lang.String[] descriptorData = {
       "\n\tRPC.proto\032\rTracing.proto\032\013hbase.proto\"" +
-      ":\n\017UserInformation\022\025\n\reffectiveUser\030\001 \002(" +
-      "\t\022\020\n\010realUser\030\002 \001(\t\"\267\001\n\020ConnectionHeader" +
-      "\022\"\n\010userInfo\030\001 \001(\0132\020.UserInformation\022\023\n\013" +
-      "serviceName\030\002 \001(\t\022H\n\023cellBlockCodecClass" +
-      "\030\003 \001(\t:+org.apache.hadoop.hbase.codec.Ke" +
-      "yValueCodec\022 \n\030cellBlockCompressorClass\030" +
-      "\004 \001(\t\"\037\n\rCellBlockMeta\022\016\n\006length\030\001 \001(\r\"w" +
-      "\n\021ExceptionResponse\022\032\n\022exceptionClassNam" +
-      "e\030\001 \001(\t\022\022\n\nstackTrace\030\002 \001(\t\022\020\n\010hostname\030",
-      "\003 \001(\t\022\014\n\004port\030\004 \001(\005\022\022\n\ndoNotRetry\030\005 \001(\010\"" +
-      "\216\001\n\rRequestHeader\022\016\n\006callId\030\001 \001(\r\022\034\n\ttra" +
-      "ceInfo\030\002 \001(\0132\t.RPCTInfo\022\022\n\nmethodName\030\003 " +
-      "\001(\t\022\024\n\014requestParam\030\004 \001(\010\022%\n\rcellBlockMe" +
-      "ta\030\005 \001(\0132\016.CellBlockMeta\"n\n\016ResponseHead" +
-      "er\022\016\n\006callId\030\001 \001(\r\022%\n\texception\030\002 \001(\0132\022." +
-      "ExceptionResponse\022%\n\rcellBlockMeta\030\003 \001(\013" +
-      "2\016.CellBlockMetaB<\n*org.apache.hadoop.hb" +
-      "ase.protobuf.generatedB\tRPCProtosH\001\240\001\001"
+      "<\n\017UserInformation\022\026\n\016effective_user\030\001 \002" +
+      "(\t\022\021\n\treal_user\030\002 \001(\t\"\277\001\n\020ConnectionHead" +
+      "er\022#\n\tuser_info\030\001 \001(\0132\020.UserInformation\022" +
+      "\024\n\014service_name\030\002 \001(\t\022K\n\026cell_block_code" +
+      "c_class\030\003 \001(\t:+org.apache.hadoop.hbase.c" +
+      "odec.KeyValueCodec\022#\n\033cell_block_compres" +
+      "sor_class\030\004 \001(\t\"\037\n\rCellBlockMeta\022\016\n\006leng" +
+      "th\030\001 \001(\r\"|\n\021ExceptionResponse\022\034\n\024excepti" +
+      "on_class_name\030\001 \001(\t\022\023\n\013stack_trace\030\002 \001(\t",
+      "\022\020\n\010hostname\030\003 \001(\t\022\014\n\004port\030\004 \001(\005\022\024\n\014do_n" +
+      "ot_retry\030\005 \001(\010\"\224\001\n\rRequestHeader\022\017\n\007call" +
+      "_id\030\001 \001(\r\022\035\n\ntrace_info\030\002 \001(\0132\t.RPCTInfo" +
+      "\022\023\n\013method_name\030\003 \001(\t\022\025\n\rrequest_param\030\004" +
+      " \001(\010\022\'\n\017cell_block_meta\030\005 \001(\0132\016.CellBloc" +
+      "kMeta\"q\n\016ResponseHeader\022\017\n\007call_id\030\001 \001(\r" +
+      "\022%\n\texception\030\002 \001(\0132\022.ExceptionResponse\022" +
+      "\'\n\017cell_block_meta\030\003 \001(\0132\016.CellBlockMeta" +
+      "B<\n*org.apache.hadoop.hbase.protobuf.gen" +
+      "eratedB\tRPCProtosH\001\240\001\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {

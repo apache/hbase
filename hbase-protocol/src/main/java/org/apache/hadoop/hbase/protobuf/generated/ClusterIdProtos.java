@@ -11,7 +11,7 @@ public final class ClusterIdProtos {
   public interface ClusterIdOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
     
-    // required string clusterId = 1;
+    // required string cluster_id = 1;
     boolean hasClusterId();
     String getClusterId();
   }
@@ -44,8 +44,8 @@ public final class ClusterIdProtos {
     }
     
     private int bitField0_;
-    // required string clusterId = 1;
-    public static final int CLUSTERID_FIELD_NUMBER = 1;
+    // required string cluster_id = 1;
+    public static final int CLUSTER_ID_FIELD_NUMBER = 1;
     private java.lang.Object clusterId_;
     public boolean hasClusterId() {
       return ((bitField0_ & 0x00000001) == 0x00000001);
@@ -149,7 +149,7 @@ public final class ClusterIdProtos {
       int hash = 41;
       hash = (19 * hash) + getDescriptorForType().hashCode();
       if (hasClusterId()) {
-        hash = (37 * hash) + CLUSTERID_FIELD_NUMBER;
+        hash = (37 * hash) + CLUSTER_ID_FIELD_NUMBER;
         hash = (53 * hash) + getClusterId().hashCode();
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
@@ -377,7 +377,7 @@ public final class ClusterIdProtos {
       
       private int bitField0_;
       
-      // required string clusterId = 1;
+      // required string cluster_id = 1;
       private java.lang.Object clusterId_ = "";
       public boolean hasClusterId() {
         return ((bitField0_ & 0x00000001) == 0x00000001);
@@ -438,9 +438,9 @@ public final class ClusterIdProtos {
       descriptor;
   static {
     java.lang.String[] descriptorData = {
-      "\n\017ClusterId.proto\"\036\n\tClusterId\022\021\n\tcluste" +
-      "rId\030\001 \002(\tBB\n*org.apache.hadoop.hbase.pro" +
-      "tobuf.generatedB\017ClusterIdProtosH\001\240\001\001"
+      "\n\017ClusterId.proto\"\037\n\tClusterId\022\022\n\ncluste" +
+      "r_id\030\001 \002(\tBB\n*org.apache.hadoop.hbase.pr" +
+      "otobuf.generatedB\017ClusterIdProtosH\001\240\001\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {

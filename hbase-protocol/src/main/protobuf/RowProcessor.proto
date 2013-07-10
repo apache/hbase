@@ -27,15 +27,15 @@ option java_generate_equals_and_hash = true;
 option optimize_for = SPEED;
 
 message RowProcessorRequest {
-  required string rowProcessorClassName = 1;
-  optional string rowProcessorInitializerMessageName = 2;
-  optional bytes  rowProcessorInitializerMessage = 3;
+  required string row_processor_class_name = 1;
+  optional string row_processor_initializer_message_name = 2;
+  optional bytes  row_processor_initializer_message = 3;
 }
 
 message RowProcessorResult {
-  required bytes rowProcessorResult = 1;
+  required bytes row_processor_result = 1;
 }
 
 service RowProcessorService {
-  rpc process (RowProcessorRequest) returns (RowProcessorResult);
+  rpc Process (RowProcessorRequest) returns (RowProcessorResult);
 }

@@ -11,7 +11,7 @@ public final class MultiRowMutation {
   public interface MultiMutateRequestOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
     
-    // repeated .MutationProto mutationRequest = 1;
+    // repeated .MutationProto mutation_request = 1;
     java.util.List<org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto> 
         getMutationRequestList();
     org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto getMutationRequest(int index);
@@ -49,8 +49,8 @@ public final class MultiRowMutation {
       return org.apache.hadoop.hbase.protobuf.generated.MultiRowMutation.internal_static_MultiMutateRequest_fieldAccessorTable;
     }
     
-    // repeated .MutationProto mutationRequest = 1;
-    public static final int MUTATIONREQUEST_FIELD_NUMBER = 1;
+    // repeated .MutationProto mutation_request = 1;
+    public static final int MUTATION_REQUEST_FIELD_NUMBER = 1;
     private java.util.List<org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto> mutationRequest_;
     public java.util.List<org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto> getMutationRequestList() {
       return mutationRequest_;
@@ -142,7 +142,7 @@ public final class MultiRowMutation {
       int hash = 41;
       hash = (19 * hash) + getDescriptorForType().hashCode();
       if (getMutationRequestCount() > 0) {
-        hash = (37 * hash) + MUTATIONREQUEST_FIELD_NUMBER;
+        hash = (37 * hash) + MUTATION_REQUEST_FIELD_NUMBER;
         hash = (53 * hash) + getMutationRequestList().hashCode();
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
@@ -404,7 +404,7 @@ public final class MultiRowMutation {
       
       private int bitField0_;
       
-      // repeated .MutationProto mutationRequest = 1;
+      // repeated .MutationProto mutation_request = 1;
       private java.util.List<org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto> mutationRequest_ =
         java.util.Collections.emptyList();
       private void ensureMutationRequestIsMutable() {
@@ -1141,13 +1141,14 @@ public final class MultiRowMutation {
       descriptor;
   static {
     java.lang.String[] descriptorData = {
-      "\n\026MultiRowMutation.proto\032\014Client.proto\"=" +
-      "\n\022MultiMutateRequest\022\'\n\017mutationRequest\030" +
-      "\001 \003(\0132\016.MutationProto\"\025\n\023MultiMutateResp" +
-      "onse2R\n\027MultiRowMutationService\0227\n\nmutat" +
-      "eRows\022\023.MultiMutateRequest\032\024.MultiMutate" +
-      "ResponseBF\n*org.apache.hadoop.hbase.prot" +
-      "obuf.generatedB\020MultiRowMutationH\001\210\001\001\240\001\001"
+      "\n\026MultiRowMutation.proto\032\014Client.proto\">" +
+      "\n\022MultiMutateRequest\022(\n\020mutation_request" +
+      "\030\001 \003(\0132\016.MutationProto\"\025\n\023MultiMutateRes" +
+      "ponse2R\n\027MultiRowMutationService\0227\n\nMuta" +
+      "teRows\022\023.MultiMutateRequest\032\024.MultiMutat" +
+      "eResponseBF\n*org.apache.hadoop.hbase.pro" +
+      "tobuf.generatedB\020MultiRowMutationH\001\210\001\001\240\001" +
+      "\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {

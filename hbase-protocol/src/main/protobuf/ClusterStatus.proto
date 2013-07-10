@@ -28,7 +28,7 @@ import "ClusterId.proto";
 import "FS.proto";
 
 message RegionState {
-  required RegionInfo regionInfo = 1;
+  required RegionInfo region_info = 1;
   required State state = 2;
   optional uint64 stamp = 3;
   enum State {
@@ -50,12 +50,12 @@ message RegionState {
 
 message RegionInTransition {
   required RegionSpecifier spec = 1;
-  required RegionState regionState = 2;
+  required RegionState region_state = 2;
 }
 
 message RegionLoad {
   /** the region specifier */
-  required RegionSpecifier regionSpecifier = 1;
+  required RegionSpecifier region_specifier = 1;
 
   /** the number of stores for the region */
   optional uint32 stores = 2;
@@ -64,65 +64,65 @@ message RegionLoad {
   optional uint32 storefiles = 3;
 
   /** the total size of the store files for the region, uncompressed, in MB */
-  optional uint32 storeUncompressedSizeMB = 4;
+  optional uint32 store_uncompressed_size_MB = 4;
 
   /** the current total size of the store files for the region, in MB */
-  optional uint32 storefileSizeMB = 5;
+  optional uint32 storefile_size_MB = 5;
 
   /** the current size of the memstore for the region, in MB */
-  optional uint32 memstoreSizeMB = 6;
+  optional uint32 memstore_size_MB = 6;
 
   /**
    * The current total size of root-level store file indexes for the region,
    * in MB. The same as {@link #rootIndexSizeKB} but in MB.
    */
-  optional uint32 storefileIndexSizeMB = 7;
+  optional uint32 storefile_index_size_MB = 7;
 
   /** the current total read requests made to region */
-  optional uint64 readRequestsCount = 8;
+  optional uint64 read_requests_count = 8;
 
   /** the current total write requests made to region */
-  optional uint64 writeRequestsCount = 9;
+  optional uint64 write_requests_count = 9;
 
   /** the total compacting key values in currently running compaction */
-  optional uint64 totalCompactingKVs = 10;
+  optional uint64 total_compacting_KVs = 10;
 
   /** the completed count of key values in currently running compaction */
-  optional uint64 currentCompactedKVs = 11;
+  optional uint64 current_compacted_KVs = 11;
 
    /** The current total size of root-level indexes for the region, in KB. */
-  optional uint32 rootIndexSizeKB = 12;
+  optional uint32 root_index_size_KB = 12;
 
   /** The total size of all index blocks, not just the root level, in KB. */
-  optional uint32 totalStaticIndexSizeKB = 13;
+  optional uint32 total_static_index_size_KB = 13;
 
   /**
    * The total size of all Bloom filter blocks, not just loaded into the
    * block cache, in KB.
    */
-  optional uint32 totalStaticBloomSizeKB = 14;
+  optional uint32 total_static_bloom_size_KB = 14;
 
   /** the most recent sequence Id from cache flush */
-  optional uint64 completeSequenceId = 15;
+  optional uint64 complete_sequence_id = 15;
 }
 
 /* Server-level protobufs */
 
 message ServerLoad {
   /** Number of requests since last report. */
-  optional uint32 numberOfRequests = 1;
+  optional uint32 number_of_requests = 1;
 
   /** Total Number of requests from the start of the region server. */
-  optional uint32 totalNumberOfRequests = 2;
+  optional uint32 total_number_of_requests = 2;
 
   /** the amount of used heap, in MB. */
-  optional uint32 usedHeapMB = 3;
+  optional uint32 used_heap_MB = 3;
 
   /** the maximum allowable size of the heap, in MB. */
-  optional uint32 maxHeapMB = 4;
+  optional uint32 max_heap_MB = 4;
 
   /** Information on the load of individual regions. */
-  repeated RegionLoad regionLoads = 5;
+  repeated RegionLoad region_loads = 5;
 
   /**
    * Regionserver-level coprocessors, e.g., WALObserver implementations.
@@ -132,39 +132,38 @@ message ServerLoad {
   repeated Coprocessor coprocessors = 6;
 
   /**
-   * Time when incremental (non-total) counts began being calculated (e.g. numberOfRequests)
+   * Time when incremental (non-total) counts began being calculated (e.g. number_of_requests)
    * time is measured as the difference, measured in milliseconds, between the current time
    * and midnight, January 1, 1970 UTC.
    */
-  optional uint64 reportStartTime = 7;
+  optional uint64 report_start_time = 7;
 
   /**
    * Time when report was generated.
    * time is measured as the difference, measured in milliseconds, between the current time
    * and midnight, January 1, 1970 UTC.
    */
-  optional uint64 reportEndTime = 8;
+  optional uint64 report_end_time = 8;
 
   /**
    * The port number that this region server is hosing an info server on.
    */
-  optional uint32 infoServerPort = 9;
+  optional uint32 info_server_port = 9;
 }
 
 message LiveServerInfo {
   required ServerName server = 1;
-  required ServerLoad serverLoad = 2;
+  required ServerLoad server_load = 2;
 }
 
-
 message ClusterStatus {
-  optional HBaseVersionFileContent hbaseVersion = 1;
-  repeated LiveServerInfo liveServers = 2;
-  repeated ServerName deadServers = 3;
-  repeated RegionInTransition regionsInTransition = 4;
-  optional ClusterId clusterId = 5;
-  repeated Coprocessor masterCoprocessors = 6;
+  optional HBaseVersionFileContent hbase_version = 1;
+  repeated LiveServerInfo live_servers = 2;
+  repeated ServerName dead_servers = 3;
+  repeated RegionInTransition regions_in_transition = 4;
+  optional ClusterId cluster_id = 5;
+  repeated Coprocessor master_coprocessors = 6;
   optional ServerName master = 7;
-  repeated ServerName backupMasters = 8;
-  optional bool balancerOn = 9;
+  repeated ServerName backup_masters = 8;
+  optional bool balancer_on = 9;
 }

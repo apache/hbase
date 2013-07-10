@@ -11,7 +11,7 @@ public final class MasterMonitorProtos {
   public interface GetSchemaAlterStatusRequestOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
     
-    // required bytes tableName = 1;
+    // required bytes table_name = 1;
     boolean hasTableName();
     com.google.protobuf.ByteString getTableName();
   }
@@ -44,8 +44,8 @@ public final class MasterMonitorProtos {
     }
     
     private int bitField0_;
-    // required bytes tableName = 1;
-    public static final int TABLENAME_FIELD_NUMBER = 1;
+    // required bytes table_name = 1;
+    public static final int TABLE_NAME_FIELD_NUMBER = 1;
     private com.google.protobuf.ByteString tableName_;
     public boolean hasTableName() {
       return ((bitField0_ & 0x00000001) == 0x00000001);
@@ -127,7 +127,7 @@ public final class MasterMonitorProtos {
       int hash = 41;
       hash = (19 * hash) + getDescriptorForType().hashCode();
       if (hasTableName()) {
-        hash = (37 * hash) + TABLENAME_FIELD_NUMBER;
+        hash = (37 * hash) + TABLE_NAME_FIELD_NUMBER;
         hash = (53 * hash) + getTableName().hashCode();
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
@@ -355,7 +355,7 @@ public final class MasterMonitorProtos {
       
       private int bitField0_;
       
-      // required bytes tableName = 1;
+      // required bytes table_name = 1;
       private com.google.protobuf.ByteString tableName_ = com.google.protobuf.ByteString.EMPTY;
       public boolean hasTableName() {
         return ((bitField0_ & 0x00000001) == 0x00000001);
@@ -393,11 +393,11 @@ public final class MasterMonitorProtos {
   public interface GetSchemaAlterStatusResponseOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
     
-    // optional uint32 yetToUpdateRegions = 1;
+    // optional uint32 yet_to_update_regions = 1;
     boolean hasYetToUpdateRegions();
     int getYetToUpdateRegions();
     
-    // optional uint32 totalRegions = 2;
+    // optional uint32 total_regions = 2;
     boolean hasTotalRegions();
     int getTotalRegions();
   }
@@ -430,8 +430,8 @@ public final class MasterMonitorProtos {
     }
     
     private int bitField0_;
-    // optional uint32 yetToUpdateRegions = 1;
-    public static final int YETTOUPDATEREGIONS_FIELD_NUMBER = 1;
+    // optional uint32 yet_to_update_regions = 1;
+    public static final int YET_TO_UPDATE_REGIONS_FIELD_NUMBER = 1;
     private int yetToUpdateRegions_;
     public boolean hasYetToUpdateRegions() {
       return ((bitField0_ & 0x00000001) == 0x00000001);
@@ -440,8 +440,8 @@ public final class MasterMonitorProtos {
       return yetToUpdateRegions_;
     }
     
-    // optional uint32 totalRegions = 2;
-    public static final int TOTALREGIONS_FIELD_NUMBER = 2;
+    // optional uint32 total_regions = 2;
+    public static final int TOTAL_REGIONS_FIELD_NUMBER = 2;
     private int totalRegions_;
     public boolean hasTotalRegions() {
       return ((bitField0_ & 0x00000002) == 0x00000002);
@@ -532,11 +532,11 @@ public final class MasterMonitorProtos {
       int hash = 41;
       hash = (19 * hash) + getDescriptorForType().hashCode();
       if (hasYetToUpdateRegions()) {
-        hash = (37 * hash) + YETTOUPDATEREGIONS_FIELD_NUMBER;
+        hash = (37 * hash) + YET_TO_UPDATE_REGIONS_FIELD_NUMBER;
         hash = (53 * hash) + getYetToUpdateRegions();
       }
       if (hasTotalRegions()) {
-        hash = (37 * hash) + TOTALREGIONS_FIELD_NUMBER;
+        hash = (37 * hash) + TOTAL_REGIONS_FIELD_NUMBER;
         hash = (53 * hash) + getTotalRegions();
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
@@ -774,7 +774,7 @@ public final class MasterMonitorProtos {
       
       private int bitField0_;
       
-      // optional uint32 yetToUpdateRegions = 1;
+      // optional uint32 yet_to_update_regions = 1;
       private int yetToUpdateRegions_ ;
       public boolean hasYetToUpdateRegions() {
         return ((bitField0_ & 0x00000001) == 0x00000001);
@@ -795,7 +795,7 @@ public final class MasterMonitorProtos {
         return this;
       }
       
-      // optional uint32 totalRegions = 2;
+      // optional uint32 total_regions = 2;
       private int totalRegions_ ;
       public boolean hasTotalRegions() {
         return ((bitField0_ & 0x00000002) == 0x00000002);
@@ -830,7 +830,7 @@ public final class MasterMonitorProtos {
   public interface GetTableDescriptorsRequestOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
     
-    // repeated string tableNames = 1;
+    // repeated string table_names = 1;
     java.util.List<String> getTableNamesList();
     int getTableNamesCount();
     String getTableNames(int index);
@@ -863,8 +863,8 @@ public final class MasterMonitorProtos {
       return org.apache.hadoop.hbase.protobuf.generated.MasterMonitorProtos.internal_static_GetTableDescriptorsRequest_fieldAccessorTable;
     }
     
-    // repeated string tableNames = 1;
-    public static final int TABLENAMES_FIELD_NUMBER = 1;
+    // repeated string table_names = 1;
+    public static final int TABLE_NAMES_FIELD_NUMBER = 1;
     private com.google.protobuf.LazyStringList tableNames_;
     public java.util.List<String>
         getTableNamesList() {
@@ -948,7 +948,7 @@ public final class MasterMonitorProtos {
       int hash = 41;
       hash = (19 * hash) + getDescriptorForType().hashCode();
       if (getTableNamesCount() > 0) {
-        hash = (37 * hash) + TABLENAMES_FIELD_NUMBER;
+        hash = (37 * hash) + TABLE_NAMES_FIELD_NUMBER;
         hash = (53 * hash) + getTableNamesList().hashCode();
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
@@ -1179,7 +1179,7 @@ public final class MasterMonitorProtos {
       
       private int bitField0_;
       
-      // repeated string tableNames = 1;
+      // repeated string table_names = 1;
       private com.google.protobuf.LazyStringList tableNames_ = com.google.protobuf.LazyStringArrayList.EMPTY;
       private void ensureTableNamesIsMutable() {
         if (!((bitField0_ & 0x00000001) == 0x00000001)) {
@@ -1249,7 +1249,7 @@ public final class MasterMonitorProtos {
   public interface GetTableDescriptorsResponseOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
     
-    // repeated .TableSchema tableSchema = 1;
+    // repeated .TableSchema table_schema = 1;
     java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableSchema> 
         getTableSchemaList();
     org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableSchema getTableSchema(int index);
@@ -1287,8 +1287,8 @@ public final class MasterMonitorProtos {
       return org.apache.hadoop.hbase.protobuf.generated.MasterMonitorProtos.internal_static_GetTableDescriptorsResponse_fieldAccessorTable;
     }
     
-    // repeated .TableSchema tableSchema = 1;
-    public static final int TABLESCHEMA_FIELD_NUMBER = 1;
+    // repeated .TableSchema table_schema = 1;
+    public static final int TABLE_SCHEMA_FIELD_NUMBER = 1;
     private java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableSchema> tableSchema_;
     public java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableSchema> getTableSchemaList() {
       return tableSchema_;
@@ -1380,7 +1380,7 @@ public final class MasterMonitorProtos {
       int hash = 41;
       hash = (19 * hash) + getDescriptorForType().hashCode();
       if (getTableSchemaCount() > 0) {
-        hash = (37 * hash) + TABLESCHEMA_FIELD_NUMBER;
+        hash = (37 * hash) + TABLE_SCHEMA_FIELD_NUMBER;
         hash = (53 * hash) + getTableSchemaList().hashCode();
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
@@ -1642,7 +1642,7 @@ public final class MasterMonitorProtos {
       
       private int bitField0_;
       
-      // repeated .TableSchema tableSchema = 1;
+      // repeated .TableSchema table_schema = 1;
       private java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableSchema> tableSchema_ =
         java.util.Collections.emptyList();
       private void ensureTableSchemaIsMutable() {
@@ -2142,7 +2142,7 @@ public final class MasterMonitorProtos {
   public interface GetClusterStatusResponseOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
     
-    // required .ClusterStatus clusterStatus = 1;
+    // required .ClusterStatus cluster_status = 1;
     boolean hasClusterStatus();
     org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ClusterStatus getClusterStatus();
     org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ClusterStatusOrBuilder getClusterStatusOrBuilder();
@@ -2176,8 +2176,8 @@ public final class MasterMonitorProtos {
     }
     
     private int bitField0_;
-    // required .ClusterStatus clusterStatus = 1;
-    public static final int CLUSTERSTATUS_FIELD_NUMBER = 1;
+    // required .ClusterStatus cluster_status = 1;
+    public static final int CLUSTER_STATUS_FIELD_NUMBER = 1;
     private org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ClusterStatus clusterStatus_;
     public boolean hasClusterStatus() {
       return ((bitField0_ & 0x00000001) == 0x00000001);
@@ -2266,7 +2266,7 @@ public final class MasterMonitorProtos {
       int hash = 41;
       hash = (19 * hash) + getDescriptorForType().hashCode();
       if (hasClusterStatus()) {
-        hash = (37 * hash) + CLUSTERSTATUS_FIELD_NUMBER;
+        hash = (37 * hash) + CLUSTER_STATUS_FIELD_NUMBER;
         hash = (53 * hash) + getClusterStatus().hashCode();
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
@@ -2511,7 +2511,7 @@ public final class MasterMonitorProtos {
       
       private int bitField0_;
       
-      // required .ClusterStatus clusterStatus = 1;
+      // required .ClusterStatus cluster_status = 1;
       private org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ClusterStatus clusterStatus_ = org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ClusterStatus.getDefaultInstance();
       private com.google.protobuf.SingleFieldBuilder<
           org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ClusterStatus, org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ClusterStatus.Builder, org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ClusterStatusOrBuilder> clusterStatusBuilder_;
@@ -3068,26 +3068,26 @@ public final class MasterMonitorProtos {
   static {
     java.lang.String[] descriptorData = {
       "\n\023MasterMonitor.proto\032\014Master.proto\032\013hba" +
-      "se.proto\032\023ClusterStatus.proto\"0\n\033GetSche" +
-      "maAlterStatusRequest\022\021\n\ttableName\030\001 \002(\014\"" +
-      "P\n\034GetSchemaAlterStatusResponse\022\032\n\022yetTo" +
-      "UpdateRegions\030\001 \001(\r\022\024\n\014totalRegions\030\002 \001(" +
-      "\r\"0\n\032GetTableDescriptorsRequest\022\022\n\ntable" +
-      "Names\030\001 \003(\t\"@\n\033GetTableDescriptorsRespon" +
-      "se\022!\n\013tableSchema\030\001 \003(\0132\014.TableSchema\"\031\n" +
-      "\027GetClusterStatusRequest\"A\n\030GetClusterSt" +
-      "atusResponse\022%\n\rclusterStatus\030\001 \002(\0132\016.Cl",
-      "usterStatus2\314\002\n\024MasterMonitorService\022S\n\024" +
-      "getSchemaAlterStatus\022\034.GetSchemaAlterSta" +
-      "tusRequest\032\035.GetSchemaAlterStatusRespons" +
-      "e\022P\n\023getTableDescriptors\022\033.GetTableDescr" +
-      "iptorsRequest\032\034.GetTableDescriptorsRespo" +
-      "nse\022G\n\020getClusterStatus\022\030.GetClusterStat" +
-      "usRequest\032\031.GetClusterStatusResponse\022D\n\017" +
-      "isMasterRunning\022\027.IsMasterRunningRequest" +
-      "\032\030.IsMasterRunningResponseBI\n*org.apache" +
-      ".hadoop.hbase.protobuf.generatedB\023Master",
-      "MonitorProtosH\001\210\001\001\240\001\001"
+      "se.proto\032\023ClusterStatus.proto\"1\n\033GetSche" +
+      "maAlterStatusRequest\022\022\n\ntable_name\030\001 \002(\014" +
+      "\"T\n\034GetSchemaAlterStatusResponse\022\035\n\025yet_" +
+      "to_update_regions\030\001 \001(\r\022\025\n\rtotal_regions" +
+      "\030\002 \001(\r\"1\n\032GetTableDescriptorsRequest\022\023\n\013" +
+      "table_names\030\001 \003(\t\"A\n\033GetTableDescriptors" +
+      "Response\022\"\n\014table_schema\030\001 \003(\0132\014.TableSc" +
+      "hema\"\031\n\027GetClusterStatusRequest\"B\n\030GetCl" +
+      "usterStatusResponse\022&\n\016cluster_status\030\001 ",
+      "\002(\0132\016.ClusterStatus2\314\002\n\024MasterMonitorSer" +
+      "vice\022S\n\024GetSchemaAlterStatus\022\034.GetSchema" +
+      "AlterStatusRequest\032\035.GetSchemaAlterStatu" +
+      "sResponse\022P\n\023GetTableDescriptors\022\033.GetTa" +
+      "bleDescriptorsRequest\032\034.GetTableDescript" +
+      "orsResponse\022G\n\020GetClusterStatus\022\030.GetClu" +
+      "sterStatusRequest\032\031.GetClusterStatusResp" +
+      "onse\022D\n\017IsMasterRunning\022\027.IsMasterRunnin" +
+      "gRequest\032\030.IsMasterRunningResponseBI\n*or" +
+      "g.apache.hadoop.hbase.protobuf.generated",
+      "B\023MasterMonitorProtosH\001\210\001\001\240\001\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {

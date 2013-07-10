@@ -28,11 +28,11 @@ message IsMasterRunningRequest {
 }
 
 message IsMasterRunningResponse {
-  required bool isMasterRunning = 1;
+  required bool is_master_running = 1;
 }
 
 service MasterService {
   /** return true if master is available */
-  rpc isMasterRunning(IsMasterRunningRequest)
+  rpc IsMasterRunning(IsMasterRunningRequest)
     returns(IsMasterRunningResponse);
 }

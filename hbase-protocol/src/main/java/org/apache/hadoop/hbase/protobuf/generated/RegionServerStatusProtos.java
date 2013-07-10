@@ -15,11 +15,11 @@ public final class RegionServerStatusProtos {
     boolean hasPort();
     int getPort();
     
-    // required uint64 serverStartCode = 2;
+    // required uint64 server_start_code = 2;
     boolean hasServerStartCode();
     long getServerStartCode();
     
-    // required uint64 serverCurrentTime = 3;
+    // required uint64 server_current_time = 3;
     boolean hasServerCurrentTime();
     long getServerCurrentTime();
   }
@@ -62,8 +62,8 @@ public final class RegionServerStatusProtos {
       return port_;
     }
     
-    // required uint64 serverStartCode = 2;
-    public static final int SERVERSTARTCODE_FIELD_NUMBER = 2;
+    // required uint64 server_start_code = 2;
+    public static final int SERVER_START_CODE_FIELD_NUMBER = 2;
     private long serverStartCode_;
     public boolean hasServerStartCode() {
       return ((bitField0_ & 0x00000002) == 0x00000002);
@@ -72,8 +72,8 @@ public final class RegionServerStatusProtos {
       return serverStartCode_;
     }
     
-    // required uint64 serverCurrentTime = 3;
-    public static final int SERVERCURRENTTIME_FIELD_NUMBER = 3;
+    // required uint64 server_current_time = 3;
+    public static final int SERVER_CURRENT_TIME_FIELD_NUMBER = 3;
     private long serverCurrentTime_;
     public boolean hasServerCurrentTime() {
       return ((bitField0_ & 0x00000004) == 0x00000004);
@@ -193,11 +193,11 @@ public final class RegionServerStatusProtos {
         hash = (53 * hash) + getPort();
       }
       if (hasServerStartCode()) {
-        hash = (37 * hash) + SERVERSTARTCODE_FIELD_NUMBER;
+        hash = (37 * hash) + SERVER_START_CODE_FIELD_NUMBER;
         hash = (53 * hash) + hashLong(getServerStartCode());
       }
       if (hasServerCurrentTime()) {
-        hash = (37 * hash) + SERVERCURRENTTIME_FIELD_NUMBER;
+        hash = (37 * hash) + SERVER_CURRENT_TIME_FIELD_NUMBER;
         hash = (53 * hash) + hashLong(getServerCurrentTime());
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
@@ -482,7 +482,7 @@ public final class RegionServerStatusProtos {
         return this;
       }
       
-      // required uint64 serverStartCode = 2;
+      // required uint64 server_start_code = 2;
       private long serverStartCode_ ;
       public boolean hasServerStartCode() {
         return ((bitField0_ & 0x00000002) == 0x00000002);
@@ -503,7 +503,7 @@ public final class RegionServerStatusProtos {
         return this;
       }
       
-      // required uint64 serverCurrentTime = 3;
+      // required uint64 server_current_time = 3;
       private long serverCurrentTime_ ;
       public boolean hasServerCurrentTime() {
         return ((bitField0_ & 0x00000004) == 0x00000004);
@@ -538,7 +538,7 @@ public final class RegionServerStatusProtos {
   public interface RegionServerStartupResponseOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
     
-    // repeated .NameStringPair mapEntries = 1;
+    // repeated .NameStringPair map_entries = 1;
     java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair> 
         getMapEntriesList();
     org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair getMapEntries(int index);
@@ -576,8 +576,8 @@ public final class RegionServerStatusProtos {
       return org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.internal_static_RegionServerStartupResponse_fieldAccessorTable;
     }
     
-    // repeated .NameStringPair mapEntries = 1;
-    public static final int MAPENTRIES_FIELD_NUMBER = 1;
+    // repeated .NameStringPair map_entries = 1;
+    public static final int MAP_ENTRIES_FIELD_NUMBER = 1;
     private java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair> mapEntries_;
     public java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair> getMapEntriesList() {
       return mapEntries_;
@@ -669,7 +669,7 @@ public final class RegionServerStatusProtos {
       int hash = 41;
       hash = (19 * hash) + getDescriptorForType().hashCode();
       if (getMapEntriesCount() > 0) {
-        hash = (37 * hash) + MAPENTRIES_FIELD_NUMBER;
+        hash = (37 * hash) + MAP_ENTRIES_FIELD_NUMBER;
         hash = (53 * hash) + getMapEntriesList().hashCode();
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
@@ -931,7 +931,7 @@ public final class RegionServerStatusProtos {
       
       private int bitField0_;
       
-      // repeated .NameStringPair mapEntries = 1;
+      // repeated .NameStringPair map_entries = 1;
       private java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair> mapEntries_ =
         java.util.Collections.emptyList();
       private void ensureMapEntriesIsMutable() {
@@ -2073,7 +2073,7 @@ public final class RegionServerStatusProtos {
     org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName getServer();
     org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerNameOrBuilder getServerOrBuilder();
     
-    // required string errorMessage = 2;
+    // required string error_message = 2;
     boolean hasErrorMessage();
     String getErrorMessage();
   }
@@ -2119,8 +2119,8 @@ public final class RegionServerStatusProtos {
       return server_;
     }
     
-    // required string errorMessage = 2;
-    public static final int ERRORMESSAGE_FIELD_NUMBER = 2;
+    // required string error_message = 2;
+    public static final int ERROR_MESSAGE_FIELD_NUMBER = 2;
     private java.lang.Object errorMessage_;
     public boolean hasErrorMessage() {
       return ((bitField0_ & 0x00000002) == 0x00000002);
@@ -2249,7 +2249,7 @@ public final class RegionServerStatusProtos {
         hash = (53 * hash) + getServer().hashCode();
       }
       if (hasErrorMessage()) {
-        hash = (37 * hash) + ERRORMESSAGE_FIELD_NUMBER;
+        hash = (37 * hash) + ERROR_MESSAGE_FIELD_NUMBER;
         hash = (53 * hash) + getErrorMessage().hashCode();
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
@@ -2602,7 +2602,7 @@ public final class RegionServerStatusProtos {
         return serverBuilder_;
       }
       
-      // required string errorMessage = 2;
+      // required string error_message = 2;
       private java.lang.Object errorMessage_ = "";
       public boolean hasErrorMessage() {
         return ((bitField0_ & 0x00000002) == 0x00000002);
@@ -2952,7 +2952,7 @@ public final class RegionServerStatusProtos {
   public interface GetLastFlushedSequenceIdRequestOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
     
-    // required bytes regionName = 1;
+    // required bytes region_name = 1;
     boolean hasRegionName();
     com.google.protobuf.ByteString getRegionName();
   }
@@ -2985,8 +2985,8 @@ public final class RegionServerStatusProtos {
     }
     
     private int bitField0_;
-    // required bytes regionName = 1;
-    public static final int REGIONNAME_FIELD_NUMBER = 1;
+    // required bytes region_name = 1;
+    public static final int REGION_NAME_FIELD_NUMBER = 1;
     private com.google.protobuf.ByteString regionName_;
     public boolean hasRegionName() {
       return ((bitField0_ & 0x00000001) == 0x00000001);
@@ -3068,7 +3068,7 @@ public final class RegionServerStatusProtos {
       int hash = 41;
       hash = (19 * hash) + getDescriptorForType().hashCode();
       if (hasRegionName()) {
-        hash = (37 * hash) + REGIONNAME_FIELD_NUMBER;
+        hash = (37 * hash) + REGION_NAME_FIELD_NUMBER;
         hash = (53 * hash) + getRegionName().hashCode();
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
@@ -3296,7 +3296,7 @@ public final class RegionServerStatusProtos {
       
       private int bitField0_;
       
-      // required bytes regionName = 1;
+      // required bytes region_name = 1;
       private com.google.protobuf.ByteString regionName_ = com.google.protobuf.ByteString.EMPTY;
       public boolean hasRegionName() {
         return ((bitField0_ & 0x00000001) == 0x00000001);
@@ -3334,7 +3334,7 @@ public final class RegionServerStatusProtos {
   public interface GetLastFlushedSequenceIdResponseOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
     
-    // required uint64 lastFlushedSequenceId = 1;
+    // required uint64 last_flushed_sequence_id = 1;
     boolean hasLastFlushedSequenceId();
     long getLastFlushedSequenceId();
   }
@@ -3367,8 +3367,8 @@ public final class RegionServerStatusProtos {
     }
     
     private int bitField0_;
-    // required uint64 lastFlushedSequenceId = 1;
-    public static final int LASTFLUSHEDSEQUENCEID_FIELD_NUMBER = 1;
+    // required uint64 last_flushed_sequence_id = 1;
+    public static final int LAST_FLUSHED_SEQUENCE_ID_FIELD_NUMBER = 1;
     private long lastFlushedSequenceId_;
     public boolean hasLastFlushedSequenceId() {
       return ((bitField0_ & 0x00000001) == 0x00000001);
@@ -3450,7 +3450,7 @@ public final class RegionServerStatusProtos {
       int hash = 41;
       hash = (19 * hash) + getDescriptorForType().hashCode();
       if (hasLastFlushedSequenceId()) {
-        hash = (37 * hash) + LASTFLUSHEDSEQUENCEID_FIELD_NUMBER;
+        hash = (37 * hash) + LAST_FLUSHED_SEQUENCE_ID_FIELD_NUMBER;
         hash = (53 * hash) + hashLong(getLastFlushedSequenceId());
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
@@ -3678,7 +3678,7 @@ public final class RegionServerStatusProtos {
       
       private int bitField0_;
       
-      // required uint64 lastFlushedSequenceId = 1;
+      // required uint64 last_flushed_sequence_id = 1;
       private long lastFlushedSequenceId_ ;
       public boolean hasLastFlushedSequenceId() {
         return ((bitField0_ & 0x00000001) == 0x00000001);
@@ -4176,31 +4176,31 @@ public final class RegionServerStatusProtos {
   static {
     java.lang.String[] descriptorData = {
       "\n\030RegionServerStatus.proto\032\013hbase.proto\032" +
-      "\023ClusterStatus.proto\"^\n\032RegionServerStar" +
-      "tupRequest\022\014\n\004port\030\001 \002(\r\022\027\n\017serverStartC" +
-      "ode\030\002 \002(\004\022\031\n\021serverCurrentTime\030\003 \002(\004\"B\n\033" +
-      "RegionServerStartupResponse\022#\n\nmapEntrie" +
-      "s\030\001 \003(\0132\017.NameStringPair\"S\n\031RegionServer" +
-      "ReportRequest\022\033\n\006server\030\001 \002(\0132\013.ServerNa" +
-      "me\022\031\n\004load\030\002 \001(\0132\013.ServerLoad\"\034\n\032RegionS" +
-      "erverReportResponse\"N\n\031ReportRSFatalErro" +
-      "rRequest\022\033\n\006server\030\001 \002(\0132\013.ServerName\022\024\n",
-      "\014errorMessage\030\002 \002(\t\"\034\n\032ReportRSFatalErro" +
-      "rResponse\"5\n\037GetLastFlushedSequenceIdReq" +
-      "uest\022\022\n\nregionName\030\001 \002(\014\"A\n GetLastFlush" +
-      "edSequenceIdResponse\022\035\n\025lastFlushedSeque" +
-      "nceId\030\001 \002(\0042\354\002\n\031RegionServerStatusServic" +
-      "e\022P\n\023regionServerStartup\022\033.RegionServerS" +
-      "tartupRequest\032\034.RegionServerStartupRespo" +
-      "nse\022M\n\022regionServerReport\022\032.RegionServer" +
-      "ReportRequest\032\033.RegionServerReportRespon" +
-      "se\022M\n\022reportRSFatalError\022\032.ReportRSFatal",
-      "ErrorRequest\032\033.ReportRSFatalErrorRespons" +
-      "e\022_\n\030getLastFlushedSequenceId\022 .GetLastF" +
-      "lushedSequenceIdRequest\032!.GetLastFlushed" +
-      "SequenceIdResponseBN\n*org.apache.hadoop." +
-      "hbase.protobuf.generatedB\030RegionServerSt" +
-      "atusProtosH\001\210\001\001\240\001\001"
+      "\023ClusterStatus.proto\"b\n\032RegionServerStar" +
+      "tupRequest\022\014\n\004port\030\001 \002(\r\022\031\n\021server_start" +
+      "_code\030\002 \002(\004\022\033\n\023server_current_time\030\003 \002(\004" +
+      "\"C\n\033RegionServerStartupResponse\022$\n\013map_e" +
+      "ntries\030\001 \003(\0132\017.NameStringPair\"S\n\031RegionS" +
+      "erverReportRequest\022\033\n\006server\030\001 \002(\0132\013.Ser" +
+      "verName\022\031\n\004load\030\002 \001(\0132\013.ServerLoad\"\034\n\032Re" +
+      "gionServerReportResponse\"O\n\031ReportRSFata" +
+      "lErrorRequest\022\033\n\006server\030\001 \002(\0132\013.ServerNa",
+      "me\022\025\n\rerror_message\030\002 \002(\t\"\034\n\032ReportRSFat" +
+      "alErrorResponse\"6\n\037GetLastFlushedSequenc" +
+      "eIdRequest\022\023\n\013region_name\030\001 \002(\014\"D\n GetLa" +
+      "stFlushedSequenceIdResponse\022 \n\030last_flus" +
+      "hed_sequence_id\030\001 \002(\0042\354\002\n\031RegionServerSt" +
+      "atusService\022P\n\023RegionServerStartup\022\033.Reg" +
+      "ionServerStartupRequest\032\034.RegionServerSt" +
+      "artupResponse\022M\n\022RegionServerReport\022\032.Re" +
+      "gionServerReportRequest\032\033.RegionServerRe" +
+      "portResponse\022M\n\022ReportRSFatalError\022\032.Rep",
+      "ortRSFatalErrorRequest\032\033.ReportRSFatalEr" +
+      "rorResponse\022_\n\030GetLastFlushedSequenceId\022" +
+      " .GetLastFlushedSequenceIdRequest\032!.GetL" +
+      "astFlushedSequenceIdResponseBN\n*org.apac" +
+      "he.hadoop.hbase.protobuf.generatedB\030Regi" +
+      "onServerStatusProtosH\001\210\001\001\240\001\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {

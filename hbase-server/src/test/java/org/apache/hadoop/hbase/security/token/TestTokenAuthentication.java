@@ -274,15 +274,15 @@ public class TestTokenAuthentication {
     }
 
     @Override
-    public AuthenticationProtos.WhoAmIResponse whoami(
+    public AuthenticationProtos.WhoAmIResponse whoAmI(
         RpcController controller, AuthenticationProtos.WhoAmIRequest request)
       throws ServiceException {
-      LOG.debug("whoami() request from "+RequestContext.getRequestUserName());
+      LOG.debug("whoAmI() request from "+RequestContext.getRequestUserName());
       // ignore passed in controller -- it's always null
       ServerRpcController serverController = new ServerRpcController();
       BlockingRpcCallback<AuthenticationProtos.WhoAmIResponse> callback =
           new BlockingRpcCallback<AuthenticationProtos.WhoAmIResponse>();
-      whoami(serverController, request, callback);
+      whoAmI(serverController, request, callback);
       try {
         serverController.checkFailed();
         return callback.get();
@@ -383,7 +383,7 @@ public class TestTokenAuthentication {
           AuthenticationProtos.AuthenticationService.BlockingInterface stub =
             AuthenticationProtos.AuthenticationService.newBlockingStub(channel);
           AuthenticationProtos.WhoAmIResponse response =
-            stub.whoami(null, AuthenticationProtos.WhoAmIRequest.getDefaultInstance());
+            stub.whoAmI(null, AuthenticationProtos.WhoAmIRequest.getDefaultInstance());
           String myname = response.getUsername();
           assertEquals("testuser", myname);
           String authMethod = response.getAuthMethod();

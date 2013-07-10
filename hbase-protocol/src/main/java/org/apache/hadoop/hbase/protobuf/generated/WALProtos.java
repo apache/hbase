@@ -80,7 +80,7 @@ public final class WALProtos {
   public interface WALHeaderOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
     
-    // optional bool hasCompression = 1;
+    // optional bool has_compression = 1;
     boolean hasHasCompression();
     boolean getHasCompression();
   }
@@ -113,8 +113,8 @@ public final class WALProtos {
     }
     
     private int bitField0_;
-    // optional bool hasCompression = 1;
-    public static final int HASCOMPRESSION_FIELD_NUMBER = 1;
+    // optional bool has_compression = 1;
+    public static final int HAS_COMPRESSION_FIELD_NUMBER = 1;
     private boolean hasCompression_;
     public boolean hasHasCompression() {
       return ((bitField0_ & 0x00000001) == 0x00000001);
@@ -192,7 +192,7 @@ public final class WALProtos {
       int hash = 41;
       hash = (19 * hash) + getDescriptorForType().hashCode();
       if (hasHasCompression()) {
-        hash = (37 * hash) + HASCOMPRESSION_FIELD_NUMBER;
+        hash = (37 * hash) + HAS_COMPRESSION_FIELD_NUMBER;
         hash = (53 * hash) + hashBoolean(getHasCompression());
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
@@ -416,7 +416,7 @@ public final class WALProtos {
       
       private int bitField0_;
       
-      // optional bool hasCompression = 1;
+      // optional bool has_compression = 1;
       private boolean hasCompression_ ;
       public boolean hasHasCompression() {
         return ((bitField0_ & 0x00000001) == 0x00000001);
@@ -451,23 +451,23 @@ public final class WALProtos {
   public interface WALKeyOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
     
-    // required bytes encodedRegionName = 1;
+    // required bytes encoded_region_name = 1;
     boolean hasEncodedRegionName();
     com.google.protobuf.ByteString getEncodedRegionName();
     
-    // required bytes tableName = 2;
+    // required bytes table_name = 2;
     boolean hasTableName();
     com.google.protobuf.ByteString getTableName();
     
-    // required uint64 logSequenceNumber = 3;
+    // required uint64 log_sequence_number = 3;
     boolean hasLogSequenceNumber();
     long getLogSequenceNumber();
     
-    // required uint64 writeTime = 4;
+    // required uint64 write_time = 4;
     boolean hasWriteTime();
     long getWriteTime();
     
-    // optional .UUID clusterId = 5;
+    // optional .UUID cluster_id = 5;
     boolean hasClusterId();
     org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.UUID getClusterId();
     org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.UUIDOrBuilder getClusterIdOrBuilder();
@@ -482,7 +482,7 @@ public final class WALProtos {
     org.apache.hadoop.hbase.protobuf.generated.WALProtos.FamilyScopeOrBuilder getScopesOrBuilder(
         int index);
     
-    // optional uint32 followingKvCount = 7;
+    // optional uint32 following_kv_count = 7;
     boolean hasFollowingKvCount();
     int getFollowingKvCount();
   }
@@ -515,8 +515,8 @@ public final class WALProtos {
     }
     
     private int bitField0_;
-    // required bytes encodedRegionName = 1;
-    public static final int ENCODEDREGIONNAME_FIELD_NUMBER = 1;
+    // required bytes encoded_region_name = 1;
+    public static final int ENCODED_REGION_NAME_FIELD_NUMBER = 1;
     private com.google.protobuf.ByteString encodedRegionName_;
     public boolean hasEncodedRegionName() {
       return ((bitField0_ & 0x00000001) == 0x00000001);
@@ -525,8 +525,8 @@ public final class WALProtos {
       return encodedRegionName_;
     }
     
-    // required bytes tableName = 2;
-    public static final int TABLENAME_FIELD_NUMBER = 2;
+    // required bytes table_name = 2;
+    public static final int TABLE_NAME_FIELD_NUMBER = 2;
     private com.google.protobuf.ByteString tableName_;
     public boolean hasTableName() {
       return ((bitField0_ & 0x00000002) == 0x00000002);
@@ -535,8 +535,8 @@ public final class WALProtos {
       return tableName_;
     }
     
-    // required uint64 logSequenceNumber = 3;
-    public static final int LOGSEQUENCENUMBER_FIELD_NUMBER = 3;
+    // required uint64 log_sequence_number = 3;
+    public static final int LOG_SEQUENCE_NUMBER_FIELD_NUMBER = 3;
     private long logSequenceNumber_;
     public boolean hasLogSequenceNumber() {
       return ((bitField0_ & 0x00000004) == 0x00000004);
@@ -545,8 +545,8 @@ public final class WALProtos {
       return logSequenceNumber_;
     }
     
-    // required uint64 writeTime = 4;
-    public static final int WRITETIME_FIELD_NUMBER = 4;
+    // required uint64 write_time = 4;
+    public static final int WRITE_TIME_FIELD_NUMBER = 4;
     private long writeTime_;
     public boolean hasWriteTime() {
       return ((bitField0_ & 0x00000008) == 0x00000008);
@@ -555,8 +555,8 @@ public final class WALProtos {
       return writeTime_;
     }
     
-    // optional .UUID clusterId = 5;
-    public static final int CLUSTERID_FIELD_NUMBER = 5;
+    // optional .UUID cluster_id = 5;
+    public static final int CLUSTER_ID_FIELD_NUMBER = 5;
     private org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.UUID clusterId_;
     public boolean hasClusterId() {
       return ((bitField0_ & 0x00000010) == 0x00000010);
@@ -589,8 +589,8 @@ public final class WALProtos {
       return scopes_.get(index);
     }
     
-    // optional uint32 followingKvCount = 7;
-    public static final int FOLLOWINGKVCOUNT_FIELD_NUMBER = 7;
+    // optional uint32 following_kv_count = 7;
+    public static final int FOLLOWING_KV_COUNT_FIELD_NUMBER = 7;
     private int followingKvCount_;
     public boolean hasFollowingKvCount() {
       return ((bitField0_ & 0x00000020) == 0x00000020);
@@ -771,23 +771,23 @@ public final class WALProtos {
       int hash = 41;
       hash = (19 * hash) + getDescriptorForType().hashCode();
       if (hasEncodedRegionName()) {
-        hash = (37 * hash) + ENCODEDREGIONNAME_FIELD_NUMBER;
+        hash = (37 * hash) + ENCODED_REGION_NAME_FIELD_NUMBER;
         hash = (53 * hash) + getEncodedRegionName().hashCode();
       }
       if (hasTableName()) {
-        hash = (37 * hash) + TABLENAME_FIELD_NUMBER;
+        hash = (37 * hash) + TABLE_NAME_FIELD_NUMBER;
         hash = (53 * hash) + getTableName().hashCode();
       }
       if (hasLogSequenceNumber()) {
-        hash = (37 * hash) + LOGSEQUENCENUMBER_FIELD_NUMBER;
+        hash = (37 * hash) + LOG_SEQUENCE_NUMBER_FIELD_NUMBER;
         hash = (53 * hash) + hashLong(getLogSequenceNumber());
       }
       if (hasWriteTime()) {
-        hash = (37 * hash) + WRITETIME_FIELD_NUMBER;
+        hash = (37 * hash) + WRITE_TIME_FIELD_NUMBER;
         hash = (53 * hash) + hashLong(getWriteTime());
       }
       if (hasClusterId()) {
-        hash = (37 * hash) + CLUSTERID_FIELD_NUMBER;
+        hash = (37 * hash) + CLUSTER_ID_FIELD_NUMBER;
         hash = (53 * hash) + getClusterId().hashCode();
       }
       if (getScopesCount() > 0) {
@@ -795,7 +795,7 @@ public final class WALProtos {
         hash = (53 * hash) + getScopesList().hashCode();
       }
       if (hasFollowingKvCount()) {
-        hash = (37 * hash) + FOLLOWINGKVCOUNT_FIELD_NUMBER;
+        hash = (37 * hash) + FOLLOWING_KV_COUNT_FIELD_NUMBER;
         hash = (53 * hash) + getFollowingKvCount();
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
@@ -1178,7 +1178,7 @@ public final class WALProtos {
       
       private int bitField0_;
       
-      // required bytes encodedRegionName = 1;
+      // required bytes encoded_region_name = 1;
       private com.google.protobuf.ByteString encodedRegionName_ = com.google.protobuf.ByteString.EMPTY;
       public boolean hasEncodedRegionName() {
         return ((bitField0_ & 0x00000001) == 0x00000001);
@@ -1202,7 +1202,7 @@ public final class WALProtos {
         return this;
       }
       
-      // required bytes tableName = 2;
+      // required bytes table_name = 2;
       private com.google.protobuf.ByteString tableName_ = com.google.protobuf.ByteString.EMPTY;
       public boolean hasTableName() {
         return ((bitField0_ & 0x00000002) == 0x00000002);
@@ -1226,7 +1226,7 @@ public final class WALProtos {
         return this;
       }
       
-      // required uint64 logSequenceNumber = 3;
+      // required uint64 log_sequence_number = 3;
       private long logSequenceNumber_ ;
       public boolean hasLogSequenceNumber() {
         return ((bitField0_ & 0x00000004) == 0x00000004);
@@ -1247,7 +1247,7 @@ public final class WALProtos {
         return this;
       }
       
-      // required uint64 writeTime = 4;
+      // required uint64 write_time = 4;
       private long writeTime_ ;
       public boolean hasWriteTime() {
         return ((bitField0_ & 0x00000008) == 0x00000008);
@@ -1268,7 +1268,7 @@ public final class WALProtos {
         return this;
       }
       
-      // optional .UUID clusterId = 5;
+      // optional .UUID cluster_id = 5;
       private org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.UUID clusterId_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.UUID.getDefaultInstance();
       private com.google.protobuf.SingleFieldBuilder<
           org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.UUID, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.UUID.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.UUIDOrBuilder> clusterIdBuilder_;
@@ -1544,7 +1544,7 @@ public final class WALProtos {
         return scopesBuilder_;
       }
       
-      // optional uint32 followingKvCount = 7;
+      // optional uint32 following_kv_count = 7;
       private int followingKvCount_ ;
       public boolean hasFollowingKvCount() {
         return ((bitField0_ & 0x00000040) == 0x00000040);
@@ -1583,7 +1583,7 @@ public final class WALProtos {
     boolean hasFamily();
     com.google.protobuf.ByteString getFamily();
     
-    // required .ScopeType scopeType = 2;
+    // required .ScopeType scope_type = 2;
     boolean hasScopeType();
     org.apache.hadoop.hbase.protobuf.generated.WALProtos.ScopeType getScopeType();
   }
@@ -1626,8 +1626,8 @@ public final class WALProtos {
       return family_;
     }
     
-    // required .ScopeType scopeType = 2;
-    public static final int SCOPETYPE_FIELD_NUMBER = 2;
+    // required .ScopeType scope_type = 2;
+    public static final int SCOPE_TYPE_FIELD_NUMBER = 2;
     private org.apache.hadoop.hbase.protobuf.generated.WALProtos.ScopeType scopeType_;
     public boolean hasScopeType() {
       return ((bitField0_ & 0x00000002) == 0x00000002);
@@ -1730,7 +1730,7 @@ public final class WALProtos {
         hash = (53 * hash) + getFamily().hashCode();
       }
       if (hasScopeType()) {
-        hash = (37 * hash) + SCOPETYPE_FIELD_NUMBER;
+        hash = (37 * hash) + SCOPE_TYPE_FIELD_NUMBER;
         hash = (53 * hash) + hashEnum(getScopeType());
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
@@ -2006,7 +2006,7 @@ public final class WALProtos {
         return this;
       }
       
-      // required .ScopeType scopeType = 2;
+      // required .ScopeType scope_type = 2;
       private org.apache.hadoop.hbase.protobuf.generated.WALProtos.ScopeType scopeType_ = org.apache.hadoop.hbase.protobuf.generated.WALProtos.ScopeType.REPLICATION_SCOPE_LOCAL;
       public boolean hasScopeType() {
         return ((bitField0_ & 0x00000002) == 0x00000002);
@@ -2044,29 +2044,29 @@ public final class WALProtos {
   public interface CompactionDescriptorOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
     
-    // required bytes tableName = 1;
+    // required bytes table_name = 1;
     boolean hasTableName();
     com.google.protobuf.ByteString getTableName();
     
-    // required bytes encodedRegionName = 2;
+    // required bytes encoded_region_name = 2;
     boolean hasEncodedRegionName();
     com.google.protobuf.ByteString getEncodedRegionName();
     
-    // required bytes familyName = 3;
+    // required bytes family_name = 3;
     boolean hasFamilyName();
     com.google.protobuf.ByteString getFamilyName();
     
-    // repeated string compactionInput = 4;
+    // repeated string compaction_input = 4;
     java.util.List<String> getCompactionInputList();
     int getCompactionInputCount();
     String getCompactionInput(int index);
     
-    // repeated string compactionOutput = 5;
+    // repeated string compaction_output = 5;
     java.util.List<String> getCompactionOutputList();
     int getCompactionOutputCount();
     String getCompactionOutput(int index);
     
-    // required string storeHomeDir = 6;
+    // required string store_home_dir = 6;
     boolean hasStoreHomeDir();
     String getStoreHomeDir();
   }
@@ -2099,8 +2099,8 @@ public final class WALProtos {
     }
     
     private int bitField0_;
-    // required bytes tableName = 1;
-    public static final int TABLENAME_FIELD_NUMBER = 1;
+    // required bytes table_name = 1;
+    public static final int TABLE_NAME_FIELD_NUMBER = 1;
     private com.google.protobuf.ByteString tableName_;
     public boolean hasTableName() {
       return ((bitField0_ & 0x00000001) == 0x00000001);
@@ -2109,8 +2109,8 @@ public final class WALProtos {
       return tableName_;
     }
     
-    // required bytes encodedRegionName = 2;
-    public static final int ENCODEDREGIONNAME_FIELD_NUMBER = 2;
+    // required bytes encoded_region_name = 2;
+    public static final int ENCODED_REGION_NAME_FIELD_NUMBER = 2;
     private com.google.protobuf.ByteString encodedRegionName_;
     public boolean hasEncodedRegionName() {
       return ((bitField0_ & 0x00000002) == 0x00000002);
@@ -2119,8 +2119,8 @@ public final class WALProtos {
       return encodedRegionName_;
     }
     
-    // required bytes familyName = 3;
-    public static final int FAMILYNAME_FIELD_NUMBER = 3;
+    // required bytes family_name = 3;
+    public static final int FAMILY_NAME_FIELD_NUMBER = 3;
     private com.google.protobuf.ByteString familyName_;
     public boolean hasFamilyName() {
       return ((bitField0_ & 0x00000004) == 0x00000004);
@@ -2129,8 +2129,8 @@ public final class WALProtos {
       return familyName_;
     }
     
-    // repeated string compactionInput = 4;
-    public static final int COMPACTIONINPUT_FIELD_NUMBER = 4;
+    // repeated string compaction_input = 4;
+    public static final int COMPACTION_INPUT_FIELD_NUMBER = 4;
     private com.google.protobuf.LazyStringList compactionInput_;
     public java.util.List<String>
         getCompactionInputList() {
@@ -2143,8 +2143,8 @@ public final class WALProtos {
       return compactionInput_.get(index);
     }
     
-    // repeated string compactionOutput = 5;
-    public static final int COMPACTIONOUTPUT_FIELD_NUMBER = 5;
+    // repeated string compaction_output = 5;
+    public static final int COMPACTION_OUTPUT_FIELD_NUMBER = 5;
     private com.google.protobuf.LazyStringList compactionOutput_;
     public java.util.List<String>
         getCompactionOutputList() {
@@ -2157,8 +2157,8 @@ public final class WALProtos {
       return compactionOutput_.get(index);
     }
     
-    // required string storeHomeDir = 6;
-    public static final int STOREHOMEDIR_FIELD_NUMBER = 6;
+    // required string store_home_dir = 6;
+    public static final int STORE_HOME_DIR_FIELD_NUMBER = 6;
     private java.lang.Object storeHomeDir_;
     public boolean hasStoreHomeDir() {
       return ((bitField0_ & 0x00000008) == 0x00000008);
@@ -2343,27 +2343,27 @@ public final class WALProtos {
       int hash = 41;
       hash = (19 * hash) + getDescriptorForType().hashCode();
       if (hasTableName()) {
-        hash = (37 * hash) + TABLENAME_FIELD_NUMBER;
+        hash = (37 * hash) + TABLE_NAME_FIELD_NUMBER;
         hash = (53 * hash) + getTableName().hashCode();
       }
       if (hasEncodedRegionName()) {
-        hash = (37 * hash) + ENCODEDREGIONNAME_FIELD_NUMBER;
+        hash = (37 * hash) + ENCODED_REGION_NAME_FIELD_NUMBER;
         hash = (53 * hash) + getEncodedRegionName().hashCode();
       }
       if (hasFamilyName()) {
-        hash = (37 * hash) + FAMILYNAME_FIELD_NUMBER;
+        hash = (37 * hash) + FAMILY_NAME_FIELD_NUMBER;
         hash = (53 * hash) + getFamilyName().hashCode();
       }
       if (getCompactionInputCount() > 0) {
-        hash = (37 * hash) + COMPACTIONINPUT_FIELD_NUMBER;
+        hash = (37 * hash) + COMPACTION_INPUT_FIELD_NUMBER;
         hash = (53 * hash) + getCompactionInputList().hashCode();
       }
       if (getCompactionOutputCount() > 0) {
-        hash = (37 * hash) + COMPACTIONOUTPUT_FIELD_NUMBER;
+        hash = (37 * hash) + COMPACTION_OUTPUT_FIELD_NUMBER;
         hash = (53 * hash) + getCompactionOutputList().hashCode();
       }
       if (hasStoreHomeDir()) {
-        hash = (37 * hash) + STOREHOMEDIR_FIELD_NUMBER;
+        hash = (37 * hash) + STORE_HOME_DIR_FIELD_NUMBER;
         hash = (53 * hash) + getStoreHomeDir().hashCode();
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
@@ -2691,7 +2691,7 @@ public final class WALProtos {
       
       private int bitField0_;
       
-      // required bytes tableName = 1;
+      // required bytes table_name = 1;
       private com.google.protobuf.ByteString tableName_ = com.google.protobuf.ByteString.EMPTY;
       public boolean hasTableName() {
         return ((bitField0_ & 0x00000001) == 0x00000001);
@@ -2715,7 +2715,7 @@ public final class WALProtos {
         return this;
       }
       
-      // required bytes encodedRegionName = 2;
+      // required bytes encoded_region_name = 2;
       private com.google.protobuf.ByteString encodedRegionName_ = com.google.protobuf.ByteString.EMPTY;
       public boolean hasEncodedRegionName() {
         return ((bitField0_ & 0x00000002) == 0x00000002);
@@ -2739,7 +2739,7 @@ public final class WALProtos {
         return this;
       }
       
-      // required bytes familyName = 3;
+      // required bytes family_name = 3;
       private com.google.protobuf.ByteString familyName_ = com.google.protobuf.ByteString.EMPTY;
       public boolean hasFamilyName() {
         return ((bitField0_ & 0x00000004) == 0x00000004);
@@ -2763,7 +2763,7 @@ public final class WALProtos {
         return this;
       }
       
-      // repeated string compactionInput = 4;
+      // repeated string compaction_input = 4;
       private com.google.protobuf.LazyStringList compactionInput_ = com.google.protobuf.LazyStringArrayList.EMPTY;
       private void ensureCompactionInputIsMutable() {
         if (!((bitField0_ & 0x00000008) == 0x00000008)) {
@@ -2819,7 +2819,7 @@ public final class WALProtos {
         onChanged();
       }
       
-      // repeated string compactionOutput = 5;
+      // repeated string compaction_output = 5;
       private com.google.protobuf.LazyStringList compactionOutput_ = com.google.protobuf.LazyStringArrayList.EMPTY;
       private void ensureCompactionOutputIsMutable() {
         if (!((bitField0_ & 0x00000010) == 0x00000010)) {
@@ -2875,7 +2875,7 @@ public final class WALProtos {
         onChanged();
       }
       
-      // required string storeHomeDir = 6;
+      // required string store_home_dir = 6;
       private java.lang.Object storeHomeDir_ = "";
       public boolean hasStoreHomeDir() {
         return ((bitField0_ & 0x00000020) == 0x00000020);
@@ -3256,22 +3256,23 @@ public final class WALProtos {
       descriptor;
   static {
     java.lang.String[] descriptorData = {
-      "\n\tWAL.proto\032\013hbase.proto\"#\n\tWALHeader\022\026\n" +
-      "\016hasCompression\030\001 \001(\010\"\266\001\n\006WALKey\022\031\n\021enco" +
-      "dedRegionName\030\001 \002(\014\022\021\n\ttableName\030\002 \002(\014\022\031" +
-      "\n\021logSequenceNumber\030\003 \002(\004\022\021\n\twriteTime\030\004" +
-      " \002(\004\022\030\n\tclusterId\030\005 \001(\0132\005.UUID\022\034\n\006scopes" +
-      "\030\006 \003(\0132\014.FamilyScope\022\030\n\020followingKvCount" +
-      "\030\007 \001(\r\"<\n\013FamilyScope\022\016\n\006family\030\001 \002(\014\022\035\n" +
-      "\tscopeType\030\002 \002(\0162\n.ScopeType\"\241\001\n\024Compact" +
-      "ionDescriptor\022\021\n\ttableName\030\001 \002(\014\022\031\n\021enco" +
-      "dedRegionName\030\002 \002(\014\022\022\n\nfamilyName\030\003 \002(\014\022",
-      "\027\n\017compactionInput\030\004 \003(\t\022\030\n\020compactionOu" +
-      "tput\030\005 \003(\t\022\024\n\014storeHomeDir\030\006 \002(\t\"\014\n\nWALT" +
-      "railer*F\n\tScopeType\022\033\n\027REPLICATION_SCOPE" +
-      "_LOCAL\020\000\022\034\n\030REPLICATION_SCOPE_GLOBAL\020\001B?" +
-      "\n*org.apache.hadoop.hbase.protobuf.gener" +
-      "atedB\tWALProtosH\001\210\001\000\240\001\001"
+      "\n\tWAL.proto\032\013hbase.proto\"$\n\tWALHeader\022\027\n" +
+      "\017has_compression\030\001 \001(\010\"\277\001\n\006WALKey\022\033\n\023enc" +
+      "oded_region_name\030\001 \002(\014\022\022\n\ntable_name\030\002 \002" +
+      "(\014\022\033\n\023log_sequence_number\030\003 \002(\004\022\022\n\nwrite" +
+      "_time\030\004 \002(\004\022\031\n\ncluster_id\030\005 \001(\0132\005.UUID\022\034" +
+      "\n\006scopes\030\006 \003(\0132\014.FamilyScope\022\032\n\022followin" +
+      "g_kv_count\030\007 \001(\r\"=\n\013FamilyScope\022\016\n\006famil" +
+      "y\030\001 \002(\014\022\036\n\nscope_type\030\002 \002(\0162\n.ScopeType\"" +
+      "\251\001\n\024CompactionDescriptor\022\022\n\ntable_name\030\001" +
+      " \002(\014\022\033\n\023encoded_region_name\030\002 \002(\014\022\023\n\013fam",
+      "ily_name\030\003 \002(\014\022\030\n\020compaction_input\030\004 \003(\t" +
+      "\022\031\n\021compaction_output\030\005 \003(\t\022\026\n\016store_hom" +
+      "e_dir\030\006 \002(\t\"\014\n\nWALTrailer*F\n\tScopeType\022\033" +
+      "\n\027REPLICATION_SCOPE_LOCAL\020\000\022\034\n\030REPLICATI" +
+      "ON_SCOPE_GLOBAL\020\001B?\n*org.apache.hadoop.h" +
+      "base.protobuf.generatedB\tWALProtosH\001\210\001\000\240" +
+      "\001\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {

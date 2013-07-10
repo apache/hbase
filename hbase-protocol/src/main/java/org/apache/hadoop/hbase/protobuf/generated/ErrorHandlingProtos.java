@@ -11,19 +11,19 @@ public final class ErrorHandlingProtos {
   public interface StackTraceElementMessageOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
     
-    // optional string declaringClass = 1;
+    // optional string declaring_class = 1;
     boolean hasDeclaringClass();
     String getDeclaringClass();
     
-    // optional string methodName = 2;
+    // optional string method_name = 2;
     boolean hasMethodName();
     String getMethodName();
     
-    // optional string fileName = 3;
+    // optional string file_name = 3;
     boolean hasFileName();
     String getFileName();
     
-    // optional int32 lineNumber = 4;
+    // optional int32 line_number = 4;
     boolean hasLineNumber();
     int getLineNumber();
   }
@@ -56,8 +56,8 @@ public final class ErrorHandlingProtos {
     }
     
     private int bitField0_;
-    // optional string declaringClass = 1;
-    public static final int DECLARINGCLASS_FIELD_NUMBER = 1;
+    // optional string declaring_class = 1;
+    public static final int DECLARING_CLASS_FIELD_NUMBER = 1;
     private java.lang.Object declaringClass_;
     public boolean hasDeclaringClass() {
       return ((bitField0_ & 0x00000001) == 0x00000001);
@@ -88,8 +88,8 @@ public final class ErrorHandlingProtos {
       }
     }
     
-    // optional string methodName = 2;
-    public static final int METHODNAME_FIELD_NUMBER = 2;
+    // optional string method_name = 2;
+    public static final int METHOD_NAME_FIELD_NUMBER = 2;
     private java.lang.Object methodName_;
     public boolean hasMethodName() {
       return ((bitField0_ & 0x00000002) == 0x00000002);
@@ -120,8 +120,8 @@ public final class ErrorHandlingProtos {
       }
     }
     
-    // optional string fileName = 3;
-    public static final int FILENAME_FIELD_NUMBER = 3;
+    // optional string file_name = 3;
+    public static final int FILE_NAME_FIELD_NUMBER = 3;
     private java.lang.Object fileName_;
     public boolean hasFileName() {
       return ((bitField0_ & 0x00000004) == 0x00000004);
@@ -152,8 +152,8 @@ public final class ErrorHandlingProtos {
       }
     }
     
-    // optional int32 lineNumber = 4;
-    public static final int LINENUMBER_FIELD_NUMBER = 4;
+    // optional int32 line_number = 4;
+    public static final int LINE_NUMBER_FIELD_NUMBER = 4;
     private int lineNumber_;
     public boolean hasLineNumber() {
       return ((bitField0_ & 0x00000008) == 0x00000008);
@@ -270,19 +270,19 @@ public final class ErrorHandlingProtos {
       int hash = 41;
       hash = (19 * hash) + getDescriptorForType().hashCode();
       if (hasDeclaringClass()) {
-        hash = (37 * hash) + DECLARINGCLASS_FIELD_NUMBER;
+        hash = (37 * hash) + DECLARING_CLASS_FIELD_NUMBER;
         hash = (53 * hash) + getDeclaringClass().hashCode();
       }
       if (hasMethodName()) {
-        hash = (37 * hash) + METHODNAME_FIELD_NUMBER;
+        hash = (37 * hash) + METHOD_NAME_FIELD_NUMBER;
         hash = (53 * hash) + getMethodName().hashCode();
       }
       if (hasFileName()) {
-        hash = (37 * hash) + FILENAME_FIELD_NUMBER;
+        hash = (37 * hash) + FILE_NAME_FIELD_NUMBER;
         hash = (53 * hash) + getFileName().hashCode();
       }
       if (hasLineNumber()) {
-        hash = (37 * hash) + LINENUMBER_FIELD_NUMBER;
+        hash = (37 * hash) + LINE_NUMBER_FIELD_NUMBER;
         hash = (53 * hash) + getLineNumber();
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
@@ -548,7 +548,7 @@ public final class ErrorHandlingProtos {
       
       private int bitField0_;
       
-      // optional string declaringClass = 1;
+      // optional string declaring_class = 1;
       private java.lang.Object declaringClass_ = "";
       public boolean hasDeclaringClass() {
         return ((bitField0_ & 0x00000001) == 0x00000001);
@@ -584,7 +584,7 @@ public final class ErrorHandlingProtos {
         onChanged();
       }
       
-      // optional string methodName = 2;
+      // optional string method_name = 2;
       private java.lang.Object methodName_ = "";
       public boolean hasMethodName() {
         return ((bitField0_ & 0x00000002) == 0x00000002);
@@ -620,7 +620,7 @@ public final class ErrorHandlingProtos {
         onChanged();
       }
       
-      // optional string fileName = 3;
+      // optional string file_name = 3;
       private java.lang.Object fileName_ = "";
       public boolean hasFileName() {
         return ((bitField0_ & 0x00000004) == 0x00000004);
@@ -656,7 +656,7 @@ public final class ErrorHandlingProtos {
         onChanged();
       }
       
-      // optional int32 lineNumber = 4;
+      // optional int32 line_number = 4;
       private int lineNumber_ ;
       public boolean hasLineNumber() {
         return ((bitField0_ & 0x00000008) == 0x00000008);
@@ -691,7 +691,7 @@ public final class ErrorHandlingProtos {
   public interface GenericExceptionMessageOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
     
-    // optional string className = 1;
+    // optional string class_name = 1;
     boolean hasClassName();
     String getClassName();
     
@@ -699,7 +699,7 @@ public final class ErrorHandlingProtos {
     boolean hasMessage();
     String getMessage();
     
-    // optional bytes errorInfo = 3;
+    // optional bytes error_info = 3;
     boolean hasErrorInfo();
     com.google.protobuf.ByteString getErrorInfo();
     
@@ -742,8 +742,8 @@ public final class ErrorHandlingProtos {
     }
     
     private int bitField0_;
-    // optional string className = 1;
-    public static final int CLASSNAME_FIELD_NUMBER = 1;
+    // optional string class_name = 1;
+    public static final int CLASS_NAME_FIELD_NUMBER = 1;
     private java.lang.Object className_;
     public boolean hasClassName() {
       return ((bitField0_ & 0x00000001) == 0x00000001);
@@ -806,8 +806,8 @@ public final class ErrorHandlingProtos {
       }
     }
     
-    // optional bytes errorInfo = 3;
-    public static final int ERRORINFO_FIELD_NUMBER = 3;
+    // optional bytes error_info = 3;
+    public static final int ERROR_INFO_FIELD_NUMBER = 3;
     private com.google.protobuf.ByteString errorInfo_;
     public boolean hasErrorInfo() {
       return ((bitField0_ & 0x00000004) == 0x00000004);
@@ -942,7 +942,7 @@ public final class ErrorHandlingProtos {
       int hash = 41;
       hash = (19 * hash) + getDescriptorForType().hashCode();
       if (hasClassName()) {
-        hash = (37 * hash) + CLASSNAME_FIELD_NUMBER;
+        hash = (37 * hash) + CLASS_NAME_FIELD_NUMBER;
         hash = (53 * hash) + getClassName().hashCode();
       }
       if (hasMessage()) {
@@ -950,7 +950,7 @@ public final class ErrorHandlingProtos {
         hash = (53 * hash) + getMessage().hashCode();
       }
       if (hasErrorInfo()) {
-        hash = (37 * hash) + ERRORINFO_FIELD_NUMBER;
+        hash = (37 * hash) + ERROR_INFO_FIELD_NUMBER;
         hash = (53 * hash) + getErrorInfo().hashCode();
       }
       if (getTraceCount() > 0) {
@@ -1254,7 +1254,7 @@ public final class ErrorHandlingProtos {
       
       private int bitField0_;
       
-      // optional string className = 1;
+      // optional string class_name = 1;
       private java.lang.Object className_ = "";
       public boolean hasClassName() {
         return ((bitField0_ & 0x00000001) == 0x00000001);
@@ -1326,7 +1326,7 @@ public final class ErrorHandlingProtos {
         onChanged();
       }
       
-      // optional bytes errorInfo = 3;
+      // optional bytes error_info = 3;
       private com.google.protobuf.ByteString errorInfo_ = com.google.protobuf.ByteString.EMPTY;
       public boolean hasErrorInfo() {
         return ((bitField0_ & 0x00000004) == 0x00000004);
@@ -1554,7 +1554,7 @@ public final class ErrorHandlingProtos {
     boolean hasSource();
     String getSource();
     
-    // optional .GenericExceptionMessage genericException = 2;
+    // optional .GenericExceptionMessage generic_exception = 2;
     boolean hasGenericException();
     org.apache.hadoop.hbase.protobuf.generated.ErrorHandlingProtos.GenericExceptionMessage getGenericException();
     org.apache.hadoop.hbase.protobuf.generated.ErrorHandlingProtos.GenericExceptionMessageOrBuilder getGenericExceptionOrBuilder();
@@ -1620,8 +1620,8 @@ public final class ErrorHandlingProtos {
       }
     }
     
-    // optional .GenericExceptionMessage genericException = 2;
-    public static final int GENERICEXCEPTION_FIELD_NUMBER = 2;
+    // optional .GenericExceptionMessage generic_exception = 2;
+    public static final int GENERIC_EXCEPTION_FIELD_NUMBER = 2;
     private org.apache.hadoop.hbase.protobuf.generated.ErrorHandlingProtos.GenericExceptionMessage genericException_;
     public boolean hasGenericException() {
       return ((bitField0_ & 0x00000002) == 0x00000002);
@@ -1719,7 +1719,7 @@ public final class ErrorHandlingProtos {
         hash = (53 * hash) + getSource().hashCode();
       }
       if (hasGenericException()) {
-        hash = (37 * hash) + GENERICEXCEPTION_FIELD_NUMBER;
+        hash = (37 * hash) + GENERIC_EXCEPTION_FIELD_NUMBER;
         hash = (53 * hash) + getGenericException().hashCode();
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
@@ -2006,7 +2006,7 @@ public final class ErrorHandlingProtos {
         onChanged();
       }
       
-      // optional .GenericExceptionMessage genericException = 2;
+      // optional .GenericExceptionMessage generic_exception = 2;
       private org.apache.hadoop.hbase.protobuf.generated.ErrorHandlingProtos.GenericExceptionMessage genericException_ = org.apache.hadoop.hbase.protobuf.generated.ErrorHandlingProtos.GenericExceptionMessage.getDefaultInstance();
       private com.google.protobuf.SingleFieldBuilder<
           org.apache.hadoop.hbase.protobuf.generated.ErrorHandlingProtos.GenericExceptionMessage, org.apache.hadoop.hbase.protobuf.generated.ErrorHandlingProtos.GenericExceptionMessage.Builder, org.apache.hadoop.hbase.protobuf.generated.ErrorHandlingProtos.GenericExceptionMessageOrBuilder> genericExceptionBuilder_;
@@ -2131,17 +2131,17 @@ public final class ErrorHandlingProtos {
       descriptor;
   static {
     java.lang.String[] descriptorData = {
-      "\n\023ErrorHandling.proto\"l\n\030StackTraceEleme" +
-      "ntMessage\022\026\n\016declaringClass\030\001 \001(\t\022\022\n\nmet" +
-      "hodName\030\002 \001(\t\022\020\n\010fileName\030\003 \001(\t\022\022\n\nlineN" +
-      "umber\030\004 \001(\005\"z\n\027GenericExceptionMessage\022\021" +
-      "\n\tclassName\030\001 \001(\t\022\017\n\007message\030\002 \001(\t\022\021\n\ter" +
-      "rorInfo\030\003 \001(\014\022(\n\005trace\030\004 \003(\0132\031.StackTrac" +
-      "eElementMessage\"]\n\027ForeignExceptionMessa" +
-      "ge\022\016\n\006source\030\001 \001(\t\0222\n\020genericException\030\002" +
-      " \001(\0132\030.GenericExceptionMessageBF\n*org.ap" +
-      "ache.hadoop.hbase.protobuf.generatedB\023Er",
-      "rorHandlingProtosH\001\240\001\001"
+      "\n\023ErrorHandling.proto\"p\n\030StackTraceEleme" +
+      "ntMessage\022\027\n\017declaring_class\030\001 \001(\t\022\023\n\013me" +
+      "thod_name\030\002 \001(\t\022\021\n\tfile_name\030\003 \001(\t\022\023\n\013li" +
+      "ne_number\030\004 \001(\005\"|\n\027GenericExceptionMessa" +
+      "ge\022\022\n\nclass_name\030\001 \001(\t\022\017\n\007message\030\002 \001(\t\022" +
+      "\022\n\nerror_info\030\003 \001(\014\022(\n\005trace\030\004 \003(\0132\031.Sta" +
+      "ckTraceElementMessage\"^\n\027ForeignExceptio" +
+      "nMessage\022\016\n\006source\030\001 \001(\t\0223\n\021generic_exce" +
+      "ption\030\002 \001(\0132\030.GenericExceptionMessageBF\n" +
+      "*org.apache.hadoop.hbase.protobuf.genera",
+      "tedB\023ErrorHandlingProtosH\001\240\001\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {

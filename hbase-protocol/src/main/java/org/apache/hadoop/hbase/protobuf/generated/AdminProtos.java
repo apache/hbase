@@ -16,7 +16,7 @@ public final class AdminProtos {
     org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier getRegion();
     org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifierOrBuilder getRegionOrBuilder();
     
-    // optional bool compactionState = 2;
+    // optional bool compaction_state = 2;
     boolean hasCompactionState();
     boolean getCompactionState();
   }
@@ -62,8 +62,8 @@ public final class AdminProtos {
       return region_;
     }
     
-    // optional bool compactionState = 2;
-    public static final int COMPACTIONSTATE_FIELD_NUMBER = 2;
+    // optional bool compaction_state = 2;
+    public static final int COMPACTION_STATE_FIELD_NUMBER = 2;
     private boolean compactionState_;
     public boolean hasCompactionState() {
       return ((bitField0_ & 0x00000002) == 0x00000002);
@@ -166,7 +166,7 @@ public final class AdminProtos {
         hash = (53 * hash) + getRegion().hashCode();
       }
       if (hasCompactionState()) {
-        hash = (37 * hash) + COMPACTIONSTATE_FIELD_NUMBER;
+        hash = (37 * hash) + COMPACTION_STATE_FIELD_NUMBER;
         hash = (53 * hash) + hashBoolean(getCompactionState());
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
@@ -515,7 +515,7 @@ public final class AdminProtos {
         return regionBuilder_;
       }
       
-      // optional bool compactionState = 2;
+      // optional bool compaction_state = 2;
       private boolean compactionState_ ;
       public boolean hasCompactionState() {
         return ((bitField0_ & 0x00000002) == 0x00000002);
@@ -550,12 +550,12 @@ public final class AdminProtos {
   public interface GetRegionInfoResponseOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
     
-    // required .RegionInfo regionInfo = 1;
+    // required .RegionInfo region_info = 1;
     boolean hasRegionInfo();
     org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo getRegionInfo();
     org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfoOrBuilder getRegionInfoOrBuilder();
     
-    // optional .GetRegionInfoResponse.CompactionState compactionState = 2;
+    // optional .GetRegionInfoResponse.CompactionState compaction_state = 2;
     boolean hasCompactionState();
     org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetRegionInfoResponse.CompactionState getCompactionState();
   }
@@ -663,8 +663,8 @@ public final class AdminProtos {
     }
     
     private int bitField0_;
-    // required .RegionInfo regionInfo = 1;
-    public static final int REGIONINFO_FIELD_NUMBER = 1;
+    // required .RegionInfo region_info = 1;
+    public static final int REGION_INFO_FIELD_NUMBER = 1;
     private org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo regionInfo_;
     public boolean hasRegionInfo() {
       return ((bitField0_ & 0x00000001) == 0x00000001);
@@ -676,8 +676,8 @@ public final class AdminProtos {
       return regionInfo_;
     }
     
-    // optional .GetRegionInfoResponse.CompactionState compactionState = 2;
-    public static final int COMPACTIONSTATE_FIELD_NUMBER = 2;
+    // optional .GetRegionInfoResponse.CompactionState compaction_state = 2;
+    public static final int COMPACTION_STATE_FIELD_NUMBER = 2;
     private org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetRegionInfoResponse.CompactionState compactionState_;
     public boolean hasCompactionState() {
       return ((bitField0_ & 0x00000002) == 0x00000002);
@@ -776,11 +776,11 @@ public final class AdminProtos {
       int hash = 41;
       hash = (19 * hash) + getDescriptorForType().hashCode();
       if (hasRegionInfo()) {
-        hash = (37 * hash) + REGIONINFO_FIELD_NUMBER;
+        hash = (37 * hash) + REGION_INFO_FIELD_NUMBER;
         hash = (53 * hash) + getRegionInfo().hashCode();
       }
       if (hasCompactionState()) {
-        hash = (37 * hash) + COMPACTIONSTATE_FIELD_NUMBER;
+        hash = (37 * hash) + COMPACTION_STATE_FIELD_NUMBER;
         hash = (53 * hash) + hashEnum(getCompactionState());
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
@@ -1045,7 +1045,7 @@ public final class AdminProtos {
       
       private int bitField0_;
       
-      // required .RegionInfo regionInfo = 1;
+      // required .RegionInfo region_info = 1;
       private org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo regionInfo_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo.getDefaultInstance();
       private com.google.protobuf.SingleFieldBuilder<
           org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfoOrBuilder> regionInfoBuilder_;
@@ -1135,7 +1135,7 @@ public final class AdminProtos {
         return regionInfoBuilder_;
       }
       
-      // optional .GetRegionInfoResponse.CompactionState compactionState = 2;
+      // optional .GetRegionInfoResponse.CompactionState compaction_state = 2;
       private org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetRegionInfoResponse.CompactionState compactionState_ = org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetRegionInfoResponse.CompactionState.NONE;
       public boolean hasCompactionState() {
         return ((bitField0_ & 0x00000002) == 0x00000002);
@@ -1757,7 +1757,7 @@ public final class AdminProtos {
   public interface GetStoreFileResponseOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
     
-    // repeated string storeFile = 1;
+    // repeated string store_file = 1;
     java.util.List<String> getStoreFileList();
     int getStoreFileCount();
     String getStoreFile(int index);
@@ -1790,8 +1790,8 @@ public final class AdminProtos {
       return org.apache.hadoop.hbase.protobuf.generated.AdminProtos.internal_static_GetStoreFileResponse_fieldAccessorTable;
     }
     
-    // repeated string storeFile = 1;
-    public static final int STOREFILE_FIELD_NUMBER = 1;
+    // repeated string store_file = 1;
+    public static final int STORE_FILE_FIELD_NUMBER = 1;
     private com.google.protobuf.LazyStringList storeFile_;
     public java.util.List<String>
         getStoreFileList() {
@@ -1875,7 +1875,7 @@ public final class AdminProtos {
       int hash = 41;
       hash = (19 * hash) + getDescriptorForType().hashCode();
       if (getStoreFileCount() > 0) {
-        hash = (37 * hash) + STOREFILE_FIELD_NUMBER;
+        hash = (37 * hash) + STORE_FILE_FIELD_NUMBER;
         hash = (53 * hash) + getStoreFileList().hashCode();
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
@@ -2106,7 +2106,7 @@ public final class AdminProtos {
       
       private int bitField0_;
       
-      // repeated string storeFile = 1;
+      // repeated string store_file = 1;
       private com.google.protobuf.LazyStringList storeFile_ = com.google.protobuf.LazyStringArrayList.EMPTY;
       private void ensureStoreFileIsMutable() {
         if (!((bitField0_ & 0x00000001) == 0x00000001)) {
@@ -2476,7 +2476,7 @@ public final class AdminProtos {
   public interface GetOnlineRegionResponseOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
     
-    // repeated .RegionInfo regionInfo = 1;
+    // repeated .RegionInfo region_info = 1;
     java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo> 
         getRegionInfoList();
     org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo getRegionInfo(int index);
@@ -2514,8 +2514,8 @@ public final class AdminProtos {
       return org.apache.hadoop.hbase.protobuf.generated.AdminProtos.internal_static_GetOnlineRegionResponse_fieldAccessorTable;
     }
     
-    // repeated .RegionInfo regionInfo = 1;
-    public static final int REGIONINFO_FIELD_NUMBER = 1;
+    // repeated .RegionInfo region_info = 1;
+    public static final int REGION_INFO_FIELD_NUMBER = 1;
     private java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo> regionInfo_;
     public java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo> getRegionInfoList() {
       return regionInfo_;
@@ -2607,7 +2607,7 @@ public final class AdminProtos {
       int hash = 41;
       hash = (19 * hash) + getDescriptorForType().hashCode();
       if (getRegionInfoCount() > 0) {
-        hash = (37 * hash) + REGIONINFO_FIELD_NUMBER;
+        hash = (37 * hash) + REGION_INFO_FIELD_NUMBER;
         hash = (53 * hash) + getRegionInfoList().hashCode();
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
@@ -2869,7 +2869,7 @@ public final class AdminProtos {
       
       private int bitField0_;
       
-      // repeated .RegionInfo regionInfo = 1;
+      // repeated .RegionInfo region_info = 1;
       private java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo> regionInfo_ =
         java.util.Collections.emptyList();
       private void ensureRegionInfoIsMutable() {
@@ -3069,7 +3069,7 @@ public final class AdminProtos {
   public interface OpenRegionRequestOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
     
-    // repeated .OpenRegionRequest.RegionOpenInfo openInfo = 1;
+    // repeated .OpenRegionRequest.RegionOpenInfo open_info = 1;
     java.util.List<org.apache.hadoop.hbase.protobuf.generated.AdminProtos.OpenRegionRequest.RegionOpenInfo> 
         getOpenInfoList();
     org.apache.hadoop.hbase.protobuf.generated.AdminProtos.OpenRegionRequest.RegionOpenInfo getOpenInfo(int index);
@@ -3115,11 +3115,11 @@ public final class AdminProtos {
       org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo getRegion();
       org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfoOrBuilder getRegionOrBuilder();
       
-      // optional uint32 versionOfOfflineNode = 2;
+      // optional uint32 version_of_offline_node = 2;
       boolean hasVersionOfOfflineNode();
       int getVersionOfOfflineNode();
       
-      // repeated .ServerName favoredNodes = 3;
+      // repeated .ServerName favored_nodes = 3;
       java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName> 
           getFavoredNodesList();
       org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName getFavoredNodes(int index);
@@ -3171,8 +3171,8 @@ public final class AdminProtos {
         return region_;
       }
       
-      // optional uint32 versionOfOfflineNode = 2;
-      public static final int VERSIONOFOFFLINENODE_FIELD_NUMBER = 2;
+      // optional uint32 version_of_offline_node = 2;
+      public static final int VERSION_OF_OFFLINE_NODE_FIELD_NUMBER = 2;
       private int versionOfOfflineNode_;
       public boolean hasVersionOfOfflineNode() {
         return ((bitField0_ & 0x00000002) == 0x00000002);
@@ -3181,8 +3181,8 @@ public final class AdminProtos {
         return versionOfOfflineNode_;
       }
       
-      // repeated .ServerName favoredNodes = 3;
-      public static final int FAVOREDNODES_FIELD_NUMBER = 3;
+      // repeated .ServerName favored_nodes = 3;
+      public static final int FAVORED_NODES_FIELD_NUMBER = 3;
       private java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName> favoredNodes_;
       public java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName> getFavoredNodesList() {
         return favoredNodes_;
@@ -3312,11 +3312,11 @@ public final class AdminProtos {
           hash = (53 * hash) + getRegion().hashCode();
         }
         if (hasVersionOfOfflineNode()) {
-          hash = (37 * hash) + VERSIONOFOFFLINENODE_FIELD_NUMBER;
+          hash = (37 * hash) + VERSION_OF_OFFLINE_NODE_FIELD_NUMBER;
           hash = (53 * hash) + getVersionOfOfflineNode();
         }
         if (getFavoredNodesCount() > 0) {
-          hash = (37 * hash) + FAVOREDNODES_FIELD_NUMBER;
+          hash = (37 * hash) + FAVORED_NODES_FIELD_NUMBER;
           hash = (53 * hash) + getFavoredNodesList().hashCode();
         }
         hash = (29 * hash) + getUnknownFields().hashCode();
@@ -3719,7 +3719,7 @@ public final class AdminProtos {
           return regionBuilder_;
         }
         
-        // optional uint32 versionOfOfflineNode = 2;
+        // optional uint32 version_of_offline_node = 2;
         private int versionOfOfflineNode_ ;
         public boolean hasVersionOfOfflineNode() {
           return ((bitField0_ & 0x00000002) == 0x00000002);
@@ -3740,7 +3740,7 @@ public final class AdminProtos {
           return this;
         }
         
-        // repeated .ServerName favoredNodes = 3;
+        // repeated .ServerName favored_nodes = 3;
         private java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName> favoredNodes_ =
           java.util.Collections.emptyList();
         private void ensureFavoredNodesIsMutable() {
@@ -3937,8 +3937,8 @@ public final class AdminProtos {
       // @@protoc_insertion_point(class_scope:OpenRegionRequest.RegionOpenInfo)
     }
     
-    // repeated .OpenRegionRequest.RegionOpenInfo openInfo = 1;
-    public static final int OPENINFO_FIELD_NUMBER = 1;
+    // repeated .OpenRegionRequest.RegionOpenInfo open_info = 1;
+    public static final int OPEN_INFO_FIELD_NUMBER = 1;
     private java.util.List<org.apache.hadoop.hbase.protobuf.generated.AdminProtos.OpenRegionRequest.RegionOpenInfo> openInfo_;
     public java.util.List<org.apache.hadoop.hbase.protobuf.generated.AdminProtos.OpenRegionRequest.RegionOpenInfo> getOpenInfoList() {
       return openInfo_;
@@ -4030,7 +4030,7 @@ public final class AdminProtos {
       int hash = 41;
       hash = (19 * hash) + getDescriptorForType().hashCode();
       if (getOpenInfoCount() > 0) {
-        hash = (37 * hash) + OPENINFO_FIELD_NUMBER;
+        hash = (37 * hash) + OPEN_INFO_FIELD_NUMBER;
         hash = (53 * hash) + getOpenInfoList().hashCode();
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
@@ -4292,7 +4292,7 @@ public final class AdminProtos {
       
       private int bitField0_;
       
-      // repeated .OpenRegionRequest.RegionOpenInfo openInfo = 1;
+      // repeated .OpenRegionRequest.RegionOpenInfo open_info = 1;
       private java.util.List<org.apache.hadoop.hbase.protobuf.generated.AdminProtos.OpenRegionRequest.RegionOpenInfo> openInfo_ =
         java.util.Collections.emptyList();
       private void ensureOpenInfoIsMutable() {
@@ -4492,7 +4492,7 @@ public final class AdminProtos {
   public interface OpenRegionResponseOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
     
-    // repeated .OpenRegionResponse.RegionOpeningState openingState = 1;
+    // repeated .OpenRegionResponse.RegionOpeningState opening_state = 1;
     java.util.List<org.apache.hadoop.hbase.protobuf.generated.AdminProtos.OpenRegionResponse.RegionOpeningState> getOpeningStateList();
     int getOpeningStateCount();
     org.apache.hadoop.hbase.protobuf.generated.AdminProtos.OpenRegionResponse.RegionOpeningState getOpeningState(int index);
@@ -4597,8 +4597,8 @@ public final class AdminProtos {
       // @@protoc_insertion_point(enum_scope:OpenRegionResponse.RegionOpeningState)
     }
     
-    // repeated .OpenRegionResponse.RegionOpeningState openingState = 1;
-    public static final int OPENINGSTATE_FIELD_NUMBER = 1;
+    // repeated .OpenRegionResponse.RegionOpeningState opening_state = 1;
+    public static final int OPENING_STATE_FIELD_NUMBER = 1;
     private java.util.List<org.apache.hadoop.hbase.protobuf.generated.AdminProtos.OpenRegionResponse.RegionOpeningState> openingState_;
     public java.util.List<org.apache.hadoop.hbase.protobuf.generated.AdminProtos.OpenRegionResponse.RegionOpeningState> getOpeningStateList() {
       return openingState_;
@@ -4681,7 +4681,7 @@ public final class AdminProtos {
       int hash = 41;
       hash = (19 * hash) + getDescriptorForType().hashCode();
       if (getOpeningStateCount() > 0) {
-        hash = (37 * hash) + OPENINGSTATE_FIELD_NUMBER;
+        hash = (37 * hash) + OPENING_STATE_FIELD_NUMBER;
         hash = (53 * hash) + hashEnumList(getOpeningStateList());
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
@@ -4931,7 +4931,7 @@ public final class AdminProtos {
       
       private int bitField0_;
       
-      // repeated .OpenRegionResponse.RegionOpeningState openingState = 1;
+      // repeated .OpenRegionResponse.RegionOpeningState opening_state = 1;
       private java.util.List<org.apache.hadoop.hbase.protobuf.generated.AdminProtos.OpenRegionResponse.RegionOpeningState> openingState_ =
         java.util.Collections.emptyList();
       private void ensureOpeningStateIsMutable() {
@@ -5001,15 +5001,15 @@ public final class AdminProtos {
     org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier getRegion();
     org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifierOrBuilder getRegionOrBuilder();
     
-    // optional uint32 versionOfClosingNode = 2;
+    // optional uint32 version_of_closing_node = 2;
     boolean hasVersionOfClosingNode();
     int getVersionOfClosingNode();
     
-    // optional bool transitionInZK = 3 [default = true];
+    // optional bool transition_in_ZK = 3 [default = true];
     boolean hasTransitionInZK();
     boolean getTransitionInZK();
     
-    // optional .ServerName destinationServer = 4;
+    // optional .ServerName destination_server = 4;
     boolean hasDestinationServer();
     org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName getDestinationServer();
     org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerNameOrBuilder getDestinationServerOrBuilder();
@@ -5056,8 +5056,8 @@ public final class AdminProtos {
       return region_;
     }
     
-    // optional uint32 versionOfClosingNode = 2;
-    public static final int VERSIONOFCLOSINGNODE_FIELD_NUMBER = 2;
+    // optional uint32 version_of_closing_node = 2;
+    public static final int VERSION_OF_CLOSING_NODE_FIELD_NUMBER = 2;
     private int versionOfClosingNode_;
     public boolean hasVersionOfClosingNode() {
       return ((bitField0_ & 0x00000002) == 0x00000002);
@@ -5066,8 +5066,8 @@ public final class AdminProtos {
       return versionOfClosingNode_;
     }
     
-    // optional bool transitionInZK = 3 [default = true];
-    public static final int TRANSITIONINZK_FIELD_NUMBER = 3;
+    // optional bool transition_in_ZK = 3 [default = true];
+    public static final int TRANSITION_IN_ZK_FIELD_NUMBER = 3;
     private boolean transitionInZK_;
     public boolean hasTransitionInZK() {
       return ((bitField0_ & 0x00000004) == 0x00000004);
@@ -5076,8 +5076,8 @@ public final class AdminProtos {
       return transitionInZK_;
     }
     
-    // optional .ServerName destinationServer = 4;
-    public static final int DESTINATIONSERVER_FIELD_NUMBER = 4;
+    // optional .ServerName destination_server = 4;
+    public static final int DESTINATION_SERVER_FIELD_NUMBER = 4;
     private org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName destinationServer_;
     public boolean hasDestinationServer() {
       return ((bitField0_ & 0x00000008) == 0x00000008);
@@ -5215,15 +5215,15 @@ public final class AdminProtos {
         hash = (53 * hash) + getRegion().hashCode();
       }
       if (hasVersionOfClosingNode()) {
-        hash = (37 * hash) + VERSIONOFCLOSINGNODE_FIELD_NUMBER;
+        hash = (37 * hash) + VERSION_OF_CLOSING_NODE_FIELD_NUMBER;
         hash = (53 * hash) + getVersionOfClosingNode();
       }
       if (hasTransitionInZK()) {
-        hash = (37 * hash) + TRANSITIONINZK_FIELD_NUMBER;
+        hash = (37 * hash) + TRANSITION_IN_ZK_FIELD_NUMBER;
         hash = (53 * hash) + hashBoolean(getTransitionInZK());
       }
       if (hasDestinationServer()) {
-        hash = (37 * hash) + DESTINATIONSERVER_FIELD_NUMBER;
+        hash = (37 * hash) + DESTINATION_SERVER_FIELD_NUMBER;
         hash = (53 * hash) + getDestinationServer().hashCode();
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
@@ -5619,7 +5619,7 @@ public final class AdminProtos {
         return regionBuilder_;
       }
       
-      // optional uint32 versionOfClosingNode = 2;
+      // optional uint32 version_of_closing_node = 2;
       private int versionOfClosingNode_ ;
       public boolean hasVersionOfClosingNode() {
         return ((bitField0_ & 0x00000002) == 0x00000002);
@@ -5640,7 +5640,7 @@ public final class AdminProtos {
         return this;
       }
       
-      // optional bool transitionInZK = 3 [default = true];
+      // optional bool transition_in_ZK = 3 [default = true];
       private boolean transitionInZK_ = true;
       public boolean hasTransitionInZK() {
         return ((bitField0_ & 0x00000004) == 0x00000004);
@@ -5661,7 +5661,7 @@ public final class AdminProtos {
         return this;
       }
       
-      // optional .ServerName destinationServer = 4;
+      // optional .ServerName destination_server = 4;
       private org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName destinationServer_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.getDefaultInstance();
       private com.google.protobuf.SingleFieldBuilder<
           org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerNameOrBuilder> destinationServerBuilder_;
@@ -6149,7 +6149,7 @@ public final class AdminProtos {
     org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier getRegion();
     org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifierOrBuilder getRegionOrBuilder();
     
-    // optional uint64 ifOlderThanTs = 2;
+    // optional uint64 if_older_than_ts = 2;
     boolean hasIfOlderThanTs();
     long getIfOlderThanTs();
   }
@@ -6195,8 +6195,8 @@ public final class AdminProtos {
       return region_;
     }
     
-    // optional uint64 ifOlderThanTs = 2;
-    public static final int IFOLDERTHANTS_FIELD_NUMBER = 2;
+    // optional uint64 if_older_than_ts = 2;
+    public static final int IF_OLDER_THAN_TS_FIELD_NUMBER = 2;
     private long ifOlderThanTs_;
     public boolean hasIfOlderThanTs() {
       return ((bitField0_ & 0x00000002) == 0x00000002);
@@ -6299,7 +6299,7 @@ public final class AdminProtos {
         hash = (53 * hash) + getRegion().hashCode();
       }
       if (hasIfOlderThanTs()) {
-        hash = (37 * hash) + IFOLDERTHANTS_FIELD_NUMBER;
+        hash = (37 * hash) + IF_OLDER_THAN_TS_FIELD_NUMBER;
         hash = (53 * hash) + hashLong(getIfOlderThanTs());
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
@@ -6648,7 +6648,7 @@ public final class AdminProtos {
         return regionBuilder_;
       }
       
-      // optional uint64 ifOlderThanTs = 2;
+      // optional uint64 if_older_than_ts = 2;
       private long ifOlderThanTs_ ;
       public boolean hasIfOlderThanTs() {
         return ((bitField0_ & 0x00000002) == 0x00000002);
@@ -6683,7 +6683,7 @@ public final class AdminProtos {
   public interface FlushRegionResponseOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
     
-    // required uint64 lastFlushTime = 1;
+    // required uint64 last_flush_time = 1;
     boolean hasLastFlushTime();
     long getLastFlushTime();
     
@@ -6720,8 +6720,8 @@ public final class AdminProtos {
     }
     
     private int bitField0_;
-    // required uint64 lastFlushTime = 1;
-    public static final int LASTFLUSHTIME_FIELD_NUMBER = 1;
+    // required uint64 last_flush_time = 1;
+    public static final int LAST_FLUSH_TIME_FIELD_NUMBER = 1;
     private long lastFlushTime_;
     public boolean hasLastFlushTime() {
       return ((bitField0_ & 0x00000001) == 0x00000001);
@@ -6826,7 +6826,7 @@ public final class AdminProtos {
       int hash = 41;
       hash = (19 * hash) + getDescriptorForType().hashCode();
       if (hasLastFlushTime()) {
-        hash = (37 * hash) + LASTFLUSHTIME_FIELD_NUMBER;
+        hash = (37 * hash) + LAST_FLUSH_TIME_FIELD_NUMBER;
         hash = (53 * hash) + hashLong(getLastFlushTime());
       }
       if (hasFlushed()) {
@@ -7072,7 +7072,7 @@ public final class AdminProtos {
       
       private int bitField0_;
       
-      // required uint64 lastFlushTime = 1;
+      // required uint64 last_flush_time = 1;
       private long lastFlushTime_ ;
       public boolean hasLastFlushTime() {
         return ((bitField0_ & 0x00000001) == 0x00000001);
@@ -7133,7 +7133,7 @@ public final class AdminProtos {
     org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier getRegion();
     org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifierOrBuilder getRegionOrBuilder();
     
-    // optional bytes splitPoint = 2;
+    // optional bytes split_point = 2;
     boolean hasSplitPoint();
     com.google.protobuf.ByteString getSplitPoint();
   }
@@ -7179,8 +7179,8 @@ public final class AdminProtos {
       return region_;
     }
     
-    // optional bytes splitPoint = 2;
-    public static final int SPLITPOINT_FIELD_NUMBER = 2;
+    // optional bytes split_point = 2;
+    public static final int SPLIT_POINT_FIELD_NUMBER = 2;
     private com.google.protobuf.ByteString splitPoint_;
     public boolean hasSplitPoint() {
       return ((bitField0_ & 0x00000002) == 0x00000002);
@@ -7283,7 +7283,7 @@ public final class AdminProtos {
         hash = (53 * hash) + getRegion().hashCode();
       }
       if (hasSplitPoint()) {
-        hash = (37 * hash) + SPLITPOINT_FIELD_NUMBER;
+        hash = (37 * hash) + SPLIT_POINT_FIELD_NUMBER;
         hash = (53 * hash) + getSplitPoint().hashCode();
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
@@ -7632,7 +7632,7 @@ public final class AdminProtos {
         return regionBuilder_;
       }
       
-      // optional bytes splitPoint = 2;
+      // optional bytes split_point = 2;
       private com.google.protobuf.ByteString splitPoint_ = com.google.protobuf.ByteString.EMPTY;
       public boolean hasSplitPoint() {
         return ((bitField0_ & 0x00000002) == 0x00000002);
@@ -8878,12 +8878,12 @@ public final class AdminProtos {
   public interface MergeRegionsRequestOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
     
-    // required .RegionSpecifier regionA = 1;
+    // required .RegionSpecifier region_a = 1;
     boolean hasRegionA();
     org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier getRegionA();
     org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifierOrBuilder getRegionAOrBuilder();
     
-    // required .RegionSpecifier regionB = 2;
+    // required .RegionSpecifier region_b = 2;
     boolean hasRegionB();
     org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier getRegionB();
     org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifierOrBuilder getRegionBOrBuilder();
@@ -8921,8 +8921,8 @@ public final class AdminProtos {
     }
     
     private int bitField0_;
-    // required .RegionSpecifier regionA = 1;
-    public static final int REGIONA_FIELD_NUMBER = 1;
+    // required .RegionSpecifier region_a = 1;
+    public static final int REGION_A_FIELD_NUMBER = 1;
     private org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier regionA_;
     public boolean hasRegionA() {
       return ((bitField0_ & 0x00000001) == 0x00000001);
@@ -8934,8 +8934,8 @@ public final class AdminProtos {
       return regionA_;
     }
     
-    // required .RegionSpecifier regionB = 2;
-    public static final int REGIONB_FIELD_NUMBER = 2;
+    // required .RegionSpecifier region_b = 2;
+    public static final int REGION_B_FIELD_NUMBER = 2;
     private org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier regionB_;
     public boolean hasRegionB() {
       return ((bitField0_ & 0x00000002) == 0x00000002);
@@ -9068,11 +9068,11 @@ public final class AdminProtos {
       int hash = 41;
       hash = (19 * hash) + getDescriptorForType().hashCode();
       if (hasRegionA()) {
-        hash = (37 * hash) + REGIONA_FIELD_NUMBER;
+        hash = (37 * hash) + REGION_A_FIELD_NUMBER;
         hash = (53 * hash) + getRegionA().hashCode();
       }
       if (hasRegionB()) {
-        hash = (37 * hash) + REGIONB_FIELD_NUMBER;
+        hash = (37 * hash) + REGION_B_FIELD_NUMBER;
         hash = (53 * hash) + getRegionB().hashCode();
       }
       if (hasForcible()) {
@@ -9370,7 +9370,7 @@ public final class AdminProtos {
       
       private int bitField0_;
       
-      // required .RegionSpecifier regionA = 1;
+      // required .RegionSpecifier region_a = 1;
       private org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier regionA_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier.getDefaultInstance();
       private com.google.protobuf.SingleFieldBuilder<
           org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifierOrBuilder> regionABuilder_;
@@ -9460,7 +9460,7 @@ public final class AdminProtos {
         return regionABuilder_;
       }
       
-      // required .RegionSpecifier regionB = 2;
+      // required .RegionSpecifier region_b = 2;
       private org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier regionB_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier.getDefaultInstance();
       private com.google.protobuf.SingleFieldBuilder<
           org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifierOrBuilder> regionBBuilder_;
@@ -9890,12 +9890,12 @@ public final class AdminProtos {
     org.apache.hadoop.hbase.protobuf.generated.WALProtos.WALKey getKey();
     org.apache.hadoop.hbase.protobuf.generated.WALProtos.WALKeyOrBuilder getKeyOrBuilder();
     
-    // repeated bytes keyValueBytes = 2;
+    // repeated bytes key_value_bytes = 2;
     java.util.List<com.google.protobuf.ByteString> getKeyValueBytesList();
     int getKeyValueBytesCount();
     com.google.protobuf.ByteString getKeyValueBytes(int index);
     
-    // optional int32 associatedCellCount = 3;
+    // optional int32 associated_cell_count = 3;
     boolean hasAssociatedCellCount();
     int getAssociatedCellCount();
   }
@@ -9941,8 +9941,8 @@ public final class AdminProtos {
       return key_;
     }
     
-    // repeated bytes keyValueBytes = 2;
-    public static final int KEYVALUEBYTES_FIELD_NUMBER = 2;
+    // repeated bytes key_value_bytes = 2;
+    public static final int KEY_VALUE_BYTES_FIELD_NUMBER = 2;
     private java.util.List<com.google.protobuf.ByteString> keyValueBytes_;
     public java.util.List<com.google.protobuf.ByteString>
         getKeyValueBytesList() {
@@ -9955,8 +9955,8 @@ public final class AdminProtos {
       return keyValueBytes_.get(index);
     }
     
-    // optional int32 associatedCellCount = 3;
-    public static final int ASSOCIATEDCELLCOUNT_FIELD_NUMBER = 3;
+    // optional int32 associated_cell_count = 3;
+    public static final int ASSOCIATED_CELL_COUNT_FIELD_NUMBER = 3;
     private int associatedCellCount_;
     public boolean hasAssociatedCellCount() {
       return ((bitField0_ & 0x00000002) == 0x00000002);
@@ -10074,11 +10074,11 @@ public final class AdminProtos {
         hash = (53 * hash) + getKey().hashCode();
       }
       if (getKeyValueBytesCount() > 0) {
-        hash = (37 * hash) + KEYVALUEBYTES_FIELD_NUMBER;
+        hash = (37 * hash) + KEY_VALUE_BYTES_FIELD_NUMBER;
         hash = (53 * hash) + getKeyValueBytesList().hashCode();
       }
       if (hasAssociatedCellCount()) {
-        hash = (37 * hash) + ASSOCIATEDCELLCOUNT_FIELD_NUMBER;
+        hash = (37 * hash) + ASSOCIATED_CELL_COUNT_FIELD_NUMBER;
         hash = (53 * hash) + getAssociatedCellCount();
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
@@ -10449,7 +10449,7 @@ public final class AdminProtos {
         return keyBuilder_;
       }
       
-      // repeated bytes keyValueBytes = 2;
+      // repeated bytes key_value_bytes = 2;
       private java.util.List<com.google.protobuf.ByteString> keyValueBytes_ = java.util.Collections.emptyList();;
       private void ensureKeyValueBytesIsMutable() {
         if (!((bitField0_ & 0x00000002) == 0x00000002)) {
@@ -10500,7 +10500,7 @@ public final class AdminProtos {
         return this;
       }
       
-      // optional int32 associatedCellCount = 3;
+      // optional int32 associated_cell_count = 3;
       private int associatedCellCount_ ;
       public boolean hasAssociatedCellCount() {
         return ((bitField0_ & 0x00000004) == 0x00000004);
@@ -11728,7 +11728,7 @@ public final class AdminProtos {
   public interface RollWALWriterResponseOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
     
-    // repeated bytes regionToFlush = 1;
+    // repeated bytes region_to_flush = 1;
     java.util.List<com.google.protobuf.ByteString> getRegionToFlushList();
     int getRegionToFlushCount();
     com.google.protobuf.ByteString getRegionToFlush(int index);
@@ -11761,8 +11761,8 @@ public final class AdminProtos {
       return org.apache.hadoop.hbase.protobuf.generated.AdminProtos.internal_static_RollWALWriterResponse_fieldAccessorTable;
     }
     
-    // repeated bytes regionToFlush = 1;
-    public static final int REGIONTOFLUSH_FIELD_NUMBER = 1;
+    // repeated bytes region_to_flush = 1;
+    public static final int REGION_TO_FLUSH_FIELD_NUMBER = 1;
     private java.util.List<com.google.protobuf.ByteString> regionToFlush_;
     public java.util.List<com.google.protobuf.ByteString>
         getRegionToFlushList() {
@@ -11846,7 +11846,7 @@ public final class AdminProtos {
       int hash = 41;
       hash = (19 * hash) + getDescriptorForType().hashCode();
       if (getRegionToFlushCount() > 0) {
-        hash = (37 * hash) + REGIONTOFLUSH_FIELD_NUMBER;
+        hash = (37 * hash) + REGION_TO_FLUSH_FIELD_NUMBER;
         hash = (53 * hash) + getRegionToFlushList().hashCode();
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
@@ -12076,7 +12076,7 @@ public final class AdminProtos {
       
       private int bitField0_;
       
-      // repeated bytes regionToFlush = 1;
+      // repeated bytes region_to_flush = 1;
       private java.util.List<com.google.protobuf.ByteString> regionToFlush_ = java.util.Collections.emptyList();;
       private void ensureRegionToFlushIsMutable() {
         if (!((bitField0_ & 0x00000001) == 0x00000001)) {
@@ -13157,12 +13157,12 @@ public final class AdminProtos {
   public interface ServerInfoOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
     
-    // required .ServerName serverName = 1;
+    // required .ServerName server_name = 1;
     boolean hasServerName();
     org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName getServerName();
     org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerNameOrBuilder getServerNameOrBuilder();
     
-    // optional uint32 webuiPort = 2;
+    // optional uint32 webui_port = 2;
     boolean hasWebuiPort();
     int getWebuiPort();
   }
@@ -13195,8 +13195,8 @@ public final class AdminProtos {
     }
     
     private int bitField0_;
-    // required .ServerName serverName = 1;
-    public static final int SERVERNAME_FIELD_NUMBER = 1;
+    // required .ServerName server_name = 1;
+    public static final int SERVER_NAME_FIELD_NUMBER = 1;
     private org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName serverName_;
     public boolean hasServerName() {
       return ((bitField0_ & 0x00000001) == 0x00000001);
@@ -13208,8 +13208,8 @@ public final class AdminProtos {
       return serverName_;
     }
     
-    // optional uint32 webuiPort = 2;
-    public static final int WEBUIPORT_FIELD_NUMBER = 2;
+    // optional uint32 webui_port = 2;
+    public static final int WEBUI_PORT_FIELD_NUMBER = 2;
     private int webuiPort_;
     public boolean hasWebuiPort() {
       return ((bitField0_ & 0x00000002) == 0x00000002);
@@ -13308,11 +13308,11 @@ public final class AdminProtos {
       int hash = 41;
       hash = (19 * hash) + getDescriptorForType().hashCode();
       if (hasServerName()) {
-        hash = (37 * hash) + SERVERNAME_FIELD_NUMBER;
+        hash = (37 * hash) + SERVER_NAME_FIELD_NUMBER;
         hash = (53 * hash) + getServerName().hashCode();
       }
       if (hasWebuiPort()) {
-        hash = (37 * hash) + WEBUIPORT_FIELD_NUMBER;
+        hash = (37 * hash) + WEBUI_PORT_FIELD_NUMBER;
         hash = (53 * hash) + getWebuiPort();
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
@@ -13571,7 +13571,7 @@ public final class AdminProtos {
       
       private int bitField0_;
       
-      // required .ServerName serverName = 1;
+      // required .ServerName server_name = 1;
       private org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName serverName_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.getDefaultInstance();
       private com.google.protobuf.SingleFieldBuilder<
           org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerNameOrBuilder> serverNameBuilder_;
@@ -13661,7 +13661,7 @@ public final class AdminProtos {
         return serverNameBuilder_;
       }
       
-      // optional uint32 webuiPort = 2;
+      // optional uint32 webui_port = 2;
       private int webuiPort_ ;
       public boolean hasWebuiPort() {
         return ((bitField0_ & 0x00000002) == 0x00000002);
@@ -13696,7 +13696,7 @@ public final class AdminProtos {
   public interface GetServerInfoResponseOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
     
-    // required .ServerInfo serverInfo = 1;
+    // required .ServerInfo server_info = 1;
     boolean hasServerInfo();
     org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ServerInfo getServerInfo();
     org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ServerInfoOrBuilder getServerInfoOrBuilder();
@@ -13730,8 +13730,8 @@ public final class AdminProtos {
     }
     
     private int bitField0_;
-    // required .ServerInfo serverInfo = 1;
-    public static final int SERVERINFO_FIELD_NUMBER = 1;
+    // required .ServerInfo server_info = 1;
+    public static final int SERVER_INFO_FIELD_NUMBER = 1;
     private org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ServerInfo serverInfo_;
     public boolean hasServerInfo() {
       return ((bitField0_ & 0x00000001) == 0x00000001);
@@ -13820,7 +13820,7 @@ public final class AdminProtos {
       int hash = 41;
       hash = (19 * hash) + getDescriptorForType().hashCode();
       if (hasServerInfo()) {
-        hash = (37 * hash) + SERVERINFO_FIELD_NUMBER;
+        hash = (37 * hash) + SERVER_INFO_FIELD_NUMBER;
         hash = (53 * hash) + getServerInfo().hashCode();
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
@@ -14065,7 +14065,7 @@ public final class AdminProtos {
       
       private int bitField0_;
       
-      // required .ServerInfo serverInfo = 1;
+      // required .ServerInfo server_info = 1;
       private org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ServerInfo serverInfo_ = org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ServerInfo.getDefaultInstance();
       private com.google.protobuf.SingleFieldBuilder<
           org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ServerInfo, org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ServerInfo.Builder, org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ServerInfoOrBuilder> serverInfoBuilder_;
@@ -15387,79 +15387,80 @@ public final class AdminProtos {
   static {
     java.lang.String[] descriptorData = {
       "\n\013Admin.proto\032\014Client.proto\032\013hbase.proto" +
-      "\032\tWAL.proto\"Q\n\024GetRegionInfoRequest\022 \n\006r" +
-      "egion\030\001 \002(\0132\020.RegionSpecifier\022\027\n\017compact" +
-      "ionState\030\002 \001(\010\"\301\001\n\025GetRegionInfoResponse" +
-      "\022\037\n\nregionInfo\030\001 \002(\0132\013.RegionInfo\022?\n\017com" +
-      "pactionState\030\002 \001(\0162&.GetRegionInfoRespon" +
-      "se.CompactionState\"F\n\017CompactionState\022\010\n" +
-      "\004NONE\020\000\022\t\n\005MINOR\020\001\022\t\n\005MAJOR\020\002\022\023\n\017MAJOR_A" +
-      "ND_MINOR\020\003\"G\n\023GetStoreFileRequest\022 \n\006reg" +
-      "ion\030\001 \002(\0132\020.RegionSpecifier\022\016\n\006family\030\002 ",
-      "\003(\014\")\n\024GetStoreFileResponse\022\021\n\tstoreFile" +
-      "\030\001 \003(\t\"\030\n\026GetOnlineRegionRequest\":\n\027GetO" +
-      "nlineRegionResponse\022\037\n\nregionInfo\030\001 \003(\0132" +
-      "\013.RegionInfo\"\270\001\n\021OpenRegionRequest\0223\n\010op" +
-      "enInfo\030\001 \003(\0132!.OpenRegionRequest.RegionO" +
-      "penInfo\032n\n\016RegionOpenInfo\022\033\n\006region\030\001 \002(" +
-      "\0132\013.RegionInfo\022\034\n\024versionOfOfflineNode\030\002" +
-      " \001(\r\022!\n\014favoredNodes\030\003 \003(\0132\013.ServerName\"" +
-      "\234\001\n\022OpenRegionResponse\022<\n\014openingState\030\001" +
-      " \003(\0162&.OpenRegionResponse.RegionOpeningS",
-      "tate\"H\n\022RegionOpeningState\022\n\n\006OPENED\020\000\022\022" +
-      "\n\016ALREADY_OPENED\020\001\022\022\n\016FAILED_OPENING\020\002\"\232" +
-      "\001\n\022CloseRegionRequest\022 \n\006region\030\001 \002(\0132\020." +
-      "RegionSpecifier\022\034\n\024versionOfClosingNode\030" +
-      "\002 \001(\r\022\034\n\016transitionInZK\030\003 \001(\010:\004true\022&\n\021d" +
-      "estinationServer\030\004 \001(\0132\013.ServerName\"%\n\023C" +
-      "loseRegionResponse\022\016\n\006closed\030\001 \002(\010\"M\n\022Fl" +
-      "ushRegionRequest\022 \n\006region\030\001 \002(\0132\020.Regio" +
-      "nSpecifier\022\025\n\rifOlderThanTs\030\002 \001(\004\"=\n\023Flu" +
-      "shRegionResponse\022\025\n\rlastFlushTime\030\001 \002(\004\022",
-      "\017\n\007flushed\030\002 \001(\010\"J\n\022SplitRegionRequest\022 " +
-      "\n\006region\030\001 \002(\0132\020.RegionSpecifier\022\022\n\nspli" +
-      "tPoint\030\002 \001(\014\"\025\n\023SplitRegionResponse\"W\n\024C" +
-      "ompactRegionRequest\022 \n\006region\030\001 \002(\0132\020.Re" +
-      "gionSpecifier\022\r\n\005major\030\002 \001(\010\022\016\n\006family\030\003" +
-      " \001(\014\"\027\n\025CompactRegionResponse\"t\n\023MergeRe" +
-      "gionsRequest\022!\n\007regionA\030\001 \002(\0132\020.RegionSp" +
-      "ecifier\022!\n\007regionB\030\002 \002(\0132\020.RegionSpecifi" +
-      "er\022\027\n\010forcible\030\003 \001(\010:\005false\"\026\n\024MergeRegi" +
-      "onsResponse\"T\n\010WALEntry\022\024\n\003key\030\001 \002(\0132\007.W",
-      "ALKey\022\025\n\rkeyValueBytes\030\002 \003(\014\022\033\n\023associat" +
-      "edCellCount\030\003 \001(\005\"4\n\030ReplicateWALEntryRe" +
-      "quest\022\030\n\005entry\030\001 \003(\0132\t.WALEntry\"\033\n\031Repli" +
-      "cateWALEntryResponse\"\026\n\024RollWALWriterReq" +
-      "uest\".\n\025RollWALWriterResponse\022\025\n\rregionT" +
-      "oFlush\030\001 \003(\014\"#\n\021StopServerRequest\022\016\n\006rea" +
-      "son\030\001 \002(\t\"\024\n\022StopServerResponse\"\026\n\024GetSe" +
-      "rverInfoRequest\"@\n\nServerInfo\022\037\n\nserverN" +
-      "ame\030\001 \002(\0132\013.ServerName\022\021\n\twebuiPort\030\002 \001(" +
-      "\r\"8\n\025GetServerInfoResponse\022\037\n\nserverInfo",
-      "\030\001 \002(\0132\013.ServerInfo2\337\006\n\014AdminService\022>\n\r" +
-      "getRegionInfo\022\025.GetRegionInfoRequest\032\026.G" +
-      "etRegionInfoResponse\022;\n\014getStoreFile\022\024.G" +
-      "etStoreFileRequest\032\025.GetStoreFileRespons" +
-      "e\022D\n\017getOnlineRegion\022\027.GetOnlineRegionRe" +
-      "quest\032\030.GetOnlineRegionResponse\0225\n\nopenR" +
-      "egion\022\022.OpenRegionRequest\032\023.OpenRegionRe" +
-      "sponse\0228\n\013closeRegion\022\023.CloseRegionReque" +
-      "st\032\024.CloseRegionResponse\0228\n\013flushRegion\022" +
-      "\023.FlushRegionRequest\032\024.FlushRegionRespon",
-      "se\0228\n\013splitRegion\022\023.SplitRegionRequest\032\024" +
-      ".SplitRegionResponse\022>\n\rcompactRegion\022\025." +
-      "CompactRegionRequest\032\026.CompactRegionResp" +
-      "onse\022;\n\014mergeRegions\022\024.MergeRegionsReque" +
-      "st\032\025.MergeRegionsResponse\022J\n\021replicateWA" +
-      "LEntry\022\031.ReplicateWALEntryRequest\032\032.Repl" +
-      "icateWALEntryResponse\022\'\n\006replay\022\r.MultiR" +
-      "equest\032\016.MultiResponse\022>\n\rrollWALWriter\022" +
-      "\025.RollWALWriterRequest\032\026.RollWALWriterRe" +
-      "sponse\022>\n\rgetServerInfo\022\025.GetServerInfoR",
-      "equest\032\026.GetServerInfoResponse\0225\n\nstopSe" +
-      "rver\022\022.StopServerRequest\032\023.StopServerRes" +
-      "ponseBA\n*org.apache.hadoop.hbase.protobu" +
-      "f.generatedB\013AdminProtosH\001\210\001\001\240\001\001"
+      "\032\tWAL.proto\"R\n\024GetRegionInfoRequest\022 \n\006r" +
+      "egion\030\001 \002(\0132\020.RegionSpecifier\022\030\n\020compact" +
+      "ion_state\030\002 \001(\010\"\303\001\n\025GetRegionInfoRespons" +
+      "e\022 \n\013region_info\030\001 \002(\0132\013.RegionInfo\022@\n\020c" +
+      "ompaction_state\030\002 \001(\0162&.GetRegionInfoRes" +
+      "ponse.CompactionState\"F\n\017CompactionState" +
+      "\022\010\n\004NONE\020\000\022\t\n\005MINOR\020\001\022\t\n\005MAJOR\020\002\022\023\n\017MAJO" +
+      "R_AND_MINOR\020\003\"G\n\023GetStoreFileRequest\022 \n\006" +
+      "region\030\001 \002(\0132\020.RegionSpecifier\022\016\n\006family",
+      "\030\002 \003(\014\"*\n\024GetStoreFileResponse\022\022\n\nstore_" +
+      "file\030\001 \003(\t\"\030\n\026GetOnlineRegionRequest\";\n\027" +
+      "GetOnlineRegionResponse\022 \n\013region_info\030\001" +
+      " \003(\0132\013.RegionInfo\"\275\001\n\021OpenRegionRequest\022" +
+      "4\n\topen_info\030\001 \003(\0132!.OpenRegionRequest.R" +
+      "egionOpenInfo\032r\n\016RegionOpenInfo\022\033\n\006regio" +
+      "n\030\001 \002(\0132\013.RegionInfo\022\037\n\027version_of_offli" +
+      "ne_node\030\002 \001(\r\022\"\n\rfavored_nodes\030\003 \003(\0132\013.S" +
+      "erverName\"\235\001\n\022OpenRegionResponse\022=\n\ropen" +
+      "ing_state\030\001 \003(\0162&.OpenRegionResponse.Reg",
+      "ionOpeningState\"H\n\022RegionOpeningState\022\n\n" +
+      "\006OPENED\020\000\022\022\n\016ALREADY_OPENED\020\001\022\022\n\016FAILED_" +
+      "OPENING\020\002\"\240\001\n\022CloseRegionRequest\022 \n\006regi" +
+      "on\030\001 \002(\0132\020.RegionSpecifier\022\037\n\027version_of" +
+      "_closing_node\030\002 \001(\r\022\036\n\020transition_in_ZK\030" +
+      "\003 \001(\010:\004true\022\'\n\022destination_server\030\004 \001(\0132" +
+      "\013.ServerName\"%\n\023CloseRegionResponse\022\016\n\006c" +
+      "losed\030\001 \002(\010\"P\n\022FlushRegionRequest\022 \n\006reg" +
+      "ion\030\001 \002(\0132\020.RegionSpecifier\022\030\n\020if_older_" +
+      "than_ts\030\002 \001(\004\"?\n\023FlushRegionResponse\022\027\n\017",
+      "last_flush_time\030\001 \002(\004\022\017\n\007flushed\030\002 \001(\010\"K" +
+      "\n\022SplitRegionRequest\022 \n\006region\030\001 \002(\0132\020.R" +
+      "egionSpecifier\022\023\n\013split_point\030\002 \001(\014\"\025\n\023S" +
+      "plitRegionResponse\"W\n\024CompactRegionReque" +
+      "st\022 \n\006region\030\001 \002(\0132\020.RegionSpecifier\022\r\n\005" +
+      "major\030\002 \001(\010\022\016\n\006family\030\003 \001(\014\"\027\n\025CompactRe" +
+      "gionResponse\"v\n\023MergeRegionsRequest\022\"\n\010r" +
+      "egion_a\030\001 \002(\0132\020.RegionSpecifier\022\"\n\010regio" +
+      "n_b\030\002 \002(\0132\020.RegionSpecifier\022\027\n\010forcible\030" +
+      "\003 \001(\010:\005false\"\026\n\024MergeRegionsResponse\"X\n\010",
+      "WALEntry\022\024\n\003key\030\001 \002(\0132\007.WALKey\022\027\n\017key_va" +
+      "lue_bytes\030\002 \003(\014\022\035\n\025associated_cell_count" +
+      "\030\003 \001(\005\"4\n\030ReplicateWALEntryRequest\022\030\n\005en" +
+      "try\030\001 \003(\0132\t.WALEntry\"\033\n\031ReplicateWALEntr" +
+      "yResponse\"\026\n\024RollWALWriterRequest\"0\n\025Rol" +
+      "lWALWriterResponse\022\027\n\017region_to_flush\030\001 " +
+      "\003(\014\"#\n\021StopServerRequest\022\016\n\006reason\030\001 \002(\t" +
+      "\"\024\n\022StopServerResponse\"\026\n\024GetServerInfoR" +
+      "equest\"B\n\nServerInfo\022 \n\013server_name\030\001 \002(" +
+      "\0132\013.ServerName\022\022\n\nwebui_port\030\002 \001(\r\"9\n\025Ge",
+      "tServerInfoResponse\022 \n\013server_info\030\001 \002(\013" +
+      "2\013.ServerInfo2\337\006\n\014AdminService\022>\n\rGetReg" +
+      "ionInfo\022\025.GetRegionInfoRequest\032\026.GetRegi" +
+      "onInfoResponse\022;\n\014GetStoreFile\022\024.GetStor" +
+      "eFileRequest\032\025.GetStoreFileResponse\022D\n\017G" +
+      "etOnlineRegion\022\027.GetOnlineRegionRequest\032" +
+      "\030.GetOnlineRegionResponse\0225\n\nOpenRegion\022" +
+      "\022.OpenRegionRequest\032\023.OpenRegionResponse" +
+      "\0228\n\013CloseRegion\022\023.CloseRegionRequest\032\024.C" +
+      "loseRegionResponse\0228\n\013FlushRegion\022\023.Flus",
+      "hRegionRequest\032\024.FlushRegionResponse\0228\n\013" +
+      "SplitRegion\022\023.SplitRegionRequest\032\024.Split" +
+      "RegionResponse\022>\n\rCompactRegion\022\025.Compac" +
+      "tRegionRequest\032\026.CompactRegionResponse\022;" +
+      "\n\014MergeRegions\022\024.MergeRegionsRequest\032\025.M" +
+      "ergeRegionsResponse\022J\n\021ReplicateWALEntry" +
+      "\022\031.ReplicateWALEntryRequest\032\032.ReplicateW" +
+      "ALEntryResponse\022\'\n\006Replay\022\r.MultiRequest" +
+      "\032\016.MultiResponse\022>\n\rRollWALWriter\022\025.Roll" +
+      "WALWriterRequest\032\026.RollWALWriterResponse",
+      "\022>\n\rGetServerInfo\022\025.GetServerInfoRequest" +
+      "\032\026.GetServerInfoResponse\0225\n\nStopServer\022\022" +
+      ".StopServerRequest\032\023.StopServerResponseB" +
+      "A\n*org.apache.hadoop.hbase.protobuf.gene" +
+      "ratedB\013AdminProtosH\001\210\001\001\240\001\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {

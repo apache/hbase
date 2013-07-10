@@ -29,7 +29,7 @@ import "Comparator.proto";
 
 message Filter {
   required string name = 1;
-  optional bytes serializedFilter = 2;
+  optional bytes serialized_filter = 2;
 }
 
 message ColumnCountGetFilter {
@@ -39,7 +39,7 @@ message ColumnCountGetFilter {
 message ColumnPaginationFilter {
   required int32 limit = 1;
   optional int32 offset = 2;
-  optional bytes columnOffset = 3;
+  optional bytes column_offset = 3;
 }
 
 message ColumnPrefixFilter {
@@ -47,26 +47,26 @@ message ColumnPrefixFilter {
 }
 
 message ColumnRangeFilter {
-  optional bytes minColumn = 1;
-  optional bool minColumnInclusive = 2;
-  optional bytes maxColumn = 3;
-  optional bool maxColumnInclusive = 4;
+  optional bytes min_column = 1;
+  optional bool min_column_inclusive = 2;
+  optional bytes max_column = 3;
+  optional bool max_column_inclusive = 4;
 }
 
 message CompareFilter {
-  required CompareType compareOp = 1;
+  required CompareType compare_op = 1;
   optional Comparator comparator = 2;
 }
 
 message DependentColumnFilter {
-  required CompareFilter compareFilter = 1;
-  optional bytes columnFamily = 2;
-  optional bytes columnQualifier = 3;
-  optional bool dropDependentColumn = 4;
+  required CompareFilter compare_filter = 1;
+  optional bytes column_family = 2;
+  optional bytes column_qualifier = 3;
+  optional bool drop_dependent_column = 4;
 }
 
 message FamilyFilter {
-  required CompareFilter compareFilter = 1;
+  required CompareFilter compare_filter = 1;
 }
 
 message FilterList {
@@ -91,23 +91,23 @@ message FirstKeyValueMatchingQualifiersFilter {
 }
 
 message FuzzyRowFilter {
-  repeated BytesBytesPair fuzzyKeysData = 1;
+  repeated BytesBytesPair fuzzy_keys_data = 1;
 }
 
 message InclusiveStopFilter {
-  optional bytes stopRowKey = 1;
+  optional bytes stop_row_key = 1;
 }
 
 message KeyOnlyFilter {
-  required bool lenAsVal = 1;
+  required bool len_as_val = 1;
 }
 
 message MultipleColumnPrefixFilter {
-  repeated bytes sortedPrefixes = 1;
+  repeated bytes sorted_prefixes = 1;
 }
 
 message PageFilter {
-  required int64 pageSize = 1;
+  required int64 page_size = 1;
 }
 
 message PrefixFilter {
@@ -115,7 +115,7 @@ message PrefixFilter {
 }
 
 message QualifierFilter {
-  required CompareFilter compareFilter = 1;
+  required CompareFilter compare_filter = 1;
 }
 
 message RandomRowFilter {
@@ -123,20 +123,20 @@ message RandomRowFilter {
 }
 
 message RowFilter {
-  required CompareFilter compareFilter = 1;
+  required CompareFilter compare_filter = 1;
 }
 
 message SingleColumnValueExcludeFilter {
-  required SingleColumnValueFilter singleColumnValueFilter = 1;
+  required SingleColumnValueFilter single_column_value_filter = 1;
 }
 
 message SingleColumnValueFilter {
-  optional bytes columnFamily = 1;
-  optional bytes columnQualifier = 2;
-  required CompareType compareOp = 3;
+  optional bytes column_family = 1;
+  optional bytes column_qualifier = 2;
+  required CompareType compare_op = 3;
   required Comparator comparator = 4;
-  optional bool filterIfMissing = 5;
-  optional bool latestVersionOnly = 6;
+  optional bool filter_if_missing = 5;
+  optional bool latest_version_only = 6;
 }
 
 message SkipFilter {
@@ -148,7 +148,7 @@ message TimestampsFilter {
 }
 
 message ValueFilter {
-  required CompareFilter compareFilter = 1;
+  required CompareFilter compare_filter = 1;
 }
 
 message WhileMatchFilter {

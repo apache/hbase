@@ -32,24 +32,24 @@ import "Client.proto";
 /* Column-level protobufs */
 
 message AddColumnRequest {
-  required bytes tableName = 1;
-  required ColumnFamilySchema columnFamilies = 2;
+  required bytes table_name = 1;
+  required ColumnFamilySchema column_families = 2;
 }
 
 message AddColumnResponse {
 }
 
 message DeleteColumnRequest {
-  required bytes tableName = 1;
-  required bytes columnName = 2;
+  required bytes table_name = 1;
+  required bytes column_name = 2;
 }
 
 message DeleteColumnResponse {
 }
 
 message ModifyColumnRequest {
-  required bytes tableName = 1;
-  required ColumnFamilySchema columnFamilies = 2;
+  required bytes table_name = 1;
+  required ColumnFamilySchema column_families = 2;
 }
 
 message ModifyColumnResponse {
@@ -59,7 +59,7 @@ message ModifyColumnResponse {
 
 message MoveRegionRequest {
   required RegionSpecifier region = 1;
-  optional ServerName destServerName = 2;
+  optional ServerName dest_server_name = 2;
 }
 
 message MoveRegionResponse {
@@ -69,8 +69,8 @@ message MoveRegionResponse {
  * Dispatch merging the specified regions.
  */
 message DispatchMergingRegionsRequest {
-  required RegionSpecifier regionA = 1;
-  required RegionSpecifier regionB = 2;
+  required RegionSpecifier region_a = 1;
+  required RegionSpecifier region_b = 2;
   optional bool forcible = 3 [default = false];
 }
 
@@ -102,37 +102,37 @@ message OfflineRegionResponse {
 /* Table-level protobufs */
 
 message CreateTableRequest {
-  required TableSchema tableSchema = 1;
-  repeated bytes splitKeys = 2;
+  required TableSchema table_schema = 1;
+  repeated bytes split_keys = 2;
 }
 
 message CreateTableResponse {
 }
 
 message DeleteTableRequest {
-  required bytes tableName = 1;
+  required bytes table_name = 1;
 }
 
 message DeleteTableResponse {
 }
 
 message EnableTableRequest {
-  required bytes tableName = 1;
+  required bytes table_name = 1;
 }
 
 message EnableTableResponse {
 }
 
 message DisableTableRequest {
-  required bytes tableName = 1;
+  required bytes table_name = 1;
 }
 
 message DisableTableResponse {
 }
 
 message ModifyTableRequest {
-  required bytes tableName = 1;
-  required TableSchema tableSchema = 2;
+  required bytes table_name = 1;
+  required TableSchema table_schema = 2;
 }
 
 message ModifyTableResponse {
@@ -157,7 +157,7 @@ message BalanceRequest {
 }
 
 message BalanceResponse {
-  required bool balancerRan = 1;
+  required bool balancer_ran = 1;
 }
 
 message SetBalancerRunningRequest {
@@ -166,14 +166,14 @@ message SetBalancerRunningRequest {
 }
 
 message SetBalancerRunningResponse {
-  optional bool prevBalanceValue = 1;
+  optional bool prev_balance_value = 1;
 }
 
 message CatalogScanRequest {
 }
 
 message CatalogScanResponse {
-  optional int32 scanResult = 1;
+  optional int32 scan_result = 1;
 }
 
 message EnableCatalogJanitorRequest {
@@ -181,7 +181,7 @@ message EnableCatalogJanitorRequest {
 }
 
 message EnableCatalogJanitorResponse {
-  optional bool prevValue = 1;
+  optional bool prev_value = 1;
 }
 
 message IsCatalogJanitorEnabledRequest {
@@ -196,7 +196,7 @@ message TakeSnapshotRequest{
 }
 
 message TakeSnapshotResponse{
-	required int64 expectedTimeout = 1;
+	required int64 expected_timeout = 1;
 }
 
 message ListSnapshotRequest{
@@ -242,36 +242,36 @@ message IsRestoreSnapshotDoneResponse {
 
 service MasterAdminService {
   /** Adds a column to the specified table. */
-  rpc addColumn(AddColumnRequest)
+  rpc AddColumn(AddColumnRequest)
     returns(AddColumnResponse);
 
   /** Deletes a column from the specified table. Table must be disabled. */
-  rpc deleteColumn(DeleteColumnRequest)
+  rpc DeleteColumn(DeleteColumnRequest)
     returns(DeleteColumnResponse);
 
   /** Modifies an existing column on the specified table. */
-  rpc modifyColumn(ModifyColumnRequest)
+  rpc ModifyColumn(ModifyColumnRequest)
     returns(ModifyColumnResponse);
 
   /** Move the region region to the destination server. */
-  rpc moveRegion(MoveRegionRequest)
+  rpc MoveRegion(MoveRegionRequest)
     returns(MoveRegionResponse);
 
  /** Master dispatch merging the regions */
-  rpc dispatchMergingRegions(DispatchMergingRegionsRequest)
+  rpc DispatchMergingRegions(DispatchMergingRegionsRequest)
     returns(DispatchMergingRegionsResponse);    
 
   /** Assign a region to a server chosen at random. */
-  rpc assignRegion(AssignRegionRequest)
+  rpc AssignRegion(AssignRegionRequest)
     returns(AssignRegionResponse);
 
   /**
    * Unassign a region from current hosting regionserver.  Region will then be
    * assigned to a regionserver chosen at random.  Region could be reassigned
-   * back to the same server.  Use moveRegion if you want
+   * back to the same server.  Use MoveRegion if you want
    * to control the region movement.
    */
-  rpc unassignRegion(UnassignRegionRequest)
+  rpc UnassignRegion(UnassignRegionRequest)
     returns(UnassignRegionResponse);
 
   /**
@@ -280,35 +280,35 @@ service MasterAdminService {
    * automatically reassign the region as in unassign.   This is a special
    * method, and should only be used by experts or hbck.
    */
-  rpc offlineRegion(OfflineRegionRequest)
+  rpc OfflineRegion(OfflineRegionRequest)
     returns(OfflineRegionResponse);
 
   /** Deletes a table */
-  rpc deleteTable(DeleteTableRequest)
+  rpc DeleteTable(DeleteTableRequest)
     returns(DeleteTableResponse);
 
   /** Puts the table on-line (only needed if table has been previously taken offline) */
-  rpc enableTable(EnableTableRequest)
+  rpc EnableTable(EnableTableRequest)
     returns(EnableTableResponse);
 
   /** Take table offline */
-  rpc disableTable(DisableTableRequest)
+  rpc DisableTable(DisableTableRequest)
     returns(DisableTableResponse);
 
   /** Modify a table's metadata */
-  rpc modifyTable(ModifyTableRequest)
+  rpc ModifyTable(ModifyTableRequest)
     returns(ModifyTableResponse);
 
   /** Creates a new table asynchronously */
-  rpc createTable(CreateTableRequest)
+  rpc CreateTable(CreateTableRequest)
     returns(CreateTableResponse);
 
     /** Shutdown an HBase cluster. */
-  rpc shutdown(ShutdownRequest)
+  rpc Shutdown(ShutdownRequest)
     returns(ShutdownResponse);
 
   /** Stop HBase Master only.  Does not shutdown the cluster. */
-  rpc stopMaster(StopMasterRequest)
+  rpc StopMaster(StopMasterRequest)
     returns(StopMasterResponse);
 
   /**
@@ -316,72 +316,72 @@ service MasterAdminService {
    * go ahead and do the reassignments.  Can NOT run for various reasons.
    * Check logs.
    */
-  rpc balance(BalanceRequest)
+  rpc Balance(BalanceRequest)
     returns(BalanceResponse);
 
   /**
    * Turn the load balancer on or off.
    * If synchronous is true, it waits until current balance() call, if outstanding, to return.
    */
-  rpc setBalancerRunning(SetBalancerRunningRequest)
+  rpc SetBalancerRunning(SetBalancerRunningRequest)
     returns(SetBalancerRunningResponse);
 
   /** Get a run of the catalog janitor */
-  rpc runCatalogScan(CatalogScanRequest)
+  rpc RunCatalogScan(CatalogScanRequest)
      returns(CatalogScanResponse);
 
   /**
    * Enable the catalog janitor on or off.
    */
-  rpc enableCatalogJanitor(EnableCatalogJanitorRequest)
+  rpc EnableCatalogJanitor(EnableCatalogJanitorRequest)
      returns(EnableCatalogJanitorResponse);
 
   /**
    * Query whether the catalog janitor is enabled.
    */
-  rpc isCatalogJanitorEnabled(IsCatalogJanitorEnabledRequest)
+  rpc IsCatalogJanitorEnabled(IsCatalogJanitorEnabledRequest)
      returns(IsCatalogJanitorEnabledResponse);
 
   /**
    * Call a master coprocessor endpoint
    */
-  rpc execMasterService(CoprocessorServiceRequest)
+  rpc ExecMasterService(CoprocessorServiceRequest)
     returns(CoprocessorServiceResponse);
 
   /** 
    * Create a snapshot for the given table.
    * @param snapshot description of the snapshot to take
    */
-  rpc snapshot(TakeSnapshotRequest) returns(TakeSnapshotResponse);
+  rpc Snapshot(TakeSnapshotRequest) returns(TakeSnapshotResponse);
 
   /**
    * List completed snapshots.
    * Returns a list of snapshot descriptors for completed snapshots
    */
-  rpc getCompletedSnapshots(ListSnapshotRequest) returns(ListSnapshotResponse);
+  rpc GetCompletedSnapshots(ListSnapshotRequest) returns(ListSnapshotResponse);
 
   /**
    * Delete an existing snapshot. This method can also be used to clean up an aborted snapshot.
    * @param snapshotName snapshot to delete
    */
-  rpc deleteSnapshot(DeleteSnapshotRequest) returns(DeleteSnapshotResponse);
+  rpc DeleteSnapshot(DeleteSnapshotRequest) returns(DeleteSnapshotResponse);
 
   /**
    * Determine if the snapshot is done yet.
    */
-  rpc isSnapshotDone(IsSnapshotDoneRequest) returns(IsSnapshotDoneResponse);
+  rpc IsSnapshotDone(IsSnapshotDoneRequest) returns(IsSnapshotDoneResponse);
 
   /**
    * Restore a snapshot
    * @param snapshot description of the snapshot to restore
    */
-  rpc restoreSnapshot(RestoreSnapshotRequest) returns(RestoreSnapshotResponse);
+  rpc RestoreSnapshot(RestoreSnapshotRequest) returns(RestoreSnapshotResponse);
 
   /**
    * Determine if the snapshot restore is done yet.
    */
-  rpc isRestoreSnapshotDone(IsRestoreSnapshotDoneRequest) returns(IsRestoreSnapshotDoneResponse);
+  rpc IsRestoreSnapshotDone(IsRestoreSnapshotDoneRequest) returns(IsRestoreSnapshotDoneResponse);
 
   /** return true if master is available */
-  rpc isMasterRunning(IsMasterRunningRequest) returns(IsMasterRunningResponse);
+  rpc IsMasterRunning(IsMasterRunningRequest) returns(IsMasterRunningResponse);
 }

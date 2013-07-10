@@ -311,7 +311,7 @@ public final class MasterProtos {
   public interface IsMasterRunningResponseOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
     
-    // required bool isMasterRunning = 1;
+    // required bool is_master_running = 1;
     boolean hasIsMasterRunning();
     boolean getIsMasterRunning();
   }
@@ -344,8 +344,8 @@ public final class MasterProtos {
     }
     
     private int bitField0_;
-    // required bool isMasterRunning = 1;
-    public static final int ISMASTERRUNNING_FIELD_NUMBER = 1;
+    // required bool is_master_running = 1;
+    public static final int IS_MASTER_RUNNING_FIELD_NUMBER = 1;
     private boolean isMasterRunning_;
     public boolean hasIsMasterRunning() {
       return ((bitField0_ & 0x00000001) == 0x00000001);
@@ -427,7 +427,7 @@ public final class MasterProtos {
       int hash = 41;
       hash = (19 * hash) + getDescriptorForType().hashCode();
       if (hasIsMasterRunning()) {
-        hash = (37 * hash) + ISMASTERRUNNING_FIELD_NUMBER;
+        hash = (37 * hash) + IS_MASTER_RUNNING_FIELD_NUMBER;
         hash = (53 * hash) + hashBoolean(getIsMasterRunning());
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
@@ -655,7 +655,7 @@ public final class MasterProtos {
       
       private int bitField0_;
       
-      // required bool isMasterRunning = 1;
+      // required bool is_master_running = 1;
       private boolean isMasterRunning_ ;
       public boolean hasIsMasterRunning() {
         return ((bitField0_ & 0x00000001) == 0x00000001);
@@ -928,12 +928,12 @@ public final class MasterProtos {
   static {
     java.lang.String[] descriptorData = {
       "\n\014Master.proto\"\030\n\026IsMasterRunningRequest" +
-      "\"2\n\027IsMasterRunningResponse\022\027\n\017isMasterR" +
-      "unning\030\001 \002(\0102U\n\rMasterService\022D\n\017isMaste" +
-      "rRunning\022\027.IsMasterRunningRequest\032\030.IsMa" +
-      "sterRunningResponseBB\n*org.apache.hadoop" +
-      ".hbase.protobuf.generatedB\014MasterProtosH" +
-      "\001\210\001\001\240\001\001"
+      "\"4\n\027IsMasterRunningResponse\022\031\n\021is_master" +
+      "_running\030\001 \002(\0102U\n\rMasterService\022D\n\017IsMas" +
+      "terRunning\022\027.IsMasterRunningRequest\032\030.Is" +
+      "MasterRunningResponseBB\n*org.apache.hado" +
+      "op.hbase.protobuf.generatedB\014MasterProto" +
+      "sH\001\210\001\001\240\001\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {

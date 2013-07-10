@@ -32,10 +32,10 @@ message RegionServerStartupRequest {
   required uint32 port = 1;
 
   /** This servers' startcode */
-  required uint64 serverStartCode = 2;
+  required uint64 server_start_code = 2;
 
   /** Current time of the region server in ms */
-  required uint64 serverCurrentTime = 3;
+  required uint64 server_current_time = 3;
 }
 
 message RegionServerStartupResponse {
@@ -44,7 +44,7 @@ message RegionServerStartupResponse {
    * hbase rootdir, the hostname to use creating the RegionServer ServerName,
    * etc
    */
-  repeated NameStringPair mapEntries = 1;
+  repeated NameStringPair map_entries = 1;
 }
 
 message RegionServerReportRequest {
@@ -62,7 +62,7 @@ message ReportRSFatalErrorRequest {
   required ServerName server = 1;
 
   /** informative text to expose in the master logs and UI */
-  required string errorMessage = 2;
+  required string error_message = 2;
 }
 
 message ReportRSFatalErrorResponse {
@@ -70,33 +70,33 @@ message ReportRSFatalErrorResponse {
 
 message GetLastFlushedSequenceIdRequest {
   /** region name */
-  required bytes regionName = 1;
+  required bytes region_name = 1;
 }
 
 message GetLastFlushedSequenceIdResponse {
   /** the last HLog sequence id flushed from MemStore to HFile for the region */
-  required uint64 lastFlushedSequenceId = 1;
+  required uint64 last_flushed_sequence_id = 1;
 }
 
 service RegionServerStatusService {
   /** Called when a region server first starts. */
-  rpc regionServerStartup(RegionServerStartupRequest)
+  rpc RegionServerStartup(RegionServerStartupRequest)
     returns(RegionServerStartupResponse);
 
   /** Called to report the load the RegionServer is under. */
-  rpc regionServerReport(RegionServerReportRequest)
+  rpc RegionServerReport(RegionServerReportRequest)
     returns(RegionServerReportResponse);
 
   /**
    * Called by a region server to report a fatal error that is causing it to
    * abort.
    */
-  rpc reportRSFatalError(ReportRSFatalErrorRequest)
+  rpc ReportRSFatalError(ReportRSFatalErrorRequest)
     returns(ReportRSFatalErrorResponse);
 
   /** Called to get the sequence id of the last MemStore entry flushed to an
    * HFile for a specified region. Used by the region server to speed up
    * log splitting. */
-  rpc getLastFlushedSequenceId(GetLastFlushedSequenceIdRequest)
+  rpc GetLastFlushedSequenceId(GetLastFlushedSequenceIdRequest)
     returns(GetLastFlushedSequenceIdResponse);
 }
