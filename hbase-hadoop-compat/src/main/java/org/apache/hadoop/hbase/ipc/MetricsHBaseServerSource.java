@@ -22,37 +22,37 @@ package org.apache.hadoop.hbase.ipc;
 import org.apache.hadoop.hbase.metrics.BaseSource;
 
 public interface MetricsHBaseServerSource extends BaseSource {
-  public static final String AUTHORIZATION_SUCCESSES_NAME = "authorizationSuccesses";
-  public static final String AUTHORIZATION_SUCCESSES_DESC =
+  String AUTHORIZATION_SUCCESSES_NAME = "authorizationSuccesses";
+  String AUTHORIZATION_SUCCESSES_DESC =
       "Number of authorization successes.";
-  public static final String AUTHORIZATION_FAILURES_NAME = "authorizationFailures";
-  public static final String AUTHORIZATION_FAILURES_DESC =
+  String AUTHORIZATION_FAILURES_NAME = "authorizationFailures";
+  String AUTHORIZATION_FAILURES_DESC =
       "Number of authorization failures.";
-  public static final String AUTHENTICATION_SUCCESSES_NAME = "authenticationSuccesses";
-  public static final String AUTHENTICATION_SUCCESSES_DESC =
+  String AUTHENTICATION_SUCCESSES_NAME = "authenticationSuccesses";
+  String AUTHENTICATION_SUCCESSES_DESC =
       "Number of authentication successes.";
-  public static final String AUTHENTICATION_FAILURES_NAME = "authenticationFailures";
-  public static final String AUTHENTICATION_FAILURES_DESC =
+  String AUTHENTICATION_FAILURES_NAME = "authenticationFailures";
+  String AUTHENTICATION_FAILURES_DESC =
       "Number of authentication failures.";
-  public static final String SENT_BYTES_NAME = "sentBytes";
-  public static final String SENT_BYTES_DESC = "Number of bytes sent.";
-  public static final String RECEIVED_BYTES_NAME = "receivedBytes";
-  public static final String RECEIVED_BYTES_DESC = "Number of bytes received.";
-  public static final String QUEUE_CALL_TIME_NAME = "queueCallTime";
-  public static final String QUEUE_CALL_TIME_DESC = "Queue Call Time.";
-  public static final String PROCESS_CALL_TIME_NAME = "processCallTime";
-  public static final String PROCESS_CALL_TIME_DESC = "Processing call time.";
-  public static final String QUEUE_SIZE_NAME = "queueSize";
-  public static final String QUEUE_SIZE_DESC = "Number of bytes in the call queues.";
-  public static final String GENERAL_QUEUE_NAME = "numCallsInGeneralQueue";
-  public static final String GENERAL_QUEUE_DESC = "Number of calls in the general call queue.";
-  public static final String PRIORITY_QUEUE_NAME = "numCallsInPriorityQueue";
-  public static final String REPLICATION_QUEUE_NAME = "numCallsInReplicationQueue";
-  public static final String REPLICATION_QUEUE_DESC =
+  String SENT_BYTES_NAME = "sentBytes";
+  String SENT_BYTES_DESC = "Number of bytes sent.";
+  String RECEIVED_BYTES_NAME = "receivedBytes";
+  String RECEIVED_BYTES_DESC = "Number of bytes received.";
+  String QUEUE_CALL_TIME_NAME = "queueCallTime";
+  String QUEUE_CALL_TIME_DESC = "Queue Call Time.";
+  String PROCESS_CALL_TIME_NAME = "processCallTime";
+  String PROCESS_CALL_TIME_DESC = "Processing call time.";
+  String QUEUE_SIZE_NAME = "queueSize";
+  String QUEUE_SIZE_DESC = "Number of bytes in the call queues.";
+  String GENERAL_QUEUE_NAME = "numCallsInGeneralQueue";
+  String GENERAL_QUEUE_DESC = "Number of calls in the general call queue.";
+  String PRIORITY_QUEUE_NAME = "numCallsInPriorityQueue";
+  String REPLICATION_QUEUE_NAME = "numCallsInReplicationQueue";
+  String REPLICATION_QUEUE_DESC =
       "Number of calls in the replication call queue.";
-  public static final String PRIORITY_QUEUE_DESC = "Number of calls in the priority call queue.";
-  public static final String NUM_OPEN_CONNECTIONS_NAME = "numOpenConnections";
-  public static final String NUM_OPEN_CONNECTIONS_DESC = "Number of open connections.";
+  String PRIORITY_QUEUE_DESC = "Number of calls in the priority call queue.";
+  String NUM_OPEN_CONNECTIONS_NAME = "numOpenConnections";
+  String NUM_OPEN_CONNECTIONS_DESC = "Number of open connections.";
 
   void authorizationSuccess();
 

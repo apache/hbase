@@ -50,21 +50,21 @@ public interface LoadBalancer extends Configurable {
    * Set the current cluster status.  This allows a LoadBalancer to map host name to a server
    * @param st
    */
-  public void setClusterStatus(ClusterStatus st);
+  void setClusterStatus(ClusterStatus st);
 
 
   /**
    * Set the master service.
    * @param masterServices
    */
-  public void setMasterServices(MasterServices masterServices);
+  void setMasterServices(MasterServices masterServices);
 
   /**
    * Perform the major balance operation
    * @param clusterState
    * @return List of plans
    */
-  public List<RegionPlan> balanceCluster(Map<ServerName, List<HRegionInfo>> clusterState);
+  List<RegionPlan> balanceCluster(Map<ServerName, List<HRegionInfo>> clusterState);
 
   /**
    * Perform a Round Robin assignment of regions.
@@ -72,7 +72,10 @@ public interface LoadBalancer extends Configurable {
    * @param servers
    * @return Map of servername to regioninfos
    */
-  public Map<ServerName, List<HRegionInfo>> roundRobinAssignment(List<HRegionInfo> regions, List<ServerName> servers);
+  Map<ServerName, List<HRegionInfo>> roundRobinAssignment(
+    List<HRegionInfo> regions,
+    List<ServerName> servers
+  );
 
   /**
    * Assign regions to the previously hosting region server
@@ -80,7 +83,10 @@ public interface LoadBalancer extends Configurable {
    * @param servers
    * @return List of plans
    */
-  public Map<ServerName, List<HRegionInfo>> retainAssignment(Map<HRegionInfo, ServerName> regions, List<ServerName> servers);
+  Map<ServerName, List<HRegionInfo>> retainAssignment(
+    Map<HRegionInfo, ServerName> regions,
+    List<ServerName> servers
+  );
 
   /**
    * Sync assign a region
@@ -88,7 +94,10 @@ public interface LoadBalancer extends Configurable {
    * @param servers
     * @return Map regioninfos to servernames
    */
-  public Map<HRegionInfo, ServerName> immediateAssignment(List<HRegionInfo> regions, List<ServerName> servers);
+  Map<HRegionInfo, ServerName> immediateAssignment(
+    List<HRegionInfo> regions,
+    List<ServerName> servers
+  );
 
   /**
    * Get a random region server from the list
@@ -96,6 +105,7 @@ public interface LoadBalancer extends Configurable {
    * @param servers
    * @return Servername
    */
-  public ServerName randomAssignment(HRegionInfo regionInfo, 
-		  List<ServerName> servers);
+  ServerName randomAssignment(
+    HRegionInfo regionInfo, List<ServerName> servers
+  );
 }

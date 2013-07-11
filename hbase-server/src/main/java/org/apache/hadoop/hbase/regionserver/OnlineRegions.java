@@ -35,7 +35,7 @@ interface OnlineRegions extends Server {
    * Add to online regions.
    * @param r
    */
-  public void addToOnlineRegions(final HRegion r);
+  void addToOnlineRegions(final HRegion r);
 
   /**
    * This method removes HRegion corresponding to hri from the Map of onlineRegions.
@@ -44,7 +44,7 @@ interface OnlineRegions extends Server {
    * @param destination Destination, if any, null otherwise.
    * @return True if we removed a region from online list.
    */
-  public boolean removeFromOnlineRegions(final HRegion r, ServerName destination);
+  boolean removeFromOnlineRegions(final HRegion r, ServerName destination);
 
   /**
    * Return {@link HRegion} instance.
@@ -54,7 +54,7 @@ interface OnlineRegions extends Server {
    * @return HRegion for the passed encoded <code>encodedRegionName</code> or
    * null if named region is not member of the online regions.
    */
-  public HRegion getFromOnlineRegions(String encodedRegionName);
+  HRegion getFromOnlineRegions(String encodedRegionName);
 
    /**
     * Get all online regions of a table in this RS.
@@ -62,5 +62,5 @@ interface OnlineRegions extends Server {
     * @return List of HRegion
     * @throws java.io.IOException
     */
-   public List<HRegion> getOnlineRegions(byte[] tableName) throws IOException;
+   List<HRegion> getOnlineRegions(byte[] tableName) throws IOException;
 }

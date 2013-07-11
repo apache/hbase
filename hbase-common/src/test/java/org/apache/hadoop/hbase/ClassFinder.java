@@ -50,16 +50,16 @@ public class ClassFinder {
   private ClassFilter classFilter;
   private FileFilter fileFilter;
 
-  public static interface ResourcePathFilter {
-    public boolean isCandidatePath(String resourcePath, boolean isJar);
+  public interface ResourcePathFilter {
+    boolean isCandidatePath(String resourcePath, boolean isJar);
   };
 
-  public static interface FileNameFilter {
-    public boolean isCandidateFile(String fileName, String absFilePath);
+  public interface FileNameFilter {
+    boolean isCandidateFile(String fileName, String absFilePath);
   };
 
-  public static interface ClassFilter {
-    public boolean isCandidateClass(Class<?> c);
+  public interface ClassFilter {
+    boolean isCandidateClass(Class<?> c);
   };
 
   public ClassFinder() {

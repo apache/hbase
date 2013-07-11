@@ -25,27 +25,27 @@ import org.apache.hadoop.hbase.metrics.BaseSource;
  */
 public interface MetricsRESTSource extends BaseSource {
 
-  public static String METRICS_NAME = "REST";
+  String METRICS_NAME = "REST";
 
-  public static String CONTEXT = "rest";
+  String CONTEXT = "rest";
 
-  public static String JMX_CONTEXT = "REST";
+  String JMX_CONTEXT = "REST";
 
-  public static String METRICS_DESCRIPTION = "Metrics about the HBase REST server";
+  String METRICS_DESCRIPTION = "Metrics about the HBase REST server";
 
-  static String REQUEST_KEY = "requests";
+  String REQUEST_KEY = "requests";
 
-  static String SUCCESSFUL_GET_KEY = "successfulGet";
+  String SUCCESSFUL_GET_KEY = "successfulGet";
 
-  static String SUCCESSFUL_PUT_KEY = "successfulPut";
+  String SUCCESSFUL_PUT_KEY = "successfulPut";
 
-  static String SUCCESSFUL_DELETE_KEY = "successfulDelete";
+  String SUCCESSFUL_DELETE_KEY = "successfulDelete";
 
-  static String FAILED_GET_KEY = "failedGet";
+  String FAILED_GET_KEY = "failedGet";
 
-  static String FAILED_PUT_KEY = "failedPut";
+  String FAILED_PUT_KEY = "failedPut";
 
-  static String FAILED_DELETE_KEY = "failedDelete";
+  String FAILED_DELETE_KEY = "failedDelete";
 
   /**
    * Increment the number of requests

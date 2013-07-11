@@ -34,13 +34,13 @@ public interface RegionScanner extends InternalScanner {
   /**
    * @return The RegionInfo for this scanner.
    */
-  public HRegionInfo getRegionInfo();
+  HRegionInfo getRegionInfo();
 
   /**
    * @return True if a filter indicates that this scanner will return no further rows.
    * @throws IOException in case of I/O failure on a filter.
    */
-  public boolean isFilterDone() throws IOException;
+  boolean isFilterDone() throws IOException;
 
   /**
    * Do a reseek to the required row. Should not be used to seek to a key which
@@ -52,17 +52,17 @@ public interface RegionScanner extends InternalScanner {
    *           if row is null
    *
    */
-  public boolean reseek(byte[] row) throws IOException;
+  boolean reseek(byte[] row) throws IOException;
 
   /**
    * @return The preferred max buffersize. See {@link Scan#setMaxResultSize(long)}
    */
-  public long getMaxResultSize();
+  long getMaxResultSize();
 
   /**
    * @return The Scanner's MVCC readPt see {@link MultiVersionConsistencyControl}
    */
-  public long getMvccReadPoint();
+  long getMvccReadPoint();
 
   /**
    * Grab the next row's worth of values with the default limit on the number of values
@@ -74,7 +74,7 @@ public interface RegionScanner extends InternalScanner {
    * @return true if more rows exist after this one, false if scanner is done
    * @throws IOException e
    */
-  public boolean nextRaw(List<KeyValue> result) throws IOException;
+  boolean nextRaw(List<KeyValue> result) throws IOException;
 
   /**
    * Grab the next row's worth of values with a limit on the number of values
@@ -102,5 +102,5 @@ public interface RegionScanner extends InternalScanner {
    * @return true if more rows exist after this one, false if scanner is done
    * @throws IOException e
    */
-  public boolean nextRaw(List<KeyValue> result, int limit) throws IOException;
+  boolean nextRaw(List<KeyValue> result, int limit) throws IOException;
 }

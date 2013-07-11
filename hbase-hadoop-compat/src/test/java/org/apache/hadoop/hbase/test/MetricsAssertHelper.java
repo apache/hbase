@@ -27,7 +27,7 @@ public interface MetricsAssertHelper {
    * Init helper.  This method will make sure that the metrics system is set
    * up for tests.
    */
-  public void init();
+  void init();
 
   /**
    * Assert that a tag exists and has a given value.
@@ -37,7 +37,7 @@ public interface MetricsAssertHelper {
    * @param source   The BaseSource{@link BaseSource} that will provide the tags,
    *                 gauges, and counters.
    */
-  public void assertTag(String name, String expected, BaseSource source);
+  void assertTag(String name, String expected, BaseSource source);
 
   /**
    * Assert that a gauge exists and that it's value is equal to the expected value.
@@ -47,7 +47,7 @@ public interface MetricsAssertHelper {
    * @param source   The BaseSource{@link BaseSource} that will provide the tags,
    *                 gauges, and counters.
    */
-  public void assertGauge(String name, long expected, BaseSource source);
+  void assertGauge(String name, long expected, BaseSource source);
 
   /**
    * Assert that a gauge exists and it's value is greater than a given value
@@ -57,7 +57,7 @@ public interface MetricsAssertHelper {
    * @param source   The BaseSource{@link BaseSource} that will provide the tags,
    *                 gauges, and counters.
    */
-  public void assertGaugeGt(String name, long expected, BaseSource source);
+  void assertGaugeGt(String name, long expected, BaseSource source);
 
   /**
    * Assert that a gauge exists and it's value is less than a given value
@@ -67,7 +67,7 @@ public interface MetricsAssertHelper {
    * @param source   The BaseSource{@link BaseSource} that will provide the tags,
    *                 gauges, and counters.
    */
-  public void assertGaugeLt(String name, long expected, BaseSource source);
+  void assertGaugeLt(String name, long expected, BaseSource source);
 
   /**
    * Assert that a gauge exists and that it's value is equal to the expected value.
@@ -77,7 +77,7 @@ public interface MetricsAssertHelper {
    * @param source   The BaseSource{@link BaseSource} that will provide the tags,
    *                 gauges, and counters.
    */
-  public void assertGauge(String name, double expected, BaseSource source);
+  void assertGauge(String name, double expected, BaseSource source);
 
   /**
    * Assert that a gauge exists and it's value is greater than a given value
@@ -87,7 +87,7 @@ public interface MetricsAssertHelper {
    * @param source   The BaseSource{@link BaseSource} that will provide the tags,
    *                 gauges, and counters.
    */
-  public void assertGaugeGt(String name, double expected, BaseSource source);
+  void assertGaugeGt(String name, double expected, BaseSource source);
 
   /**
    * Assert that a gauge exists and it's value is less than a given value
@@ -97,7 +97,7 @@ public interface MetricsAssertHelper {
    * @param source   The BaseSource{@link BaseSource} that will provide the tags,
    *                 gauges, and counters.
    */
-  public void assertGaugeLt(String name, double expected, BaseSource source);
+  void assertGaugeLt(String name, double expected, BaseSource source);
 
   /**
    * Assert that a counter exists and that it's value is equal to the expected value.
@@ -107,7 +107,7 @@ public interface MetricsAssertHelper {
    * @param source   The BaseSource{@link BaseSource} that will provide the tags,
    *                 gauges, and counters.
    */
-  public void assertCounter(String name, long expected, BaseSource source);
+  void assertCounter(String name, long expected, BaseSource source);
 
   /**
    * Assert that a counter exists and that it's value is greater than the given value.
@@ -117,7 +117,7 @@ public interface MetricsAssertHelper {
    * @param source   The BaseSource{@link BaseSource} that will provide the tags,
    *                 gauges, and counters.
    */
-  public void assertCounterGt(String name, long expected, BaseSource source);
+  void assertCounterGt(String name, long expected, BaseSource source);
 
   /**
    * Assert that a counter exists and that it's value is less than the given value.
@@ -127,7 +127,7 @@ public interface MetricsAssertHelper {
    * @param source   The BaseSource{@link BaseSource} that will provide the tags,
    *                 gauges, and counters.
    */
-  public void assertCounterLt(String name, long expected, BaseSource source);
+  void assertCounterLt(String name, long expected, BaseSource source);
 
   /**
    * Get the value of a counter.
@@ -137,7 +137,7 @@ public interface MetricsAssertHelper {
    *               gauges, and counters.
    * @return long value of the counter.
    */
-  public long getCounter(String name, BaseSource source);
+  long getCounter(String name, BaseSource source);
 
   /**
    * Get the value of a gauge as a double.
@@ -147,7 +147,7 @@ public interface MetricsAssertHelper {
    *               gauges, and counters.
    * @return double value of the gauge.
    */
-  public double getGaugeDouble(String name, BaseSource source);
+  double getGaugeDouble(String name, BaseSource source);
 
   /**
    * Get the value of a gauge as a long.
@@ -157,5 +157,5 @@ public interface MetricsAssertHelper {
    *               gauges, and counters.
    * @return long value of the gauge.
    */
-  public long getGaugeLong(String name, BaseSource source);
+  long getGaugeLong(String name, BaseSource source);
 }

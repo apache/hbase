@@ -28,22 +28,22 @@ public interface MetricsRegionServerSource extends BaseSource {
   /**
    * The name of the metrics
    */
-  static final String METRICS_NAME = "Server";
+  String METRICS_NAME = "Server";
 
   /**
    * The name of the metrics context that metrics will be under.
    */
-  static final String METRICS_CONTEXT = "regionserver";
+  String METRICS_CONTEXT = "regionserver";
 
   /**
    * Description
    */
-  static final String METRICS_DESCRIPTION = "Metrics about HBase RegionServer";
+  String METRICS_DESCRIPTION = "Metrics about HBase RegionServer";
 
   /**
    * The name of the metrics context that metrics will be under in jmx
    */
-  static final String METRICS_JMX_CONTEXT = "RegionServer,sub=" + METRICS_NAME;
+  String METRICS_JMX_CONTEXT = "RegionServer,sub=" + METRICS_NAME;
 
   /**
    * Update the Put time histogram
@@ -113,103 +113,103 @@ public interface MetricsRegionServerSource extends BaseSource {
   void incrSlowAppend();
 
   // Strings used for exporting to metrics system.
-  static final String REGION_COUNT = "regionCount";
-  static final String REGION_COUNT_DESC = "Number of regions";
-  static final String STORE_COUNT = "storeCount";
-  static final String STORE_COUNT_DESC = "Number of Stores";
-  static final String STOREFILE_COUNT = "storeFileCount";
-  static final String STOREFILE_COUNT_DESC = "Number of Store Files";
-  static final String MEMSTORE_SIZE = "memStoreSize";
-  static final String MEMSTORE_SIZE_DESC = "Size of the memstore";
-  static final String STOREFILE_SIZE = "storeFileSize";
-  static final String STOREFILE_SIZE_DESC = "Size of storefiles being served.";
-  static final String TOTAL_REQUEST_COUNT = "totalRequestCount";
-  static final String TOTAL_REQUEST_COUNT_DESC =
+  String REGION_COUNT = "regionCount";
+  String REGION_COUNT_DESC = "Number of regions";
+  String STORE_COUNT = "storeCount";
+  String STORE_COUNT_DESC = "Number of Stores";
+  String STOREFILE_COUNT = "storeFileCount";
+  String STOREFILE_COUNT_DESC = "Number of Store Files";
+  String MEMSTORE_SIZE = "memStoreSize";
+  String MEMSTORE_SIZE_DESC = "Size of the memstore";
+  String STOREFILE_SIZE = "storeFileSize";
+  String STOREFILE_SIZE_DESC = "Size of storefiles being served.";
+  String TOTAL_REQUEST_COUNT = "totalRequestCount";
+  String TOTAL_REQUEST_COUNT_DESC =
       "Total number of requests this RegionServer has answered.";
-  static final String READ_REQUEST_COUNT = "readRequestCount";
-  static final String READ_REQUEST_COUNT_DESC =
+  String READ_REQUEST_COUNT = "readRequestCount";
+  String READ_REQUEST_COUNT_DESC =
       "Number of read requests this region server has answered.";
-  static final String WRITE_REQUEST_COUNT = "writeRequestCount";
-  static final String WRITE_REQUEST_COUNT_DESC =
+  String WRITE_REQUEST_COUNT = "writeRequestCount";
+  String WRITE_REQUEST_COUNT_DESC =
       "Number of mutation requests this region server has answered.";
-  static final String CHECK_MUTATE_FAILED_COUNT = "checkMutateFailedCount";
-  static final String CHECK_MUTATE_FAILED_COUNT_DESC =
+  String CHECK_MUTATE_FAILED_COUNT = "checkMutateFailedCount";
+  String CHECK_MUTATE_FAILED_COUNT_DESC =
       "Number of Check and Mutate calls that failed the checks.";
-  static final String CHECK_MUTATE_PASSED_COUNT = "checkMutatePassedCount";
-  static final String CHECK_MUTATE_PASSED_COUNT_DESC =
+  String CHECK_MUTATE_PASSED_COUNT = "checkMutatePassedCount";
+  String CHECK_MUTATE_PASSED_COUNT_DESC =
       "Number of Check and Mutate calls that passed the checks.";
-  static final String STOREFILE_INDEX_SIZE = "storeFileIndexSize";
-  static final String STOREFILE_INDEX_SIZE_DESC = "Size of indexes in storefiles on disk.";
-  static final String STATIC_INDEX_SIZE = "staticIndexSize";
-  static final String STATIC_INDEX_SIZE_DESC = "Uncompressed size of the static indexes.";
-  static final String STATIC_BLOOM_SIZE = "staticBloomSize";
-  static final String STATIC_BLOOM_SIZE_DESC =
+  String STOREFILE_INDEX_SIZE = "storeFileIndexSize";
+  String STOREFILE_INDEX_SIZE_DESC = "Size of indexes in storefiles on disk.";
+  String STATIC_INDEX_SIZE = "staticIndexSize";
+  String STATIC_INDEX_SIZE_DESC = "Uncompressed size of the static indexes.";
+  String STATIC_BLOOM_SIZE = "staticBloomSize";
+  String STATIC_BLOOM_SIZE_DESC =
       "Uncompressed size of the static bloom filters.";
-  static final String NUMBER_OF_MUTATIONS_WITHOUT_WAL = "mutationsWithoutWALCount";
-  static final String NUMBER_OF_MUTATIONS_WITHOUT_WAL_DESC =
+  String NUMBER_OF_MUTATIONS_WITHOUT_WAL = "mutationsWithoutWALCount";
+  String NUMBER_OF_MUTATIONS_WITHOUT_WAL_DESC =
       "Number of mutations that have been sent by clients with the write ahead logging turned off.";
-  static final String DATA_SIZE_WITHOUT_WAL = "mutationsWithoutWALSize";
-  static final String DATA_SIZE_WITHOUT_WAL_DESC =
+  String DATA_SIZE_WITHOUT_WAL = "mutationsWithoutWALSize";
+  String DATA_SIZE_WITHOUT_WAL_DESC =
       "Size of data that has been sent by clients with the write ahead logging turned off.";
-  static final String PERCENT_FILES_LOCAL = "percentFilesLocal";
-  static final String PERCENT_FILES_LOCAL_DESC =
+  String PERCENT_FILES_LOCAL = "percentFilesLocal";
+  String PERCENT_FILES_LOCAL_DESC =
       "The percent of HFiles that are stored on the local hdfs data node.";
-  static final String COMPACTION_QUEUE_LENGTH = "compactionQueueLength";
-  static final String COMPACTION_QUEUE_LENGTH_DESC = "Length of the queue for compactions.";
-  static final String FLUSH_QUEUE_LENGTH = "flushQueueLength";
-  static final String FLUSH_QUEUE_LENGTH_DESC = "Length of the queue for region flushes";
-  static final String BLOCK_CACHE_FREE_SIZE = "blockCacheFreeSize";
-  static final String BLOCK_CACHE_FREE_DESC =
+  String COMPACTION_QUEUE_LENGTH = "compactionQueueLength";
+  String COMPACTION_QUEUE_LENGTH_DESC = "Length of the queue for compactions.";
+  String FLUSH_QUEUE_LENGTH = "flushQueueLength";
+  String FLUSH_QUEUE_LENGTH_DESC = "Length of the queue for region flushes";
+  String BLOCK_CACHE_FREE_SIZE = "blockCacheFreeSize";
+  String BLOCK_CACHE_FREE_DESC =
       "Size of the block cache that is not occupied.";
-  static final String BLOCK_CACHE_COUNT = "blockCacheCount";
-  static final String BLOCK_CACHE_COUNT_DESC = "Number of block in the block cache.";
-  static final String BLOCK_CACHE_SIZE = "blockCacheSize";
-  static final String BLOCK_CACHE_SIZE_DESC = "Size of the block cache.";
-  static final String BLOCK_CACHE_HIT_COUNT = "blockCacheHitCount";
-  static final String BLOCK_CACHE_HIT_COUNT_DESC = "Count of the hit on the block cache.";
-  static final String BLOCK_CACHE_MISS_COUNT = "blockCacheMissCount";
-  static final String BLOCK_COUNT_MISS_COUNT_DESC =
+  String BLOCK_CACHE_COUNT = "blockCacheCount";
+  String BLOCK_CACHE_COUNT_DESC = "Number of block in the block cache.";
+  String BLOCK_CACHE_SIZE = "blockCacheSize";
+  String BLOCK_CACHE_SIZE_DESC = "Size of the block cache.";
+  String BLOCK_CACHE_HIT_COUNT = "blockCacheHitCount";
+  String BLOCK_CACHE_HIT_COUNT_DESC = "Count of the hit on the block cache.";
+  String BLOCK_CACHE_MISS_COUNT = "blockCacheMissCount";
+  String BLOCK_COUNT_MISS_COUNT_DESC =
       "Number of requests for a block that missed the block cache.";
-  static final String BLOCK_CACHE_EVICTION_COUNT = "blockCacheEvictionCount";
-  static final String BLOCK_CACHE_EVICTION_COUNT_DESC =
+  String BLOCK_CACHE_EVICTION_COUNT = "blockCacheEvictionCount";
+  String BLOCK_CACHE_EVICTION_COUNT_DESC =
       "Count of the number of blocks evicted from the block cache.";
-  static final String BLOCK_CACHE_HIT_PERCENT = "blockCountHitPercent";
-  static final String BLOCK_CACHE_HIT_PERCENT_DESC =
+  String BLOCK_CACHE_HIT_PERCENT = "blockCountHitPercent";
+  String BLOCK_CACHE_HIT_PERCENT_DESC =
       "Percent of block cache requests that are hits";
-  static final String BLOCK_CACHE_EXPRESS_HIT_PERCENT = "blockCacheExpressHitPercent";
-  static final String BLOCK_CACHE_EXPRESS_HIT_PERCENT_DESC =
+  String BLOCK_CACHE_EXPRESS_HIT_PERCENT = "blockCacheExpressHitPercent";
+  String BLOCK_CACHE_EXPRESS_HIT_PERCENT_DESC =
       "The percent of the time that requests with the cache turned on hit the cache.";
-  static final String RS_START_TIME_NAME = "regionServerStartTime";
-  static final String ZOOKEEPER_QUORUM_NAME = "zookeeperQuorum";
-  static final String SERVER_NAME_NAME = "serverName";
-  static final String CLUSTER_ID_NAME = "clusterId";
-  static final String RS_START_TIME_DESC = "RegionServer Start Time";
-  static final String ZOOKEEPER_QUORUM_DESC = "Zookeeper Quorum";
-  static final String SERVER_NAME_DESC = "Server Name";
-  static final String CLUSTER_ID_DESC = "Cluster Id";
-  static final String UPDATES_BLOCKED_TIME = "updatesBlockedTime";
-  static final String UPDATES_BLOCKED_DESC =
+  String RS_START_TIME_NAME = "regionServerStartTime";
+  String ZOOKEEPER_QUORUM_NAME = "zookeeperQuorum";
+  String SERVER_NAME_NAME = "serverName";
+  String CLUSTER_ID_NAME = "clusterId";
+  String RS_START_TIME_DESC = "RegionServer Start Time";
+  String ZOOKEEPER_QUORUM_DESC = "Zookeeper Quorum";
+  String SERVER_NAME_DESC = "Server Name";
+  String CLUSTER_ID_DESC = "Cluster Id";
+  String UPDATES_BLOCKED_TIME = "updatesBlockedTime";
+  String UPDATES_BLOCKED_DESC =
       "Number of MS updates have been blocked so that the memstore can be flushed.";
-  static final String DELETE_KEY = "delete";
-  static final String GET_KEY = "get";
-  static final String INCREMENT_KEY = "increment";
-  static final String MUTATE_KEY = "mutate";
-  static final String APPEND_KEY = "append";
-  static final String REPLAY_KEY = "replay";
-  static final String SCAN_NEXT_KEY = "scanNext";
-  static final String SLOW_MUTATE_KEY = "slowPutCount";
-  static final String SLOW_GET_KEY = "slowGetCount";
-  static final String SLOW_DELETE_KEY = "slowDeleteCount";
-  static final String SLOW_INCREMENT_KEY = "slowIncrementCount";
-  static final String SLOW_APPEND_KEY = "slowAppendCount";
-  static final String SLOW_MUTATE_DESC =
+  String DELETE_KEY = "delete";
+  String GET_KEY = "get";
+  String INCREMENT_KEY = "increment";
+  String MUTATE_KEY = "mutate";
+  String APPEND_KEY = "append";
+  String REPLAY_KEY = "replay";
+  String SCAN_NEXT_KEY = "scanNext";
+  String SLOW_MUTATE_KEY = "slowPutCount";
+  String SLOW_GET_KEY = "slowGetCount";
+  String SLOW_DELETE_KEY = "slowDeleteCount";
+  String SLOW_INCREMENT_KEY = "slowIncrementCount";
+  String SLOW_APPEND_KEY = "slowAppendCount";
+  String SLOW_MUTATE_DESC =
       "The number of Multis that took over 1000ms to complete";
-  static final String SLOW_DELETE_DESC =
+  String SLOW_DELETE_DESC =
       "The number of Deletes that took over 1000ms to complete";
-  static final String SLOW_GET_DESC = "The number of Gets that took over 1000ms to complete";
-  static final String SLOW_INCREMENT_DESC =
+  String SLOW_GET_DESC = "The number of Gets that took over 1000ms to complete";
+  String SLOW_INCREMENT_DESC =
       "The number of Increments that took over 1000ms to complete";
-  static final String SLOW_APPEND_DESC =
+  String SLOW_APPEND_DESC =
       "The number of Appends that took over 1000ms to complete";
 
 

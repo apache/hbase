@@ -39,7 +39,7 @@ public interface ProcedureCoordinatorRpcs extends Closeable {
    * @param listener
    * @return true if succeed, false if encountered initialization errors.
    */
-  public boolean start(final ProcedureCoordinator listener);
+  boolean start(final ProcedureCoordinator listener);
 
   /**
    * Notify the members that the coordinator has aborted the procedure and that it should release
@@ -50,7 +50,7 @@ public interface ProcedureCoordinatorRpcs extends Closeable {
    * @throws IOException if the rpcs can't reach the other members of the procedure (and can't
    *           recover).
    */
-  public void sendAbortToMembers(Procedure procName, ForeignException cause) throws IOException;
+  void sendAbortToMembers(Procedure procName, ForeignException cause) throws IOException;
 
   /**
    * Notify the members to acquire barrier for the procedure
@@ -61,7 +61,7 @@ public interface ProcedureCoordinatorRpcs extends Closeable {
    * @throws IllegalArgumentException if the procedure was already marked as failed
    * @throws IOException if we can't reach the remote notification mechanism
    */
-  public void sendGlobalBarrierAcquire(Procedure procName, byte[] info, List<String> members)
+  void sendGlobalBarrierAcquire(Procedure procName, byte[] info, List<String> members)
       throws IOException, IllegalArgumentException;
 
   /**
@@ -74,12 +74,12 @@ public interface ProcedureCoordinatorRpcs extends Closeable {
    * @param members members to tell we have reached in-barrier phase
    * @throws IOException if we can't reach the remote notification mechanism
    */
-  public void sendGlobalBarrierReached(Procedure procName, List<String> members) throws IOException;
+  void sendGlobalBarrierReached(Procedure procName, List<String> members) throws IOException;
 
   /**
    * Notify Members to reset the distributed state for procedure
    * @param procName name of the procedure to reset
    * @throws IOException if the remote notification mechanism cannot be reached
    */
-  public void resetMembers(Procedure procName) throws IOException;
+  void resetMembers(Procedure procName) throws IOException;
 }

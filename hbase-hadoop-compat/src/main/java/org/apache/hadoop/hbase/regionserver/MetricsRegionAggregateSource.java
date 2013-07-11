@@ -29,22 +29,22 @@ public interface MetricsRegionAggregateSource extends BaseSource {
   /**
    * The name of the metrics
    */
-  static final String METRICS_NAME = "Regions";
+  String METRICS_NAME = "Regions";
 
   /**
    * The name of the metrics context that metrics will be under.
    */
-  static final String METRICS_CONTEXT = "regionserver";
+  String METRICS_CONTEXT = "regionserver";
 
   /**
    * Description
    */
-  static final String METRICS_DESCRIPTION = "Metrics about HBase RegionServer regions and tables";
+  String METRICS_DESCRIPTION = "Metrics about HBase RegionServer regions and tables";
 
   /**
    * The name of the metrics context that metrics will be under in jmx
    */
-  static final String METRICS_JMX_CONTEXT = "RegionServer,sub=" + METRICS_NAME;
+  String METRICS_JMX_CONTEXT = "RegionServer,sub=" + METRICS_NAME;
 
   /**
    * Register a MetricsRegionSource as being open.

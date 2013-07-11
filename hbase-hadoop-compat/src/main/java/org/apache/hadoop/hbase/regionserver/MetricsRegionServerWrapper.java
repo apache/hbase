@@ -27,35 +27,35 @@ public interface MetricsRegionServerWrapper {
   /**
    * Get ServerName
    */
-  public String getServerName();
+  String getServerName();
 
   /**
    * Get the Cluster ID
    *
    * @return Cluster ID
    */
-  public String getClusterId();
+  String getClusterId();
 
   /**
    * Get the Zookeeper Quorum Info
    *
    * @return Zookeeper Quorum Info
    */
-  public String getZookeeperQuorum();
+  String getZookeeperQuorum();
 
   /**
    * Get the co-processors
    *
    * @return Co-processors
    */
-  public String getCoprocessors();
+  String getCoprocessors();
 
   /**
    * Get HRegionServer start time
    *
    * @return Start time of RegionServer in milliseconds
    */
-  public long getStartCode();
+  long getStartCode();
 
   /**
    * The number of online regions

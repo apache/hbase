@@ -117,7 +117,7 @@ class AsyncProcess<CResult> {
    * </li>
    * </list>
    */
-  static interface AsyncProcessCallback<CResult> {
+  interface AsyncProcessCallback<CResult> {
 
     /**
      * Called on success. originalIndex holds the index in the action list.
