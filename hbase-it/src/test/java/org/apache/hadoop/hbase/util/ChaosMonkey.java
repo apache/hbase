@@ -239,12 +239,14 @@ public class ChaosMonkey extends AbstractHBaseTool implements Stoppable {
     }
 
     void restartMaster(ServerName server, long sleepTime) throws IOException {
+      sleepTime = Math.max(sleepTime, 1000);
       killMaster(server);
       sleep(sleepTime);
       startMaster(server);
     }
 
     void restartRs(ServerName server, long sleepTime) throws IOException {
+      sleepTime = Math.max(sleepTime, 1000);
       killRs(server);
       sleep(sleepTime);
       startRs(server);
