@@ -108,7 +108,7 @@ public class IntegrationTestBulkLoad implements Configurable, Tool {
   private static byte[] DATA_FAM  = Bytes.toBytes("D");
 
   private static String CHAIN_LENGTH_KEY = "hbase.IntegrationTestBulkLoad.chainLength";
-  private static int CHAIN_LENGTH = 900000;
+  private static int CHAIN_LENGTH = 500000;
 
   private static String NUM_MAPS_KEY = "hbase.IntegrationTestBulkLoad.numMaps";
   private static int NUM_MAPS = 1;
@@ -305,7 +305,7 @@ public class IntegrationTestBulkLoad implements Configurable, Tool {
         KeyValue sortKv = new KeyValue(rk, SORT_FAM, chainIdArray, Bytes.toBytes(i));
         // Added data so that large stores are created.
         KeyValue dataKv = new KeyValue(rk, DATA_FAM, chainIdArray,
-          Bytes.toBytes(RandomStringUtils.randomAlphabetic(100))
+          Bytes.toBytes(RandomStringUtils.randomAlphabetic(50))
         );
 
         // Emit the key values.
@@ -582,9 +582,9 @@ public class IntegrationTestBulkLoad implements Configurable, Tool {
     // Scale this up on a real cluster
     if (util.isDistributedCluster()) {
       util.getConfiguration().setIfUnset(NUM_MAPS_KEY,
-          Integer.toString(util.getHBaseAdmin().getClusterStatus().getServersSize() * 20)
+          Integer.toString(util.getHBaseAdmin().getClusterStatus().getServersSize() * 10)
       );
-      util.getConfiguration().setIfUnset(NUM_IMPORT_ROUNDS_KEY, "3");
+      util.getConfiguration().setIfUnset(NUM_IMPORT_ROUNDS_KEY, "5");
     } else {
       util.startMiniMapReduceCluster();
     }
