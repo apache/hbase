@@ -27,7 +27,6 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.io.IOException;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
@@ -134,7 +133,28 @@ public class TestSplitTransactionOnCluster {
 
   private HRegionInfo getAndCheckSingleTableRegion(final List<HRegion> regions) {
     assertEquals(1, regions.size());
-    return regions.get(0).getRegionInfo();
+    HRegionInfo hri = regions.get(0).getRegionInfo();
+    return waitOnRIT(hri);
+  }
+
+  /**
+   * Often region has not yet fully opened.  If we try to use it -- do a move for instance -- it
+   * will fail silently if the region is not yet opened.
+   * @param hri Region to check if in Regions In Transition... wait until out of transition before
+   * returning
+   * @return Passed in <code>hri</code>
+   */
+  private HRegionInfo waitOnRIT(final HRegionInfo hri) {
+    // Close worked but we are going to open the region elsewhere.  Before going on, make sure
+    // this completes.
+    while (TESTING_UTIL.getHBaseCluster().getMaster().getAssignmentManager().
+        getRegionStates().isRegionInTransition(hri)) {
+      LOG.info("Waiting on region in transition: " +
+        TESTING_UTIL.getHBaseCluster().getMaster().getAssignmentManager().getRegionStates().
+          getRegionTransitionState(hri));
+      Threads.sleep(10);
+    }
+    return hri;
   }
 
   @Test(timeout = 60000)
@@ -231,7 +251,7 @@ public class TestSplitTransactionOnCluster {
   throws IOException, InterruptedException, NodeExistsException, KeeperException,
       DeserializationException, ServiceException {
     final byte [] tableName =
-      Bytes.toBytes("ephemeral");
+      Bytes.toBytes("testRSSplitEphemeralsDisappearButDaughtersAreOnlinedAfterShutdownHandling");
 
     // Create table then get the single region for our new table.
     HTable t = createTableAndWait(tableName, HConstants.CATALOG_FAMILY);
