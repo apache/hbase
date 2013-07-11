@@ -69,7 +69,7 @@ public class DelimitedKeyPrefixRegionSplitPolicy extends IncreasingToUpperBoundR
   @Override
   protected byte[] getSplitPoint() {
     byte[] splitPoint = super.getSplitPoint();
-    if (delimiter != null) {
+    if (splitPoint != null && delimiter != null) {
 
       //find the first occurrence of delimiter in split point
       int index = com.google.common.primitives.Bytes.indexOf(splitPoint, delimiter);
