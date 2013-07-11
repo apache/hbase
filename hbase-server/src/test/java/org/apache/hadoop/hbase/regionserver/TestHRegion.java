@@ -18,6 +18,14 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import static org.mockito.Matchers.any;
+import static org.mockito.Matchers.anyLong;
+import static org.mockito.Matchers.eq;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.util.ArrayList;
@@ -27,6 +35,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.NavigableMap;
 import java.util.TreeMap;
+import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
@@ -56,6 +65,7 @@ import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.MultithreadedTestUtil;
 import org.apache.hadoop.hbase.MultithreadedTestUtil.RepeatingTestThread;
 import org.apache.hadoop.hbase.MultithreadedTestUtil.TestThread;
+import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.client.Append;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Durability;
@@ -3868,6 +3878,107 @@ public class TestHRegion extends HBaseTestCase {
     assertEquals(Bytes.toBytes("value1"), kvs.get(0).getValue());
   }
 
+  @Test
+  public void testDurability() throws Exception {
+    String method = "testDurability";
+    // there are 5 x 5 cases:
+    // table durability(SYNC,FSYNC,ASYC,SKIP,USE_DEFAULT) x mutation durability(SYNC,FSYNC,ASYC,SKIP,USE_DEFAULT)
+
+    // expected cases for append and sync wal
+    durabilityTest(method, Durability.SYNC_WAL, Durability.SYNC_WAL, 0, true, true, false);
+    durabilityTest(method, Durability.SYNC_WAL, Durability.FSYNC_WAL, 0, true, true, false);
+    durabilityTest(method, Durability.SYNC_WAL, Durability.USE_DEFAULT, 0, true, true, false);
+
+    durabilityTest(method, Durability.FSYNC_WAL, Durability.SYNC_WAL, 0, true, true, false);
+    durabilityTest(method, Durability.FSYNC_WAL, Durability.FSYNC_WAL, 0, true, true, false);
+    durabilityTest(method, Durability.FSYNC_WAL, Durability.USE_DEFAULT, 0, true, true, false);
+
+    durabilityTest(method, Durability.ASYNC_WAL, Durability.SYNC_WAL, 0, true, true, false);
+    durabilityTest(method, Durability.ASYNC_WAL, Durability.FSYNC_WAL, 0, true, true, false);
+
+    durabilityTest(method, Durability.SKIP_WAL, Durability.SYNC_WAL, 0, true, true, false);
+    durabilityTest(method, Durability.SKIP_WAL, Durability.FSYNC_WAL, 0, true, true, false);
+
+    durabilityTest(method, Durability.USE_DEFAULT, Durability.SYNC_WAL, 0, true, true, false);
+    durabilityTest(method, Durability.USE_DEFAULT, Durability.FSYNC_WAL, 0, true, true, false);
+    durabilityTest(method, Durability.USE_DEFAULT, Durability.USE_DEFAULT, 0, true, true, false);
+
+    // expected cases for async wal
+    // do not sync for deferred flush with large optionallogflushinterval
+    conf.setLong("hbase.regionserver.optionallogflushinterval", Integer.MAX_VALUE);
+    durabilityTest(method, Durability.SYNC_WAL, Durability.ASYNC_WAL, 0, true, false, false);
+    durabilityTest(method, Durability.FSYNC_WAL, Durability.ASYNC_WAL, 0, true, false, false);
+    durabilityTest(method, Durability.ASYNC_WAL, Durability.ASYNC_WAL, 0, true, false, false);
+    durabilityTest(method, Durability.SKIP_WAL, Durability.ASYNC_WAL, 0, true, false, false);
+    durabilityTest(method, Durability.USE_DEFAULT, Durability.ASYNC_WAL, 0, true, false, false);
+    durabilityTest(method, Durability.ASYNC_WAL, Durability.USE_DEFAULT, 0, true, false, false);
+
+    // now small deferred log flush optionallogflushinterval, expect sync
+    conf.setLong("hbase.regionserver.optionallogflushinterval", 5);
+    durabilityTest(method, Durability.SYNC_WAL, Durability.ASYNC_WAL, 5000, true, false, true);
+    durabilityTest(method, Durability.FSYNC_WAL, Durability.ASYNC_WAL, 5000, true, false, true);
+    durabilityTest(method, Durability.ASYNC_WAL, Durability.ASYNC_WAL, 5000, true, false, true);
+    durabilityTest(method, Durability.SKIP_WAL, Durability.ASYNC_WAL, 5000, true, false, true);
+    durabilityTest(method, Durability.USE_DEFAULT, Durability.ASYNC_WAL, 5000, true, false, true);
+    durabilityTest(method, Durability.ASYNC_WAL, Durability.USE_DEFAULT, 5000, true, false, true);
+
+    // expect skip wal cases
+    durabilityTest(method, Durability.SYNC_WAL, Durability.SKIP_WAL, 0, false, false, false);
+    durabilityTest(method, Durability.FSYNC_WAL, Durability.SKIP_WAL, 0, false, false, false);
+    durabilityTest(method, Durability.ASYNC_WAL, Durability.SKIP_WAL, 0, false, false, false);
+    durabilityTest(method, Durability.SKIP_WAL, Durability.SKIP_WAL, 0, false, false, false);
+    durabilityTest(method, Durability.USE_DEFAULT, Durability.SKIP_WAL, 0, false, false, false);
+    durabilityTest(method, Durability.SKIP_WAL, Durability.USE_DEFAULT, 0, false, false, false);
+
+  }
+
+  private void durabilityTest(String method, Durability tableDurability,
+      Durability mutationDurability, long timeout, boolean expectAppend,
+      final boolean expectSync, final boolean expectSyncFromLogSyncer) throws Exception {
+    method = method + "_" + tableDurability.name() + "_" + mutationDurability.name();
+    byte[] tableName = Bytes.toBytes(method);
+    byte[] family = Bytes.toBytes("family");
+    Path logDir = new Path(new Path(DIR + method), "log");
+    HLog hlog = HLogFactory.createHLog(fs, logDir, UUID.randomUUID().toString(), conf);
+    final HLog log = spy(hlog);
+    this.region = initHRegion(tableName, HConstants.EMPTY_START_ROW,
+      HConstants.EMPTY_END_ROW, method, conf, false,
+      tableDurability, log, new byte[][] {family});
+
+    Put put = new Put(Bytes.toBytes("r1"));
+    put.add(family, Bytes.toBytes("q1"), Bytes.toBytes("v1"));
+    put.setDurability(mutationDurability);
+    region.put(put);
+
+    //verify append called or not
+    verify(log, expectAppend ? times(1) : never())
+      .appendNoSync((HRegionInfo)any(), eq(tableName),
+        (WALEdit)any(), (UUID)any(), anyLong(), (HTableDescriptor)any());
+
+    //verify sync called or not
+    if (expectSync || expectSyncFromLogSyncer) {
+      TEST_UTIL.waitFor(timeout, new Waiter.Predicate<Exception>() {
+        @Override
+        public boolean evaluate() throws Exception {
+          try {
+            if (expectSync) {
+              verify(log, times(1)).sync(anyLong()); //Hregion calls this one
+            } else if (expectSyncFromLogSyncer) {
+              verify(log, times(1)).sync(); //log syncer calls this one
+            }
+          } catch (Throwable ignore) {}
+          return true;
+        }
+      });
+    } else {
+      verify(log, never()).sync(anyLong());
+      verify(log, never()).sync();
+    }
+
+    hlog.close();
+    region.close();
+  }
+
   private void putData(int startRow, int numRows, byte [] qf,
       byte [] ...families)
   throws IOException {
@@ -3997,6 +4108,13 @@ public class TestHRegion extends HBaseTestCase {
     return initHRegion(tableName, null, null, callingMethod, conf, isReadOnly, families);
   }
 
+  private static HRegion initHRegion(byte[] tableName, byte[] startKey, byte[] stopKey,
+      String callingMethod, Configuration conf, boolean isReadOnly, byte[]... families)
+      throws IOException {
+    return initHRegion(tableName, startKey, stopKey, callingMethod, conf, isReadOnly,
+      Durability.SYNC_WAL, null, families);
+  }
+
   /**
    * @param tableName
    * @param startKey
@@ -4009,7 +4127,8 @@ public class TestHRegion extends HBaseTestCase {
    * @return A region on which you must call {@link HRegion#closeHRegion(HRegion)} when done.
    */
   private static HRegion initHRegion(byte[] tableName, byte[] startKey, byte[] stopKey,
-      String callingMethod, Configuration conf, boolean isReadOnly, byte[]... families)
+      String callingMethod, Configuration conf, boolean isReadOnly, Durability durability,
+      HLog hlog, byte[]... families)
       throws IOException {
     HTableDescriptor htd = new HTableDescriptor(tableName);
     htd.setReadOnly(isReadOnly);
@@ -4019,6 +4138,7 @@ public class TestHRegion extends HBaseTestCase {
       hcd.setMaxVersions(Integer.MAX_VALUE);
       htd.addFamily(hcd);
     }
+    htd.setDurability(durability);
     HRegionInfo info = new HRegionInfo(htd.getName(), startKey, stopKey, false);
     Path path = new Path(DIR + callingMethod);
     FileSystem fs = FileSystem.get(conf);
@@ -4027,7 +4147,7 @@ public class TestHRegion extends HBaseTestCase {
         throw new IOException("Failed delete of " + path);
       }
     }
-    return HRegion.createHRegion(info, path, conf, htd);
+    return HRegion.createHRegion(info, path, conf, htd, hlog);
   }
 
   /**

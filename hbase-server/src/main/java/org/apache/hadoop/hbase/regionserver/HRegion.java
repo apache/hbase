@@ -109,8 +109,8 @@ import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
-import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.ipc.RpcCallContext;
+import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetRegionInfoResponse.CompactionState;
@@ -191,6 +191,12 @@ public class HRegion implements HeapSize { // , Writable{
 
   public static final String LOAD_CFS_ON_DEMAND_CONFIG_KEY =
       "hbase.hregion.scan.loadColumnFamiliesOnDemand";
+
+  /**
+   * This is the global default value for durability. All tables/mutations not
+   * defining a durability or using USE_DEFAULT will default to this value.
+   */
+  private static final Durability DEFAULT_DURABLITY = Durability.SYNC_WAL;
 
   final AtomicBoolean closed = new AtomicBoolean(false);
   /* Closing can take some time; use the closing flag if there is stuff we don't
@@ -399,6 +405,7 @@ public class HRegion implements HeapSize { // , Writable{
   private final MetricsRegion metricsRegion;
   private final MetricsRegionWrapperImpl metricsRegionWrapper;
   private final boolean deferredLogSyncDisabled;
+  private final Durability durability;
 
   /**
    * HRegion constructor. This constructor should only be used for testing and
@@ -508,6 +515,9 @@ public class HRegion implements HeapSize { // , Writable{
     // When hbase.regionserver.optionallogflushinterval <= 0 , deferred log sync is disabled.
     this.deferredLogSyncDisabled = conf.getLong("hbase.regionserver.optionallogflushinterval",
         1 * 1000) <= 0;
+    this.durability = htd.getDurability() == Durability.USE_DEFAULT
+        ? DEFAULT_DURABLITY
+        : htd.getDurability();
     if (rsServices != null) {
       this.rsAccounting = this.rsServices.getRegionServerAccounting();
       // don't initialize coprocessors if not running within a regionserver
@@ -651,6 +661,7 @@ public class HRegion implements HeapSize { // , Writable{
       for (final HColumnDescriptor family : htableDescriptor.getFamilies()) {
         status.setStatus("Instantiating store for column family " + family);
         completionService.submit(new Callable<HStore>() {
+          @Override
           public HStore call() throws IOException {
             return instantiateHStore(family);
           }
@@ -826,7 +837,7 @@ public class HRegion implements HeapSize { // , Writable{
   public void setRecovering(boolean newState) {
     this.getRegionInfo().setRecovering(newState);
   }
-  
+
   /**
    * @return True if current region is in recovering
    */
@@ -896,7 +907,7 @@ public class HRegion implements HeapSize { // , Writable{
   private final Object closeLock = new Object();
 
   /** Conf key for the periodic flush interval */
-  public static final String MEMSTORE_PERIODIC_FLUSH_INTERVAL = 
+  public static final String MEMSTORE_PERIODIC_FLUSH_INTERVAL =
       "hbase.regionserver.optionalcacheflushinterval";
   /** Default interval for the memstore flush */
   public static final int DEFAULT_CACHE_FLUSH_INTERVAL = 3600000;
@@ -992,6 +1003,7 @@ public class HRegion implements HeapSize { // , Writable{
         for (final Store store : stores.values()) {
           completionService
               .submit(new Callable<Pair<byte[], Collection<StoreFile>>>() {
+                @Override
                 public Pair<byte[], Collection<StoreFile>> call() throws IOException {
                   return new Pair<byte[], Collection<StoreFile>>(
                     store.getFamily().getName(), store.close());
@@ -1082,6 +1094,7 @@ public class HRegion implements HeapSize { // , Writable{
       new ThreadFactory() {
         private int count = 1;
 
+        @Override
         public Thread newThread(Runnable r) {
           return new Thread(r, threadNamePrefix + "-" + count++);
         }
@@ -1536,7 +1549,7 @@ public class HRegion implements HeapSize { // , Writable{
 
     // sync unflushed WAL changes when deferred log sync is enabled
     // see HBASE-8208 for details
-    if (wal != null && isDeferredLogSyncEnabled()) {
+    if (wal != null && !shouldSyncLog()) {
       wal.sync();
     }
 
@@ -1921,7 +1934,7 @@ public class HRegion implements HeapSize { // , Writable{
       Pair<Mutation, Integer>[] mutationsAndLocks) throws IOException {
     return batchMutate(mutationsAndLocks, false);
   }
- 
+
   /**
    * Perform a batch of mutations.
    * It supports only Put and Delete mutations and will ignore other types passed.
@@ -1970,7 +1983,7 @@ public class HRegion implements HeapSize { // , Writable{
     }
     return batchOp.retCodeDetails;
   }
-  
+
 
   private void doPreMutationHook(BatchOperationInProgress<Pair<Mutation, Integer>> batchOp)
       throws IOException {
@@ -2125,7 +2138,7 @@ public class HRegion implements HeapSize { // , Writable{
           }
         }
       }
-      
+
       // we should record the timestamp only after we have acquired the rowLock,
       // otherwise, newer puts/deletes are not guaranteed to have a newer timestamp
       now = EnvironmentEdgeManager.currentTimeMillis();
@@ -2165,8 +2178,8 @@ public class HRegion implements HeapSize { // , Writable{
 
       // calling the pre CP hook for batch mutation
       if (!isInReplay && coprocessorHost != null) {
-        MiniBatchOperationInProgress<Pair<Mutation, Integer>> miniBatchOp = 
-          new MiniBatchOperationInProgress<Pair<Mutation, Integer>>(batchOp.operations, 
+        MiniBatchOperationInProgress<Pair<Mutation, Integer>> miniBatchOp =
+          new MiniBatchOperationInProgress<Pair<Mutation, Integer>>(batchOp.operations,
           batchOp.retCodeDetails, batchOp.walEditsFromCoprocessors, firstIndex, lastIndexExclusive);
         if (coprocessorHost.preBatchMutate(miniBatchOp)) return 0L;
       }
@@ -2202,7 +2215,7 @@ public class HRegion implements HeapSize { // , Writable{
         batchOp.retCodeDetails[i] = OperationStatus.SUCCESS;
 
         Mutation m = batchOp.operations[i].getFirst();
-        Durability tmpDur = m.getDurability();
+        Durability tmpDur = getEffectiveDurability(m.getDurability());
         if (tmpDur.ordinal() > durability.ordinal()) {
           durability = tmpDur;
         }
@@ -2225,8 +2238,10 @@ public class HRegion implements HeapSize { // , Writable{
       // STEP 5. Append the edit to WAL. Do not sync wal.
       // -------------------------
       Mutation first = batchOp.operations[firstIndex].getFirst();
-      txid = this.log.appendNoSync(this.getRegionInfo(), this.htableDescriptor.getName(),
+      if (walEdit.size() > 0) {
+        txid = this.log.appendNoSync(this.getRegionInfo(), this.htableDescriptor.getName(),
                walEdit, first.getClusterId(), now, this.htableDescriptor);
+      }
 
       // -------------------------------
       // STEP 6. Release row locks, etc.
@@ -2250,8 +2265,8 @@ public class HRegion implements HeapSize { // , Writable{
       walSyncSuccessful = true;
       // calling the post CP hook for batch mutation
       if (!isInReplay && coprocessorHost != null) {
-        MiniBatchOperationInProgress<Pair<Mutation, Integer>> miniBatchOp = 
-          new MiniBatchOperationInProgress<Pair<Mutation, Integer>>(batchOp.operations, 
+        MiniBatchOperationInProgress<Pair<Mutation, Integer>> miniBatchOp =
+          new MiniBatchOperationInProgress<Pair<Mutation, Integer>>(batchOp.operations,
           batchOp.retCodeDetails, batchOp.walEditsFromCoprocessors, firstIndex, lastIndexExclusive);
         coprocessorHost.postBatchMutate(miniBatchOp);
       }
@@ -2331,6 +2346,14 @@ public class HRegion implements HeapSize { // , Writable{
       }
       batchOp.nextIndexToProcess = lastIndexExclusive;
     }
+  }
+
+  /**
+   * Returns effective durability from the passed durability and
+   * the table descriptor.
+   */
+  protected Durability getEffectiveDurability(Durability d) {
+    return d == Durability.USE_DEFAULT ? this.durability : d;
   }
 
   //TODO, Think that gets/puts and deletes should be refactored a bit so that
@@ -3482,6 +3505,7 @@ public class HRegion implements HeapSize { // , Writable{
     private long maxResultSize;
     private HRegion region;
 
+    @Override
     public HRegionInfo getRegionInfo() {
       return region.getRegionInfo();
     }
@@ -3674,6 +3698,7 @@ public class HRegion implements HeapSize { // , Writable{
     /*
      * @return True if a filter rules the scanner is over, done.
      */
+    @Override
     public synchronized boolean isFilterDone() throws IOException {
       return this.filter != null && this.filter.filterAllRemaining();
     }
@@ -4634,7 +4659,7 @@ public class HRegion implements HeapSize { // , Writable{
           }
           // 10. Sync edit log
           if (txid != 0) {
-            syncOrDefer(txid, processor.useDurability());
+            syncOrDefer(txid, getEffectiveDurability(processor.useDurability()));
           }
           walSyncSuccessful = true;
         }
@@ -4742,7 +4767,8 @@ public class HRegion implements HeapSize { // , Writable{
     byte[] row = append.getRow();
     checkRow(row, "append");
     boolean flush = false;
-    boolean writeToWAL = append.getDurability() != Durability.SKIP_WAL;
+    Durability durability = getEffectiveDurability(append.getDurability());
+    boolean writeToWAL = durability != Durability.SKIP_WAL;
     WALEdit walEdits = null;
     List<KeyValue> allKVs = new ArrayList<KeyValue>(append.size());
     Map<Store, List<KeyValue>> tempMemstore = new HashMap<Store, List<KeyValue>>();
@@ -4877,7 +4903,7 @@ public class HRegion implements HeapSize { // , Writable{
       }
       if (writeToWAL) {
         // sync the transaction log outside the rowlock
-        syncOrDefer(txid, append.getDurability());
+        syncOrDefer(txid, durability);
       }
     } finally {
       if (w != null) {
@@ -4911,7 +4937,8 @@ public class HRegion implements HeapSize { // , Writable{
     checkRow(row, "increment");
     TimeRange tr = increment.getTimeRange();
     boolean flush = false;
-    boolean writeToWAL = increment.getDurability() != Durability.SKIP_WAL;
+    Durability durability = getEffectiveDurability(increment.getDurability());
+    boolean writeToWAL = durability != Durability.SKIP_WAL;
     WALEdit walEdits = null;
     List<KeyValue> allKVs = new ArrayList<KeyValue>(increment.size());
     Map<Store, List<KeyValue>> tempMemstore = new HashMap<Store, List<KeyValue>>();
@@ -5022,7 +5049,7 @@ public class HRegion implements HeapSize { // , Writable{
       }
       if (writeToWAL) {
         // sync the transaction log outside the rowlock
-        syncOrDefer(txid, increment.getDurability());
+        syncOrDefer(txid, durability);
       }
     } finally {
       if (w != null) {
@@ -5059,7 +5086,7 @@ public class HRegion implements HeapSize { // , Writable{
       ClassSize.OBJECT +
       ClassSize.ARRAY +
       39 * ClassSize.REFERENCE + 2 * Bytes.SIZEOF_INT +
-      (11 * Bytes.SIZEOF_LONG) +
+      (12 * Bytes.SIZEOF_LONG) +
       2 * Bytes.SIZEOF_BOOLEAN);
 
   public static final long DEEP_OVERHEAD = FIXED_OVERHEAD +
@@ -5362,7 +5389,7 @@ public class HRegion implements HeapSize { // , Writable{
     case DELETE:
     case BATCH_MUTATE:
       // when a region is in recovering state, no read, split or merge is allowed
-      if (this.isRecovering() && (this.disallowWritesInRecovering || 
+      if (this.isRecovering() && (this.disallowWritesInRecovering ||
               (op != Operation.PUT && op != Operation.DELETE && op != Operation.BATCH_MUTATE))) {
         throw new RegionInRecoveryException(this.getRegionNameAsString() + " is recovering");
       }
@@ -5485,8 +5512,8 @@ public class HRegion implements HeapSize { // , Writable{
     } else {
       switch(durability) {
       case USE_DEFAULT:
-        // do what CF defaults to
-        if (!isDeferredLogSyncEnabled()) {
+        // do what table defaults to
+        if (shouldSyncLog()) {
           this.log.sync(txid);
         }
         break;
@@ -5509,10 +5536,11 @@ public class HRegion implements HeapSize { // , Writable{
   }
 
   /**
-   * check if current region is deferred sync enabled.
+   * Check whether we should sync the log from the table's durability settings
    */
-  private boolean isDeferredLogSyncEnabled() {
-    return (this.htableDescriptor.isDeferredLogFlush() && !this.deferredLogSyncDisabled);
+  private boolean shouldSyncLog() {
+    return this.deferredLogSyncDisabled ||
+        durability.ordinal() >  Durability.ASYNC_WAL.ordinal();
   }
 
   /**

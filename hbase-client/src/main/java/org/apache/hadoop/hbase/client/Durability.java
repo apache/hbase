@@ -22,14 +22,16 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
 /**
- * Enum describing the durability guarantees for {@link Mutation}
+ * Enum describing the durability guarantees for tables and {@link Mutation}s
  * Note that the items must be sorted in order of increasing durability
  */
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
 public enum Durability {
+  /* Developer note: Do not rename the enum field names. They are serialized in HTableDescriptor */
   /**
-   * Use the column family's default setting to determine durability.
+   * If this is for tables durability, use HBase's global default value (SYNC_WAL).
+   * Otherwise, if this is for mutation, use the table's default setting to determine durability.
    * This must remain the first option.
    */
   USE_DEFAULT,
