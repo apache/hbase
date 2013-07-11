@@ -3419,7 +3419,8 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
             // be true or false. True means the region is opening on this RS; while false
             // means the region is closing. Only return ALREADY_OPENED if not closing (i.e.
             // not in transition any more, or still transition to open.
-            if (!Boolean.FALSE.equals(closing)) {
+            if (!Boolean.FALSE.equals(closing)
+                && getFromOnlineRegions(region.getEncodedName()) != null) {
               LOG.warn("Attempted open of " + region.getEncodedName()
                 + " but already online on this server");
               builder.addOpeningState(RegionOpeningState.ALREADY_OPENED);
