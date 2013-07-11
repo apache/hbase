@@ -34,9 +34,12 @@ import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.regex.Matcher;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
@@ -62,6 +65,8 @@ import com.google.protobuf.InvalidProtocolBufferException;
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
 public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
+
+  private static final Log LOG = LogFactory.getLog(HTableDescriptor.class);
 
   /**
    *  Changes prior to version 3 were not recorded here.
@@ -153,11 +158,24 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
 
   /**
    * <em>INTERNAL</em> Used by HBase Shell interface to access this metadata
-   * attribute which denotes if the deferred log flush option is enabled
+   * attribute which denotes if the deferred log flush option is enabled.
+   * @deprecated Use {@link #DURABILITY} instead.
    */
+  @Deprecated
   public static final String DEFERRED_LOG_FLUSH = "DEFERRED_LOG_FLUSH";
+  @Deprecated
   private static final ImmutableBytesWritable DEFERRED_LOG_FLUSH_KEY =
     new ImmutableBytesWritable(Bytes.toBytes(DEFERRED_LOG_FLUSH));
+
+  /**
+   * <em>INTERNAL</em> {@link Durability} setting for the table.
+   */
+  public static final String DURABILITY = "DURABILITY";
+  private static final ImmutableBytesWritable DURABILITY_KEY =
+      new ImmutableBytesWritable(Bytes.toBytes("DURABILITY"));
+
+  /** Default durability for HTD is USE_DEFAULT, which defaults to HBase-global default value */
+  private static final Durability DEFAULT_DURABLITY = Durability.USE_DEFAULT;
 
   /*
    *  The below are ugly but better than creating them each time till we
@@ -195,6 +213,7 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
         String.valueOf(DEFAULT_MEMSTORE_FLUSH_SIZE));
     DEFAULT_VALUES.put(DEFERRED_LOG_FLUSH,
         String.valueOf(DEFAULT_DEFERRED_LOG_FLUSH));
+    DEFAULT_VALUES.put(DURABILITY, DEFAULT_DURABLITY.name()); //use the enum name
     for (String s : DEFAULT_VALUES.keySet()) {
       RESERVED_KEYWORDS.add(new ImmutableBytesWritable(Bytes.toBytes(s)));
     }
@@ -210,10 +229,11 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
    * Cache of whether this is root table or not.
    */
   private volatile Boolean root = null;
+
   /**
-   * Cache of whether deferred logging set.
+   * Durability setting for the table
    */
-  private Boolean deferredLog = null;
+  private Durability durability = null;
 
   /**
    * Maps column family name to the respective HColumnDescriptors
@@ -374,7 +394,6 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
       final boolean valueIfNull) {
     byte [] value = getValue(key);
     if (value != null) {
-      // TODO: Make value be a boolean rather than String of boolean.
       return Boolean.valueOf(Bytes.toString(value));
     }
     return valueIfNull;
@@ -525,6 +544,13 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
    */
   public void setValue(final ImmutableBytesWritable key,
       final ImmutableBytesWritable value) {
+    if (key.compareTo(DEFERRED_LOG_FLUSH_KEY) == 0) {
+      boolean isDeferredFlush = Boolean.valueOf(Bytes.toString(value.get()));
+      LOG.warn("HTableDescriptor property:" + DEFERRED_LOG_FLUSH + " is deprecated, " +
+          "use " + DURABILITY + " instead");
+      setDurability(isDeferredFlush ? Durability.ASYNC_WAL : DEFAULT_DURABLITY);
+      return;
+    }
     values.put(key, value);
   }
 
@@ -591,13 +617,11 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
    * @return true if that deferred log flush is enabled on the table
    *
    * @see #setDeferredLogFlush(boolean)
+   * @deprecated use {@link #getDurability()}
    */
+  @Deprecated
   public synchronized boolean isDeferredLogFlush() {
-    if(this.deferredLog == null) {
-      this.deferredLog =
-          isSomething(DEFERRED_LOG_FLUSH_KEY, DEFAULT_DEFERRED_LOG_FLUSH);
-    }
-    return this.deferredLog;
+    return getDurability() == Durability.ASYNC_WAL;
   }
 
   /**
@@ -613,10 +637,42 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
    * </p>
    *
    * @param isDeferredLogFlush
+   * @deprecated use {@link #setDurability(Durability)}
    */
+  @Deprecated
   public synchronized void setDeferredLogFlush(final boolean isDeferredLogFlush) {
-    setValue(DEFERRED_LOG_FLUSH_KEY, isDeferredLogFlush? TRUE: FALSE);
-    this.deferredLog = isDeferredLogFlush;
+    this.setDurability(isDeferredLogFlush ? Durability.ASYNC_WAL : DEFAULT_DURABLITY);
+  }
+
+  /**
+   * Sets the {@link Durability} setting for the table. This defaults to Durability.USE_DEFAULT.
+   * @param durability enum value
+   */
+  public void setDurability(Durability durability) {
+    this.durability = durability;
+    setValue(DURABILITY_KEY, durability.name());
+  }
+
+  /**
+   * Returns the durability setting for the table.
+   * @return durability setting for the table.
+   */
+  public Durability getDurability() {
+    if (this.durability == null) {
+      byte[] durabilityValue = getValue(DURABILITY_KEY);
+      if (durabilityValue == null) {
+        this.durability = DEFAULT_DURABLITY;
+      } else {
+        try {
+          this.durability = Durability.valueOf(Bytes.toString(durabilityValue));
+        } catch (IllegalArgumentException ex) {
+          LOG.warn("Received " + ex + " because Durability value for HTableDescriptor"
+            + " is not known. Durability:" + Bytes.toString(durabilityValue));
+          this.durability = DEFAULT_DURABLITY;
+        }
+      }
+    }
+    return this.durability;
   }
 
   /**

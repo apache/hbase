@@ -27,6 +27,7 @@ import java.util.regex.Pattern;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.coprocessor.BaseRegionObserver;
 import org.apache.hadoop.hbase.coprocessor.SampleRegionWALObserver;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
@@ -46,14 +47,14 @@ public class TestHTableDescriptor {
     HTableDescriptor htd = new HTableDescriptor(HTableDescriptor.META_TABLEDESC);
     final int v = 123;
     htd.setMaxFileSize(v);
-    htd.setDeferredLogFlush(true);
+    htd.setDurability(Durability.ASYNC_WAL);
     htd.setReadOnly(true);
     byte [] bytes = htd.toByteArray();
     HTableDescriptor deserializedHtd = HTableDescriptor.parseFrom(bytes);
     assertEquals(htd, deserializedHtd);
     assertEquals(v, deserializedHtd.getMaxFileSize());
     assertTrue(deserializedHtd.isReadOnly());
-    assertTrue(deserializedHtd.isDeferredLogFlush());
+    assertEquals(Durability.ASYNC_WAL, deserializedHtd.getDurability());
   }
 
   /**
