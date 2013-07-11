@@ -262,7 +262,7 @@ public class RegionStates {
       hri, state, System.currentTimeMillis(), newServerName);
     RegionState oldState = regionStates.put(regionName, regionState);
     if (oldState == null || oldState.getState() != regionState.getState()) {
-      LOG.info("Region transitioned from " + oldState + " to " + regionState);
+      LOG.info("Transitioned from " + oldState + " to " + regionState);
     }
     if (newServerName != null || (
         state != State.PENDING_CLOSE && state != State.CLOSING)) {
@@ -298,7 +298,7 @@ public class RegionStates {
 
     ServerName oldServerName = regionAssignments.put(hri, serverName);
     if (!serverName.equals(oldServerName)) {
-      LOG.info("Onlined region " + hri.getShortNameToLog() + " on " + serverName);
+      LOG.info("Onlined " + hri.getShortNameToLog() + " on " + serverName);
       Set<HRegionInfo> regions = serverHoldings.get(serverName);
       if (regions == null) {
         regions = new HashSet<HRegionInfo>();
@@ -306,7 +306,7 @@ public class RegionStates {
       }
       regions.add(hri);
       if (oldServerName != null) {
-        LOG.info("Offlined region " + hri.getShortNameToLog() + " from " + oldServerName);
+        LOG.info("Offlined " + hri.getShortNameToLog() + " from " + oldServerName);
         serverHoldings.get(oldServerName).remove(hri);
       }
     }
@@ -333,7 +333,7 @@ public class RegionStates {
 
     ServerName oldServerName = regionAssignments.remove(hri);
     if (oldServerName != null) {
-      LOG.info("Offlined region " + hri.getShortNameToLog() + " from " + oldServerName);
+      LOG.info("Offlined " + hri.getShortNameToLog() + " from " + oldServerName);
       serverHoldings.get(oldServerName).remove(hri);
     }
   }
@@ -361,7 +361,7 @@ public class RegionStates {
         // Region is open on this region server, but in transition.
         // This region must be moving away from this server, or splitting/merging.
         // SSH will handle it, either skip assigning, or re-assign.
-        LOG.info("Transitioning region " + state + " will be handled by SSH for " + sn);
+        LOG.info("Transitioning " + state + " will be handled by SSH for " + sn);
         if (state.isSplitting() || state.isMerging()) {
           LOG.info("Offline splitting/merging region " + state);
           try {
