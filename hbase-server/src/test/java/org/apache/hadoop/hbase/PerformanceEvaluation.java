@@ -198,7 +198,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
   /**
    * Implementations can have their status set.
    */
-  static interface Status {
+  interface Status {
     /**
      * Sets status
      * @param msg status message

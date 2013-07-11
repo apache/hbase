@@ -26,21 +26,21 @@ import java.io.IOException;
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
 public interface Coprocessor {
-  static final int VERSION = 1;
+  int VERSION = 1;
 
   /** Highest installation priority */
-  static final int PRIORITY_HIGHEST = 0;
+  int PRIORITY_HIGHEST = 0;
   /** High (system) installation priority */
-  static final int PRIORITY_SYSTEM = Integer.MAX_VALUE / 4;
+  int PRIORITY_SYSTEM = Integer.MAX_VALUE / 4;
   /** Default installation priority for user coprocessors */
-  static final int PRIORITY_USER = Integer.MAX_VALUE / 2;
+  int PRIORITY_USER = Integer.MAX_VALUE / 2;
   /** Lowest installation priority */
-  static final int PRIORITY_LOWEST = Integer.MAX_VALUE;
+  int PRIORITY_LOWEST = Integer.MAX_VALUE;
 
   /**
    * Lifecycle state of a given coprocessor instance.
    */
-  public enum State {
+  enum State {
     UNINSTALLED,
     INSTALLED,
     STARTING,

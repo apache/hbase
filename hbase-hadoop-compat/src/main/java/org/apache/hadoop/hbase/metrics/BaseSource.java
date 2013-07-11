@@ -24,7 +24,7 @@ package org.apache.hadoop.hbase.metrics;
  */
 public interface BaseSource {
 
-  public static final String HBASE_METRICS_SYSTEM_NAME = "HBase";
+  String HBASE_METRICS_SYSTEM_NAME = "HBase";
 
   /**
    * Clear out the metrics and re-prepare the source.

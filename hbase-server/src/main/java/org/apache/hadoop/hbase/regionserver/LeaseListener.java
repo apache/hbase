@@ -32,5 +32,5 @@ import org.apache.hadoop.classification.InterfaceAudience;
 @InterfaceAudience.Private
 public interface LeaseListener {
   /** When a lease expires, this method is called. */
-  public void leaseExpired();
+  void leaseExpired();
 }

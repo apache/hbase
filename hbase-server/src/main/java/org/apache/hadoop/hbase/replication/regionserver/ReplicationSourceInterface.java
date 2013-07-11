@@ -41,61 +41,63 @@ public interface ReplicationSourceInterface {
    * @param peerClusterId the id of the peer cluster
    * @throws IOException
    */
-  public void init(final Configuration conf,
-                   final FileSystem fs,
-                   final ReplicationSourceManager manager,
-                   final Stoppable stopper,
-                   final String peerClusterId) throws IOException;
+  void init(
+    final Configuration conf,
+    final FileSystem fs,
+    final ReplicationSourceManager manager,
+    final Stoppable stopper,
+    final String peerClusterId
+  ) throws IOException;
 
   /**
    * Add a log to the list of logs to replicate
    * @param log path to the log to replicate
    */
-  public void enqueueLog(Path log);
+  void enqueueLog(Path log);
 
   /**
    * Get the current log that's replicated
    * @return the current log
    */
-  public Path getCurrentPath();
+  Path getCurrentPath();
 
   /**
    * Start the replication
    */
-  public void startup();
+  void startup();
 
   /**
    * End the replication
    * @param reason why it's terminating
    */
-  public void terminate(String reason);
+  void terminate(String reason);
 
   /**
    * End the replication
    * @param reason why it's terminating
    * @param cause the error that's causing it
    */
-  public void terminate(String reason, Exception cause);
+  void terminate(String reason, Exception cause);
 
   /**
    * Get the id that the source is replicating to
    *
    * @return peer cluster id
    */
-  public String getPeerClusterZnode();
+  String getPeerClusterZnode();
 
   /**
    * Get the id that the source is replicating to.
    *
    * @return peer cluster id
    */
-  public String getPeerClusterId();
+  String getPeerClusterId();
 
   /**
    * Get a string representation of the current statistics
    * for this source
    * @return printable stats
    */
-  public String getStats();
+  String getStats();
 
 }

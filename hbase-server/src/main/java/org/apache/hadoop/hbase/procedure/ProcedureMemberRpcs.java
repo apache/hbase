@@ -35,13 +35,13 @@ public interface ProcedureMemberRpcs extends Closeable {
   /**
    * Initialize and start any threads or connections the member needs.
    */
-  public void start(final String memberName, final ProcedureMember member);
+  void start(final String memberName, final ProcedureMember member);
 
   /**
    * Each subprocedure is being executed on a member.  This is the identifier for the member.
    * @return the member name
    */
-  public String getMemberName();
+  String getMemberName();
 
   /**
    * Notify the coordinator that we aborted the specified {@link Subprocedure}
@@ -51,7 +51,7 @@ public interface ProcedureMemberRpcs extends Closeable {
    * @throws IOException thrown when the rpcs can't reach the other members of the procedure (and
    *  thus can't recover).
    */
-  public void sendMemberAborted(Subprocedure sub, ForeignException cause) throws IOException;
+  void sendMemberAborted(Subprocedure sub, ForeignException cause) throws IOException;
 
   /**
    * Notify the coordinator that the specified {@link Subprocedure} has acquired the locally required
@@ -60,7 +60,7 @@ public interface ProcedureMemberRpcs extends Closeable {
    * @param sub the specified {@link Subprocedure}
    * @throws IOException if we can't reach the coordinator
    */
-  public void sendMemberAcquired(Subprocedure sub) throws IOException;
+  void sendMemberAcquired(Subprocedure sub) throws IOException;
 
   /**
    * Notify the coordinator that the specified {@link Subprocedure} has completed the work that
@@ -69,5 +69,5 @@ public interface ProcedureMemberRpcs extends Closeable {
    * @param sub the specified {@link Subprocedure}
    * @throws IOException if we can't reach the coordinator
    */
-  public void sendMemberCompleted(Subprocedure sub) throws IOException;
+  void sendMemberCompleted(Subprocedure sub) throws IOException;
 }

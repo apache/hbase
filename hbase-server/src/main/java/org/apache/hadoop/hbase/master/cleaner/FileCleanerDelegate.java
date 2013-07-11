@@ -29,12 +29,10 @@ import org.apache.hadoop.hbase.Stoppable;
  */
 @InterfaceAudience.Private
 public interface FileCleanerDelegate extends Configurable, Stoppable {
-
   /**
    * Should the master delete the file or keep it?
    * @param file full path to the file to check
    * @return <tt>true</tt> if the file is deletable, <tt>false</tt> if not
    */
-  public boolean isFileDeletable(Path file);
-
+  boolean isFileDeletable(Path file);
 }

@@ -76,6 +76,6 @@ public interface Constraint extends Configurable {
    * @throws org.apache.hadoop.hbase.exceptions.ConstraintException when the {@link Put} does not match the
    *         constraint.
    */
-  public void check(Put p) throws ConstraintException;
+  void check(Put p) throws ConstraintException;
 
 }

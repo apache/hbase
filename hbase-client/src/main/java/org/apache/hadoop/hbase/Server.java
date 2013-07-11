@@ -32,20 +32,20 @@ public interface Server extends Abortable, Stoppable {
   /**
    * Gets the configuration object for this server.
    */
-  public Configuration getConfiguration();
+  Configuration getConfiguration();
 
   /**
    * Gets the ZooKeeper instance for this server.
    */
-  public ZooKeeperWatcher getZooKeeper();
+  ZooKeeperWatcher getZooKeeper();
 
   /**
    * @return Master's instance of {@link CatalogTracker}
    */
-  public CatalogTracker getCatalogTracker();
+  CatalogTracker getCatalogTracker();
 
   /**
    * @return The unique server name for this server.
    */
-  public ServerName getServerName();
+  ServerName getServerName();
 }

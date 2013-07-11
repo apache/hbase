@@ -47,9 +47,9 @@ import org.apache.hadoop.hbase.client.HBaseAdmin;
 public final class Canary implements Tool {
   // Sink interface used by the canary to outputs information
   public interface Sink {
-    public void publishReadFailure(HRegionInfo region);
-    public void publishReadFailure(HRegionInfo region, HColumnDescriptor column);
-    public void publishReadTiming(HRegionInfo region, HColumnDescriptor column, long msTime);
+    void publishReadFailure(HRegionInfo region);
+    void publishReadFailure(HRegionInfo region, HColumnDescriptor column);
+    void publishReadTiming(HRegionInfo region, HColumnDescriptor column, long msTime);
   }
 
   // Simple implementation of canary sink that allows to plot on

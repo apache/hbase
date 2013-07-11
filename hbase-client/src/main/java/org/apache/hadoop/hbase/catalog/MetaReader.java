@@ -558,7 +558,7 @@ public class MetaReader {
      * @return True if we are to proceed scanning the table, else false if
      * we are to stop now.
      */
-    public boolean visit(final Result r) throws IOException;
+    boolean visit(final Result r) throws IOException;
   }
 
   /**

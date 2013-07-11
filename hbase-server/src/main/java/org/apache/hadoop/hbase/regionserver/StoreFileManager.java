@@ -44,40 +44,41 @@ public interface StoreFileManager {
    * Loads the initial store files into empty StoreFileManager.
    * @param storeFiles The files to load.
    */
-  public abstract void loadFiles(List<StoreFile> storeFiles);
+  void loadFiles(List<StoreFile> storeFiles);
 
   /**
    * Adds new file, either for from MemStore flush or bulk insert, into the structure.
    * @param sf New store file.
    */
-  public abstract void insertNewFile(StoreFile sf);
+  void insertNewFile(StoreFile sf);
 
   /**
    * Adds compaction results into the structure.
    * @param compactedFiles The input files for the compaction.
    * @param results The resulting files for the compaction.
    */
-  public abstract void addCompactionResults(
-      Collection<StoreFile> compactedFiles, Collection<StoreFile> results);
+  void addCompactionResults(
+    Collection<StoreFile> compactedFiles, Collection<StoreFile> results
+  );
 
   /**
    * Clears all the files currently in use and returns them.
    * @return The files previously in use.
    */
-  public abstract ImmutableCollection<StoreFile> clearFiles();
+  ImmutableCollection<StoreFile> clearFiles();
 
   /**
    * Gets the snapshot of the store files currently in use. Can be used for things like metrics
    * and checks; should not assume anything about relations between store files in the list.
    * @return The list of StoreFiles.
    */
-  public abstract Collection<StoreFile> getStorefiles();
+  Collection<StoreFile> getStorefiles();
 
   /**
    * Returns the number of files currently in use.
    * @return The number of files.
    */
-  public abstract int getStorefileCount();
+  int getStorefileCount();
 
   /**
    * Gets the store files to scan for a Scan or Get request.
@@ -86,8 +87,9 @@ public interface StoreFileManager {
    * @param stopRow Stop row of the request.
    * @return The list of files that are to be read for this request.
    */
-  public abstract Collection<StoreFile> getFilesForScanOrGet(boolean isGet,
-      byte[] startRow, byte[] stopRow);
+  Collection<StoreFile> getFilesForScanOrGet(
+    boolean isGet, byte[] startRow, byte[] stopRow
+  );
 
   /**
    * Gets initial, full list of candidate store files to check for row-key-before.
@@ -95,8 +97,9 @@ public interface StoreFileManager {
    * @return The files that may have the key less than or equal to targetKey, in reverse
    *         order of new-ness, and preference for target key.
    */
-  public abstract Iterator<StoreFile> getCandidateFilesForRowKeyBefore(
-      KeyValue targetKey);
+  Iterator<StoreFile> getCandidateFilesForRowKeyBefore(
+    KeyValue targetKey
+  );
 
   /**
    * Updates the candidate list for finding row key before. Based on the list of candidates
@@ -109,8 +112,9 @@ public interface StoreFileManager {
    * @param candidate The current best candidate found.
    * @return The list to replace candidateFiles.
    */
-  public abstract Iterator<StoreFile> updateCandidateFilesForRowKeyBefore(
-      Iterator<StoreFile> candidateFiles, KeyValue targetKey, KeyValue candidate);
+  Iterator<StoreFile> updateCandidateFilesForRowKeyBefore(
+    Iterator<StoreFile> candidateFiles, KeyValue targetKey, KeyValue candidate
+  );
 
 
   /**
@@ -118,10 +122,10 @@ public interface StoreFileManager {
    * @return The mid-point, or null if no split is possible.
    * @throws IOException
    */
-  public abstract byte[] getSplitPoint() throws IOException;
+  byte[] getSplitPoint() throws IOException;
 
   /**
    * @return The store compaction priority.
    */
-  public abstract int getStoreCompactionPriority();
+  int getStoreCompactionPriority();
 }

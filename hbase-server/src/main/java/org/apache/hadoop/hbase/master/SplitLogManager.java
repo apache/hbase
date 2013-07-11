@@ -1593,11 +1593,11 @@ public class SplitLogManager extends ZooKeeperListener {
    * a serialization point at the end of the task processing. Must be
    * restartable and idempotent.
    */
-  static public interface TaskFinisher {
+  public interface TaskFinisher {
     /**
      * status that can be returned finish()
      */
-    static public enum Status {
+    enum Status {
       /**
        * task completed successfully
        */
@@ -1616,7 +1616,7 @@ public class SplitLogManager extends ZooKeeperListener {
      * @param taskname
      * @return DONE if task completed successfully, ERR otherwise
      */
-    public Status finish(ServerName workerName, String taskname);
+    Status finish(ServerName workerName, String taskname);
   }
 
   enum ResubmitDirective {

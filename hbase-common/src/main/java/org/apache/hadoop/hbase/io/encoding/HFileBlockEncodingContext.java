@@ -34,39 +34,39 @@ public interface HFileBlockEncodingContext {
   /**
    * @return OutputStream to which encoded data is written
    */
-  public OutputStream getOutputStreamForEncoder();
+  OutputStream getOutputStreamForEncoder();
 
   /**
    * @return encoded and compressed bytes with header which are ready to write
    *         out to disk
    */
-  public byte[] getOnDiskBytesWithHeader();
+  byte[] getOnDiskBytesWithHeader();
 
   /**
    * @return encoded but not heavily compressed bytes with header which can be
    *         cached in block cache
    */
-  public byte[] getUncompressedBytesWithHeader();
+  byte[] getUncompressedBytesWithHeader();
 
   /**
    * @return the block type after encoding
    */
-  public BlockType getBlockType();
+  BlockType getBlockType();
 
   /**
    * @return the compression algorithm used by this encoding context
    */
-  public Compression.Algorithm getCompression();
+  Compression.Algorithm getCompression();
 
   /**
    * sets the dummy header bytes
    */
-  public void setDummyHeader(byte[] headerBytes);
+  void setDummyHeader(byte[] headerBytes);
 
   /**
    * @return the {@link DataBlockEncoding} encoding used
    */
-  public DataBlockEncoding getDataBlockEncoding();
+  DataBlockEncoding getDataBlockEncoding();
 
   /**
    * Do any action that needs to be performed after the encoding.
@@ -76,11 +76,11 @@ public interface HFileBlockEncodingContext {
    * @param blockType
    * @throws IOException
    */
-  public void postEncoding(BlockType blockType) throws IOException;
+  void postEncoding(BlockType blockType) throws IOException;
 
   /**
    * Releases the resources used.
    */
-  public void close();
+  void close();
 
 }

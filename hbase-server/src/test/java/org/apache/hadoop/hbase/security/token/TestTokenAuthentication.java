@@ -92,7 +92,7 @@ public class TestTokenAuthentication {
   }
   private static Log LOG = LogFactory.getLog(TestTokenAuthentication.class);
 
-  public static interface AuthenticationServiceSecurityInfo {}
+  public interface AuthenticationServiceSecurityInfo {}
 
   /**
    * Basic server process for RPC authentication testing

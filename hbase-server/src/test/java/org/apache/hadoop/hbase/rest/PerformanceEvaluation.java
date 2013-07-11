@@ -182,7 +182,7 @@ public class PerformanceEvaluation  {
   /**
    * Implementations can have their status set.
    */
-  static interface Status {
+  interface Status {
     /**
      * Sets status
      * @param msg status message

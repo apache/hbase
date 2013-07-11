@@ -31,7 +31,7 @@ public interface ReplicationQueuesClient {
    * be alive, dead or from a previous run of the cluster.
    * @return a list of server names
    */
-  public List<String> getListOfReplicators();
+  List<String> getListOfReplicators();
 
   /**
    * Get a list of all HLogs in the given queue on the given region server.
@@ -39,12 +39,12 @@ public interface ReplicationQueuesClient {
    * @param queueId a String that identifies the queue
    * @return a list of HLogs, null if this region server is dead and has no outstanding queues
    */
-  public List<String> getLogsInQueue(String serverName, String queueId);
+  List<String> getLogsInQueue(String serverName, String queueId);
 
   /**
    * Get a list of all queues for the specified region server.
    * @param serverName the server name of the region server that owns the set of queues
    * @return a list of queueIds, null if this region server is not a replicator.
    */
-  public List<String> getAllQueues(String serverName);
+  List<String> getAllQueues(String serverName);
 }
