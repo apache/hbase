@@ -172,8 +172,8 @@ public class IntegrationTestMTTR {
     // Set up the action that will move the regions of our table.
     moveRegionAction = new ChaosMonkey.MoveRegionsOfTable(SLEEP_TIME, tableName);
 
-    // Kill the master (No sleep time because there is only one master running at this time.)
-    restartMasterAction = new ChaosMonkey.RestartActiveMaster(0l);
+    // Kill the master
+    restartMasterAction = new ChaosMonkey.RestartActiveMaster(1000);
 
     // Give the action the access to the cluster.
     ChaosMonkey.ActionContext actionContext = new ChaosMonkey.ActionContext(util);
