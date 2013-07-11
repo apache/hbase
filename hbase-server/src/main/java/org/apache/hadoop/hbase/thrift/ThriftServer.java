@@ -91,7 +91,7 @@ public class ThriftServer {
    */
    void doMain(final String[] args) throws Exception {
      processOptions(args);
-     
+
      // login the server principal (if using secure Hadoop)
      if (User.isSecurityEnabled() && User.isHBaseSecurityEnabled(conf)) {
        String machineName = Strings.domainNamePointerToHostName(
@@ -100,7 +100,7 @@ public class ThriftServer {
        User.login(conf, "hbase.thrift.keytab.file",
            "hbase.thrift.kerberos.principal", machineName);
      }
-     
+
      serverRunner = new ThriftServerRunner(conf);
 
      // Put up info server.
@@ -197,10 +197,12 @@ public class ThriftServer {
         conf, TBoundedThreadPoolServer.THREAD_KEEP_ALIVE_TIME_SEC_CONF_KEY);
 
     // Set general thrift server options
-    conf.setBoolean(
-        ThriftServerRunner.COMPACT_CONF_KEY, cmd.hasOption(COMPACT_OPTION));
-    conf.setBoolean(
-        ThriftServerRunner.FRAMED_CONF_KEY, cmd.hasOption(FRAMED_OPTION));
+    boolean compact = cmd.hasOption(COMPACT_OPTION) ||
+      conf.getBoolean(ThriftServerRunner.COMPACT_CONF_KEY, false);
+    conf.setBoolean(ThriftServerRunner.COMPACT_CONF_KEY, compact);
+    boolean framed = cmd.hasOption(FRAMED_OPTION) ||
+      conf.getBoolean(ThriftServerRunner.FRAMED_CONF_KEY, false);
+    conf.setBoolean(ThriftServerRunner.FRAMED_CONF_KEY, framed);
     if (cmd.hasOption(BIND_OPTION)) {
       conf.set(
           ThriftServerRunner.BIND_CONF_KEY, cmd.getOptionValue(BIND_OPTION));
