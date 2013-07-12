@@ -58,22 +58,22 @@ public class TestCompactionState {
     TEST_UTIL.shutdownMiniCluster();
   }
 
-  @Test(timeout=60000)
+  @Test(timeout=600000)
   public void testMajorCompaction() throws IOException, InterruptedException {
     compaction("testMajorCompaction", 8, CompactionState.MAJOR, false);
   }
 
-  @Test(timeout=60000)
+  @Test(timeout=600000)
   public void testMinorCompaction() throws IOException, InterruptedException {
     compaction("testMinorCompaction", 15, CompactionState.MINOR, false);
   }
 
-  @Test(timeout=60000)
+  @Test(timeout=600000)
   public void testMajorCompactionOnFamily() throws IOException, InterruptedException {
     compaction("testMajorCompactionOnFamily", 8, CompactionState.MAJOR, true);
   }
 
-  @Test(timeout=60000)
+  @Test(timeout=600000)
   public void testMinorCompactionOnFamily() throws IOException, InterruptedException {
     compaction("testMinorCompactionOnFamily", 15, CompactionState.MINOR, true);
   }
@@ -211,7 +211,7 @@ public class TestCompactionState {
     }
     return count;
   }
-  
+
   private static void loadData(final HTable ht, final byte[][] families,
       final int rows, final int flushes) throws IOException {
     List<Put> puts = new ArrayList<Put>(rows);
@@ -231,7 +231,7 @@ public class TestCompactionState {
       puts.clear();
     }
   }
-  
+
   @org.junit.Rule
   public org.apache.hadoop.hbase.ResourceCheckerJUnitRule cu =
     new org.apache.hadoop.hbase.ResourceCheckerJUnitRule();

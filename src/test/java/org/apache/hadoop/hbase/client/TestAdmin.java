@@ -40,23 +40,39 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.*;
+import org.apache.hadoop.hbase.DoNotRetryIOException;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HRegionLocation;
+import org.apache.hadoop.hbase.HServerAddress;
+import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.InvalidFamilyOperationException;
+import org.apache.hadoop.hbase.LargeTests;
+import org.apache.hadoop.hbase.MiniHBaseCluster;
+import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.TableExistsException;
+import org.apache.hadoop.hbase.TableNotDisabledException;
+import org.apache.hadoop.hbase.TableNotEnabledException;
+import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.catalog.CatalogTracker;
 import org.apache.hadoop.hbase.executor.EventHandler;
-import org.apache.hadoop.hbase.executor.EventHandler.EventType;
-import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.master.AssignmentManager;
 import org.apache.hadoop.hbase.master.HMaster;
-import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.wal.HLogUtilsForTests;
-import org.apache.hadoop.hbase.InvalidFamilyOperationException;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.zookeeper.ZKTableReadOnly;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
-import org.junit.*;
+import org.junit.After;
+import org.junit.AfterClass;
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.BeforeClass;
+import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 
@@ -702,8 +718,8 @@ public class TestAdmin {
     }
     ladmin.close();
   }
-  
-    
+
+
   @Test
   public void testCreateTableWithOnlyEmptyStartRow() throws IOException {
     byte[] tableName = Bytes.toBytes("testCreateTableWithOnlyEmptyStartRow");
@@ -717,7 +733,7 @@ public class TestAdmin {
     } catch (IllegalArgumentException e) {
     }
   }
-    
+
   @Test
   public void testCreateTableWithEmptyRowInTheSplitKeys() throws IOException {
     byte[] tableName = Bytes
@@ -985,7 +1001,7 @@ public class TestAdmin {
      new HColumnDescriptor("/cfamily/name");
   }
 
-  @Test(timeout=36000)
+  @Test(timeout=300000)
   public void testEnableDisableAddColumnDeleteColumn() throws Exception {
     ZooKeeperWatcher zkw = HBaseTestingUtility.getZooKeeperWatcher(TEST_UTIL);
     byte [] tableName = Bytes.toBytes("testMasterAdmin");
@@ -1229,10 +1245,14 @@ public class TestAdmin {
             .getServerName().getServerName());
       }
     }
-    Thread.sleep(1000);
-    onlineRegions = rs.getOnlineRegions();
+    boolean isInList = rs.getOnlineRegions().contains(info);
+    long timeout = System.currentTimeMillis() + 10000;
+    while ((System.currentTimeMillis() < timeout) && (isInList)) {
+      Thread.sleep(100);
+      isInList = rs.getOnlineRegions().contains(info);
+    }
     assertFalse("The region should not be present in online regions list.",
-        onlineRegions.contains(info));
+        isInList);
   }
 
   @Test
@@ -1277,7 +1297,7 @@ public class TestAdmin {
     }
 
     boolean isInList = rs.getOnlineRegions().contains(info);
-    long timeout = System.currentTimeMillis() + 2000;
+    long timeout = System.currentTimeMillis() + 10000;
     while ((System.currentTimeMillis() < timeout) && (isInList)) {
       Thread.sleep(100);
       isInList = rs.getOnlineRegions().contains(info);
@@ -1575,7 +1595,7 @@ public class TestAdmin {
       ct.stop();
     }
   }
-  
+
   @Test
   public void testRootTableSplit() throws Exception {
     Scan s = new Scan();
@@ -1587,7 +1607,7 @@ public class TestAdmin {
     List<HRegion> regions = TEST_UTIL.getMiniHBaseCluster().getRegions(HConstants.ROOT_TABLE_NAME);
     assertEquals("ROOT region should not be splitted.",1, regions.size());
   }
-  
+
   @org.junit.Rule
   public org.apache.hadoop.hbase.ResourceCheckerJUnitRule cu =
     new org.apache.hadoop.hbase.ResourceCheckerJUnitRule();

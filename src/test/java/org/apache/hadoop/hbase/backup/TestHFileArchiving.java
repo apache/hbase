@@ -37,7 +37,6 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.Stoppable;
-import org.apache.hadoop.hbase.backup.HFileArchiver;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.master.cleaner.HFileCleaner;
@@ -249,9 +248,23 @@ public class TestHFileArchiving {
     UTIL.deleteTable(TABLE_NAME);
     LOG.debug("Deleted table");
 
-    // then get the files in the archive directory.
+    assertArchiveFiles(fs, storeFiles, 30000);
+  }
+
+  private void assertArchiveFiles(FileSystem fs, List<String> storeFiles, long timeout) throws IOException {
+    long end = System.currentTimeMillis() + timeout;
     Path archiveDir = HFileArchiveUtil.getArchivePath(UTIL.getConfiguration());
-    List<String> archivedFiles = getAllFileNames(fs, archiveDir);
+    List<String> archivedFiles = new ArrayList<String>();
+
+    // We have to ensure that the DeleteTableHandler is finished. HBaseAdmin.deleteXXX() can return before all files
+    // are archived. We should fix HBASE-5487 and fix synchronous operations from admin.
+    while (System.currentTimeMillis() < end) {
+      archivedFiles = getAllFileNames(fs, archiveDir);
+      if (archivedFiles.size() >= storeFiles.size()) {
+        break;
+      }
+    }
+
     Collections.sort(storeFiles);
     Collections.sort(archivedFiles);
 
@@ -309,23 +322,9 @@ public class TestHFileArchiving {
     // then delete the table so the hfiles get archived
     UTIL.getHBaseAdmin().deleteColumn(TABLE_NAME, TEST_FAM);
 
-    // then get the files in the archive directory.
-    Path archiveDir = HFileArchiveUtil.getArchivePath(UTIL.getConfiguration());
-    List<String> archivedFiles = getAllFileNames(fs, archiveDir);
-    Collections.sort(storeFiles);
-    Collections.sort(archivedFiles);
+    assertArchiveFiles(fs, storeFiles, 30000);
 
-    LOG.debug("Store files:");
-    for (int i = 0; i < storeFiles.size(); i++) {
-      LOG.debug(i + " - " + storeFiles.get(i));
-    }
-    LOG.debug("Archive files:");
-    for (int i = 0; i < archivedFiles.size(); i++) {
-      LOG.debug(i + " - " + archivedFiles.get(i));
-    }
-
-    assertTrue("Archived files are missing some of the store files!",
-      archivedFiles.containsAll(storeFiles));
+    UTIL.deleteTable(TABLE_NAME);
   }
 
   /**
@@ -420,7 +419,7 @@ public class TestHFileArchiving {
     return fileNames;
   }
 
-  private List<String> getRegionStoreFiles(final FileSystem fs, final Path regionDir) 
+  private List<String> getRegionStoreFiles(final FileSystem fs, final Path regionDir)
       throws IOException {
     List<String> storeFiles = getAllFileNames(fs, regionDir);
     // remove all the non-storefile named files for the region

@@ -67,7 +67,7 @@ public class TestChangingEncoding {
       new HBaseTestingUtility();
   private static final Configuration conf = TEST_UTIL.getConfiguration();
 
-  private static final int TIMEOUT_MS = 240000;
+  private static final int TIMEOUT_MS = 600000;
 
   private HBaseAdmin admin;
   private HColumnDescriptor hcd;
