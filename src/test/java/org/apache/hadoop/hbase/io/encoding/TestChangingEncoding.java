@@ -67,7 +67,7 @@ public class TestChangingEncoding {
       new HBaseTestingUtility();
   private static final Configuration conf = TEST_UTIL.getConfiguration();
 
-  private static final int TIMEOUT_MS = 240000;
+  private static final int TIMEOUT_MS = 600000;
 
   private HBaseAdmin admin;
   private HColumnDescriptor hcd;
@@ -239,7 +239,7 @@ public class TestChangingEncoding {
     LOG.debug("Compacting table " + tableName);
     admin.majorCompact(tableName);
     HRegionServer rs = TEST_UTIL.getMiniHBaseCluster().getRegionServer(0);
-    
+
     // Waiting for the compaction to start, at least .5s.
     final long maxWaitime = System.currentTimeMillis() + 500;
     boolean cont;
@@ -247,7 +247,7 @@ public class TestChangingEncoding {
       cont = rs.compactSplitThread.getCompactionQueueSize() == 0;
       Threads.sleep(1);
     } while (cont && System.currentTimeMillis() < maxWaitime);
-    
+
     while (rs.compactSplitThread.getCompactionQueueSize() > 0) {
       Threads.sleep(5);
     }

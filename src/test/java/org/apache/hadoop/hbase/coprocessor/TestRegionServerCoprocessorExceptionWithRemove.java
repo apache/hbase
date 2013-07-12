@@ -20,22 +20,25 @@
 
 package org.apache.hadoop.hbase.coprocessor;
 
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+
 import java.io.IOException;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.*;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RetriesExhaustedWithDetailsException;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
-import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-
-import static org.junit.Assert.*;
 
 /**
  * Tests unhandled exceptions thrown by coprocessors running on regionserver.
@@ -77,7 +80,7 @@ public class TestRegionServerCoprocessorExceptionWithRemove {
     TEST_UTIL.shutdownMiniCluster();
   }
 
-  @Test(timeout=30000)
+  @Test(timeout=60000)
   public void testExceptionFromCoprocessorDuringPut()
       throws IOException {
     // Set watches on the zookeeper nodes for all of the regionservers in the

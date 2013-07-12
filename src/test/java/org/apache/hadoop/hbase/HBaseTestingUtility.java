@@ -88,8 +88,8 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.MiniMRCluster;
 import org.apache.zookeeper.KeeperException;
-import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.KeeperException.NodeExistsException;
+import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.ZooKeeper;
 
 /**
@@ -842,6 +842,8 @@ public class HBaseTestingUtility {
       desc.addFamily(hcd);
     }
     getHBaseAdmin().createTable(desc, startKey, endKey, numRegions);
+    // HBaseAdmin only waits for regions to appear in META we should wait until they are assigned
+    waitUntilAllRegionsAssigned(tableName);
     return new HTable(getConfiguration(), tableName);
   }
 
@@ -861,6 +863,8 @@ public class HBaseTestingUtility {
       desc.addFamily(new HColumnDescriptor(family));
     }
     getHBaseAdmin().createTable(desc);
+    // HBaseAdmin only waits for regions to appear in META we should wait until they are assigned
+    waitUntilAllRegionsAssigned(tableName);
     return new HTable(c, tableName);
   }
 
@@ -883,6 +887,8 @@ public class HBaseTestingUtility {
       desc.addFamily(hcd);
     }
     getHBaseAdmin().createTable(desc);
+    // HBaseAdmin only waits for regions to appear in META we should wait until they are assigned
+    waitUntilAllRegionsAssigned(tableName);
     return new HTable(c, tableName);
   }
 
@@ -917,6 +923,8 @@ public class HBaseTestingUtility {
       desc.addFamily(hcd);
     }
     getHBaseAdmin().createTable(desc);
+    // HBaseAdmin only waits for regions to appear in META we should wait until they are assigned
+    waitUntilAllRegionsAssigned(tableName);
     return new HTable(new Configuration(getConfiguration()), tableName);
   }
 
@@ -938,6 +946,8 @@ public class HBaseTestingUtility {
       desc.addFamily(hcd);
     }
     getHBaseAdmin().createTable(desc);
+    // HBaseAdmin only waits for regions to appear in META we should wait until they are assigned
+    waitUntilAllRegionsAssigned(tableName);
     return new HTable(new Configuration(getConfiguration()), tableName);
   }
 
@@ -961,6 +971,8 @@ public class HBaseTestingUtility {
       i++;
     }
     getHBaseAdmin().createTable(desc);
+    // HBaseAdmin only waits for regions to appear in META we should wait until they are assigned
+    waitUntilAllRegionsAssigned(tableName);
     return new HTable(new Configuration(getConfiguration()), tableName);
   }
 
@@ -1065,7 +1077,7 @@ public class HBaseTestingUtility {
   throws IOException {
     return loadRegion(r, f, false);
   }
-  
+
   /**
    * Load region with rows from 'aaa' to 'zzz'.
    * @param r Region
@@ -1183,7 +1195,7 @@ public class HBaseTestingUtility {
    *
    * @param table  The table to use for the data.
    * @param columnFamily  The family to insert the data into.
-   * @param cleanupFS  True if a previous region should be remove from the FS  
+   * @param cleanupFS  True if a previous region should be remove from the FS
    * @return count of regions created.
    * @throws IOException When creating the regions fails.
    */
@@ -1220,7 +1232,7 @@ public class HBaseTestingUtility {
       final byte[] columnFamily, byte [][] startKeys) throws IOException {
     return createMultiRegions(c, table, columnFamily, startKeys, true);
   }
-  
+
   public int createMultiRegions(final Configuration c, final HTable table,
           final byte[] columnFamily, byte [][] startKeys, boolean cleanupFS)
   throws IOException {
@@ -2242,10 +2254,10 @@ public class HBaseTestingUtility {
         HRegion.createHRegion(info, getDataTestDir(), getConfiguration(), htd);
     return region;
   }
-  
+
   /**
    * Create region split keys between startkey and endKey
-   * 
+   *
    * @param startKey
    * @param endKey
    * @param numRegions the number of regions to be created. it has to be greater than 3.

@@ -100,7 +100,7 @@ public class TestSizeBasedThrottler {
           15, // fail if throttler's value
               // exceeds 15
           1000, // use 1000 threads
-          500 // wait for 500ms
+          5000 // wait for 5 sec
           );
     }
   }
@@ -114,7 +114,7 @@ public class TestSizeBasedThrottler {
           4, // fail if throttler's value
              // exceeds 4
           1000, // use 1000 threads
-          500 // wait for 500ms
+          5000 // wait for 5 sec
           );
     }
   }
@@ -128,7 +128,7 @@ public class TestSizeBasedThrottler {
           2, // fail if throttler's value
              // exceeds 2
           1000, // use 1000 threads
-          500 // wait for 500ms
+          5000 // wait for 5 sec
           );
     }
   }

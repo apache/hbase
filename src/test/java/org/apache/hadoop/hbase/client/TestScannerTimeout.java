@@ -25,7 +25,9 @@ import static org.junit.Assert.fail;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.*;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.LargeTests;
 import org.apache.hadoop.hbase.catalog.MetaReader;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -147,7 +149,7 @@ public class TestScannerTimeout {
     LOG.info("END ************ test2772");
 
   }
-  
+
   /**
    * Test that scanner won't miss any rows if the region server it was reading
    * from failed. Before 3686, it would skip rows in the scan.
@@ -163,7 +165,14 @@ public class TestScannerTimeout {
     scan.setCaching(SCANNER_CACHING);
     LOG.info("************ TEST3686A");
     MetaReader.fullScanMetaAndPrint(TEST_UTIL.getHBaseCluster().getMaster().getCatalogTracker());
-    HTable table = new HTable(TEST_UTIL.getConfiguration(), TABLE_NAME);
+    // Set a very high timeout, we want to test what happens when a RS
+    // fails but the region is recovered before the lease times out.
+    // Since the RS is already created, this conf is client-side only for
+    // this new table
+    Configuration conf = new Configuration(TEST_UTIL.getConfiguration());
+    conf.setInt(
+        HConstants.HBASE_REGIONSERVER_LEASE_PERIOD_KEY, SCANNER_TIMEOUT*100);
+    HTable table = new HTable(conf, TABLE_NAME);
     LOG.info("START ************ TEST3686A---22");
 
     ResultScanner r = table.getScanner(scan);
@@ -183,7 +192,7 @@ public class TestScannerTimeout {
     table.close();
     LOG.info("************ END TEST3686A");
   }
-  
+
   /**
    * Make sure that no rows are lost if the scanner timeout is longer on the
    * client than the server, and the scan times out on the server but not the
