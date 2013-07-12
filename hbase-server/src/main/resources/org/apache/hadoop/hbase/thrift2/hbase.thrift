@@ -98,7 +98,8 @@ struct TGet {
   4: optional TTimeRange timeRange,
 
   5: optional i32 maxVersions,
-  6: optional binary filterString
+  6: optional binary filterString,
+  7: optional map<binary, binary> attributes
 }
 
 /**
@@ -116,7 +117,8 @@ struct TPut {
   1: required binary row,
   2: required list<TColumnValue> columnValues
   3: optional i64 timestamp,
-  4: optional bool writeToWal = 1
+  4: optional bool writeToWal = 1,
+  5: optional map<binary, binary> attributes
 }
 
 /**
@@ -147,7 +149,8 @@ struct TDelete {
   2: optional list<TColumn> columns,
   3: optional i64 timestamp,
   4: optional TDeleteType deleteType = 1,
-  5: optional bool writeToWal = 1
+  5: optional bool writeToWal = 1,
+  6: optional map<binary, binary> attributes
 }
 
 /**
@@ -159,7 +162,8 @@ struct TDelete {
 struct TIncrement {
   1: required binary row,
   2: required list<TColumnIncrement> columns,
-  3: optional bool writeToWal = 1
+  3: optional bool writeToWal = 1,
+  4: optional map<binary, binary> attributes
 }
 
 /**
@@ -174,7 +178,8 @@ struct TScan {
   5: optional i32 maxVersions=1,
   6: optional TTimeRange timeRange,
   7: optional binary filterString,
-  8: optional i32 batchSize
+  8: optional i32 batchSize,
+  9: optional map<binary, binary> attributes
 }
 
 //

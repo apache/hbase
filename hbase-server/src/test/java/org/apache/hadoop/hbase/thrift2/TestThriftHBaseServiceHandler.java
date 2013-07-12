@@ -26,7 +26,12 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MediumTests;
+import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
+import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.Increment;
+import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.filter.ParseFilter;
 import org.apache.hadoop.hbase.test.MetricsAssertHelper;
 import org.apache.hadoop.hbase.thrift.ThriftMetrics;
@@ -57,7 +62,13 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.HashMap;
 
+import static org.apache.hadoop.hbase.thrift2.ThriftUtilities.getFromThrift;
+import static org.apache.hadoop.hbase.thrift2.ThriftUtilities.putFromThrift;
+import static org.apache.hadoop.hbase.thrift2.ThriftUtilities.scanFromThrift;
+import static org.apache.hadoop.hbase.thrift2.ThriftUtilities.incrementFromThrift;
+import static org.apache.hadoop.hbase.thrift2.ThriftUtilities.deleteFromThrift;
 import static org.junit.Assert.*;
 import static java.nio.ByteBuffer.wrap;
 
@@ -692,6 +703,44 @@ public class TestThriftHBaseServiceHandler {
     ThriftMetrics m = new ThriftMetrics(conf, ThriftMetrics.ThriftServerType.TWO);
     m.getSource().init(); //Clear all the metrics
     return m;
+  }
+
+  @Test
+  public void testAttribute() throws Exception {
+    byte[] rowName = "testAttribute".getBytes();
+    byte[] attributeKey = "attribute1".getBytes();
+    byte[] attributeValue = "value1".getBytes();
+    Map<ByteBuffer, ByteBuffer> attributes = new HashMap<ByteBuffer, ByteBuffer>();
+    attributes.put(wrap(attributeKey), wrap(attributeValue));
+
+    TGet tGet = new TGet(wrap(rowName));
+    tGet.setAttributes(attributes);
+    Get get = getFromThrift(tGet);
+    assertArrayEquals(get.getAttribute("attribute1"), attributeValue);
+
+    List<TColumnValue> columnValues = new ArrayList<TColumnValue>();
+    columnValues.add(new TColumnValue(wrap(familyAname), wrap(qualifierAname), wrap(valueAname)));
+    TPut tPut = new TPut(wrap(rowName) , columnValues);
+    tPut.setAttributes(attributes);
+    Put put = putFromThrift(tPut);
+    assertArrayEquals(put.getAttribute("attribute1"), attributeValue);
+
+    TScan tScan = new TScan();
+    tScan.setAttributes(attributes);
+    Scan scan = scanFromThrift(tScan);
+    assertArrayEquals(scan.getAttribute("attribute1"), attributeValue);
+
+    List<TColumnIncrement> incrementColumns = new ArrayList<TColumnIncrement>();
+    incrementColumns.add(new TColumnIncrement(wrap(familyAname), wrap(qualifierAname)));
+    TIncrement tIncrement = new TIncrement(wrap(rowName), incrementColumns);
+    tIncrement.setAttributes(attributes);
+    Increment increment = incrementFromThrift(tIncrement);
+    assertArrayEquals(increment.getAttribute("attribute1"), attributeValue);
+
+    TDelete tDelete = new TDelete(wrap(rowName));
+    tDelete.setAttributes(attributes);
+    Delete delete = deleteFromThrift(tDelete);
+    assertArrayEquals(delete.getAttribute("attribute1"), attributeValue);
   }
 
 }
