@@ -172,7 +172,7 @@ public class TestScannerTimeout {
     // this new table
     Configuration conf = new Configuration(TEST_UTIL.getConfiguration());
     conf.setInt(
-        HConstants.HBASE_REGIONSERVER_LEASE_PERIOD_KEY, SCANNER_TIMEOUT*100);
+        HConstants.HBASE_CLIENT_SCANNER_TIMEOUT_PERIOD, SCANNER_TIMEOUT*100);
     HTable table = new HTable(conf, TABLE_NAME);
     LOG.info("START ************ TEST3686A---22");
 
