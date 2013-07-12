@@ -39,7 +39,21 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.*;
+import org.apache.hadoop.hbase.DoNotRetryIOException;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HRegionLocation;
+import org.apache.hadoop.hbase.HServerAddress;
+import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.InvalidFamilyOperationException;
+import org.apache.hadoop.hbase.LargeTests;
+import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.TableExistsException;
+import org.apache.hadoop.hbase.TableNotDisabledException;
+import org.apache.hadoop.hbase.TableNotEnabledException;
+import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.catalog.CatalogTracker;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.exceptions.InvalidFamilyOperationException;
@@ -761,7 +775,7 @@ public class TestAdmin {
     }
     ladmin.close();
   }
-  
+
   @Test
   public void testTableAvailableWithRandomSplitKeys() throws Exception {
     byte[] tableName = Bytes.toBytes("testTableAvailableWithRandomSplitKeys");
@@ -1077,7 +1091,7 @@ public class TestAdmin {
      new HColumnDescriptor("/cfamily/name");
   }
 
-  @Test(timeout=36000)
+  @Test(timeout=300000)
   public void testEnableDisableAddColumnDeleteColumn() throws Exception {
     ZooKeeperWatcher zkw = HBaseTestingUtility.getZooKeeperWatcher(TEST_UTIL);
     byte [] tableName = Bytes.toBytes("testMasterAdmin");
@@ -1320,10 +1334,15 @@ public class TestAdmin {
             .getServerName().getServerName());
       }
     }
-    Thread.sleep(1000);
-    onlineRegions = ProtobufUtil.getOnlineRegions(rs);
+    boolean isInList = ProtobufUtil.getOnlineRegions(rs).contains(info);
+    long timeout = System.currentTimeMillis() + 10000;
+    while ((System.currentTimeMillis() < timeout) && (isInList)) {
+      Thread.sleep(100);
+      isInList = ProtobufUtil.getOnlineRegions(rs).contains(info);
+    }
+
     assertFalse("The region should not be present in online regions list.",
-        onlineRegions.contains(info));
+      isInList);
   }
 
   @Test
@@ -1372,7 +1391,7 @@ public class TestAdmin {
     }
 
     boolean isInList = ProtobufUtil.getOnlineRegions(rs).contains(info);
-    long timeout = System.currentTimeMillis() + 2000;
+    long timeout = System.currentTimeMillis() + 10000;
     while ((System.currentTimeMillis() < timeout) && (isInList)) {
       Thread.sleep(100);
       isInList = ProtobufUtil.getOnlineRegions(rs).contains(info);

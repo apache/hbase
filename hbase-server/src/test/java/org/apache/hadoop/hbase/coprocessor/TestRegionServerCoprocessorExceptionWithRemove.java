@@ -77,7 +77,7 @@ public class TestRegionServerCoprocessorExceptionWithRemove {
     TEST_UTIL.shutdownMiniCluster();
   }
 
-  @Test(timeout=30000)
+  @Test(timeout=60000)
   public void testExceptionFromCoprocessorDuringPut()
       throws IOException, InterruptedException {
     // Set watches on the zookeeper nodes for all of the regionservers in the

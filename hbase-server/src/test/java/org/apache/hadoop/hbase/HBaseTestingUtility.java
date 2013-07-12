@@ -1070,6 +1070,8 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
       desc.addFamily(hcd);
     }
     getHBaseAdmin().createTable(desc, startKey, endKey, numRegions);
+    // HBaseAdmin only waits for regions to appear in META we should wait until they are assigned
+    waitUntilAllRegionsAssigned(tableName);
     return new HTable(getConfiguration(), tableName);
   }
 
@@ -1094,6 +1096,8 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
       desc.addFamily(hcd);
     }
     getHBaseAdmin().createTable(desc);
+    // HBaseAdmin only waits for regions to appear in META we should wait until they are assigned
+    waitUntilAllRegionsAssigned(tableName);
     return new HTable(c, tableName);
   }
 
@@ -1116,6 +1120,8 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
       desc.addFamily(hcd);
     }
     getHBaseAdmin().createTable(desc);
+    // HBaseAdmin only waits for regions to appear in META we should wait until they are assigned
+    waitUntilAllRegionsAssigned(tableName);
     return new HTable(c, tableName);
   }
 
@@ -1149,6 +1155,8 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
       desc.addFamily(hcd);
     }
     getHBaseAdmin().createTable(desc);
+    // HBaseAdmin only waits for regions to appear in META we should wait until they are assigned
+    waitUntilAllRegionsAssigned(tableName);
     return new HTable(new Configuration(getConfiguration()), tableName);
   }
 
@@ -1170,6 +1178,8 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
       desc.addFamily(hcd);
     }
     getHBaseAdmin().createTable(desc);
+    // HBaseAdmin only waits for regions to appear in META we should wait until they are assigned
+    waitUntilAllRegionsAssigned(tableName);
     return new HTable(new Configuration(getConfiguration()), tableName);
   }
 
@@ -1193,6 +1203,8 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
       i++;
     }
     getHBaseAdmin().createTable(desc);
+    // HBaseAdmin only waits for regions to appear in META we should wait until they are assigned
+    waitUntilAllRegionsAssigned(tableName);
     return new HTable(new Configuration(getConfiguration()), tableName);
   }
 
@@ -1210,6 +1222,8 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
     HColumnDescriptor hcd = new HColumnDescriptor(family);
     desc.addFamily(hcd);
     getHBaseAdmin().createTable(desc, splitRows);
+    // HBaseAdmin only waits for regions to appear in META we should wait until they are assigned
+    waitUntilAllRegionsAssigned(tableName);
     return new HTable(getConfiguration(), tableName);
   }
 
@@ -1229,6 +1243,8 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
       desc.addFamily(hcd);
     }
     getHBaseAdmin().createTable(desc, splitRows);
+    // HBaseAdmin only waits for regions to appear in META we should wait until they are assigned
+    waitUntilAllRegionsAssigned(tableName);
     return new HTable(getConfiguration(), tableName);
   }
 

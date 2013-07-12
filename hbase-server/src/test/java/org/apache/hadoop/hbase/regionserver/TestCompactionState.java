@@ -211,7 +211,7 @@ public class TestCompactionState {
     }
     return count;
   }
-  
+
   private static void loadData(final HTable ht, final byte[][] families,
       final int rows, final int flushes) throws IOException {
     List<Put> puts = new ArrayList<Put>(rows);
