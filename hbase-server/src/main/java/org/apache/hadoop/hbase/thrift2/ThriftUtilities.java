@@ -25,10 +25,13 @@ import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.client.*;
 import org.apache.hadoop.hbase.filter.ParseFilter;
 import org.apache.hadoop.hbase.thrift2.generated.*;
+import org.apache.hadoop.hbase.util.Bytes;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.*;
+
+import static org.apache.hadoop.hbase.util.Bytes.getBytes;
 
 @InterfaceAudience.Private
 public class ThriftUtilities {
@@ -62,6 +65,15 @@ public class ThriftUtilities {
       out.setMaxVersions(in.getMaxVersions());
     }
 
+    if (in.isSetFilterString()) {
+      ParseFilter parseFilter = new ParseFilter();
+      out.setFilter(parseFilter.parseFilterString(in.getFilterString()));
+    }
+
+    if (in.isSetAttributes()) {
+      addAttributes(out,in.getAttributes());
+    }
+
     if (!in.isSetColumns()) {
       return out;
     }
@@ -72,11 +84,6 @@ public class ThriftUtilities {
       } else {
         out.addFamily(column.getFamily());
       }
-    }
-
-    if (in.isSetFilterString()) {
-      ParseFilter parseFilter = new ParseFilter();
-      out.setFilter(parseFilter.parseFilterString(in.getFilterString()));
     }
 
     return out;
@@ -171,6 +178,10 @@ public class ThriftUtilities {
       }
     }
 
+    if (in.isSetAttributes()) {
+      addAttributes(out,in.getAttributes());
+    }
+
     return out;
   }
 
@@ -234,6 +245,11 @@ public class ThriftUtilities {
         out = new Delete(in.getRow());
       }
     }
+
+    if (in.isSetAttributes()) {
+      addAttributes(out,in.getAttributes());
+    }
+
     out.setDurability(in.isWriteToWal() ? Durability.SYNC_WAL : Durability.SKIP_WAL);
     return out;
   }
@@ -329,6 +345,10 @@ public class ThriftUtilities {
       out.setFilter(parseFilter.parseFilterString(in.getFilterString()));
     }
 
+    if (in.isSetAttributes()) {
+      addAttributes(out,in.getAttributes());
+    }
+
     return out;
   }
 
@@ -337,7 +357,27 @@ public class ThriftUtilities {
     for (TColumnIncrement column : in.getColumns()) {
       out.addColumn(column.getFamily(), column.getQualifier(), column.getAmount());
     }
+
+    if (in.isSetAttributes()) {
+      addAttributes(out,in.getAttributes());
+    }
+
     out.setDurability(in.isWriteToWal() ? Durability.SYNC_WAL : Durability.SKIP_WAL);
     return out;
+  }
+
+  /**
+   * Adds all the attributes into the Operation object
+   */
+  private static void addAttributes(OperationWithAttributes op,
+                                    Map<ByteBuffer, ByteBuffer> attributes) {
+    if (attributes == null || attributes.size() == 0) {
+      return;
+    }
+    for (Map.Entry<ByteBuffer, ByteBuffer> entry : attributes.entrySet()) {
+      String name = Bytes.toStringBinary(getBytes(entry.getKey()));
+      byte[] value =  getBytes(entry.getValue());
+      op.setAttribute(name, value);
+    }
   }
 }

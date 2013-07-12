@@ -42,6 +42,7 @@ public class TIncrement implements org.apache.thrift.TBase<TIncrement, TIncremen
   private static final org.apache.thrift.protocol.TField ROW_FIELD_DESC = new org.apache.thrift.protocol.TField("row", org.apache.thrift.protocol.TType.STRING, (short)1);
   private static final org.apache.thrift.protocol.TField COLUMNS_FIELD_DESC = new org.apache.thrift.protocol.TField("columns", org.apache.thrift.protocol.TType.LIST, (short)2);
   private static final org.apache.thrift.protocol.TField WRITE_TO_WAL_FIELD_DESC = new org.apache.thrift.protocol.TField("writeToWal", org.apache.thrift.protocol.TType.BOOL, (short)3);
+  private static final org.apache.thrift.protocol.TField ATTRIBUTES_FIELD_DESC = new org.apache.thrift.protocol.TField("attributes", org.apache.thrift.protocol.TType.MAP, (short)4);
 
   private static final Map<Class<? extends IScheme>, SchemeFactory> schemes = new HashMap<Class<? extends IScheme>, SchemeFactory>();
   static {
@@ -52,12 +53,14 @@ public class TIncrement implements org.apache.thrift.TBase<TIncrement, TIncremen
   public ByteBuffer row; // required
   public List<TColumnIncrement> columns; // required
   public boolean writeToWal; // optional
+  public Map<ByteBuffer,ByteBuffer> attributes; // optional
 
   /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
   public enum _Fields implements org.apache.thrift.TFieldIdEnum {
     ROW((short)1, "row"),
     COLUMNS((short)2, "columns"),
-    WRITE_TO_WAL((short)3, "writeToWal");
+    WRITE_TO_WAL((short)3, "writeToWal"),
+    ATTRIBUTES((short)4, "attributes");
 
     private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
 
@@ -78,6 +81,8 @@ public class TIncrement implements org.apache.thrift.TBase<TIncrement, TIncremen
           return COLUMNS;
         case 3: // WRITE_TO_WAL
           return WRITE_TO_WAL;
+        case 4: // ATTRIBUTES
+          return ATTRIBUTES;
         default:
           return null;
       }
@@ -120,7 +125,7 @@ public class TIncrement implements org.apache.thrift.TBase<TIncrement, TIncremen
   // isset id assignments
   private static final int __WRITETOWAL_ISSET_ID = 0;
   private byte __isset_bitfield = 0;
-  private _Fields optionals[] = {_Fields.WRITE_TO_WAL};
+  private _Fields optionals[] = {_Fields.WRITE_TO_WAL,_Fields.ATTRIBUTES};
   public static final Map<_Fields, org.apache.thrift.meta_data.FieldMetaData> metaDataMap;
   static {
     Map<_Fields, org.apache.thrift.meta_data.FieldMetaData> tmpMap = new EnumMap<_Fields, org.apache.thrift.meta_data.FieldMetaData>(_Fields.class);
@@ -131,6 +136,10 @@ public class TIncrement implements org.apache.thrift.TBase<TIncrement, TIncremen
             new org.apache.thrift.meta_data.StructMetaData(org.apache.thrift.protocol.TType.STRUCT, TColumnIncrement.class))));
     tmpMap.put(_Fields.WRITE_TO_WAL, new org.apache.thrift.meta_data.FieldMetaData("writeToWal", org.apache.thrift.TFieldRequirementType.OPTIONAL, 
         new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.BOOL)));
+    tmpMap.put(_Fields.ATTRIBUTES, new org.apache.thrift.meta_data.FieldMetaData("attributes", org.apache.thrift.TFieldRequirementType.OPTIONAL, 
+        new org.apache.thrift.meta_data.MapMetaData(org.apache.thrift.protocol.TType.MAP, 
+            new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.STRING            , true), 
+            new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.STRING            , true))));
     metaDataMap = Collections.unmodifiableMap(tmpMap);
     org.apache.thrift.meta_data.FieldMetaData.addStructMetaDataMap(TIncrement.class, metaDataMap);
   }
@@ -166,6 +175,23 @@ public class TIncrement implements org.apache.thrift.TBase<TIncrement, TIncremen
       this.columns = __this__columns;
     }
     this.writeToWal = other.writeToWal;
+    if (other.isSetAttributes()) {
+      Map<ByteBuffer,ByteBuffer> __this__attributes = new HashMap<ByteBuffer,ByteBuffer>();
+      for (Map.Entry<ByteBuffer, ByteBuffer> other_element : other.attributes.entrySet()) {
+
+        ByteBuffer other_element_key = other_element.getKey();
+        ByteBuffer other_element_value = other_element.getValue();
+
+        ByteBuffer __this__attributes_copy_key = org.apache.thrift.TBaseHelper.copyBinary(other_element_key);
+;
+
+        ByteBuffer __this__attributes_copy_value = org.apache.thrift.TBaseHelper.copyBinary(other_element_value);
+;
+
+        __this__attributes.put(__this__attributes_copy_key, __this__attributes_copy_value);
+      }
+      this.attributes = __this__attributes;
+    }
   }
 
   public TIncrement deepCopy() {
@@ -178,6 +204,7 @@ public class TIncrement implements org.apache.thrift.TBase<TIncrement, TIncremen
     this.columns = null;
     this.writeToWal = true;
 
+    this.attributes = null;
   }
 
   public byte[] getRow() {
@@ -276,6 +303,41 @@ public class TIncrement implements org.apache.thrift.TBase<TIncrement, TIncremen
     __isset_bitfield = EncodingUtils.setBit(__isset_bitfield, __WRITETOWAL_ISSET_ID, value);
   }
 
+  public int getAttributesSize() {
+    return (this.attributes == null) ? 0 : this.attributes.size();
+  }
+
+  public void putToAttributes(ByteBuffer key, ByteBuffer val) {
+    if (this.attributes == null) {
+      this.attributes = new HashMap<ByteBuffer,ByteBuffer>();
+    }
+    this.attributes.put(key, val);
+  }
+
+  public Map<ByteBuffer,ByteBuffer> getAttributes() {
+    return this.attributes;
+  }
+
+  public TIncrement setAttributes(Map<ByteBuffer,ByteBuffer> attributes) {
+    this.attributes = attributes;
+    return this;
+  }
+
+  public void unsetAttributes() {
+    this.attributes = null;
+  }
+
+  /** Returns true if field attributes is set (has been assigned a value) and false otherwise */
+  public boolean isSetAttributes() {
+    return this.attributes != null;
+  }
+
+  public void setAttributesIsSet(boolean value) {
+    if (!value) {
+      this.attributes = null;
+    }
+  }
+
   public void setFieldValue(_Fields field, Object value) {
     switch (field) {
     case ROW:
@@ -302,6 +364,14 @@ public class TIncrement implements org.apache.thrift.TBase<TIncrement, TIncremen
       }
       break;
 
+    case ATTRIBUTES:
+      if (value == null) {
+        unsetAttributes();
+      } else {
+        setAttributes((Map<ByteBuffer,ByteBuffer>)value);
+      }
+      break;
+
     }
   }
 
@@ -315,6 +385,9 @@ public class TIncrement implements org.apache.thrift.TBase<TIncrement, TIncremen
 
     case WRITE_TO_WAL:
       return Boolean.valueOf(isWriteToWal());
+
+    case ATTRIBUTES:
+      return getAttributes();
 
     }
     throw new IllegalStateException();
@@ -333,6 +406,8 @@ public class TIncrement implements org.apache.thrift.TBase<TIncrement, TIncremen
       return isSetColumns();
     case WRITE_TO_WAL:
       return isSetWriteToWal();
+    case ATTRIBUTES:
+      return isSetAttributes();
     }
     throw new IllegalStateException();
   }
@@ -374,6 +449,15 @@ public class TIncrement implements org.apache.thrift.TBase<TIncrement, TIncremen
       if (!(this_present_writeToWal && that_present_writeToWal))
         return false;
       if (this.writeToWal != that.writeToWal)
+        return false;
+    }
+
+    boolean this_present_attributes = true && this.isSetAttributes();
+    boolean that_present_attributes = true && that.isSetAttributes();
+    if (this_present_attributes || that_present_attributes) {
+      if (!(this_present_attributes && that_present_attributes))
+        return false;
+      if (!this.attributes.equals(that.attributes))
         return false;
     }
 
@@ -423,6 +507,16 @@ public class TIncrement implements org.apache.thrift.TBase<TIncrement, TIncremen
         return lastComparison;
       }
     }
+    lastComparison = Boolean.valueOf(isSetAttributes()).compareTo(typedOther.isSetAttributes());
+    if (lastComparison != 0) {
+      return lastComparison;
+    }
+    if (isSetAttributes()) {
+      lastComparison = org.apache.thrift.TBaseHelper.compareTo(this.attributes, typedOther.attributes);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+    }
     return 0;
   }
 
@@ -462,6 +556,16 @@ public class TIncrement implements org.apache.thrift.TBase<TIncrement, TIncremen
       if (!first) sb.append(", ");
       sb.append("writeToWal:");
       sb.append(this.writeToWal);
+      first = false;
+    }
+    if (isSetAttributes()) {
+      if (!first) sb.append(", ");
+      sb.append("attributes:");
+      if (this.attributes == null) {
+        sb.append("null");
+      } else {
+        sb.append(this.attributes);
+      }
       first = false;
     }
     sb.append(")");
@@ -526,14 +630,14 @@ public class TIncrement implements org.apache.thrift.TBase<TIncrement, TIncremen
           case 2: // COLUMNS
             if (schemeField.type == org.apache.thrift.protocol.TType.LIST) {
               {
-                org.apache.thrift.protocol.TList _list32 = iprot.readListBegin();
-                struct.columns = new ArrayList<TColumnIncrement>(_list32.size);
-                for (int _i33 = 0; _i33 < _list32.size; ++_i33)
+                org.apache.thrift.protocol.TList _list62 = iprot.readListBegin();
+                struct.columns = new ArrayList<TColumnIncrement>(_list62.size);
+                for (int _i63 = 0; _i63 < _list62.size; ++_i63)
                 {
-                  TColumnIncrement _elem34; // required
-                  _elem34 = new TColumnIncrement();
-                  _elem34.read(iprot);
-                  struct.columns.add(_elem34);
+                  TColumnIncrement _elem64; // required
+                  _elem64 = new TColumnIncrement();
+                  _elem64.read(iprot);
+                  struct.columns.add(_elem64);
                 }
                 iprot.readListEnd();
               }
@@ -546,6 +650,26 @@ public class TIncrement implements org.apache.thrift.TBase<TIncrement, TIncremen
             if (schemeField.type == org.apache.thrift.protocol.TType.BOOL) {
               struct.writeToWal = iprot.readBool();
               struct.setWriteToWalIsSet(true);
+            } else { 
+              org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
+            }
+            break;
+          case 4: // ATTRIBUTES
+            if (schemeField.type == org.apache.thrift.protocol.TType.MAP) {
+              {
+                org.apache.thrift.protocol.TMap _map65 = iprot.readMapBegin();
+                struct.attributes = new HashMap<ByteBuffer,ByteBuffer>(2*_map65.size);
+                for (int _i66 = 0; _i66 < _map65.size; ++_i66)
+                {
+                  ByteBuffer _key67; // required
+                  ByteBuffer _val68; // required
+                  _key67 = iprot.readBinary();
+                  _val68 = iprot.readBinary();
+                  struct.attributes.put(_key67, _val68);
+                }
+                iprot.readMapEnd();
+              }
+              struct.setAttributesIsSet(true);
             } else { 
               org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
             }
@@ -574,9 +698,9 @@ public class TIncrement implements org.apache.thrift.TBase<TIncrement, TIncremen
         oprot.writeFieldBegin(COLUMNS_FIELD_DESC);
         {
           oprot.writeListBegin(new org.apache.thrift.protocol.TList(org.apache.thrift.protocol.TType.STRUCT, struct.columns.size()));
-          for (TColumnIncrement _iter35 : struct.columns)
+          for (TColumnIncrement _iter69 : struct.columns)
           {
-            _iter35.write(oprot);
+            _iter69.write(oprot);
           }
           oprot.writeListEnd();
         }
@@ -586,6 +710,21 @@ public class TIncrement implements org.apache.thrift.TBase<TIncrement, TIncremen
         oprot.writeFieldBegin(WRITE_TO_WAL_FIELD_DESC);
         oprot.writeBool(struct.writeToWal);
         oprot.writeFieldEnd();
+      }
+      if (struct.attributes != null) {
+        if (struct.isSetAttributes()) {
+          oprot.writeFieldBegin(ATTRIBUTES_FIELD_DESC);
+          {
+            oprot.writeMapBegin(new org.apache.thrift.protocol.TMap(org.apache.thrift.protocol.TType.STRING, org.apache.thrift.protocol.TType.STRING, struct.attributes.size()));
+            for (Map.Entry<ByteBuffer, ByteBuffer> _iter70 : struct.attributes.entrySet())
+            {
+              oprot.writeBinary(_iter70.getKey());
+              oprot.writeBinary(_iter70.getValue());
+            }
+            oprot.writeMapEnd();
+          }
+          oprot.writeFieldEnd();
+        }
       }
       oprot.writeFieldStop();
       oprot.writeStructEnd();
@@ -607,18 +746,31 @@ public class TIncrement implements org.apache.thrift.TBase<TIncrement, TIncremen
       oprot.writeBinary(struct.row);
       {
         oprot.writeI32(struct.columns.size());
-        for (TColumnIncrement _iter36 : struct.columns)
+        for (TColumnIncrement _iter71 : struct.columns)
         {
-          _iter36.write(oprot);
+          _iter71.write(oprot);
         }
       }
       BitSet optionals = new BitSet();
       if (struct.isSetWriteToWal()) {
         optionals.set(0);
       }
-      oprot.writeBitSet(optionals, 1);
+      if (struct.isSetAttributes()) {
+        optionals.set(1);
+      }
+      oprot.writeBitSet(optionals, 2);
       if (struct.isSetWriteToWal()) {
         oprot.writeBool(struct.writeToWal);
+      }
+      if (struct.isSetAttributes()) {
+        {
+          oprot.writeI32(struct.attributes.size());
+          for (Map.Entry<ByteBuffer, ByteBuffer> _iter72 : struct.attributes.entrySet())
+          {
+            oprot.writeBinary(_iter72.getKey());
+            oprot.writeBinary(_iter72.getValue());
+          }
+        }
       }
     }
 
@@ -628,21 +780,36 @@ public class TIncrement implements org.apache.thrift.TBase<TIncrement, TIncremen
       struct.row = iprot.readBinary();
       struct.setRowIsSet(true);
       {
-        org.apache.thrift.protocol.TList _list37 = new org.apache.thrift.protocol.TList(org.apache.thrift.protocol.TType.STRUCT, iprot.readI32());
-        struct.columns = new ArrayList<TColumnIncrement>(_list37.size);
-        for (int _i38 = 0; _i38 < _list37.size; ++_i38)
+        org.apache.thrift.protocol.TList _list73 = new org.apache.thrift.protocol.TList(org.apache.thrift.protocol.TType.STRUCT, iprot.readI32());
+        struct.columns = new ArrayList<TColumnIncrement>(_list73.size);
+        for (int _i74 = 0; _i74 < _list73.size; ++_i74)
         {
-          TColumnIncrement _elem39; // required
-          _elem39 = new TColumnIncrement();
-          _elem39.read(iprot);
-          struct.columns.add(_elem39);
+          TColumnIncrement _elem75; // required
+          _elem75 = new TColumnIncrement();
+          _elem75.read(iprot);
+          struct.columns.add(_elem75);
         }
       }
       struct.setColumnsIsSet(true);
-      BitSet incoming = iprot.readBitSet(1);
+      BitSet incoming = iprot.readBitSet(2);
       if (incoming.get(0)) {
         struct.writeToWal = iprot.readBool();
         struct.setWriteToWalIsSet(true);
+      }
+      if (incoming.get(1)) {
+        {
+          org.apache.thrift.protocol.TMap _map76 = new org.apache.thrift.protocol.TMap(org.apache.thrift.protocol.TType.STRING, org.apache.thrift.protocol.TType.STRING, iprot.readI32());
+          struct.attributes = new HashMap<ByteBuffer,ByteBuffer>(2*_map76.size);
+          for (int _i77 = 0; _i77 < _map76.size; ++_i77)
+          {
+            ByteBuffer _key78; // required
+            ByteBuffer _val79; // required
+            _key78 = iprot.readBinary();
+            _val79 = iprot.readBinary();
+            struct.attributes.put(_key78, _val79);
+          }
+        }
+        struct.setAttributesIsSet(true);
       }
     }
   }

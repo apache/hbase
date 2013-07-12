@@ -131,9 +131,9 @@ public class THBaseService {
     /**
      * Bulk commit a List of TDeletes to the table.
      * 
-     * This returns a list of TDeletes that were not
-     * executed. So if everything succeeds you'll
-     * receive an empty list.
+     * Throws a TIOError if any of the deletes fail.
+     * 
+     * Always returns an empty list for backwards compatibility.
      * 
      * @param table the table to delete from
      * 
@@ -3772,14 +3772,14 @@ public class THBaseService {
             case 2: // GETS
               if (schemeField.type == org.apache.thrift.protocol.TType.LIST) {
                 {
-                  org.apache.thrift.protocol.TList _list48 = iprot.readListBegin();
-                  struct.gets = new ArrayList<TGet>(_list48.size);
-                  for (int _i49 = 0; _i49 < _list48.size; ++_i49)
+                  org.apache.thrift.protocol.TList _list98 = iprot.readListBegin();
+                  struct.gets = new ArrayList<TGet>(_list98.size);
+                  for (int _i99 = 0; _i99 < _list98.size; ++_i99)
                   {
-                    TGet _elem50; // required
-                    _elem50 = new TGet();
-                    _elem50.read(iprot);
-                    struct.gets.add(_elem50);
+                    TGet _elem100; // required
+                    _elem100 = new TGet();
+                    _elem100.read(iprot);
+                    struct.gets.add(_elem100);
                   }
                   iprot.readListEnd();
                 }
@@ -3812,9 +3812,9 @@ public class THBaseService {
           oprot.writeFieldBegin(GETS_FIELD_DESC);
           {
             oprot.writeListBegin(new org.apache.thrift.protocol.TList(org.apache.thrift.protocol.TType.STRUCT, struct.gets.size()));
-            for (TGet _iter51 : struct.gets)
+            for (TGet _iter101 : struct.gets)
             {
-              _iter51.write(oprot);
+              _iter101.write(oprot);
             }
             oprot.writeListEnd();
           }
@@ -3840,9 +3840,9 @@ public class THBaseService {
         oprot.writeBinary(struct.table);
         {
           oprot.writeI32(struct.gets.size());
-          for (TGet _iter52 : struct.gets)
+          for (TGet _iter102 : struct.gets)
           {
-            _iter52.write(oprot);
+            _iter102.write(oprot);
           }
         }
       }
@@ -3853,14 +3853,14 @@ public class THBaseService {
         struct.table = iprot.readBinary();
         struct.setTableIsSet(true);
         {
-          org.apache.thrift.protocol.TList _list53 = new org.apache.thrift.protocol.TList(org.apache.thrift.protocol.TType.STRUCT, iprot.readI32());
-          struct.gets = new ArrayList<TGet>(_list53.size);
-          for (int _i54 = 0; _i54 < _list53.size; ++_i54)
+          org.apache.thrift.protocol.TList _list103 = new org.apache.thrift.protocol.TList(org.apache.thrift.protocol.TType.STRUCT, iprot.readI32());
+          struct.gets = new ArrayList<TGet>(_list103.size);
+          for (int _i104 = 0; _i104 < _list103.size; ++_i104)
           {
-            TGet _elem55; // required
-            _elem55 = new TGet();
-            _elem55.read(iprot);
-            struct.gets.add(_elem55);
+            TGet _elem105; // required
+            _elem105 = new TGet();
+            _elem105.read(iprot);
+            struct.gets.add(_elem105);
           }
         }
         struct.setGetsIsSet(true);
@@ -4255,14 +4255,14 @@ public class THBaseService {
             case 0: // SUCCESS
               if (schemeField.type == org.apache.thrift.protocol.TType.LIST) {
                 {
-                  org.apache.thrift.protocol.TList _list56 = iprot.readListBegin();
-                  struct.success = new ArrayList<TResult>(_list56.size);
-                  for (int _i57 = 0; _i57 < _list56.size; ++_i57)
+                  org.apache.thrift.protocol.TList _list106 = iprot.readListBegin();
+                  struct.success = new ArrayList<TResult>(_list106.size);
+                  for (int _i107 = 0; _i107 < _list106.size; ++_i107)
                   {
-                    TResult _elem58; // required
-                    _elem58 = new TResult();
-                    _elem58.read(iprot);
-                    struct.success.add(_elem58);
+                    TResult _elem108; // required
+                    _elem108 = new TResult();
+                    _elem108.read(iprot);
+                    struct.success.add(_elem108);
                   }
                   iprot.readListEnd();
                 }
@@ -4299,9 +4299,9 @@ public class THBaseService {
           oprot.writeFieldBegin(SUCCESS_FIELD_DESC);
           {
             oprot.writeListBegin(new org.apache.thrift.protocol.TList(org.apache.thrift.protocol.TType.STRUCT, struct.success.size()));
-            for (TResult _iter59 : struct.success)
+            for (TResult _iter109 : struct.success)
             {
-              _iter59.write(oprot);
+              _iter109.write(oprot);
             }
             oprot.writeListEnd();
           }
@@ -4340,9 +4340,9 @@ public class THBaseService {
         if (struct.isSetSuccess()) {
           {
             oprot.writeI32(struct.success.size());
-            for (TResult _iter60 : struct.success)
+            for (TResult _iter110 : struct.success)
             {
-              _iter60.write(oprot);
+              _iter110.write(oprot);
             }
           }
         }
@@ -4357,14 +4357,14 @@ public class THBaseService {
         BitSet incoming = iprot.readBitSet(2);
         if (incoming.get(0)) {
           {
-            org.apache.thrift.protocol.TList _list61 = new org.apache.thrift.protocol.TList(org.apache.thrift.protocol.TType.STRUCT, iprot.readI32());
-            struct.success = new ArrayList<TResult>(_list61.size);
-            for (int _i62 = 0; _i62 < _list61.size; ++_i62)
+            org.apache.thrift.protocol.TList _list111 = new org.apache.thrift.protocol.TList(org.apache.thrift.protocol.TType.STRUCT, iprot.readI32());
+            struct.success = new ArrayList<TResult>(_list111.size);
+            for (int _i112 = 0; _i112 < _list111.size; ++_i112)
             {
-              TResult _elem63; // required
-              _elem63 = new TResult();
-              _elem63.read(iprot);
-              struct.success.add(_elem63);
+              TResult _elem113; // required
+              _elem113 = new TResult();
+              _elem113.read(iprot);
+              struct.success.add(_elem113);
             }
           }
           struct.setSuccessIsSet(true);
@@ -7083,14 +7083,14 @@ public class THBaseService {
             case 2: // PUTS
               if (schemeField.type == org.apache.thrift.protocol.TType.LIST) {
                 {
-                  org.apache.thrift.protocol.TList _list64 = iprot.readListBegin();
-                  struct.puts = new ArrayList<TPut>(_list64.size);
-                  for (int _i65 = 0; _i65 < _list64.size; ++_i65)
+                  org.apache.thrift.protocol.TList _list114 = iprot.readListBegin();
+                  struct.puts = new ArrayList<TPut>(_list114.size);
+                  for (int _i115 = 0; _i115 < _list114.size; ++_i115)
                   {
-                    TPut _elem66; // required
-                    _elem66 = new TPut();
-                    _elem66.read(iprot);
-                    struct.puts.add(_elem66);
+                    TPut _elem116; // required
+                    _elem116 = new TPut();
+                    _elem116.read(iprot);
+                    struct.puts.add(_elem116);
                   }
                   iprot.readListEnd();
                 }
@@ -7123,9 +7123,9 @@ public class THBaseService {
           oprot.writeFieldBegin(PUTS_FIELD_DESC);
           {
             oprot.writeListBegin(new org.apache.thrift.protocol.TList(org.apache.thrift.protocol.TType.STRUCT, struct.puts.size()));
-            for (TPut _iter67 : struct.puts)
+            for (TPut _iter117 : struct.puts)
             {
-              _iter67.write(oprot);
+              _iter117.write(oprot);
             }
             oprot.writeListEnd();
           }
@@ -7151,9 +7151,9 @@ public class THBaseService {
         oprot.writeBinary(struct.table);
         {
           oprot.writeI32(struct.puts.size());
-          for (TPut _iter68 : struct.puts)
+          for (TPut _iter118 : struct.puts)
           {
-            _iter68.write(oprot);
+            _iter118.write(oprot);
           }
         }
       }
@@ -7164,14 +7164,14 @@ public class THBaseService {
         struct.table = iprot.readBinary();
         struct.setTableIsSet(true);
         {
-          org.apache.thrift.protocol.TList _list69 = new org.apache.thrift.protocol.TList(org.apache.thrift.protocol.TType.STRUCT, iprot.readI32());
-          struct.puts = new ArrayList<TPut>(_list69.size);
-          for (int _i70 = 0; _i70 < _list69.size; ++_i70)
+          org.apache.thrift.protocol.TList _list119 = new org.apache.thrift.protocol.TList(org.apache.thrift.protocol.TType.STRUCT, iprot.readI32());
+          struct.puts = new ArrayList<TPut>(_list119.size);
+          for (int _i120 = 0; _i120 < _list119.size; ++_i120)
           {
-            TPut _elem71; // required
-            _elem71 = new TPut();
-            _elem71.read(iprot);
-            struct.puts.add(_elem71);
+            TPut _elem121; // required
+            _elem121 = new TPut();
+            _elem121.read(iprot);
+            struct.puts.add(_elem121);
           }
         }
         struct.setPutsIsSet(true);
@@ -8810,14 +8810,14 @@ public class THBaseService {
             case 2: // DELETES
               if (schemeField.type == org.apache.thrift.protocol.TType.LIST) {
                 {
-                  org.apache.thrift.protocol.TList _list72 = iprot.readListBegin();
-                  struct.deletes = new ArrayList<TDelete>(_list72.size);
-                  for (int _i73 = 0; _i73 < _list72.size; ++_i73)
+                  org.apache.thrift.protocol.TList _list122 = iprot.readListBegin();
+                  struct.deletes = new ArrayList<TDelete>(_list122.size);
+                  for (int _i123 = 0; _i123 < _list122.size; ++_i123)
                   {
-                    TDelete _elem74; // required
-                    _elem74 = new TDelete();
-                    _elem74.read(iprot);
-                    struct.deletes.add(_elem74);
+                    TDelete _elem124; // required
+                    _elem124 = new TDelete();
+                    _elem124.read(iprot);
+                    struct.deletes.add(_elem124);
                   }
                   iprot.readListEnd();
                 }
@@ -8850,9 +8850,9 @@ public class THBaseService {
           oprot.writeFieldBegin(DELETES_FIELD_DESC);
           {
             oprot.writeListBegin(new org.apache.thrift.protocol.TList(org.apache.thrift.protocol.TType.STRUCT, struct.deletes.size()));
-            for (TDelete _iter75 : struct.deletes)
+            for (TDelete _iter125 : struct.deletes)
             {
-              _iter75.write(oprot);
+              _iter125.write(oprot);
             }
             oprot.writeListEnd();
           }
@@ -8878,9 +8878,9 @@ public class THBaseService {
         oprot.writeBinary(struct.table);
         {
           oprot.writeI32(struct.deletes.size());
-          for (TDelete _iter76 : struct.deletes)
+          for (TDelete _iter126 : struct.deletes)
           {
-            _iter76.write(oprot);
+            _iter126.write(oprot);
           }
         }
       }
@@ -8891,14 +8891,14 @@ public class THBaseService {
         struct.table = iprot.readBinary();
         struct.setTableIsSet(true);
         {
-          org.apache.thrift.protocol.TList _list77 = new org.apache.thrift.protocol.TList(org.apache.thrift.protocol.TType.STRUCT, iprot.readI32());
-          struct.deletes = new ArrayList<TDelete>(_list77.size);
-          for (int _i78 = 0; _i78 < _list77.size; ++_i78)
+          org.apache.thrift.protocol.TList _list127 = new org.apache.thrift.protocol.TList(org.apache.thrift.protocol.TType.STRUCT, iprot.readI32());
+          struct.deletes = new ArrayList<TDelete>(_list127.size);
+          for (int _i128 = 0; _i128 < _list127.size; ++_i128)
           {
-            TDelete _elem79; // required
-            _elem79 = new TDelete();
-            _elem79.read(iprot);
-            struct.deletes.add(_elem79);
+            TDelete _elem129; // required
+            _elem129 = new TDelete();
+            _elem129.read(iprot);
+            struct.deletes.add(_elem129);
           }
         }
         struct.setDeletesIsSet(true);
@@ -9293,14 +9293,14 @@ public class THBaseService {
             case 0: // SUCCESS
               if (schemeField.type == org.apache.thrift.protocol.TType.LIST) {
                 {
-                  org.apache.thrift.protocol.TList _list80 = iprot.readListBegin();
-                  struct.success = new ArrayList<TDelete>(_list80.size);
-                  for (int _i81 = 0; _i81 < _list80.size; ++_i81)
+                  org.apache.thrift.protocol.TList _list130 = iprot.readListBegin();
+                  struct.success = new ArrayList<TDelete>(_list130.size);
+                  for (int _i131 = 0; _i131 < _list130.size; ++_i131)
                   {
-                    TDelete _elem82; // required
-                    _elem82 = new TDelete();
-                    _elem82.read(iprot);
-                    struct.success.add(_elem82);
+                    TDelete _elem132; // required
+                    _elem132 = new TDelete();
+                    _elem132.read(iprot);
+                    struct.success.add(_elem132);
                   }
                   iprot.readListEnd();
                 }
@@ -9337,9 +9337,9 @@ public class THBaseService {
           oprot.writeFieldBegin(SUCCESS_FIELD_DESC);
           {
             oprot.writeListBegin(new org.apache.thrift.protocol.TList(org.apache.thrift.protocol.TType.STRUCT, struct.success.size()));
-            for (TDelete _iter83 : struct.success)
+            for (TDelete _iter133 : struct.success)
             {
-              _iter83.write(oprot);
+              _iter133.write(oprot);
             }
             oprot.writeListEnd();
           }
@@ -9378,9 +9378,9 @@ public class THBaseService {
         if (struct.isSetSuccess()) {
           {
             oprot.writeI32(struct.success.size());
-            for (TDelete _iter84 : struct.success)
+            for (TDelete _iter134 : struct.success)
             {
-              _iter84.write(oprot);
+              _iter134.write(oprot);
             }
           }
         }
@@ -9395,14 +9395,14 @@ public class THBaseService {
         BitSet incoming = iprot.readBitSet(2);
         if (incoming.get(0)) {
           {
-            org.apache.thrift.protocol.TList _list85 = new org.apache.thrift.protocol.TList(org.apache.thrift.protocol.TType.STRUCT, iprot.readI32());
-            struct.success = new ArrayList<TDelete>(_list85.size);
-            for (int _i86 = 0; _i86 < _list85.size; ++_i86)
+            org.apache.thrift.protocol.TList _list135 = new org.apache.thrift.protocol.TList(org.apache.thrift.protocol.TType.STRUCT, iprot.readI32());
+            struct.success = new ArrayList<TDelete>(_list135.size);
+            for (int _i136 = 0; _i136 < _list135.size; ++_i136)
             {
-              TDelete _elem87; // required
-              _elem87 = new TDelete();
-              _elem87.read(iprot);
-              struct.success.add(_elem87);
+              TDelete _elem137; // required
+              _elem137 = new TDelete();
+              _elem137.read(iprot);
+              struct.success.add(_elem137);
             }
           }
           struct.setSuccessIsSet(true);
@@ -13674,14 +13674,14 @@ public class THBaseService {
             case 0: // SUCCESS
               if (schemeField.type == org.apache.thrift.protocol.TType.LIST) {
                 {
-                  org.apache.thrift.protocol.TList _list88 = iprot.readListBegin();
-                  struct.success = new ArrayList<TResult>(_list88.size);
-                  for (int _i89 = 0; _i89 < _list88.size; ++_i89)
+                  org.apache.thrift.protocol.TList _list138 = iprot.readListBegin();
+                  struct.success = new ArrayList<TResult>(_list138.size);
+                  for (int _i139 = 0; _i139 < _list138.size; ++_i139)
                   {
-                    TResult _elem90; // required
-                    _elem90 = new TResult();
-                    _elem90.read(iprot);
-                    struct.success.add(_elem90);
+                    TResult _elem140; // required
+                    _elem140 = new TResult();
+                    _elem140.read(iprot);
+                    struct.success.add(_elem140);
                   }
                   iprot.readListEnd();
                 }
@@ -13727,9 +13727,9 @@ public class THBaseService {
           oprot.writeFieldBegin(SUCCESS_FIELD_DESC);
           {
             oprot.writeListBegin(new org.apache.thrift.protocol.TList(org.apache.thrift.protocol.TType.STRUCT, struct.success.size()));
-            for (TResult _iter91 : struct.success)
+            for (TResult _iter141 : struct.success)
             {
-              _iter91.write(oprot);
+              _iter141.write(oprot);
             }
             oprot.writeListEnd();
           }
@@ -13776,9 +13776,9 @@ public class THBaseService {
         if (struct.isSetSuccess()) {
           {
             oprot.writeI32(struct.success.size());
-            for (TResult _iter92 : struct.success)
+            for (TResult _iter142 : struct.success)
             {
-              _iter92.write(oprot);
+              _iter142.write(oprot);
             }
           }
         }
@@ -13796,14 +13796,14 @@ public class THBaseService {
         BitSet incoming = iprot.readBitSet(3);
         if (incoming.get(0)) {
           {
-            org.apache.thrift.protocol.TList _list93 = new org.apache.thrift.protocol.TList(org.apache.thrift.protocol.TType.STRUCT, iprot.readI32());
-            struct.success = new ArrayList<TResult>(_list93.size);
-            for (int _i94 = 0; _i94 < _list93.size; ++_i94)
+            org.apache.thrift.protocol.TList _list143 = new org.apache.thrift.protocol.TList(org.apache.thrift.protocol.TType.STRUCT, iprot.readI32());
+            struct.success = new ArrayList<TResult>(_list143.size);
+            for (int _i144 = 0; _i144 < _list143.size; ++_i144)
             {
-              TResult _elem95; // required
-              _elem95 = new TResult();
-              _elem95.read(iprot);
-              struct.success.add(_elem95);
+              TResult _elem145; // required
+              _elem145 = new TResult();
+              _elem145.read(iprot);
+              struct.success.add(_elem145);
             }
           }
           struct.setSuccessIsSet(true);
