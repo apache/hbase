@@ -166,7 +166,14 @@ public class TestScannerTimeout {
     scan.setCaching(SCANNER_CACHING);
     LOG.info("************ TEST3686A");
     MetaReader.fullScanMetaAndPrint(TEST_UTIL.getHBaseCluster().getMaster().getCatalogTracker());
-    HTable table = new HTable(TEST_UTIL.getConfiguration(), TABLE_NAME);
+    // Set a very high timeout, we want to test what happens when a RS
+    // fails but the region is recovered before the lease times out.
+    // Since the RS is already created, this conf is client-side only for
+    // this new table
+    Configuration conf = new Configuration(TEST_UTIL.getConfiguration());
+    conf.setInt(
+        HConstants.HBASE_REGIONSERVER_LEASE_PERIOD_KEY, SCANNER_TIMEOUT*100);
+    HTable table = new HTable(conf, TABLE_NAME);
     LOG.info("START ************ TEST3686A---22");
 
     ResultScanner r = table.getScanner(scan);
