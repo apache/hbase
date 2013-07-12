@@ -45,6 +45,7 @@ public class TPut implements org.apache.thrift.TBase<TPut, TPut._Fields>, java.i
   private static final org.apache.thrift.protocol.TField COLUMN_VALUES_FIELD_DESC = new org.apache.thrift.protocol.TField("columnValues", org.apache.thrift.protocol.TType.LIST, (short)2);
   private static final org.apache.thrift.protocol.TField TIMESTAMP_FIELD_DESC = new org.apache.thrift.protocol.TField("timestamp", org.apache.thrift.protocol.TType.I64, (short)3);
   private static final org.apache.thrift.protocol.TField WRITE_TO_WAL_FIELD_DESC = new org.apache.thrift.protocol.TField("writeToWal", org.apache.thrift.protocol.TType.BOOL, (short)4);
+  private static final org.apache.thrift.protocol.TField ATTRIBUTES_FIELD_DESC = new org.apache.thrift.protocol.TField("attributes", org.apache.thrift.protocol.TType.MAP, (short)5);
 
   private static final Map<Class<? extends IScheme>, SchemeFactory> schemes = new HashMap<Class<? extends IScheme>, SchemeFactory>();
   static {
@@ -56,13 +57,15 @@ public class TPut implements org.apache.thrift.TBase<TPut, TPut._Fields>, java.i
   public List<TColumnValue> columnValues; // required
   public long timestamp; // optional
   public boolean writeToWal; // optional
+  public Map<ByteBuffer,ByteBuffer> attributes; // optional
 
   /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
   public enum _Fields implements org.apache.thrift.TFieldIdEnum {
     ROW((short)1, "row"),
     COLUMN_VALUES((short)2, "columnValues"),
     TIMESTAMP((short)3, "timestamp"),
-    WRITE_TO_WAL((short)4, "writeToWal");
+    WRITE_TO_WAL((short)4, "writeToWal"),
+    ATTRIBUTES((short)5, "attributes");
 
     private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
 
@@ -85,6 +88,8 @@ public class TPut implements org.apache.thrift.TBase<TPut, TPut._Fields>, java.i
           return TIMESTAMP;
         case 4: // WRITE_TO_WAL
           return WRITE_TO_WAL;
+        case 5: // ATTRIBUTES
+          return ATTRIBUTES;
         default:
           return null;
       }
@@ -128,7 +133,7 @@ public class TPut implements org.apache.thrift.TBase<TPut, TPut._Fields>, java.i
   private static final int __TIMESTAMP_ISSET_ID = 0;
   private static final int __WRITETOWAL_ISSET_ID = 1;
   private BitSet __isset_bit_vector = new BitSet(2);
-  private _Fields optionals[] = {_Fields.TIMESTAMP,_Fields.WRITE_TO_WAL};
+  private _Fields optionals[] = {_Fields.TIMESTAMP,_Fields.WRITE_TO_WAL,_Fields.ATTRIBUTES};
   public static final Map<_Fields, org.apache.thrift.meta_data.FieldMetaData> metaDataMap;
   static {
     Map<_Fields, org.apache.thrift.meta_data.FieldMetaData> tmpMap = new EnumMap<_Fields, org.apache.thrift.meta_data.FieldMetaData>(_Fields.class);
@@ -141,6 +146,10 @@ public class TPut implements org.apache.thrift.TBase<TPut, TPut._Fields>, java.i
         new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.I64)));
     tmpMap.put(_Fields.WRITE_TO_WAL, new org.apache.thrift.meta_data.FieldMetaData("writeToWal", org.apache.thrift.TFieldRequirementType.OPTIONAL, 
         new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.BOOL)));
+    tmpMap.put(_Fields.ATTRIBUTES, new org.apache.thrift.meta_data.FieldMetaData("attributes", org.apache.thrift.TFieldRequirementType.OPTIONAL, 
+        new org.apache.thrift.meta_data.MapMetaData(org.apache.thrift.protocol.TType.MAP, 
+            new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.STRING            , true), 
+            new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.STRING            , true))));
     metaDataMap = Collections.unmodifiableMap(tmpMap);
     org.apache.thrift.meta_data.FieldMetaData.addStructMetaDataMap(TPut.class, metaDataMap);
   }
@@ -178,6 +187,23 @@ public class TPut implements org.apache.thrift.TBase<TPut, TPut._Fields>, java.i
     }
     this.timestamp = other.timestamp;
     this.writeToWal = other.writeToWal;
+    if (other.isSetAttributes()) {
+      Map<ByteBuffer,ByteBuffer> __this__attributes = new HashMap<ByteBuffer,ByteBuffer>();
+      for (Map.Entry<ByteBuffer, ByteBuffer> other_element : other.attributes.entrySet()) {
+
+        ByteBuffer other_element_key = other_element.getKey();
+        ByteBuffer other_element_value = other_element.getValue();
+
+        ByteBuffer __this__attributes_copy_key = org.apache.thrift.TBaseHelper.copyBinary(other_element_key);
+;
+
+        ByteBuffer __this__attributes_copy_value = org.apache.thrift.TBaseHelper.copyBinary(other_element_value);
+;
+
+        __this__attributes.put(__this__attributes_copy_key, __this__attributes_copy_value);
+      }
+      this.attributes = __this__attributes;
+    }
   }
 
   public TPut deepCopy() {
@@ -192,6 +218,7 @@ public class TPut implements org.apache.thrift.TBase<TPut, TPut._Fields>, java.i
     this.timestamp = 0;
     this.writeToWal = true;
 
+    this.attributes = null;
   }
 
   public byte[] getRow() {
@@ -313,6 +340,41 @@ public class TPut implements org.apache.thrift.TBase<TPut, TPut._Fields>, java.i
     __isset_bit_vector.set(__WRITETOWAL_ISSET_ID, value);
   }
 
+  public int getAttributesSize() {
+    return (this.attributes == null) ? 0 : this.attributes.size();
+  }
+
+  public void putToAttributes(ByteBuffer key, ByteBuffer val) {
+    if (this.attributes == null) {
+      this.attributes = new HashMap<ByteBuffer,ByteBuffer>();
+    }
+    this.attributes.put(key, val);
+  }
+
+  public Map<ByteBuffer,ByteBuffer> getAttributes() {
+    return this.attributes;
+  }
+
+  public TPut setAttributes(Map<ByteBuffer,ByteBuffer> attributes) {
+    this.attributes = attributes;
+    return this;
+  }
+
+  public void unsetAttributes() {
+    this.attributes = null;
+  }
+
+  /** Returns true if field attributes is set (has been assigned a value) and false otherwise */
+  public boolean isSetAttributes() {
+    return this.attributes != null;
+  }
+
+  public void setAttributesIsSet(boolean value) {
+    if (!value) {
+      this.attributes = null;
+    }
+  }
+
   public void setFieldValue(_Fields field, Object value) {
     switch (field) {
     case ROW:
@@ -347,6 +409,14 @@ public class TPut implements org.apache.thrift.TBase<TPut, TPut._Fields>, java.i
       }
       break;
 
+    case ATTRIBUTES:
+      if (value == null) {
+        unsetAttributes();
+      } else {
+        setAttributes((Map<ByteBuffer,ByteBuffer>)value);
+      }
+      break;
+
     }
   }
 
@@ -363,6 +433,9 @@ public class TPut implements org.apache.thrift.TBase<TPut, TPut._Fields>, java.i
 
     case WRITE_TO_WAL:
       return Boolean.valueOf(isWriteToWal());
+
+    case ATTRIBUTES:
+      return getAttributes();
 
     }
     throw new IllegalStateException();
@@ -383,6 +456,8 @@ public class TPut implements org.apache.thrift.TBase<TPut, TPut._Fields>, java.i
       return isSetTimestamp();
     case WRITE_TO_WAL:
       return isSetWriteToWal();
+    case ATTRIBUTES:
+      return isSetAttributes();
     }
     throw new IllegalStateException();
   }
@@ -433,6 +508,15 @@ public class TPut implements org.apache.thrift.TBase<TPut, TPut._Fields>, java.i
       if (!(this_present_writeToWal && that_present_writeToWal))
         return false;
       if (this.writeToWal != that.writeToWal)
+        return false;
+    }
+
+    boolean this_present_attributes = true && this.isSetAttributes();
+    boolean that_present_attributes = true && that.isSetAttributes();
+    if (this_present_attributes || that_present_attributes) {
+      if (!(this_present_attributes && that_present_attributes))
+        return false;
+      if (!this.attributes.equals(that.attributes))
         return false;
     }
 
@@ -492,6 +576,16 @@ public class TPut implements org.apache.thrift.TBase<TPut, TPut._Fields>, java.i
         return lastComparison;
       }
     }
+    lastComparison = Boolean.valueOf(isSetAttributes()).compareTo(typedOther.isSetAttributes());
+    if (lastComparison != 0) {
+      return lastComparison;
+    }
+    if (isSetAttributes()) {
+      lastComparison = org.apache.thrift.TBaseHelper.compareTo(this.attributes, typedOther.attributes);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+    }
     return 0;
   }
 
@@ -537,6 +631,16 @@ public class TPut implements org.apache.thrift.TBase<TPut, TPut._Fields>, java.i
       if (!first) sb.append(", ");
       sb.append("writeToWal:");
       sb.append(this.writeToWal);
+      first = false;
+    }
+    if (isSetAttributes()) {
+      if (!first) sb.append(", ");
+      sb.append("attributes:");
+      if (this.attributes == null) {
+        sb.append("null");
+      } else {
+        sb.append(this.attributes);
+      }
       first = false;
     }
     sb.append(")");
@@ -600,14 +704,14 @@ public class TPut implements org.apache.thrift.TBase<TPut, TPut._Fields>, java.i
           case 2: // COLUMN_VALUES
             if (schemeField.type == org.apache.thrift.protocol.TType.LIST) {
               {
-                org.apache.thrift.protocol.TList _list16 = iprot.readListBegin();
-                struct.columnValues = new ArrayList<TColumnValue>(_list16.size);
-                for (int _i17 = 0; _i17 < _list16.size; ++_i17)
+                org.apache.thrift.protocol.TList _list26 = iprot.readListBegin();
+                struct.columnValues = new ArrayList<TColumnValue>(_list26.size);
+                for (int _i27 = 0; _i27 < _list26.size; ++_i27)
                 {
-                  TColumnValue _elem18; // required
-                  _elem18 = new TColumnValue();
-                  _elem18.read(iprot);
-                  struct.columnValues.add(_elem18);
+                  TColumnValue _elem28; // required
+                  _elem28 = new TColumnValue();
+                  _elem28.read(iprot);
+                  struct.columnValues.add(_elem28);
                 }
                 iprot.readListEnd();
               }
@@ -628,6 +732,26 @@ public class TPut implements org.apache.thrift.TBase<TPut, TPut._Fields>, java.i
             if (schemeField.type == org.apache.thrift.protocol.TType.BOOL) {
               struct.writeToWal = iprot.readBool();
               struct.setWriteToWalIsSet(true);
+            } else { 
+              org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
+            }
+            break;
+          case 5: // ATTRIBUTES
+            if (schemeField.type == org.apache.thrift.protocol.TType.MAP) {
+              {
+                org.apache.thrift.protocol.TMap _map29 = iprot.readMapBegin();
+                struct.attributes = new HashMap<ByteBuffer,ByteBuffer>(2*_map29.size);
+                for (int _i30 = 0; _i30 < _map29.size; ++_i30)
+                {
+                  ByteBuffer _key31; // required
+                  ByteBuffer _val32; // optional
+                  _key31 = iprot.readBinary();
+                  _val32 = iprot.readBinary();
+                  struct.attributes.put(_key31, _val32);
+                }
+                iprot.readMapEnd();
+              }
+              struct.setAttributesIsSet(true);
             } else { 
               org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
             }
@@ -656,9 +780,9 @@ public class TPut implements org.apache.thrift.TBase<TPut, TPut._Fields>, java.i
         oprot.writeFieldBegin(COLUMN_VALUES_FIELD_DESC);
         {
           oprot.writeListBegin(new org.apache.thrift.protocol.TList(org.apache.thrift.protocol.TType.STRUCT, struct.columnValues.size()));
-          for (TColumnValue _iter19 : struct.columnValues)
+          for (TColumnValue _iter33 : struct.columnValues)
           {
-            _iter19.write(oprot);
+            _iter33.write(oprot);
           }
           oprot.writeListEnd();
         }
@@ -673,6 +797,21 @@ public class TPut implements org.apache.thrift.TBase<TPut, TPut._Fields>, java.i
         oprot.writeFieldBegin(WRITE_TO_WAL_FIELD_DESC);
         oprot.writeBool(struct.writeToWal);
         oprot.writeFieldEnd();
+      }
+      if (struct.attributes != null) {
+        if (struct.isSetAttributes()) {
+          oprot.writeFieldBegin(ATTRIBUTES_FIELD_DESC);
+          {
+            oprot.writeMapBegin(new org.apache.thrift.protocol.TMap(org.apache.thrift.protocol.TType.STRING, org.apache.thrift.protocol.TType.STRING, struct.attributes.size()));
+            for (Map.Entry<ByteBuffer, ByteBuffer> _iter34 : struct.attributes.entrySet())
+            {
+              oprot.writeBinary(_iter34.getKey());
+              oprot.writeBinary(_iter34.getValue());
+            }
+            oprot.writeMapEnd();
+          }
+          oprot.writeFieldEnd();
+        }
       }
       oprot.writeFieldStop();
       oprot.writeStructEnd();
@@ -694,9 +833,9 @@ public class TPut implements org.apache.thrift.TBase<TPut, TPut._Fields>, java.i
       oprot.writeBinary(struct.row);
       {
         oprot.writeI32(struct.columnValues.size());
-        for (TColumnValue _iter20 : struct.columnValues)
+        for (TColumnValue _iter35 : struct.columnValues)
         {
-          _iter20.write(oprot);
+          _iter35.write(oprot);
         }
       }
       BitSet optionals = new BitSet();
@@ -706,12 +845,25 @@ public class TPut implements org.apache.thrift.TBase<TPut, TPut._Fields>, java.i
       if (struct.isSetWriteToWal()) {
         optionals.set(1);
       }
-      oprot.writeBitSet(optionals, 2);
+      if (struct.isSetAttributes()) {
+        optionals.set(2);
+      }
+      oprot.writeBitSet(optionals, 3);
       if (struct.isSetTimestamp()) {
         oprot.writeI64(struct.timestamp);
       }
       if (struct.isSetWriteToWal()) {
         oprot.writeBool(struct.writeToWal);
+      }
+      if (struct.isSetAttributes()) {
+        {
+          oprot.writeI32(struct.attributes.size());
+          for (Map.Entry<ByteBuffer, ByteBuffer> _iter36 : struct.attributes.entrySet())
+          {
+            oprot.writeBinary(_iter36.getKey());
+            oprot.writeBinary(_iter36.getValue());
+          }
+        }
       }
     }
 
@@ -721,18 +873,18 @@ public class TPut implements org.apache.thrift.TBase<TPut, TPut._Fields>, java.i
       struct.row = iprot.readBinary();
       struct.setRowIsSet(true);
       {
-        org.apache.thrift.protocol.TList _list21 = new org.apache.thrift.protocol.TList(org.apache.thrift.protocol.TType.STRUCT, iprot.readI32());
-        struct.columnValues = new ArrayList<TColumnValue>(_list21.size);
-        for (int _i22 = 0; _i22 < _list21.size; ++_i22)
+        org.apache.thrift.protocol.TList _list37 = new org.apache.thrift.protocol.TList(org.apache.thrift.protocol.TType.STRUCT, iprot.readI32());
+        struct.columnValues = new ArrayList<TColumnValue>(_list37.size);
+        for (int _i38 = 0; _i38 < _list37.size; ++_i38)
         {
-          TColumnValue _elem23; // required
-          _elem23 = new TColumnValue();
-          _elem23.read(iprot);
-          struct.columnValues.add(_elem23);
+          TColumnValue _elem39; // required
+          _elem39 = new TColumnValue();
+          _elem39.read(iprot);
+          struct.columnValues.add(_elem39);
         }
       }
       struct.setColumnValuesIsSet(true);
-      BitSet incoming = iprot.readBitSet(2);
+      BitSet incoming = iprot.readBitSet(3);
       if (incoming.get(0)) {
         struct.timestamp = iprot.readI64();
         struct.setTimestampIsSet(true);
@@ -740,6 +892,21 @@ public class TPut implements org.apache.thrift.TBase<TPut, TPut._Fields>, java.i
       if (incoming.get(1)) {
         struct.writeToWal = iprot.readBool();
         struct.setWriteToWalIsSet(true);
+      }
+      if (incoming.get(2)) {
+        {
+          org.apache.thrift.protocol.TMap _map40 = new org.apache.thrift.protocol.TMap(org.apache.thrift.protocol.TType.STRING, org.apache.thrift.protocol.TType.STRING, iprot.readI32());
+          struct.attributes = new HashMap<ByteBuffer,ByteBuffer>(2*_map40.size);
+          for (int _i41 = 0; _i41 < _map40.size; ++_i41)
+          {
+            ByteBuffer _key42; // required
+            ByteBuffer _val43; // optional
+            _key42 = iprot.readBinary();
+            _val43 = iprot.readBinary();
+            struct.attributes.put(_key42, _val43);
+          }
+        }
+        struct.setAttributesIsSet(true);
       }
     }
   }

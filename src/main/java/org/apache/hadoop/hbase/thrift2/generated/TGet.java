@@ -49,6 +49,7 @@ public class TGet implements org.apache.thrift.TBase<TGet, TGet._Fields>, java.i
   private static final org.apache.thrift.protocol.TField TIME_RANGE_FIELD_DESC = new org.apache.thrift.protocol.TField("timeRange", org.apache.thrift.protocol.TType.STRUCT, (short)4);
   private static final org.apache.thrift.protocol.TField MAX_VERSIONS_FIELD_DESC = new org.apache.thrift.protocol.TField("maxVersions", org.apache.thrift.protocol.TType.I32, (short)5);
   private static final org.apache.thrift.protocol.TField FILTER_STRING_FIELD_DESC = new org.apache.thrift.protocol.TField("filterString", org.apache.thrift.protocol.TType.STRING, (short)6);
+  private static final org.apache.thrift.protocol.TField ATTRIBUTES_FIELD_DESC = new org.apache.thrift.protocol.TField("attributes", org.apache.thrift.protocol.TType.MAP, (short)7);
 
   private static final Map<Class<? extends IScheme>, SchemeFactory> schemes = new HashMap<Class<? extends IScheme>, SchemeFactory>();
   static {
@@ -62,6 +63,7 @@ public class TGet implements org.apache.thrift.TBase<TGet, TGet._Fields>, java.i
   public TTimeRange timeRange; // optional
   public int maxVersions; // optional
   public ByteBuffer filterString; // optional
+  public Map<ByteBuffer,ByteBuffer> attributes; // optional
 
   /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
   public enum _Fields implements org.apache.thrift.TFieldIdEnum {
@@ -70,7 +72,8 @@ public class TGet implements org.apache.thrift.TBase<TGet, TGet._Fields>, java.i
     TIMESTAMP((short)3, "timestamp"),
     TIME_RANGE((short)4, "timeRange"),
     MAX_VERSIONS((short)5, "maxVersions"),
-    FILTER_STRING((short)6, "filterString");
+    FILTER_STRING((short)6, "filterString"),
+    ATTRIBUTES((short)7, "attributes");
 
     private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
 
@@ -97,6 +100,8 @@ public class TGet implements org.apache.thrift.TBase<TGet, TGet._Fields>, java.i
           return MAX_VERSIONS;
         case 6: // FILTER_STRING
           return FILTER_STRING;
+        case 7: // ATTRIBUTES
+          return ATTRIBUTES;
         default:
           return null;
       }
@@ -140,7 +145,7 @@ public class TGet implements org.apache.thrift.TBase<TGet, TGet._Fields>, java.i
   private static final int __TIMESTAMP_ISSET_ID = 0;
   private static final int __MAXVERSIONS_ISSET_ID = 1;
   private BitSet __isset_bit_vector = new BitSet(2);
-  private _Fields optionals[] = {_Fields.COLUMNS,_Fields.TIMESTAMP,_Fields.TIME_RANGE,_Fields.MAX_VERSIONS,_Fields.FILTER_STRING};
+  private _Fields optionals[] = {_Fields.COLUMNS,_Fields.TIMESTAMP,_Fields.TIME_RANGE,_Fields.MAX_VERSIONS,_Fields.FILTER_STRING,_Fields.ATTRIBUTES};
   public static final Map<_Fields, org.apache.thrift.meta_data.FieldMetaData> metaDataMap;
   static {
     Map<_Fields, org.apache.thrift.meta_data.FieldMetaData> tmpMap = new EnumMap<_Fields, org.apache.thrift.meta_data.FieldMetaData>(_Fields.class);
@@ -157,6 +162,10 @@ public class TGet implements org.apache.thrift.TBase<TGet, TGet._Fields>, java.i
         new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.I32)));
     tmpMap.put(_Fields.FILTER_STRING, new org.apache.thrift.meta_data.FieldMetaData("filterString", org.apache.thrift.TFieldRequirementType.OPTIONAL, 
         new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.STRING        , true)));
+    tmpMap.put(_Fields.ATTRIBUTES, new org.apache.thrift.meta_data.FieldMetaData("attributes", org.apache.thrift.TFieldRequirementType.OPTIONAL, 
+        new org.apache.thrift.meta_data.MapMetaData(org.apache.thrift.protocol.TType.MAP, 
+            new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.STRING            , true), 
+            new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.STRING            , true))));
     metaDataMap = Collections.unmodifiableMap(tmpMap);
     org.apache.thrift.meta_data.FieldMetaData.addStructMetaDataMap(TGet.class, metaDataMap);
   }
@@ -197,6 +206,23 @@ public class TGet implements org.apache.thrift.TBase<TGet, TGet._Fields>, java.i
       this.filterString = org.apache.thrift.TBaseHelper.copyBinary(other.filterString);
 ;
     }
+    if (other.isSetAttributes()) {
+      Map<ByteBuffer,ByteBuffer> __this__attributes = new HashMap<ByteBuffer,ByteBuffer>();
+      for (Map.Entry<ByteBuffer, ByteBuffer> other_element : other.attributes.entrySet()) {
+
+        ByteBuffer other_element_key = other_element.getKey();
+        ByteBuffer other_element_value = other_element.getValue();
+
+        ByteBuffer __this__attributes_copy_key = org.apache.thrift.TBaseHelper.copyBinary(other_element_key);
+;
+
+        ByteBuffer __this__attributes_copy_value = org.apache.thrift.TBaseHelper.copyBinary(other_element_value);
+;
+
+        __this__attributes.put(__this__attributes_copy_key, __this__attributes_copy_value);
+      }
+      this.attributes = __this__attributes;
+    }
   }
 
   public TGet deepCopy() {
@@ -213,6 +239,7 @@ public class TGet implements org.apache.thrift.TBase<TGet, TGet._Fields>, java.i
     setMaxVersionsIsSet(false);
     this.maxVersions = 0;
     this.filterString = null;
+    this.attributes = null;
   }
 
   public byte[] getRow() {
@@ -392,6 +419,41 @@ public class TGet implements org.apache.thrift.TBase<TGet, TGet._Fields>, java.i
     }
   }
 
+  public int getAttributesSize() {
+    return (this.attributes == null) ? 0 : this.attributes.size();
+  }
+
+  public void putToAttributes(ByteBuffer key, ByteBuffer val) {
+    if (this.attributes == null) {
+      this.attributes = new HashMap<ByteBuffer,ByteBuffer>();
+    }
+    this.attributes.put(key, val);
+  }
+
+  public Map<ByteBuffer,ByteBuffer> getAttributes() {
+    return this.attributes;
+  }
+
+  public TGet setAttributes(Map<ByteBuffer,ByteBuffer> attributes) {
+    this.attributes = attributes;
+    return this;
+  }
+
+  public void unsetAttributes() {
+    this.attributes = null;
+  }
+
+  /** Returns true if field attributes is set (has been assigned a value) and false otherwise */
+  public boolean isSetAttributes() {
+    return this.attributes != null;
+  }
+
+  public void setAttributesIsSet(boolean value) {
+    if (!value) {
+      this.attributes = null;
+    }
+  }
+
   public void setFieldValue(_Fields field, Object value) {
     switch (field) {
     case ROW:
@@ -442,6 +504,14 @@ public class TGet implements org.apache.thrift.TBase<TGet, TGet._Fields>, java.i
       }
       break;
 
+    case ATTRIBUTES:
+      if (value == null) {
+        unsetAttributes();
+      } else {
+        setAttributes((Map<ByteBuffer,ByteBuffer>)value);
+      }
+      break;
+
     }
   }
 
@@ -464,6 +534,9 @@ public class TGet implements org.apache.thrift.TBase<TGet, TGet._Fields>, java.i
 
     case FILTER_STRING:
       return getFilterString();
+
+    case ATTRIBUTES:
+      return getAttributes();
 
     }
     throw new IllegalStateException();
@@ -488,6 +561,8 @@ public class TGet implements org.apache.thrift.TBase<TGet, TGet._Fields>, java.i
       return isSetMaxVersions();
     case FILTER_STRING:
       return isSetFilterString();
+    case ATTRIBUTES:
+      return isSetAttributes();
     }
     throw new IllegalStateException();
   }
@@ -556,6 +631,15 @@ public class TGet implements org.apache.thrift.TBase<TGet, TGet._Fields>, java.i
       if (!(this_present_filterString && that_present_filterString))
         return false;
       if (!this.filterString.equals(that.filterString))
+        return false;
+    }
+
+    boolean this_present_attributes = true && this.isSetAttributes();
+    boolean that_present_attributes = true && that.isSetAttributes();
+    if (this_present_attributes || that_present_attributes) {
+      if (!(this_present_attributes && that_present_attributes))
+        return false;
+      if (!this.attributes.equals(that.attributes))
         return false;
     }
 
@@ -635,6 +719,16 @@ public class TGet implements org.apache.thrift.TBase<TGet, TGet._Fields>, java.i
         return lastComparison;
       }
     }
+    lastComparison = Boolean.valueOf(isSetAttributes()).compareTo(typedOther.isSetAttributes());
+    if (lastComparison != 0) {
+      return lastComparison;
+    }
+    if (isSetAttributes()) {
+      lastComparison = org.apache.thrift.TBaseHelper.compareTo(this.attributes, typedOther.attributes);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+    }
     return 0;
   }
 
@@ -701,6 +795,16 @@ public class TGet implements org.apache.thrift.TBase<TGet, TGet._Fields>, java.i
         sb.append("null");
       } else {
         org.apache.thrift.TBaseHelper.toString(this.filterString, sb);
+      }
+      first = false;
+    }
+    if (isSetAttributes()) {
+      if (!first) sb.append(", ");
+      sb.append("attributes:");
+      if (this.attributes == null) {
+        sb.append("null");
+      } else {
+        sb.append(this.attributes);
       }
       first = false;
     }
@@ -811,6 +915,26 @@ public class TGet implements org.apache.thrift.TBase<TGet, TGet._Fields>, java.i
               org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
             }
             break;
+          case 7: // ATTRIBUTES
+            if (schemeField.type == org.apache.thrift.protocol.TType.MAP) {
+              {
+                org.apache.thrift.protocol.TMap _map11 = iprot.readMapBegin();
+                struct.attributes = new HashMap<ByteBuffer,ByteBuffer>(2*_map11.size);
+                for (int _i12 = 0; _i12 < _map11.size; ++_i12)
+                {
+                  ByteBuffer _key13; // required
+                  ByteBuffer _val14; // optional
+                  _key13 = iprot.readBinary();
+                  _val14 = iprot.readBinary();
+                  struct.attributes.put(_key13, _val14);
+                }
+                iprot.readMapEnd();
+              }
+              struct.setAttributesIsSet(true);
+            } else { 
+              org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
+            }
+            break;
           default:
             org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
         }
@@ -836,9 +960,9 @@ public class TGet implements org.apache.thrift.TBase<TGet, TGet._Fields>, java.i
           oprot.writeFieldBegin(COLUMNS_FIELD_DESC);
           {
             oprot.writeListBegin(new org.apache.thrift.protocol.TList(org.apache.thrift.protocol.TType.STRUCT, struct.columns.size()));
-            for (TColumn _iter11 : struct.columns)
+            for (TColumn _iter15 : struct.columns)
             {
-              _iter11.write(oprot);
+              _iter15.write(oprot);
             }
             oprot.writeListEnd();
           }
@@ -866,6 +990,21 @@ public class TGet implements org.apache.thrift.TBase<TGet, TGet._Fields>, java.i
         if (struct.isSetFilterString()) {
           oprot.writeFieldBegin(FILTER_STRING_FIELD_DESC);
           oprot.writeBinary(struct.filterString);
+          oprot.writeFieldEnd();
+        }
+      }
+      if (struct.attributes != null) {
+        if (struct.isSetAttributes()) {
+          oprot.writeFieldBegin(ATTRIBUTES_FIELD_DESC);
+          {
+            oprot.writeMapBegin(new org.apache.thrift.protocol.TMap(org.apache.thrift.protocol.TType.STRING, org.apache.thrift.protocol.TType.STRING, struct.attributes.size()));
+            for (Map.Entry<ByteBuffer, ByteBuffer> _iter16 : struct.attributes.entrySet())
+            {
+              oprot.writeBinary(_iter16.getKey());
+              oprot.writeBinary(_iter16.getValue());
+            }
+            oprot.writeMapEnd();
+          }
           oprot.writeFieldEnd();
         }
       }
@@ -903,13 +1042,16 @@ public class TGet implements org.apache.thrift.TBase<TGet, TGet._Fields>, java.i
       if (struct.isSetFilterString()) {
         optionals.set(4);
       }
-      oprot.writeBitSet(optionals, 5);
+      if (struct.isSetAttributes()) {
+        optionals.set(5);
+      }
+      oprot.writeBitSet(optionals, 6);
       if (struct.isSetColumns()) {
         {
           oprot.writeI32(struct.columns.size());
-          for (TColumn _iter12 : struct.columns)
+          for (TColumn _iter17 : struct.columns)
           {
-            _iter12.write(oprot);
+            _iter17.write(oprot);
           }
         }
       }
@@ -925,6 +1067,16 @@ public class TGet implements org.apache.thrift.TBase<TGet, TGet._Fields>, java.i
       if (struct.isSetFilterString()) {
         oprot.writeBinary(struct.filterString);
       }
+      if (struct.isSetAttributes()) {
+        {
+          oprot.writeI32(struct.attributes.size());
+          for (Map.Entry<ByteBuffer, ByteBuffer> _iter18 : struct.attributes.entrySet())
+          {
+            oprot.writeBinary(_iter18.getKey());
+            oprot.writeBinary(_iter18.getValue());
+          }
+        }
+      }
     }
 
     @Override
@@ -932,17 +1084,17 @@ public class TGet implements org.apache.thrift.TBase<TGet, TGet._Fields>, java.i
       TTupleProtocol iprot = (TTupleProtocol) prot;
       struct.row = iprot.readBinary();
       struct.setRowIsSet(true);
-      BitSet incoming = iprot.readBitSet(5);
+      BitSet incoming = iprot.readBitSet(6);
       if (incoming.get(0)) {
         {
-          org.apache.thrift.protocol.TList _list13 = new org.apache.thrift.protocol.TList(org.apache.thrift.protocol.TType.STRUCT, iprot.readI32());
-          struct.columns = new ArrayList<TColumn>(_list13.size);
-          for (int _i14 = 0; _i14 < _list13.size; ++_i14)
+          org.apache.thrift.protocol.TList _list19 = new org.apache.thrift.protocol.TList(org.apache.thrift.protocol.TType.STRUCT, iprot.readI32());
+          struct.columns = new ArrayList<TColumn>(_list19.size);
+          for (int _i20 = 0; _i20 < _list19.size; ++_i20)
           {
-            TColumn _elem15; // required
-            _elem15 = new TColumn();
-            _elem15.read(iprot);
-            struct.columns.add(_elem15);
+            TColumn _elem21; // required
+            _elem21 = new TColumn();
+            _elem21.read(iprot);
+            struct.columns.add(_elem21);
           }
         }
         struct.setColumnsIsSet(true);
@@ -963,6 +1115,21 @@ public class TGet implements org.apache.thrift.TBase<TGet, TGet._Fields>, java.i
       if (incoming.get(4)) {
         struct.filterString = iprot.readBinary();
         struct.setFilterStringIsSet(true);
+      }
+      if (incoming.get(5)) {
+        {
+          org.apache.thrift.protocol.TMap _map22 = new org.apache.thrift.protocol.TMap(org.apache.thrift.protocol.TType.STRING, org.apache.thrift.protocol.TType.STRING, iprot.readI32());
+          struct.attributes = new HashMap<ByteBuffer,ByteBuffer>(2*_map22.size);
+          for (int _i23 = 0; _i23 < _map22.size; ++_i23)
+          {
+            ByteBuffer _key24; // required
+            ByteBuffer _val25; // optional
+            _key24 = iprot.readBinary();
+            _val25 = iprot.readBinary();
+            struct.attributes.put(_key24, _val25);
+          }
+        }
+        struct.setAttributesIsSet(true);
       }
     }
   }
