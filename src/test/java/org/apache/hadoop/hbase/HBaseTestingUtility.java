@@ -1266,7 +1266,7 @@ public class HBaseTestingUtility {
       Path tableDir = new Path(getDefaultRootDirPath().toString()
           + System.getProperty("file.separator") + htd.getNameAsString()
           + System.getProperty("file.separator") + regionToDeleteInFS);
-      getDFSCluster().getFileSystem().delete(tableDir);
+      FileSystem.get(c).delete(tableDir);
     }
     // flush cache of regions
     HConnection conn = table.getConnection();
