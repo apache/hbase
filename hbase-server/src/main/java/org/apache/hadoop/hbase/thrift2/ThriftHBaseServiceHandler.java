@@ -332,11 +332,17 @@ public class ThriftHBaseServiceHandler implements THBaseService.Iface {
 
   @Override
   public void closeScanner(int scannerId) throws TIOError, TIllegalArgument, TException {
-    if (removeScanner(scannerId) == null) {
+    LOG.debug("scannerClose: id=" + scannerId);
+    ResultScanner scanner = getScanner(scannerId);
+    if (scanner == null) {
+      String message = "scanner ID is invalid";
+      LOG.warn(message);
       TIllegalArgument ex = new TIllegalArgument();
       ex.setMessage("Invalid scanner Id");
       throw ex;
     }
+    scanner.close();
+    removeScanner(scannerId);
   }
 
 }
