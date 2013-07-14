@@ -100,6 +100,7 @@ import org.apache.hadoop.hbase.zookeeper.MiniZooKeeperCluster;
 import org.apache.hadoop.hbase.zookeeper.ZKAssign;
 import org.apache.hadoop.hbase.zookeeper.ZKConfig;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
+import org.apache.hadoop.hbase.tool.Canary;
 import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
@@ -1652,7 +1653,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
    * @param tableName user table to lookup in .META.
    * @return region server that holds it, null if the row doesn't exist
    * @throws IOException
-   * @throws InterruptedException 
+   * @throws InterruptedException
    */
   public HRegionServer getRSForFirstRegionInTable(byte[] tableName)
   throws IOException, InterruptedException {
@@ -2149,6 +2150,16 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
          Bytes.toStringBinary(table),
          System.currentTimeMillis() - remainder < timeoutMillis);
       Thread.sleep(200);
+    }
+    // Finally make sure all regions are fully open and online out on the cluster. Regions may be
+    // in the .META. table and almost open on all regionservers but there setting the region
+    // online in the regionserver is the very last thing done and can take a little while to happen.
+    // Below we do a get.  The get will retry if a NotServeringRegionException or a
+    // RegionOpeningException.  It is crass but when done all will be online.
+    try {
+      Canary.sniff(getHBaseAdmin(), Bytes.toString(table));
+    } catch (Exception e) {
+      throw new IOException(e);
     }
   }
 
