@@ -17,11 +17,16 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.LinkedList;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.KeyValue;
@@ -34,10 +39,6 @@ import org.apache.hadoop.hbase.exceptions.UnknownScannerException;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.MapReduceProtos;
 import org.apache.hadoop.hbase.util.Bytes;
-
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.LinkedList;
 
 /**
  * Implements the scanner interface for the HBase client.
@@ -65,7 +66,7 @@ public class ClientScanner extends AbstractClientScanner {
     private final byte[] tableName;
     private final int scannerTimeout;
     private boolean scanMetricsPublished = false;
-    
+
     /**
      * Create a new ClientScanner for the specified table. An HConnection will be
      * retrieved using the passed Configuration.
@@ -108,7 +109,9 @@ public class ClientScanner extends AbstractClientScanner {
           HConstants.HBASE_CLIENT_SCANNER_MAX_RESULT_SIZE_KEY,
           HConstants.DEFAULT_HBASE_CLIENT_SCANNER_MAX_RESULT_SIZE);
       }
-      this.scannerTimeout = conf.getInt(HConstants.HBASE_CLIENT_SCANNER_TIMEOUT_PERIOD,
+      this.scannerTimeout = HBaseConfiguration.getInt(conf,
+        HConstants.HBASE_CLIENT_SCANNER_TIMEOUT_PERIOD,
+        HConstants.HBASE_REGIONSERVER_LEASE_PERIOD_KEY,
         HConstants.DEFAULT_HBASE_CLIENT_SCANNER_TIMEOUT_PERIOD);
 
       // check if application wants to collect scan metrics
@@ -253,6 +256,7 @@ public class ClientScanner extends AbstractClientScanner {
       scanMetricsPublished = true;
     }
 
+    @Override
     public Result next() throws IOException {
       // If the scanner is closed and there's nothing left in the cache, next is a no-op.
       if (cache.size() == 0 && this.closed) {
@@ -377,6 +381,7 @@ public class ClientScanner extends AbstractClientScanner {
      * if returned array is of zero-length (We never return null).
      * @throws IOException
      */
+    @Override
     public Result [] next(int nbRows) throws IOException {
       // Collect values to be returned here
       ArrayList<Result> resultSets = new ArrayList<Result>(nbRows);
@@ -391,6 +396,7 @@ public class ClientScanner extends AbstractClientScanner {
       return resultSets.toArray(new Result[resultSets.size()]);
     }
 
+    @Override
     public void close() {
       if (!scanMetricsPublished) writeScanMetrics();
       if (callable != null) {
