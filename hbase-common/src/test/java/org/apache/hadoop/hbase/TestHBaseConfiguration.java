@@ -1,0 +1,56 @@
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package org.apache.hadoop.hbase;
+
+
+import static org.junit.Assert.assertEquals;
+
+import org.apache.hadoop.conf.Configuration;
+import org.junit.Test;
+import org.junit.experimental.categories.Category;
+
+@Category(SmallTests.class)
+public class TestHBaseConfiguration {
+
+  @Test
+  public void testGetIntDeprecated() {
+    int VAL = 1, VAL2 = 2;
+    String NAME = "foo";
+    String DEPRECATED_NAME = "foo.deprecated";
+
+    Configuration conf = HBaseConfiguration.create();
+    conf.setInt(NAME, VAL);
+    assertEquals(VAL, HBaseConfiguration.getInt(conf, NAME, DEPRECATED_NAME, 0));
+
+    conf = HBaseConfiguration.create();
+    conf.setInt(DEPRECATED_NAME, VAL);
+    assertEquals(VAL, HBaseConfiguration.getInt(conf, NAME, DEPRECATED_NAME, 0));
+
+    conf = HBaseConfiguration.create();
+    conf.setInt(DEPRECATED_NAME, VAL);
+    conf.setInt(NAME, VAL);
+    assertEquals(VAL, HBaseConfiguration.getInt(conf, NAME, DEPRECATED_NAME, 0));
+
+    conf = HBaseConfiguration.create();
+    conf.setInt(DEPRECATED_NAME, VAL);
+    conf.setInt(NAME, VAL2); // deprecated value will override this
+    assertEquals(VAL, HBaseConfiguration.getInt(conf, NAME, DEPRECATED_NAME, 0));
+  }
+
+}
