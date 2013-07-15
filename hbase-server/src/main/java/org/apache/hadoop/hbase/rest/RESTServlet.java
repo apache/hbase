@@ -1,5 +1,4 @@
-/*
- *
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -20,11 +19,16 @@
 package org.apache.hadoop.hbase.rest;
 
 import java.io.IOException;
+import java.security.PrivilegedAction;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
+import org.apache.hadoop.hbase.client.HConnectionManager;
+import org.apache.hadoop.hbase.client.HConnectionWrapper;
+import org.apache.hadoop.hbase.client.HTableInterface;
 import org.apache.hadoop.hbase.client.HTablePool;
+import org.apache.hadoop.security.UserGroupInformation;
 
 /**
  * Singleton class encapsulating global REST servlet state and functions.
@@ -36,6 +40,7 @@ public class RESTServlet implements Constants {
   private final HTablePool pool;
   private final MetricsREST metrics = new MetricsREST();
   private final HBaseAdmin admin;
+  private final UserGroupInformation ugi;
 
   /**
    * @return the RESTServlet singleton instance
@@ -53,8 +58,13 @@ public class RESTServlet implements Constants {
    */
   public synchronized static RESTServlet getInstance(Configuration conf)
   throws IOException {
+    return getInstance(conf, null);
+  }
+
+  public synchronized static RESTServlet getInstance(Configuration conf,
+      UserGroupInformation ugi) throws IOException {
     if (INSTANCE == null) {
-      INSTANCE = new RESTServlet(conf);
+      INSTANCE = new RESTServlet(conf, ugi);
     }
     return INSTANCE;
   }
@@ -68,11 +78,44 @@ public class RESTServlet implements Constants {
    * @param conf existing configuration
    * @throws IOException
    */
-  RESTServlet(Configuration conf) throws IOException {
+  RESTServlet(final Configuration conf,
+      final UserGroupInformation ugi) throws IOException {
     this.conf = conf;
+    this.ugi = ugi;
     int maxSize = conf.getInt("hbase.rest.htablepool.size", 10);
-    this.pool = new HTablePool(conf, maxSize);
-    this.admin = new HBaseAdmin(conf);
+    if (ugi == null) {
+      pool = new HTablePool(conf, maxSize);
+      admin = new HBaseAdmin(conf);
+    } else {
+      admin = new HBaseAdmin(new HConnectionWrapper(ugi,
+        HConnectionManager.getConnection(new Configuration(conf))));
+
+      pool = new HTablePool(conf, maxSize) {
+        /**
+         * A HTablePool adapter. It makes sure the real user is
+         * always used in creating any table so that the HConnection
+         * is not any proxy user in case impersonation with
+         * RESTServletContainer.
+         */
+        @Override
+        protected HTableInterface createHTable(final String tableName) {
+          return ugi.doAs(new PrivilegedAction<HTableInterface>() {
+            @Override
+            public HTableInterface run() {
+              return callCreateHTable(tableName);
+             }
+           });
+          
+        }
+
+        /**
+         * A helper method used to call super.createHTable.
+         */
+        HTableInterface callCreateHTable(final String tableName) {
+          return super.createHTable(tableName);
+        }
+      };
+    }
   }
 
   HBaseAdmin getAdmin() {
@@ -98,5 +141,9 @@ public class RESTServlet implements Constants {
    */
   boolean isReadOnly() {
     return getConfiguration().getBoolean("hbase.rest.readonly", false);
+  }
+
+  UserGroupInformation getUser() {
+    return ugi;
   }
 }
