@@ -27,6 +27,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.RegionLoad;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.exceptions.RegionOpeningException;
 import org.apache.hadoop.hbase.executor.EventHandler;
 import org.apache.hadoop.hbase.executor.EventType;
 import org.apache.hadoop.hbase.master.CatalogJanitor;
@@ -117,6 +118,7 @@ public class DispatchMergingRegionHandler extends EventHandler {
 
       RegionPlan regionPlan = new RegionPlan(region_b, region_b_location,
           region_a_location);
+      LOG.info("Moving regions to same server for merge: " + regionPlan.toString());
       masterServices.getAssignmentManager().balance(regionPlan);
       while (!masterServices.isStopped()) {
         try {
@@ -143,19 +145,27 @@ public class DispatchMergingRegionHandler extends EventHandler {
     }
 
     if (onSameRS) {
-      try{
-        masterServices.getServerManager().sendRegionsMerge(region_a_location,
-            region_a, region_b, forcible);
-        LOG.info("Successfully send MERGE REGIONS RPC to server "
-            + region_a_location.toString() + " for region "
-            + region_a.getRegionNameAsString() + ","
-            + region_b.getRegionNameAsString() + ", focible=" + forcible);
-      } catch (IOException ie) {
-        LOG.info("Failed send MERGE REGIONS RPC to server "
-            + region_a_location.toString() + " for region "
-            + region_a.getRegionNameAsString() + ","
-            + region_b.getRegionNameAsString() + ", focible=" + forcible + ", "
-            + ie.getMessage());
+      startTime = EnvironmentEdgeManager.currentTimeMillis();
+      while (!masterServices.isStopped()) {
+        try {
+          masterServices.getServerManager().sendRegionsMerge(region_a_location,
+              region_a, region_b, forcible);
+          LOG.info("Sent merge to server " + region_a_location + " for region " +
+            region_a.getEncodedName() + "," + region_b.getEncodedName() + ", focible=" + forcible);
+          break;
+        } catch (RegionOpeningException roe) {
+          if ((EnvironmentEdgeManager.currentTimeMillis() - startTime) > timeout) {
+            LOG.warn("Failed sending merge to " + region_a_location + " after " + timeout + "ms",
+              roe);
+            break;
+          }
+          // Do a retry since region should be online on RS immediately
+        } catch (IOException ie) {
+          LOG.warn("Failed sending merge to " + region_a_location + " for region " +
+            region_a.getEncodedName() + "," + region_b.getEncodedName() + ", focible=" + forcible,
+            ie);
+          break;
+        }
       }
     } else {
       LOG.info("Cancel merging regions " + region_a.getRegionNameAsString()
@@ -164,5 +174,4 @@ public class DispatchMergingRegionHandler extends EventHandler {
           + (EnvironmentEdgeManager.currentTimeMillis() - startTime) + "ms");
     }
   }
-
 }
