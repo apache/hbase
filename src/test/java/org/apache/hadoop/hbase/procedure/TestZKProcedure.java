@@ -21,6 +21,7 @@ import static org.junit.Assert.assertEquals;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyListOf;
 import static org.mockito.Matchers.eq;
+import static org.mockito.Mockito.atMost;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
@@ -316,7 +317,10 @@ public class TestZKProcedure {
     // -------------
     // verification
     // -------------
-    waitAndVerifyProc(coordinatorTask, once, never(), once, once, true);
+
+    // always expect prepared, never committed, and possible to have cleanup and finish (racy since
+    // error case)
+    waitAndVerifyProc(coordinatorTask, once, never(), once, atMost(1), true);
     verifyCohortSuccessful(expected, subprocFactory, cohortTasks, once, never(), once,
       once, true);
 

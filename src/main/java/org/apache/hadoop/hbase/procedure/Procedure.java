@@ -333,7 +333,9 @@ public class Procedure implements Callable<Void>, ForeignExceptionListener {
   }
 
   /**
-   * Waits until the entire procedure has globally completed, or has been aborted.
+   * Waits until the entire procedure has globally completed, or has been aborted.  If an
+   * exception is thrown the procedure may or not have run cleanup to trigger the completion latch
+   * yet.
    * @throws ForeignException
    * @throws InterruptedException
    */
