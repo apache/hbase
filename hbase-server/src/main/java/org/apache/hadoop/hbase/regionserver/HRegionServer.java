@@ -3016,6 +3016,7 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
         if (request.hasScannerId()) {
           rsh = scanners.get(scannerName);
           if (rsh == null) {
+            LOG.info("Client tried to access missing scanner " + scannerName);
             throw new UnknownScannerException(
               "Name: " + scannerName + ", already closed?");
           }
