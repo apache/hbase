@@ -1,5 +1,4 @@
-/*
- *
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -43,4 +42,19 @@ public interface Constants {
   String MIMETYPE_JSON = "application/json";
 
   String CRLF = "\r\n";
+
+  static final String REST_KEYTAB_FILE = "hbase.rest.keytab.file";
+  static final String REST_KERBEROS_PRINCIPAL = "hbase.rest.kerberos.principal";
+  static final String REST_AUTHENTICATION_TYPE = "hbase.rest.authentication.type";
+  static final String REST_AUTHENTICATION_PRINCIPAL =
+    "hbase.rest.authentication.kerberos.principal";
+
+  static final String REST_SSL_ENABLED = "hbase.rest.ssl.enabled";
+  static final String REST_SSL_KEYSTORE_STORE = "hbase.rest.ssl.keystore.store";
+  static final String REST_SSL_KEYSTORE_PASSWORD = "hbase.rest.ssl.keystore.password";
+  static final String REST_SSL_KEYSTORE_KEYPASSWORD =
+    "hbase.rest.ssl.keystore.keypassword";
+
+  static final String REST_DNS_NAMESERVER = "hbase.rest.dns.nameserver";
+  static final String REST_DNS_INTERFACE = "hbase.rest.dns.interface";
 }

@@ -20,7 +20,6 @@
 package org.apache.hadoop.hbase.rest;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -35,6 +34,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.rest.filter.AuthFilter;
 import org.apache.hadoop.hbase.rest.filter.GzipFilter;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.InfoServer;
@@ -42,10 +42,11 @@ import org.apache.hadoop.hbase.util.Strings;
 import org.apache.hadoop.hbase.util.VersionInfo;
 import org.apache.hadoop.net.DNS;
 import org.apache.hadoop.security.SecurityUtil;
-import org.apache.hadoop.security.authentication.server.AuthenticationFilter;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.mortbay.jetty.Connector;
 import org.mortbay.jetty.Server;
 import org.mortbay.jetty.nio.SelectChannelConnector;
+import org.mortbay.jetty.security.SslSelectChannelConnector;
 import org.mortbay.jetty.servlet.Context;
 import org.mortbay.jetty.servlet.FilterHolder;
 import org.mortbay.jetty.servlet.ServletHolder;
@@ -67,11 +68,6 @@ import com.sun.jersey.spi.container.servlet.ServletContainer;
 @InterfaceAudience.Private
 public class RESTServer implements Constants {
 
-  private static final String REST_SECURITY_KEY = "hbase.rest.authentication";
-  private static final String REST_KEYTAB_KEY = "hbase.rest.keytab.file";
-  private static final String REST_SPNEGO_PRINCIPAL_KEY = "hbase.rest.kerberos.spnego.principal";
-  private static final String REST_PRINCIPAL_KEY = "hbase.rest.kerberos.principal";
-
   private static void printUsageAndExit(Options options, int exitCode) {
     HelpFormatter formatter = new HelpFormatter();
     formatter.printHelp("bin/hbase rest start", "", options,
@@ -90,35 +86,35 @@ public class RESTServer implements Constants {
 
     VersionInfo.logVersion();
     FilterHolder authFilter = null;
+    UserGroupInformation realUser = null;
     Configuration conf = HBaseConfiguration.create();
-    // login the server principal (if using secure Hadoop)   
+    Class<? extends ServletContainer> containerClass = ServletContainer.class;
+
+    // login the server principal (if using secure Hadoop)
     if (User.isSecurityEnabled() && User.isHBaseSecurityEnabled(conf)) {
       String machineName = Strings.domainNamePointerToHostName(
-        DNS.getDefaultHost(conf.get("hbase.rest.dns.interface", "default"),
-          conf.get("hbase.rest.dns.nameserver", "default")));
-      User.login(conf, REST_KEYTAB_KEY, REST_PRINCIPAL_KEY,
-        machineName);
-      if ("kerberos".equalsIgnoreCase(conf.get(REST_SECURITY_KEY))) {
-        Map<String, String> params = new HashMap<String, String>();
-        String principalInConf = conf.get(REST_SPNEGO_PRINCIPAL_KEY);
-        Preconditions.checkArgument(principalInConf != null && !principalInConf.isEmpty(),
-          REST_SPNEGO_PRINCIPAL_KEY + " should be set if authentication is enabled");
-        params.put("kerberos.principal",
-          SecurityUtil.getServerPrincipal(principalInConf, machineName));
-        String httpKeytab = conf.get(REST_KEYTAB_KEY);
-        Preconditions.checkArgument(httpKeytab != null && !httpKeytab.isEmpty(),
-          REST_KEYTAB_KEY + " should be set if authentication is enabled");
-        params.put("kerberos.keytab", httpKeytab);
-        params.put(AuthenticationFilter.AUTH_TYPE, "kerberos");
-        params.put(AuthenticationFilter.COOKIE_PATH, "/");
+        DNS.getDefaultHost(conf.get(REST_DNS_INTERFACE, "default"),
+          conf.get(REST_DNS_NAMESERVER, "default")));
+      String keytabFilename = conf.get(REST_KEYTAB_FILE);
+      Preconditions.checkArgument(keytabFilename != null && !keytabFilename.isEmpty(),
+        REST_KEYTAB_FILE + " should be set if security is enabled");
+      String principalConfig = conf.get(REST_KERBEROS_PRINCIPAL);
+      Preconditions.checkArgument(principalConfig != null && !principalConfig.isEmpty(),
+        REST_KERBEROS_PRINCIPAL + " should be set if security is enabled");
+      String principalName = SecurityUtil.getServerPrincipal(principalConfig, machineName);
+      UserGroupInformation loginUser =
+        UserGroupInformation.loginUserFromKeytabAndReturnUGI(
+          principalName, keytabFilename);
+      if (conf.get(REST_AUTHENTICATION_TYPE) != null) {
+        containerClass = RESTServletContainer.class;
         authFilter = new FilterHolder();
+        authFilter.setClassName(AuthFilter.class.getName());
         authFilter.setName("AuthenticationFilter");
-        authFilter.setClassName(AuthenticationFilter.class.getName());
-        authFilter.setInitParameters(params);
+        realUser = loginUser;
       }
     }
 
-    RESTServlet servlet = RESTServlet.getInstance(conf);
+    RESTServlet servlet = RESTServlet.getInstance(conf, realUser);
 
     Options options = new Options();
     options.addOption("p", "port", true, "Port to bind to [default: 8080]");
@@ -173,7 +169,7 @@ public class RESTServer implements Constants {
     }
 
     // set up the Jersey servlet container for Jetty
-    ServletHolder sh = new ServletHolder(ServletContainer.class);
+    ServletHolder sh = new ServletHolder(containerClass);
     sh.setInitParameter(
       "com.sun.jersey.config.property.resourceConfigClass",
       ResourceConfig.class.getCanonicalName());
@@ -181,12 +177,12 @@ public class RESTServer implements Constants {
       "jetty");
     // The servlet holder below is instantiated to only handle the case
     // of the /status/cluster returning arrays of nodes (live/dead). Without
-    // this servlet holder, the problem is that the node arrays in the response 
-    // are collapsed to single nodes. We want to be able to treat the 
-    // node lists as POJO in the response to /status/cluster servlet call, 
+    // this servlet holder, the problem is that the node arrays in the response
+    // are collapsed to single nodes. We want to be able to treat the
+    // node lists as POJO in the response to /status/cluster servlet call,
     // but not change the behavior for any of the other servlets
     // Hence we don't use the servlet holder for all servlets / paths
-    ServletHolder shPojoMap = new ServletHolder(ServletContainer.class);
+    ServletHolder shPojoMap = new ServletHolder(containerClass);
     @SuppressWarnings("unchecked")
     Map<String, String> shInitMap = sh.getInitParameters();
     for (Entry<String, String> e : shInitMap.entrySet()) {
@@ -199,6 +195,16 @@ public class RESTServer implements Constants {
     Server server = new Server();
 
     Connector connector = new SelectChannelConnector();
+    if(conf.getBoolean(REST_SSL_ENABLED, false)) {
+      SslSelectChannelConnector sslConnector = new SslSelectChannelConnector();
+      String keystore = conf.get(REST_SSL_KEYSTORE_STORE);
+      String password = conf.get(REST_SSL_KEYSTORE_PASSWORD);
+      String keyPassword = conf.get(REST_SSL_KEYSTORE_KEYPASSWORD, password);
+      sslConnector.setKeystore(keystore);
+      sslConnector.setPassword(password);
+      sslConnector.setKeyPassword(keyPassword);
+      connector = sslConnector;
+    }
     connector.setPort(servlet.getConfiguration().getInt("hbase.rest.port", 8080));
     connector.setHost(servlet.getConfiguration().get("hbase.rest.host", "0.0.0.0"));
 

@@ -24,6 +24,7 @@ import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.MasterAdminS
 import org.apache.hadoop.hbase.protobuf.generated.MasterMonitorProtos.MasterMonitorService;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerStatusService;
 import org.apache.hadoop.security.authorize.PolicyProvider;
+import org.apache.hadoop.security.authorize.ProxyUsers;
 import org.apache.hadoop.security.authorize.Service;
 import org.apache.hadoop.security.authorize.ServiceAuthorizationManager;
 
@@ -50,6 +51,7 @@ public class HBasePolicyProvider extends PolicyProvider {
     System.setProperty("hadoop.policy.file", "hbase-policy.xml");
     if (conf.getBoolean(ServiceAuthorizationManager.SERVICE_AUTHORIZATION_CONFIG, false)) {
       authManager.refresh(conf, new HBasePolicyProvider());
+      ProxyUsers.refreshSuperUserGroupsConfiguration(conf);
     }
   }
 }
