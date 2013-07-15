@@ -204,7 +204,7 @@ public class TestStochasticLoadBalancer extends BalancerTestBase {
     assertEquals(0.5, costFunction.costFromArray(statThree), 0.01);
   }
 
-  @Test(timeout =  30000)
+  @Test(timeout =  60000)
   public void testLosingRs() throws Exception {
     int numNodes = 3;
     int numRegions = 20;
@@ -234,7 +234,7 @@ public class TestStochasticLoadBalancer extends BalancerTestBase {
     assertNull(plans);
   }
 
-  @Test (timeout = 20000)
+  @Test (timeout = 60000)
   public void testSmallCluster() {
     int numNodes = 10;
     int numRegions = 1000;
@@ -243,7 +243,7 @@ public class TestStochasticLoadBalancer extends BalancerTestBase {
     testWithCluster(numNodes, numRegions, numRegionsPerServer, numTables, true);
   }
 
-  @Test (timeout = 20000)
+  @Test (timeout = 60000)
   public void testSmallCluster2() {
     int numNodes = 20;
     int numRegions = 2000;
@@ -252,7 +252,7 @@ public class TestStochasticLoadBalancer extends BalancerTestBase {
     testWithCluster(numNodes, numRegions, numRegionsPerServer, numTables, true);
   }
 
-  @Test (timeout = 20000)
+  @Test (timeout = 60000)
   public void testSmallCluster3() {
     int numNodes = 20;
     int numRegions = 2000;
