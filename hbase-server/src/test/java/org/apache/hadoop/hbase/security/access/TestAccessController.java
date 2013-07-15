@@ -892,7 +892,8 @@ public class TestAccessController {
 
       HTable table = new HTable(conf, tableName);
       try {
-        TEST_UTIL.waitTableEnabled(tableName);
+        HBaseAdmin admin = new HBaseAdmin(TEST_UTIL.getConfiguration());
+        TEST_UTIL.waitTableEnabled(admin, tableName);
         LoadIncrementalHFiles loader = new LoadIncrementalHFiles(conf);
         loader.doBulkLoad(loadPath, table);
       } finally {
