@@ -2128,7 +2128,12 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
    */
   public void waitTableEnabled(byte[] table)
       throws InterruptedException, IOException {
-    waitTableEnabled(table, 30000);
+    waitTableEnabled(getHBaseAdmin(), table, 30000);
+  }
+
+  public void waitTableEnabled(HBaseAdmin admin, byte[] table)
+      throws InterruptedException, IOException {
+    waitTableEnabled(admin, table, 30000);
   }
 
   /**
@@ -2142,10 +2147,15 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
    */
   public void waitTableEnabled(byte[] table, long timeoutMillis)
   throws InterruptedException, IOException {
+    waitTableEnabled(getHBaseAdmin(), table, timeoutMillis);
+  }
+
+  public void waitTableEnabled(HBaseAdmin admin, byte[] table, long timeoutMillis)
+  throws InterruptedException, IOException {
     long startWait = System.currentTimeMillis();
     waitTableAvailable(table, timeoutMillis);
     long remainder = System.currentTimeMillis() - startWait;
-    while (!getHBaseAdmin().isTableEnabled(table)) {
+    while (!admin.isTableEnabled(table)) {
       assertTrue("Timed out waiting for table to become available and enabled " +
          Bytes.toStringBinary(table),
          System.currentTimeMillis() - remainder < timeoutMillis);
@@ -2157,7 +2167,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
     // Below we do a get.  The get will retry if a NotServeringRegionException or a
     // RegionOpeningException.  It is crass but when done all will be online.
     try {
-      Canary.sniff(getHBaseAdmin(), Bytes.toString(table));
+      Canary.sniff(admin, Bytes.toString(table));
     } catch (Exception e) {
       throw new IOException(e);
     }
