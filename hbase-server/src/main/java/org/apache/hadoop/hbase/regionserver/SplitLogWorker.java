@@ -240,6 +240,7 @@ public class SplitLogWorker extends ZooKeeperListener implements Runnable {
           return;
         }
       }
+      SplitLogCounters.tot_wkr_task_grabing.incrementAndGet();
       synchronized (taskReadyLock) {
         while (seq_start == taskReadySeq) {
           try {
