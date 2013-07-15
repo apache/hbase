@@ -630,6 +630,14 @@ public final class HConstants {
   public static String HBASE_CLIENT_SCANNER_TIMEOUT_PERIOD = "hbase.client.scanner.timeout.period";
 
   /**
+   * Use {@link #HBASE_CLIENT_SCANNER_TIMEOUT_PERIOD} instead.
+   * @deprecated This config option is deprecated. Will be removed at later releases after 0.96.
+   */
+  @Deprecated
+  public static String HBASE_REGIONSERVER_LEASE_PERIOD_KEY =
+      "hbase.regionserver.lease.period";
+
+  /**
    * Default value of {@link #HBASE_CLIENT_SCANNER_TIMEOUT_PERIOD}.
    */
   public static int DEFAULT_HBASE_CLIENT_SCANNER_TIMEOUT_PERIOD = 60000;
