@@ -1464,7 +1464,9 @@ public class RpcServer implements RpcServerInterface {
           incRpcCount();  // Increment the rpc count
         }
         count = channelRead(channel, data);
-        if (data.remaining() == 0) {
+        if (count < 0) {
+          return count;
+        } else if (data.remaining() == 0) {
           dataLengthBuffer.clear();
           data.flip();
           if (skipInitialSaslHandshake) {
