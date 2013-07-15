@@ -1107,6 +1107,36 @@ attribute to Maven (See <xref linkend="maven.build.hadoop" /> for more).
 </para>
 
 </section>
+
+</section>
+
+    <section xml:id="trouble.tests">
+       <title>Running unit or integration tests</title>
+          <section xml:id="trouble.HDFS-2556">
+             <title>Runtime exceptions from MiniDFSCluster when running tests</title>
+<para>If you see something like the following
+<programlisting>...
+java.lang.NullPointerException: null
+at org.apache.hadoop.hdfs.MiniDFSCluster.startDataNodes
+at org.apache.hadoop.hdfs.MiniDFSCluster.&lt;init&gt;
+at org.apache.hadoop.hbase.MiniHBaseCluster.&lt;init&gt;
+at org.apache.hadoop.hbase.HBaseTestingUtility.startMiniDFSCluster
+at org.apache.hadoop.hbase.HBaseTestingUtility.startMiniCluster
+...</programlisting>
+or
+<programlisting>...
+java.io.IOException: Shutting down
+at org.apache.hadoop.hbase.MiniHBaseCluster.init
+at org.apache.hadoop.hbase.MiniHBaseCluster.&lt;init&gt;
+at org.apache.hadoop.hbase.MiniHBaseCluster.&lt;init&gt;
+at org.apache.hadoop.hbase.HBaseTestingUtility.startMiniHBaseCluster
+at org.apache.hadoop.hbase.HBaseTestingUtility.startMiniCluster
+...</programlisting>
+... then try issuing the command <command>umask 022</command> before launching tests. This is a workaround for
+<link xlink:href="https://issues.apache.org/jira/browse/HDFS-2556">HDFS-2556</link>
+</para>
+</section>
+
 </section>
 
     <section xml:id="trouble.casestudy">
