@@ -2258,7 +2258,7 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
       ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
       clazz = Class.forName(classname, true, classLoader);
     } catch (java.lang.ClassNotFoundException nfe) {
-      throw new IOException("Cound not find class for " + classname);
+      throw new IOException("Could not find class for " + classname);
     }
 
     // create an instance of the replication object.

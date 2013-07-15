@@ -176,7 +176,7 @@ public class Merge extends Configured implements Tool {
           Bytes.toStringBinary(meta.getRegionName()));
     }
     if (info2 == null) {
-      throw new IOException("Cound not find " + Bytes.toStringBinary(region2) + " in " +
+      throw new IOException("Could not find " + Bytes.toStringBinary(region2) + " in " +
           Bytes.toStringBinary(meta.getRegionName()));
     }
     HRegion merged = null;
