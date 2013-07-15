@@ -2096,7 +2096,12 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
    */
   public void waitTableAvailable(byte[] table)
       throws InterruptedException, IOException {
-    waitTableAvailable(table, 30000);
+    waitTableAvailable(getHBaseAdmin(), table, 30000);
+  }
+
+  public void waitTableAvailable(HBaseAdmin admin, byte[] table)
+      throws InterruptedException, IOException {
+    waitTableAvailable(admin, table, 30000);
   }
 
   /**
@@ -2108,8 +2113,13 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
    */
   public void waitTableAvailable(byte[] table, long timeoutMillis)
   throws InterruptedException, IOException {
+    waitTableAvailable(getHBaseAdmin(), table, timeoutMillis);
+  }
+
+  public void waitTableAvailable(HBaseAdmin admin, byte[] table, long timeoutMillis)
+  throws InterruptedException, IOException {
     long startWait = System.currentTimeMillis();
-    while (!getHBaseAdmin().isTableAvailable(table)) {
+    while (!admin.isTableAvailable(table)) {
       assertTrue("Timed out waiting for table to become available " +
         Bytes.toStringBinary(table),
         System.currentTimeMillis() - startWait < timeoutMillis);
@@ -2153,7 +2163,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
   public void waitTableEnabled(HBaseAdmin admin, byte[] table, long timeoutMillis)
   throws InterruptedException, IOException {
     long startWait = System.currentTimeMillis();
-    waitTableAvailable(table, timeoutMillis);
+    waitTableAvailable(admin, table, timeoutMillis);
     long remainder = System.currentTimeMillis() - startWait;
     while (!admin.isTableEnabled(table)) {
       assertTrue("Timed out waiting for table to become available and enabled " +
