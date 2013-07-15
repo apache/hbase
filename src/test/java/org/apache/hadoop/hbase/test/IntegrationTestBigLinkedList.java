@@ -52,9 +52,11 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.ScannerCallable;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.mapreduce.TableMapReduceUtil;
 import org.apache.hadoop.hbase.mapreduce.TableMapper;
+import org.apache.hadoop.hbase.mapreduce.TableRecordReaderImpl;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.io.NullWritable;
@@ -626,6 +628,8 @@ public class IntegrationTestBigLinkedList extends Configured implements Tool {
       job.setNumReduceTasks(numReducers);
       job.setJarByClass(getClass());
 
+      setJobScannerConf(job);
+
       Scan scan = new Scan();
       scan.addColumn(FAMILY_NAME, COLUMN_PREV);
       scan.setCaching(10000);
@@ -1080,5 +1084,11 @@ public class IntegrationTestBigLinkedList extends Configured implements Tool {
     if (wrapMuplitplier != null) {
       job.getConfiguration().setInt(GENERATOR_WRAP_KEY, wrapMuplitplier.intValue());
     }
+  }
+
+  private static void setJobScannerConf(Job job) {
+    // Make sure scanners log something useful to make debugging possible.
+    job.getConfiguration().setBoolean(ScannerCallable.LOG_SCANNER_ACTIVITY, true);
+    job.getConfiguration().setInt(TableRecordReaderImpl.LOG_PER_ROW_COUNT, 100000);
   }
 }

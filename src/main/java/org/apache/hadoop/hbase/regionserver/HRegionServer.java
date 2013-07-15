@@ -2592,7 +2592,10 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
   public Result[] next(final long scannerId, int nbRows) throws IOException {
     String scannerName = String.valueOf(scannerId);
     RegionScanner s = this.scanners.get(scannerName);
-    if (s == null) throw new UnknownScannerException("Name: " + scannerName);
+    if (s == null) {
+      LOG.info("Client tried to access missing scanner " + scannerName);
+      throw new UnknownScannerException("Name: " + scannerName);
+    }
     try {
       checkOpen();
     } catch (IOException e) {
@@ -2610,7 +2613,13 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     try {
       // Remove lease while its being processed in server; protects against case
       // where processing of request takes > lease expiration time.
-      lease = this.leases.removeLease(scannerName);
+      try {
+        lease = this.leases.removeLease(scannerName);
+      } catch (LeaseException le) {
+        // What it really means is that there's no such scanner.
+        LOG.info("Client tried to access missing scanner " + scannerName + " (no lease)");
+        throw new UnknownScannerException("No lease for " + scannerName + ": " + le.getMessage());
+      }
       List<Result> results = new ArrayList<Result>(nbRows);
       long currentScanResultSize = 0;
       List<KeyValue> values = new ArrayList<KeyValue>();
