@@ -899,7 +899,7 @@ public class RpcClient {
           e = (IOException)t;
           markClosed(e);
         } else {
-          e = new IOException("Coundn't set up IO Streams", t);
+          e = new IOException("Could not set up IO Streams", t);
           markClosed(e);
         }
         close();
