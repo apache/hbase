@@ -85,6 +85,9 @@ public abstract class FSUtils {
   /** Full access permissions (starting point for a umask) */
   private static final String FULL_RWX_PERMISSIONS = "777";
 
+  /** Set to true on Windows platforms */
+  public static final boolean WINDOWS = System.getProperty("os.name").startsWith("Windows");
+
   protected FSUtils() {
     super();
   }
@@ -93,7 +96,7 @@ public abstract class FSUtils {
    * Compare of path component. Does not consider schema; i.e. if schemas different but <code>path
    * <code> starts with <code>rootPath<code>, then the function returns true
    * @param rootPath
-   * @param path 
+   * @param path
    * @return True if <code>path</code> starts with <code>rootPath</code>
    */
   public static boolean isStartingWithPath(final Path rootPath, final String path) {
@@ -402,7 +405,7 @@ public abstract class FSUtils {
   /**
    * We use reflection because {@link DistributedFileSystem#setSafeMode(
    * FSConstants.SafeModeAction action, boolean isChecked)} is not in hadoop 1.1
-   * 
+   *
    * @param dfs
    * @return whether we're in safe mode
    * @throws IOException
@@ -416,14 +419,14 @@ public abstract class FSUtils {
         org.apache.hadoop.hdfs.protocol.FSConstants.SafeModeAction.SAFEMODE_GET, true);
     } catch (Exception e) {
       if (e instanceof IOException) throw (IOException) e;
-      
+
       // Check whether dfs is on safemode.
       inSafeMode = dfs.setSafeMode(
-        org.apache.hadoop.hdfs.protocol.FSConstants.SafeModeAction.SAFEMODE_GET);      
+        org.apache.hadoop.hdfs.protocol.FSConstants.SafeModeAction.SAFEMODE_GET);
     }
-    return inSafeMode;    
+    return inSafeMode;
   }
-  
+
   /**
    * Check whether dfs is in safemode.
    * @param conf
@@ -456,7 +459,7 @@ public abstract class FSUtils {
     Path versionFile = new Path(rootdir, HConstants.VERSION_FILE_NAME);
     FileStatus[] status = null;
     try {
-      // hadoop 2.0 throws FNFE if directory does not exist.  
+      // hadoop 2.0 throws FNFE if directory does not exist.
       // hadoop 1.0 returns null if directory does not exist.
       status = fs.listStatus(versionFile);
     } catch (FileNotFoundException fnfe) {

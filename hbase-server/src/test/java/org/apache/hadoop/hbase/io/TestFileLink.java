@@ -22,26 +22,22 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
-import org.junit.Test;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import junit.framework.TestCase;
-import org.junit.experimental.categories.Category;
-
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.FSDataInputStream;
-import org.apache.hadoop.fs.FSDataOutputStream;
-import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.MediumTests;
-import org.apache.hadoop.hbase.io.FileLink;
-
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataInputStream;
+import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.MediumTests;
+import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.junit.Test;
+import org.junit.experimental.categories.Category;
 
 /**
  * Test that FileLink switches between alternate locations
@@ -108,11 +104,20 @@ public class TestFileLink {
       dataVerify(data, n, (byte)2);
       size += n;
 
+      if (FSUtils.WINDOWS) {
+        in.close();
+      }
+
       // Move origin to archive
       assertFalse(fs.exists(archivedPath));
       fs.rename(originalPath, archivedPath);
       assertFalse(fs.exists(originalPath));
       assertTrue(fs.exists(archivedPath));
+
+      if (FSUtils.WINDOWS) {
+        in = link.open(fs); // re-read from beginning
+        in.read(data);
+      }
 
       // Try to read to the end
       while ((n = in.read(data)) > 0) {
