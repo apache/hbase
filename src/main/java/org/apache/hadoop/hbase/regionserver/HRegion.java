@@ -141,6 +141,7 @@ import com.google.common.collect.ClassToInstanceMap;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
 import com.google.common.collect.MutableClassToInstanceMap;
 
 /**
@@ -2178,6 +2179,8 @@ public class HRegion implements HeapSize { // , Writable{
 
     /** Keep track of the locks we hold so we can release them in finally clause */
     List<Integer> acquiredLocks = Lists.newArrayListWithCapacity(batchOp.operations.length);
+    Set<HashedBytes> rowsAlreadyLocked = Sets.newHashSet();
+      
     // reference family maps directly so coprocessors can mutate them if desired
     Map<byte[],List<KeyValue>>[] familyMaps = new Map[batchOp.operations.length];
     // We try to set up a batch in the range [firstIndex,lastIndexExclusive)
@@ -2234,15 +2237,23 @@ public class HRegion implements HeapSize { // , Writable{
         // If we haven't got any rows in our batch, we should block to
         // get the next one.
         boolean shouldBlock = numReadyToWrite == 0;
+        boolean failedToAcquire = false;
         Integer acquiredLockId = null;
+        HashedBytes currentRow = new HashedBytes(mutation.getRow());
         try {
-          acquiredLockId = getLock(providedLockId, mutation.getRow(),
-              shouldBlock);
+          if (providedLockId != null || !rowsAlreadyLocked.contains(currentRow)) {
+            acquiredLockId = getLock(providedLockId, currentRow, shouldBlock);
+            if (acquiredLockId == null) {
+              failedToAcquire = true;
+            } else if (providedLockId == null) {
+              rowsAlreadyLocked.add(currentRow);
+            }
+          } 
         } catch (IOException ioe) {
-          LOG.warn("Failed getting lock in batch put, row="
-                  + Bytes.toStringBinary(mutation.getRow()), ioe);
+          LOG.warn("Failed getting lock in batch put, row=" + currentRow, ioe);
+          failedToAcquire = true;
         }
-        if (acquiredLockId == null) {
+        if (failedToAcquire) {
           // We failed to grab another lock
           assert !shouldBlock : "Should never fail to get lock when blocking";
           break; // stop acquiring more rows for this batch
@@ -2382,6 +2393,7 @@ public class HRegion implements HeapSize { // , Writable{
           releaseRowLock(toRelease);
         }
         acquiredLocks = null;
+        rowsAlreadyLocked = null;
       }
       // -------------------------
       // STEP 7. Sync wal.
@@ -3363,7 +3375,7 @@ public class HRegion implements HeapSize { // , Writable{
     this.writeRequestsCount.increment();
     this.opMetrics.setWriteRequestCountMetrics( this.writeRequestsCount.get());
     try {
-      return internalObtainRowLock(row, true);
+      return internalObtainRowLock(new HashedBytes(row), true);
     } finally {
       closeRegionOperation();
     }
@@ -3375,12 +3387,11 @@ public class HRegion implements HeapSize { // , Writable{
    *        Otherwise, just tries to obtain the lock and returns
    *        null if unavailable.
    */
-  private Integer internalObtainRowLock(final byte[] row, boolean waitForLock)
+  private Integer internalObtainRowLock(final HashedBytes rowKey, boolean waitForLock)
       throws IOException {
-    checkRow(row, "row lock");
+    checkRow(rowKey.getBytes(), "row lock");
     startRegionOperation();
     try {
-      HashedBytes rowKey = new HashedBytes(row);
       CountDownLatch rowLatch = new CountDownLatch(1);
 
       // loop until we acquire the row lock (unless !waitForLock)
@@ -3396,8 +3407,7 @@ public class HRegion implements HeapSize { // , Writable{
           try {
             if (!existingLatch.await(this.rowLockWaitDuration,
                             TimeUnit.MILLISECONDS)) {
-              throw new IOException("Timed out on getting lock for row="
-                  + Bytes.toStringBinary(row));
+              throw new IOException("Timed out on getting lock for row=" + rowKey);
             }
           } catch (InterruptedException ie) {
             // Empty
@@ -3471,12 +3481,27 @@ public class HRegion implements HeapSize { // , Writable{
    */
   public Integer getLock(Integer lockid, byte [] row, boolean waitForLock)
   throws IOException {
-    Integer lid = null;
+    return getLock(lockid, new HashedBytes(row), waitForLock);
+  }
+
+  /**
+   * Returns existing row lock if found, otherwise
+   * obtains a new row lock and returns it.
+   * @param lockid requested by the user, or null if the user didn't already hold lock
+   * @param row the row to lock
+   * @param waitForLock if true, will block until the lock is available, otherwise will
+   * simply return null if it could not acquire the lock.
+   * @return lockid or null if waitForLock is false and the lock was unavailable.
+   */
+  protected Integer getLock(Integer lockid, HashedBytes row, boolean waitForLock)
+  throws IOException {
+    Integer lid;
     if (lockid == null) {
       lid = internalObtainRowLock(row, waitForLock);
     } else {
-      if (!isRowLocked(lockid)) {
-        throw new IOException("Invalid row lock");
+      HashedBytes rowFromLock = lockIds.get(lockid);
+      if (!row.equals(rowFromLock)) {
+        throw new IOException("Invalid row lock: LockId: " + lockid + " holds the lock for row: " + rowFromLock + " but wanted lock for row: " + row);
       }
       lid = lockid;
     }
