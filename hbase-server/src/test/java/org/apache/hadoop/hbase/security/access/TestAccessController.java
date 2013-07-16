@@ -127,7 +127,6 @@ public class TestAccessController {
   // user with no permissions
   private static User USER_NONE;
 
-  private static byte[] TEST_TABLE2 = Bytes.toBytes("testtable2");
   private static byte[] TEST_FAMILY = Bytes.toBytes("f1");
 
   private static MasterCoprocessorEnvironment CP_ENV;
@@ -1918,7 +1917,7 @@ public class TestAccessController {
     verifyDenied(cloneAction, USER_CREATE, USER_RW, USER_RO, USER_NONE, USER_OWNER);
   }
 
-  @Test
+  @Test (timeout=30000)
   public void testGlobalAuthorizationForNewRegisteredRS() throws Exception {
     LOG.debug("Test for global authorization for a new registered RegionServer.");
     MiniHBaseCluster hbaseCluster = TEST_UTIL.getHBaseCluster();
@@ -1941,7 +1940,8 @@ public class TestAccessController {
       acl.close();
     }
     HBaseAdmin admin = TEST_UTIL.getHBaseAdmin();
-    HTableDescriptor htd = new HTableDescriptor(TEST_TABLE2);
+    final byte [] tableName = Bytes.toBytes("testGlobalAuthorizationForNewRegisteredRS");
+    HTableDescriptor htd = new HTableDescriptor(tableName);
     htd.addFamily(new HColumnDescriptor(TEST_FAMILY));
     admin.createTable(htd);
 
@@ -1951,7 +1951,7 @@ public class TestAccessController {
     final HRegionServer newRs = newRsThread.getRegionServer();
 
     // Move region to the new RegionServer.
-    HTable table = new HTable(TEST_UTIL.getConfiguration(), TEST_TABLE2);
+    HTable table = new HTable(TEST_UTIL.getConfiguration(), tableName);
     try {
       NavigableMap<HRegionInfo, ServerName> regions = table
           .getRegionLocations();
@@ -1968,25 +1968,25 @@ public class TestAccessController {
       };
       SUPERUSER.runAs(moveAction);
 
-      final int RETRIES_LIMIT = 10;
+      final int RETRIES_LIMIT = 100;
       int retries = 0;
-      while (newRs.getOnlineRegions(TEST_TABLE2).size() < 1 && retries < RETRIES_LIMIT) {
-        LOG.debug("Waiting for region to be opened. Already retried " + retries
-            + " times.");
+      while (newRs.getOnlineRegions(tableName).size() < 1 && retries < RETRIES_LIMIT) {
+        LOG.debug("Waiting for a region to be opened. Already retried " + retries + " times.");
         try {
-          Thread.sleep(200);
+          Thread.sleep(1000);
         } catch (InterruptedException e) {
         }
         retries++;
         if (retries == RETRIES_LIMIT - 1) {
-          fail("Retry exhaust for waiting region to be opened.");
+          fail("Retry exhaust for waiting region to be opened: " +
+            newRs.getOnlineRegions(tableName));
         }
       }
       // Verify write permission for user "admin2" who has the global
       // permissions.
       PrivilegedExceptionAction putAction = new PrivilegedExceptionAction() {
         public Object run() throws Exception {
-          HTable table = new HTable(TEST_UTIL.getConfiguration(), TEST_TABLE2);
+          HTable table = new HTable(TEST_UTIL.getConfiguration(), tableName);
           Put put = new Put(Bytes.toBytes("test"));
           put.add(TEST_FAMILY, Bytes.toBytes("qual"), Bytes.toBytes("value"));
           table.put(put);
