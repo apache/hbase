@@ -88,6 +88,7 @@ public class TestReplicationBase {
     conf1.setBoolean("dfs.support.append", true);
     conf1.setLong(HConstants.THREAD_WAKE_FREQUENCY, 100);
     conf1.setInt("replication.stats.thread.period.seconds", 5);
+    conf1.setBoolean("hbase.tests.use.shortcircuit.reads", false);
 
     utility1 = new HBaseTestingUtility(conf1);
     utility1.startMiniZKCluster();
@@ -105,6 +106,7 @@ public class TestReplicationBase {
     conf2.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 6);
     conf2.setBoolean(HConstants.REPLICATION_ENABLE_KEY, true);
     conf2.setBoolean("dfs.support.append", true);
+    conf2.setBoolean("hbase.tests.use.shortcircuit.reads", false);
 
     utility2 = new HBaseTestingUtility(conf2);
     utility2.setZkCluster(miniZK);
@@ -127,7 +129,7 @@ public class TestReplicationBase {
     HBaseAdmin admin1 = new HBaseAdmin(conf1);
     HBaseAdmin admin2 = new HBaseAdmin(conf2);
     admin1.createTable(table, HBaseTestingUtility.KEYS_FOR_HBA_CREATE_TABLE);
-    admin2.createTable(table);
+    admin2.createTable(table, HBaseTestingUtility.KEYS_FOR_HBA_CREATE_TABLE);
     htable1 = new HTable(conf1, tableName);
     htable1.setWriteBufferSize(1024);
     htable2 = new HTable(conf2, tableName);
