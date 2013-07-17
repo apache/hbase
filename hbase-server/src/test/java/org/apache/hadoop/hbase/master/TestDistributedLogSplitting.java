@@ -700,18 +700,23 @@ public class TestDistributedLogSplitting {
     startCluster(NUM_RS, curConf);
     final int NUM_REGIONS_TO_CREATE = 40;
     final int NUM_LOG_LINES = 1000;
-    // turn off load balancing to prevent regions from moving around otherwise
-    // they will consume recovered.edits
-    master.balanceSwitch(false);
 
     List<RegionServerThread> rsts = cluster.getLiveRegionServerThreads();
     final ZooKeeperWatcher zkw = new ZooKeeperWatcher(conf, "table-creation", null);
     HTable disablingHT = installTable(zkw, "disableTable", "family", NUM_REGIONS_TO_CREATE);
     HTable ht = installTable(zkw, "table", "family", NUM_REGIONS_TO_CREATE, NUM_REGIONS_TO_CREATE);
 
+    // turn off load balancing to prevent regions from moving around otherwise
+    // they will consume recovered.edits
+    master.balanceSwitch(false);
+
     List<HRegionInfo> regions = null;
     HRegionServer hrs = null;
+    boolean hasRegionsForBothTables = false;
+    String tableName = null;
     for (int i = 0; i < NUM_RS; i++) {
+      tableName = null;
+      hasRegionsForBothTables = false;
       boolean isCarryingMeta = false;
       hrs = rsts.get(i).getRegionServer();
       regions = ProtobufUtil.getOnlineRegions(hrs);
@@ -720,12 +725,24 @@ public class TestDistributedLogSplitting {
           isCarryingMeta = true;
           break;
         }
+        if (tableName != null && !tableName.equalsIgnoreCase(region.getTableNameAsString())) {
+          // make sure that we find a RS has online regions for both "table" and "disableTable"
+          hasRegionsForBothTables = true;
+          break;
+        } else if (tableName == null) {
+          tableName = region.getTableNameAsString();
+        }
       }
       if (isCarryingMeta) {
         continue;
       }
-      break;
+      if (hasRegionsForBothTables) {
+        break;
+      }
     }
+
+    // make sure we found a good RS
+    Assert.assertTrue(hasRegionsForBothTables);
 
     LOG.info("#regions = " + regions.size());
     Iterator<HRegionInfo> it = regions.iterator();
