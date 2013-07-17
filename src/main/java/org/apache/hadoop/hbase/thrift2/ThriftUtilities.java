@@ -315,6 +315,27 @@ public class ThriftUtilities {
     return out;
   }
 
+  /**
+   * Creates a {@link RowMutations} (HBase) from a {@link TRowMutations} (Thrift)
+   *
+   * @param in the <code>TRowMutations</code> to convert
+   *
+   * @return converted <code>RowMutations</code>
+   */
+  public static RowMutations rowMutationsFromThrift(TRowMutations in) throws IOException {
+    RowMutations out = new RowMutations(in.getRow());
+    List<TMutation> mutations = in.getMutations();
+    for (TMutation mutation : mutations) {
+      if (mutation.isSetPut()) {
+        out.add(putFromThrift(mutation.getPut()));
+      }
+      if (mutation.isSetDeleteSingle()) {
+        out.add(deleteFromThrift(mutation.getDeleteSingle()));
+      }
+    }
+    return out;
+  }
+
   public static Scan scanFromThrift(TScan in) throws IOException {
     Scan out = new Scan();
 

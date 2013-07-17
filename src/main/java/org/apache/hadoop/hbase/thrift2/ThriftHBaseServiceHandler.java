@@ -30,6 +30,7 @@ import static org.apache.hadoop.hbase.thrift2.ThriftUtilities.putsFromThrift;
 import static org.apache.hadoop.hbase.thrift2.ThriftUtilities.resultFromHBase;
 import static org.apache.hadoop.hbase.thrift2.ThriftUtilities.resultsFromHBase;
 import static org.apache.hadoop.hbase.thrift2.ThriftUtilities.scanFromThrift;
+import static org.apache.hadoop.hbase.thrift2.ThriftUtilities.rowMutationsFromThrift;
 import static org.apache.thrift.TBaseHelper.byteBufferToByteArray;
 
 import java.io.IOException;
@@ -60,6 +61,7 @@ import org.apache.hadoop.hbase.thrift2.generated.TIncrement;
 import org.apache.hadoop.hbase.thrift2.generated.TPut;
 import org.apache.hadoop.hbase.thrift2.generated.TResult;
 import org.apache.hadoop.hbase.thrift2.generated.TScan;
+import org.apache.hadoop.hbase.thrift2.generated.TRowMutations;
 import org.apache.thrift.TException;
 
 /**
@@ -346,4 +348,15 @@ public class ThriftHBaseServiceHandler implements THBaseService.Iface {
     removeScanner(scannerId);
   }
 
+  @Override
+  public void mutateRow(ByteBuffer table, TRowMutations rowMutations) throws TIOError, TException {
+    HTableInterface htable = getTable(table);
+    try {
+      htable.mutateRow(rowMutationsFromThrift(rowMutations));
+    } catch (IOException e) {
+      throw getTIOError(e);
+    } finally {
+      closeTable(htable);
+    }
+  }
 }
