@@ -35,6 +35,7 @@ import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
+import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.zookeeper.ZKAssign;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
@@ -195,8 +196,7 @@ public class TestDrainingServer {
 
     ServerManager sm = master.getServerManager();
 
-    Collection<HRegion> regionsBefore = drainingServer.
-      getCopyOfOnlineRegionsSortedBySize().values();
+    Collection<HRegion> regionsBefore = drainingServer.getOnlineRegionsLocalContext();
     LOG.info("Regions of drained server are: "+ regionsBefore );
 
     try {
@@ -222,17 +222,23 @@ public class TestDrainingServer {
         hrs.abort("Aborting");
       }
 
-      // Wait for regions to come back online again.
-      waitForAllRegionsOnline();
-
-      Collection<HRegion> regionsAfter =
-          drainingServer.getCopyOfOnlineRegionsSortedBySize().values();
+      // Wait for regions to come back online again.  waitForAllRegionsOnline can come back before
+      // we've assigned out regions on the cluster so retry if we are shy the wanted number
+      Collection<HRegion> regionsAfter = null;
+      for (int i = 0; i < 1000; i++) {
+        waitForAllRegionsOnline();
+        regionsAfter = getRegions();
+        if (regionsAfter.size() >= regionCount) break;
+        LOG.info("Expecting " + regionCount + " but only " + regionsAfter);
+        Threads.sleep(10);
+      }
       LOG.info("Regions of drained server: " + regionsAfter + ", all regions: " + getRegions());
       Assert.assertEquals("Test conditions are not met: regions were" +
         " created/deleted during the test. ",
         regionCount, TEST_UTIL.getMiniHBaseCluster().countServedRegions());
 
       // Assert the draining server still has the same regions.
+      regionsAfter = drainingServer.getOnlineRegionsLocalContext();
       StringBuilder result = new StringBuilder();
       for (HRegion r: regionsAfter){
         if (!regionsBefore.contains(r)){
@@ -259,9 +265,13 @@ public class TestDrainingServer {
 
   private Collection<HRegion> getRegions() {
     Collection<HRegion> regions = new ArrayList<HRegion>();
-    for (int i = 0; i < NB_SLAVES; i++) {
-      HRegionServer hrs = TEST_UTIL.getMiniHBaseCluster().getRegionServer(i);
-      regions.addAll( hrs.getCopyOfOnlineRegionsSortedBySize().values() );
+    List<RegionServerThread> rsthreads =
+      TEST_UTIL.getMiniHBaseCluster().getLiveRegionServerThreads();
+    for (RegionServerThread t: rsthreads) {
+      HRegionServer rs = t.getRegionServer();
+      Collection<HRegion> lr = rs.getOnlineRegionsLocalContext();
+      LOG.info("Found " + lr + " on " + rs);
+      regions.addAll(lr);
     }
     return regions;
   }
