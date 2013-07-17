@@ -73,11 +73,13 @@ public class TestRemoteAdmin {
 
   @Test
   public void testCreateAnDeleteTable() throws Exception {
-    assertFalse(remoteAdmin.isTableAvailable(TABLE_1));
-    remoteAdmin.createTable(DESC_1);
-    assertTrue(remoteAdmin.isTableAvailable(TABLE_1));
-    remoteAdmin.deleteTable(TABLE_1);
-    assertFalse(remoteAdmin.isTableAvailable(TABLE_1));
+    final String tableName = "testCreateAnDeleteTable";
+    HTableDescriptor htd = new HTableDescriptor(tableName);
+    assertFalse(remoteAdmin.isTableAvailable(tableName));
+    remoteAdmin.createTable(htd);
+    assertTrue(remoteAdmin.isTableAvailable(tableName));
+    remoteAdmin.deleteTable(tableName);
+    assertFalse(remoteAdmin.isTableAvailable(tableName));
   }
 
   @Test
@@ -135,5 +137,4 @@ public class TestRemoteAdmin {
     assertTrue("Table " + TABLE_2 + " was not found by get request to '/'",
         found);
   }
-
 }
