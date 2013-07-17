@@ -1778,12 +1778,7 @@ public class Store extends SchemaConfigured implements HeapSize,
    */
   public StoreScanner getScanner(Scan scan,
       final NavigableSet<byte []> targetCols) throws IOException {
-    lock.readLock().lock();
-    try {
-      return new StoreScanner(this, scan, targetCols, getAggregator());
-    } finally {
-      lock.readLock().unlock();
-    }
+    return new StoreScanner(this, scan, targetCols, getAggregator());
   }
 
   @Override
