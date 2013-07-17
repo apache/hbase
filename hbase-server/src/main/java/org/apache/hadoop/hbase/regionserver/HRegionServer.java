@@ -2072,10 +2072,11 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
   }
 
   /**
-   * @return A new Map of online regions sorted by region size with the first
-   *         entry being the biggest.
+   * @return A new Map of online regions sorted by region size with the first entry being the
+   * biggest.  If two regions are the same size, then the last one found wins; i.e. this method
+   * may NOT return all regions.
    */
-  public SortedMap<Long, HRegion> getCopyOfOnlineRegionsSortedBySize() {
+  SortedMap<Long, HRegion> getCopyOfOnlineRegionsSortedBySize() {
     // we'll sort the regions in reverse
     SortedMap<Long, HRegion> sortedRegions = new TreeMap<Long, HRegion>(
         new Comparator<Long>() {
@@ -3360,7 +3361,6 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
       throw new ServiceException(ie);
     }
   }
-
 
   // Region open/close direct RPCs
 
