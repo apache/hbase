@@ -98,7 +98,7 @@ implements InputFormat<ImmutableBytesWritable, Result> {
     TableRecordReader trr = this.tableRecordReader;
     // if no table record reader was provided use default
     if (trr == null) {
-      trr = new TableRecordReader();
+      trr = new TableRecordReader(job);
     }
     trr.setStartRow(tSplit.getStartRow());
     trr.setEndRow(tSplit.getEndRow());

@@ -26,6 +26,7 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
+import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.RecordReader;
 
 
@@ -35,7 +36,18 @@ import org.apache.hadoop.mapred.RecordReader;
 public class TableRecordReader
 implements RecordReader<ImmutableBytesWritable, Result> {
 
-  private TableRecordReaderImpl recordReaderImpl = new TableRecordReaderImpl();
+  private TableRecordReaderImpl recordReaderImpl = null;
+
+  TableRecordReader(final JobConf conf) {
+    String splitAlgo = conf.get("hbase.mapreduce.tableinputformat.split.algo");
+    boolean showProgress = conf.getBoolean("hbase.mapreduce.show.mapper.progress", false);
+    int stringLength = conf.getInt("hbase.mapreduce.hex.row.length", 8);
+    if (splitAlgo != null && splitAlgo.equals("HexStringSplit") && showProgress) {
+      recordReaderImpl = new HexStringTableRecordReaderImpl(stringLength);
+    } else {
+      recordReaderImpl = new TableRecordReaderImpl();
+    }
+  }
 
   /**
    * Restart from survivable exceptions by creating a new scanner.
@@ -53,7 +65,7 @@ implements RecordReader<ImmutableBytesWritable, Result> {
    * @throws IOException
    */
   public void init() throws IOException {
-    this.recordReaderImpl.restart(this.recordReaderImpl.getStartRow());
+    this.recordReaderImpl.init();
   }
 
   /**
@@ -123,7 +135,7 @@ implements RecordReader<ImmutableBytesWritable, Result> {
 
   public float getProgress() {
     // Depends on the total number of tuples and getPos
-    return this.recordReaderImpl.getPos();
+    return this.recordReaderImpl.getProgress();
   }
 
   /**

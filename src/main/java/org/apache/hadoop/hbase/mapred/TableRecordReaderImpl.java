@@ -43,9 +43,9 @@ public class TableRecordReaderImpl {
   static final Log LOG = LogFactory.getLog(TableRecordReaderImpl.class);
 
   private Scan scan = null;
-  private byte [] startRow;
-  private byte [] endRow;
-  private byte [] lastRow = null;
+  protected byte [] startRow;
+  protected byte [] endRow;
+  protected byte [] lastRow = null;
   private Filter trrRowFilter;
   private ResultScanner scanner;
   private HTable htable;
@@ -127,6 +127,10 @@ public class TableRecordReaderImpl {
    */
   public void setEndRow(final byte [] endRow) {
     this.endRow = endRow;
+  }
+
+  public byte[] getEndRow() {
+    return endRow;
   }
 
   /**
