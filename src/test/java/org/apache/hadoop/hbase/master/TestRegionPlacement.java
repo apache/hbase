@@ -19,21 +19,7 @@
  */
 package org.apache.hadoop.hbase.master;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-
-import java.io.IOException;
-import java.net.InetSocketAddress;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.List;
-import java.util.Map;
-import java.util.Random;
-import java.util.concurrent.atomic.AtomicInteger;
-
+import com.google.gson.Gson;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -59,6 +45,21 @@ import org.apache.hadoop.hbase.util.Writables;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
+
+import java.io.IOException;
+import java.net.InetSocketAddress;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.List;
+import java.util.Map;
+import java.util.Random;
+import java.util.concurrent.atomic.AtomicInteger;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 
 public class TestRegionPlacement {
   final static Log LOG = LogFactory.getLog(TestRegionPlacement.class);
@@ -552,4 +553,28 @@ public class TestRegionPlacement {
        throw new RuntimeException();
      }
    }
+
+  /**
+   * Download current assignment plan, serialize it to json and deserialize the json.
+   * The two plans should be identical.
+   */
+  @Test
+  public void testJsonToAP() {
+    try {
+      createTable("testJsonAssignmentPlan", 3);
+
+      AssignmentPlan currentPlan = rp.getExistingAssignmentPlan();
+      RegionPlacement.printAssignmentPlan(currentPlan);
+      AssignmentPlanData data = AssignmentPlanData.constructFromAssignmentPlan(currentPlan);
+
+      String jsonStr = new Gson().toJson(data);
+      LOG.info("Json version of current assignment plan: " + jsonStr);
+      AssignmentPlan loadedPlan = rp.loadPlansFromJson(jsonStr);
+      RegionPlacement.printAssignmentPlan(loadedPlan);
+      assertEquals("Loaded plan should be the same with current plan", currentPlan, loadedPlan);
+    } catch (Exception e) {
+      e.printStackTrace();
+      throw new RuntimeException();
+    }
+  }
 }

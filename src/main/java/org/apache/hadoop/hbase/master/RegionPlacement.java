@@ -1,24 +1,33 @@
+/**
+ * Copyright 2013 The Apache Software Foundation
+ *
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package org.apache.hadoop.hbase.master;
 
-import java.io.IOException;
-import java.net.InetSocketAddress;
-import java.text.DecimalFormat;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.Random;
-import java.util.Scanner;
-import java.util.Set;
-import java.util.TreeMap;
-
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.JsonSyntaxException;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.GnuParser;
 import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
+import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -40,6 +49,21 @@ import org.apache.hadoop.hbase.util.MunkresAssignment;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
+
+import java.io.File;
+import java.io.IOException;
+import java.net.InetSocketAddress;
+import java.text.DecimalFormat;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Random;
+import java.util.Scanner;
+import java.util.Set;
+import java.util.TreeMap;
 
 public class RegionPlacement implements RegionPlacementPolicy{
   private static final Log LOG = LogFactory.getLog(RegionPlacement.class
@@ -1275,6 +1299,11 @@ public class RegionPlacement implements RegionPlacementPolicy{
     opt.addOption("r", true, "The region name that needs to be updated");
     opt.addOption("f", true, "The new favored nodes");
 
+    opt.addOption("upload", true,
+        "upload the json file which contains new placement plan");
+    opt.addOption("download", true,
+        "download existing placement plan into a json file");
+
     opt.addOption("tables", true,
         "The list of table names splitted by ',' ;" +
         "For example: -tables: t1,t2,...,tn");
@@ -1433,6 +1462,41 @@ public class RegionPlacement implements RegionPlacementPolicy{
         String newRack = s.nextLine().trim();
         s.close();
         rp.expandRegionsToNewRack(newRack, snapshot);
+      } else if (cmd.hasOption("upload")) {
+        String fileName = cmd.getOptionValue("upload");
+        try {
+          String jsonStr = FileUtils.readFileToString(new File(fileName));
+          AssignmentPlan newPlan = rp.loadPlansFromJson(jsonStr);
+          Map<String, Map<String, Float>> locality = FSUtils
+              .getRegionDegreeLocalityMappingFromFS(conf);
+          Map<String, Integer> movesPerTable = rp.getRegionsMovement(newPlan);
+          rp.checkDifferencesWithOldPlan(movesPerTable, locality, newPlan);
+          System.out.println("Do you want to update the assignment plan? [y/n]");
+          Scanner s = new Scanner(System.in);
+          String input = s.nextLine().trim();
+          if (input.equals("y")) {
+            System.out.println("Updating assignment plan...");
+            rp.updateAssignmentPlan(newPlan);
+          }
+          s.close();
+        } catch (IOException e) {
+          LOG.error("Unable to load plan file: " + e);
+        } catch (JsonSyntaxException je) {
+          LOG.error("Unable to parse json file: " + je);
+        }
+      } else if (cmd.hasOption("download")) {
+        String path = cmd.getOptionValue("download");
+        try {
+          RegionAssignmentSnapshot snapshot = rp.getRegionAssignmentSnapshot();
+          AssignmentPlan plan = snapshot.getExistingAssignmentPlan();
+          AssignmentPlanData data = AssignmentPlanData.constructFromAssignmentPlan(plan);
+          Gson prettyGson = new GsonBuilder().setPrettyPrinting().create();
+          String jsonOutput = prettyGson.toJson(data);
+          FileUtils.write(new File(path), jsonOutput);
+        } catch (Exception e) {
+          LOG.error("Unable to download current assignment plan" + e);
+          e.printStackTrace();
+        }
       } else {
         printHelp(opt);
       }
@@ -1760,5 +1824,38 @@ public class RegionPlacement implements RegionPlacementPolicy{
       }
       printDispersionScores(table, snapshot, regions.size(), null, false);
     }
+  }
+
+  /**
+   * Convert json string to assignment plan
+   * @param jsonStr
+   * @return assignment plan converted from json string
+   * @throws JsonSyntaxException
+   * @throws IOException
+   */
+  public AssignmentPlan loadPlansFromJson(String jsonStr)
+      throws JsonSyntaxException, IOException {
+    AssignmentPlanData data = new Gson().fromJson(jsonStr, AssignmentPlanData.class);
+    AssignmentPlan newPlan = new AssignmentPlan();
+    RegionAssignmentSnapshot snapshot = this.getRegionAssignmentSnapshot();
+    Map<String, HRegionInfo> map = snapshot.getRegionNameToRegionInfoMap();
+    for (AssignmentPlanData.Assignment plan : data.getAssignments()) {
+      HRegionInfo regionInfo = map.get(plan.getRegionname());
+      List<HServerAddress> favoredNodes = null;
+      if (regionInfo == null) {
+        LOG.error("Cannot find the region " + plan.getRegionname());
+      } else {
+        List<String> addresses = plan.getFavored();
+        String nodesStr = StringUtils.join(addresses, ",");
+        try {
+          favoredNodes = RegionPlacement.getFavoredNodeList(nodesStr);
+        } catch (IllegalArgumentException e) {
+          LOG.error("Cannot parse the invalid favored nodes because " + e);
+        }
+      }
+      newPlan.updateAssignmentPlan(regionInfo, favoredNodes);
+    }
+
+    return newPlan;
   }
 }
