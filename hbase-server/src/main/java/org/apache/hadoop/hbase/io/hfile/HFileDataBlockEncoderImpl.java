@@ -41,7 +41,7 @@ import com.google.common.base.Preconditions;
 public class HFileDataBlockEncoderImpl implements HFileDataBlockEncoder {
   private final DataBlockEncoding onDisk;
   private final DataBlockEncoding inCache;
-  private final HFileBlockEncodingContext inCacheEncodeCtx;
+  private final byte[] dummyHeader;
 
   public HFileDataBlockEncoderImpl(DataBlockEncoding encoding) {
     this(encoding, encoding);
@@ -75,16 +75,7 @@ public class HFileDataBlockEncoderImpl implements HFileDataBlockEncoder {
         onDisk : DataBlockEncoding.NONE;
     this.inCache = inCache != null ?
         inCache : DataBlockEncoding.NONE;
-    if (inCache != DataBlockEncoding.NONE) {
-      inCacheEncodeCtx =
-          this.inCache.getEncoder().newDataBlockEncodingContext(
-              Algorithm.NONE, this.inCache, dummyHeader);
-    } else {
-      // create a default encoding context
-      inCacheEncodeCtx =
-          new HFileBlockDefaultEncodingContext(Algorithm.NONE,
-              this.inCache, dummyHeader);
-    }
+    this.dummyHeader = dummyHeader;
 
     Preconditions.checkArgument(onDisk == DataBlockEncoding.NONE ||
         onDisk == inCache, "on-disk encoding (" + onDisk + ") must be " +
@@ -166,7 +157,7 @@ public class HFileDataBlockEncoderImpl implements HFileDataBlockEncoder {
       }
       // Encode the unencoded block with the in-cache encoding.
       return encodeDataBlock(block, inCache, block.doesIncludeMemstoreTS(),
-          inCacheEncodeCtx);
+          createInCacheEncodingContext());
     }
 
     if (block.getBlockType() == BlockType.ENCODED_DATA) {
@@ -254,6 +245,22 @@ public class HFileDataBlockEncoderImpl implements HFileDataBlockEncoder {
         block.getBytesPerChecksum(), block.getChecksumType(),
         block.getOnDiskDataSizeWithHeader());
     return encodedBlock;
+  }
+
+  /**
+   * Returns a new encoding context given the inCache encoding scheme provided in the constructor.
+   * This used to be kept around but HFileBlockDefaultEncodingContext isn't thread-safe.
+   * See HBASE-8732
+   * @return a new in cache encoding context
+   */
+  private HFileBlockEncodingContext createInCacheEncodingContext() {
+    return (inCache != DataBlockEncoding.NONE) ?
+        this.inCache.getEncoder().newDataBlockEncodingContext(
+            Algorithm.NONE, this.inCache, dummyHeader)
+        :
+        // create a default encoding context
+        new HFileBlockDefaultEncodingContext(Algorithm.NONE,
+            this.inCache, dummyHeader);
   }
 
   @Override

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,26 +15,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.replication;
 
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.LargeTests;
-import org.junit.BeforeClass;
+import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 /**
- * Run the same test as TestReplication but with HLog compression enabled
+ * Runs the TestReplicationKillRS test and selects the RS to kill in the slave cluster
+ * Do not add other tests in this class.
  */
 @Category(LargeTests.class)
-public class TestReplicationQueueFailoverCompressed extends TestReplicationQueueFailover {
+public class TestReplicationKillSlaveRS extends TestReplicationKillRS {
 
-  /**
-   * @throws java.lang.Exception
-   */
-  @BeforeClass
-  public static void setUpBeforeClass() throws Exception {
-    conf1.setBoolean(HConstants.ENABLE_WAL_COMPRESSION, true);
-    TestReplicationBase.setUpBeforeClass();
+  @Test(timeout=300000)
+  public void killOneSlaveRS() throws Exception {
+    loadTableAndKillRS(utility2);
   }
 }

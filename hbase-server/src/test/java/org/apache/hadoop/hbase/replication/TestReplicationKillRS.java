@@ -33,36 +33,31 @@ import org.junit.experimental.categories.Category;
 import static org.junit.Assert.fail;
 
 @Category(LargeTests.class)
-public class TestReplicationQueueFailover extends TestReplicationBase {
+public class TestReplicationKillRS extends TestReplicationBase {
 
-  private static final Log LOG = LogFactory.getLog(TestReplicationQueueFailover.class);
+  private static final Log LOG = LogFactory.getLog(TestReplicationKillRS.class);
 
   /**
-   * Load up multiple tables over 2 region servers and kill a source during
+   * Load up 1 tables over 2 region servers and kill a source during
    * the upload. The failover happens internally.
    *
    * WARNING this test sometimes fails because of HBASE-3515
    *
    * @throws Exception
    */
-  @Test(timeout=300000)
-  public void queueFailover() throws Exception {
+  public void loadTableAndKillRS(HBaseTestingUtility util) throws Exception {
     // killing the RS with .META. can result into failed puts until we solve
     // IO fencing
     int rsToKill1 =
-        utility1.getHBaseCluster().getServerWithMeta() == 0 ? 1 : 0;
-    int rsToKill2 =
-        utility2.getHBaseCluster().getServerWithMeta() == 0 ? 1 : 0;
+        util.getHBaseCluster().getServerWithMeta() == 0 ? 1 : 0;
 
     // Takes about 20 secs to run the full loading, kill around the middle
-    Thread killer1 = killARegionServer(utility1, 7500, rsToKill1);
-    Thread killer2 = killARegionServer(utility2, 10000, rsToKill2);
+    Thread killer = killARegionServer(util, 5000, rsToKill1);
 
     LOG.info("Start loading table");
     int initialCount = utility1.loadTable(htable1, famName);
     LOG.info("Done loading table");
-    killer1.join(5000);
-    killer2.join(5000);
+    killer.join(5000);
     LOG.info("Done waiting for threads");
 
     Result[] res;

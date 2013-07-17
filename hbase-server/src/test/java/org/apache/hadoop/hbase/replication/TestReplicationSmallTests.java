@@ -240,6 +240,7 @@ public class TestReplicationSmallTests extends TestReplicationBase {
     assertEquals(NB_ROWS_IN_BATCH, res1.length);
 
     for (int i = 0; i < NB_RETRIES; i++) {
+      scan = new Scan();
       if (i==NB_RETRIES-1) {
         fail("Waited too much time for normal batch replication");
       }
@@ -378,10 +379,10 @@ public class TestReplicationSmallTests extends TestReplicationBase {
 
     assertEquals(NB_ROWS_IN_BIG_BATCH, res.length);
 
-    scan = new Scan();
 
     long start = System.currentTimeMillis();
     for (int i = 0; i < NB_RETRIES; i++) {
+      scan = new Scan();
 
       scanner = htable2.getScanner(scan);
       res = scanner.next(NB_ROWS_IN_BIG_BATCH);
