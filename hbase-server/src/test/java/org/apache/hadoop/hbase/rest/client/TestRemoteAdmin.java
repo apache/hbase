@@ -38,6 +38,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.junit.Ignore;
 import org.junit.experimental.categories.Category;
 
 @Category(MediumTests.class)
@@ -71,7 +72,7 @@ public class TestRemoteAdmin {
     TEST_UTIL.shutdownMiniCluster();
   }
 
-  @Test
+  @Ignore ("See hbase-8965; REENABLE") @Test
   public void testCreateAnDeleteTable() throws Exception {
     final String tableName = "testCreateAnDeleteTable";
     HTableDescriptor htd = new HTableDescriptor(tableName);
@@ -108,15 +109,12 @@ public class TestRemoteAdmin {
 
   @Test
   public void testClusterStatus() throws Exception {
-
-    ClusterStatus status = TEST_UTIL.getHBaseClusterInterface()
-        .getClusterStatus();
+    ClusterStatus status = TEST_UTIL.getHBaseClusterInterface().getClusterStatus();
     StorageClusterStatusModel returnedStatus = remoteAdmin.getClusterStatus();
+    assertEquals("Region count from cluster status and returned status did not match up",
+      status.getRegionsCount(), returnedStatus.getRegions());
     assertEquals(
-        "Region count from cluster status and returned status did not match up. ",
-        status.getRegionsCount(), returnedStatus.getRegions());
-    assertEquals(
-        "Dead server count from cluster status and returned status did not match up. ",
+        "Dead server count from cluster status and returned status did not match up",
         status.getDeadServers(), returnedStatus.getDeadNodes().size());
   }
 
