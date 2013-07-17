@@ -890,8 +890,9 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
       this.healthCheckChore.interrupt();
     }
 
+    // Stop the snapshot handler, forcefully killing all running tasks
     try {
-      if (snapshotManager != null) snapshotManager.stop(this.abortRequested);
+      if (snapshotManager != null) snapshotManager.stop(this.abortRequested || this.killed);
     } catch (IOException e) {
       LOG.warn("Failed to close snapshot handler cleanly", e);
     }
@@ -911,13 +912,6 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
     // Interrupt catalog tracker here in case any regions being opened out in
     // handlers are stuck waiting on meta.
     if (this.catalogTracker != null) this.catalogTracker.stop();
-
-    // stop the snapshot handler, forcefully killing all running tasks
-    try {
-      if (snapshotManager != null) snapshotManager.stop(this.abortRequested || this.killed);
-    } catch (IOException e) {
-      LOG.warn("Failed to close snapshot handler cleanly", e);
-    }
 
     // Closing the compactSplit thread before closing meta regions
     if (!this.killed && containsMetaTableRegions()) {
