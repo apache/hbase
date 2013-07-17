@@ -233,7 +233,7 @@ public class TestParallelPut extends HBaseTestCase {
         put.add(fam1, qual1, value);
         in[0] = put;
         try {
-          OperationStatus[] ret = region.put(in);
+          OperationStatus[] ret = region.batchMutate(in);
           assertEquals(1, ret.length);
           assertEquals(OperationStatusCode.SUCCESS, ret[0].getOperationStatusCode());
           assertGet(rowkey, fam1, qual1, value);

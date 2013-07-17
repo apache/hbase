@@ -253,12 +253,12 @@ public abstract class BaseRegionObserver implements RegionObserver {
   
   @Override
   public void preBatchMutate(final ObserverContext<RegionCoprocessorEnvironment> c,
-      final MiniBatchOperationInProgress<Pair<Mutation, Integer>> miniBatchOp) throws IOException {
+      final MiniBatchOperationInProgress<Mutation> miniBatchOp) throws IOException {
   }
 
   @Override
   public void postBatchMutate(final ObserverContext<RegionCoprocessorEnvironment> c,
-      final MiniBatchOperationInProgress<Pair<Mutation, Integer>> miniBatchOp) throws IOException {
+      final MiniBatchOperationInProgress<Mutation> miniBatchOp) throws IOException {
   }
 
   @Override

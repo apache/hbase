@@ -554,7 +554,7 @@ public interface RegionObserver extends Coprocessor {
    * @throws IOException if an error occurred on the coprocessor
    */
   void preBatchMutate(final ObserverContext<RegionCoprocessorEnvironment> c,
-      final MiniBatchOperationInProgress<Pair<Mutation, Integer>> miniBatchOp) throws IOException;
+      final MiniBatchOperationInProgress<Mutation> miniBatchOp) throws IOException;
 
   /**
    * This will be called after applying a batch of Mutations on a region. The Mutations are added to
@@ -564,7 +564,7 @@ public interface RegionObserver extends Coprocessor {
    * @throws IOException if an error occurred on the coprocessor
    */
   void postBatchMutate(final ObserverContext<RegionCoprocessorEnvironment> c,
-      final MiniBatchOperationInProgress<Pair<Mutation, Integer>> miniBatchOp) throws IOException;
+      final MiniBatchOperationInProgress<Mutation> miniBatchOp) throws IOException;
 
   /**
    * Called before checkAndPut

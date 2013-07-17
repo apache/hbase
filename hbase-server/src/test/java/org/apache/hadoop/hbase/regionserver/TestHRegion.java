@@ -72,7 +72,6 @@ import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Increment;
-import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
@@ -96,6 +95,7 @@ import org.apache.hadoop.hbase.monitoring.TaskMonitor;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos.CompactionDescriptor;
 import org.apache.hadoop.hbase.regionserver.HRegion.RegionScannerImpl;
+import org.apache.hadoop.hbase.regionserver.HRegion.RowLock;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.regionserver.wal.HLogFactory;
 import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
@@ -107,7 +107,6 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManagerTestHelper;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.IncrementingEnvironmentEdge;
-import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.PairOfSameType;
 import org.apache.hadoop.hbase.util.Threads;
 import org.junit.Assert;
@@ -764,7 +763,6 @@ public class TestHRegion extends HBaseTestCase {
     }
   }
 
-  @SuppressWarnings("unchecked")
   public void testBatchPut() throws Exception {
     byte[] b = Bytes.toBytes(getName());
     byte[] cf = Bytes.toBytes(COLUMN_FAMILY);
@@ -783,7 +781,7 @@ public class TestHRegion extends HBaseTestCase {
         puts[i].add(cf, qual, val);
       }
 
-      OperationStatus[] codes = this.region.put(puts);
+      OperationStatus[] codes = this.region.batchMutate(puts);
       assertEquals(10, codes.length);
       for (int i = 0; i < 10; i++) {
         assertEquals(OperationStatusCode.SUCCESS, codes[i]
@@ -794,7 +792,7 @@ public class TestHRegion extends HBaseTestCase {
 
       LOG.info("Next a batch put with one invalid family");
       puts[5].add(Bytes.toBytes("BAD_CF"), qual, val);
-      codes = this.region.put(puts);
+      codes = this.region.batchMutate(puts);
       assertEquals(10, codes.length);
       for (int i = 0; i < 10; i++) {
         assertEquals((i == 5) ? OperationStatusCode.BAD_FAMILY :
@@ -804,7 +802,7 @@ public class TestHRegion extends HBaseTestCase {
       metricsAssertHelper.assertCounter("syncTimeNumOps", syncs + 2, source);
 
       LOG.info("Next a batch put that has to break into two batches to avoid a lock");
-      Integer lockedRow = region.obtainRowLock(Bytes.toBytes("row_2"));
+      RowLock rowLock = region.getRowLock(Bytes.toBytes("row_2"));
 
       MultithreadedTestUtil.TestContext ctx =
         new MultithreadedTestUtil.TestContext(conf);
@@ -813,7 +811,7 @@ public class TestHRegion extends HBaseTestCase {
       TestThread putter = new TestThread(ctx) {
         @Override
         public void doWork() throws IOException {
-          retFromThread.set(region.put(puts));
+          retFromThread.set(region.batchMutate(puts));
         }
       };
       LOG.info("...starting put thread while holding lock");
@@ -829,7 +827,7 @@ public class TestHRegion extends HBaseTestCase {
         }
       }
       LOG.info("...releasing row lock, which should let put thread continue");
-      region.releaseRowLock(lockedRow);
+      rowLock.release();
       LOG.info("...joining on thread");
       ctx.stop();
       LOG.info("...checking that next batch was synced");
@@ -840,29 +838,6 @@ public class TestHRegion extends HBaseTestCase {
           OperationStatusCode.SUCCESS, codes[i].getOperationStatusCode());
       }
 
-      LOG.info("Nexta, a batch put which uses an already-held lock");
-      lockedRow = region.obtainRowLock(Bytes.toBytes("row_2"));
-      LOG.info("...obtained row lock");
-      List<Pair<Mutation, Integer>> putsAndLocks = Lists.newArrayList();
-      for (int i = 0; i < 10; i++) {
-        Pair<Mutation, Integer> pair = new Pair<Mutation, Integer>(puts[i], null);
-        if (i == 2) pair.setSecond(lockedRow);
-        putsAndLocks.add(pair);
-      }
-
-      codes = region.batchMutate(putsAndLocks.toArray(new Pair[0]));
-      LOG.info("...performed put");
-      for (int i = 0; i < 10; i++) {
-        assertEquals((i == 5) ? OperationStatusCode.BAD_FAMILY :
-          OperationStatusCode.SUCCESS, codes[i].getOperationStatusCode());
-      }
-      // Make sure we didn't do an extra batch
-      metricsAssertHelper.assertCounter("syncTimeNumOps", syncs + 5, source);
-
-      // Make sure we still hold lock
-      assertTrue(region.isRowLocked(lockedRow));
-      LOG.info("...releasing lock");
-      region.releaseRowLock(lockedRow);
     } finally {
       HRegion.closeHRegion(this.region);
        this.region = null;
@@ -891,7 +866,7 @@ public class TestHRegion extends HBaseTestCase {
         puts[i].add(cf, qual, val);
       }
 
-      OperationStatus[] codes = this.region.put(puts);
+      OperationStatus[] codes = this.region.batchMutate(puts);
       assertEquals(10, codes.length);
       for (int i = 0; i < 10; i++) {
         assertEquals(OperationStatusCode.SANITY_CHECK_FAILURE, codes[i]

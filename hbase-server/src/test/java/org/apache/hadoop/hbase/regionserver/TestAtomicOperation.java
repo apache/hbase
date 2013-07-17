@@ -59,10 +59,7 @@ import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManagerTestHelper;
-import org.apache.hadoop.hbase.util.Pair;
 import org.junit.experimental.categories.Category;
-
-import com.google.common.collect.Lists;
 
 
 /**
@@ -528,16 +525,12 @@ public class TestAtomicOperation extends HBaseTestCase {
     final MockHRegion region = (MockHRegion) TestHRegion.initHRegion(
         Bytes.toBytes(tableName), tableName, conf, Bytes.toBytes(family));
 
-    List<Pair<Mutation, Integer>> putsAndLocks = Lists.newArrayList();
     Put[] puts = new Put[1];
     Put put = new Put(Bytes.toBytes("r1"));
     put.add(Bytes.toBytes(family), Bytes.toBytes("q1"), Bytes.toBytes("10"));
     puts[0] = put;
-    Pair<Mutation, Integer> pair = new Pair<Mutation, Integer>(puts[0], null);
-
-    putsAndLocks.add(pair);
-
-    region.batchMutate(putsAndLocks.toArray(new Pair[0]));
+    
+    region.batchMutate(puts);
     MultithreadedTestUtil.TestContext ctx =
       new MultithreadedTestUtil.TestContext(conf);
     ctx.addThread(new PutThread(ctx, region));
@@ -565,15 +558,12 @@ public class TestAtomicOperation extends HBaseTestCase {
     }
 
     public void doWork() throws Exception {
-      List<Pair<Mutation, Integer>> putsAndLocks = Lists.newArrayList();
       Put[] puts = new Put[1];
       Put put = new Put(Bytes.toBytes("r1"));
       put.add(Bytes.toBytes(family), Bytes.toBytes("q1"), Bytes.toBytes("50"));
       puts[0] = put;
-      Pair<Mutation, Integer> pair = new Pair<Mutation, Integer>(puts[0], null);
-      putsAndLocks.add(pair);
       testStep = TestStep.PUT_STARTED;
-      region.batchMutate(putsAndLocks.toArray(new Pair[0]));
+      region.batchMutate(puts);
     }
   }
 
@@ -607,43 +597,50 @@ public class TestAtomicOperation extends HBaseTestCase {
     }
 
     @Override
-    public void releaseRowLock(Integer lockId) {
-      if (testStep == TestStep.INIT) {
-        super.releaseRowLock(lockId);
-        return;
-      }
-
-      if (testStep == TestStep.PUT_STARTED) {
-        try {
-          testStep = TestStep.PUT_COMPLETED;
-          super.releaseRowLock(lockId);
-          // put has been written to the memstore and the row lock has been released, but the
-          // MVCC has not been advanced.  Prior to fixing HBASE-7051, the following order of
-          // operations would cause the non-atomicity to show up:
-          // 1) Put releases row lock (where we are now)
-          // 2) CheckAndPut grabs row lock and reads the value prior to the put (10)
-          //    because the MVCC has not advanced
-          // 3) Put advances MVCC
-          // So, in order to recreate this order, we wait for the checkAndPut to grab the rowLock
-          // (see below), and then wait some more to give the checkAndPut time to read the old
-          // value.
-          latch.await();
-          Thread.sleep(1000);
-        } catch (InterruptedException e) {
-          Thread.currentThread().interrupt();
-        }
-      }
-      else if (testStep == TestStep.CHECKANDPUT_STARTED) {
-        super.releaseRowLock(lockId);
-      }
-    }
-
-    @Override
-    public Integer getLock(Integer lockid, byte[] row, boolean waitForLock) throws IOException {
+    public RowLock getRowLock(final byte[] row, boolean waitForLock) throws IOException {
       if (testStep == TestStep.CHECKANDPUT_STARTED) {
         latch.countDown();
       }
-      return super.getLock(lockid, row, waitForLock);
+      return new WrappedRowLock(super.getRowLock(row, waitForLock));
+    }
+    
+    public class WrappedRowLock extends RowLock {
+
+      private WrappedRowLock(RowLock rowLock) {
+        super(rowLock.context);
+      }
+
+      @Override
+      public void release() {
+        if (testStep == TestStep.INIT) {
+          super.release();
+          return;
+        }
+
+        if (testStep == TestStep.PUT_STARTED) {
+          try {
+            testStep = TestStep.PUT_COMPLETED;
+            super.release();
+            // put has been written to the memstore and the row lock has been released, but the
+            // MVCC has not been advanced.  Prior to fixing HBASE-7051, the following order of
+            // operations would cause the non-atomicity to show up:
+            // 1) Put releases row lock (where we are now)
+            // 2) CheckAndPut grabs row lock and reads the value prior to the put (10)
+            //    because the MVCC has not advanced
+            // 3) Put advances MVCC
+            // So, in order to recreate this order, we wait for the checkAndPut to grab the rowLock
+            // (see below), and then wait some more to give the checkAndPut time to read the old
+            // value.
+            latch.await();
+            Thread.sleep(1000);
+          } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+          }
+        }
+        else if (testStep == TestStep.CHECKANDPUT_STARTED) {
+          super.release();
+        }
+      }
     }
   }
 }

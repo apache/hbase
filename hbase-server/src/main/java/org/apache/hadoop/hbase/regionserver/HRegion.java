@@ -34,7 +34,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.NavigableMap;
 import java.util.NavigableSet;
-import java.util.Random;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.UUID;
@@ -138,6 +137,7 @@ import org.apache.hadoop.io.MultipleIOException;
 import org.apache.hadoop.util.StringUtils;
 import org.cliffc.high_scale_lib.Counter;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -223,12 +223,13 @@ public class HRegion implements HeapSize { // , Writable{
   // Members
   //////////////////////////////////////////////////////////////////////////////
 
-  private final ConcurrentHashMap<HashedBytes, CountDownLatch> lockedRows =
-    new ConcurrentHashMap<HashedBytes, CountDownLatch>();
-  private final ConcurrentHashMap<Integer, HashedBytes> lockIds =
-    new ConcurrentHashMap<Integer, HashedBytes>();
-  private final AtomicInteger lockIdGenerator = new AtomicInteger(1);
-  static private Random rand = new Random();
+  // map from a locked row to the context for that lock including:
+  // - CountDownLatch for threads waiting on that row
+  // - the thread that owns the lock (allow reentrancy)
+  // - reference count of (reentrant) locks held by the thread
+  // - the row itself
+  private final ConcurrentHashMap<HashedBytes, RowLockContext> lockedRows =
+      new ConcurrentHashMap<HashedBytes, RowLockContext>();
 
   protected final Map<byte[], Store> stores = new ConcurrentSkipListMap<byte[], Store>(
       Bytes.BYTES_RAWCOMPARATOR);
@@ -1764,7 +1765,7 @@ public class HRegion implements HeapSize { // , Writable{
     try {
       delete.getRow();
       // All edits for the given row (across all column families) must happen atomically.
-      doBatchMutate(delete, null);
+      doBatchMutate(delete);
     } finally {
       closeRegionOperation();
     }
@@ -1787,7 +1788,7 @@ public class HRegion implements HeapSize { // , Writable{
     delete.setFamilyMap(familyMap);
     delete.setClusterId(clusterId);
     delete.setDurability(durability);
-    doBatchMutate(delete, null);
+    doBatchMutate(delete);
   }
 
   /**
@@ -1862,7 +1863,7 @@ public class HRegion implements HeapSize { // , Writable{
     this.writeRequestsCount.increment();
     try {
       // All edits for the given row (across all column families) must happen atomically.
-      doBatchMutate(put, null);
+      doBatchMutate(put);
     } finally {
       closeRegionOperation();
     }
@@ -1892,46 +1893,29 @@ public class HRegion implements HeapSize { // , Writable{
   }
 
   /**
-   * Perform a batch put with no pre-specified locks
-   * @see HRegion#batchMutate(Pair[])
+   * Perform a batch of mutations.
+   * It supports only Put and Delete mutations and will ignore other types passed.
+   * @param mutations the list of mutations
+   * @return an array of OperationStatus which internally contains the
+   *         OperationStatusCode and the exceptionMessage if any.
+   * @throws IOException
    */
-  public OperationStatus[] put(Put[] puts) throws IOException {
-    @SuppressWarnings("unchecked")
-    Pair<Mutation, Integer> putsAndLocks[] = new Pair[puts.length];
-
-    for (int i = 0; i < puts.length; i++) {
-      putsAndLocks[i] = new Pair<Mutation, Integer>(puts[i], null);
-    }
-    return batchMutate(putsAndLocks);
+  public OperationStatus[] batchMutate(Mutation[] mutations) throws IOException {
+    return batchMutate(mutations, false);
   }
 
   /**
    * Perform a batch of mutations.
    * It supports only Put and Delete mutations and will ignore other types passed.
-   * @param mutationsAndLocks
-   *          the list of mutations paired with their requested lock IDs.
+   * @param mutations the list of mutations
    * @return an array of OperationStatus which internally contains the
    *         OperationStatusCode and the exceptionMessage if any.
    * @throws IOException
    */
-  public OperationStatus[] batchMutate(
-      Pair<Mutation, Integer>[] mutationsAndLocks) throws IOException {
-    return batchMutate(mutationsAndLocks, false);
-  }
-
-  /**
-   * Perform a batch of mutations.
-   * It supports only Put and Delete mutations and will ignore other types passed.
-   * @param mutationsAndLocks
-   *          the list of mutations paired with their requested lock IDs.
-   * @return an array of OperationStatus which internally contains the
-   *         OperationStatusCode and the exceptionMessage if any.
-   * @throws IOException
-   */
-  OperationStatus[] batchMutate(Pair<Mutation, Integer>[] mutationsAndLocks, boolean isReplay)
+  OperationStatus[] batchMutate(Mutation[] mutations, boolean isReplay)
       throws IOException {
-    BatchOperationInProgress<Pair<Mutation, Integer>> batchOp =
-      new BatchOperationInProgress<Pair<Mutation,Integer>>(mutationsAndLocks);
+    BatchOperationInProgress<Mutation> batchOp =
+      new BatchOperationInProgress<Mutation>(mutations);
 
     boolean initialized = false;
 
@@ -1969,14 +1953,13 @@ public class HRegion implements HeapSize { // , Writable{
   }
 
 
-  private void doPreMutationHook(BatchOperationInProgress<Pair<Mutation, Integer>> batchOp)
+  private void doPreMutationHook(BatchOperationInProgress<Mutation> batchOp)
       throws IOException {
     /* Run coprocessor pre hook outside of locks to avoid deadlock */
     WALEdit walEdit = new WALEdit();
     if (coprocessorHost != null) {
       for (int i = 0 ; i < batchOp.operations.length; i++) {
-        Pair<Mutation, Integer> nextPair = batchOp.operations[i];
-        Mutation m = nextPair.getFirst();
+        Mutation m = batchOp.operations[i];
         if (m instanceof Put) {
           if (coprocessorHost.prePut((Put) m, walEdit, m.getDurability())) {
             // pre hook says skip this Put
@@ -2005,7 +1988,7 @@ public class HRegion implements HeapSize { // , Writable{
   }
 
   @SuppressWarnings("unchecked")
-  private long doMiniBatchMutation(BatchOperationInProgress<Pair<Mutation, Integer>> batchOp,
+  private long doMiniBatchMutation(BatchOperationInProgress<Mutation> batchOp,
       boolean isInReplay) throws IOException {
 
     // variable to note if all Put items are for the same CF -- metrics related
@@ -2024,7 +2007,7 @@ public class HRegion implements HeapSize { // , Writable{
     boolean locked = false;
 
     /** Keep track of the locks we hold so we can release them in finally clause */
-    List<Integer> acquiredLocks = Lists.newArrayListWithCapacity(batchOp.operations.length);
+    List<RowLock> acquiredRowLocks = Lists.newArrayListWithCapacity(batchOp.operations.length);
     // reference family maps directly so coprocessors can mutate them if desired
     Map<byte[], List<? extends Cell>>[] familyMaps = new Map[batchOp.operations.length];
     // We try to set up a batch in the range [firstIndex,lastIndexExclusive)
@@ -2040,10 +2023,8 @@ public class HRegion implements HeapSize { // , Writable{
       int numReadyToWrite = 0;
       long now = EnvironmentEdgeManager.currentTimeMillis();
       while (lastIndexExclusive < batchOp.operations.length) {
-        Pair<Mutation, Integer> nextPair = batchOp.operations[lastIndexExclusive];
-        Mutation mutation = nextPair.getFirst();
+        Mutation mutation = batchOp.operations[lastIndexExclusive];
         boolean isPutMutation = mutation instanceof Put;
-        Integer providedLockId = nextPair.getSecond();
 
         Map<byte[], List<? extends Cell>> familyMap = mutation.getFamilyMap();
         // store the family map reference to allow for mutations
@@ -2081,25 +2062,25 @@ public class HRegion implements HeapSize { // , Writable{
           lastIndexExclusive++;
           continue;
         }
+        
         // If we haven't got any rows in our batch, we should block to
         // get the next one.
         boolean shouldBlock = numReadyToWrite == 0;
-        Integer acquiredLockId = null;
+        RowLock rowLock = null;
         try {
-          acquiredLockId = getLock(providedLockId, mutation.getRow(),
-              shouldBlock);
+          rowLock = getRowLock(mutation.getRow(), shouldBlock);
         } catch (IOException ioe) {
           LOG.warn("Failed getting lock in batch put, row="
-                  + Bytes.toStringBinary(mutation.getRow()), ioe);
+            + Bytes.toStringBinary(mutation.getRow()), ioe);
         }
-        if (acquiredLockId == null) {
+        if (rowLock == null) {
           // We failed to grab another lock
           assert !shouldBlock : "Should never fail to get lock when blocking";
           break; // stop acquiring more rows for this batch
+        } else {
+          acquiredRowLocks.add(rowLock);
         }
-        if (providedLockId == null) {
-          acquiredLocks.add(acquiredLockId);
-        }
+
         lastIndexExclusive++;
         numReadyToWrite++;
 
@@ -2141,7 +2122,7 @@ public class HRegion implements HeapSize { // , Writable{
         if (batchOp.retCodeDetails[i].getOperationStatusCode()
             != OperationStatusCode.NOT_RUN) continue;
 
-        Mutation mutation = batchOp.operations[i].getFirst();
+        Mutation mutation = batchOp.operations[i];
         if (mutation instanceof Put) {
           updateKVTimestamps(familyMaps[i].values(), byteNow);
           noOfPuts++;
@@ -2162,8 +2143,8 @@ public class HRegion implements HeapSize { // , Writable{
 
       // calling the pre CP hook for batch mutation
       if (!isInReplay && coprocessorHost != null) {
-        MiniBatchOperationInProgress<Pair<Mutation, Integer>> miniBatchOp =
-          new MiniBatchOperationInProgress<Pair<Mutation, Integer>>(batchOp.operations,
+        MiniBatchOperationInProgress<Mutation> miniBatchOp = 
+          new MiniBatchOperationInProgress<Mutation>(batchOp.operations, 
           batchOp.retCodeDetails, batchOp.walEditsFromCoprocessors, firstIndex, lastIndexExclusive);
         if (coprocessorHost.preBatchMutate(miniBatchOp)) return 0L;
       }
@@ -2198,7 +2179,7 @@ public class HRegion implements HeapSize { // , Writable{
         }
         batchOp.retCodeDetails[i] = OperationStatus.SUCCESS;
 
-        Mutation m = batchOp.operations[i].getFirst();
+        Mutation m = batchOp.operations[i];
         Durability tmpDur = getEffectiveDurability(m.getDurability());
         if (tmpDur.ordinal() > durability.ordinal()) {
           durability = tmpDur;
@@ -2221,10 +2202,10 @@ public class HRegion implements HeapSize { // , Writable{
       // -------------------------
       // STEP 5. Append the edit to WAL. Do not sync wal.
       // -------------------------
-      Mutation first = batchOp.operations[firstIndex].getFirst();
+      Mutation mutation = batchOp.operations[firstIndex];
       if (walEdit.size() > 0) {
         txid = this.log.appendNoSync(this.getRegionInfo(), this.htableDescriptor.getName(),
-               walEdit, first.getClusterId(), now, this.htableDescriptor);
+               walEdit, mutation.getClusterId(), now, this.htableDescriptor);
       }
 
       // -------------------------------
@@ -2234,12 +2215,8 @@ public class HRegion implements HeapSize { // , Writable{
         this.updatesLock.readLock().unlock();
         locked = false;
       }
-      if (acquiredLocks != null) {
-        for (Integer toRelease : acquiredLocks) {
-          releaseRowLock(toRelease);
-        }
-        acquiredLocks = null;
-      }
+      releaseRowLocks(acquiredRowLocks);
+      
       // -------------------------
       // STEP 7. Sync wal.
       // -------------------------
@@ -2249,8 +2226,8 @@ public class HRegion implements HeapSize { // , Writable{
       walSyncSuccessful = true;
       // calling the post CP hook for batch mutation
       if (!isInReplay && coprocessorHost != null) {
-        MiniBatchOperationInProgress<Pair<Mutation, Integer>> miniBatchOp =
-          new MiniBatchOperationInProgress<Pair<Mutation, Integer>>(batchOp.operations,
+        MiniBatchOperationInProgress<Mutation> miniBatchOp = 
+          new MiniBatchOperationInProgress<Mutation>(batchOp.operations, 
           batchOp.retCodeDetails, batchOp.walEditsFromCoprocessors, firstIndex, lastIndexExclusive);
         coprocessorHost.postBatchMutate(miniBatchOp);
       }
@@ -2274,7 +2251,7 @@ public class HRegion implements HeapSize { // , Writable{
               != OperationStatusCode.SUCCESS) {
             continue;
           }
-          Mutation m = batchOp.operations[i].getFirst();
+          Mutation m = batchOp.operations[i];
           if (m instanceof Put) {
             coprocessorHost.postPut((Put) m, walEdit, m.getDurability());
           } else {
@@ -2296,12 +2273,7 @@ public class HRegion implements HeapSize { // , Writable{
       if (locked) {
         this.updatesLock.readLock().unlock();
       }
-
-      if (acquiredLocks != null) {
-        for (Integer toRelease : acquiredLocks) {
-          releaseRowLock(toRelease);
-        }
-      }
+      releaseRowLocks(acquiredRowLocks);
 
       // See if the column families were consistent through the whole thing.
       // if they were then keep them. If they were not then pass a null.
@@ -2378,8 +2350,8 @@ public class HRegion implements HeapSize { // , Writable{
       checkFamily(family);
       get.addColumn(family, qualifier);
 
-      // Lock row
-      Integer lid = getLock(null, get.getRow(), true);
+      // Lock row - note that doBatchMutate will relock this row if called
+      RowLock rowLock = getRowLock(get.getRow());
       // wait for all previous transactions to complete (with lock held)
       mvcc.completeMemstoreInsert(mvcc.beginMemstoreInsert());
       List<KeyValue> result = null;
@@ -2425,27 +2397,23 @@ public class HRegion implements HeapSize { // , Writable{
         if (matches) {
           // All edits for the given row (across all column families) must
           // happen atomically.
-          doBatchMutate((Mutation)w, lid);
+          doBatchMutate((Mutation)w);
           this.checkAndMutateChecksPassed.increment();
           return true;
         }
         this.checkAndMutateChecksFailed.increment();
         return false;
       } finally {
-        releaseRowLock(lid);
+        rowLock.release();
       }
     } finally {
       closeRegionOperation();
     }
   }
 
-  @SuppressWarnings("unchecked")
-  private void doBatchMutate(Mutation mutation, Integer lid) throws IOException,
+  private void doBatchMutate(Mutation mutation) throws IOException,
       org.apache.hadoop.hbase.exceptions.DoNotRetryIOException {
-    Pair<Mutation, Integer>[] mutateWithLocks = new Pair[] {
-      new Pair<Mutation, Integer>(mutation, lid)
-    };
-    OperationStatus[] batchMutate = this.batchMutate(mutateWithLocks);
+    OperationStatus[] batchMutate = this.batchMutate(new Mutation[] { mutation });
     if (batchMutate[0].getOperationStatusCode().equals(OperationStatusCode.SANITY_CHECK_FAILURE)) {
       throw new FailedSanityCheckException(batchMutate[0].getExceptionMsg());
     } else if (batchMutate[0].getOperationStatusCode().equals(OperationStatusCode.BAD_FAMILY)) {
@@ -2621,7 +2589,7 @@ public class HRegion implements HeapSize { // , Writable{
     Put p = new Put(row);
     p.setFamilyMap(familyMap);
     p.setClusterId(HConstants.DEFAULT_CLUSTER_ID);
-    doBatchMutate(p, null);
+    doBatchMutate(p);
   }
 
   /**
@@ -2672,7 +2640,7 @@ public class HRegion implements HeapSize { // , Writable{
    * called when a Put/Delete has updated memstore but subequently fails to update
    * the wal. This method is then invoked to rollback the memstore.
    */
-  private void rollbackMemstore(BatchOperationInProgress<Pair<Mutation, Integer>> batchOp,
+  private void rollbackMemstore(BatchOperationInProgress<Mutation> batchOp,
                                 Map<byte[], List<? extends Cell>>[] familyMaps,
                                 int start, int end) {
     int kvsRolledback = 0;
@@ -3182,138 +3150,76 @@ public class HRegion implements HeapSize { // , Writable{
   }
 
   /**
-   * Obtain a lock on the given row.  Blocks until success.
-   *
-   * I know it's strange to have two mappings:
-   * <pre>
-   *   ROWS  ==> LOCKS
-   * </pre>
-   * as well as
-   * <pre>
-   *   LOCKS ==> ROWS
-   * </pre>
-   * <p>It would be more memory-efficient to just have one mapping;
-   * maybe we'll do that in the future.
-   *
-   * @param row Name of row to lock.
-   * @throws IOException
-   * @return The id of the held lock.
-   */
-  public Integer obtainRowLock(final byte [] row) throws IOException {
-    startRegionOperation();
-    this.writeRequestsCount.increment();
-    try {
-      return internalObtainRowLock(row, true);
-    } finally {
-      closeRegionOperation();
-    }
-  }
-
-  /**
-   * Obtains or tries to obtain the given row lock.
+   * Tries to acquire a lock on the given row.
    * @param waitForLock if true, will block until the lock is available.
    *        Otherwise, just tries to obtain the lock and returns
-   *        null if unavailable.
+   *        false if unavailable.
+   * @return the row lock if acquired,
+   *   null if waitForLock was false and the lock was not acquired
+   * @throws IOException if waitForLock was true and the lock could not be acquired after waiting
    */
-  private Integer internalObtainRowLock(final byte[] row, boolean waitForLock)
-  throws IOException {
+  public RowLock getRowLock(byte[] row, boolean waitForLock) throws IOException {
     checkRow(row, "row lock");
     startRegionOperation();
     try {
       HashedBytes rowKey = new HashedBytes(row);
-      CountDownLatch rowLatch = new CountDownLatch(1);
+      RowLockContext rowLockContext = new RowLockContext(rowKey);
 
       // loop until we acquire the row lock (unless !waitForLock)
       while (true) {
-        CountDownLatch existingLatch = lockedRows.putIfAbsent(rowKey, rowLatch);
-        if (existingLatch == null) {
+        RowLockContext existingContext = lockedRows.putIfAbsent(rowKey, rowLockContext);
+        if (existingContext == null) {
+          // Row is not already locked by any thread, use newly created context.
+          break;
+        } else if (existingContext.ownedByCurrentThread()) {
+          // Row is already locked by current thread, reuse existing context instead.
+          rowLockContext = existingContext;
           break;
         } else {
-          // row already locked
+          // Row is already locked by some other thread, give up or wait for it
           if (!waitForLock) {
             return null;
           }
           try {
-            if (!existingLatch.await(this.rowLockWaitDuration,
-                            TimeUnit.MILLISECONDS)) {
-              throw new IOException("Timed out on getting lock for row="
-                  + Bytes.toStringBinary(row));
+            if (!existingContext.latch.await(this.rowLockWaitDuration, TimeUnit.MILLISECONDS)) {
+              throw new IOException("Timed out waiting for lock for row: " + rowKey);
             }
           } catch (InterruptedException ie) {
-            LOG.warn("internalObtainRowLock interrupted for row=" + Bytes.toStringBinary(row));
+            LOG.warn("Thread interrupted waiting for lock on row: " + rowKey);
             InterruptedIOException iie = new InterruptedIOException();
             iie.initCause(ie);
             throw iie;
           }
         }
       }
-
-      // loop until we generate an unused lock id
-      while (true) {
-        Integer lockId = lockIdGenerator.incrementAndGet();
-        HashedBytes existingRowKey = lockIds.putIfAbsent(lockId, rowKey);
-        if (existingRowKey == null) {
-          return lockId;
-        } else {
-          // lockId already in use, jump generator to a new spot
-          lockIdGenerator.set(rand.nextInt());
-        }
-      }
+      
+      // allocate new lock for this thread
+      return rowLockContext.newLock();
     } finally {
       closeRegionOperation();
     }
   }
 
   /**
-   * Release the row lock!
-   * @param lockId  The lock ID to release.
+   * Acqures a lock on the given row.
+   * The same thread may acquire multiple locks on the same row.
+   * @return the acquired row lock
+   * @throws IOException if the lock could not be acquired after waiting
    */
-  public void releaseRowLock(final Integer lockId) {
-    if (lockId == null) return; // null lock id, do nothing
-    HashedBytes rowKey = lockIds.remove(lockId);
-    if (rowKey == null) {
-      LOG.warn("Release unknown lockId: " + lockId);
-      return;
-    }
-    CountDownLatch rowLatch = lockedRows.remove(rowKey);
-    if (rowLatch == null) {
-      LOG.error("Releases row not locked, lockId: " + lockId + " row: "
-          + rowKey);
-      return;
-    }
-    rowLatch.countDown();
+  public RowLock getRowLock(byte[] row) throws IOException {
+    return getRowLock(row, true);
   }
 
   /**
-   * See if row is currently locked.
-   * @param lockId
-   * @return boolean
+   * If the given list of row locks is not null, releases all locks.
    */
-  boolean isRowLocked(final Integer lockId) {
-    return lockIds.containsKey(lockId);
-  }
-
-  /**
-   * Returns existing row lock if found, otherwise
-   * obtains a new row lock and returns it.
-   * @param lockid requested by the user, or null if the user didn't already hold lock
-   * @param row the row to lock
-   * @param waitForLock if true, will block until the lock is available, otherwise will
-   * simply return null if it could not acquire the lock.
-   * @return lockid or null if waitForLock is false and the lock was unavailable.
-   */
-  public Integer getLock(Integer lockid, byte [] row, boolean waitForLock)
-  throws IOException {
-    Integer lid = null;
-    if (lockid == null) {
-      lid = internalObtainRowLock(row, waitForLock);
-    } else {
-      if (!isRowLocked(lockid)) {
-        throw new IOException("Invalid row lock");
+  public void releaseRowLocks(List<RowLock> rowLocks) {
+    if (rowLocks != null) {
+      for (RowLock rowLock : rowLocks) {
+        rowLock.release();
       }
-      lid = lockid;
+      rowLocks.clear();
     }
-    return lid;
   }
 
   /**
@@ -4583,24 +4489,19 @@ public class HRegion implements HeapSize { // , Writable{
     MultiVersionConsistencyControl.WriteEntry writeEntry = null;
     boolean locked = false;
     boolean walSyncSuccessful = false;
-    List<Integer> acquiredLocks = null;
+    List<RowLock> acquiredRowLocks = null;
     long addedSize = 0;
     List<KeyValue> mutations = new ArrayList<KeyValue>();
     Collection<byte[]> rowsToLock = processor.getRowsToLock();
     try {
       // 2. Acquire the row lock(s)
-      acquiredLocks = new ArrayList<Integer>(rowsToLock.size());
+      acquiredRowLocks = new ArrayList<RowLock>(rowsToLock.size());
       for (byte[] row : rowsToLock) {
-        // Attempt to lock all involved rows, fail if one lock times out
-        Integer lid = getLock(null, row, true);
-        if (lid == null) {
-          throw new IOException("Failed to acquire lock on "
-              + Bytes.toStringBinary(row));
-        }
-        acquiredLocks.add(lid);
+        // Attempt to lock all involved rows, throw if any lock times out
+        acquiredRowLocks.add(getRowLock(row));
       }
       // 3. Region lock
-      lock(this.updatesLock.readLock(), acquiredLocks.size());
+      lock(this.updatesLock.readLock(), acquiredRowLocks.size());
       locked = true;
 
       long now = EnvironmentEdgeManager.currentTimeMillis();
@@ -4635,12 +4536,8 @@ public class HRegion implements HeapSize { // , Writable{
           }
 
           // 9. Release row lock(s)
-          if (acquiredLocks != null) {
-            for (Integer lid : acquiredLocks) {
-              releaseRowLock(lid);
-            }
-            acquiredLocks = null;
-          }
+          releaseRowLocks(acquiredRowLocks);
+
           // 10. Sync edit log
           if (txid != 0) {
             syncOrDefer(txid, getEffectiveDurability(processor.useDurability()));
@@ -4665,12 +4562,8 @@ public class HRegion implements HeapSize { // , Writable{
           this.updatesLock.readLock().unlock();
           locked = false;
         }
-        if (acquiredLocks != null) {
-          for (Integer lid : acquiredLocks) {
-            releaseRowLock(lid);
-          }
-        }
-
+        // release locks if some were acquired but another timed out
+        releaseRowLocks(acquiredRowLocks);
       }
 
       // 12. Run post-process hook
@@ -4765,125 +4658,129 @@ public class HRegion implements HeapSize { // , Writable{
     startRegionOperation(Operation.APPEND);
     this.writeRequestsCount.increment();
     WriteEntry w = null;
+    RowLock rowLock = null;
     try {
-      Integer lid = getLock(null, row, true);
-      lock(this.updatesLock.readLock());
-      // wait for all prior MVCC transactions to finish - while we hold the row lock
-      // (so that we are guaranteed to see the latest state)
-      mvcc.completeMemstoreInsert(mvcc.beginMemstoreInsert());
-      // now start my own transaction
-      w = mvcc.beginMemstoreInsert();
+      rowLock = getRowLock(row);
       try {
-        long now = EnvironmentEdgeManager.currentTimeMillis();
-        // Process each family
-        for (Map.Entry<byte[], List<? extends Cell>> family : append.getFamilyMap().entrySet()) {
-
-          Store store = stores.get(family.getKey());
-          List<KeyValue> kvs = new ArrayList<KeyValue>(family.getValue().size());
-
-          // Get previous values for all columns in this family
-          Get get = new Get(row);
-          for (Cell cell : family.getValue()) {
-            KeyValue kv = KeyValueUtil.ensureKeyValue(cell);
-            get.addColumn(family.getKey(), kv.getQualifier());
-          }
-          List<KeyValue> results = get(get, false);
-
-          // Iterate the input columns and update existing values if they were
-          // found, otherwise add new column initialized to the append value
-
-          // Avoid as much copying as possible. Every byte is copied at most
-          // once.
-          // Would be nice if KeyValue had scatter/gather logic
-          int idx = 0;
-          for (Cell cell : family.getValue()) {
-            KeyValue kv = KeyValueUtil.ensureKeyValue(cell);
-            KeyValue newKV;
-            if (idx < results.size()
-                && results.get(idx).matchingQualifier(kv.getBuffer(),
-                    kv.getQualifierOffset(), kv.getQualifierLength())) {
-              KeyValue oldKv = results.get(idx);
-              // allocate an empty kv once
-              newKV = new KeyValue(row.length, kv.getFamilyLength(),
-                  kv.getQualifierLength(), now, KeyValue.Type.Put,
-                  oldKv.getValueLength() + kv.getValueLength());
-              // copy in the value
-              System.arraycopy(oldKv.getBuffer(), oldKv.getValueOffset(),
-                  newKV.getBuffer(), newKV.getValueOffset(),
-                  oldKv.getValueLength());
-              System.arraycopy(kv.getBuffer(), kv.getValueOffset(),
-                  newKV.getBuffer(),
-                  newKV.getValueOffset() + oldKv.getValueLength(),
-                  kv.getValueLength());
-              idx++;
-            } else {
-              // allocate an empty kv once
-              newKV = new KeyValue(row.length, kv.getFamilyLength(),
-                  kv.getQualifierLength(), now, KeyValue.Type.Put,
-                  kv.getValueLength());
-              // copy in the value
-              System.arraycopy(kv.getBuffer(), kv.getValueOffset(),
-                  newKV.getBuffer(), newKV.getValueOffset(),
-                  kv.getValueLength());
-            }
-            // copy in row, family, and qualifier
-            System.arraycopy(kv.getBuffer(), kv.getRowOffset(),
-                newKV.getBuffer(), newKV.getRowOffset(), kv.getRowLength());
-            System.arraycopy(kv.getBuffer(), kv.getFamilyOffset(),
-                newKV.getBuffer(), newKV.getFamilyOffset(),
-                kv.getFamilyLength());
-            System.arraycopy(kv.getBuffer(), kv.getQualifierOffset(),
-                newKV.getBuffer(), newKV.getQualifierOffset(),
-                kv.getQualifierLength());
-
-            newKV.setMemstoreTS(w.getWriteNumber());
-            kvs.add(newKV);
-
-            // Append update to WAL
-            if (writeToWAL) {
-              if (walEdits == null) {
-                walEdits = new WALEdit();
-              }
-              walEdits.add(newKV);
-            }
-          }
-
-          //store the kvs to the temporary memstore before writing HLog
-          tempMemstore.put(store, kvs);
-        }
-
-        // Actually write to WAL now
-        if (writeToWAL) {
-          // Using default cluster id, as this can only happen in the orginating
-          // cluster. A slave cluster receives the final value (not the delta)
-          // as a Put.
-          txid = this.log.appendNoSync(this.getRegionInfo(), this.htableDescriptor.getName(),
-            walEdits, HConstants.DEFAULT_CLUSTER_ID, EnvironmentEdgeManager.currentTimeMillis(),
-            this.htableDescriptor);
-        } else {
-          recordMutationWithoutWal(append.getFamilyMap());
-        }
-
-        //Actually write to Memstore now
-        for (Map.Entry<Store, List<KeyValue>> entry : tempMemstore.entrySet()) {
-          Store store = entry.getKey();
-          if (store.getFamily().getMaxVersions() == 1) {
-            // upsert if VERSIONS for this CF == 1
-            size += store.upsert(entry.getValue(), getSmallestReadPoint());
-          } else {
-            // otherwise keep older versions around
-            for (Cell cell: entry.getValue()) {
+        lock(this.updatesLock.readLock());
+        // wait for all prior MVCC transactions to finish - while we hold the row lock
+        // (so that we are guaranteed to see the latest state)
+        mvcc.completeMemstoreInsert(mvcc.beginMemstoreInsert());
+        // now start my own transaction
+        w = mvcc.beginMemstoreInsert();
+        try {
+          long now = EnvironmentEdgeManager.currentTimeMillis();
+          // Process each family
+          for (Map.Entry<byte[], List<? extends Cell>> family : append.getFamilyMap().entrySet()) {
+  
+            Store store = stores.get(family.getKey());
+            List<KeyValue> kvs = new ArrayList<KeyValue>(family.getValue().size());
+  
+            // Get previous values for all columns in this family
+            Get get = new Get(row);
+            for (Cell cell : family.getValue()) {
               KeyValue kv = KeyValueUtil.ensureKeyValue(cell);
-              size += store.add(kv);
+              get.addColumn(family.getKey(), kv.getQualifier());
             }
+            List<KeyValue> results = get(get, false);
+  
+            // Iterate the input columns and update existing values if they were
+            // found, otherwise add new column initialized to the append value
+  
+            // Avoid as much copying as possible. Every byte is copied at most
+            // once.
+            // Would be nice if KeyValue had scatter/gather logic
+            int idx = 0;
+            for (Cell cell : family.getValue()) {
+              KeyValue kv = KeyValueUtil.ensureKeyValue(cell);
+              KeyValue newKV;
+              if (idx < results.size()
+                  && results.get(idx).matchingQualifier(kv.getBuffer(),
+                      kv.getQualifierOffset(), kv.getQualifierLength())) {
+                KeyValue oldKv = results.get(idx);
+                // allocate an empty kv once
+                newKV = new KeyValue(row.length, kv.getFamilyLength(),
+                    kv.getQualifierLength(), now, KeyValue.Type.Put,
+                    oldKv.getValueLength() + kv.getValueLength());
+                // copy in the value
+                System.arraycopy(oldKv.getBuffer(), oldKv.getValueOffset(),
+                    newKV.getBuffer(), newKV.getValueOffset(),
+                    oldKv.getValueLength());
+                System.arraycopy(kv.getBuffer(), kv.getValueOffset(),
+                    newKV.getBuffer(),
+                    newKV.getValueOffset() + oldKv.getValueLength(),
+                    kv.getValueLength());
+                idx++;
+              } else {
+                // allocate an empty kv once
+                newKV = new KeyValue(row.length, kv.getFamilyLength(),
+                    kv.getQualifierLength(), now, KeyValue.Type.Put,
+                    kv.getValueLength());
+                // copy in the value
+                System.arraycopy(kv.getBuffer(), kv.getValueOffset(),
+                    newKV.getBuffer(), newKV.getValueOffset(),
+                    kv.getValueLength());
+              }
+              // copy in row, family, and qualifier
+              System.arraycopy(kv.getBuffer(), kv.getRowOffset(),
+                  newKV.getBuffer(), newKV.getRowOffset(), kv.getRowLength());
+              System.arraycopy(kv.getBuffer(), kv.getFamilyOffset(),
+                  newKV.getBuffer(), newKV.getFamilyOffset(),
+                  kv.getFamilyLength());
+              System.arraycopy(kv.getBuffer(), kv.getQualifierOffset(),
+                  newKV.getBuffer(), newKV.getQualifierOffset(),
+                  kv.getQualifierLength());
+  
+              newKV.setMemstoreTS(w.getWriteNumber());
+              kvs.add(newKV);
+  
+              // Append update to WAL
+              if (writeToWAL) {
+                if (walEdits == null) {
+                  walEdits = new WALEdit();
+                }
+                walEdits.add(newKV);
+              }
+            }
+  
+            //store the kvs to the temporary memstore before writing HLog
+            tempMemstore.put(store, kvs);
           }
-          allKVs.addAll(entry.getValue());
+  
+          // Actually write to WAL now
+          if (writeToWAL) {
+            // Using default cluster id, as this can only happen in the orginating
+            // cluster. A slave cluster receives the final value (not the delta)
+            // as a Put.
+            txid = this.log.appendNoSync(this.getRegionInfo(), this.htableDescriptor.getName(),
+              walEdits, HConstants.DEFAULT_CLUSTER_ID, EnvironmentEdgeManager.currentTimeMillis(),
+              this.htableDescriptor);
+          } else {
+            recordMutationWithoutWal(append.getFamilyMap());
+          }
+  
+          //Actually write to Memstore now
+          for (Map.Entry<Store, List<KeyValue>> entry : tempMemstore.entrySet()) {
+            Store store = entry.getKey();
+            if (store.getFamily().getMaxVersions() == 1) {
+              // upsert if VERSIONS for this CF == 1
+              size += store.upsert(entry.getValue(), getSmallestReadPoint());
+            } else {
+              // otherwise keep older versions around
+              for (Cell cell: entry.getValue()) {
+                KeyValue kv = KeyValueUtil.ensureKeyValue(cell);
+                size += store.add(kv);
+              }
+            }
+            allKVs.addAll(entry.getValue());
+          }
+          size = this.addAndGetGlobalMemstoreSize(size);
+          flush = isFlushSize(size);
+        } finally {
+          this.updatesLock.readLock().unlock();
         }
-        size = this.addAndGetGlobalMemstoreSize(size);
-        flush = isFlushSize(size);
       } finally {
-        this.updatesLock.readLock().unlock();
-        releaseRowLock(lid);
+        rowLock.release();
       }
       if (writeToWAL) {
         // sync the transaction log outside the rowlock
@@ -4936,100 +4833,103 @@ public class HRegion implements HeapSize { // , Writable{
     this.writeRequestsCount.increment();
     WriteEntry w = null;
     try {
-      Integer lid = getLock(null, row, true);
-      lock(this.updatesLock.readLock());
-      // wait for all prior MVCC transactions to finish - while we hold the row lock
-      // (so that we are guaranteed to see the latest state)
-      mvcc.completeMemstoreInsert(mvcc.beginMemstoreInsert());
-      // now start my own transaction
-      w = mvcc.beginMemstoreInsert();
+      RowLock rowLock = getRowLock(row);
       try {
-        long now = EnvironmentEdgeManager.currentTimeMillis();
-        // Process each family
-        for (Map.Entry<byte [], List<? extends Cell>> family:
-            increment.getFamilyMap().entrySet()) {
-
-          Store store = stores.get(family.getKey());
-          List<KeyValue> kvs = new ArrayList<KeyValue>(family.getValue().size());
-
-          // Get previous values for all columns in this family
-          Get get = new Get(row);
-          for (Cell cell: family.getValue()) {
-            KeyValue kv = KeyValueUtil.ensureKeyValue(cell);
-            get.addColumn(family.getKey(), kv.getQualifier());
-          }
-          get.setTimeRange(tr.getMin(), tr.getMax());
-          List<KeyValue> results = get(get, false);
-
-          // Iterate the input columns and update existing values if they were
-          // found, otherwise add new column initialized to the increment amount
-          int idx = 0;
-          for (Cell cell: family.getValue()) {
-            KeyValue kv = KeyValueUtil.ensureKeyValue(cell);
-            long amount = Bytes.toLong(kv.getValue());
-            byte [] qualifier = kv.getQualifier();
-            if (idx < results.size() && results.get(idx).matchingQualifier(qualifier)) {
-              kv = results.get(idx);
-              if(kv.getValueLength() == Bytes.SIZEOF_LONG) {
-                amount += Bytes.toLong(kv.getBuffer(), kv.getValueOffset(), Bytes.SIZEOF_LONG);
-              } else {
-                // throw DoNotRetryIOException instead of IllegalArgumentException
-                throw new org.apache.hadoop.hbase.exceptions.DoNotRetryIOException(
-                    "Attempted to increment field that isn't 64 bits wide");
-              }
-              idx++;
-            }
-
-            // Append new incremented KeyValue to list
-            KeyValue newKV =
-              new KeyValue(row, family.getKey(), qualifier, now, Bytes.toBytes(amount));
-            newKV.setMemstoreTS(w.getWriteNumber());
-            kvs.add(newKV);
-
-            // Prepare WAL updates
-            if (writeToWAL) {
-              if (walEdits == null) {
-                walEdits = new WALEdit();
-              }
-              walEdits.add(newKV);
-            }
-          }
-
-          //store the kvs to the temporary memstore before writing HLog
-          tempMemstore.put(store, kvs);
-        }
-
-        // Actually write to WAL now
-        if (writeToWAL) {
-          // Using default cluster id, as this can only happen in the orginating
-          // cluster. A slave cluster receives the final value (not the delta)
-          // as a Put.
-          txid = this.log.appendNoSync(this.getRegionInfo(), this.htableDescriptor.getName(),
-              walEdits, HConstants.DEFAULT_CLUSTER_ID, EnvironmentEdgeManager.currentTimeMillis(),
-              this.htableDescriptor);
-        } else {
-          recordMutationWithoutWal(increment.getFamilyMap());
-        }
-        //Actually write to Memstore now
-        for (Map.Entry<Store, List<KeyValue>> entry : tempMemstore.entrySet()) {
-          Store store = entry.getKey();
-          if (store.getFamily().getMaxVersions() == 1) {
-            // upsert if VERSIONS for this CF == 1
-            size += store.upsert(entry.getValue(), getSmallestReadPoint());
-          } else {
-            // otherwise keep older versions around
-            for (Cell cell : entry.getValue()) {
+        lock(this.updatesLock.readLock());
+        // wait for all prior MVCC transactions to finish - while we hold the row lock
+        // (so that we are guaranteed to see the latest state)
+        mvcc.completeMemstoreInsert(mvcc.beginMemstoreInsert());
+        // now start my own transaction
+        w = mvcc.beginMemstoreInsert();
+        try {
+          long now = EnvironmentEdgeManager.currentTimeMillis();
+          // Process each family
+          for (Map.Entry<byte [], List<? extends Cell>> family:
+              increment.getFamilyMap().entrySet()) {
+  
+            Store store = stores.get(family.getKey());
+            List<KeyValue> kvs = new ArrayList<KeyValue>(family.getValue().size());
+  
+            // Get previous values for all columns in this family
+            Get get = new Get(row);
+            for (Cell cell: family.getValue()) {
               KeyValue kv = KeyValueUtil.ensureKeyValue(cell);
-              size += store.add(kv);
+              get.addColumn(family.getKey(), kv.getQualifier());
             }
+            get.setTimeRange(tr.getMin(), tr.getMax());
+            List<KeyValue> results = get(get, false);
+  
+            // Iterate the input columns and update existing values if they were
+            // found, otherwise add new column initialized to the increment amount
+            int idx = 0;
+            for (Cell cell: family.getValue()) {
+              KeyValue kv = KeyValueUtil.ensureKeyValue(cell);
+              long amount = Bytes.toLong(kv.getValue());
+              byte [] qualifier = kv.getQualifier();
+              if (idx < results.size() && results.get(idx).matchingQualifier(qualifier)) {
+                kv = results.get(idx);
+                if(kv.getValueLength() == Bytes.SIZEOF_LONG) {
+                  amount += Bytes.toLong(kv.getBuffer(), kv.getValueOffset(), Bytes.SIZEOF_LONG);
+                } else {
+                  // throw DoNotRetryIOException instead of IllegalArgumentException
+                  throw new org.apache.hadoop.hbase.exceptions.DoNotRetryIOException(
+                      "Attempted to increment field that isn't 64 bits wide");
+                }
+                idx++;
+              }
+  
+              // Append new incremented KeyValue to list
+              KeyValue newKV =
+                new KeyValue(row, family.getKey(), qualifier, now, Bytes.toBytes(amount));
+              newKV.setMemstoreTS(w.getWriteNumber());
+              kvs.add(newKV);
+  
+              // Prepare WAL updates
+              if (writeToWAL) {
+                if (walEdits == null) {
+                  walEdits = new WALEdit();
+                }
+                walEdits.add(newKV);
+              }
+            }
+  
+            //store the kvs to the temporary memstore before writing HLog
+            tempMemstore.put(store, kvs);
           }
-          allKVs.addAll(entry.getValue());
+  
+          // Actually write to WAL now
+          if (writeToWAL) {
+            // Using default cluster id, as this can only happen in the orginating
+            // cluster. A slave cluster receives the final value (not the delta)
+            // as a Put.
+            txid = this.log.appendNoSync(this.getRegionInfo(), this.htableDescriptor.getName(),
+                walEdits, HConstants.DEFAULT_CLUSTER_ID, EnvironmentEdgeManager.currentTimeMillis(),
+                this.htableDescriptor);
+          } else {
+            recordMutationWithoutWal(increment.getFamilyMap());
+          }
+          //Actually write to Memstore now
+          for (Map.Entry<Store, List<KeyValue>> entry : tempMemstore.entrySet()) {
+            Store store = entry.getKey();
+            if (store.getFamily().getMaxVersions() == 1) {
+              // upsert if VERSIONS for this CF == 1
+              size += store.upsert(entry.getValue(), getSmallestReadPoint());
+            } else {
+              // otherwise keep older versions around
+              for (Cell cell : entry.getValue()) {
+                KeyValue kv = KeyValueUtil.ensureKeyValue(cell);
+                size += store.add(kv);
+              }
+            }
+            allKVs.addAll(entry.getValue());
+          }
+          size = this.addAndGetGlobalMemstoreSize(size);
+          flush = isFlushSize(size);
+        } finally {
+          this.updatesLock.readLock().unlock();
         }
-        size = this.addAndGetGlobalMemstoreSize(size);
-        flush = isFlushSize(size);
       } finally {
-        this.updatesLock.readLock().unlock();
-        releaseRowLock(lid);
+        rowLock.release();
       }
       if (writeToWAL) {
         // sync the transaction log outside the rowlock
@@ -5069,22 +4969,32 @@ public class HRegion implements HeapSize { // , Writable{
   public static final long FIXED_OVERHEAD = ClassSize.align(
       ClassSize.OBJECT +
       ClassSize.ARRAY +
-      39 * ClassSize.REFERENCE + 2 * Bytes.SIZEOF_INT +
-      (12 * Bytes.SIZEOF_LONG) +
-      2 * Bytes.SIZEOF_BOOLEAN);
+      38 * ClassSize.REFERENCE + 2 * Bytes.SIZEOF_INT +
+      (11 * Bytes.SIZEOF_LONG) +
+      4 * Bytes.SIZEOF_BOOLEAN);
 
+  // woefully out of date - currently missing:
+  // 1 x HashMap - coprocessorServiceHandlers
+  // 6 org.cliffc.high_scale_lib.Counter - numMutationsWithoutWAL, dataInMemoryWithoutWAL,
+  //   checkAndMutateChecksPassed, checkAndMutateChecksFailed, readRequestsCount,
+  //   writeRequestsCount, updatesBlockedMs
+  // 1 x HRegion$WriteState - writestate
+  // 1 x RegionCoprocessorHost - coprocessorHost
+  // 1 x RegionSplitPolicy - splitPolicy
+  // 1 x MetricsRegion - metricsRegion
+  // 1 x MetricsRegionWrapperImpl - metricsRegionWrapper
   public static final long DEEP_OVERHEAD = FIXED_OVERHEAD +
       ClassSize.OBJECT + // closeLock
       (2 * ClassSize.ATOMIC_BOOLEAN) + // closed, closing
       (3 * ClassSize.ATOMIC_LONG) + // memStoreSize, numPutsWithoutWAL, dataInMemoryWithoutWAL
-      ClassSize.ATOMIC_INTEGER + // lockIdGenerator
-      (3 * ClassSize.CONCURRENT_HASHMAP) +  // lockedRows, lockIds, scannerReadPoints
+      (2 * ClassSize.CONCURRENT_HASHMAP) +  // lockedRows, scannerReadPoints
       WriteState.HEAP_SIZE + // writestate
       ClassSize.CONCURRENT_SKIPLISTMAP + ClassSize.CONCURRENT_SKIPLISTMAP_ENTRY + // stores
       (2 * ClassSize.REENTRANT_LOCK) + // lock, updatesLock
       ClassSize.ARRAYLIST + // recentFlushes
       MultiVersionConsistencyControl.FIXED_SIZE // mvcc
       + ClassSize.TREEMAP // maxSeqIdInStores
+      + 2 * ClassSize.ATOMIC_INTEGER // majorInProgress, minorInProgress
       ;
 
   @Override
@@ -5093,7 +5003,7 @@ public class HRegion implements HeapSize { // , Writable{
     for (Store store : this.stores.values()) {
       heapSize += store.heapSize();
     }
-    // this does not take into account row locks, recent flushes, mvcc entries
+    // this does not take into account row locks, recent flushes, mvcc entries, and more
     return heapSize;
   }
 
@@ -5656,5 +5566,69 @@ public class HRegion implements HeapSize { // , Writable{
      * @throws IOException
      */
     void failedBulkLoad(byte[] family, String srcPath) throws IOException;
+  }
+  
+  @VisibleForTesting class RowLockContext {
+    private final HashedBytes row;
+    private final CountDownLatch latch = new CountDownLatch(1);
+    private final Thread thread;
+    private int lockCount = 0;
+
+    RowLockContext(HashedBytes row) {
+      this.row = row;
+      this.thread = Thread.currentThread();
+    }
+    
+    boolean ownedByCurrentThread() {
+      return thread == Thread.currentThread();
+    }
+    
+    RowLock newLock() {
+      lockCount++;
+      return new RowLock(this);
+    }
+    
+    void releaseLock() {
+      if (!ownedByCurrentThread()) {
+        throw new IllegalArgumentException("Lock held by thread: " + thread
+          + " cannot be released by different thread: " + Thread.currentThread());
+      }
+      lockCount--;
+      if (lockCount == 0) {
+        // no remaining locks by the thread, unlock and allow other threads to access
+        RowLockContext existingContext = lockedRows.remove(row);
+        if (existingContext != this) {
+          throw new RuntimeException(
+              "Internal row lock state inconsistent, should not happen, row: " + row);
+        }
+        latch.countDown();
+      }
+    }
+  }
+  
+  /**
+   * Row lock held by a given thread.
+   * One thread may acquire multiple locks on the same row simultaneously.
+   * The locks must be released by calling release() from the same thread.
+   */
+  public class RowLock {
+    @VisibleForTesting final RowLockContext context;
+    private boolean released = false;
+    
+    @VisibleForTesting RowLock(RowLockContext context) {
+      this.context = context;
+    }
+    
+    /**
+     * Release the given lock.  If there are no remaining locks held by the current thread
+     * then unlock the row and allow other threads to acquire the lock.
+     * @throws IllegalArgumentException if called by a different thread than the lock owning thread
+     */
+    public void release() {
+      if (!released) {
+        context.releaseLock();
+        released = true;
+      }
+    }
   }
 }
