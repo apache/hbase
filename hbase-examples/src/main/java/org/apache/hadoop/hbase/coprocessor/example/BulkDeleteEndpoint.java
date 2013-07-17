@@ -49,7 +49,6 @@ import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.OperationStatus;
 import org.apache.hadoop.hbase.regionserver.RegionScanner;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.Pair;
 
 import com.google.protobuf.RpcCallback;
 import com.google.protobuf.RpcController;
@@ -146,20 +145,19 @@ public class BulkDeleteEndpoint extends BulkDeleteService implements Coprocessor
           }
         }
         if (deleteRows.size() > 0) {
-          Pair<Mutation, Integer>[] deleteWithLockArr = new Pair[deleteRows.size()];
+          Mutation[] deleteArr = new Mutation[deleteRows.size()];
           int i = 0;
           for (List<KeyValue> deleteRow : deleteRows) {
-            Delete delete = createDeleteMutation(deleteRow, deleteType, timestamp);
-            deleteWithLockArr[i++] = new Pair<Mutation, Integer>(delete, null);
+            deleteArr[i++] = createDeleteMutation(deleteRow, deleteType, timestamp);
           }
-          OperationStatus[] opStatus = region.batchMutate(deleteWithLockArr);
+          OperationStatus[] opStatus = region.batchMutate(deleteArr);
           for (i = 0; i < opStatus.length; i++) {
             if (opStatus[i].getOperationStatusCode() != OperationStatusCode.SUCCESS) {
               break;
             }
             totalRowsDeleted++;
             if (deleteType == DeleteType.VERSION) {
-              byte[] versionsDeleted = deleteWithLockArr[i].getFirst().getAttribute(
+              byte[] versionsDeleted = deleteArr[i].getAttribute(
                   NO_OF_VERSIONS_TO_DELETE);
               if (versionsDeleted != null) {
                 totalVersionsDeleted += Bytes.toInt(versionsDeleted);

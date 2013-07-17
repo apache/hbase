@@ -407,7 +407,7 @@ public class SimpleRegionObserver extends BaseRegionObserver {
   
   @Override
   public void preBatchMutate(ObserverContext<RegionCoprocessorEnvironment> c,
-      MiniBatchOperationInProgress<Pair<Mutation, Integer>> miniBatchOp) throws IOException {
+      MiniBatchOperationInProgress<Mutation> miniBatchOp) throws IOException {
     RegionCoprocessorEnvironment e = c.getEnvironment();
     assertNotNull(e);
     assertNotNull(e.getRegion());
@@ -417,7 +417,7 @@ public class SimpleRegionObserver extends BaseRegionObserver {
 
   @Override
   public void postBatchMutate(final ObserverContext<RegionCoprocessorEnvironment> c,
-      final MiniBatchOperationInProgress<Pair<Mutation, Integer>> miniBatchOp) throws IOException {
+      final MiniBatchOperationInProgress<Mutation> miniBatchOp) throws IOException {
     RegionCoprocessorEnvironment e = c.getEnvironment();
     assertNotNull(e);
     assertNotNull(e.getRegion());

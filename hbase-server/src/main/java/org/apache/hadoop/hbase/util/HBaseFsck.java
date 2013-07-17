@@ -1061,7 +1061,7 @@ public class HBaseFsck extends Configured implements Tool {
         "You may need to restore the previously sidelined .META.");
       return false;
     }
-    meta.put(puts.toArray(new Put[0]));
+    meta.batchMutate(puts.toArray(new Put[0]));
     HRegion.closeHRegion(meta);
     LOG.info("Success! .META. table rebuilt.");
     LOG.info("Old .META. is moved into " + backupDir);

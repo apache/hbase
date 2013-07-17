@@ -993,7 +993,7 @@ public class RegionCoprocessorHost
    * @throws IOException
    */
   public boolean preBatchMutate(
-      final MiniBatchOperationInProgress<Pair<Mutation, Integer>> miniBatchOp) throws IOException {
+      final MiniBatchOperationInProgress<Mutation> miniBatchOp) throws IOException {
     boolean bypass = false;
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
     for (RegionEnvironment env : coprocessors) {
@@ -1018,7 +1018,7 @@ public class RegionCoprocessorHost
    * @throws IOException
    */
   public void postBatchMutate(
-      final MiniBatchOperationInProgress<Pair<Mutation, Integer>> miniBatchOp) throws IOException {
+      final MiniBatchOperationInProgress<Mutation> miniBatchOp) throws IOException {
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
     for (RegionEnvironment env : coprocessors) {
       if (env.getInstance() instanceof RegionObserver) {
