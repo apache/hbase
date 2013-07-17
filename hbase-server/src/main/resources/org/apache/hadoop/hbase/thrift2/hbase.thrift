@@ -182,6 +182,22 @@ struct TScan {
   9: optional map<binary, binary> attributes
 }
 
+/**
+ * Atomic mutation for the specified row. It can be either Put or Delete.
+ */
+union TMutation {
+  1: optional TPut put,
+  2: optional TDelete deleteSingle,
+}
+
+/**
+ * A TRowMutations object is used to apply a number of Mutations to a single row.
+ */
+struct TRowMutations {
+  1: required binary row
+  2: required list<TMutation> mutations
+}
+
 //
 // Exceptions
 //
@@ -414,5 +430,16 @@ service THBaseService {
     /** if the scannerId is invalid */
     2: TIllegalArgument ia
   )
+
+  /**
+   * mutateRow performs multiple mutations atomically on a single row.
+  */
+  void mutateRow(
+  /** table to apply the mutations */
+    1: required binary table,
+
+    /** mutations to apply */
+    2: required TRowMutations rowMutations
+  ) throws (1: TIOError io)
 
 }

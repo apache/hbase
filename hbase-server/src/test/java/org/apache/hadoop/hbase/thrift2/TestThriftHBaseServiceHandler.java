@@ -48,6 +48,8 @@ import org.apache.hadoop.hbase.thrift2.generated.TIncrement;
 import org.apache.hadoop.hbase.thrift2.generated.TPut;
 import org.apache.hadoop.hbase.thrift2.generated.TResult;
 import org.apache.hadoop.hbase.thrift2.generated.TScan;
+import org.apache.hadoop.hbase.thrift2.generated.TMutation;
+import org.apache.hadoop.hbase.thrift2.generated.TRowMutations;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.thrift.TException;
 import org.junit.AfterClass;
@@ -743,5 +745,67 @@ public class TestThriftHBaseServiceHandler {
     assertArrayEquals(delete.getAttribute("attribute1"), attributeValue);
   }
 
+  /**
+   * Put valueA to a row, make sure put has happened, then create a mutation object to put valueB
+   * and delete ValueA, then check that the row value is only valueB.
+   *
+   * @throws Exception
+   */
+  @Test
+  public void testMutateRow() throws Exception {
+    ThriftHBaseServiceHandler handler = createHandler();
+    byte[] rowName = "testMutateRow".getBytes();
+    ByteBuffer table = wrap(tableAname);
+
+    List<TColumnValue> columnValuesA = new ArrayList<TColumnValue>();
+    TColumnValue columnValueA = new TColumnValue(wrap(familyAname), wrap(qualifierAname),
+        wrap(valueAname));
+    columnValuesA.add(columnValueA);
+    TPut putA = new TPut(wrap(rowName), columnValuesA);
+    putA.setColumnValues(columnValuesA);
+
+    handler.put(table,putA);
+
+    TGet get = new TGet(wrap(rowName));
+    TResult result = handler.get(table, get);
+    assertArrayEquals(rowName, result.getRow());
+    List<TColumnValue> returnedColumnValues = result.getColumnValues();
+
+    List<TColumnValue> expectedColumnValues = new ArrayList<TColumnValue>();
+    expectedColumnValues.add(columnValueA);
+    assertTColumnValuesEqual(expectedColumnValues, returnedColumnValues);
+
+    List<TColumnValue> columnValuesB = new ArrayList<TColumnValue>();
+    TColumnValue columnValueB = new TColumnValue(wrap(familyAname), wrap(qualifierBname),
+        wrap(valueBname));
+    columnValuesB.add(columnValueB);
+    TPut putB = new TPut(wrap(rowName), columnValuesB);
+    putB.setColumnValues(columnValuesB);
+
+    TDelete delete = new TDelete(wrap(rowName));
+    List<TColumn> deleteColumns = new ArrayList<TColumn>();
+    TColumn deleteColumn = new TColumn(wrap(familyAname));
+    deleteColumn.setQualifier(qualifierAname);
+    deleteColumns.add(deleteColumn);
+    delete.setColumns(deleteColumns);
+
+    List<TMutation> mutations = new ArrayList<TMutation>();
+    TMutation mutationA = TMutation.put(putB);
+    mutations.add(mutationA);
+
+    TMutation mutationB = TMutation.deleteSingle(delete);
+    mutations.add(mutationB);
+
+    TRowMutations tRowMutations = new TRowMutations(wrap(rowName),mutations);
+    handler.mutateRow(table,tRowMutations);
+
+    result = handler.get(table, get);
+    assertArrayEquals(rowName, result.getRow());
+    returnedColumnValues = result.getColumnValues();
+
+    expectedColumnValues = new ArrayList<TColumnValue>();
+    expectedColumnValues.add(columnValueB);
+    assertTColumnValuesEqual(expectedColumnValues, returnedColumnValues);
+  }
 }
 

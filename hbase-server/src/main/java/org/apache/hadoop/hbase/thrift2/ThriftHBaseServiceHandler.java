@@ -18,16 +18,7 @@
  */
 package org.apache.hadoop.hbase.thrift2;
 
-import static org.apache.hadoop.hbase.thrift2.ThriftUtilities.deleteFromThrift;
-import static org.apache.hadoop.hbase.thrift2.ThriftUtilities.deletesFromThrift;
-import static org.apache.hadoop.hbase.thrift2.ThriftUtilities.getFromThrift;
-import static org.apache.hadoop.hbase.thrift2.ThriftUtilities.getsFromThrift;
-import static org.apache.hadoop.hbase.thrift2.ThriftUtilities.incrementFromThrift;
-import static org.apache.hadoop.hbase.thrift2.ThriftUtilities.putFromThrift;
-import static org.apache.hadoop.hbase.thrift2.ThriftUtilities.putsFromThrift;
-import static org.apache.hadoop.hbase.thrift2.ThriftUtilities.resultFromHBase;
-import static org.apache.hadoop.hbase.thrift2.ThriftUtilities.resultsFromHBase;
-import static org.apache.hadoop.hbase.thrift2.ThriftUtilities.scanFromThrift;
+import static org.apache.hadoop.hbase.thrift2.ThriftUtilities.*;
 import static org.apache.thrift.TBaseHelper.byteBufferToByteArray;
 
 import java.io.IOException;
@@ -49,16 +40,9 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.client.HTableInterface;
 import org.apache.hadoop.hbase.client.HTablePool;
 import org.apache.hadoop.hbase.client.ResultScanner;
+import org.apache.hadoop.hbase.client.RowMutations;
 import org.apache.hadoop.hbase.thrift.ThriftMetrics;
-import org.apache.hadoop.hbase.thrift2.generated.TDelete;
-import org.apache.hadoop.hbase.thrift2.generated.TGet;
-import org.apache.hadoop.hbase.thrift2.generated.THBaseService;
-import org.apache.hadoop.hbase.thrift2.generated.TIOError;
-import org.apache.hadoop.hbase.thrift2.generated.TIllegalArgument;
-import org.apache.hadoop.hbase.thrift2.generated.TIncrement;
-import org.apache.hadoop.hbase.thrift2.generated.TPut;
-import org.apache.hadoop.hbase.thrift2.generated.TResult;
-import org.apache.hadoop.hbase.thrift2.generated.TScan;
+import org.apache.hadoop.hbase.thrift2.generated.*;
 import org.apache.thrift.TException;
 
 /**
@@ -347,6 +331,18 @@ public class ThriftHBaseServiceHandler implements THBaseService.Iface {
     }
     scanner.close();
     removeScanner(scannerId);
+  }
+
+  @Override
+  public void mutateRow(ByteBuffer table, TRowMutations rowMutations) throws TIOError, TException {
+    HTableInterface htable = getTable(table);
+    try {
+      htable.mutateRow(rowMutationsFromThrift(rowMutations));
+    } catch (IOException e) {
+      throw getTIOError(e);
+    } finally {
+      closeTable(htable);
+    }
   }
 
 }
