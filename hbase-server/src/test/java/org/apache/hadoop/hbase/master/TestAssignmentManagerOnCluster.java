@@ -88,7 +88,7 @@ public class TestAssignmentManagerOnCluster {
   /**
    * This tests region assignment
    */
-  @Test
+  @Test (timeout=60000)
   public void testAssignRegion() throws Exception {
     String table = "testAssignRegion";
     try {
@@ -116,7 +116,7 @@ public class TestAssignmentManagerOnCluster {
   /**
    * This tests region assignment on a simulated restarted server
    */
-  @Test
+  @Test (timeout=60000)
   public void testAssignRegionOnRestartedServer() throws Exception {
     String table = "testAssignRegionOnRestartedServer";
     ServerName deadServer = null;
@@ -174,7 +174,7 @@ public class TestAssignmentManagerOnCluster {
   /**
    * This tests offlining a region
    */
-  @Test
+  @Test (timeout=60000)
   public void testOfflineRegion() throws Exception {
     String table = "testOfflineRegion";
     try {
@@ -326,7 +326,7 @@ public class TestAssignmentManagerOnCluster {
   /**
    * This tests region close failed
    */
-  @Test (timeout=30000)
+  @Test (timeout=60000)
   public void testCloseFailed() throws Exception {
     String table = "testCloseFailed";
     try {
@@ -370,7 +370,7 @@ public class TestAssignmentManagerOnCluster {
   /**
    * This tests region open failed
    */
-  @Test (timeout=30000)
+  @Test (timeout=60000)
   public void testOpenFailed() throws Exception {
     String table = "testOpenFailed";
     try {
@@ -409,7 +409,7 @@ public class TestAssignmentManagerOnCluster {
   /**
    * This tests region open failure which is not recoverable
    */
-  @Test (timeout=30000)
+  @Test (timeout=60000)
   public void testOpenFailedUnrecoverable() throws Exception {
     String table = "testOpenFailedUnrecoverable";
     try {
@@ -450,7 +450,7 @@ public class TestAssignmentManagerOnCluster {
     }
   }
   
-  @Test
+  @Test (timeout=60000)
   public void testSSHWhenDisablingTableRegionsInOpeningOrPendingOpenState() throws Exception {
     final String table = "testSSHWhenDisablingTableRegionsInOpeningOrPendingOpenState";
     AssignmentManager am = TEST_UTIL.getHBaseCluster().getMaster().getAssignmentManager();
