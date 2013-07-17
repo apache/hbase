@@ -154,7 +154,7 @@ public class TestAccessController {
       Coprocessor.PRIORITY_HIGHEST, 1, conf);
     RegionServerCoprocessorHost rsHost = TEST_UTIL.getMiniHBaseCluster().getRegionServer(0)
         .getCoprocessorHost();
-    RSCP_ENV = rsHost.createEnvironment(AccessController.class, ACCESS_CONTROLLER, 
+    RSCP_ENV = rsHost.createEnvironment(AccessController.class, ACCESS_CONTROLLER,
       Coprocessor.PRIORITY_HIGHEST, 1, conf);
 
     // Wait for the ACL table to become available
@@ -423,7 +423,7 @@ public class TestAccessController {
 
     verifyAllowed(disableTable, SUPERUSER, USER_ADMIN, USER_CREATE, USER_OWNER);
     verifyDenied(disableTable, USER_RW, USER_RO, USER_NONE);
-    
+
     // No user should be allowed to disable _acl_ table
     verifyDenied(disableAclTable, SUPERUSER, USER_ADMIN, USER_CREATE, USER_OWNER, USER_RW, USER_RO);
   }
@@ -619,7 +619,7 @@ public class TestAccessController {
     verifyDenied(action, USER_CREATE, USER_RW, USER_RO, USER_NONE);
   }
 
-  
+
   @Test
   public void testFlush() throws Exception {
     PrivilegedExceptionAction action = new PrivilegedExceptionAction() {
@@ -1935,7 +1935,7 @@ public class TestAccessController {
           + hbaseCluster.getLiveRegionServerThreads().size();
       ProtobufUtil.grant(protocol, activeUserForNewRs, null, null, null,
         Permission.Action.ADMIN, Permission.Action.CREATE,
-        Permission.Action.READ, Permission.Action.WRITE);      
+        Permission.Action.READ, Permission.Action.WRITE);
     } finally {
       acl.close();
     }
@@ -1973,7 +1973,7 @@ public class TestAccessController {
         LOG.debug("Waiting for region to be opened. Already retried " + retries
             + " times.");
         try {
-          Thread.sleep(200);
+          Thread.sleep(1000);
         } catch (InterruptedException e) {
         }
         retries++;
