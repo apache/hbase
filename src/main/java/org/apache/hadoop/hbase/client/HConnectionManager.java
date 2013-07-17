@@ -177,7 +177,6 @@ public class HConnectionManager {
 
   /**
    * Delete information for all connections.
-   * @param stopProxy stop the proxy as well
    */
   public static void deleteAllConnections() {
     synchronized (HBASE_INSTANCES) {
@@ -188,10 +187,18 @@ public class HConnectionManager {
       }
       HBaseRPC.stopClients ();
     }
+    deleteAllZookeeperConnections();
+  }
+
+  /**
+   * Delete information for all zookeeper connections.
+   */
+  public static void deleteAllZookeeperConnections() {
     synchronized (ZK_WRAPPERS) {
       for (ClientZKConnection connection : ZK_WRAPPERS.values()) {
         connection.closeZooKeeperConnection();
       }
+      ZK_WRAPPERS.clear();
     }
   }
 

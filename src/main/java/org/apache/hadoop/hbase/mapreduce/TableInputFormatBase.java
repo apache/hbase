@@ -34,6 +34,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HServerAddress;
+import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
@@ -220,6 +221,8 @@ extends InputFormat<ImmutableBytesWritable, Result> {
           LOG.debug("getSplits: split -> " + i + " -> " + split);
       }
     }
+
+    HConnectionManager.deleteAllZookeeperConnections();
     return splits;
   }
 
