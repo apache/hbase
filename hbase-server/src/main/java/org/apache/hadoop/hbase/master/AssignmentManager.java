@@ -1851,7 +1851,7 @@ public class AssignmentManager extends ZooKeeperListener {
         LOG.debug("Server stopped/aborted; skipping assign of " + region);
         return;
       }
-      LOG.info("Assigning region " + region.getRegionNameAsString() +
+      LOG.info("Assigning " + region.getRegionNameAsString() +
           " to " + plan.getDestination().toString());
       // Transition RegionState to PENDING_OPEN
       currentState = regionStates.updateRegionState(region,

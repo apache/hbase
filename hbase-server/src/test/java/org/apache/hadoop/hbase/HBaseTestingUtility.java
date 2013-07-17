@@ -559,7 +559,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
     if (readOnProp != null){
       return  Boolean.parseBoolean(readOnProp);
     } else {
-      return conf.getBoolean(propName, true);
+      return conf.getBoolean(propName, false);
     }
   }
 
