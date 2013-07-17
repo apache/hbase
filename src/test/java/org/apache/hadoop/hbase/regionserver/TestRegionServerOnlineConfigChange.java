@@ -216,5 +216,24 @@ public class TestRegionServerOnlineConfigChange extends TestCase {
     assertEquals(newMajorCompactionJitter,
             s.compactionManager.comConf.getMajorCompactionJitter(), 0.00001);
   }
+
+  /**
+   * Check if quorum read settings change online properly
+   */
+  public void testQuorumReadConfigurationChange() {
+    int threads = conf.getInt(
+        HConstants.HDFS_QUORUM_READ_THREADS_MAX, 0);
+    int timeout = conf.getInt(
+        HConstants.HDFS_QUORUM_READ_TIMEOUT_MILLIS, 0);
+    threads += 1;
+    timeout += 1;
+    conf.setInt(HConstants.HDFS_QUORUM_READ_THREADS_MAX, threads);
+    conf.setInt(HConstants.HDFS_QUORUM_READ_TIMEOUT_MILLIS, timeout);
+    HRegionServer.configurationManager.notifyAllObservers(conf);
+    assertEquals(threads,
+        conf.getInt(HConstants.HDFS_QUORUM_READ_THREADS_MAX, 0));
+    assertEquals(timeout,
+        conf.getInt(HConstants.HDFS_QUORUM_READ_TIMEOUT_MILLIS, 0));
+  }
 }
 

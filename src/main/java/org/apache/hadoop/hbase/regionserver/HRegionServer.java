@@ -109,6 +109,7 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.ServerConnection;
 import org.apache.hadoop.hbase.client.ServerConnectionManager;
 import org.apache.hadoop.hbase.conf.ConfigurationManager;
+import org.apache.hadoop.hbase.conf.ConfigurationObserver;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.L2BucketCache;
 import org.apache.hadoop.hbase.io.hfile.LruBlockCache;
@@ -165,7 +166,7 @@ import com.google.common.base.Preconditions;
  * the HMaster. There are many HRegionServers in a single HBase deployment.
  */
 public class HRegionServer implements HRegionInterface,
-    HBaseRPCErrorHandler, Runnable, Watcher {
+    HBaseRPCErrorHandler, Runnable, Watcher, ConfigurationObserver {
   public static final Log LOG = LogFactory.getLog(HRegionServer.class);
   private static final HMsg REPORT_EXITING = new HMsg(Type.MSG_REPORT_EXITING);
   private static final HMsg REPORT_RESTARTING = new HMsg(
@@ -1019,6 +1020,9 @@ public class HRegionServer implements HRegionInterface,
     // So, shutdown the MemstoreFlusher and LogRoller
     this.stopRequestedAtStageTwo.set(true);
 
+    // Stop listening to configuration update event
+    configurationManager.deregisterObserver(this);
+
     // shutdown thriftserver
     if (thriftServer != null) {
       thriftServer.shutdown();
@@ -1194,6 +1198,9 @@ public class HRegionServer implements HRegionInterface,
         thriftServer.start();
         LOG.info("Started Thrift API from Region Server.");
       }
+
+      // Register configuration update event for handling it on the fly
+      configurationManager.registerObserver(this);
     } catch (Throwable e) {
       this.isOnline = false;
       this.stopRequestedAtStageOne.set(true);
@@ -3836,5 +3843,14 @@ public class HRegionServer implements HRegionInterface,
       return s.getResponseQueueSize();
     }
     return 0;
+  }
+
+  @Override
+  public void notifyOnChange(Configuration conf) {
+    this.setNumHDFSQuorumReadThreads(conf.getInt(
+        HConstants.HDFS_QUORUM_READ_THREADS_MAX, HConstants.DEFAULT_HDFS_QUORUM_READ_THREADS_MAX));
+
+    this.setHDFSQuorumReadTimeoutMillis(conf.getInt(
+        HConstants.HDFS_QUORUM_READ_TIMEOUT_MILLIS, HConstants.DEFAULT_HDFS_QUORUM_READ_TIMEOUT_MILLIS));
   }
 }
