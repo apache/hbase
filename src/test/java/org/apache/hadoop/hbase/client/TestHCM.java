@@ -331,13 +331,21 @@ public class TestHCM {
   }
 
   /**
-   * Tests that a closed connection does not have a live zookeeper
+   * Tests that a destroyed connection does not have a live zookeeper.
+   * Below is timing based.  We put up a connection to a table and then close the connection while
+   * having a background thread running that is forcing close of the connection to try and
+   * provoke a close catastrophe; we are hoping for a car crash so we can see if we are leaking
+   * zk connections.
    * @throws Exception
    */
   @Test
   public void testDeleteForZKConnLeak() throws Exception {
     TEST_UTIL.createTable(TABLE_NAME2, FAM_NAM);
-    final Configuration config = TEST_UTIL.getConfiguration();
+    final Configuration config = HBaseConfiguration.create(TEST_UTIL.getConfiguration());
+    config.setInt("zookeeper.recovery.retry", 1);
+    config.setInt("zookeeper.recovery.retry.intervalmill", 1000);
+    config.setInt("hbase.rpc.timeout", 2000);
+    config.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 1);
 
     ThreadPoolExecutor pool = new ThreadPoolExecutor(1, 10,
       5, TimeUnit.SECONDS,
@@ -350,41 +358,54 @@ public class TestHCM {
         while (!Thread.interrupted()) {
           try {
             HConnection conn = HConnectionManager.getConnection(config);
+            LOG.info("Connection " + conn);
             HConnectionManager.deleteStaleConnection(conn);
+            LOG.info("Connection closed " + conn);
+            // TODO: This sleep time should be less than the time that it takes to open and close
+            // a table.  Ideally we would do a few runs first to measure.  For now this is
+            // timing based; hopefully we hit the bad condition.
+            Threads.sleep(10);
           } catch (Exception e) {
           }
         }
       }
     });
 
-    // use connection multiple times
-    for (int i = 0; i < 10; i++) {
+    // Use connection multiple times.
+    for (int i = 0; i < 30; i++) {
       HConnection c1 = null;
-        try {
-          c1 = HConnectionManager.getConnection(config);
-          HTable table = new HTable(TABLE_NAME2, c1, pool);
-          table.close();
-        } catch (Exception e) {
-        } finally {
-          if (c1 != null) {
-            if (c1.isClosed()) {
-              // cannot use getZooKeeper as method instantiates watcher if null
-              Field zkwField = c1.getClass().getDeclaredField("zooKeeper");
-              zkwField.setAccessible(true);
-              Object watcher = zkwField.get(c1);
+      try {
+        c1 = HConnectionManager.getConnection(config);
+        LOG.info("HTable connection " + i + " " + c1);
+        HTable table = new HTable(TABLE_NAME2, c1, pool);
+        table.close();
+        LOG.info("HTable connection " + i + " closed " + c1);
+      } catch (Exception e) {
+        LOG.info("We actually want this to happen!!!!  So we can see if we are leaking zk", e);
+      } finally {
+        if (c1 != null) {
+          if (c1.isClosed()) {
+            // cannot use getZooKeeper as method instantiates watcher if null
+            Field zkwField = c1.getClass().getDeclaredField("zooKeeper");
+            zkwField.setAccessible(true);
+            Object watcher = zkwField.get(c1);
 
-              if (watcher != null) {
-                if (((ZooKeeperWatcher)watcher).getRecoverableZooKeeper().getState().isAlive()) {
+            if (watcher != null) {
+              if (((ZooKeeperWatcher)watcher).getRecoverableZooKeeper().getState().isAlive()) {
+                // non-synchronized access to watcher; sleep and check again in case zk connection
+                // hasn't been cleaned up yet.
+                Thread.sleep(1000);
+                if (((ZooKeeperWatcher) watcher).getRecoverableZooKeeper().getState().isAlive()) {
                   pool.shutdownNow();
                   fail("Live zookeeper in closed connection");
                 }
               }
             }
-            c1.close();
           }
+          c1.close();
         }
+      }
     }
-
     pool.shutdownNow();
   }
 
