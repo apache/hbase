@@ -22,7 +22,6 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.util.List;
-import java.util.concurrent.CountDownLatch;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -38,14 +37,9 @@ import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.master.MasterServices;
-import org.apache.hadoop.hbase.master.TestMaster;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.zookeeper.ZKTable;
-import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.junit.After;
-import org.junit.AfterClass;
 import org.junit.Before;
-import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
@@ -69,7 +63,7 @@ public class TestCreateTableHandler {
     throwException = false;
   }
 
-  @Test
+  @Test (timeout=300000)
   public void testCreateTableHandlerIfCalledTwoTimesAndFirstOneIsUnderProgress() throws Exception {
     final MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
     final HMaster m = cluster.getMaster();
@@ -95,8 +89,8 @@ public class TestCreateTableHandler {
     assertTrue(TEST_UTIL.getHBaseAdmin().isTableEnabled(TABLENAME));
 
   }
-  
-  @Test (timeout=5000)
+
+  @Test (timeout=60000)
   public void testMasterRestartAfterEnablingNodeIsCreated() throws Exception {
     byte[] tableName = Bytes.toBytes("testMasterRestartAfterEnablingNodeIsCreated");
     final MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
