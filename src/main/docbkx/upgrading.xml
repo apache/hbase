@@ -90,6 +90,9 @@
  </para>
  <para>The API has changed in a few areas; in particular how you use coprocessors (TODO: MapReduce too?)
  </para>
+ <para>TODO: Need to recompile your code against 0.96, choose the right hbase jar to suit your h1 or h2
+     setup, etc.  WHAT ELSE
+ </para>
  <section xml:id="096.zk.cleaning">
      <title>Cleaning zookeeper of old data</title>
      <para>Clean zookeeper of all its content before you start 0.96.x (or 0.95.x).  Here is how:
