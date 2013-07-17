@@ -21,7 +21,6 @@ package org.apache.hadoop.hbase.zookeeper;
 
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
-import java.lang.reflect.Field;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
 import java.util.ArrayList;
@@ -273,12 +272,62 @@ public class ZKSplitLog {
     public static AtomicLong tot_wkr_final_transistion_failed =
       new AtomicLong(0);
 
-    public static void resetCounters() throws Exception {
-      Class<?> cl = (new Counters()).getClass();
-      Field[] flds = cl.getDeclaredFields();
-      for (Field fld : flds) {
-        ((AtomicLong)fld.get(null)).set(0);
-      }
+    public static void resetCounters() {
+    //SplitLogManager counters
+      tot_mgr_log_split_batch_start.set(0);
+      tot_mgr_log_split_batch_success.set(0);
+      tot_mgr_log_split_batch_err.set(0);
+      tot_mgr_new_unexpected_hlogs.set(0);
+      tot_mgr_log_split_start.set(0);
+      tot_mgr_log_split_success.set(0);
+      tot_mgr_log_split_err.set(0);
+      tot_mgr_node_create_queued.set(0);
+      tot_mgr_node_create_result.set(0);
+      tot_mgr_node_create_rescan_queued.set(0);
+      tot_mgr_node_create_rescan_result.set(0);
+      tot_mgr_node_already_exists.set(0);
+      tot_mgr_node_create_err.set(0);
+      tot_mgr_node_create_retry.set(0);
+      tot_mgr_get_data_queued.set(0);
+      tot_mgr_get_data_result.set(0);
+      tot_mgr_get_data_nonode.set(0);
+      tot_mgr_get_data_err.set(0);
+      tot_mgr_get_data_retry.set(0);
+      tot_mgr_node_delete_queued.set(0);
+      tot_mgr_node_delete_result.set(0);
+      tot_mgr_node_delete_err.set(0);
+      tot_mgr_resubmit.set(0);
+      tot_mgr_resubmit_failed.set(0);
+      tot_mgr_null_data.set(0);
+      tot_mgr_orphan_task_acquired.set(0);
+      tot_mgr_wait_for_zk_delete.set(0);
+      tot_mgr_unacquired_orphan_done.set(0);
+      tot_mgr_resubmit_threshold_reached.set(0);
+      tot_mgr_missing_state_in_delete.set(0);
+      tot_mgr_heartbeat.set(0);
+      tot_mgr_rescan.set(0);
+      tot_mgr_rescan_deleted.set(0);
+      tot_mgr_task_deleted.set(0);
+      tot_mgr_resubmit_unassigned.set(0);
+      tot_mgr_relist_logdir.set(0);
+      tot_mgr_resubmit_dead_server_task.set(0);
+
+      // SplitLogWorker counters
+      tot_wkr_failed_to_grab_task_no_data.set(0);
+      tot_wkr_failed_to_grab_task_exception.set(0);
+      tot_wkr_failed_to_grab_task_owned.set(0);
+      tot_wkr_failed_to_grab_task_lost_race.set(0);
+      tot_wkr_task_acquired.set(0);
+      tot_wkr_task_resigned.set(0);
+      tot_wkr_task_done.set(0);
+      tot_wkr_task_err.set(0);
+      tot_wkr_task_heartbeat.set(0);
+      tot_wkr_get_data_queued.set(0);
+      tot_wkr_get_data_result.set(0);
+      tot_wkr_get_data_retry.set(0);
+      tot_wkr_preempt_task.set(0);
+      tot_wkr_task_heartbeat_failed.set(0);
+      tot_wkr_final_transistion_failed.set(0);
     }
   }
 }
