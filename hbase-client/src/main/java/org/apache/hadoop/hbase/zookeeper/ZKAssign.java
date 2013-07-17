@@ -783,8 +783,7 @@ public class ZKAssign {
   throws KeeperException {
     String encoded = region.getEncodedName();
     if(LOG.isDebugEnabled()) {
-      LOG.debug(zkw.prefix("Attempting to transition node " +
-        HRegionInfo.prettyPrint(encoded) +
+      LOG.debug(zkw.prefix("Transitioning " + HRegionInfo.prettyPrint(encoded) +
         " from " + beginState.toString() + " to " + endState.toString()));
     }
 
@@ -995,9 +994,7 @@ public class ZKAssign {
       List<String> znodes =
         ZKUtil.listChildrenAndWatchForNewChildren(zkw, zkw.assignmentZNode);
       if (znodes != null && !znodes.isEmpty()) {
-        for (String znode : znodes) {
-          LOG.debug("ZK RIT -> " + znode);
-        }
+        LOG.debug("Waiting on RIT: " + znodes);
       }
       Thread.sleep(100);
     }
