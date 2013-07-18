@@ -36,6 +36,7 @@ import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.Col
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.ColumnValue.QualifierValue;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.DeleteType;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.MutationType;
+import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameBytesPair;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -47,6 +48,20 @@ import com.google.protobuf.ByteString;
  */
 @Category(SmallTests.class)
 public class TestProtobufUtil {
+  @Test
+  public void testException() throws IOException {
+    NameBytesPair.Builder builder = NameBytesPair.newBuilder();
+    final String omg = "OMG!!!";
+    builder.setName("java.io.IOException");
+    builder.setValue(ByteString.copyFrom(Bytes.toBytes(omg)));
+    Throwable t = ProtobufUtil.toException(builder.build());
+    assertEquals(omg, t.getMessage());
+    builder.clear();
+    builder.setName("org.apache.hadoop.ipc.RemoteException");
+    builder.setValue(ByteString.copyFrom(Bytes.toBytes(omg)));
+    t = ProtobufUtil.toException(builder.build());
+    assertEquals(omg, t.getMessage());
+  }
 
   /**
    * Test basic Get conversions.
