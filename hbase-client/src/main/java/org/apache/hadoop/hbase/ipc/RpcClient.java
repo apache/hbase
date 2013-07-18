@@ -580,22 +580,19 @@ public class RpcClient {
         if (socket.getOutputStream() != null) {
           socket.getOutputStream().close();
         }
-      } catch (IOException e) {
-        LOG.warn("Not able to close an output stream", e);
+      } catch (IOException ignored) {  // Can happen if the socket is already closed
       }
       try {
         if (socket.getInputStream() != null) {
           socket.getInputStream().close();
         }
-      } catch (IOException e) {
-        LOG.warn("Not able to close an input stream", e);
+      } catch (IOException ignored) {  // Can happen if the socket is already closed
       }
       try {
         if (socket.getChannel() != null) {
           socket.getChannel().close();
         }
-      } catch (IOException e) {
-        LOG.warn("Not able to close a channel", e);
+      } catch (IOException ignored) {  // Can happen if the socket is already closed
       }
       try {
         socket.close();
