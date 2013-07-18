@@ -4603,7 +4603,7 @@ public class TestFromClientSide {
     }
   }
 
-  @Test
+  @Ignore ("Flakey: HBASE-8989") @Test
   public void testClientPoolThreadLocal() throws IOException {
     final byte[] tableName = Bytes.toBytes("testClientPoolThreadLocal");
 
@@ -4657,8 +4657,8 @@ public class TestFromClientSide {
             NavigableMap<Long, byte[]> navigableMap = result.getMap()
                 .get(FAMILY).get(QUALIFIER);
 
-            assertEquals("The number of versions of '" + FAMILY + ":"
-                + QUALIFIER + " did not match " + versionsCopy, versionsCopy,
+            assertEquals("The number of versions of '" + Bytes.toString(FAMILY) + ":"
+                + Bytes.toString(QUALIFIER) + " did not match " + versionsCopy, versionsCopy,
                 navigableMap.size());
             for (Map.Entry<Long, byte[]> entry : navigableMap.entrySet()) {
               assertTrue("The value at time " + entry.getKey()
