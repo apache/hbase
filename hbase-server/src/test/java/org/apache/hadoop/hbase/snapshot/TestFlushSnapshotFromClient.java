@@ -123,7 +123,8 @@ public class TestFlushSnapshotFromClient {
     UTIL.deleteTable(TABLE_NAME);
     // and cleanup the archive directory
     try {
-      UTIL.getTestFileSystem().delete(new Path(UTIL.getDefaultRootDirPath(), ".archive"), true);
+      UTIL.getTestFileSystem().delete(
+        new Path(UTIL.getDefaultRootDirPath(), HConstants.HFILE_ARCHIVE_DIRECTORY), true);
     } catch (IOException e) {
       LOG.warn("Failure to delete archive directory", e);
     }

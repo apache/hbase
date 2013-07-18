@@ -78,7 +78,7 @@ public class TestHLog  {
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static Path hbaseDir;
   private static Path oldLogDir;
-  
+
   @Before
   public void setUp() throws Exception {
 
@@ -120,7 +120,7 @@ public class TestHLog  {
     fs = cluster.getFileSystem();
 
     hbaseDir = TEST_UTIL.createRootDir();
-    oldLogDir = new Path(hbaseDir, ".oldlogs");
+    oldLogDir = new Path(hbaseDir, HConstants.HREGION_OLDLOGDIR_NAME);
     dir = new Path(hbaseDir, getName());
   }
   @AfterClass
@@ -159,7 +159,7 @@ public class TestHLog  {
     final byte [] tableName = Bytes.toBytes(getName());
     final byte [] rowName = tableName;
     Path logdir = new Path(hbaseDir, HConstants.HREGION_LOGDIR_NAME);
-    HLog log = HLogFactory.createHLog(fs, hbaseDir, 
+    HLog log = HLogFactory.createHLog(fs, hbaseDir,
         HConstants.HREGION_LOGDIR_NAME, conf);
     final int howmany = 3;
     HRegionInfo[] infos = new HRegionInfo[3];
@@ -237,7 +237,7 @@ public class TestHLog  {
     in.close();
 
     HLog wal = HLogFactory.createHLog(fs, dir, "hlogdir", conf);
-    
+
     final int total = 20;
     HLog.Reader reader = null;
 
@@ -367,10 +367,10 @@ public class TestHLog  {
       }
     }
   }
-  
+
   /*
    * We pass different values to recoverFileLease() so that different code paths are covered
-   * 
+   *
    * For this test to pass, requires:
    * 1. HDFS-200 (append support)
    * 2. HDFS-988 (SafeMode should freeze file operations
@@ -506,7 +506,7 @@ public class TestHLog  {
     HLog log = null;
     try {
       log = HLogFactory.createHLog(fs, hbaseDir, getName(), conf);
-      
+
       // Write columns named 1, 2, 3, etc. and then values of single byte
       // 1, 2, 3...
       long timestamp = System.currentTimeMillis();
@@ -652,7 +652,7 @@ public class TestHLog  {
     final byte [] tableName = Bytes.toBytes("testLogCleaning");
     final byte [] tableName2 = Bytes.toBytes("testLogCleaning2");
 
-    HLog log = HLogFactory.createHLog(fs, hbaseDir, 
+    HLog log = HLogFactory.createHLog(fs, hbaseDir,
         getName(), conf);
     try {
       HRegionInfo hri = new HRegionInfo(tableName,
@@ -736,7 +736,7 @@ public class TestHLog  {
   @Test
   public void testWALCoprocessorLoaded() throws Exception {
     // test to see whether the coprocessor is loaded or not.
-    HLog log = HLogFactory.createHLog(fs, hbaseDir, 
+    HLog log = HLogFactory.createHLog(fs, hbaseDir,
         getName(), conf);
     try {
       WALCoprocessorHost host = log.getCoprocessorHost();
@@ -760,7 +760,7 @@ public class TestHLog  {
       log.append(hri, tableName, cols, timestamp, htd);
     }
   }
-  
+
 
   /**
    * @throws IOException
@@ -953,7 +953,7 @@ public class TestHLog  {
     @Override
     public void logRollRequested() {
       // TODO Auto-generated method stub
-      
+
     }
 
     @Override
