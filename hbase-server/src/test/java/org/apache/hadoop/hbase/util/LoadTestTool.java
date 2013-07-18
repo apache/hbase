@@ -43,33 +43,33 @@ public class LoadTestTool extends AbstractHBaseTool {
   private static final Log LOG = LogFactory.getLog(LoadTestTool.class);
 
   /** Table name for the test */
-  private byte[] tableName;
+  protected byte[] tableName;
 
   /** Table name to use of not overridden on the command line */
-  private static final String DEFAULT_TABLE_NAME = "cluster_test";
+  protected static final String DEFAULT_TABLE_NAME = "cluster_test";
 
   /** Column family used by the test */
-  static byte[] COLUMN_FAMILY = Bytes.toBytes("test_cf");
+  protected static byte[] COLUMN_FAMILY = Bytes.toBytes("test_cf");
 
   /** Column families used by the test */
-  static final byte[][] COLUMN_FAMILIES = { COLUMN_FAMILY };
+  protected static final byte[][] COLUMN_FAMILIES = { COLUMN_FAMILY };
 
   /** The number of reader/writer threads if not specified */
-  private static final int DEFAULT_NUM_THREADS = 20;
+  protected static final int DEFAULT_NUM_THREADS = 20;
 
   /** Usage string for the load option */
-  private static final String OPT_USAGE_LOAD =
+  protected static final String OPT_USAGE_LOAD =
       "<avg_cols_per_key>:<avg_data_size>" +
       "[:<#threads=" + DEFAULT_NUM_THREADS + ">]";
 
   /** Usa\ge string for the read option */
-  private static final String OPT_USAGE_READ =
+  protected static final String OPT_USAGE_READ =
       "<verify_percent>[:<#threads=" + DEFAULT_NUM_THREADS + ">]";
 
-  private static final String OPT_USAGE_BLOOM = "Bloom filter type, one of " +
+  protected static final String OPT_USAGE_BLOOM = "Bloom filter type, one of " +
       Arrays.toString(BloomType.values());
 
-  private static final String OPT_USAGE_COMPRESSION = "Compression type, " +
+  protected static final String OPT_USAGE_COMPRESSION = "Compression type, " +
       "one of " + Arrays.toString(Compression.Algorithm.values());
 
   public static final String OPT_DATA_BLOCK_ENCODING_USAGE =
@@ -91,54 +91,54 @@ public class LoadTestTool extends AbstractHBaseTool {
   public static final String OPT_USAGE_IN_MEMORY = "Tries to keep the HFiles of the CF " +
   		"inmemory as far as possible.  Not guaranteed that reads are always served from inmemory";
 
-  private static final String OPT_KEY_WINDOW = "key_window";
-  private static final String OPT_WRITE = "write";
-  private static final String OPT_MAX_READ_ERRORS = "max_read_errors";
-  private static final String OPT_MULTIPUT = "multiput";
-  private static final String OPT_NUM_KEYS = "num_keys";
-  private static final String OPT_READ = "read";
-  private static final String OPT_START_KEY = "start_key";
-  private static final String OPT_TABLE_NAME = "tn";
-  private static final String OPT_ZK_QUORUM = "zk";
-  private static final String OPT_SKIP_INIT = "skip_init";
-  private static final String OPT_INIT_ONLY = "init_only";
+  protected static final String OPT_KEY_WINDOW = "key_window";
+  protected static final String OPT_WRITE = "write";
+  protected static final String OPT_MAX_READ_ERRORS = "max_read_errors";
+  protected static final String OPT_MULTIPUT = "multiput";
+  protected static final String OPT_NUM_KEYS = "num_keys";
+  protected static final String OPT_READ = "read";
+  protected static final String OPT_START_KEY = "start_key";
+  protected static final String OPT_TABLE_NAME = "tn";
+  protected static final String OPT_ZK_QUORUM = "zk";
+  protected static final String OPT_SKIP_INIT = "skip_init";
+  protected static final String OPT_INIT_ONLY = "init_only";
 
-  private static final long DEFAULT_START_KEY = 0;
+  protected static final long DEFAULT_START_KEY = 0;
 
   /** This will be removed as we factor out the dependency on command line */
-  private CommandLine cmd;
+  protected CommandLine cmd;
 
-  private MultiThreadedWriter writerThreads = null;
-  private MultiThreadedReader readerThreads = null;
+  protected MultiThreadedWriter writerThreads = null;
+  protected MultiThreadedReader readerThreads = null;
 
-  private long startKey, endKey;
+  protected long startKey, endKey;
 
-  private boolean isWrite, isRead;
+  protected boolean isWrite, isRead;
 
   // Column family options
-  private DataBlockEncoding dataBlockEncodingAlgo;
-  private boolean encodeInCacheOnly;
-  private Compression.Algorithm compressAlgo;
-  private BloomType bloomType;
+  protected DataBlockEncoding dataBlockEncodingAlgo;
+  protected boolean encodeInCacheOnly;
+  protected Compression.Algorithm compressAlgo;
+  protected BloomType bloomType;
   private boolean inMemoryCF;
   // Writer options
-  private int numWriterThreads = DEFAULT_NUM_THREADS;
-  private int minColsPerKey, maxColsPerKey;
-  private int minColDataSize, maxColDataSize;
-  private boolean isMultiPut;
+  protected int numWriterThreads = DEFAULT_NUM_THREADS;
+  protected int minColsPerKey, maxColsPerKey;
+  protected int minColDataSize, maxColDataSize;
+  protected boolean isMultiPut;
 
   // Reader options
-  private int numReaderThreads = DEFAULT_NUM_THREADS;
-  private int keyWindow = MultiThreadedReader.DEFAULT_KEY_WINDOW;
-  private int maxReadErrors = MultiThreadedReader.DEFAULT_MAX_ERRORS;
-  private int verifyPercent;
+  protected int numReaderThreads = DEFAULT_NUM_THREADS;
+  protected int keyWindow = MultiThreadedReader.DEFAULT_KEY_WINDOW;
+  protected int maxReadErrors = MultiThreadedReader.DEFAULT_MAX_ERRORS;
+  protected int verifyPercent;
 
   // TODO: refactor LoadTestToolImpl somewhere to make the usage from tests less bad,
   //       console tool itself should only be used from console.
-  private boolean isSkipInit = false;
-  private boolean isInitOnly = false;
+  protected boolean isSkipInit = false;
+  protected boolean isInitOnly = false;
 
-  private String[] splitColonSeparated(String option,
+  protected String[] splitColonSeparated(String option,
       int minNumCols, int maxNumCols) {
     String optVal = cmd.getOptionValue(option);
     String[] cols = optVal.split(":");
@@ -151,7 +151,7 @@ public class LoadTestTool extends AbstractHBaseTool {
     return cols;
   }
 
-  private int getNumThreads(String numThreadsStr) {
+  protected int getNumThreads(String numThreadsStr) {
     return parseInt(numThreadsStr, 1, Short.MAX_VALUE);
   }
 
@@ -159,7 +159,7 @@ public class LoadTestTool extends AbstractHBaseTool {
    * Apply column family options such as Bloom filters, compression, and data
    * block encoding.
    */
-  private void applyColumnFamilyOptions(byte[] tableName,
+  protected void applyColumnFamilyOptions(byte[] tableName,
       byte[][] columnFamilies) throws IOException {
     HBaseAdmin admin = new HBaseAdmin(conf);
     HTableDescriptor tableDesc = admin.getTableDescriptor(tableName);
