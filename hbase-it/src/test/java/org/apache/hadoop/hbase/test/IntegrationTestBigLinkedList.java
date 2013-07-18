@@ -21,8 +21,6 @@ package org.apache.hadoop.hbase.test;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
-import java.io.StringWriter;
-import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -574,7 +572,6 @@ public class IntegrationTestBigLinkedList extends Configured implements Tool {
             comma = ",";
             refsSb.append(Bytes.toStringBinary(ref));
           }
-          byte[] bytes = new byte[key.getLength()];
           keyString = Bytes.toStringBinary(key.getBytes(), 0, key.getLength());
         }
 
@@ -945,7 +942,7 @@ public class IntegrationTestBigLinkedList extends Configured implements Tool {
     }
   }
 
-  private static byte[] getTableName(Configuration conf) {
+  static byte[] getTableName(Configuration conf) {
     return Bytes.toBytes(conf.get(TABLE_NAME_KEY, DEFAULT_TABLE_NAME));
   }
 

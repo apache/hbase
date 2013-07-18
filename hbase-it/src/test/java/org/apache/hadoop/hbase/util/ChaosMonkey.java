@@ -36,6 +36,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ClusterStatus;
 import org.apache.hadoop.hbase.HBaseCluster;
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.IntegrationTestDataIngestWithChaosMonkey;
 import org.apache.hadoop.hbase.IntegrationTestingUtility;
@@ -105,8 +106,12 @@ public class ChaosMonkey extends AbstractHBaseTool implements Stoppable {
   private void setPoliciesByName(String... policies) {
     this.policies = new Policy[policies.length];
     for (int i=0; i < policies.length; i++) {
-      this.policies[i] = NAMED_POLICIES.get(policies[i]);
+      this.policies[i] = getPolicyByName(policies[i]);
     }
+  }
+
+  public static Policy getPolicyByName(String policy) {
+    return NAMED_POLICIES.get(policy);
   }
 
   /**
@@ -327,6 +332,10 @@ public class ChaosMonkey extends AbstractHBaseTool implements Stoppable {
     private final long sleepTime;
     private final byte[] tableNameBytes;
 
+    public MoveRegionsOfTable(String tableName) {
+      this(-1, tableName);
+    }
+
     public MoveRegionsOfTable(long sleepTime, String tableName) {
       this.sleepTime = sleepTime;
       this.tableNameBytes = Bytes.toBytes(tableName);
@@ -349,9 +358,248 @@ public class ChaosMonkey extends AbstractHBaseTool implements Stoppable {
           LOG.debug("Error moving region", e);
         }
       }
-      Thread.sleep(sleepTime);
+      if (sleepTime > 0) {
+        Thread.sleep(sleepTime);
+      }
     }
   }
+
+  public static class MoveRandomRegionOfTable extends Action {
+    private final long sleepTime;
+    private final byte[] tableNameBytes;
+
+    public MoveRandomRegionOfTable(String tableName) {
+      this(-1, tableName);
+    }
+
+    public MoveRandomRegionOfTable(long sleepTime, String tableName) {
+      this.sleepTime = sleepTime;
+      this.tableNameBytes = Bytes.toBytes(tableName);
+    }
+
+    @Override
+    public void perform() throws Exception {
+      HBaseTestingUtility util = context.getHaseIntegrationTestingUtility();
+      HBaseAdmin admin = util.getHBaseAdmin();
+
+      List<HRegionInfo> regions = admin.getTableRegions(tableNameBytes);
+      HRegionInfo region = selectRandomItem(
+        regions.toArray(new HRegionInfo[regions.size()]));
+      admin.unassign(region.getRegionName(), false);
+      if (sleepTime > 0) {
+        Thread.sleep(sleepTime);
+      }
+    }
+  }
+
+  public static class SplitRandomRegionOfTable extends Action {
+    private final byte[] tableNameBytes;
+    private final long sleepTime;
+
+    public SplitRandomRegionOfTable(String tableName) {
+      this(-1, tableName);
+    }
+
+    public SplitRandomRegionOfTable(int sleepTime, String tableName) {
+      this.tableNameBytes = Bytes.toBytes(tableName);
+      this.sleepTime = sleepTime;
+    }
+
+    @Override
+    public void perform() throws Exception {
+      HBaseTestingUtility util = context.getHaseIntegrationTestingUtility();
+      HBaseAdmin admin = util.getHBaseAdmin();
+
+      List<HRegionInfo> regions = admin.getTableRegions(tableNameBytes);
+      HRegionInfo region = selectRandomItem(
+        regions.toArray(new HRegionInfo[regions.size()]));
+      admin.split(region.getRegionName());
+      if (sleepTime > 0) {
+        Thread.sleep(sleepTime);
+      }
+    }
+  }
+
+  public static class MergeRandomAdjacentRegionsOfTable extends Action {
+    private final byte[] tableNameBytes;
+    private final String tableName;
+    private final long sleepTime;
+
+    public MergeRandomAdjacentRegionsOfTable(String tableName) {
+      this(-1, tableName);
+    }
+
+    public MergeRandomAdjacentRegionsOfTable(int sleepTime, String tableName) {
+      this.tableNameBytes = Bytes.toBytes(tableName);
+      this.tableName = tableName;
+      this.sleepTime = sleepTime;
+    }
+
+    @Override
+    public void perform() throws Exception {
+      HBaseTestingUtility util = context.getHaseIntegrationTestingUtility();
+      HBaseAdmin admin = util.getHBaseAdmin();
+  
+      List<HRegionInfo> regions = admin.getTableRegions(tableNameBytes);
+      if (regions.size() < 2) {
+        LOG.info("Table " + tableName + " doesn't have enough region to merge");
+        return;
+      }
+
+      int i = RandomUtils.nextInt(regions.size() - 1);
+      HRegionInfo a = regions.get(i++);
+      HRegionInfo b = regions.get(i);
+      admin.mergeRegions(a.getEncodedNameAsBytes(), b.getEncodedNameAsBytes(), false);
+      if (sleepTime > 0) {
+        Thread.sleep(sleepTime);
+      }
+    }
+  }
+
+  public static class CompactTable extends Action {
+    private final byte[] tableNameBytes;
+    private final int majorRatio;
+    private final long sleepTime;
+
+    public CompactTable(
+        String tableName, float majorRatio) {
+      this(-1, tableName, majorRatio);
+    }
+
+    public CompactTable(
+        int sleepTime, String tableName, float majorRatio) {
+      this.tableNameBytes = Bytes.toBytes(tableName);
+      this.majorRatio = (int) (100 * majorRatio);
+      this.sleepTime = sleepTime;
+    }
+
+    @Override
+    public void perform() throws Exception {
+      HBaseTestingUtility util = context.getHaseIntegrationTestingUtility();
+      HBaseAdmin admin = util.getHBaseAdmin();
+      if (RandomUtils.nextInt(100) < majorRatio) {
+        admin.majorCompact(tableNameBytes);
+      } else {
+        admin.compact(tableNameBytes);
+      }
+      if (sleepTime > 0) {
+        Thread.sleep(sleepTime);
+      }
+    }
+  }
+
+  public static class CompactRandomRegionOfTable extends Action {
+    private final byte[] tableNameBytes;
+    private final int majorRatio;
+    private final long sleepTime;
+
+    public CompactRandomRegionOfTable(
+        String tableName, float majorRatio) {
+      this(-1, tableName, majorRatio);
+    }
+
+    public CompactRandomRegionOfTable(
+        int sleepTime, String tableName, float majorRatio) {
+      this.tableNameBytes = Bytes.toBytes(tableName);
+      this.majorRatio = (int) (100 * majorRatio);
+      this.sleepTime = sleepTime;
+    }
+
+    @Override
+    public void perform() throws Exception {
+      HBaseTestingUtility util = context.getHaseIntegrationTestingUtility();
+      HBaseAdmin admin = util.getHBaseAdmin();
+      List<HRegionInfo> regions = admin.getTableRegions(tableNameBytes);
+      HRegionInfo region = selectRandomItem(
+        regions.toArray(new HRegionInfo[regions.size()]));
+      if (RandomUtils.nextInt(100) < majorRatio) {
+        admin.majorCompact(region.getRegionName());
+      } else {
+        admin.compact(region.getRegionName());
+      }
+      if (sleepTime > 0) {
+        Thread.sleep(sleepTime);
+      }
+    }
+  }
+
+  public static class FlushTable extends Action {
+    private final byte[] tableNameBytes;
+    private final long sleepTime;
+
+    public FlushTable(String tableName) {
+      this(-1, tableName);
+    }
+
+    public FlushTable(int sleepTime, String tableName) {
+      this.tableNameBytes = Bytes.toBytes(tableName);
+      this.sleepTime = sleepTime;
+    }
+
+    @Override
+    public void perform() throws Exception {
+      HBaseTestingUtility util = context.getHaseIntegrationTestingUtility();
+      HBaseAdmin admin = util.getHBaseAdmin();
+      admin.flush(tableNameBytes);
+      if (sleepTime > 0) {
+        Thread.sleep(sleepTime);
+      }
+    }
+  }
+
+  public static class FlushRandomRegionOfTable extends Action {
+    private final byte[] tableNameBytes;
+    private final long sleepTime;
+
+    public FlushRandomRegionOfTable(String tableName) {
+     this (-1, tableName);
+    }
+
+    public FlushRandomRegionOfTable(int sleepTime, String tableName) {
+      this.tableNameBytes = Bytes.toBytes(tableName);
+      this.sleepTime = sleepTime;
+    }
+
+    @Override
+    public void perform() throws Exception {
+      HBaseTestingUtility util = context.getHaseIntegrationTestingUtility();
+      HBaseAdmin admin = util.getHBaseAdmin();
+      List<HRegionInfo> regions = admin.getTableRegions(tableNameBytes);
+      HRegionInfo region = selectRandomItem(
+        regions.toArray(new HRegionInfo[regions.size()]));
+      admin.flush(region.getRegionName());
+      if (sleepTime > 0) {
+        Thread.sleep(sleepTime);
+      }
+    }
+  }
+
+  public static class SnapshotTable extends Action {
+    private final String tableName;
+    private final long sleepTime;
+
+    public SnapshotTable(String tableName) {
+      this(-1, tableName);
+    }
+
+    public SnapshotTable(int sleepTime, String tableName) {
+      this.tableName = tableName;
+      this.sleepTime = sleepTime;
+    }
+
+    @Override
+    public void perform() throws Exception {
+      HBaseTestingUtility util = context.getHaseIntegrationTestingUtility();
+      String snapshotName = tableName + "-it-" + System.currentTimeMillis();
+      HBaseAdmin admin = util.getHBaseAdmin();
+      admin.snapshot(snapshotName, tableName);
+      if (sleepTime > 0) {
+        Thread.sleep(sleepTime);
+      }
+    }
+  }
+
+
   /**
    * Restarts a ratio of the running regionservers at the same time
    */
