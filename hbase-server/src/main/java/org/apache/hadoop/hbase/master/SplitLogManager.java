@@ -1308,6 +1308,8 @@ public class SplitLogManager extends ZooKeeperListener {
    * out
    */
   private class TimeoutMonitor extends Chore {
+    private long lastLog = 0;
+
     public TimeoutMonitor(final int period, Stoppable stopper) {
       super("SplitLogManager Timeout Monitor", period, stopper);
     }
@@ -1354,7 +1356,11 @@ public class SplitLogManager extends ZooKeeperListener {
         }
       }
       if (tot > 0) {
-        LOG.debug("total tasks = " + tot + " unassigned = " + unassigned);
+        long now = EnvironmentEdgeManager.currentTimeMillis();
+        if (now > lastLog + 5000) {
+          lastLog = now;
+          LOG.info("total tasks = " + tot + " unassigned = " + unassigned + " tasks=" + tasks);
+        }
       }
       if (resubmitted > 0) {
         LOG.info("resubmitted " + resubmitted + " out of " + tot + " tasks");
