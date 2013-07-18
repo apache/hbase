@@ -334,7 +334,7 @@ public class ZKProcedureMemberRpcs implements ProcedureMemberRpcs {
   }
 
   public void start(final String memberName, final ProcedureMember listener) {
-    LOG.debug("Starting procedure member '" + this.memberName + "'");
+    LOG.debug("Starting procedure member '" + memberName + "'");
     this.member = listener;
     this.memberName = memberName;
     watchForAbortedProcedures();
