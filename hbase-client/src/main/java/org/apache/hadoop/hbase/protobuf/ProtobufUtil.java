@@ -1204,17 +1204,22 @@ public final class ProtobufUtil {
    * @throws IOException if failed to deserialize the parameter
    */
   @SuppressWarnings("unchecked")
-  public static Throwable toException(
-      final NameBytesPair parameter) throws IOException {
+  public static Throwable toException(final NameBytesPair parameter) throws IOException {
     if (parameter == null || !parameter.hasValue()) return null;
     String desc = parameter.getValue().toStringUtf8();
     String type = parameter.getName();
     try {
       Class<? extends Throwable> c =
         (Class<? extends Throwable>)Class.forName(type, true, CLASS_LOADER);
-      Constructor<? extends Throwable> cn =
-        c.getDeclaredConstructor(String.class);
-      return cn.newInstance(desc);
+      Constructor<? extends Throwable> cn = null;
+      try {
+        cn = c.getDeclaredConstructor(String.class);
+        return cn.newInstance(desc);
+      } catch (NoSuchMethodException e) {
+        // Could be a raw RemoteException. See HBASE-8987.
+        cn = c.getDeclaredConstructor(String.class, String.class);
+        return cn.newInstance(type, desc);
+      }
     } catch (Exception e) {
       throw new IOException(e);
     }
