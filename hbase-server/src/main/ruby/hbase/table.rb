@@ -25,6 +25,8 @@ module Hbase
   class Table
     include HBaseConstants
 
+    @@thread_pool = nil
+
     # Add the command 'name' to table s.t. the shell command also called via 'name'
     # and has an internal method also called 'name'.
     #
@@ -110,7 +112,12 @@ EOF
     attr_reader :name
 
     def initialize(configuration, table_name, shell)
-      @table = org.apache.hadoop.hbase.client.HTable.new(configuration, table_name)
+      if @@thread_pool then
+        @table = org.apache.hadoop.hbase.client.HTable.new(configuration, table_name.to_java_bytes, @@thread_pool)
+      else
+        @table = org.apache.hadoop.hbase.client.HTable.new(configuration, table_name)
+        @@thread_pool = @table.getPool()
+      end
       @name = table_name
       @shell = shell
       @converters = Hash.new()
