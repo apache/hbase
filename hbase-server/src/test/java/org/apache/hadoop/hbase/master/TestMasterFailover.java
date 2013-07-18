@@ -25,7 +25,6 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
@@ -41,7 +40,6 @@ import org.apache.hadoop.hbase.ClusterStatus;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.LargeTests;
@@ -789,7 +787,7 @@ public class TestMasterFailover {
     ZKAssign.blockUntilNoRIT(zkw);
     log("No more RIT in ZK");
     long now = System.currentTimeMillis();
-    final long maxTime = 120000;
+    long maxTime = 120000;
     boolean done = master.assignmentManager.waitUntilNoRegionsInTransition(maxTime);
     if (!done) {
       LOG.info("rit=" + master.getAssignmentManager().getRegionStates().getRegionsInTransition());
@@ -801,10 +799,22 @@ public class TestMasterFailover {
 
     // Grab all the regions that are online across RSs
     Set<HRegionInfo> onlineRegions = new TreeSet<HRegionInfo>();
+    now = System.currentTimeMillis();
+    maxTime = 30000;
     for (JVMClusterUtil.RegionServerThread rst :
         cluster.getRegionServerThreads()) {
       try {
-        onlineRegions.addAll(ProtobufUtil.getOnlineRegions(rst.getRegionServer()));
+        HRegionServer rs = rst.getRegionServer();
+        while (!rs.getRegionsInTransitionInRS().isEmpty()) {
+          elapsed = System.currentTimeMillis() - now;
+          assertTrue("Test timed out in getting online regions", elapsed < maxTime);
+          if (rs.isAborted() || rs.isStopped()) {
+            // This region server is stopped, skip it.
+            break;
+          }
+          Thread.sleep(100);
+        }
+        onlineRegions.addAll(ProtobufUtil.getOnlineRegions(rs));
       } catch (RegionServerStoppedException e) {
         LOG.info("Got RegionServerStoppedException", e);
       }

@@ -2196,7 +2196,6 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
     return this.rsHost;
   }
 
-
   @Override
   public ConcurrentMap<byte[], Boolean> getRegionsInTransitionInRS() {
     return this.regionsInTransitionInRS;
