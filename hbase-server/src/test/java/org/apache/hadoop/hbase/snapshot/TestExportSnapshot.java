@@ -248,7 +248,8 @@ public class TestExportSnapshot {
     for (FileStatus fileStatus: rootFiles) {
       String name = fileStatus.getPath().getName();
       assertTrue(fileStatus.isDir());
-      assertTrue(name.equals(HConstants.SNAPSHOT_DIR_NAME) || name.equals(".archive"));
+      assertTrue(name.equals(HConstants.SNAPSHOT_DIR_NAME) ||
+                 name.equals(HConstants.HFILE_ARCHIVE_DIRECTORY));
     }
 
     // compare the snapshot metadata and verify the hfiles

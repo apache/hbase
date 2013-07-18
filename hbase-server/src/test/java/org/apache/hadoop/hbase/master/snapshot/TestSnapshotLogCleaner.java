@@ -75,7 +75,7 @@ public class TestSnapshotLogCleaner {
     fs.create(new Path(hostSnapshotLogDir, snapshotlogfile));
 
     // now check to see if that log file would get deleted.
-    Path oldlogDir = new Path(rootDir, ".oldlogs");
+    Path oldlogDir = new Path(rootDir, HConstants.HREGION_OLDLOGDIR_NAME);
     Path logFile = new Path(oldlogDir, snapshotlogfile);
     fs.create(logFile);
 

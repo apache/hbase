@@ -103,7 +103,8 @@ public class TestSnapshotFromClient {
     UTIL.deleteTable(TABLE_NAME);
     // and cleanup the archive directory
     try {
-      UTIL.getTestFileSystem().delete(new Path(UTIL.getDefaultRootDirPath(), ".archive"), true);
+      UTIL.getTestFileSystem().delete(
+        new Path(UTIL.getDefaultRootDirPath(), HConstants.HFILE_ARCHIVE_DIRECTORY), true);
     } catch (IOException e) {
       LOG.warn("Failure to delete archive directory", e);
     }
@@ -144,7 +145,7 @@ public class TestSnapshotFromClient {
 
   /**
    * Test HBaseAdmin#deleteSnapshots(String) which deletes snapshots whose names match the parameter
-   * 
+   *
    * @throws Exception
    */
   @Test
@@ -157,15 +158,15 @@ public class TestSnapshotFromClient {
     HTable table = new HTable(UTIL.getConfiguration(), TABLE_NAME);
     UTIL.loadTable(table, TEST_FAM);
     table.close();
-    
+
     byte[] snapshot1 = Bytes.toBytes("TableSnapshot1");
     admin.snapshot(snapshot1, TABLE_NAME);
     LOG.debug("Snapshot1 completed.");
-    
+
     byte[] snapshot2 = Bytes.toBytes("TableSnapshot2");
     admin.snapshot(snapshot2, TABLE_NAME);
     LOG.debug("Snapshot2 completed.");
-    
+
     String snapshot3 = "3rdTableSnapshot";
     admin.snapshot(Bytes.toBytes(snapshot3), TABLE_NAME);
     LOG.debug(snapshot3 + " completed.");
@@ -175,7 +176,7 @@ public class TestSnapshotFromClient {
     List<SnapshotDescription> snapshots = admin.listSnapshots();
     assertEquals(1, snapshots.size());
     assertEquals(snapshots.get(0).getName(), snapshot3);
-    
+
     admin.deleteSnapshot(snapshot3);
     admin.close();
   }

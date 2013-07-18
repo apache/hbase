@@ -503,7 +503,7 @@ public class HBaseFsck extends Configured implements Tool {
     for (FileStatus cf : dirs) {
       String cfName= cf.getPath().getName();
       // TODO Figure out what the special dirs are
-      if (cfName.startsWith(".") || cfName.equals("splitlog")) continue;
+      if (cfName.startsWith(".") || cfName.equals(HConstants.SPLIT_LOGDIR_NAME)) continue;
 
       FileStatus[] hfiles = fs.listStatus(cf.getPath());
       for (FileStatus hfile : hfiles) {

@@ -109,7 +109,7 @@ public class TestHLogSplit {
   private static final Path HBASEDIR = new Path("/hbase");
   private static final Path HLOGDIR = new Path(HBASEDIR, "hlog");
   private static final Path OLDLOGDIR = new Path(HBASEDIR, "hlog.old");
-  private static final Path CORRUPTDIR = new Path(HBASEDIR, ".corrupt");
+  private static final Path CORRUPTDIR = new Path(HBASEDIR, HConstants.CORRUPT_DIR_NAME);
 
   private static final int NUM_WRITERS = 10;
   private static final int ENTRIES = 10; // entries per writer per region
@@ -140,7 +140,7 @@ public class TestHLogSplit {
     TEST_UTIL.getConfiguration().setClass("hbase.regionserver.hlog.writer.impl",
       InstrumentedSequenceFileLogWriter.class, HLog.Writer.class);
     TEST_UTIL.getConfiguration().setBoolean("dfs.support.broken.append", true);
-    TEST_UTIL.getConfiguration().setBoolean("dfs.support.append", true);    
+    TEST_UTIL.getConfiguration().setBoolean("dfs.support.append", true);
     // This is how you turn off shortcircuit read currently.  TODO: Fix.  Should read config.
     System.setProperty("hbase.tests.use.shortcircuit.reads", "false");
     // Create fake maping user to group and set it to the conf.
@@ -888,7 +888,7 @@ public class TestHLogSplit {
     fs.initialize(fs.getUri(), conf);
 
     final AtomicInteger count = new AtomicInteger();
-    
+
     CancelableProgressable localReporter
       = new CancelableProgressable() {
         @Override
@@ -1232,7 +1232,7 @@ public class TestHLogSplit {
     HLogSplitter.split(HBASEDIR, HLOGDIR, OLDLOGDIR, fs, conf);
 
     final Path corruptDir = new Path(FSUtils.getRootDir(conf), conf.get(
-        "hbase.regionserver.hlog.splitlog.corrupt.dir", ".corrupt"));
+        "hbase.regionserver.hlog.splitlog.corrupt.dir", HConstants.CORRUPT_DIR_NAME));
     assertEquals(1, fs.listStatus(corruptDir).length);
   }
 

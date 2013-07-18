@@ -55,7 +55,7 @@ public class TestWALReferenceTask {
     // setup the log dir
     Path testDir = UTIL.getDataTestDir();
     Set<String> servers = new HashSet<String>();
-    Path logDir = new Path(testDir, ".logs");
+    Path logDir = new Path(testDir, HConstants.HREGION_LOGDIR_NAME);
     Path server1Dir = new Path(logDir, "Server1");
     servers.add(server1Dir.getName());
     Path server2Dir = new Path(logDir, "me.hbase.com,56073,1348618509968");

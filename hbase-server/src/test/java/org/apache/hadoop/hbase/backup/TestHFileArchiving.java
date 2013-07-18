@@ -394,7 +394,8 @@ public class TestHFileArchiving {
   }
 
   private void clearArchiveDirectory() throws IOException {
-    UTIL.getTestFileSystem().delete(new Path(UTIL.getDefaultRootDirPath(), ".archive"), true);
+    UTIL.getTestFileSystem().delete(
+      new Path(UTIL.getDefaultRootDirPath(), HConstants.HFILE_ARCHIVE_DIRECTORY), true);
   }
 
   /**
