@@ -88,10 +88,10 @@ public class TestFSHDFSUtils {
     // therefore return true if we are to break the loop.
     Mockito.when(dfs.recoverLease(FILE)).
       thenReturn(false).thenReturn(false).thenReturn(true);
-    Mockito.when(dfs.isFileClosed(FILE.toString())).thenReturn(true);
+    Mockito.when(dfs.isFileClosed(FILE)).thenReturn(true);
     assertTrue(this.fsHDFSUtils.recoverDFSFileLease(dfs, FILE, HTU.getConfiguration(), reporter));
-    Mockito.verify(dfs, Mockito.times(3)).recoverLease(FILE);
-    Mockito.verify(dfs, Mockito.times(1)).isFileClosed(FILE.toString());
+    Mockito.verify(dfs, Mockito.times(2)).recoverLease(FILE);
+    Mockito.verify(dfs, Mockito.times(1)).isFileClosed(FILE);
   }
 
   /**
@@ -102,7 +102,7 @@ public class TestFSHDFSUtils {
      * Close status of a file. Copied over from HDFS-4525
      * @return true if file is already closed
      **/
-    public boolean isFileClosed(String f) throws IOException{
+    public boolean isFileClosed(Path f) throws IOException{
       return false;
     }
   }
