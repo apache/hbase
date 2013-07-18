@@ -95,9 +95,13 @@ public class FSHDFSUtils extends FSUtils {
     // is dead.  We set it to 61 seconds, 1 second than the default READ_TIMEOUT in HDFS, the
     // default value for DFS_CLIENT_SOCKET_TIMEOUT_KEY.
     long subsequentPause = conf.getInt("hbase.lease.recovery.dfs.timeout", 61 * 1000);
+    
+    Method isFileClosedMeth = null;
+    // whether we need to look for isFileClosed method
+    boolean findIsFileClosedMeth = true;
     boolean recovered = false;
     // We break the loop if we succeed the lease recovery, timeout, or we throw an exception.
-    for (int nbAttempt = 0; true; nbAttempt++) {
+    for (int nbAttempt = 0; !recovered; nbAttempt++) {
       recovered = recoverLease(dfs, nbAttempt, p, startWaiting);
       if (recovered) break;
       checkIfCancelled(reporter);
@@ -113,7 +117,20 @@ public class FSHDFSUtils extends FSUtils {
           while ((EnvironmentEdgeManager.currentTimeMillis() - localStartWaiting) <
               subsequentPause) {
             Thread.sleep(conf.getInt("hbase.lease.recovery.pause", 1000));
-            if (isFileClosed(dfs, p)) break;
+            if (findIsFileClosedMeth) {
+              try {
+                isFileClosedMeth = dfs.getClass().getMethod("isFileClosed",
+                  new Class[]{ Path.class });
+              } catch (NoSuchMethodException nsme) {
+                LOG.debug("isFileClosed not available");
+              } finally {
+                findIsFileClosedMeth = false;
+              }
+            }
+            if (isFileClosedMeth != null && isFileClosed(dfs, isFileClosedMeth, p)) {
+              recovered = true;
+              break;
+            }
             checkIfCancelled(reporter);
           }
         }
@@ -181,21 +198,17 @@ public class FSHDFSUtils extends FSUtils {
   /**
    * Call HDFS-4525 isFileClosed if it is available.
    * @param dfs
+   * @param m
    * @param p
    * @return True if file is closed.
    */
-  boolean isFileClosed(final DistributedFileSystem dfs, final Path p) {
+  private boolean isFileClosed(final DistributedFileSystem dfs, final Method m, final Path p) {
     try {
-      Method m = dfs.getClass().getMethod("isFileClosed", new Class<?>[] {String.class});
-      return (Boolean) m.invoke(dfs, p.toString());
+      return (Boolean) m.invoke(dfs, p);
     } catch (SecurityException e) {
       LOG.warn("No access", e);
-    } catch (NoSuchMethodException e) {
-      if (LOG.isTraceEnabled()) {
-        LOG.trace("noSuchMethod isFileClosed (HDFS-4525); making do without");
-      }
     } catch (Exception e) {
-      LOG.warn("Failed invocation", e);
+      LOG.warn("Failed invocation for " + p.toString(), e);
     }
     return false;
   }
