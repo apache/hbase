@@ -130,7 +130,7 @@ public class TestHCM {
     final HConnectionImplementation hci =  (HConnectionImplementation)t.getConnection();
     while (t.getRegionLocation(rk).getPort() != sn.getPort()){
       TEST_UTIL.getHBaseAdmin().move(t.getRegionLocation(rk).getRegionInfo().
-          getEncodedNameAsBytes(), sn.getVersionedBytes());
+          getEncodedNameAsBytes(), Bytes.toBytes(sn.toString()));
       while(TEST_UTIL.getHBaseCluster().getMaster().getAssignmentManager().
           getRegionStates().isRegionsInTransition()){
         Thread.sleep(1);

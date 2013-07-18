@@ -128,6 +128,9 @@ public class ServerName implements Comparable<ServerName> {
     if (serverName == null || serverName.length() <= 0) {
       throw new IllegalArgumentException("Passed hostname is null or empty");
     }
+    if (!Character.isLetterOrDigit(serverName.charAt(0))) {
+      throw new IllegalArgumentException("Bad passed hostname, serverName=" + serverName);
+    }
     int index = serverName.indexOf(SERVERNAME_SEPARATOR);
     return serverName.substring(0, index);
   }
