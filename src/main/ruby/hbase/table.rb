@@ -26,9 +26,15 @@ module Hbase
   class Table
     include HBaseConstants
     attr_reader :table
+    @@thread_pool = nil
 
     def initialize(configuration, table_name, formatter)
-      @table = org.apache.hadoop.hbase.client.HTable.new(configuration, table_name)
+      if @@thread_pool then
+        @table = org.apache.hadoop.hbase.client.HTable.new(configuration, table_name.to_java_bytes, @@thread_pool)
+      else
+        @table = org.apache.hadoop.hbase.client.HTable.new(configuration, table_name)
+        @@thread_pool = @table.getPool()
+      end
     end
 
     #----------------------------------------------------------------------------------------------
