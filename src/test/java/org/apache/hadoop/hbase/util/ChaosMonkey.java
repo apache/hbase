@@ -118,11 +118,11 @@ public class ChaosMonkey extends AbstractHBaseTool implements Stoppable {
       this.util = util;
     }
 
-    IntegrationTestingUtility getHaseIntegrationTestingUtility() {
+    public IntegrationTestingUtility getHaseIntegrationTestingUtility() {
       return util;
     }
 
-    HBaseCluster getHBaseCluster() {
+    public HBaseCluster getHBaseCluster() {
       return util.getHBaseClusterInterface();
     }
   }
@@ -494,8 +494,8 @@ public class ChaosMonkey extends AbstractHBaseTool implements Stoppable {
   /**
    * A context for a Policy
    */
-  private static class PolicyContext extends ActionContext {
-    PolicyContext(IntegrationTestingUtility util) {
+  public static class PolicyContext extends ActionContext {
+    public PolicyContext(IntegrationTestingUtility util) {
       super(util);
     }
   }
@@ -504,7 +504,7 @@ public class ChaosMonkey extends AbstractHBaseTool implements Stoppable {
    * A policy to introduce chaos to the cluster
    */
   public static abstract class Policy extends StoppableImplementation implements Runnable {
-    PolicyContext context;
+    protected PolicyContext context;
     public void init(PolicyContext context) throws Exception {
       this.context = context;
     }
