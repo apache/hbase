@@ -318,30 +318,18 @@ public class HConnectionManager {
   }
 
   /**
-   * Delete information for all connections. Close or not the connection, depending on the
-   *  staleConnection boolean and the ref count. By default, you should use it with
-   *  staleConnection to true.
+   * Delete information for all connections.
    */
-  public static void deleteAllConnections(boolean staleConnection) {
+  public static void deleteAllConnections() {
     synchronized (CONNECTION_INSTANCES) {
       Set<HConnectionKey> connectionKeys = new HashSet<HConnectionKey>();
       connectionKeys.addAll(CONNECTION_INSTANCES.keySet());
       for (HConnectionKey connectionKey : connectionKeys) {
-        deleteConnection(connectionKey, staleConnection);
+        deleteConnection(connectionKey, false);
       }
       CONNECTION_INSTANCES.clear();
     }
   }
-
-  /**
-   * Delete information for all connections..
-   * @deprecated kept for backward compatibility, but the behavior is broken. HBASE-8983
-   */
-  @Deprecated
-  public static void deleteAllConnections() {
-    deleteAllConnections(false);
-  }
-
 
   private static void deleteConnection(HConnection connection, boolean staleConnection) {
     synchronized (CONNECTION_INSTANCES) {
