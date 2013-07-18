@@ -59,6 +59,7 @@ import org.junit.experimental.categories.Category;
 
 /** JUnit test case for HLog */
 @Category(LargeTests.class)
+@SuppressWarnings("deprecation")
 public class TestHLog  {
   private static final Log LOG = LogFactory.getLog(TestHLog.class);
   {
@@ -193,10 +194,8 @@ public class TestHLog  {
         log.rollWriter();
       }
       log.close();
-      HLogSplitter logSplitter = HLogSplitter.createLogSplitter(conf,
-          hbaseDir, logdir, oldLogDir, fs);
-      List<Path> splits =
-        logSplitter.splitLog();
+      List<Path> splits = HLogSplitter.split(
+        hbaseDir, logdir, oldLogDir, fs, conf);
       verifySplits(splits, howmany);
       log = null;
     } finally {
@@ -340,7 +339,7 @@ public class TestHLog  {
 
   private void verifySplits(List<Path> splits, final int howmany)
   throws IOException {
-    assertEquals(howmany, splits.size());
+    assertEquals(howmany * howmany, splits.size());
     for (int i = 0; i < splits.size(); i++) {
       LOG.info("Verifying=" + splits.get(i));
       HLog.Reader reader = HLogFactory.createReader(fs, splits.get(i), conf);
@@ -362,7 +361,7 @@ public class TestHLog  {
           previousRegion = region;
           count++;
         }
-        assertEquals(howmany * howmany, count);
+        assertEquals(howmany, count);
       } finally {
         reader.close();
       }
@@ -479,7 +478,7 @@ public class TestHLog  {
       throw t.exception;
 
     // Make sure you can read all the content
-    HLog.Reader reader = HLogFactory.createReader(this.fs, walPath, this.conf);
+    HLog.Reader reader = HLogFactory.createReader(fs, walPath, conf);
     int count = 0;
     HLog.Entry entry = new HLog.Entry();
     while (reader.next(entry) != null) {

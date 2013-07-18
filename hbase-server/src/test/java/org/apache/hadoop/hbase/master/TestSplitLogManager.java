@@ -193,8 +193,7 @@ public class TestSplitLogManager {
   public void testTaskCreation() throws Exception {
 
     LOG.info("TestTaskCreation - test the creation of a task in zk");
-    slm = new SplitLogManager(zkw, conf, stopper, master, DUMMY_MASTER, null);
-    slm.finishInitialization();
+    slm = new SplitLogManager(zkw, conf, stopper, master, DUMMY_MASTER);
     TaskBatch batch = new TaskBatch();
 
     String tasknode = submitTaskAndWait(batch, "foo/1");
@@ -214,8 +213,7 @@ public class TestSplitLogManager {
     zkw.getRecoverableZooKeeper().create(tasknode, slt.toByteArray(), Ids.OPEN_ACL_UNSAFE,
         CreateMode.PERSISTENT);
 
-    slm = new SplitLogManager(zkw, conf, stopper, master, DUMMY_MASTER, null);
-    slm.finishInitialization();
+    slm = new SplitLogManager(zkw, conf, stopper, master, DUMMY_MASTER);
     waitForCounter(tot_mgr_orphan_task_acquired, 0, 1, to/2);
     Task task = slm.findOrCreateOrphanTask(tasknode);
     assertTrue(task.isOrphan());
@@ -241,8 +239,7 @@ public class TestSplitLogManager {
         CreateMode.PERSISTENT);
     int version = ZKUtil.checkExists(zkw, tasknode);
 
-    slm = new SplitLogManager(zkw, conf, stopper, master, DUMMY_MASTER, null);
-    slm.finishInitialization();
+    slm = new SplitLogManager(zkw, conf, stopper, master, DUMMY_MASTER);
     waitForCounter(tot_mgr_orphan_task_acquired, 0, 1, to/2);
     Task task = slm.findOrCreateOrphanTask(tasknode);
     assertTrue(task.isOrphan());
@@ -265,8 +262,7 @@ public class TestSplitLogManager {
     LOG.info("TestMultipleResbmits - no indefinite resubmissions");
 
     conf.setInt("hbase.splitlog.max.resubmit", 2);
-    slm = new SplitLogManager(zkw, conf, stopper, master, DUMMY_MASTER, null);
-    slm.finishInitialization();
+    slm = new SplitLogManager(zkw, conf, stopper, master, DUMMY_MASTER);
     TaskBatch batch = new TaskBatch();
 
     String tasknode = submitTaskAndWait(batch, "foo/1");
@@ -298,8 +294,7 @@ public class TestSplitLogManager {
   public void testRescanCleanup() throws Exception {
     LOG.info("TestRescanCleanup - ensure RESCAN nodes are cleaned up");
 
-    slm = new SplitLogManager(zkw, conf, stopper, master, DUMMY_MASTER, null);
-    slm.finishInitialization();
+    slm = new SplitLogManager(zkw, conf, stopper, master, DUMMY_MASTER);
     TaskBatch batch = new TaskBatch();
 
     String tasknode = submitTaskAndWait(batch, "foo/1");
@@ -328,8 +323,7 @@ public class TestSplitLogManager {
   public void testTaskDone() throws Exception {
     LOG.info("TestTaskDone - cleanup task node once in DONE state");
 
-    slm = new SplitLogManager(zkw, conf, stopper, master, DUMMY_MASTER, null);
-    slm.finishInitialization();
+    slm = new SplitLogManager(zkw, conf, stopper, master, DUMMY_MASTER);
     TaskBatch batch = new TaskBatch();
     String tasknode = submitTaskAndWait(batch, "foo/1");
     final ServerName worker1 = new ServerName("worker1,1,1");
@@ -349,8 +343,7 @@ public class TestSplitLogManager {
     LOG.info("TestTaskErr - cleanup task node once in ERR state");
 
     conf.setInt("hbase.splitlog.max.resubmit", 0);
-    slm = new SplitLogManager(zkw, conf, stopper, master, DUMMY_MASTER, null);
-    slm.finishInitialization();
+    slm = new SplitLogManager(zkw, conf, stopper, master, DUMMY_MASTER);
     TaskBatch batch = new TaskBatch();
 
     String tasknode = submitTaskAndWait(batch, "foo/1");
@@ -372,8 +365,7 @@ public class TestSplitLogManager {
   public void testTaskResigned() throws Exception {
     LOG.info("TestTaskResigned - resubmit task node once in RESIGNED state");
     assertEquals(tot_mgr_resubmit.get(), 0);
-    slm = new SplitLogManager(zkw, conf, stopper, master, DUMMY_MASTER, null);
-    slm.finishInitialization();
+    slm = new SplitLogManager(zkw, conf, stopper, master, DUMMY_MASTER);
     assertEquals(tot_mgr_resubmit.get(), 0);
     TaskBatch batch = new TaskBatch();
     String tasknode = submitTaskAndWait(batch, "foo/1");
@@ -407,8 +399,7 @@ public class TestSplitLogManager {
     zkw.getRecoverableZooKeeper().create(tasknode1, slt.toByteArray(), Ids.OPEN_ACL_UNSAFE,
         CreateMode.PERSISTENT);
 
-    slm = new SplitLogManager(zkw, conf, stopper, master, DUMMY_MASTER, null);
-    slm.finishInitialization();
+    slm = new SplitLogManager(zkw, conf, stopper, master, DUMMY_MASTER);
     waitForCounter(tot_mgr_orphan_task_acquired, 0, 1, to/2);
 
     // submit another task which will stay in unassigned mode
@@ -437,8 +428,7 @@ public class TestSplitLogManager {
     LOG.info("testDeadWorker");
 
     conf.setLong("hbase.splitlog.max.resubmit", 0);
-    slm = new SplitLogManager(zkw, conf, stopper, master, DUMMY_MASTER, null);
-    slm.finishInitialization();
+    slm = new SplitLogManager(zkw, conf, stopper, master, DUMMY_MASTER);
     TaskBatch batch = new TaskBatch();
 
     String tasknode = submitTaskAndWait(batch, "foo/1");
@@ -463,8 +453,7 @@ public class TestSplitLogManager {
 
   @Test
   public void testWorkerCrash() throws Exception {
-    slm = new SplitLogManager(zkw, conf, stopper, master, DUMMY_MASTER, null);
-    slm.finishInitialization();
+    slm = new SplitLogManager(zkw, conf, stopper, master, DUMMY_MASTER);
     TaskBatch batch = new TaskBatch();
 
     String tasknode = submitTaskAndWait(batch, "foo/1");
@@ -489,8 +478,7 @@ public class TestSplitLogManager {
   @Test
   public void testEmptyLogDir() throws Exception {
     LOG.info("testEmptyLogDir");
-    slm = new SplitLogManager(zkw, conf, stopper, master, DUMMY_MASTER, null);
-    slm.finishInitialization();
+    slm = new SplitLogManager(zkw, conf, stopper, master, DUMMY_MASTER);
     FileSystem fs = TEST_UTIL.getTestFileSystem();
     Path emptyLogDirPath = new Path(fs.getWorkingDirectory(),
         UUID.randomUUID().toString());
@@ -505,8 +493,7 @@ public class TestSplitLogManager {
 
     conf.setInt("hbase.splitlog.manager.unassigned.timeout", 0);
     conf.setInt("hbase.splitlog.manager.timeoutmonitor.period", 1000);
-    slm = new SplitLogManager(zkw, conf, stopper, master, DUMMY_MASTER, null);
-    slm.finishInitialization();
+    slm = new SplitLogManager(zkw, conf, stopper, master, DUMMY_MASTER);
     FileSystem fs = TEST_UTIL.getTestFileSystem();
     final Path logDir = new Path(fs.getWorkingDirectory(),
         UUID.randomUUID().toString());
@@ -544,5 +531,4 @@ public class TestSplitLogManager {
       fs.delete(logDir, true);
     }
   }
-
 }

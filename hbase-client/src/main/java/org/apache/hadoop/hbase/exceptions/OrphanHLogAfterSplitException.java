@@ -25,6 +25,8 @@ import java.io.IOException;
 @InterfaceAudience.Private
 public class OrphanHLogAfterSplitException extends IOException {
 
+  private static final long serialVersionUID = -4363805979687710634L;
+
   /**
    * Create this exception without a message
    */

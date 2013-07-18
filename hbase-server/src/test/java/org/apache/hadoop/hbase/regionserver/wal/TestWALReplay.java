@@ -21,13 +21,11 @@ package org.apache.hadoop.hbase.regionserver.wal;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
-import static org.mockito.Mockito.doReturn;
 
 import java.io.IOException;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.SortedSet;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -814,8 +812,8 @@ public class TestWALReplay {
     wal.completeCacheFlush(hri.getEncodedNameAsBytes());
     wal.close();
     FileStatus[] listStatus = this.fs.listStatus(wal.getDir());
-    HLogSplitter.splitLogFile(hbaseRootDir, listStatus[0], this.fs, this.conf,
-        null);
+    HLogSplitter.splitLogFile(hbaseRootDir, listStatus[0],
+      this.fs, this.conf, null, null, null);
     FileStatus[] listStatus1 = this.fs.listStatus(new Path(hbaseRootDir + "/"
         + tableNameStr + "/" + hri.getEncodedName() + "/recovered.edits"));
     int editCount = 0;
@@ -923,10 +921,8 @@ public class TestWALReplay {
    * @throws IOException
    */
   private Path runWALSplit(final Configuration c) throws IOException {
-    FileSystem fs = FileSystem.get(c);
-    HLogSplitter logSplitter = HLogSplitter.createLogSplitter(c,
-        this.hbaseRootDir, this.logDir, this.oldLogDir, fs);
-    List<Path> splits = logSplitter.splitLog();
+    List<Path> splits = HLogSplitter.split(
+      hbaseRootDir, logDir, oldLogDir, FileSystem.get(c), c);
     // Split should generate only 1 file since there's only 1 region
     assertEquals("splits=" + splits, 1, splits.size());
     // Make sure the file exists

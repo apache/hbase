@@ -48,11 +48,9 @@ import org.apache.hadoop.hbase.catalog.MetaReader;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.exceptions.InvalidFamilyOperationException;
-import org.apache.hadoop.hbase.exceptions.OrphanHLogAfterSplitException;
 import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
-import org.apache.hadoop.hbase.regionserver.wal.HLogSplitter;
 import org.apache.hadoop.hbase.regionserver.wal.HLogUtil;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -89,7 +87,6 @@ public class MasterFileSystem {
   // create the split log lock
   final Lock splitLogLock = new ReentrantLock();
   final boolean distributedLogReplay;
-  final boolean distributedLogSplitting;
   final SplitLogManager splitLogManager;
   private final MasterServices services;
 
@@ -125,12 +122,8 @@ public class MasterFileSystem {
     // make sure the fs has the same conf
     fs.setConf(conf);
     this.splitLogManager = new SplitLogManager(master.getZooKeeper(), master.getConfiguration(),
-        master, services, master.getServerName());
-    this.distributedLogSplitting = conf.getBoolean(HConstants.DISTRIBUTED_LOG_SPLITTING_KEY, true);
-    if (this.distributedLogSplitting) {
-      this.splitLogManager.finishInitialization(masterRecovery);
-    }
-    this.distributedLogReplay = this.conf.getBoolean(HConstants.DISTRIBUTED_LOG_REPLAY_KEY, 
+        master, services, master.getServerName(), masterRecovery);
+    this.distributedLogReplay = this.conf.getBoolean(HConstants.DISTRIBUTED_LOG_REPLAY_KEY,
       HConstants.DEFAULT_DISTRIBUTED_LOG_REPLAY_CONFIG);
     // setup the filesystem variable
     // set up the archived logs path
@@ -305,16 +298,7 @@ public class MasterFileSystem {
    * @throws IOException
    */
   public void splitMetaLog(final Set<ServerName> serverNames) throws IOException {
-    long splitTime = 0, splitLogSize = 0;
-    List<Path> logDirs = getLogDirs(serverNames);
-
-    splitLogManager.handleDeadWorkers(serverNames);
-    splitTime = EnvironmentEdgeManager.currentTimeMillis();
-    splitLogSize = splitLogManager.splitLogDistributed(serverNames, logDirs, META_FILTER);
-    splitTime = EnvironmentEdgeManager.currentTimeMillis() - splitTime;
-    if (this.metricsMaster != null) {
-      this.metricsMaster.addMetaWALSplit(splitTime, splitLogSize);
-    }
+    splitLog(serverNames, META_FILTER);
   }
 
   private List<Path> getLogDirs(final Set<ServerName> serverNames) throws IOException {
@@ -419,40 +403,13 @@ public class MasterFileSystem {
     long splitTime = 0, splitLogSize = 0;
     List<Path> logDirs = getLogDirs(serverNames);
 
-    if (distributedLogSplitting) {
-      splitLogManager.handleDeadWorkers(serverNames);
-      splitTime = EnvironmentEdgeManager.currentTimeMillis();
-      splitLogSize = splitLogManager.splitLogDistributed(serverNames, logDirs, filter);
-      splitTime = EnvironmentEdgeManager.currentTimeMillis() - splitTime;
-    } else {
-      for(Path logDir: logDirs){
-        // splitLogLock ensures that dead region servers' logs are processed
-        // one at a time
-        this.splitLogLock.lock();
-        try {
-          HLogSplitter splitter = HLogSplitter.createLogSplitter(conf, rootdir, logDir, oldLogDir,
-            this.fs);
-          try {
-            // If FS is in safe mode, just wait till out of it.
-            FSUtils.waitOnSafeMode(conf, conf.getInt(HConstants.THREAD_WAKE_FREQUENCY, 1000));
-            splitter.splitLog();
-          } catch (OrphanHLogAfterSplitException e) {
-            LOG.warn("Retrying splitting because of:", e);
-            //An HLogSplitter instance can only be used once.  Get new instance.
-            splitter = HLogSplitter.createLogSplitter(conf, rootdir, logDir,
-              oldLogDir, this.fs);
-            splitter.splitLog();
-          }
-          splitTime = splitter.getTime();
-          splitLogSize = splitter.getSize();
-        } finally {
-          this.splitLogLock.unlock();
-        }
-      }
-    }
+    splitLogManager.handleDeadWorkers(serverNames);
+    splitTime = EnvironmentEdgeManager.currentTimeMillis();
+    splitLogSize = splitLogManager.splitLogDistributed(serverNames, logDirs, filter);
+    splitTime = EnvironmentEdgeManager.currentTimeMillis() - splitTime;
 
     if (this.metricsMaster != null) {
-      if (filter == this.META_FILTER) {
+      if (filter == META_FILTER) {
         this.metricsMaster.addMetaWALSplit(splitTime, splitLogSize);
       } else {
         this.metricsMaster.addSplit(splitTime, splitLogSize);
@@ -469,6 +426,7 @@ public class MasterFileSystem {
    * needed populating the directory with necessary bootup files).
    * @throws IOException
    */
+  @SuppressWarnings("deprecation")
   private Path checkRootDir(final Path rd, final Configuration c,
     final FileSystem fs)
   throws IOException {
