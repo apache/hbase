@@ -84,7 +84,9 @@ public class TestDelayedRpc {
       TestDelayedRpcProtos.TestDelayedService.newReflectiveBlockingService(instance);
     rpcServer = new RpcServer(null, "testDelayedRpc",
         Lists.newArrayList(new RpcServer.BlockingServiceAndInterface(service, null)),
-        isa, 1, 0, conf, 0);
+        isa,
+        conf,
+        new SimpleRpcScheduler(conf, 1, 0, 0, null, 0));
     rpcServer.start();
     RpcClient rpcClient = new RpcClient(conf, HConstants.DEFAULT_CLUSTER_ID.toString());
     try {
@@ -163,7 +165,9 @@ public class TestDelayedRpc {
       TestDelayedRpcProtos.TestDelayedService.newReflectiveBlockingService(instance);
     rpcServer = new RpcServer(null, "testTooManyDelayedRpcs",
       Lists.newArrayList(new RpcServer.BlockingServiceAndInterface(service, null)),
-        isa, 1, 0, conf, 0);
+        isa,
+        conf,
+        new SimpleRpcScheduler(conf, 1, 0, 0, null, 0));
     rpcServer.start();
     RpcClient rpcClient = new RpcClient(conf, HConstants.DEFAULT_CLUSTER_ID.toString());
     try {
@@ -283,7 +287,9 @@ public class TestDelayedRpc {
       TestDelayedRpcProtos.TestDelayedService.newReflectiveBlockingService(instance);
     rpcServer = new RpcServer(null, "testEndDelayThrowing",
         Lists.newArrayList(new RpcServer.BlockingServiceAndInterface(service, null)),
-        isa, 1, 0, conf, 0);
+        isa,
+        conf,
+        new SimpleRpcScheduler(conf, 1, 0, 0, null, 0));
     rpcServer.start();
     RpcClient rpcClient = new RpcClient(conf, HConstants.DEFAULT_CLUSTER_ID.toString());
     try {

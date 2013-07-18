@@ -37,26 +37,29 @@ public class MetricsHBaseServerWrapperImpl implements MetricsHBaseServerWrapper 
 
   @Override
   public int getGeneralQueueLength() {
-    if (this.server == null || this.server.callQueue == null) {
+    if (this.server == null
+        || this.server.getScheduler() == null) {
       return 0;
     }
-    return server.callQueue.size();
+    return server.getScheduler().getGeneralQueueLength();
   }
 
   @Override
   public int getReplicationQueueLength() {
-    if (this.server == null || this.server.replicationQueue == null) {
+    if (this.server == null
+        || this.server.getScheduler() == null) {
       return 0;
     }
-    return server.replicationQueue.size();
+    return server.getScheduler().getReplicationQueueLength();
   }
 
   @Override
   public int getPriorityQueueLength() {
-    if (this.server == null || this.server.priorityCallQueue == null) {
+    if (this.server == null
+        || this.server.getScheduler() == null) {
       return 0;
     }
-    return server.priorityCallQueue.size();
+    return server.getScheduler().getPriorityQueueLength();
   }
 
   @Override

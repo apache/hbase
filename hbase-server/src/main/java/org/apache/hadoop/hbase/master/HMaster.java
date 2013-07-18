@@ -80,6 +80,7 @@ import org.apache.hadoop.hbase.ipc.RpcServerInterface;
 import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.ipc.RpcServer.BlockingServiceAndInterface;
 import org.apache.hadoop.hbase.ipc.ServerRpcController;
+import org.apache.hadoop.hbase.ipc.SimpleRpcScheduler;
 import org.apache.hadoop.hbase.master.balancer.BalancerChore;
 import org.apache.hadoop.hbase.master.balancer.ClusterStatusChore;
 import org.apache.hadoop.hbase.master.balancer.LoadBalancerFactory;
@@ -395,14 +396,19 @@ MasterServices, Server {
     String name = "master/" + initialIsa.toString();
     // Set how many times to retry talking to another server over HConnection.
     HConnectionManager.setServerSideHConnectionRetries(this.conf, name, LOG);
-    int numHandlers = conf.getInt("hbase.master.handler.count",
-      conf.getInt("hbase.regionserver.handler.count", 25));
+    int numHandlers = conf.getInt(HConstants.MASTER_HANDLER_COUNT,
+      conf.getInt(HConstants.REGION_SERVER_HANDLER_COUNT, HConstants.DEFAULT_MASTER_HANLDER_COUNT));
+    SimpleRpcScheduler scheduler = new SimpleRpcScheduler(
+        conf,
+        numHandlers,
+        0, // we don't use high priority handlers in master
+        0, // we don't use replication handlers in master
+        null, // this is a DNC w/o high priority handlers
+        0);
     this.rpcServer = new RpcServer(this, name, getServices(),
       initialIsa, // BindAddress is IP we got for this server.
-      numHandlers,
-      0, // we dont use high priority handlers in master
       conf,
-      0); // this is a DNC w/o high priority handlers
+      scheduler);
     // Set our address.
     this.isa = this.rpcServer.getListenerAddress();
     this.serverName =

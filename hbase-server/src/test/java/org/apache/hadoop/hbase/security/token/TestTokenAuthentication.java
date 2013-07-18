@@ -53,6 +53,7 @@ import org.apache.hadoop.hbase.ipc.RequestContext;
 import org.apache.hadoop.hbase.ipc.RpcServer.BlockingServiceAndInterface;
 import org.apache.hadoop.hbase.ipc.RpcServerInterface;
 import org.apache.hadoop.hbase.ipc.ServerRpcController;
+import org.apache.hadoop.hbase.ipc.SimpleRpcScheduler;
 import org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
@@ -128,8 +129,10 @@ public class TestTokenAuthentication {
         AuthenticationProtos.AuthenticationService.newReflectiveBlockingService(this);
       sai.add(new BlockingServiceAndInterface(service,
         AuthenticationProtos.AuthenticationService.BlockingInterface.class));
+      SimpleRpcScheduler scheduler = new SimpleRpcScheduler(
+          conf, 3, 1, 0, null, HConstants.QOS_THRESHOLD);
       this.rpcServer =
-        new RpcServer(this, "tokenServer", sai, initialIsa, 3, 1, conf, HConstants.QOS_THRESHOLD);
+        new RpcServer(this, "tokenServer", sai, initialIsa, conf, scheduler);
       this.isa = this.rpcServer.getListenerAddress();
       this.sleeper = new Sleeper(1000, this);
     }

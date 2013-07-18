@@ -81,6 +81,7 @@ public class TestIPC {
   public static final Log LOG = LogFactory.getLog(TestIPC.class);
   static byte [] CELL_BYTES =  Bytes.toBytes("xyz");
   static Cell CELL = new KeyValue(CELL_BYTES, CELL_BYTES, CELL_BYTES, CELL_BYTES);
+  private final static Configuration CONF = HBaseConfiguration.create();
   // We are using the test TestRpcServiceProtos generated classes and Service because they are
   // available and basic with methods like 'echo', and ping.  Below we make a blocking service
   // by passing in implementation of blocking interface.  We use this service in all tests that
@@ -132,11 +133,11 @@ public class TestIPC {
    * HBaseRpcServer directly.
    */
   private static class TestRpcServer extends RpcServer {
+
     TestRpcServer() throws IOException {
       super(null, "testRpcServer",
           Lists.newArrayList(new BlockingServiceAndInterface(SERVICE, null)),
-        new InetSocketAddress("0.0.0.0", 0), 1, 1,
-        HBaseConfiguration.create(), 0);
+        new InetSocketAddress("0.0.0.0", 0), CONF, new SimpleRpcScheduler(CONF, 1, 1, 0, null, 0));
     }
 
     @Override

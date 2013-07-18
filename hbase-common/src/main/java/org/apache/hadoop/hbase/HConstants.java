@@ -739,6 +739,20 @@ public final class HConstants {
       "hbase.regionserver.disallow.writes.when.recovering";
   public static final boolean DEFAULT_DISALLOW_WRITES_IN_RECOVERING_CONFIG = false;
 
+  public static final String REGION_SERVER_HANDLER_COUNT = "hbase.regionserver.handler.count";
+  public static final int DEFAULT_REGION_SERVER_HANDLER_COUNT = 10;
+
+  public static final String REGION_SERVER_META_HANDLER_COUNT =
+      "hbase.regionserver.metahandler.count";
+  public static final int DEFAULT_REGION_SERVER_META_HANDLER_COUNT = 10;
+
+  public static final String REGION_SERVER_REPLICATION_HANDLER_COUNT =
+      "hbase.regionserver.replication.handler.count";
+  public static final int DEFAULT_REGION_SERVER_REPLICATION_HANDLER_COUNT = 3;
+
+  public static final String MASTER_HANDLER_COUNT = "hbase.master.handler.count";
+  public static final int DEFAULT_MASTER_HANLDER_COUNT = 25;
+
   /** Conf key that specifies timeout value to wait for a region ready */
   public static final String LOG_REPLAY_WAIT_REGION_TIMEOUT =
       "hbase.master.log.replay.wait.region.timeout";

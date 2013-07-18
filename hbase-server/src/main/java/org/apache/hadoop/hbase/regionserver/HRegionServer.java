@@ -115,6 +115,7 @@ import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.ipc.RpcServer.BlockingServiceAndInterface;
 import org.apache.hadoop.hbase.ipc.RpcServerInterface;
 import org.apache.hadoop.hbase.ipc.ServerRpcController;
+import org.apache.hadoop.hbase.ipc.SimpleRpcScheduler;
 import org.apache.hadoop.hbase.master.SplitLogManager;
 import org.apache.hadoop.hbase.master.TableLockManager;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
@@ -547,18 +548,27 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
     String name = "regionserver/" + initialIsa.toString();
     // Set how many times to retry talking to another server over HConnection.
     HConnectionManager.setServerSideHConnectionRetries(this.conf, name, LOG);
+    this.qosFunction = new QosFunction(this);
+    int handlerCount = conf.getInt(HConstants.REGION_SERVER_HANDLER_COUNT,
+        HConstants.DEFAULT_REGION_SERVER_HANDLER_COUNT);
+    SimpleRpcScheduler scheduler = new SimpleRpcScheduler(
+        conf,
+        handlerCount,
+        conf.getInt(HConstants.REGION_SERVER_META_HANDLER_COUNT,
+            HConstants.DEFAULT_REGION_SERVER_META_HANDLER_COUNT),
+        conf.getInt(HConstants.REGION_SERVER_REPLICATION_HANDLER_COUNT,
+            HConstants.DEFAULT_REGION_SERVER_REPLICATION_HANDLER_COUNT),
+        qosFunction,
+        HConstants.QOS_THRESHOLD);
     this.rpcServer = new RpcServer(this, name, getServices(),
       /*HBaseRPCErrorHandler.class, OnlineRegions.class},*/
       initialIsa, // BindAddress is IP we got for this server.
-      conf.getInt("hbase.regionserver.handler.count", 10),
-      conf.getInt("hbase.regionserver.metahandler.count", 10),
-      conf, HConstants.QOS_THRESHOLD);
+      conf, scheduler);
 
     // Set our address.
     this.isa = this.rpcServer.getListenerAddress();
 
     this.rpcServer.setErrorHandler(this);
-    this.rpcServer.setQosFunction((qosFunction = new QosFunction(this)));
     this.startcode = System.currentTimeMillis();
 
     // login the zookeeper client principal (if using security)

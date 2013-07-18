@@ -65,8 +65,6 @@ public interface RpcServerInterface {
    */
   MetricsHBaseServer getMetrics();
 
-  void setQosFunction(Function<Pair<RequestHeader, Message>, Integer> newFunc);
-
   /**
    * Refresh autentication manager policy.
    * @param pp
