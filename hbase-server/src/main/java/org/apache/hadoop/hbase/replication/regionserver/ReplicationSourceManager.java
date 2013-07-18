@@ -155,15 +155,29 @@ public class ReplicationSourceManager {
     if (holdLogInZK) {
      return;
     }
+    cleanOldLogs(key, id, queueRecovered);
+  }
+
+  /**
+   * Cleans a log file and all older files from ZK. Called when we are sure that a
+   * log file is closed and has no more entries.
+   * @param key Path to the log
+   * @param id id of the peer cluster
+   * @param queueRecovered Whether this is a recovered queue
+   */
+  public void cleanOldLogs(String key,
+                           String id,
+                           boolean queueRecovered) {
     synchronized (this.hlogsById) {
       SortedSet<String> hlogs = this.hlogsById.get(id);
-      if (!queueRecovered && !hlogs.first().equals(key)) {
-        SortedSet<String> hlogSet = hlogs.headSet(key);
-        for (String hlog : hlogSet) {
-          this.zkHelper.removeLogFromList(hlog, id);
-        }
-        hlogSet.clear();
+      if (queueRecovered || hlogs.first().equals(key)) {
+        return;
       }
+      SortedSet<String> hlogSet = hlogs.headSet(key);
+      for (String hlog : hlogSet) {
+        this.zkHelper.removeLogFromList(hlog, id);
+      }
+      hlogSet.clear();
     }
   }
 
