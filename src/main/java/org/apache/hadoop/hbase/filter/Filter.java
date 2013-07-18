@@ -27,17 +27,19 @@ import java.util.List;
 
 /**
  * Interface for row and column filters directly applied within the regionserver.
+ *
  * A filter can expect the following call sequence:
- *<ul>
- * <li>{@link #reset()}</li>
- * <li>{@link #filterAllRemaining()} -> true indicates scan is over, false, keep going on.</li>
- * <li>{@link #filterRowKey(byte[],int,int)} -> true to drop this row,
- * if false, we will also call</li>
- * <li>{@link #filterKeyValue(KeyValue)} -> true to drop this key/value</li>
- * <li>{@link #filterRow(List)} -> allows directmodification of the final list to be submitted
- * <li>{@link #filterRow()} -> last chance to drop entire row based on the sequence of
- * filterValue() calls. Eg: filter a row if it doesn't contain a specified column.
- * </li>
+ * <ul>
+ *   <li> {@link #reset()} : reset the filter state before filtering a new row. </li>
+ *   <li> {@link #filterAllRemaining()}: true means row scan is over; false means keep going. </li>
+ *   <li> {@link #filterRowKey(byte[],int,int)}: true means drop this row; false means include.</li>
+ *   <li> {@link #filterKeyValue(KeyValue)}: decides whether to include or exclude this KeyValue.
+ *        See {@link ReturnCode}. </li>
+ *   <li> {@link #transform(KeyValue)}: if the KeyValue is included, let the filter transform the
+ *        KeyValue. </li>
+ *   <li> {@link #filterRow(List)}: allows direct modification of the final list to be submitted
+ *   <li> {@link #filterRow()}: last chance to drop entire row based on the sequence of
+ *        filter calls. Eg: filter a row if it doesn't contain a specified column. </li>
  * </ul>
  *
  * Filter instances are created one per region/scan.  This interface replaces

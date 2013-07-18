@@ -35,9 +35,18 @@ import java.util.List;
 /**
  * Implementation of {@link Filter} that represents an ordered List of Filters
  * which will be evaluated with a specified boolean operator {@link Operator#MUST_PASS_ALL}
- * (<code>!AND</code>) or {@link Operator#MUST_PASS_ONE} (<code>!OR</code>).
+ * (<code>AND</code>) or {@link Operator#MUST_PASS_ONE} (<code>OR</code>).
  * Since you can use Filter Lists as children of Filter Lists, you can create a
  * hierarchy of filters to be evaluated.
+ *
+ * <br/>
+ * {@link Operator#MUST_PASS_ALL} evaluates lazily: evaluation stops as soon as one filter does
+ * not include the KeyValue.
+ *
+ * <br/>
+ * {@link Operator#MUST_PASS_ONE} evaluates non-lazily: all filters are always evaluated.
+ *
+ * <br/>
  * Defaults to {@link Operator#MUST_PASS_ALL}.
  * <p>TODO: Fix creation of Configuration on serialization and deserialization.
  */
@@ -54,6 +63,18 @@ public class FilterList implements Filter {
   private static final int MAX_LOG_FILTERS = 5;
   private Operator operator = Operator.MUST_PASS_ALL;
   private List<Filter> filters = new ArrayList<Filter>();
+
+  /** Reference KeyValue used by {@link #transform(KeyValue)} for validation purpose. */
+  private KeyValue referenceKV = null;
+
+  /**
+   * When filtering a given KeyValue in {@link #filterKeyValue(KeyValue)},
+   * this stores the transformed KeyValue to be returned by {@link #transform(KeyValue)}.
+   *
+   * Individual filters transformation are applied only when the filter includes the KeyValue.
+   * Transformations are composed in the order specified by {@link #filters}.
+   */
+  private KeyValue transformedKV = null;
 
   /**
    * Default constructor, filters nothing. Required though for RPC
@@ -184,15 +205,21 @@ public class FilterList implements Filter {
 
   @Override
   public KeyValue transform(KeyValue v) {
-    KeyValue current = v;
-    for (Filter filter : filters) {
-      current = filter.transform(current);
-    }
-    return current;
+    // transform() is expected to follow an inclusive filterKeyValue() immediately:
+    if (!v.equals(this.referenceKV)) {
+      throw new IllegalStateException(
+          "Reference KeyValue: " + this.referenceKV + " does not match: " + v);
+     }
+    return this.transformedKV;
   }
 
   @Override
   public ReturnCode filterKeyValue(KeyValue v) {
+    this.referenceKV = v;
+
+    // Accumulates successive transformation of every filter that includes the KeyValue:
+    KeyValue transformed = v;
+
     ReturnCode rc = operator == Operator.MUST_PASS_ONE?
         ReturnCode.SKIP: ReturnCode.INCLUDE;
     for (Filter filter : filters) {
@@ -206,6 +233,7 @@ public class FilterList implements Filter {
         case INCLUDE_AND_NEXT_COL:
           rc = ReturnCode.INCLUDE_AND_NEXT_COL;
         case INCLUDE:
+          transformed = filter.transform(transformed);
           continue;
         default:
           return code;
@@ -220,16 +248,30 @@ public class FilterList implements Filter {
           if (rc != ReturnCode.INCLUDE_AND_NEXT_COL) {
             rc = ReturnCode.INCLUDE;
           }
+          transformed = filter.transform(transformed);
           break;
         case INCLUDE_AND_NEXT_COL:
           rc = ReturnCode.INCLUDE_AND_NEXT_COL;
+          transformed = filter.transform(transformed);
           // must continue here to evaluate all filters
+          break;
         case NEXT_ROW:
+          break;
         case SKIP:
-          // continue;
+          break;
+        case NEXT_COL:
+          break;
+        case SEEK_NEXT_USING_HINT:
+          break;
+        default:
+          throw new IllegalStateException("Received code is not valid.");
         }
       }
     }
+
+    // Save the transformed KeyValue for transform():
+    this.transformedKV = transformed;
+
     return rc;
   }
 

@@ -34,9 +34,12 @@ import junit.framework.TestCase;
 
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.SmallTests;
+import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.filter.FilterList.Operator;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.experimental.categories.Category;
+
+import com.google.common.collect.Lists;
 
 /**
  * Tests filter sets
@@ -392,6 +395,46 @@ public class TestFilterList extends TestCase {
         Arrays.asList(new Filter [] { filterNoHint, filterMinHint } ));
     assertEquals(0, KeyValue.COMPARATOR.compare(filterList.getNextKeyHint(null),
         minKeyValue));
+  }
+
+  /**
+   * Tests the behavior of transform() in a hierarchical filter.
+   *
+   * transform() only applies after a filterKeyValue() whose return-code includes the KeyValue.
+   * Lazy evaluation of AND
+   */
+  public void testTransformMPO() throws Exception {
+    // Apply the following filter:
+    //     (family=fam AND qualifier=qual1 AND KeyOnlyFilter)
+    //  OR (family=fam AND qualifier=qual2)
+    final FilterList flist = new FilterList(Operator.MUST_PASS_ONE, Lists.<Filter>newArrayList(
+        new FilterList(Operator.MUST_PASS_ALL, Lists.<Filter>newArrayList(
+            new FamilyFilter(CompareOp.EQUAL, new BinaryComparator(Bytes.toBytes("fam"))),
+            new QualifierFilter(CompareOp.EQUAL, new BinaryComparator(Bytes.toBytes("qual1"))),
+            new KeyOnlyFilter())),
+        new FilterList(Operator.MUST_PASS_ALL, Lists.<Filter>newArrayList(
+            new FamilyFilter(CompareOp.EQUAL, new BinaryComparator(Bytes.toBytes("fam"))),
+            new QualifierFilter(CompareOp.EQUAL, new BinaryComparator(Bytes.toBytes("qual2")))))));
+
+    final KeyValue kvQual1 = new KeyValue(
+        Bytes.toBytes("row"), Bytes.toBytes("fam"), Bytes.toBytes("qual1"), Bytes.toBytes("value"));
+    final KeyValue kvQual2 = new KeyValue(
+        Bytes.toBytes("row"), Bytes.toBytes("fam"), Bytes.toBytes("qual2"), Bytes.toBytes("value"));
+    final KeyValue kvQual3 = new KeyValue(
+        Bytes.toBytes("row"), Bytes.toBytes("fam"), Bytes.toBytes("qual3"), Bytes.toBytes("value"));
+
+    // Value for fam:qual1 should be stripped:
+    assertEquals(Filter.ReturnCode.INCLUDE, flist.filterKeyValue(kvQual1));
+    final KeyValue transformedQual1 = flist.transform(kvQual1);
+    assertEquals(0, transformedQual1.getValue().length);
+
+    // Value for fam:qual2 should not be stripped:
+    assertEquals(Filter.ReturnCode.INCLUDE, flist.filterKeyValue(kvQual2));
+    final KeyValue transformedQual2 = flist.transform(kvQual2);
+    assertEquals("value", Bytes.toString(transformedQual2.getValue()));
+
+    // Other keys should be skipped:
+    assertEquals(Filter.ReturnCode.SKIP, flist.filterKeyValue(kvQual3));
   }
 
   @org.junit.Rule
