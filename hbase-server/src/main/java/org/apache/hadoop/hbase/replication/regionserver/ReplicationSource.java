@@ -282,6 +282,10 @@ public class ReplicationSource extends Thread
           sleepMultiplier++;
         }
         continue;
+      } else if (oldPath != null && !oldPath.getName().equals(getCurrentPath().getName())) {
+        this.manager.cleanOldLogs(getCurrentPath().getName(),
+                                  this.peerId,
+                                  this.replicationQueueInfo.isQueueRecovered());
       }
       boolean currentWALisBeingWrittenTo = false;
       //For WAL files we own (rather than recovered), take a snapshot of whether the
