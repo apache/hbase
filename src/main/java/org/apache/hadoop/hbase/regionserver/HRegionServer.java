@@ -2029,8 +2029,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
       masterIsa =
         new InetSocketAddress(masterServerName.getHostname(), masterServerName.getPort());
 
-      LOG.info("Attempting connect to Master server at " +
-        this.masterAddressManager.getMasterAddress());
+      LOG.info("Attempting connect to Master server at " + masterServerName);
       try {
         // Do initial RPC setup. The final argument indicates that the RPC
         // should retry indefinitely.
