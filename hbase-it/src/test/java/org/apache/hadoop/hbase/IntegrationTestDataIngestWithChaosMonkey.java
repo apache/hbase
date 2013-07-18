@@ -20,6 +20,18 @@ package org.apache.hadoop.hbase;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.util.ChaosMonkey;
+import org.apache.hadoop.hbase.util.ChaosMonkey.Action;
+import org.apache.hadoop.hbase.util.ChaosMonkey.CompactRandomRegionOfTable;
+import org.apache.hadoop.hbase.util.ChaosMonkey.CompactTable;
+import org.apache.hadoop.hbase.util.ChaosMonkey.FlushRandomRegionOfTable;
+import org.apache.hadoop.hbase.util.ChaosMonkey.FlushTable;
+import org.apache.hadoop.hbase.util.ChaosMonkey.MergeRandomAdjacentRegionsOfTable;
+import org.apache.hadoop.hbase.util.ChaosMonkey.MoveRandomRegionOfTable;
+import org.apache.hadoop.hbase.util.ChaosMonkey.MoveRegionsOfTable;
+import org.apache.hadoop.hbase.util.ChaosMonkey.PeriodicRandomActionPolicy;
+import org.apache.hadoop.hbase.util.ChaosMonkey.SnapshotTable;
+import org.apache.hadoop.hbase.util.ChaosMonkey.SplitRandomRegionOfTable;
+import org.apache.hadoop.hbase.util.LoadTestTool;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -36,8 +48,8 @@ public class IntegrationTestDataIngestWithChaosMonkey extends IngestIntegrationT
 
   private static int NUM_SLAVES_BASE = 4; //number of slaves for the smallest cluster
 
-  // run for 5 min by default
-  private static final long DEFAULT_RUN_TIME = 5 * 60 * 1000;
+  // run for 10 min by default
+  private static final long DEFAULT_RUN_TIME = 10 * 60 * 1000;
 
   private ChaosMonkey monkey;
 
@@ -57,7 +69,32 @@ public class IntegrationTestDataIngestWithChaosMonkey extends IngestIntegrationT
       NUM_SLAVES_BASE = 5;
     }
     super.setUp(NUM_SLAVES_BASE);
-    monkey = new ChaosMonkey(util, ChaosMonkey.EVERY_MINUTE_RANDOM_ACTION_POLICY);
+
+    // Actions such as compact/flush a table/region,
+    // move one region around. They are not so destructive,
+    // can be executed more frequently.
+    Action[] actions1 = new Action[] {
+      new CompactTable(tableName, 0.5f),
+      new CompactRandomRegionOfTable(tableName, 0.6f),
+      new FlushTable(tableName),
+      new FlushRandomRegionOfTable(tableName),
+      new MoveRandomRegionOfTable(tableName)
+    };
+
+    // Actions such as split/merge/snapshot.
+    // They should not cause data loss, or unreliability
+    // such as region stuck in transition.
+    Action[] actions2 = new Action[] {
+      new SplitRandomRegionOfTable(tableName),
+      new MergeRandomAdjacentRegionsOfTable(tableName),
+      new SnapshotTable(tableName),
+      new MoveRegionsOfTable(tableName)
+    };
+
+    monkey = new ChaosMonkey(util,
+      new PeriodicRandomActionPolicy(30 * 1000, actions1),
+      new PeriodicRandomActionPolicy(60 * 1000, actions2),
+      ChaosMonkey.getPolicyByName(ChaosMonkey.EVERY_MINUTE_RANDOM_ACTION_POLICY));
     monkey.start();
   }
 

@@ -20,20 +20,19 @@ package org.apache.hadoop.hbase;
 
 import java.io.IOException;
 
-import junit.framework.Assert;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.LoadTestTool;
+import org.junit.Assert;
 
 /**
  * A base class for tests that do something with the cluster while running
  * {@link LoadTestTool} to write and verify some data.
  */
 public abstract class IngestIntegrationTestBase {
-  private static String tableName = null;
+  protected static String tableName = null;
 
   /** A soft limit on how long we should run */
   private static final String RUN_TIME_KEY = "hbase.%s.runtime";
