@@ -123,7 +123,6 @@ public class TestHBaseFsck {
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
-    TEST_UTIL.getConfiguration().setBoolean(HConstants.DISTRIBUTED_LOG_SPLITTING_KEY, false);
     TEST_UTIL.getConfiguration().setInt("hbase.regionserver.handler.count", 2);
     TEST_UTIL.getConfiguration().setInt("hbase.regionserver.metahandler.count", 2);
     TEST_UTIL.startMiniCluster(3);

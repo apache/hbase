@@ -22,13 +22,9 @@ import java.io.EOFException;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InterruptedIOException;
-import java.lang.reflect.Constructor;
-import java.lang.reflect.InvocationTargetException;
-import java.net.ConnectException;
 import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
@@ -39,15 +35,12 @@ import java.util.TreeSet;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletionService;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorCompletionService;
 import java.util.concurrent.Future;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -58,7 +51,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
@@ -71,13 +63,10 @@ import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.client.Put;
-import org.apache.hadoop.hbase.client.RetriesExhaustedException;
 import org.apache.hadoop.hbase.client.Row;
-import org.apache.hadoop.hbase.exceptions.OrphanHLogAfterSplitException;
 import org.apache.hadoop.hbase.exceptions.RegionOpeningException;
 import org.apache.hadoop.hbase.exceptions.TableNotFoundException;
 import org.apache.hadoop.hbase.io.HeapSize;
-import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.master.SplitLogManager;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
@@ -85,7 +74,6 @@ import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.AdminService.BlockingInterface;
 import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.RegionStoreSequenceIds;
 import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.StoreSequenceId;
-import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.Table;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.LastSequenceId;
 import org.apache.hadoop.hbase.regionserver.wal.HLog.Entry;
@@ -98,15 +86,11 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Threads;
-import org.apache.hadoop.hbase.zookeeper.ZKAssign;
 import org.apache.hadoop.hbase.zookeeper.ZKSplitLog;
 import org.apache.hadoop.hbase.zookeeper.ZKTable;
-import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.hadoop.io.MultipleIOException;
-import org.apache.hadoop.ipc.RemoteException;
 import org.apache.zookeeper.KeeperException;
-import org.apache.zookeeper.data.Stat;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
@@ -118,19 +102,10 @@ import com.google.common.collect.Lists;
  */
 @InterfaceAudience.Private
 public class HLogSplitter {
-  private static final String LOG_SPLITTER_IMPL = "hbase.hlog.splitter.impl";
-
   static final Log LOG = LogFactory.getLog(HLogSplitter.class);
-
-  private boolean hasSplit = false;
-  private long splitTime = 0;
-  private long splitSize = 0;
-
 
   // Parameters for split process
   protected final Path rootDir;
-  protected final Path srcDir;
-  protected final Path oldLogDir;
   protected final FileSystem fs;
   protected final Configuration conf;
 
@@ -172,62 +147,11 @@ public class HLogSplitter {
 
   // Min batch size when replay WAL edits
   private final int minBatchSize;
-  
-  /**
-   * Create a new HLogSplitter using the given {@link Configuration} and the
-   * <code>hbase.hlog.splitter.impl</code> property to derived the instance class to use.
-   * distributedLogReplay won't be enabled by this constructor.
-   * <p>
-   * @param conf
-   * @param rootDir hbase directory
-   * @param srcDir logs directory
-   * @param oldLogDir directory where processed logs are archived to
-   * @param fs FileSystem
-   * @return New HLogSplitter instance
-   */
-  public static HLogSplitter createLogSplitter(Configuration conf,
-      final Path rootDir, final Path srcDir,
-      Path oldLogDir, final FileSystem fs)  {
 
-    @SuppressWarnings("unchecked")
-    Class<? extends HLogSplitter> splitterClass = (Class<? extends HLogSplitter>) conf
-        .getClass(LOG_SPLITTER_IMPL, HLogSplitter.class);
-    try {
-       Constructor<? extends HLogSplitter> constructor =
-         splitterClass.getConstructor(
-          Configuration.class, // conf
-          Path.class, // rootDir
-          Path.class, // srcDir
-          Path.class, // oldLogDir
-          FileSystem.class, // fs
-          LastSequenceId.class);
-      return constructor.newInstance(conf, rootDir, srcDir, oldLogDir, fs, null);
-    } catch (IllegalArgumentException e) {
-      throw new RuntimeException(e);
-    } catch (InstantiationException e) {
-      throw new RuntimeException(e);
-    } catch (IllegalAccessException e) {
-      throw new RuntimeException(e);
-    } catch (InvocationTargetException e) {
-      throw new RuntimeException(e);
-    } catch (SecurityException e) {
-      throw new RuntimeException(e);
-    } catch (NoSuchMethodException e) {
-      throw new RuntimeException(e);
-    }
-  }
-
-  public HLogSplitter(Configuration conf, Path rootDir, Path srcDir,
-      Path oldLogDir, FileSystem fs, LastSequenceId idChecker) {
-      this(conf, rootDir, srcDir, oldLogDir, fs, idChecker, null);
-  }
-
-  public HLogSplitter(Configuration conf, Path rootDir, Path srcDir,
-      Path oldLogDir, FileSystem fs, LastSequenceId idChecker, ZooKeeperWatcher zkw) {
+  HLogSplitter(Configuration conf, Path rootDir,
+      FileSystem fs, LastSequenceId idChecker, ZooKeeperWatcher zkw) {
     this.conf = conf;
     this.rootDir = rootDir;
-    this.srcDir = srcDir;
-    this.oldLogDir = oldLogDir;
     this.fs = fs;
     this.sequenceIdChecker = idChecker;
     this.watcher = zkw;
@@ -253,198 +177,8 @@ public class HLogSplitter {
   }
 
   /**
-   * Split up a bunch of regionserver commit log files that are no longer being
-   * written to, into new files, one per region for region to replay on startup.
-   * Delete the old log files when finished.
-   *
-   * @throws IOException will throw if corrupted hlogs aren't tolerated
-   * @return the list of splits
-   */
-  public List<Path> splitLog()
-      throws IOException {
-    return splitLog((CountDownLatch) null);
-  }
-  
-  /**
-   * Split up a bunch of regionserver commit log files that are no longer being
-   * written to, into new files, one per region for region to replay on startup.
-   * Delete the old log files when finished.
-   *
-   * @param latch
-   * @throws IOException will throw if corrupted hlogs aren't tolerated
-   * @return the list of splits
-   */
-  public List<Path> splitLog(CountDownLatch latch)
-      throws IOException {
-    Preconditions.checkState(!hasSplit,
-        "An HLogSplitter instance may only be used once");
-    hasSplit = true;
-
-    status = TaskMonitor.get().createStatus(
-        "Splitting logs in " + srcDir);
-
-    long startTime = EnvironmentEdgeManager.currentTimeMillis();
-
-    status.setStatus("Determining files to split...");
-    List<Path> splits = null;
-    if (!fs.exists(srcDir)) {
-      // Nothing to do
-      status.markComplete("No log directory existed to split.");
-      return splits;
-    }
-    FileStatus[] logfiles = fs.listStatus(srcDir);
-    if (logfiles == null || logfiles.length == 0) {
-      // Nothing to do
-      return splits;
-    }
-    logAndReport("Splitting " + logfiles.length + " hlog(s) in "
-    + srcDir.toString());
-    splits = splitLog(logfiles, latch);
-
-    splitTime = EnvironmentEdgeManager.currentTimeMillis() - startTime;
-    String msg = "hlog file splitting completed in " + splitTime +
-        " ms for " + srcDir.toString();
-    status.markComplete(msg);
-    LOG.info(msg);
-    return splits;
-  }
-
-  private void logAndReport(String msg) {
-    status.setStatus(msg);
-    LOG.info(msg);
-  }
-
-  /**
-   * @return time that this split took
-   */
-  public long getTime() {
-    return this.splitTime;
-  }
-
-  /**
-   * @return aggregate size of hlogs that were split
-   */
-  public long getSize() {
-    return this.splitSize;
-  }
-
-  /**
-   * @return a map from encoded region ID to the number of edits written out
-   * for that region.
-   */
-  Map<byte[], Long> getOutputCounts() {
-    Preconditions.checkState(hasSplit);
-    return outputSink.getOutputCounts();
-  }
-
-  /**
-   * Splits or Replays the HLog edits in the given list of logfiles (that are a mix of edits on
-   * multiple regions) by region and then splits(or replay when distributedLogReplay is true) them
-   * per region directories, in batches.
-   * <p>
-   * This process is split into multiple threads. In the main thread, we loop through the logs to be
-   * split. For each log, we:
-   * <ul>
-   * <li>Recover it (take and drop HDFS lease) to ensure no other process can write</li>
-   * <li>Read each edit (see {@link #parseHLog}</li>
-   * <li>Mark as "processed" or "corrupt" depending on outcome</li>
-   * </ul>
-   * <p>
-   * Each edit is passed into the EntryBuffers instance, which takes care of memory accounting and
-   * splitting the edits by region.
-   * <p>
-   * The OutputSink object then manages N other WriterThreads which pull chunks of edits from
-   * EntryBuffers and write them to either recovered.edits files or replay them to newly assigned
-   * region servers directly
-   * <p>
-   * After the process is complete, the log files are archived to a separate directory.
-   */
-  private List<Path> splitLog(final FileStatus[] logfiles, CountDownLatch latch)
-      throws IOException {
-    List<Path> processedLogs = new ArrayList<Path>(logfiles.length);
-    List<Path> corruptedLogs = new ArrayList<Path>(logfiles.length);
-    List<Path> splits;
-
-    boolean skipErrors = conf.getBoolean("hbase.hlog.split.skip.errors", true);
-
-    countTotalBytes(logfiles);
-    splitSize = 0;
-
-    outputSink.startWriterThreads();
-
-    try {
-      int i = 0;
-      for (FileStatus log : logfiles) {
-       Path logPath = log.getPath();
-        long logLength = log.getLen();
-        splitSize += logLength;
-        logAndReport("Splitting hlog " + (i++ + 1) + " of " + logfiles.length
-            + ": " + logPath + ", length=" + logLength);
-        Reader in = null;
-        try {
-          //actually, for meta-only hlogs, we don't need to go thru the process
-          //of parsing and segregating by regions since all the logs are for
-          //meta only. However, there is a sequence number that can be obtained
-          //only by parsing.. so we parse for all files currently
-          //TODO: optimize this part somehow
-          in = getReader(fs, log, conf, skipErrors, null);
-          if (in != null) {
-            parseHLog(in, logPath, entryBuffers, fs, conf, skipErrors);
-          }
-          processedLogs.add(logPath);
-        } catch (CorruptedLogFileException e) {
-          LOG.info("Got while parsing hlog " + logPath +
-              ". Marking as corrupted", e);
-          corruptedLogs.add(logPath);
-        } finally {
-          if (in != null) {
-            try {
-              in.close();
-            } catch (IOException e) {
-              LOG.warn("Close log reader threw exception -- continuing", e);
-            }
-          }
-        }
-      }
-      status.setStatus("Log splits complete. Checking for orphaned logs.");
-
-      if (latch != null) {
-        try {
-          latch.await();
-        } catch (InterruptedException ie) {
-          LOG.warn("wait for latch interrupted");
-          Thread.currentThread().interrupt();
-        }
-      }
-      FileStatus[] currFiles = fs.listStatus(srcDir);
-      if (currFiles.length > processedLogs.size()
-          + corruptedLogs.size()) {
-        throw new OrphanHLogAfterSplitException(
-          "Discovered orphan hlog after split. Maybe the "
-            + "HRegionServer was not dead when we started");
-      }
-    } finally {
-      status.setStatus("Finishing writing output logs and closing down.");
-      splits = outputSink.finishWritingAndClose();
-    }
-    status.setStatus("Archiving logs after completed split");
-    archiveLogs(srcDir, corruptedLogs, processedLogs, oldLogDir, fs, conf);
-    return splits;
-  }
-
-  /**
-   * @return the total size of the passed list of files.
-   */
-  private static long countTotalBytes(FileStatus[] logfiles) {
-    long ret = 0;
-    for (FileStatus stat : logfiles) {
-      ret += stat.getLen();
-    }
-    return ret;
-  }
-
-  /**
-   * Splits a HLog file into region's recovered-edits directory
+   * Splits a HLog file into region's recovered-edits directory.
+   * This is the main entry point for distributed log splitting from SplitLogWorker.
    * <p>
    * If the log file has N regions then N recovered.edits files will be produced.
    * <p>
@@ -459,34 +193,40 @@ public class HLogSplitter {
    * @return false if it is interrupted by the progress-able.
    * @throws IOException
    */
-  static public boolean splitLogFile(Path rootDir, FileStatus logfile, FileSystem fs,
+  public static boolean splitLogFile(Path rootDir, FileStatus logfile, FileSystem fs,
       Configuration conf, CancelableProgressable reporter, LastSequenceId idChecker,
-      ZooKeeperWatcher zkw)
-      throws IOException {
-    HLogSplitter s = new HLogSplitter(conf, rootDir, null, null/* oldLogDir */, fs, idChecker, zkw);
+      ZooKeeperWatcher zkw) throws IOException {
+    HLogSplitter s = new HLogSplitter(conf, rootDir, fs, idChecker, zkw);
     return s.splitLogFile(logfile, reporter);
   }
 
-  /**
-   * Splits a HLog file into region's recovered-edits directory
-   * <p>
-   * If the log file has N regions then N recovered.edits files will be produced.
-   * <p>
-   * @param rootDir
-   * @param logfile
-   * @param fs
-   * @param conf
-   * @param reporter
-   * @return false if it is interrupted by the progress-able.
-   * @throws IOException
-   */
-  static public boolean splitLogFile(Path rootDir, FileStatus logfile, FileSystem fs,
-      Configuration conf, CancelableProgressable reporter)
-      throws IOException {
-    return HLogSplitter.splitLogFile(rootDir, logfile, fs, conf, reporter, null, null);
+  // A wrapper to split one log folder using the method used by distributed
+  // log splitting. Used by tools and unit tests. It should be package private.
+  // It is public only because TestWALObserver is in a different package,
+  // which uses this method to to log splitting.
+  public static List<Path> split(Path rootDir, Path logDir, Path oldLogDir,
+      FileSystem fs, Configuration conf) throws IOException {
+    FileStatus[] logfiles = fs.listStatus(logDir);
+    List<Path> splits = new ArrayList<Path>();
+    if (logfiles != null && logfiles.length > 0) {
+      for (FileStatus logfile: logfiles) {
+        HLogSplitter s = new HLogSplitter(conf, rootDir, fs, null, null);
+        if (s.splitLogFile(logfile, null)) {
+          finishSplitLogFile(rootDir, oldLogDir, logfile.getPath(), conf);
+          if (s.outputSink.splits != null) {
+            splits.addAll(s.outputSink.splits);
+          }
+        }
+      }
+    }
+    if (!fs.delete(logDir, true)) {
+      throw new IOException("Unable to delete src dir: " + logDir);
+    }
+    return splits;
   }
 
-  public boolean splitLogFile(FileStatus logfile,
+  // The real log splitter. It just splits one log file.
+  boolean splitLogFile(FileStatus logfile,
       CancelableProgressable reporter) throws IOException {
     boolean isCorrupted = false;
     Preconditions.checkState(status == null);
@@ -615,31 +355,31 @@ public class HLogSplitter {
    * @param conf
    * @throws IOException
    */
-  public static void finishSplitLogFile(String logfile, Configuration conf)
-      throws IOException {
+  public static void finishSplitLogFile(String logfile,
+      Configuration conf)  throws IOException {
     Path rootdir = FSUtils.getRootDir(conf);
     Path oldLogDir = new Path(rootdir, HConstants.HREGION_OLDLOGDIR_NAME);
-    finishSplitLogFile(rootdir, oldLogDir, logfile, conf);
-  }
-
-  public static void finishSplitLogFile(Path rootdir, Path oldLogDir,
-      String logfile, Configuration conf) throws IOException {
-    List<Path> processedLogs = new ArrayList<Path>();
-    List<Path> corruptedLogs = new ArrayList<Path>();
-    FileSystem fs;
-    fs = rootdir.getFileSystem(conf);
-    Path logPath = null;
+    Path logPath;
     if (FSUtils.isStartingWithPath(rootdir, logfile)) {
       logPath = new Path(logfile);
     } else {
       logPath = new Path(rootdir, logfile);
     }
+    finishSplitLogFile(rootdir, oldLogDir, logPath, conf);
+  }
+
+  static void finishSplitLogFile(Path rootdir, Path oldLogDir,
+      Path logPath, Configuration conf) throws IOException {
+    List<Path> processedLogs = new ArrayList<Path>();
+    List<Path> corruptedLogs = new ArrayList<Path>();
+    FileSystem fs;
+    fs = rootdir.getFileSystem(conf);
     if (ZKSplitLog.isCorrupted(rootdir, logPath.getName(), fs)) {
       corruptedLogs.add(logPath);
     } else {
       processedLogs.add(logPath);
     }
-    archiveLogs(null, corruptedLogs, processedLogs, oldLogDir, fs, conf);
+    archiveLogs(corruptedLogs, processedLogs, oldLogDir, fs, conf);
     Path stagingDir = ZKSplitLog.getSplitLogDir(rootdir, logPath.getName());
     fs.delete(stagingDir, true);
   }
@@ -657,7 +397,6 @@ public class HLogSplitter {
    * @throws IOException
    */
   private static void archiveLogs(
-      final Path srcDir,
       final List<Path> corruptedLogs,
       final List<Path> processedLogs, final Path oldLogDir,
       final FileSystem fs, final Configuration conf) throws IOException {
@@ -691,12 +430,6 @@ public class HLogSplitter {
           LOG.debug("Archived processed log " + p + " to " + newPath);
         }
       }
-    }
-
-    // distributed log splitting removes the srcDir (region's log dir) later
-    // when all the log files in that srcDir have been successfully processed
-    if (srcDir != null && !fs.delete(srcDir, true)) {
-      throw new IOException("Unable to delete src dir: " + srcDir);
     }
   }
 
@@ -775,38 +508,6 @@ public class HLogSplitter {
   }
 
   /**
-   * Parse a single hlog and put the edits in entryBuffers
-   *
-   * @param in the hlog reader
-   * @param path the path of the log file
-   * @param entryBuffers the buffer to hold the parsed edits
-   * @param fs the file system
-   * @param conf the configuration
-   * @param skipErrors indicator if CorruptedLogFileException should be thrown instead of IOException
-   * @throws IOException
-   * @throws CorruptedLogFileException if hlog is corrupted
-   */
-  private void parseHLog(final Reader in, Path path,
-		EntryBuffers entryBuffers, final FileSystem fs,
-    final Configuration conf, boolean skipErrors)
-	throws IOException, CorruptedLogFileException {
-    int editsCount = 0;
-    try {
-      Entry entry;
-      while ((entry = getNextLogLine(in, path, skipErrors)) != null) {
-        entryBuffers.appendEntry(entry);
-        editsCount++;
-      }
-    } catch (InterruptedException ie) {
-      IOException t = new InterruptedIOException();
-      t.initCause(ie);
-      throw t;
-    } finally {
-      LOG.debug("Pushed=" + editsCount + " entries from " + path);
-    }
-  }
-
-  /**
    * Create a new {@link Reader} for reading logs to split.
    *
    * @param fs
@@ -822,7 +523,6 @@ public class HLogSplitter {
     Path path = file.getPath();
     long length = file.getLen();
     Reader in;
-
 
     // Check for possibly empty file. With appends, currently Hadoop reports a
     // zero length even if the file has been sync'd. Revisit if HDFS-376 or
@@ -895,7 +595,6 @@ public class HLogSplitter {
       throw t;
     }
   }
-
 
   private void writerThreadError(Throwable t) {
     thrown.compareAndSet(null, t);
@@ -1078,7 +777,6 @@ public class HLogSplitter {
     }
   }
 
-
   class WriterThread extends Thread {
     private volatile boolean shouldStop = false;
     private OutputSink outputSink = null;
@@ -1127,7 +825,6 @@ public class HLogSplitter {
       }
     }
 
-
     private void writeBuffer(RegionEntryBuffer buffer) throws IOException {
       outputSink.append(buffer);
     }
@@ -1138,37 +835,6 @@ public class HLogSplitter {
         dataAvailable.notifyAll();
       }
     }
-  }
-
-  Path convertRegionEditsToTemp(Path rootdir, Path edits, String tmpname) {
-    List<String> components = new ArrayList<String>(10);
-    do {
-      components.add(edits.getName());
-      edits = edits.getParent();
-    } while (edits.depth() > rootdir.depth());
-    Path ret = ZKSplitLog.getSplitLogDir(rootdir, tmpname);
-    for (int i = components.size() - 1; i >= 0; i--) {
-      ret = new Path(ret, components.get(i));
-    }
-    try {
-      if (fs.exists(ret)) {
-        LOG.warn("Found existing old temporary edits file. It could be the "
-            + "result of a previous failed split attempt. Deleting "
-            + ret + ", length="
-            + fs.getFileStatus(ret).getLen());
-        if (!fs.delete(ret, false)) {
-          LOG.warn("Failed delete of old " + ret);
-        }
-      }
-      Path dir = ret.getParent();
-      if (!fs.exists(dir)) {
-        if (!fs.mkdirs(dir)) LOG.warn("mkdir failed on " + dir);
-      }
-    } catch (IOException e) {
-      LOG.warn("Could not prepare temp staging area ", e);
-      // ignore, exceptions will be thrown elsewhere
-    }
-    return ret;
   }
 
   /**
@@ -1198,6 +864,8 @@ public class HLogSplitter {
     protected CancelableProgressable reporter = null;
 
     protected AtomicLong skippedEdits = new AtomicLong();
+
+    protected List<Path> splits = null;
 
     public OutputSink(int numWriters) {
       numThreads = numWriters;
@@ -1334,7 +1002,10 @@ public class HLogSplitter {
           throw MultipleIOException.createIOException(thrown);
         }
       }
-      return (isSuccessful) ? result : null;
+      if (isSuccessful) {
+        splits = result;
+      }
+      return splits;
     }
 
     /**
@@ -2003,16 +1674,17 @@ public class HLogSplitter {
 
     @Override
     List<Path> finishWritingAndClose() throws IOException {
-      List<Path> result = new ArrayList<Path>();
       try {
         if (!finishWriting()) {
           return null;
         }
         if (hasEditsInDisablingOrDisabledTables) {
-          result = logRecoveredEditsOutputSink.finishWritingAndClose();
+          splits = logRecoveredEditsOutputSink.finishWritingAndClose();
+        } else {
+          splits = new ArrayList<Path>();
         }
         // returns an empty array in order to keep interface same as old way
-        return result;
+        return splits;
       } finally {
         List<IOException> thrown = closeRegionServerWriters();
         if (thrown != null && !thrown.isEmpty()) {

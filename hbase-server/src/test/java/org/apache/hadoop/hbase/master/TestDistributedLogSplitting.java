@@ -84,7 +84,6 @@ import org.apache.hadoop.hbase.util.JVMClusterUtil.MasterThread;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.zookeeper.ZKAssign;
-import org.apache.hadoop.hbase.zookeeper.ZKTable;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.log4j.Level;
@@ -130,7 +129,6 @@ public class TestDistributedLogSplitting {
     conf.setInt("zookeeper.recovery.retry", 0);
     conf.setInt(HConstants.REGIONSERVER_INFO_PORT, -1);
     conf.setFloat(HConstants.LOAD_BALANCER_SLOP_KEY, (float) 100.0); // no load balancing
-    conf.setBoolean(HConstants.DISTRIBUTED_LOG_SPLITTING_KEY, true);
     TEST_UTIL = new HBaseTestingUtility(conf);
     TEST_UTIL.startMiniCluster(NUM_MASTERS, num_rs);
     cluster = TEST_UTIL.getHBaseCluster();
@@ -401,7 +399,6 @@ public class TestDistributedLogSplitting {
     abortMaster(cluster);
 
     // abort RS
-    int numRS = cluster.getLiveRegionServerThreads().size();
     LOG.info("Aborting region server: " + hrs.getServerName());
     hrs.abort("testing");
 
@@ -484,7 +481,6 @@ public class TestDistributedLogSplitting {
     abortMaster(cluster);
 
     // abort RS
-    int numRS = cluster.getLiveRegionServerThreads().size();
     LOG.info("Aborting region server: " + hrs.getServerName());
     hrs.abort("testing");
 
@@ -498,9 +494,9 @@ public class TestDistributedLogSplitting {
 
     Thread.sleep(2000);
     LOG.info("Current Open Regions:" + getAllOnlineRegions(cluster).size());
-    
+
     startMasterAndWaitUntilLogSplit(cluster);
-    
+
     // wait for all regions are fully recovered
     TEST_UTIL.waitFor(180000, 200, new Waiter.Predicate<Exception>() {
       @Override
@@ -518,8 +514,8 @@ public class TestDistributedLogSplitting {
 
     ht.close();
   }
-  
-  
+
+
   @Test(timeout = 300000)
   public void testLogReplayTwoSequentialRSDown() throws Exception {
     LOG.info("testRecoveredEditsReplayTwoSequentialRSDown");
@@ -1103,7 +1099,6 @@ public class TestDistributedLogSplitting {
     // turn off load balancing to prevent regions from moving around otherwise
     // they will consume recovered.edits
     master.balanceSwitch(false);
-    FileSystem fs = master.getMasterFileSystem().getFileSystem();
     final ZooKeeperWatcher zkw = new ZooKeeperWatcher(curConf, "table-creation", null);
     List<RegionServerThread> rsts = cluster.getLiveRegionServerThreads();
 

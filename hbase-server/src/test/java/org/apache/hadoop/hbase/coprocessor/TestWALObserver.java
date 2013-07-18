@@ -353,10 +353,8 @@ public class TestWALObserver {
   }
 
   private Path runWALSplit(final Configuration c) throws IOException {
-    FileSystem fs = FileSystem.get(c);
-    HLogSplitter logSplitter = HLogSplitter.createLogSplitter(c,
-        this.hbaseRootDir, this.logDir, this.oldLogDir, fs);
-    List<Path> splits = logSplitter.splitLog();
+    List<Path> splits = HLogSplitter.split(
+      hbaseRootDir, logDir, oldLogDir, FileSystem.get(c), c);
     // Split should generate only 1 file since there's only 1 region
     assertEquals(1, splits.size());
     // Make sure the file exists

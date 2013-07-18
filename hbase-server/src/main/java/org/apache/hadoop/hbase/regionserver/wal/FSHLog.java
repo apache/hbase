@@ -866,6 +866,7 @@ class FSHLog implements HLog, Syncable {
    * @return txid of this transaction
    * @throws IOException
    */
+  @SuppressWarnings("deprecation")
   private long append(HRegionInfo info, byte [] tableName, WALEdit edits, UUID clusterId,
       final long now, HTableDescriptor htd, boolean doSync, boolean isInMemstore)
     throws IOException {
@@ -1342,15 +1343,13 @@ class FSHLog implements HLog, Syncable {
     if (!fs.exists(p)) {
       throw new FileNotFoundException(p.toString());
     }
-    final Path baseDir = FSUtils.getRootDir(conf);
-    final Path oldLogDir = new Path(baseDir, HConstants.HREGION_OLDLOGDIR_NAME);
     if (!fs.getFileStatus(p).isDir()) {
       throw new IOException(p + " is not a directory");
     }
 
-    HLogSplitter logSplitter = HLogSplitter.createLogSplitter(
-        conf, baseDir, p, oldLogDir, fs);
-    logSplitter.splitLog();
+    final Path baseDir = FSUtils.getRootDir(conf);
+    final Path oldLogDir = new Path(baseDir, HConstants.HREGION_OLDLOGDIR_NAME);
+    HLogSplitter.split(baseDir, p, oldLogDir, fs, conf);
   }
 
   @Override
