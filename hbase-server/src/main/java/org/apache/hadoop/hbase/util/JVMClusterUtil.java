@@ -251,16 +251,17 @@ public class JVMClusterUtil {
 
     }
     boolean wasInterrupted = false;
-    final long maxTime = System.currentTimeMillis() + 120 * 1000;
+    final long maxTime = System.currentTimeMillis() + 30 * 1000;
     if (regionservers != null) {
       // first try nicely.
       for (RegionServerThread t : regionservers) {
         t.getRegionServer().stop("Shutdown requested");
       }
       for (RegionServerThread t : regionservers) {
-        if (t.isAlive() && !wasInterrupted && System.currentTimeMillis() < maxTime) {
+        long now = System.currentTimeMillis();
+        if (t.isAlive() && !wasInterrupted && now < maxTime) {
           try {
-            t.join(maxTime);
+            t.join(maxTime - now);
           } catch (InterruptedException e) {
             LOG.info("Got InterruptedException on shutdown - " +
                 "not waiting anymore on region server ends", e);
@@ -270,17 +271,20 @@ public class JVMClusterUtil {
       }
 
       // Let's try to interrupt the remaining threads if any.
-      for (int i = 0; i < 10; ++i) {
+      for (int i = 0; i < 100; ++i) {
+        boolean atLeastOneLiveServer = false;
         for (RegionServerThread t : regionservers) {
           if (t.isAlive()) {
+            atLeastOneLiveServer = true;
             try {
               LOG.warn("RegionServerThreads remaining, give one more chance before interrupting");
-              t.join(10);
+              t.join(1000);
             } catch (InterruptedException e) {
               wasInterrupted = true;
             }
           }
         }
+        if (!atLeastOneLiveServer) break;
         for (RegionServerThread t : regionservers) {
           if (t.isAlive()) {
             LOG.warn("RegionServerThreads taking too long to stop, interrupting");
