@@ -28,8 +28,6 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-import java.util.Map;
-
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.fail;
 
@@ -51,7 +49,7 @@ public class TestReplicationDisableInactivePeer extends TestReplicationBase {
 
     // enabling and shutdown the peer
     admin.enablePeer("2");
-    utility2.getHBaseCluster().getMaster().shutdown();
+    utility2.shutdownMiniHBaseCluster();
 
     byte[] rowkey = Bytes.toBytes("disable inactive peer");
     Put put = new Put(rowkey);
