@@ -126,6 +126,16 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
 
   /**
    * <em>INTERNAL</em> Used by HBase Shell interface to access this metadata
+   * attribute which denotes if the table is compaction enabled
+   *
+   * @see #isCompactionEnabled()
+   */
+  public static final String COMPACTION_ENABLED = "COMPACTION_ENABLED";
+  private static final ImmutableBytesWritable COMPACTION_ENABLED_KEY =
+    new ImmutableBytesWritable(Bytes.toBytes(COMPACTION_ENABLED));
+
+  /**
+   * <em>INTERNAL</em> Used by HBase Shell interface to access this metadata
    * attribute which represents the maximum size of the memstore after which
    * its contents are flushed onto the disk
    *
@@ -194,6 +204,11 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
    * Constant that denotes whether the table is READONLY by default and is false
    */
   public static final boolean DEFAULT_READONLY = false;
+
+  /**
+   * Constant that denotes whether the table is compaction enabled by default
+   */
+  public static final boolean DEFAULT_COMPACTION_ENABLED = true;
 
   /**
    * Constant that denotes the maximum default size of the memstore after which
@@ -609,6 +624,25 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
    */
   public void setReadOnly(final boolean readOnly) {
     setValue(READONLY_KEY, readOnly? TRUE: FALSE);
+  }
+
+  /**
+   * Check if the compaction enable flag of the table is true. If flag is
+   * false then no minor/major compactions will be done in real.
+   *
+   * @return true if table compaction enabled
+   */
+  public boolean isCompactionEnabled() {
+    return isSomething(COMPACTION_ENABLED_KEY, DEFAULT_COMPACTION_ENABLED);
+  }
+
+  /**
+   * Setting the table compaction enable flag.
+   *
+   * @param isEnable True if enable compaction.
+   */
+  public void setCompactionEnabled(final boolean isEnable) {
+    setValue(COMPACTION_ENABLED_KEY, isEnable ? TRUE : FALSE);
   }
 
   /**
