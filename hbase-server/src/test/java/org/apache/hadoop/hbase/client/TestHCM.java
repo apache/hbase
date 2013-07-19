@@ -884,7 +884,7 @@ public class TestHCM {
    * zk connections.
    * @throws Exception
    */
-  @Test
+  @Ignore ("Flakey test: See HBASE-8996")@Test
   public void testDeleteForZKConnLeak() throws Exception {
     TEST_UTIL.createTable(TABLE_NAME4, FAM_NAM);
     final Configuration config = HBaseConfiguration.create(TEST_UTIL.getConfiguration());
