@@ -531,7 +531,7 @@
               using method parallelization class ! -->
             <testFailureIgnore>false</testFailureIgnore>
             <forkedProcessTimeoutInSeconds>${surefire.timeout}</forkedProcessTimeoutInSeconds>
-            <argLine>-enableassertions -Xmx1900m
+            <argLine>-enableassertions -Xmx1900m -XX:MaxPermSize=100m
               -Djava.security.egd=file:/dev/./urandom -Djava.net.preferIPv4Stack=true</argLine>
             <redirectTestOutputToFile>${test.output.tofile}</redirectTestOutputToFile>
           </configuration>
