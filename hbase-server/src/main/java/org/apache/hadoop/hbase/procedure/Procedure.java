@@ -293,7 +293,7 @@ public class Procedure implements Callable<Void>, ForeignExceptionListener {
    * @param member
    */
   public void barrierAcquiredByMember(String member) {
-    LOG.debug("member: '" + member + "' joining prepared barrier for procedure '" + procName
+    LOG.debug("member: '" + member + "' joining acquired barrier for procedure '" + procName
         + "' on coordinator");
     if (this.acquiringMembers.contains(member)) {
       synchronized (joinBarrierLock) {
