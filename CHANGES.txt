@@ -1,5 +1,57 @@
 HBase Change Log
 
+Release 0.94.10 - 7/19/2013
+Sub-task
+
+    [HBASE-8774] - Add BatchSize and Filter to Thrift2
+    [HBASE-8819] - Port HBASE-5428 to Thrift 2
+    [HBASE-8826] - Ensure HBASE-8695 is covered in Thrift 2
+    [HBASE-8832] - Ensure HBASE-4658 is supported by Thrift 2
+    [HBASE-8876] - Addendum to HBASE-8774 Add BatchSize and Filter to Thrift2 - Add BatchSize Test
+    [HBASE-8938] - Thrift2 does not close scanner instance
+
+Bug
+
+    [HBASE-8432] - a table with unbalanced regions will balance indefinitely with the 'org.apache.hadoop.hbase.master.DefaultLoadBalancer'
+    [HBASE-8678] - Wrongly delete cells in some case which can not be deleted
+    [HBASE-8695] - The HBase thrift service ignores XML configuration
+    [HBASE-8776] - tweak retry settings some more (on trunk and 0.94)
+    [HBASE-8782] - Thrift2 can not parse values when using framed transport
+    [HBASE-8794] - DependentColumnFilter.toString() throws NullPointerException
+    [HBASE-8811] - REST service ignores misspelled "check=" parameter, causing unexpected mutations
+    [HBASE-8814] - Possible NPE in split if a region has empty store files.
+    [HBASE-8858] - Backport hbase-6979 "recovered.edits file should not break distributed log splitting"
+    [HBASE-8910] - HMaster.abortNow shouldn't try to become a master again if it was stopped
+    [HBASE-8967] - Duplicate call to snapshotManager.stop() in HRegionServer
+    [HBASE-8968] - Avoid call to zk in HRegionServer#getMaster() to log the master address which already read from the zk.
+    [HBASE-8971] - Bump 0.94 version to 0.94.10-SNAPSHOT
+    [HBASE-8988] - Reuse the thread pool in the shell to not run out of threads
+
+Improvement
+
+    [HBASE-8599] - HLogs in ZK are not cleaned up when replication lag is minimal
+    [HBASE-8767] - Backport hbase-8001 and hbase-8012, avoid lazy seek
+    [HBASE-8806] - Row locks are acquired repeatedly in HRegion.doMiniBatchMutation for duplicate rows.
+    [HBASE-8809] - Include deletes in the scan (setRaw) method does not respect the time range or the filter
+    [HBASE-8847] - Filter.transform() always applies unconditionally, even when combined in a FilterList
+    [HBASE-8908] - Backport HBASE-8882 and HBASE-8904 (An Integration Test to Test MTTR) to 0.94
+    [HBASE-8921] - [thrift2] Add GenericOptionsParser to Thrift 2 server
+    [HBASE-8945] - Backport to 0.94: HBASE-7952 Remove update() and Improve ExplicitColumnTracker performance.
+
+Task
+
+    [HBASE-8829] - Improve failed TestMetaScanner assert message so can see where/why failure
+
+Test
+
+    [HBASE-7770] - minor integration test framework fixes
+    [HBASE-8885] - Fix and reenable TestGet failing#testDynamicFilter
+    [HBASE-8914] - [0.94] TestRegionServerCoprocessorExceptionWithAbort is flaky
+    [HBASE-8928] - Make ChaosMonkey & LoadTest tools extensible, to allow addition of more actions and policies.
+    [HBASE-8934] - Fix bunch of flaky tests
+    [HBASE-8969] - Backport HBASE-8535+HBASE-8586 TestHCM#testDeleteForZKConnLeak enhancement to 0.94
+
+
 Release 0.94.9 - 6/24/2013
 Sub-task
 
