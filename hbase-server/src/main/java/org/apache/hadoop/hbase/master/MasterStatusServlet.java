@@ -63,7 +63,11 @@ public class MasterStatusServlet extends HttpServlet {
     List<ServerName> servers = null;
     Set<ServerName> deadServers = null;
     
-    if(master.isActiveMaster()){
+    if(master.isActiveMaster()) {
+      if (master.getServerManager() == null) {
+        response.sendError(503, "Master not ready");
+        return;
+      }
       metaLocation = getMetaLocationOrNull(master);
       //ServerName metaLocation = master.getCatalogTracker().getMetaLocation();
       servers = master.getServerManager().getOnlineServersList();
