@@ -164,14 +164,15 @@ public class ProcedureCoordinator {
     Future<Void> f = null;
     try {
       synchronized (procedures) {
-        f = this.pool.submit(proc);
-        // if everything got started properly, we can add it known running procedures
         this.procedures.put(procName, proc);
+        f = this.pool.submit(proc);
       }
       return true;
     } catch (RejectedExecutionException e) {
       LOG.warn("Procedure " + procName + " rejected by execution pool.  Propagating error and " +
           "cancelling operation.", e);
+      // Remove the procedure from the list since is not started
+      this.procedures.remove(procName);
       // the thread pool is full and we can't run the procedure
       proc.receive(new ForeignException(procName, e));
 
@@ -258,9 +259,12 @@ public class ProcedureCoordinator {
    */
   void memberAcquiredBarrier(String procName, final String member) {
     Procedure proc = procedures.get(procName);
-    if (proc != null) {
-      proc.barrierAcquiredByMember(member);
+    if (proc == null) {
+      LOG.warn("Member '"+ member +"' is trying to acquire an unknown procedure '"+ procName +"'");
+      return;
     }
+
+    proc.barrierAcquiredByMember(member);
   }
 
   /**
@@ -271,9 +275,11 @@ public class ProcedureCoordinator {
    */
   void memberFinishedBarrier(String procName, final String member) {
     Procedure proc = procedures.get(procName);
-    if (proc != null) {
-      proc.barrierReleasedByMember(member);
+    if (proc == null) {
+      LOG.warn("Member '"+ member +"' is trying to release an unknown procedure '"+ procName +"'");
+      return;
     }
+    proc.barrierReleasedByMember(member);
   }
 
   /**

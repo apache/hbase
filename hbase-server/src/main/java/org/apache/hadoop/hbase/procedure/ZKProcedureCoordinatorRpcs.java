@@ -182,6 +182,8 @@ public class ZKProcedureCoordinatorRpcs implements ProcedureCoordinatorRpcs {
               ZKUtil.getNodeName(path));
           } else if (isAbortPathNode(path)) {
             abort(path);
+          } else {
+            LOG.debug("Ignoring created notification for node:" + path);
           }
         }
       };
