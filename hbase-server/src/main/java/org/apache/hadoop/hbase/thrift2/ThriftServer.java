@@ -135,7 +135,7 @@ public class ThriftServer {
   }
 
   /*
-   * If bindValue is null, we don't bind. 
+   * If bindValue is null, we don't bind.
    */
   private static InetSocketAddress bindToPort(String bindValue, int listenPort)
       throws UnknownHostException {
@@ -220,7 +220,7 @@ public class ThriftServer {
 
   /**
    * Start up the Thrift2 server.
-   * 
+   *
    * @param args
    */
   public static void main(String[] args) throws Exception {

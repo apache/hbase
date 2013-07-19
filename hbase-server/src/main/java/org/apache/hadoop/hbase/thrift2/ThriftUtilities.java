@@ -356,7 +356,7 @@ public class ThriftUtilities {
         timeRange.isSetMinStamp() && timeRange.isSetMaxStamp()) {
       out.setTimeRange(timeRange.getMinStamp(), timeRange.getMaxStamp());
     }
-     
+
     if (in.isSetBatchSize()) {
       out.setBatch(in.getBatchSize());
     }
@@ -365,7 +365,7 @@ public class ThriftUtilities {
       ParseFilter parseFilter = new ParseFilter();
       out.setFilter(parseFilter.parseFilterString(in.getFilterString()));
     }
-    
+
     if (in.isSetAttributes()) {
       addAttributes(out,in.getAttributes());
     }
