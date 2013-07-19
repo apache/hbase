@@ -330,8 +330,8 @@ public class DefaultLoadBalancer implements LoadBalancer {
       if (regionsToPut == 0)
       {
         regionsToPut = 1;
-        maxToTake--;
       }
+      maxToTake -= regionsToPut;
       underloadedServers.put(server.getKey().getServerName(), regionsToPut);
     }
     // number of servers that get new regions
@@ -439,6 +439,10 @@ public class DefaultLoadBalancer implements LoadBalancer {
       for (Map.Entry<ServerAndLoad, List<HRegionInfo>> server :
         serversByLoad.entrySet()) {
         int regionCount = server.getKey().getLoad();
+        BalanceInfo balanceInfo = serverBalanceInfo.get(server.getKey().getServerName());
+        if(balanceInfo != null) {
+          regionCount += balanceInfo.getNumRegionsAdded();
+        }
         if(regionCount >= max) {
           break;
         }
