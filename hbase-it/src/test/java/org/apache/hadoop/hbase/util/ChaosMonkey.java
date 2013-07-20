@@ -331,6 +331,7 @@ public class ChaosMonkey extends AbstractHBaseTool implements Stoppable {
   public static class MoveRegionsOfTable extends Action {
     private final long sleepTime;
     private final byte[] tableNameBytes;
+    private final String tableName;
 
     public MoveRegionsOfTable(String tableName) {
       this(-1, tableName);
@@ -339,6 +340,7 @@ public class ChaosMonkey extends AbstractHBaseTool implements Stoppable {
     public MoveRegionsOfTable(long sleepTime, String tableName) {
       this.sleepTime = sleepTime;
       this.tableNameBytes = Bytes.toBytes(tableName);
+      this.tableName = tableName;
     }
 
     @Override
@@ -349,11 +351,13 @@ public class ChaosMonkey extends AbstractHBaseTool implements Stoppable {
       Collection<ServerName> serversList = admin.getClusterStatus().getServers();
       ServerName[] servers = serversList.toArray(new ServerName[serversList.size()]);
 
+      LOG.info("Performing action: Move regions of table " + tableName);
       for (HRegionInfo regionInfo:regions) {
         try {
-          byte[] destServerName =
-              Bytes.toBytes(servers[RandomUtils.nextInt(servers.length)].getServerName());
-          admin.move(regionInfo.getRegionName(), destServerName);
+          String destServerName =
+            servers[RandomUtils.nextInt(servers.length)].getServerName();
+          LOG.debug("Moving " + regionInfo.getRegionNameAsString() + " to " + destServerName);
+          admin.move(regionInfo.getRegionName(), Bytes.toBytes(destServerName));
         } catch (Exception e) {
           LOG.debug("Error moving region", e);
         }
@@ -367,6 +371,7 @@ public class ChaosMonkey extends AbstractHBaseTool implements Stoppable {
   public static class MoveRandomRegionOfTable extends Action {
     private final long sleepTime;
     private final byte[] tableNameBytes;
+    private final String tableName;
 
     public MoveRandomRegionOfTable(String tableName) {
       this(-1, tableName);
@@ -375,6 +380,7 @@ public class ChaosMonkey extends AbstractHBaseTool implements Stoppable {
     public MoveRandomRegionOfTable(long sleepTime, String tableName) {
       this.sleepTime = sleepTime;
       this.tableNameBytes = Bytes.toBytes(tableName);
+      this.tableName = tableName;
     }
 
     @Override
@@ -385,6 +391,8 @@ public class ChaosMonkey extends AbstractHBaseTool implements Stoppable {
       List<HRegionInfo> regions = admin.getTableRegions(tableNameBytes);
       HRegionInfo region = selectRandomItem(
         regions.toArray(new HRegionInfo[regions.size()]));
+      LOG.info("Performing action: Move random region of table "
+        + tableName + ", region=" + region.getRegionNameAsString());
       admin.unassign(region.getRegionName(), false);
       if (sleepTime > 0) {
         Thread.sleep(sleepTime);
@@ -395,6 +403,7 @@ public class ChaosMonkey extends AbstractHBaseTool implements Stoppable {
   public static class SplitRandomRegionOfTable extends Action {
     private final byte[] tableNameBytes;
     private final long sleepTime;
+    private final String tableName;
 
     public SplitRandomRegionOfTable(String tableName) {
       this(-1, tableName);
@@ -403,6 +412,7 @@ public class ChaosMonkey extends AbstractHBaseTool implements Stoppable {
     public SplitRandomRegionOfTable(int sleepTime, String tableName) {
       this.tableNameBytes = Bytes.toBytes(tableName);
       this.sleepTime = sleepTime;
+      this.tableName = tableName;
     }
 
     @Override
@@ -413,6 +423,8 @@ public class ChaosMonkey extends AbstractHBaseTool implements Stoppable {
       List<HRegionInfo> regions = admin.getTableRegions(tableNameBytes);
       HRegionInfo region = selectRandomItem(
         regions.toArray(new HRegionInfo[regions.size()]));
+      LOG.info("Performing action: Split random region of table "
+        + tableName + ", region=" + region.getRegionNameAsString());
       admin.split(region.getRegionName());
       if (sleepTime > 0) {
         Thread.sleep(sleepTime);
@@ -439,7 +451,8 @@ public class ChaosMonkey extends AbstractHBaseTool implements Stoppable {
     public void perform() throws Exception {
       HBaseTestingUtility util = context.getHaseIntegrationTestingUtility();
       HBaseAdmin admin = util.getHBaseAdmin();
-  
+
+      LOG.info("Performing action: Merge random adjacent regions of table " + tableName);
       List<HRegionInfo> regions = admin.getTableRegions(tableNameBytes);
       if (regions.size() < 2) {
         LOG.info("Table " + tableName + " doesn't have enough region to merge");
@@ -449,6 +462,7 @@ public class ChaosMonkey extends AbstractHBaseTool implements Stoppable {
       int i = RandomUtils.nextInt(regions.size() - 1);
       HRegionInfo a = regions.get(i++);
       HRegionInfo b = regions.get(i);
+      LOG.debug("Merging " + a.getRegionNameAsString() + " and " + b.getRegionNameAsString());
       admin.mergeRegions(a.getEncodedNameAsBytes(), b.getEncodedNameAsBytes(), false);
       if (sleepTime > 0) {
         Thread.sleep(sleepTime);
@@ -460,6 +474,7 @@ public class ChaosMonkey extends AbstractHBaseTool implements Stoppable {
     private final byte[] tableNameBytes;
     private final int majorRatio;
     private final long sleepTime;
+    private final String tableName;
 
     public CompactTable(
         String tableName, float majorRatio) {
@@ -471,13 +486,17 @@ public class ChaosMonkey extends AbstractHBaseTool implements Stoppable {
       this.tableNameBytes = Bytes.toBytes(tableName);
       this.majorRatio = (int) (100 * majorRatio);
       this.sleepTime = sleepTime;
+      this.tableName = tableName;
     }
 
     @Override
     public void perform() throws Exception {
       HBaseTestingUtility util = context.getHaseIntegrationTestingUtility();
       HBaseAdmin admin = util.getHBaseAdmin();
-      if (RandomUtils.nextInt(100) < majorRatio) {
+      boolean major = RandomUtils.nextInt(100) < majorRatio;
+
+      LOG.info("Performing action: Compact table " + tableName + ", major=" + major);
+      if (major) {
         admin.majorCompact(tableNameBytes);
       } else {
         admin.compact(tableNameBytes);
@@ -492,6 +511,7 @@ public class ChaosMonkey extends AbstractHBaseTool implements Stoppable {
     private final byte[] tableNameBytes;
     private final int majorRatio;
     private final long sleepTime;
+    private final String tableName;
 
     public CompactRandomRegionOfTable(
         String tableName, float majorRatio) {
@@ -503,6 +523,7 @@ public class ChaosMonkey extends AbstractHBaseTool implements Stoppable {
       this.tableNameBytes = Bytes.toBytes(tableName);
       this.majorRatio = (int) (100 * majorRatio);
       this.sleepTime = sleepTime;
+      this.tableName = tableName;
     }
 
     @Override
@@ -512,7 +533,11 @@ public class ChaosMonkey extends AbstractHBaseTool implements Stoppable {
       List<HRegionInfo> regions = admin.getTableRegions(tableNameBytes);
       HRegionInfo region = selectRandomItem(
         regions.toArray(new HRegionInfo[regions.size()]));
-      if (RandomUtils.nextInt(100) < majorRatio) {
+      boolean major = RandomUtils.nextInt(100) < majorRatio;
+
+      LOG.info("Performing action: Compact random region of table "
+        + tableName + ", major=" + major + ", region=" + region.getRegionNameAsString());
+      if (major) {
         admin.majorCompact(region.getRegionName());
       } else {
         admin.compact(region.getRegionName());
@@ -526,6 +551,7 @@ public class ChaosMonkey extends AbstractHBaseTool implements Stoppable {
   public static class FlushTable extends Action {
     private final byte[] tableNameBytes;
     private final long sleepTime;
+    private final String tableName;
 
     public FlushTable(String tableName) {
       this(-1, tableName);
@@ -534,12 +560,15 @@ public class ChaosMonkey extends AbstractHBaseTool implements Stoppable {
     public FlushTable(int sleepTime, String tableName) {
       this.tableNameBytes = Bytes.toBytes(tableName);
       this.sleepTime = sleepTime;
+      this.tableName = tableName;
     }
 
     @Override
     public void perform() throws Exception {
       HBaseTestingUtility util = context.getHaseIntegrationTestingUtility();
       HBaseAdmin admin = util.getHBaseAdmin();
+
+      LOG.info("Performing action: Flush table " + tableName);
       admin.flush(tableNameBytes);
       if (sleepTime > 0) {
         Thread.sleep(sleepTime);
@@ -550,6 +579,7 @@ public class ChaosMonkey extends AbstractHBaseTool implements Stoppable {
   public static class FlushRandomRegionOfTable extends Action {
     private final byte[] tableNameBytes;
     private final long sleepTime;
+    private final String tableName;
 
     public FlushRandomRegionOfTable(String tableName) {
      this (-1, tableName);
@@ -558,6 +588,7 @@ public class ChaosMonkey extends AbstractHBaseTool implements Stoppable {
     public FlushRandomRegionOfTable(int sleepTime, String tableName) {
       this.tableNameBytes = Bytes.toBytes(tableName);
       this.sleepTime = sleepTime;
+      this.tableName = tableName;
     }
 
     @Override
@@ -567,6 +598,9 @@ public class ChaosMonkey extends AbstractHBaseTool implements Stoppable {
       List<HRegionInfo> regions = admin.getTableRegions(tableNameBytes);
       HRegionInfo region = selectRandomItem(
         regions.toArray(new HRegionInfo[regions.size()]));
+
+      LOG.info("Performing action: Flush random region of table "
+        + tableName + ", region=" + region.getRegionNameAsString());
       admin.flush(region.getRegionName());
       if (sleepTime > 0) {
         Thread.sleep(sleepTime);
@@ -592,6 +626,8 @@ public class ChaosMonkey extends AbstractHBaseTool implements Stoppable {
       HBaseTestingUtility util = context.getHaseIntegrationTestingUtility();
       String snapshotName = tableName + "-it-" + System.currentTimeMillis();
       HBaseAdmin admin = util.getHBaseAdmin();
+
+      LOG.info("Performing action: Snapshot table " + tableName);
       admin.snapshot(snapshotName, tableName);
       if (sleepTime > 0) {
         Thread.sleep(sleepTime);
@@ -1039,5 +1075,4 @@ public class ChaosMonkey extends AbstractHBaseTool implements Stoppable {
     int ret = ToolRunner.run(conf, monkey, args);
     System.exit(ret);
   }
-
 }
