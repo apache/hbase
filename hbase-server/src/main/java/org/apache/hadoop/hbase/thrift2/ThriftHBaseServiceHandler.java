@@ -99,7 +99,8 @@ public class ThriftHBaseServiceHandler implements THBaseService.Iface {
   }
 
   ThriftHBaseServiceHandler(Configuration conf) {
-    htablePool = new HTablePool(conf, Integer.MAX_VALUE);
+    int maxPoolSize = conf.getInt("hbase.thrift.htablepool.size.max", 1000);
+    htablePool = new HTablePool(conf, maxPoolSize);
   }
 
   private HTableInterface getTable(ByteBuffer tableName) {
