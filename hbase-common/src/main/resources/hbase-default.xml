@@ -864,21 +864,30 @@ possible configurations would overwhelm and obscure the important.
     After that, the server starts dropping connections.</description>
   </property>
   <property>
-     <name>hbase.thrift.maxQueuedRequests</name>
-     <value>1000</value>
-     <description>The maximum number of pending Thrift connections waiting in the queue. If
+    <name>hbase.thrift.maxQueuedRequests</name>
+    <value>1000</value>
+    <description>The maximum number of pending Thrift connections waiting in the queue. If
      there are no idle threads in the pool, the server queues requests. Only
      when the queue overflows, new threads are added, up to
      hbase.thrift.maxQueuedRequests threads.</description>
-   </property>
-     <property>
-     <name>hbase.offheapcache.percentage</name>
-     <value>0</value>
-     <description>The amount of off heap space to be allocated towards the experimental
+  </property>
+  <property>
+    <name>hbase.thrift.htablepool.size.max</name>
+    <value>1000</value>
+    <description>The upper bound for the table pool used in the Thrift gateways server.
+      Since this is per table name, we assume a single table and so with 1000 default
+      worker threads max this is set to a matching number. For other workloads this number
+      can be adjusted as needed.
+    </description>
+  </property>
+  <property>
+    <name>hbase.offheapcache.percentage</name>
+    <value>0</value>
+    <description>The amount of off heap space to be allocated towards the experimental
      off heap cache. If you desire the cache to be disabled, simply set this
      value to 0.</description>
-   </property>
-   <property>
+  </property>
+  <property>
     <name>hbase.data.umask.enable</name>
     <value>false</value>
     <description>Enable, if true, that file permissions should be assigned
