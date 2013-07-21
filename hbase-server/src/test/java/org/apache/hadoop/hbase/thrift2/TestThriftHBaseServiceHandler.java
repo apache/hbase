@@ -478,7 +478,7 @@ public class TestThriftHBaseServiceHandler {
     TDelete delete = new TDelete(wrap(rowName));
 
     assertFalse(handler.checkAndDelete(table, wrap(rowName), wrap(familyAname),
-      wrap(qualifierAname), wrap(valueAname), delete));
+        wrap(qualifierAname), wrap(valueAname), delete));
 
     TGet get = new TGet(wrap(rowName));
     TResult result = handler.get(table, get);
@@ -666,6 +666,63 @@ public class TestThriftHBaseServiceHandler {
     } catch (TIllegalArgument e) {
     }
   }
+
+  @Test
+  public void testGetScannerResults() throws Exception {
+    ThriftHBaseServiceHandler handler = createHandler();
+    ByteBuffer table = wrap(tableAname);
+
+    // insert data
+    TColumnValue columnValue =
+        new TColumnValue(wrap(familyAname), wrap(qualifierAname), wrap(valueAname));
+    List<TColumnValue> columnValues = new ArrayList<TColumnValue>();
+    columnValues.add(columnValue);
+    for (int i = 0; i < 20; i++) {
+      TPut put =
+          new TPut(wrap(("testGetScannerResults" + pad(i, (byte) 2)).getBytes()), columnValues);
+      handler.put(table, put);
+    }
+
+    // create scan instance
+    TScan scan = new TScan();
+    List<TColumn> columns = new ArrayList<TColumn>();
+    TColumn column = new TColumn();
+    column.setFamily(familyAname);
+    column.setQualifier(qualifierAname);
+    columns.add(column);
+    scan.setColumns(columns);
+    scan.setStartRow("testGetScannerResults".getBytes());
+
+    // get 5 rows and check the returned results
+    scan.setStopRow("testGetScannerResults05".getBytes());
+    List<TResult> results = handler.getScannerResults(table, scan, 5);
+    assertEquals(5, results.size());
+    for (int i = 0; i < 5; i++) {
+      // check if the rows are returned and in order
+      assertArrayEquals(("testGetScannerResults" + pad(i, (byte) 2)).getBytes(), results.get(i)
+          .getRow());
+    }
+
+    // get 10 rows and check the returned results
+    scan.setStopRow("testGetScannerResults10".getBytes());
+    results = handler.getScannerResults(table, scan, 10);
+    assertEquals(10, results.size());
+    for (int i = 0; i < 10; i++) {
+      // check if the rows are returned and in order
+      assertArrayEquals(("testGetScannerResults" + pad(i, (byte) 2)).getBytes(), results.get(i)
+          .getRow());
+    }
+
+    // get 20 rows and check the returned results
+    scan.setStopRow("testGetScannerResults20".getBytes());
+    results = handler.getScannerResults(table, scan, 20);
+    assertEquals(20, results.size());
+    for (int i = 0; i < 20; i++) {
+      // check if the rows are returned and in order
+      assertArrayEquals(("testGetScannerResults" + pad(i, (byte) 2)).getBytes(), results.get(i)
+          .getRow());
+    }
+ }
 
   @Test
   public void testFilterRegistration() throws Exception {

@@ -416,10 +416,9 @@ service THBaseService {
   )
 
   /**
-   * Closes the scanner. Should be called if you need to close
-   * the Scanner before all results are read.
-   *
-   * Exhausted scanners are closed automatically.
+   * Closes the scanner. Should be called to free server side resources timely.
+   * Typically close once the scanner is not needed anymore, i.e. after looping
+   * over it to get all the required rows.
    */
   void closeScanner(
     /** the Id of the Scanner to close **/
@@ -441,5 +440,24 @@ service THBaseService {
     /** mutations to apply */
     2: required TRowMutations rowMutations
   ) throws (1: TIOError io)
+
+  /**
+   * Get results for the provided TScan object.
+   * This helper function opens a scanner, get the results and close the scanner.
+   *
+   * @return between zero and numRows TResults
+   */
+  list<TResult> getScannerResults(
+    /** the table to get the Scanner for */
+    1: required binary table,
+
+    /** the scan object to get a Scanner for */
+    2: required TScan scan,
+
+    /** number of rows to return */
+    3: i32 numRows = 1
+  ) throws (
+    1: TIOError io
+  )
 
 }
