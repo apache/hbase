@@ -46,7 +46,7 @@ public class TestHRegionPartitioner {
   /**
    * Test HRegionPartitioner
    */
-  @Test
+  @Test (timeout=300000)
   public void testHRegionPartitioner() throws Exception {
 
     byte[][] families = { Bytes.toBytes("familyA"), Bytes.toBytes("familyB") };

@@ -76,7 +76,7 @@ public class TestCellCounter {
    * Test CellCounter all data should print to output
    * 
    */
-  @Test
+  @Test (timeout=300000)
   public void testCellCounter() throws Exception {
     String sourceTable = "sourceTable";
     byte[][] families = { FAMILY_A, FAMILY_B };
@@ -127,7 +127,7 @@ public class TestCellCounter {
   /**
    * Test main method of CellCounter
    */
-  @Test
+  @Test (timeout=300000)
   public void testCellCounterMain() throws Exception {
 
     PrintStream oldPrintStream = System.err;
@@ -154,6 +154,5 @@ public class TestCellCounter {
       System.setErr(oldPrintStream);
       System.setSecurityManager(SECURITY_MANAGER);
     }
-
   }
 }

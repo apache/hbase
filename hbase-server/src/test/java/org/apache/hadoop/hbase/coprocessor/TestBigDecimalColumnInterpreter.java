@@ -126,7 +126,7 @@ public class TestBigDecimalColumnInterpreter {
   /**
    * @throws Throwable
    */
-  @Test
+  @Test (timeout=300000)
   public void testMedianWithValidRange() throws Throwable {
     AggregationClient aClient = new AggregationClient(conf);
     Scan scan = new Scan();
@@ -145,7 +145,7 @@ public class TestBigDecimalColumnInterpreter {
    * give max for the entire table.
    * @throws Throwable
    */
-  @Test
+  @Test (timeout=300000)
   public void testMaxWithValidRange() throws Throwable {
     AggregationClient aClient = new AggregationClient(conf);
     Scan scan = new Scan();
@@ -159,7 +159,7 @@ public class TestBigDecimalColumnInterpreter {
   /**
    * @throws Throwable
    */
-  @Test
+  @Test (timeout=300000)
   public void testMaxWithValidRange2() throws Throwable {
     AggregationClient aClient = new AggregationClient(conf);
     Scan scan = new Scan();
@@ -172,7 +172,7 @@ public class TestBigDecimalColumnInterpreter {
     assertEquals(new BigDecimal("14.00"), max);
   }
 
-  @Test
+  @Test (timeout=300000)
   public void testMaxWithValidRangeWithNoCQ() throws Throwable {
     AggregationClient aClient = new AggregationClient(conf);
     Scan scan = new Scan();
@@ -183,7 +183,7 @@ public class TestBigDecimalColumnInterpreter {
     assertEquals(new BigDecimal("19.00"), maximum);
   }
 
-  @Test
+  @Test (timeout=300000)
   public void testMaxWithValidRange2WithNoCQ() throws Throwable {
     AggregationClient aClient = new AggregationClient(conf);
     Scan scan = new Scan();
@@ -196,7 +196,7 @@ public class TestBigDecimalColumnInterpreter {
     assertEquals(new BigDecimal("6.00"), max);
   }
 
-  @Test
+  @Test (timeout=300000)
   public void testMaxWithValidRangeWithNullCF() {
     AggregationClient aClient = new AggregationClient(conf);
     final ColumnInterpreter<BigDecimal, BigDecimal, EmptyMsg, BigDecimalMsg, BigDecimalMsg> ci =
@@ -212,7 +212,7 @@ public class TestBigDecimalColumnInterpreter {
     // null column family, and max will be set to 0
   }
 
-  @Test
+  @Test (timeout=300000)
   public void testMaxWithInvalidRange() {
     AggregationClient aClient = new AggregationClient(conf);
     final ColumnInterpreter<BigDecimal, BigDecimal, EmptyMsg, BigDecimalMsg, BigDecimalMsg> ci =
@@ -231,7 +231,7 @@ public class TestBigDecimalColumnInterpreter {
     assertEquals(BigDecimal.ZERO, max);// control should go to the catch block
   }
 
-  @Test
+  @Test (timeout=300000)
   public void testMaxWithInvalidRange2() throws Throwable {
     BigDecimal max = new BigDecimal(Long.MIN_VALUE);
     Scan scan = new Scan();
@@ -249,7 +249,7 @@ public class TestBigDecimalColumnInterpreter {
     assertEquals(BigDecimal.ZERO, max);// control should go to the catch block
   }
 
-  @Test
+  @Test (timeout=300000)
   public void testMaxWithFilter() throws Throwable {
     BigDecimal max = BigDecimal.ZERO;
     AggregationClient aClient = new AggregationClient(conf);
@@ -270,7 +270,7 @@ public class TestBigDecimalColumnInterpreter {
   /**
    * @throws Throwable
    */
-  @Test
+  @Test (timeout=300000)
   public void testMinWithValidRange() throws Throwable {
     AggregationClient aClient = new AggregationClient(conf);
     Scan scan = new Scan();
@@ -286,7 +286,7 @@ public class TestBigDecimalColumnInterpreter {
   /**
    * @throws Throwable
    */
-  @Test
+  @Test (timeout=300000)
   public void testMinWithValidRange2() throws Throwable {
     AggregationClient aClient = new AggregationClient(conf);
     Scan scan = new Scan();
@@ -299,7 +299,7 @@ public class TestBigDecimalColumnInterpreter {
     assertEquals(new BigDecimal("5.00"), min);
   }
 
-  @Test
+  @Test (timeout=300000)
   public void testMinWithValidRangeWithNoCQ() throws Throwable {
     AggregationClient aClient = new AggregationClient(conf);
     Scan scan = new Scan();
@@ -312,7 +312,7 @@ public class TestBigDecimalColumnInterpreter {
     assertEquals(new BigDecimal("0.00"), min);
   }
 
-  @Test
+  @Test (timeout=300000)
   public void testMinWithValidRange2WithNoCQ() throws Throwable {
     AggregationClient aClient = new AggregationClient(conf);
     Scan scan = new Scan();
@@ -325,7 +325,7 @@ public class TestBigDecimalColumnInterpreter {
     assertEquals(new BigDecimal("0.60"), min);
   }
 
-  @Test
+  @Test (timeout=300000)
   public void testMinWithValidRangeWithNullCF() {
     AggregationClient aClient = new AggregationClient(conf);
     Scan scan = new Scan();
@@ -342,7 +342,7 @@ public class TestBigDecimalColumnInterpreter {
     // null column family, and max will be set to 0
   }
 
-  @Test
+  @Test (timeout=300000)
   public void testMinWithInvalidRange() {
     AggregationClient aClient = new AggregationClient(conf);
     BigDecimal min = null;
@@ -359,7 +359,7 @@ public class TestBigDecimalColumnInterpreter {
     assertEquals(null, min);// control should go to the catch block
   }
 
-  @Test
+  @Test (timeout=300000)
   public void testMinWithInvalidRange2() {
     AggregationClient aClient = new AggregationClient(conf);
     Scan scan = new Scan();
@@ -376,7 +376,7 @@ public class TestBigDecimalColumnInterpreter {
     assertEquals(null, min);// control should go to the catch block
   }
 
-  @Test
+  @Test (timeout=300000)
   public void testMinWithFilter() throws Throwable {
     AggregationClient aClient = new AggregationClient(conf);
     Scan scan = new Scan();
@@ -396,7 +396,7 @@ public class TestBigDecimalColumnInterpreter {
   /**
    * @throws Throwable
    */
-  @Test
+  @Test (timeout=300000)
   public void testSumWithValidRange() throws Throwable {
     AggregationClient aClient = new AggregationClient(conf);
     Scan scan = new Scan();
@@ -410,7 +410,7 @@ public class TestBigDecimalColumnInterpreter {
   /**
    * @throws Throwable
    */
-  @Test
+  @Test (timeout=300000)
   public void testSumWithValidRange2() throws Throwable {
     AggregationClient aClient = new AggregationClient(conf);
     Scan scan = new Scan();
@@ -423,7 +423,7 @@ public class TestBigDecimalColumnInterpreter {
     assertEquals(new BigDecimal("95.00"), sum);
   }
 
-  @Test
+  @Test (timeout=300000)
   public void testSumWithValidRangeWithNoCQ() throws Throwable {
     AggregationClient aClient = new AggregationClient(conf);
     Scan scan = new Scan();
@@ -434,7 +434,7 @@ public class TestBigDecimalColumnInterpreter {
     assertEquals(new BigDecimal("209.00"), sum); // 190 + 19
   }
 
-  @Test
+  @Test (timeout=300000)
   public void testSumWithValidRange2WithNoCQ() throws Throwable {
     AggregationClient aClient = new AggregationClient(conf);
     Scan scan = new Scan();
@@ -447,7 +447,7 @@ public class TestBigDecimalColumnInterpreter {
     assertEquals(new BigDecimal("6.60"), sum); // 6 + 60
   }
 
-  @Test
+  @Test (timeout=300000)
   public void testSumWithValidRangeWithNullCF() {
     AggregationClient aClient = new AggregationClient(conf);
     Scan scan = new Scan();
@@ -464,7 +464,7 @@ public class TestBigDecimalColumnInterpreter {
     // null column family, and max will be set to 0
   }
 
-  @Test
+  @Test (timeout=300000)
   public void testSumWithInvalidRange() {
     AggregationClient aClient = new AggregationClient(conf);
     Scan scan = new Scan();
@@ -481,7 +481,7 @@ public class TestBigDecimalColumnInterpreter {
     assertEquals(null, sum);// control should go to the catch block
   }
 
-  @Test
+  @Test (timeout=300000)
   public void testSumWithFilter() throws Throwable {
     AggregationClient aClient = new AggregationClient(conf);
     Filter f = new PrefixFilter(Bytes.toBytes("foo:bar"));
@@ -501,7 +501,7 @@ public class TestBigDecimalColumnInterpreter {
   /**
    * @throws Throwable
    */
-  @Test
+  @Test (timeout=300000)
   public void testAvgWithValidRange() throws Throwable {
     AggregationClient aClient = new AggregationClient(conf);
     Scan scan = new Scan();
@@ -515,7 +515,7 @@ public class TestBigDecimalColumnInterpreter {
   /**
    * @throws Throwable
    */
-  @Test
+  @Test (timeout=300000)
   public void testAvgWithValidRange2() throws Throwable {
     AggregationClient aClient = new AggregationClient(conf);
     Scan scan = new Scan();
@@ -528,7 +528,7 @@ public class TestBigDecimalColumnInterpreter {
     assertEquals(9.5, avg, 0);
   }
 
-  @Test
+  @Test (timeout=300000)
   public void testAvgWithValidRangeWithNoCQ() throws Throwable {
     AggregationClient aClient = new AggregationClient(conf);
     Scan scan = new Scan();
@@ -539,7 +539,7 @@ public class TestBigDecimalColumnInterpreter {
     assertEquals(10.45, avg, 0.01);
   }
 
-  @Test
+  @Test (timeout=300000)
   public void testAvgWithValidRange2WithNoCQ() throws Throwable {
     AggregationClient aClient = new AggregationClient(conf);
     Scan scan = new Scan();
@@ -552,7 +552,7 @@ public class TestBigDecimalColumnInterpreter {
     assertEquals(6 + 0.60, avg, 0);
   }
 
-  @Test
+  @Test (timeout=300000)
   public void testAvgWithValidRangeWithNullCF() {
     AggregationClient aClient = new AggregationClient(conf);
     Scan scan = new Scan();
@@ -567,7 +567,7 @@ public class TestBigDecimalColumnInterpreter {
     // null column family, and max will be set to 0
   }
 
-  @Test
+  @Test (timeout=300000)
   public void testAvgWithInvalidRange() {
     AggregationClient aClient = new AggregationClient(conf);
     Scan scan = new Scan();
@@ -584,7 +584,7 @@ public class TestBigDecimalColumnInterpreter {
     assertEquals(null, avg);// control should go to the catch block
   }
 
-  @Test
+  @Test (timeout=300000)
   public void testAvgWithFilter() throws Throwable {
     AggregationClient aClient = new AggregationClient(conf);
     Scan scan = new Scan();
@@ -604,7 +604,7 @@ public class TestBigDecimalColumnInterpreter {
   /**
    * @throws Throwable
    */
-  @Test
+  @Test (timeout=300000)
   public void testStdWithValidRange() throws Throwable {
     AggregationClient aClient = new AggregationClient(conf);
     Scan scan = new Scan();
@@ -619,7 +619,7 @@ public class TestBigDecimalColumnInterpreter {
    * need to change this
    * @throws Throwable
    */
-  @Test
+  @Test (timeout=300000)
   public void testStdWithValidRange2() throws Throwable {
     AggregationClient aClient = new AggregationClient(conf);
     Scan scan = new Scan();
@@ -636,7 +636,7 @@ public class TestBigDecimalColumnInterpreter {
    * need to change this
    * @throws Throwable
    */
-  @Test
+  @Test (timeout=300000)
   public void testStdWithValidRangeWithNoCQ() throws Throwable {
     AggregationClient aClient = new AggregationClient(conf);
     Scan scan = new Scan();
@@ -647,7 +647,7 @@ public class TestBigDecimalColumnInterpreter {
     assertEquals(6.342, std, 0.05d);
   }
 
-  @Test
+  @Test (timeout=300000)
   public void testStdWithValidRange2WithNoCQ() throws Throwable {
     AggregationClient aClient = new AggregationClient(conf);
     Scan scan = new Scan();
@@ -661,7 +661,7 @@ public class TestBigDecimalColumnInterpreter {
     assertEquals(0, std, 0.05d);
   }
 
-  @Test
+  @Test (timeout=300000)
   public void testStdWithValidRangeWithNullCF() {
     AggregationClient aClient = new AggregationClient(conf);
     Scan scan = new Scan();
@@ -695,7 +695,7 @@ public class TestBigDecimalColumnInterpreter {
     assertEquals(null, std);// control should go to the catch block
   }
 
-  @Test
+  @Test (timeout=300000)
   public void testStdWithFilter() throws Throwable {
     AggregationClient aClient = new AggregationClient(conf);
     Filter f = new PrefixFilter(Bytes.toBytes("foo:bar"));
@@ -708,5 +708,4 @@ public class TestBigDecimalColumnInterpreter {
     std = aClient.std(TEST_TABLE, ci, scan);
     assertEquals(Double.NaN, std, 0);
   }
-
 }

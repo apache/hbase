@@ -32,11 +32,10 @@ import static org.junit.Assert.*;
 
 @Category(LargeTests.class)
 public class TestTableMapReduceUtil {
-
   /**
    * Test different variants ofinitTableMapperJob method
    */
-  @Test
+  @Test (timeout=600000)
   public void testInitTableMapperJob() throws Exception {
     Configuration configuration = new Configuration();
     Job job = new Job(configuration, "tableName");
