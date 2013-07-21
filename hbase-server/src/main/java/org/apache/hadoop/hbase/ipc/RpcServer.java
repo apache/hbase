@@ -1534,7 +1534,6 @@ public class RpcServer implements RpcServerInterface {
     private void setupCellBlockCodecs(final ConnectionHeader header)
     throws FatalConnectionException {
       // TODO: Plug in other supported decoders.
-      if (!header.hasCellBlockCodecClass()) throw new FatalConnectionException("No codec");
       String className = header.getCellBlockCodecClass();
       try {
         this.codec = (Codec)Class.forName(className).newInstance();
