@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.replication;
 
 import org.apache.hadoop.hbase.LargeTests;
 import org.junit.Test;
+import org.junit.Ignore;
 import org.junit.experimental.categories.Category;
 
 /**
@@ -28,7 +29,7 @@ import org.junit.experimental.categories.Category;
 @Category(LargeTests.class)
 public class TestReplicationKillSlaveRS extends TestReplicationKillRS {
 
-  @Test(timeout=300000)
+  @Ignore ("Flakey.  See HBASE-9008 and HBASE-9007")  @Test(timeout=300000)
   public void killOneSlaveRS() throws Exception {
     loadTableAndKillRS(utility2);
   }
