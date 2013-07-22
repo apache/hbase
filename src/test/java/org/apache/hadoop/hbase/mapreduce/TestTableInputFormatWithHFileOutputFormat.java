@@ -27,9 +27,10 @@ public class TestTableInputFormatWithHFileOutputFormat {
   static final String TABLENAME = "testMultipleHLogs";
   static final byte[] CF1 = Bytes.toBytes("cf1");
   static final byte[] CF2 = Bytes.toBytes("cf2");
-  static final byte[][] FAMILIES = new byte[][]{CF1, CF2};
+  static final byte[] CF3 = Bytes.toBytes("cf3");
+  static final byte[][] FAMILIES = new byte[][]{CF1, CF2, CF3};
   static final int REGION_NUM = 20;
-  static final byte[] QAULIFIER = Bytes.toBytes("q");
+  static final byte[] QUALIFIER = Bytes.toBytes("q");
   static final byte[] VALUE = Bytes.toBytes("v");
   static final Path OUTPUTPATH = new Path("TEST-OUTPUT");
   static HTable htable;
@@ -82,7 +83,10 @@ public class TestTableInputFormatWithHFileOutputFormat {
     // Put some data for each Region
     for (byte[] row : htable.getStartKeys()) {
       Put p = new Put(row);
-      p.add(CF1, QAULIFIER, VALUE);
+      p.add(CF1, QUALIFIER, VALUE);
+      // We would delete the kv for CF3, to verify that Deletes work with
+      // HFileOutputFormat
+      p.add(CF3, QUALIFIER, VALUE);
       htable.put(p);
       htable.flushCommits();
     }
@@ -92,7 +96,8 @@ public class TestTableInputFormatWithHFileOutputFormat {
     // Create the scan object
     Scan scan = new Scan();
     scan.addFamily(CF1);
-    
+    scan.addFamily(CF3);
+
     // Create and initialize the MR job
     Job job = new Job(conf, "process column contents");
     FileOutputFormat.setOutputPath(job, OUTPUTPATH);
@@ -120,20 +125,23 @@ public class TestTableInputFormatWithHFileOutputFormat {
     Scan scan = new Scan();
     scan.addFamily(CF1);
     scan.addFamily(CF2);
+    scan.addFamily(CF3);
     
     ResultScanner s = htable.getScanner(scan);
     Result result = null;
     int count = 0;
     while((result = s.next()) != null) {
       count++;
-      
+
+      // We should only see CF1 and CF2. And not see CF3 since, we also added
+      // Delete kvs in the MR job.
       Assert.assertEquals(2, result.list().size());
       KeyValue kvFromCF1 = result.list().get(0);
       KeyValue kvFromCF2 = result.list().get(1);
-      
+
       Assert.assertTrue(Bytes.compareTo(kvFromCF1.getFamily(), CF1) == 0);
       Assert.assertTrue(Bytes.compareTo(kvFromCF2.getFamily(), CF2) == 0);
-      
+
       Assert.assertTrue(Bytes.compareTo(kvFromCF1.getRow(), kvFromCF2.getRow()) == 0);
       Assert.assertTrue(Bytes.compareTo(kvFromCF1.getQualifier(), kvFromCF2.getQualifier()) == 0);
       Assert.assertTrue(kvFromCF1.getTimestamp() == kvFromCF2.getTimestamp());
@@ -147,10 +155,13 @@ public class TestTableInputFormatWithHFileOutputFormat {
     private KeyValue previousKV = null;
     public void map(ImmutableBytesWritable key, Result result, Context context)
     throws IOException, InterruptedException {
-      Assert.assertEquals(1, result.size());
+      Assert.assertEquals(2, result.size());
       KeyValue tmp = result.list().get(0);
       KeyValue currentKV = new KeyValue(tmp.getRow(), CF2, tmp.getQualifier(), tmp.getTimestamp(), tmp.getValue());
-      
+
+      KeyValue tmp2 = result.list().get(1);
+      KeyValue deleteKV = new KeyValue(tmp2.getRow(), CF3, tmp2.getQualifier(), tmp.getTimestamp(), KeyValue.Type.Delete);
+
       // Sanity check that the output key value is sorted
       if (previousKV != null) {
         Assert.assertTrue(KeyValue.COMPARATOR.compare(currentKV, previousKV) >= 0);
@@ -158,6 +169,7 @@ public class TestTableInputFormatWithHFileOutputFormat {
       previousKV = currentKV;
       System.out.println("current KV: " + Bytes.toStringBinary(currentKV.getBuffer()));
       context.write(key, currentKV);
+      context.write(key, deleteKV);
     }
   }
 }

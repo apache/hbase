@@ -25,8 +25,8 @@ import java.math.BigInteger;
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 
-import com.sun.org.apache.commons.logging.Log;
-import com.sun.org.apache.commons.logging.LogFactory;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 
 public class HexStringTableRecordReaderImpl extends TableRecordReaderImpl {
   final Log LOG = LogFactory.getLog(HexStringTableRecordReaderImpl.class);
