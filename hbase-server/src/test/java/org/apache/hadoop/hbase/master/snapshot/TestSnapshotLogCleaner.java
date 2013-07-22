@@ -80,6 +80,6 @@ public class TestSnapshotLogCleaner {
     fs.create(logFile);
 
     // make sure that the file isn't deletable
-    assertFalse(cleaner.isFileDeletable(logFile));
+    assertFalse(cleaner.isFileDeletable(fs.getFileStatus(logFile)));
   }
 }

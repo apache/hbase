@@ -25,6 +25,7 @@ import java.io.IOException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -139,13 +140,15 @@ public class TestCleanerChore {
     Path parent = new Path(testDir, "parent");
     Path file = new Path(parent, "someFile");
     fs.mkdirs(parent);
+    assertTrue("Test parent didn't get created.", fs.exists(parent));
     // touch a new file
     fs.create(file).close();
     assertTrue("Test file didn't get created.", fs.exists(file));
-
+    
+    FileStatus fStat = fs.getFileStatus(parent);
     chore.chore();
     // make sure we never checked the directory
-    Mockito.verify(spy, Mockito.never()).isFileDeletable(parent);
+    Mockito.verify(spy, Mockito.never()).isFileDeletable(fStat);
     Mockito.reset(spy);
   }
 
@@ -212,7 +215,7 @@ public class TestCleanerChore {
         FSUtils.logFileSystemState(fs, testDir, LOG);
         return (Boolean) invocation.callRealMethod();
       }
-    }).when(spy).isFileDeletable(Mockito.any(Path.class));
+    }).when(spy).isFileDeletable(Mockito.any(FileStatus.class));
 
     // run the chore
     chore.chore();
@@ -221,7 +224,7 @@ public class TestCleanerChore {
     assertTrue("Added file unexpectedly deleted", fs.exists(addedFile));
     assertTrue("Parent directory deleted unexpectedly", fs.exists(parent));
     assertFalse("Original file unexpectedly retained", fs.exists(file));
-    Mockito.verify(spy, Mockito.times(1)).isFileDeletable(Mockito.any(Path.class));
+    Mockito.verify(spy, Mockito.times(1)).isFileDeletable(Mockito.any(FileStatus.class));
     Mockito.reset(spy);
   }
 
@@ -270,7 +273,7 @@ public class TestCleanerChore {
         FSUtils.logFileSystemState(fs, testDir, LOG);
         return (Boolean) invocation.callRealMethod();
       }
-    }).when(spy).isFileDeletable(Mockito.any(Path.class));
+    }).when(spy).isFileDeletable(Mockito.any(FileStatus.class));
 
     // attempt to delete the directory, which
     if (chore.checkAndDeleteDirectory(parent)) {
@@ -282,7 +285,7 @@ public class TestCleanerChore {
     assertTrue("Added file unexpectedly deleted", fs.exists(racyFile));
     assertTrue("Parent directory deleted unexpectedly", fs.exists(parent));
     assertFalse("Original file unexpectedly retained", fs.exists(file));
-    Mockito.verify(spy, Mockito.times(1)).isFileDeletable(Mockito.any(Path.class));
+    Mockito.verify(spy, Mockito.times(1)).isFileDeletable(Mockito.any(FileStatus.class));
   }
 
   private static class AllValidPaths extends CleanerChore<BaseHFileCleanerDelegate> {
@@ -301,14 +304,14 @@ public class TestCleanerChore {
 
   public static class AlwaysDelete extends BaseHFileCleanerDelegate {
     @Override
-    public boolean isFileDeletable(Path file) {
+    public boolean isFileDeletable(FileStatus fStat) {
       return true;
     }
   }
 
   public static class NeverDelete extends BaseHFileCleanerDelegate {
     @Override
-    public boolean isFileDeletable(Path file) {
+    public boolean isFileDeletable(FileStatus fStat) {
       return false;
     }
   }

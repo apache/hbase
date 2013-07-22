@@ -75,7 +75,7 @@ public class TestHFileCleaner {
     conf.setLong(TimeToLiveHFileCleaner.TTL_CONF_KEY, 100);
     cleaner.setConf(conf);
     assertTrue("File not set deletable - check mod time:" + getFileStats(file, fs)
-        + " with create time:" + createTime, cleaner.isFileDeletable(file));
+        + " with create time:" + createTime, cleaner.isFileDeletable(fs.getFileStatus(file)));
   }
 
   /**

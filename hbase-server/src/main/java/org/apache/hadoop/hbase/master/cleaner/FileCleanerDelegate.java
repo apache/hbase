@@ -19,7 +19,7 @@ package org.apache.hadoop.hbase.master.cleaner;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configurable;
-import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.hbase.Stoppable;
 
 /**
@@ -32,7 +32,8 @@ public interface FileCleanerDelegate extends Configurable, Stoppable {
   /**
    * Should the master delete the file or keep it?
    * @param file full path to the file to check
+   * @param fStat file status of the file to check
    * @return <tt>true</tt> if the file is deletable, <tt>false</tt> if not
    */
-  boolean isFileDeletable(Path file);
+  boolean isFileDeletable(FileStatus fStat);
 }

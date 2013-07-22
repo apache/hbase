@@ -343,7 +343,7 @@ public class TestZooKeeperTableArchiveClient {
         if (counter[0] >= expected) finished.countDown();
         return ret;
       }
-    }).when(delegateSpy).isFileDeletable(Mockito.any(Path.class));
+    }).when(delegateSpy).isFileDeletable(Mockito.any(FileStatus.class));
     cleaners.set(0, delegateSpy);
 
     return finished;

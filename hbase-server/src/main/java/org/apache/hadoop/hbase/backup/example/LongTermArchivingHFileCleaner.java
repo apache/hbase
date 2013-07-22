@@ -48,11 +48,12 @@ public class LongTermArchivingHFileCleaner extends BaseHFileCleanerDelegate {
   private FileSystem fs;
 
   @Override
-  public boolean isFileDeletable(Path file) {
+  public boolean isFileDeletable(FileStatus fStat) {
     try {
       // if its a directory, then it can be deleted
-      if (!fs.isFile(file)) return true;
-
+      if (fStat.isDir()) return true;
+      
+      Path file = fStat.getPath();
       // check to see if
       FileStatus[] deleteStatus = FSUtils.listStatus(this.fs, file, null);
       // if the file doesn't exist, then it can be deleted (but should never
@@ -69,7 +70,7 @@ public class LongTermArchivingHFileCleaner extends BaseHFileCleanerDelegate {
       LOG.debug("Archiver says to [" + (ret ? "delete" : "keep") + "] files for table:" + tableName);
       return ret;
     } catch (IOException e) {
-      LOG.error("Failed to lookup status of:" + file + ", keeping it just incase.", e);
+      LOG.error("Failed to lookup status of:" + fStat.getPath() + ", keeping it just incase.", e);
       return false;
     }
   }

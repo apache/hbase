@@ -17,14 +17,12 @@
  */
 package org.apache.hadoop.hbase.master.cleaner;
 
-import java.io.IOException;
-
-import org.apache.hadoop.fs.FileStatus;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 
 /**
  * Log cleaner that uses the timestamp of the hlog to determine if it should
@@ -38,21 +36,18 @@ public class TimeToLiveLogCleaner extends BaseLogCleanerDelegate {
   private boolean stopped = false;
 
   @Override
-  public boolean isLogDeletable(Path filePath) {
-    long time = 0;
-    long currentTime = System.currentTimeMillis();
-    try {
-      FileStatus fStat = filePath.getFileSystem(this.getConf()).getFileStatus(filePath);
-      time = fStat.getModificationTime();
-    } catch (IOException e) {
-      LOG.error("Unable to get modification time of file " + filePath.getName() +
-      ", not deleting it.", e);
-      return false;
-    }
+  public boolean isLogDeletable(FileStatus fStat) {
+    long currentTime = EnvironmentEdgeManager.currentTimeMillis();
+    long time = fStat.getModificationTime();
     long life = currentTime - time;
+    
+    if (LOG.isTraceEnabled()) {
+      LOG.trace("Log life:" + life + ", ttl:" + ttl + ", current:" + currentTime + ", from: "
+          + time);
+    }
     if (life < 0) {
-      LOG.warn("Found a log newer than current time, " +
-          "probably a clock skew");
+      LOG.warn("Found a log (" + fStat.getPath() + ") newer than current time (" + currentTime
+          + " < " + time + "), probably a clock skew");
       return false;
     }
     return life > ttl;
