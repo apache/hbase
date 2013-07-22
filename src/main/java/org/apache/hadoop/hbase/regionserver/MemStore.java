@@ -657,26 +657,41 @@ public class MemStore implements HeapSize {
       return lowest != null;
     }
 
+
     @Override
     public synchronized boolean reseek(KeyValue key) {
+
+      /*
+       * The high level idea is to seek linearly up until a configurable maximum
+       * and then if the kvs we are seeking to are not found yet we fall back to
+       * logarithmic seek.
+       *
+       * The reason we can reach our reseek limit in the kvset and skip searching the
+       * snapshot all together is as follows...
+       * Let x and y denote the # of steps to seek in each of the lists, to reach "key".
+       * If x + y < 20, the order does not matter: we will find the "key" in linear search regardless.
+       * if x + y >= 20, we will have to fall back on seek(key) eventually. It does not matter,
+       * if we spend the 20 steps on x, or we spend it on y. -- aaiyer
+       */
+
 
       //Limit the number of kvs to search linearly before triggering a seek.
       int seeked = 0;
 
       while (kvsetNextRow != null &&
           comparator.compare(kvsetNextRow, key) < 0 &&
-          seeked++ < this.maxLinearReseeks) {
+          ++seeked <= this.maxLinearReseeks) {
         kvsetNextRow = getNext(kvsetIt);
       }
 
       while (snapshotNextRow != null &&
           comparator.compare(snapshotNextRow, key) < 0 &&
-          seeked++ < this.maxLinearReseeks) {
+          ++seeked <= this.maxLinearReseeks) {
         snapshotNextRow = getNext(snapshotIt);
       }
 
       // The linear reseek took more than the maximum allowed by config.
-      if (seeked >= this.maxLinearReseeks) {
+      if (seeked > this.maxLinearReseeks) {
         return seek(key);
       }
 
