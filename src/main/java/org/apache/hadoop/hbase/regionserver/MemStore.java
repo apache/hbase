@@ -665,16 +665,8 @@ public class MemStore implements HeapSize {
 
     @Override
     public boolean reseek(KeyValue key) {
-      while (kvsetNextRow != null &&
-          comparator.compare(kvsetNextRow, key) < 0) {
-        kvsetNextRow = getNext(kvsetIt);
-      }
-
-      while (snapshotNextRow != null &&
-          comparator.compare(snapshotNextRow, key) < 0) {
-        snapshotNextRow = getNext(snapshotIt);
-      }
-      return (kvsetNextRow != null || snapshotNextRow != null);
+      //shaneh Jul-17-2013: Temporary fix while a more efficient reseek is worked on.
+      return seek(key);
     }
 
     public synchronized KeyValue peek() {
