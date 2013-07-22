@@ -567,6 +567,16 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
    * @return this (for chained invocation)
    */
   public HColumnDescriptor setMaxVersions(int maxVersions) {
+    if (maxVersions <= 0) {
+      // TODO: Allow maxVersion of 0 to be the way you say "Keep all versions".
+      // Until there is support, consider 0 or < 0 -- a configuration error.
+      throw new IllegalArgumentException("Maximum versions must be positive");
+    }    
+    if (maxVersions < this.getMinVersions()) {      
+        throw new IllegalArgumentException("Set MaxVersion to " + maxVersions
+            + " while minVersion is " + this.getMinVersions()
+            + ". Maximum versions must be >= minimum versions ");      
+    }
     setValue(HConstants.VERSIONS, Integer.toString(maxVersions));
     cachedMaxVersions = maxVersions;
     return this;
