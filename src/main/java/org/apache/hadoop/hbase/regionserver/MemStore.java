@@ -581,6 +581,10 @@ public class MemStore implements HeapSize {
     volatile MemStoreLAB allocatorAtCreation;
     volatile MemStoreLAB snapshotAllocatorAtCreation;
 
+    // The maximum number of kvs to search linearly before doing a seek
+    private int maxLinearReseeks = conf.getInt(HConstants.MEMSTORE_RESEEK_LINEAR_SEARCH_LIMIT_KEY,
+        HConstants.MEMSTORE_RESEEK_LINEAR_SEARCH_LIMIT_DEFAULT);
+
     /*
     Some notes...
 
@@ -614,13 +618,11 @@ public class MemStore implements HeapSize {
         this.snapshotAllocatorAtCreation.incScannerCount();
       }
 
-      //DebugPrint.println(" MS new@" + hashCode());
     }
 
     protected KeyValue getNext(Iterator<KeyValue> it) {
       KeyValue ret = null;
       long readPoint = MultiVersionConsistencyControl.getThreadReadPoint();
-      //DebugPrint.println( " MS@" + hashCode() + ": threadpoint = " + readPoint);
 
       while (ret == null && it.hasNext()) {
         KeyValue v = it.next();
@@ -649,14 +651,6 @@ public class MemStore implements HeapSize {
       kvsetNextRow = getNext(kvsetIt);
       snapshotNextRow = getNext(snapshotIt);
 
-
-      //long readPoint = MultiVersionConsistencyControl.getThreadReadPoint();
-      //DebugPrint.println( " MS@" + hashCode() + " kvset seek: " + kvsetNextRow + " with size = " +
-      //    kvset.size() + " threadread = " + readPoint);
-      //DebugPrint.println( " MS@" + hashCode() + " snapshot seek: " + snapshotNextRow + " with size = " +
-      //    snapshot.size() + " threadread = " + readPoint);
-
-
       KeyValue lowest = getLowest();
 
       // has data := (lowest != null)
@@ -664,13 +658,32 @@ public class MemStore implements HeapSize {
     }
 
     @Override
-    public boolean reseek(KeyValue key) {
-      //shaneh Jul-17-2013: Temporary fix while a more efficient reseek is worked on.
-      return seek(key);
+    public synchronized boolean reseek(KeyValue key) {
+
+      //Limit the number of kvs to search linearly before triggering a seek.
+      int seeked = 0;
+
+      while (kvsetNextRow != null &&
+          comparator.compare(kvsetNextRow, key) < 0 &&
+          seeked++ < this.maxLinearReseeks) {
+        kvsetNextRow = getNext(kvsetIt);
+      }
+
+      while (snapshotNextRow != null &&
+          comparator.compare(snapshotNextRow, key) < 0 &&
+          seeked++ < this.maxLinearReseeks) {
+        snapshotNextRow = getNext(snapshotIt);
+      }
+
+      // The linear reseek took more than the maximum allowed by config.
+      if (seeked >= this.maxLinearReseeks) {
+        return seek(key);
+      }
+
+      return (kvsetNextRow != null || snapshotNextRow != null);
     }
 
     public synchronized KeyValue peek() {
-      //DebugPrint.println(" MS@" + hashCode() + " peek = " + getLowest());
       return getLowest();
     }
 
@@ -689,9 +702,6 @@ public class MemStore implements HeapSize {
         snapshotNextRow = getNext(snapshotIt);
       }
 
-      //long readpoint = MultiVersionConsistencyControl.getThreadReadPoint();
-      //DebugPrint.println(" MS@" + hashCode() + " next: " + theNext + " next_next: " +
-      //    getLowest() + " threadpoint=" + readpoint);
       return theNext;
     }
 

@@ -810,6 +810,13 @@ public final class HConstants {
   public final static float MSLAB_PCT_LOWER_LIMIT = 0.0f;
   public final static float MSLAB_PCT_UPPER_LIMIT = 2.0f;
 
+
+  /*
+   * Memstore Linear search limit
+   */
+  public final static String MEMSTORE_RESEEK_LINEAR_SEARCH_LIMIT_KEY = "hbase.hregion.memstore.linear.search.limit";
+  public final static int MEMSTORE_RESEEK_LINEAR_SEARCH_LIMIT_DEFAULT = 20;
+
   private HConstants() {
     // Can't be instantiated with this constructor.
   }
