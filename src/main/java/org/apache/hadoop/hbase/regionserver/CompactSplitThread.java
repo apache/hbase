@@ -19,19 +19,19 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import com.google.common.base.Preconditions;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.conf.ConfigurationObserver;
+import org.apache.hadoop.hbase.util.DaemonThreadFactory;
+
 import java.util.concurrent.Executors;
 import java.util.concurrent.PriorityBlockingQueue;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.conf.Configuration;
-
-import com.google.common.base.Preconditions;
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.conf.ConfigurationObserver;
 
 /**
  * Compact region on request and then run split if appropriate
@@ -69,14 +69,13 @@ public class CompactSplitThread implements ConfigurationObserver {
 
     Preconditions.checkArgument(largeThreads > 0 && smallThreads > 0);
 
+    CompactionRequest.Rejection rejectionHandler = new CompactionRequest.Rejection();
     this.largeCompactions = new ThreadPoolExecutor(largeThreads, largeThreads,
-        60, TimeUnit.SECONDS, new PriorityBlockingQueue<Runnable>());
-    this.largeCompactions
-        .setRejectedExecutionHandler(new CompactionRequest.Rejection());
+        60, TimeUnit.SECONDS, new PriorityBlockingQueue<Runnable>(),
+        new DaemonThreadFactory("large-compaction-thread-"), rejectionHandler);
     this.smallCompactions = new ThreadPoolExecutor(smallThreads, smallThreads,
-        60, TimeUnit.SECONDS, new PriorityBlockingQueue<Runnable>());
-    this.smallCompactions
-        .setRejectedExecutionHandler(new CompactionRequest.Rejection());
+        60, TimeUnit.SECONDS, new PriorityBlockingQueue<Runnable>(),
+        new DaemonThreadFactory("small-compaction-thread-"), rejectionHandler);
 
     this.splits = (ThreadPoolExecutor) Executors
         .newFixedThreadPool(splitThreads);
