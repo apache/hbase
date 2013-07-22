@@ -941,7 +941,7 @@ public class HRegion implements HeapSize { // , Writable{
     }
 
     status.setStatus("Disabling compacts and flushes for region");
-    boolean wasFlushing = false;
+    boolean wasFlushing;
     synchronized (writestate) {
       // Disable compacting and flushing by background threads for this
       // region.
@@ -1511,7 +1511,7 @@ public class HRegion implements HeapSize { // , Writable{
               + "] - WAL is going away");
           return false;
         }
-        flushSeqId = startSeqId.longValue();
+        flushSeqId = startSeqId;
       } else {
         flushSeqId = myseqid;
       }
@@ -2339,8 +2339,7 @@ public class HRegion implements HeapSize { // , Writable{
     boolean isPut = w instanceof Put;
     if (!isPut && !(w instanceof Delete))
       throw new org.apache.hadoop.hbase.exceptions.DoNotRetryIOException("Action must be Put or Delete");
-    Row r = (Row)w;
-    if (!Bytes.equals(row, r.getRow())) {
+    if (!Bytes.equals(row, w.getRow())) {
       throw new org.apache.hadoop.hbase.exceptions.DoNotRetryIOException("Action's getRow must match the passed row");
     }
 
@@ -2354,7 +2353,7 @@ public class HRegion implements HeapSize { // , Writable{
       RowLock rowLock = getRowLock(get.getRow());
       // wait for all previous transactions to complete (with lock held)
       mvcc.completeMemstoreInsert(mvcc.beginMemstoreInsert());
-      List<KeyValue> result = null;
+      List<KeyValue> result;
       try {
         result = get(get, false);
 
@@ -2823,7 +2822,7 @@ public class HRegion implements HeapSize { // , Writable{
       }
       if (isZeroLengthThenDelete(fs, edits)) continue;
 
-      long maxSeqId = Long.MAX_VALUE;
+      long maxSeqId;
       String fileName = edits.getName();
       maxSeqId = Math.abs(Long.parseLong(fileName));
       if (maxSeqId <= minSeqIdForTheRegion) {
@@ -3048,7 +3047,6 @@ public class HRegion implements HeapSize { // , Writable{
    * Call to complete a compaction. Its for the case where we find in the WAL a compaction
    * that was not finished.  We could find one recovering a WAL after a regionserver crash.
    * See HBASE-2331.
-   * @param fs
    * @param compaction
    */
   void completeCompactionMarker(CompactionDescriptor compaction)
@@ -3355,10 +3353,8 @@ public class HRegion implements HeapSize { // , Writable{
 
   @Override
   public boolean equals(Object o) {
-    if (!(o instanceof HRegion)) {
-      return false;
-    }
-    return Bytes.equals(this.getRegionName(), ((HRegion) o).getRegionName());
+    return o instanceof HRegion && Bytes.equals(this.getRegionName(),
+                                                ((HRegion) o).getRegionName());
   }
 
   @Override
@@ -3733,10 +3729,9 @@ public class HRegion implements HeapSize { // , Writable{
       }
       resetFilters();
       // Calling the hook in CP which allows it to do a fast forward
-      if (this.region.getCoprocessorHost() != null) {
-        return this.region.getCoprocessorHost().postScannerFilterRow(this, currentRow);
-      }
-      return true;
+      return this.region.getCoprocessorHost() == null
+          || this.region.getCoprocessorHost().postScannerFilterRow(this,
+                                                                   currentRow);
     }
 
     private boolean isStopRow(byte [] currentRow, int offset, short length) {
@@ -4302,7 +4297,7 @@ public class HRegion implements HeapSize { // , Writable{
         + Bytes.toStringBinary(mergedRegionInfo.getStartKey())
         + "> and end key <"
         + Bytes.toStringBinary(mergedRegionInfo.getEndKey()) + ">");
-    HRegion dstRegion = null;
+    HRegion dstRegion;
     try {
       dstRegion = rmt.execute(null, null);
     } catch (IOException ioe) {
@@ -4658,7 +4653,7 @@ public class HRegion implements HeapSize { // , Writable{
     startRegionOperation(Operation.APPEND);
     this.writeRequestsCount.increment();
     WriteEntry w = null;
-    RowLock rowLock = null;
+    RowLock rowLock;
     try {
       rowLock = getRowLock(row);
       try {
@@ -5120,7 +5115,7 @@ public class HRegion implements HeapSize { // , Writable{
       final HLog log, final Configuration c,
       final boolean majorCompact)
   throws IOException {
-    HRegion region = null;
+    HRegion region;
     String metaStr = Bytes.toString(HConstants.META_TABLE_NAME);
     // Currently expects tables have one region only.
     if (p.getName().startsWith(metaStr)) {
@@ -5140,7 +5135,7 @@ public class HRegion implements HeapSize { // , Writable{
         RegionScanner scanner = region.getScanner(scan);
         try {
           List<KeyValue> kvs = new ArrayList<KeyValue>();
-          boolean done = false;
+          boolean done;
           do {
             kvs.clear();
             done = scanner.next(kvs);
