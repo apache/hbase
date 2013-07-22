@@ -138,19 +138,24 @@ if (cmd.hasOption("n")) {
 conf = HBaseConfiguration.create();
 admin = new HBaseAdmin(conf);
 
-PrintWriter errFileWriter = new PrintWriter(logsFolder + "/rolling_restart_failed_nodes");
+String failedNodesFileName = logsFolder + "/rolling_restart_failed_nodes_" +
+  conf.get("titan.cell.name") + "_" + System.currentTimeMillis();
+
+PrintWriter errFileWriter = new PrintWriter(failedNodesFileName);
+
+println "Please check " + failedNodesFileName + " for list of failed servers.";
 
 if (hosts != null) {
   for (String server in hosts) {
-    HServerAddress serverAddr = new HServerAddress(server, 60020);
     try {
+      HServerAddress serverAddr = new HServerAddress(server, 60020);
       HServerInfo host = 
         admin.getConnection().getHRegionConnection(serverAddr).getHServerInfo();
       restartRegionServer(admin, host, conf, rollingRestartArgs, logsFolder, verifyRSRestart);
     } catch (Exception e) {
       e.printStackTrace();
       println "\nERROR: "+ server + " Failed.";
-      errFileWriter.println(host.getHostname());
+      errFileWriter.println(server);
     }
   }
 } else {
