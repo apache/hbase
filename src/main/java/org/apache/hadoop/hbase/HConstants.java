@@ -332,13 +332,6 @@ public final class HConstants {
    */
   public static final int DEFAULT_HDFS_QUORUM_READ_THREADS_MAX = 50;
 
-  /**
-   * If using quorum reads from HDFS, the timeout of using another region server.
-   */
-  public static final String HDFS_QUORUM_READ_TIMEOUT_MILLIS =
-    "hbase.dfsclient.quorum.reads.timeout";
-  public static final int DEFAULT_HDFS_QUORUM_READ_TIMEOUT_MILLIS = 0;
-
   /** Default maximum file size */
   public static final long DEFAULT_MAX_FILE_SIZE = 256 * 1024 * 1024;
   
