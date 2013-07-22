@@ -19,6 +19,12 @@
 package org.apache.hadoop.hbase.fs;
 
 
+import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.net.BindException;
+import java.net.ServerSocket;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.commons.logging.impl.Log4JLogger;
@@ -36,9 +42,9 @@ import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
-import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.regionserver.wal.HLogUtil;
 import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
@@ -55,11 +61,6 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-
-import java.lang.reflect.Field;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
-import java.net.ServerSocket;
 
 /**
  * Tests for the hdfs fix from HBASE-6435.
@@ -179,12 +180,24 @@ public class TestBlockReorder {
         }));
 
 
-    ServerSocket ss = new ServerSocket(port);// We're taking the port to have a timeout issue later.
+    final int retries = 10;
+    ServerSocket ss = null;
+    for (int i = 0; i < retries; i++) {
+      try {
+        ss = new ServerSocket(port);// We're taking the port to have a timeout issue later.
+        break;
+      } catch (BindException be) {
+        // This rarely happens. HBASE-9012
+        LOG.info("Got bind exception trying to set up socket on " + port +
+          "; waiting a while; retry=" + i);
+        Threads.sleep(1000);
+      }
+    }
     ServerSocket ssI = new ServerSocket(ipcPort);
 
     // Now it will fail with a timeout, unfortunately it does not always connect to the same box,
-    // so we try 10 times;  with the reorder it will never last more than a few milli seconds
-    for (int i = 0; i < 10; i++) {
+    // so we try retries times;  with the reorder it will never last more than a few milli seconds
+    for (int i = 0; i < retries; i++) {
       start = System.currentTimeMillis();
 
       fin = dfs.open(p);
