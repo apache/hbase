@@ -133,6 +133,8 @@ public class ServerManager {
    */
   final Object deadServerStatusLock = new Object();
 
+  private final boolean resendDroppedMessages;
+
   /**
    * A set of host:port pairs representing regionservers that are blacklisted
    * from region assignment. Used for unit tests only. Please do not use this
@@ -228,6 +230,8 @@ public class ServerManager {
         DEFAULT_BLACKLIST_NODE_EXPIRATION_WINDOW);
     this.blacklistUpdateInterval = c.getLong("hbase.master.blacklist.update.interval",
         DEFAULT_BLACKLIST_UPDATE_WINDOW);
+
+    this.resendDroppedMessages = c.getBoolean("hbase.master.msgs.resend-openclose", false);
   }
 
   /**
@@ -629,32 +633,42 @@ public class ServerManager {
       // Tell the region server to close regions that we have marked for closing.
       for (HRegionInfo i:
         this.master.getRegionManager().getMarkedToClose(serverInfo.getServerName())) {
-        if (closingRegions == null || !closingRegions.contains(i.getEncodedName())) {
-          HMsg msg = new HMsg(HMsg.Type.MSG_REGION_CLOSE, i);
-          LOG.info("HMsg " + msg.toString() + " was lost earlier. Resending to " + serverInfo.getServerName());
-          returnMsgs.add(msg);
+        if (resendDroppedMessages) {
+          if (closingRegions == null || !closingRegions.contains(i.getEncodedName())) {
+            HMsg msg = new HMsg(HMsg.Type.MSG_REGION_CLOSE, i);
+            LOG.info("HMsg " + msg.toString() + " was lost earlier. Resending to " + serverInfo.getServerName());
+            returnMsgs.add(msg);
+          } else {
+            // Transition the region from toClose to closing state
+            this.master.getRegionManager().setPendingClose(i.getRegionNameAsString());
+          }
         } else {
-          // Transition the region from toClose to closing state
-          this.master.getRegionManager().setPendingClose(i.getRegionNameAsString());
+            // old code path for backward compatability during rolling restart.
+            // TODO: Amit: get rid of this after all clusters have been pushed
+            HMsg msg = new HMsg(HMsg.Type.MSG_REGION_CLOSE, i);
+            returnMsgs.add(msg);
+            this.master.getRegionManager().setPendingClose(i.getRegionNameAsString());
         }
       }
 
       // Figure out what the RegionServer ought to do, and write back.
 
-      // 1. Remind the server to open the regions that the RS has not acked for
-      // Normally, the master shouldn't need to do this. But, this may be required
-      // if there was a network Incident, in which the master's message to OPEN a
-      // region was lost.
-      for (HRegionInfo i:
-        this.master.getRegionManager().getRegionsInPendingOpenUnacked(serverInfo.getServerName())) {
-        if (openingRegions == null || !openingRegions.contains(i.getEncodedName())) {
-          HMsg msg = new HMsg(HMsg.Type.MSG_REGION_OPEN, i);
-          LOG.info("HMsg " + msg.toString() + " was lost earlier. Resending to " + serverInfo.getServerName());
-          returnMsgs.add(msg);
-          openingCount++;
-        } else {
-          LOG.info("Region " + i.getEncodedName() + " is reported to be opening " + serverInfo.getServerName());
-          this.processRegionOpening(i.getRegionNameAsString());
+      if (resendDroppedMessages) {
+        // 1. Remind the server to open the regions that the RS has not acked for
+        // Normally, the master shouldn't need to do this. But, this may be required
+        // if there was a network Incident, in which the master's message to OPEN a
+        // region was lost.
+        for (HRegionInfo i:
+          this.master.getRegionManager().getRegionsInPendingOpenUnacked(serverInfo.getServerName())) {
+          if (openingRegions == null || !openingRegions.contains(i.getEncodedName())) {
+            HMsg msg = new HMsg(HMsg.Type.MSG_REGION_OPEN, i);
+            LOG.info("HMsg " + msg.toString() + " was lost earlier. Resending to " + serverInfo.getServerName());
+            returnMsgs.add(msg);
+            openingCount++;
+          } else {
+            LOG.info("Region " + i.getEncodedName() + " is reported to be opening " + serverInfo.getServerName());
+            this.processRegionOpening(i.getRegionNameAsString());
+          }
         }
       }
 
