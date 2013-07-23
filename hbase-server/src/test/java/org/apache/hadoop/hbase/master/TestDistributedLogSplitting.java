@@ -173,9 +173,16 @@ public class TestDistributedLogSplitting {
     List<HRegionInfo> regions = null;
     HRegionServer hrs = null;
     for (int i = 0; i < NUM_RS; i++) {
+      boolean foundRs = false;
       hrs = rsts.get(i).getRegionServer();
       regions = ProtobufUtil.getOnlineRegions(hrs);
-      if (regions.size() != 0) break;
+      for (HRegionInfo region : regions) {
+        if (region.getTableNameAsString().equalsIgnoreCase("table")) {
+          foundRs = true;
+          break;
+        }
+      }
+      if (foundRs) break;
     }
     final Path logDir = new Path(rootdir, HLogUtil.getHLogDirectoryName(hrs
         .getServerName().toString()));
