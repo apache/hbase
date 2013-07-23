@@ -18,25 +18,19 @@
 
 package org.apache.hadoop.hbase;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 
-import junit.framework.Assert;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.apache.commons.lang.math.RandomUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.client.HConnectionManager;
-import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ChaosMonkey;
-import org.apache.hadoop.hbase.util.Pair;
-import org.apache.hadoop.hbase.util.ChaosMonkey.Action;
+import org.apache.hadoop.hbase.util.LoadTestTool;
 import org.junit.After;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
-import org.junit.Ignore;
 import org.junit.experimental.categories.Category;
 
 /**
@@ -82,7 +76,7 @@ public class IntegrationTestRebalanceAndKillServersTargeted extends IngestIntegr
       Assert.assertTrue((liveCount + deadCount) < victimServers.size());
       List<ServerName> targetServers = new ArrayList<ServerName>(liveCount);
       for (int i = 0; i < liveCount + deadCount; ++i) {
-        int victimIx = random.nextInt(victimServers.size());
+        int victimIx = RandomUtils.nextInt(victimServers.size());
         targetServers.add(victimServers.remove(victimIx));
       }
       unbalanceRegions(status, victimServers, targetServers, HOARD_FRC_OF_REGIONS);
@@ -100,7 +94,6 @@ public class IntegrationTestRebalanceAndKillServersTargeted extends IngestIntegr
   }
 
   @Before
-  @SuppressWarnings("unchecked")
   public void setUp() throws Exception {
     Configuration conf = HBaseConfiguration.create();
     conf.set(HConnectionManager.RETRIES_BY_SERVER_KEY, "true");

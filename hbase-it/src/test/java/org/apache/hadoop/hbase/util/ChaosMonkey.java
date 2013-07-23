@@ -26,7 +26,6 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Queue;
-import java.util.Random;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.lang.math.RandomUtils;
@@ -146,7 +145,6 @@ public class ChaosMonkey extends AbstractHBaseTool implements Stoppable {
     protected HBaseCluster cluster;
     protected ClusterStatus initialStatus;
     protected ServerName[] initialServers;
-    protected Random random = new Random();
 
     public void init(ActionContext context) throws IOException {
       this.context = context;
@@ -207,7 +205,7 @@ public class ChaosMonkey extends AbstractHBaseTool implements Stoppable {
         int victimRegionCount = (int)Math.ceil(fractionOfRegions * regions.size());
         LOG.debug("Removing " + victimRegionCount + " regions from " + server.getServerName());
         for (int i = 0; i < victimRegionCount; ++i) {
-          int victimIx = random.nextInt(regions.size());
+          int victimIx = RandomUtils.nextInt(regions.size());
           String regionId = HRegionInfo.encodeRegionName(regions.remove(victimIx));
           victimRegions.add(Bytes.toBytes(regionId));
         }
@@ -217,7 +215,7 @@ public class ChaosMonkey extends AbstractHBaseTool implements Stoppable {
           + " servers to " + toServers.size() + " different servers");
       HBaseAdmin admin = this.context.getHaseIntegrationTestingUtility().getHBaseAdmin();
       for (byte[] victimRegion : victimRegions) {
-        int targetIx = random.nextInt(toServers.size());
+        int targetIx = RandomUtils.nextInt(toServers.size());
         admin.move(victimRegion, Bytes.toBytes(toServers.get(targetIx).getServerName()));
       }
     }
@@ -324,7 +322,7 @@ public class ChaosMonkey extends AbstractHBaseTool implements Stoppable {
       Collection<ServerName> serverNames = table.getRegionLocations().values();
       ServerName[] nameArray = serverNames.toArray(new ServerName[serverNames.size()]);
 
-      restartRs(nameArray[random.nextInt(nameArray.length)], sleepTime);
+      restartRs(nameArray[RandomUtils.nextInt(nameArray.length)], sleepTime);
     }
   }
 
@@ -388,11 +386,11 @@ public class ChaosMonkey extends AbstractHBaseTool implements Stoppable {
       HBaseTestingUtility util = context.getHaseIntegrationTestingUtility();
       HBaseAdmin admin = util.getHBaseAdmin();
 
+      LOG.info("Performing action: Move random region of table " + tableName);
       List<HRegionInfo> regions = admin.getTableRegions(tableNameBytes);
       HRegionInfo region = selectRandomItem(
         regions.toArray(new HRegionInfo[regions.size()]));
-      LOG.info("Performing action: Move random region of table "
-        + tableName + ", region=" + region.getRegionNameAsString());
+      LOG.debug("Unassigning region " + region.getRegionNameAsString());
       admin.unassign(region.getRegionName(), false);
       if (sleepTime > 0) {
         Thread.sleep(sleepTime);
@@ -420,11 +418,11 @@ public class ChaosMonkey extends AbstractHBaseTool implements Stoppable {
       HBaseTestingUtility util = context.getHaseIntegrationTestingUtility();
       HBaseAdmin admin = util.getHBaseAdmin();
 
+      LOG.info("Performing action: Split random region of table " + tableName);
       List<HRegionInfo> regions = admin.getTableRegions(tableNameBytes);
       HRegionInfo region = selectRandomItem(
         regions.toArray(new HRegionInfo[regions.size()]));
-      LOG.info("Performing action: Split random region of table "
-        + tableName + ", region=" + region.getRegionNameAsString());
+      LOG.debug("Splitting region " + region.getRegionNameAsString());
       admin.split(region.getRegionName());
       if (sleepTime > 0) {
         Thread.sleep(sleepTime);
@@ -531,15 +529,18 @@ public class ChaosMonkey extends AbstractHBaseTool implements Stoppable {
       HBaseTestingUtility util = context.getHaseIntegrationTestingUtility();
       HBaseAdmin admin = util.getHBaseAdmin();
       List<HRegionInfo> regions = admin.getTableRegions(tableNameBytes);
-      HRegionInfo region = selectRandomItem(
-        regions.toArray(new HRegionInfo[regions.size()]));
       boolean major = RandomUtils.nextInt(100) < majorRatio;
 
       LOG.info("Performing action: Compact random region of table "
-        + tableName + ", major=" + major + ", region=" + region.getRegionNameAsString());
+        + tableName + ", major=" + major);
+      HRegionInfo region = selectRandomItem(
+        regions.toArray(new HRegionInfo[regions.size()]));
+
       if (major) {
+        LOG.debug("Major compacting region " + region.getRegionNameAsString());
         admin.majorCompact(region.getRegionName());
       } else {
+        LOG.debug("Compacting region " + region.getRegionNameAsString());
         admin.compact(region.getRegionName());
       }
       if (sleepTime > 0) {
@@ -595,12 +596,12 @@ public class ChaosMonkey extends AbstractHBaseTool implements Stoppable {
     public void perform() throws Exception {
       HBaseTestingUtility util = context.getHaseIntegrationTestingUtility();
       HBaseAdmin admin = util.getHBaseAdmin();
+
+      LOG.info("Performing action: Flush random region of table " + tableName);
       List<HRegionInfo> regions = admin.getTableRegions(tableNameBytes);
       HRegionInfo region = selectRandomItem(
         regions.toArray(new HRegionInfo[regions.size()]));
-
-      LOG.info("Performing action: Flush random region of table "
-        + tableName + ", region=" + region.getRegionNameAsString());
+      LOG.debug("Flushing region " + region.getRegionNameAsString());
       admin.flush(region.getRegionName());
       if (sleepTime > 0) {
         Thread.sleep(sleepTime);
@@ -705,7 +706,7 @@ public class ChaosMonkey extends AbstractHBaseTool implements Stoppable {
         if (serversToBeKilled.isEmpty() || deadServers.isEmpty()) {
           action = deadServers.isEmpty();
         } else {
-          action = random.nextBoolean();
+          action = RandomUtils.nextBoolean();
         }
 
         if (action) {
@@ -717,7 +718,7 @@ public class ChaosMonkey extends AbstractHBaseTool implements Stoppable {
           startRs(server);
         }
 
-        sleep(random.nextInt((int)sleepTime));
+        sleep(RandomUtils.nextInt((int)sleepTime));
       }
     }
   }
@@ -745,7 +746,7 @@ public class ChaosMonkey extends AbstractHBaseTool implements Stoppable {
       int targetServerCount = (int)Math.ceil(fractionOfServers * victimServers.size());
       List<ServerName> targetServers = new ArrayList<ServerName>(targetServerCount);
       for (int i = 0; i < targetServerCount; ++i) {
-        int victimIx = random.nextInt(victimServers.size());
+        int victimIx = RandomUtils.nextInt(victimServers.size());
         targetServers.add(victimServers.remove(victimIx));
       }
       unbalanceRegions(status, victimServers, targetServers, fractionOfRegions);
@@ -822,7 +823,7 @@ public class ChaosMonkey extends AbstractHBaseTool implements Stoppable {
     @Override
     public void run() {
       // Add some jitter.
-      int jitter = new Random().nextInt((int)periodMs);
+      int jitter = RandomUtils.nextInt((int)periodMs);
       LOG.info("Sleeping for " + jitter + " to add jitter");
       Threads.sleep(jitter);
 
@@ -934,19 +935,17 @@ public class ChaosMonkey extends AbstractHBaseTool implements Stoppable {
 
   /** Selects a random item from the given items */
   static <T> T selectRandomItem(T[] items) {
-    Random random = new Random();
-    return items[random.nextInt(items.length)];
+    return items[RandomUtils.nextInt(items.length)];
   }
 
   /** Selects a random item from the given items with weights*/
   static <T> T selectWeightedRandomItem(List<Pair<T, Integer>> items) {
-    Random random = new Random();
     int totalWeight = 0;
     for (Pair<T, Integer> pair : items) {
       totalWeight += pair.getSecond();
     }
 
-    int cutoff = random.nextInt(totalWeight);
+    int cutoff = RandomUtils.nextInt(totalWeight);
     int cummulative = 0;
     T item = null;
 
@@ -965,13 +964,12 @@ public class ChaosMonkey extends AbstractHBaseTool implements Stoppable {
 
   /** Selects and returns ceil(ratio * items.length) random items from the given array */
   static <T> List<T> selectRandomItems(T[] items, float ratio) {
-    Random random = new Random();
     int remaining = (int)Math.ceil(items.length * ratio);
 
     List<T> selectedItems = new ArrayList<T>(remaining);
 
     for (int i=0; i<items.length && remaining > 0; i++) {
-      if (random.nextFloat() < ((float)remaining/(items.length-i))) {
+      if (RandomUtils.nextFloat() < ((float)remaining/(items.length-i))) {
         selectedItems.add(items[i]);
         remaining--;
       }
