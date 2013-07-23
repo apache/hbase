@@ -33,6 +33,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.SplitLogCounters;
 import org.apache.hadoop.hbase.SplitLogTask;
@@ -169,8 +170,14 @@ public class SplitLogWorker extends ZooKeeperListener implements Runnable {
     try {
       LOG.info("SplitLogWorker " + this.serverName + " starting");
       this.watcher.registerListener(this);
-      // initialize a new connection for splitlogworker configuration
-      HConnectionManager.getConnection(conf);
+      boolean distributedLogReplay = this.conf.getBoolean(
+        HConstants.DISTRIBUTED_LOG_REPLAY_KEY,
+          HConstants.DEFAULT_DISTRIBUTED_LOG_REPLAY_CONFIG);
+      if (distributedLogReplay) {
+        // initialize a new connection for splitlogworker configuration
+        HConnectionManager.getConnection(conf);
+      }
+
       // wait for master to create the splitLogZnode
       int res = -1;
       while (res == -1 && !exitWorker) {

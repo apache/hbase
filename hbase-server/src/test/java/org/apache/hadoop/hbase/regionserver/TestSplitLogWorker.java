@@ -100,7 +100,6 @@ public class TestSplitLogWorker {
     assertTrue(ZKUtil.checkExists(zkw, zkw.splitLogZNode) != -1);
     LOG.debug(zkw.splitLogZNode + " created");
     SplitLogCounters.resetCounters();
-
   }
 
   @After
@@ -201,7 +200,7 @@ public class TestSplitLogWorker {
     try {
       Thread.yield(); // let the worker start
       Thread.sleep(1000);
-      waitForCounter(SplitLogCounters.tot_wkr_task_grabing, 0, 1, 1500);
+      waitForCounter(SplitLogCounters.tot_wkr_task_grabing, 0, 1, 5000);
 
       // this time create a task node after starting the splitLogWorker
       zkw.getRecoverableZooKeeper().create(PATH,
