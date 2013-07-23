@@ -115,7 +115,7 @@ public class TestReplicationKillRS extends TestReplicationBase {
       public void run() {
         try {
           Thread.sleep(timeout);
-          utility.expireRegionServerSession(rs);
+          utility.getHBaseCluster().getRegionServer(rs).stop("Stopping as part of the test");
         } catch (Exception e) {
           LOG.error("Couldn't kill a region server", e);
         }

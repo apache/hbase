@@ -29,7 +29,7 @@ import org.junit.experimental.categories.Category;
 @Category(LargeTests.class)
 public class TestReplicationKillSlaveRS extends TestReplicationKillRS {
 
-  @Ignore ("Flakey.  See HBASE-9008 and HBASE-9007")  @Test(timeout=300000)
+  @Test(timeout=300000)
   public void killOneSlaveRS() throws Exception {
     loadTableAndKillRS(utility2);
   }
