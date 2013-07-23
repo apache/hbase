@@ -143,21 +143,24 @@ public class HBaseClusterManager extends ClusterManager {
    * CommandProvider to manage the service using bin/hbase-* scripts
    */
   static class HBaseShellCommandProvider extends CommandProvider {
-    private String getHBaseHome() {
-      return System.getenv("HBASE_HOME");
-    }
+    private final String hbaseHome;
+    private final String confDir;
 
-    private String getConfig() {
-      String confDir = System.getenv("HBASE_CONF_DIR");
-      if (confDir != null) {
-        return String.format("--config %s", confDir);
+    HBaseShellCommandProvider(Configuration conf) {
+      hbaseHome = conf.get("hbase.it.clustermanager.hbase.home",
+        System.getenv("HBASE_HOME"));
+      String tmp = conf.get("hbase.it.clustermanager.hbase.conf.dir",
+        System.getenv("HBASE_CONF_DIR"));
+      if (tmp != null) {
+        confDir = String.format("--config %s", tmp);
+      } else {
+        confDir = "";
       }
-      return "";
     }
 
     @Override
     public String getCommand(ServiceType service, Operation op) {
-      return String.format("%s/bin/hbase-daemon.sh %s %s %s", getHBaseHome(), getConfig(),
+      return String.format("%s/bin/hbase-daemon.sh %s %s %s", hbaseHome, confDir,
           op.toString().toLowerCase(), service);
     }
   }
@@ -169,7 +172,7 @@ public class HBaseClusterManager extends ClusterManager {
   protected CommandProvider getCommandProvider(ServiceType service) {
     //TODO: make it pluggable, or auto-detect the best command provider, should work with
     //hadoop daemons as well
-    return new HBaseShellCommandProvider();
+    return new HBaseShellCommandProvider(getConf());
   }
 
   /**
