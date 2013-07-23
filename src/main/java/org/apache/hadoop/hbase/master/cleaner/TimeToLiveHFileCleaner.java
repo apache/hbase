@@ -17,15 +17,11 @@
  */
 package org.apache.hadoop.hbase.master.cleaner;
 
-import java.io.IOException;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 
 /**
@@ -41,7 +37,6 @@ public class TimeToLiveHFileCleaner extends BaseHFileCleanerDelegate {
   private static final long DEFAULT_TTL = 60000 * 5;
   // Configured time a hfile can be kept after it was moved to the archive
   private long ttl;
-  private FileSystem fs;
 
   @Override
   public void setConf(Configuration conf) {
@@ -50,45 +45,19 @@ public class TimeToLiveHFileCleaner extends BaseHFileCleanerDelegate {
   }
 
   @Override
-  public boolean isFileDeletable(Path filePath) {
-    if (!instantiateFS()) {
-      return false;
-    }
-    long time = 0;
+  public boolean isFileDeletable(FileStatus fStat) {
     long currentTime = EnvironmentEdgeManager.currentTimeMillis();
-    try {
-      FileStatus fStat = fs.getFileStatus(filePath);
-      time = fStat.getModificationTime();
-    } catch (IOException e) {
-      LOG.error("Unable to get modification time of file " + filePath.getName()
-          + ", not deleting it.", e);
-      return false;
-    }
+		long time = fStat.getModificationTime();
     long life = currentTime - time;
     if (LOG.isTraceEnabled()) {
       LOG.trace("HFile life:" + life + ", ttl:" + ttl + ", current:" + currentTime + ", from: "
           + time);
     }
     if (life < 0) {
-      LOG.warn("Found a log (" + filePath + ") newer than current time (" + currentTime + " < "
-          + time + "), probably a clock skew");
+      LOG.warn("Found a hfile (" + fStat.getPath() + ") newer than current time (" + currentTime
+         + " < " + time + "), probably a clock skew");
       return false;
     }
     return life > ttl;
-  }
-
-  /**
-   * setup the filesystem, if it hasn't been already
-   */
-  private synchronized boolean instantiateFS() {
-    if (this.fs == null) {
-      try {
-        this.fs = FileSystem.get(this.getConf());
-      } catch (IOException e) {
-        LOG.error("Couldn't instantiate the file system, not deleting file, just incase");
-        return false;
-      }
-    }
-    return true;
   }
 }

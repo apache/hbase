@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.hbase.master.cleaner.BaseHFileCleanerDelegate;
 
 /**
@@ -31,7 +31,7 @@ public class CheckedArchivingHFileCleaner extends BaseHFileCleanerDelegate {
   private static boolean checked;
 
   @Override
-  public boolean isFileDeletable(Path file) {
+  public boolean isFileDeletable(FileStatus fStat) {
     checked = true;
     return true;
   }

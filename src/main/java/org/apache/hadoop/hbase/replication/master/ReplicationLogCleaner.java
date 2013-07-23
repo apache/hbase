@@ -22,6 +22,7 @@ package org.apache.hadoop.hbase.replication.master;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.HConstants;
@@ -53,7 +54,7 @@ public class ReplicationLogCleaner extends BaseLogCleanerDelegate implements Abo
   public ReplicationLogCleaner() {}
 
   @Override
-  public boolean isLogDeletable(Path filePath) {
+  public boolean isLogDeletable(FileStatus fStat) {
 
     try {
       if (!zkHelper.getReplication()) {
@@ -69,7 +70,7 @@ public class ReplicationLogCleaner extends BaseLogCleanerDelegate implements Abo
     if (this.getConf() == null) {
       return true;
     }
-    String log = filePath.getName();
+    String log = fStat.getPath().getName();
     // If we saw the hlog previously, let's consider it's still used
     // At some point in the future we will refresh the list and it will be gone
     if (this.hlogs.contains(log)) {
