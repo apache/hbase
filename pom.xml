@@ -80,7 +80,6 @@
       <post>user@hbase.apache.org</post>
       <archive>http://mail-archives.apache.org/mod_mbox/hbase-user/</archive>
       <otherArchives>
-        <otherArchive>http://hbase.apache.org/mail/user/</otherArchive>
         <otherArchive>http://dir.gmane.org/gmane.comp.java.hadoop.hbase.user</otherArchive>
         <otherArchive>http://search-hadoop.com/?q=&amp;fc_project=HBase</otherArchive>
       </otherArchives>
@@ -92,7 +91,6 @@
       <post>dev@hbase.apache.org</post>
       <archive>http://mail-archives.apache.org/mod_mbox/hbase-dev/</archive>
       <otherArchives>
-        <otherArchive>http://hbase.apache.org/mail/dev/</otherArchive>
         <otherArchive>http://dir.gmane.org/gmane.comp.java.hadoop.hbase.devel</otherArchive>
         <otherArchive>http://search-hadoop.com/?q=&amp;fc_project=HBase</otherArchive>
       </otherArchives>
@@ -102,27 +100,18 @@
       <subscribe>commits-subscribe@hbase.apache.org</subscribe>
       <unsubscribe>commits-unsubscribe@hbase.apache.org</unsubscribe>
       <archive>http://mail-archives.apache.org/mod_mbox/hbase-commits/</archive>
-      <otherArchives>
-        <otherArchive>http://hbase.apache.org/mail/commits/</otherArchive>
-      </otherArchives>
     </mailingList>
     <mailingList>
       <name>Issues List</name>
       <subscribe>issues-subscribe@hbase.apache.org</subscribe>
       <unsubscribe>issues-unsubscribe@hbase.apache.org</unsubscribe>
       <archive>http://mail-archives.apache.org/mod_mbox/hbase-issues/</archive>
-      <otherArchives>
-        <otherArchive>http://hbase.apache.org/mail/issues/</otherArchive>
-      </otherArchives>
     </mailingList>
     <mailingList>
       <name>Builds List</name>
       <subscribe>builds-subscribe@hbase.apache.org</subscribe>
       <unsubscribe>builds-unsubscribe@hbase.apache.org</unsubscribe>
       <archive>http://mail-archives.apache.org/mod_mbox/hbase-builds/</archive>
-      <otherArchives>
-        <otherArchive>http://hbase.apache.org/mail/builds/</otherArchive>
-      </otherArchives>
     </mailingList>
   </mailingLists>
   <developers>
