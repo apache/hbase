@@ -133,51 +133,53 @@ public class ClassFinder {
     try {
       jarFile = new JarInputStream(new FileInputStream(jarFileName));
     } catch (IOException ioEx) {
-      if (!proceedOnExceptions) {
-        throw ioEx;
-      }
       LOG.error("Failed to look for classes in " + jarFileName + ": " + ioEx);
+      throw ioEx;
     }
 
     Set<Class<?>> classes = new HashSet<Class<?>>();
     JarEntry entry = null;
-    while (true) {
-      try {
-        entry = jarFile.getNextJarEntry();
-      } catch (IOException ioEx) {
-        if (!proceedOnExceptions) {
-          throw ioEx;
+    try {
+      while (true) {
+        try {
+          entry = jarFile.getNextJarEntry();
+        } catch (IOException ioEx) {
+          if (!proceedOnExceptions) {
+            throw ioEx;
+          }
+          LOG.error("Failed to get next entry from " + jarFileName + ": " + ioEx);
+          break;
         }
-        LOG.error("Failed to get next entry from " + jarFileName + ": " + ioEx);
-        break;
-      }
-      if (entry == null) {
-        break; // loop termination condition
-      }
+        if (entry == null) {
+          break; // loop termination condition
+        }
 
-      String className = entry.getName();
-      if (!className.endsWith(CLASS_EXT)) {
-        continue;
-      }
-      int ix = className.lastIndexOf('/');
-      String fileName = (ix >= 0) ? className.substring(ix + 1) : className;
-      if (null != this.fileNameFilter
-          && !this.fileNameFilter.isCandidateFile(fileName, className)) {
-        continue;
-      }
-      className = className
-          .substring(0, className.length() - CLASS_EXT.length()).replace('/', '.');
-      if (!className.startsWith(packageName)) {
-        continue;
-      }
-      Class<?> c = makeClass(className, proceedOnExceptions);
-      if (c != null) {
-        if (!classes.add(c)) {
-          LOG.error("Ignoring duplicate class " + className);
+        String className = entry.getName();
+        if (!className.endsWith(CLASS_EXT)) {
+          continue;
+        }
+        int ix = className.lastIndexOf('/');
+        String fileName = (ix >= 0) ? className.substring(ix + 1) : className;
+        if (null != this.fileNameFilter
+            && !this.fileNameFilter.isCandidateFile(fileName, className)) {
+          continue;
+        }
+        className =
+            className.substring(0, className.length() - CLASS_EXT.length()).replace('/', '.');
+        if (!className.startsWith(packageName)) {
+          continue;
+        }
+        Class<?> c = makeClass(className, proceedOnExceptions);
+        if (c != null) {
+          if (!classes.add(c)) {
+            LOG.error("Ignoring duplicate class " + className);
+          }
         }
       }
+      return classes;
+    } finally {
+      jarFile.close();
     }
-    return classes;
   }
 
   private Set<Class<?>> findClassesFromFiles(File baseDirectory, String packageName,

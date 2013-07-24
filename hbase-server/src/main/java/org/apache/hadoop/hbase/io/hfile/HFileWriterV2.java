@@ -181,14 +181,15 @@ public class HFileWriterV2 extends AbstractHFileWriter {
       byte[] fakeKey = ((KeyComparator) comparator).getShortMidpointKey(
         lastKeyOfPreviousBlock, firstKeyInBlock);
       if (comparator.compare(fakeKey, firstKeyInBlock) > 0) {
-        throw new IOException("Unexpected getShortMidpointKey result, fakeKey:" + fakeKey
-            + ", firstKeyInBlock:" + firstKeyInBlock);
+        throw new IOException("Unexpected getShortMidpointKey result, fakeKey:"
+            + Bytes.toStringBinary(fakeKey) + ", firstKeyInBlock:"
+            + Bytes.toStringBinary(firstKeyInBlock));
       }
       if (lastKeyOfPreviousBlock != null && comparator.compare(lastKeyOfPreviousBlock,
         fakeKey) >= 0) {
         throw new IOException("Unexpected getShortMidpointKey result, lastKeyOfPreviousBlock:" +
-            Bytes.toString(lastKeyOfPreviousBlock) + ", fakeKey:" +
-            Bytes.toString(fakeKey));
+            Bytes.toStringBinary(lastKeyOfPreviousBlock) + ", fakeKey:" +
+            Bytes.toStringBinary(fakeKey));
       }
       dataBlockIndexWriter.addEntry(fakeKey, lastDataBlockOffset,onDiskSize);
     } else {

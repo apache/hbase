@@ -1093,7 +1093,6 @@ public class AccessController extends BaseRegionObserver
   @Override
   public void preBulkLoadHFile(ObserverContext<RegionCoprocessorEnvironment> ctx,
       List<Pair<byte[], String>> familyPaths) throws IOException {
-    List<byte[]> cfs = new LinkedList<byte[]>();
     for(Pair<byte[],String> el : familyPaths) {
       requirePermission("preBulkLoadHFile",
           ctx.getEnvironment().getRegion().getTableDesc().getName(),

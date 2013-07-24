@@ -326,7 +326,7 @@ public class RegionScannerHolder {
           }
 
           // coprocessor postNext hook
-          if (region != null && region.getCoprocessorHost() != null) {
+          if (region.getCoprocessorHost() != null) {
             region.getCoprocessorHost().postScannerNext(scanner, results, rows, true);
           }
         }

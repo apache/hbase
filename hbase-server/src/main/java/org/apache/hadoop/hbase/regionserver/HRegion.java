@@ -3532,10 +3532,8 @@ public class HRegion implements HeapSize { // , Writable{
       }
       if (region != null && region.metricsRegion != null) {
         long totalSize = 0;
-        if (outResults != null) {
-          for(KeyValue kv:outResults) {
-            totalSize += kv.getLength();
-          }
+        for(KeyValue kv:outResults) {
+          totalSize += kv.getLength();
         }
         region.metricsRegion.updateScanNext(totalSize);
       }

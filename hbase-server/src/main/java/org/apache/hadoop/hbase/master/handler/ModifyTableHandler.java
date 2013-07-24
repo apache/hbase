@@ -82,7 +82,7 @@ public class ModifyTableHandler extends TableEventHandler {
       for (byte[] familyName: oldFamilies) {
         if (!newFamilies.contains(familyName)) {
           LOG.debug("Removing family=" + Bytes.toString(familyName) +
-                    " from table=" + this.tableName);
+                    " from table=" + Bytes.toString(this.tableName));
           for (HRegionInfo hri: hris) {
             // Delete the family directory in FS for all the regions one by one
             mfs.deleteFamilyFromFS(hri, familyName);

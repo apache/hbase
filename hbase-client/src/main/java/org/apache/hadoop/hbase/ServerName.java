@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase;
 
 import com.google.common.net.InetAddresses;
 import com.google.protobuf.InvalidProtocolBufferException;
+
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
@@ -28,6 +29,7 @@ import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.MetaRegionServ
 import org.apache.hadoop.hbase.util.Addressing;
 import org.apache.hadoop.hbase.util.Bytes;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Pattern;
@@ -51,7 +53,7 @@ import java.util.regex.Pattern;
  */
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
-public class ServerName implements Comparable<ServerName> {
+public class ServerName implements Comparable<ServerName>, Serializable {
   /**
    * Version for this class.
    * Its a short rather than a byte so I can for sure distinguish between this

@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.master.balancer;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -165,7 +166,7 @@ public class FavoredNodeAssignmentHelper {
       put.add(HConstants.CATALOG_FAMILY, FAVOREDNODES_QUALIFIER,
           EnvironmentEdgeManager.currentTimeMillis(), favoredNodes);
       LOG.info("Create the region " + regionInfo.getRegionNameAsString() +
-          " with favored nodes " + favoredNodes);
+          " with favored nodes " + Bytes.toString(favoredNodes));
     }
     return put;
   }

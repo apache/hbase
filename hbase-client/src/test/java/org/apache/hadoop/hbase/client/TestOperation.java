@@ -218,7 +218,7 @@ public class TestOperation {
       Arrays.asList((Filter) TS_FILTER, L_TS_FILTER, CR_FILTER, COL_PRE_FILTER,
           CCG_FILTER, CP_FILTER, PREFIX_FILTER, PAGE_FILTER));
   private static String STR_L_FILTER_LIST = String.format(
-      "%s AND (5/8): [%s, %s, %s, %s, %s]",
+      "%s AND (5/8): [%s, %s, %s, %s, %s, %s]",
       L_FILTER_LIST.getClass().getSimpleName(), STR_TS_FILTER, STR_L_TS_FILTER,
       STR_CR_FILTER, STR_COL_PRE_FILTER, STR_CCG_FILTER, STR_CP_FILTER);
 

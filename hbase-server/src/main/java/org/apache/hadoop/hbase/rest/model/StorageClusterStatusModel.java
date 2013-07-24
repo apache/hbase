@@ -96,54 +96,56 @@ import com.google.protobuf.ByteString;
 @InterfaceAudience.Private
 public class StorageClusterStatusModel 
     implements Serializable, ProtobufMessageHandler {
-	private static final long serialVersionUID = 1L;
+  private static final long serialVersionUID = 1L;
 
-	/**
-	 * Represents a region server.
-	 */
-	public static class Node {
-	  
-	  /**
-	   * Represents a region hosted on a region server.
-	   */
-	  public static class Region {
-	    private byte[] name;
-	    private int stores;
-	    private int storefiles;
-	    private int storefileSizeMB;
-	    private int memstoreSizeMB;
-	    private int storefileIndexSizeMB;
-	    private long readRequestsCount;
-	    private long writeRequestsCount;
-	    private int rootIndexSizeKB;
-	    private int totalStaticIndexSizeKB;
-	    private int totalStaticBloomSizeKB;
-	    private long totalCompactingKVs;
-	    private long currentCompactedKVs;
+  /**
+   * Represents a region server.
+   */
+  public static class Node implements Serializable {
+    private static final long serialVersionUID = 1L;
 
-	    /**
-	     * Default constructor
-	     */
-	    public Region() {}
+    /**
+     * Represents a region hosted on a region server.
+     */
+    public static class Region {
+      private byte[] name;
+      private int stores;
+      private int storefiles;
+      private int storefileSizeMB;
+      private int memstoreSizeMB;
+      private int storefileIndexSizeMB;
+      private long readRequestsCount;
+      private long writeRequestsCount;
+      private int rootIndexSizeKB;
+      private int totalStaticIndexSizeKB;
+      private int totalStaticBloomSizeKB;
+      private long totalCompactingKVs;
+      private long currentCompactedKVs;
 
-	    /**
-	     * Constructor
-	     * @param name the region name
-	     */
-	    public Region(byte[] name) {
-	      this.name = name;
-	    }
+      /**
+       * Default constructor
+       */
+      public Region() {
+      }
 
-	    /**
-	     * Constructor
-	     * @param name the region name
-	     * @param stores the number of stores
-	     * @param storefiles the number of store files
-	     * @param storefileSizeMB total size of store files, in MB
-	     * @param memstoreSizeMB total size of memstore, in MB
-	     * @param storefileIndexSizeMB total size of store file indexes, in MB
-	     */
-	    public Region(byte[] name, int stores, int storefiles,
+      /**
+       * Constructor
+       * @param name the region name
+       */
+      public Region(byte[] name) {
+        this.name = name;
+      }
+
+      /**
+       * Constructor
+       * @param name the region name
+       * @param stores the number of stores
+       * @param storefiles the number of store files
+       * @param storefileSizeMB total size of store files, in MB
+       * @param memstoreSizeMB total size of memstore, in MB
+       * @param storefileIndexSizeMB total size of store file indexes, in MB
+       */
+      public Region(byte[] name, int stores, int storefiles,
           int storefileSizeMB, int memstoreSizeMB, int storefileIndexSizeMB,
           long readRequestsCount, long writeRequestsCount, int rootIndexSizeKB,
           int totalStaticIndexSizeKB, int totalStaticBloomSizeKB,
@@ -164,18 +166,18 @@ public class StorageClusterStatusModel
       }
 
       /**
-	     * @return the region name
-	     */
-	    @XmlAttribute
-	    public byte[] getName() {
-	      return name;
-	    }
+       * @return the region name
+       */
+      @XmlAttribute
+      public byte[] getName() {
+        return name;
+      }
 
-	    /**
-	     * @return the number of stores 
-	     */
-	    @XmlAttribute
-	    public int getStores() {
+      /**
+       * @return the number of stores
+       */
+      @XmlAttribute
+      public int getStores() {
         return stores;
       }
 
@@ -210,7 +212,7 @@ public class StorageClusterStatusModel
       public int getStorefileIndexSizeMB() {
         return storefileIndexSizeMB;
       }
-      
+
       /**
        * @return the current total read requests made to region
        */
@@ -250,7 +252,7 @@ public class StorageClusterStatusModel
       public int getTotalStaticBloomSizeKB() {
         return totalStaticBloomSizeKB;
       }
-      
+
       /**
        * @return The total number of compacting key-values 
        */
@@ -273,7 +275,7 @@ public class StorageClusterStatusModel
       public void setReadRequestsCount(long readRequestsCount) {
         this.readRequestsCount = readRequestsCount;
       }
-      
+
       /**
        * @param rootIndexSizeKB The current total size of root-level indexes
        *                        for the region, in KB
@@ -281,14 +283,14 @@ public class StorageClusterStatusModel
       public void setRootIndexSizeKB(int rootIndexSizeKB) {
         this.rootIndexSizeKB = rootIndexSizeKB;
       }
-      
+
       /**
        * @param writeRequestsCount The current total write requests made to region
        */
       public void setWriteRequestsCount(long writeRequestsCount) {
         this.writeRequestsCount = writeRequestsCount;
       }
-      
+
       /**
        * @param currentCompactedKVs The completed count of key values
        *                            in currently running compaction
@@ -296,7 +298,7 @@ public class StorageClusterStatusModel
       public void setCurrentCompactedKVs(long currentCompactedKVs) {
         this.currentCompactedKVs = currentCompactedKVs;
       }
-      
+
       /**
        * @param totalCompactingKVs The total compacting key values
        *                           in currently running compaction
@@ -304,7 +306,7 @@ public class StorageClusterStatusModel
       public void setTotalCompactingKVs(long totalCompactingKVs) {
         this.totalCompactingKVs = totalCompactingKVs;
       }
-      
+
       /**
        * @param totalStaticBloomSizeKB The total size of all Bloom filter blocks,
        *                               not just loaded into the block cache, in KB.
@@ -312,7 +314,7 @@ public class StorageClusterStatusModel
       public void setTotalStaticBloomSizeKB(int totalStaticBloomSizeKB) {
         this.totalStaticBloomSizeKB = totalStaticBloomSizeKB;
       }
-      
+
       /**
        * @param totalStaticIndexSizeKB The total size of all index blocks,
        *                               not just the root level, in KB.
@@ -320,17 +322,17 @@ public class StorageClusterStatusModel
       public void setTotalStaticIndexSizeKB(int totalStaticIndexSizeKB) {
         this.totalStaticIndexSizeKB = totalStaticIndexSizeKB;
       }
-      
-      /**
-	     * @param name the region name
-	     */
-	    public void setName(byte[] name) {
-	      this.name = name;
-	    }
 
-	    /**
-	     * @param stores the number of stores
-	     */
+      /**
+       * @param name the region name
+       */
+      public void setName(byte[] name) {
+        this.name = name;
+      }
+
+      /**
+       * @param stores the number of stores
+       */
       public void setStores(int stores) {
         this.stores = stores;
       }
@@ -362,9 +364,9 @@ public class StorageClusterStatusModel
       public void setStorefileIndexSizeMB(int storefileIndexSizeMB) {
         this.storefileIndexSizeMB = storefileIndexSizeMB;
       }
-	  }
+    }
 
-	  private String name;
+    private String name;
     private long startCode;
     private int requests;
     private int heapSizeMB;
@@ -499,73 +501,73 @@ public class StorageClusterStatusModel
     public void setRequests(int requests) {
       this.requests = requests;
     }
-	}
+  }
 
-	private List<Node> liveNodes = new ArrayList<Node>();
-	private List<String> deadNodes = new ArrayList<String>();
-	private int regions;
-	private int requests;
-	private double averageLoad;
+  private List<Node> liveNodes = new ArrayList<Node>();
+  private List<String> deadNodes = new ArrayList<String>();
+  private int regions;
+  private int requests;
+  private double averageLoad;
 
-	/**
-	 * Add a live node to the cluster representation.
-	 * @param name the region server name
-	 * @param startCode the region server's start code
-	 * @param heapSizeMB the current heap size, in MB
-	 * @param maxHeapSizeMB the maximum heap size, in MB
-	 */
-	public Node addLiveNode(String name, long startCode, int heapSizeMB,
-	    int maxHeapSizeMB) {
-	  Node node = new Node(name, startCode);
-	  node.setHeapSizeMB(heapSizeMB);
-	  node.setMaxHeapSizeMB(maxHeapSizeMB);
-	  liveNodes.add(node);
-	  return node;
-	}
+  /**
+   * Add a live node to the cluster representation.
+   * @param name the region server name
+   * @param startCode the region server's start code
+   * @param heapSizeMB the current heap size, in MB
+   * @param maxHeapSizeMB the maximum heap size, in MB
+   */
+  public Node addLiveNode(String name, long startCode, int heapSizeMB, int maxHeapSizeMB) {
+    Node node = new Node(name, startCode);
+    node.setHeapSizeMB(heapSizeMB);
+    node.setMaxHeapSizeMB(maxHeapSizeMB);
+    liveNodes.add(node);
+    return node;
+  }
 
-	/**
-	 * @param index the index
-	 * @return the region server model
-	 */
-	public Node getLiveNode(int index) {
-	  return liveNodes.get(index);
-	}
+  /**
+   * @param index the index
+   * @return the region server model
+   */
+  public Node getLiveNode(int index) {
+    return liveNodes.get(index);
+  }
 
-	/**
-	 * Add a dead node to the cluster representation.
-	 * @param node the dead region server's name
-	 */
-	public void addDeadNode(String node) {
-	  deadNodes.add(node);
-	}
-	
-	/**
-	 * @param index the index
-	 * @return the dead region server's name
-	 */
-	public String getDeadNode(int index) {
-	  return deadNodes.get(index);
-	}
+  /**
+   * Add a dead node to the cluster representation.
+   * @param node the dead region server's name
+   */
+  public void addDeadNode(String node) {
+    deadNodes.add(node);
+  }
 
-	/**
-	 * Default constructor
-	 */
-	public StorageClusterStatusModel() {}
+  /**
+   * @param index the index
+   * @return the dead region server's name
+   */
+  public String getDeadNode(int index) {
+    return deadNodes.get(index);
+  }
 
-	/**
-	 * @return the list of live nodes
-	 */
-	@XmlElement(name="Node")
-	@XmlElementWrapper(name="LiveNodes")
-	public List<Node> getLiveNodes() {
-	  return liveNodes;
-	}
+  /**
+   * Default constructor
+   */
+  public StorageClusterStatusModel() {
+  }
 
-	/**
-	 * @return the list of dead nodes
-	 */
-  @XmlElement(name="Node")
-  @XmlElementWrapper(name="DeadNodes")
+  /**
+   * @return the list of live nodes
+   */
+  @XmlElement(name = "Node")
+  @XmlElementWrapper(name = "LiveNodes")
+  public List<Node> getLiveNodes() {
+    return liveNodes;
+  }
+
+  /**
+   * @return the list of dead nodes
+   */
+  @XmlElement(name = "Node")
+  @XmlElementWrapper(name = "DeadNodes")
   public List<String> getDeadNodes() {
     return deadNodes;
   }
@@ -631,13 +633,14 @@ public class StorageClusterStatusModel
     this.averageLoad = averageLoad;
   }
 
-	/* (non-Javadoc)
-	 * @see java.lang.Object#toString()
-	 */
-	@Override
-	public String toString() {
-	  StringBuilder sb = new StringBuilder();
-	  sb.append(String.format("%d live servers, %d dead servers, " + 
+  /*
+   * (non-Javadoc)
+   * @see java.lang.Object#toString()
+   */
+  @Override
+  public String toString() {
+    StringBuilder sb = new StringBuilder();
+    sb.append(String.format("%d live servers, %d dead servers, " + 
       "%.4f average load%n%n", liveNodes.size(), deadNodes.size(),
       averageLoad));
     if (!liveNodes.isEmpty()) {
@@ -699,9 +702,9 @@ public class StorageClusterStatusModel
         sb.append('\n');
       }
     }
-	  return sb.toString();
-	}
-	
+    return sb.toString();
+  }
+
   @Override
   public byte[] createProtobufOutput() {
     StorageClusterStatus.Builder builder = StorageClusterStatus.newBuilder();

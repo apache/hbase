@@ -118,8 +118,7 @@ public class CellCounter {
         for (KeyValue value : values.list()) {
           currentRowKey = Bytes.toStringBinary(value.getRow());
           String thisRowFamilyName = Bytes.toStringBinary(value.getFamily());
-          if (thisRowFamilyName != null &&
-              !thisRowFamilyName.equals(currentFamilyName)) {
+          if (!thisRowFamilyName.equals(currentFamilyName)) {
             currentFamilyName = thisRowFamilyName;
             context.getCounter("CF", thisRowFamilyName).increment(1);
             context.write(new Text("Total Families Across all Rows"),
@@ -128,8 +127,7 @@ public class CellCounter {
           }
           String thisRowQualifierName = thisRowFamilyName + separator
               + Bytes.toStringBinary(value.getQualifier());
-          if (thisRowQualifierName != null &&
-              !thisRowQualifierName.equals(currentQualifierName)) {
+          if (!thisRowQualifierName.equals(currentQualifierName)) {
             currentQualifierName = thisRowQualifierName;
             context.getCounter("CFQL", thisRowQualifierName).increment(1);
             context.write(new Text("Total Qualifiers across all Rows"),
