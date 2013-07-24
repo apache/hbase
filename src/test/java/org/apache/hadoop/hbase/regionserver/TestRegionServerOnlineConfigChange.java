@@ -25,8 +25,11 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.util.Bytes;
 
@@ -49,9 +52,16 @@ public class TestRegionServerOnlineConfigChange extends TestCase {
   HRegion r1 = null;
 
   final String table1Str = "table1";
+  final String table2Str = "table2";
   final String columnFamily1Str = "columnFamily1";
+  final String columnFamily2Str = "columnFamily2";
   final byte[] TABLE1 = Bytes.toBytes(table1Str);
   final byte[] COLUMN_FAMILY1 = Bytes.toBytes(columnFamily1Str);
+  final byte[] COLUMN_FAMILY2 = Bytes.toBytes(columnFamily2Str);
+  final byte[][] FAMILIES = { COLUMN_FAMILY1, COLUMN_FAMILY2 };
+  final String prop = "prop";
+  final String cf2PropVal = "customVal";
+  final String newGeneralPropVal = "newGeneralVal";
 
 
   @Override
@@ -215,6 +225,68 @@ public class TestRegionServerOnlineConfigChange extends TestCase {
     HRegionServer.configurationManager.notifyAllObservers(conf);
     assertEquals(newMajorCompactionJitter,
             s.compactionManager.comConf.getMajorCompactionJitter(), 0.00001);
+  }
+
+  /**
+   * Create a table with two column families, and set the value of a dummy
+   * property to a specific value, in only one of the column families.
+   * @return
+   * @throws IOException
+   */
+  private HTable createTableWithPerCFConfigurations() throws IOException {
+    byte[] tableName = Bytes.toBytesBinary(table2Str);
+    HTableDescriptor desc = new HTableDescriptor(tableName);
+    for (byte[] family : FAMILIES) {
+      HColumnDescriptor hcd = new HColumnDescriptor(family);
+      if (Bytes.equals(family, COLUMN_FAMILY2)) {
+        hcd.setValue(Bytes.toBytes(prop),
+                      Bytes.toBytes(cf2PropVal));
+      }
+      desc.addFamily(hcd);
+    }
+    (new HBaseAdmin(conf)).createTable(desc);
+    return new HTable(conf, tableName);
+  }
+
+  /**
+   * Some customers like Messages use a per-CF based configuration scheme. We
+   * want to verify that when there is an online-configuration change, these
+   * per-CF configurations don't get overridden. This actually verifies the
+   * notifyOnChange() method for the Store class, to ensure that the
+   * CompoundConfiguration class retains the top-priority for the per-CF level
+   * configurations after the configuration has changed.
+   */
+  public void testPerCFConfigurationsNotOverridden() throws IOException {
+    // Set the value of a dummy property, 'prop' in CF2.
+    HTable t = createTableWithPerCFConfigurations();
+
+    HRegionInfo hri = t.getRegionsInfo().keySet().iterator().next();
+    byte[] rName = hri.getRegionName();
+    HRegionServer rs = hbaseTestingUtility.getRSWithRegion(rName);
+    HRegion r = rs.getRegion(rName);
+
+    // Get the Store objects for each CF.
+    Store s1 = r.getStore(COLUMN_FAMILY1);
+    Store s2 = r.getStore(COLUMN_FAMILY2);
+
+    // Set the value of prop to some other value in the conf.
+    conf.set(prop, newGeneralPropVal);
+
+    // Simulate an online config change
+    HRegionServer.configurationManager.notifyAllObservers(conf);
+
+    // Here we show that a property that was set in the HColumnDescriptor
+    // for a Column Family is preserved, because we implemented the
+    // notifyOnChange(Configuration) method for the Store class in such a
+    // fashion that the configuration (which is a CompoundConfiguration object)
+    // gives a higher priority to property values in the HCD.
+
+    // The value for prop in CF1 should have changed since we did not set that
+    // property in its HCD.
+    assertEquals(newGeneralPropVal, s1.conf.get(prop));
+    // However, the value for prop in CF2 shouldn't change since we explicitly
+    // specified a value for that property in the HCD.
+    assertEquals(cf2PropVal, s2.conf.get(prop));
   }
 }
 
