@@ -810,6 +810,8 @@ public class TestHLogSplit {
         return mockWriter;
       }
     };
+    // Start up background thread that will thread dump if we are stuck here.
+    Threads.threadDumpingIsAlive(Thread.currentThread());
     try {
       logSplitter.splitLogFile(logfiles[0], null);
       fail("Didn't throw!");
