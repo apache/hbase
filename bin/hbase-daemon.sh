@@ -172,12 +172,12 @@ case $startStop in
 
 (start)
     check_before_start
-    nohup $thiscmd --config "${HBASE_CONF_DIR}" internal_start $command $args < /dev/null > /dev/null 2>&1  &
+    nohup $thiscmd --config "${HBASE_CONF_DIR}" internal_start $command $args < /dev/null > ${logout} 2>&1  &
   ;;
 
 (autorestart)
     check_before_start
-    nohup $thiscmd --config "${HBASE_CONF_DIR}" internal_autorestart $command $args < /dev/null > /dev/null 2>&1  &
+    nohup $thiscmd --config "${HBASE_CONF_DIR}" internal_autorestart $command $args < /dev/null > ${logout} 2>&1  &
   ;;
 
 (internal_start)
@@ -189,7 +189,7 @@ case $startStop in
     echo "`ulimit -a`" >> $loglog 2>&1
     nice -n $HBASE_NICENESS "$HBASE_HOME"/bin/hbase \
         --config "${HBASE_CONF_DIR}" \
-        $command "$@" start > "$logout"  &
+        $command "$@" start >> "$logout" 2>&1 &
     echo $! > $pid
     sleep 1; head "$logout"
     wait
