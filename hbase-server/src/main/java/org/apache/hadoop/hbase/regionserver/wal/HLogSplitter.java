@@ -607,7 +607,7 @@ public class HLogSplitter {
     Throwable thrown = this.thrown.get();
     if (thrown == null) return;
     if (thrown instanceof IOException) {
-      throw (IOException)thrown;
+      throw new IOException(thrown);
     } else {
       throw new RuntimeException(thrown);
     }
@@ -790,7 +790,7 @@ public class HLogSplitter {
       try {
         doRun();
       } catch (Throwable t) {
-        LOG.error("Error in log splitting write thread", t);
+        LOG.error("Exiting thread", t);
         writerThreadError(t);
       }
     }
