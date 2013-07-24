@@ -266,7 +266,7 @@ public class ChaosMonkey extends AbstractHBaseTool implements Stoppable {
     @Override
     public void perform() throws Exception {
       LOG.info("Performing action: Restart region server holding ROOT");
-      ServerName server = cluster.getServerHoldingMeta();
+      ServerName server = cluster.getServerHoldingRoot();
       if (server == null) {
         LOG.warn("No server is holding -ROOT- right now.");
         return;
