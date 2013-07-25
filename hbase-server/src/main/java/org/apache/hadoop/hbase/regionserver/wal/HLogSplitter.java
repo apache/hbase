@@ -161,7 +161,7 @@ public class HLogSplitter {
             128*1024*1024));
 
     this.minBatchSize = conf.getInt("hbase.regionserver.wal.logreplay.batch.size", 512);
-    this.distributedLogReplay = this.conf.getBoolean(HConstants.DISTRIBUTED_LOG_REPLAY_KEY, 
+    this.distributedLogReplay = this.conf.getBoolean(HConstants.DISTRIBUTED_LOG_REPLAY_KEY,
       HConstants.DEFAULT_DISTRIBUTED_LOG_REPLAY_CONFIG);
 
     this.numWriterThreads = conf.getInt("hbase.regionserver.hlog.splitlog.writer.threads", 3);
@@ -1026,12 +1026,14 @@ public class HLogSplitter {
             return t;
           }
         });
-      CompletionService<Void> completionService = new ExecutorCompletionService<Void>(
-          closeThreadPool);
+      CompletionService<Void> completionService =
+        new ExecutorCompletionService<Void>(closeThreadPool);
       for (final Map.Entry<byte[], ? extends SinkWriter> writersEntry : writers.entrySet()) {
+        LOG.debug("Submitting close of " + ((WriterAndPath)writersEntry.getValue()).p);
         completionService.submit(new Callable<Void>() {
           public Void call() throws Exception {
             WriterAndPath wap = (WriterAndPath) writersEntry.getValue();
+            LOG.debug("Closing " + wap.p);
             try {
               wap.w.close();
             } catch (IOException ioe) {
@@ -1039,7 +1041,7 @@ public class HLogSplitter {
               thrown.add(ioe);
               return null;
             }
-            LOG.info("Closed path " + wap.p + " (wrote " + wap.editsWritten + " edits in "
+            LOG.info("Closed wap " + wap.p + " (wrote " + wap.editsWritten + " edits in "
                 + (wap.nanosSpent / 1000 / 1000) + "ms)");
 
             if (wap.editsWritten == 0) {
@@ -1147,7 +1149,7 @@ public class HLogSplitter {
               thrown.add(ioe);
               continue;
             }
-            LOG.info("Closed path " + wap.p + " (wrote " + wap.editsWritten + " edits in "
+            LOG.info("Closed log " + wap.p + " (wrote " + wap.editsWritten + " edits in "
                 + (wap.nanosSpent / 1000 / 1000) + "ms)");
           }
         }
@@ -1296,19 +1298,19 @@ public class HLogSplitter {
 
     private long waitRegionOnlineTimeOut;
     private final Set<String> recoveredRegions = Collections.synchronizedSet(new HashSet<String>());
-    private final Map<String, RegionServerWriter> writers = 
+    private final Map<String, RegionServerWriter> writers =
         new ConcurrentHashMap<String, RegionServerWriter>();
     // online encoded region name -> region location map
-    private final Map<String, HRegionLocation> onlineRegions = 
+    private final Map<String, HRegionLocation> onlineRegions =
         new ConcurrentHashMap<String, HRegionLocation>();
 
     private Map<byte[], HConnection> tableNameToHConnectionMap = Collections
         .synchronizedMap(new TreeMap<byte[], HConnection>(Bytes.BYTES_COMPARATOR));
     /**
-     * Map key -> value layout 
+     * Map key -> value layout
      * <servername>:<table name> -> Queue<Row>
      */
-    private Map<String, List<Pair<HRegionLocation, Row>>> serverToBufferQueueMap = 
+    private Map<String, List<Pair<HRegionLocation, Row>>> serverToBufferQueueMap =
         new ConcurrentHashMap<String, List<Pair<HRegionLocation, Row>>>();
     private List<Throwable> thrown = new ArrayList<Throwable>();
 
@@ -1321,7 +1323,7 @@ public class HLogSplitter {
 
     public LogReplayOutputSink(int numWriters) {
       super(numWriters);
-      this.waitRegionOnlineTimeOut = conf.getInt("hbase.splitlog.manager.timeout", 
+      this.waitRegionOnlineTimeOut = conf.getInt("hbase.splitlog.manager.timeout",
         SplitLogManager.DEFAULT_TIMEOUT);
       this.logRecoveredEditsOutputSink = new LogRecoveredEditsOutputSink(numWriters);
       this.logRecoveredEditsOutputSink.setReporter(reporter);
@@ -1333,7 +1335,7 @@ public class HLogSplitter {
         LOG.warn("got an empty buffer, skipping");
         return;
       }
-      
+
       // check if current region in a disabling or disabled table
       if (disablingOrDisabledTables.contains(Bytes.toString(buffer.tableName))) {
         // need fall back to old way
@@ -1433,7 +1435,7 @@ public class HLogSplitter {
             }
 
             try {
-              loc = locateRegionAndRefreshLastFlushedSequenceId(hconn, table, kv.getRow(), 
+              loc = locateRegionAndRefreshLastFlushedSequenceId(hconn, table, kv.getRow(),
                 encodeRegionNameStr);
             } catch (TableNotFoundException ex) {
               // table has been deleted so skip edits of the table
@@ -1493,7 +1495,7 @@ public class HLogSplitter {
 
         // skip the edit
         if(needSkip) continue;
-        
+
         // add the last row
         if (preRow != null && lastAddedRow != preRow) {
           synchronized (serverToBufferQueueMap) {
@@ -1554,7 +1556,7 @@ public class HLogSplitter {
         }
         regionMaxSeqIdInStores.put(loc.getRegionInfo().getEncodedName(), storeIds);
       }
-      
+
       if (cachedLastFlushedSequenceId == null
           || lastFlushedSequenceId > cachedLastFlushedSequenceId) {
         lastFlushedSequenceIds.put(loc.getRegionInfo().getEncodedName(), lastFlushedSequenceId);
@@ -1599,7 +1601,7 @@ public class HLogSplitter {
      */
     private HRegionLocation waitUntilRegionOnline(HRegionLocation loc, byte[] row,
         final long timeout)
-        throws IOException { 
+        throws IOException {
       final long endTime = EnvironmentEdgeManager.currentTimeMillis() + timeout;
       final long pause = conf.getLong(HConstants.HBASE_CLIENT_PAUSE,
         HConstants.DEFAULT_HBASE_CLIENT_PAUSE);
@@ -1631,12 +1633,12 @@ public class HLogSplitter {
           Thread.sleep(expectedSleep);
         } catch (InterruptedException e) {
           Thread.currentThread().interrupt();
-          throw new IOException("Interrupted when waiting regon " + 
+          throw new IOException("Interrupted when waiting regon " +
               loc.getRegionInfo().getEncodedName() + " online.", e);
         }
         tries++;
       }
-      
+
       throw new IOException("Timeout when waiting region " + loc.getRegionInfo().getEncodedName() +
         " online for " + timeout + " milliseconds.", cause);
     }
@@ -1802,7 +1804,7 @@ public class HLogSplitter {
       }
       return hconn;
     }
-    
+
     private String getTableFromLocationStr(String loc) {
       /**
        * location key is in format <server name:port>#<table name>
