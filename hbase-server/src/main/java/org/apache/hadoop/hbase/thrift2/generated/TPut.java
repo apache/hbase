@@ -38,8 +38,9 @@ import org.slf4j.LoggerFactory;
  * don't have one. If you don't provide a default timestamp
  * the current time is inserted.
  * 
- * You can also specify if this Put should be written
- * to the write-ahead Log (WAL) or not. It defaults to true.
+ * You can specify how this Put should be written to the write-ahead Log (WAL)
+ * by changing the durability. If you don't provide durability, it defaults to
+ * column family's default setting for durability.
  */
 public class TPut implements org.apache.thrift.TBase<TPut, TPut._Fields>, java.io.Serializable, Cloneable {
   private static final org.apache.thrift.protocol.TStruct STRUCT_DESC = new org.apache.thrift.protocol.TStruct("TPut");
@@ -47,8 +48,8 @@ public class TPut implements org.apache.thrift.TBase<TPut, TPut._Fields>, java.i
   private static final org.apache.thrift.protocol.TField ROW_FIELD_DESC = new org.apache.thrift.protocol.TField("row", org.apache.thrift.protocol.TType.STRING, (short)1);
   private static final org.apache.thrift.protocol.TField COLUMN_VALUES_FIELD_DESC = new org.apache.thrift.protocol.TField("columnValues", org.apache.thrift.protocol.TType.LIST, (short)2);
   private static final org.apache.thrift.protocol.TField TIMESTAMP_FIELD_DESC = new org.apache.thrift.protocol.TField("timestamp", org.apache.thrift.protocol.TType.I64, (short)3);
-  private static final org.apache.thrift.protocol.TField WRITE_TO_WAL_FIELD_DESC = new org.apache.thrift.protocol.TField("writeToWal", org.apache.thrift.protocol.TType.BOOL, (short)4);
   private static final org.apache.thrift.protocol.TField ATTRIBUTES_FIELD_DESC = new org.apache.thrift.protocol.TField("attributes", org.apache.thrift.protocol.TType.MAP, (short)5);
+  private static final org.apache.thrift.protocol.TField DURABILITY_FIELD_DESC = new org.apache.thrift.protocol.TField("durability", org.apache.thrift.protocol.TType.I32, (short)6);
 
   private static final Map<Class<? extends IScheme>, SchemeFactory> schemes = new HashMap<Class<? extends IScheme>, SchemeFactory>();
   static {
@@ -59,16 +60,24 @@ public class TPut implements org.apache.thrift.TBase<TPut, TPut._Fields>, java.i
   public ByteBuffer row; // required
   public List<TColumnValue> columnValues; // required
   public long timestamp; // optional
-  public boolean writeToWal; // optional
   public Map<ByteBuffer,ByteBuffer> attributes; // optional
+  /**
+   * 
+   * @see TDurability
+   */
+  public TDurability durability; // optional
 
   /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
   public enum _Fields implements org.apache.thrift.TFieldIdEnum {
     ROW((short)1, "row"),
     COLUMN_VALUES((short)2, "columnValues"),
     TIMESTAMP((short)3, "timestamp"),
-    WRITE_TO_WAL((short)4, "writeToWal"),
-    ATTRIBUTES((short)5, "attributes");
+    ATTRIBUTES((short)5, "attributes"),
+    /**
+     * 
+     * @see TDurability
+     */
+    DURABILITY((short)6, "durability");
 
     private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
 
@@ -89,10 +98,10 @@ public class TPut implements org.apache.thrift.TBase<TPut, TPut._Fields>, java.i
           return COLUMN_VALUES;
         case 3: // TIMESTAMP
           return TIMESTAMP;
-        case 4: // WRITE_TO_WAL
-          return WRITE_TO_WAL;
         case 5: // ATTRIBUTES
           return ATTRIBUTES;
+        case 6: // DURABILITY
+          return DURABILITY;
         default:
           return null;
       }
@@ -134,9 +143,8 @@ public class TPut implements org.apache.thrift.TBase<TPut, TPut._Fields>, java.i
 
   // isset id assignments
   private static final int __TIMESTAMP_ISSET_ID = 0;
-  private static final int __WRITETOWAL_ISSET_ID = 1;
   private byte __isset_bitfield = 0;
-  private _Fields optionals[] = {_Fields.TIMESTAMP,_Fields.WRITE_TO_WAL,_Fields.ATTRIBUTES};
+  private _Fields optionals[] = {_Fields.TIMESTAMP,_Fields.ATTRIBUTES,_Fields.DURABILITY};
   public static final Map<_Fields, org.apache.thrift.meta_data.FieldMetaData> metaDataMap;
   static {
     Map<_Fields, org.apache.thrift.meta_data.FieldMetaData> tmpMap = new EnumMap<_Fields, org.apache.thrift.meta_data.FieldMetaData>(_Fields.class);
@@ -147,19 +155,17 @@ public class TPut implements org.apache.thrift.TBase<TPut, TPut._Fields>, java.i
             new org.apache.thrift.meta_data.StructMetaData(org.apache.thrift.protocol.TType.STRUCT, TColumnValue.class))));
     tmpMap.put(_Fields.TIMESTAMP, new org.apache.thrift.meta_data.FieldMetaData("timestamp", org.apache.thrift.TFieldRequirementType.OPTIONAL, 
         new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.I64)));
-    tmpMap.put(_Fields.WRITE_TO_WAL, new org.apache.thrift.meta_data.FieldMetaData("writeToWal", org.apache.thrift.TFieldRequirementType.OPTIONAL, 
-        new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.BOOL)));
     tmpMap.put(_Fields.ATTRIBUTES, new org.apache.thrift.meta_data.FieldMetaData("attributes", org.apache.thrift.TFieldRequirementType.OPTIONAL, 
         new org.apache.thrift.meta_data.MapMetaData(org.apache.thrift.protocol.TType.MAP, 
             new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.STRING            , true), 
             new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.STRING            , true))));
+    tmpMap.put(_Fields.DURABILITY, new org.apache.thrift.meta_data.FieldMetaData("durability", org.apache.thrift.TFieldRequirementType.OPTIONAL, 
+        new org.apache.thrift.meta_data.EnumMetaData(org.apache.thrift.protocol.TType.ENUM, TDurability.class)));
     metaDataMap = Collections.unmodifiableMap(tmpMap);
     org.apache.thrift.meta_data.FieldMetaData.addStructMetaDataMap(TPut.class, metaDataMap);
   }
 
   public TPut() {
-    this.writeToWal = true;
-
   }
 
   public TPut(
@@ -188,7 +194,6 @@ public class TPut implements org.apache.thrift.TBase<TPut, TPut._Fields>, java.i
       this.columnValues = __this__columnValues;
     }
     this.timestamp = other.timestamp;
-    this.writeToWal = other.writeToWal;
     if (other.isSetAttributes()) {
       Map<ByteBuffer,ByteBuffer> __this__attributes = new HashMap<ByteBuffer,ByteBuffer>();
       for (Map.Entry<ByteBuffer, ByteBuffer> other_element : other.attributes.entrySet()) {
@@ -206,6 +211,9 @@ public class TPut implements org.apache.thrift.TBase<TPut, TPut._Fields>, java.i
       }
       this.attributes = __this__attributes;
     }
+    if (other.isSetDurability()) {
+      this.durability = other.durability;
+    }
   }
 
   public TPut deepCopy() {
@@ -218,9 +226,8 @@ public class TPut implements org.apache.thrift.TBase<TPut, TPut._Fields>, java.i
     this.columnValues = null;
     setTimestampIsSet(false);
     this.timestamp = 0;
-    this.writeToWal = true;
-
     this.attributes = null;
+    this.durability = null;
   }
 
   public byte[] getRow() {
@@ -319,29 +326,6 @@ public class TPut implements org.apache.thrift.TBase<TPut, TPut._Fields>, java.i
     __isset_bitfield = EncodingUtils.setBit(__isset_bitfield, __TIMESTAMP_ISSET_ID, value);
   }
 
-  public boolean isWriteToWal() {
-    return this.writeToWal;
-  }
-
-  public TPut setWriteToWal(boolean writeToWal) {
-    this.writeToWal = writeToWal;
-    setWriteToWalIsSet(true);
-    return this;
-  }
-
-  public void unsetWriteToWal() {
-    __isset_bitfield = EncodingUtils.clearBit(__isset_bitfield, __WRITETOWAL_ISSET_ID);
-  }
-
-  /** Returns true if field writeToWal is set (has been assigned a value) and false otherwise */
-  public boolean isSetWriteToWal() {
-    return EncodingUtils.testBit(__isset_bitfield, __WRITETOWAL_ISSET_ID);
-  }
-
-  public void setWriteToWalIsSet(boolean value) {
-    __isset_bitfield = EncodingUtils.setBit(__isset_bitfield, __WRITETOWAL_ISSET_ID, value);
-  }
-
   public int getAttributesSize() {
     return (this.attributes == null) ? 0 : this.attributes.size();
   }
@@ -377,6 +361,38 @@ public class TPut implements org.apache.thrift.TBase<TPut, TPut._Fields>, java.i
     }
   }
 
+  /**
+   * 
+   * @see TDurability
+   */
+  public TDurability getDurability() {
+    return this.durability;
+  }
+
+  /**
+   * 
+   * @see TDurability
+   */
+  public TPut setDurability(TDurability durability) {
+    this.durability = durability;
+    return this;
+  }
+
+  public void unsetDurability() {
+    this.durability = null;
+  }
+
+  /** Returns true if field durability is set (has been assigned a value) and false otherwise */
+  public boolean isSetDurability() {
+    return this.durability != null;
+  }
+
+  public void setDurabilityIsSet(boolean value) {
+    if (!value) {
+      this.durability = null;
+    }
+  }
+
   public void setFieldValue(_Fields field, Object value) {
     switch (field) {
     case ROW:
@@ -403,19 +419,19 @@ public class TPut implements org.apache.thrift.TBase<TPut, TPut._Fields>, java.i
       }
       break;
 
-    case WRITE_TO_WAL:
-      if (value == null) {
-        unsetWriteToWal();
-      } else {
-        setWriteToWal((Boolean)value);
-      }
-      break;
-
     case ATTRIBUTES:
       if (value == null) {
         unsetAttributes();
       } else {
         setAttributes((Map<ByteBuffer,ByteBuffer>)value);
+      }
+      break;
+
+    case DURABILITY:
+      if (value == null) {
+        unsetDurability();
+      } else {
+        setDurability((TDurability)value);
       }
       break;
 
@@ -433,11 +449,11 @@ public class TPut implements org.apache.thrift.TBase<TPut, TPut._Fields>, java.i
     case TIMESTAMP:
       return Long.valueOf(getTimestamp());
 
-    case WRITE_TO_WAL:
-      return Boolean.valueOf(isWriteToWal());
-
     case ATTRIBUTES:
       return getAttributes();
+
+    case DURABILITY:
+      return getDurability();
 
     }
     throw new IllegalStateException();
@@ -456,10 +472,10 @@ public class TPut implements org.apache.thrift.TBase<TPut, TPut._Fields>, java.i
       return isSetColumnValues();
     case TIMESTAMP:
       return isSetTimestamp();
-    case WRITE_TO_WAL:
-      return isSetWriteToWal();
     case ATTRIBUTES:
       return isSetAttributes();
+    case DURABILITY:
+      return isSetDurability();
     }
     throw new IllegalStateException();
   }
@@ -504,21 +520,21 @@ public class TPut implements org.apache.thrift.TBase<TPut, TPut._Fields>, java.i
         return false;
     }
 
-    boolean this_present_writeToWal = true && this.isSetWriteToWal();
-    boolean that_present_writeToWal = true && that.isSetWriteToWal();
-    if (this_present_writeToWal || that_present_writeToWal) {
-      if (!(this_present_writeToWal && that_present_writeToWal))
-        return false;
-      if (this.writeToWal != that.writeToWal)
-        return false;
-    }
-
     boolean this_present_attributes = true && this.isSetAttributes();
     boolean that_present_attributes = true && that.isSetAttributes();
     if (this_present_attributes || that_present_attributes) {
       if (!(this_present_attributes && that_present_attributes))
         return false;
       if (!this.attributes.equals(that.attributes))
+        return false;
+    }
+
+    boolean this_present_durability = true && this.isSetDurability();
+    boolean that_present_durability = true && that.isSetDurability();
+    if (this_present_durability || that_present_durability) {
+      if (!(this_present_durability && that_present_durability))
+        return false;
+      if (!this.durability.equals(that.durability))
         return false;
     }
 
@@ -568,22 +584,22 @@ public class TPut implements org.apache.thrift.TBase<TPut, TPut._Fields>, java.i
         return lastComparison;
       }
     }
-    lastComparison = Boolean.valueOf(isSetWriteToWal()).compareTo(typedOther.isSetWriteToWal());
-    if (lastComparison != 0) {
-      return lastComparison;
-    }
-    if (isSetWriteToWal()) {
-      lastComparison = org.apache.thrift.TBaseHelper.compareTo(this.writeToWal, typedOther.writeToWal);
-      if (lastComparison != 0) {
-        return lastComparison;
-      }
-    }
     lastComparison = Boolean.valueOf(isSetAttributes()).compareTo(typedOther.isSetAttributes());
     if (lastComparison != 0) {
       return lastComparison;
     }
     if (isSetAttributes()) {
       lastComparison = org.apache.thrift.TBaseHelper.compareTo(this.attributes, typedOther.attributes);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+    }
+    lastComparison = Boolean.valueOf(isSetDurability()).compareTo(typedOther.isSetDurability());
+    if (lastComparison != 0) {
+      return lastComparison;
+    }
+    if (isSetDurability()) {
+      lastComparison = org.apache.thrift.TBaseHelper.compareTo(this.durability, typedOther.durability);
       if (lastComparison != 0) {
         return lastComparison;
       }
@@ -629,12 +645,6 @@ public class TPut implements org.apache.thrift.TBase<TPut, TPut._Fields>, java.i
       sb.append(this.timestamp);
       first = false;
     }
-    if (isSetWriteToWal()) {
-      if (!first) sb.append(", ");
-      sb.append("writeToWal:");
-      sb.append(this.writeToWal);
-      first = false;
-    }
     if (isSetAttributes()) {
       if (!first) sb.append(", ");
       sb.append("attributes:");
@@ -642,6 +652,16 @@ public class TPut implements org.apache.thrift.TBase<TPut, TPut._Fields>, java.i
         sb.append("null");
       } else {
         sb.append(this.attributes);
+      }
+      first = false;
+    }
+    if (isSetDurability()) {
+      if (!first) sb.append(", ");
+      sb.append("durability:");
+      if (this.durability == null) {
+        sb.append("null");
+      } else {
+        sb.append(this.durability);
       }
       first = false;
     }
@@ -711,7 +731,7 @@ public class TPut implements org.apache.thrift.TBase<TPut, TPut._Fields>, java.i
                 struct.columnValues = new ArrayList<TColumnValue>(_list26.size);
                 for (int _i27 = 0; _i27 < _list26.size; ++_i27)
                 {
-                  TColumnValue _elem28; // required
+                  TColumnValue _elem28; // optional
                   _elem28 = new TColumnValue();
                   _elem28.read(iprot);
                   struct.columnValues.add(_elem28);
@@ -727,14 +747,6 @@ public class TPut implements org.apache.thrift.TBase<TPut, TPut._Fields>, java.i
             if (schemeField.type == org.apache.thrift.protocol.TType.I64) {
               struct.timestamp = iprot.readI64();
               struct.setTimestampIsSet(true);
-            } else { 
-              org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
-            }
-            break;
-          case 4: // WRITE_TO_WAL
-            if (schemeField.type == org.apache.thrift.protocol.TType.BOOL) {
-              struct.writeToWal = iprot.readBool();
-              struct.setWriteToWalIsSet(true);
             } else { 
               org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
             }
@@ -755,6 +767,14 @@ public class TPut implements org.apache.thrift.TBase<TPut, TPut._Fields>, java.i
                 iprot.readMapEnd();
               }
               struct.setAttributesIsSet(true);
+            } else { 
+              org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
+            }
+            break;
+          case 6: // DURABILITY
+            if (schemeField.type == org.apache.thrift.protocol.TType.I32) {
+              struct.durability = TDurability.findByValue(iprot.readI32());
+              struct.setDurabilityIsSet(true);
             } else { 
               org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
             }
@@ -796,11 +816,6 @@ public class TPut implements org.apache.thrift.TBase<TPut, TPut._Fields>, java.i
         oprot.writeI64(struct.timestamp);
         oprot.writeFieldEnd();
       }
-      if (struct.isSetWriteToWal()) {
-        oprot.writeFieldBegin(WRITE_TO_WAL_FIELD_DESC);
-        oprot.writeBool(struct.writeToWal);
-        oprot.writeFieldEnd();
-      }
       if (struct.attributes != null) {
         if (struct.isSetAttributes()) {
           oprot.writeFieldBegin(ATTRIBUTES_FIELD_DESC);
@@ -813,6 +828,13 @@ public class TPut implements org.apache.thrift.TBase<TPut, TPut._Fields>, java.i
             }
             oprot.writeMapEnd();
           }
+          oprot.writeFieldEnd();
+        }
+      }
+      if (struct.durability != null) {
+        if (struct.isSetDurability()) {
+          oprot.writeFieldBegin(DURABILITY_FIELD_DESC);
+          oprot.writeI32(struct.durability.getValue());
           oprot.writeFieldEnd();
         }
       }
@@ -845,18 +867,15 @@ public class TPut implements org.apache.thrift.TBase<TPut, TPut._Fields>, java.i
       if (struct.isSetTimestamp()) {
         optionals.set(0);
       }
-      if (struct.isSetWriteToWal()) {
+      if (struct.isSetAttributes()) {
         optionals.set(1);
       }
-      if (struct.isSetAttributes()) {
+      if (struct.isSetDurability()) {
         optionals.set(2);
       }
       oprot.writeBitSet(optionals, 3);
       if (struct.isSetTimestamp()) {
         oprot.writeI64(struct.timestamp);
-      }
-      if (struct.isSetWriteToWal()) {
-        oprot.writeBool(struct.writeToWal);
       }
       if (struct.isSetAttributes()) {
         {
@@ -867,6 +886,9 @@ public class TPut implements org.apache.thrift.TBase<TPut, TPut._Fields>, java.i
             oprot.writeBinary(_iter36.getValue());
           }
         }
+      }
+      if (struct.isSetDurability()) {
+        oprot.writeI32(struct.durability.getValue());
       }
     }
 
@@ -880,7 +902,7 @@ public class TPut implements org.apache.thrift.TBase<TPut, TPut._Fields>, java.i
         struct.columnValues = new ArrayList<TColumnValue>(_list37.size);
         for (int _i38 = 0; _i38 < _list37.size; ++_i38)
         {
-          TColumnValue _elem39; // required
+          TColumnValue _elem39; // optional
           _elem39 = new TColumnValue();
           _elem39.read(iprot);
           struct.columnValues.add(_elem39);
@@ -893,10 +915,6 @@ public class TPut implements org.apache.thrift.TBase<TPut, TPut._Fields>, java.i
         struct.setTimestampIsSet(true);
       }
       if (incoming.get(1)) {
-        struct.writeToWal = iprot.readBool();
-        struct.setWriteToWalIsSet(true);
-      }
-      if (incoming.get(2)) {
         {
           org.apache.thrift.protocol.TMap _map40 = new org.apache.thrift.protocol.TMap(org.apache.thrift.protocol.TType.STRING, org.apache.thrift.protocol.TType.STRING, iprot.readI32());
           struct.attributes = new HashMap<ByteBuffer,ByteBuffer>(2*_map40.size);
@@ -910,6 +928,10 @@ public class TPut implements org.apache.thrift.TBase<TPut, TPut._Fields>, java.i
           }
         }
         struct.setAttributesIsSet(true);
+      }
+      if (incoming.get(2)) {
+        struct.durability = TDurability.findByValue(iprot.readI32());
+        struct.setDurabilityIsSet(true);
       }
     }
   }

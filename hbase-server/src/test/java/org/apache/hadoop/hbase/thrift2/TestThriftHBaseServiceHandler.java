@@ -32,6 +32,7 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Increment;
 import org.apache.hadoop.hbase.client.Delete;
+import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.filter.ParseFilter;
 import org.apache.hadoop.hbase.test.MetricsAssertHelper;
 import org.apache.hadoop.hbase.thrift.ThriftMetrics;
@@ -50,6 +51,7 @@ import org.apache.hadoop.hbase.thrift2.generated.TResult;
 import org.apache.hadoop.hbase.thrift2.generated.TScan;
 import org.apache.hadoop.hbase.thrift2.generated.TMutation;
 import org.apache.hadoop.hbase.thrift2.generated.TRowMutations;
+import org.apache.hadoop.hbase.thrift2.generated.TDurability;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.thrift.TException;
 import org.junit.AfterClass;
@@ -863,6 +865,75 @@ public class TestThriftHBaseServiceHandler {
     expectedColumnValues = new ArrayList<TColumnValue>();
     expectedColumnValues.add(columnValueB);
     assertTColumnValuesEqual(expectedColumnValues, returnedColumnValues);
+  }
+
+  /**
+   * Create TPut, TDelete , TIncrement objects, set durability then call ThriftUtility
+   * functions to get Put , Delete and Increment respectively. Use getDurability to make sure
+   * the returned objects have the appropriate durability setting.
+   *
+   * @throws Exception
+   */
+  @Test
+  public void testDurability() throws Exception {
+    byte[] rowName = "testDurability".getBytes();
+    List<TColumnValue> columnValues = new ArrayList<TColumnValue>();
+    columnValues.add(new TColumnValue(wrap(familyAname), wrap(qualifierAname), wrap(valueAname)));
+
+    List<TColumnIncrement> incrementColumns = new ArrayList<TColumnIncrement>();
+    incrementColumns.add(new TColumnIncrement(wrap(familyAname), wrap(qualifierAname)));
+
+    TDelete tDelete = new TDelete(wrap(rowName));
+    tDelete.setDurability(TDurability.SKIP_WAL);
+    Delete delete = deleteFromThrift(tDelete);
+    assertEquals(delete.getDurability(), Durability.SKIP_WAL);
+
+    tDelete.setDurability(TDurability.ASYNC_WAL);
+    delete = deleteFromThrift(tDelete);
+    assertEquals(delete.getDurability(), Durability.ASYNC_WAL);
+
+    tDelete.setDurability(TDurability.SYNC_WAL);
+    delete = deleteFromThrift(tDelete);
+    assertEquals(delete.getDurability(), Durability.SYNC_WAL);
+
+    tDelete.setDurability(TDurability.FSYNC_WAL);
+    delete = deleteFromThrift(tDelete);
+    assertEquals(delete.getDurability(), Durability.FSYNC_WAL);
+
+    TPut tPut = new TPut(wrap(rowName), columnValues);
+    tPut.setDurability(TDurability.SKIP_WAL);
+    Put put = putFromThrift(tPut);
+    assertEquals(put.getDurability(), Durability.SKIP_WAL);
+
+    tPut.setDurability(TDurability.ASYNC_WAL);
+    put = putFromThrift(tPut);
+    assertEquals(put.getDurability(), Durability.ASYNC_WAL);
+
+    tPut.setDurability(TDurability.SYNC_WAL);
+    put = putFromThrift(tPut);
+    assertEquals(put.getDurability(), Durability.SYNC_WAL);
+
+    tPut.setDurability(TDurability.FSYNC_WAL);
+    put = putFromThrift(tPut);
+    assertEquals(put.getDurability(), Durability.FSYNC_WAL);
+
+    TIncrement tIncrement = new TIncrement(wrap(rowName), incrementColumns);
+
+    tIncrement.setDurability(TDurability.SKIP_WAL);
+    Increment increment = incrementFromThrift(tIncrement);
+    assertEquals(increment.getDurability(), Durability.SKIP_WAL);
+
+    tIncrement.setDurability(TDurability.ASYNC_WAL);
+    increment = incrementFromThrift(tIncrement);
+    assertEquals(increment.getDurability(), Durability.ASYNC_WAL);
+
+    tIncrement.setDurability(TDurability.SYNC_WAL);
+    increment = incrementFromThrift(tIncrement);
+    assertEquals(increment.getDurability(), Durability.SYNC_WAL);
+
+    tIncrement.setDurability(TDurability.FSYNC_WAL);
+    increment = incrementFromThrift(tIncrement);
+    assertEquals(increment.getDurability(), Durability.FSYNC_WAL);
   }
 }
 
