@@ -742,7 +742,8 @@ public class TestHLogSplit {
       InstrumentedSequenceFileLogWriter.activateFailure = true;
       HLogSplitter.split(HBASEDIR, HLOGDIR, OLDLOGDIR, fs, conf);
     } catch (IOException e) {
-      assertEquals("This exception is instrumented and should only be thrown for testing", e.getMessage());
+      assertTrue(e.getMessage().
+        contains("This exception is instrumented and should only be thrown for testing"));
       throw e;
     } finally {
       InstrumentedSequenceFileLogWriter.activateFailure = false;
@@ -810,13 +811,36 @@ public class TestHLogSplit {
         return mockWriter;
       }
     };
-    // Start up background thread that will thread dump if we are stuck here.
-    Threads.threadDumpingIsAlive(Thread.currentThread());
+    // Set up a background thread dumper.  Needs a thread to depend on and then we need to run
+    // the thread dumping in a background thread so it does not hold up the test.
+    final AtomicBoolean stop = new AtomicBoolean(false);
+    final Thread someOldThread = new Thread("Some-old-thread") {
+      @Override
+      public void run() {
+        while(!stop.get()) Threads.sleep(10);
+      }
+    };
+    someOldThread.setDaemon(true);
+    someOldThread.start();
+    final Thread t = new Thread("Background-thread-dumper") {
+      public void run() {
+        try {
+          Threads.threadDumpingIsAlive(someOldThread);
+        } catch (InterruptedException e) {
+          e.printStackTrace();
+        }
+      }
+    };
+    t.setDaemon(true);
+    t.start();
     try {
       logSplitter.splitLogFile(logfiles[0], null);
       fail("Didn't throw!");
     } catch (IOException ioe) {
       assertTrue(ioe.toString().contains("Injected"));
+    } finally {
+      // Setting this to true will turn off the background thread dumper.
+      stop.set(true);
     }
   }
 
