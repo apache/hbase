@@ -52,9 +52,6 @@ import org.slf4j.LoggerFactory;
  * as if you had added a TColumn for every column family and this timestamp
  * (i.e. all versions older than or equal in all column families will be deleted)
  * 
- * You can specify how this Delete should be written to the write-ahead Log (WAL)
- * by changing the durability. If you don't provide durability, it defaults to
- * column family's default setting for durability.
  */
 public class TDelete implements org.apache.thrift.TBase<TDelete, TDelete._Fields>, java.io.Serializable, Cloneable {
   private static final org.apache.thrift.protocol.TStruct STRUCT_DESC = new org.apache.thrift.protocol.TStruct("TDelete");
@@ -63,8 +60,8 @@ public class TDelete implements org.apache.thrift.TBase<TDelete, TDelete._Fields
   private static final org.apache.thrift.protocol.TField COLUMNS_FIELD_DESC = new org.apache.thrift.protocol.TField("columns", org.apache.thrift.protocol.TType.LIST, (short)2);
   private static final org.apache.thrift.protocol.TField TIMESTAMP_FIELD_DESC = new org.apache.thrift.protocol.TField("timestamp", org.apache.thrift.protocol.TType.I64, (short)3);
   private static final org.apache.thrift.protocol.TField DELETE_TYPE_FIELD_DESC = new org.apache.thrift.protocol.TField("deleteType", org.apache.thrift.protocol.TType.I32, (short)4);
+  private static final org.apache.thrift.protocol.TField WRITE_TO_WAL_FIELD_DESC = new org.apache.thrift.protocol.TField("writeToWal", org.apache.thrift.protocol.TType.BOOL, (short)5);
   private static final org.apache.thrift.protocol.TField ATTRIBUTES_FIELD_DESC = new org.apache.thrift.protocol.TField("attributes", org.apache.thrift.protocol.TType.MAP, (short)6);
-  private static final org.apache.thrift.protocol.TField DURABILITY_FIELD_DESC = new org.apache.thrift.protocol.TField("durability", org.apache.thrift.protocol.TType.I32, (short)7);
 
   private static final Map<Class<? extends IScheme>, SchemeFactory> schemes = new HashMap<Class<? extends IScheme>, SchemeFactory>();
   static {
@@ -80,12 +77,8 @@ public class TDelete implements org.apache.thrift.TBase<TDelete, TDelete._Fields
    * @see TDeleteType
    */
   public TDeleteType deleteType; // optional
+  public boolean writeToWal; // optional
   public Map<ByteBuffer,ByteBuffer> attributes; // optional
-  /**
-   * 
-   * @see TDurability
-   */
-  public TDurability durability; // optional
 
   /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
   public enum _Fields implements org.apache.thrift.TFieldIdEnum {
@@ -97,12 +90,8 @@ public class TDelete implements org.apache.thrift.TBase<TDelete, TDelete._Fields
      * @see TDeleteType
      */
     DELETE_TYPE((short)4, "deleteType"),
-    ATTRIBUTES((short)6, "attributes"),
-    /**
-     * 
-     * @see TDurability
-     */
-    DURABILITY((short)7, "durability");
+    WRITE_TO_WAL((short)5, "writeToWal"),
+    ATTRIBUTES((short)6, "attributes");
 
     private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
 
@@ -125,10 +114,10 @@ public class TDelete implements org.apache.thrift.TBase<TDelete, TDelete._Fields
           return TIMESTAMP;
         case 4: // DELETE_TYPE
           return DELETE_TYPE;
+        case 5: // WRITE_TO_WAL
+          return WRITE_TO_WAL;
         case 6: // ATTRIBUTES
           return ATTRIBUTES;
-        case 7: // DURABILITY
-          return DURABILITY;
         default:
           return null;
       }
@@ -170,8 +159,9 @@ public class TDelete implements org.apache.thrift.TBase<TDelete, TDelete._Fields
 
   // isset id assignments
   private static final int __TIMESTAMP_ISSET_ID = 0;
+  private static final int __WRITETOWAL_ISSET_ID = 1;
   private byte __isset_bitfield = 0;
-  private _Fields optionals[] = {_Fields.COLUMNS,_Fields.TIMESTAMP,_Fields.DELETE_TYPE,_Fields.ATTRIBUTES,_Fields.DURABILITY};
+  private _Fields optionals[] = {_Fields.COLUMNS,_Fields.TIMESTAMP,_Fields.DELETE_TYPE,_Fields.WRITE_TO_WAL,_Fields.ATTRIBUTES};
   public static final Map<_Fields, org.apache.thrift.meta_data.FieldMetaData> metaDataMap;
   static {
     Map<_Fields, org.apache.thrift.meta_data.FieldMetaData> tmpMap = new EnumMap<_Fields, org.apache.thrift.meta_data.FieldMetaData>(_Fields.class);
@@ -184,18 +174,20 @@ public class TDelete implements org.apache.thrift.TBase<TDelete, TDelete._Fields
         new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.I64)));
     tmpMap.put(_Fields.DELETE_TYPE, new org.apache.thrift.meta_data.FieldMetaData("deleteType", org.apache.thrift.TFieldRequirementType.OPTIONAL, 
         new org.apache.thrift.meta_data.EnumMetaData(org.apache.thrift.protocol.TType.ENUM, TDeleteType.class)));
+    tmpMap.put(_Fields.WRITE_TO_WAL, new org.apache.thrift.meta_data.FieldMetaData("writeToWal", org.apache.thrift.TFieldRequirementType.OPTIONAL, 
+        new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.BOOL)));
     tmpMap.put(_Fields.ATTRIBUTES, new org.apache.thrift.meta_data.FieldMetaData("attributes", org.apache.thrift.TFieldRequirementType.OPTIONAL, 
         new org.apache.thrift.meta_data.MapMetaData(org.apache.thrift.protocol.TType.MAP, 
             new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.STRING            , true), 
             new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.STRING            , true))));
-    tmpMap.put(_Fields.DURABILITY, new org.apache.thrift.meta_data.FieldMetaData("durability", org.apache.thrift.TFieldRequirementType.OPTIONAL, 
-        new org.apache.thrift.meta_data.EnumMetaData(org.apache.thrift.protocol.TType.ENUM, TDurability.class)));
     metaDataMap = Collections.unmodifiableMap(tmpMap);
     org.apache.thrift.meta_data.FieldMetaData.addStructMetaDataMap(TDelete.class, metaDataMap);
   }
 
   public TDelete() {
     this.deleteType = org.apache.hadoop.hbase.thrift2.generated.TDeleteType.DELETE_COLUMNS;
+
+    this.writeToWal = true;
 
   }
 
@@ -226,6 +218,7 @@ public class TDelete implements org.apache.thrift.TBase<TDelete, TDelete._Fields
     if (other.isSetDeleteType()) {
       this.deleteType = other.deleteType;
     }
+    this.writeToWal = other.writeToWal;
     if (other.isSetAttributes()) {
       Map<ByteBuffer,ByteBuffer> __this__attributes = new HashMap<ByteBuffer,ByteBuffer>();
       for (Map.Entry<ByteBuffer, ByteBuffer> other_element : other.attributes.entrySet()) {
@@ -243,9 +236,6 @@ public class TDelete implements org.apache.thrift.TBase<TDelete, TDelete._Fields
       }
       this.attributes = __this__attributes;
     }
-    if (other.isSetDurability()) {
-      this.durability = other.durability;
-    }
   }
 
   public TDelete deepCopy() {
@@ -260,8 +250,9 @@ public class TDelete implements org.apache.thrift.TBase<TDelete, TDelete._Fields
     this.timestamp = 0;
     this.deleteType = org.apache.hadoop.hbase.thrift2.generated.TDeleteType.DELETE_COLUMNS;
 
+    this.writeToWal = true;
+
     this.attributes = null;
-    this.durability = null;
   }
 
   public byte[] getRow() {
@@ -392,6 +383,29 @@ public class TDelete implements org.apache.thrift.TBase<TDelete, TDelete._Fields
     }
   }
 
+  public boolean isWriteToWal() {
+    return this.writeToWal;
+  }
+
+  public TDelete setWriteToWal(boolean writeToWal) {
+    this.writeToWal = writeToWal;
+    setWriteToWalIsSet(true);
+    return this;
+  }
+
+  public void unsetWriteToWal() {
+    __isset_bitfield = EncodingUtils.clearBit(__isset_bitfield, __WRITETOWAL_ISSET_ID);
+  }
+
+  /** Returns true if field writeToWal is set (has been assigned a value) and false otherwise */
+  public boolean isSetWriteToWal() {
+    return EncodingUtils.testBit(__isset_bitfield, __WRITETOWAL_ISSET_ID);
+  }
+
+  public void setWriteToWalIsSet(boolean value) {
+    __isset_bitfield = EncodingUtils.setBit(__isset_bitfield, __WRITETOWAL_ISSET_ID, value);
+  }
+
   public int getAttributesSize() {
     return (this.attributes == null) ? 0 : this.attributes.size();
   }
@@ -424,38 +438,6 @@ public class TDelete implements org.apache.thrift.TBase<TDelete, TDelete._Fields
   public void setAttributesIsSet(boolean value) {
     if (!value) {
       this.attributes = null;
-    }
-  }
-
-  /**
-   * 
-   * @see TDurability
-   */
-  public TDurability getDurability() {
-    return this.durability;
-  }
-
-  /**
-   * 
-   * @see TDurability
-   */
-  public TDelete setDurability(TDurability durability) {
-    this.durability = durability;
-    return this;
-  }
-
-  public void unsetDurability() {
-    this.durability = null;
-  }
-
-  /** Returns true if field durability is set (has been assigned a value) and false otherwise */
-  public boolean isSetDurability() {
-    return this.durability != null;
-  }
-
-  public void setDurabilityIsSet(boolean value) {
-    if (!value) {
-      this.durability = null;
     }
   }
 
@@ -493,19 +475,19 @@ public class TDelete implements org.apache.thrift.TBase<TDelete, TDelete._Fields
       }
       break;
 
+    case WRITE_TO_WAL:
+      if (value == null) {
+        unsetWriteToWal();
+      } else {
+        setWriteToWal((Boolean)value);
+      }
+      break;
+
     case ATTRIBUTES:
       if (value == null) {
         unsetAttributes();
       } else {
         setAttributes((Map<ByteBuffer,ByteBuffer>)value);
-      }
-      break;
-
-    case DURABILITY:
-      if (value == null) {
-        unsetDurability();
-      } else {
-        setDurability((TDurability)value);
       }
       break;
 
@@ -526,11 +508,11 @@ public class TDelete implements org.apache.thrift.TBase<TDelete, TDelete._Fields
     case DELETE_TYPE:
       return getDeleteType();
 
+    case WRITE_TO_WAL:
+      return Boolean.valueOf(isWriteToWal());
+
     case ATTRIBUTES:
       return getAttributes();
-
-    case DURABILITY:
-      return getDurability();
 
     }
     throw new IllegalStateException();
@@ -551,10 +533,10 @@ public class TDelete implements org.apache.thrift.TBase<TDelete, TDelete._Fields
       return isSetTimestamp();
     case DELETE_TYPE:
       return isSetDeleteType();
+    case WRITE_TO_WAL:
+      return isSetWriteToWal();
     case ATTRIBUTES:
       return isSetAttributes();
-    case DURABILITY:
-      return isSetDurability();
     }
     throw new IllegalStateException();
   }
@@ -608,21 +590,21 @@ public class TDelete implements org.apache.thrift.TBase<TDelete, TDelete._Fields
         return false;
     }
 
+    boolean this_present_writeToWal = true && this.isSetWriteToWal();
+    boolean that_present_writeToWal = true && that.isSetWriteToWal();
+    if (this_present_writeToWal || that_present_writeToWal) {
+      if (!(this_present_writeToWal && that_present_writeToWal))
+        return false;
+      if (this.writeToWal != that.writeToWal)
+        return false;
+    }
+
     boolean this_present_attributes = true && this.isSetAttributes();
     boolean that_present_attributes = true && that.isSetAttributes();
     if (this_present_attributes || that_present_attributes) {
       if (!(this_present_attributes && that_present_attributes))
         return false;
       if (!this.attributes.equals(that.attributes))
-        return false;
-    }
-
-    boolean this_present_durability = true && this.isSetDurability();
-    boolean that_present_durability = true && that.isSetDurability();
-    if (this_present_durability || that_present_durability) {
-      if (!(this_present_durability && that_present_durability))
-        return false;
-      if (!this.durability.equals(that.durability))
         return false;
     }
 
@@ -682,22 +664,22 @@ public class TDelete implements org.apache.thrift.TBase<TDelete, TDelete._Fields
         return lastComparison;
       }
     }
+    lastComparison = Boolean.valueOf(isSetWriteToWal()).compareTo(typedOther.isSetWriteToWal());
+    if (lastComparison != 0) {
+      return lastComparison;
+    }
+    if (isSetWriteToWal()) {
+      lastComparison = org.apache.thrift.TBaseHelper.compareTo(this.writeToWal, typedOther.writeToWal);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+    }
     lastComparison = Boolean.valueOf(isSetAttributes()).compareTo(typedOther.isSetAttributes());
     if (lastComparison != 0) {
       return lastComparison;
     }
     if (isSetAttributes()) {
       lastComparison = org.apache.thrift.TBaseHelper.compareTo(this.attributes, typedOther.attributes);
-      if (lastComparison != 0) {
-        return lastComparison;
-      }
-    }
-    lastComparison = Boolean.valueOf(isSetDurability()).compareTo(typedOther.isSetDurability());
-    if (lastComparison != 0) {
-      return lastComparison;
-    }
-    if (isSetDurability()) {
-      lastComparison = org.apache.thrift.TBaseHelper.compareTo(this.durability, typedOther.durability);
       if (lastComparison != 0) {
         return lastComparison;
       }
@@ -755,6 +737,12 @@ public class TDelete implements org.apache.thrift.TBase<TDelete, TDelete._Fields
       }
       first = false;
     }
+    if (isSetWriteToWal()) {
+      if (!first) sb.append(", ");
+      sb.append("writeToWal:");
+      sb.append(this.writeToWal);
+      first = false;
+    }
     if (isSetAttributes()) {
       if (!first) sb.append(", ");
       sb.append("attributes:");
@@ -762,16 +750,6 @@ public class TDelete implements org.apache.thrift.TBase<TDelete, TDelete._Fields
         sb.append("null");
       } else {
         sb.append(this.attributes);
-      }
-      first = false;
-    }
-    if (isSetDurability()) {
-      if (!first) sb.append(", ");
-      sb.append("durability:");
-      if (this.durability == null) {
-        sb.append("null");
-      } else {
-        sb.append(this.durability);
       }
       first = false;
     }
@@ -838,7 +816,7 @@ public class TDelete implements org.apache.thrift.TBase<TDelete, TDelete._Fields
                 struct.columns = new ArrayList<TColumn>(_list44.size);
                 for (int _i45 = 0; _i45 < _list44.size; ++_i45)
                 {
-                  TColumn _elem46; // optional
+                  TColumn _elem46; // required
                   _elem46 = new TColumn();
                   _elem46.read(iprot);
                   struct.columns.add(_elem46);
@@ -866,6 +844,14 @@ public class TDelete implements org.apache.thrift.TBase<TDelete, TDelete._Fields
               org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
             }
             break;
+          case 5: // WRITE_TO_WAL
+            if (schemeField.type == org.apache.thrift.protocol.TType.BOOL) {
+              struct.writeToWal = iprot.readBool();
+              struct.setWriteToWalIsSet(true);
+            } else { 
+              org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
+            }
+            break;
           case 6: // ATTRIBUTES
             if (schemeField.type == org.apache.thrift.protocol.TType.MAP) {
               {
@@ -882,14 +868,6 @@ public class TDelete implements org.apache.thrift.TBase<TDelete, TDelete._Fields
                 iprot.readMapEnd();
               }
               struct.setAttributesIsSet(true);
-            } else { 
-              org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
-            }
-            break;
-          case 7: // DURABILITY
-            if (schemeField.type == org.apache.thrift.protocol.TType.I32) {
-              struct.durability = TDurability.findByValue(iprot.readI32());
-              struct.setDurabilityIsSet(true);
             } else { 
               org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
             }
@@ -940,6 +918,11 @@ public class TDelete implements org.apache.thrift.TBase<TDelete, TDelete._Fields
           oprot.writeFieldEnd();
         }
       }
+      if (struct.isSetWriteToWal()) {
+        oprot.writeFieldBegin(WRITE_TO_WAL_FIELD_DESC);
+        oprot.writeBool(struct.writeToWal);
+        oprot.writeFieldEnd();
+      }
       if (struct.attributes != null) {
         if (struct.isSetAttributes()) {
           oprot.writeFieldBegin(ATTRIBUTES_FIELD_DESC);
@@ -952,13 +935,6 @@ public class TDelete implements org.apache.thrift.TBase<TDelete, TDelete._Fields
             }
             oprot.writeMapEnd();
           }
-          oprot.writeFieldEnd();
-        }
-      }
-      if (struct.durability != null) {
-        if (struct.isSetDurability()) {
-          oprot.writeFieldBegin(DURABILITY_FIELD_DESC);
-          oprot.writeI32(struct.durability.getValue());
           oprot.writeFieldEnd();
         }
       }
@@ -990,10 +966,10 @@ public class TDelete implements org.apache.thrift.TBase<TDelete, TDelete._Fields
       if (struct.isSetDeleteType()) {
         optionals.set(2);
       }
-      if (struct.isSetAttributes()) {
+      if (struct.isSetWriteToWal()) {
         optionals.set(3);
       }
-      if (struct.isSetDurability()) {
+      if (struct.isSetAttributes()) {
         optionals.set(4);
       }
       oprot.writeBitSet(optionals, 5);
@@ -1012,6 +988,9 @@ public class TDelete implements org.apache.thrift.TBase<TDelete, TDelete._Fields
       if (struct.isSetDeleteType()) {
         oprot.writeI32(struct.deleteType.getValue());
       }
+      if (struct.isSetWriteToWal()) {
+        oprot.writeBool(struct.writeToWal);
+      }
       if (struct.isSetAttributes()) {
         {
           oprot.writeI32(struct.attributes.size());
@@ -1021,9 +1000,6 @@ public class TDelete implements org.apache.thrift.TBase<TDelete, TDelete._Fields
             oprot.writeBinary(_iter54.getValue());
           }
         }
-      }
-      if (struct.isSetDurability()) {
-        oprot.writeI32(struct.durability.getValue());
       }
     }
 
@@ -1039,7 +1015,7 @@ public class TDelete implements org.apache.thrift.TBase<TDelete, TDelete._Fields
           struct.columns = new ArrayList<TColumn>(_list55.size);
           for (int _i56 = 0; _i56 < _list55.size; ++_i56)
           {
-            TColumn _elem57; // optional
+            TColumn _elem57; // required
             _elem57 = new TColumn();
             _elem57.read(iprot);
             struct.columns.add(_elem57);
@@ -1056,6 +1032,10 @@ public class TDelete implements org.apache.thrift.TBase<TDelete, TDelete._Fields
         struct.setDeleteTypeIsSet(true);
       }
       if (incoming.get(3)) {
+        struct.writeToWal = iprot.readBool();
+        struct.setWriteToWalIsSet(true);
+      }
+      if (incoming.get(4)) {
         {
           org.apache.thrift.protocol.TMap _map58 = new org.apache.thrift.protocol.TMap(org.apache.thrift.protocol.TType.STRING, org.apache.thrift.protocol.TType.STRING, iprot.readI32());
           struct.attributes = new HashMap<ByteBuffer,ByteBuffer>(2*_map58.size);
@@ -1069,10 +1049,6 @@ public class TDelete implements org.apache.thrift.TBase<TDelete, TDelete._Fields
           }
         }
         struct.setAttributesIsSet(true);
-      }
-      if (incoming.get(4)) {
-        struct.durability = TDurability.findByValue(iprot.readI32());
-        struct.setDurabilityIsSet(true);
       }
     }
   }
