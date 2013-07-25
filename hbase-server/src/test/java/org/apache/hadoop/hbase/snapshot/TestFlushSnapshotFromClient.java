@@ -87,6 +87,7 @@ public class TestFlushSnapshotFromClient {
   private static final byte[] TEST_FAM = Bytes.toBytes("fam");
   private static final byte[] TEST_QUAL = Bytes.toBytes("q");
   private static final byte[] TABLE_NAME = Bytes.toBytes(STRING_TABLE_NAME);
+  private final int DEFAULT_NUM_ROWS = 100;
 
   /**
    * Setup the config for the cluster
@@ -159,7 +160,7 @@ public class TestFlushSnapshotFromClient {
 
     // put some stuff in the table
     HTable table = new HTable(UTIL.getConfiguration(), TABLE_NAME);
-    loadData(table, 10000, TEST_FAM);
+    loadData(table, DEFAULT_NUM_ROWS, TEST_FAM);
 
     // get the name of all the regionservers hosting the snapshotted table
     Set<String> snapshotServers = new HashSet<String>();
@@ -259,7 +260,7 @@ public class TestFlushSnapshotFromClient {
 
   @Test
   public void testSnapshotStateAfterMerge() throws Exception {
-    int numRows = 10000;
+    int numRows = DEFAULT_NUM_ROWS;
     HBaseAdmin admin = UTIL.getHBaseAdmin();
     // make sure we don't fail on listing snapshots
     SnapshotTestingUtils.assertNoSnapshots(admin);
@@ -316,7 +317,7 @@ public class TestFlushSnapshotFromClient {
 
   @Test
   public void testTakeSnapshotAfterMerge() throws Exception {
-    int numRows = 10000;
+    int numRows = DEFAULT_NUM_ROWS;
     HBaseAdmin admin = UTIL.getHBaseAdmin();
     // make sure we don't fail on listing snapshots
     SnapshotTestingUtils.assertNoSnapshots(admin);
@@ -373,7 +374,7 @@ public class TestFlushSnapshotFromClient {
     // make sure we don't fail on listing snapshots
     SnapshotTestingUtils.assertNoSnapshots(admin);
     // load the table so we have some data
-    loadData(new HTable(UTIL.getConfiguration(), TABLE_NAME), 10000, TEST_FAM);
+    loadData(new HTable(UTIL.getConfiguration(), TABLE_NAME), DEFAULT_NUM_ROWS, TEST_FAM);
     // and wait until everything stabilizes
     waitForTableToBeOnline(TABLE_NAME);
 
@@ -444,8 +445,8 @@ public class TestFlushSnapshotFromClient {
     // create second testing table
     createTable(TABLE2_NAME, TEST_FAM);
     // load the table so we have some data
-    loadData(new HTable(UTIL.getConfiguration(), TABLE_NAME), 10000, TEST_FAM);
-    loadData(new HTable(UTIL.getConfiguration(), TABLE2_NAME), 10000, TEST_FAM);
+    loadData(new HTable(UTIL.getConfiguration(), TABLE_NAME), DEFAULT_NUM_ROWS, TEST_FAM);
+    loadData(new HTable(UTIL.getConfiguration(), TABLE2_NAME), DEFAULT_NUM_ROWS, TEST_FAM);
     // and wait until everything stabilizes
     waitForTableToBeOnline(TABLE_NAME);
     waitForTableToBeOnline(TABLE2_NAME);
