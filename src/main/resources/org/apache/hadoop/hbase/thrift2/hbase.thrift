@@ -78,6 +78,21 @@ enum TDeleteType {
 }
 
 /**
+ * Specify Durability:
+ *  - SKIP_WAL means do not write the Mutation to the WAL.
+ *  - ASYNC_WAL means write the Mutation to the WAL asynchronously,
+ *  - SYNC_WAL means write the Mutation to the WAL synchronously,
+ *  - FSYNC_WAL means Write the Mutation to the WAL synchronously and force the entries to disk.
+ */
+
+enum TDurability {
+  SKIP_WAL = 1,
+  ASYNC_WAL = 2,
+  SYNC_WAL = 3,
+  FSYNC_WAL = 4
+}
+
+/**
  * Used to perform Get operations on a single row.
  *
  * The scope can be further narrowed down by specifying a list of
@@ -117,8 +132,9 @@ struct TPut {
   1: required binary row,
   2: required list<TColumnValue> columnValues
   3: optional i64 timestamp,
-  4: optional bool writeToWal = 1,
-  5: optional map<binary, binary> attributes
+  4: optional bool writeToWal,
+  5: optional map<binary, binary> attributes,
+  6: optional TDurability durability
 }
 
 /**
@@ -149,8 +165,9 @@ struct TDelete {
   2: optional list<TColumn> columns,
   3: optional i64 timestamp,
   4: optional TDeleteType deleteType = 1,
-  5: optional bool writeToWal = 1,
-  6: optional map<binary, binary> attributes
+  5: optional bool writeToWal,
+  6: optional map<binary, binary> attributes,
+  7: optional TDurability durability
 }
 
 /**

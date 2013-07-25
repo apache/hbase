@@ -165,7 +165,11 @@ public class ThriftUtilities {
       out = new Put(in.getRow());
     }
 
-    out.setWriteToWAL(in.isWriteToWal());
+    if (in.isSetDurability()) {
+      out.setDurability(durabilityFromThrift(in.getDurability()));
+    } else if (in.isSetWriteToWal()) {
+      out.setWriteToWAL(in.isWriteToWal());
+    }
 
     for (TColumnValue columnValue : in.getColumnValues()) {
       if (columnValue.isSetTimestamp()) {
@@ -248,7 +252,12 @@ public class ThriftUtilities {
       addAttributes(out,in.getAttributes());
     }
 
-    out.setWriteToWAL(in.isWriteToWal());
+    if (in.isSetDurability()) {
+      out.setDurability(durabilityFromThrift(in.getDurability()));
+    } else if (in.isSetWriteToWal()) {
+      out.setWriteToWAL(in.isWriteToWal());
+    }
+
     return out;
   }
 
@@ -403,6 +412,16 @@ public class ThriftUtilities {
       String name = Bytes.toStringBinary(getBytes(entry.getKey()));
       byte[] value =  getBytes(entry.getValue());
       op.setAttribute(name, value);
+    }
+  }
+
+  private static Durability durabilityFromThrift(TDurability tDurability) {
+    switch (tDurability.getValue()) {
+      case 1: return Durability.SKIP_WAL;
+      case 2: return Durability.ASYNC_WAL;
+      case 3: return Durability.SYNC_WAL;
+      case 4: return Durability.FSYNC_WAL;
+      default: return null;
     }
   }
 }

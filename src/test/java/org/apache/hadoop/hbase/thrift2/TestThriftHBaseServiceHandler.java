@@ -40,6 +40,7 @@ import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Delete;
+import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.filter.ParseFilter;
 import org.apache.hadoop.hbase.thrift.ThriftMetrics;
 import org.apache.hadoop.hbase.thrift2.generated.TColumn;
@@ -57,6 +58,7 @@ import org.apache.hadoop.hbase.thrift2.generated.TResult;
 import org.apache.hadoop.hbase.thrift2.generated.TScan;
 import org.apache.hadoop.hbase.thrift2.generated.TMutation;
 import org.apache.hadoop.hbase.thrift2.generated.TRowMutations;
+import org.apache.hadoop.hbase.thrift2.generated.TDurability;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.metrics.ContextFactory;
 import org.apache.hadoop.metrics.MetricsContext;
@@ -849,6 +851,88 @@ public class TestThriftHBaseServiceHandler {
     expectedColumnValues = new ArrayList<TColumnValue>();
     expectedColumnValues.add(columnValueB);
     assertTColumnValuesEqual(expectedColumnValues, returnedColumnValues);
+  }
+
+  /**
+   * Create TPut, TDelete , TIncrement objects, set durability then call ThriftUtility
+   * functions to get Put , Delete and Increment respectively. Use getDurability to make sure
+   * the returned objects have the appropriate durability setting.
+   *
+   * @throws Exception
+   */
+  @Test
+  public void testDurability() throws Exception {
+    byte[] rowName = "testDurability".getBytes();
+    List<TColumnValue> columnValues = new ArrayList<TColumnValue>();
+    columnValues.add(new TColumnValue(wrap(familyAname), wrap(qualifierAname), wrap(valueAname)));
+
+    List<TColumnIncrement> incrementColumns = new ArrayList<TColumnIncrement>();
+    incrementColumns.add(new TColumnIncrement(wrap(familyAname), wrap(qualifierAname)));
+
+    TDelete tDelete = new TDelete(wrap(rowName));
+
+    //if not setting writeToWal, check for default value
+    Delete delete = deleteFromThrift(tDelete);
+    assertEquals(delete.getDurability(), Durability.USE_DEFAULT);
+
+    //if setting writeToWal to true, durability should be CF default
+    tDelete.setWriteToWal(true);
+    delete = deleteFromThrift(tDelete);
+    assertEquals(delete.getDurability(), Durability.USE_DEFAULT);
+
+    //if setting writeToWal to false, durability should be SKIP_WAL
+    tDelete.setWriteToWal(false);
+    delete = deleteFromThrift(tDelete);
+    assertEquals(delete.getDurability(), Durability.SKIP_WAL);
+
+
+    tDelete.setDurability(TDurability.SKIP_WAL);
+    delete = deleteFromThrift(tDelete);
+    assertEquals(delete.getDurability(), Durability.SKIP_WAL);
+
+    tDelete.setDurability(TDurability.ASYNC_WAL);
+    delete = deleteFromThrift(tDelete);
+    assertEquals(delete.getDurability(), Durability.ASYNC_WAL);
+
+    tDelete.setDurability(TDurability.SYNC_WAL);
+    delete = deleteFromThrift(tDelete);
+    assertEquals(delete.getDurability(), Durability.SYNC_WAL);
+
+    tDelete.setDurability(TDurability.FSYNC_WAL);
+    delete = deleteFromThrift(tDelete);
+    assertEquals(delete.getDurability(), Durability.FSYNC_WAL);
+
+    TPut tPut = new TPut(wrap(rowName), columnValues);
+
+    //if not setting writeToWal, check for default value
+    Put put = putFromThrift(tPut);
+    assertEquals(put.getDurability(), Durability.USE_DEFAULT);
+
+    //if setting writeToWal to true, durability should be CF default
+    tPut.setWriteToWal(true);
+    put = putFromThrift(tPut);
+    assertEquals(put.getDurability(), Durability.USE_DEFAULT);
+
+    //if setting writeToWal to false, durability should be SKIP_WAL
+    tPut.setWriteToWal(false);
+    put = putFromThrift(tPut);
+    assertEquals(put.getDurability(), Durability.SKIP_WAL);
+
+    tPut.setDurability(TDurability.SKIP_WAL);
+    put = putFromThrift(tPut);
+    assertEquals(put.getDurability(), Durability.SKIP_WAL);
+
+    tPut.setDurability(TDurability.ASYNC_WAL);
+    put = putFromThrift(tPut);
+    assertEquals(put.getDurability(), Durability.ASYNC_WAL);
+
+    tPut.setDurability(TDurability.SYNC_WAL);
+    put = putFromThrift(tPut);
+    assertEquals(put.getDurability(), Durability.SYNC_WAL);
+
+    tPut.setDurability(TDurability.FSYNC_WAL);
+    put = putFromThrift(tPut);
+    assertEquals(put.getDurability(), Durability.FSYNC_WAL);
   }
 
   private static ThriftMetrics getMetrics(Configuration conf) throws Exception {
