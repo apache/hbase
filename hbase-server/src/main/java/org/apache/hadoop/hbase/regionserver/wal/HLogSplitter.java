@@ -938,8 +938,8 @@ public class HLogSplitter {
           iie.initCause(ie);
           throw iie;
         }
-        checkForErrors();
       }
+      checkForErrors();
       LOG.info("Split writers finished");
       return (!progress_failed);
     }
