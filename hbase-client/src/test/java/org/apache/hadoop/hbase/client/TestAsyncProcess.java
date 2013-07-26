@@ -45,7 +45,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
-@SuppressWarnings("ThrowableResultOfMethodCallIgnored")
 @Category(MediumTests.class)
 public class TestAsyncProcess {
   private static final byte[] DUMMY_TABLE = "DUMMY_TABLE".getBytes();
@@ -65,40 +64,38 @@ public class TestAsyncProcess {
   private static Exception failure = new Exception("failure");
 
   static class MyAsyncProcess<Res> extends AsyncProcess<Res> {
-
-    public MyAsyncProcess(HConnection hc,
-                          AsyncProcessCallback<Res> callback, Configuration conf) {
+    public MyAsyncProcess(HConnection hc, AsyncProcessCallback<Res> callback, Configuration conf) {
       super(hc, DUMMY_TABLE, new ThreadPoolExecutor(1, 10, 60, TimeUnit.SECONDS,
-          new SynchronousQueue<Runnable>(),
-          Threads.newDaemonThreadFactory("test-TestAsyncProcess"))
-          , callback, conf);
+        new SynchronousQueue<Runnable>(), Threads.newDaemonThreadFactory("test-TestAsyncProcess")),
+        callback, conf);
     }
 
-    /**
-     * Do not call a server, fails if the rowkey of the operation is{@link #FAILS}
-     */
     @Override
-    protected ServerCallable<MultiResponse> createCallable(
-        final HRegionLocation loc, final MultiAction<Row> multi) {
-
-      final MultiResponse mr = new MultiResponse();
-      for (Map.Entry<byte[], List<Action<Row>>> entry : multi.actions.entrySet()) {
-        for (Action a : entry.getValue()) {
-          if (Arrays.equals(FAILS, a.getAction().getRow())) {
-            mr.add(loc.getRegionInfo().getRegionName(), a.getOriginalIndex(), failure);
-          } else {
-            mr.add(loc.getRegionInfo().getRegionName(), a.getOriginalIndex(), success);
-          }
-        }
-      }
-
-      return new MultiServerCallable<Row>(hConnection, tableName, null, null) {
+    protected RpcRetryingCaller<MultiResponse> createCaller(MultiServerCallable<Row> callable) {
+      final MultiResponse mr = createMultiResponse(callable.getLocation(), callable.getMulti());
+      return new RpcRetryingCaller<MultiResponse>() {
         @Override
-        public MultiResponse withoutRetries() {
+        public MultiResponse callWithoutRetries( RetryingCallable<MultiResponse> callable)
+        throws IOException, RuntimeException {
           return mr;
         }
       };
     }
+  }
+
+  static MultiResponse createMultiResponse(final HRegionLocation loc,
+      final MultiAction<Row> multi) {
+    final MultiResponse mr = new MultiResponse();
+    for (Map.Entry<byte[], List<Action<Row>>> entry : multi.actions.entrySet()) {
+      for (Action a : entry.getValue()) {
+        if (Arrays.equals(FAILS, a.getAction().getRow())) {
+          mr.add(loc.getRegionInfo().getRegionName(), a.getOriginalIndex(), failure);
+        } else {
+          mr.add(loc.getRegionInfo().getRegionName(), a.getOriginalIndex(), success);
+        }
+      }
+    }
+    return mr;
   }
 
   /**

@@ -32,10 +32,11 @@ import org.apache.hadoop.hbase.MultithreadedTestUtil.RepeatingTestThread;
 import org.apache.hadoop.hbase.MultithreadedTestUtil.TestContext;
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.client.RegionServerCallable;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
+import org.apache.hadoop.hbase.client.RpcRetryingCaller;
 import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.client.ServerCallable;
 import org.apache.hadoop.hbase.exceptions.TableExistsException;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
@@ -141,41 +142,43 @@ public class TestHRegionServerBulkLoad {
       }
 
       // bulk load HFiles
-      HConnection conn = UTIL.getHBaseAdmin().getConnection();
+      final HConnection conn = UTIL.getHBaseAdmin().getConnection();
       byte[] tbl = Bytes.toBytes(tableName);
-      new ServerCallable<Void>(conn, tbl, Bytes
-          .toBytes("aaa")) {
+      RegionServerCallable<Void> callable =
+          new RegionServerCallable<Void>(conn, tbl, Bytes.toBytes("aaa")) {
         @Override
         public Void call() throws Exception {
-          LOG.debug("Going to connect to server " + location + " for row "
-              + Bytes.toStringBinary(row));
-          byte[] regionName = location.getRegionInfo().getRegionName();
+          LOG.debug("Going to connect to server " + getLocation() + " for row "
+              + Bytes.toStringBinary(getRow()));
+          byte[] regionName = getLocation().getRegionInfo().getRegionName();
           BulkLoadHFileRequest request =
             RequestConverter.buildBulkLoadHFileRequest(famPaths, regionName, true);
-          stub.bulkLoadHFile(null, request);
+          getStub().bulkLoadHFile(null, request);
           return null;
         }
-      }.withRetries();
+      };
+      RpcRetryingCaller<Void> caller = new RpcRetryingCaller<Void>();
+      caller.callWithRetries(callable, UTIL.getConfiguration());
 
       // Periodically do compaction to reduce the number of open file handles.
       if (numBulkLoads.get() % 10 == 0) {
         // 10 * 50 = 500 open file handles!
-        new ServerCallable<Void>(conn, tbl,
-            Bytes.toBytes("aaa")) {
+        callable = new RegionServerCallable<Void>(conn, tbl, Bytes.toBytes("aaa")) {
           @Override
           public Void call() throws Exception {
-            LOG.debug("compacting " + location + " for row "
-                + Bytes.toStringBinary(row));
+            LOG.debug("compacting " + getLocation() + " for row "
+                + Bytes.toStringBinary(getRow()));
             AdminProtos.AdminService.BlockingInterface server =
-              connection.getAdmin(location.getServerName());
+              conn.getAdmin(getLocation().getServerName());
             CompactRegionRequest request =
               RequestConverter.buildCompactRegionRequest(
-                location.getRegionInfo().getRegionName(), true, null);
+                getLocation().getRegionInfo().getRegionName(), true, null);
             server.compactRegion(null, request);
             numCompactions.incrementAndGet();
             return null;
           }
-        }.withRetries();
+        };
+        caller.callWithRetries(callable, UTIL.getConfiguration());
       }
     }
   }

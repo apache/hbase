@@ -223,18 +223,6 @@ public class HConnectionWrapper implements HConnection {
   }
 
   @Override
-  public <T> T getRegionServerWithRetries(ServerCallable<T> callable)
-      throws IOException, RuntimeException {
-    return hconnection.getRegionServerWithRetries(callable);
-  }
-
-  @Override
-  public <T> T getRegionServerWithoutRetries(ServerCallable<T> callable)
-      throws IOException, RuntimeException {
-    return hconnection.getRegionServerWithoutRetries(callable);
-  }
-
-  @Override
   public void processBatch(List<? extends Row> actions, byte[] tableName,
       ExecutorService pool, Object[] results) throws IOException,
       InterruptedException {

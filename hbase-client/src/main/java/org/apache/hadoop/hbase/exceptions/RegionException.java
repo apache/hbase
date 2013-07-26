@@ -43,5 +43,4 @@ public class RegionException extends HBaseIOException {
   public RegionException(String s) {
     super(s);
   }
-
 }

@@ -18,6 +18,7 @@
  */
 package org.apache.hadoop.hbase.util;
 
+import java.io.InterruptedIOException;
 import java.io.PrintWriter;
 import java.lang.Thread.UncaughtExceptionHandler;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -129,6 +130,7 @@ public class Threads {
   }
 
   /**
+   * If interrupted, just prints out the interrupt on STDOUT, resets interrupt and returns
    * @param millis How long to sleep for in milliseconds.
    */
   public static void sleep(long millis) {
@@ -136,6 +138,7 @@ public class Threads {
       Thread.sleep(millis);
     } catch (InterruptedException e) {
       e.printStackTrace();
+      Thread.currentThread().interrupt();
     }
   }
 

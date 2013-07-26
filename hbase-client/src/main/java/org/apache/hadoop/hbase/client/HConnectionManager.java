@@ -1954,18 +1954,6 @@ public class HConnectionManager {
       }
     }
 
-    @Override
-    public <T> T getRegionServerWithRetries(ServerCallable<T> callable)
-    throws IOException, RuntimeException {
-      return callable.withRetries();
-    }
-
-    @Override
-    public <T> T getRegionServerWithoutRetries(ServerCallable<T> callable)
-    throws IOException, RuntimeException {
-      return callable.withoutRetries();
-    }
-
     void updateCachedLocation(HRegionInfo hri, HRegionLocation source,
                               ServerName serverName, long seqNum) {
       HRegionLocation newHrl = new HRegionLocation(hri, serverName, seqNum);

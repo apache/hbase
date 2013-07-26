@@ -29,7 +29,7 @@ import org.apache.hadoop.hbase.HBaseIOException;
 @InterfaceAudience.Public
 @InterfaceStability.Stable
 public class DoNotRetryIOException extends HBaseIOException {
-
+  // TODO: This would be more useful as a marker interface than as a class.
   private static final long serialVersionUID = 1197446454511704139L;
 
   /**

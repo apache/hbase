@@ -24,8 +24,7 @@ import org.apache.hadoop.hbase.HConstants;
 import java.util.Random;
 
 /**
- * Utility used by client connections such as {@link HConnection} and
- * {@link ServerCallable}
+ * Utility used by client connections.
  */
 @InterfaceAudience.Public
 @InterfaceStability.Evolving

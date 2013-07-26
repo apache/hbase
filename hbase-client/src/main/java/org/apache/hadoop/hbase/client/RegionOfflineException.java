@@ -24,7 +24,7 @@ import org.apache.hadoop.hbase.exceptions.RegionException;
 
 /** Thrown when a table can not be located */
 @InterfaceAudience.Public
-@InterfaceStability.Stable
+@InterfaceStability.Evolving
 public class RegionOfflineException extends RegionException {
   private static final long serialVersionUID = 466008402L;
   /** default constructor */

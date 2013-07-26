@@ -17,14 +17,12 @@ package org.apache.hadoop.hbase.exceptions;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
-import java.io.IOException;
-
 /**
  * Thrown when a table exists but should not
  */
 @InterfaceAudience.Public
 @InterfaceStability.Stable
-public class TableExistsException extends IOException {
+public class TableExistsException extends DoNotRetryIOException {
   private static final long serialVersionUID = 1L << 7 - 1L;
   /** default constructor */
   public TableExistsException() {

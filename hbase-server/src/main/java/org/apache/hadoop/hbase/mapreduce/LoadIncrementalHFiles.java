@@ -60,7 +60,8 @@ import org.apache.hadoop.hbase.exceptions.TableNotFoundException;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HTable;
-import org.apache.hadoop.hbase.client.ServerCallable;
+import org.apache.hadoop.hbase.client.RegionServerCallable;
+import org.apache.hadoop.hbase.client.RpcRetryingCaller;
 import org.apache.hadoop.hbase.client.coprocessor.SecureBulkLoadClient;
 import org.apache.hadoop.hbase.io.HalfStoreFileReader;
 import org.apache.hadoop.hbase.io.Reference;
@@ -536,23 +537,24 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
       famPaths.add(Pair.newPair(lqi.family, lqi.hfilePath.toString()));
     }
 
-    final ServerCallable<Boolean> svrCallable = new ServerCallable<Boolean>(conn,
-        tableName, first) {
+    final RegionServerCallable<Boolean> svrCallable =
+        new RegionServerCallable<Boolean>(conn, tableName, first) {
       @Override
       public Boolean call() throws Exception {
         SecureBulkLoadClient secureClient = null;
         boolean success = false;
 
         try {
-          LOG.debug("Going to connect to server " + location + " for row "
-              + Bytes.toStringBinary(row));
-          byte[] regionName = location.getRegionInfo().getRegionName();
+          LOG.debug("Going to connect to server " + getLocation() + " for row "
+              + Bytes.toStringBinary(getRow()));
+          byte[] regionName = getLocation().getRegionInfo().getRegionName();
           if(!useSecure) {
-            success = ProtobufUtil.bulkLoadHFile(stub, famPaths, regionName, assignSeqIds);
+            success = ProtobufUtil.bulkLoadHFile(getStub(), famPaths, regionName, assignSeqIds);
           } else {
-            HTable table = new HTable(conn.getConfiguration(), tableName);
+            HTable table = new HTable(conn.getConfiguration(), getTableName());
             secureClient = new SecureBulkLoadClient(table);
-            success = secureClient.bulkLoadHFiles(famPaths, userToken, bulkToken, location.getRegionInfo().getStartKey());
+            success = secureClient.bulkLoadHFiles(famPaths, userToken, bulkToken,
+              getLocation().getRegionInfo().getStartKey());
           }
           return success;
         } finally {
@@ -586,7 +588,7 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
 
     try {
       List<LoadQueueItem> toRetry = new ArrayList<LoadQueueItem>();
-      boolean success = svrCallable.withRetries();
+      boolean success = new RpcRetryingCaller<Boolean>().callWithRetries(svrCallable, getConf());
       if (!success) {
         LOG.warn("Attempt to bulk load region containing "
             + Bytes.toStringBinary(first) + " into table "
