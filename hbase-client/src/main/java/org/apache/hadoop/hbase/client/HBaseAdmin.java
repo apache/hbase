@@ -52,6 +52,7 @@ import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.exceptions.FailedLogCloseException;
 import org.apache.hadoop.hbase.exceptions.HBaseSnapshotException;
 import org.apache.hadoop.hbase.exceptions.MasterNotRunningException;
+import org.apache.hadoop.hbase.exceptions.MergeRegionException;
 import org.apache.hadoop.hbase.exceptions.NotServingRegionException;
 import org.apache.hadoop.hbase.exceptions.RegionException;
 import org.apache.hadoop.hbase.exceptions.RestoreSnapshotException;
@@ -1709,6 +1710,9 @@ public class HBaseAdmin implements Abortable, Closeable {
       IOException ioe = ProtobufUtil.getRemoteException(se);
       if (ioe instanceof UnknownRegionException) {
         throw (UnknownRegionException) ioe;
+      }
+      if (ioe instanceof MergeRegionException) {
+        throw (MergeRegionException) ioe;
       }
       LOG.error("Unexpected exception: " + se
           + " from calling HMaster.dispatchMergingRegions");

@@ -69,6 +69,7 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.exceptions.MasterNotRunningException;
+import org.apache.hadoop.hbase.exceptions.MergeRegionException;
 import org.apache.hadoop.hbase.exceptions.PleaseHoldException;
 import org.apache.hadoop.hbase.exceptions.TableNotDisabledException;
 import org.apache.hadoop.hbase.exceptions.TableNotFoundException;
@@ -76,9 +77,9 @@ import org.apache.hadoop.hbase.exceptions.UnknownProtocolException;
 import org.apache.hadoop.hbase.exceptions.UnknownRegionException;
 import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.executor.ExecutorType;
-import org.apache.hadoop.hbase.ipc.RpcServerInterface;
 import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.ipc.RpcServer.BlockingServiceAndInterface;
+import org.apache.hadoop.hbase.ipc.RpcServerInterface;
 import org.apache.hadoop.hbase.ipc.ServerRpcController;
 import org.apache.hadoop.hbase.ipc.SimpleRpcScheduler;
 import org.apache.hadoop.hbase.master.balancer.BalancerChore;
@@ -1525,16 +1526,28 @@ MasterServices, Server {
               : encodedNameOfRegionB)));
     }
 
-    if (!forcible && !HRegionInfo.areAdjacent(regionStateA.getRegion(),
-            regionStateB.getRegion())) {
-      throw new ServiceException("Unable to merge not adjacent regions "
-          + regionStateA.getRegion().getRegionNameAsString() + ", "
-          + regionStateB.getRegion().getRegionNameAsString()
-          + " where forcible = " + forcible);
+    if (!regionStateA.isOpened() || !regionStateB.isOpened()) {
+      throw new ServiceException(new MergeRegionException(
+        "Unable to merge regions not online " + regionStateA + ", " + regionStateB));
+    }
+
+    HRegionInfo regionInfoA = regionStateA.getRegion();
+    HRegionInfo regionInfoB = regionStateB.getRegion();
+    if (regionInfoA.compareTo(regionInfoB) == 0) {
+      throw new ServiceException(new MergeRegionException(
+        "Unable to merge a region to itself " + regionInfoA + ", " + regionInfoB));
+    }
+
+    if (!forcible && !HRegionInfo.areAdjacent(regionInfoA, regionInfoB)) {
+      throw new ServiceException(new MergeRegionException(
+        "Unable to merge not adjacent regions "
+          + regionInfoA.getRegionNameAsString() + ", "
+          + regionInfoB.getRegionNameAsString()
+          + " where forcible = " + forcible));
     }
 
     try {
-      dispatchMergingRegions(regionStateA.getRegion(), regionStateB.getRegion(), forcible);
+      dispatchMergingRegions(regionInfoA, regionInfoB, forcible);
     } catch (IOException ioe) {
       throw new ServiceException(ioe);
     }
