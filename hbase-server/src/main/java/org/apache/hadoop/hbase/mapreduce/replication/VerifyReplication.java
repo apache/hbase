@@ -36,10 +36,10 @@ import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.mapreduce.TableInputFormat;
 import org.apache.hadoop.hbase.mapreduce.TableMapReduceUtil;
 import org.apache.hadoop.hbase.mapreduce.TableMapper;
+import org.apache.hadoop.hbase.replication.ReplicationFactory;
 import org.apache.hadoop.hbase.replication.ReplicationPeer;
 import org.apache.hadoop.hbase.replication.ReplicationPeers;
 import org.apache.hadoop.hbase.replication.ReplicationPeersZKImpl;
-import org.apache.hadoop.hbase.replication.ReplicationZookeeper;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.hadoop.mapreduce.Job;
@@ -118,7 +118,8 @@ public class VerifyReplication {
                 @Override public void abort(String why, Throwable e) {}
                 @Override public boolean isAborted() {return false;}
               });
-              ReplicationPeers rp = new ReplicationPeersZKImpl(localZKW, conf, localZKW);
+              ReplicationPeers rp =
+                  ReplicationFactory.getReplicationPeers(localZKW, conf, localZKW);
               rp.init();
               Configuration peerConf = rp.getPeerConf(peerId);
               if (peerConf == null) {

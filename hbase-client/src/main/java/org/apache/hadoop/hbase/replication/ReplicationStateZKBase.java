@@ -95,7 +95,16 @@ public abstract class ReplicationStateZKBase {
     return ProtobufUtil.prependPBMagic(bytes);
   }
 
-  public boolean peerExists(String id) throws KeeperException {
+  protected boolean peerExists(String id) throws KeeperException {
     return ZKUtil.checkExists(this.zookeeper, ZKUtil.joinZNode(this.peersZNode, id)) >= 0;
+  }
+
+  /**
+   * Determine if a ZK path points to a peer node.
+   * @param path path to be checked
+   * @return true if the path points to a peer node, otherwise false
+   */
+  protected boolean isPeerPath(String path) {
+    return path.split("/").length == peersZNode.split("/").length + 1;
   }
 }

@@ -56,11 +56,11 @@ import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.AdminService;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
+import org.apache.hadoop.hbase.replication.ReplicationPeers;
 import org.apache.hadoop.hbase.replication.ReplicationQueueInfo;
-import org.apache.hadoop.hbase.replication.ReplicationZookeeper;
+import org.apache.hadoop.hbase.replication.ReplicationQueues;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Threads;
-import org.apache.hadoop.hbase.zookeeper.ZKClusterId;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.zookeeper.KeeperException;
 
@@ -86,8 +86,8 @@ public class ReplicationSource extends Thread
   // container of entries to replicate
   private HLog.Entry[] entriesArray;
   private HConnection conn;
-  // Helper class for zookeeper
-  private ReplicationZookeeper zkHelper;
+  private ReplicationQueues replicationQueues;
+  private ReplicationPeers replicationPeers;
   private Configuration conf;
   // ratio of region servers to chose from a slave cluster
   private float ratio;
@@ -151,12 +151,10 @@ public class ReplicationSource extends Thread
    * @param peerClusterZnode the name of our znode
    * @throws IOException
    */
-  public void init(final Configuration conf,
-                   final FileSystem fs,
-                   final ReplicationSourceManager manager,
-                   final Stoppable stopper,
-                   final String peerClusterZnode)
-      throws IOException {
+  public void init(final Configuration conf, final FileSystem fs,
+      final ReplicationSourceManager manager, final ReplicationQueues replicationQueues,
+      final ReplicationPeers replicationPeers, final Stoppable stopper,
+      final String peerClusterZnode, final UUID clusterId) throws IOException {
     this.stopper = stopper;
     this.conf = conf;
     this.replicationQueueSizeCapacity =
@@ -178,7 +176,8 @@ public class ReplicationSource extends Thread
     // replication and make replication specific settings such as compression or codec to use
     // passing Cells.
     this.conn = HConnectionManager.getConnection(conf);
-    this.zkHelper = manager.getRepZkWrapper();
+    this.replicationQueues = replicationQueues;
+    this.replicationPeers = replicationPeers;
     this.ratio = this.conf.getFloat("replication.source.ratio", 0.1f);
     this.currentPeers = new ArrayList<ServerName>();
     this.random = new Random();
@@ -188,11 +187,8 @@ public class ReplicationSource extends Thread
     this.fs = fs;
     this.metrics = new MetricsSource(peerClusterZnode);
     this.repLogReader = new ReplicationHLogReaderManager(this.fs, this.conf);
-    try {
-      this.clusterId = ZKClusterId.getUUIDForCluster(zkHelper.getZookeeperWatcher());
-    } catch (KeeperException ke) {
-      throw new IOException("Could not read cluster id", ke);
-    }
+    this.clusterId = clusterId;
+
     this.peerClusterZnode = peerClusterZnode;
     this.replicationQueueInfo = new ReplicationQueueInfo(peerClusterZnode);
     // ReplicationQueueInfo parses the peerId out of the znode for us
@@ -204,7 +200,7 @@ public class ReplicationSource extends Thread
    */
   private void chooseSinks() {
     this.currentPeers.clear();
-    List<ServerName> addresses = this.zkHelper.getSlavesAddresses(this.peerId);
+    List<ServerName> addresses = this.replicationPeers.getRegionServersOfConnectedPeer(this.peerId);
     Set<ServerName> setOfAddr = new HashSet<ServerName>();
     int nbPeers = (int) (Math.ceil(addresses.size() * ratio));
     LOG.debug("Getting " + nbPeers +
@@ -238,7 +234,7 @@ public class ReplicationSource extends Thread
     int sleepMultiplier = 1;
     // delay this until we are in an asynchronous thread
     while (this.peerClusterId == null) {
-      this.peerClusterId = zkHelper.getPeerUUID(this.peerId);
+      this.peerClusterId = replicationPeers.getPeerUUID(this.peerId);
       if (this.peerClusterId == null) {
         if (sleepForRetries("Cannot contact the peer's zk ensemble", sleepMultiplier)) {
           sleepMultiplier++;
@@ -254,8 +250,8 @@ public class ReplicationSource extends Thread
     // normally has a position (unless the RS failed between 2 logs)
     if (this.replicationQueueInfo.isQueueRecovered()) {
       try {
-        this.repLogReader.setPosition(this.zkHelper.getHLogRepPosition(
-            this.peerClusterZnode, this.queue.peek().getName()));
+        this.repLogReader.setPosition(this.replicationQueues.getLogPosition(this.peerClusterZnode,
+          this.queue.peek().getName()));
         if (LOG.isTraceEnabled()) {
           LOG.trace("Recovered queue started with log " + this.queue.peek() +
               " at position " + this.repLogReader.getPosition());
@@ -736,7 +732,7 @@ public class ReplicationSource extends Thread
    * @return true if the peer is enabled, otherwise false
    */
   protected boolean isPeerEnabled() {
-    return this.zkHelper.getPeerEnabled(this.peerId);
+    return this.replicationPeers.getStatusOfConnectedPeer(this.peerId);
   }
 
   /**

@@ -20,11 +20,18 @@ package org.apache.hadoop.hbase.replication;
 
 import java.util.List;
 
+import org.apache.zookeeper.KeeperException;
+
 /**
  * This provides an interface for clients of replication to view replication queues. These queues
  * keep track of the HLogs that still need to be replicated to remote clusters.
  */
 public interface ReplicationQueuesClient {
+
+  /**
+   * Initialize the replication queue client interface.
+   */
+  public void init() throws KeeperException;
 
   /**
    * Get a list of all region servers that have outstanding replication queues. These servers could

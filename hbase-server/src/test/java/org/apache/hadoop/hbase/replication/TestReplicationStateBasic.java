@@ -69,6 +69,7 @@ public abstract class TestReplicationStateBasic {
 
   @Test
   public void testReplicationQueuesClient() throws KeeperException {
+    rqc.init();
     // Test methods with empty state
     assertEquals(0, rqc.getListOfReplicators().size());
     assertNull(rqc.getLogsInQueue(server1, "qId1"));
