@@ -28,12 +28,10 @@ import static org.junit.Assert.fail;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.Set;
-import java.util.TreeSet;
 import java.util.Random;
+import java.util.Set;
 import java.util.concurrent.Callable;
 
 import junit.framework.Assert;
@@ -66,8 +64,8 @@ import org.apache.hadoop.hbase.io.compress.Compression.Algorithm;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFile.Reader;
-import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.BloomType;
+import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.regionserver.TimeRangeTracker;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -80,11 +78,10 @@ import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.mapreduce.RecordWriter;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
-
-import com.google.common.collect.Lists;
 
 /**
  * Simple test for {@link KeyValueSortReducer} and {@link HFileOutputFormat}.
@@ -652,7 +649,7 @@ public class TestHFileOutputFormat  {
    * Without the fix of HBASE-6901, an ArrayIndexOutOfBoundsException
    * will be thrown.
    */
-  @Test
+  @Ignore ("Flakey: See HBASE-9051") @Test
   public void testExcludeAllFromMinorCompaction() throws Exception {
     Configuration conf = util.getConfiguration();
     conf.setInt("hbase.hstore.compaction.min", 2);
