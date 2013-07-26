@@ -29,11 +29,11 @@ import java.util.Random;
 import java.util.SortedMap;
 import java.util.SortedSet;
 import java.util.TreeSet;
+import java.util.UUID;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -42,10 +42,10 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Stoppable;
+import org.apache.hadoop.hbase.replication.ReplicationListener;
+import org.apache.hadoop.hbase.replication.ReplicationPeers;
 import org.apache.hadoop.hbase.replication.ReplicationQueues;
-import org.apache.hadoop.hbase.replication.ReplicationZookeeper;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperListener;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
+import org.apache.hadoop.hbase.replication.ReplicationTracker;
 import org.apache.zookeeper.KeeperException;
 
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
@@ -60,18 +60,23 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
  * When a region server dies, this class uses a watcher to get notified and it
  * tries to grab a lock in order to transfer all the queues in a local
  * old source.
+ * 
+ * This class implements the ReplicationListener interface so that it can track changes in
+ * replication state.
  */
 @InterfaceAudience.Private
-public class ReplicationSourceManager {
+public class ReplicationSourceManager implements ReplicationListener {
   private static final Log LOG =
       LogFactory.getLog(ReplicationSourceManager.class);
   // List of all the sources that read this RS's logs
   private final List<ReplicationSourceInterface> sources;
   // List of all the sources we got from died RSs
   private final List<ReplicationSourceInterface> oldsources;
-  // Helper for zookeeper
-  private final ReplicationZookeeper zkHelper;
   private final ReplicationQueues replicationQueues;
+  private final ReplicationTracker replicationTracker;
+  private final ReplicationPeers replicationPeers;
+  // UUID for this cluster
+  private final UUID clusterId;
   // All about stopping
   private final Stoppable stopper;
   // All logs we are currently tracking
@@ -80,8 +85,6 @@ public class ReplicationSourceManager {
   private final FileSystem fs;
   // The path to the latest log we saw, for new coming sources
   private Path latestPath;
-  // List of all the other region servers in this cluster
-  private final List<String> otherRegionServers = new ArrayList<String>();
   // Path to the hlogs directories
   private final Path logDir;
   // Path to the hlog archive
@@ -104,12 +107,14 @@ public class ReplicationSourceManager {
    * @param logDir the directory that contains all hlog directories of live RSs
    * @param oldLogDir the directory where old logs are archived
    */
-  public ReplicationSourceManager(final ReplicationZookeeper zkHelper,
-      final ReplicationQueues replicationQueues, final Configuration conf, final Stoppable stopper,
-      final FileSystem fs, final Path logDir, final Path oldLogDir) {
+  public ReplicationSourceManager(final ReplicationQueues replicationQueues,
+      final ReplicationPeers replicationPeers, final ReplicationTracker replicationTracker,
+      final Configuration conf, final Stoppable stopper, final FileSystem fs, final Path logDir,
+      final Path oldLogDir, final UUID clusterId) {
     this.sources = new ArrayList<ReplicationSourceInterface>();
-    this.zkHelper = zkHelper;
     this.replicationQueues = replicationQueues;
+    this.replicationPeers = replicationPeers;
+    this.replicationTracker = replicationTracker;
     this.stopper = stopper;
     this.hlogsById = new HashMap<String, SortedSet<String>>();
     this.oldsources = new ArrayList<ReplicationSourceInterface>();
@@ -118,11 +123,9 @@ public class ReplicationSourceManager {
     this.logDir = logDir;
     this.oldLogDir = oldLogDir;
     this.sleepBeforeFailover = conf.getLong("replication.sleep.before.failover", 2000);
-    this.zkHelper.registerRegionServerListener(
-        new OtherRegionServerWatcher(this.zkHelper.getZookeeperWatcher()));
-    this.zkHelper.registerRegionServerListener(
-        new PeersWatcher(this.zkHelper.getZookeeperWatcher()));
-    this.zkHelper.listPeersIdsAndWatch();
+    this.clusterId = clusterId;
+    this.replicationTracker.registerListener(this);
+    this.replicationPeers.getAllPeerIds();
     // It's preferable to failover 1 RS at a time, but with good zk servers
     // more could be processed at the same time.
     int nbWorkers = conf.getInt("replication.executor.workers", 1);
@@ -150,12 +153,12 @@ public class ReplicationSourceManager {
    */
   public void logPositionAndCleanOldLogs(Path log, String id, long position, 
       boolean queueRecovered, boolean holdLogInZK) {
-    String key = log.getName();
-    this.zkHelper.writeReplicationStatus(key, id, position);
+    String fileName = log.getName();
+    this.replicationQueues.setLogPosition(id, fileName, position);
     if (holdLogInZK) {
      return;
     }
-    cleanOldLogs(key, id, queueRecovered);
+    cleanOldLogs(fileName, id, queueRecovered);
   }
 
   /**
@@ -175,7 +178,7 @@ public class ReplicationSourceManager {
       }
       SortedSet<String> hlogSet = hlogs.headSet(key);
       for (String hlog : hlogSet) {
-        this.zkHelper.removeLogFromList(hlog, id);
+        this.replicationQueues.removeLog(id, hlog);
       }
       hlogSet.clear();
     }
@@ -186,24 +189,21 @@ public class ReplicationSourceManager {
    * old region server hlog queues
    */
   public void init() throws IOException {
-    for (String id : this.zkHelper.getPeerClusters()) {
+    for (String id : this.replicationPeers.getConnectedPeers()) {
       addSource(id);
     }
     List<String> currentReplicators = this.replicationQueues.getListOfReplicators();
     if (currentReplicators == null || currentReplicators.size() == 0) {
       return;
     }
-    synchronized (otherRegionServers) {
-      refreshOtherRegionServersList();
-      LOG.info("Current list of replicators: " + currentReplicators
-          + " other RSs: " + otherRegionServers);
-    }
+    List<String> otherRegionServers = replicationTracker.getListOfRegionServers();
+    LOG.info("Current list of replicators: " + currentReplicators + " other RSs: "
+        + otherRegionServers);
+
     // Look if there's anything to process after a restart
     for (String rs : currentReplicators) {
-      synchronized (otherRegionServers) {
-        if (!this.otherRegionServers.contains(rs)) {
-          transferQueues(rs);
-        }
+      if (!otherRegionServers.contains(rs)) {
+        transferQueues(rs);
       }
     }
   }
@@ -215,7 +215,9 @@ public class ReplicationSourceManager {
    * @throws IOException
    */
   public ReplicationSourceInterface addSource(String id) throws IOException {
-    ReplicationSourceInterface src = getReplicationSource(this.conf, this.fs, this, stopper, id);
+    ReplicationSourceInterface src =
+        getReplicationSource(this.conf, this.fs, this, this.replicationQueues,
+          this.replicationPeers, stopper, id, this.clusterId);
     synchronized (this.hlogsById) {
       this.sources.add(src);
       this.hlogsById.put(id, new TreeSet<String>());
@@ -224,7 +226,7 @@ public class ReplicationSourceManager {
         String name = this.latestPath.getName();
         this.hlogsById.get(id).add(name);
         try {
-          this.zkHelper.addLogToList(name, src.getPeerClusterZnode());
+          this.replicationQueues.addLog(src.getPeerClusterZnode(), name);
         } catch (KeeperException ke) {
           String message = "Cannot add log to zk for" +
             " replication when creating a new source";
@@ -239,12 +241,23 @@ public class ReplicationSourceManager {
   }
 
   /**
+   * Delete a complete queue of hlogs associated with a peer cluster
+   * @param peerId Id of the peer cluster queue of hlogs to delete
+   */
+  public void deleteSource(String peerId, boolean closeConnection) {
+    this.replicationQueues.removeQueue(peerId);
+    if (closeConnection) {
+      this.replicationPeers.disconnectFromPeer(peerId);
+    }
+  }
+
+  /**
    * Terminate the replication on this region server
    */
   public void join() {
     this.executor.shutdown();
     if (this.sources.size() == 0) {
-      this.zkHelper.deleteOwnRSZNode();
+      this.replicationQueues.removeAllQueues();
     }
     for (ReplicationSourceInterface source : this.sources) {
       source.terminate("Region server is closing");
@@ -273,7 +286,7 @@ public class ReplicationSourceManager {
       String name = newLog.getName();
       for (ReplicationSourceInterface source : this.sources) {
         try {
-          this.zkHelper.addLogToList(name, source.getPeerClusterZnode());
+          this.replicationQueues.addLog(source.getPeerClusterZnode(), name);
         } catch (KeeperException ke) {
           throw new IOException("Cannot add log to zk for replication", ke);
         }
@@ -299,14 +312,6 @@ public class ReplicationSourceManager {
   }
 
   /**
-   * Get the ZK help of this manager
-   * @return the helper
-   */
-  public ReplicationZookeeper getRepZkWrapper() {
-    return zkHelper;
-  }
-
-  /**
    * Factory method to create a replication source
    * @param conf the configuration to use
    * @param fs the file system to use
@@ -316,12 +321,10 @@ public class ReplicationSourceManager {
    * @return the created source
    * @throws IOException
    */
-  public ReplicationSourceInterface getReplicationSource(
-      final Configuration conf,
-      final FileSystem fs,
-      final ReplicationSourceManager manager,
-      final Stoppable stopper,
-      final String peerId) throws IOException {
+  public ReplicationSourceInterface getReplicationSource(final Configuration conf,
+      final FileSystem fs, final ReplicationSourceManager manager,
+      final ReplicationQueues replicationQueues, final ReplicationPeers replicationPeers,
+      final Stoppable stopper, final String peerId, final UUID clusterId) throws IOException {
     ReplicationSourceInterface src;
     try {
       @SuppressWarnings("rawtypes")
@@ -334,7 +337,7 @@ public class ReplicationSourceManager {
       src = new ReplicationSource();
 
     }
-    src.init(conf, fs, manager, stopper, peerId);
+    src.init(conf, fs, manager, replicationQueues, replicationPeers, stopper, peerId, clusterId);
     return src;
   }
 
@@ -347,7 +350,9 @@ public class ReplicationSourceManager {
    * @param rsZnode
    */
   private void transferQueues(String rsZnode) {
-    NodeFailoverWorker transfer = new NodeFailoverWorker(rsZnode);
+    NodeFailoverWorker transfer =
+        new NodeFailoverWorker(rsZnode, this.replicationQueues, this.replicationPeers,
+            this.clusterId);
     try {
       this.executor.execute(transfer);
     } catch (RejectedExecutionException ex) {
@@ -362,7 +367,7 @@ public class ReplicationSourceManager {
   public void closeRecoveredQueue(ReplicationSourceInterface src) {
     LOG.info("Done with the recovered queue " + src.getPeerClusterZnode());
     this.oldsources.remove(src);
-    this.zkHelper.deleteSource(src.getPeerClusterZnode(), false);
+    deleteSource(src.getPeerClusterZnode(), false);
   }
 
   /**
@@ -403,150 +408,33 @@ public class ReplicationSourceManager {
     }
     srcToRemove.terminate(terminateMessage);
     this.sources.remove(srcToRemove);
-    this.zkHelper.deleteSource(id, true);
+    deleteSource(id, true);
   }
 
-  /**
-   * Reads the list of region servers from ZK and atomically clears our
-   * local view of it and replaces it with the updated list.
-   * 
-   * @return true if the local list of the other region servers was updated
-   * with the ZK data (even if it was empty),
-   * false if the data was missing in ZK
-   */
-  private boolean refreshOtherRegionServersList() {
-    List<String> newRsList = zkHelper.getRegisteredRegionServers();
-    if (newRsList == null) {
-      return false;
-    } else {
-      synchronized (otherRegionServers) {
-        otherRegionServers.clear();
-        otherRegionServers.addAll(newRsList);
-      }
-    }
-    return true;
+  @Override
+  public void regionServerRemoved(String regionserver) {
+    transferQueues(regionserver);
   }
 
-  /**
-   * Watcher used to be notified of the other region server's death
-   * in the local cluster. It initiates the process to transfer the queues
-   * if it is able to grab the lock.
-   */
-  public class OtherRegionServerWatcher extends ZooKeeperListener {
-
-    /**
-     * Construct a ZooKeeper event listener.
-     */
-    public OtherRegionServerWatcher(ZooKeeperWatcher watcher) {
-      super(watcher);
-    }
-
-    /**
-     * Called when a new node has been created.
-     * @param path full path of the new node
-     */
-    public void nodeCreated(String path) {
-      refreshListIfRightPath(path);
-    }
-
-    /**
-     * Called when a node has been deleted
-     * @param path full path of the deleted node
-     */
-    public void nodeDeleted(String path) {
-      if (stopper.isStopped()) {
-        return;
-      }
-      boolean cont = refreshListIfRightPath(path);
-      if (!cont) {
-        return;
-      }
-      LOG.info(path + " znode expired, trying to lock it");
-      transferQueues(ReplicationZookeeper.getZNodeName(path));
-    }
-
-    /**
-     * Called when an existing node has a child node added or removed.
-     * @param path full path of the node whose children have changed
-     */
-    public void nodeChildrenChanged(String path) {
-      if (stopper.isStopped()) {
-        return;
-      }
-      refreshListIfRightPath(path);
-    }
-
-    private boolean refreshListIfRightPath(String path) {
-      if (!path.startsWith(zkHelper.getZookeeperWatcher().rsZNode)) {
-        return false;
-      }
-      return refreshOtherRegionServersList();
-    }
+  @Override
+  public void peerRemoved(String peerId) {
+    removePeer(peerId);
   }
 
-  /**
-   * Watcher used to follow the creation and deletion of peer clusters.
-   */
-  public class PeersWatcher extends ZooKeeperListener {
-
-    /**
-     * Construct a ZooKeeper event listener.
-     */
-    public PeersWatcher(ZooKeeperWatcher watcher) {
-      super(watcher);
-    }
-
-    /**
-     * Called when a node has been deleted
-     * @param path full path of the deleted node
-     */
-    public void nodeDeleted(String path) {
-      List<String> peers = refreshPeersList(path);
-      if (peers == null) {
-        return;
-      }
-      if (zkHelper.isPeerPath(path)) {
-        String id = ReplicationZookeeper.getZNodeName(path);
-        removePeer(id);
-      }
-    }
-
-    /**
-     * Called when an existing node has a child node added or removed.
-     * @param path full path of the node whose children have changed
-     */
-    public void nodeChildrenChanged(String path) {
-      List<String> peers = refreshPeersList(path);
-      if (peers == null) {
-        return;
-      }
-      for (String id : peers) {
-        try {
-          boolean added = zkHelper.connectToPeer(id);
-          if (added) {
-            addSource(id);
-          }
-        } catch (IOException e) {
-          // TODO manage better than that ?
-          LOG.error("Error while adding a new peer", e);
-        } catch (KeeperException e) {
-          LOG.error("Error while adding a new peer", e);
+  @Override
+  public void peerListChanged(List<String> peerIds) {
+    for (String id : peerIds) {
+      try {
+        boolean added = this.replicationPeers.connectToPeer(id);
+        if (added) {
+          addSource(id);
         }
+      } catch (IOException e) {
+        // TODO manage better than that ?
+        LOG.error("Error while adding a new peer", e);
+      } catch (KeeperException e) {
+        LOG.error("Error while adding a new peer", e);
       }
-    }
-
-    /**
-     * Verify if this event is meant for us, and if so then get the latest
-     * peers' list from ZK. Also reset the watches.
-     * @param path path to check against
-     * @return A list of peers' identifiers if the event concerns this watcher,
-     * else null.
-     */
-    private List<String> refreshPeersList(String path) {
-      if (!path.startsWith(zkHelper.getPeersZNode())) {
-        return null;
-      }
-      return zkHelper.listPeersIdsAndWatch();
     }
   }
 
@@ -557,14 +445,21 @@ public class ReplicationSourceManager {
   class NodeFailoverWorker extends Thread {
 
     private String rsZnode;
+    private final ReplicationQueues rq;
+    private final ReplicationPeers rp;
+    private final UUID clusterId;
 
     /**
      *
      * @param rsZnode
      */
-    public NodeFailoverWorker(String rsZnode) {
+    public NodeFailoverWorker(String rsZnode, final ReplicationQueues replicationQueues,
+        final ReplicationPeers replicationPeers, final UUID clusterId) {
       super("Failover-for-"+rsZnode);
       this.rsZnode = rsZnode;
+      this.rq = replicationQueues;
+      this.rp = replicationPeers;
+      this.clusterId = clusterId;
     }
 
     @Override
@@ -584,7 +479,7 @@ public class ReplicationSourceManager {
       }
       SortedMap<String, SortedSet<String>> newQueues = null;
 
-      newQueues = zkHelper.claimQueues(rsZnode);
+      newQueues = this.rq.claimQueues(rsZnode);
 
       // Copying over the failed queue is completed.
       if (newQueues.isEmpty()) {
@@ -597,8 +492,9 @@ public class ReplicationSourceManager {
         String peerId = entry.getKey();
         try {
           ReplicationSourceInterface src =
-              getReplicationSource(conf, fs, ReplicationSourceManager.this, stopper, peerId);
-          if (!zkHelper.getPeerClusters().contains((src.getPeerClusterId()))) {
+              getReplicationSource(conf, fs, ReplicationSourceManager.this, this.rq, this.rp,
+                stopper, peerId, this.clusterId);
+          if (!this.rp.getConnectedPeers().contains((src.getPeerClusterId()))) {
             src.terminate("Recovered queue doesn't belong to any current peer");
             break;
           }

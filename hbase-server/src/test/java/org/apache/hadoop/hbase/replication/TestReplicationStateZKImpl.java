@@ -36,7 +36,10 @@ import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.zookeeper.KeeperException;
 import org.junit.After;
 import org.junit.AfterClass;
+import org.junit.Test;
+
 import static org.junit.Assert.*;
+
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.experimental.categories.Category;
@@ -50,6 +53,7 @@ public class TestReplicationStateZKImpl extends TestReplicationStateBasic {
   private static HBaseTestingUtility utility;
   private static ZooKeeperWatcher zkw;
   private static String replicationZNode;
+  private ReplicationQueuesZKImpl rqZK;
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
@@ -65,7 +69,7 @@ public class TestReplicationStateZKImpl extends TestReplicationStateBasic {
 
   private static String initPeerClusterState(String baseZKNode)
       throws IOException, KeeperException {
-    // Set up state nodes of peer clusters
+    // Add a dummy region server and set up the cluster id
     Configuration testConf = new Configuration(conf);
     testConf.set(HConstants.ZOOKEEPER_ZNODE_PARENT, baseZKNode);
     ZooKeeperWatcher zkw1 = new ZooKeeperWatcher(testConf, "test1", null);
@@ -82,16 +86,13 @@ public class TestReplicationStateZKImpl extends TestReplicationStateBasic {
     DummyServer ds1 = new DummyServer(server1);
     DummyServer ds2 = new DummyServer(server2);
     DummyServer ds3 = new DummyServer(server3);
-    try {
-      rq1 = new ReplicationQueuesZKImpl(zkw, conf, ds1);
-      rq2 = new ReplicationQueuesZKImpl(zkw, conf, ds2);
-      rq3 = new ReplicationQueuesZKImpl(zkw, conf, ds3);
-      rqc = new ReplicationQueuesClientZKImpl(zkw, conf, ds1);
-      rp = new ReplicationPeersZKImpl(zkw, conf, zkw);
-      OUR_KEY = ZKUtil.getZooKeeperClusterKey(conf);
-    } catch (KeeperException e) {
-      fail("Exception thrown: " + e);
-    }
+    rq1 = ReplicationFactory.getReplicationQueues(zkw, conf, ds1);
+    rq2 = ReplicationFactory.getReplicationQueues(zkw, conf, ds2);
+    rq3 = ReplicationFactory.getReplicationQueues(zkw, conf, ds3);
+    rqc = ReplicationFactory.getReplicationQueuesClient(zkw, conf, ds1);
+    rp = ReplicationFactory.getReplicationPeers(zkw, conf, zkw);
+    OUR_KEY = ZKUtil.getZooKeeperClusterKey(conf);
+    rqZK = new ReplicationQueuesZKImpl(zkw, conf, ds1);
   }
 
   @After
@@ -102,6 +103,23 @@ public class TestReplicationStateZKImpl extends TestReplicationStateBasic {
   @AfterClass
   public static void tearDownAfterClass() throws Exception {
     utility.shutdownMiniZKCluster();
+  }
+
+  @Test
+  public void testIsPeerPath_PathToParentOfPeerNode() {
+    assertFalse(rqZK.isPeerPath(rqZK.peersZNode));
+  }
+
+  @Test
+  public void testIsPeerPath_PathToChildOfPeerNode() {
+    String peerChild = ZKUtil.joinZNode(ZKUtil.joinZNode(rqZK.peersZNode, "1"), "child");
+    assertFalse(rqZK.isPeerPath(peerChild));
+  }
+
+  @Test
+  public void testIsPeerPath_ActualPeerPath() {
+    String peerPath = ZKUtil.joinZNode(rqZK.peersZNode, "1");
+    assertTrue(rqZK.isPeerPath(peerPath));
   }
 
   static class DummyServer implements Server {

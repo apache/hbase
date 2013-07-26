@@ -21,7 +21,6 @@ import static org.junit.Assert.assertEquals;
 
 import java.io.IOException;
 import java.net.URLEncoder;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
@@ -30,7 +29,8 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.catalog.CatalogTracker;
 import org.apache.hadoop.hbase.master.cleaner.LogCleaner;
-import org.apache.hadoop.hbase.replication.ReplicationZookeeper;
+import org.apache.hadoop.hbase.replication.ReplicationFactory;
+import org.apache.hadoop.hbase.replication.ReplicationQueues;
 import org.apache.hadoop.hbase.replication.regionserver.Replication;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.junit.AfterClass;
@@ -68,8 +68,9 @@ public class TestLogsCleaner {
     conf.setBoolean(HConstants.REPLICATION_ENABLE_KEY, true);
     Replication.decorateMasterConfiguration(conf);
     Server server = new DummyServer();
-    ReplicationZookeeper zkHelper = new ReplicationZookeeper(server);
-
+    ReplicationQueues repQueues =
+        ReplicationFactory.getReplicationQueues(server.getZooKeeper(), conf, server);
+    repQueues.init(server.getServerName().toString());
     Path oldLogDir = new Path(TEST_UTIL.getDataTestDir(),
         HConstants.HREGION_OLDLOGDIR_NAME);
     String fakeMachineName =
@@ -98,7 +99,7 @@ public class TestLogsCleaner {
       // (TimeToLiveLogCleaner) but would be rejected by the second
       // (ReplicationLogCleaner)
       if (i % (30/3) == 1) {
-        zkHelper.addLogToList(fileName.getName(), fakeMachineName);
+        repQueues.addLog(fakeMachineName, fileName.getName());
         System.out.println("Replication log file: " + fileName);
       }
     }

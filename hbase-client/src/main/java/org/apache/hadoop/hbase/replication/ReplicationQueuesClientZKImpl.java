@@ -30,8 +30,12 @@ public class ReplicationQueuesClientZKImpl extends ReplicationStateZKBase implem
     ReplicationQueuesClient {
 
   public ReplicationQueuesClientZKImpl(final ZooKeeperWatcher zk, Configuration conf,
-      Abortable abortable) throws KeeperException {
+      Abortable abortable) {
     super(zk, conf, abortable);
+  }
+
+  @Override
+  public void init() throws KeeperException {
     ZKUtil.createWithParents(this.zookeeper, this.queuesZNode);
   }
 

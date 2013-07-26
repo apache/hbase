@@ -22,10 +22,10 @@ import java.io.IOException;
 import java.util.List;
 import java.util.NavigableMap;
 import java.util.TreeMap;
+import java.util.UUID;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.commons.logging.Log;
@@ -45,11 +45,13 @@ import org.apache.hadoop.hbase.regionserver.ReplicationSinkService;
 import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
+import org.apache.hadoop.hbase.replication.ReplicationFactory;
+import org.apache.hadoop.hbase.replication.ReplicationPeers;
 import org.apache.hadoop.hbase.replication.ReplicationQueues;
-import org.apache.hadoop.hbase.replication.ReplicationQueuesZKImpl;
-import org.apache.hadoop.hbase.replication.ReplicationZookeeper;
+import org.apache.hadoop.hbase.replication.ReplicationTracker;
 import org.apache.hadoop.hbase.replication.master.ReplicationLogCleaner;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.zookeeper.ZKClusterId;
 import org.apache.zookeeper.KeeperException;
 
 import static org.apache.hadoop.hbase.HConstants.HBASE_MASTER_LOGCLEANER_PLUGINS;
@@ -66,8 +68,9 @@ public class Replication implements WALActionsListener,
       LogFactory.getLog(Replication.class);
   private boolean replication;
   private ReplicationSourceManager replicationManager;
-  private ReplicationZookeeper zkHelper;
   private ReplicationQueues replicationQueues;
+  private ReplicationPeers replicationPeers;
+  private ReplicationTracker replicationTracker;
   private Configuration conf;
   private ReplicationSink replicationSink;
   // Hosting server
@@ -107,23 +110,35 @@ public class Replication implements WALActionsListener,
         .build());
     if (replication) {
       try {
-        this.zkHelper = new ReplicationZookeeper(server);
         this.replicationQueues =
-            new ReplicationQueuesZKImpl(server.getZooKeeper(), this.conf, this.server);
+            ReplicationFactory.getReplicationQueues(server.getZooKeeper(), this.conf, this.server);
         this.replicationQueues.init(this.server.getServerName().toString());
+        this.replicationPeers =
+            ReplicationFactory.getReplicationPeers(server.getZooKeeper(), this.conf, this.server);
+        this.replicationPeers.init();
+        this.replicationTracker =
+            ReplicationFactory.getReplicationTracker(server.getZooKeeper(), this.replicationPeers,
+              this.conf, this.server, this.server);
       } catch (KeeperException ke) {
         throw new IOException("Failed replication handler create", ke);
       }
+      UUID clusterId = null;
+      try {
+        clusterId = ZKClusterId.getUUIDForCluster(this.server.getZooKeeper());
+      } catch (KeeperException ke) {
+        throw new IOException("Could not read cluster id", ke);
+      }
       this.replicationManager =
-          new ReplicationSourceManager(zkHelper, replicationQueues, conf, this.server, fs, logDir,
-              oldLogDir);
+          new ReplicationSourceManager(replicationQueues, replicationPeers, replicationTracker,
+              conf, this.server, fs, logDir, oldLogDir, clusterId);
       this.statsThreadPeriod =
           this.conf.getInt("replication.stats.thread.period.seconds", 5 * 60);
       LOG.debug("ReplicationStatisticsThread " + this.statsThreadPeriod);
     } else {
       this.replicationManager = null;
-      this.zkHelper = null;
       this.replicationQueues = null;
+      this.replicationPeers = null;
+      this.replicationTracker = null;
     }
   }
 
