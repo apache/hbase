@@ -1200,7 +1200,9 @@ public class HConnectionManager {
         for (Map<byte[], HRegionLocation> tableLocations :
           cachedRegionLocations.values()) {
           for (Entry<byte[], HRegionLocation> e : tableLocations.entrySet()) {
-            if (e.getValue().getHostnamePort().equals(server)) {
+            HRegionLocation value = e.getValue();
+            if (value != null
+                && value.getHostnamePort().equals(server)) {
               tableLocations.remove(e.getKey());
               deletedSomething = true;
             }
