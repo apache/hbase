@@ -84,7 +84,6 @@ import java.util.concurrent.atomic.AtomicLong;
  */
 class AsyncProcess<CResult> {
   private static final Log LOG = LogFactory.getLog(AsyncProcess.class);
-
   protected final HConnection hConnection;
   protected final byte[] tableName;
   protected final ExecutorService pool;
@@ -406,9 +405,9 @@ class AsyncProcess<CResult> {
         public void run() {
           MultiResponse res;
           try {
-            ServerCallable<MultiResponse> callable = createCallable(loc, multi);
+            MultiServerCallable<Row> callable = createCallable(loc, multi);
             try {
-              res = callable.withoutRetries();
+              res = createCaller(callable).callWithoutRetries(callable);
             } catch (IOException e) {
               LOG.warn("The call to the RS failed, we don't know where we stand. location="
                   + loc, e);
@@ -441,10 +440,19 @@ class AsyncProcess<CResult> {
   /**
    * Create a callable. Isolated to be easily overridden in the tests.
    */
-  protected ServerCallable<MultiResponse> createCallable(
-      final HRegionLocation loc, final MultiAction<Row> multi) {
+  protected MultiServerCallable<Row> createCallable(final HRegionLocation location,
+      final MultiAction<Row> multi) {
+    return new MultiServerCallable<Row>(hConnection, tableName, location, multi);
+  }
 
-    return new MultiServerCallable<Row>(hConnection, tableName, loc, multi);
+  /**
+   * For tests.
+   * @param callable
+   * @return Returns a caller.
+   */
+  protected RpcRetryingCaller<MultiResponse> createCaller(MultiServerCallable<Row> callable) {
+    // callable is unused.
+    return new RpcRetryingCaller<MultiResponse>();
   }
 
   /**

@@ -1,6 +1,4 @@
-/*
- * Copyright The Apache Software Foundation
- *
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -17,18 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.exceptions;
+package org.apache.hadoop.hbase.client;
 
-public class LockTimeoutException extends DoNotRetryIOException {
 
-  private static final long serialVersionUID = -1770764924258999825L;
-
-  /** Default constructor */
-  public LockTimeoutException() {
-    super();
-  }
-
-  public LockTimeoutException(String s) {
-    super(s);
-  }
-}
+class ScannerCaller extends RpcRetryingCaller<Result []> {}

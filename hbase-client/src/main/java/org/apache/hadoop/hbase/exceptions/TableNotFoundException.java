@@ -24,7 +24,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 /** Thrown when a table can not be located */
 @InterfaceAudience.Public
 @InterfaceStability.Stable
-public class TableNotFoundException extends RegionException {
+public class TableNotFoundException extends DoNotRetryIOException {
   private static final long serialVersionUID = 993179627856392526L;
 
   /** default constructor */

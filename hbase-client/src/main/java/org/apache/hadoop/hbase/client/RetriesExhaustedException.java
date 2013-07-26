@@ -20,6 +20,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 import java.io.IOException;
 import java.util.Date;
 import java.util.List;
+import java.util.concurrent.Callable;
 
 /**
  * Exception thrown by HTable methods when an attempt to do something (like
@@ -61,7 +62,7 @@ public class RetriesExhaustedException extends IOException {
 
   /**
    * Create a new RetriesExhaustedException from the list of prior failures.
-   * @param callableVitals Details from the {@link ServerCallable} we were using
+   * @param callableVitals Details from the Callable we were using
    * when we got this exception.
    * @param numTries The number of tries we made
    * @param exceptions List of exceptions that failed before giving up

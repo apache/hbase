@@ -22,6 +22,7 @@ import static org.junit.Assert.*;
 
 import java.io.IOException;
 import java.lang.reflect.Method;
+import java.net.BindException;
 import java.util.TreeMap;
 import java.util.List;
 import java.util.Map;
@@ -39,6 +40,7 @@ import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.regionserver.wal.HLog.Reader;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.coprocessor.SampleRegionWALObserver;
@@ -377,7 +379,7 @@ public class TestHLog  {
    *              [FSNamesystem.nextGenerationStampForBlock])
    * 3. HDFS-142 (on restart, maintain pendingCreates)
    */
-  @Test
+  @Test (timeout=300000)
   public void testAppendClose() throws Exception {
     byte [] tableName = Bytes.toBytes(getName());
     HRegionInfo regioninfo = new HRegionInfo(tableName,
@@ -422,16 +424,16 @@ public class TestHLog  {
         Thread.sleep(1000);
       }
       assertFalse(cluster.isClusterUp());
-
-      // Workaround a strange issue with Hadoop's RPC system - if we don't
-      // sleep here, the new datanodes will pick up a cached IPC connection to
-      // the old (dead) NN and fail to start. Sleeping 2 seconds goes past
-      // the idle time threshold configured in the conf above
-      Thread.sleep(2000);
-
-      LOG.info("Waiting a few seconds before re-starting HDFS");
-      Thread.sleep(5000);
-      cluster = TEST_UTIL.startMiniDFSClusterForTestHLog(namenodePort);
+      cluster = null;
+      for (int i = 0; i < 100; i++) {
+        try {
+          cluster = TEST_UTIL.startMiniDFSClusterForTestHLog(namenodePort);
+          break;
+        } catch (BindException e) {
+          LOG.info("Sleeping.  BindException bringing up new cluster");
+          Threads.sleep(1000);
+        }
+      }
       cluster.waitActive();
       fs = cluster.getFileSystem();
       LOG.info("STARTED second instance.");

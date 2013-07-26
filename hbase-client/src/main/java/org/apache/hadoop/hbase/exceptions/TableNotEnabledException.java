@@ -22,14 +22,13 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.util.Bytes;
 
-import java.io.IOException;
 
 /**
  * Thrown if a table should be enabled but is not
  */
 @InterfaceAudience.Public
 @InterfaceStability.Stable
-public class TableNotEnabledException extends IOException {
+public class TableNotEnabledException extends DoNotRetryIOException {
   private static final long serialVersionUID = 262144L;
   /** default constructor */
   public TableNotEnabledException() {

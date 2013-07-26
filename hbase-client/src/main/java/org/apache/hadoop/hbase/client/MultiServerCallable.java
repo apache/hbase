@@ -21,7 +21,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.Callable;
 
 import org.apache.hadoop.hbase.CellScannable;
 import org.apache.hadoop.hbase.HRegionLocation;
@@ -36,19 +35,22 @@ import com.google.protobuf.ServiceException;
 
 /**
  * Callable that handles the <code>multi</code> method call going against a single
- * regionserver; i.e. A {@link ServerCallable} for the multi call (It is not a
- * {@link Callable} that goes against multiple regions.
+ * regionserver; i.e. A {@link RegionServerCallable} for the multi call (It is not a
+ * {@link RegionServerCallable} that goes against multiple regions.
  * @param <R>
  */
-class MultiServerCallable<R> extends ServerCallable<MultiResponse> {
+class MultiServerCallable<R> extends RegionServerCallable<MultiResponse> {
   private final MultiAction<R> multi;
-  private final HRegionLocation loc;
 
   MultiServerCallable(final HConnection connection, final byte [] tableName,
-      final HRegionLocation loc, final MultiAction<R> multi) {
+      final HRegionLocation location, final MultiAction<R> multi) {
     super(connection, tableName, null);
     this.multi = multi;
-    this.loc = loc;
+    setLocation(location);
+  }
+
+  MultiAction<R> getMulti() {
+    return this.multi;
   }
 
   @Override
@@ -74,7 +76,7 @@ class MultiServerCallable<R> extends ServerCallable<MultiResponse> {
                 RequestConverter.buildNoDataMultiRequest(regionName, rms, cells);
             // Carry the cells over the proxy/pb Service interface using the payload carrying
             // rpc controller.
-            stub.multi(new PayloadCarryingRpcController(cells), multiRequest);
+            getStub().multi(new PayloadCarryingRpcController(cells), multiRequest);
             // This multi call does not return results.
             response.add(regionName, action.getOriginalIndex(), Result.EMPTY_RESULT);
           } catch (ServiceException se) {
@@ -99,7 +101,7 @@ class MultiServerCallable<R> extends ServerCallable<MultiResponse> {
           // Controller optionally carries cell data over the proxy/service boundary and also
           // optionally ferries cell response data back out again.
           PayloadCarryingRpcController controller = new PayloadCarryingRpcController(cells);
-          ClientProtos.MultiResponse responseProto = stub.multi(controller, multiRequest);
+          ClientProtos.MultiResponse responseProto = getStub().multi(controller, multiRequest);
           results = ResponseConverter.getResults(responseProto, controller.cellScanner());
         } catch (ServiceException se) {
           ex = ProtobufUtil.getRemoteException(se);
@@ -115,6 +117,7 @@ class MultiServerCallable<R> extends ServerCallable<MultiResponse> {
 
   @Override
   public void prepare(boolean reload) throws IOException {
-    stub = connection.getClient(loc.getServerName());
+    // Use the location we were given in the constructor rather than go look it up.
+    setStub(getConnection().getClient(getLocation().getServerName()));
   }
 }

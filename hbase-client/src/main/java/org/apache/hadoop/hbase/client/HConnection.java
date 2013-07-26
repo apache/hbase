@@ -60,6 +60,12 @@ import org.apache.hadoop.hbase.protobuf.generated.MasterMonitorProtos.MasterMoni
 @InterfaceStability.Stable
 public interface HConnection extends Abortable, Closeable {
   /**
+   * Key for configuration in Configuration whose value is the class we implement making a
+   * new HConnection instance.
+   */
+  public static final String HBASE_CLIENT_CONNECTION_IMPL = "hbase.client.connection.impl";
+
+  /**
    * @return Configuration instance being used by this HConnection instance.
    */
   Configuration getConfiguration();
@@ -268,34 +274,6 @@ public interface HConnection extends Abortable, Closeable {
   HRegionLocation getRegionLocation(byte [] tableName, byte [] row,
     boolean reload)
   throws IOException;
-
-  /**
-   * Pass in a ServerCallable with your particular bit of logic defined and
-   * this method will manage the process of doing retries with timed waits
-   * and refinds of missing regions.
-   *
-   * @param <T> the type of the return value
-   * @param callable callable to run
-   * @return an object of type T
-   * @throws IOException if a remote or network exception occurs
-   * @throws RuntimeException other unspecified error
-   */
-  @Deprecated
-  <T> T getRegionServerWithRetries(ServerCallable<T> callable)
-  throws IOException, RuntimeException;
-
-  /**
-   * Pass in a ServerCallable with your particular bit of logic defined and
-   * this method will pass it to the defined region server.
-   * @param <T> the type of the return value
-   * @param callable callable to run
-   * @return an object of type T
-   * @throws IOException if a remote or network exception occurs
-   * @throws RuntimeException other unspecified error
-   */
-  @Deprecated
-  <T> T getRegionServerWithoutRetries(ServerCallable<T> callable)
-  throws IOException, RuntimeException;
 
   /**
    * Process a mixed batch of Get, Put and Delete actions. All actions for a
