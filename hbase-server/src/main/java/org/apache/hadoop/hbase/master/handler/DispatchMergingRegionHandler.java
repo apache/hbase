@@ -20,12 +20,14 @@ package org.apache.hadoop.hbase.master.handler;
 
 import java.io.IOException;
 import java.io.InterruptedIOException;
+import java.util.Map;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.RegionLoad;
+import org.apache.hadoop.hbase.ServerLoad;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.exceptions.RegionOpeningException;
 import org.apache.hadoop.hbase.executor.EventHandler;
@@ -34,6 +36,7 @@ import org.apache.hadoop.hbase.master.CatalogJanitor;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.RegionPlan;
 import org.apache.hadoop.hbase.master.RegionStates;
+import org.apache.hadoop.hbase.master.ServerManager;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 
 /**
@@ -98,12 +101,8 @@ public class DispatchMergingRegionHandler extends EventHandler {
       // Move region_b to region a's location, switch region_a and region_b if
       // region_a's load lower than region_b's, so we will always move lower
       // load region
-      RegionLoad loadOfRegionA = masterServices.getServerManager()
-          .getLoad(region_a_location).getRegionsLoad()
-          .get(region_a.getRegionName());
-      RegionLoad loadOfRegionB = masterServices.getServerManager()
-          .getLoad(region_b_location).getRegionsLoad()
-          .get(region_b.getRegionName());
+      RegionLoad loadOfRegionA = getRegionLoad(region_a_location, region_a);
+      RegionLoad loadOfRegionB = getRegionLoad(region_b_location, region_b);
       if (loadOfRegionA != null && loadOfRegionB != null
           && loadOfRegionA.getRequestsCount() < loadOfRegionB
               .getRequestsCount()) {
@@ -173,5 +172,17 @@ public class DispatchMergingRegionHandler extends EventHandler {
           + ", because can't move them together after "
           + (EnvironmentEdgeManager.currentTimeMillis() - startTime) + "ms");
     }
+  }
+
+  private RegionLoad getRegionLoad(ServerName sn, HRegionInfo hri) {
+    ServerManager serverManager =  masterServices.getServerManager();
+    ServerLoad load = serverManager.getLoad(sn);
+    if (load != null) {
+      Map<byte[], RegionLoad> regionsLoad = load.getRegionsLoad();
+      if (regionsLoad != null) {
+        return regionsLoad.get(hri.getRegionName());
+      }
+    }
+    return null;
   }
 }
