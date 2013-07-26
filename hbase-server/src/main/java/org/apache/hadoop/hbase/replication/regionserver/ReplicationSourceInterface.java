@@ -40,8 +40,11 @@ public interface ReplicationSourceInterface {
    * @param conf the configuration to use
    * @param fs the file system to use
    * @param manager the manager to use
+   * @param replicationQueues
+   * @param replicationPeers
    * @param stopper the stopper object for this region server
-   * @param peerClusterId the id of the peer cluster
+   * @param peerClusterZnode
+   * @param clusterId
    * @throws IOException
    */
   public void init(final Configuration conf, final FileSystem fs,

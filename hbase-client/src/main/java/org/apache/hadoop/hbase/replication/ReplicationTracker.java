@@ -43,7 +43,7 @@ public interface ReplicationTracker {
 
   /**
    * Returns a list of other live region servers in the cluster.
-   * @return
+   * @return List of region servers.
    */
   public List<String> getListOfRegionServers();
 }
