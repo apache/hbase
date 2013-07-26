@@ -60,7 +60,7 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
  * When a region server dies, this class uses a watcher to get notified and it
  * tries to grab a lock in order to transfer all the queues in a local
  * old source.
- * 
+ *
  * This class implements the ReplicationListener interface so that it can track changes in
  * replication state.
  */
@@ -99,13 +99,15 @@ public class ReplicationSourceManager implements ReplicationListener {
 
   /**
    * Creates a replication manager and sets the watch on all the other registered region servers
-   * @param zkHelper the zk helper for replication
    * @param replicationQueues the interface for manipulating replication queues
+   * @param replicationPeers
+   * @param replicationTracker
    * @param conf the configuration to use
    * @param stopper the stopper object for this region server
    * @param fs the file system to use
    * @param logDir the directory that contains all hlog directories of live RSs
    * @param oldLogDir the directory where old logs are archived
+   * @param clusterId
    */
   public ReplicationSourceManager(final ReplicationQueues replicationQueues,
       final ReplicationPeers replicationPeers, final ReplicationTracker replicationTracker,
@@ -151,7 +153,7 @@ public class ReplicationSourceManager implements ReplicationListener {
    * @param queueRecovered indicates if this queue comes from another region server
    * @param holdLogInZK if true then the log is retained in ZK
    */
-  public void logPositionAndCleanOldLogs(Path log, String id, long position, 
+  public void logPositionAndCleanOldLogs(Path log, String id, long position,
       boolean queueRecovered, boolean holdLogInZK) {
     String fileName = log.getName();
     this.replicationQueues.setLogPosition(id, fileName, position);
