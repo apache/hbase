@@ -78,6 +78,21 @@ enum TDeleteType {
 }
 
 /**
+ * Specify Durability:
+ *  - SKIP_WAL means do not write the Mutation to the WAL.
+ *  - ASYNC_WAL means write the Mutation to the WAL asynchronously,
+ *  - SYNC_WAL means write the Mutation to the WAL synchronously,
+ *  - FSYNC_WAL means Write the Mutation to the WAL synchronously and force the entries to disk.
+ */
+
+enum TDurability {
+  SKIP_WAL = 1,
+  ASYNC_WAL = 2,
+  SYNC_WAL = 3,
+  FSYNC_WAL = 4
+}
+
+/**
  * Used to perform Get operations on a single row.
  *
  * The scope can be further narrowed down by specifying a list of
@@ -110,15 +125,16 @@ struct TGet {
  * don't have one. If you don't provide a default timestamp
  * the current time is inserted.
  *
- * You can also specify if this Put should be written
- * to the write-ahead Log (WAL) or not. It defaults to true.
+ * You can specify how this Put should be written to the write-ahead Log (WAL)
+ * by changing the durability. If you don't provide durability, it defaults to
+ * column family's default setting for durability.
  */
 struct TPut {
   1: required binary row,
   2: required list<TColumnValue> columnValues
   3: optional i64 timestamp,
-  4: optional bool writeToWal = 1,
-  5: optional map<binary, binary> attributes
+  5: optional map<binary, binary> attributes,
+  6: optional TDurability durability
 }
 
 /**
@@ -143,27 +159,32 @@ struct TPut {
  * as if you had added a TColumn for every column family and this timestamp
  * (i.e. all versions older than or equal in all column families will be deleted)
  *
+ * You can specify how this Delete should be written to the write-ahead Log (WAL)
+ * by changing the durability. If you don't provide durability, it defaults to
+ * column family's default setting for durability.
  */
 struct TDelete {
   1: required binary row,
   2: optional list<TColumn> columns,
   3: optional i64 timestamp,
   4: optional TDeleteType deleteType = 1,
-  5: optional bool writeToWal = 1,
-  6: optional map<binary, binary> attributes
+  6: optional map<binary, binary> attributes,
+  7: optional TDurability durability
+
 }
 
 /**
  * Used to perform Increment operations for a single row.
  *
- * You can specify if this Increment should be written
- * to the write-ahead Log (WAL) or not. It defaults to true.
+ * You can specify how this Increment should be written to the write-ahead Log (WAL)
+ * by changing the durability. If you don't provide durability, it defaults to
+ * column family's default setting for durability.
  */
 struct TIncrement {
   1: required binary row,
   2: required list<TColumnIncrement> columns,
-  3: optional bool writeToWal = 1,
-  4: optional map<binary, binary> attributes
+  4: optional map<binary, binary> attributes,
+  5: optional TDurability durability
 }
 
 /**
