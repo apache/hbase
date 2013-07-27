@@ -87,7 +87,7 @@ public class TestFlushSnapshotFromClient {
   private static final byte[] TEST_FAM = Bytes.toBytes("fam");
   private static final byte[] TEST_QUAL = Bytes.toBytes("q");
   private static final byte[] TABLE_NAME = Bytes.toBytes(STRING_TABLE_NAME);
-  private final int DEFAULT_NUM_ROWS = 1000;
+  private final int DEFAULT_NUM_ROWS = 100;
 
   /**
    * Setup the config for the cluster
@@ -124,7 +124,6 @@ public class TestFlushSnapshotFromClient {
   @Before
   public void setup() throws Exception {
     createTable(TABLE_NAME, TEST_FAM);
-    assertTrue(UTIL.getHBaseAdmin().getTableRegions(TABLE_NAME).size() > 2);
   }
 
   @After
@@ -412,7 +411,8 @@ public class TestFlushSnapshotFromClient {
       assertEquals(info, snapshotRegionInfo);
       // check to make sure we have the family
       Path familyDir = new Path(regionDir, Bytes.toString(TEST_FAM));
-      assertTrue(fs.exists(familyDir));
+      assertTrue("Missing region " + Bytes.toString(snapshotRegionInfo.getStartKey()),
+                 fs.exists(familyDir));
 
       // make sure we have some file references
       assertTrue(fs.listStatus(familyDir).length > 0);
@@ -570,7 +570,8 @@ public class TestFlushSnapshotFromClient {
     waitForTableToBeOnline(TABLE_NAME);
   }
 
-  private void createTable(final byte[] tableName, final byte[]... families) throws IOException {
+  private void createTable(final byte[] tableName, final byte[]... families)
+      throws IOException, InterruptedException {
     HTableDescriptor htd = new HTableDescriptor(tableName);
     for (byte[] family: families) {
       HColumnDescriptor hcd = new HColumnDescriptor(family);
@@ -582,25 +583,33 @@ public class TestFlushSnapshotFromClient {
       splitKeys[i] = new byte[] { hex[i] };
     }
     UTIL.getHBaseAdmin().createTable(htd, splitKeys);
+    waitForTableToBeOnline(tableName);
+    assertEquals(15, UTIL.getHBaseAdmin().getTableRegions(TABLE_NAME).size());
   }
 
-  public void loadData(final HTable table, int rows, byte[]... families) throws IOException {
+  public void loadData(final HTable table, int rows, byte[]... families)
+      throws IOException, InterruptedException {
     table.setAutoFlush(false);
 
+    // Ensure one row per region
     assertTrue(rows >= 16);
-    for (char k: "0123456789abcdef".toCharArray()) {
-      byte[] value = Bytes.add(Bytes.toBytes(k), Bytes.toBytes(System.currentTimeMillis()));
-      byte[] key = Bytes.toBytes(MD5Hash.getMD5AsHex(value));
+    for (byte k0: Bytes.toBytes("0123456789abcdef")) {
+      byte[] k = new byte[] { k0 };
+      byte[] value = Bytes.add(Bytes.toBytes(System.currentTimeMillis()), k);
+      byte[] key = Bytes.add(k, Bytes.toBytes(MD5Hash.getMD5AsHex(value)));
       putData(table, families, key, value);
       rows--;
     }
 
+    // Add other extra rows. more rows, more files
     while (rows-- > 0) {
       byte[] value = Bytes.add(Bytes.toBytes(System.currentTimeMillis()), Bytes.toBytes(rows));
       byte[] key = Bytes.toBytes(MD5Hash.getMD5AsHex(value));
       putData(table, families, key, value);
     }
     table.flushCommits();
+
+    waitForTableToBeOnline(table.getTableName());
   }
 
   private void putData(final HTable table, final byte[][] families,
