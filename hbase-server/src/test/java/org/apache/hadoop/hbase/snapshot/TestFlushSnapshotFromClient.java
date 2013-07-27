@@ -136,6 +136,10 @@ public class TestFlushSnapshotFromClient {
     } catch (IOException e) {
       LOG.warn("Failure to delete archive directory", e);
     }
+    for (SnapshotDescription snapshot: UTIL.getHBaseAdmin().listSnapshots()) {
+      UTIL.getHBaseAdmin().deleteSnapshot(snapshot.getName());
+    }
+    SnapshotTestingUtils.assertNoSnapshots(UTIL.getHBaseAdmin());
   }
 
   @AfterClass
@@ -193,10 +197,6 @@ public class TestFlushSnapshotFromClient {
 
     SnapshotTestingUtils.confirmSnapshotValid(snapshots.get(0), TABLE_NAME, TEST_FAM, rootDir,
       admin, fs, false, new Path(rootDir, HConstants.HREGION_LOGDIR_NAME), snapshotServers);
-
-    admin.deleteSnapshot(snapshot);
-    snapshots = admin.listSnapshots();
-    SnapshotTestingUtils.assertNoSnapshots(admin);
   }
 
   @Test
@@ -245,16 +245,6 @@ public class TestFlushSnapshotFromClient {
       FSUtils.getRootDir(UTIL.getConfiguration()), LOG);
     // make sure we get the snapshot
     SnapshotTestingUtils.assertOneSnapshotThatMatches(admin, snapshot);
-
-    // test that we can delete the snapshot
-    admin.deleteSnapshot(snapshot.getName());
-    LOG.info(" === Async Snapshot Deleted ===");
-    FSUtils.logFileSystemState(UTIL.getTestFileSystem(),
-      FSUtils.getRootDir(UTIL.getConfiguration()), LOG);
-    // make sure we don't have any snapshots
-    SnapshotTestingUtils.assertNoSnapshots(admin);
-    LOG.info(" === Async Snapshot Test Completed ===");
-
   }
 
   @Test
@@ -308,10 +298,6 @@ public class TestFlushSnapshotFromClient {
     // test that we can delete the snapshot
     UTIL.deleteTable(cloneAfterMergeName);
     UTIL.deleteTable(cloneBeforeMergeName);
-    admin.deleteSnapshot(snapshotBeforeMergeName);
-
-    // make sure we don't have any snapshots
-    SnapshotTestingUtils.assertNoSnapshots(admin);
   }
 
   @Test
@@ -357,10 +343,6 @@ public class TestFlushSnapshotFromClient {
 
     // test that we can delete the snapshot
     UTIL.deleteTable(cloneName);
-    admin.deleteSnapshot(snapshotName);
-
-    // make sure we don't have any snapshots
-    SnapshotTestingUtils.assertNoSnapshots(admin);
   }
 
   /**
@@ -417,15 +399,6 @@ public class TestFlushSnapshotFromClient {
       // make sure we have some file references
       assertTrue(fs.listStatus(familyDir).length > 0);
     }
-
-    // test that we can delete the snapshot
-    admin.deleteSnapshot(snapshotName);
-    FSUtils.logFileSystemState(UTIL.getTestFileSystem(),
-      FSUtils.getRootDir(UTIL.getConfiguration()), LOG);
-
-    // make sure we don't have any snapshots
-    SnapshotTestingUtils.assertNoSnapshots(admin);
-    LOG.debug("------- Flush-Snapshot Create List Destroy-------------");
   }
 
   /**
@@ -534,10 +507,6 @@ public class TestFlushSnapshotFromClient {
     assertTrue("We expect at least 1 snapshot of table1 ", t1SnapshotsCount > 0);
     assertTrue("We expect at least 1 snapshot of table2 ", t2SnapshotsCount > 0);
 
-    // delete snapshots so subsequent tests are clean.
-    for (SnapshotDescription ss : taken) {
-      admin.deleteSnapshot(ss.getName());
-    }
     UTIL.deleteTable(TABLE2_NAME);
   }
 
