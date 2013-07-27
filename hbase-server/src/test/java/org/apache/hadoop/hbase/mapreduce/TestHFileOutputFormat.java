@@ -34,6 +34,8 @@ import java.util.Map.Entry;
 import java.util.Random;
 import java.util.concurrent.Callable;
 
+import com.google.common.collect.Lists;
+
 import junit.framework.Assert;
 
 import org.apache.commons.logging.Log;
