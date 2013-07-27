@@ -87,7 +87,7 @@ public class TestFlushSnapshotFromClient {
   private static final byte[] TEST_FAM = Bytes.toBytes("fam");
   private static final byte[] TEST_QUAL = Bytes.toBytes("q");
   private static final byte[] TABLE_NAME = Bytes.toBytes(STRING_TABLE_NAME);
-  private final int DEFAULT_NUM_ROWS = 100;
+  private final int DEFAULT_NUM_ROWS = 1000;
 
   /**
    * Setup the config for the cluster
