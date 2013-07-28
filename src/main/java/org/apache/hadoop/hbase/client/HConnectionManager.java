@@ -802,7 +802,7 @@ public class HConnectionManager {
           return true;
         }
       };
-      MetaScanner.metaScan(conf, visitor);
+      MetaScanner.metaScan(conf, this, visitor, null);
       return available.get() && (regionCount.get() > 0);
     }
 
@@ -842,8 +842,8 @@ public class HConnectionManager {
     @Override
     public List<HRegionLocation> locateRegions(final byte[] tableName, final boolean useCache,
         final boolean offlined) throws IOException {
-      NavigableMap<HRegionInfo, ServerName> regions = MetaScanner.allTableRegions(conf, tableName,
-        offlined);
+      NavigableMap<HRegionInfo, ServerName> regions = MetaScanner.allTableRegions(conf, this,
+          tableName, offlined);
       final List<HRegionLocation> locations = new ArrayList<HRegionLocation>();
       for (HRegionInfo regionInfo : regions.keySet()) {
         locations.add(locateRegion(tableName, regionInfo.getStartKey(), useCache, true));
@@ -955,8 +955,8 @@ public class HConnectionManager {
       };
       try {
         // pre-fetch certain number of regions info at region cache.
-        MetaScanner.metaScan(conf, visitor, tableName, row,
-            this.prefetchRegionLimit);
+        MetaScanner.metaScan(conf, this, visitor, tableName, row,
+            this.prefetchRegionLimit, HConstants.META_TABLE_NAME);
       } catch (IOException e) {
         LOG.warn("Encountered problems when prefetch META table: ", e);
       }

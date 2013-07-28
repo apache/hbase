@@ -2593,7 +2593,7 @@ public class HBaseFsck extends Configured implements Tool {
     };
 
     // Scan -ROOT- to pick up META regions
-    MetaScanner.metaScan(getConf(), visitor, null, null,
+    MetaScanner.metaScan(getConf(), null, visitor, null, null,
       Integer.MAX_VALUE, HConstants.ROOT_TABLE_NAME);
 
     if (!checkMetaOnly) {

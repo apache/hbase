@@ -25,7 +25,6 @@ import java.io.DataOutput;
 import java.io.IOException;
 import java.lang.reflect.Proxy;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Collections;
@@ -33,10 +32,8 @@ import java.util.NavigableMap;
 import java.util.TreeMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.SynchronousQueue;
-import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -210,9 +207,6 @@ public class HTable implements HTableInterface {
    */
   public HTable(final byte[] tableName, final HConnection connection, 
       final ExecutorService pool) throws IOException {
-    if (pool == null || pool.isShutdown()) {
-      throw new IllegalArgumentException("Pool is null or shut down.");
-    }
     if (connection == null || connection.isClosed()) {
       throw new IllegalArgumentException("Connection is null or closed.");
     }
@@ -481,7 +475,7 @@ public class HTable implements HTableInterface {
    * @throws IOException if a remote or network exception occurs
    */
   public NavigableMap<HRegionInfo, ServerName> getRegionLocations() throws IOException {
-    return MetaScanner.allTableRegions(getConfiguration(), getTableName(), false);
+    return MetaScanner.allTableRegions(getConfiguration(), this.connection, getTableName(), false);
   }
 
   /**

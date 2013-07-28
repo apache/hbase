@@ -103,6 +103,7 @@ public class HBaseAdmin implements Abortable, Closeable {
   private boolean aborted;
 
   private static volatile boolean synchronousBalanceSwitchSupported = true;
+  private final boolean cleanupConnectionOnClose; // close the connection in close()
 
   /**
    * Constructor
@@ -119,6 +120,7 @@ public class HBaseAdmin implements Abortable, Closeable {
     this.numRetries = this.conf.getInt("hbase.client.retries.number", 10);
     this.retryLongerMultiplier = this.conf.getInt(
         "hbase.client.retries.longer.multiplier", 10);
+    this.cleanupConnectionOnClose = true;
 
     int tries = 0;
     while ( true ){
@@ -165,6 +167,7 @@ public class HBaseAdmin implements Abortable, Closeable {
       throws MasterNotRunningException, ZooKeeperConnectionException {
     this.conf = connection.getConfiguration();
     this.connection = connection;
+    this.cleanupConnectionOnClose = false;
 
     this.pause = this.conf.getLong("hbase.client.pause", 1000);
     this.numRetries = this.conf.getInt("hbase.client.retries.number", 10);
@@ -454,7 +457,7 @@ public class HBaseAdmin implements Abortable, Closeable {
             return true;
           }
         };
-        MetaScanner.metaScan(conf, visitor, desc.getName());
+        MetaScanner.metaScan(conf, connection, visitor, desc.getName());
         if (actualRegCount.get() != numRegs) {
           if (tries == this.numRetries * this.retryLongerMultiplier - 1) {
             throw new RegionOfflineException("Only " + actualRegCount.get() +
@@ -1675,7 +1678,7 @@ public class HBaseAdmin implements Abortable, Closeable {
         }
       };
 
-      MetaScanner.metaScan(conf, visitor);
+      MetaScanner.metaScan(conf, connection, visitor, null);
       pair = result.get();
     }
     return pair;
@@ -1802,7 +1805,7 @@ public class HBaseAdmin implements Abortable, Closeable {
   }
 
   public void close() throws IOException {
-    if (this.connection != null) {
+    if (cleanupConnectionOnClose && this.connection != null) {
       this.connection.close();
     }
   }

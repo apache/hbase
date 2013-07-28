@@ -86,7 +86,7 @@ public class TestMetaScanner {
     doReturn(true).when(visitor).processRow((Result)anyObject());
 
     // Scanning the entire table should give us three rows
-    MetaScanner.metaScan(conf, visitor, TABLENAME);
+    MetaScanner.metaScan(conf, null, visitor, TABLENAME);
     verify(visitor, times(3)).processRow((Result)anyObject());
 
     // Scanning the table with a specified empty start row should also
@@ -192,7 +192,7 @@ public class TestMetaScanner {
          while(!isStopped()) {
            try {
             NavigableMap<HRegionInfo, ServerName> regions =
-                MetaScanner.allTableRegions(TEST_UTIL.getConfiguration(), TABLENAME, false);
+                MetaScanner.allTableRegions(TEST_UTIL.getConfiguration(), null, TABLENAME, false);
 
             LOG.info("-------");
             byte[] lastEndKey = HConstants.EMPTY_START_ROW;
