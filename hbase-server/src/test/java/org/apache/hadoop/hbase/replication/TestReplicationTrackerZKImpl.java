@@ -37,6 +37,7 @@ import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.junit.AfterClass;
 import org.junit.Test;
+import org.junit.Ignore;
 
 import static org.junit.Assert.*;
 
@@ -140,7 +141,7 @@ public class TestReplicationTrackerZKImpl {
     assertEquals("hostname2.example.org:1234", rsRemovedData);
   }
 
-  @Test(timeout = 30000)
+  @Ignore ("Flakey") @Test(timeout = 30000)
   public void testPeerRemovedEvent() throws Exception {
     rp.addPeer("5", utility.getClusterKey());
     rt.registerListener(new DummyReplicationListener());
@@ -152,7 +153,7 @@ public class TestReplicationTrackerZKImpl {
     assertEquals("5", peerRemovedData);
   }
 
-  @Test(timeout = 30000)
+  @Ignore ("Flakey") @Test(timeout = 30000)
   public void testPeerListChangedEvent() throws Exception {
     // add a peer
     rp.addPeer("5", utility.getClusterKey());
