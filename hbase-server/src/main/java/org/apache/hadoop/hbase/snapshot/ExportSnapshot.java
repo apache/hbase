@@ -246,7 +246,7 @@ public final class ExportSnapshot extends Configured implements Tool {
         final Path outputPath, final FSDataOutputStream out,
         final long inputFileSize) {
       final String statusMessage = "copied %s/" + StringUtils.humanReadableInt(inputFileSize) +
-                                   " (%.3f%%) from " + inputPath + " to " + outputPath;
+                                   " (%.3f%%)";
 
       try {
         byte[] buffer = new byte[BUFFER_SIZE];
@@ -263,7 +263,8 @@ public final class ExportSnapshot extends Configured implements Tool {
             context.getCounter(Counter.BYTES_COPIED).increment(reportBytes);
             context.setStatus(String.format(statusMessage,
                               StringUtils.humanReadableInt(totalBytesWritten),
-                              reportBytes/(float)inputFileSize));
+                              totalBytesWritten/(float)inputFileSize) +
+                              " from " + inputPath + " to " + outputPath);
             reportBytes = 0;
           }
         }
@@ -271,7 +272,8 @@ public final class ExportSnapshot extends Configured implements Tool {
         context.getCounter(Counter.BYTES_COPIED).increment(reportBytes);
         context.setStatus(String.format(statusMessage,
                           StringUtils.humanReadableInt(totalBytesWritten),
-                          reportBytes/(float)inputFileSize));
+                          totalBytesWritten/(float)inputFileSize) +
+                          " from " + inputPath + " to " + outputPath);
 
         // Verify that the written size match
         if (totalBytesWritten != inputFileSize) {
