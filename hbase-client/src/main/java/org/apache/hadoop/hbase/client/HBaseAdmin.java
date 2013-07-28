@@ -152,6 +152,7 @@ public class HBaseAdmin implements Abortable, Closeable {
   // want to wait a long time.
   private final int retryLongerMultiplier;
   private boolean aborted;
+  private boolean cleanupConnectionOnClose = false; // close the connection in close()
 
   /**
    * Constructor.
@@ -164,6 +165,7 @@ public class HBaseAdmin implements Abortable, Closeable {
     // Will not leak connections, as the new implementation of the constructor
     // does not throw exceptions anymore.
     this(HConnectionManager.getConnection(new Configuration(c)));
+    this.cleanupConnectionOnClose = true;
   }
 
  /**
@@ -446,7 +448,7 @@ public class HBaseAdmin implements Abortable, Closeable {
             return true;
           }
         };
-        MetaScanner.metaScan(conf, visitor, desc.getName());
+        MetaScanner.metaScan(conf, connection, visitor, desc.getName());
         if (actualRegCount.get() != numRegs) {
           if (tries == this.numRetries * this.retryLongerMultiplier - 1) {
             throw new RegionOfflineException("Only " + actualRegCount.get() +
@@ -1863,7 +1865,7 @@ public class HBaseAdmin implements Abortable, Closeable {
         }
       };
 
-      MetaScanner.metaScan(conf, visitor);
+      MetaScanner.metaScan(conf, connection, visitor, null);
       pair = result.get();
     }
     return pair;
@@ -2038,7 +2040,7 @@ public class HBaseAdmin implements Abortable, Closeable {
 
   @Override
   public void close() throws IOException {
-    if (this.connection != null) {
+    if (cleanupConnectionOnClose && this.connection != null) {
       this.connection.close();
     }
   }

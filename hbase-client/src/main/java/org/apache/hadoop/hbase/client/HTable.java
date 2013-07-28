@@ -227,9 +227,6 @@ public class HTable implements HTableInterface {
    */
   public HTable(final byte[] tableName, final HConnection connection,
       final ExecutorService pool) throws IOException {
-    if (pool == null || pool.isShutdown()) {
-      throw new IllegalArgumentException("Pool is null or shut down.");
-    }
     if (connection == null || connection.isClosed()) {
       throw new IllegalArgumentException("Connection is null or closed.");
     }
@@ -501,7 +498,7 @@ public class HTable implements HTableInterface {
    */
   public NavigableMap<HRegionInfo, ServerName> getRegionLocations() throws IOException {
     // TODO: Odd that this returns a Map of HRI to SN whereas getRegionLocation, singular, returns an HRegionLocation.
-    return MetaScanner.allTableRegions(getConfiguration(), getTableName(), false);
+    return MetaScanner.allTableRegions(getConfiguration(), this.connection, getTableName(), false);
   }
 
   /**

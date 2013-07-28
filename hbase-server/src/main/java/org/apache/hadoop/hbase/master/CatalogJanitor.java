@@ -162,7 +162,7 @@ public class CatalogJanitor extends Chore {
 
     // Run full scan of .META. catalog table passing in our custom visitor with
     // the start row
-    MetaScanner.metaScan(server.getConfiguration(), visitor, tableName);
+    MetaScanner.metaScan(server.getConfiguration(), null, visitor, tableName);
 
     return new Triple<Integer, Map<HRegionInfo, Result>, Map<HRegionInfo, Result>>(
         count.get(), mergedRegions, splitParents);
