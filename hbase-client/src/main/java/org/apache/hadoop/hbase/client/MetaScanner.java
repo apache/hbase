@@ -61,7 +61,7 @@ public class MetaScanner {
   public static void metaScan(Configuration configuration,
       MetaScannerVisitor visitor)
   throws IOException {
-    metaScan(configuration, visitor, null);
+    metaScan(configuration, visitor, null, null, Integer.MAX_VALUE);
   }
 
   /**
@@ -69,15 +69,17 @@ public class MetaScanner {
    * name to locate meta regions.
    *
    * @param configuration config
+   * @param connection connection to use internally (null to use a new instance)
    * @param visitor visitor object
    * @param userTableName User table name in meta table to start scan at.  Pass
    * null if not interested in a particular table.
    * @throws IOException e
    */
-  public static void metaScan(Configuration configuration,
+  public static void metaScan(Configuration configuration, HConnection connection,
       MetaScannerVisitor visitor, byte [] userTableName)
   throws IOException {
-    metaScan(configuration, visitor, userTableName, null, Integer.MAX_VALUE);
+    metaScan(configuration, connection, visitor, userTableName, null, Integer.MAX_VALUE,
+        HConstants.META_TABLE_NAME);
   }
 
   /**
@@ -99,7 +101,7 @@ public class MetaScanner {
       MetaScannerVisitor visitor, byte [] userTableName, byte[] row,
       int rowLimit)
   throws IOException {
-    metaScan(configuration, visitor, userTableName, row, rowLimit,
+    metaScan(configuration, null, visitor, userTableName, row, rowLimit,
       HConstants.META_TABLE_NAME);
   }
 
@@ -109,6 +111,7 @@ public class MetaScanner {
    * <code>rowLimit</code> of rows.
    *
    * @param configuration HBase configuration.
+   * @param connection connection to use internally (null to use a new instance)
    * @param visitor Visitor object. Closes the visitor before returning.
    * @param tableName User table name in meta table to start scan at.  Pass
    * null if not interested in a particular table.
@@ -119,12 +122,17 @@ public class MetaScanner {
    * @param metaTableName Meta table to scan, root or meta.
    * @throws IOException e
    */
-  public static void metaScan(Configuration configuration,
+  public static void metaScan(Configuration configuration, HConnection connection,
       final MetaScannerVisitor visitor, final byte[] tableName,
       final byte[] row, final int rowLimit, final byte[] metaTableName)
   throws IOException {
     int rowUpperLimit = rowLimit > 0 ? rowLimit: Integer.MAX_VALUE;
-    HTable metaTable = new HTable(configuration, HConstants.META_TABLE_NAME);
+    HTable metaTable;
+    if (connection == null) {
+      metaTable = new HTable(configuration, HConstants.META_TABLE_NAME, null);
+    } else {
+      metaTable = new HTable(HConstants.META_TABLE_NAME, connection, null);      
+    }
     // Calculate startrow for scan.
     byte[] startRow;
     ResultScanner scanner = null;
@@ -215,17 +223,8 @@ public class MetaScanner {
   }
 
   /**
-   * Lists all of the regions currently in META.
-   * @param conf
-   * @return List of all user-space regions.
-   * @throws IOException
-   */
-  public static List<HRegionInfo> listAllRegions(Configuration conf)
-  throws IOException {
-    return listAllRegions(conf, true);
-  }
-
-  /**
+   * Used in tests.
+   *
    * Lists all of the regions currently in META.
    * @param conf
    * @param offlined True if we are to include offlined regions, false and we'll
@@ -268,6 +267,7 @@ public class MetaScanner {
    * @throws IOException
    */
   public static NavigableMap<HRegionInfo, ServerName> allTableRegions(Configuration conf,
+      HConnection connection,
       final byte [] tablename, final boolean offlined) throws IOException {
     final NavigableMap<HRegionInfo, ServerName> regions =
       new TreeMap<HRegionInfo, ServerName>();
@@ -280,7 +280,7 @@ public class MetaScanner {
         return true;
       }
     };
-    metaScan(conf, visitor, tablename);
+    metaScan(conf, connection, visitor, tablename);
     return regions;
   }
 

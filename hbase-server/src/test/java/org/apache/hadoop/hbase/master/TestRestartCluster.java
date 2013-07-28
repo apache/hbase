@@ -102,7 +102,7 @@ public class TestRestartCluster {
     }
 
     List<HRegionInfo> allRegions =
-      MetaScanner.listAllRegions(UTIL.getConfiguration());
+      MetaScanner.listAllRegions(UTIL.getConfiguration(), true);
     assertEquals(3, allRegions.size());
 
     LOG.info("\n\nShutting down cluster");
@@ -118,7 +118,7 @@ public class TestRestartCluster {
     // Otherwise we're reusing an HConnection that has gone stale because
     // the shutdown of the cluster also called shut of the connection.
     allRegions = MetaScanner.
-      listAllRegions(new Configuration(UTIL.getConfiguration()));
+      listAllRegions(new Configuration(UTIL.getConfiguration()), true);
     assertEquals(3, allRegions.size());
 
     LOG.info("\n\nWaiting for tables to be available");
