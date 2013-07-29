@@ -21,8 +21,10 @@
 package org.apache.hadoop.hbase.client;
 
 import junit.framework.TestCase;
+
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.SmallTests;
+import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.experimental.categories.Category;
 
@@ -122,8 +124,27 @@ public class TestResult extends TestCase {
     }
   }
 
+  /**
+   * Verify that Result.getBytes(...) behaves correctly.
+   */
+  public void testResultGetBytes() throws Exception {
+    byte [] value1 = Bytes.toBytes("value1");
+    byte [] qual = Bytes.toBytes("qual");
+
+    KeyValue kv1 = new KeyValue(row, family, qual, value);
+    KeyValue kv2 = new KeyValue(row, family, qual, value1);
+
+    Result r1 = new Result(new KeyValue[] {kv1, kv2});
+
+    ImmutableBytesWritable bytes = r1.getBytes();
+    assertNotNull(bytes);
+
+    Result r2 = new Result(bytes);
+    // no exception thrown
+    Result.compareResults(r1, r2);
+  }
+
   @org.junit.Rule
   public org.apache.hadoop.hbase.ResourceCheckerJUnitRule cu =
     new org.apache.hadoop.hbase.ResourceCheckerJUnitRule();
 }
-

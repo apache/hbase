@@ -36,6 +36,7 @@ import org.apache.hadoop.hbase.KeyValue.SplitKeyValue;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.io.WritableWithSize;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.io.Writable;
 
 /**
@@ -401,6 +402,22 @@ public class Result implements Writable, WritableWithSize {
    * @return pointer to raw binary of Result
    */
   public ImmutableBytesWritable getBytes() {
+    if (this.bytes == null && this.kvs != null) {
+      int totalLen = 0;
+      for(KeyValue kv : kvs) {
+        totalLen += kv.getLength() + Bytes.SIZEOF_INT;
+      }
+      DataOutputBuffer out = new DataOutputBuffer(totalLen);
+      try {
+        for(KeyValue kv : kvs) {
+          kv.write(out);
+        }
+        out.close();
+      } catch (IOException e) {
+        throw new RuntimeException("IOException in Result.getBytes()", e);
+      }
+      this.bytes = new ImmutableBytesWritable(out.getData(), 0, out.getLength());
+    }
     return this.bytes;
   }
 
