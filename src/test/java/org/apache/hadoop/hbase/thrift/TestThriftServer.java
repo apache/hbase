@@ -44,6 +44,7 @@ import org.apache.hadoop.hbase.thrift.generated.TRegionInfo;
 import org.apache.hadoop.hbase.thrift.generated.TRowResult;
 import org.apache.hadoop.hbase.thrift.generated.TIncrement;
 import org.apache.hadoop.hbase.thrift.ThriftServerRunner.HBaseHandler;
+import org.apache.hadoop.hbase.thrift.generated.TScan;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.metrics.ContextFactory;
 import org.apache.hadoop.metrics.MetricsContext;
@@ -465,6 +466,46 @@ public class TestThriftServer {
     TRowResult rowResult4a = handler.scannerGet(scanner4).get(0);
     assertEquals(rowResult4a.columns.size(), 1);
     assertEquals(rowResult4a.columns.get(columnBname).value, valueBname);
+
+    // Test scanner using a TScan object once with sortColumns False and once with sortColumns true
+    TScan scanNoSortColumns = new TScan();
+    scanNoSortColumns.setStartRow(rowAname);
+    scanNoSortColumns.setStopRow(rowBname);
+
+    int scanner5 = handler.scannerOpenWithScan(tableAname , scanNoSortColumns, null);
+    TRowResult rowResult5 = handler.scannerGet(scanner5).get(0);
+    assertEquals(rowResult5.columns.size(), 1);
+    assertEquals(rowResult5.columns.get(columnBname).value, valueCname);
+
+    TScan scanSortColumns = new TScan();
+    scanSortColumns.setStartRow(rowAname);
+    scanSortColumns.setStopRow(rowBname);
+    scanSortColumns = scanSortColumns.setSortColumns(true);
+
+    int scanner6 = handler.scannerOpenWithScan(tableAname ,scanSortColumns, null);
+    TRowResult rowResult6 = handler.scannerGet(scanner6).get(0);
+    assertEquals(rowResult6.sortedColumns.size(), 1);
+    assertEquals(rowResult6.sortedColumns.get(0).getCell().value, valueCname);
+
+    List<Mutation> rowBmutations = new ArrayList<Mutation>();
+    for (int i = 0; i < 20; i++) {
+      rowBmutations.add(new Mutation(false, asByteBuffer("columnA:" + i), valueCname, true));
+    }
+    ByteBuffer rowC = asByteBuffer("rowC");
+    handler.mutateRow(tableAname, rowC, rowBmutations, null);
+
+    TScan scanSortMultiColumns = new TScan();
+    scanSortMultiColumns.setStartRow(rowC);
+    scanSortMultiColumns = scanSortMultiColumns.setSortColumns(true);
+    int scanner7 = handler.scannerOpenWithScan(tableAname, scanSortMultiColumns, null);
+    TRowResult rowResult7 = handler.scannerGet(scanner7).get(0);
+
+    ByteBuffer smallerColumn = asByteBuffer("columnA:");
+    for (int i = 0; i < 20; i++) {
+      ByteBuffer currentColumn = rowResult7.sortedColumns.get(i).columnName;
+      assertTrue(Bytes.compareTo(smallerColumn.array(), currentColumn.array()) < 0);
+      smallerColumn = currentColumn;
+    }
 
     // Teardown
     handler.disableTable(tableAname);
