@@ -62,6 +62,7 @@ import org.apache.hadoop.hbase.exceptions.TableNotFoundException;
 import org.apache.hadoop.hbase.executor.EventHandler;
 import org.apache.hadoop.hbase.executor.EventType;
 import org.apache.hadoop.hbase.executor.ExecutorService;
+import org.apache.hadoop.hbase.master.RegionState.State;
 import org.apache.hadoop.hbase.master.balancer.FavoredNodeAssignmentHelper;
 import org.apache.hadoop.hbase.master.balancer.FavoredNodeLoadBalancer;
 import org.apache.hadoop.hbase.master.handler.ClosedRegionHandler;
@@ -1415,10 +1416,7 @@ public class AssignmentManager extends ZooKeeperListener {
    * @param regionInfo
    */
   public void regionOffline(final HRegionInfo regionInfo) {
-    regionStates.regionOffline(regionInfo);
-    removeClosedRegion(regionInfo);
-    // remove the region plan as well just in case.
-    clearRegionPlan(regionInfo);
+    regionOffline(regionInfo, null);
   }
 
   public void offlineDisabledRegion(HRegionInfo regionInfo) {
@@ -2355,7 +2353,7 @@ public class AssignmentManager extends ZooKeeperListener {
   public boolean waitForAssignment(HRegionInfo regionInfo)
       throws InterruptedException {
     while (!regionStates.isRegionAssigned(regionInfo)) {
-      if (regionStates.isRegionFailedToOpen(regionInfo)
+      if (regionStates.isRegionInState(regionInfo, State.FAILED_OPEN)
           || this.server.isStopped()) {
         return false;
       }
@@ -3102,7 +3100,7 @@ public class AssignmentManager extends ZooKeeperListener {
    */
   public void handleSplitReport(final ServerName sn, final HRegionInfo parent,
       final HRegionInfo a, final HRegionInfo b) {
-    regionOffline(parent);
+    regionOffline(parent, State.SPLIT);
     regionOnline(a, sn);
     regionOnline(b, sn);
 
@@ -3126,8 +3124,8 @@ public class AssignmentManager extends ZooKeeperListener {
    */
   public void handleRegionsMergeReport(final ServerName sn,
       final HRegionInfo merged, final HRegionInfo a, final HRegionInfo b) {
-    regionOffline(a);
-    regionOffline(b);
+    regionOffline(a, State.MERGED);
+    regionOffline(b, State.MERGED);
     regionOnline(merged, sn);
 
     // There's a possibility that the region was merging while a user asked
@@ -3237,5 +3235,17 @@ public class AssignmentManager extends ZooKeeperListener {
     regionStates.updateRegionState(merging_a, RegionState.State.MERGING);
     regionStates.updateRegionState(merging_b, RegionState.State.MERGING);
     return true;
+  }
+
+  /**
+   * A region is offline.  The new state should be the specified one,
+   * if not null.  If the specified state is null, the new state is Offline.
+   * The specified state can be Split/Merged/Offline/null only.
+   */
+  private void regionOffline(final HRegionInfo regionInfo, final State state) {
+    regionStates.regionOffline(regionInfo, state);
+    removeClosedRegion(regionInfo);
+    // remove the region plan as well just in case.
+    clearRegionPlan(regionInfo);
   }
 }

@@ -39,6 +39,7 @@ import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.master.RegionStates;
 import org.apache.hadoop.hbase.master.TableLockManager;
+import org.apache.hadoop.hbase.master.RegionState.State;
 import org.apache.hadoop.hbase.master.TableLockManager.TableLock;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.zookeeper.KeeperException;
@@ -203,7 +204,9 @@ public class DisableTableHandler extends EventHandler {
       RegionStates regionStates = assignmentManager.getRegionStates();
       for (HRegionInfo region: regions) {
         if (regionStates.isRegionInTransition(region)
-            && !regionStates.isRegionFailedToClose(region)) continue;
+            && !regionStates.isRegionInState(region, State.FAILED_CLOSE)) {
+          continue;
+        }
         final HRegionInfo hri = region;
         pool.execute(Trace.wrap(new Runnable() {
           public void run() {

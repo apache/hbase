@@ -37,6 +37,7 @@ import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.RegionStates;
+import org.apache.hadoop.hbase.master.RegionState.State;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.zookeeper.KeeperException;
@@ -73,7 +74,7 @@ public class DeleteTableHandler extends TableEventHandler {
     for (HRegionInfo region : regions) {
       long done = System.currentTimeMillis() + waitTime;
       while (System.currentTimeMillis() < done) {
-        if (states.isRegionFailedToOpen(region)) {
+        if (states.isRegionInState(region, State.FAILED_OPEN)) {
           am.regionOffline(region);
         }
         if (!states.isRegionInTransition(region)) break;

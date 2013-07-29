@@ -380,10 +380,12 @@ public class TestAssignmentManager {
       RegionPlan plan = new RegionPlan(REGIONINFO, SERVERNAME_A, SERVERNAME_B);
       am.balance(plan);
 
+      RegionStates regionStates = am.getRegionStates();
       // Must be failed to close since the server is fake
-      assertTrue(am.getRegionStates().isRegionFailedToClose(REGIONINFO));
+      assertTrue(regionStates.isRegionInTransition(REGIONINFO)
+        && regionStates.isRegionInState(REGIONINFO, State.FAILED_CLOSE));
       // Move it back to pending_close
-      am.getRegionStates().updateRegionState(REGIONINFO, State.PENDING_CLOSE);
+      regionStates.updateRegionState(REGIONINFO, State.PENDING_CLOSE);
 
       // Now fake the region closing successfully over on the regionserver; the
       // regionserver will have set the region in CLOSED state.  This will
@@ -413,7 +415,7 @@ public class TestAssignmentManager {
         ZKAssign.transitionNodeOpened(this.watcher, REGIONINFO, SERVERNAME_B, versionid);
       assertNotSame(-1, versionid);
       // Wait on the handler removing the OPENED znode.
-      while(am.getRegionStates().isRegionInTransition(REGIONINFO)) Threads.sleep(1);
+      while(regionStates.isRegionInTransition(REGIONINFO)) Threads.sleep(1);
     } finally {
       executor.shutdown();
       am.shutdown();

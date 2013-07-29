@@ -61,12 +61,15 @@ import org.apache.hadoop.hbase.exceptions.MasterNotRunningException;
 import org.apache.hadoop.hbase.exceptions.UnknownRegionException;
 import org.apache.hadoop.hbase.exceptions.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.executor.EventType;
+import org.apache.hadoop.hbase.master.AssignmentManager;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.master.RegionStates;
+import org.apache.hadoop.hbase.master.RegionState.State;
 import org.apache.hadoop.hbase.master.handler.SplitRegionHandler;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.HBaseFsck;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
@@ -811,6 +814,22 @@ public class TestSplitTransactionOnCluster {
           FSUtils.getTableStoreFilePathMap(null, fs, rootDir, tableName);
       assertEquals("Expected nothing but found " + storefilesAfter.toString(),
           storefilesAfter.size(), 0);
+
+      hri = region.getRegionInfo(); // split parent
+      AssignmentManager am = cluster.getMaster().getAssignmentManager();
+      RegionStates regionStates = am.getRegionStates();
+      long start = EnvironmentEdgeManager.currentTimeMillis();
+      while (!regionStates.isRegionInState(hri, State.SPLIT)) {
+        assertFalse("Timed out in waiting split parent to be in state SPLIT",
+          EnvironmentEdgeManager.currentTimeMillis() - start > 60000);
+        Thread.sleep(500);
+      }
+
+      // We should not be able to assign it again
+      am.assign(hri, true, true);
+      assertFalse("Split region should not be in transition again",
+        regionStates.isRegionInTransition(hri)
+          && regionStates.isRegionInState(hri, State.SPLIT));
     } finally {
       admin.setBalancerRunning(true, false);
       cluster.getMaster().setCatalogJanitorEnabled(true);
