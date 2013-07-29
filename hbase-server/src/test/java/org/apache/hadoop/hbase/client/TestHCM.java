@@ -110,7 +110,7 @@ public class TestHCM {
     return HConnectionTestingUtility.getConnectionCount();
   }
 
-  @Test(expected = RegionServerStoppedException.class)
+  @Ignore ("Fails in IDEs: HBASE-9042") @Test(expected = RegionServerStoppedException.class)
   public void testClusterStatus() throws Exception {
     byte[] tn = "testClusterStatus".getBytes();
     byte[] cf = "cf".getBytes();
