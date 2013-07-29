@@ -34,6 +34,7 @@ import org.apache.hadoop.hbase.thrift.generated.ColumnDescriptor;
 import org.apache.hadoop.hbase.thrift.generated.IllegalArgument;
 import org.apache.hadoop.hbase.thrift.generated.TCell;
 import org.apache.hadoop.hbase.thrift.generated.TIncrement;
+import org.apache.hadoop.hbase.thrift.generated.TColumn;
 import org.apache.hadoop.hbase.thrift.generated.TRowResult;
 import org.apache.hadoop.hbase.util.Bytes;
 
@@ -130,9 +131,15 @@ public class ThriftUtilities {
    *
    * @param in
    *          Hbase RowResult object
+   * @param sortColumns
+   *          This boolean dictates if row data is returned in a sorted order
+   *          sortColumns = True will set TRowResult's sortedColumns member
+   *                        which is an ArrayList of TColumn struct
+   *          sortColumns = False will set TRowResult's columns member which is
+   *                        a map of columnName and TCell struct
    * @return Thrift TRowResult array
    */
-  static public List<TRowResult> rowResultFromHBase(Result[] in) {
+  static public List<TRowResult> rowResultFromHBase(Result[] in, boolean sortColumns) {
     List<TRowResult> results = new ArrayList<TRowResult>();
     for ( Result result_ : in) {
         if(result_ == null || result_.isEmpty()) {
@@ -140,16 +147,39 @@ public class ThriftUtilities {
         }
         TRowResult result = new TRowResult();
         result.row = ByteBuffer.wrap(result_.getRow());
-        result.columns = new TreeMap<ByteBuffer, TCell>();
-        for(KeyValue kv : result_.raw()) {
-          result.columns.put(
-              ByteBuffer.wrap(KeyValue.makeColumn(kv.getFamily(),
-                  kv.getQualifier())),
-              new TCell(ByteBuffer.wrap(kv.getValue()), kv.getTimestamp()));
+        if (sortColumns) {
+          result.sortedColumns = new ArrayList<TColumn>();
+          for (KeyValue kv : result_.raw()) {
+            result.sortedColumns.add(new TColumn(
+                ByteBuffer.wrap(KeyValue.makeColumn(kv.getFamily(),
+                    kv.getQualifier())),
+                new TCell(ByteBuffer.wrap(kv.getValue()), kv.getTimestamp())));
+          }
+        } else {
+          result.columns = new TreeMap<ByteBuffer, TCell>();
+          for( KeyValue kv : result_.raw()) {
+            result.columns.put(
+                ByteBuffer.wrap(KeyValue.makeColumn(kv.getFamily(),
+                    kv.getQualifier())),
+                new TCell(ByteBuffer.wrap(kv.getValue()), kv.getTimestamp()));
+          }
         }
       results.add(result);
     }
     return results;
+  }
+
+  /**
+   * This utility method creates a list of Thrift TRowResult "struct" based on
+   * an array of Hbase RowResult objects. The empty list is returned if the input is
+   * null.
+   *
+   * @param in
+   *          Array of Hbase RowResult objects
+   * @return Thrift TRowResult array
+   */
+  static public List<TRowResult> rowResultFromHBase(Result[] in) {
+    return rowResultFromHBase(in, false);
   }
 
   static public List<TRowResult> rowResultFromHBase(Result in) {

@@ -122,11 +122,20 @@ struct TIncrement {
 }
 
 /**
+ * Holds column name and the cell.
+ */
+struct TColumn {
+  1:Text columnName,
+  2:TCell cell
+ }
+
+/**
  * Holds row name and then a map of columns to cells. 
  */
 struct TRowResult {
   1:Text row,
-  2:map<Text, TCell> columns
+  2:optional map<Text, TCell> columns,
+  3:optional list<TColumn> sortedColumns 
 }
 
 /**
@@ -138,7 +147,8 @@ struct TScan {
   3:optional i64 timestamp,
   4:optional list<Text> columns,
   5:optional i32 caching,
-  6:optional Text filterString
+  6:optional Text filterString,
+  7:optional bool sortColumns
 }
 
 //

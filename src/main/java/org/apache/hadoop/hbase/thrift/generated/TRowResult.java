@@ -35,6 +35,7 @@ public class TRowResult implements org.apache.thrift.TBase<TRowResult, TRowResul
 
   private static final org.apache.thrift.protocol.TField ROW_FIELD_DESC = new org.apache.thrift.protocol.TField("row", org.apache.thrift.protocol.TType.STRING, (short)1);
   private static final org.apache.thrift.protocol.TField COLUMNS_FIELD_DESC = new org.apache.thrift.protocol.TField("columns", org.apache.thrift.protocol.TType.MAP, (short)2);
+  private static final org.apache.thrift.protocol.TField SORTED_COLUMNS_FIELD_DESC = new org.apache.thrift.protocol.TField("sortedColumns", org.apache.thrift.protocol.TType.LIST, (short)3);
 
   private static final Map<Class<? extends IScheme>, SchemeFactory> schemes = new HashMap<Class<? extends IScheme>, SchemeFactory>();
   static {
@@ -43,12 +44,14 @@ public class TRowResult implements org.apache.thrift.TBase<TRowResult, TRowResul
   }
 
   public ByteBuffer row; // required
-  public Map<ByteBuffer,TCell> columns; // required
+  public Map<ByteBuffer,TCell> columns; // optional
+  public List<TColumn> sortedColumns; // optional
 
   /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
   public enum _Fields implements org.apache.thrift.TFieldIdEnum {
     ROW((short)1, "row"),
-    COLUMNS((short)2, "columns");
+    COLUMNS((short)2, "columns"),
+    SORTED_COLUMNS((short)3, "sortedColumns");
 
     private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
 
@@ -67,6 +70,8 @@ public class TRowResult implements org.apache.thrift.TBase<TRowResult, TRowResul
           return ROW;
         case 2: // COLUMNS
           return COLUMNS;
+        case 3: // SORTED_COLUMNS
+          return SORTED_COLUMNS;
         default:
           return null;
       }
@@ -107,15 +112,19 @@ public class TRowResult implements org.apache.thrift.TBase<TRowResult, TRowResul
   }
 
   // isset id assignments
+  private _Fields optionals[] = {_Fields.COLUMNS,_Fields.SORTED_COLUMNS};
   public static final Map<_Fields, org.apache.thrift.meta_data.FieldMetaData> metaDataMap;
   static {
     Map<_Fields, org.apache.thrift.meta_data.FieldMetaData> tmpMap = new EnumMap<_Fields, org.apache.thrift.meta_data.FieldMetaData>(_Fields.class);
     tmpMap.put(_Fields.ROW, new org.apache.thrift.meta_data.FieldMetaData("row", org.apache.thrift.TFieldRequirementType.DEFAULT, 
         new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.STRING        , "Text")));
-    tmpMap.put(_Fields.COLUMNS, new org.apache.thrift.meta_data.FieldMetaData("columns", org.apache.thrift.TFieldRequirementType.DEFAULT, 
+    tmpMap.put(_Fields.COLUMNS, new org.apache.thrift.meta_data.FieldMetaData("columns", org.apache.thrift.TFieldRequirementType.OPTIONAL, 
         new org.apache.thrift.meta_data.MapMetaData(org.apache.thrift.protocol.TType.MAP, 
             new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.STRING            , "Text"), 
             new org.apache.thrift.meta_data.StructMetaData(org.apache.thrift.protocol.TType.STRUCT, TCell.class))));
+    tmpMap.put(_Fields.SORTED_COLUMNS, new org.apache.thrift.meta_data.FieldMetaData("sortedColumns", org.apache.thrift.TFieldRequirementType.OPTIONAL, 
+        new org.apache.thrift.meta_data.ListMetaData(org.apache.thrift.protocol.TType.LIST, 
+            new org.apache.thrift.meta_data.StructMetaData(org.apache.thrift.protocol.TType.STRUCT, TColumn.class))));
     metaDataMap = Collections.unmodifiableMap(tmpMap);
     org.apache.thrift.meta_data.FieldMetaData.addStructMetaDataMap(TRowResult.class, metaDataMap);
   }
@@ -124,12 +133,10 @@ public class TRowResult implements org.apache.thrift.TBase<TRowResult, TRowResul
   }
 
   public TRowResult(
-    ByteBuffer row,
-    Map<ByteBuffer,TCell> columns)
+    ByteBuffer row)
   {
     this();
     this.row = row;
-    this.columns = columns;
   }
 
   /**
@@ -154,6 +161,13 @@ public class TRowResult implements org.apache.thrift.TBase<TRowResult, TRowResul
       }
       this.columns = __this__columns;
     }
+    if (other.isSetSortedColumns()) {
+      List<TColumn> __this__sortedColumns = new ArrayList<TColumn>();
+      for (TColumn other_element : other.sortedColumns) {
+        __this__sortedColumns.add(new TColumn(other_element));
+      }
+      this.sortedColumns = __this__sortedColumns;
+    }
   }
 
   public TRowResult deepCopy() {
@@ -164,6 +178,7 @@ public class TRowResult implements org.apache.thrift.TBase<TRowResult, TRowResul
   public void clear() {
     this.row = null;
     this.columns = null;
+    this.sortedColumns = null;
   }
 
   public byte[] getRow() {
@@ -235,6 +250,45 @@ public class TRowResult implements org.apache.thrift.TBase<TRowResult, TRowResul
     }
   }
 
+  public int getSortedColumnsSize() {
+    return (this.sortedColumns == null) ? 0 : this.sortedColumns.size();
+  }
+
+  public java.util.Iterator<TColumn> getSortedColumnsIterator() {
+    return (this.sortedColumns == null) ? null : this.sortedColumns.iterator();
+  }
+
+  public void addToSortedColumns(TColumn elem) {
+    if (this.sortedColumns == null) {
+      this.sortedColumns = new ArrayList<TColumn>();
+    }
+    this.sortedColumns.add(elem);
+  }
+
+  public List<TColumn> getSortedColumns() {
+    return this.sortedColumns;
+  }
+
+  public TRowResult setSortedColumns(List<TColumn> sortedColumns) {
+    this.sortedColumns = sortedColumns;
+    return this;
+  }
+
+  public void unsetSortedColumns() {
+    this.sortedColumns = null;
+  }
+
+  /** Returns true if field sortedColumns is set (has been assigned a value) and false otherwise */
+  public boolean isSetSortedColumns() {
+    return this.sortedColumns != null;
+  }
+
+  public void setSortedColumnsIsSet(boolean value) {
+    if (!value) {
+      this.sortedColumns = null;
+    }
+  }
+
   public void setFieldValue(_Fields field, Object value) {
     switch (field) {
     case ROW:
@@ -253,6 +307,14 @@ public class TRowResult implements org.apache.thrift.TBase<TRowResult, TRowResul
       }
       break;
 
+    case SORTED_COLUMNS:
+      if (value == null) {
+        unsetSortedColumns();
+      } else {
+        setSortedColumns((List<TColumn>)value);
+      }
+      break;
+
     }
   }
 
@@ -263,6 +325,9 @@ public class TRowResult implements org.apache.thrift.TBase<TRowResult, TRowResul
 
     case COLUMNS:
       return getColumns();
+
+    case SORTED_COLUMNS:
+      return getSortedColumns();
 
     }
     throw new IllegalStateException();
@@ -279,6 +344,8 @@ public class TRowResult implements org.apache.thrift.TBase<TRowResult, TRowResul
       return isSetRow();
     case COLUMNS:
       return isSetColumns();
+    case SORTED_COLUMNS:
+      return isSetSortedColumns();
     }
     throw new IllegalStateException();
   }
@@ -311,6 +378,15 @@ public class TRowResult implements org.apache.thrift.TBase<TRowResult, TRowResul
       if (!(this_present_columns && that_present_columns))
         return false;
       if (!this.columns.equals(that.columns))
+        return false;
+    }
+
+    boolean this_present_sortedColumns = true && this.isSetSortedColumns();
+    boolean that_present_sortedColumns = true && that.isSetSortedColumns();
+    if (this_present_sortedColumns || that_present_sortedColumns) {
+      if (!(this_present_sortedColumns && that_present_sortedColumns))
+        return false;
+      if (!this.sortedColumns.equals(that.sortedColumns))
         return false;
     }
 
@@ -350,6 +426,16 @@ public class TRowResult implements org.apache.thrift.TBase<TRowResult, TRowResul
         return lastComparison;
       }
     }
+    lastComparison = Boolean.valueOf(isSetSortedColumns()).compareTo(typedOther.isSetSortedColumns());
+    if (lastComparison != 0) {
+      return lastComparison;
+    }
+    if (isSetSortedColumns()) {
+      lastComparison = org.apache.thrift.TBaseHelper.compareTo(this.sortedColumns, typedOther.sortedColumns);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+    }
     return 0;
   }
 
@@ -377,14 +463,26 @@ public class TRowResult implements org.apache.thrift.TBase<TRowResult, TRowResul
       sb.append(this.row);
     }
     first = false;
-    if (!first) sb.append(", ");
-    sb.append("columns:");
-    if (this.columns == null) {
-      sb.append("null");
-    } else {
-      sb.append(this.columns);
+    if (isSetColumns()) {
+      if (!first) sb.append(", ");
+      sb.append("columns:");
+      if (this.columns == null) {
+        sb.append("null");
+      } else {
+        sb.append(this.columns);
+      }
+      first = false;
     }
-    first = false;
+    if (isSetSortedColumns()) {
+      if (!first) sb.append(", ");
+      sb.append("sortedColumns:");
+      if (this.sortedColumns == null) {
+        sb.append("null");
+      } else {
+        sb.append(this.sortedColumns);
+      }
+      first = false;
+    }
     sb.append(")");
     return sb.toString();
   }
@@ -443,7 +541,7 @@ public class TRowResult implements org.apache.thrift.TBase<TRowResult, TRowResul
                 for (int _i9 = 0; _i9 < _map8.size; ++_i9)
                 {
                   ByteBuffer _key10; // required
-                  TCell _val11; // optional
+                  TCell _val11; // required
                   _key10 = iprot.readBinary();
                   _val11 = new TCell();
                   _val11.read(iprot);
@@ -452,6 +550,25 @@ public class TRowResult implements org.apache.thrift.TBase<TRowResult, TRowResul
                 iprot.readMapEnd();
               }
               struct.setColumnsIsSet(true);
+            } else { 
+              org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
+            }
+            break;
+          case 3: // SORTED_COLUMNS
+            if (schemeField.type == org.apache.thrift.protocol.TType.LIST) {
+              {
+                org.apache.thrift.protocol.TList _list12 = iprot.readListBegin();
+                struct.sortedColumns = new ArrayList<TColumn>(_list12.size);
+                for (int _i13 = 0; _i13 < _list12.size; ++_i13)
+                {
+                  TColumn _elem14; // required
+                  _elem14 = new TColumn();
+                  _elem14.read(iprot);
+                  struct.sortedColumns.add(_elem14);
+                }
+                iprot.readListEnd();
+              }
+              struct.setSortedColumnsIsSet(true);
             } else { 
               org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
             }
@@ -477,17 +594,33 @@ public class TRowResult implements org.apache.thrift.TBase<TRowResult, TRowResul
         oprot.writeFieldEnd();
       }
       if (struct.columns != null) {
-        oprot.writeFieldBegin(COLUMNS_FIELD_DESC);
-        {
-          oprot.writeMapBegin(new org.apache.thrift.protocol.TMap(org.apache.thrift.protocol.TType.STRING, org.apache.thrift.protocol.TType.STRUCT, struct.columns.size()));
-          for (Map.Entry<ByteBuffer, TCell> _iter12 : struct.columns.entrySet())
+        if (struct.isSetColumns()) {
+          oprot.writeFieldBegin(COLUMNS_FIELD_DESC);
           {
-            oprot.writeBinary(_iter12.getKey());
-            _iter12.getValue().write(oprot);
+            oprot.writeMapBegin(new org.apache.thrift.protocol.TMap(org.apache.thrift.protocol.TType.STRING, org.apache.thrift.protocol.TType.STRUCT, struct.columns.size()));
+            for (Map.Entry<ByteBuffer, TCell> _iter15 : struct.columns.entrySet())
+            {
+              oprot.writeBinary(_iter15.getKey());
+              _iter15.getValue().write(oprot);
+            }
+            oprot.writeMapEnd();
           }
-          oprot.writeMapEnd();
+          oprot.writeFieldEnd();
         }
-        oprot.writeFieldEnd();
+      }
+      if (struct.sortedColumns != null) {
+        if (struct.isSetSortedColumns()) {
+          oprot.writeFieldBegin(SORTED_COLUMNS_FIELD_DESC);
+          {
+            oprot.writeListBegin(new org.apache.thrift.protocol.TList(org.apache.thrift.protocol.TType.STRUCT, struct.sortedColumns.size()));
+            for (TColumn _iter16 : struct.sortedColumns)
+            {
+              _iter16.write(oprot);
+            }
+            oprot.writeListEnd();
+          }
+          oprot.writeFieldEnd();
+        }
       }
       oprot.writeFieldStop();
       oprot.writeStructEnd();
@@ -513,17 +646,29 @@ public class TRowResult implements org.apache.thrift.TBase<TRowResult, TRowResul
       if (struct.isSetColumns()) {
         optionals.set(1);
       }
-      oprot.writeBitSet(optionals, 2);
+      if (struct.isSetSortedColumns()) {
+        optionals.set(2);
+      }
+      oprot.writeBitSet(optionals, 3);
       if (struct.isSetRow()) {
         oprot.writeBinary(struct.row);
       }
       if (struct.isSetColumns()) {
         {
           oprot.writeI32(struct.columns.size());
-          for (Map.Entry<ByteBuffer, TCell> _iter13 : struct.columns.entrySet())
+          for (Map.Entry<ByteBuffer, TCell> _iter17 : struct.columns.entrySet())
           {
-            oprot.writeBinary(_iter13.getKey());
-            _iter13.getValue().write(oprot);
+            oprot.writeBinary(_iter17.getKey());
+            _iter17.getValue().write(oprot);
+          }
+        }
+      }
+      if (struct.isSetSortedColumns()) {
+        {
+          oprot.writeI32(struct.sortedColumns.size());
+          for (TColumn _iter18 : struct.sortedColumns)
+          {
+            _iter18.write(oprot);
           }
         }
       }
@@ -532,26 +677,40 @@ public class TRowResult implements org.apache.thrift.TBase<TRowResult, TRowResul
     @Override
     public void read(org.apache.thrift.protocol.TProtocol prot, TRowResult struct) throws org.apache.thrift.TException {
       TTupleProtocol iprot = (TTupleProtocol) prot;
-      BitSet incoming = iprot.readBitSet(2);
+      BitSet incoming = iprot.readBitSet(3);
       if (incoming.get(0)) {
         struct.row = iprot.readBinary();
         struct.setRowIsSet(true);
       }
       if (incoming.get(1)) {
         {
-          org.apache.thrift.protocol.TMap _map14 = new org.apache.thrift.protocol.TMap(org.apache.thrift.protocol.TType.STRING, org.apache.thrift.protocol.TType.STRUCT, iprot.readI32());
-          struct.columns = new HashMap<ByteBuffer,TCell>(2*_map14.size);
-          for (int _i15 = 0; _i15 < _map14.size; ++_i15)
+          org.apache.thrift.protocol.TMap _map19 = new org.apache.thrift.protocol.TMap(org.apache.thrift.protocol.TType.STRING, org.apache.thrift.protocol.TType.STRUCT, iprot.readI32());
+          struct.columns = new HashMap<ByteBuffer,TCell>(2*_map19.size);
+          for (int _i20 = 0; _i20 < _map19.size; ++_i20)
           {
-            ByteBuffer _key16; // required
-            TCell _val17; // required
-            _key16 = iprot.readBinary();
-            _val17 = new TCell();
-            _val17.read(iprot);
-            struct.columns.put(_key16, _val17);
+            ByteBuffer _key21; // required
+            TCell _val22; // required
+            _key21 = iprot.readBinary();
+            _val22 = new TCell();
+            _val22.read(iprot);
+            struct.columns.put(_key21, _val22);
           }
         }
         struct.setColumnsIsSet(true);
+      }
+      if (incoming.get(2)) {
+        {
+          org.apache.thrift.protocol.TList _list23 = new org.apache.thrift.protocol.TList(org.apache.thrift.protocol.TType.STRUCT, iprot.readI32());
+          struct.sortedColumns = new ArrayList<TColumn>(_list23.size);
+          for (int _i24 = 0; _i24 < _list23.size; ++_i24)
+          {
+            TColumn _elem25; // required
+            _elem25 = new TColumn();
+            _elem25.read(iprot);
+            struct.sortedColumns.add(_elem25);
+          }
+        }
+        struct.setSortedColumnsIsSet(true);
       }
     }
   }
