@@ -258,7 +258,7 @@ public class TestAssignmentManagerOnCluster {
 
     // wait till the table is assigned
     HMaster master = TEST_UTIL.getHBaseCluster().getMaster();
-    long timeoutTime = System.currentTimeMillis() + 100;
+    long timeoutTime = System.currentTimeMillis() + 1000;
     while (true) {
       List<HRegionInfo> regions = master.getAssignmentManager().
         getRegionStates().getRegionsOfTable(Bytes.toBytes(tableName));
@@ -449,7 +449,7 @@ public class TestAssignmentManagerOnCluster {
       TEST_UTIL.deleteTable(Bytes.toBytes(table));
     }
   }
-  
+
   @Test (timeout=60000)
   public void testSSHWhenDisablingTableRegionsInOpeningOrPendingOpenState() throws Exception {
     final String table = "testSSHWhenDisablingTableRegionsInOpeningOrPendingOpenState";
@@ -479,7 +479,9 @@ public class TestAssignmentManagerOnCluster {
       assertTrue("Regions to be assigned should be empty.", am.getRegionStates()
           .getRegionState(hri).isOffline());
     } finally {
-      am.regionOnline(hri, serverName);
+      if (hri != null && serverName != null) {
+        am.regionOnline(hri, serverName);
+      }
       am.getZKTable().setDisabledTable(table);
       TEST_UTIL.deleteTable(Bytes.toBytes(table));
     }
