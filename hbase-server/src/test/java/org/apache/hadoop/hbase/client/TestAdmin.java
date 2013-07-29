@@ -1555,7 +1555,7 @@ public class TestAdmin {
   }
 
   @Test
-  public void testMoveToPreviouslyAssignedRS() throws IOException {
+  public void testMoveToPreviouslyAssignedRS() throws IOException, InterruptedException {
     byte[] tableName = Bytes.toBytes("testMoveToPreviouslyAssignedRS");
     MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
     HMaster master = cluster.getMaster();
@@ -1563,6 +1563,8 @@ public class TestAdmin {
     List<HRegionInfo> tableRegions = localAdmin.getTableRegions(tableName);
     HRegionInfo hri = tableRegions.get(0);
     AssignmentManager am = master.getAssignmentManager();
+    assertTrue("Region " + hri.getRegionNameAsString()
+      + " should be assigned properly", am.waitForAssignment(hri));
     ServerName server = am.getRegionStates().getRegionServerOfRegion(hri);
     localAdmin.move(hri.getEncodedNameAsBytes(), Bytes.toBytes(server.getServerName()));
     assertEquals("Current region server and region server before move should be same.", server,
