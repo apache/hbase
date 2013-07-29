@@ -95,6 +95,7 @@ public class TestZKBasedOpenCloseRegion {
 
     }
     waitUntilAllRegionsAssigned();
+    waitOnRIT();
   }
 
   /**
@@ -156,6 +157,18 @@ public class TestZKBasedOpenCloseRegion {
     }
 
     LOG.info("Done with testReOpenRegion");
+  }
+
+  private void waitOnRIT() {
+    // Close worked but we are going to open the region elsewhere.  Before going on, make sure
+    // this completes.
+    while (TEST_UTIL.getHBaseCluster().getMaster().getAssignmentManager().
+        isRegionsInTransition()) {
+      LOG.info("Waiting on regions in transition: " +
+        TEST_UTIL.getHBaseCluster().getMaster().getAssignmentManager().
+          getRegionsInTransition());
+      Threads.sleep(10);
+    }
   }
 
   private HRegionInfo getNonMetaRegion(final Collection<HRegionInfo> regions) {
