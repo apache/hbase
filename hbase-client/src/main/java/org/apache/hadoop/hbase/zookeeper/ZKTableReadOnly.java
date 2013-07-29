@@ -141,7 +141,7 @@ public class ZKTableReadOnly {
   throws KeeperException {
     String znode = ZKUtil.joinZNode(zkw.tableZNode, child);
     byte [] data = ZKUtil.getData(zkw, znode);
-    if (data == null || data.length <= 0) return ZooKeeperProtos.Table.State.ENABLED;
+    if (data == null || data.length <= 0) return null;
     try {
       ProtobufUtil.expectPBMagicPrefix(data);
       ZooKeeperProtos.Table.Builder builder = ZooKeeperProtos.Table.newBuilder();
