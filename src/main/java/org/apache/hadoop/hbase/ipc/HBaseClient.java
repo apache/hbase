@@ -977,8 +977,11 @@ public class HBaseClient {
     //noinspection SynchronizationOnLocalVariableOrMethodParameter
     synchronized (call) {
       while (!call.done) {
+        if (connection.shouldCloseConnection.get()) {
+          throw new IOException("Unexpected closed connection");
+        }
         try {
-          call.wait();                           // wait for the result
+          call.wait(1000);                       // wait for the result
         } catch (InterruptedException ignored) {
           // save the fact that we were interrupted
           interrupted = true;
