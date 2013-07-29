@@ -55,7 +55,7 @@ public class PutSortReducer extends
   {
     // although reduce() is called per-row, handle pathological case
     long threshold = context.getConfiguration().getLong(
-        "putsortreducer.row.threshold", 2L * (1<<30));
+        "putsortreducer.row.threshold", 1L * (1<<30));
     Iterator<Put> iter = puts.iterator();
     while (iter.hasNext()) {
       TreeSet<KeyValue> map = new TreeSet<KeyValue>(KeyValue.COMPARATOR);
@@ -67,7 +67,7 @@ public class PutSortReducer extends
           for (Cell cell: cells) {
             KeyValue kv = KeyValueUtil.ensureKeyValue(cell);
             map.add(kv);
-            curSize += kv.getLength();
+            curSize += kv.heapSize();
           }
         }
       }
