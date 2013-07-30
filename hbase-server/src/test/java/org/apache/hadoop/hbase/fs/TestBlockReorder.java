@@ -182,18 +182,19 @@ public class TestBlockReorder {
 
     final int retries = 10;
     ServerSocket ss = null;
-    for (int i = 0; i < retries; i++) {
-      try {
-        ss = new ServerSocket(port);// We're taking the port to have a timeout issue later.
-        break;
-      } catch (BindException be) {
-        // This rarely happens. HBASE-9012
-        LOG.info("Got bind exception trying to set up socket on " + port +
-          "; waiting a while; retry=" + i);
-        Threads.sleep(1000);
+    ServerSocket ssI;
+    try {
+      ss = new ServerSocket(port);// We're taking the port to have a timeout issue later.
+      ssI = new ServerSocket(ipcPort);
+    } catch (BindException be) {
+      LOG.warn("Got bind exception trying to set up socket on " + port + " or " + ipcPort +
+          ", this means that the datanode has not closed the socket or" +
+          " someone else took it. It may happen, skipping this test for this time.", be);
+      if (ss != null) {
+        ss.close();
       }
+      return;
     }
-    ServerSocket ssI = new ServerSocket(ipcPort);
 
     // Now it will fail with a timeout, unfortunately it does not always connect to the same box,
     // so we try retries times;  with the reorder it will never last more than a few milli seconds
@@ -207,6 +208,7 @@ public class TestBlockReorder {
       LOG.info("HFileSystem readtime= " + (end - start));
       Assert.assertFalse("We took too much time to read", (end - start) > 60000);
     }
+
     ss.close();
     ssI.close();
   }
