@@ -66,7 +66,7 @@ public class DispatchMergingRegionHandler extends EventHandler {
     this.region_b = region_b;
     this.forcible = forcible;
     this.timeout = server.getConfiguration().getInt(
-        "hbase.master.regionmerge.timeout", 30 * 1000);
+        "hbase.master.regionmerge.timeout", 120 * 1000);
   }
 
   @Override
