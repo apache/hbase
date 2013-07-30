@@ -285,7 +285,7 @@ public class TestSplitLogManager {
     assertTrue(version2 > version1);
     slt = new SplitLogTask.Owned(worker3);
     ZKUtil.setData(zkw, tasknode, slt.toByteArray());
-    waitForCounter(tot_mgr_heartbeat, 1, 2, to/2);
+    waitForCounter(tot_mgr_heartbeat, 2, 3, to/2);
     waitForCounter(tot_mgr_resubmit_threshold_reached, 0, 1, to + to/2);
     Thread.sleep(to + to/2);
     assertEquals(2L, tot_mgr_resubmit.get() - tot_mgr_resubmit_force.get());
