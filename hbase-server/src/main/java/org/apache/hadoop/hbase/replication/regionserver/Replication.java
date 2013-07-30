@@ -222,11 +222,25 @@ public class Replication implements WALActionsListener,
   @Override
   public void visitLogEntryBeforeWrite(HTableDescriptor htd, HLogKey logKey,
                                        WALEdit logEdit) {
+    scopeWALEdits(htd, logKey, logEdit);
+  }
+
+  /**
+   * Utility method used to set the correct scopes on each log key. Doesn't set a scope on keys
+   * from compaction WAL edits and if the scope is local.
+   * @param htd Descriptor used to find the scope to use
+   * @param logKey Key that may get scoped according to its edits
+   * @param logEdit Edits used to lookup the scopes
+   */
+  public static void scopeWALEdits(HTableDescriptor htd, HLogKey logKey,
+                                   WALEdit logEdit) {
     NavigableMap<byte[], Integer> scopes =
         new TreeMap<byte[], Integer>(Bytes.BYTES_COMPARATOR);
     byte[] family;
     for (KeyValue kv : logEdit.getKeyValues()) {
       family = kv.getFamily();
+      if (kv.matchingFamily(WALEdit.METAFAMILY)) continue;
+
       int scope = htd.getFamily(family).getScope();
       if (scope != REPLICATION_SCOPE_LOCAL &&
           !scopes.containsKey(family)) {

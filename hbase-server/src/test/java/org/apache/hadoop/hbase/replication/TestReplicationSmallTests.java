@@ -24,6 +24,10 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.LargeTests;
 import org.apache.hadoop.hbase.client.*;
 import org.apache.hadoop.hbase.mapreduce.replication.VerifyReplication;
+import org.apache.hadoop.hbase.protobuf.generated.WALProtos;
+import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
+import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
+import org.apache.hadoop.hbase.replication.regionserver.Replication;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
@@ -459,6 +463,19 @@ public class TestReplicationSmallTests extends TestReplicationBase {
         findCounter(VerifyReplication.Verifier.Counters.GOODROWS).getValue());
     assertEquals(NB_ROWS_IN_BATCH, job.getCounters().
         findCounter(VerifyReplication.Verifier.Counters.BADROWS).getValue());
+  }
+
+  /**
+   * Test for HBASE-9038, Replication.scopeWALEdits would NPE if it wasn't filtering out
+   * the compaction WALEdit
+   * @throws Exception
+   */
+  @Test(timeout=300000)
+  public void testCompactionWALEdits() throws Exception {
+    WALProtos.CompactionDescriptor compactionDescriptor =
+        WALProtos.CompactionDescriptor.getDefaultInstance();
+    WALEdit edit = WALEdit.createCompaction(compactionDescriptor);
+    Replication.scopeWALEdits(htable1.getTableDescriptor(), new HLogKey(), edit);
   }
 
 }
