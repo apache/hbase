@@ -110,10 +110,7 @@ public class TestSnapshotMetadata {
     conf.setInt("hbase.hstore.compactionThreshold", 10);
     // block writes if we get to 12 store files
     conf.setInt("hbase.hstore.blockingStoreFiles", 12);
-    // drop the number of attempts for the hbase admin
     conf.setInt("hbase.regionserver.msginterval", 100);
-    conf.setInt("hbase.client.pause", 250);
-    conf.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 6);
     conf.setBoolean("hbase.master.enabletable.roundrobin", true);
     // Avoid potentially aggressive splitting which would cause snapshot to fail
     conf.set(HConstants.HBASE_REGION_SPLIT_POLICY_KEY,
@@ -175,7 +172,7 @@ public class TestSnapshotMetadata {
   /**
    * Verify that the describe for a cloned table matches the describe from the original.
    */
-  @Test
+  @Test (timeout=300000)
   public void testDescribeMatchesAfterClone() throws Exception {
     // Clone the original table
     final String clonedTableNameAsString = "clone" + originalTableNameAsString;
@@ -218,7 +215,7 @@ public class TestSnapshotMetadata {
   /**
    * Verify that the describe for a restored table matches the describe for one the original.
    */
-  @Test
+  @Test (timeout=300000)
   public void testDescribeMatchesAfterRestore() throws Exception {
     runRestoreWithAdditionalMetadata(false);
   }
@@ -227,7 +224,7 @@ public class TestSnapshotMetadata {
    * Verify that if metadata changed after a snapshot was taken, that the old metadata replaces the
    * new metadata during a restore
    */
-  @Test
+  @Test (timeout=300000)
   public void testDescribeMatchesAfterMetadataChangeAndRestore() throws Exception {
     runRestoreWithAdditionalMetadata(true);
   }
@@ -237,7 +234,7 @@ public class TestSnapshotMetadata {
    * the restored table's original metadata
    * @throws Exception
    */
-  @Test
+  @Test (timeout=300000)
   public void testDescribeOnEmptyTableMatchesAfterMetadataChangeAndRestore() throws Exception {
     runRestoreWithAdditionalMetadata(true, false);
   }

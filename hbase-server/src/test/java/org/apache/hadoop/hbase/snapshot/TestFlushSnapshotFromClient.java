@@ -113,8 +113,6 @@ public class TestFlushSnapshotFromClient {
     conf.setInt("hbase.hstore.compactionThreshold", 10);
     // block writes if we get to 12 store files
     conf.setInt("hbase.hstore.blockingStoreFiles", 12);
-    // drop the number of attempts for the hbase admin
-    conf.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 3);
     // Enable snapshot
     conf.setBoolean(SnapshotManager.HBASE_SNAPSHOT_ENABLED, true);
     conf.set(HConstants.HBASE_REGION_SPLIT_POLICY_KEY,
@@ -155,7 +153,7 @@ public class TestFlushSnapshotFromClient {
    * Test simple flush snapshotting a table that is online
    * @throws Exception
    */
-  @Test
+  @Test (timeout=300000)
   public void testFlushTableSnapshot() throws Exception {
     HBaseAdmin admin = UTIL.getHBaseAdmin();
     // make sure we don't fail on listing snapshots
@@ -199,7 +197,7 @@ public class TestFlushSnapshotFromClient {
       admin, fs, false, new Path(rootDir, HConstants.HREGION_LOGDIR_NAME), snapshotServers);
   }
 
-  @Test
+  @Test (timeout=300000)
   public void testSnapshotFailsOnNonExistantTable() throws Exception {
     HBaseAdmin admin = UTIL.getHBaseAdmin();
     // make sure we don't fail on listing snapshots
@@ -228,7 +226,7 @@ public class TestFlushSnapshotFromClient {
     }
   }
 
-  @Test(timeout = 60000)
+  @Test(timeout = 300000)
   public void testAsyncFlushSnapshot() throws Exception {
     HBaseAdmin admin = UTIL.getHBaseAdmin();
     SnapshotDescription snapshot = SnapshotDescription.newBuilder().setName("asyncSnapshot")
@@ -247,7 +245,7 @@ public class TestFlushSnapshotFromClient {
     SnapshotTestingUtils.assertOneSnapshotThatMatches(admin, snapshot);
   }
 
-  @Test
+  @Test (timeout=300000)
   public void testSnapshotStateAfterMerge() throws Exception {
     int numRows = DEFAULT_NUM_ROWS;
     HBaseAdmin admin = UTIL.getHBaseAdmin();
@@ -300,7 +298,7 @@ public class TestFlushSnapshotFromClient {
     UTIL.deleteTable(cloneBeforeMergeName);
   }
 
-  @Test
+  @Test (timeout=300000)
   public void testTakeSnapshotAfterMerge() throws Exception {
     int numRows = DEFAULT_NUM_ROWS;
     HBaseAdmin admin = UTIL.getHBaseAdmin();
@@ -348,7 +346,7 @@ public class TestFlushSnapshotFromClient {
   /**
    * Basic end-to-end test of simple-flush-based snapshots
    */
-  @Test
+  @Test (timeout=300000)
   public void testFlushCreateListDestroy() throws Exception {
     LOG.debug("------- Starting Snapshot test -------------");
     HBaseAdmin admin = UTIL.getHBaseAdmin();
@@ -406,7 +404,7 @@ public class TestFlushSnapshotFromClient {
    * same table currently running and that concurrent snapshots on different tables can both
    * succeed concurretly.
    */
-  @Test(timeout=60000)
+  @Test(timeout=300000)
   public void testConcurrentSnapshottingAttempts() throws IOException, InterruptedException {
     final String STRING_TABLE2_NAME = STRING_TABLE_NAME + "2";
     final byte[] TABLE2_NAME = Bytes.toBytes(STRING_TABLE2_NAME);

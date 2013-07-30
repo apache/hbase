@@ -82,10 +82,7 @@ public class TestSnapshotCloneIndependence {
     conf.setInt("hbase.hstore.compactionThreshold", 10);
     // block writes if we get to 12 store files
     conf.setInt("hbase.hstore.blockingStoreFiles", 12);
-    // drop the number of attempts for the hbase admin
     conf.setInt("hbase.regionserver.msginterval", 100);
-    conf.setInt("hbase.client.pause", 250);
-    conf.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 6);
     conf.setBoolean("hbase.master.enabletable.roundrobin", true);
     // Avoid potentially aggressive splitting which would cause snapshot to fail
     conf.set(HConstants.HBASE_REGION_SPLIT_POLICY_KEY,
@@ -122,7 +119,7 @@ public class TestSnapshotCloneIndependence {
    * Verify that adding data to the cloned table will not affect the original, and vice-versa when
    * it is taken as an online snapshot.
    */
-  @Test
+  @Test (timeout=300000)
   public void testOnlineSnapshotAppendIndependent() throws Exception {
     runTestSnapshotAppendIndependent(true);
   }
@@ -131,7 +128,7 @@ public class TestSnapshotCloneIndependence {
    * Verify that adding data to the cloned table will not affect the original, and vice-versa when
    * it is taken as an offline snapshot.
    */
-  @Test
+  @Test (timeout=300000)
   public void testOfflineSnapshotAppendIndependent() throws Exception {
     runTestSnapshotAppendIndependent(false);
   }
@@ -140,7 +137,7 @@ public class TestSnapshotCloneIndependence {
    * Verify that adding metadata to the cloned table will not affect the original, and vice-versa
    * when it is taken as an online snapshot.
    */
-  @Test
+  @Test (timeout=300000)
   public void testOnlineSnapshotMetadataChangesIndependent() throws Exception {
     runTestSnapshotMetadataChangesIndependent(true);
   }
@@ -149,7 +146,7 @@ public class TestSnapshotCloneIndependence {
    * Verify that adding netadata to the cloned table will not affect the original, and vice-versa
    * when is taken as an online snapshot.
    */
-  @Test
+  @Test (timeout=300000)
   public void testOfflineSnapshotMetadataChangesIndependent() throws Exception {
     runTestSnapshotMetadataChangesIndependent(false);
   }
@@ -158,7 +155,7 @@ public class TestSnapshotCloneIndependence {
    * Verify that region operations, in this case splitting a region, are independent between the
    * cloned table and the original.
    */
-  @Test
+  @Test (timeout=300000)
   public void testOfflineSnapshotRegionOperationsIndependent() throws Exception {
     runTestRegionOperationsIndependent(false);
   }
@@ -167,7 +164,7 @@ public class TestSnapshotCloneIndependence {
    * Verify that region operations, in this case splitting a region, are independent between the
    * cloned table and the original.
    */
-  @Test
+  @Test (timeout=300000)
   public void testOnlineSnapshotRegionOperationsIndependent() throws Exception {
     runTestRegionOperationsIndependent(true);
   }
