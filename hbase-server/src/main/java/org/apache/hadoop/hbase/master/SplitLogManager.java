@@ -865,6 +865,7 @@ public class SplitLogManager extends ZooKeeperListener {
       // race with heartbeat() that might be changing last_version
       version = task.last_version;
     } else {
+      SplitLogCounters.tot_mgr_resubmit_force.incrementAndGet();
       version = -1;
     }
     LOG.info("resubmitting task " + path);

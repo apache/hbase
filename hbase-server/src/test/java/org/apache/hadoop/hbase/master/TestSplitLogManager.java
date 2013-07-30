@@ -30,6 +30,7 @@ import static org.apache.hadoop.hbase.SplitLogCounters.tot_mgr_rescan_deleted;
 import static org.apache.hadoop.hbase.SplitLogCounters.tot_mgr_resubmit;
 import static org.apache.hadoop.hbase.SplitLogCounters.tot_mgr_resubmit_dead_server_task;
 import static org.apache.hadoop.hbase.SplitLogCounters.tot_mgr_resubmit_failed;
+import static org.apache.hadoop.hbase.SplitLogCounters.tot_mgr_resubmit_force;
 import static org.apache.hadoop.hbase.SplitLogCounters.tot_mgr_resubmit_threshold_reached;
 import static org.apache.hadoop.hbase.SplitLogCounters.tot_mgr_resubmit_unassigned;
 import static org.apache.hadoop.hbase.SplitLogCounters.tot_mgr_task_deleted;
@@ -287,7 +288,7 @@ public class TestSplitLogManager {
     waitForCounter(tot_mgr_heartbeat, 1, 2, to/2);
     waitForCounter(tot_mgr_resubmit_threshold_reached, 0, 1, to + to/2);
     Thread.sleep(to + to/2);
-    assertEquals(2L, tot_mgr_resubmit.get());
+    assertEquals(2L, tot_mgr_resubmit.get() - tot_mgr_resubmit_force.get());
   }
 
   @Test
