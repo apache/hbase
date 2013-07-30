@@ -34,6 +34,9 @@ import java.util.concurrent.CountDownLatch;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
@@ -58,12 +61,17 @@ import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.executor.EventType;
+import org.apache.hadoop.hbase.master.AssignmentManager;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.RegionState;
+import org.apache.hadoop.hbase.master.RegionState.State;
 import org.apache.hadoop.hbase.master.RegionStates;
 import org.apache.hadoop.hbase.master.handler.SplitRegionHandler;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.HBaseFsck;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.zookeeper.ZKAssign;
@@ -72,10 +80,9 @@ import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.KeeperException.NodeExistsException;
 import org.apache.zookeeper.data.Stat;
-import org.apache.hadoop.hbase.Abortable;
+import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Assert;
-import org.junit.After;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -744,6 +751,59 @@ public class TestSplitTransactionOnCluster {
     p.add(Bytes.toBytes("cf"), Bytes.toBytes("q1"), Bytes.toBytes("4"));
     t.put(p);
     admin.flush(tableName);
+  }
+
+  /**
+   * After a region is split, it should not be able to assign again
+   */
+  @Test
+  public void testSplitRegionNotAssignable() throws Exception {
+    final byte[] tableName = Bytes.toBytes("testSplitRegionNotAssignable");
+    // Create table then get the single region for our new table.
+    HTable t = createTableAndWait(tableName, Bytes.toBytes("cf"));
+    try {
+      List<HRegion> regions = cluster.getRegions(tableName);
+      int regionServerIndex = cluster.getServerWith(regions.get(0).getRegionName());
+      HRegionServer regionServer = cluster.getRegionServer(regionServerIndex);
+      insertData(tableName, admin, t);
+      // Turn off balancer so it doesn't cut in and mess up our placements.
+      admin.setBalancerRunning(false, true);
+      // Turn off the meta scanner so it don't remove parent on us.
+      cluster.getMaster().setCatalogJanitorEnabled(false);
+      final HRegion region = findSplittableRegion(regions);
+      assertTrue("not able to find a splittable region", region != null);
+
+      // Now split.
+      SplitTransaction st = new MockedSplitTransaction(region, Bytes.toBytes("row2"));
+      try {
+        st.prepare();
+        st.execute(regionServer, regionServer);
+      } catch (IOException e) {
+        fail("Split execution should have succeeded with no exceptions thrown");
+      }
+
+      List<HRegion> daughters = cluster.getRegions(tableName);
+      assertTrue(daughters.size() == regions.size() + 1);
+
+      HRegionInfo hri = region.getRegionInfo(); // split parent
+      AssignmentManager am = cluster.getMaster().getAssignmentManager();
+      RegionStates regionStates = am.getRegionStates();
+      long start = EnvironmentEdgeManager.currentTimeMillis();
+      while (!regionStates.isRegionInState(hri, State.SPLIT)) {
+        assertFalse("Timed out in waiting split parent to be in state SPLIT",
+          EnvironmentEdgeManager.currentTimeMillis() - start > 60000);
+        Thread.sleep(500);
+      }
+
+      // We should not be able to assign it again
+      am.assign(hri, true, true);
+      assertFalse("Split region should not be in transition again",
+        regionStates.isRegionInTransition(hri)
+          && regionStates.isRegionInState(hri, State.SPLIT));
+    } finally {
+      admin.setBalancerRunning(true, false);
+      cluster.getMaster().setCatalogJanitorEnabled(true);
+    }
   }
 
   private void testSplitBeforeSettingSplittingInZKInternals() throws Exception {

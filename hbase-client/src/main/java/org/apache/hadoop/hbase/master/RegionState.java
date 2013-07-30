@@ -126,6 +126,10 @@ public class RegionState implements org.apache.hadoop.io.Writable {
     return state == State.SPLITTING;
   }
 
+  public boolean isSplit() {
+    return state == State.SPLIT;
+  }
+
   public boolean isFailedOpen() {
     return state == State.FAILED_OPEN;
   }
@@ -136,6 +140,10 @@ public class RegionState implements org.apache.hadoop.io.Writable {
 
   public boolean isMerging() {
     return state == State.MERGING;
+  }
+
+  public boolean isMerged() {
+    return state == State.MERGED;
   }
 
   public boolean isOpenOrMergingOnServer(final ServerName sn) {
