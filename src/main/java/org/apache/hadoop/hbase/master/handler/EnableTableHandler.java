@@ -52,7 +52,7 @@ public class EnableTableHandler extends EventHandler {
   private final String tableNameStr;
   private final AssignmentManager assignmentManager;
   private final CatalogTracker ct;
-  private boolean retainAssignment = false;
+  private boolean skipTableStateCheck = false;
 
   public EnableTableHandler(Server server, byte [] tableName,
       CatalogTracker catalogTracker, AssignmentManager assignmentManager,
@@ -63,12 +63,12 @@ public class EnableTableHandler extends EventHandler {
     this.tableNameStr = Bytes.toString(tableName);
     this.ct = catalogTracker;
     this.assignmentManager = assignmentManager;
-    this.retainAssignment = skipTableStateCheck;
+    this.skipTableStateCheck = skipTableStateCheck;
     // Check if table exists
     if (!MetaReader.tableExists(catalogTracker, this.tableNameStr)) {
-      // retainAssignment is true only during recovery. In normal case it is
+      // skipTableStateCheck is true only during recovery. In normal case it is
       // false
-      if (!this.retainAssignment) {
+      if (!this.skipTableStateCheck) {
         throw new TableNotFoundException(tableNameStr);
       }
       try {
@@ -142,8 +142,7 @@ public class EnableTableHandler extends EventHandler {
     }
     LOG.info("Table has " + countOfRegionsInTable + " regions of which " +
       regionsCount + " are offline.");
-    BulkEnabler bd = new BulkEnabler(this.server, regions, countOfRegionsInTable,
-        this.retainAssignment);
+    BulkEnabler bd = new BulkEnabler(this.server, regions, countOfRegionsInTable, true);
     try {
       if (bd.bulkAssign()) {
         done = true;
@@ -174,7 +173,7 @@ public class EnableTableHandler extends EventHandler {
     for (Pair<HRegionInfo, ServerName> regionLocation : regionsInMeta) {
       HRegionInfo hri = regionLocation.getFirst();
       ServerName sn = regionLocation.getSecond();
-      if (this.retainAssignment) {
+      if (this.skipTableStateCheck) {
         // Region may be available in enablingTableRegions during master startup only.
         if (enablingTableRegions != null && enablingTableRegions.contains(hri)) {
           regions.add(hri);
@@ -186,6 +185,9 @@ public class EnableTableHandler extends EventHandler {
         continue;
       } else {
         regions.add(hri);
+        if (sn != null && serverManager.isServerOnline(sn)) {
+          this.assignmentManager.addPlan(hri.getEncodedName(), new RegionPlan(hri, null, sn));
+        }
       }
     }
     return regions;
@@ -198,44 +200,26 @@ public class EnableTableHandler extends EventHandler {
     private final List<HRegionInfo> regions;
     // Count of regions in table at time this assign was launched.
     private final int countOfRegionsInTable;
-    private final boolean retainAssignment;
 
     BulkEnabler(final Server server, final List<HRegionInfo> regions,
         final int countOfRegionsInTable,final boolean retainAssignment) {
       super(server);
       this.regions = regions;
       this.countOfRegionsInTable = countOfRegionsInTable;
-      this.retainAssignment = retainAssignment;
     }
 
     @Override
     protected void populatePool(ExecutorService pool) throws IOException {
-      boolean roundRobinAssignment = this.server.getConfiguration().getBoolean(
-          "hbase.master.enabletable.roundrobin", false);
-
-      if (retainAssignment || !roundRobinAssignment) {
-        for (HRegionInfo region : regions) {
-          if (assignmentManager.isRegionInTransition(region) != null) {
-            continue;
+      for (HRegionInfo region : regions) {
+        if (assignmentManager.isRegionInTransition(region) != null) {
+          continue;
+        }
+        final HRegionInfo hri = region;
+        pool.execute(new Runnable() {
+          public void run() {
+            assignmentManager.assign(hri, true, false, false);
           }
-          final HRegionInfo hri = region;
-          pool.execute(new Runnable() {
-            public void run() {
-              if (retainAssignment) {
-                assignmentManager.assign(hri, true, false, false);
-              } else {
-                assignmentManager.assign(hri, true);
-              }
-            }
-          });
-        }
-      } else {
-        try {
-          assignmentManager.assignUserRegionsToOnlineServers(regions);
-        } catch (InterruptedException e) {
-          LOG.warn("Assignment was interrupted");
-          Thread.currentThread().interrupt();
-        }
+        });
       }
     }
 

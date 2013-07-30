@@ -856,12 +856,12 @@ public class TestAdmin {
   }
 
   /**
-   * Test round-robin assignment on enableTable.
+   * Test retain assignment on enableTable.
    *
    * @throws IOException
    */
   @Test
-  public void testEnableTableRoundRobinAssignment() throws IOException {
+  public void testEnableTableRetainAssignment() throws IOException, InterruptedException {
     byte[] tableName = Bytes.toBytes("testEnableTableAssignment");
     byte[][] splitKeys = { new byte[] { 1, 1, 1 }, new byte[] { 2, 2, 2 },
         new byte[] { 3, 3, 3 }, new byte[] { 4, 4, 4 }, new byte[] { 5, 5, 5 },
@@ -872,42 +872,22 @@ public class TestAdmin {
     desc.addFamily(new HColumnDescriptor(HConstants.CATALOG_FAMILY));
     admin.createTable(desc, splitKeys);
     HTable ht = new HTable(TEST_UTIL.getConfiguration(), tableName);
-    Map<HRegionInfo, HServerAddress> regions = ht.getRegionsInfo();
+    Map<HRegionInfo, ServerName> regions = ht.getRegionLocations();
     assertEquals("Tried to create " + expectedRegions + " regions "
         + "but only found " + regions.size(), expectedRegions, regions.size());
     // Disable table.
     admin.disableTable(tableName);
-    // Enable table, use round-robin assignment to assign regions.
+    // Enable table, use retain assignment to assign regions.
     admin.enableTable(tableName);
+    Map<HRegionInfo, ServerName> regions2 = ht.getRegionLocations();
 
     // Check the assignment.
-    HTable metaTable = new HTable(TEST_UTIL.getConfiguration(),
-        HConstants.META_TABLE_NAME);
-    List<HRegionInfo> regionInfos = admin.getTableRegions(tableName);
-    Map<String, Integer> serverMap = new HashMap<String, Integer>();
-    for (int i = 0, j = regionInfos.size(); i < j; i++) {
-      HRegionInfo hri = regionInfos.get(i);
-      Get get = new Get(hri.getRegionName());
-      Result result = metaTable.get(get);
-      String server = Bytes.toString(result.getValue(HConstants.CATALOG_FAMILY,
-          HConstants.SERVER_QUALIFIER));
-      Integer regioncount = serverMap.get(server);
-      if (regioncount == null) {
-        regioncount = 0;
-      }
-      regioncount++;
-      serverMap.put(server, regioncount);
+    assertEquals(regions.size(), regions2.size());
+    for (Map.Entry<HRegionInfo, ServerName> entry : regions.entrySet()) {
+      ServerName sn1 = regions2.get(entry.getKey());
+      ServerName sn2 = entry.getValue();
+      assertEquals(sn1, sn2);
     }
-    List<Map.Entry<String, Integer>> entryList = new ArrayList<Map.Entry<String, Integer>>(
-        serverMap.entrySet());
-    Collections.sort(entryList, new Comparator<Map.Entry<String, Integer>>() {
-      public int compare(Map.Entry<String, Integer> oa,
-          Map.Entry<String, Integer> ob) {
-        return (oa.getValue() - ob.getValue());
-      }
-    });
-    assertTrue(entryList.size() == 3);
-    assertTrue((entryList.get(2).getValue() - entryList.get(0).getValue()) < 2);
   }
 
   /**
