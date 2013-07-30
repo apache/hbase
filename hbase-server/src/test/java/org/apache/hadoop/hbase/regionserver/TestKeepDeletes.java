@@ -275,7 +275,7 @@ public class TestKeepDeletes extends HBaseTestCase {
     try {
       InternalScanner scan = region.getScanner(s);
       fail("raw scanner with columns should have failed");
-    } catch (org.apache.hadoop.hbase.exceptions.DoNotRetryIOException dnre) {
+    } catch (org.apache.hadoop.hbase.DoNotRetryIOException dnre) {
       // ok!
     }
 

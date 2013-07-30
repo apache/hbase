@@ -21,7 +21,6 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.client.Put;
-import org.apache.hadoop.hbase.exceptions.ConstraintException;
 
 /**
  * Apply a {@link Constraint} (in traditional database terminology) to a HTable.
@@ -30,7 +29,8 @@ import org.apache.hadoop.hbase.exceptions.ConstraintException;
  * <p>
  * A {@link Constraint} must be added to a table before the table is loaded via
  * {@link Constraints#add(HTableDescriptor, Class...)} or
- * {@link Constraints#add(HTableDescriptor, org.apache.hadoop.hbase.util.Pair...)}
+ * {@link Constraints#add(HTableDescriptor,
+ * org.apache.hadoop.hbase.util.Pair...)}
  * (if you want to add a configuration with the {@link Constraint}). Constraints
  * will be run in the order that they are added. Further, a Constraint will be
  * configured before it is run (on load).
@@ -40,7 +40,8 @@ import org.apache.hadoop.hbase.exceptions.ConstraintException;
  * enabling/disabling of a given {@link Constraint} after it has been added.
  * <p>
  * If a {@link Put} is invalid, the Constraint should throw some sort of
- * {@link org.apache.hadoop.hbase.exceptions.ConstraintException}, indicating that the {@link Put} has failed. When
+ * {@link org.apache.hadoop.hbase.constraint.ConstraintException}, indicating
+ * that the {@link Put} has failed. When
  * this exception is thrown, not further retries of the {@link Put} are
  * attempted nor are any other {@link Constraint Constraints} attempted (the
  * {@link Put} is clearly not valid). Therefore, there are performance
@@ -48,7 +49,8 @@ import org.apache.hadoop.hbase.exceptions.ConstraintException;
  * specified.
  * <p>
  * If a {@link Constraint} fails to fail the {@link Put} via a
- * {@link org.apache.hadoop.hbase.exceptions.ConstraintException}, but instead throws a {@link RuntimeException},
+ * {@link org.apache.hadoop.hbase.constraint.ConstraintException}, but instead
+ * throws a {@link RuntimeException},
  * the entire constraint processing mechanism ({@link ConstraintProcessor}) will
  * be unloaded from the table. This ensures that the region server is still
  * functional, but no more {@link Put Puts} will be checked via
@@ -73,7 +75,8 @@ public interface Constraint extends Configurable {
    * propagated back to the client so you can see what caused the {@link Put} to
    * fail.
    * @param p {@link Put} to check
-   * @throws org.apache.hadoop.hbase.exceptions.ConstraintException when the {@link Put} does not match the
+   * @throws org.apache.hadoop.hbase.constraint.ConstraintException when the
+   * {@link Put} does not match the
    *         constraint.
    */
   void check(Put p) throws ConstraintException;

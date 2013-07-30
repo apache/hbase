@@ -24,8 +24,6 @@ import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.catalog.MetaReader;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
-import org.apache.hadoop.hbase.exceptions.PleaseHoldException;
-import org.apache.hadoop.hbase.exceptions.UnknownRegionException;
 import org.apache.hadoop.hbase.executor.EventHandler;
 import org.apache.hadoop.hbase.executor.EventHandler.EventHandlerListener;
 import org.apache.hadoop.hbase.executor.EventType;

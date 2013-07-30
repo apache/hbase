@@ -21,7 +21,7 @@ package org.apache.hadoop.hbase.client;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.hbase.exceptions.DoNotRetryIOException;
+import org.apache.hadoop.hbase.DoNotRetryIOException;
 
 /**
  * Thrown when a scanner has timed out.

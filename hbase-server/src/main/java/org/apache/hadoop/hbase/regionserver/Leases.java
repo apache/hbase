@@ -21,7 +21,6 @@ package org.apache.hadoop.hbase.regionserver;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.exceptions.LeaseException;
 import org.apache.hadoop.hbase.util.HasThread;
 
 import java.util.ConcurrentModificationException;
@@ -188,7 +187,7 @@ public class Leases extends HasThread {
    * Renew a lease
    *
    * @param leaseName name of lease
-   * @throws org.apache.hadoop.hbase.exceptions.LeaseException
+   * @throws org.apache.hadoop.hbase.regionserver.LeaseException
    */
   public void renewLease(final String leaseName) throws LeaseException {
     synchronized (leaseQueue) {

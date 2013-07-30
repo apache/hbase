@@ -41,10 +41,13 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.LargeTests;
+import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.RegionTransition;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.UnknownRegionException;
+import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.catalog.MetaReader;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
@@ -54,9 +57,6 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
-import org.apache.hadoop.hbase.exceptions.MasterNotRunningException;
-import org.apache.hadoop.hbase.exceptions.UnknownRegionException;
-import org.apache.hadoop.hbase.exceptions.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.executor.EventType;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.RegionState;
@@ -911,7 +911,7 @@ public class TestSplitTransactionOnCluster {
    * @return Index of the server hosting the single table region
    * @throws UnknownRegionException
    * @throws MasterNotRunningException
-   * @throws org.apache.hadoop.hbase.exceptions.ZooKeeperConnectionException
+   * @throws org.apache.hadoop.hbase.ZooKeeperConnectionException
    * @throws InterruptedException
    */
   private int ensureTableRegionNotOnSameServerAsMeta(final HBaseAdmin admin,

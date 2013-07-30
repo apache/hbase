@@ -54,11 +54,11 @@ import org.apache.hadoop.hbase.catalog.CatalogTracker;
 import org.apache.hadoop.hbase.catalog.MetaReader;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
-import org.apache.hadoop.hbase.exceptions.NotServingRegionException;
-import org.apache.hadoop.hbase.exceptions.RegionAlreadyInTransitionException;
-import org.apache.hadoop.hbase.exceptions.RegionServerStoppedException;
-import org.apache.hadoop.hbase.exceptions.ServerNotRunningYetException;
-import org.apache.hadoop.hbase.exceptions.TableNotFoundException;
+import org.apache.hadoop.hbase.NotServingRegionException;
+import org.apache.hadoop.hbase.regionserver.RegionAlreadyInTransitionException;
+import org.apache.hadoop.hbase.regionserver.RegionServerStoppedException;
+import org.apache.hadoop.hbase.ipc.ServerNotRunningYetException;
+import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.executor.EventHandler;
 import org.apache.hadoop.hbase.executor.EventType;
 import org.apache.hadoop.hbase.executor.ExecutorService;
@@ -70,7 +70,9 @@ import org.apache.hadoop.hbase.master.handler.EnableTableHandler;
 import org.apache.hadoop.hbase.master.handler.MergedRegionHandler;
 import org.apache.hadoop.hbase.master.handler.OpenedRegionHandler;
 import org.apache.hadoop.hbase.master.handler.SplitRegionHandler;
+import org.apache.hadoop.hbase.regionserver.RegionAlreadyInTransitionException;
 import org.apache.hadoop.hbase.regionserver.RegionOpeningState;
+import org.apache.hadoop.hbase.regionserver.RegionServerStoppedException;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.KeyLocker;
 import org.apache.hadoop.hbase.util.Pair;
@@ -2663,7 +2665,7 @@ public class AssignmentManager extends ZooKeeperListener {
    * are in ENABLING state when the master restarted/switched
    *
    * @throws KeeperException
-   * @throws org.apache.hadoop.hbase.exceptions.TableNotFoundException
+   * @throws org.apache.hadoop.hbase.TableNotFoundException
    * @throws IOException
    */
   private void recoverTableInEnablingState()

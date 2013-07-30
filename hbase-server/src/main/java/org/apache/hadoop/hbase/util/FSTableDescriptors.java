@@ -43,7 +43,7 @@ import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableDescriptors;
-import org.apache.hadoop.hbase.exceptions.TableInfoMissingException;
+import org.apache.hadoop.hbase.TableInfoMissingException;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 
 import com.google.common.primitives.Ints;

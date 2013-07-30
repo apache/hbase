@@ -314,7 +314,7 @@ public class TestCoprocessorInterface extends HBaseTestCase {
         Get g = new Get(r);
         regions[i].get(g);
         fail();
-      } catch (org.apache.hadoop.hbase.exceptions.DoNotRetryIOException xc) {
+      } catch (org.apache.hadoop.hbase.DoNotRetryIOException xc) {
       }
       assertNull(regions[i].getCoprocessorHost().
           findCoprocessor(CoprocessorII.class.getName()));
