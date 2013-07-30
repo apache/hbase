@@ -91,8 +91,6 @@ public class TestZooKeeperTableArchiveClient {
   private static void setupConf(Configuration conf) {
     // only compact with 3 files
     conf.setInt("hbase.hstore.compaction.min", 3);
-    // drop the number of attempts for the hbase admin
-    conf.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 1);
   }
 
   @After
@@ -125,7 +123,7 @@ public class TestZooKeeperTableArchiveClient {
   /**
    * Test turning on/off archiving
    */
-  @Test
+  @Test (timeout=300000)
   public void testArchivingEnableDisable() throws Exception {
     // 1. turn on hfile backups
     LOG.debug("----Starting archiving");
@@ -148,7 +146,7 @@ public class TestZooKeeperTableArchiveClient {
       archivingClient.getArchivingEnabled(TABLE_NAME));
   }
 
-  @Test
+  @Test (timeout=300000)
   public void testArchivingOnSingleTable() throws Exception {
     createArchiveDirectory();
     FileSystem fs = UTIL.getTestFileSystem();
@@ -192,7 +190,7 @@ public class TestZooKeeperTableArchiveClient {
    * Test archiving/cleaning across multiple tables, where some are retained, and others aren't
    * @throws Exception on failure
    */
-  @Test
+  @Test (timeout=300000)
   public void testMultipleTables() throws Exception {
     createArchiveDirectory();
     String otherTable = "otherTable";

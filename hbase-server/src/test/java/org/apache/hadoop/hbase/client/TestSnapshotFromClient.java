@@ -24,7 +24,6 @@ import java.io.IOException;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.regex.Pattern;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -85,8 +84,6 @@ public class TestSnapshotFromClient {
     conf.setInt("hbase.hstore.compactionThreshold", 10);
     // block writes if we get to 12 store files
     conf.setInt("hbase.hstore.blockingStoreFiles", 12);
-    // drop the number of attempts for the hbase admin
-    conf.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 1);
     // Enable snapshot
     conf.setBoolean(SnapshotManager.HBASE_SNAPSHOT_ENABLED, true);
     conf.set(HConstants.HBASE_REGION_SPLIT_POLICY_KEY,
@@ -123,7 +120,7 @@ public class TestSnapshotFromClient {
    * Test snapshotting not allowed .META. and -ROOT-
    * @throws Exception
    */
-  @Test
+  @Test (timeout=300000)
   public void testMetaTablesSnapshot() throws Exception {
     HBaseAdmin admin = UTIL.getHBaseAdmin();
     byte[] snapshotName = Bytes.toBytes("metaSnapshot");
@@ -148,7 +145,7 @@ public class TestSnapshotFromClient {
    *
    * @throws Exception
    */
-  @Test
+  @Test (timeout=300000)
   public void testSnapshotDeletionWithRegex() throws Exception {
     HBaseAdmin admin = UTIL.getHBaseAdmin();
     // make sure we don't fail on listing snapshots
@@ -184,7 +181,7 @@ public class TestSnapshotFromClient {
    * Test snapshotting a table that is offline
    * @throws Exception
    */
-  @Test
+  @Test (timeout=300000)
   public void testOfflineTableSnapshot() throws Exception {
     HBaseAdmin admin = UTIL.getHBaseAdmin();
     // make sure we don't fail on listing snapshots
@@ -238,7 +235,7 @@ public class TestSnapshotFromClient {
     SnapshotTestingUtils.assertNoSnapshots(admin);
   }
 
-  @Test
+  @Test (timeout=300000)
   public void testSnapshotFailsOnNonExistantTable() throws Exception {
     HBaseAdmin admin = UTIL.getHBaseAdmin();
     // make sure we don't fail on listing snapshots
