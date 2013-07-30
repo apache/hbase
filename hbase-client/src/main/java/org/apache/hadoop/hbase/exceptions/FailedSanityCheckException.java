@@ -20,7 +20,7 @@ package org.apache.hadoop.hbase.exceptions;
 /**
  * Exception thrown if a mutation fails sanity checks.
  */
-public class FailedSanityCheckException extends org.apache.hadoop.hbase.exceptions.DoNotRetryIOException {
+public class FailedSanityCheckException extends org.apache.hadoop.hbase.DoNotRetryIOException {
 
   private static final long serialVersionUID = 1788783640409186240L;
 

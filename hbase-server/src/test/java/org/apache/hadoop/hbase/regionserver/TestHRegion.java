@@ -55,6 +55,7 @@ import org.apache.hadoop.hbase.HBaseTestCase;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.HConstants.OperationStatusCode;
 import org.apache.hadoop.hbase.HDFSBlocksDistribution;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -76,9 +77,6 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.exceptions.FailedSanityCheckException;
-import org.apache.hadoop.hbase.exceptions.NoSuchColumnFamilyException;
-import org.apache.hadoop.hbase.exceptions.NotServingRegionException;
-import org.apache.hadoop.hbase.exceptions.WrongRegionException;
 import org.apache.hadoop.hbase.filter.BinaryComparator;
 import org.apache.hadoop.hbase.filter.ColumnCountGetFilter;
 import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
@@ -1086,7 +1084,7 @@ public class TestHRegion extends HBaseTestCase {
         boolean res = region.checkAndMutate(row, fam1, qual1, CompareOp.EQUAL,
             new BinaryComparator(value2), put, false);
         fail();
-      } catch (org.apache.hadoop.hbase.exceptions.DoNotRetryIOException expected) {
+      } catch (org.apache.hadoop.hbase.DoNotRetryIOException expected) {
         // expected exception.
       }
     } finally {
@@ -1607,7 +1605,7 @@ public class TestHRegion extends HBaseTestCase {
       //Test
       try {
         region.get(get);
-      } catch (org.apache.hadoop.hbase.exceptions.DoNotRetryIOException e) {
+      } catch (org.apache.hadoop.hbase.DoNotRetryIOException e) {
         assertFalse(false);
         return;
       }

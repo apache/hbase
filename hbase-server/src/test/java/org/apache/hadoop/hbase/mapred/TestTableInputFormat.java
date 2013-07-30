@@ -40,7 +40,6 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.exceptions.UnknownScannerException;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.AfterClass;
@@ -299,7 +298,7 @@ public class TestTableInputFormat {
    * Run test assuming UnknownScannerException (which is a type of
    * DoNotRetryIOException) using mapred api.
    * 
-   * @throws org.apache.hadoop.hbase.exceptions.DoNotRetryIOException
+   * @throws org.apache.hadoop.hbase.DoNotRetryIOException
    */
   @Test
   public void testTableRecordReaderScannerTimeout() throws IOException {
@@ -311,9 +310,9 @@ public class TestTableInputFormat {
    * Run test assuming UnknownScannerException (which is a type of
    * DoNotRetryIOException) using mapred api.
    * 
-   * @throws org.apache.hadoop.hbase.exceptions.DoNotRetryIOException
+   * @throws org.apache.hadoop.hbase.DoNotRetryIOException
    */
-  @Test(expected = org.apache.hadoop.hbase.exceptions.DoNotRetryIOException.class)
+  @Test(expected = org.apache.hadoop.hbase.DoNotRetryIOException.class)
   public void testTableRecordReaderScannerTimeoutTwice() throws IOException {
     HTable htable = createDNRIOEScannerTable("table5".getBytes(), 2);
     runTestMapred(htable);
@@ -363,7 +362,7 @@ public class TestTableInputFormat {
    * DoNotRetryIOException) using newer mapreduce api
    * 
    * @throws InterruptedException
-   * @throws org.apache.hadoop.hbase.exceptions.DoNotRetryIOException
+   * @throws org.apache.hadoop.hbase.DoNotRetryIOException
    */
   @Test
   public void testTableRecordReaderScannerTimeoutMapreduce()
@@ -377,9 +376,9 @@ public class TestTableInputFormat {
    * DoNotRetryIOException) using newer mapreduce api
    * 
    * @throws InterruptedException
-   * @throws org.apache.hadoop.hbase.exceptions.DoNotRetryIOException
+   * @throws org.apache.hadoop.hbase.DoNotRetryIOException
    */
-  @Test(expected = org.apache.hadoop.hbase.exceptions.DoNotRetryIOException.class)
+  @Test(expected = org.apache.hadoop.hbase.DoNotRetryIOException.class)
   public void testTableRecordReaderScannerTimeoutMapreduceTwice()
       throws IOException, InterruptedException {
     HTable htable = createDNRIOEScannerTable("table5-mr".getBytes(), 2);

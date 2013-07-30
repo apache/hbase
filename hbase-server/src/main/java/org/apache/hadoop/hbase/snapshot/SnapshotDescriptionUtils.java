@@ -29,8 +29,6 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.exceptions.CorruptedSnapshotException;
-import org.apache.hadoop.hbase.exceptions.SnapshotCreationException;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
@@ -276,7 +274,8 @@ public class SnapshotDescriptionUtils {
    * @param fs filesystem where the snapshot was taken
    * @param snapshotDir directory where the snapshot was stored
    * @return the stored snapshot description
-   * @throws org.apache.hadoop.hbase.exceptions.CorruptedSnapshotException if the snapshot cannot be read
+   * @throws org.apache.hadoop.hbase.snapshot.CorruptedSnapshotException if the
+   * snapshot cannot be read
    */
   public static SnapshotDescription readSnapshotInfo(FileSystem fs, Path snapshotDir)
       throws CorruptedSnapshotException {
@@ -301,7 +300,8 @@ public class SnapshotDescriptionUtils {
    * @param rootdir root directory of the hbase installation
    * @param workingDir directory where the in progress snapshot was built
    * @param fs {@link FileSystem} where the snapshot was built
-   * @throws org.apache.hadoop.hbase.exceptions.SnapshotCreationException if the snapshot could not be moved
+   * @throws org.apache.hadoop.hbase.snapshot.SnapshotCreationException if the
+   * snapshot could not be moved
    * @throws IOException the filesystem could not be reached
    */
   public static void completeSnapshot(SnapshotDescription snapshot, Path rootdir, Path workingDir,

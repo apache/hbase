@@ -34,7 +34,6 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.exceptions.FailedLogCloseException;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos.WALTrailer;
 import org.apache.hadoop.io.Writable;
 
@@ -225,7 +224,7 @@ public interface HLog {
    * @return If lots of logs, flush the returned regions so next time through we
    *         can clean logs. Returns null if nothing to flush. Names are actual
    *         region names as returned by {@link HRegionInfo#getEncodedName()}
-   * @throws org.apache.hadoop.hbase.exceptions.FailedLogCloseException
+   * @throws org.apache.hadoop.hbase.regionserver.wal.FailedLogCloseException
    * @throws IOException
    */
   byte[][] rollWriter() throws FailedLogCloseException, IOException;
@@ -243,7 +242,7 @@ public interface HLog {
    * @return If lots of logs, flush the returned regions so next time through we
    *         can clean logs. Returns null if nothing to flush. Names are actual
    *         region names as returned by {@link HRegionInfo#getEncodedName()}
-   * @throws org.apache.hadoop.hbase.exceptions.FailedLogCloseException
+   * @throws org.apache.hadoop.hbase.regionserver.wal.FailedLogCloseException
    * @throws IOException
    */
   byte[][] rollWriter(boolean force) throws FailedLogCloseException,

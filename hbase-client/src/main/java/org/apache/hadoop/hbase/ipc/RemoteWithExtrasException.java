@@ -18,7 +18,7 @@
 package org.apache.hadoop.hbase.ipc;
 
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.exceptions.DoNotRetryIOException;
+import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.ipc.RemoteException;
 
 /**

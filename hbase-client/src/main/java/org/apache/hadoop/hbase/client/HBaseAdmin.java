@@ -43,26 +43,26 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.MasterNotRunningException;
+import org.apache.hadoop.hbase.NotServingRegionException;
+import org.apache.hadoop.hbase.RegionException;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.TableExistsException;
+import org.apache.hadoop.hbase.TableNotEnabledException;
+import org.apache.hadoop.hbase.TableNotFoundException;
+import org.apache.hadoop.hbase.UnknownRegionException;
+import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.catalog.CatalogTracker;
 import org.apache.hadoop.hbase.catalog.MetaReader;
 import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitor;
 import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitorBase;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
-import org.apache.hadoop.hbase.exceptions.FailedLogCloseException;
-import org.apache.hadoop.hbase.exceptions.HBaseSnapshotException;
-import org.apache.hadoop.hbase.exceptions.MasterNotRunningException;
+import org.apache.hadoop.hbase.regionserver.wal.FailedLogCloseException;
+import org.apache.hadoop.hbase.snapshot.HBaseSnapshotException;
 import org.apache.hadoop.hbase.exceptions.MergeRegionException;
-import org.apache.hadoop.hbase.exceptions.NotServingRegionException;
-import org.apache.hadoop.hbase.exceptions.RegionException;
-import org.apache.hadoop.hbase.exceptions.RestoreSnapshotException;
-import org.apache.hadoop.hbase.exceptions.SnapshotCreationException;
-import org.apache.hadoop.hbase.exceptions.TableExistsException;
-import org.apache.hadoop.hbase.exceptions.TableNotEnabledException;
-import org.apache.hadoop.hbase.exceptions.TableNotFoundException;
-import org.apache.hadoop.hbase.exceptions.UnknownRegionException;
-import org.apache.hadoop.hbase.exceptions.UnknownSnapshotException;
-import org.apache.hadoop.hbase.exceptions.ZooKeeperConnectionException;
+import org.apache.hadoop.hbase.snapshot.RestoreSnapshotException;
+import org.apache.hadoop.hbase.snapshot.SnapshotCreationException;
+import org.apache.hadoop.hbase.snapshot.UnknownSnapshotException;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcChannel;
 import org.apache.hadoop.hbase.ipc.MasterCoprocessorRpcChannel;
 import org.apache.hadoop.hbase.ipc.PayloadCarryingRpcController;
@@ -191,7 +191,7 @@ public class HBaseAdmin implements Abortable, Closeable {
   /**
    * @return A new CatalogTracker instance; call {@link #cleanupCatalogTracker(CatalogTracker)}
    * to cleanup the returned catalog tracker.
-   * @throws org.apache.hadoop.hbase.exceptions.ZooKeeperConnectionException
+   * @throws org.apache.hadoop.hbase.ZooKeeperConnectionException
    * @throws IOException
    * @see #cleanupCatalogTracker(CatalogTracker)
    */
@@ -370,7 +370,7 @@ public class HBaseAdmin implements Abortable, Closeable {
    *
    * @throws IllegalArgumentException if the table name is reserved
    * @throws MasterNotRunningException if master is not running
-   * @throws org.apache.hadoop.hbase.exceptions.TableExistsException if table already exists (If concurrent
+   * @throws org.apache.hadoop.hbase.TableExistsException if table already exists (If concurrent
    * threads, the table may have been created between test-for-existence
    * and attempt-at-creation).
    * @throws IOException
@@ -407,7 +407,7 @@ public class HBaseAdmin implements Abortable, Closeable {
    * @throws IllegalArgumentException if the table name is reserved, if the split keys
    * are repeated and if the split key has empty byte array.
    * @throws MasterNotRunningException if master is not running
-   * @throws org.apache.hadoop.hbase.exceptions.TableExistsException if table already exists (If concurrent
+   * @throws org.apache.hadoop.hbase.TableExistsException if table already exists (If concurrent
    * threads, the table may have been created between test-for-existence
    * and attempt-at-creation).
    * @throws IOException
@@ -496,7 +496,7 @@ public class HBaseAdmin implements Abortable, Closeable {
    * @throws IllegalArgumentException Bad table name, if the split keys
    * are repeated and if the split key has empty byte array.
    * @throws MasterNotRunningException if master is not running
-   * @throws org.apache.hadoop.hbase.exceptions.TableExistsException if table already exists (If concurrent
+   * @throws org.apache.hadoop.hbase.TableExistsException if table already exists (If concurrent
    * threads, the table may have been created between test-for-existence
    * and attempt-at-creation).
    * @throws IOException
@@ -1678,7 +1678,7 @@ public class HBaseAdmin implements Abortable, Closeable {
   /**
    * Query on the catalog janitor state (Enabled/Disabled?)
    * @throws ServiceException
-   * @throws org.apache.hadoop.hbase.exceptions.MasterNotRunningException
+   * @throws org.apache.hadoop.hbase.MasterNotRunningException
    */
   public boolean isCatalogJanitorEnabled() throws ServiceException, MasterNotRunningException {
     MasterAdminKeepAliveConnection stub = connection.getKeepAliveMasterAdminService();

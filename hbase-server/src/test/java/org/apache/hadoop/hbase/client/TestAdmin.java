@@ -45,19 +45,19 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.InvalidFamilyOperationException;
 import org.apache.hadoop.hbase.LargeTests;
+import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
+import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.TableExistsException;
+import org.apache.hadoop.hbase.TableNotDisabledException;
+import org.apache.hadoop.hbase.TableNotEnabledException;
+import org.apache.hadoop.hbase.TableNotFoundException;
+import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.catalog.CatalogTracker;
 import org.apache.hadoop.hbase.client.HTable;
-import org.apache.hadoop.hbase.exceptions.InvalidFamilyOperationException;
-import org.apache.hadoop.hbase.exceptions.MasterNotRunningException;
-import org.apache.hadoop.hbase.exceptions.NotServingRegionException;
-import org.apache.hadoop.hbase.exceptions.TableExistsException;
-import org.apache.hadoop.hbase.exceptions.TableNotDisabledException;
-import org.apache.hadoop.hbase.exceptions.TableNotEnabledException;
-import org.apache.hadoop.hbase.exceptions.TableNotFoundException;
-import org.apache.hadoop.hbase.exceptions.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.executor.EventHandler;
 import org.apache.hadoop.hbase.master.AssignmentManager;
 import org.apache.hadoop.hbase.master.HMaster;
@@ -257,7 +257,7 @@ public class TestAdmin {
     boolean ok = false;
     try {
       ht.get(get);
-    } catch (org.apache.hadoop.hbase.exceptions.DoNotRetryIOException e) {
+    } catch (org.apache.hadoop.hbase.DoNotRetryIOException e) {
       ok = true;
     }
     assertTrue(ok);
@@ -303,7 +303,7 @@ public class TestAdmin {
     try {
       ht1.get(get);
       ht2.get(get);
-    } catch (org.apache.hadoop.hbase.exceptions.DoNotRetryIOException e) {
+    } catch (org.apache.hadoop.hbase.DoNotRetryIOException e) {
       ok = true;
     }
 
@@ -1105,7 +1105,7 @@ public class TestAdmin {
     this.admin.disableTable(tableName);
     try {
       new HTable(TEST_UTIL.getConfiguration(), tableName);
-    } catch (org.apache.hadoop.hbase.exceptions.DoNotRetryIOException e) {
+    } catch (org.apache.hadoop.hbase.DoNotRetryIOException e) {
       //expected
     }
 

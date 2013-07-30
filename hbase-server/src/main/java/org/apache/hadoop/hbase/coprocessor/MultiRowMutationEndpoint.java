@@ -29,9 +29,8 @@ import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.client.Mutation;
-import org.apache.hadoop.hbase.exceptions.CoprocessorException;
 import org.apache.hadoop.hbase.regionserver.HRegion;
-import org.apache.hadoop.hbase.exceptions.WrongRegionException;
+import org.apache.hadoop.hbase.regionserver.WrongRegionException;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.ResponseConverter;
@@ -104,7 +103,7 @@ CoprocessorService, Coprocessor {
             throw new WrongRegionException(msg);
           } else {
             // rows are split between regions, do not retry
-            throw new org.apache.hadoop.hbase.exceptions.DoNotRetryIOException(msg);
+            throw new org.apache.hadoop.hbase.DoNotRetryIOException(msg);
           }
         }
         rowsToLock.add(m.getRow());

@@ -33,11 +33,11 @@ import org.apache.hadoop.hbase.CellScannable;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.catalog.CatalogTracker;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.exceptions.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.ipc.PayloadCarryingRpcController;
 import org.apache.hadoop.hbase.ipc.RpcServerInterface;
@@ -160,7 +160,7 @@ ClientProtos.ClientService.BlockingInterface, RegionServerServices {
   /**
    * @param sn Name of this mock regionserver
    * @throws IOException
-   * @throws org.apache.hadoop.hbase.exceptions.ZooKeeperConnectionException
+   * @throws org.apache.hadoop.hbase.ZooKeeperConnectionException
    */
   MockRegionServer(final Configuration conf, final ServerName sn)
   throws ZooKeeperConnectionException, IOException {

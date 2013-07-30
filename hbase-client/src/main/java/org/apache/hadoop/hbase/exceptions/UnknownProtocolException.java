@@ -23,7 +23,7 @@ package org.apache.hadoop.hbase.exceptions;
  * An error requesting an RPC protocol that the server is not serving.
  */
 @SuppressWarnings("serial")
-public class UnknownProtocolException extends org.apache.hadoop.hbase.exceptions.DoNotRetryIOException {
+public class UnknownProtocolException extends org.apache.hadoop.hbase.DoNotRetryIOException {
   private Class<?> protocol;
 
   public UnknownProtocolException(String mesg) {

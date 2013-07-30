@@ -67,9 +67,13 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CompoundConfiguration;
+import org.apache.hadoop.hbase.DroppedSnapshotException;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.NotServingRegionException;
+import org.apache.hadoop.hbase.RegionTooBusyException;
+import org.apache.hadoop.hbase.UnknownScannerException;
 import org.apache.hadoop.hbase.HConstants.OperationStatusCode;
 import org.apache.hadoop.hbase.HDFSBlocksDistribution;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -90,15 +94,9 @@ import org.apache.hadoop.hbase.client.Row;
 import org.apache.hadoop.hbase.client.RowMutations;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.errorhandling.ForeignExceptionSnare;
-import org.apache.hadoop.hbase.exceptions.DroppedSnapshotException;
 import org.apache.hadoop.hbase.exceptions.FailedSanityCheckException;
-import org.apache.hadoop.hbase.exceptions.NoSuchColumnFamilyException;
-import org.apache.hadoop.hbase.exceptions.NotServingRegionException;
 import org.apache.hadoop.hbase.exceptions.RegionInRecoveryException;
-import org.apache.hadoop.hbase.exceptions.RegionTooBusyException;
 import org.apache.hadoop.hbase.exceptions.UnknownProtocolException;
-import org.apache.hadoop.hbase.exceptions.UnknownScannerException;
-import org.apache.hadoop.hbase.exceptions.WrongRegionException;
 import org.apache.hadoop.hbase.filter.ByteArrayComparable;
 import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.filter.Filter;
@@ -2338,9 +2336,11 @@ public class HRegion implements HeapSize { // , Writable{
     checkResources();
     boolean isPut = w instanceof Put;
     if (!isPut && !(w instanceof Delete))
-      throw new org.apache.hadoop.hbase.exceptions.DoNotRetryIOException("Action must be Put or Delete");
+      throw new org.apache.hadoop.hbase.DoNotRetryIOException("Action must " +
+      		"be Put or Delete");
     if (!Bytes.equals(row, w.getRow())) {
-      throw new org.apache.hadoop.hbase.exceptions.DoNotRetryIOException("Action's getRow must match the passed row");
+      throw new org.apache.hadoop.hbase.DoNotRetryIOException("Action's " +
+      		"getRow must match the passed row");
     }
 
     startRegionOperation();
@@ -2411,7 +2411,7 @@ public class HRegion implements HeapSize { // , Writable{
   }
 
   private void doBatchMutate(Mutation mutation) throws IOException,
-      org.apache.hadoop.hbase.exceptions.DoNotRetryIOException {
+      org.apache.hadoop.hbase.DoNotRetryIOException {
     OperationStatus[] batchMutate = this.batchMutate(new Mutation[] { mutation });
     if (batchMutate[0].getOperationStatusCode().equals(OperationStatusCode.SANITY_CHECK_FAILURE)) {
       throw new FailedSanityCheckException(batchMutate[0].getExceptionMsg());
@@ -3278,7 +3278,7 @@ public class HRegion implements HeapSize { // , Writable{
 
         Store store = getStore(familyName);
         if (store == null) {
-          IOException ioe = new org.apache.hadoop.hbase.exceptions.DoNotRetryIOException(
+          IOException ioe = new org.apache.hadoop.hbase.DoNotRetryIOException(
               "No such column family " + Bytes.toStringBinary(familyName));
           ioes.add(ioe);
         } else {
@@ -4865,7 +4865,7 @@ public class HRegion implements HeapSize { // , Writable{
                   amount += Bytes.toLong(kv.getBuffer(), kv.getValueOffset(), Bytes.SIZEOF_LONG);
                 } else {
                   // throw DoNotRetryIOException instead of IllegalArgumentException
-                  throw new org.apache.hadoop.hbase.exceptions.DoNotRetryIOException(
+                  throw new org.apache.hadoop.hbase.DoNotRetryIOException(
                       "Attempted to increment field that isn't 64 bits wide");
                 }
                 idx++;
