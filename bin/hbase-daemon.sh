@@ -172,7 +172,9 @@ case $startStop in
 
 (start)
     check_before_start
+    echo starting $command, logging to $logout
     nohup $thiscmd --config "${HBASE_CONF_DIR}" internal_start $command $args < /dev/null > ${logout} 2>&1  &
+    sleep 1; head "${logout}"
   ;;
 
 (autorestart)
@@ -183,7 +185,6 @@ case $startStop in
 (internal_start)
     hbase_rotate_log $logout
     hbase_rotate_log $loggc
-    echo starting $command, logging to $logout
     # Add to the command log file vital stats on our environment.
     echo "`date` Starting $command on `hostname`" >> $loglog
     echo "`ulimit -a`" >> $loglog 2>&1
@@ -191,7 +192,6 @@ case $startStop in
         --config "${HBASE_CONF_DIR}" \
         $command "$@" start >> "$logout" 2>&1 &
     echo $! > $pid
-    sleep 1; head "$logout"
     wait
     cleanZNode
   ;;
