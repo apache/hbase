@@ -25,7 +25,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.RegionServerCallable;
-import org.apache.hadoop.hbase.client.RpcRetryingCaller;
+import org.apache.hadoop.hbase.client.RpcRetryingCallerFactory;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServiceResponse;
@@ -52,10 +52,13 @@ public class RegionCoprocessorRpcChannel extends CoprocessorRpcChannel{
   private final byte[] row;
   private byte[] lastRegion;
 
+  private RpcRetryingCallerFactory rpcFactory;
+
   public RegionCoprocessorRpcChannel(HConnection conn, byte[] table, byte[] row) {
     this.connection = conn;
     this.table = table;
     this.row = row;
+    this.rpcFactory = RpcRetryingCallerFactory.instantiate(conn.getConfiguration());
   }
 
   @Override
@@ -83,8 +86,8 @@ public class RegionCoprocessorRpcChannel extends CoprocessorRpcChannel{
             return ProtobufUtil.execService(getStub(), call, regionName);
           }
         };
-    CoprocessorServiceResponse result = new RpcRetryingCaller<CoprocessorServiceResponse>().
-        callWithRetries(callable, this.connection.getConfiguration());
+    CoprocessorServiceResponse result = rpcFactory.<CoprocessorServiceResponse> newCaller()
+        .callWithRetries(callable);
     Message response = null;
     if (result.getValue().hasValue()) {
       response = responsePrototype.newBuilderForType()

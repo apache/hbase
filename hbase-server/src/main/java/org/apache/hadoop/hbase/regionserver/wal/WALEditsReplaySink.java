@@ -38,6 +38,7 @@ import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.RegionServerCallable;
 import org.apache.hadoop.hbase.client.Row;
 import org.apache.hadoop.hbase.client.RpcRetryingCaller;
+import org.apache.hadoop.hbase.client.RpcRetryingCallerFactory;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.AdminService;
@@ -162,9 +163,10 @@ public class WALEditsReplaySink {
   private void replayEdits(final HRegionLocation regionLoc, final HRegionInfo regionInfo,
       final List<Action<Row>> actions) throws IOException {
     try {
+      RpcRetryingCallerFactory factory = RpcRetryingCallerFactory.instantiate(conf);
       ReplayServerCallable<MultiResponse> callable = new ReplayServerCallable<MultiResponse>(
           this.conn, this.tableName, regionLoc, regionInfo, actions);
-      new RpcRetryingCaller<MultiResponse>().callWithRetries(callable, conf, this.replayTimeout);
+      factory.<MultiResponse> newCaller().callWithRetries(callable, this.replayTimeout);
     } catch (IOException ie) {
       if (skipErrors) {
         LOG.warn(HConstants.HREGION_EDITS_REPLAY_SKIP_ERRORS

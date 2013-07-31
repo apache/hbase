@@ -36,6 +36,7 @@ import org.apache.hadoop.hbase.client.RegionServerCallable;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.RpcRetryingCaller;
+import org.apache.hadoop.hbase.client.RpcRetryingCallerFactory;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.TableExistsException;
 import org.apache.hadoop.hbase.io.compress.Compression;
@@ -157,8 +158,9 @@ public class TestHRegionServerBulkLoad {
           return null;
         }
       };
-      RpcRetryingCaller<Void> caller = new RpcRetryingCaller<Void>();
-      caller.callWithRetries(callable, UTIL.getConfiguration());
+      RpcRetryingCallerFactory factory = new RpcRetryingCallerFactory(conf);
+      RpcRetryingCaller<Void> caller = factory.<Void> newCaller();
+      caller.callWithRetries(callable);
 
       // Periodically do compaction to reduce the number of open file handles.
       if (numBulkLoads.get() % 10 == 0) {
@@ -178,7 +180,7 @@ public class TestHRegionServerBulkLoad {
             return null;
           }
         };
-        caller.callWithRetries(callable, UTIL.getConfiguration());
+        caller.callWithRetries(callable);
       }
     }
   }
