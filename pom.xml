@@ -419,6 +419,9 @@
                  dest="${project.build.directory}">
                   <patternset>
                     <include name="facebook-arc-jira-*/arc_jira_lib/**"/>
+            <exclude>**/replication/*.java</exclude>
+            <exclude>**/avro/*.java</exclude>
+            <exclude>**/rest/*.java</exclude>
                   </patternset>
                 </untar>
                 <move todir="${basedir}">
