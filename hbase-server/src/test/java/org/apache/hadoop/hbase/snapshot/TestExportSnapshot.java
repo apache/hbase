@@ -119,10 +119,9 @@ public class TestExportSnapshot {
 
   @After
   public void tearDown() throws Exception {
-    admin.disableTable(tableName);
-    admin.deleteSnapshot(snapshotName);
-    admin.deleteSnapshot(emptySnapshotName);
-    admin.deleteTable(tableName);
+    TEST_UTIL.deleteTable(tableName);
+    SnapshotTestingUtils.deleteAllSnapshots(TEST_UTIL.getHBaseAdmin());
+    SnapshotTestingUtils.deleteArchiveDirectory(TEST_UTIL);
     admin.close();
   }
 

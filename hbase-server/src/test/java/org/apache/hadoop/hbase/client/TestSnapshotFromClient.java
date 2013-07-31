@@ -98,13 +98,8 @@ public class TestSnapshotFromClient {
   @After
   public void tearDown() throws Exception {
     UTIL.deleteTable(TABLE_NAME);
-    // and cleanup the archive directory
-    try {
-      UTIL.getTestFileSystem().delete(
-        new Path(UTIL.getDefaultRootDirPath(), HConstants.HFILE_ARCHIVE_DIRECTORY), true);
-    } catch (IOException e) {
-      LOG.warn("Failure to delete archive directory", e);
-    }
+    SnapshotTestingUtils.deleteAllSnapshots(UTIL.getHBaseAdmin());
+    SnapshotTestingUtils.deleteArchiveDirectory(UTIL);
   }
 
   @AfterClass
