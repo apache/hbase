@@ -29,6 +29,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Arrays;
 import java.util.NavigableSet;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import com.google.common.collect.ImmutableList;
 import org.apache.commons.logging.Log;
@@ -64,45 +65,44 @@ import org.apache.hadoop.hbase.util.Pair;
 public class SimpleRegionObserver extends BaseRegionObserver {
   static final Log LOG = LogFactory.getLog(TestRegionObserverInterface.class);
 
-  boolean beforeDelete = true;
-  boolean scannerOpened = false;
-  boolean hadPreOpen;
-  boolean hadPostOpen;
-  boolean hadPreClose;
-  boolean hadPostClose;
-  boolean hadPreFlush;
-  boolean hadPreFlushScannerOpen;
-  boolean hadPostFlush;
-  boolean hadPreSplit;
-  boolean hadPostSplit;
-  boolean hadPreCompactSelect;
-  boolean hadPostCompactSelect;
-  boolean hadPreCompactScanner;
-  boolean hadPreCompact;
-  boolean hadPostCompact;
-  boolean hadPreGet = false;
-  boolean hadPostGet = false;
-  boolean hadPrePut = false;
-  boolean hadPostPut = false;
-  boolean hadPreDeleted = false;
-  boolean hadPostDeleted = false;
-  boolean hadPreGetClosestRowBefore = false;
-  boolean hadPostGetClosestRowBefore = false;
-  boolean hadPreIncrement = false;
-  boolean hadPostIncrement = false;
-  boolean hadPreWALRestored = false;
-  boolean hadPostWALRestored = false;
-  boolean hadPreScannerNext = false;
-  boolean hadPostScannerNext = false;
-  boolean hadPreScannerClose = false;
-  boolean hadPostScannerClose = false;
-  boolean hadPreScannerOpen = false;
-  boolean hadPreStoreScannerOpen = false;
-  boolean hadPostScannerOpen = false;
-  boolean hadPreBulkLoadHFile = false;
-  boolean hadPostBulkLoadHFile = false;
-  boolean hadPreBatchMutate = false;
-  boolean hadPostBatchMutate = false;
+  final AtomicInteger ctBeforeDelete = new AtomicInteger(1);
+  final AtomicInteger ctPreOpen = new AtomicInteger(0);
+  final AtomicInteger ctPostOpen = new AtomicInteger(0);
+  final AtomicInteger ctPreClose = new AtomicInteger(0);
+  final AtomicInteger ctPostClose = new AtomicInteger(0);
+  final AtomicInteger ctPreFlush = new AtomicInteger(0);
+  final AtomicInteger ctPreFlushScannerOpen = new AtomicInteger(0);
+  final AtomicInteger ctPostFlush = new AtomicInteger(0);
+  final AtomicInteger ctPreSplit = new AtomicInteger(0);
+  final AtomicInteger ctPostSplit = new AtomicInteger(0);
+  final AtomicInteger ctPreCompactSelect = new AtomicInteger(0);
+  final AtomicInteger ctPostCompactSelect = new AtomicInteger(0);
+  final AtomicInteger ctPreCompactScanner = new AtomicInteger(0);
+  final AtomicInteger ctPreCompact = new AtomicInteger(0);
+  final AtomicInteger ctPostCompact = new AtomicInteger(0);
+  final AtomicInteger ctPreGet = new AtomicInteger(0);
+  final AtomicInteger ctPostGet = new AtomicInteger(0);
+  final AtomicInteger ctPrePut = new AtomicInteger(0);
+  final AtomicInteger ctPostPut = new AtomicInteger(0);
+  final AtomicInteger ctPreDeleted = new AtomicInteger(0);
+  final AtomicInteger ctPostDeleted = new AtomicInteger(0);
+  final AtomicInteger ctPreGetClosestRowBefore = new AtomicInteger(0);
+  final AtomicInteger ctPostGetClosestRowBefore = new AtomicInteger(0);
+  final AtomicInteger ctPreIncrement = new AtomicInteger(0);
+  final AtomicInteger ctPostIncrement = new AtomicInteger(0);
+  final AtomicInteger ctPreWALRestored = new AtomicInteger(0);
+  final AtomicInteger ctPostWALRestored = new AtomicInteger(0);
+  final AtomicInteger ctPreScannerNext = new AtomicInteger(0);
+  final AtomicInteger ctPostScannerNext = new AtomicInteger(0);
+  final AtomicInteger ctPreScannerClose = new AtomicInteger(0);
+  final AtomicInteger ctPostScannerClose = new AtomicInteger(0);
+  final AtomicInteger ctPreScannerOpen = new AtomicInteger(0);
+  final AtomicInteger ctPreStoreScannerOpen = new AtomicInteger(0);
+  final AtomicInteger ctPostScannerOpen = new AtomicInteger(0);
+  final AtomicInteger ctPreBulkLoadHFile = new AtomicInteger(0);
+  final AtomicInteger ctPostBulkLoadHFile = new AtomicInteger(0);
+  final AtomicInteger ctPreBatchMutate = new AtomicInteger(0);
+  final AtomicInteger ctPostBatchMutate = new AtomicInteger(0);
 
   @Override
   public void start(CoprocessorEnvironment e) throws IOException {
@@ -116,86 +116,86 @@ public class SimpleRegionObserver extends BaseRegionObserver {
 
   @Override
   public void preOpen(ObserverContext<RegionCoprocessorEnvironment> c) {
-    hadPreOpen = true;
+    ctPreOpen.incrementAndGet();
   }
 
   @Override
   public void postOpen(ObserverContext<RegionCoprocessorEnvironment> c) {
-    hadPostOpen = true;
+    ctPostOpen.incrementAndGet();
   }
 
   public boolean wasOpened() {
-    return hadPreOpen && hadPostOpen;
+    return ctPreOpen.get() > 0 && ctPostOpen.get() > 0;
   }
 
   @Override
   public void preClose(ObserverContext<RegionCoprocessorEnvironment> c, boolean abortRequested) {
-    hadPreClose = true;
+    ctPreClose.incrementAndGet();
   }
 
   @Override
   public void postClose(ObserverContext<RegionCoprocessorEnvironment> c, boolean abortRequested) {
-    hadPostClose = true;
+    ctPostClose.incrementAndGet();
   }
 
   public boolean wasClosed() {
-    return hadPreClose && hadPostClose;
+    return ctPreClose.get() > 0 && ctPostClose.get() > 0;
   }
 
   @Override
   public InternalScanner preFlush(ObserverContext<RegionCoprocessorEnvironment> c,
       Store store, InternalScanner scanner) {
-    hadPreFlush = true;
+    ctPreFlush.incrementAndGet();
     return scanner;
   }
 
   @Override
   public InternalScanner preFlushScannerOpen(final ObserverContext<RegionCoprocessorEnvironment> c,
       Store store, KeyValueScanner memstoreScanner, InternalScanner s) throws IOException {
-    hadPreFlushScannerOpen = true;
+    ctPreFlushScannerOpen.incrementAndGet();
     return null;
   }
 
   @Override
   public void postFlush(ObserverContext<RegionCoprocessorEnvironment> c,
       Store store, StoreFile resultFile) {
-    hadPostFlush = true;
+    ctPostFlush.incrementAndGet();
   }
 
   public boolean wasFlushed() {
-    return hadPreFlush && hadPostFlush;
+    return ctPreFlush.get() > 0 && ctPostFlush.get() > 0;
   }
 
   @Override
   public void preSplit(ObserverContext<RegionCoprocessorEnvironment> c) {
-    hadPreSplit = true;
+    ctPreSplit.incrementAndGet();
   }
 
   @Override
   public void postSplit(ObserverContext<RegionCoprocessorEnvironment> c, HRegion l, HRegion r) {
-    hadPostSplit = true;
+    ctPostSplit.incrementAndGet();
   }
 
   public boolean wasSplit() {
-    return hadPreSplit && hadPostSplit;
+    return ctPreSplit.get() > 0 && ctPostSplit.get() > 0;
   }
 
   @Override
   public void preCompactSelection(ObserverContext<RegionCoprocessorEnvironment> c,
       Store store, List<StoreFile> candidates) {
-    hadPreCompactSelect = true;
+    ctPreCompactSelect.incrementAndGet();
   }
 
   @Override
   public void postCompactSelection(ObserverContext<RegionCoprocessorEnvironment> c,
       Store store, ImmutableList<StoreFile> selected) {
-    hadPostCompactSelect = true;
+    ctPostCompactSelect.incrementAndGet();
   }
 
   @Override
   public InternalScanner preCompact(ObserverContext<RegionCoprocessorEnvironment> e,
       Store store, InternalScanner scanner, ScanType scanType) {
-    hadPreCompact = true;
+    ctPreCompact.incrementAndGet();
     return scanner;
   }
 
@@ -204,25 +204,25 @@ public class SimpleRegionObserver extends BaseRegionObserver {
       final ObserverContext<RegionCoprocessorEnvironment> c,
       Store store, List<? extends KeyValueScanner> scanners, ScanType scanType, long earliestPutTs,
       InternalScanner s) throws IOException {
-    hadPreCompactScanner = true;
+    ctPreCompactScanner.incrementAndGet();
     return null;
   }
 
   @Override
   public void postCompact(ObserverContext<RegionCoprocessorEnvironment> e,
       Store store, StoreFile resultFile) {
-    hadPostCompact = true;
+    ctPostCompact.incrementAndGet();
   }
 
   public boolean wasCompacted() {
-    return hadPreCompact && hadPostCompact;
+    return ctPreCompact.get() > 0 && ctPostCompact.get() > 0;
   }
 
   @Override
   public RegionScanner preScannerOpen(final ObserverContext<RegionCoprocessorEnvironment> c,
       final Scan scan,
       final RegionScanner s) throws IOException {
-    hadPreScannerOpen = true;
+    ctPreScannerOpen.incrementAndGet();
     return null;
   }
 
@@ -230,7 +230,7 @@ public class SimpleRegionObserver extends BaseRegionObserver {
   public KeyValueScanner preStoreScannerOpen(final ObserverContext<RegionCoprocessorEnvironment> c,
       final Store store, final Scan scan, final NavigableSet<byte[]> targetCols,
       final KeyValueScanner s) throws IOException {
-    hadPreStoreScannerOpen = true;
+    ctPreStoreScannerOpen.incrementAndGet();
     return null;
   }
 
@@ -238,7 +238,7 @@ public class SimpleRegionObserver extends BaseRegionObserver {
   public RegionScanner postScannerOpen(final ObserverContext<RegionCoprocessorEnvironment> c,
       final Scan scan, final RegionScanner s)
       throws IOException {
-    hadPostScannerOpen = true;
+    ctPostScannerOpen.incrementAndGet();
     return s;
   }
 
@@ -246,7 +246,7 @@ public class SimpleRegionObserver extends BaseRegionObserver {
   public boolean preScannerNext(final ObserverContext<RegionCoprocessorEnvironment> c,
       final InternalScanner s, final List<Result> results,
       final int limit, final boolean hasMore) throws IOException {
-    hadPreScannerNext = true;
+    ctPreScannerNext.incrementAndGet();
     return hasMore;
   }
 
@@ -254,20 +254,20 @@ public class SimpleRegionObserver extends BaseRegionObserver {
   public boolean postScannerNext(final ObserverContext<RegionCoprocessorEnvironment> c,
       final InternalScanner s, final List<Result> results, final int limit,
       final boolean hasMore) throws IOException {
-    hadPostScannerNext = true;
+    ctPostScannerNext.incrementAndGet();
     return hasMore;
   }
 
   @Override
   public void preScannerClose(final ObserverContext<RegionCoprocessorEnvironment> c,
       final InternalScanner s) throws IOException {
-    hadPreScannerClose = true;
+    ctPreScannerClose.incrementAndGet();
   }
 
   @Override
   public void postScannerClose(final ObserverContext<RegionCoprocessorEnvironment> c,
       final InternalScanner s) throws IOException {
-    hadPostScannerClose = true;
+    ctPostScannerClose.incrementAndGet();
   }
 
   @Override
@@ -278,7 +278,7 @@ public class SimpleRegionObserver extends BaseRegionObserver {
     assertNotNull(e.getRegion());
     assertNotNull(get);
     assertNotNull(results);
-    hadPreGet = true;
+    ctPreGet.incrementAndGet();
   }
 
   @Override
@@ -309,7 +309,7 @@ public class SimpleRegionObserver extends BaseRegionObserver {
       assertTrue(foundB);
       assertTrue(foundC);
     }
-    hadPostGet = true;
+    ctPostGet.incrementAndGet();
   }
 
   @Override
@@ -342,7 +342,7 @@ public class SimpleRegionObserver extends BaseRegionObserver {
       assertTrue(Bytes.equals(kv.getQualifier(),
           TestRegionObserverInterface.C));
     }
-    hadPrePut = true;
+    ctPrePut.incrementAndGet();
   }
 
   @Override
@@ -375,7 +375,7 @@ public class SimpleRegionObserver extends BaseRegionObserver {
       kv = (KeyValue)cells.get(0);
       assertTrue(Bytes.equals(kv.getQualifier(), TestRegionObserverInterface.C));
     }
-    hadPostPut = true;
+    ctPostPut.incrementAndGet();
   }
 
   @Override
@@ -387,8 +387,8 @@ public class SimpleRegionObserver extends BaseRegionObserver {
     assertNotNull(e);
     assertNotNull(e.getRegion());
     assertNotNull(familyMap);
-    if (beforeDelete) {
-      hadPreDeleted = true;
+    if (ctBeforeDelete.get() > 0) {
+      ctPreDeleted.incrementAndGet();
     }
   }
 
@@ -401,8 +401,8 @@ public class SimpleRegionObserver extends BaseRegionObserver {
     assertNotNull(e);
     assertNotNull(e.getRegion());
     assertNotNull(familyMap);
-    beforeDelete = false;
-    hadPostDeleted = true;
+    ctBeforeDelete.set(0);
+    ctPostDeleted.incrementAndGet();
   }
   
   @Override
@@ -412,7 +412,7 @@ public class SimpleRegionObserver extends BaseRegionObserver {
     assertNotNull(e);
     assertNotNull(e.getRegion());
     assertNotNull(miniBatchOp);
-    hadPreBatchMutate = true;
+    ctPreBatchMutate.incrementAndGet();
   }
 
   @Override
@@ -422,7 +422,7 @@ public class SimpleRegionObserver extends BaseRegionObserver {
     assertNotNull(e);
     assertNotNull(e.getRegion());
     assertNotNull(miniBatchOp);
-    hadPostBatchMutate = true;
+    ctPostBatchMutate.incrementAndGet();
   }
 
   @Override
@@ -434,8 +434,8 @@ public class SimpleRegionObserver extends BaseRegionObserver {
     assertNotNull(e.getRegion());
     assertNotNull(row);
     assertNotNull(result);
-    if (beforeDelete) {
-      hadPreGetClosestRowBefore = true;
+    if (ctBeforeDelete.get() > 0) {
+      ctPreGetClosestRowBefore.incrementAndGet();
     }
   }
 
@@ -448,20 +448,20 @@ public class SimpleRegionObserver extends BaseRegionObserver {
     assertNotNull(e.getRegion());
     assertNotNull(row);
     assertNotNull(result);
-    hadPostGetClosestRowBefore = true;
+    ctPostGetClosestRowBefore.incrementAndGet();
   }
 
   @Override
   public Result preIncrement(final ObserverContext<RegionCoprocessorEnvironment> c,
       final Increment increment) throws IOException {
-    hadPreIncrement = true;
+    ctPreIncrement.incrementAndGet();
     return null;
   }
 
   @Override
   public Result postIncrement(final ObserverContext<RegionCoprocessorEnvironment> c,
       final Increment increment, final Result result) throws IOException {
-    hadPostIncrement = true;
+    ctPostIncrement.incrementAndGet();
     return result;
   }
 
@@ -480,7 +480,7 @@ public class SimpleRegionObserver extends BaseRegionObserver {
       String familyName = Bytes.toString(TestRegionObserverInterface.A);
       assertEquals(familyPath.substring(familyPath.length()-familyName.length()-1),"/"+familyName);
     }
-    hadPreBulkLoadHFile = true;
+    ctPreBulkLoadHFile.incrementAndGet();
   }
 
   @Override
@@ -498,71 +498,172 @@ public class SimpleRegionObserver extends BaseRegionObserver {
       String familyName = Bytes.toString(TestRegionObserverInterface.A);
       assertEquals(familyPath.substring(familyPath.length()-familyName.length()-1),"/"+familyName);
     }
-    hadPostBulkLoadHFile = true;
+    ctPostBulkLoadHFile.incrementAndGet();
     return hasLoaded;
   }
 
   public boolean hadPreGet() {
-    return hadPreGet;
+    return ctPreGet.get() > 0;
   }
 
   public boolean hadPostGet() {
-    return hadPostGet;
+    return ctPostGet.get() > 0;
   }
 
   public boolean hadPrePut() {
-    return hadPrePut;
+    return ctPrePut.get() > 0;
   }
 
   public boolean hadPostPut() {
-    return hadPostPut;
+    return ctPostPut.get() > 0;
   }
   
   public boolean hadPreBatchMutate() {
-    return hadPreBatchMutate;
+    return ctPreBatchMutate.get() > 0;
   }
 
   public boolean hadPostBatchMutate() {
-    return hadPostBatchMutate;
+    return ctPostBatchMutate.get() > 0;
   }
   
   public boolean hadDelete() {
-    return !beforeDelete;
+    return !(ctBeforeDelete.get() > 0);
   }
 
   public boolean hadPreIncrement() {
-    return hadPreIncrement;
+    return ctPreIncrement.get() > 0;
   }
 
   public boolean hadPostIncrement() {
-    return hadPostIncrement;
+    return ctPostIncrement.get() > 0;
   }
 
   public boolean hadPreWALRestored() {
-    return hadPreWALRestored;
+    return ctPreWALRestored.get() > 0;
   }
 
   public boolean hadPostWALRestored() {
-    return hadPostWALRestored;
+    return ctPostWALRestored.get() > 0;
   }
   public boolean wasScannerNextCalled() {
-    return hadPreScannerNext && hadPostScannerNext;
+    return ctPreScannerNext.get() > 0 && ctPostScannerNext.get() > 0;
   }
   public boolean wasScannerCloseCalled() {
-    return hadPreScannerClose && hadPostScannerClose;
+    return ctPreScannerClose.get() > 0 && ctPostScannerClose.get() > 0;
   }
   public boolean wasScannerOpenCalled() {
-    return hadPreScannerOpen && hadPostScannerOpen;
+    return ctPreScannerOpen.get() > 0 && ctPostScannerOpen.get() > 0;
   }
   public boolean hadDeleted() {
-    return hadPreDeleted && hadPostDeleted;
+    return ctPreDeleted.get() > 0 && ctPostDeleted.get() > 0;
   }
 
   public boolean hadPostBulkLoadHFile() {
-    return hadPostBulkLoadHFile;
+    return ctPostBulkLoadHFile.get() > 0;
   }
 
   public boolean hadPreBulkLoadHFile() {
-    return hadPreBulkLoadHFile;
+    return ctPreBulkLoadHFile.get() > 0;
+  }
+
+
+  public int getCtBeforeDelete() {
+    return ctBeforeDelete.get();
+  }
+
+  public int getCtPreOpen() {
+    return ctPreOpen.get();
+  }
+
+  public int getCtPostOpen() {
+    return ctPostOpen.get();
+  }
+
+  public int getCtPreClose() {
+    return ctPreClose.get();
+  }
+
+  public int getCtPostClose() {
+    return ctPostClose.get();
+  }
+
+  public int getCtPreFlush() {
+    return ctPreFlush.get();
+  }
+
+  public int getCtPreFlushScannerOpen() {
+    return ctPreFlushScannerOpen.get();
+  }
+
+  public int getCtPostFlush() {
+    return ctPostFlush.get();
+  }
+
+  public int getCtPreSplit() {
+    return ctPreSplit.get();
+  }
+
+  public int getCtPostSplit() {
+    return ctPostSplit.get();
+  }
+
+  public int getCtPreCompactSelect() {
+    return ctPreCompactSelect.get();
+  }
+
+  public int getCtPostCompactSelect() {
+    return ctPostCompactSelect.get();
+  }
+
+  public int getCtPreCompactScanner() {
+    return ctPreCompactScanner.get();
+  }
+
+  public int getCtPreCompact() {
+    return ctPreCompact.get();
+  }
+
+  public int getCtPostCompact() {
+    return ctPostCompact.get();
+  }
+
+  public int getCtPreGet() {
+    return ctPreGet.get();
+  }
+
+  public int getCtPostGet() {
+    return ctPostGet.get();
+  }
+
+  public int getCtPrePut() {
+    return ctPrePut.get();
+  }
+
+  public int getCtPostPut() {
+    return ctPostPut.get();
+  }
+
+  public int getCtPreDeleted() {
+    return ctPreDeleted.get();
+  }
+
+  public int getCtPostDeleted() {
+    return ctPostDeleted.get();
+  }
+
+  public int getCtPreGetClosestRowBefore() {
+    return ctPreGetClosestRowBefore.get();
+  }
+
+  public int getCtPostGetClosestRowBefore() {
+    return ctPostGetClosestRowBefore.get();
+  }
+
+  public int getCtPreIncrement() {
+    return ctPreIncrement.get();
+  }
+
+  public int getCtPostIncrement() {
+    return ctPostIncrement.get();
   }
 }
