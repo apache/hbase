@@ -34,19 +34,26 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
+import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.master.HMaster;
+import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.snapshot.HBaseSnapshotException;
 import org.apache.hadoop.hbase.snapshot.HSnapshotDescription;
 import org.apache.hadoop.hbase.snapshot.TakeSnapshotUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
 import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.MD5Hash;
 import org.junit.Assert;
 
 /**
@@ -251,5 +258,103 @@ public class SnapshotTestingUtils {
       files.addAll(Arrays.asList(hfiles));
     }
     return files;
+  }
+
+  // ==========================================================================
+  //  Table Helpers
+  // ==========================================================================
+  public static void waitForTableToBeOnline(final HBaseTestingUtility util, final byte[] tableName)
+      throws IOException, InterruptedException {
+    HRegionServer rs = util.getRSForFirstRegionInTable(tableName);
+    List<HRegion> onlineRegions = rs.getOnlineRegions(tableName);
+    for (HRegion region : onlineRegions) {
+      region.waitForFlushesAndCompactions();
+    }
+    util.getHBaseAdmin().isTableAvailable(tableName);
+  }
+
+  public static void createTable(final HBaseTestingUtility util, final byte[] tableName,
+      final byte[]... families) throws IOException, InterruptedException {
+    HTableDescriptor htd = new HTableDescriptor(tableName);
+    for (byte[] family: families) {
+      HColumnDescriptor hcd = new HColumnDescriptor(family);
+      htd.addFamily(hcd);
+    }
+    byte[][] splitKeys = new byte[14][];
+    byte[] hex = Bytes.toBytes("123456789abcde");
+    for (int i = 0; i < splitKeys.length; ++i) {
+      splitKeys[i] = new byte[] { hex[i] };
+    }
+    util.getHBaseAdmin().createTable(htd, splitKeys);
+    waitForTableToBeOnline(util, tableName);
+    assertEquals(15, util.getHBaseAdmin().getTableRegions(tableName).size());
+  }
+
+  public static void loadData(final HBaseTestingUtility util, final byte[] tableName, int rows,
+      byte[]... families) throws IOException, InterruptedException {
+    loadData(util, new HTable(util.getConfiguration(), tableName), rows, families);
+  }
+
+  public static void loadData(final HBaseTestingUtility util, final HTable table, int rows,
+      byte[]... families) throws IOException, InterruptedException {
+    table.setAutoFlush(false);
+
+    // Ensure one row per region
+    assertTrue(rows >= 16);
+    for (byte k0: Bytes.toBytes("0123456789abcdef")) {
+      byte[] k = new byte[] { k0 };
+      byte[] value = Bytes.add(Bytes.toBytes(System.currentTimeMillis()), k);
+      byte[] key = Bytes.add(k, Bytes.toBytes(MD5Hash.getMD5AsHex(value)));
+      putData(table, families, key, value);
+      rows--;
+    }
+
+    // Add other extra rows. more rows, more files
+    while (rows-- > 0) {
+      byte[] value = Bytes.add(Bytes.toBytes(System.currentTimeMillis()), Bytes.toBytes(rows));
+      byte[] key = Bytes.toBytes(MD5Hash.getMD5AsHex(value));
+      putData(table, families, key, value);
+    }
+    table.flushCommits();
+
+    waitForTableToBeOnline(util, table.getTableName());
+  }
+
+  private static void putData(final HTable table, final byte[][] families,
+      final byte[] key, final byte[] value) throws IOException {
+    byte[] q = Bytes.toBytes("q");
+    Put put = new Put(key);
+    put.setWriteToWAL(false);
+    for (byte[] family: families) {
+      put.add(family, q, value);
+    }
+    table.put(put);
+  }
+
+  public static void deleteAllSnapshots(final HBaseAdmin admin)
+      throws IOException {
+    // Delete all the snapshots
+    for (SnapshotDescription snapshot: admin.listSnapshots()) {
+      admin.deleteSnapshot(snapshot.getName());
+    }
+    SnapshotTestingUtils.assertNoSnapshots(admin);
+  }
+
+  public static void deleteArchiveDirectory(final HBaseTestingUtility util)
+      throws IOException {
+    // Ensure the archiver to be empty
+    MasterFileSystem mfs = util.getMiniHBaseCluster().getMaster().getMasterFileSystem();
+    Path archiveDir = new Path(mfs.getRootDir(), HConstants.HFILE_ARCHIVE_DIRECTORY);
+    mfs.getFileSystem().delete(archiveDir, true);
+  }
+
+  public static void verifyRowCount(final HBaseTestingUtility util, final byte[] tableName,
+      long expectedRows) throws IOException {
+    HTable table = new HTable(util.getConfiguration(), tableName);
+    try {
+      assertEquals(expectedRows, util.countRows(table));
+    } finally {
+      table.close();
+    }
   }
 }

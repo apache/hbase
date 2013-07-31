@@ -35,9 +35,9 @@ import org.apache.hadoop.hbase.LargeTests;
 import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.master.snapshot.SnapshotManager;
 import org.apache.hadoop.hbase.regionserver.NoSuchColumnFamilyException;
+import org.apache.hadoop.hbase.snapshot.SnapshotTestingUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
-import org.apache.hadoop.hbase.util.MD5Hash;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -100,7 +100,7 @@ public class TestRestoreSnapshotFromClient {
     snapshotName2 = Bytes.toBytes("snaptb2-" + tid);
 
     // create Table and disable it
-    createTable(tableName, FAMILY);
+    SnapshotTestingUtils.createTable(TEST_UTIL, tableName, FAMILY);
     admin.disableTable(tableName);
 
     // take an empty snapshot
@@ -110,7 +110,7 @@ public class TestRestoreSnapshotFromClient {
     try {
       // enable table and insert data
       admin.enableTable(tableName);
-      loadData(table, 500, FAMILY);
+      SnapshotTestingUtils.loadData(TEST_UTIL, table, 500, FAMILY);
       snapshot0Rows = TEST_UTIL.countRows(table);
       admin.disableTable(tableName);
 
@@ -119,7 +119,7 @@ public class TestRestoreSnapshotFromClient {
 
       // enable table and insert more data
       admin.enableTable(tableName);
-      loadData(table, 500, FAMILY);
+      SnapshotTestingUtils.loadData(TEST_UTIL, table, 500, FAMILY);
       snapshot1Rows = TEST_UTIL.countRows(table);
       admin.disableTable(tableName);
 
@@ -135,43 +135,36 @@ public class TestRestoreSnapshotFromClient {
 
   @After
   public void tearDown() throws Exception {
-    if (admin.tableExists(tableName)) {
-      TEST_UTIL.deleteTable(tableName);
-    }
-    admin.deleteSnapshot(snapshotName0);
-    admin.deleteSnapshot(snapshotName1);
-
-    // Ensure the archiver to be empty
-    MasterFileSystem mfs = TEST_UTIL.getMiniHBaseCluster().getMaster().getMasterFileSystem();
-    mfs.getFileSystem().delete(
-      new Path(mfs.getRootDir(), HConstants.HFILE_ARCHIVE_DIRECTORY), true);
+    TEST_UTIL.deleteTable(tableName);
+    SnapshotTestingUtils.deleteAllSnapshots(TEST_UTIL.getHBaseAdmin());
+    SnapshotTestingUtils.deleteArchiveDirectory(TEST_UTIL);
   }
 
   @Test
   public void testRestoreSnapshot() throws IOException {
-    verifyRowCount(tableName, snapshot1Rows);
+    SnapshotTestingUtils.verifyRowCount(TEST_UTIL, tableName, snapshot1Rows);
 
     // Restore from snapshot-0
     admin.disableTable(tableName);
     admin.restoreSnapshot(snapshotName0);
     admin.enableTable(tableName);
-    verifyRowCount(tableName, snapshot0Rows);
+    SnapshotTestingUtils.verifyRowCount(TEST_UTIL, tableName, snapshot0Rows);
 
     // Restore from emptySnapshot
     admin.disableTable(tableName);
     admin.restoreSnapshot(emptySnapshot);
     admin.enableTable(tableName);
-    verifyRowCount(tableName, 0);
+    SnapshotTestingUtils.verifyRowCount(TEST_UTIL, tableName, 0);
 
     // Restore from snapshot-1
     admin.disableTable(tableName);
     admin.restoreSnapshot(snapshotName1);
     admin.enableTable(tableName);
-    verifyRowCount(tableName, snapshot1Rows);
+    SnapshotTestingUtils.verifyRowCount(TEST_UTIL, tableName, snapshot1Rows);
   }
 
   @Test
-  public void testRestoreSchemaChange() throws IOException {
+  public void testRestoreSchemaChange() throws Exception {
     byte[] TEST_FAMILY2 = Bytes.toBytes("cf2");
 
     HTable table = new HTable(TEST_UTIL.getConfiguration(), tableName);
@@ -183,7 +176,7 @@ public class TestRestoreSnapshotFromClient {
     assertEquals(2, table.getTableDescriptor().getFamilies().size());
     HTableDescriptor htd = admin.getTableDescriptor(tableName);
     assertEquals(2, htd.getFamilies().size());
-    loadData(table, 500, TEST_FAMILY2);
+    SnapshotTestingUtils.loadData(TEST_UTIL, table, 500, TEST_FAMILY2);
     long snapshot2Rows = snapshot1Rows + 500;
     assertEquals(snapshot2Rows, TEST_UTIL.countRows(table));
     assertEquals(500, TEST_UTIL.countRows(table, TEST_FAMILY2));
@@ -230,51 +223,20 @@ public class TestRestoreSnapshotFromClient {
   public void testRestoreSnapshotOfCloned() throws IOException, InterruptedException {
     byte[] clonedTableName = Bytes.toBytes("clonedtb-" + System.currentTimeMillis());
     admin.cloneSnapshot(snapshotName0, clonedTableName);
-    verifyRowCount(clonedTableName, snapshot0Rows);
+    SnapshotTestingUtils.verifyRowCount(TEST_UTIL, clonedTableName, snapshot0Rows);
     admin.disableTable(clonedTableName);
     admin.snapshot(snapshotName2, clonedTableName);
     admin.deleteTable(clonedTableName);
     waitCleanerRun();
 
     admin.cloneSnapshot(snapshotName2, clonedTableName);
-    verifyRowCount(clonedTableName, snapshot0Rows);
-    admin.disableTable(clonedTableName);
-    admin.deleteTable(clonedTableName);
+    SnapshotTestingUtils.verifyRowCount(TEST_UTIL, clonedTableName, snapshot0Rows);
+    TEST_UTIL.deleteTable(clonedTableName);
   }
 
   // ==========================================================================
   //  Helpers
   // ==========================================================================
-  private void createTable(final byte[] tableName, final byte[]... families) throws IOException {
-    HTableDescriptor htd = new HTableDescriptor(tableName);
-    for (byte[] family: families) {
-      HColumnDescriptor hcd = new HColumnDescriptor(family);
-      htd.addFamily(hcd);
-    }
-    byte[][] splitKeys = new byte[16][];
-    byte[] hex = Bytes.toBytes("0123456789abcdef");
-    for (int i = 0; i < 16; ++i) {
-      splitKeys[i] = new byte[] { hex[i] };
-    }
-    admin.createTable(htd, splitKeys);
-  }
-
-  public void loadData(final HTable table, int rows, byte[]... families) throws IOException {
-    byte[] qualifier = Bytes.toBytes("q");
-    table.setAutoFlush(false);
-    while (rows-- > 0) {
-      byte[] value = Bytes.add(Bytes.toBytes(System.currentTimeMillis()), Bytes.toBytes(rows));
-      byte[] key = Bytes.toBytes(MD5Hash.getMD5AsHex(value));
-      Put put = new Put(key);
-      put.setWriteToWAL(false);
-      for (byte[] family: families) {
-        put.add(family, qualifier, value);
-      }
-      table.put(put);
-    }
-    table.flushCommits();
-  }
-
   private void waitCleanerRun() throws InterruptedException {
     TEST_UTIL.getMiniHBaseCluster().getMaster().getHFileCleaner().choreForTesting();
   }
@@ -289,11 +251,5 @@ public class TestRestoreSnapshotFromClient {
       }
     }
     return families;
-  }
-
-  private void verifyRowCount(final byte[] tableName, long expectedRows) throws IOException {
-    HTable table = new HTable(TEST_UTIL.getConfiguration(), tableName);
-    assertEquals(expectedRows, TEST_UTIL.countRows(table));
-    table.close();
   }
 }
