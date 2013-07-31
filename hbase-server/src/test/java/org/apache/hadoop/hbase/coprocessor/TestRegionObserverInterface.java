@@ -105,7 +105,7 @@ public class TestRegionObserverInterface {
   public void testRegionObserver() throws IOException {
     byte[] tableName = TEST_TABLE;
     // recreate table every time in order to reset the status of the
-    // coproccessor.
+    // coprocessor.
     HTable table = util.createTable(tableName, new byte[][] {A, B, C});
     verifyMethodResult(SimpleRegionObserver.class,
         new String[] {"hadPreGet", "hadPostGet", "hadPrePut", "hadPostPut",
@@ -125,6 +125,11 @@ public class TestRegionObserverInterface {
         TEST_TABLE,
         new Boolean[] {false, false, true, true, true, true, false}
     );
+
+    verifyMethodResult(SimpleRegionObserver.class,
+        new String[] {"getCtPreOpen", "getCtPostOpen", "getCtPreClose", "getCtPostClose"},
+        TEST_TABLE,
+        new Integer[] {1, 1, 0, 0});
 
     Get get = new Get(ROW);
     get.addColumn(A, A);
@@ -153,6 +158,11 @@ public class TestRegionObserverInterface {
     );
     util.deleteTable(tableName);
     table.close();
+
+    verifyMethodResult(SimpleRegionObserver.class,
+        new String[] {"getCtPreOpen", "getCtPostOpen", "getCtPreClose", "getCtPostClose"},
+        TEST_TABLE,
+        new Integer[] {1, 1, 1, 1});
   }
 
   @Test
