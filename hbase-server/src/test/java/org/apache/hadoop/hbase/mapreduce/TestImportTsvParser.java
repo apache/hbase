@@ -32,6 +32,7 @@ import org.apache.hadoop.hbase.mapreduce.ImportTsv.TsvParser;
 import org.apache.hadoop.hbase.mapreduce.ImportTsv.TsvParser.BadTsvLineException;
 import org.apache.hadoop.hbase.mapreduce.ImportTsv.TsvParser.ParsedLine;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.Pair;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
@@ -186,4 +187,42 @@ public class TestImportTsvParser {
     byte[] line = Bytes.toBytes("rowkey\tval_a");
     parser.parse(line, line.length);
   }
+  
+  @Test
+  public void testTsvParserParseRowKey() throws BadTsvLineException {
+    TsvParser parser = new TsvParser("HBASE_ROW_KEY,col_a,HBASE_TS_KEY", "\t");
+    assertEquals(0, parser.getRowKeyColumnIndex());
+    byte[] line = Bytes.toBytes("rowkey\tval_a\t1234");
+    Pair<Integer, Integer> rowKeyOffsets = parser
+        .parseRowKey(line, line.length);
+    assertEquals(0, rowKeyOffsets.getFirst().intValue());
+    assertEquals(5, rowKeyOffsets.getSecond().intValue());
+    try {
+      line = Bytes.toBytes("\t\tval_a\t1234");
+      parser.parseRowKey(line, line.length);
+      fail("Should get BadTsvLineException on empty rowkey.");
+    } catch (BadTsvLineException b) {
+
+    }
+    parser = new TsvParser("col_a,HBASE_ROW_KEY,HBASE_TS_KEY", "\t");
+    assertEquals(1, parser.getRowKeyColumnIndex());
+    line = Bytes.toBytes("val_a\trowkey\t1234");
+    rowKeyOffsets = parser.parseRowKey(line, line.length);
+    assertEquals(6, rowKeyOffsets.getFirst().intValue());
+    assertEquals(11, rowKeyOffsets.getSecond().intValue());
+    try {
+      line = Bytes.toBytes("val_a");
+      rowKeyOffsets = parser.parseRowKey(line, line.length);
+      fail("Should get BadTsvLineException when number of columns less than rowkey position.");
+    } catch (BadTsvLineException b) {
+
+    }
+    parser = new TsvParser("col_a,HBASE_TS_KEY,HBASE_ROW_KEY", "\t");
+    assertEquals(2, parser.getRowKeyColumnIndex());
+    line = Bytes.toBytes("val_a\t1234\trowkey");
+    rowKeyOffsets = parser.parseRowKey(line, line.length);
+    assertEquals(11, rowKeyOffsets.getFirst().intValue());
+    assertEquals(16, rowKeyOffsets.getSecond().intValue());
+  }
+
 }

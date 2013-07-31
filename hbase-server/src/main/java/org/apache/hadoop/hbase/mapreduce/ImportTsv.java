@@ -42,6 +42,8 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.util.Base64;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
@@ -247,6 +249,31 @@ public class ImportTsv extends Configured implements Tool {
       }
       private static final long serialVersionUID = 1L;
     }
+
+    public Pair<Integer, Integer> parseRowKey(byte[] lineBytes, int length)
+        throws BadTsvLineException {
+      int rkColumnIndex = 0;
+      int startPos = 0, endPos = 0;
+      for (int i = 0; i <= length; i++) {
+        if (i == length || lineBytes[i] == separatorByte) {
+          endPos = i - 1;
+          if (rkColumnIndex++ == getRowKeyColumnIndex()) {
+            if ((endPos + 1) == startPos) {
+              throw new BadTsvLineException("Empty value for ROW KEY.");
+            }
+            break;
+          } else {
+            startPos = endPos + 2;
+          }
+        }
+        if (i == length) {
+          throw new BadTsvLineException(
+              "Row key does not exist as number of columns in the line"
+                  + " are less than row key position.");
+        }
+      }
+      return new Pair<Integer, Integer>(startPos, endPos);
+    }
   }
 
   /**
@@ -301,10 +328,22 @@ public class ImportTsv extends Configured implements Tool {
       Path outputDir = new Path(hfileOutPath);
       FileOutputFormat.setOutputPath(job, outputDir);
       job.setMapOutputKeyClass(ImmutableBytesWritable.class);
-      job.setMapOutputValueClass(Put.class);
-      job.setCombinerClass(PutCombiner.class);
+      if (mapperClass.equals(TsvImporterTextMapper.class)) {
+        job.setMapOutputValueClass(Text.class);
+        job.setReducerClass(TextSortReducer.class);
+      } else {
+        job.setMapOutputValueClass(Put.class);
+        job.setCombinerClass(PutCombiner.class);
+      }
       HFileOutputFormat.configureIncrementalLoad(job, table);
     } else {
+      if (mapperClass.equals(TsvImporterTextMapper.class)) {
+        usage(TsvImporterTextMapper.class.toString()
+            + " should not be used for non bulkloading case. use "
+            + TsvImporterMapper.class.toString()
+            + " or custom mapper whose value type is Put.");
+        System.exit(-1);
+      }
       // No reducers. Just write straight to table. Call initTableReducerJob
       // to set up the TableOutputFormat.
       TableMapReduceUtil.initTableReducerJob(tableName, null, job);
