@@ -448,7 +448,7 @@ public class TestDistributedLogSplitting {
     HTable ht = installTable(zkw, "table", "family", NUM_REGIONS_TO_CREATE);
 
     List<HRegionInfo> regions = null;
-    HRegionServer hrs1 = rsts.get(0).getRegionServer();
+    HRegionServer hrs1 = findRSToKill(false, "table");
     regions = ProtobufUtil.getOnlineRegions(hrs1);
 
     makeHLog(hrs1.getWAL(), regions, "table", "family", NUM_LOG_LINES, 100);
@@ -819,7 +819,7 @@ public class TestDistributedLogSplitting {
     FileSystem fs = master.getMasterFileSystem().getFileSystem();
 
     final List<RegionServerThread> rsts = cluster.getLiveRegionServerThreads();
-    HRegionServer hrs = rsts.get(0).getRegionServer();
+    HRegionServer hrs = findRSToKill(false, "table");
     Path rootdir = FSUtils.getRootDir(conf);
     final Path logDir = new Path(rootdir,
         HLogUtil.getHLogDirectoryName(hrs.getServerName().toString()));
