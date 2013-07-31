@@ -133,22 +133,8 @@ public class TestSnapshotFromMaster {
   @After
   public void tearDown() throws Exception {
     UTIL.deleteTable(TABLE_NAME);
-
-    // delete the archive directory, if its exists
-    if (fs.exists(archiveDir)) {
-      if (!fs.delete(archiveDir, true)) {
-        throw new IOException("Couldn't delete archive directory (" + archiveDir
-            + " for an unknown reason");
-      }
-    }
-
-    // delete the snapshot directory, if its exists
-    if (fs.exists(snapshots)) {
-      if (!fs.delete(snapshots, true)) {
-        throw new IOException("Couldn't delete snapshots directory (" + snapshots
-            + " for an unknown reason");
-      }
-    }
+    SnapshotTestingUtils.deleteAllSnapshots(UTIL.getHBaseAdmin());
+    SnapshotTestingUtils.deleteArchiveDirectory(UTIL);
   }
 
   @AfterClass
