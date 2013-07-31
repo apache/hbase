@@ -228,10 +228,11 @@ public class HBaseRPC {
       client.stop();
     }
     
-    protected void stopClients () {
+    protected synchronized void stopClients() {
       for (Map.Entry<SocketFactory, HBaseClient> e : clients.entrySet()) {
-        this.stopClient (e.getValue ());
+        e.getValue().stop();
       }
+      clients.clear();
     }
   }
 
