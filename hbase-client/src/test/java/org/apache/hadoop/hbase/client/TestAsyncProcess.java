@@ -51,7 +51,7 @@ public class TestAsyncProcess {
   private static final byte[] DUMMY_BYTES_1 = "DUMMY_BYTES_1".getBytes();
   private static final byte[] DUMMY_BYTES_2 = "DUMMY_BYTES_2".getBytes();
   private static final byte[] FAILS = "FAILS".getBytes();
-  private Configuration conf = new Configuration();
+  private static final Configuration conf = new Configuration();
 
 
   private static ServerName sn = new ServerName("localhost:10,1254");
@@ -67,13 +67,13 @@ public class TestAsyncProcess {
     public MyAsyncProcess(HConnection hc, AsyncProcessCallback<Res> callback, Configuration conf) {
       super(hc, DUMMY_TABLE, new ThreadPoolExecutor(1, 10, 60, TimeUnit.SECONDS,
         new SynchronousQueue<Runnable>(), Threads.newDaemonThreadFactory("test-TestAsyncProcess")),
-        callback, conf);
+          callback, conf, new RpcRetryingCallerFactory(conf));
     }
 
     @Override
     protected RpcRetryingCaller<MultiResponse> createCaller(MultiServerCallable<Row> callable) {
       final MultiResponse mr = createMultiResponse(callable.getLocation(), callable.getMulti());
-      return new RpcRetryingCaller<MultiResponse>() {
+      return new RpcRetryingCaller<MultiResponse>(conf) {
         @Override
         public MultiResponse callWithoutRetries( RetryingCallable<MultiResponse> callable)
         throws IOException, RuntimeException {

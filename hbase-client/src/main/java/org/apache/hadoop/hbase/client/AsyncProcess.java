@@ -101,6 +101,7 @@ class AsyncProcess<CResult> {
   protected int numTries;
   protected final boolean useServerTrackerForRetries;
   protected int serverTrackerTimeout;
+  protected RpcRetryingCallerFactory rpcCallerFactory;
 
 
   /**
@@ -167,7 +168,8 @@ class AsyncProcess<CResult> {
   }
 
   public AsyncProcess(HConnection hc, byte[] tableName, ExecutorService pool,
-                      AsyncProcessCallback<CResult> callback, Configuration conf) {
+      AsyncProcessCallback<CResult> callback, Configuration conf, 
+      RpcRetryingCallerFactory rpcCaller) {
     this.hConnection = hc;
     this.tableName = tableName;
     this.pool = pool;
@@ -201,6 +203,8 @@ class AsyncProcess<CResult> {
         serverTrackerTimeout += ConnectionUtils.getPauseTime(this.pause, i);
       }
     }
+
+    this.rpcCallerFactory = rpcCaller;
   }
 
   /**
@@ -452,7 +456,7 @@ class AsyncProcess<CResult> {
    */
   protected RpcRetryingCaller<MultiResponse> createCaller(MultiServerCallable<Row> callable) {
     // callable is unused.
-    return new RpcRetryingCaller<MultiResponse>();
+    return rpcCallerFactory.<MultiResponse> newCaller();
   }
 
   /**
