@@ -84,12 +84,13 @@ public class TestMetricsMBeanBase extends TestCase {
     assertEquals( 50L, this.stats.getAttribute("varyRateMaxTime") );
     assertEquals( 30L, this.stats.getAttribute("varyRateAvgTime") );
     assertEquals( 2, this.stats.getAttribute("varyRateNumOps") );
+    assertEquals( 0, this.stats.getAttribute("varyRateNumOpsCurrent") );
   }
 
   public void testGetMBeanInfo() {
     MBeanInfo info = this.stats.getMBeanInfo();
     MBeanAttributeInfo[] attributes = info.getAttributes();
-    assertEquals( 6, attributes.length );
+    assertEquals( 7, attributes.length );
 
     Map<String,MBeanAttributeInfo> attributeByName =
         new HashMap<String,MBeanAttributeInfo>(attributes.length);
@@ -108,6 +109,8 @@ public class TestMetricsMBeanBase extends TestCase {
         "varyRateAvgTime", "java.lang.Long", "test");
     assertAttribute( attributeByName.get("varyRateNumOps"),
         "varyRateNumOps", "java.lang.Integer", "test");
+    assertAttribute( attributeByName.get("varyRateNumOpsCurrent"),
+      "varyRateNumOpsCurrent", "java.lang.Integer", "test");
   }
 
   protected void assertAttribute(MBeanAttributeInfo attr, String name,

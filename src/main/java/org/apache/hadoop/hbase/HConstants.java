@@ -817,6 +817,9 @@ public final class HConstants {
   public final static String MEMSTORE_RESEEK_LINEAR_SEARCH_LIMIT_KEY = "hbase.hregion.memstore.linear.search.limit";
   public final static int MEMSTORE_RESEEK_LINEAR_SEARCH_LIMIT_DEFAULT = 20;
 
+  public static final String USE_MSLAB_KEY = "hbase.hregion.memstore.mslab.enabled";
+  public static final boolean USE_MSLAB_DEFAULT = false;
+
   private HConstants() {
     // Can't be instantiated with this constructor.
   }

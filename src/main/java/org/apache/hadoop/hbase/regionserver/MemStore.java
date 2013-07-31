@@ -57,10 +57,6 @@ import org.apache.hadoop.hbase.util.CollectionBackedScanner;
 public class MemStore implements HeapSize {
   private static final Log LOG = LogFactory.getLog(MemStore.class);
 
-  static final String USE_MSLAB_KEY =
-      "hbase.hregion.memstore.mslab.enabled";
-  private static final boolean USE_MSLAB_DEFAULT = false;
-
   private Configuration conf;
 
   // MemStore.  Use a KeyValueSkipListSet rather than SkipListSet because of the
@@ -128,7 +124,7 @@ public class MemStore implements HeapSize {
 
     this.successfullyAllocatedKvBytes = new AtomicLong(0);
 
-    if (conf.getBoolean(USE_MSLAB_KEY, USE_MSLAB_DEFAULT)) {
+    if (conf.getBoolean(HConstants.USE_MSLAB_KEY, HConstants.USE_MSLAB_DEFAULT)) {
       this.chunkPool = MemStoreChunkPool.getPool(conf);
       this.allocator = new MemStoreLAB(conf, chunkPool);
     } else {
@@ -787,7 +783,7 @@ public class MemStore implements HeapSize {
   }
 
   public final static long FIXED_OVERHEAD = ClassSize.align(
-      ClassSize.OBJECT + (11 * ClassSize.REFERENCE));
+      ClassSize.OBJECT + (16 * ClassSize.REFERENCE));
 
   public final static long DEEP_OVERHEAD = ClassSize.align(FIXED_OVERHEAD +
       ClassSize.REENTRANT_LOCK + ClassSize.ATOMIC_LONG +
