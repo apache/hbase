@@ -47,7 +47,10 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.Utils.OutputFileUtils.OutputFilesFilter;
+import org.apache.hadoop.mapreduce.Job;
+import org.apache.hadoop.util.GenericOptionsParser;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 import org.junit.AfterClass;
@@ -181,6 +184,49 @@ public class TestImportTsv implements Configurable {
     util.deleteTable(table);
   }
 
+  @Test
+  public void testJobConfigurationsWithTsvImporterTextMapper() throws Exception {
+    String table = "test-" + UUID.randomUUID();
+    Path bulkOutputPath = new Path(util.getDataTestDir(table),"hfiles");
+    String INPUT_FILE = "InputFile1.csv";
+    // Prepare the arguments required for the test.
+    String[] args =
+        new String[] {
+            "-D" + ImportTsv.MAPPER_CONF_KEY
+                + "=org.apache.hadoop.hbase.mapreduce.TsvImporterTextMapper",
+            "-D" + ImportTsv.COLUMNS_CONF_KEY
+                + "=HBASE_ROW_KEY,FAM:A,FAM:B",
+            "-D" + ImportTsv.SEPARATOR_CONF_KEY + "=,",
+            "-D" + ImportTsv.BULK_OUTPUT_CONF_KEY + "=" + bulkOutputPath.toString(), table,
+            INPUT_FILE
+            };
+    GenericOptionsParser opts = new GenericOptionsParser(util.getConfiguration(), args);
+    args = opts.getRemainingArgs();
+    Job job = ImportTsv.createSubmittableJob(util.getConfiguration(), args);
+    assertTrue(job.getMapperClass().equals(TsvImporterTextMapper.class));
+    assertTrue(job.getReducerClass().equals(TextSortReducer.class));
+    assertTrue(job.getMapOutputValueClass().equals(Text.class));
+  }
+  
+  @Test
+  public void testBulkOutputWithTsvImporterTextMapper() throws Exception {
+    String table = "test-" + UUID.randomUUID();
+    String FAMILY = "FAM";
+    Path bulkOutputPath = new Path(util.getDataTestDir(table),"hfiles");
+    // Prepare the arguments required for the test.
+    String[] args =
+        new String[] {
+            "-D" + ImportTsv.MAPPER_CONF_KEY
+                + "=org.apache.hadoop.hbase.mapreduce.TsvImporterTextMapper",
+            "-D" + ImportTsv.COLUMNS_CONF_KEY
+                + "=HBASE_ROW_KEY,FAM:A,FAM:B",
+            "-D" + ImportTsv.SEPARATOR_CONF_KEY + "=,",
+            "-D" + ImportTsv.BULK_OUTPUT_CONF_KEY + "=" + bulkOutputPath.toString(), table 
+            };
+    String data = "KEY\u001bVALUE4\u001bVALUE8\n";
+    doMROnTableTest(util, FAMILY, data, args, 4);
+  }
+  
   protected static Tool doMROnTableTest(HBaseTestingUtility util, String family,
       String data, String[] args) throws Exception {
     return doMROnTableTest(util, family, data, args, 1);

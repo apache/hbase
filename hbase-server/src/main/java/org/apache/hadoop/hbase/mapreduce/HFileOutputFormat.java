@@ -57,6 +57,7 @@ import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.SequenceFile;
+import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.RecordWriter;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
@@ -332,6 +333,8 @@ public class HFileOutputFormat extends FileOutputFormat<ImmutableBytesWritable, 
       job.setReducerClass(KeyValueSortReducer.class);
     } else if (Put.class.equals(job.getMapOutputValueClass())) {
       job.setReducerClass(PutSortReducer.class);
+    } else if (Text.class.equals(job.getMapOutputValueClass())) {
+      job.setReducerClass(TextSortReducer.class);
     } else {
       LOG.warn("Unknown map output value type:" + job.getMapOutputValueClass());
     }
