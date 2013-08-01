@@ -154,10 +154,11 @@
  activation property as the parent Hadoop 1.0.x profile to make sure it gets run at
  the same time. -->
     <profile>
-      <id>hadoop-1.0</id>
+      <id>hadoop-1.1</id>
       <activation>
         <property>
-          <name>!hadoop.profile</name>
+            <!--Below formatting for dev-support/generate-hadoopX-poms.sh-->
+            <!--h1--><name>!hadoop.profile</name>
         </property>
       </activation>
       <dependencies>
@@ -176,14 +177,22 @@
       <id>hadoop-2.0</id>
       <activation>
         <property>
-          <name>hadoop.profile</name>
-          <value>2.0</value>
+            <!--Below formatting for dev-support/generate-hadoopX-poms.sh-->
+            <!--h2--><name>hadoop.profile</name><value>2.0</value>
         </property>
       </activation>
       <dependencies>
         <dependency>
           <groupId>org.apache.hadoop</groupId>
-          <artifactId>hadoop-client</artifactId>
+          <artifactId>hadoop-common</artifactId>
+        </dependency>
+        <dependency>
+          <groupId>org.apache.hadoop</groupId>
+          <artifactId>hadoop-auth</artifactId>
+        </dependency>
+        <dependency>
+          <groupId>org.apache.hadoop</groupId>
+          <artifactId>hadoop-mapreduce-client-core</artifactId>
         </dependency>
         <dependency>
           <groupId>org.apache.hadoop</groupId>

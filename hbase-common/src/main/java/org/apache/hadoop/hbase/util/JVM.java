@@ -27,10 +27,10 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import java.lang.reflect.Method;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
@@ -44,10 +44,8 @@ import org.apache.hadoop.classification.InterfaceStability;
 
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
-public class JVM 
-{
-  static final Logger LOG = LoggerFactory.getLogger(JVM.class);
-
+public class JVM {
+  private static final Log LOG = LogFactory.getLog(JVM.class);
   private OperatingSystemMXBean osMbean;
 
   private static final boolean ibmvendor =
