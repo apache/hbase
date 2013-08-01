@@ -543,7 +543,7 @@ public final class HConstants {
      * Parameter name for maximum number of bytes returned when calling a
      * scanner's next method.
      */
-  public static String HBASE_CLIENT_SCANNER_MAX_RESULT_SIZE_KEY = "hbase.client.scanner.max.result.size";
+  public static final String HBASE_CLIENT_SCANNER_MAX_RESULT_SIZE_KEY = "hbase.client.scanner.max.result.size";
 
   /**
    * Maximum number of bytes returned when calling a scanner's next method.
@@ -552,7 +552,7 @@ public final class HConstants {
    *
    * The default value is unlimited.
    */
-  public static long DEFAULT_HBASE_CLIENT_SCANNER_MAX_RESULT_SIZE = Long.MAX_VALUE;
+  public static final long DEFAULT_HBASE_CLIENT_SCANNER_MAX_RESULT_SIZE = Long.MAX_VALUE;
 
 
   /**
@@ -562,43 +562,43 @@ public final class HConstants {
    * if partialRow is true, otherwise, the row will be truncated in order to
    * fit the memory.
    */
-  public static int DEFAULT_HBASE_SCANNER_MAX_RESULT_SIZE = Integer.MAX_VALUE;
+  public static final int DEFAULT_HBASE_SCANNER_MAX_RESULT_SIZE = Integer.MAX_VALUE;
 
   /**
    * HRegion server lease period in milliseconds. Clients must report in within this period
    * else they are considered dead. Unit measured in ms (milliseconds).
    */
-  public static String HBASE_REGIONSERVER_LEASE_PERIOD_KEY   = "hbase.regionserver.lease.period";
+  public static final String HBASE_REGIONSERVER_LEASE_PERIOD_KEY   = "hbase.regionserver.lease.period";
 
 
   /**
    * Default value of {@link #HBASE_REGIONSERVER_LEASE_PERIOD_KEY}.
    */
-  public static long DEFAULT_HBASE_REGIONSERVER_LEASE_PERIOD = 60000;
+  public static final long DEFAULT_HBASE_REGIONSERVER_LEASE_PERIOD = 60000;
 
   /**
    * timeout for each RPC
    */
-  public static String HBASE_RPC_TIMEOUT_KEY = "hbase.rpc.timeout";
-  public static String HBASE_RS_REPORT_TIMEOUT_KEY = "hbase.regionserverReport.timeout";
+  public static final String HBASE_RPC_TIMEOUT_KEY = "hbase.rpc.timeout";
+  public static final String HBASE_RS_REPORT_TIMEOUT_KEY = "hbase.regionserverReport.timeout";
 
   /**
    * Default value of {@link #HBASE_RPC_TIMEOUT_KEY}
    */
-  public static int DEFAULT_HBASE_RPC_TIMEOUT = 60000;
-  public static int DEFAULT_RS_REPORT_TIMEOUT = 3000;
+  public static final int DEFAULT_HBASE_RPC_TIMEOUT = 60000;
+  public static final int DEFAULT_RS_REPORT_TIMEOUT = 3000;
 
   /**
    * pause between rpc or connect retries
    */
-  public static String HBASE_CLIENT_PAUSE = "hbase.client.pause";
-  public static int DEFAULT_HBASE_CLIENT_PAUSE = 1000;
+  public static final String HBASE_CLIENT_PAUSE = "hbase.client.pause";
+  public static final int DEFAULT_HBASE_CLIENT_PAUSE = 1000;
 
   /**
    * compression for each RPC and its default value
    */
-  public static String HBASE_RPC_COMPRESSION_KEY = "hbase.rpc.compression";
-  public static Compression.Algorithm DEFAULT_HBASE_RPC_COMPRESSION =
+  public static final String HBASE_RPC_COMPRESSION_KEY = "hbase.rpc.compression";
+  public static final Compression.Algorithm DEFAULT_HBASE_RPC_COMPRESSION =
     Compression.Algorithm.NONE;
 
   public static final String
@@ -696,7 +696,7 @@ public final class HConstants {
   /**
    * Absolute path of the external jar which will contain the custom compaction hook
    */
-  public static  String COMPACTION_HOOK_JAR = "compaction_hook_jar";
+  public static final String COMPACTION_HOOK_JAR = "compaction_hook_jar";
 
   public static final String GENERAL_BLOOM_FILTER = "general_bloom_filter";
 

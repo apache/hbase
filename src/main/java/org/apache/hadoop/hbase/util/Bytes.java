@@ -115,13 +115,13 @@ public class Bytes {
   /**
    * Pass this to TreeMaps where byte [] are keys.
    */
-  public static Comparator<byte []> BYTES_COMPARATOR =
+  public static final Comparator<byte []> BYTES_COMPARATOR =
     new ByteArrayComparator();
 
   /**
    * Use comparing byte arrays, byte-by-byte
    */
-  public static RawComparator<byte []> BYTES_RAWCOMPARATOR =
+  public static final RawComparator<byte []> BYTES_RAWCOMPARATOR =
     new ByteArrayComparator();
 
   public static final Comparator<ByteBuffer> BYTE_BUFFER_COMPARATOR =

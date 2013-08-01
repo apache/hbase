@@ -70,7 +70,7 @@ public class ClientLocalScanner extends ResultScannerImpl {
   /*
    * Threadpool for doing scanner prefetches
    */
-  public static ThreadPoolExecutor scanPrefetchThreadPool;
+  public static final ThreadPoolExecutor scanPrefetchThreadPool;
   private static int numHandlers = 20;
   private final boolean areHardlinksCreated;
   // Initializing the numHandlers statically since the thread pool can be

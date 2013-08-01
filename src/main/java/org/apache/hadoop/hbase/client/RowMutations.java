@@ -138,18 +138,17 @@ public class RowMutations extends Operation implements Row {
   @Override
   public Map<String, Object> getFingerprint() {
     Map<String, Object> map = new HashMap<String, Object>();
-    List<String> mutationsList = new ArrayList<String>();
     // ideally, we would also include table information, but that information
     // is not stored in each Operation instance.
     map.put("row", Bytes.toStringBinary(this.row));
     int deleteCnt = 0, putCnt = 0;
     for (Mutation mod: this.mutations) {
-    	if (mod instanceof Put) {
-    		putCnt++;
-    	}
-    	else {
-    		deleteCnt++;
-    	}
+      if (mod instanceof Put) {
+        putCnt++;
+      }
+      else {
+        deleteCnt++;
+      }
     }
     map.put("num-put", putCnt);
     map.put("num-delete", deleteCnt);

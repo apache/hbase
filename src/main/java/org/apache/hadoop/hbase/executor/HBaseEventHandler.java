@@ -67,7 +67,7 @@ public abstract class HBaseEventHandler implements Runnable
   protected RegionTransitionEventData hbEventData;
 
   // listeners that are called before and after an event is processed
-  protected static List<HBaseEventHandlerListener> eventHandlerListeners = 
+  protected static final List<HBaseEventHandlerListener> eventHandlerListeners =
     Collections.synchronizedList(new ArrayList<HBaseEventHandlerListener>());  
 
   /**
