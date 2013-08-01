@@ -461,6 +461,7 @@
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-release-plugin</artifactId>
+          <version>2.4.1</version>
           <!--Making a release I've been using mvn 3.0 and specifying the apache-release
               profile on the command line as follows:
 
@@ -480,6 +481,7 @@
                 But it builds the test jar.  From SUREFIRE-172.
               -->
             <arguments>-Dmaven.test.skip.exec</arguments>
+            <pomFileName>pom.xml</pomFileName>
           </configuration>
         </plugin>
         <plugin>
@@ -609,6 +611,9 @@
             <execution>
               <phase>prepare-package</phase>
               <goals>
+                  <!--This goal will install a -test.jar when we do install
+                      See http://maven.apache.org/guides/mini/guide-attached-tests.html
+                   -->
                 <goal>test-jar</goal>
               </goals>
             </execution>
@@ -884,7 +889,9 @@
     <commons-io.version>2.4</commons-io.version>
     <commons-lang.version>2.6</commons-lang.version>
     <commons-logging.version>1.1.1</commons-logging.version>
-    <commons-math.version>2.1</commons-math.version>
+    <commons-math.version>2.2</commons-math.version>
+    <collections.version>3.2.1</collections.version>
+    <httpclient.version>3.0.1</httpclient.version>
     <metrics-core.version>2.1.2</metrics-core.version>
     <guava.version>12.0.1</guava.version>
     <jackson.version>1.8.8</jackson.version>
@@ -896,13 +903,13 @@
     <jruby.version>1.6.8</jruby.version>
     <junit.version>4.11</junit.version>
     <htrace.version>1.50</htrace.version>
-    <slf4j.version>1.4.3</slf4j.version>
     <log4j.version>1.2.17</log4j.version>
     <mockito-all.version>1.9.0</mockito-all.version>
     <protobuf.version>2.4.1</protobuf.version>
     <stax-api.version>1.0.1</stax-api.version>
     <thrift.version>0.9.0</thrift.version>
     <zookeeper.version>3.4.5</zookeeper.version>
+    <slf4j.version>1.6.4</slf4j.version>
     <hadoop-snappy.version>0.0.1-SNAPSHOT</hadoop-snappy.version>
     <clover.version>2.6.3</clover.version>
     <jamon-runtime.version>2.3.1</jamon-runtime.version>
@@ -1046,6 +1053,18 @@
         <version>${jettison.version}</version>
       </dependency>
       <dependency>
+        <groupId>log4j</groupId>
+        <artifactId>log4j</artifactId>
+        <version>${log4j.version}</version>
+      </dependency>
+      <!--This is not used by hbase directly.  Used by thrift,
+          yammer and zk.-->
+      <dependency>
+        <groupId>org.slf4j</groupId>
+        <artifactId>slf4j-api</artifactId>
+        <version>${slf4j.version}</version>
+      </dependency>
+      <dependency>
         <groupId>com.yammer.metrics</groupId>
         <artifactId>metrics-core</artifactId>
         <version>${metrics-core.version}</version>
@@ -1054,6 +1073,16 @@
         <groupId>com.google.guava</groupId>
         <artifactId>guava</artifactId>
         <version>${guava.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>commons-collections</groupId>
+        <artifactId>commons-collections</artifactId>
+        <version>${collections.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>commons-httpclient</groupId>
+        <artifactId>commons-httpclient</artifactId>
+        <version>${httpclient.version}</version>
       </dependency>
       <dependency>
         <groupId>commons-cli</groupId>
@@ -1089,11 +1118,6 @@
         <groupId>org.apache.commons</groupId>
         <artifactId>commons-math</artifactId>
         <version>${commons-math.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>log4j</groupId>
-        <artifactId>log4j</artifactId>
-        <version>${log4j.version}</version>
       </dependency>
       <dependency>
         <groupId>org.apache.zookeeper</groupId>
@@ -1204,16 +1228,6 @@
         <version>${jackson.version}</version>
       </dependency>
       <dependency>
-        <groupId>org.slf4j</groupId>
-        <artifactId>slf4j-api</artifactId>
-        <version>${slf4j.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>org.slf4j</groupId>
-        <artifactId>slf4j-log4j12</artifactId>
-        <version>${slf4j.version}</version>
-      </dependency>
-      <dependency>
         <!--If this is not in the runtime lib, we get odd
       "2009-02-27 11:38:39.504::WARN:  failed jsp
        java.lang.NoSuchFieldError: IS_SECURITY_ENABLED"
@@ -1297,6 +1311,12 @@
         <groupId>junit</groupId>
         <artifactId>junit</artifactId>
         <version>${junit.version}</version>
+        <exclusions>
+          <exclusion>
+            <groupId>org.hamcrest</groupId>
+            <artifactId>hamcrest-core</artifactId>
+          </exclusion>
+        </exclusions>
       </dependency>
       <dependency>
         <groupId>org.mockito</groupId>
@@ -1318,6 +1338,10 @@
       <artifactId>findbugs-annotations</artifactId>
       <version>${findbugs-annotations}</version>
       <scope>compile</scope>
+    </dependency>
+    <dependency>
+      <groupId>log4j</groupId>
+      <artifactId>log4j</artifactId>
     </dependency>
     <!-- Test dependencies -->
     <dependency>
@@ -1438,7 +1462,8 @@
       <id>hadoop-1.1</id>
       <activation>
         <property>
-          <name>!hadoop.profile</name>
+            <!--Below formatting for dev-support/generate-hadoopX-poms.sh-->
+            <!--h1--><name>!hadoop.profile</name>
         </property>
       </activation>
       <modules>
@@ -1446,7 +1471,6 @@
       </modules>
       <properties>
         <hadoop.version>${hadoop-one.version}</hadoop.version>
-        <slf4j.version>1.4.3</slf4j.version>
         <compat.module>hbase-hadoop1-compat</compat.module>
         <assembly.file>src/main/assembly/hadoop-one-compat.xml</assembly.file>
       </properties>
@@ -1507,7 +1531,6 @@
         <hadoop.version>1.0.4</hadoop.version>
         <!-- Need to set this for the Hadoop 1 compat module -->
         <hadoop-one.version>${hadoop.version}</hadoop-one.version>
-        <slf4j.version>1.4.3</slf4j.version>
         <compat.module>hbase-hadoop1-compat</compat.module>
         <assembly.file>src/main/assembly/hadoop-one-compat.xml</assembly.file>
       </properties>
@@ -1558,8 +1581,8 @@
       <id>hadoop-2.0</id>
       <activation>
         <property>
-          <name>hadoop.profile</name>
-          <value>2.0</value>
+            <!--Below formatting for dev-support/generate-hadoopX-poms.sh-->
+            <!--h2--><name>hadoop.profile</name><value>2.0</value>
         </property>
       </activation>
       <modules>
@@ -1567,12 +1590,43 @@
       </modules>
       <properties>
         <hadoop.version>${hadoop-two.version}</hadoop.version>
-        <slf4j.version>1.6.1</slf4j.version>
         <compat.module>hbase-hadoop2-compat</compat.module>
         <assembly.file>src/main/assembly/hadoop-two-compat.xml</assembly.file>
       </properties>
       <dependencyManagement>
         <dependencies>
+          <dependency>
+            <groupId>org.apache.hadoop</groupId>
+            <artifactId>hadoop-mapreduce-client-core</artifactId>
+            <version>${hadoop-two.version}</version>
+          </dependency>
+          <dependency>
+            <groupId>org.apache.hadoop</groupId>
+            <artifactId>hadoop-mapreduce-client-jobclient</artifactId>
+            <version>${hadoop-two.version}</version>
+          </dependency>
+          <dependency>
+            <groupId>org.apache.hadoop</groupId>
+            <artifactId>hadoop-mapreduce-client-jobclient</artifactId>
+            <version>${hadoop-two.version}</version>
+            <type>test-jar</type>
+          </dependency>
+          <dependency>
+            <groupId>org.apache.hadoop</groupId>
+            <artifactId>hadoop-hdfs</artifactId>
+            <version>${hadoop-two.version}</version>
+          </dependency>
+          <dependency>
+            <groupId>org.apache.hadoop</groupId>
+            <artifactId>hadoop-hdfs</artifactId>
+            <version>${hadoop-two.version}</version>
+            <type>test-jar</type>
+          </dependency>
+          <dependency>
+            <groupId>org.apache.hadoop</groupId>
+            <artifactId>hadoop-auth</artifactId>
+            <version>${hadoop-two.version}</version>
+          </dependency>
           <dependency>
             <groupId>org.apache.hadoop</groupId>
             <artifactId>hadoop-common</artifactId>
@@ -1625,7 +1679,6 @@
         </property>
       </activation>
       <properties>
-        <slf4j.version>1.6.1</slf4j.version>
         <hadoop.version>3.0.0-SNAPSHOT</hadoop.version>
       </properties>
       <dependencies>
