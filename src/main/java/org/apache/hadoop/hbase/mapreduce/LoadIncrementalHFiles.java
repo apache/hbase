@@ -74,10 +74,13 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
   public static String EXIT_ON_FIRST_FAILURE = "hbase.mapreduce.bulkload.failure.exitOnFirst";
   private boolean exitOnFirstFailure;
 
+  private Configuration conf;
+
   public LoadIncrementalHFiles(Configuration conf) {
     super(conf);
     assignSeqIds = conf.getBoolean(ASSIGN_SEQ_IDS, true);
     exitOnFirstFailure = conf.getBoolean(EXIT_ON_FIRST_FAILURE, true);
+    this.conf = conf;
   }
 
   public LoadIncrementalHFiles() {

@@ -21,15 +21,12 @@ package org.apache.hadoop.hbase.mapreduce;
 
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
-import java.net.InetSocketAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
@@ -58,13 +55,12 @@ import org.apache.hadoop.hbase.io.hfile.HFileDataBlockEncoder;
 import org.apache.hadoop.hbase.io.hfile.HFileDataBlockEncoderImpl;
 import org.apache.hadoop.hbase.mapreduce.hadoopbackport.TotalOrderPartitioner;
 import org.apache.hadoop.hbase.master.RegionPlacement;
-import org.apache.hadoop.hbase.regionserver.StoreFile.BloomType;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
+import org.apache.hadoop.hbase.regionserver.StoreFile.BloomType;
 import org.apache.hadoop.hbase.util.BloomFilterFactory;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.io.NullWritable;
-import org.apache.hadoop.io.RawComparator;
 import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.RecordWriter;
@@ -93,6 +89,8 @@ public class HFileOutputFormat extends FileOutputFormat<ImmutableBytesWritable, 
   static final String TABLE_NAME = "hbase.hfileoutputformat.tablename";
   static final String UTF8 = "UTF-8";
 
+  protected static RecordWriter<ImmutableBytesWritable, KeyValue> latestWriter = null;
+
   public RecordWriter<ImmutableBytesWritable, KeyValue> getRecordWriter(final TaskAttemptContext context)
   throws IOException, InterruptedException {
     // Get the path of the temporary output file
@@ -100,6 +98,7 @@ public class HFileOutputFormat extends FileOutputFormat<ImmutableBytesWritable, 
     final Path outputdir = new FileOutputCommitter(outputPath, context).getWorkPath();
     final Configuration conf = context.getConfiguration();
     final FileSystem fs = outputdir.getFileSystem(conf);
+
     // These configs. are from hbase-*.xml
     final long maxsize = conf.getLong("hbase.hregion.max.filesize",
         HConstants.DEFAULT_MAX_FILE_SIZE);
@@ -125,7 +124,8 @@ public class HFileOutputFormat extends FileOutputFormat<ImmutableBytesWritable, 
     final Pair<byte[][], byte[][]> startKeysAndFavoredNodes = 
       (table == null ? null : table.getStartKeysAndFavoredNodes());
 
-    return new RecordWriter<ImmutableBytesWritable, KeyValue>() {
+    RecordWriter<ImmutableBytesWritable, KeyValue> writer =
+        new RecordWriter<ImmutableBytesWritable, KeyValue>() {
       // Map of families to writers and how much has been output on the writer.
       private final Map<byte [], WriterLength> writers =
         new TreeMap<byte [], WriterLength>(Bytes.BYTES_COMPARATOR);
@@ -266,6 +266,7 @@ public class HFileOutputFormat extends FileOutputFormat<ImmutableBytesWritable, 
            */
           w.appendMetadata(HConstants.NO_MIN_FLUSH_TIME, 0, false);
           w.close();
+
         }
       }
 
@@ -276,6 +277,9 @@ public class HFileOutputFormat extends FileOutputFormat<ImmutableBytesWritable, 
         }
       }
     };
+
+    latestWriter = writer;
+    return writer;
   }
 
   /*

@@ -26,16 +26,15 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.io.IOException;
-import java.net.InetSocketAddress;
-import java.net.URI;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Random;
 import java.util.Map.Entry;
+import java.util.Random;
 
+import com.google.common.collect.Lists;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -46,13 +45,12 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.PerformanceEvaluation;
 import org.apache.hadoop.hbase.client.Delete;
-import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
@@ -65,18 +63,14 @@ import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.Compression;
-import org.apache.hadoop.hbase.io.hfile.HFile;
-import org.apache.hadoop.hbase.io.hfile.HFileDataBlockEncoder;
-import org.apache.hadoop.hbase.io.hfile.HFileScanner;
 import org.apache.hadoop.hbase.io.hfile.Compression.Algorithm;
+import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFile.Reader;
-import org.apache.hadoop.hbase.master.AssignmentPlan;
+import org.apache.hadoop.hbase.io.hfile.HFileScanner;
 import org.apache.hadoop.hbase.master.RegionPlacement;
-import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.regionserver.StoreFile.BloomType;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
@@ -91,8 +85,6 @@ import org.apache.hadoop.mapreduce.TaskAttemptID;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.junit.Test;
 import org.mockito.Mockito;
-
-import com.google.common.collect.Lists;
 
 /**
  * Simple test for {@link KeyValueSortReducer} and {@link HFileOutputFormat}.
@@ -252,6 +244,50 @@ public class TestHFileOutputFormat  {
       context.write(new ImmutableBytesWritable(key), new RowMutation(del3));
     }
   }
+
+  static class SimpleKVMapper
+      extends Mapper<NullWritable, NullWritable, ImmutableBytesWritable, KeyValue> {
+
+    static final String testKey = "testKey";
+    static final String testValue = "testValue";
+
+    @Override
+    protected void map (
+        NullWritable n1, NullWritable n2,
+        Mapper<NullWritable, NullWritable,
+            ImmutableBytesWritable, KeyValue>.Context context)
+        throws IOException ,InterruptedException
+    {
+      int taskId = context.getTaskAttemptID().getTaskID().getId();
+      assert taskId < Byte.MAX_VALUE : "Unit tests dont support > 127 tasks!";
+
+      String taskIdString = context.getTaskAttemptID().getTaskID().toString();
+      byte[] keyBytes = Bytes.toBytes(testKey + taskIdString);
+      byte[] valBytes = Bytes.toBytes(testValue);
+      ImmutableBytesWritable key = new ImmutableBytesWritable(keyBytes);
+
+      for (byte[] family : TestHFileOutputFormat.FAMILIES) {
+        KeyValue kv = new KeyValue(keyBytes, family,
+            PerformanceEvaluation.QUALIFIER_NAME, valBytes);
+        context.write(key, kv);
+      }
+    }
+
+    @Override
+    protected void cleanup(Context context) throws IOException, InterruptedException {
+      Configuration conf = context.getConfiguration();
+      HTable table = new HTable(conf, TABLE_NAME);
+
+      Path outputPath = FileOutputFormat.getOutputPath(context);
+      FileSystem fs = outputPath.getFileSystem(conf);
+      Path workOutputPath = FileOutputFormat.getWorkOutputPath(context).makeQualified(fs);
+
+      // Force flushing HFile into working directory
+      HFileOutputFormat.latestWriter.close(context);
+
+      new LoadIncrementalHFiles(conf).doBulkLoad(workOutputPath, table);
+    }
+  };
 
   /**
    * Test for the union style MR jobs that runs both Put and Delete requests
@@ -618,6 +654,55 @@ public class TestHFileOutputFormat  {
         job.getNumReduceTasks());
 
     assertTrue(job.waitForCompletion(true));
+  }
+
+  /**
+   * Test for uploading map output in cleanup stage of each task
+   * @throws Exception
+   */
+  @Test
+  public void testUploadByTask() throws Exception {
+    try {
+      MiniHBaseCluster cluster = util.startMiniCluster();
+      cluster.getMaster();
+      HTable table = util.createTable(TABLE_NAME, FAMILIES);
+      Configuration conf = table.getConfiguration() ;
+      Path testDir = util.getTestDir("testUploadByTask");
+
+      // Generate the bulk load files
+      util.startMiniMapReduceCluster();
+
+      Job job = new Job(conf, "testUploadByTask");
+      job.setInputFormatClass(NMapInputFormat.class);
+      job.setMapperClass(SimpleKVMapper.class);
+      job.setMapOutputKeyClass(ImmutableBytesWritable.class);
+      job.setMapOutputValueClass(KeyValue.class);
+      job.setOutputFormatClass(HFileOutputFormat.class);
+      job.setNumReduceTasks(0);
+      HFileOutputFormat.configAsMapOutputFormat(job, table);
+      FileOutputFormat.setOutputPath(job, testDir);
+      assertTrue(job.waitForCompletion(true));
+
+      // Ensure data shows up
+      int expectedRows = conf.getInt("mapred.map.tasks", 1);
+      assertEquals("LoadIncrementalHFiles should put a row per task",
+          expectedRows, util.countRows(table));
+      Scan scan = new Scan();
+      ResultScanner results = table.getScanner(scan);
+      for (Result res : results) {
+        assertEquals(FAMILIES.length, res.raw().length);
+        for (KeyValue kv : res.raw()) {
+          assertTrue("Key should start with pre-defined test key",
+              Bytes.toStringBinary(kv.getRow()).startsWith(SimpleKVMapper.testKey));
+          assertEquals("Value should equal to pre-defined value",
+              SimpleKVMapper.testValue, Bytes.toString(kv.getValue()));
+        }
+      }
+      results.close();
+    } finally {
+      util.shutdownMiniMapReduceCluster();
+      util.shutdownMiniCluster();
+    }
   }
 
   /**
