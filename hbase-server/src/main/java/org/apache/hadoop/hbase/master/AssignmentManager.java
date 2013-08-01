@@ -71,9 +71,7 @@ import org.apache.hadoop.hbase.master.handler.EnableTableHandler;
 import org.apache.hadoop.hbase.master.handler.MergedRegionHandler;
 import org.apache.hadoop.hbase.master.handler.OpenedRegionHandler;
 import org.apache.hadoop.hbase.master.handler.SplitRegionHandler;
-import org.apache.hadoop.hbase.regionserver.RegionAlreadyInTransitionException;
 import org.apache.hadoop.hbase.regionserver.RegionOpeningState;
-import org.apache.hadoop.hbase.regionserver.RegionServerStoppedException;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.KeyLocker;
 import org.apache.hadoop.hbase.util.Pair;
@@ -923,26 +921,25 @@ public class AssignmentManager extends ZooKeeperListener {
               + " or not on the expected server");
             return;
           }
-          // Handle this the same as if it were opened and then closed.
-          regionState = regionStates.updateRegionState(rt, RegionState.State.CLOSED);
-          // When there are more than one region server a new RS is selected as the
-          // destination and the same is updated in the regionplan. (HBASE-5546)
-          if (regionState != null) {
-            AtomicInteger failedOpenCount = failedOpenTracker.get(encodedName);
-            if (failedOpenCount == null) {
-              failedOpenCount = new AtomicInteger();
-              // No need to use putIfAbsent, or extra synchronization since
-              // this whole handleRegion block is locked on the encoded region
-              // name, and failedOpenTracker is updated only in this block
-              failedOpenTracker.put(encodedName, failedOpenCount);
-            }
-            if (failedOpenCount.incrementAndGet() >= maximumAttempts) {
-              regionStates.updateRegionState(
-                regionState.getRegion(), RegionState.State.FAILED_OPEN);
-              // remove the tracking info to save memory, also reset
-              // the count for next open initiative
-              failedOpenTracker.remove(encodedName);
-            } else {
+          AtomicInteger failedOpenCount = failedOpenTracker.get(encodedName);
+          if (failedOpenCount == null) {
+            failedOpenCount = new AtomicInteger();
+            // No need to use putIfAbsent, or extra synchronization since
+            // this whole handleRegion block is locked on the encoded region
+            // name, and failedOpenTracker is updated only in this block
+            failedOpenTracker.put(encodedName, failedOpenCount);
+          }
+          if (failedOpenCount.incrementAndGet() >= maximumAttempts) {
+            regionStates.updateRegionState(rt, RegionState.State.FAILED_OPEN);
+            // remove the tracking info to save memory, also reset
+            // the count for next open initiative
+            failedOpenTracker.remove(encodedName);
+          } else {
+            // Handle this the same as if it were opened and then closed.
+            regionState = regionStates.updateRegionState(rt, RegionState.State.CLOSED);
+            if (regionState != null) {
+              // When there are more than one region server a new RS is selected as the
+              // destination and the same is updated in the regionplan. (HBASE-5546)
               getRegionPlan(regionState.getRegion(), sn, true);
               this.executorService.submit(new ClosedRegionHandler(server,
                 this, regionState.getRegion()));
@@ -1757,10 +1754,10 @@ public class AssignmentManager extends ZooKeeperListener {
       case CLOSING:
       case PENDING_CLOSE:
       case FAILED_CLOSE:
+      case FAILED_OPEN:
         unassign(region, state, -1, null, false, null);
         state = regionStates.getRegionState(region);
         if (state.isOffline()) break;
-      case FAILED_OPEN:
       case CLOSED:
         LOG.debug("Forcing OFFLINE; was=" + state);
         state = regionStates.updateRegionState(

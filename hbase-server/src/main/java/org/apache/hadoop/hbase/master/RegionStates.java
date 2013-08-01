@@ -248,7 +248,7 @@ public class RegionStates {
 
     if (state == State.FAILED_CLOSE || state == State.FAILED_OPEN) {
       LOG.warn("Failed to transition " + hri.getShortNameToLog()
-        + " on " + serverName + ": " + state);
+        + " on " + serverName + ", set to " + state);
     }
 
     String regionName = hri.getEncodedName();

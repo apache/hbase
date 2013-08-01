@@ -19,6 +19,8 @@ package org.apache.hadoop.hbase.master;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -392,6 +394,8 @@ public class TestAssignmentManagerOnCluster {
 
       RegionState state = am.getRegionStates().getRegionState(hri);
       assertEquals(RegionState.State.FAILED_OPEN, state.getState());
+      // Failed to open since no plan, so it's on no server
+      assertNull(state.getServerName());
 
       MockLoadBalancer.controledRegion = null;
       master.assignRegion(hri);
@@ -436,6 +440,10 @@ public class TestAssignmentManagerOnCluster {
 
       RegionState state = am.getRegionStates().getRegionState(hri);
       assertEquals(RegionState.State.FAILED_OPEN, state.getState());
+      // Failed to open due to file system issue. Region state should
+      // carry the opening region server so that we can force close it
+      // later on before opening it again. See HBASE-9092.
+      assertNotNull(state.getServerName());
 
       // remove the blocking file, so that region can be opened
       fs.delete(regionDir, true);
