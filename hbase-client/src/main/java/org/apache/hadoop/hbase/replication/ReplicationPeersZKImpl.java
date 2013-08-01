@@ -39,6 +39,7 @@ import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.zookeeper.ZKClusterId;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
+import org.apache.hadoop.hbase.zookeeper.ZooKeeperListener;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.KeeperException.ConnectionLossException;
@@ -266,6 +267,14 @@ public class ReplicationPeersZKImpl extends ReplicationStateZKBase implements Re
     return ids;
   }
 
+  @Override
+  public long getTimestampOfLastChangeToPeer(String peerId) {
+    if (!peerClusters.containsKey(peerId)) {
+      throw new IllegalArgumentException("Unknown peer id: " + peerId);
+    }
+    return peerClusters.get(peerId).getLastRegionserverUpdate();
+  }
+
   /**
    * A private method used during initialization. This method attempts to connect to all registered
    * peer clusters. This method does not set a watch on the peer cluster znodes.
@@ -291,6 +300,7 @@ public class ReplicationPeersZKImpl extends ReplicationStateZKBase implements Re
       LOG.warn("Lost the ZooKeeper connection for peer " + peer.getClusterKey(), ke);
       try {
         peer.reloadZkWatcher();
+        peer.getZkw().registerListener(new PeerRegionServerListener(peer));
       } catch (IOException io) {
         LOG.warn("Creation of ZookeeperWatcher failed for peer " + peer.getClusterKey(), io);
       }
@@ -304,7 +314,7 @@ public class ReplicationPeersZKImpl extends ReplicationStateZKBase implements Re
    */
   private static List<ServerName> fetchSlavesAddresses(ZooKeeperWatcher zkw)
       throws KeeperException {
-    List<String> children = ZKUtil.listChildrenNoWatch(zkw, zkw.rsZNode);
+    List<String> children = ZKUtil.listChildrenAndWatchForNewChildren(zkw, zkw.rsZNode);
     if (children == null) {
       return Collections.emptyList();
     }
@@ -314,6 +324,7 @@ public class ReplicationPeersZKImpl extends ReplicationStateZKBase implements Re
     }
     return addresses;
   }
+
 
   private String getPeerStateNode(String id) {
     return ZKUtil.joinZNode(this.peersZNode, ZKUtil.joinZNode(id, this.peerStateNodeName));
@@ -366,6 +377,7 @@ public class ReplicationPeersZKImpl extends ReplicationStateZKBase implements Re
     ReplicationPeer peer =
         new ReplicationPeer(peerConf, peerId, ZKUtil.getZooKeeperClusterKey(peerConf));
     peer.startStateTracker(this.zookeeper, this.getPeerStateNode(peerId));
+    peer.getZkw().registerListener(new PeerRegionServerListener(peer));
     return peer;
   }
 
@@ -405,5 +417,38 @@ public class ReplicationPeersZKImpl extends ReplicationStateZKBase implements Re
         ZooKeeperProtos.ReplicationPeer.newBuilder().setClusterkey(clusterKey).build()
             .toByteArray();
     return ProtobufUtil.prependPBMagic(bytes);
+  }
+
+  /**
+   * Tracks changes to the list of region servers in a peer's cluster.
+   */
+  public static class PeerRegionServerListener extends ZooKeeperListener {
+
+    private ReplicationPeer peer;
+    private String regionServerListNode;
+
+    public PeerRegionServerListener(ReplicationPeer replicationPeer) {
+      super(replicationPeer.getZkw());
+      this.peer = replicationPeer;
+      this.regionServerListNode = peer.getZkw().rsZNode;
+    }
+
+    public PeerRegionServerListener(String regionServerListNode, ZooKeeperWatcher zkw) {
+      super(zkw);
+      this.regionServerListNode = regionServerListNode;
+    }
+
+    @Override
+    public synchronized void nodeChildrenChanged(String path) {
+      if (path.equals(regionServerListNode)) {
+        try {
+          LOG.info("Detected change to peer regionservers, fetching updated list");
+          peer.setRegionServers(fetchSlavesAddresses(peer.getZkw()));
+        } catch (KeeperException e) {
+          LOG.fatal("Error reading slave addresses", e);
+        }
+      }
+    }
+
   }
 }

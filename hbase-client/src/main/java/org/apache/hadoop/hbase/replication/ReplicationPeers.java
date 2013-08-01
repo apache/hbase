@@ -123,6 +123,14 @@ public interface ReplicationPeers {
   List<ServerName> getRegionServersOfConnectedPeer(String peerId);
 
   /**
+   * Get the timestamp of the last change in composition of a given peer cluster.
+   * @param peerId identifier of the peer cluster for which the timestamp is requested
+   * @return the timestamp (in milliseconds) of the last change to the composition of
+   *         the peer cluster
+   */
+  long getTimestampOfLastChangeToPeer(String peerId);
+
+  /**
    * Returns the UUID of the provided peer id.
    * @param peerId the peer's ID that will be converted into a UUID
    * @return a UUID or null if the peer cluster does not exist or is not connected.

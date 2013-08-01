@@ -23,16 +23,11 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.ConnectException;
 import java.net.SocketTimeoutException;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
-import java.util.HashSet;
 import java.util.List;
 import java.util.NavigableMap;
-import java.util.Random;
-import java.util.Set;
 import java.util.UUID;
-import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.PriorityBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
@@ -45,20 +40,19 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HConnectionManager;
-import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.ReplicationProtbufUtil;
-import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.AdminService;
+import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.AdminService.BlockingInterface;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.replication.ReplicationPeers;
 import org.apache.hadoop.hbase.replication.ReplicationQueueInfo;
 import org.apache.hadoop.hbase.replication.ReplicationQueues;
+import org.apache.hadoop.hbase.replication.regionserver.ReplicationSinkManager.SinkPeer;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.ipc.RemoteException;
@@ -89,9 +83,6 @@ public class ReplicationSource extends Thread
   private ReplicationQueues replicationQueues;
   private ReplicationPeers replicationPeers;
   private Configuration conf;
-  // ratio of region servers to chose from a slave cluster
-  private float ratio;
-  private Random random;
   private ReplicationQueueInfo replicationQueueInfo;
   // id of the peer cluster this source replicates to
   private String peerId;
@@ -99,8 +90,6 @@ public class ReplicationSource extends Thread
   private ReplicationSourceManager manager;
   // Should we stop everything?
   private Stoppable stopper;
-  // List of chosen sinks (region servers)
-  private List<ServerName> currentPeers;
   // How long should we sleep for each retry
   private long sleepForRetries;
   // Max size in bytes of entriesArray
@@ -140,6 +129,8 @@ public class ReplicationSource extends Thread
   private MetricsSource metrics;
   // Handle on the log reader helper
   private ReplicationHLogReaderManager repLogReader;
+  // Handles connecting to peer region servers
+  private ReplicationSinkManager replicationSinkMgr;
 
   /**
    * Instantiation method used by region servers
@@ -178,9 +169,6 @@ public class ReplicationSource extends Thread
     this.conn = HConnectionManager.getConnection(conf);
     this.replicationQueues = replicationQueues;
     this.replicationPeers = replicationPeers;
-    this.ratio = this.conf.getFloat("replication.source.ratio", 0.1f);
-    this.currentPeers = new ArrayList<ServerName>();
-    this.random = new Random();
     this.manager = manager;
     this.sleepForRetries =
         this.conf.getLong("replication.source.sleepforretries", 1000);
@@ -193,29 +181,9 @@ public class ReplicationSource extends Thread
     this.replicationQueueInfo = new ReplicationQueueInfo(peerClusterZnode);
     // ReplicationQueueInfo parses the peerId out of the znode for us
     this.peerId = this.replicationQueueInfo.getPeerId();
+    this.replicationSinkMgr = new ReplicationSinkManager(conn, peerId, replicationPeers, conf);
   }
 
-  /**
-   * Select a number of peers at random using the ratio. Mininum 1.
-   */
-  private void chooseSinks() {
-    this.currentPeers.clear();
-    List<ServerName> addresses = this.replicationPeers.getRegionServersOfConnectedPeer(this.peerId);
-    Set<ServerName> setOfAddr = new HashSet<ServerName>();
-    int nbPeers = (int) (Math.ceil(addresses.size() * ratio));
-    LOG.debug("Getting " + nbPeers +
-        " rs from peer cluster # " + this.peerId);
-    for (int i = 0; i < nbPeers; i++) {
-      ServerName sn;
-      // Make sure we get one address that we don't already have
-      do {
-        sn = addresses.get(this.random.nextInt(addresses.size()));
-      } while (setOfAddr.contains(sn));
-      LOG.info("Choosing peer " + sn);
-      setOfAddr.add(sn);
-    }
-    this.currentPeers.addAll(setOfAddr);
-  }
 
   @Override
   public void enqueueLog(Path log) {
@@ -457,9 +425,9 @@ public class ReplicationSource extends Thread
     int sleepMultiplier = 1;
 
     // Connect to peer cluster first, unless we have to stop
-    while (this.isActive() && this.currentPeers.size() == 0) {
-      chooseSinks();
-      if (this.isActive() && this.currentPeers.size() == 0) {
+    while (this.isActive() && replicationSinkMgr.getSinks().size() == 0) {
+      replicationSinkMgr.chooseSinks();
+      if (this.isActive() && replicationSinkMgr.getSinks().size() == 0) {
         if (sleepForRetries("Waiting for peers", sleepMultiplier)) {
           sleepMultiplier++;
         }
@@ -583,7 +551,7 @@ public class ReplicationSource extends Thread
     return (this.repLogReader.getPosition() == 0 &&
         !this.replicationQueueInfo.isQueueRecovered() && queue.size() == 0);
   }
-  
+
   /**
    * Do the sleeping logic
    * @param msg Why we sleep
@@ -637,7 +605,7 @@ public class ReplicationSource extends Thread
 
   /**
    * Do the shipping logic
-   * @param currentWALisBeingWrittenTo was the current WAL being (seemingly) 
+   * @param currentWALisBeingWrittenTo was the current WAL being (seemingly)
    * written to when this method was called
    */
   protected void shipEdits(boolean currentWALisBeingWrittenTo) {
@@ -653,8 +621,10 @@ public class ReplicationSource extends Thread
         }
         continue;
       }
+      SinkPeer sinkPeer = null;
       try {
-        AdminService.BlockingInterface rrs = getRS();
+        sinkPeer = replicationSinkMgr.getReplicationSink();
+        BlockingInterface rrs = sinkPeer.getRegionServer();
         if (LOG.isTraceEnabled()) {
           LOG.trace("Replicating " + this.currentNbEntries + " entries");
         }
@@ -700,27 +670,17 @@ public class ReplicationSource extends Thread
               this.socketTimeoutMultiplier);
           } else if (ioe instanceof ConnectException) {
             LOG.warn("Peer is unavailable, rechecking all sinks: ", ioe);
-            chooseSinks();
+            replicationSinkMgr.chooseSinks();
           } else {
             LOG.warn("Can't replicate because of a local or network error: ", ioe);
           }
         }
 
-        try {
-          boolean down;
-          // Spin while the slave is down and we're not asked to shutdown/close
-          do {
-            down = isSlaveDown();
-            if (down) {
-              if (sleepForRetries("Since we are unable to replicate", sleepMultiplier)) {
-                sleepMultiplier++;
-              } else {
-                chooseSinks();
-              }
-            }
-          } while (this.isActive() && down );
-        } catch (InterruptedException e) {
-          LOG.debug("Interrupted while trying to contact the peer cluster");
+        if (sinkPeer != null) {
+          replicationSinkMgr.reportBadSink(sinkPeer);
+        }
+        if (sleepForRetries("Since we are unable to replicate", sleepMultiplier)) {
+          sleepMultiplier++;
         }
       }
     }
@@ -795,49 +755,6 @@ public class ReplicationSource extends Thread
     }
     this.running = false;
     Threads.shutdown(this, this.sleepForRetries);
-  }
-
-  /**
-   * Get a new region server at random from this peer
-   * @return
-   * @throws IOException
-   */
-  private AdminService.BlockingInterface getRS() throws IOException {
-    if (this.currentPeers.size() == 0) {
-      throw new IOException(this.peerClusterZnode + " has 0 region servers");
-    }
-    ServerName address =
-        currentPeers.get(random.nextInt(this.currentPeers.size()));
-    return this.conn.getAdmin(address);
-  }
-
-  /**
-   * Check if the slave is down by trying to establish a connection
-   * @return true if down, false if up
-   * @throws InterruptedException
-   */
-  public boolean isSlaveDown() throws InterruptedException {
-    final CountDownLatch latch = new CountDownLatch(1);
-    Thread pingThread = new Thread() {
-      public void run() {
-        try {
-          AdminService.BlockingInterface rrs = getRS();
-          // Dummy call which should fail
-          ProtobufUtil.getServerInfo(rrs);
-          latch.countDown();
-        } catch (IOException ex) {
-          if (ex instanceof RemoteException) {
-            ex = ((RemoteException) ex).unwrapRemoteException();
-          }
-          LOG.info("Slave cluster looks down: " + ex.getMessage(), ex);
-        }
-      }
-    };
-    pingThread.start();
-    // awaits returns true if countDown happened
-    boolean down = ! latch.await(this.sleepForRetries, TimeUnit.MILLISECONDS);
-    pingThread.interrupt();
-    return down;
   }
 
   public String getPeerClusterZnode() {

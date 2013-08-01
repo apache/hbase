@@ -18,6 +18,13 @@
  */
 package org.apache.hadoop.hbase.replication;
 
+import java.io.Closeable;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -35,12 +42,6 @@ import org.apache.zookeeper.KeeperException.NodeExistsException;
 
 import com.google.protobuf.InvalidProtocolBufferException;
 
-import java.io.Closeable;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.concurrent.atomic.AtomicBoolean;
-
 /**
  * This class acts as a wrapper for all the objects used to identify and
  * communicate with remote peers and is responsible for answering to expired
@@ -57,8 +58,10 @@ public class ReplicationPeer implements Abortable, Closeable {
   // Cannot be final since a new object needs to be recreated when session fails
   private ZooKeeperWatcher zkw;
   private final Configuration conf;
+  private long lastRegionserverUpdate;
 
   private PeerStateTracker peerStateTracker;
+
 
   /**
    * Constructor that takes all the objects required to communicate with the
@@ -130,6 +133,7 @@ public class ReplicationPeer implements Abortable, Closeable {
    */
   public void setRegionServers(List<ServerName> regionServers) {
     this.regionServers = regionServers;
+    lastRegionserverUpdate = System.currentTimeMillis();
   }
 
   /**
@@ -138,6 +142,15 @@ public class ReplicationPeer implements Abortable, Closeable {
    */
   public ZooKeeperWatcher getZkw() {
     return zkw;
+  }
+
+  /**
+   * Get the timestamp at which the last change occurred to the list of region servers to replicate
+   * to.
+   * @return The System.currentTimeMillis at the last time the list of peer region servers changed.
+   */
+  public long getLastRegionserverUpdate() {
+    return lastRegionserverUpdate;
   }
 
   /**
