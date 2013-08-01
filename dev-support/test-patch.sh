@@ -631,12 +631,15 @@ checkLineLengths () {
   echo ""
   #see http://en.wikipedia.org/wiki/Diff#Unified_format
 
-  ll=`cat $PATCH_DIR/patch | grep "^+" | grep -v "^@@" | grep -v "^+++" | grep -v "import" | wc -L`
   MAX_LINE_LENGTH_PATCH=`expr $MAX_LINE_LENGTH + 1`
+  lines=`cat $PATCH_DIR/patch | grep "^+" | grep -v "^@@" | grep -v "^+++" | grep -v "import" | awk -v len="$MAX_LINE_LENGTH_PATCH" 'length ($0) > len'
+  ll=`echo "$lines" | wc -l`
   if [[ "$ll" -gt "$MAX_LINE_LENGTH_PATCH" ]]; then
     JIRA_COMMENT="$JIRA_COMMENT
 
-    {color:red}-1 lineLengths{color}.  The patch introduces lines longer than $MAX_LINE_LENGTH"
+    {color:red}-1 lineLengths{color}.  The patch introduces the following lines longer than $MAX_LINE_LENGTH:
+    $lines"
+
     return 1
   fi
   JIRA_COMMENT="$JIRA_COMMENT
