@@ -904,28 +904,30 @@ public class HRegionServer implements HRegionInterface,
       LOG.warn("Stopping - unexpected ...", t);
     }
 
-    // tell the master that we are going to shut down
-    // do it on separate thread because we don't want to block here if
-    // master is inaccessible. It is OK if this thread's message arrives
-    // out of order at the master.
-    Thread t = new Thread() {
-      @Override
-      public void run() {
-        try {
-          HMsg[] exitMsg = new HMsg[1];
-          exitMsg[0] = REPORT_BEGINNING_OF_THE_END;
-          LOG.info("prepping master for region server shutdown : " +
-              serverInfo.getServerName());
-          hbaseMaster.regionServerReport(serverInfo, exitMsg, (HRegionInfo[])null);
-        } catch (Throwable e) {
-          LOG.warn("Failed to send exiting message to master: ",
-              RemoteExceptionHandler.checkThrowable(e));
+    if(!killed) {
+      // tell the master that we are going to shut down
+      // do it on separate thread because we don't want to block here if
+      // master is inaccessible. It is OK if this thread's message arrives
+      // out of order at the master.
+      Thread t = new Thread() {
+        @Override
+        public void run() {
+          try {
+            HMsg[] exitMsg = new HMsg[1];
+            exitMsg[0] = REPORT_BEGINNING_OF_THE_END;
+            LOG.info("prepping master for region server shutdown : " +
+                serverInfo.getServerName());
+            hbaseMaster.regionServerReport(serverInfo, exitMsg, (HRegionInfo[])null);
+          } catch (Throwable e) {
+            LOG.warn("Failed to send exiting message to master: ",
+                RemoteExceptionHandler.checkThrowable(e));
+          }
         }
-      }
-    };
-    t.setName("reporting-start-of-exit-to-master");
-    t.setDaemon(true);
-    t.start();
+      };
+      t.setName("reporting-start-of-exit-to-master");
+      t.setDaemon(true);
+      t.start();
+    }
 
     if (killed) {
       // Just skip out w/o closing regions.

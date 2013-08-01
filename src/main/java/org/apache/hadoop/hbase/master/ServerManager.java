@@ -145,6 +145,8 @@ public class ServerManager {
   private static final ConcurrentHashMap<String, Long> blacklistedRSHostPortMap =
       new ConcurrentHashMap<String, Long>();
 
+  private final RegionChecker regionChecker;
+
   /*
    * Dumps into log current stats on dead servers and number of servers
    * TODO: Make this a metric; dump metrics into log.
@@ -226,6 +228,9 @@ public class ServerManager {
         n + "ServerManager-Timeout-Monitor");
     
     this.pendingMsgsToSvrsMap = new ConcurrentHashMap<HServerInfo, ArrayList<HMsg>>();
+
+    this.regionChecker = new RegionChecker(master);
+
     this.blacklistNodeExpirationTimeWindow = c.getLong("hbase.master.blacklist.expiration.window",
         DEFAULT_BLACKLIST_NODE_EXPIRATION_WINDOW);
     this.blacklistUpdateInterval = c.getLong("hbase.master.blacklist.update.interval",
@@ -476,6 +481,11 @@ public class ServerManager {
    * @param msgs
    */
   private void processRegionServerExit(HServerInfo serverInfo, HMsg[] msgs) {
+
+    for(int i = 1; i < msgs.length; i++) {
+      this.regionChecker.becameClosed(msgs[i].getRegionInfo());
+    }
+
     // This method removes ROOT/META from the list and marks them to be
     // reassigned in addition to other housework.
     processServerInfoOnShutdown(serverInfo);
@@ -811,6 +821,7 @@ public class ServerManager {
    */
   public void processRegionOpen(HServerInfo serverInfo,
       HRegionInfo region, ArrayList<HMsg> returnMsgs) {
+
     boolean duplicateAssignment = false;
     RegionManager regionManager = master.getRegionManager();
     synchronized (regionManager) {
@@ -865,6 +876,7 @@ public class ServerManager {
         if (region.isRootRegion()) {
           // it was assigned, and it's not a duplicate assignment, so take it out
           // of the unassigned list.
+          regionChecker.becameOpened(region);
           regionManager.removeRegion(region);
 
           // Store the Root Region location (in memory)
@@ -892,6 +904,8 @@ public class ServerManager {
    * @param region
    */
   public void processRegionClose(HServerInfo serverInfo, HRegionInfo region) {
+    this.regionChecker.becameClosed(region);
+
     synchronized (this.master.getRegionManager()) {
       if (region.isRootRegion()) {
         // Root region
@@ -1087,6 +1101,7 @@ public class ServerManager {
     // First check a server to expire.  ServerName is of the form:
     // <hostname> , <port> , <startcode>
     String serverName = hsi.getServerName();
+
     HServerInfo info = this.serversToServerInfo.get(serverName);
     if (info == null) {
       LOG.warn("No HServerInfo for " + serverName);
@@ -1096,6 +1111,9 @@ public class ServerManager {
       LOG.warn("Already processing shutdown of " + serverName);
       return;
     }
+
+    long expiredSince = serversToLoad.get(serverName).lastLoadRefreshTime;
+
     synchronized (deadServerStatusLock) {
       // Remove the server from the known servers lists and update load info
       this.serversToServerInfo.remove(serverName);
@@ -1109,7 +1127,7 @@ public class ServerManager {
       this.master.getSplitLogManager().handleDeadServer(serverName);
     }
     this.master.getRegionServerOperationQueue().
-      put(new ProcessServerShutdown(master, info));
+      put(new ProcessServerShutdown(master, info, expiredSince));
     this.master.getMetrics().incRegionServerExpired();
   }
 
@@ -1147,6 +1165,10 @@ public class ServerManager {
 
   Set<String> getDeadServers() {
     return this.deadServers;
+  }
+
+  public RegionChecker getRegionChecker() {
+    return this.regionChecker;
   }
 
   public ServerLoadMap<HServerLoad> getServersToLoad() {

@@ -53,6 +53,7 @@ class ProcessServerShutdown extends RegionServerOperation {
   private List<MetaRegion> metaRegions, metaRegionsUnassigned;
   private boolean rootRescanned;
   private HServerAddress deadServerAddress;
+  private final long expiredSince;
 
   public enum LogSplitResult {
     NOT_RUNNING,
@@ -78,13 +79,15 @@ class ProcessServerShutdown extends RegionServerOperation {
    * @param master
    * @param serverInfo
    */
-  public ProcessServerShutdown(HMaster master, HServerInfo serverInfo) {
+  public ProcessServerShutdown(HMaster master, HServerInfo serverInfo, long expiredSince) {
     super(master, serverInfo.getServerName());
     this.deadServer = serverInfo.getServerName();
     this.deadServerAddress = serverInfo.getServerAddress();
     this.rootRescanned = false;
     this.successfulMetaScans = new HashSet<String>();
     // check to see if I am responsible for either ROOT or any of the META tables.
+
+    this.expiredSince = expiredSince;
 
     // TODO Why do we do this now instead of at processing time?
     closeMetaRegions();
@@ -286,12 +289,12 @@ class ProcessServerShutdown extends RegionServerOperation {
         if (skip)
           continue;
 
-        master.getRegionManager().setUnassigned(info, false);
+        this.setRegionUnassigned(info, false);
         this.metaRegionsUnassigned.add(mr);
       }
       else {
         LOG.debug(this.toString() + "setting " + " unassigned: " + info.toString());
-        master.getRegionManager().setUnassigned(info, false);
+        this.setRegionUnassigned(info, false);
       }
     }
     t2 = System.currentTimeMillis();
@@ -418,7 +421,7 @@ class ProcessServerShutdown extends RegionServerOperation {
       if (metaRegionsUnassigned.contains(metaRegion)) continue;
 
       LOG.info(this.toString() + " setting to unassigned: " + metaRegion.toString());
-      master.getRegionManager().setUnassigned(metaRegion.getRegionInfo(), true);
+      this.setRegionUnassigned(metaRegion.getRegionInfo(), true);
       metaRegionsUnassigned.add(metaRegion);
     }
 
@@ -503,5 +506,10 @@ class ProcessServerShutdown extends RegionServerOperation {
    */
   public LogSplitResult getLogSplitResult() {
     return this.logSplitResult;
+  }
+
+  private void setRegionUnassigned(HRegionInfo info, boolean force) {
+    this.master.getServerManager().getRegionChecker().becameClosed(info, this.expiredSince);
+    this.master.getRegionManager().setUnassigned(info, force);
   }
 }

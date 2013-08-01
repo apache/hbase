@@ -96,6 +96,9 @@ public class RegionManager {
 
   private final AssignmentManager assignmentManager;
 
+  private int metaRegionsCount = 0;
+  private int notMetaRegionsCount = 0;
+
   /**
    * Map key -> tableName, value -> ThrottledRegionReopener
    * An entry is created in the map before an alter operation is performed on the
@@ -1714,6 +1717,22 @@ public class RegionManager {
    */
   public void setNumMetaRegions(int num) {
     numberOfMetaRegions.set(num);
+  }
+
+  public void addRegionsInfo(int r, boolean isMeta)
+  {
+    if(isMeta) {
+      metaRegionsCount = r;
+    }
+    else {
+      notMetaRegionsCount = r;
+    }
+  }
+
+  public int getRegionsCount()
+  {
+    //meta + not-meta + root
+    return metaRegionsCount + notMetaRegionsCount + 1;
   }
 
   /**

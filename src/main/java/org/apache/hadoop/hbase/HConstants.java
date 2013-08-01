@@ -214,6 +214,11 @@ public final class HConstants {
   /** Default region server interface class name. */
   public static final String DEFAULT_REGION_SERVER_CLASS = HRegionInterface.class.getName();
 
+  /** Parameter name for enabling regionChecker */
+  public static final String REGION_CHECKER_ENABLED = "hbase.master.regionchecker.enabled";
+  /** Default value for enabling regionChecker */
+  public static final Boolean DEFAULT_REGION_CHECKER_ENABLED = false;
+
   /** Parameter name for what compaction manager to use. */
   public static final String COMPACTION_MANAGER_CLASS = "hbase.compactionmanager.class";
 
@@ -334,7 +339,7 @@ public final class HConstants {
 
   /** Default maximum file size */
   public static final long DEFAULT_MAX_FILE_SIZE = 256 * 1024 * 1024;
-  
+
   /** Default minimum number of files to be compacted */
   public static final int DEFAULT_MIN_FILES_TO_COMPACT = 3;
 
@@ -715,7 +720,7 @@ public final class HConstants {
   public static final String HBASE_REGION_ASSIGNMENT_LOADBALANCER_WAITTIME_MS
                                 = "hbase.master.assignment.load.balancer.waittime.ms";
   public static final int DEFAULT_HBASE_REGION_ASSIGNMENT_LOADBALANCER_WAITTIME_MS = 60000;
-  
+
   /*
    * This defines the number of buckets used for computing the histogram of
    * pread latency.

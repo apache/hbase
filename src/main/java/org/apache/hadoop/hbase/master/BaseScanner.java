@@ -211,8 +211,10 @@ abstract class BaseScanner extends Chore {
           splitParents.put(region, values);
         }
         rows += 1;
-
       }
+
+      this.master.getRegionManager().addRegionsInfo(rows, this.rootRegion);
+
       if (rootRegion) {
         this.master.getRegionManager().setNumMetaRegions(rows);
       }

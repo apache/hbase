@@ -110,6 +110,7 @@ public class ProcessRegionOpen extends ProcessRegionStatusChange {
     LOG.info("Updated row " + regionInfo.getRegionNameAsString() + " in region "
         + Bytes.toString(region.getRegionName()) + " with startcode=" + serverInfo.getStartCode()
         + ", server=" + serverInfo.getHostnamePort());
+    this.master.getServerManager().getRegionChecker().becameOpened(regionInfo);
   }
   
   @Override
