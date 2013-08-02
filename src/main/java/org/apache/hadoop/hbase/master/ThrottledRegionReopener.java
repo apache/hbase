@@ -181,10 +181,8 @@ public class ThrottledRegionReopener {
    * @throws IOException
    */
   public void startRegionsReopening() throws IOException {
-    if (HTable.isTableEnabled(master.getConfiguration(), tableName)) {
-      LOG.info("Initiating reopen for all regions of " + tableName);
-      closer.start();
-    }
+    LOG.info("Initiating reopen for all regions of " + tableName);
+    closer.start();
   }
 
   public int getRegionCloseWaitInterval() {
