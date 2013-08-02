@@ -422,6 +422,7 @@
             <exclude>**/replication/*.java</exclude>
             <exclude>**/avro/*.java</exclude>
             <exclude>**/rest/*.java</exclude>
+            <exclude>**/rest/*/*.java</exclude>
                   </patternset>
                 </untar>
                 <move todir="${basedir}">
