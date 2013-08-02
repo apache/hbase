@@ -21,17 +21,14 @@ package org.apache.hadoop.hbase.util;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InterruptedIOException;
-import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
-import org.apache.hadoop.hdfs.protocol.AlreadyBeingCreatedException;
 import org.apache.hadoop.hdfs.server.namenode.LeaseExpiredException;
 
 
@@ -42,99 +39,175 @@ public class FSHDFSUtils extends FSUtils{
   private static final Log LOG = LogFactory.getLog(FSHDFSUtils.class);
 
   /**
-   * Lease timeout constant, sourced from HDFS upstream.
-   * The upstream constant is defined in a private interface, so we
-   * can't reuse for compatibility reasons.
-   * NOTE: On versions earlier than Hadoop 0.23, the constant is in
-   * o.a.h.hdfs.protocol.FSConstants, while for 0.23 and above it is
-   * in o.a.h.hdfs.protocol.HdfsConstants cause of HDFS-1620.
+   * Recover the lease from HDFS, retrying multiple times.
    */
-  public static final long LEASE_SOFTLIMIT_PERIOD = 60 * 1000;
-
-  public static final String TEST_TRIGGER_DFS_APPEND = "hbase.test.trigger.dfs.append";
-
   @Override
-  public void recoverFileLease(final FileSystem fs, final Path p, Configuration conf)
-  throws IOException{
+  public void recoverFileLease(final FileSystem fs, final Path p,
+      Configuration conf)
+  throws IOException {
     if (!isAppendSupported(conf)) {
       LOG.warn("Running on HDFS without append enabled may result in data loss");
       return;
     }
     // lease recovery not needed for local file system case.
-    // currently, local file system doesn't implement append either.
-    if (!(fs instanceof DistributedFileSystem)) {
-      return;
-    }
-    LOG.info("Recovering file " + p);
-    long startWaiting = System.currentTimeMillis();
+    if (!(fs instanceof DistributedFileSystem)) return;
+    recoverDFSFileLease((DistributedFileSystem)fs, p, conf);
+  }
 
-    // Trying recovery
+  /*
+   * Run the dfs recover lease. recoverLease is asynchronous. It returns:
+   *    -false when it starts the lease recovery (i.e. lease recovery not *yet* done)
+   *    - true when the lease recovery has succeeded or the file is closed.
+   * But, we have to be careful.  Each time we call recoverLease, it starts the recover lease
+   * process over from the beginning.  We could put ourselves in a situation where we are
+   * doing nothing but starting a recovery, interrupting it to start again, and so on.
+   * The findings over in HBASE-8354 have it that the namenode will try to recover the lease
+   * on the file's primary node.  If all is well, it should return near immediately.  But,
+   * as is common, it is the very primary node that has crashed and so the namenode will be
+   * stuck waiting on a socket timeout before it will ask another datanode to start the
+   * recovery. It does not help if we call recoverLease in the meantime and in particular,
+   * subsequent to the socket timeout, a recoverLease invocation will cause us to start
+   * over from square one (possibly waiting on socket timeout against primary node).  So,
+   * in the below, we do the following:
+   * 1. Call recoverLease.
+   * 2. If it returns true, break.
+   * 3. If it returns false, wait a few seconds and then call it again.
+   * 4. If it returns true, break.
+   * 5. If it returns false, wait for what we think the datanode socket timeout is
+   * (configurable) and then try again.
+   * 6. If it returns true, break.
+   * 7. If it returns false, repeat starting at step 5. above.
+   *
+   * If HDFS-4525 is available, call it every second and we might be able to exit early.
+   */
+  boolean recoverDFSFileLease(final DistributedFileSystem dfs, final Path p,
+      final Configuration conf)
+  throws IOException {
+    LOG.info("Recovering lease on dfs file " + p);
+    long startWaiting = EnvironmentEdgeManager.currentTimeMillis();
+    // Default is 15 minutes. It's huge, but the idea is that if we have a major issue, HDFS
+    // usually needs 10 minutes before marking the nodes as dead. So we're putting ourselves
+    // beyond that limit 'to be safe'.
+    long recoveryTimeout = conf.getInt("hbase.lease.recovery.timeout", 900000) + startWaiting;
+    // This setting should be what the cluster dfs heartbeat is set to.
+    long firstPause = conf.getInt("hbase.lease.recovery.first.pause", 3000);
+    // This should be set to how long it'll take for us to timeout against primary datanode if it
+    // is dead.  We set it to 61 seconds, 1 second than the default READ_TIMEOUT in HDFS, the
+    // default value for DFS_CLIENT_SOCKET_TIMEOUT_KEY.
+    long subsequentPause = conf.getInt("hbase.lease.recovery.dfs.timeout", 61 * 1000);
+
+    Method isFileClosedMeth = null;
+    // whether we need to look for isFileClosed method
+    boolean findIsFileClosedMeth = true;
     boolean recovered = false;
-    long recoveryTimeout = conf.getInt("hbase.lease.recovery.timeout", 300000);
-    // conf parameter passed from unit test, indicating whether fs.append() should be triggered
-    boolean triggerAppend = conf.getBoolean(TEST_TRIGGER_DFS_APPEND, false);
-    // retrying lease recovery may preempt pending lease recovery; default to waiting for 4 seconds
-    // after calling recoverLease
-    int waitingPeriod = conf.getInt("hbase.lease.recovery.waiting.period", 4000);
-    Exception ex = null;
-    while (!recovered) {
+    // We break the loop if we succeed the lease recovery, timeout, or we throw an exception.
+    for (int nbAttempt = 0; !recovered; nbAttempt++) {
+      recovered = recoverLease(dfs, nbAttempt, p, startWaiting);
+      if (recovered) break;
+      if (checkIfTimedout(conf, recoveryTimeout, nbAttempt, p, startWaiting)) break;
       try {
-        try {
-          DistributedFileSystem dfs = (DistributedFileSystem) fs;
-          if (triggerAppend) throw new IOException();
-          try {
-            recovered = (Boolean) DistributedFileSystem.class.getMethod(
-              "recoverLease", new Class[] { Path.class }).invoke(dfs, p);
-            if (!recovered) LOG.debug("recoverLease returned false");
-          } catch (InvocationTargetException ite) {
-            // function was properly called, but threw it's own exception
-            throw (IOException) ite.getCause();
-          }
-        } catch (Exception e) {
-          LOG.debug("Failed fs.recoverLease invocation, " + e.toString() +
-            ", trying fs.append instead");
-          ex = e;
-        }
-        if (ex != null || System.currentTimeMillis() - startWaiting > recoveryTimeout) {
-          LOG.debug("trying fs.append for " + p + " with " + ex);
-          ex = null; // assume the following append() call would succeed
-          FSDataOutputStream out = fs.append(p);
-          out.close();
-          recovered = true;
-          LOG.debug("fs.append passed");
-        }
-        if (recovered) break;
-      } catch (IOException e) {
-        e = RemoteExceptionHandler.checkIOException(e);
-        if (e instanceof AlreadyBeingCreatedException) {
-          // We expect that we'll get this message while the lease is still
-          // within its soft limit, but if we get it past that, it means
-          // that the RS is holding onto the file even though it lost its
-          // znode. We could potentially abort after some time here.
-          long waitedFor = System.currentTimeMillis() - startWaiting;
-          if (waitedFor > LEASE_SOFTLIMIT_PERIOD) {
-            LOG.warn("Waited " + waitedFor + "ms for lease recovery on " + p +
-              ":" + e.getMessage());
-          }
-        } else if (e instanceof LeaseExpiredException &&
-            e.getMessage().contains("File does not exist")) {
-          // This exception comes out instead of FNFE, fix it
-          throw new FileNotFoundException(
-              "The given HLog wasn't found at " + p.toString());
+        // On the first time through wait the short 'firstPause'.
+        if (nbAttempt == 0) {
+          Thread.sleep(firstPause);
         } else {
-          throw new IOException("Failed to open " + p + " for append", e);
+          // Cycle here until subsequentPause elapses.  While spinning, check isFileClosed if
+          // available (should be in hadoop 2.0.5... not in hadoop 1 though.
+          long localStartWaiting = EnvironmentEdgeManager.currentTimeMillis();
+          while ((EnvironmentEdgeManager.currentTimeMillis() - localStartWaiting) <
+              subsequentPause) {
+            Thread.sleep(conf.getInt("hbase.lease.recovery.pause", 1000));
+            if (findIsFileClosedMeth) {
+               try {
+                 isFileClosedMeth = dfs.getClass().getMethod("isFileClosed",
+                   new Class[]{ Path.class });
+               } catch (NoSuchMethodException nsme) {
+                 LOG.debug("isFileClosed not available");
+               } finally {
+                 findIsFileClosedMeth = false;
+               }
+             }
+             if (isFileClosedMeth != null && isFileClosed(dfs, isFileClosedMeth, p)) {
+               recovered = true;
+               break;
+             }
+          }
         }
-      }
-      try {
-        Thread.sleep(waitingPeriod);
       } catch (InterruptedException ie) {
         InterruptedIOException iioe = new InterruptedIOException();
         iioe.initCause(ie);
         throw iioe;
       }
-      // we keep original behavior without retrying lease recovery
-      break;
     }
-    LOG.info("Finished lease recovery attempt for " + p);
+    return recovered;
+  }
+
+  boolean checkIfTimedout(final Configuration conf, final long recoveryTimeout,
+      final int nbAttempt, final Path p, final long startWaiting) {
+    if (recoveryTimeout < EnvironmentEdgeManager.currentTimeMillis()) {
+      LOG.warn("Cannot recoverLease after trying for " +
+        conf.getInt("hbase.lease.recovery.timeout", 900000) +
+        "ms (hbase.lease.recovery.timeout); continuing, but may be DATALOSS!!!; " +
+        getLogMessageDetail(nbAttempt, p, startWaiting));
+      return true;
+    }
+    return false;
+  }
+
+  /**
+   * Try to recover the lease.
+   * @param dfs
+   * @param nbAttempt
+   * @param p
+   * @param startWaiting
+   * @return True if dfs#recoverLease came by true.
+   * @throws FileNotFoundException
+   */
+  boolean recoverLease(final DistributedFileSystem dfs, final int nbAttempt, final Path p,
+      final long startWaiting)
+  throws FileNotFoundException {
+    boolean recovered = false;
+    try {
+      recovered = dfs.recoverLease(p);
+      LOG.info("recoverLease=" + recovered + ", " +
+        getLogMessageDetail(nbAttempt, p, startWaiting));
+    } catch (IOException e) {
+      if (e instanceof LeaseExpiredException && e.getMessage().contains("File does not exist")) {
+        // This exception comes out instead of FNFE, fix it
+        throw new FileNotFoundException("The given HLog wasn't found at " + p);
+      } else if (e instanceof FileNotFoundException) {
+        throw (FileNotFoundException)e;
+      }
+      LOG.warn(getLogMessageDetail(nbAttempt, p, startWaiting), e);
+    }
+    return recovered;
+  }
+
+  /**
+   * @param nbAttempt
+   * @param p
+   * @param startWaiting
+   * @return Detail to append to any log message around lease recovering.
+   */
+  private String getLogMessageDetail(final int nbAttempt, final Path p, final long startWaiting) {
+    return "attempt=" + nbAttempt + " on file=" + p + " after " +
+      (EnvironmentEdgeManager.currentTimeMillis() - startWaiting) + "ms";
+  }
+
+  /**
+   * Call HDFS-4525 isFileClosed if it is available.
+   * @param dfs
+   * @param m
+   * @param p
+   * @return True if file is closed.
+   */
+  private boolean isFileClosed(final DistributedFileSystem dfs, final Method m, final Path p) {
+    try {
+      return (Boolean) m.invoke(dfs, p);
+    } catch (SecurityException e) {
+      LOG.warn("No access", e);
+    } catch (Exception e) {
+      LOG.warn("Failed invocation for " + p.toString(), e);
+    }
+    return false;
   }
 }

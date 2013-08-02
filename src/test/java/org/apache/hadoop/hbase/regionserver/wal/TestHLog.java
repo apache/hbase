@@ -20,8 +20,8 @@
 package org.apache.hadoop.hbase.regionserver.wal;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.io.IOException;
@@ -39,21 +39,25 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.*;
-import org.apache.hadoop.hbase.regionserver.wal.HLog.Reader;
-import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.FSHDFSUtils;
-import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.Coprocessor;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.LargeTests;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.coprocessor.SampleRegionWALObserver;
+import org.apache.hadoop.hbase.regionserver.wal.HLog.Reader;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.FSConstants;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.namenode.LeaseManager;
-import org.apache.hadoop.io.SequenceFile;
 import org.apache.log4j.Level;
 import org.junit.After;
 import org.junit.AfterClass;
@@ -198,7 +202,7 @@ public class TestHLog  {
       }
       log.close();
       HLogSplitter logSplitter = HLogSplitter.createLogSplitter(conf,
-          hbaseDir, logdir, this.oldLogDir, this.fs);
+          hbaseDir, logdir, oldLogDir, fs);
       List<Path> splits =
         logSplitter.splitLog();
       verifySplits(splits, howmany);
@@ -371,10 +375,10 @@ public class TestHLog  {
       }
     }
   }
-  
+
   /*
    * We pass different values to recoverFileLease() so that different code paths are covered
-   * 
+   *
    * For this test to pass, requires:
    * 1. HDFS-200 (append support)
    * 2. HDFS-988 (SafeMode should freeze file operations
@@ -383,18 +387,10 @@ public class TestHLog  {
    */
   @Test
   public void testAppendClose() throws Exception {
-    testAppendClose(true);
-    testAppendClose(false);
-  }
-
-  /*
-   * @param triggerDirectAppend whether to trigger direct call of fs.append()
-   */
-  public void testAppendClose(final boolean triggerDirectAppend) throws Exception {
     byte [] tableName = Bytes.toBytes(getName());
     HRegionInfo regioninfo = new HRegionInfo(tableName,
              HConstants.EMPTY_START_ROW, HConstants.EMPTY_END_ROW, false);
-    Path subdir = new Path(dir, "hlogdir" + triggerDirectAppend);
+    Path subdir = new Path(dir, "hlogdir");
     Path archdir = new Path(dir, "hlogdir_archive");
     HLog wal = new HLog(fs, subdir, archdir, conf);
     final int total = 20;
@@ -411,7 +407,7 @@ public class TestHLog  {
     wal.sync();
      int namenodePort = cluster.getNameNodePort();
     final Path walPath = wal.computeFilename();
-    
+
 
     // Stop the cluster.  (ensure restart since we're sharing MiniDFSCluster)
     try {
@@ -452,23 +448,21 @@ public class TestHLog  {
     Method setLeasePeriod = cluster.getClass()
       .getDeclaredMethod("setLeasePeriod", new Class[]{Long.TYPE, Long.TYPE});
     setLeasePeriod.setAccessible(true);
-    setLeasePeriod.invoke(cluster,
-                          new Object[]{new Long(1000), new Long(1000)});
+    setLeasePeriod.invoke(cluster, 1000L, 1000L);
     try {
       Thread.sleep(1000);
     } catch (InterruptedException e) {
       LOG.info(e);
     }
-    
+
     // Now try recovering the log, like the HMaster would do
     final FileSystem recoveredFs = fs;
     final Configuration rlConf = conf;
-    
+
     class RecoverLogThread extends Thread {
       public Exception exception = null;
       public void run() {
           try {
-            rlConf.setBoolean(FSHDFSUtils.TEST_TRIGGER_DFS_APPEND, triggerDirectAppend);
             FSUtils.getInstance(fs, rlConf)
               .recoverFileLease(recoveredFs, walPath, rlConf);
           } catch (IOException e) {
@@ -805,7 +799,7 @@ public class TestHLog  {
     @Override
     public void logRollRequested() {
       // TODO Auto-generated method stub
-      
+
     }
 
     @Override
