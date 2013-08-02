@@ -111,7 +111,14 @@ public class Append extends Mutation {
     }
     // Cast so explicit list type rather than ? extends Cell.  Help the compiler out.  See
     // http://stackoverflow.com/questions/6474784/java-using-generics-with-lists-and-interfaces
-    ((List<KeyValue>)list).add(kv);
+    List<KeyValue> l = (List<KeyValue>)list;
+    // find where the new entry should be placed in the List
+    int idx = 0;
+    for (KeyValue keyval : l) {
+      if (Bytes.compareTo(kv.getQualifier(), keyval.getQualifier()) < 0) break;
+      idx ++;
+    }
+    l.add(idx, kv);
     this.familyMap.put(family, list);
     return this;
   }
