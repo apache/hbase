@@ -33,13 +33,13 @@
     <groupId>org.apache</groupId>
     <artifactId>apache</artifactId>
     <version>12</version>
-    <relativePath/>
+    <relativePath />
     <!-- no parent resolution -->
   </parent>
   <groupId>org.apache.hbase</groupId>
   <artifactId>hbase</artifactId>
   <packaging>pom</packaging>
-  <version>0.95.2-hadoop2-SNAPSHOT</version>
+  <version>0.95.2-hadoop3-SNAPSHOT</version>
   <name>HBase</name>
   <description>
     Apache HBase is the Hadoop database. Use it when you need
@@ -1739,7 +1739,7 @@
         <surefire.firstPartThreadCount>1</surefire.firstPartThreadCount>
         <surefire.skipFirstPart>false</surefire.skipFirstPart>
         <surefire.skipSecondPart>true</surefire.skipSecondPart>
-        <surefire.firstPartGroups/>
+        <surefire.firstPartGroups />
       </properties>
     </profile>
     <profile>
@@ -1755,7 +1755,7 @@
         <surefire.skipFirstPart>false</surefire.skipFirstPart>
         <surefire.skipSecondPart>true</surefire.skipSecondPart>
         <surefire.firstPartGroups>org.apache.hadoop.hbase.SmallTests</surefire.firstPartGroups>
-        <surefire.secondPartGroups/>
+        <surefire.secondPartGroups />
       </properties>
     </profile>
     <profile>
@@ -1769,7 +1769,7 @@
         <surefire.skipFirstPart>false</surefire.skipFirstPart>
         <surefire.skipSecondPart>true</surefire.skipSecondPart>
         <surefire.firstPartGroups>org.apache.hadoop.hbase.MediumTests</surefire.firstPartGroups>
-        <surefire.secondPartGroups/>
+        <surefire.secondPartGroups />
       </properties>
     </profile>
     <profile>
@@ -1783,7 +1783,7 @@
         <surefire.skipFirstPart>false</surefire.skipFirstPart>
         <surefire.skipSecondPart>true</surefire.skipSecondPart>
         <surefire.firstPartGroups>org.apache.hadoop.hbase.LargeTests</surefire.firstPartGroups>
-        <surefire.secondPartGroups/>
+        <surefire.secondPartGroups />
       </properties>
     </profile>
     <profile>
@@ -1832,7 +1832,7 @@
         <surefire.firstPartForkMode>always</surefire.firstPartForkMode>
         <surefire.skipFirstPart>false</surefire.skipFirstPart>
         <surefire.skipSecondPart>true</surefire.skipSecondPart>
-        <surefire.firstPartGroups/>
+        <surefire.firstPartGroups />
       </properties>
     </profile>
     <!-- Profile for running clover. You need to have a clover license under ~/.clover.license for ${clover.version}
