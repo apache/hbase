@@ -38,6 +38,7 @@ import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.regionserver.ConstantSizeRegionSplitPolicy;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 import org.junit.Test;
@@ -48,7 +49,7 @@ import com.google.common.collect.Lists;
 /**
  * Test case that uses multiple threads to read and write multifamily rows
  * into a table, verifying that reads never see partially-complete writes.
- * 
+ *
  * This can run as a junit test, or with a main() function which runs against
  * a real cluster (eg for testing with failures, region movement, etc)
  */
@@ -88,7 +89,7 @@ public class TestAcidGuarantees implements Tool {
       ConstantSizeRegionSplitPolicy.class.getName());
     util = new HBaseTestingUtility(conf);
   }
-  
+
   /**
    * Thread that does random full-row writes into a table.
    */
@@ -99,7 +100,7 @@ public class TestAcidGuarantees implements Tool {
     byte targetFamilies[][];
     HTable table;
     AtomicLong numWritten = new AtomicLong();
-    
+
     public AtomicityWriter(TestContext ctx, byte targetRows[][],
                            byte targetFamilies[][]) throws IOException {
       super(ctx);
@@ -110,7 +111,7 @@ public class TestAcidGuarantees implements Tool {
     public void doAnAction() throws Exception {
       // Pick a random row to write into
       byte[] targetRow = targetRows[rand.nextInt(targetRows.length)];
-      Put p = new Put(targetRow); 
+      Put p = new Put(targetRow);
       rand.nextBytes(data);
 
       for (byte[] family : targetFamilies) {
@@ -123,7 +124,7 @@ public class TestAcidGuarantees implements Tool {
       numWritten.getAndIncrement();
     }
   }
-  
+
   /**
    * Thread that does single-row reads in a table, looking for partially
    * completed rows.
@@ -153,7 +154,7 @@ public class TestAcidGuarantees implements Tool {
         // ignore this action
         return;
       }
-      
+
       for (byte[] family : targetFamilies) {
         for (int i = 0; i < NUM_COLS_TO_CHECK; i++) {
           byte qualifier[] = Bytes.toBytes("col" + i);
@@ -182,7 +183,7 @@ public class TestAcidGuarantees implements Tool {
       throw new RuntimeException(msg.toString());
     }
   }
-  
+
   /**
    * Thread that does full scans of the table looking for any partially completed
    * rows.
@@ -206,10 +207,10 @@ public class TestAcidGuarantees implements Tool {
         s.addFamily(family);
       }
       ResultScanner scanner = table.getScanner(s);
-      
+
       for (Result res : scanner) {
         byte[] gotValue = null;
-  
+
         for (byte[] family : targetFamilies) {
           for (int i = 0; i < NUM_COLS_TO_CHECK; i++) {
             byte qualifier[] = Bytes.toBytes("col" + i);
@@ -256,12 +257,12 @@ public class TestAcidGuarantees implements Tool {
       final boolean systemTest) throws Exception {
     createTableIfMissing();
     TestContext ctx = new TestContext(util.getConfiguration());
-    
+
     byte rows[][] = new byte[numUniqueRows][];
     for (int i = 0; i < numUniqueRows; i++) {
       rows[i] = Bytes.toBytes("test_row_" + i);
     }
-    
+
     List<AtomicityWriter> writers = Lists.newArrayList();
     for (int i = 0; i < numWriters; i++) {
       AtomicityWriter writer = new AtomicityWriter(
@@ -273,7 +274,11 @@ public class TestAcidGuarantees implements Tool {
     ctx.addThread(new RepeatingTestThread(ctx) {
       HBaseAdmin admin = new HBaseAdmin(util.getConfiguration());
       public void doAnAction() throws Exception {
-        admin.flush(TABLE_NAME);
+        try {
+          admin.flush(TABLE_NAME);
+        } catch(IOException ioe) {
+          LOG.warn("Ignoring exception while flushing: " + StringUtils.stringifyException(ioe));
+        }
         // Flushing has been a source of ACID violations previously (see HBASE-2856), so ideally,
         // we would flush as often as possible.  On a running cluster, this isn't practical:
         // (1) we will cause a lot of load due to all the flushing and compacting
@@ -293,18 +298,18 @@ public class TestAcidGuarantees implements Tool {
       getters.add(getter);
       ctx.addThread(getter);
     }
-    
+
     List<AtomicScanReader> scanners = Lists.newArrayList();
     for (int i = 0; i < numScanners; i++) {
       AtomicScanReader scanner = new AtomicScanReader(ctx, FAMILIES);
       scanners.add(scanner);
       ctx.addThread(scanner);
     }
-    
+
     ctx.startThreads();
     ctx.waitFor(millisToRun);
     ctx.stop();
-    
+
     LOG.info("Finished test. Writers:");
     for (AtomicityWriter writer : writers) {
       LOG.info("  wrote " + writer.numWritten.get());
@@ -327,7 +332,7 @@ public class TestAcidGuarantees implements Tool {
       runTestAtomicity(20000, 5, 5, 0, 3);
     } finally {
       util.shutdownMiniCluster();
-    }    
+    }
   }
 
   @Test
@@ -337,7 +342,7 @@ public class TestAcidGuarantees implements Tool {
       runTestAtomicity(20000, 5, 0, 5, 3);
     } finally {
       util.shutdownMiniCluster();
-    }    
+    }
   }
 
   @Test
@@ -347,7 +352,7 @@ public class TestAcidGuarantees implements Tool {
       runTestAtomicity(20000, 5, 2, 2, 3);
     } finally {
       util.shutdownMiniCluster();
-    }    
+    }
   }
 
   ////////////////////////////////////////////////////////////////////////////
