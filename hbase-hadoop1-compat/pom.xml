@@ -118,15 +118,15 @@ limitations under the License.
       <artifactId>metrics-core</artifactId>
     </dependency>
     <dependency>
-      <groupId>log4j</groupId>
-      <artifactId>log4j</artifactId>
-    </dependency>
-    <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-test</artifactId>
       <version>${hadoop-one.version}</version><!--$NO-MVN-MAN-VER$-->
       <optional>true</optional>
       <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>commons-logging</groupId>
+      <artifactId>commons-logging</artifactId>
     </dependency>
   </dependencies>
 

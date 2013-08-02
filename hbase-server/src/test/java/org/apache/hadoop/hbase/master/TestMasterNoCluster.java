@@ -65,8 +65,8 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.mockito.Mockito;
 import org.junit.experimental.categories.Category;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 
 /**
  * Standup the master and fake it to test various aspects of master function.
@@ -78,7 +78,7 @@ import org.slf4j.LoggerFactory;
  */
 @Category(MediumTests.class)
 public class TestMasterNoCluster {
-  private static Logger LOG = LoggerFactory.getLogger(TestMasterNoCluster.class);
+  private static final Log LOG = LogFactory.getLog(TestMasterNoCluster.class);
   private static final HBaseTestingUtility TESTUTIL = new HBaseTestingUtility();
 
   @BeforeClass
@@ -240,7 +240,7 @@ public class TestMasterNoCluster {
    * @throws IOException
    * @throws KeeperException
    * @throws InterruptedException
-   * @throws DeserializationException 
+   * @throws DeserializationException
    * @throws ServiceException
    */
   @Test (timeout=30000)
