@@ -317,18 +317,30 @@ public class HConnectionManager {
   }
 
   /**
-   * Delete information for all connections.
+   * Delete information for all connections. Close or not the connection, depending on the
+   *  staleConnection boolean and the ref count. By default, you should use it with
+   *  staleConnection to true.
    */
-  public static void deleteAllConnections() {
+  public static void deleteAllConnections(boolean staleConnection) {
     synchronized (CONNECTION_INSTANCES) {
       Set<HConnectionKey> connectionKeys = new HashSet<HConnectionKey>();
       connectionKeys.addAll(CONNECTION_INSTANCES.keySet());
       for (HConnectionKey connectionKey : connectionKeys) {
-        deleteConnection(connectionKey, false);
+        deleteConnection(connectionKey, staleConnection);
       }
       CONNECTION_INSTANCES.clear();
     }
   }
+
+  /**
+   * Delete information for all connections..
+   * @deprecated kept for backward compatibility, but the behavior is broken. HBASE-8983
+   */
+  @Deprecated
+  public static void deleteAllConnections() {
+    deleteAllConnections(false);
+  }
+
 
   private static void deleteConnection(HConnection connection, boolean staleConnection) {
     synchronized (CONNECTION_INSTANCES) {
@@ -352,7 +364,7 @@ public class HConnectionManager {
         }
       } else {
         LOG.error("Connection not found in the list, can't delete it "+
-          "(connection key=" + connectionKey + "). May be the key was modified?");
+          "(connection key=" + connectionKey + "). May be the key was modified?", new Exception());
       }
     }
   }
