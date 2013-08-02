@@ -231,25 +231,25 @@ public class DistributedHBaseCluster extends HBaseCluster {
 
     //check whether current master has changed
     if (!ServerName.isSameHostnameAndPort(initial.getMaster(), current.getMaster())) {
+      LOG.info("Initial active master : " + initial.getMaster().getHostname()
+          + " has changed to : " + current.getMaster().getHostname());
+      // If initial master is stopped, start it, before restoring the state.
+      // It will come up as a backup master, if there is already an active master.
+      if (!clusterManager.isRunning(ServiceType.HBASE_MASTER, initial.getMaster().getHostname())) {
+        startMaster(initial.getMaster().getHostname());
+      }
+
       //master has changed, we would like to undo this.
       //1. Kill the current backups
       //2. Stop current master
-      //3. Start a master at the initial hostname (if not already running as backup)
-      //4. Start backup masters
-      boolean foundOldMaster = false;
+      //3. Start backup masters
       for (ServerName currentBackup : current.getBackupMasters()) {
         if (!ServerName.isSameHostnameAndPort(currentBackup, initial.getMaster())) {
           stopMaster(currentBackup);
-        } else {
-          foundOldMaster = true;
         }
       }
       stopMaster(current.getMaster());
-      if (foundOldMaster) { //if initial master is not running as a backup
-        startMaster(initial.getMaster().getHostname());
-      }
       waitForActiveAndReadyMaster(); //wait so that active master takes over
-
       //start backup masters
       for (ServerName backup : initial.getBackupMasters()) {
         //these are not started in backup mode, but we should already have an active master
@@ -304,5 +304,16 @@ public class DistributedHBaseCluster extends HBaseCluster {
         stopRegionServer(currentServers.get(hostname));
       }
     }
+    // While restoring above, if the HBase Master which was initially the Active one, was down
+    // and the restore put the cluster back to Initial configuration, HAdmin instance will need
+    // to refresh its connections (otherwise it will return incorrect information) or we can
+    // point it to new instance.
+    try {
+      admin.close();
+    } catch (IOException ioe) {
+      LOG.info("While closing the old connection", ioe);
+    }
+    this.admin = new HBaseAdmin(conf);
+    LOG.info("Added new HBaseAdmin");
   }
 }
