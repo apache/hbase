@@ -86,7 +86,7 @@ public class TestProcedureCoordinator {
   }
 
   private ProcedureCoordinator buildNewCoordinator() {
-    ThreadPoolExecutor pool = ProcedureCoordinator.defaultPool(nodeName, POOL_KEEP_ALIVE, 1, WAKE_FREQUENCY);
+    ThreadPoolExecutor pool = ProcedureCoordinator.defaultPool(nodeName, 1, POOL_KEEP_ALIVE);
     return spy(new ProcedureCoordinator(controller, pool));
   }
 

@@ -198,7 +198,6 @@ abstract public class Subprocedure implements Callable<Void> {
       } else {
         msg = "Subprocedure '" + barrierName + "' failed!";
       }
-      LOG.error(msg , e);
       cancel(msg, e);
 
       LOG.debug("Subprocedure '" + barrierName + "' running cleanup.");

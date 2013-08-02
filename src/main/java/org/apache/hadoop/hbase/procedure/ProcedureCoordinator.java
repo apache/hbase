@@ -51,11 +51,14 @@ import com.google.common.collect.MapMaker;
 public class ProcedureCoordinator {
   private static final Log LOG = LogFactory.getLog(ProcedureCoordinator.class);
 
+  final static long KEEP_ALIVE_MILLIS_DEFAULT = 5000;
   final static long TIMEOUT_MILLIS_DEFAULT = 60000;
   final static long WAKE_MILLIS_DEFAULT = 500;
 
   private final ProcedureCoordinatorRpcs rpcs;
   private final ExecutorService pool;
+  private final long wakeTimeMillis;
+  private final long timeoutMillis;
 
   // Running procedure table.  Maps procedure name to running procedure reference
   private final ConcurrentMap<String, Procedure> procedures =
@@ -71,6 +74,23 @@ public class ProcedureCoordinator {
    * @param pool Used for executing procedures.
    */
   public ProcedureCoordinator(ProcedureCoordinatorRpcs rpcs, ThreadPoolExecutor pool) {
+    this(rpcs, pool, TIMEOUT_MILLIS_DEFAULT, WAKE_MILLIS_DEFAULT);
+  }
+
+  /**
+   * Create and start a ProcedureCoordinator.
+   *
+   * The rpc object registers the ProcedureCoordinator and starts any threads in
+   * this constructor.
+   *
+   * @param rpcs
+   * @param pool Used for executing procedures.
+   * @param timeoutMillis
+   */
+  public ProcedureCoordinator(ProcedureCoordinatorRpcs rpcs, ThreadPoolExecutor pool,
+      long timeoutMillis, long wakeTimeMillis) {
+    this.timeoutMillis = timeoutMillis;
+    this.wakeTimeMillis = wakeTimeMillis;
     this.rpcs = rpcs;
     this.pool = pool;
     this.rpcs.start(this);
@@ -78,10 +98,24 @@ public class ProcedureCoordinator {
 
   /**
    * Default thread pool for the procedure
+   *
+   * @param coordName
+   * @param opThreads the maximum number of threads to allow in the pool
    */
-  public static ThreadPoolExecutor defaultPool(String coordName, long keepAliveTime, int opThreads,
-      long wakeFrequency) {
-    return new ThreadPoolExecutor(1, opThreads, keepAliveTime, TimeUnit.SECONDS,
+  public static ThreadPoolExecutor defaultPool(String coordName, int opThreads) {
+    return defaultPool(coordName, opThreads, KEEP_ALIVE_MILLIS_DEFAULT);
+  }
+
+  /**
+   * Default thread pool for the procedure
+   *
+   * @param coordName
+   * @param opThreads the maximum number of threads to allow in the pool
+   * @param keepAliveMillis the maximum time (ms) that excess idle threads will wait for new tasks
+   */
+  public static ThreadPoolExecutor defaultPool(String coordName, int opThreads,
+      long keepAliveMillis) {
+    return new ThreadPoolExecutor(1, opThreads, keepAliveMillis, TimeUnit.MILLISECONDS,
         new SynchronousQueue<Runnable>(),
         new DaemonThreadFactory("(" + coordName + ")-proc-coordinator-pool"));
   }
@@ -194,7 +228,7 @@ public class ProcedureCoordinator {
   Procedure createProcedure(ForeignExceptionDispatcher fed, String procName, byte[] procArgs,
       List<String> expectedMembers) {
     // build the procedure
-    return new Procedure(this, fed, WAKE_MILLIS_DEFAULT, TIMEOUT_MILLIS_DEFAULT,
+    return new Procedure(this, fed, wakeTimeMillis, timeoutMillis,
         procName, procArgs, expectedMembers);
   }
 
