@@ -212,20 +212,18 @@ implements WritableComparable<ImmutableBytesWritable> {
    */
   @Override
   public String toString() {
-    StringBuilder sb = new StringBuilder(3*this.bytes.length);
-    for (int idx = offset; idx < offset + length; idx++) {
-      // if not the first, put a blank separator in
-      if (idx != offset) {
-        sb.append(' ');
-      }
-      String num = Integer.toHexString(bytes[idx]);
+    StringBuilder sb = new StringBuilder(3*this.length);
+    final int endIdx = this.offset + this.length;
+    for (int idx = this.offset; idx < endIdx ; idx++) {
+      sb.append(' ');
+      String num = Integer.toHexString(0xff & this.bytes[idx]);
       // if it is only one digit, add a leading 0.
       if (num.length() < 2) {
         sb.append('0');
       }
       sb.append(num);
     }
-    return sb.toString();
+    return sb.length() > 0 ? sb.substring(1) : "";
   }
 
   /** A Comparator optimized for ImmutableBytesWritable.
