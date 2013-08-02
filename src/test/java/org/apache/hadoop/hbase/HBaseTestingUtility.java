@@ -62,6 +62,7 @@ import org.apache.hadoop.hbase.io.hfile.ChecksumUtil;
 import org.apache.hadoop.hbase.io.hfile.Compression;
 import org.apache.hadoop.hbase.io.hfile.Compression.Algorithm;
 import org.apache.hadoop.hbase.io.hfile.HFile;
+import org.apache.hadoop.hbase.mapreduce.MapreduceTestingShim;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.ServerManager;
 import org.apache.hadoop.hbase.regionserver.HRegion;
@@ -1439,8 +1440,14 @@ public class HBaseTestingUtility {
 
     mrCluster = new MiniMRCluster(0, 0, servers,
       FileSystem.get(conf).getUri().toString(), 1, null, null, null, new JobConf(conf));
-    mrCluster.getJobTrackerRunner().getJobTracker().getConf().set("mapred.local.dir",
+
+    JobConf jobConf = MapreduceTestingShim.getJobConf(mrCluster);
+    if (jobConf == null) {
+      jobConf = mrCluster.createJobConf();
+    }
+    jobConf.set("mapred.local.dir",
       conf.get("mapred.local.dir")); //Hadoop MiniMR overwrites this while it should not
+
     LOG.info("Mini mapreduce cluster started");
     JobConf mrClusterJobConf = mrCluster.createJobConf();
     c.set("mapred.job.tracker", mrClusterJobConf.get("mapred.job.tracker"));
