@@ -20,6 +20,11 @@
 
 package org.apache.hadoop.hbase.coprocessor;
 
+import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+
 import java.io.IOException;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
@@ -44,18 +49,14 @@ import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
-
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-import static org.junit.Assert.*;
-
 @Category(MediumTests.class)
 public class TestRegionObserverInterface {
   static final Log LOG = LogFactory.getLog(TestRegionObserverInterface.class);
-  static final String DIR = "test/build/data/TestRegionObserver/";
 
   public static final byte[] TEST_TABLE = Bytes.toBytes("TestTable");
   public final static byte[] A = Bytes.toBytes("a");
@@ -304,21 +305,21 @@ public class TestRegionObserverInterface {
         public boolean next(List<KeyValue> results) throws IOException {
           return next(results, -1);
         }
-        
+
         @Override
-        public boolean next(List<KeyValue> results, String metric) 
+        public boolean next(List<KeyValue> results, String metric)
             throws IOException {
           return next(results, -1, metric);
         }
 
         @Override
-        public boolean next(List<KeyValue> results, int limit) 
+        public boolean next(List<KeyValue> results, int limit)
             throws IOException{
           return next(results, limit, null);
         }
 
         @Override
-        public boolean next(List<KeyValue> results, int limit, String metric) 
+        public boolean next(List<KeyValue> results, int limit, String metric)
             throws IOException {
           List<KeyValue> internalResults = new ArrayList<KeyValue>();
           boolean hasMore;

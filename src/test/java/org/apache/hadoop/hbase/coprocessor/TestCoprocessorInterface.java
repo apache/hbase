@@ -20,6 +20,8 @@
 
 package org.apache.hadoop.hbase.coprocessor;
 
+import static org.mockito.Mockito.when;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -45,14 +47,12 @@ import org.apache.hadoop.hbase.util.PairOfSameType;
 import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
 
-import static org.mockito.Mockito.when;
-
 @Category(SmallTests.class)
 public class TestCoprocessorInterface extends HBaseTestCase {
   static final Log LOG = LogFactory.getLog(TestCoprocessorInterface.class);
-  static final String DIR = "test/build/data/TestCoprocessorInterface/";
   private static final HBaseTestingUtility TEST_UTIL =
     new HBaseTestingUtility();
+  static final Path DIR = TEST_UTIL.getDataTestDir();
 
   private static class CustomScanner implements RegionScanner {
 
@@ -66,9 +66,9 @@ public class TestCoprocessorInterface extends HBaseTestCase {
     public boolean next(List<KeyValue> results) throws IOException {
       return delegate.next(results);
     }
-    
+
     @Override
-    public boolean next(List<KeyValue> results, String metric) 
+    public boolean next(List<KeyValue> results, String metric)
         throws IOException {
       return delegate.next(results, metric);
     }
@@ -77,9 +77,9 @@ public class TestCoprocessorInterface extends HBaseTestCase {
     public boolean next(List<KeyValue> result, int limit) throws IOException {
       return delegate.next(result, limit);
     }
-    
+
     @Override
-    public boolean next(List<KeyValue> result, int limit, String metric) 
+    public boolean next(List<KeyValue> result, int limit, String metric)
         throws IOException {
       return delegate.next(result, limit, metric);
     }

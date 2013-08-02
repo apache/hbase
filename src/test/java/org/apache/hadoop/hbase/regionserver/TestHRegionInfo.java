@@ -21,16 +21,13 @@ package org.apache.hadoop.hbase.regionserver;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
-import java.io.IOException;
-
-import org.apache.hadoop.hbase.*;
+import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.FSTableDescriptors;
-import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.MD5Hash;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -60,32 +57,7 @@ public class TestHRegionInfo {
                  + id + "." + md5HashInHex + ".",
                  nameStr);
   }
-  
-  @Test
-  public void testGetSetOfHTD() throws IOException {
-    HBaseTestingUtility HTU = new HBaseTestingUtility();
-        final String tablename = "testGetSetOfHTD";
 
-    // Delete the temporary table directory that might still be there from the
-    // previous test run.
-    FSTableDescriptors.deleteTableDescriptorIfExists(tablename,
-        HTU.getConfiguration());
-
-    HTableDescriptor htd = new HTableDescriptor(tablename);
-    FSTableDescriptors.createTableDescriptor(htd, HTU.getConfiguration());
-    HRegionInfo hri = new HRegionInfo(Bytes.toBytes("testGetSetOfHTD"),
-        HConstants.EMPTY_START_ROW, HConstants.EMPTY_END_ROW);
-    HTableDescriptor htd2 = hri.getTableDesc();
-    assertTrue(htd.equals(htd2));
-    final String key = "SOME_KEY";
-    assertNull(htd.getValue(key));
-    final String value = "VALUE";
-    htd.setValue(key, value);
-    hri.setTableDesc(htd);
-    HTableDescriptor htd3 = hri.getTableDesc();
-    assertTrue(htd.equals(htd3));
-  }
-  
   @Test
   public void testContainsRange() {
     HTableDescriptor tableDesc = new HTableDescriptor("testtable");
@@ -105,7 +77,7 @@ public class TestHRegionInfo {
     assertFalse(hri.containsRange(Bytes.toBytes("g"), Bytes.toBytes("g")));
     // Single row range entirely outside
     assertFalse(hri.containsRange(Bytes.toBytes("z"), Bytes.toBytes("z")));
-    
+
     // Degenerate range
     try {
       hri.containsRange(Bytes.toBytes("z"), Bytes.toBytes("a"));
@@ -134,14 +106,14 @@ public class TestHRegionInfo {
   public void testComparator() {
     byte[] tablename = Bytes.toBytes("comparatorTablename");
     byte[] empty = new byte[0];
-    HRegionInfo older = new HRegionInfo(tablename, empty, empty, false, 0L); 
-    HRegionInfo newer = new HRegionInfo(tablename, empty, empty, false, 1L); 
+    HRegionInfo older = new HRegionInfo(tablename, empty, empty, false, 0L);
+    HRegionInfo newer = new HRegionInfo(tablename, empty, empty, false, 1L);
     assertTrue(older.compareTo(newer) < 0);
     assertTrue(newer.compareTo(older) > 0);
     assertTrue(older.compareTo(older) == 0);
     assertTrue(newer.compareTo(newer) == 0);
   }
-  
+
   @org.junit.Rule
   public org.apache.hadoop.hbase.ResourceCheckerJUnitRule cu =
     new org.apache.hadoop.hbase.ResourceCheckerJUnitRule();

@@ -1420,6 +1420,9 @@ public class HBaseTestingUtility {
    */
   public void startMiniMapReduceCluster(final int servers) throws IOException {
     LOG.info("Starting mini mapreduce cluster...");
+    if (dataTestDir == null) {
+      setupDataTestDir();
+    }
     // These are needed for the new and improved Map/Reduce framework
     Configuration c = getConfiguration();
     String logDir = c.get("hadoop.log.dir");
@@ -1434,8 +1437,10 @@ public class HBaseTestingUtility {
     // we up the VM usable so that processes don't get killed.
     conf.setFloat("yarn.nodemanager.vmem-pmem-ratio", 8.0f);
 
-    mrCluster = new MiniMRCluster(servers,
-      FileSystem.get(conf).getUri().toString(), 1);
+    mrCluster = new MiniMRCluster(0, 0, servers,
+      FileSystem.get(conf).getUri().toString(), 1, null, null, null, new JobConf(conf));
+    mrCluster.getJobTrackerRunner().getJobTracker().getConf().set("mapred.local.dir",
+      conf.get("mapred.local.dir")); //Hadoop MiniMR overwrites this while it should not
     LOG.info("Mini mapreduce cluster started");
     JobConf mrClusterJobConf = mrCluster.createJobConf();
     c.set("mapred.job.tracker", mrClusterJobConf.get("mapred.job.tracker"));

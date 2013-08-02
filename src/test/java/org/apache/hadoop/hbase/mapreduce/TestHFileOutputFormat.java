@@ -275,7 +275,7 @@ public class TestHFileOutputFormat  {
       // verify that the file has the proper FileInfo.
       writer.close(context);
 
-      // the generated file lives 1 directory down from the attempt directory 
+      // the generated file lives 1 directory down from the attempt directory
       // and is the only file, e.g.
       // _attempt__0000_r_000000_0/b/1979617994050536795
       FileSystem fs = FileSystem.get(conf);
@@ -344,7 +344,8 @@ public class TestHFileOutputFormat  {
 
   @Test
   public void testJobConfiguration() throws Exception {
-    Job job = new Job();
+    Job job = new Job(util.getConfiguration());
+    job.setWorkingDirectory(util.getDataTestDir("testJobConfiguration"));
     HTable table = Mockito.mock(HTable.class);
     setupMockStartKeys(table);
     HFileOutputFormat.configureIncrementalLoad(job, table);
@@ -469,6 +470,7 @@ public class TestHFileOutputFormat  {
       Configuration conf, HTable table, Path outDir)
   throws Exception {
     Job job = new Job(conf, "testLocalMRIncrementalLoad");
+    job.setWorkingDirectory(util.getDataTestDir("runIncrementalPELoad"));
     setupRandomGeneratorMapper(job);
     HFileOutputFormat.configureIncrementalLoad(job, table);
     FileOutputFormat.setOutputPath(job, outDir);
@@ -583,6 +585,7 @@ public class TestHFileOutputFormat  {
       // pollutes the GZip codec pool with an incompatible compressor.
       conf.set("io.seqfile.compression.type", "NONE");
       Job job = new Job(conf, "testLocalMRIncrementalLoad");
+      job.setWorkingDirectory(util.getDataTestDir("testColumnFamilyCompression"));
       setupRandomGeneratorMapper(job);
       HFileOutputFormat.configureIncrementalLoad(job, table);
       FileOutputFormat.setOutputPath(job, dir);
