@@ -283,7 +283,7 @@ public class TestHFileOutputFormat  {
       Path workOutputPath = FileOutputFormat.getWorkOutputPath(context).makeQualified(fs);
 
       // Force flushing HFile into working directory
-      HFileOutputFormat.latestWriter.close(context);
+      HFileOutputFormat.closeWriter(context);
 
       new LoadIncrementalHFiles(conf).doBulkLoad(workOutputPath, table);
     }

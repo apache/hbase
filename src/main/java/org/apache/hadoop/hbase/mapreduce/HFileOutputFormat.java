@@ -89,7 +89,7 @@ public class HFileOutputFormat extends FileOutputFormat<ImmutableBytesWritable, 
   static final String TABLE_NAME = "hbase.hfileoutputformat.tablename";
   static final String UTF8 = "UTF-8";
 
-  protected static RecordWriter<ImmutableBytesWritable, KeyValue> latestWriter = null;
+  private static RecordWriter<ImmutableBytesWritable, KeyValue> latestWriter = null;
 
   public RecordWriter<ImmutableBytesWritable, KeyValue> getRecordWriter(final TaskAttemptContext context)
   throws IOException, InterruptedException {
@@ -638,5 +638,11 @@ public class HFileOutputFormat extends FileOutputFormat<ImmutableBytesWritable, 
       conf.set(TABLE_NAME, Bytes.toString(table.getTableName()));
     }
     // The rest of the stuff will be taken care of by the RecordWriter
+  }
+
+  public static void closeWriter(TaskAttemptContext context) throws IOException, InterruptedException {
+    if (HFileOutputFormat.latestWriter != null) {
+      latestWriter.close(context);
+    }
   }
 }
