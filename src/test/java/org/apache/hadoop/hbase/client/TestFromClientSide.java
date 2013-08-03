@@ -4166,7 +4166,7 @@ public class TestFromClientSide {
     byte[] v1 = Bytes.toBytes("42");
     byte[] v2 = Bytes.toBytes("23");
     byte [][] QUALIFIERS = new byte [][] {
-        Bytes.toBytes("a"), Bytes.toBytes("b")
+        Bytes.toBytes("b"), Bytes.toBytes("a")
     };
     Append a = new Append(ROW);
     a.add(FAMILY, QUALIFIERS[0], v1);
