@@ -39,6 +39,7 @@ import org.apache.hadoop.util.StringUtils;
 /**
  * Iterate over an HBase table data, return (Text, RowResult) pairs
  */
+@Deprecated
 public class TableRecordReaderImpl {
   static final Log LOG = LogFactory.getLog(TableRecordReaderImpl.class);
 

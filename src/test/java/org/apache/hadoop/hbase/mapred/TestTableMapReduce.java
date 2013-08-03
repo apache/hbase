@@ -48,6 +48,7 @@ import org.apache.hadoop.mapred.Reporter;
  * on our tables is simple - take every row in the table, reverse the value of
  * a particular cell, and write it back to the table.
  */
+@Deprecated
 public class TestTableMapReduce extends MultiRegionTable {
   private static final Log LOG =
     LogFactory.getLog(TestTableMapReduce.class.getName());
