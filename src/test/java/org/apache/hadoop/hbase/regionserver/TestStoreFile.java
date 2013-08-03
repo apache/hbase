@@ -74,7 +74,6 @@ public class TestStoreFile extends HBaseTestCase {
 
   @Override
   public void setUp() throws Exception {
-    super.setUp();
     startingMetrics = SchemaMetrics.getMetricsSnapshot();
     try {
       this.cluster = new MiniDFSCluster(this.conf, 2, true, (String[])null);
@@ -85,6 +84,7 @@ public class TestStoreFile extends HBaseTestCase {
     } catch (IOException e) {
       shutdownDfs(cluster);
     }
+    super.setUp();
   }
 
   @Override

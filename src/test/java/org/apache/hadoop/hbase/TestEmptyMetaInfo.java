@@ -28,19 +28,46 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
+import org.junit.Test;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 /**
  * Tests master cleanup of rows in meta table where there is no HRegionInfo
  */
-public class TestEmptyMetaInfo extends HBaseClusterTestCase {
+public class TestEmptyMetaInfo  {
+  private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private final static int SLAVES = 3;
+
+  /**
+   * @throws java.lang.Exception
+   */
+  @BeforeClass
+  public static void setUpBeforeClass() throws Exception {
+    TEST_UTIL.startMiniCluster(SLAVES);
+  }
+
+  /**
+   * @throws java.lang.Exception
+   */
+  @AfterClass
+  public static void tearDownAfterClass() throws Exception {
+    TEST_UTIL.shutdownMiniCluster();
+  }
+
+
   /**
    * Insert some bogus rows in meta. Master should clean them up.
    * @throws IOException
    */
+  @Test
   public void testEmptyMetaInfo() throws IOException {
-    HTable t = new HTable(conf, HConstants.META_TABLE_NAME);
+    HTable t = new HTable(TEST_UTIL.getConfiguration(), HConstants.META_TABLE_NAME);
     final int COUNT = 5;
-    final byte [] tableName = Bytes.toBytes(getName());
+    final byte [] tableName = Bytes.toBytes("testEmptyMetaInfo");
     for (int i = 0; i < COUNT; i++) {
       byte [] regionName = HRegionInfo.createRegionName(tableName,
         Bytes.toBytes(i == 0? "": Integer.toString(i)),
@@ -51,8 +78,8 @@ public class TestEmptyMetaInfo extends HBaseClusterTestCase {
       t.put(put);
     }
     long sleepTime =
-      conf.getLong("hbase.master.meta.thread.rescanfrequency", 10000);
-    int tries = conf.getInt("hbase.client.retries.number", 5);
+      TEST_UTIL.getConfiguration().getLong("hbase.master.meta.thread.rescanfrequency", 10000);
+    int tries = TEST_UTIL.getConfiguration().getInt("hbase.client.retries.number", 5);
     int count = 0;
     do {
       tries -= 1;

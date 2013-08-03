@@ -280,7 +280,8 @@ public class HBaseTestingUtility {
     createDirAndSetProperty("mapred_output", "mapred.output.dir");
     createDirAndSetProperty("mapred_local", "mapred.local.dir");
     createDirAndSetProperty("mapred_system", "mapred.system.dir");
-    createDirAndSetProperty("mapred_temp", "mapred.temp.dir");
+    createDirAndSetProperty("fsimage", "dfs.name.dir");
+    createDirAndSetProperty("fsedit", "dfs.name.edits.dir");
   }
 
   /**

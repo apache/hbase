@@ -22,6 +22,7 @@ package org.apache.hadoop.hbase;
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.util.Random;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -32,6 +33,8 @@ import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.util.ReflectionUtils;
+import org.junit.After;
+import org.junit.Before;
 
 /**
  * Abstract base class for HBase cluster junit tests.  Spins up an hbase
@@ -119,13 +122,18 @@ public abstract class HBaseClusterTestCase extends HBaseTestCase {
   }
 
   @Override
+  @Before
   protected void setUp() throws Exception {
     try {
       if (this.startDfs) {
-        // This spews a bunch of warnings about missing scheme. TODO: fix.
-        this.dfsCluster = new MiniDFSCluster(0, this.conf, 2, true, true, true,
-          null, null, null, null);
+        // This spews a bunch of warnings about missing scheme.
+        try {
+          this.dfsCluster = new HBaseTestingUtility().startMiniDFSCluster(2);
+        } catch (Exception e) {
+          LOG.error("Failed to restart the MiniDFSCluster ", e);
 
+
+        }
         // mangle the conf so that the fs parameter points to the minidfs we
         // just started up
         FileSystem filesystem = dfsCluster.getFileSystem();
@@ -164,34 +172,22 @@ public abstract class HBaseClusterTestCase extends HBaseTestCase {
   }
 
   @Override
+  @After
   protected void tearDown() throws Exception {
-    if (!openMetaTable) {
-      // open the META table now to ensure cluster is running before shutdown.
-      new HTable(conf, HConstants.META_TABLE_NAME);
-    }
-    super.tearDown();
     try {
+      if (!openMetaTable) {
+        // open the META table now to ensure cluster is running before shutdown.
+        new HTable(conf, HConstants.META_TABLE_NAME);
+      }
+      super.tearDown();
       HConnectionManager.deleteConnectionInfo(conf, true);
-      if (this.cluster != null) {
-        try {
-          this.cluster.shutdown();
-        } catch (Exception e) {
-          LOG.warn("Closing mini dfs", e);
-        }
-        try {
-          this.zooKeeperCluster.shutdown();
-        } catch (IOException e) {
-          LOG.warn("Shutting down ZooKeeper cluster", e);
-        }
-      }
-      if (startDfs) {
-        shutdownDfs(dfsCluster);
-      }
     } catch (Exception e) {
-      LOG.error(e);
+      LOG.error("Unexpected exception during shutdown ", e);
+    } finally {
+        try {this.cluster.shutdown();} catch (Throwable e) {}
+        try {this.dfsCluster.shutdown();} catch (Throwable e) {}
+        try {this.zooKeeperCluster.shutdown();} catch (Throwable e) {}
     }
-    // ReflectionUtils.printThreadInfo(new PrintWriter(System.out),
-    //  "Temporary end-of-test thread dump debugging HADOOP-2040: " + getName());
   }
 
 

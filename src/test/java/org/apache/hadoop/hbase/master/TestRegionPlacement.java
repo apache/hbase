@@ -104,7 +104,7 @@ public class TestRegionPlacement {
     assertTrue(loadBalancer instanceof AssignmentLoadBalancer);
   }
 
-  @Test(timeout = 180000)
+  @Test(timeout = 360000)
   public void testRegionPlacement() throws Exception {
     AssignmentPlan currentPlan;
     // ONLY meta regions, ROOT and META, are assigned at beginning.
