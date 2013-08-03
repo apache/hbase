@@ -41,8 +41,8 @@ import org.apache.hadoop.util.ToolRunner;
 @InterfaceAudience.Private
 public abstract class AbstractHBaseTool implements Tool {
 
-  private static final int EXIT_SUCCESS = 0;
-  private static final int EXIT_FAILURE = 1;
+  protected static final int EXIT_SUCCESS = 0;
+  protected static final int EXIT_FAILURE = 1;
 
   private static final String SHORT_HELP_OPTION = "h";
   private static final String LONG_HELP_OPTION = "help";
@@ -54,6 +54,8 @@ public abstract class AbstractHBaseTool implements Tool {
   protected Configuration conf = null;
 
   private static final Set<String> requiredOptions = new TreeSet<String>();
+  
+  protected String[] cmdLineArgs = null;
 
   /**
    * Override this to add command-line options using {@link #addOptWithArg}
@@ -90,6 +92,7 @@ public abstract class AbstractHBaseTool implements Tool {
     try {
       // parse the command line arguments
       cmd = parseArgs(args);
+      cmdLineArgs = args;
     } catch (ParseException e) {
       LOG.error("Error when parsing command-line arguemnts", e);
       printUsage();
@@ -125,14 +128,14 @@ public abstract class AbstractHBaseTool implements Tool {
     return success;
   }
 
-  private CommandLine parseArgs(String[] args) throws ParseException {
+  protected CommandLine parseArgs(String[] args) throws ParseException {
     options.addOption(SHORT_HELP_OPTION, LONG_HELP_OPTION, false, "Show usage");
     addOptions();
     CommandLineParser parser = new BasicParser();
     return parser.parse(options, args);
   }
 
-  private void printUsage() {
+  protected void printUsage() {
     HelpFormatter helpFormatter = new HelpFormatter();
     helpFormatter.setWidth(80);
     String usageHeader = "Options:";
