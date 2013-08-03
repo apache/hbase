@@ -27,9 +27,11 @@ import java.util.Collections;
 import java.util.List;
 import java.util.NavigableSet;
 import java.util.Random;
+import java.util.Set;
 import java.util.SortedSet;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletionService;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorCompletionService;
@@ -158,8 +160,8 @@ public class Store extends SchemaConfigured implements HeapSize {
   List<StoreFile> filesCompacting = Lists.newArrayList();
 
   // All access must be synchronized.
-  private final CopyOnWriteArraySet<ChangedReadersObserver> changedReaderObservers =
-    new CopyOnWriteArraySet<ChangedReadersObserver>();
+  private final Set<ChangedReadersObserver> changedReaderObservers =
+      Collections.newSetFromMap(new ConcurrentHashMap<ChangedReadersObserver, Boolean>());
 
   private final int blocksize;
   private HFileDataBlockEncoder dataBlockEncoder;
