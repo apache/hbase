@@ -5194,6 +5194,12 @@ public class HRegion implements HeapSize { // , Writable{
       return null;
     }
 
+    // Can't split region which is in recovering state
+    if (this.isRecovering()) {
+      LOG.info("Cannot split region " + this.getRegionInfo().getEncodedName() + " in recovery.");
+      return null;
+    }
+
     if (!splitPolicy.shouldSplit()) {
       return null;
     }
