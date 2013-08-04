@@ -3476,7 +3476,8 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
 
         if (previous == null) {
           // check if the region to be opened is marked in recovering state in ZK
-          if (isRegionMarkedRecoveringInZK(region.getEncodedName())) {
+          if (SplitLogManager.isRegionMarkedRecoveringInZK(this.getZooKeeper(),
+            region.getEncodedName())) {
             this.recoveringRegions.put(region.getEncodedName(), null);
           }
           // If there is no action in progress, we can submit a specific handler.
@@ -4191,25 +4192,6 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
    */
   public CompactSplitThread getCompactSplitThread() {
     return this.compactSplitThread;
-  }
-
-  /**
-   * check if /hbase/recovering-regions/<current region encoded name> exists. Returns true if exists
-   * and set watcher as well.
-   * @param regionEncodedName region encode name
-   * @return true when /hbase/recovering-regions/<current region encoded name> exists
-   * @throws KeeperException
-   */
-  private boolean isRegionMarkedRecoveringInZK(String regionEncodedName) throws KeeperException {
-    boolean result = false;
-    String nodePath = ZKUtil.joinZNode(this.zooKeeper.recoveringRegionsZNode, regionEncodedName);
-
-    byte[] node = ZKUtil.getDataAndWatch(this.zooKeeper, nodePath);
-    if (node != null) {
-      result = true;
-    }
-
-    return result;
   }
 
   /**

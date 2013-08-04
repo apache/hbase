@@ -1196,6 +1196,27 @@ public class SplitLogManager extends ZooKeeperListener {
   }
 
   /**
+   * check if /hbase/recovering-regions/<current region encoded name> exists. Returns true if exists
+   * and set watcher as well.
+   * @param zkw
+   * @param regionEncodedName region encode name
+   * @return true when /hbase/recovering-regions/<current region encoded name> exists
+   * @throws KeeperException
+   */
+  public static boolean
+      isRegionMarkedRecoveringInZK(ZooKeeperWatcher zkw, String regionEncodedName)
+          throws KeeperException {
+    boolean result = false;
+    String nodePath = ZKUtil.joinZNode(zkw.recoveringRegionsZNode, regionEncodedName);
+
+    byte[] node = ZKUtil.getDataAndWatch(zkw, nodePath);
+    if (node != null) {
+      result = true;
+    }
+    return result;
+  }
+
+  /**
    * This function is used in distributedLogReplay to fetch last flushed sequence id from ZK
    * @param zkw
    * @param serverName
@@ -1204,8 +1225,7 @@ public class SplitLogManager extends ZooKeeperListener {
    * @throws IOException
    */
   public static RegionStoreSequenceIds getRegionFlushedSequenceId(ZooKeeperWatcher zkw,
-      String serverName,
-      String encodedRegionName) throws IOException {
+      String serverName, String encodedRegionName) throws IOException {
     // when SplitLogWorker recovers a region by directly replaying unflushed WAL edits,
     // last flushed sequence Id changes when newly assigned RS flushes writes to the region.
     // If the newly assigned RS fails again(a chained RS failures scenario), the last flushed
