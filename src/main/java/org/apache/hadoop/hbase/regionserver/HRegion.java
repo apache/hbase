@@ -5094,6 +5094,7 @@ public class HRegion implements HeapSize { // , Writable{
             .entrySet()) {
 
           Store store = stores.get(family.getKey());
+          Collections.sort(family.getValue(), store.getComparator());
           List<KeyValue> kvs = new ArrayList<KeyValue>(family.getValue().size());
 
           // Get previous values for all columns in this family

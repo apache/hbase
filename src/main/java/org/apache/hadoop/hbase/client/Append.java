@@ -88,13 +88,7 @@ public class Append extends Mutation {
     if(list == null) {
       list = new ArrayList<KeyValue>();
     }
-    // find where the new entry should be placed in the List
-    int idx = 0;
-    for (KeyValue kv : list) {
-      if (Bytes.compareTo(qualifier, kv.getQualifier()) < 0) break;
-      idx ++;
-    }
-    list.add(idx, new KeyValue(
+    list.add(new KeyValue(
         this.row, family, qualifier, this.ts, KeyValue.Type.Put, value));
     familyMap.put(family, list);
     return this;
