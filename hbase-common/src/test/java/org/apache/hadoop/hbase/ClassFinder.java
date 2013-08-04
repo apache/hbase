@@ -136,7 +136,7 @@ public class ClassFinder {
       if (!proceedOnExceptions) {
         throw ioEx;
       }
-      LOG.error("Failed to look for classes in " + jarFileName + ": " + ioEx);
+      LOG.warn("Failed to look for classes in " + jarFileName + ": " + ioEx);
     }
 
     Set<Class<?>> classes = new HashSet<Class<?>>();
@@ -148,7 +148,7 @@ public class ClassFinder {
         if (!proceedOnExceptions) {
           throw ioEx;
         }
-        LOG.error("Failed to get next entry from " + jarFileName + ": " + ioEx);
+        LOG.warn("Failed to get next entry from " + jarFileName + ": " + ioEx);
         break;
       }
       if (entry == null) {
@@ -173,7 +173,7 @@ public class ClassFinder {
       Class<?> c = makeClass(className, proceedOnExceptions);
       if (c != null) {
         if (!classes.add(c)) {
-          LOG.error("Ignoring duplicate class " + className);
+          LOG.warn("Ignoring duplicate class " + className);
         }
       }
     }
@@ -184,13 +184,13 @@ public class ClassFinder {
       boolean proceedOnExceptions) throws ClassNotFoundException, LinkageError {
     Set<Class<?>> classes = new HashSet<Class<?>>();
     if (!baseDirectory.exists()) {
-      LOG.error("Failed to find " + baseDirectory.getAbsolutePath());
+      LOG.warn("Failed to find " + baseDirectory.getAbsolutePath());
       return classes;
     }
 
     File[] files = baseDirectory.listFiles(this.fileFilter);
     if (files == null) {
-      LOG.error("Failed to get files from " + baseDirectory.getAbsolutePath());
+      LOG.warn("Failed to get files from " + baseDirectory.getAbsolutePath());
       return classes;
     }
 
@@ -205,7 +205,7 @@ public class ClassFinder {
         Class<?> c = makeClass(className, proceedOnExceptions);
         if (c != null) {
           if (!classes.add(c)) {
-            LOG.error("Ignoring duplicate class " + className);
+            LOG.warn("Ignoring duplicate class " + className);
           }
         }
       }
