@@ -1523,8 +1523,8 @@ public class HLogSplitter {
       // fetch location from cache
       HRegionLocation loc = onlineRegions.get(originalEncodedRegionName);
       if(loc != null) return loc;
-      // fetch location from .META.
-      loc = hconn.getRegionLocation(table, row, false);
+      // fetch location from .META. directly without using cache to avoid hit old dead server
+      loc = hconn.getRegionLocation(table, row, true);
       if (loc == null) {
         throw new IOException("Can't locate location for row:" + Bytes.toString(row)
             + " of table:" + Bytes.toString(table));
@@ -1560,12 +1560,21 @@ public class HLogSplitter {
       if (cachedLastFlushedSequenceId == null
           || lastFlushedSequenceId > cachedLastFlushedSequenceId) {
         lastFlushedSequenceIds.put(loc.getRegionInfo().getEncodedName(), lastFlushedSequenceId);
-      } else if (loc.getRegionInfo().isRecovering() == false) {
-        // region isn't in recovering at all because WAL file may contain a region that has
-        // been moved to somewhere before hosting RS fails
-        lastFlushedSequenceIds.put(loc.getRegionInfo().getEncodedName(), Long.MAX_VALUE);
-        LOG.info("logReplay skip region: " + loc.getRegionInfo().getEncodedName()
-            + " because it's not in recovering.");
+      }
+
+      // check if the region to be recovered is marked as recovering in ZK
+      try {
+        if (SplitLogManager.isRegionMarkedRecoveringInZK(watcher, loc.getRegionInfo()
+            .getEncodedName()) == false) {
+          // region isn't in recovering at all because WAL file may contain a region that has
+          // been moved to somewhere before hosting RS fails
+          lastFlushedSequenceIds.put(loc.getRegionInfo().getEncodedName(), Long.MAX_VALUE);
+          LOG.info("logReplay skip region: " + loc.getRegionInfo().getEncodedName()
+              + " because it's not in recovering.");
+        }
+      } catch (KeeperException e) {
+        throw new IOException("Failed to retrieve recovering state of region "
+            + loc.getRegionInfo().getEncodedName(), e);
       }
 
       onlineRegions.put(loc.getRegionInfo().getEncodedName(), loc);
@@ -1619,7 +1628,6 @@ public class HLogSplitter {
           BlockingInterface remoteSvr = hconn.getAdmin(loc.getServerName());
           HRegionInfo region = loc.getRegionInfo();
           if((region =ProtobufUtil.getRegionInfo(remoteSvr, region.getRegionName())) != null) {
-            loc.getRegionInfo().setRecovering(region.isRecovering());
             return loc;
           }
         } catch (IOException e) {

@@ -985,7 +985,7 @@ MasterServices, Server {
       // In log replay mode, we mark META region as recovering in ZK
       Set<HRegionInfo> regions = new HashSet<HRegionInfo>();
       regions.add(HRegionInfo.FIRST_META_REGIONINFO);
-      this.fileSystemManager.prepareMetaLogReplay(currentMetaServer, regions);
+      this.fileSystemManager.prepareLogReplay(currentMetaServer, regions);
     } else {
       // In recovered.edits mode: create recovered edits file for .META. server
       this.fileSystemManager.splitMetaLog(currentMetaServer);

@@ -1006,10 +1006,10 @@ public class TestDistributedLogSplitting {
     LOG.info("#regions = " + regions.size());
     Set<HRegionInfo> tmpRegions = new HashSet<HRegionInfo>();
     tmpRegions.add(HRegionInfo.FIRST_META_REGIONINFO);
-    master.getMasterFileSystem().prepareMetaLogReplay(hrs.getServerName(), tmpRegions);
-    Set<ServerName> failedServers = new HashSet<ServerName>();
-    failedServers.add(hrs.getServerName());
-    master.getMasterFileSystem().prepareLogReplay(failedServers);
+    master.getMasterFileSystem().prepareLogReplay(hrs.getServerName(), tmpRegions);
+    Set<HRegionInfo> userRegionSet = new HashSet<HRegionInfo>();
+    userRegionSet.addAll(regions);
+    master.getMasterFileSystem().prepareLogReplay(hrs.getServerName(), userRegionSet);
     boolean isMetaRegionInRecovery = false;
     List<String> recoveringRegions =
         zkw.getRecoverableZooKeeper().getChildren(zkw.recoveringRegionsZNode, false);

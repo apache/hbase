@@ -311,6 +311,9 @@ public class HRegion implements HeapSize { // , Writable{
    */
   private boolean disallowWritesInRecovering = false;
 
+  // when a region is in recovering state, it can only accept writes not reads
+  private volatile boolean isRecovering = false;
+
   /**
    * @return The smallest mvcc readPoint across all the scanners in this
    * region. Writes older than this readPoint, are included  in every
@@ -834,14 +837,14 @@ public class HRegion implements HeapSize { // , Writable{
    * @param newState
    */
   public void setRecovering(boolean newState) {
-    this.getRegionInfo().setRecovering(newState);
+    this.isRecovering = newState;
   }
 
   /**
    * @return True if current region is in recovering
    */
   public boolean isRecovering() {
-    return this.getRegionInfo().isRecovering();
+    return this.isRecovering;
   }
 
   /** @return true if region is available (not closed and not closing) */
