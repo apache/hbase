@@ -159,6 +159,17 @@ public class AssignmentManager extends ZooKeeperListener {
 
   private final ExecutorService executorService;
 
+  // For unit tests, keep track of calls to ClosedRegionHandler
+  private Map<HRegionInfo, AtomicBoolean> closedRegionHandlerCalled = 
+      new HashMap<HRegionInfo, AtomicBoolean>();
+
+  // For unit tests, keep track of calls to OpenedRegionHandler
+  private Map<HRegionInfo, AtomicBoolean> openedRegionHandlerCalled = 
+      new HashMap<HRegionInfo, AtomicBoolean>();
+
+  // For unit tests, keep track of calls to SplitRegionHandler
+  private AtomicBoolean splitRegionHandlerCalled = new AtomicBoolean(false);
+
   //Thread pool executor service for timeout monitor
   private java.util.concurrent.ExecutorService threadPoolExecutorService;
 
@@ -836,8 +847,8 @@ public class AssignmentManager extends ZooKeeperListener {
             break;
           }
           // Run handler to do the rest of the SPLIT handling.
-          this.executorService.submit(new SplitRegionHandler(server, this,
-            regionState.getRegion(), sn, daughters));
+          new SplitRegionHandler(server, this, regionState.getRegion(), sn, daughters).process();
+          splitRegionHandlerCalled.set(true);
           break;
 
         case RS_ZK_REGION_MERGING:
@@ -872,8 +883,7 @@ public class AssignmentManager extends ZooKeeperListener {
               + merge_a + ", rs_b=" + merge_b);
           }
           // Run handler to do the rest of the MERGED handling.
-          this.executorService.submit(new MergedRegionHandler(
-            server, this, sn, mergeRegions));
+          new MergedRegionHandler(server, this, sn, mergeRegions).process();
           break;
 
         case M_ZK_REGION_CLOSING:
@@ -907,8 +917,8 @@ public class AssignmentManager extends ZooKeeperListener {
           regionState = regionStates.updateRegionState(rt, RegionState.State.CLOSED);
           if (regionState != null) {
             removeClosedRegion(regionState.getRegion());
-            this.executorService.submit(new ClosedRegionHandler(server,
-              this, regionState.getRegion()));
+            new ClosedRegionHandler(server, this, regionState.getRegion()).process();
+            closedRegionHandlerCalled.put(regionState.getRegion(), new AtomicBoolean(true));
           }
           break;
 
@@ -941,8 +951,7 @@ public class AssignmentManager extends ZooKeeperListener {
               // When there are more than one region server a new RS is selected as the
               // destination and the same is updated in the regionplan. (HBASE-5546)
               getRegionPlan(regionState.getRegion(), sn, true);
-              this.executorService.submit(new ClosedRegionHandler(server,
-                this, regionState.getRegion()));
+              new ClosedRegionHandler(server, this, regionState.getRegion()).process();
             }
           }
           break;
@@ -980,8 +989,9 @@ public class AssignmentManager extends ZooKeeperListener {
           regionState = regionStates.updateRegionState(rt, RegionState.State.OPEN);
           if (regionState != null) {
             failedOpenTracker.remove(encodedName); // reset the count, if any
-            this.executorService.submit(new OpenedRegionHandler(
-              server, this, regionState.getRegion(), sn, expectedVersion));
+            new OpenedRegionHandler(
+              server, this, regionState.getRegion(), sn, expectedVersion).process();
+            openedRegionHandlerCalled.put(regionState.getRegion(), new AtomicBoolean(true));
           }
           break;
 
@@ -991,6 +1001,32 @@ public class AssignmentManager extends ZooKeeperListener {
     } finally {
       lock.unlock();
     }
+  }
+
+  //For unit tests only
+  boolean wasClosedHandlerCalled(HRegionInfo hri) {
+    AtomicBoolean b = closedRegionHandlerCalled.get(hri);
+    //compareAndSet to be sure that unit tests don't see stale values. Means,
+    //we will return true exactly once unless the handler code resets to true
+    //this value.
+    return b == null ? false : b.compareAndSet(true, false);
+  }
+
+  //For unit tests only
+  boolean wasOpenedHandlerCalled(HRegionInfo hri) {
+    AtomicBoolean b = openedRegionHandlerCalled.get(hri);
+    //compareAndSet to be sure that unit tests don't see stale values. Means,
+    //we will return true exactly once unless the handler code resets to true
+    //this value.
+    return b == null ? false : b.compareAndSet(true, false);
+  }
+
+  //For unit tests only
+  boolean wasSplitHandlerCalled() {
+    //compareAndSet to be sure that unit tests don't see stale values. Means,
+    //we will return true exactly once unless the handler code resets to true
+    //this value.
+    return splitRegionHandlerCalled.compareAndSet(true, false);
   }
 
   /**
