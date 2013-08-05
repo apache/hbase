@@ -24,16 +24,11 @@ import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.catalog.MetaReader;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
-import org.apache.hadoop.hbase.executor.EventHandler;
-import org.apache.hadoop.hbase.executor.EventHandler.EventHandlerListener;
-import org.apache.hadoop.hbase.executor.EventType;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 
 import java.io.IOException;
 import java.util.List;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
 
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -86,35 +81,27 @@ public class TestMaster {
         tableRegions.get(0).getFirst().getEndKey());
 
     // Now trigger a split and stop when the split is in progress
-    CountDownLatch split = new CountDownLatch(1);
-    CountDownLatch proceed = new CountDownLatch(1);
-    RegionSplitListener list = new RegionSplitListener(split, proceed);
-    cluster.getMaster().executorService.
-      registerListener(EventType.RS_ZK_REGION_SPLIT, list);
-
     LOG.info("Splitting table");
     TEST_UTIL.getHBaseAdmin().split(TABLENAME);
     LOG.info("Waiting for split result to be about to open");
-    split.await(60, TimeUnit.SECONDS);
-    try {
-      LOG.info("Making sure we can call getTableRegions while opening");
-      tableRegions = MetaReader.getTableRegionsAndLocations(m.getCatalogTracker(),
+    while (!m.assignmentManager.wasSplitHandlerCalled()) {
+      Thread.sleep(100);
+    }
+    LOG.info("Making sure we can call getTableRegions while opening");
+    tableRegions = MetaReader.getTableRegionsAndLocations(m.getCatalogTracker(),
         TABLENAME, false);
 
-      LOG.info("Regions: " + Joiner.on(',').join(tableRegions));
-      // We have three regions because one is split-in-progress
-      assertEquals(3, tableRegions.size());
-      LOG.info("Making sure we can call getTableRegionClosest while opening");
-      Pair<HRegionInfo, ServerName> pair =
+    LOG.info("Regions: " + Joiner.on(',').join(tableRegions));
+    // We have three regions because one is split-in-progress
+    assertEquals(3, tableRegions.size());
+    LOG.info("Making sure we can call getTableRegionClosest while opening");
+    Pair<HRegionInfo, ServerName> pair =
         m.getTableRegionForRow(TABLENAME, Bytes.toBytes("cde"));
-      LOG.info("Result is: " + pair);
-      Pair<HRegionInfo, ServerName> tableRegionFromName =
+    LOG.info("Result is: " + pair);
+    Pair<HRegionInfo, ServerName> tableRegionFromName =
         MetaReader.getRegion(m.getCatalogTracker(),
             pair.getFirst().getRegionName());
-      assertEquals(tableRegionFromName.getFirst(), pair.getFirst());
-    } finally {
-      proceed.countDown();
-    }
+    assertEquals(tableRegionFromName.getFirst(), pair.getFirst());
   }
 
   @Test
@@ -175,33 +162,5 @@ public class TestMaster {
       TEST_UTIL.deleteTable(tableName);
     }
   }
-
-  static class RegionSplitListener implements EventHandlerListener {
-    CountDownLatch split, proceed;
-
-    public RegionSplitListener(CountDownLatch split, CountDownLatch proceed) {
-      this.split = split;
-      this.proceed = proceed;
-    }
-
-    @Override
-    public void afterProcess(EventHandler event) {
-      if (event.getEventType() != EventType.RS_ZK_REGION_SPLIT) {
-        return;
-      }
-      try {
-        split.countDown();
-        proceed.await(60, TimeUnit.SECONDS);
-      } catch (InterruptedException ie) {
-        throw new RuntimeException(ie);
-      }
-      return;
-    }
-
-    @Override
-    public void beforeProcess(EventHandler event) {
-    }
-  }
-
 }
 
