@@ -85,7 +85,9 @@ public class MetaServerShutdownHandler extends ServerShutdownHandler {
         if (this.shouldSplitHlog && this.distributedLogReplay) {
           if (!am.waitOnRegionToClearRegionsInTransition(HRegionInfo.FIRST_META_REGIONINFO,
             regionAssignmentWaitTimeout)) {
-            throw new IOException("Region " + HRegionInfo.FIRST_META_REGIONINFO.getEncodedName()
+            // Wait here is to avoid log replay hits current dead server and incur a RPC timeout
+            // when replay happens before region assignment completes.
+            LOG.warn("Region " + HRegionInfo.FIRST_META_REGIONINFO.getEncodedName()
                 + " didn't complete assignment in time");
           }
           this.services.getMasterFileSystem().splitMetaLog(serverName);

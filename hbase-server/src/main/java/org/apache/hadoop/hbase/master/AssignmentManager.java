@@ -2776,11 +2776,10 @@ public class AssignmentManager extends ZooKeeperListener {
    * @param hri
    * @param timeOut Milliseconds to wait for current region to be out of transition state.
    * @return True when a region clears regions-in-transition before timeout otherwise false
-   * @throws IOException
    * @throws InterruptedException
    */
   public boolean waitOnRegionToClearRegionsInTransition(final HRegionInfo hri, long timeOut)
-      throws IOException, InterruptedException {
+      throws InterruptedException {
     if (!regionStates.isRegionInTransition(hri)) return true;
     RegionState rs = null;
     long end = (timeOut <= 0) ? Long.MAX_VALUE : EnvironmentEdgeManager.currentTimeMillis()
