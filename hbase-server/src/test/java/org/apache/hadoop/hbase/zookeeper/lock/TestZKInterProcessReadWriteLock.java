@@ -169,7 +169,7 @@ public class TestZKInterProcessReadWriteLock {
     MultithreadedTestUtil.assertOnFutures(results);
   }
 
-  @Test(timeout = 3000)
+  @Test(timeout = 30000)
   public void testReadLockExcludesWriters() throws Exception {
     // Submit a read lock request first
     // Submit a write lock request second
