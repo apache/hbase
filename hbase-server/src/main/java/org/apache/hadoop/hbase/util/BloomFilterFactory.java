@@ -197,35 +197,12 @@ public final class BloomFilterFactory {
         MAX_ALLOWED_FOLD_FACTOR);
 
     // Do we support compound bloom filters?
-    if (HFile.getFormatVersion(conf) > HFile.MIN_FORMAT_VERSION) {
-      // In case of compound Bloom filters we ignore the maxKeys hint.
-      CompoundBloomFilterWriter bloomWriter = new CompoundBloomFilterWriter(
-          getBloomBlockSize(conf), err, Hash.getHashType(conf), maxFold,
-          cacheConf.shouldCacheBloomsOnWrite(), bloomType == BloomType.ROWCOL
-              ? KeyValue.KEY_COMPARATOR : Bytes.BYTES_RAWCOMPARATOR);
-      writer.addInlineBlockWriter(bloomWriter);
-      return bloomWriter;
-    } else {
-      // A single-block Bloom filter. Only used when testing HFile format
-      // version 1.
-      int tooBig = conf.getInt(IO_STOREFILE_BLOOM_MAX_KEYS,
-          128 * 1000 * 1000);
-
-      if (maxKeys <= 0) {
-        LOG.warn("Invalid maximum number of keys specified: " + maxKeys
-            + ", not using Bloom filter");
-        return null;
-      } else if (maxKeys < tooBig) {
-        BloomFilterWriter bloom = new ByteBloomFilter((int) maxKeys, err,
-            Hash.getHashType(conf), maxFold);
-        bloom.allocBloom();
-        return bloom;
-      } else {
-        LOG.debug("Skipping bloom filter because max keysize too large: "
-            + maxKeys);
-      }
-    }
-    return null;
+    // In case of compound Bloom filters we ignore the maxKeys hint.
+    CompoundBloomFilterWriter bloomWriter = new CompoundBloomFilterWriter(getBloomBlockSize(conf),
+        err, Hash.getHashType(conf), maxFold, cacheConf.shouldCacheBloomsOnWrite(),
+        bloomType == BloomType.ROWCOL ? KeyValue.KEY_COMPARATOR : Bytes.BYTES_RAWCOMPARATOR);
+    writer.addInlineBlockWriter(bloomWriter);
+    return bloomWriter;
   }
 
   /**
@@ -250,18 +227,12 @@ public final class BloomFilterFactory {
 
     float err = getErrorRate(conf);
 
-    if (HFile.getFormatVersion(conf) > HFile.MIN_FORMAT_VERSION) {
-      int maxFold = getMaxFold(conf);
-      // In case of compound Bloom filters we ignore the maxKeys hint.
-      CompoundBloomFilterWriter bloomWriter = new CompoundBloomFilterWriter(
-          getBloomBlockSize(conf), err, Hash.getHashType(conf),
-          maxFold,
-          cacheConf.shouldCacheBloomsOnWrite(), Bytes.BYTES_RAWCOMPARATOR);
-      writer.addInlineBlockWriter(bloomWriter);
-      return bloomWriter;
-    } else {
-      LOG.info("Delete Family Bloom filter is not supported in HFile V1");
-      return null;
-    }
+    int maxFold = getMaxFold(conf);
+    // In case of compound Bloom filters we ignore the maxKeys hint.
+    CompoundBloomFilterWriter bloomWriter = new CompoundBloomFilterWriter(getBloomBlockSize(conf),
+        err, Hash.getHashType(conf), maxFold, cacheConf.shouldCacheBloomsOnWrite(),
+        Bytes.BYTES_RAWCOMPARATOR);
+    writer.addInlineBlockWriter(bloomWriter);
+    return bloomWriter;
   }
 };

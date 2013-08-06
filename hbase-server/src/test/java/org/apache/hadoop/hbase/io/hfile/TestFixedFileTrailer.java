@@ -50,8 +50,11 @@ public class TestFixedFileTrailer {
 
   private static final Log LOG = LogFactory.getLog(TestFixedFileTrailer.class);
 
-  /** The number of used fields by version. Indexed by version minus one. */
-  private static final int[] NUM_FIELDS_BY_VERSION = new int[] { 9, 14 };
+  /**
+   * The number of used fields by version. Indexed by version minus two. 
+   * Min version that we support is V2
+   */
+  private static final int[] NUM_FIELDS_BY_VERSION = new int[] { 14 };
 
   private HBaseTestingUtility util = new HBaseTestingUtility();
   private FileSystem fs;
@@ -87,17 +90,11 @@ public class TestFixedFileTrailer {
     t.setDataIndexCount(3);
     t.setEntryCount(((long) Integer.MAX_VALUE) + 1);
 
-    if (version == 1) {
-      t.setFileInfoOffset(876);
-    }
-
-    if (version == 2) {
-      t.setLastDataBlockOffset(291);
-      t.setNumDataIndexLevels(3);
-      t.setComparatorClass(KeyValue.KEY_COMPARATOR.getClass());
-      t.setFirstDataBlockOffset(9081723123L); // Completely unrealistic.
-      t.setUncompressedDataIndexSize(827398717L); // Something random.
-    }
+    t.setLastDataBlockOffset(291);
+    t.setNumDataIndexLevels(3);
+    t.setComparatorClass(KeyValue.KEY_COMPARATOR.getClass());
+    t.setFirstDataBlockOffset(9081723123L); // Completely unrealistic.
+    t.setUncompressedDataIndexSize(827398717L); // Something random.
 
     t.setLoadOnOpenOffset(128);
     t.setMetaIndexCount(7);
@@ -162,7 +159,7 @@ public class TestFixedFileTrailer {
 
     String trailerStr = t.toString();
     assertEquals("Invalid number of fields in the string representation "
-        + "of the trailer: " + trailerStr, NUM_FIELDS_BY_VERSION[version - 1],
+        + "of the trailer: " + trailerStr, NUM_FIELDS_BY_VERSION[version - 2],
         trailerStr.split(", ").length);
     assertEquals(trailerStr, t4.toString());
   }
