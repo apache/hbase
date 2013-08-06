@@ -288,7 +288,9 @@ public class RollingRestart {
           region.getRegionNameAsString().contains(",,")) {
         continue;
       }
-      moveRegion(region);
+      if (!moveRegion(region)) {
+        throw new IOException("Failed to move region " + region.getRegionNameAsString() + ". Aborting");
+      }
       Thread.sleep(this.regionDrainInterval);
     }
   }
@@ -302,7 +304,9 @@ public class RollingRestart {
           region.getRegionNameAsString().contains(",,")) {
         continue;
       }
-      moveRegion(region);
+      if (!moveRegion(region)) {
+        throw new IOException("Failed to move region " + region.getRegionNameAsString() + ". Aborting");
+      }
       Thread.sleep(this.regionUndrainInterval);
     }
   }

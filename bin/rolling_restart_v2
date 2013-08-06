@@ -152,6 +152,7 @@ if (hosts != null) {
       HServerInfo host = 
         admin.getConnection().getHRegionConnection(serverAddr).getHServerInfo();
       restartRegionServer(admin, host, conf, rollingRestartArgs, logsFolder, verifyRSRestart);
+      println "\nRolling Restart for "+ serverAddr + " succeeded.";
     } catch (Exception e) {
       e.printStackTrace();
       println "\nERROR: "+ server + " Failed.";
@@ -163,6 +164,7 @@ if (hosts != null) {
   for (host in admin.getClusterStatus().getServerInfo()) { 
     try {
       restartRegionServer(admin, host, conf, rollingRestartArgs, logsFolder, verifyRSRestart);
+      println "\nRolling Restart for "+ host + " succeeded.";
     } catch (Exception e) {
       e.printStackTrace();
       println "\nERROR: "+ host + " Failed.";
