@@ -214,11 +214,11 @@ public class Histogram {
           synchronized (underloadSampleList) {
             if (underload) {
               for (double val : underloadSampleList) {
-                Bucket bucket = buckets.get(this.getBucketIndex(value));
+                Bucket bucket = buckets.get(this.getBucketIndex(val));
                 bucket.addValue(val);
               }
             }
-            underload  = false;
+            underload = false;
           }
         }
         Bucket bucket = buckets.get(this.getBucketIndex(value));
@@ -288,7 +288,6 @@ public class Histogram {
       if (count > this.count) {
         throw new IllegalArgumentException();
       }
-      if (count == 0) return this.endValue;
       double gap = this.maxValue - this.minValue;
       double ret = this.minValue + gap * count / this.count;
       return ret;

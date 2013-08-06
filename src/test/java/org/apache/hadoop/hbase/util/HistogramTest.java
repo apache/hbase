@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.util;
 
+import org.apache.hadoop.hbase.regionserver.metrics.PercentileMetric;
 import org.junit.Test;
 
 import junit.framework.TestCase;
@@ -91,5 +92,21 @@ public class HistogramTest extends TestCase{
     assertTrue(prcntyl >= 9 && prcntyl <= 10);
     prcntyl = hist.getPercentileEstimate(0.0);
     assertTrue(prcntyl >= 1 && prcntyl <= 2);
+  }
+
+  /**
+   * This failure scenario was identified when a histogram has 100 entries and
+   * the last bucket gets 1 elements, p99 gives a Double.MaxValue because
+   * of a bug. This case fails before the fix.
+   */
+  public void testLargeP99ErrorCase() {
+    Histogram hist = new Histogram(100, 0.0, 100.0);
+    double d;
+    for (d = 0.5; d <= 101; d += 1.0) {
+      hist.addValue(d);
+    }
+    Double prcntyl = PercentileMetric.P99;
+    Double actualValue = hist.getPercentileEstimate(prcntyl);
+    assertTrue(actualValue <= d);
   }
 }
