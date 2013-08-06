@@ -91,10 +91,6 @@ public class TestCompaction extends HBaseClusterTestCase {
 
   @Override
   public void setUp() throws Exception {
-    this.cluster = new MiniDFSCluster(conf, 2, true, (String[])null);
-    // Make the hbase rootdir match the minidfs we just span up
-    this.conf.set(HConstants.HBASE_DIR,
-      this.cluster.getFileSystem().getHomeDirectory().toString());
     super.setUp();
     this.htd = createTableDescriptor(getName());
     this.r = createNewHRegion(htd, null, null);
