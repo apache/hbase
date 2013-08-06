@@ -139,7 +139,7 @@ public class TestMergeTool extends HBaseTestCase {
     try {
       // Create meta region
       createMetaRegion();
-      FSTableDescriptors.createTableDescriptor(this.fs, this.testDir, this.desc);
+      new FSTableDescriptors(this.fs, this.testDir).createTableDescriptor(this.desc);
       /*
        * Create the regions we will merge
        */

@@ -873,7 +873,7 @@ public abstract class FSUtils {
   }
 
   /**
-   * Checks if root region exists
+   * Checks if meta region exists
    *
    * @param fs file system
    * @param rootdir root directory of HBase installation
@@ -883,9 +883,9 @@ public abstract class FSUtils {
   @SuppressWarnings("deprecation")
   public static boolean metaRegionExists(FileSystem fs, Path rootdir)
   throws IOException {
-    Path rootRegionDir =
+    Path metaRegionDir =
       HRegion.getRegionDir(rootdir, HRegionInfo.FIRST_META_REGIONINFO);
-    return fs.exists(rootRegionDir);
+    return fs.exists(metaRegionDir);
   }
 
   /**

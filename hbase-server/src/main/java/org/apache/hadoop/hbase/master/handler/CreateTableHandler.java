@@ -202,8 +202,9 @@ public class CreateTableHandler extends EventHandler {
     FileSystem fs = fileSystemManager.getFileSystem();
 
     // 1. Create Table Descriptor
-    FSTableDescriptors.createTableDescriptor(fs, tempdir, this.hTableDescriptor);
     Path tempTableDir = new Path(tempdir, tableName);
+    new FSTableDescriptors(this.conf).createTableDescriptorForTableDirectory(
+      tempTableDir, this.hTableDescriptor, false);
     Path tableDir = new Path(fileSystemManager.getRootDir(), tableName);
 
     // 2. Create Regions

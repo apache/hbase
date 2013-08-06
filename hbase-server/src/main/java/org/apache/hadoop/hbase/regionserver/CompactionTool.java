@@ -51,7 +51,6 @@ import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.NullOutputFormat;
 
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HDFSBlocksDistribution;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -113,12 +112,12 @@ public class CompactionTool extends Configured implements Tool {
       if (isFamilyDir(fs, path)) {
         Path regionDir = path.getParent();
         Path tableDir = regionDir.getParent();
-        HTableDescriptor htd = FSTableDescriptors.getTableDescriptor(fs, tableDir);
+        HTableDescriptor htd = FSTableDescriptors.getTableDescriptorFromFs(fs, tableDir);
         HRegionInfo hri = HRegionFileSystem.loadRegionInfoFileContent(fs, regionDir);
         compactStoreFiles(tableDir, htd, hri, path.getName(), compactOnce, major);
       } else if (isRegionDir(fs, path)) {
         Path tableDir = path.getParent();
-        HTableDescriptor htd = FSTableDescriptors.getTableDescriptor(fs, tableDir);
+        HTableDescriptor htd = FSTableDescriptors.getTableDescriptorFromFs(fs, tableDir);
         compactRegion(tableDir, htd, path, compactOnce, major);
       } else if (isTableDir(fs, path)) {
         compactTable(path, compactOnce, major);
@@ -130,7 +129,7 @@ public class CompactionTool extends Configured implements Tool {
 
     private void compactTable(final Path tableDir, final boolean compactOnce, final boolean major)
         throws IOException {
-      HTableDescriptor htd = FSTableDescriptors.getTableDescriptor(fs, tableDir);
+      HTableDescriptor htd = FSTableDescriptors.getTableDescriptorFromFs(fs, tableDir);
       for (Path regionDir: FSUtils.getRegionDirs(fs, tableDir)) {
         compactRegion(tableDir, htd, regionDir, compactOnce, major);
       }

@@ -1099,8 +1099,6 @@ public class TestHBaseFsck {
       MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
       assertTrue(cluster.waitForActiveAndReadyMaster());
 
-      FileSystem filesystem = FileSystem.get(conf);
-      Path rootdir = FSUtils.getRootDir(conf);
 
       byte[][] SPLIT_KEYS = new byte[][] { new byte[0], Bytes.toBytes("aaa"),
           Bytes.toBytes("bbb"), Bytes.toBytes("ccc"), Bytes.toBytes("ddd") };
@@ -1108,8 +1106,8 @@ public class TestHBaseFsck {
       htdDisabled.addFamily(new HColumnDescriptor(FAM));
 
       // Write the .tableinfo
-      FSTableDescriptors
-          .createTableDescriptor(filesystem, rootdir, htdDisabled);
+      FSTableDescriptors fstd = new FSTableDescriptors(conf);
+      fstd.createTableDescriptor(htdDisabled);
       List<HRegionInfo> disabledRegions = TEST_UTIL.createMultiRegionsInMeta(
           TEST_UTIL.getConfiguration(), htdDisabled, SPLIT_KEYS);
 

@@ -667,7 +667,8 @@ public class SnapshotManager implements Stoppable {
 
     // read snapshot information
     SnapshotDescription fsSnapshot = SnapshotDescriptionUtils.readSnapshotInfo(fs, snapshotDir);
-    HTableDescriptor snapshotTableDesc = FSTableDescriptors.getTableDescriptor(fs, snapshotDir);
+    HTableDescriptor snapshotTableDesc =
+        FSTableDescriptors.getTableDescriptorFromFs(fs, snapshotDir);
     String tableName = reqSnapshot.getTable();
 
     // stop tracking "abandoned" handlers
