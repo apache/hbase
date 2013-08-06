@@ -28,8 +28,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 
 /**
  * Basic Cell codec that just writes out all the individual elements of a Cell.  Uses ints
- * delimiting all lengths. Profligate. Needs tune up.  Does not write the mvcc stamp.
- * Use a different codec if you want that in the stream.
+ * delimiting all lengths. Profligate. Needs tune up. 
  */
 public class CellCodec implements Codec {
   static class CellEncoder extends BaseEncoder {
@@ -52,6 +51,8 @@ public class CellCodec implements Codec {
       this.out.write(cell.getTypeByte());
       // Value
       write(cell.getValueArray(), cell.getValueOffset(), cell.getValueLength());
+      // MvccVersion
+      this.out.write(Bytes.toBytes(cell.getMvccVersion()));
     }
 
     /**
@@ -82,7 +83,11 @@ public class CellCodec implements Codec {
       long timestamp = Bytes.toLong(longArray);
       byte type = (byte) this.in.read();
       byte [] value = readByteArray(in);
-      return CellUtil.createCell(row, family, qualifier, timestamp, type, value);
+      // Read memstore version
+      byte[] memstoreTSArray = new byte[Bytes.SIZEOF_LONG];
+      IOUtils.readFully(this.in, memstoreTSArray);
+      long memstoreTS = Bytes.toLong(memstoreTSArray);
+      return CellUtil.createCell(row, family, qualifier, timestamp, type, value, memstoreTS);
     }
 
     /**

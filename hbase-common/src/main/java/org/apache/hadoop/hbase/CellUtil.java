@@ -128,6 +128,17 @@ public final class CellUtil {
     return new KeyValue(row, family, qualifier, timestamp,
       KeyValue.Type.codeToType(type), value);
   }
+  
+  public static Cell createCell(final byte[] row, final byte[] family, final byte[] qualifier,
+      final long timestamp, final byte type, final byte[] value, final long memstoreTS) {
+    // I need a Cell Factory here. Using KeyValue for now. TODO.
+    // TODO: Make a new Cell implementation that just carries these
+    // byte arrays.
+    KeyValue keyValue = new KeyValue(row, family, qualifier, timestamp,
+        KeyValue.Type.codeToType(type), value);
+    keyValue.setMvccVersion(memstoreTS);
+    return keyValue;
+  }
 
   /**
    * @param cellScannerables
