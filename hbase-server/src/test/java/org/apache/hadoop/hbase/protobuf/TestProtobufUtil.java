@@ -299,7 +299,6 @@ public class TestProtobufUtil {
     scanBuilder = ClientProtos.Scan.newBuilder(proto);
     scanBuilder.setMaxVersions(1);
     scanBuilder.setCacheBlocks(true);
-    scanBuilder.setPrefetching(true);
 
     Scan scan = ProtobufUtil.toScan(proto);
     assertEquals(scanBuilder.build(), ProtobufUtil.toScan(scan));
