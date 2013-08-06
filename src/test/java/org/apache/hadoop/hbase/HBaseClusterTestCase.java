@@ -19,15 +19,8 @@
  */
 package org.apache.hadoop.hbase;
 
-import java.io.File;
-import java.io.IOException;
-import java.io.PrintWriter;
-import java.util.Random;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.util.FSUtils;
@@ -35,6 +28,9 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.junit.After;
 import org.junit.Before;
+
+import java.io.File;
+import java.io.PrintWriter;
 
 /**
  * Abstract base class for HBase cluster junit tests.  Spins up an hbase
@@ -126,27 +122,21 @@ public abstract class HBaseClusterTestCase extends HBaseTestCase {
   protected void setUp() throws Exception {
     try {
       if (this.startDfs) {
-        // This spews a bunch of warnings about missing scheme.
-        try {
-          this.dfsCluster = new HBaseTestingUtility().startMiniDFSCluster(2);
-        } catch (Exception e) {
-          LOG.error("Failed to restart the MiniDFSCluster ", e);
+        // Start the mini HDFS cluster
+        this.dfsCluster = new HBaseTestingUtility().startMiniDFSCluster(2);
 
+        // Set the filesystem
+        this.fs = dfsCluster.getFileSystem();
+        conf.set("fs.defaultFS", fs.getUri().toString());
 
-        }
-        // mangle the conf so that the fs parameter points to the minidfs we
-        // just started up
-        FileSystem filesystem = dfsCluster.getFileSystem();
-        conf.set("fs.defaultFS", filesystem.getUri().toString());
-        Path parentdir = filesystem.getHomeDirectory();
-        conf.set(HConstants.HBASE_DIR, parentdir.toString());
-        filesystem.mkdirs(parentdir);
-        FSUtils.setVersion(filesystem, parentdir);
+        // Set the testDir
+        this.testDir= fs.getHomeDirectory();
+        conf.set(HConstants.HBASE_DIR, testDir.toString());
+        fs.mkdirs(testDir);
+        FSUtils.setVersion(fs, testDir);
       }
 
-      // do the super setup now. if we had done it first, then we would have
-      // gotten our conf all mangled and a local fs started up.
-      super.setUp();
+      // super.setup(); The current class has already reset the fs and testDir.
 
       // run the pre-cluster setup
       preHBaseClusterSetup();
@@ -179,7 +169,7 @@ public abstract class HBaseClusterTestCase extends HBaseTestCase {
         // open the META table now to ensure cluster is running before shutdown.
         new HTable(conf, HConstants.META_TABLE_NAME);
       }
-      super.tearDown();
+
       HConnectionManager.deleteConnectionInfo(conf, true);
     } catch (Exception e) {
       LOG.error("Unexpected exception during shutdown ", e);
