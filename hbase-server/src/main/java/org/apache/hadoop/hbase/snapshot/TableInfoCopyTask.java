@@ -26,7 +26,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.errorhandling.ForeignExceptionDispatcher;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
-import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
 
 /**
@@ -61,12 +60,14 @@ public class TableInfoCopyTask extends SnapshotTask {
     LOG.debug("Attempting to copy table info for snapshot:"
         + ClientSnapshotDescriptionUtils.toString(this.snapshot));
     // get the HTable descriptor
-    HTableDescriptor orig = FSTableDescriptors.getTableDescriptor(fs, rootDir,
-      Bytes.toBytes(this.snapshot.getTable()));
+
+    HTableDescriptor orig = FSTableDescriptors.getTableDescriptorFromFs(fs, rootDir,
+      this.snapshot.getTable());
     this.rethrowException();
     // write a copy of descriptor to the snapshot directory
     Path snapshotDir = SnapshotDescriptionUtils.getWorkingSnapshotDir(snapshot, rootDir);
-    FSTableDescriptors.createTableDescriptorForTableDirectory(fs, snapshotDir, orig, false);
+    new FSTableDescriptors(fs, rootDir)
+      .createTableDescriptorForTableDirectory(snapshotDir, orig, false);
     LOG.debug("Finished copying tableinfo.");
     return null;
   }

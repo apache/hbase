@@ -359,9 +359,10 @@ public class TestFlushSnapshotFromClient {
     assertTrue(fs.exists(snapshotinfo));
 
     // check the table info
-    HTableDescriptor desc = FSTableDescriptors.getTableDescriptor(fs, rootDir, TABLE_NAME);
-    HTableDescriptor snapshotDesc = FSTableDescriptors.getTableDescriptor(fs,
-      SnapshotDescriptionUtils.getSnapshotsDir(rootDir), Bytes.toBytes(snapshotName));
+    HTableDescriptor desc = FSTableDescriptors.getTableDescriptorFromFs(fs,
+        rootDir,STRING_TABLE_NAME);
+    HTableDescriptor snapshotDesc = FSTableDescriptors.getTableDescriptorFromFs(fs,
+      SnapshotDescriptionUtils.getSnapshotsDir(rootDir), snapshotName);
     assertEquals(desc, snapshotDesc);
 
     // check the region snapshot for all the regions

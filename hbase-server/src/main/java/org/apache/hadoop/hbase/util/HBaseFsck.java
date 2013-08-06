@@ -804,7 +804,7 @@ public class HBaseFsck extends Configured implements Tool {
         tablesInfo.put(tableName, modTInfo);
         try {
           HTableDescriptor htd =
-              FSTableDescriptors.getTableDescriptor(hbaseRoot.getFileSystem(getConf()),
+              FSTableDescriptors.getTableDescriptorFromFs(hbaseRoot.getFileSystem(getConf()),
               hbaseRoot, tableName);
           modTInfo.htds.add(htd);
         } catch (IOException ioe) {
@@ -849,16 +849,16 @@ public class HBaseFsck extends Configured implements Tool {
    * 1. the correct tablename <br>
    * 2. the correct colfamily list<br>
    * 3. the default properties for both {@link HTableDescriptor} and {@link HColumnDescriptor}<br>
-   * @param tableName
    * @throws IOException
    */
-  private boolean fabricateTableInfo(String tableName, Set<String> columns) throws IOException {
+  private boolean fabricateTableInfo(FSTableDescriptors fstd, String tableName,
+      Set<String> columns) throws IOException {
     if (columns ==null || columns.isEmpty()) return false;
     HTableDescriptor htd = new HTableDescriptor(tableName);
     for (String columnfamimly : columns) {
       htd.addFamily(new HColumnDescriptor(columnfamimly));
     }
-    FSTableDescriptors.createTableDescriptor(htd, getConf(), true);
+    fstd.createTableDescriptor(htd, true);
     return true;
   }
 
@@ -889,13 +889,13 @@ public class HBaseFsck extends Configured implements Tool {
   public void fixOrphanTables() throws IOException {
     if (shouldFixTableOrphans() && !orphanTableDirs.isEmpty()) {
 
-      Path hbaseRoot = FSUtils.getRootDir(getConf());
       List<String> tmpList = new ArrayList<String>();
       tmpList.addAll(orphanTableDirs.keySet());
       HTableDescriptor[] htds = getHTableDescriptors(tmpList);
       Iterator<Entry<String, Set<String>>> iter = orphanTableDirs.entrySet().iterator();
       int j = 0;
       int numFailedCase = 0;
+      FSTableDescriptors fstd = new FSTableDescriptors(getConf());
       while (iter.hasNext()) {
         Entry<String, Set<String>> entry = (Entry<String, Set<String>>) iter.next();
         String tableName = entry.getKey();
@@ -904,13 +904,12 @@ public class HBaseFsck extends Configured implements Tool {
           if (tableName.equals(Bytes.toString(htds[j].getName()))) {
             HTableDescriptor htd = htds[j];
             LOG.info("fixing orphan table: " + tableName + " from cache");
-            FSTableDescriptors.createTableDescriptor(
-                hbaseRoot.getFileSystem(getConf()), hbaseRoot, htd, true);
+            fstd.createTableDescriptor(htd, true);
             j++;
             iter.remove();
           }
         } else {
-          if (fabricateTableInfo(tableName, entry.getValue())) {
+          if (fabricateTableInfo(fstd, tableName, entry.getValue())) {
             LOG.warn("fixing orphan table: " + tableName + " with a default .tableinfo file");
             LOG.warn("Strongly recommend to modify the HTableDescriptor if necessary for: " + tableName);
             iter.remove();

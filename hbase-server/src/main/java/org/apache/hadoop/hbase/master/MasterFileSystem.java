@@ -452,10 +452,14 @@ public class MasterFileSystem {
     // Make sure the meta region directory exists!
     if (!FSUtils.metaRegionExists(fs, rd)) {
       bootstrap(rd, c);
+    } else {
+      // Migrate table descriptor files if necessary
+      org.apache.hadoop.hbase.util.FSTableDescriptorMigrationToSubdir
+        .migrateFSTableDescriptorsIfNecessary(fs, rd);
     }
-
+      
     // Create tableinfo-s for META if not already there.
-    FSTableDescriptors.createTableDescriptor(fs, rd, HTableDescriptor.META_TABLEDESC, false);
+    new FSTableDescriptors(fs, rd).createTableDescriptor(HTableDescriptor.META_TABLEDESC);
 
     return rd;
   }
@@ -491,7 +495,7 @@ public class MasterFileSystem {
     LOG.info("BOOTSTRAP: creating META region");
     try {
       // Bootstrapping, make sure blockcache is off.  Else, one will be
-      // created here in bootstap and it'll need to be cleaned up.  Better to
+      // created here in bootstrap and it'll need to be cleaned up.  Better to
       // not make it in first place.  Turn off block caching for bootstrap.
       // Enable after.
       HRegionInfo metaHRI = new HRegionInfo(HRegionInfo.FIRST_META_REGIONINFO);
@@ -587,16 +591,6 @@ public class MasterFileSystem {
     if (splitLogManager != null) {
       this.splitLogManager.stop();
     }
-  }
-
-  /**
-   * Create new HTableDescriptor in HDFS.
-   *
-   * @param htableDescriptor
-   */
-  public void createTableDescriptor(HTableDescriptor htableDescriptor)
-      throws IOException {
-    FSTableDescriptors.createTableDescriptor(htableDescriptor, conf);
   }
 
   /**

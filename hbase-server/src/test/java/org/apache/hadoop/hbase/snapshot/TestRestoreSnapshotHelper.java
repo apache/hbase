@@ -126,7 +126,7 @@ public class TestRestoreSnapshotHelper {
     LOG.debug("pre-restore table=" + htdClone.getNameAsString() + " snapshot=" + snapshotDir);
     FSUtils.logFileSystemState(fs, rootDir, LOG);
 
-    FSTableDescriptors.createTableDescriptor(htdClone, conf);
+    new FSTableDescriptors(conf).createTableDescriptor(htdClone);
     RestoreSnapshotHelper helper = getRestoreHelper(rootDir, snapshotDir, sourceTableName, htdClone);
     helper.restoreHdfsRegions();
 

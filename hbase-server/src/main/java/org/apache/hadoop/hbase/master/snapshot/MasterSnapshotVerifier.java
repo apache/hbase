@@ -131,7 +131,7 @@ public final class MasterSnapshotVerifier {
    * @param snapshotDir snapshot directory to check
    */
   private void verifyTableInfo(Path snapshotDir) throws IOException {
-    FSTableDescriptors.getTableDescriptor(fs, snapshotDir);
+    FSTableDescriptors.getTableDescriptorFromFs(fs, snapshotDir);
   }
 
   /**

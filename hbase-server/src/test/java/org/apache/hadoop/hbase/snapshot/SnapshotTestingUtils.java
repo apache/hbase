@@ -193,9 +193,9 @@ public class SnapshotTestingUtils {
               HConstants.HREGION_LOGDIR_NAME));
     }
     // check the table info
-    HTableDescriptor desc = FSTableDescriptors.getTableDescriptor(fs, rootDir,
-        tableName);
-    HTableDescriptor snapshotDesc = FSTableDescriptors.getTableDescriptor(fs,
+    HTableDescriptor desc = FSTableDescriptors.getTableDescriptorFromFs(fs, rootDir,
+        Bytes.toString(tableName));
+    HTableDescriptor snapshotDesc = FSTableDescriptors.getTableDescriptorFromFs(fs,
         snapshotDir);
     assertEquals(desc, snapshotDesc);
 

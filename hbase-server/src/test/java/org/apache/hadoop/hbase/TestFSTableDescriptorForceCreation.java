@@ -39,10 +39,10 @@ public class TestFSTableDescriptorForceCreation {
     final String name = "newTable2";
     FileSystem fs = FileSystem.get(UTIL.getConfiguration());
     Path rootdir = new Path(UTIL.getDataTestDir(), name);
+    FSTableDescriptors fstd = new FSTableDescriptors(fs, rootdir);
     HTableDescriptor htd = new HTableDescriptor(name);
 
-    assertTrue("Should create new table descriptor",
-      FSTableDescriptors.createTableDescriptor(fs, rootdir, htd, false));
+    assertTrue("Should create new table descriptor", fstd.createTableDescriptor(htd, false));
   }
 
   @Test
@@ -50,13 +50,12 @@ public class TestFSTableDescriptorForceCreation {
       throws IOException {
     final String name = "testAlreadyExists";
     FileSystem fs = FileSystem.get(UTIL.getConfiguration());
-    // Cleanup old tests if any detrius laying around.
+    // Cleanup old tests if any detritus laying around.
     Path rootdir = new Path(UTIL.getDataTestDir(), name);
-    TableDescriptors htds = new FSTableDescriptors(fs, rootdir);
+    FSTableDescriptors fstd = new FSTableDescriptors(fs, rootdir);
     HTableDescriptor htd = new HTableDescriptor(name);
-    htds.add(htd);
-    assertFalse("Should not create new table descriptor",
-      FSTableDescriptors.createTableDescriptor(fs, rootdir, htd, false));
+    fstd.add(htd);
+    assertFalse("Should not create new table descriptor", fstd.createTableDescriptor(htd, false));
   }
 
   @Test
@@ -65,10 +64,11 @@ public class TestFSTableDescriptorForceCreation {
     final String name = "createNewTableNew2";
     FileSystem fs = FileSystem.get(UTIL.getConfiguration());
     Path rootdir = new Path(UTIL.getDataTestDir(), name);
+    FSTableDescriptors fstd = new FSTableDescriptors(fs, rootdir);
     HTableDescriptor htd = new HTableDescriptor(name);
-    FSTableDescriptors.createTableDescriptor(fs, rootdir, htd, false);
+    fstd.createTableDescriptor(htd, false);
     assertTrue("Should create new table descriptor",
-      FSTableDescriptors.createTableDescriptor(fs, rootdir, htd, true));
+        fstd.createTableDescriptor(htd, true));
   }
 
 }

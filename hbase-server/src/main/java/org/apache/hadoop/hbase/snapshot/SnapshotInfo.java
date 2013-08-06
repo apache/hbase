@@ -317,7 +317,7 @@ public final class SnapshotInfo extends Configured implements Tool {
     }
 
     snapshotDesc = SnapshotDescriptionUtils.readSnapshotInfo(fs, snapshotDir);
-    snapshotTableDesc = FSTableDescriptors.getTableDescriptor(fs, snapshotDir);
+    snapshotTableDesc = FSTableDescriptors.getTableDescriptorFromFs(fs, snapshotDir);
     return true;
   }
 
