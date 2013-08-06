@@ -241,29 +241,17 @@ public class FixedFileTrailer {
     output.writeLong(loadOnOpenDataOffset);
     output.writeInt(dataIndexCount);
 
-    if (majorVersion == 1) {
-      // This used to be metaIndexOffset, but it was not used in version 1.
-      output.writeLong(0);
-    } else {
-      output.writeLong(uncompressedDataIndexSize);
-    }
+    output.writeLong(uncompressedDataIndexSize);
 
     output.writeInt(metaIndexCount);
     output.writeLong(totalUncompressedBytes);
-    if (majorVersion == 1) {
-      output.writeInt((int) Math.min(Integer.MAX_VALUE, entryCount));
-    } else {
-      // This field is long from version 2 onwards.
-      output.writeLong(entryCount);
-    }
+    output.writeLong(entryCount);
     output.writeInt(compressionCodec.ordinal());
 
-    if (majorVersion > 1) {
-      output.writeInt(numDataIndexLevels);
-      output.writeLong(firstDataBlockOffset);
-      output.writeLong(lastDataBlockOffset);
-      Bytes.writeStringFixedSize(output, comparatorClassName, MAX_COMPARATOR_NAME_LENGTH);
-    }
+    output.writeInt(numDataIndexLevels);
+    output.writeLong(firstDataBlockOffset);
+    output.writeLong(lastDataBlockOffset);
+    Bytes.writeStringFixedSize(output, comparatorClassName, MAX_COMPARATOR_NAME_LENGTH);
   }
 
   /**
@@ -354,23 +342,17 @@ public class FixedFileTrailer {
     fileInfoOffset = input.readLong();
     loadOnOpenDataOffset = input.readLong();
     dataIndexCount = input.readInt();
-    if (majorVersion == 1) {
-      input.readLong(); // Read and skip metaIndexOffset.
-    } else {
-      uncompressedDataIndexSize = input.readLong();
-    }
+    uncompressedDataIndexSize = input.readLong();
     metaIndexCount = input.readInt();
 
     totalUncompressedBytes = input.readLong();
-    entryCount = majorVersion == 1 ? input.readInt() : input.readLong();
+    entryCount = input.readLong();
     compressionCodec = Compression.Algorithm.values()[input.readInt()];
-    if (majorVersion > 1) {
-      numDataIndexLevels = input.readInt();
-      firstDataBlockOffset = input.readLong();
-      lastDataBlockOffset = input.readLong();
-      setComparatorClass(getComparatorClass(Bytes.readStringFixedSize(input,
+    numDataIndexLevels = input.readInt();
+    firstDataBlockOffset = input.readLong();
+    lastDataBlockOffset = input.readLong();
+    setComparatorClass(getComparatorClass(Bytes.readStringFixedSize(input,
         MAX_COMPARATOR_NAME_LENGTH)));
-    }
   }
   
   private void append(StringBuilder sb, String s) {
@@ -389,13 +371,11 @@ public class FixedFileTrailer {
     append(sb, "totalUncomressedBytes=" + totalUncompressedBytes);
     append(sb, "entryCount=" + entryCount);
     append(sb, "compressionCodec=" + compressionCodec);
-    if (majorVersion == 2) {
-      append(sb, "uncompressedDataIndexSize=" + uncompressedDataIndexSize);
-      append(sb, "numDataIndexLevels=" + numDataIndexLevels);
-      append(sb, "firstDataBlockOffset=" + firstDataBlockOffset);
-      append(sb, "lastDataBlockOffset=" + lastDataBlockOffset);
-      append(sb, "comparatorClassName=" + comparatorClassName);
-    }
+    append(sb, "uncompressedDataIndexSize=" + uncompressedDataIndexSize);
+    append(sb, "numDataIndexLevels=" + numDataIndexLevels);
+    append(sb, "firstDataBlockOffset=" + firstDataBlockOffset);
+    append(sb, "lastDataBlockOffset=" + lastDataBlockOffset);
+    append(sb, "comparatorClassName=" + comparatorClassName);
     append(sb, "majorVersion=" + majorVersion);
     append(sb, "minorVersion=" + minorVersion);
 
@@ -516,15 +496,6 @@ public class FixedFileTrailer {
   }
 
   public void setEntryCount(long newEntryCount) {
-    if (majorVersion == 1) {
-      int intEntryCount = (int) Math.min(Integer.MAX_VALUE, newEntryCount);
-      if (intEntryCount != newEntryCount) {
-        LOG.info("Warning: entry count is " + newEntryCount + " but writing "
-            + intEntryCount + " into the version " + majorVersion + " trailer");
-      }
-      entryCount = intEntryCount;
-      return;
-    }
     entryCount = newEntryCount;
   }
 
@@ -626,8 +597,6 @@ public class FixedFileTrailer {
   }
 
   public long getUncompressedDataIndexSize() {
-    if (majorVersion == 1)
-      return 0;
     return uncompressedDataIndexSize;
   }
 

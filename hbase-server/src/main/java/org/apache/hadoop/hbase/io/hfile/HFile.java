@@ -62,7 +62,6 @@ import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPair;
 import org.apache.hadoop.hbase.protobuf.generated.HFileProtos;
 import org.apache.hadoop.hbase.io.FSDataInputStreamWrapper;
-import org.apache.hadoop.hbase.regionserver.StoreFile.WriterBuilder;
 import org.apache.hadoop.hbase.util.BloomFilterWriter;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ChecksumType;
@@ -153,7 +152,7 @@ public class HFile {
     Compression.Algorithm.NONE;
 
   /** Minimum supported HFile format version */
-  public static final int MIN_FORMAT_VERSION = 1;
+  public static final int MIN_FORMAT_VERSION = 2;
 
   /** Maximum supported HFile format version
    */
