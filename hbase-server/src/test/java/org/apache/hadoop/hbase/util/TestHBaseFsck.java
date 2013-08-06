@@ -60,15 +60,16 @@ import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.catalog.MetaEditor;
 import org.apache.hadoop.hbase.client.Delete;
+import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HConnection;
+import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.io.hfile.TestHFile;
 import org.apache.hadoop.hbase.master.AssignmentManager;
 import org.apache.hadoop.hbase.master.HMaster;
@@ -231,7 +232,9 @@ public class TestHBaseFsck {
       HRegionInfo hri) throws IOException, InterruptedException {
     try {
       HBaseFsckRepair.closeRegionSilentlyAndWait(admin, sn, hri);
-      admin.offline(hri.getRegionName());
+      if (!hri.isMetaTable()) {
+        admin.offline(hri.getRegionName());
+      }
     } catch (IOException ioe) {
       LOG.warn("Got exception when attempting to offline region "
           + Bytes.toString(hri.getRegionName()), ioe);
@@ -2000,6 +2003,57 @@ public class TestHBaseFsck {
     writeLock.release(); // release for clean state
   }
 
+  @Test
+  public void testMetaOffline() throws Exception {
+    // check no errors
+    HBaseFsck hbck = doFsck(conf, false);
+    assertNoErrors(hbck);
+    deleteMetaRegion(conf, true, false, false);
+    hbck = doFsck(conf, false);
+    // ERROR_CODE.UNKNOWN is coming because we reportError with a message for the .META.
+    // inconsistency and whether we will be fixing it or not.
+    assertErrors(hbck, new ERROR_CODE[] { ERROR_CODE.NO_META_REGION, ERROR_CODE.UNKNOWN });
+    hbck = doFsck(conf, true);
+    assertErrors(hbck, new ERROR_CODE[] { ERROR_CODE.NO_META_REGION, ERROR_CODE.UNKNOWN });
+    hbck = doFsck(conf, false);
+    assertNoErrors(hbck);
+  }
+  
+  private void deleteMetaRegion(Configuration conf, boolean unassign, boolean hdfs,
+      boolean regionInfoOnly) throws IOException, InterruptedException {
+    HConnection connection = HConnectionManager.getConnection(conf);
+    HRegionLocation metaLocation = connection.locateRegion(HConstants.META_TABLE_NAME,
+        HConstants.EMPTY_START_ROW);
+    ServerName hsa = new ServerName(metaLocation.getHostnamePort(), 0L);
+    HRegionInfo hri = metaLocation.getRegionInfo();
+    if (unassign) {
+      LOG.info("Undeploying meta region " + hri + " from server " + hsa);
+      undeployRegion(new HBaseAdmin(conf), hsa, hri);
+    }
+
+    if (regionInfoOnly) {
+      LOG.info("deleting hdfs .regioninfo data: " + hri.toString() + hsa.toString());
+      Path rootDir = FSUtils.getRootDir(conf);
+      FileSystem fs = rootDir.getFileSystem(conf);
+      Path p = new Path(rootDir + "/" + HTableDescriptor.META_TABLEDESC.getNameAsString(),
+          hri.getEncodedName());
+      Path hriPath = new Path(p, HRegionFileSystem.REGION_INFO_FILE);
+      fs.delete(hriPath, true);
+    }
+
+    if (hdfs) {
+      LOG.info("deleting hdfs data: " + hri.toString() + hsa.toString());
+      Path rootDir = FSUtils.getRootDir(conf);
+      FileSystem fs = rootDir.getFileSystem(conf);
+      Path p = new Path(rootDir + "/" + HTableDescriptor.META_TABLEDESC.getNameAsString(),
+          hri.getEncodedName());
+      HBaseFsck.debugLsr(conf, p);
+      boolean success = fs.delete(p, true);
+      LOG.info("Deleted " + p + " sucessfully? " + success);
+      HBaseFsck.debugLsr(conf, p);
+    }
+  }
+  
   @org.junit.Rule
   public TestName name = new TestName();
 }

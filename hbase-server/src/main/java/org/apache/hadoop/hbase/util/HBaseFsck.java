@@ -390,16 +390,29 @@ public class HBaseFsck extends Configured implements Tool {
     InterruptedException {
     clearState();
 
+    // get regions according to what is online on each RegionServer
+    loadDeployedRegions();
+    // check whether .META. is deployed and online
+    if (!recordMetaRegion()) {
+      // Will remove later if we can fix it
+      errors.reportError("Fatal error: unable to get .META. region location. Exiting...");
+      return -2;
+    }
+    // Check if .META. is found only once and in the right place
+    if (!checkMetaRegion()) {
+      String errorMsg = ".META. table is not consistent. ";
+      if (shouldFixAssignments()) {
+        errorMsg += "HBCK will try fixing it. Rerun once .META. is back to consistent state.";
+      } else {
+        errorMsg += "Run HBCK with proper fix options to fix .META. inconsistency.";
+      }
+      errors.reportError(errorMsg + " Exiting...");
+      return -2;
+    }
+    // Not going with further consistency check for tables when META itself is not consistent.
     LOG.info("Loading regionsinfo from the .META. table");
     boolean success = loadMetaEntries();
     if (!success) return -1;
-
-    // Check if .META. is found only once and in the right place
-    if (!checkMetaRegion()) {
-      // Will remove later if we can fix it
-      errors.reportError("Encountered fatal error. Exiting...");
-      return -2;
-    }
 
     // Empty cells in .META.?
     reportEmptyMetaCells();
@@ -413,9 +426,6 @@ public class HBaseFsck extends Configured implements Tool {
     if (!checkMetaOnly) {
       reportTablesInFlux();
     }
-
-    // get regions according to what is online on each RegionServer
-    loadDeployedRegions();
 
     // load regiondirs and regioninfos from HDFS
     if (shouldCheckHdfs()) {
@@ -1334,10 +1344,13 @@ public class HBaseFsck extends Configured implements Tool {
     } catch (KeeperException e) {
       throw new IOException(e);
     }
-    MetaEntry m =
-      new MetaEntry(metaLocation.getRegionInfo(), sn, System.currentTimeMillis());
-    HbckInfo hbInfo = new HbckInfo(m);
-    regionInfoMap.put(metaLocation.getRegionInfo().getEncodedName(), hbInfo);
+    MetaEntry m = new MetaEntry(metaLocation.getRegionInfo(), sn, System.currentTimeMillis());
+    HbckInfo hbckInfo = regionInfoMap.get(metaLocation.getRegionInfo().getEncodedName());
+    if (hbckInfo == null) {
+      regionInfoMap.put(metaLocation.getRegionInfo().getEncodedName(), new HbckInfo(m));
+    } else {
+      hbckInfo.metaEntry = m;
+    }
     return true;
   }
 
@@ -2492,45 +2505,36 @@ public class HBaseFsck extends Configured implements Tool {
    * @throws KeeperException
    * @throws InterruptedException
     */
-  boolean checkMetaRegion()
-    throws IOException, KeeperException, InterruptedException {
-    List <HbckInfo> metaRegions = Lists.newArrayList();
+  boolean checkMetaRegion() throws IOException, KeeperException, InterruptedException {
+    List<HbckInfo> metaRegions = Lists.newArrayList();
     for (HbckInfo value : regionInfoMap.values()) {
-      if (value.metaEntry.isMetaRegion()) {
+      if (value.metaEntry != null && value.metaEntry.isMetaRegion()) {
         metaRegions.add(value);
       }
     }
 
-    // If something is wrong
-    if (metaRegions.size() != 1) {
-      HRegionLocation rootLocation = connection.locateRegion(
-        HConstants.ROOT_TABLE_NAME, HConstants.EMPTY_START_ROW);
-      HbckInfo root =
-          regionInfoMap.get(rootLocation.getRegionInfo().getEncodedName());
-
-      // If there is no region holding .META.
-      if (metaRegions.size() == 0) {
+    // There will be always one entry in regionInfoMap corresponding to .META.
+    // Check the deployed servers. It should be exactly one server.
+    HbckInfo metaHbckInfo = metaRegions.get(0);
+    List<ServerName> servers = metaHbckInfo.deployedOn;
+    if (servers.size() != 1) {
+      if (servers.size() == 0) {
         errors.reportError(ERROR_CODE.NO_META_REGION, ".META. is not found on any region.");
         if (shouldFixAssignments()) {
           errors.print("Trying to fix a problem with .META...");
           setShouldRerun();
           // try to fix it (treat it as unassigned region)
-          HBaseFsckRepair.fixUnassigned(admin, root.metaEntry);
-          HBaseFsckRepair.waitUntilAssigned(admin, root.getHdfsHRI());
+          HBaseFsckRepair.fixUnassigned(admin, metaHbckInfo.metaEntry);
+          HBaseFsckRepair.waitUntilAssigned(admin, metaHbckInfo.metaEntry);
         }
-      }
-      // If there are more than one regions pretending to hold the .META.
-      else if (metaRegions.size() > 1) {
-        errors.reportError(ERROR_CODE.MULTI_META_REGION, ".META. is found on more than one region.");
+      } else if (servers.size() > 1) {
+        errors
+            .reportError(ERROR_CODE.MULTI_META_REGION, ".META. is found on more than one region.");
         if (shouldFixAssignments()) {
           errors.print("Trying to fix a problem with .META...");
           setShouldRerun();
           // try fix it (treat is a dupe assignment)
-          List <ServerName> deployedOn = Lists.newArrayList();
-          for (HbckInfo mRegion : metaRegions) {
-            deployedOn.add(mRegion.metaEntry.regionServer);
-          }
-          HBaseFsckRepair.fixMultiAssignment(admin, root.metaEntry, deployedOn);
+          HBaseFsckRepair.fixMultiAssignment(admin, metaHbckInfo.metaEntry, servers);
         }
       }
       // rerun hbck with hopefully fixed META
@@ -2545,15 +2549,6 @@ public class HBaseFsck extends Configured implements Tool {
    * @throws IOException if an error is encountered
    */
   boolean loadMetaEntries() throws IOException {
-
-    // get a list of all regions from the master. This involves
-    // scanning the META table
-    if (!recordMetaRegion()) {
-      // Will remove later if we can fix it
-      errors.reportError("Fatal error: unable to get root region location. Exiting...");
-      return false;
-    }
-
     MetaScannerVisitor visitor = new MetaScannerVisitorBase() {
       int countRecord = 1;
 
@@ -2587,9 +2582,12 @@ public class HBaseFsck extends Configured implements Tool {
           }
           PairOfSameType<HRegionInfo> daughters = HRegionInfo.getDaughterRegions(result);
           MetaEntry m = new MetaEntry(hri, sn, ts, daughters.getFirst(), daughters.getSecond());
-          HbckInfo hbInfo = new HbckInfo(m);
-          HbckInfo previous = regionInfoMap.put(hri.getEncodedName(), hbInfo);
-          if (previous != null) {
+          HbckInfo previous = regionInfoMap.get(hri.getEncodedName());
+          if (previous == null) {
+            regionInfoMap.put(hri.getEncodedName(), new HbckInfo(m));
+          } else if (previous.metaEntry == null) {
+            previous.metaEntry = m;
+          } else {
             throw new IOException("Two entries in META are same " + previous);
           }
 
