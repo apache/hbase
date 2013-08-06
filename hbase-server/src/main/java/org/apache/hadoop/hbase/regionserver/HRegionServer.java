@@ -45,8 +45,6 @@ import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ConcurrentSkipListMap;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import javax.management.ObjectName;
@@ -61,7 +59,6 @@ import org.apache.hadoop.hbase.CellScannable;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.Chore;
-import org.apache.hadoop.hbase.DaemonThreadFactory;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HConstants.OperationStatusCode;
@@ -71,6 +68,7 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.HealthCheckChore;
 import org.apache.hadoop.hbase.NotServingRegionException;
+import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.Stoppable;
@@ -162,8 +160,8 @@ import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiResponse;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutateRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutateResponse;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto;
-import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.MutationType;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ResultCellMeta;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.MutationType;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ScanRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ScanResponse;
 import org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos;
@@ -478,11 +476,6 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
   private TableLockManager tableLockManager;
 
   /**
-   * Threadpool for doing scanner prefetches
-   */
-  protected ThreadPoolExecutor scanPrefetchThreadPool;
-
-  /**
    * Starts a HRegionServer at the default location
    *
    * @param conf
@@ -632,16 +625,12 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
   }
 
   RegionScanner getScanner(long scannerId) {
-    RegionScannerHolder scannerHolder = getScannerHolder(scannerId);
+    String scannerIdString = Long.toString(scannerId);
+    RegionScannerHolder scannerHolder = scanners.get(scannerIdString);
     if (scannerHolder != null) {
-      return scannerHolder.scanner;
+      return scannerHolder.s;
     }
     return null;
-  }
-
-  public RegionScannerHolder getScannerHolder(long scannerId) {
-    String scannerIdString = Long.toString(scannerId);
-    return scanners.get(scannerIdString);
   }
 
   /**
@@ -860,11 +849,6 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
     if (this.thriftServer != null) this.thriftServer.shutdown();
     this.leases.closeAfterLeasesExpire();
     this.rpcServer.stop();
-
-    if (scanPrefetchThreadPool != null) {
-      // shutdown the prefetch threads
-      scanPrefetchThreadPool.shutdownNow();
-    }
     if (this.splitLogWorker != null) {
       splitLogWorker.stop();
     }
@@ -1134,7 +1118,7 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
     // exception next time they come in.
     for (Map.Entry<String, RegionScannerHolder> e : this.scanners.entrySet()) {
       try {
-        e.getValue().closeScanner();
+        e.getValue().s.close();
       } catch (IOException ioe) {
         LOG.warn("Closing scanner " + e.getKey(), ioe);
       }
@@ -1558,14 +1542,6 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
     } else if (this.replicationSinkHandler != null) {
       this.replicationSinkHandler.startReplicationService();
     }
-
-    // start the scanner prefetch threadpool
-    int numHandlers = conf.getInt("hbase.regionserver.prefetcher.threads.max",
-      conf.getInt("hbase.regionserver.handler.count", 10)
-        + conf.getInt("hbase.regionserver.metahandler.count", 10));
-    scanPrefetchThreadPool =
-      Threads.getBlockingThreadPool(numHandlers, 60, TimeUnit.SECONDS,
-        new DaemonThreadFactory(RegionScannerHolder.PREFETCHER_THREAD_PREFIX));
 
     // Start Server.  This service is like leases in that it internally runs
     // a thread.
@@ -2372,7 +2348,7 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
     public void leaseExpired() {
       RegionScannerHolder rsh = scanners.remove(this.scannerName);
       if (rsh != null) {
-        RegionScanner s = rsh.scanner;
+        RegionScanner s = rsh.s;
         LOG.info("Scanner " + this.scannerName + " lease expired on region "
             + s.getRegionInfo().getRegionNameAsString());
         try {
@@ -2381,7 +2357,7 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
             region.getCoprocessorHost().preScannerClose(s);
           }
 
-          rsh.closeScanner();
+          s.close();
           if (region != null && region.getCoprocessorHost() != null) {
             region.getCoprocessorHost().postScannerClose(s);
           }
@@ -2686,22 +2662,20 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
     return this.fsOk;
   }
 
-  protected RegionScannerHolder addScanner(
-      RegionScanner s, HRegion r) throws LeaseStillHeldException {
-    RegionScannerHolder holder = new RegionScannerHolder(this, s, r);
-    String scannerName = null;
+  protected long addScanner(RegionScanner s) throws LeaseStillHeldException {
     long scannerId = -1;
     while (true) {
-      scannerId = nextLong();
-      scannerName = String.valueOf(scannerId);
-      RegionScannerHolder existing = scanners.putIfAbsent(scannerName, holder);
+      scannerId = rand.nextLong();
+      if (scannerId == -1) continue;
+      String scannerName = String.valueOf(scannerId);
+      RegionScannerHolder existing = scanners.putIfAbsent(scannerName, new RegionScannerHolder(s));
       if (existing == null) {
-        holder.scannerName = scannerName;
         this.leases.createLease(scannerName, this.scannerLeaseTimeoutPeriod,
-          new ScannerListener(scannerName));
-        return holder;
+            new ScannerListener(scannerName));
+        break;
       }
     }
+    return scannerId;
   }
 
   /**
@@ -2963,6 +2937,7 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
   @Override
   public ScanResponse scan(final RpcController controller,
       final ScanRequest request) throws ServiceException {
+    Leases.Lease lease = null;
     String scannerName = null;
     try {
       if (!request.hasScannerId() && !request.hasScan()) {
@@ -3013,10 +2988,7 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
             throw new UnknownScannerException(
               "Name: " + scannerName + ", already closed?");
           }
-          scanner = rsh.scanner;
-          // Use the region found in the online region list,
-          // not that one in the RegionScannerHolder. So that we can
-          // make sure the region is still open in this region server.
+          scanner = rsh.s;
           region = getRegion(scanner.getRegionInfo().getRegionName());
         } else {
           region = getRegion(request.getRegion());
@@ -3027,6 +2999,7 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
           if (!isLoadingCfsOnDemandSet) {
             scan.setLoadColumnFamiliesOnDemand(region.isLoadingCfsOnDemandDefault());
           }
+          byte[] hasMetrics = scan.getAttribute(Scan.SCAN_ATTRIBUTES_METRICS_ENABLE);
           region.prepareScanner(scan);
           if (region.getCoprocessorHost() != null) {
             scanner = region.getCoprocessorHost().preScannerOpen(scan);
@@ -3037,14 +3010,9 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
           if (region.getCoprocessorHost() != null) {
             scanner = region.getCoprocessorHost().postScannerOpen(scan, scanner);
           }
-          rsh = addScanner(scanner, region);
-          scannerName = rsh.scannerName;
-          scannerId = Long.parseLong(scannerName);
-
+          scannerId = addScanner(scanner);
+          scannerName = String.valueOf(scannerId);
           ttl = this.scannerLeaseTimeoutPeriod;
-          if (scan.getPrefetching()) {
-            rsh.enablePrefetching(scan.getCaching());
-          }
         }
 
         if (rows > 0) {
@@ -3052,34 +3020,110 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
           // performed even before checking of Lease.
           // See HBASE-5974
           if (request.hasNextCallSeq()) {
-            if (request.getNextCallSeq() != rsh.nextCallSeq) {
-              throw new OutOfOrderScannerNextException("Expected nextCallSeq: " + rsh.nextCallSeq
-                + " But the nextCallSeq got from client: " + request.getNextCallSeq() +
-                "; request=" + TextFormat.shortDebugString(request));
+            if (rsh == null) {
+              rsh = scanners.get(scannerName);
             }
-            // Increment the nextCallSeq value which is the next expected from client.
-            rsh.nextCallSeq++;
-          }
-
-          ttl = this.scannerLeaseTimeoutPeriod;
-          ScanResult result = rsh.getScanResult(rows);
-          if (result.isException) {
-            throw result.ioException;
-          }
-
-          moreResults = result.moreResults;
-          if (result.results != null) {
-            List<CellScannable> cellScannables =
-              new ArrayList<CellScannable>(result.results.size());
-            ResultCellMeta.Builder rcmBuilder = ResultCellMeta.newBuilder();
-            for (Result res : result.results) {
-              cellScannables.add(res);
-              rcmBuilder.addCellsLength(res.size());
+            if (rsh != null) {
+              if (request.getNextCallSeq() != rsh.nextCallSeq) {
+                throw new OutOfOrderScannerNextException("Expected nextCallSeq: " + rsh.nextCallSeq
+                  + " But the nextCallSeq got from client: " + request.getNextCallSeq() +
+                  "; request=" + TextFormat.shortDebugString(request));
+              }
+              // Increment the nextCallSeq value which is the next expected from client.
+              rsh.nextCallSeq++;
             }
-            builder.setResultCellMeta(rcmBuilder.build());
-            // TODO is this okey to assume the type and cast
-            ((PayloadCarryingRpcController) controller).setCellScanner(CellUtil
-              .createCellScanner(cellScannables));
+          }
+          try {
+            // Remove lease while its being processed in server; protects against case
+            // where processing of request takes > lease expiration time.
+            lease = leases.removeLease(scannerName);
+            List<Result> results = new ArrayList<Result>(rows);
+            long currentScanResultSize = 0;
+
+            boolean done = false;
+            // Call coprocessor. Get region info from scanner.
+            if (region != null && region.getCoprocessorHost() != null) {
+              Boolean bypass = region.getCoprocessorHost().preScannerNext(
+                scanner, results, rows);
+              if (!results.isEmpty()) {
+                for (Result r : results) {
+                  if (maxScannerResultSize < Long.MAX_VALUE){
+                    for (KeyValue kv : r.raw()) {
+                      currentScanResultSize += kv.heapSize();
+                    }
+                  }
+                }
+              }
+              if (bypass != null && bypass.booleanValue()) {
+                done = true;
+              }
+            }
+
+            if (!done) {
+              long maxResultSize = scanner.getMaxResultSize();
+              if (maxResultSize <= 0) {
+                maxResultSize = maxScannerResultSize;
+              }
+              List<KeyValue> values = new ArrayList<KeyValue>();
+              MultiVersionConsistencyControl.setThreadReadPoint(scanner.getMvccReadPoint());
+              region.startRegionOperation(Operation.SCAN);
+              try {
+                int i = 0;
+                synchronized(scanner) {
+                  for (; i < rows
+                      && currentScanResultSize < maxResultSize; i++) {
+                    // Collect values to be returned here
+                    boolean moreRows = scanner.nextRaw(values);
+                    if (!values.isEmpty()) {
+                      if (maxScannerResultSize < Long.MAX_VALUE){
+                        for (KeyValue kv : values) {
+                          currentScanResultSize += kv.heapSize();
+                        }
+                      }
+                      results.add(new Result(values));
+                    }
+                    if (!moreRows) {
+                      break;
+                    }
+                    values.clear();
+                  }
+                }
+                region.readRequestsCount.add(i);
+              } finally {
+                region.closeRegionOperation();
+              }
+
+              // coprocessor postNext hook
+              if (region != null && region.getCoprocessorHost() != null) {
+                region.getCoprocessorHost().postScannerNext(scanner, results, rows, true);
+              }
+            }
+
+            // If the scanner's filter - if any - is done with the scan
+            // and wants to tell the client to stop the scan. This is done by passing
+            // a null result, and setting moreResults to false.
+            if (scanner.isFilterDone() && results.isEmpty()) {
+              moreResults = false;
+              results = null;
+            } else {
+              ResultCellMeta.Builder rcmBuilder = ResultCellMeta.newBuilder();
+              List<CellScannable> cellScannables = new ArrayList<CellScannable>(results.size());
+              for (Result res : results) {
+                cellScannables.add(res);
+                rcmBuilder.addCellsLength(res.size());
+              }
+              builder.setResultCellMeta(rcmBuilder.build());
+              // TODO is this okey to assume the type and cast
+              ((PayloadCarryingRpcController) controller).setCellScanner(CellUtil
+                  .createCellScanner(cellScannables));
+            }
+          } finally {
+            // We're done. On way out re-add the above removed lease.
+            // Adding resets expiration time on lease.
+            if (scanners.containsKey(scannerName)) {
+              if (lease != null) leases.addLease(lease);
+              ttl = this.scannerLeaseTimeoutPeriod;
+            }
           }
         }
 
@@ -3093,13 +3137,9 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
           }
           rsh = scanners.remove(scannerName);
           if (rsh != null) {
-            rsh.closeScanner();
-            try {
-              leases.cancelLease(scannerName);
-            } catch (LeaseException le) {
-              // That's ok, since the lease may be gone with
-              // the prefetcher when cancelled.
-            }
+            scanner = rsh.s;
+            scanner.close();
+            leases.cancelLease(scannerName);
             if (region != null && region.getCoprocessorHost() != null) {
               region.getCoprocessorHost().postScannerClose(scanner);
             }
@@ -4180,6 +4220,18 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
 
   private String getMyEphemeralNodePath() {
     return ZKUtil.joinZNode(this.zooKeeper.rsZNode, getServerName().toString());
+  }
+
+  /**
+   * Holder class which holds the RegionScanner and nextCallSeq together.
+   */
+  private static class RegionScannerHolder {
+    private RegionScanner s;
+    private long nextCallSeq = 0L;
+
+    public RegionScannerHolder(RegionScanner s) {
+      this.s = s;
+    }
   }
 
   private boolean isHealthCheckerConfigured() {

@@ -183,7 +183,6 @@ import com.google.protobuf.Service;
  * defines the keyspace for this HRegion.
  */
 @InterfaceAudience.Private
-@SuppressWarnings("deprecation")
 public class HRegion implements HeapSize { // , Writable{
   public static final Log LOG = LogFactory.getLog(HRegion.class);
 
@@ -3542,6 +3541,7 @@ public class HRegion implements HeapSize { // , Writable{
       }
       return returnResult;
     }
+
 
     private void populateFromJoinedHeap(List<KeyValue> results, int limit)
         throws IOException {

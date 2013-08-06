@@ -61,7 +61,7 @@ public class ScannerCallable extends RegionServerCallable<Result[]> {
   public static final String LOG_SCANNER_ACTIVITY = "hbase.client.log.scanner.activity";
 
   public static final Log LOG = LogFactory.getLog(ScannerCallable.class);
-  long scannerId = -1L;
+  private long scannerId = -1L;
   private boolean instantiated = false;
   private boolean closed = false;
   private Scan scan;
@@ -137,7 +137,6 @@ public class ScannerCallable extends RegionServerCallable<Result[]> {
   /**
    * @see java.util.concurrent.Callable#call()
    */
-  @SuppressWarnings("deprecation")
   public Result [] call() throws IOException {
     if (closed) {
       if (scannerId != -1) {

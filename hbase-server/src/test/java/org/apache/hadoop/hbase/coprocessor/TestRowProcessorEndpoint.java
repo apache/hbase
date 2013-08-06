@@ -59,6 +59,7 @@ import org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.RowProcesso
 import org.apache.hadoop.hbase.regionserver.BaseRowProcessor;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
+import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.util.Bytes;
 
@@ -130,7 +131,6 @@ public class TestRowProcessorEndpoint {
       // ignore table not found
     }
     table = util.createTable(TABLE, FAM);
-    table.setAutoFlush(false);
     {
       Put put = new Put(ROW);
       put.add(FAM, A, Bytes.add(B, C));    // B, C are friends of A
@@ -144,8 +144,6 @@ public class TestRowProcessorEndpoint {
     put.add(FAM, F, G);
     table.put(put);
     row2Size = put.size();
-    table.clearRegionCache();
-    table.flushCommits();
   }
 
   @Test

@@ -149,7 +149,7 @@ public class ClientScanner extends AbstractClientScanner {
     this.caller = rpcFactory.<Result[]> newCaller();
 
       // initialize the scanner
-      nextScanner(false);
+      nextScanner(this.caching, false);
     }
 
     protected HConnection getConnection() {
@@ -190,9 +190,10 @@ public class ClientScanner extends AbstractClientScanner {
      * scanner at the scan.getStartRow().  We will go no further, just tidy
      * up outstanding scanners, if <code>currentRegion != null</code> and
      * <code>done</code> is true.
+     * @param nbRows
      * @param done Server-side says we're done scanning.
      */
-    private boolean nextScanner(final boolean done)
+    private boolean nextScanner(int nbRows, final boolean done)
     throws IOException {
       // Close the previous scanner if it's open
       if (this.callable != null) {
@@ -231,7 +232,7 @@ public class ClientScanner extends AbstractClientScanner {
           Bytes.toStringBinary(localStartKey) + "'");
       }
       try {
-        callable = getScannerCallable(localStartKey);
+        callable = getScannerCallable(localStartKey, nbRows);
         // Open a scanner on the region server starting at the
         // beginning of the region
         this.caller.callWithRetries(callable);
@@ -246,11 +247,12 @@ public class ClientScanner extends AbstractClientScanner {
       return true;
     }
 
-    protected ScannerCallable getScannerCallable(byte [] localStartKey) {
+    protected ScannerCallable getScannerCallable(byte [] localStartKey,
+        int nbRows) {
       scan.setStartRow(localStartKey);
       ScannerCallable s = new ScannerCallable(getConnection(),
         getTableName(), scan, this.scanMetrics);
-      s.setCaching(this.caching);
+      s.setCaching(nbRows);
       return s;
     }
 
@@ -284,13 +286,23 @@ public class ClientScanner extends AbstractClientScanner {
         Result [] values = null;
         long remainingResultSize = maxScannerResultSize;
         int countdown = this.caching;
-
+        // We need to reset it if it's a new callable that was created
+        // with a countdown in nextScanner
+        callable.setCaching(this.caching);
         // This flag is set when we want to skip the result returned.  We do
         // this when we reset scanner because it split under us.
         boolean skipFirst = false;
         boolean retryAfterOutOfOrderException  = true;
         do {
           try {
+            if (skipFirst) {
+              // Skip only the first row (which was the last row of the last
+              // already-processed batch).
+              callable.setCaching(1);
+              values = this.caller.callWithRetries(callable);
+              callable.setCaching(this.caching);
+              skipFirst = false;
+            }
             // Server returns a null values if scanning is to stop.  Else,
             // returns an empty array if scanning is to go on and we've just
             // exhausted current region.
@@ -360,15 +372,7 @@ public class ClientScanner extends AbstractClientScanner {
           }
           lastNext = currentTime;
           if (values != null && values.length > 0) {
-            int i = 0;
-            if (skipFirst) {
-              skipFirst = false;
-              // We will cache one row less, which is fine
-              countdown--;
-              i = 1;
-            }
-            for (; i < values.length; i++) {
-              Result rs = values[i];
+            for (Result rs : values) {
               cache.add(rs);
               for (KeyValue kv : rs.raw()) {
                   remainingResultSize -= kv.heapSize();
@@ -378,7 +382,7 @@ public class ClientScanner extends AbstractClientScanner {
             }
           }
           // Values == null means server-side filter has determined we must STOP
-        } while (remainingResultSize > 0 && countdown > 0 && nextScanner(values == null));
+        } while (remainingResultSize > 0 && countdown > 0 && nextScanner(countdown, values == null));
       }
 
       if (cache.size() > 0) {
@@ -430,13 +434,5 @@ public class ClientScanner extends AbstractClientScanner {
         callable = null;
       }
       closed = true;
-    }
-
-    long currentScannerId() {
-      return (callable == null) ? -1L : callable.scannerId;
-    }
-
-    HRegionInfo currentRegionInfo() {
-      return currentRegion;
     }
 }
