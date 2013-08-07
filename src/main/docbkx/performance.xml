@@ -202,7 +202,11 @@
     <section xml:id="hbase.regionserver.checksum.verify">
         <title><varname>hbase.regionserver.checksum.verify</varname></title>
         <para>Have HBase write the checksum into the datablock and save
-        having to do the checksum seek whenever you read. See the
+        having to do the checksum seek whenever you read.</para> 
+        
+        <para>See <xref linkend="hbase.regionserver.checksum.verify"/>,
+        <xref linkend="hbase.hstore.bytes.per.checksum"/> and <xref linkend="hbase.hstore.checksum.algorithm"/>
+        For more information see the
         release note on <link xlink:href="https://issues.apache.org/jira/browse/HBASE-5074">HBASE-5074 support checksums in HBase block cache</link>.
         </para>
     </section>
@@ -670,7 +674,10 @@ set <varname>dfs.client.read.shortcircuit</varname> to be <varname>true</varname
 <para>
     For optimal performance when short-circuit reads are enabled, it is recommended that HDFS checksums are disabled.
     To maintain data integrity with HDFS checksums disabled, HBase can be configured to write its own checksums into
-    its datablocks and verify against these. See <xref linkend="hbase.regionserver.checksum.verify" />.
+    its datablocks and verify against these. See <xref linkend="hbase.regionserver.checksum.verify" />. When both
+    local short-circuit reads and hbase level checksums are enabled, you SHOULD NOT disable configuration parameter
+    "dfs.client.read.shortcircuit.skip.checksum", which will cause skipping checksum on non-hfile reads. HBase already
+    manages that setting under the covers.
 </para>
 <para>
 The DataNodes need to be restarted in order to pick up the new

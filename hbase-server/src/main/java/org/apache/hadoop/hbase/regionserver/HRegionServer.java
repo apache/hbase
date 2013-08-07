@@ -493,6 +493,16 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
     // is enabled, then we automatically switch off hdfs checksum verification.
     this.useHBaseChecksum = conf.getBoolean(HConstants.HBASE_CHECKSUM_VERIFICATION, false);
 
+    // check that the user has not set the "dfs.client.read.shortcircuit.skip.checksum" property.
+    boolean shortCircuitSkipChecksum = conf.getBoolean(
+        "dfs.client.read.shortcircuit.skip.checksum", false);
+    if (shortCircuitSkipChecksum) {
+      LOG.warn("Configuration \"dfs.client.read.shortcircuit.skip.checksum\" should not " +
+          "be set to true." + (this.useHBaseChecksum ? " HBase checksum doesn't require " +
+          "it, see https://issues.apache.org/jira/browse/HBASE-6868." : ""));
+      assert !shortCircuitSkipChecksum; //this will fail if assertions are on
+    }
+
     // Config'ed params
     this.numRetries = this.conf.getInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER,
         HConstants.DEFAULT_HBASE_CLIENT_RETRIES_NUMBER);

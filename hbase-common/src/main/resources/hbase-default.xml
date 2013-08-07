@@ -283,12 +283,16 @@ possible configurations would overwhelm and obscure the important.
   <property>
     <name>zookeeper.session.timeout</name>
     <value>90000</value>
-    <description>ZooKeeper session timeout.
-      HBase passes this to the zk quorum as suggested maximum time for a
-      session (This setting becomes zookeeper's 'maxSessionTimeout').  See
-      http://hadoop.apache.org/zookeeper/docs/current/zookeeperProgrammers.html#ch_zkSessions
-      "The client sends a requested timeout, the server responds with the
-      timeout that it can give the client. " In milliseconds.</description>
+    <description>ZooKeeper session timeout in milliseconds. It is used in two different ways.
+      First, this value is used in the ZK client that HBase uses to connect to the ensemble.
+      It is also used by HBase when it starts a ZK server and it is passed as the 'maxSessionTimeout'. See
+      http://hadoop.apache.org/zookeeper/docs/current/zookeeperProgrammers.html#ch_zkSessions.
+      For example, if a HBase region server connects to a ZK ensemble that's also managed by HBase, then the
+      session timeout will be the one specified by this configuration. But, a region server that connects
+      to an ensemble managed with a different configuration will be subjected that ensemble's maxSessionTimeout. So,
+      even though HBase might propose using 90 seconds, the ensemble can have a max timeout lower than this and
+      it will take precedence. The current default that ZK ships with is 40 seconds, which is lower than HBase's.
+    </description>
   </property>
   <property>
     <name>zookeeper.znode.parent</name>
@@ -931,4 +935,32 @@ possible configurations would overwhelm and obscure the important.
         datanode, performing block recovery to timeout on a dead datanode; usually
         dfs.socket.timeout. See the end of HBASE-8389 for more.</description>
   </property>
+  <property>
+    <name>hbase.regionserver.checksum.verify</name>
+    <value>true</value>
+    <description>
+        If set to true, HBase will read data and then verify checksums for
+        hfile blocks. Checksum verification inside HDFS will be switched off.
+        If the hbase-checksum verification fails, then it will switch back to 
+        using HDFS checksums.
+    </description>
+  </property>
+  <property>
+    <name>hbase.hstore.bytes.per.checksum</name>
+    <value>16384</value>
+    <description>
+        Number of bytes in a newly created checksum chunk for HBase-level
+        checksums in hfile blocks.
+    </description>
+  </property>
+  <property>
+    <name>hbase.hstore.checksum.algorithm</name>
+    <value>CRC32</value>
+    <description>
+      Name of an algorithm that is used to compute checksums. Possible values
+      are NULL, CRC32, CRC32C.
+    </description>
+  </property>
+
+
 </configuration>
