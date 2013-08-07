@@ -60,6 +60,26 @@ public class HConnectionWrapper implements HConnection {
   }
 
   @Override
+  public HTableInterface getTable(String tableName) throws IOException {
+    return hconnection.getTable(tableName);
+  }
+
+  @Override
+  public HTableInterface getTable(byte[] tableName) throws IOException {
+    return hconnection.getTable(tableName);
+  }
+
+  @Override
+  public HTableInterface getTable(String tableName, ExecutorService pool)  throws IOException {
+    return hconnection.getTable(tableName, pool);
+  }
+
+  @Override
+  public HTableInterface getTable(byte[] tableName, ExecutorService pool)  throws IOException {
+    return hconnection.getTable(tableName, pool);
+  }
+
+  @Override
   public void abort(String why, Throwable e) {
     hconnection.abort(why, e);
   }

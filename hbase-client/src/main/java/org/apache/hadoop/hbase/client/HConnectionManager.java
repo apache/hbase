@@ -36,6 +36,9 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.SynchronousQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -137,6 +140,7 @@ import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.SoftValueSortedMap;
+import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.zookeeper.MasterAddressTracker;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
@@ -148,8 +152,22 @@ import com.google.protobuf.RpcController;
 import com.google.protobuf.ServiceException;
 
 /**
- * A non-instantiable class that manages {@link HConnection}s.
- * This class has a static Map of {@link HConnection} instances keyed by
+ * A non-instantiable class that manages creation of {@link HConnection}s.
+ * <p>The simplest way to use this class is by using {@link #createConnection(Configuration)}.
+ * This creates a new {@link HConnection} that is managed by the caller.
+ * From this {@link HConnection} {@link HTableInterface} implementations are retrieved 
+ * with {@link HConnection#getTable(byte[])}. Example:
+ * <pre>
+ * {@code
+ * HConnection connection = HConnectionManager.createConnection(config);
+ * HTableInterface table = connection.getTable("table1");
+ * // use the table as needed, for a single operation and a single thread
+ * table.close();
+ * connection.close();
+ * }
+ * </pre>
+ * <p>The following logic and API will be removed in the future:
+ * <p>This class has a static Map of {@link HConnection} instances keyed by
  * {@link Configuration}; all invocations of {@link #getConnection(Configuration)}
  * that pass the same {@link Configuration} instance will be returned the same
  * {@link  HConnection} instance (Adding properties to a Configuration
@@ -241,6 +259,7 @@ public class HConnectionManager {
    * @return HConnection object for <code>conf</code>
    * @throws ZooKeeperConnectionException
    */
+  @Deprecated
   @SuppressWarnings("resource")
   public static HConnection getConnection(final Configuration conf)
   throws IOException {
@@ -263,18 +282,61 @@ public class HConnectionManager {
   /**
    * Create a new HConnection instance using the passed <code>conf</code> instance.
    * <p>Note: This bypasses the usual HConnection life cycle management done by
-   * {@link #getConnection(Configuration)}. Use this with caution, the caller is responsible for
+   * {@link #getConnection(Configuration)}. The caller is responsible for
    * calling {@link HConnection#close()} on the returned connection instance.
+   *
+   * This is the recommended way to create HConnections.
+   * {@code
+   * HConnection connection = HConnectionManager.createConnection(conf);
+   * HTableInterface table = connection.getTable("mytable");
+   * table.get(...);
+   * ...
+   * table.close();
+   * connection.close();
+   * }
+   *
    * @param conf configuration
    * @return HConnection object for <code>conf</code>
    * @throws ZooKeeperConnectionException
    */
   public static HConnection createConnection(Configuration conf)
   throws IOException {
-    return createConnection(conf, false);
+    return createConnection(conf, false, null);
   }
 
+  /**
+   * Create a new HConnection instance using the passed <code>conf</code> instance.
+   * <p>Note: This bypasses the usual HConnection life cycle management done by
+   * {@link #getConnection(Configuration)}. The caller is responsible for
+   * calling {@link HConnection#close()} on the returned connection instance.
+   * This is the recommended way to create HConnections.
+   * {@code
+   * ExecutorService pool = ...;
+   * HConnection connection = HConnectionManager.createConnection(conf, pool);
+   * HTableInterface table = connection.getTable("mytable");
+   * table.get(...);
+   * ...
+   * table.close();
+   * connection.close();
+   * }
+   * @param conf configuration
+   * @param pool the thread pool to use for batch operation in HTables used via this HConnection
+   * @return HConnection object for <code>conf</code>
+   * @throws ZooKeeperConnectionException
+   */
+  public static HConnection createConnection(Configuration conf, ExecutorService pool)
+  throws IOException {
+    return createConnection(conf, false, pool);
+  }
+
+  @Deprecated
   static HConnection createConnection(final Configuration conf, final boolean managed)
+      throws IOException {
+    return createConnection(conf, managed, null);
+  }
+
+  @Deprecated
+  static HConnection createConnection(final Configuration conf, final boolean managed, final ExecutorService pool)
   throws IOException {
     String className = conf.get("hbase.client.connection.impl",
       HConnectionManager.HConnectionImplementation.class.getName());
@@ -287,9 +349,9 @@ public class HConnectionManager {
     try {
       // Default HCM#HCI is not accessible; make it so before invoking.
       Constructor<?> constructor =
-        clazz.getDeclaredConstructor(Configuration.class, boolean.class);
+        clazz.getDeclaredConstructor(Configuration.class, boolean.class, ExecutorService.class);
       constructor.setAccessible(true);
-      return (HConnection) constructor.newInstance(conf, managed);
+      return (HConnection) constructor.newInstance(conf, managed, pool);
     } catch (Exception e) {
       throw new IOException(e);
     }
@@ -301,6 +363,7 @@ public class HConnectionManager {
    * then close connection to the zookeeper ensemble and let go of all associated resources.
    *
    * @param conf configuration whose identity is used to find {@link HConnection} instance.
+   * @deprecated
    */
   public static void deleteConnection(Configuration conf) {
     deleteConnection(new HConnectionKey(conf), false);
@@ -311,6 +374,7 @@ public class HConnectionManager {
    * This will then close connection to the zookeeper ensemble and let go of all resources.
    *
    * @param connection
+   * @deprecated
    */
   public static void deleteStaleConnection(HConnection connection) {
     deleteConnection(connection, true);
@@ -320,6 +384,7 @@ public class HConnectionManager {
    * Delete information for all connections. Close or not the connection, depending on the
    *  staleConnection boolean and the ref count. By default, you should use it with
    *  staleConnection to true.
+   * @deprecated
    */
   public static void deleteAllConnections(boolean staleConnection) {
     synchronized (CONNECTION_INSTANCES) {
@@ -342,6 +407,7 @@ public class HConnectionManager {
   }
 
 
+  @Deprecated
   private static void deleteConnection(HConnection connection, boolean staleConnection) {
     synchronized (CONNECTION_INSTANCES) {
       for (Entry<HConnectionKey, HConnectionImplementation> e: CONNECTION_INSTANCES.entrySet()) {
@@ -353,6 +419,7 @@ public class HConnectionManager {
     }
   }
 
+  @Deprecated
   private static void deleteConnection(HConnectionKey connectionKey, boolean staleConnection) {
     synchronized (CONNECTION_INSTANCES) {
       HConnectionImplementation connection = CONNECTION_INSTANCES.get(connectionKey);
@@ -464,6 +531,10 @@ public class HConnectionManager {
     private final DelayedClosing delayedClosing =
       DelayedClosing.createAndStart(this);
 
+    // thread executor shared by all HTableInterface instances created
+    // by this connection
+    private volatile ExecutorService batchPool = null;
+    private volatile boolean cleanupPool = false;
 
     private final Configuration conf;
 
@@ -499,6 +570,10 @@ public class HConnectionManager {
      */
      Registry registry;
 
+     HConnectionImplementation(Configuration conf, boolean managed) throws IOException {
+       this(conf, managed, null);
+     }
+     
     /**
      * constructor
      * @param conf Configuration object
@@ -510,8 +585,9 @@ public class HConnectionManager {
      * are shared, we have reference counting going on and will only do full cleanup when no more
      * users of an HConnectionImplementation instance.
      */
-    HConnectionImplementation(Configuration conf, boolean managed) throws IOException {
+    HConnectionImplementation(Configuration conf, boolean managed, ExecutorService pool) throws IOException {
       this(conf);
+      this.batchPool = pool;
       this.managed = managed;
       this.registry = setupRegistry();
       retrieveClusterId();
@@ -556,6 +632,74 @@ public class HConnectionManager {
           HConstants.DEFAULT_HBASE_CLIENT_PREFETCH_LIMIT);
     }
  
+    @Override
+    public HTableInterface getTable(String tableName) throws IOException {
+      return getTable(Bytes.toBytes(tableName));
+    }
+
+    @Override
+    public HTableInterface getTable(byte[] tableName) throws IOException {
+      return getTable(tableName, getBatchPool());
+    }
+
+    @Override
+    public HTableInterface getTable(String tableName, ExecutorService pool) throws IOException {
+      return getTable(Bytes.toBytes(tableName), pool);
+    }
+
+    @Override
+    public HTableInterface getTable(byte[] tableName, ExecutorService pool) throws IOException {
+      if (managed) {
+        throw new IOException("The connection has to be unmanaged.");
+      }
+      return new HTable(tableName, this, pool);
+    }
+
+    private ExecutorService getBatchPool() {
+      if (batchPool == null) {
+        // shared HTable thread executor not yet initialized
+        synchronized (this) {
+          if (batchPool == null) {
+            int maxThreads = conf.getInt("hbase.hconnection.threads.max",
+                Integer.MAX_VALUE);
+            if (maxThreads == 0) {
+              maxThreads = Runtime.getRuntime().availableProcessors();
+            }
+            long keepAliveTime = conf.getLong(
+                "hbase.hconnection.threads.keepalivetime", 60);
+            this.batchPool = new ThreadPoolExecutor(
+                Runtime.getRuntime().availableProcessors(),
+                maxThreads,
+                keepAliveTime,
+                TimeUnit.SECONDS,
+                new SynchronousQueue<Runnable>(),
+                Threads.newDaemonThreadFactory("hbase-connection-shared-executor"));
+            ((ThreadPoolExecutor) this.batchPool)
+            .allowCoreThreadTimeOut(true);
+          }
+          this.cleanupPool = true;
+        }
+      }
+      return this.batchPool;
+    }
+
+    protected ExecutorService getCurrentBatchPool() {
+      return batchPool;
+    }
+
+    private void shutdownBatchPool() {
+      if (this.cleanupPool && this.batchPool != null && !this.batchPool.isShutdown()) {
+        this.batchPool.shutdown();
+        try {
+          if (!this.batchPool.awaitTermination(10, TimeUnit.SECONDS)) {
+            this.batchPool.shutdownNow();
+          }
+        } catch (InterruptedException e) {
+          this.batchPool.shutdownNow();
+        }
+      }
+    }
+
     /**
      * @return The cluster registry implementation to use.
      * @throws IOException
@@ -2267,6 +2411,7 @@ public class HConnectionManager {
       }
       delayedClosing.stop("Closing connection");
       closeMaster();
+      shutdownBatchPool();
       this.closed = true;
       closeZooKeeperWatcher();
       this.stubs.clear();
