@@ -21,6 +21,7 @@ import static org.junit.Assert.*;
 
 import java.io.IOException;
 import java.net.SocketTimeoutException;
+import java.util.concurrent.ExecutorService;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -212,7 +213,7 @@ public class TestClientNoCluster {
     final ClientService.BlockingInterface stub;
 
     ScanOpenNextThenExceptionThenRecoverConnection(Configuration conf,
-        boolean managed) throws IOException {
+        boolean managed, ExecutorService pool) throws IOException {
       super(conf, managed);
       // Mock up my stub so open scanner returns a scanner id and then on next, we throw
       // exceptions for three times and then after that, we return no more to scan.
@@ -243,8 +244,8 @@ public class TestClientNoCluster {
   extends HConnectionManager.HConnectionImplementation {
     final ClientService.BlockingInterface stub;
 
-    RegionServerStoppedOnScannerOpenConnection(Configuration conf, boolean managed)
-    throws IOException {
+    RegionServerStoppedOnScannerOpenConnection(Configuration conf, boolean managed,
+        ExecutorService pool) throws IOException {
       super(conf, managed);
       // Mock up my stub so open scanner returns a scanner id and then on next, we throw
       // exceptions for three times and then after that, we return no more to scan.
@@ -275,7 +276,7 @@ public class TestClientNoCluster {
   extends HConnectionManager.HConnectionImplementation {
     final ClientService.BlockingInterface stub;
 
-    RpcTimeoutConnection(Configuration conf, boolean managed)
+    RpcTimeoutConnection(Configuration conf, boolean managed, ExecutorService pool)
     throws IOException {
       super(conf, managed);
       // Mock up my stub so an exists call -- which turns into a get -- throws an exception

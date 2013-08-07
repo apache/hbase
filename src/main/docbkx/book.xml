@@ -1101,11 +1101,14 @@ HTable table2 = new HTable(conf2, "myTable");</programlisting>
             </para>
             <para>
                 Another solution is to precreate an <classname>HConnection</classname> using
-                <programlisting>HConnectionManager.createConnection(Configuration)</programlisting> as
-                well as an <classname>ExecutorService</classname>; then use the
-                <programlisting>HTable(byte[], HConnection, ExecutorService)</programlisting>
-                constructor to create <classname>HTable</classname> instances on demand.
-                This construction is very lightweight and resources are controlled/shared if you go this route.
+                <programlisting>// Create a connection to the cluster.
+HConnection connection = HConnectionManager.createConnection(Configuration);
+HTableInterface table = connection.getTable("myTable");
+// use table as needed, the table returned is lightweight
+table.close();
+// use the connection for other access to the cluster
+connection.close();</programlisting>
+                Constructing HTableInterface implementation is very lightweight and resources are controlled/shared if you go this route.
             </para>
           </section>
    	  </section>

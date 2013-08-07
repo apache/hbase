@@ -4100,12 +4100,7 @@ public class TestFromClientSide {
   HTable createUnmangedHConnectionHTable(final byte [] tableName) throws IOException {
     TEST_UTIL.createTable(tableName, HConstants.CATALOG_FAMILY);
     HConnection conn = HConnectionManager.createConnection(TEST_UTIL.getConfiguration());
-    ExecutorService pool = new ThreadPoolExecutor(1, Integer.MAX_VALUE,
-      60, TimeUnit.SECONDS,
-      new SynchronousQueue<Runnable>(),
-      Threads.newDaemonThreadFactory("test-from-client"));
-    ((ThreadPoolExecutor)pool).allowCoreThreadTimeOut(true);
-    return new HTable(tableName, conn, pool);
+    return (HTable)conn.getTable(tableName);
   }
 
   /**

@@ -59,6 +59,7 @@ import java.util.Map;
  * <p>
  * Pool will manage its own connections to the cluster. See
  * {@link HConnectionManager}.
+ * @deprecated Use {@link HConnection#getTable(String)} instead.
  */
 @InterfaceAudience.Public
 @InterfaceStability.Stable
