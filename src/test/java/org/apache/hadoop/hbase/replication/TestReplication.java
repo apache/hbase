@@ -94,7 +94,7 @@ public class TestReplication {
     // smaller block size and capacity to trigger more operations
     // and test them
     conf1.setInt("hbase.regionserver.hlog.blocksize", 1024*20);
-    conf1.setInt("replication.source.size.capacity", 1024);
+    conf1.setInt("replication.source.size.capacity", 10240);
     conf1.setLong("replication.source.sleepforretries", 100);
     conf1.setInt("hbase.regionserver.maxlogs", 10);
     conf1.setLong("hbase.master.logcleaner.ttl", 10);

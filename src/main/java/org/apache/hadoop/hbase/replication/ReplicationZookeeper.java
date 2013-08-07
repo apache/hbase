@@ -596,7 +596,8 @@ public class ReplicationZookeeper {
         List<String> hlogs = ZKUtil.listChildrenNoWatch(this.zookeeper, clusterPath);
         // That region server didn't have anything to replicate for this cluster
         if (hlogs == null || hlogs.size() == 0) {
-          continue;
+          ZKUtil.deleteNodeFailSilent(this.zookeeper, clusterPath);
+          continue; // empty log queue.
         }
         SortedSet<String> logQueue = new TreeSet<String>();
         queues.put(newCluster, logQueue);
