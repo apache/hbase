@@ -82,7 +82,7 @@
 <body>
     <div class="navbar navbar-fixed-top">
       <div class="navbar-inner">
-        <div class="container">
+        <div class="container-fluid">
           <a class="btn btn-navbar" data-toggle="collapse" data-target=".nav-collapse">
             <span class="icon-bar"></span>
             <span class="icon-bar"></span>
@@ -102,16 +102,14 @@
         </div>
       </div>
     </div>
-<div class="container">
+<div class="container-fluid">
 
 
-    <div class="container">
-        <div class="row inner_header">
+        <div class="row-fluid inner_header">
             <div class="page-header">
                 <h1>Table action request accepted</h1>
             </div>
         </div>
-    </div>
 <p><hr><p>
 <%
   if (action.equals("split")) {
@@ -157,7 +155,7 @@
 <body>
     <div class="navbar navbar-fixed-top">
       <div class="navbar-inner">
-        <div class="container">
+        <div class="container-fluid">
           <a class="btn btn-navbar" data-toggle="collapse" data-target=".nav-collapse">
             <span class="icon-bar"></span>
             <span class="icon-bar"></span>
@@ -176,17 +174,16 @@
         </div>
       </div>
     </div>
-<div class="container">
+<div class="container-fluid">
 
 
-    <div class="container">
-        <div class="row inner_header">
-            <div class="page-header">
-                <h1>Table <small><%= tableName %></small></h1>
-            </div>
+
+    <div class="row-fluid inner_header">
+        <div class="page-header">
+            <h1>Table <small><%= tableName %></small></h1>
         </div>
     </div>
-    <div class="row">
+    <div class="row-fluid">
 <%
   if(tableName.equals(Bytes.toString(HConstants.META_TABLE_NAME))) {
 %>
@@ -306,11 +303,11 @@ HConnectionManager.deleteConnection(hbadmin.getConfiguration());
 
 
 <% if (!readOnly) { %>
-<p><hr><p>
+<p><hr/></p>
 Actions:
 <p>
 <center>
-<table class="table" width="90%" >
+<table class="table" width="95%" >
 <tr>
   <form method="get">
   <input type="hidden" name="action" value="compact">
@@ -341,7 +338,7 @@ Actions:
 </tr>
 </table>
 </center>
-<p>
+</p>
 </div>
 </div>
 <% } %>

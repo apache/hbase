@@ -57,7 +57,7 @@
 
         <div class="navbar navbar-fixed-top">
           <div class="navbar-inner">
-            <div class="container">
+            <div class="container-fluid">
               <a class="btn btn-navbar" data-toggle="collapse" data-target=".nav-collapse">
                 <span class="icon-bar"></span>
                 <span class="icon-bar"></span>
@@ -77,13 +77,13 @@
           </div>
         </div>
 
-        <div class="container">
-            <div class="row inner_header">
+        <div class="container-fluid">
+            <div class="row-fluid inner_header">
                 <div class="page-header">
                     <h1>Zookeeper Dump</h1>
                 </div>
             </div>
-            <div class="row">
+            <div class="row-fluid">
                 <div class="span12">
                     <pre><%= ZKUtil.dump(watcher).trim() %></pre>
                 </div>
