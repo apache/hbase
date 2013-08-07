@@ -56,6 +56,7 @@ import org.apache.hadoop.hbase.util.PoolMap.PoolType;
  * <p>
  * Pool will manage its own connections to the cluster. See
  * {@link HConnectionManager}.
+ * @deprecated Use {@link HConnection#getTable(String)} instead.
  */
 public class HTablePool implements Closeable {
   private final PoolMap<String, HTableInterface> tables;

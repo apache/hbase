@@ -83,7 +83,7 @@ public class TestHConnection {
 
   class HConnectionRaceTester extends HConnectionImplementation {
     public HConnectionRaceTester(Configuration configuration, boolean managed) throws ZooKeeperConnectionException {
-      super(configuration, managed);
+      super(configuration, managed, null);
     }
 
     /**

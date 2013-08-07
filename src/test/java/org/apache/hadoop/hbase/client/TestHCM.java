@@ -25,12 +25,14 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
+import java.io.IOException;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
@@ -130,6 +132,61 @@ public class TestHCM {
   }
   
   @Test
+  public void testClusterConnection() throws IOException {
+    ThreadPoolExecutor otherPool = new ThreadPoolExecutor(1, 1, 5, TimeUnit.SECONDS,
+        new SynchronousQueue<Runnable>(), Threads.newDaemonThreadFactory("test-hcm"));
+
+    HConnection con1 = HConnectionManager.createConnection(TEST_UTIL.getConfiguration());
+    HConnection con2 = HConnectionManager.createConnection(TEST_UTIL.getConfiguration(), otherPool);
+    // make sure the internally created ExecutorService is the one passed
+    assertTrue(otherPool == ((HConnectionImplementation) con2).getCurrentBatchPool());
+
+    String tableName = "testClusterConnection";
+    TEST_UTIL.createTable(tableName.getBytes(), FAM_NAM).close();
+    HTable t = (HTable) con1.getTable(tableName, otherPool);
+    // make sure passing a pool to the getTable does not trigger creation of an
+    // internal pool
+    assertNull("Internal Thread pool should be null",
+        ((HConnectionImplementation) con1).getCurrentBatchPool());
+    // table should use the pool passed
+    assertTrue(otherPool == t.getPool());
+    t.close();
+
+    t = (HTable) con2.getTable(tableName);
+    // table should use the connectin's internal pool
+    assertTrue(otherPool == t.getPool());
+    t.close();
+
+    t = (HTable) con2.getTable(Bytes.toBytes(tableName));
+    // try other API too
+    assertTrue(otherPool == t.getPool());
+    t.close();
+
+    t = (HTable) con1.getTable(tableName);
+    ExecutorService pool = ((HConnectionImplementation) con1).getCurrentBatchPool();
+    // make sure an internal pool was created
+    assertNotNull("An internal Thread pool should have been created", pool);
+    // and that the table is using it
+    assertTrue(t.getPool() == pool);
+    t.close();
+
+    t = (HTable) con1.getTable(tableName);
+    // still using the *same* internal pool
+    assertTrue(t.getPool() == pool);
+    t.close();
+
+    con1.close();
+    // if the pool was created on demand it should be closed upon connectin
+    // close
+    assertTrue(pool.isShutdown());
+
+    con2.close();
+    // if the pool is passed, it is not closed
+    assertFalse(otherPool.isShutdown());
+    otherPool.shutdownNow();
+  }
+  
+  @Test
   public void abortingHConnectionRemovesItselfFromHCM() throws Exception {
     // Save off current HConnections
     Map<HConnectionKey, HConnectionImplementation> oldHBaseInstances = 
@@ -180,20 +237,16 @@ public class TestHCM {
   public void testConnectionManagement() throws Exception{
     TEST_UTIL.createTable(TABLE_NAME1, FAM_NAM);
     HConnection conn = HConnectionManager.createConnection(TEST_UTIL.getConfiguration());
-    ThreadPoolExecutor pool = new ThreadPoolExecutor(1, 10,
-        60, TimeUnit.SECONDS,
-        new SynchronousQueue<Runnable>(),
-        Threads.newDaemonThreadFactory("test-hcm-table"));
 
-    HTable table = new HTable(TABLE_NAME1, conn, pool);
+    HTableInterface table = conn.getTable(TABLE_NAME1);
     table.close();
     assertFalse(conn.isClosed());
-    assertFalse(pool.isShutdown());
-    table = new HTable(TEST_UTIL.getConfiguration(), TABLE_NAME1, pool);
+    assertFalse(((HTable)table).getPool().isShutdown());
+    table = conn.getTable(TABLE_NAME1);
     table.close();
-    assertFalse(pool.isShutdown());
+    assertFalse(((HTable)table).getPool().isShutdown());
     conn.close();
-    pool.shutdownNow();
+    assertTrue(((HTable)table).getPool().isShutdown());
   }
 
   /**
