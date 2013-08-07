@@ -179,6 +179,34 @@ public abstract class Mutation extends OperationWithAttributes implements Row, C
   }
 
   /**
+   * Set the durability for this mutation. If this is set to true,
+   * the default durability of the table is set.
+   * @param writeToWal
+   */
+  @Deprecated
+  public void setWriteToWAL(boolean writeToWal) {
+    if(!writeToWal) {
+      setDurability(Durability.SKIP_WAL);
+    } else {
+    // This is required to handle the case where this method is
+    // called twice, first with writeToWal = false,
+    // and then with writeToWal = true
+      setDurability(Durability.USE_DEFAULT);
+    }
+  }
+
+  /**
+   * Get the durability for this mutation.
+   * @return - true if this mutation is set to write to the WAL either
+   * synchronously, asynchronously or fsync to disk on the file system.
+   * - to get the exact durability, use the {#getDurability} method.
+   */
+  @Deprecated
+  public boolean getWriteToWAL() {
+    return Durability.SKIP_WAL != getDurability();
+  }
+
+  /**
    * Method for retrieving the put's familyMap
    * @return familyMap
    */
