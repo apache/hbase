@@ -104,6 +104,28 @@ public class TestRegionServerOnlineConfigChange extends TestCase {
   }
 
   /**
+   * Check if the server side profiling config parameter changes online
+   * @throws IOException
+   */
+  public void testServerSideProfilingOnlineChange() throws IOException {
+    assertTrue(rs1.enableServerSideProfilingForAllCalls != null);
+    boolean origProfiling =
+            rs1.enableServerSideProfilingForAllCalls.get();
+
+    conf.setBoolean("hbase.regionserver.enable.serverside.profiling",
+                    !origProfiling);
+
+    // Confirm that without the notification call, the parameter is unchanged
+    assertEquals(origProfiling,
+                 rs1.enableServerSideProfilingForAllCalls.get());
+
+    // After the notification, it should be changed
+    HRegionServer.configurationManager.notifyAllObservers(conf);
+    assertEquals(!origProfiling,
+                 rs1.enableServerSideProfilingForAllCalls.get());
+  }
+
+  /**
    * Test that the configurations in the CompactionConfiguration class change
    * properly.
    *

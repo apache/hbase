@@ -361,6 +361,10 @@ public final class HConstants {
   /** Maximum value length, enforced on KeyValue construction */
   public static final int MAXIMUM_VALUE_LENGTH = Integer.MAX_VALUE;
 
+  /** Conf key for enabling/disabling server profiling */
+  public static final String HREGIONSERVER_ENABLE_SERVERSIDE_PROFILING =
+      "hbase.regionserver.enable.serverside.profiling";
+
   // Always store the location of the root table's HRegion.
   // This HRegion is never split.
 

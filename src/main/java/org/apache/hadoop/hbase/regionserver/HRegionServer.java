@@ -369,7 +369,8 @@ public class HRegionServer implements HRegionInterface,
   // throw out an Exception. This is done to avoid OutOfMemory Errors, and
   // large GC issues.
   private static long responseSizeLimit;
-  public static boolean enableServerSideProfilingForAllCalls;
+  public static final AtomicBoolean enableServerSideProfilingForAllCalls =
+      new AtomicBoolean(false);
   public static AtomicInteger numOptimizedSeeks = new AtomicInteger(0);
   private int numRowRequests = 0;
 
@@ -437,8 +438,8 @@ public class HRegionServer implements HRegionInterface,
 
     responseSizeLimit = conf.getLong("hbase.regionserver.results.size.max",
         (long)Integer.MAX_VALUE); // set the max to 2G
-    enableServerSideProfilingForAllCalls = conf.getBoolean(
-        "hbase.regionserver.enable.serverside.profiling", false);
+    enableServerSideProfilingForAllCalls.set(conf.getBoolean(
+        HConstants.HREGIONSERVER_ENABLE_SERVERSIDE_PROFILING, false));
 
     reinitialize();
     SchemaMetrics.configureGlobally(conf);
@@ -3840,3 +3841,12 @@ public class HRegionServer implements HRegionInterface,
     return 0;
   }
 }
+    boolean origProfiling = enableServerSideProfilingForAllCalls.get();
+    boolean newProfiling = conf.getBoolean(
+        "hbase.regionserver.enable.serverside.profiling", false);
+    if (origProfiling != newProfiling) {
+      enableServerSideProfilingForAllCalls.set(newProfiling);
+      LOG.info("enableServerSideProfilingForAllCalls changed from " +
+        origProfiling + " to " + newProfiling);
+    }
+
