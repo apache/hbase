@@ -336,6 +336,10 @@ public class ReplicationSource extends Thread
               this.replicationQueueInfo.isQueueRecovered(), currentWALisBeingWrittenTo);
           this.lastLoggedPosition = this.repLogReader.getPosition();
         }
+        // Reset the sleep multiplier if nothing has actually gone wrong
+        if (!gotIOE) {
+          sleepMultiplier = 1;
+        }
         if (sleepForRetries("Nothing to replicate", sleepMultiplier)) {
           sleepMultiplier++;
         }
