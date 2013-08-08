@@ -352,6 +352,11 @@ public class TestFilterList {
 
     Filter filterMinHint = new FilterBase() {
       @Override
+      public ReturnCode filterKeyValue(KeyValue ignored) {
+        return ReturnCode.SEEK_NEXT_USING_HINT;
+      }
+
+      @Override
       public KeyValue getNextKeyHint(KeyValue currentKV) {
         return minKeyValue;
       }
@@ -361,6 +366,11 @@ public class TestFilterList {
     };
 
     Filter filterMaxHint = new FilterBase() {
+      @Override
+      public ReturnCode filterKeyValue(KeyValue ignored) {
+        return ReturnCode.SEEK_NEXT_USING_HINT;
+      }
+
       @Override
       public KeyValue getNextKeyHint(KeyValue currentKV) {
         return new KeyValue(Bytes.toBytes(Long.MAX_VALUE), null, null);
@@ -395,30 +405,34 @@ public class TestFilterList {
 
     // MUST PASS ALL
 
-    // Should take the max if given two hints
+    // Should take the first hint
     filterList = new FilterList(Operator.MUST_PASS_ALL,
         Arrays.asList(new Filter [] { filterMinHint, filterMaxHint } ));
-    assertEquals(0, KeyValue.COMPARATOR.compare(filterList.getNextKeyHint(null),
-        maxKeyValue));
-
-    // Should have max hint even if a filter has no hint
-    filterList = new FilterList(Operator.MUST_PASS_ALL,
-        Arrays.asList(
-            new Filter [] { filterMinHint, filterMaxHint, filterNoHint } ));
-    assertEquals(0, KeyValue.COMPARATOR.compare(filterList.getNextKeyHint(null),
-        maxKeyValue));
-    filterList = new FilterList(Operator.MUST_PASS_ALL,
-        Arrays.asList(new Filter [] { filterNoHint, filterMaxHint } ));
-    assertEquals(0, KeyValue.COMPARATOR.compare(filterList.getNextKeyHint(null),
-        maxKeyValue));
-    filterList = new FilterList(Operator.MUST_PASS_ALL,
-        Arrays.asList(new Filter [] { filterNoHint, filterMinHint } ));
+    filterList.filterKeyValue(null);
     assertEquals(0, KeyValue.COMPARATOR.compare(filterList.getNextKeyHint(null),
         minKeyValue));
 
-    // Should give min hint if its the only one
+    filterList = new FilterList(Operator.MUST_PASS_ALL,
+        Arrays.asList(new Filter [] { filterMaxHint, filterMinHint } ));
+    filterList.filterKeyValue(null);
+    assertEquals(0, KeyValue.COMPARATOR.compare(filterList.getNextKeyHint(null),
+        maxKeyValue));
+
+    // Should have first hint even if a filter has no hint
+    filterList = new FilterList(Operator.MUST_PASS_ALL,
+        Arrays.asList(
+            new Filter [] { filterNoHint, filterMinHint, filterMaxHint } ));
+    filterList.filterKeyValue(null);
+    assertEquals(0, KeyValue.COMPARATOR.compare(filterList.getNextKeyHint(null),
+        minKeyValue));
+    filterList = new FilterList(Operator.MUST_PASS_ALL,
+        Arrays.asList(new Filter [] { filterNoHint, filterMaxHint } ));
+    filterList.filterKeyValue(null);
+    assertEquals(0, KeyValue.COMPARATOR.compare(filterList.getNextKeyHint(null),
+        maxKeyValue));
     filterList = new FilterList(Operator.MUST_PASS_ALL,
         Arrays.asList(new Filter [] { filterNoHint, filterMinHint } ));
+    filterList.filterKeyValue(null);
     assertEquals(0, KeyValue.COMPARATOR.compare(filterList.getNextKeyHint(null),
         minKeyValue));
   }
