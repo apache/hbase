@@ -63,6 +63,7 @@ public class FilterList implements Filter {
   private static final int MAX_LOG_FILTERS = 5;
   private Operator operator = Operator.MUST_PASS_ALL;
   private List<Filter> filters = new ArrayList<Filter>();
+  private Filter seekHintFilter = null;
 
   /** Reference KeyValue used by {@link #transform(KeyValue)} for validation purpose. */
   private KeyValue referenceKV = null;
@@ -166,6 +167,7 @@ public class FilterList implements Filter {
     for (Filter filter : filters) {
       filter.reset();
     }
+    seekHintFilter = null;
   }
 
   @Override
@@ -235,6 +237,9 @@ public class FilterList implements Filter {
         case INCLUDE:
           transformed = filter.transform(transformed);
           continue;
+        case SEEK_NEXT_USING_HINT:
+          seekHintFilter = filter;
+          return code;
         default:
           return code;
         }
@@ -243,7 +248,8 @@ public class FilterList implements Filter {
           continue;
         }
 
-        switch (filter.filterKeyValue(v)) {
+        ReturnCode code = filter.filterKeyValue(v);
+        switch (code) {
         case INCLUDE:
           if (rc != ReturnCode.INCLUDE_AND_NEXT_COL) {
             rc = ReturnCode.INCLUDE;
@@ -332,9 +338,14 @@ public class FilterList implements Filter {
   @Override
   public KeyValue getNextKeyHint(KeyValue currentKV) {
     KeyValue keyHint = null;
+    if (operator == Operator.MUST_PASS_ALL) {
+      keyHint = seekHintFilter.getNextKeyHint(currentKV);
+      return keyHint;
+    }
+
     for (Filter filter : filters) {
       KeyValue curKeyHint = filter.getNextKeyHint(currentKV);
-      if (curKeyHint == null && operator == Operator.MUST_PASS_ONE) {
+      if (curKeyHint == null) {
         // If we ever don't have a hint and this is must-pass-one, then no hint
         return null;
       }
@@ -344,13 +355,7 @@ public class FilterList implements Filter {
           keyHint = curKeyHint;
           continue;
         }
-        // There is an existing hint
-        if (operator == Operator.MUST_PASS_ALL &&
-            KeyValue.COMPARATOR.compare(keyHint, curKeyHint) < 0) {
-          // If all conditions must pass, we can keep the max hint
-          keyHint = curKeyHint;
-        } else if (operator == Operator.MUST_PASS_ONE &&
-            KeyValue.COMPARATOR.compare(keyHint, curKeyHint) > 0) {
+        if (KeyValue.COMPARATOR.compare(keyHint, curKeyHint) > 0) {
           // If any condition can pass, we need to keep the min hint
           keyHint = curKeyHint;
         }
