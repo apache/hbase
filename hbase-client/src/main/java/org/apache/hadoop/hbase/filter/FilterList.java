@@ -48,7 +48,6 @@ import com.google.protobuf.InvalidProtocolBufferException;
  *
  * <br/>
  * Defaults to {@link Operator#MUST_PASS_ALL}.
- * <p>TODO: Fix creation of Configuration on serialization and deserialization.
  */
 @InterfaceAudience.Public
 @InterfaceStability.Stable
@@ -64,6 +63,7 @@ public class FilterList extends Filter {
   private static final int MAX_LOG_FILTERS = 5;
   private Operator operator = Operator.MUST_PASS_ALL;
   private List<Filter> filters = new ArrayList<Filter>();
+  private Filter seekHintFilter = null;
 
   /** Reference KeyValue used by {@link #transform(KeyValue)} for validation purpose. */
   private KeyValue referenceKV = null;
@@ -163,6 +163,7 @@ public class FilterList extends Filter {
     for (Filter filter : filters) {
       filter.reset();
     }
+    seekHintFilter = null;
   }
 
   @Override
@@ -232,6 +233,9 @@ public class FilterList extends Filter {
         case INCLUDE:
           transformed = filter.transform(transformed);
           continue;
+        case SEEK_NEXT_USING_HINT:
+          seekHintFilter = filter;
+          return code;
         default:
           return code;
         }
@@ -349,22 +353,28 @@ public class FilterList extends Filter {
    * @return true if and only if the fields of the filter that are serialized
    * are equal to the corresponding fields in other.  Used for testing.
    */
-  boolean areSerializedFieldsEqual(Filter o) {
-    if (o == this) return true;
-    if (!(o instanceof FilterList)) return false;
+  boolean areSerializedFieldsEqual(Filter other) {
+    if (other == this) return true;
+    if (!(other instanceof FilterList)) return false;
 
-    FilterList other = (FilterList)o;
-    return this.getOperator().equals(other.getOperator()) &&
-      ((this.getFilters() == other.getFilters())
-      || this.getFilters().equals(other.getFilters()));
+    FilterList o = (FilterList)other;
+    return this.getOperator().equals(o.getOperator()) &&
+      ((this.getFilters() == o.getFilters())
+      || this.getFilters().equals(o.getFilters()));
   }
 
   @Override
   public KeyValue getNextKeyHint(KeyValue currentKV) throws IOException {
     KeyValue keyHint = null;
+    if (operator == Operator.MUST_PASS_ALL) {
+      keyHint = seekHintFilter.getNextKeyHint(currentKV);
+      return keyHint;
+    }
+
+    // If any condition can pass, we need to keep the min hint
     for (Filter filter : filters) {
       KeyValue curKeyHint = filter.getNextKeyHint(currentKV);
-      if (curKeyHint == null && operator == Operator.MUST_PASS_ONE) {
+      if (curKeyHint == null) {
         // If we ever don't have a hint and this is must-pass-one, then no hint
         return null;
       }
@@ -374,14 +384,7 @@ public class FilterList extends Filter {
           keyHint = curKeyHint;
           continue;
         }
-        // There is an existing hint
-        if (operator == Operator.MUST_PASS_ALL &&
-            KeyValue.COMPARATOR.compare(keyHint, curKeyHint) < 0) {
-          // If all conditions must pass, we can keep the max hint
-          keyHint = curKeyHint;
-        } else if (operator == Operator.MUST_PASS_ONE &&
-            KeyValue.COMPARATOR.compare(keyHint, curKeyHint) > 0) {
-          // If any condition can pass, we need to keep the min hint
+        if (KeyValue.COMPARATOR.compare(keyHint, curKeyHint) > 0) {
           keyHint = curKeyHint;
         }
       }
