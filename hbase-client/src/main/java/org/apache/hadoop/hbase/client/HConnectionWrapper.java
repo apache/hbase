@@ -73,12 +73,22 @@ public class HConnectionWrapper implements HConnection {
   }
 
   @Override
+  public HTableInterface getTable(TableName tableName) throws IOException {
+    return hconnection.getTable(tableName);
+  }
+
+  @Override
   public HTableInterface getTable(String tableName, ExecutorService pool)  throws IOException {
     return hconnection.getTable(tableName, pool);
   }
 
   @Override
   public HTableInterface getTable(byte[] tableName, ExecutorService pool)  throws IOException {
+    return hconnection.getTable(tableName, pool);
+  }
+
+  @Override
+  public HTableInterface getTable(TableName tableName, ExecutorService pool)  throws IOException {
     return hconnection.getTable(tableName, pool);
   }
 

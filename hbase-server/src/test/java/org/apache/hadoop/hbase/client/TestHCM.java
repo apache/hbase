@@ -148,6 +148,11 @@ public class TestHCM {
     assertTrue(otherPool == t.getPool());
     t.close();
 
+    t = (HTable)con2.getTable(TableName.valueOf(tableName));
+    // try other API too
+    assertTrue(otherPool == t.getPool());
+    t.close();
+
     t = (HTable)con1.getTable(tableName);
     ExecutorService pool = ((HConnectionImplementation)con1).getCurrentBatchPool();
     // make sure an internal pool was created

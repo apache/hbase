@@ -653,21 +653,31 @@ public class HConnectionManager {
  
     @Override
     public HTableInterface getTable(String tableName) throws IOException {
-      return getTable(Bytes.toBytes(tableName));
+      return getTable(TableName.valueOf(tableName));
     }
 
     @Override
     public HTableInterface getTable(byte[] tableName) throws IOException {
+      return getTable(TableName.valueOf(tableName));
+    }
+
+    @Override
+    public HTableInterface getTable(TableName tableName) throws IOException {
       return getTable(tableName, getBatchPool());
     }
 
     @Override
     public HTableInterface getTable(String tableName, ExecutorService pool) throws IOException {
-      return getTable(Bytes.toBytes(tableName), pool);
+      return getTable(TableName.valueOf(tableName), pool);
     }
 
     @Override
     public HTableInterface getTable(byte[] tableName, ExecutorService pool) throws IOException {
+      return getTable(TableName.valueOf(tableName), pool);
+    }
+
+    @Override
+    public HTableInterface getTable(TableName tableName, ExecutorService pool) throws IOException {
       if (managed) {
         throw new IOException("The connection has to be unmanaged.");
       }
