@@ -61,9 +61,9 @@ public class PutCombiner<K> extends Reducer<K, Put, K, Put> {
       cnt++;
       if (put == null) {
         put = p;
-        familyMap = put.getFamilyMap();
+        familyMap = put.getFamilyCellMap();
       } else {
-        for (Entry<byte[], List<? extends Cell>> entry : p.getFamilyMap()
+        for (Entry<byte[], List<? extends Cell>> entry : p.getFamilyCellMap()
             .entrySet()) {
           List<? extends Cell> cells = familyMap.get(entry.getKey());
           List<KeyValue> kvs = (cells != null) ? (List<KeyValue>) cells : null;

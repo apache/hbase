@@ -1734,13 +1734,13 @@ public class HRegion implements HeapSize { // , Writable{
    */
   void prepareDelete(Delete delete) throws IOException {
     // Check to see if this is a deleteRow insert
-    if(delete.getFamilyMap().isEmpty()){
+    if(delete.getFamilyCellMap().isEmpty()){
       for(byte [] family : this.htableDescriptor.getFamiliesKeys()){
         // Don't eat the timestamp
         delete.deleteFamily(family, delete.getTimeStamp());
       }
     } else {
-      for(byte [] family : delete.getFamilyMap().keySet()) {
+      for(byte [] family : delete.getFamilyCellMap().keySet()) {
         if(family == null) {
           throw new NoSuchColumnFamilyException("Empty family is invalid");
         }
@@ -2026,7 +2026,7 @@ public class HRegion implements HeapSize { // , Writable{
         Mutation mutation = batchOp.operations[lastIndexExclusive];
         boolean isPutMutation = mutation instanceof Put;
 
-        Map<byte[], List<? extends Cell>> familyMap = mutation.getFamilyMap();
+        Map<byte[], List<? extends Cell>> familyMap = mutation.getFamilyCellMap();
         // store the family map reference to allow for mutations
         familyMaps[lastIndexExclusive] = familyMap;
 
@@ -2045,7 +2045,7 @@ public class HRegion implements HeapSize { // , Writable{
             } else {
               checkFamilies(familyMap.keySet());
             }
-            checkTimestamps(mutation.getFamilyMap(), now);
+            checkTimestamps(mutation.getFamilyCellMap(), now);
           } else {
             prepareDelete((Delete) mutation);
           }
@@ -2089,17 +2089,17 @@ public class HRegion implements HeapSize { // , Writable{
           // individual puts then metrics can be reported as a mutliput across
           // column families in the first put.
           if (putsCfSet == null) {
-            putsCfSet = mutation.getFamilyMap().keySet();
+            putsCfSet = mutation.getFamilyCellMap().keySet();
           } else {
             putsCfSetConsistent = putsCfSetConsistent
-                && mutation.getFamilyMap().keySet().equals(putsCfSet);
+                && mutation.getFamilyCellMap().keySet().equals(putsCfSet);
           }
         } else {
           if (deletesCfSet == null) {
-            deletesCfSet = mutation.getFamilyMap().keySet();
+            deletesCfSet = mutation.getFamilyCellMap().keySet();
           } else {
             deletesCfSetConsistent = deletesCfSetConsistent
-                && mutation.getFamilyMap().keySet().equals(deletesCfSet);
+                && mutation.getFamilyCellMap().keySet().equals(deletesCfSet);
           }
         }
       }
@@ -2185,7 +2185,7 @@ public class HRegion implements HeapSize { // , Writable{
           durability = tmpDur;
         }
         if (tmpDur == Durability.SKIP_WAL) {
-          recordMutationWithoutWal(m.getFamilyMap());
+          recordMutationWithoutWal(m.getFamilyCellMap());
           continue;
         }
 
@@ -4669,7 +4669,7 @@ public class HRegion implements HeapSize { // , Writable{
         try {
           long now = EnvironmentEdgeManager.currentTimeMillis();
           // Process each family
-          for (Map.Entry<byte[], List<? extends Cell>> family : append.getFamilyMap().entrySet()) {
+          for (Map.Entry<byte[], List<? extends Cell>> family : append.getFamilyCellMap().entrySet()) {
   
             Store store = stores.get(family.getKey());
             List<KeyValue> kvs = new ArrayList<KeyValue>(family.getValue().size());
@@ -4755,7 +4755,7 @@ public class HRegion implements HeapSize { // , Writable{
               walEdits, HConstants.DEFAULT_CLUSTER_ID, EnvironmentEdgeManager.currentTimeMillis(),
               this.htableDescriptor);
           } else {
-            recordMutationWithoutWal(append.getFamilyMap());
+            recordMutationWithoutWal(append.getFamilyCellMap());
           }
   
           //Actually write to Memstore now
@@ -4844,7 +4844,7 @@ public class HRegion implements HeapSize { // , Writable{
           long now = EnvironmentEdgeManager.currentTimeMillis();
           // Process each family
           for (Map.Entry<byte [], List<? extends Cell>> family:
-              increment.getFamilyMap().entrySet()) {
+              increment.getFamilyCellMap().entrySet()) {
   
             Store store = stores.get(family.getKey());
             List<KeyValue> kvs = new ArrayList<KeyValue>(family.getValue().size());
@@ -4905,7 +4905,7 @@ public class HRegion implements HeapSize { // , Writable{
                 walEdits, HConstants.DEFAULT_CLUSTER_ID, EnvironmentEdgeManager.currentTimeMillis(),
                 this.htableDescriptor);
           } else {
-            recordMutationWithoutWal(increment.getFamilyMap());
+            recordMutationWithoutWal(increment.getFamilyCellMap());
           }
           //Actually write to Memstore now
           for (Map.Entry<Store, List<KeyValue>> entry : tempMemstore.entrySet()) {

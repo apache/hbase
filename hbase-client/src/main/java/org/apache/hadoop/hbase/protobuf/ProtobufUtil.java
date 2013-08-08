@@ -927,7 +927,7 @@ public final class ProtobufUtil {
     }
     ColumnValue.Builder columnBuilder = ColumnValue.newBuilder();
     QualifierValue.Builder valueBuilder = QualifierValue.newBuilder();
-   for (Map.Entry<byte[], List<? extends Cell>> family: increment.getFamilyMap().entrySet()) {
+   for (Map.Entry<byte[], List<? extends Cell>> family: increment.getFamilyCellMap().entrySet()) {
       columnBuilder.setFamily(ByteString.copyFrom(family.getKey()));
       columnBuilder.clearQualifierValue();
       List<? extends Cell> values = family.getValue();
@@ -957,7 +957,7 @@ public final class ProtobufUtil {
     MutationProto.Builder builder = getMutationBuilderAndSetCommonFields(type, mutation);
     ColumnValue.Builder columnBuilder = ColumnValue.newBuilder();
     QualifierValue.Builder valueBuilder = QualifierValue.newBuilder();
-    for (Map.Entry<byte[],List<? extends Cell>> family: mutation.getFamilyMap().entrySet()) {
+    for (Map.Entry<byte[],List<? extends Cell>> family: mutation.getFamilyCellMap().entrySet()) {
       columnBuilder.setFamily(ByteString.copyFrom(family.getKey()));
       columnBuilder.clearQualifierValue();
       for (Cell cell: family.getValue()) {

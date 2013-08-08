@@ -70,7 +70,7 @@ public abstract class Mutation extends OperationWithAttributes implements Row, C
 
   @Override
   public CellScanner cellScanner() {
-    return CellUtil.createCellScanner(getFamilyMap());
+    return CellUtil.createCellScanner(getFamilyCellMap());
   }
 
   /**
@@ -182,7 +182,7 @@ public abstract class Mutation extends OperationWithAttributes implements Row, C
    * Method for retrieving the put's familyMap
    * @return familyMap
    */
-  public NavigableMap<byte [], List<? extends Cell>> getFamilyMap() {
+  public NavigableMap<byte [], List<? extends Cell>> getFamilyCellMap() {
     return this.familyMap;
   }
 

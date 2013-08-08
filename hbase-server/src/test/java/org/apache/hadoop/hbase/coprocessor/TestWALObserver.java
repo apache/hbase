@@ -157,7 +157,7 @@ public class TestWALObserver {
     // Use a Put to create familyMap.
     Put p = creatPutWith2Families(TEST_ROW);
 
-    Map<byte[], List<? extends Cell>> familyMap = p.getFamilyMap();
+    Map<byte[], List<? extends Cell>> familyMap = p.getFamilyCellMap();
     WALEdit edit = new WALEdit();
     addFamilyMapToWALEdit(familyMap, edit);
 

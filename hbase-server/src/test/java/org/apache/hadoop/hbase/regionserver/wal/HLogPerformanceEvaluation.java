@@ -99,7 +99,7 @@ public final class HLogPerformanceEvaluation extends Configured implements Tool 
           Put put = setupPut(rand, key, value, numFamilies);
           long now = System.currentTimeMillis();
           WALEdit walEdit = new WALEdit();
-          addFamilyMapToWALEdit(put.getFamilyMap(), walEdit);
+          addFamilyMapToWALEdit(put.getFamilyCellMap(), walEdit);
           HRegionInfo hri = region.getRegionInfo();
           if (this.noSync) {
             hlog.appendNoSync(hri, hri.getTableName(), walEdit,

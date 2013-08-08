@@ -938,14 +938,14 @@ public class AccessController extends BaseRegionObserver
       final Put put, final WALEdit edit, final Durability durability)
       throws IOException {
     requirePermission("put", Permission.Action.WRITE, c.getEnvironment(),
-        put.getFamilyMap());
+        put.getFamilyCellMap());
   }
 
   @Override
   public void postPut(final ObserverContext<RegionCoprocessorEnvironment> c,
       final Put put, final WALEdit edit, final Durability durability) {
     if (aclRegion) {
-      updateACL(c.getEnvironment(), put.getFamilyMap());
+      updateACL(c.getEnvironment(), put.getFamilyCellMap());
     }
   }
 
@@ -954,7 +954,7 @@ public class AccessController extends BaseRegionObserver
       final Delete delete, final WALEdit edit, final Durability durability)
       throws IOException {
     requirePermission("delete", Permission.Action.WRITE, c.getEnvironment(),
-        delete.getFamilyMap());
+        delete.getFamilyCellMap());
   }
 
   @Override
@@ -962,7 +962,7 @@ public class AccessController extends BaseRegionObserver
       final Delete delete, final WALEdit edit, final Durability durability)
       throws IOException {
     if (aclRegion) {
-      updateACL(c.getEnvironment(), delete.getFamilyMap());
+      updateACL(c.getEnvironment(), delete.getFamilyCellMap());
     }
   }
 
@@ -1003,7 +1003,7 @@ public class AccessController extends BaseRegionObserver
   @Override
   public Result preAppend(ObserverContext<RegionCoprocessorEnvironment> c, Append append)
       throws IOException {
-    requirePermission("append", Permission.Action.WRITE, c.getEnvironment(), append.getFamilyMap());
+    requirePermission("append", Permission.Action.WRITE, c.getEnvironment(), append.getFamilyCellMap());
     return null;
   }
 
@@ -1013,7 +1013,7 @@ public class AccessController extends BaseRegionObserver
       throws IOException {
     // Create a map of family to qualifiers.
     Map<byte[], Set<byte[]>> familyMap = Maps.newTreeMap(Bytes.BYTES_COMPARATOR);
-    for (Map.Entry<byte [], List<? extends Cell>> entry: increment.getFamilyMap().entrySet()) {
+    for (Map.Entry<byte [], List<? extends Cell>> entry: increment.getFamilyCellMap().entrySet()) {
       Set<byte[]> qualifiers = Sets.newTreeSet(Bytes.BYTES_COMPARATOR);
       for (Cell cell: entry.getValue()) {
         KeyValue kv = KeyValueUtil.ensureKeyValue(cell);

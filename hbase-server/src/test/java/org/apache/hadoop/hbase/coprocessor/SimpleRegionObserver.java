@@ -315,7 +315,7 @@ public class SimpleRegionObserver extends BaseRegionObserver {
   public void prePut(final ObserverContext<RegionCoprocessorEnvironment> c, 
       final Put put, final WALEdit edit,
       final Durability durability) throws IOException {
-    Map<byte[], List<? extends Cell>> familyMap  = put.getFamilyMap();
+    Map<byte[], List<? extends Cell>> familyMap  = put.getFamilyCellMap();
     RegionCoprocessorEnvironment e = c.getEnvironment();
     assertNotNull(e);
     assertNotNull(e.getRegion());
@@ -348,7 +348,7 @@ public class SimpleRegionObserver extends BaseRegionObserver {
   public void postPut(final ObserverContext<RegionCoprocessorEnvironment> c,
       final Put put, final WALEdit edit,
       final Durability durability) throws IOException {
-    Map<byte[], List<? extends Cell>> familyMap  = put.getFamilyMap();
+    Map<byte[], List<? extends Cell>> familyMap  = put.getFamilyCellMap();
     RegionCoprocessorEnvironment e = c.getEnvironment();
     assertNotNull(e);
     assertNotNull(e.getRegion());
@@ -381,7 +381,7 @@ public class SimpleRegionObserver extends BaseRegionObserver {
   public void preDelete(final ObserverContext<RegionCoprocessorEnvironment> c, 
       final Delete delete, final WALEdit edit,
       final Durability durability) throws IOException {
-    Map<byte[], List<? extends Cell>> familyMap  = delete.getFamilyMap();
+    Map<byte[], List<? extends Cell>> familyMap  = delete.getFamilyCellMap();
     RegionCoprocessorEnvironment e = c.getEnvironment();
     assertNotNull(e);
     assertNotNull(e.getRegion());
@@ -395,7 +395,7 @@ public class SimpleRegionObserver extends BaseRegionObserver {
   public void postDelete(final ObserverContext<RegionCoprocessorEnvironment> c, 
       final Delete delete, final WALEdit edit,
       final Durability durability) throws IOException {
-    Map<byte[], List<? extends Cell>> familyMap  = delete.getFamilyMap();
+    Map<byte[], List<? extends Cell>> familyMap  = delete.getFamilyCellMap();
     RegionCoprocessorEnvironment e = c.getEnvironment();
     assertNotNull(e);
     assertNotNull(e.getRegion());

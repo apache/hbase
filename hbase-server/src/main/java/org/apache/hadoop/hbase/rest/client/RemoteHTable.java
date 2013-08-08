@@ -184,7 +184,7 @@ public class RemoteHTable implements HTableInterface {
   protected CellSetModel buildModelFromPut(Put put) {
     RowModel row = new RowModel(put.getRow());
     long ts = put.getTimeStamp();
-    for (List<? extends Cell> cells: put.getFamilyMap().values()) {
+    for (List<? extends Cell> cells: put.getFamilyCellMap().values()) {
       for (Cell cell: cells) {
         KeyValue kv = KeyValueUtil.ensureKeyValue(cell);
         row.addCell(new CellModel(kv.getFamily(), kv.getQualifier(),
@@ -404,7 +404,7 @@ public class RemoteHTable implements HTableInterface {
         cells = new ArrayList<Cell>();
         map.put(row, cells);
       }
-      for (List<? extends Cell> l: put.getFamilyMap().values()) {
+      for (List<? extends Cell> l: put.getFamilyCellMap().values()) {
         cells.addAll(l);
       }
     }
@@ -445,7 +445,7 @@ public class RemoteHTable implements HTableInterface {
   }
 
   public void delete(Delete delete) throws IOException {
-    String spec = buildRowSpec(delete.getRow(), delete.getFamilyMap(),
+    String spec = buildRowSpec(delete.getRow(), delete.getFamilyCellMap(),
       delete.getTimeStamp(), delete.getTimeStamp(), 1);
     for (int i = 0; i < maxRetries; i++) {
       Response response = client.delete(spec);
