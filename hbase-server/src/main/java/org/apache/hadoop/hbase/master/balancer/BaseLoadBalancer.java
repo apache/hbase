@@ -39,7 +39,6 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.master.AssignmentManager;
 import org.apache.hadoop.hbase.master.LoadBalancer;
 import org.apache.hadoop.hbase.master.MasterServices;
-import org.apache.hadoop.hbase.util.Bytes;
 
 import com.google.common.base.Joiner;
 import com.google.common.collect.ArrayListMultimap;
@@ -145,7 +144,7 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
         regionPerServerIndex = 0;
 
         for (HRegionInfo region : entry.getValue()) {
-          String tableName = region.getTableNameAsString();
+          String tableName = region.getTableName().getNameAsString();
           Integer idx = tablesToIndex.get(tableName);
           if (idx == null) {
             tables.add(tableName);

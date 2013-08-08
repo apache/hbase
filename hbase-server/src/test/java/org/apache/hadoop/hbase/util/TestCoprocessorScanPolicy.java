@@ -33,6 +33,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
@@ -57,7 +58,6 @@ import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.regionserver.ScanInfo;
 import org.apache.hadoop.hbase.regionserver.StoreScanner;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
-import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -101,7 +101,8 @@ public class TestCoprocessorScanPolicy {
 
   @Test
   public void testBaseCases() throws Exception {
-    byte[] tableName = Bytes.toBytes("baseCases");
+    TableName tableName =
+        TableName.valueOf("baseCases");
     if (TEST_UTIL.getHBaseAdmin().tableExists(tableName)) {
       TEST_UTIL.deleteTable(tableName);
     }
@@ -109,7 +110,7 @@ public class TestCoprocessorScanPolicy {
     // set the version override to 2
     Put p = new Put(R);
     p.setAttribute("versions", new byte[]{});
-    p.add(F, tableName, Bytes.toBytes(2));
+    p.add(F, tableName.getName(), Bytes.toBytes(2));
     t.put(p);
 
     long now = EnvironmentEdgeManager.currentTimeMillis();
@@ -150,7 +151,8 @@ public class TestCoprocessorScanPolicy {
 
   @Test
   public void testTTL() throws Exception {
-    byte[] tableName = Bytes.toBytes("testTTL");
+    TableName tableName =
+        TableName.valueOf("testTTL");
     if (TEST_UTIL.getHBaseAdmin().tableExists(tableName)) {
       TEST_UTIL.deleteTable(tableName);
     }
@@ -170,7 +172,7 @@ public class TestCoprocessorScanPolicy {
     // Set the TTL override to 3s
     Put p = new Put(R);
     p.setAttribute("ttl", new byte[]{});
-    p.add(F, tableName, Bytes.toBytes(3000L));
+    p.add(F, tableName.getName(), Bytes.toBytes(3000L));
     t.put(p);
 
     p = new Put(R);
@@ -209,8 +211,10 @@ public class TestCoprocessorScanPolicy {
   }
 
   public static class ScanObserver extends BaseRegionObserver {
-    private Map<String, Long> ttls = new HashMap<String,Long>();
-    private Map<String, Integer> versions = new HashMap<String,Integer>();
+    private Map<TableName, Long> ttls =
+        new HashMap<TableName, Long>();
+    private Map<TableName, Integer> versions =
+        new HashMap<TableName, Integer>();
 
     // lame way to communicate with the coprocessor,
     // since it is loaded by a different class loader
@@ -220,12 +224,12 @@ public class TestCoprocessorScanPolicy {
       if (put.getAttribute("ttl") != null) {
         Cell cell = put.getFamilyMap().values().iterator().next().get(0);
         KeyValue kv = KeyValueUtil.ensureKeyValue(cell);
-        ttls.put(Bytes.toString(kv.getQualifier()), Bytes.toLong(kv.getValue()));
+        ttls.put(TableName.valueOf(kv.getQualifier()), Bytes.toLong(kv.getValue()));
         c.bypass();
       } else if (put.getAttribute("versions") != null) {
         Cell cell = put.getFamilyMap().values().iterator().next().get(0);
         KeyValue kv = KeyValueUtil.ensureKeyValue(cell);
-        versions.put(Bytes.toString(kv.getQualifier()), Bytes.toInt(kv.getValue()));
+        versions.put(TableName.valueOf(kv.getQualifier()), Bytes.toInt(kv.getValue()));
         c.bypass();
       }
     }

@@ -49,7 +49,8 @@ import static org.junit.Assert.*;
 public class TestRegionServerCoprocessorExceptionWithAbort {
   static final Log LOG = LogFactory.getLog(TestRegionServerCoprocessorExceptionWithAbort.class);
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
-  private static final String TABLE_NAME = "observed_table";
+  private static final TableName TABLE_NAME =
+      TableName.valueOf("observed_table");
 
   @BeforeClass
   public static void setupBeforeClass() throws Exception {
@@ -72,7 +73,7 @@ public class TestRegionServerCoprocessorExceptionWithAbort {
     // When we try to write to TEST_TABLE, the buggy coprocessor will
     // cause a NullPointerException, which will cause the regionserver (which
     // hosts the region we attempted to write to) to abort.
-    byte[] TEST_TABLE = Bytes.toBytes(TABLE_NAME);
+    TableName TEST_TABLE = TABLE_NAME;
     byte[] TEST_FAMILY = Bytes.toBytes("aaa");
 
     HTable table = TEST_UTIL.createTable(TEST_TABLE, TEST_FAMILY);
@@ -102,7 +103,8 @@ public class TestRegionServerCoprocessorExceptionWithAbort {
     public void prePut(final ObserverContext<RegionCoprocessorEnvironment> c,
                        final Put put, final WALEdit edit,
                        final Durability durability) {
-      String tableName = c.getEnvironment().getRegion().getRegionInfo().getTableNameAsString();
+      TableName tableName =
+          c.getEnvironment().getRegion().getRegionInfo().getTableName();
       if (TABLE_NAME.equals(tableName)) {
         throw new NullPointerException("Buggy coprocessor");
       }

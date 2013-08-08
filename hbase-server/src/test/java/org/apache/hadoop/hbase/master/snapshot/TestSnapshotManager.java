@@ -26,6 +26,7 @@ import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.SmallTests;
@@ -79,7 +80,7 @@ public class TestSnapshotManager {
 
   @Test
   public void testInProcess() throws KeeperException, IOException {
-    String tableName = "testTable";
+    TableName tableName = TableName.valueOf("testTable");
     SnapshotManager manager = getNewManager();
     TakeSnapshotHandler handler = Mockito.mock(TakeSnapshotHandler.class);
     assertFalse("Manager is in process when there is no current handler",

@@ -30,6 +30,7 @@ import java.util.SortedSet;
 import java.util.TreeMap;
 import java.util.TreeSet;
 
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.master.RegionPlan;
@@ -197,7 +198,8 @@ public class BalancerTestBase {
       }
       Bytes.putInt(start, 0, numRegions << 1);
       Bytes.putInt(end, 0, (numRegions << 1) + 1);
-      byte[] tableName = Bytes.toBytes("table" +  (numTables > 0 ? rand.nextInt(numTables) : i));
+      TableName tableName =
+          TableName.valueOf("table" + (numTables > 0 ? rand.nextInt(numTables) : i));
       HRegionInfo hri = new HRegionInfo(tableName, start, end, false, regionId++);
       regions.add(hri);
     }

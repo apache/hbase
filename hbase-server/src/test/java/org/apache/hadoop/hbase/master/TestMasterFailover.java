@@ -37,6 +37,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.ClusterStatus;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
@@ -188,7 +189,7 @@ public class TestMasterFailover {
     };
 
     byte [] enabledTable = Bytes.toBytes("enabledTable");
-    HTableDescriptor htdEnabled = new HTableDescriptor(enabledTable);
+    HTableDescriptor htdEnabled = new HTableDescriptor(TableName.valueOf(enabledTable));
     htdEnabled.addFamily(new HColumnDescriptor(FAMILY));
 
     FileSystem filesystem = FileSystem.get(conf);
@@ -197,26 +198,26 @@ public class TestMasterFailover {
     // Write the .tableinfo
     fstd.createTableDescriptor(htdEnabled);
 
-    HRegionInfo hriEnabled = new HRegionInfo(htdEnabled.getName(), null, null);
+    HRegionInfo hriEnabled = new HRegionInfo(htdEnabled.getTableName(), null, null);
     createRegion(hriEnabled, rootdir, conf, htdEnabled);
 
     List<HRegionInfo> enabledRegions = TEST_UTIL.createMultiRegionsInMeta(
         TEST_UTIL.getConfiguration(), htdEnabled, SPLIT_KEYS);
 
-    byte [] disabledTable = Bytes.toBytes("disabledTable");
+    TableName disabledTable = TableName.valueOf("disabledTable");
     HTableDescriptor htdDisabled = new HTableDescriptor(disabledTable);
     htdDisabled.addFamily(new HColumnDescriptor(FAMILY));
     // Write the .tableinfo
     fstd.createTableDescriptor(htdDisabled);
-    HRegionInfo hriDisabled = new HRegionInfo(htdDisabled.getName(), null, null);
+    HRegionInfo hriDisabled = new HRegionInfo(htdDisabled.getTableName(), null, null);
     createRegion(hriDisabled, rootdir, conf, htdDisabled);
     List<HRegionInfo> disabledRegions = TEST_UTIL.createMultiRegionsInMeta(
         TEST_UTIL.getConfiguration(), htdDisabled, SPLIT_KEYS);
 
-    log("Regions in META have been created");
+    log("Regions in META and namespace have been created");
 
-    // at this point we only expect 2 regions to be assigned out (catalogs)
-    assertEquals(1, cluster.countServedRegions());
+    // at this point we only expect 3 regions to be assigned out (catalogs and namespace)
+    assertEquals(2, cluster.countServedRegions());
 
     // Let's just assign everything to first RS
     HRegionServer hrs = cluster.getRegionServer(0);
@@ -267,7 +268,7 @@ public class TestMasterFailover {
 
     // Disable the disabledTable in ZK
     ZKTable zktable = new ZKTable(zkw);
-    zktable.setDisabledTable(Bytes.toString(disabledTable));
+    zktable.setDisabledTable(disabledTable);
 
     /*
      *  ZK = OFFLINE
@@ -492,35 +493,36 @@ public class TestMasterFailover {
         TEST_UTIL.getRegionSplitStartKeys(Bytes.toBytes("aaa"), Bytes.toBytes("zzz"), 30);
 
     byte [] enabledTable = Bytes.toBytes("enabledTable");
-    HTableDescriptor htdEnabled = new HTableDescriptor(enabledTable);
+    HTableDescriptor htdEnabled = new HTableDescriptor(TableName.valueOf(enabledTable));
     htdEnabled.addFamily(new HColumnDescriptor(FAMILY));
     FileSystem filesystem = FileSystem.get(conf);
     Path rootdir = FSUtils.getRootDir(conf);
     FSTableDescriptors fstd = new FSTableDescriptors(filesystem, rootdir);
     // Write the .tableinfo
     fstd.createTableDescriptor(htdEnabled);
-    HRegionInfo hriEnabled = new HRegionInfo(htdEnabled.getName(),
+    HRegionInfo hriEnabled = new HRegionInfo(htdEnabled.getTableName(),
         null, null);
     createRegion(hriEnabled, rootdir, conf, htdEnabled);
 
     List<HRegionInfo> enabledRegions = TEST_UTIL.createMultiRegionsInMeta(
         TEST_UTIL.getConfiguration(), htdEnabled, SPLIT_KEYS);
 
-    byte [] disabledTable = Bytes.toBytes("disabledTable");
+    TableName disabledTable =
+        TableName.valueOf("disabledTable");
     HTableDescriptor htdDisabled = new HTableDescriptor(disabledTable);
     htdDisabled.addFamily(new HColumnDescriptor(FAMILY));
     // Write the .tableinfo
     fstd.createTableDescriptor(htdDisabled);
-    HRegionInfo hriDisabled = new HRegionInfo(htdDisabled.getName(), null, null);
+    HRegionInfo hriDisabled = new HRegionInfo(htdDisabled.getTableName(), null, null);
     createRegion(hriDisabled, rootdir, conf, htdDisabled);
 
     List<HRegionInfo> disabledRegions = TEST_UTIL.createMultiRegionsInMeta(
         TEST_UTIL.getConfiguration(), htdDisabled, SPLIT_KEYS);
 
-    log("Regions in META have been created");
+    log("Regions in META and Namespace have been created");
 
-    // at this point we only expect 2 regions to be assigned out (catalogs)
-    assertEquals(1, cluster.countServedRegions());
+    // at this point we only expect 2 regions to be assigned out (catalogs and namespace  )
+    assertEquals(2, cluster.countServedRegions());
 
     // The first RS will stay online
     List<RegionServerThread> regionservers =
@@ -558,7 +560,7 @@ public class TestMasterFailover {
     log("Assignment completed");
 
     assertTrue(" Table must be enabled.", master.getAssignmentManager()
-        .getZKTable().isEnabledTable("enabledTable"));
+        .getZKTable().isEnabledTable(TableName.valueOf("enabledTable")));
     // we also need regions assigned out on the dead server
     List<HRegionInfo> enabledAndOnDeadRegions = new ArrayList<HRegionInfo>();
     enabledAndOnDeadRegions.addAll(enabledRegions.subList(0, 6));
@@ -619,10 +621,10 @@ public class TestMasterFailover {
 
     // Disable the disabledTable in ZK
     ZKTable zktable = new ZKTable(zkw);
-    zktable.setDisabledTable(Bytes.toString(disabledTable));
+    zktable.setDisabledTable(disabledTable);
 
     assertTrue(" The enabled table should be identified on master fail over.",
-        zktable.isEnabledTable("enabledTable"));
+        zktable.isEnabledTable(TableName.valueOf("enabledTable")));
 
     /*
      * ZK = CLOSING

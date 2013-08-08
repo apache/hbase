@@ -144,7 +144,7 @@ public class TestHRegionServerBulkLoad {
 
       // bulk load HFiles
       final HConnection conn = UTIL.getHBaseAdmin().getConnection();
-      byte[] tbl = Bytes.toBytes(tableName);
+      TableName tbl = TableName.valueOf(tableName);
       RegionServerCallable<Void> callable =
           new RegionServerCallable<Void>(conn, tbl, Bytes.toBytes("aaa")) {
         @Override
@@ -251,7 +251,7 @@ public class TestHRegionServerBulkLoad {
   private void setupTable(String table, int cfs) throws IOException {
     try {
       LOG.info("Creating table " + table);
-      HTableDescriptor htd = new HTableDescriptor(table);
+      HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(table));
       for (int i = 0; i < 10; i++) {
         htd.addFamily(new HColumnDescriptor(family(i)));
       }

@@ -42,6 +42,7 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.SmallTests;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
@@ -140,11 +141,11 @@ public class TestRegionObserverScannerOpenHook {
 
   HRegion initHRegion(byte[] tableName, String callingMethod, Configuration conf,
       byte[]... families) throws IOException {
-    HTableDescriptor htd = new HTableDescriptor(tableName);
+    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(tableName));
     for (byte[] family : families) {
       htd.addFamily(new HColumnDescriptor(family));
     }
-    HRegionInfo info = new HRegionInfo(htd.getName(), null, null, false);
+    HRegionInfo info = new HRegionInfo(htd.getTableName(), null, null, false);
     Path path = new Path(DIR + callingMethod);
     HRegion r = HRegion.createHRegion(info, path, conf, htd);
     // this following piece is a hack. currently a coprocessorHost
@@ -220,7 +221,7 @@ public class TestRegionObserverScannerOpenHook {
     String tableName = "testRegionObserverCompactionTimeStacking";
     byte[] ROW = Bytes.toBytes("testRow");
     byte[] A = Bytes.toBytes("A");
-    HTableDescriptor desc = new HTableDescriptor(tableName);
+    HTableDescriptor desc = new HTableDescriptor(TableName.valueOf(tableName));
     desc.addFamily(new HColumnDescriptor(A));
     desc.addCoprocessor(EmptyRegionObsever.class.getName(), null, Coprocessor.PRIORITY_USER, null);
     desc.addCoprocessor(NoDataFromCompaction.class.getName(), null, Coprocessor.PRIORITY_HIGHEST,
@@ -229,7 +230,7 @@ public class TestRegionObserverScannerOpenHook {
     HBaseAdmin admin = UTIL.getHBaseAdmin();
     admin.createTable(desc);
 
-    HTable table = new HTable(conf, desc.getName());
+    HTable table = new HTable(conf, desc.getTableName());
 
     // put a row and flush it to disk
     Put put = new Put(ROW);
@@ -237,8 +238,8 @@ public class TestRegionObserverScannerOpenHook {
     table.put(put);
     table.flushCommits();
 
-    HRegionServer rs = UTIL.getRSForFirstRegionInTable(desc.getName());
-    List<HRegion> regions = rs.getOnlineRegions(desc.getName());
+    HRegionServer rs = UTIL.getRSForFirstRegionInTable(desc.getTableName());
+    List<HRegion> regions = rs.getOnlineRegions(desc.getTableName());
     assertEquals("More than 1 region serving test table with 1 row", 1, regions.size());
     HRegion region = regions.get(0);
     admin.flush(region.getRegionName());

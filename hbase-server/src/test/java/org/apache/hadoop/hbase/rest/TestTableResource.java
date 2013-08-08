@@ -82,7 +82,7 @@ public class TestTableResource {
     if (admin.tableExists(TABLE)) {
       return;
     }
-    HTableDescriptor htd = new HTableDescriptor(TABLE);
+    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(TABLE));
     htd.addFamily(new HColumnDescriptor(COLUMN_FAMILY));
     admin.createTable(htd);
     HTable table = new HTable(TEST_UTIL.getConfiguration(), TABLE);

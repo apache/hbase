@@ -28,6 +28,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.NotAllMetaRegionsOnlineException;
@@ -46,6 +47,7 @@ import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.TableLockManager;
 import org.apache.hadoop.hbase.master.TableLockManager.TableLock;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
+import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.ModifyRegionUtils;
 import org.apache.zookeeper.KeeperException;
 
@@ -77,7 +79,7 @@ public class CreateTableHandler extends EventHandler {
     this.assignmentManager = masterServices.getAssignmentManager();
     this.tableLockManager = masterServices.getTableLockManager();
 
-    this.tableLock = this.tableLockManager.writeLock(this.hTableDescriptor.getName()
+    this.tableLock = this.tableLockManager.writeLock(this.hTableDescriptor.getTableName()
         , EventType.C_M_CREATE_TABLE.toString());
   }
 
@@ -100,7 +102,7 @@ public class CreateTableHandler extends EventHandler {
     this.tableLock.acquire();
     boolean success = false;
     try {
-      String tableName = this.hTableDescriptor.getNameAsString();
+      TableName tableName = this.hTableDescriptor.getTableName();
       if (MetaReader.tableExists(catalogTracker, tableName)) {
         throw new TableExistsException(tableName);
       }
@@ -137,12 +139,12 @@ public class CreateTableHandler extends EventHandler {
       name = server.getServerName().toString();
     }
     return getClass().getSimpleName() + "-" + name + "-" + getSeqid() + "-" +
-      this.hTableDescriptor.getNameAsString();
+      this.hTableDescriptor.getTableName();
   }
 
   @Override
   public void process() {
-    String tableName = this.hTableDescriptor.getNameAsString();
+    TableName tableName = this.hTableDescriptor.getTableName();
     LOG.info("Create table " + tableName);
 
     try {
@@ -174,11 +176,11 @@ public class CreateTableHandler extends EventHandler {
       // It will block the creation saying TableAlreadyExists.
       try {
         this.assignmentManager.getZKTable().removeEnablingTable(
-            this.hTableDescriptor.getNameAsString(), false);
+            this.hTableDescriptor.getTableName(), false);
       } catch (KeeperException e) {
         // Keeper exception should not happen here
         LOG.error("Got a keeper exception while removing the ENABLING table znode "
-            + this.hTableDescriptor.getNameAsString(), e);
+            + this.hTableDescriptor.getTableName(), e);
       }
     }
   }
@@ -197,19 +199,19 @@ public class CreateTableHandler extends EventHandler {
    *   [If something fails here: we still have the table in disabled state]
    * - Update ZooKeeper with the enabled state
    */
-  private void handleCreateTable(String tableName) throws IOException, KeeperException {
+  private void handleCreateTable(TableName tableName)
+      throws IOException, KeeperException {
     Path tempdir = fileSystemManager.getTempDir();
     FileSystem fs = fileSystemManager.getFileSystem();
 
     // 1. Create Table Descriptor
-    Path tempTableDir = new Path(tempdir, tableName);
+    Path tempTableDir = FSUtils.getTableDir(tempdir, tableName);
     new FSTableDescriptors(this.conf).createTableDescriptorForTableDirectory(
       tempTableDir, this.hTableDescriptor, false);
-    Path tableDir = new Path(fileSystemManager.getRootDir(), tableName);
+    Path tableDir = FSUtils.getTableDir(fileSystemManager.getRootDir(), tableName);
 
     // 2. Create Regions
     List<HRegionInfo> regionInfos = handleCreateHdfsRegions(tempdir, tableName);
-
     // 3. Move Table temp directory to the hbase root location
     if (!fs.rename(tempTableDir, tableDir)) {
       throw new IOException("Unable to move table from temp=" + tempTableDir +
@@ -258,7 +260,7 @@ public class CreateTableHandler extends EventHandler {
    * @return the list of regions created
    */
   protected List<HRegionInfo> handleCreateHdfsRegions(final Path tableRootDir,
-    final String tableName)
+    final TableName tableName)
       throws IOException {
     return ModifyRegionUtils.createRegions(conf, tableRootDir,
         hTableDescriptor, newRegions, null);

@@ -28,6 +28,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.catalog.CatalogTracker;
@@ -47,7 +48,7 @@ import org.apache.hadoop.hbase.snapshot.ClientSnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.snapshot.RestoreSnapshotException;
 import org.apache.hadoop.hbase.snapshot.RestoreSnapshotHelper;
 import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
-import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.FSUtils;
 
 /**
  * Handler to Restore a snapshot.
@@ -71,7 +72,7 @@ public class RestoreSnapshotHandler extends TableEventHandler implements Snapsho
   public RestoreSnapshotHandler(final MasterServices masterServices,
       final SnapshotDescription snapshot, final HTableDescriptor htd,
       final MetricsMaster metricsMaster) throws IOException {
-    super(EventType.C_M_RESTORE_SNAPSHOT, htd.getName(), masterServices, masterServices);
+    super(EventType.C_M_RESTORE_SNAPSHOT, htd.getTableName(), masterServices, masterServices);
     this.metricsMaster = metricsMaster;
 
     // Snapshot information
@@ -88,7 +89,7 @@ public class RestoreSnapshotHandler extends TableEventHandler implements Snapsho
 
     this.status = TaskMonitor.get().createStatus(
       "Restoring  snapshot '" + snapshot.getName() + "' to table "
-          + hTableDescriptor.getNameAsString());
+          + hTableDescriptor.getTableName());
   }
 
   public RestoreSnapshotHandler prepare() throws IOException {
@@ -109,8 +110,7 @@ public class RestoreSnapshotHandler extends TableEventHandler implements Snapsho
     CatalogTracker catalogTracker = masterServices.getCatalogTracker();
     FileSystem fs = fileSystemManager.getFileSystem();
     Path rootDir = fileSystemManager.getRootDir();
-    byte[] tableName = hTableDescriptor.getName();
-    Path tableDir = HTableDescriptor.getTableDir(rootDir, tableName);
+    TableName tableName = hTableDescriptor.getTableName();
 
     try {
       // 1. Update descriptor
@@ -121,7 +121,7 @@ public class RestoreSnapshotHandler extends TableEventHandler implements Snapsho
       Path snapshotDir = SnapshotDescriptionUtils.getCompletedSnapshotDir(snapshot, rootDir);
       RestoreSnapshotHelper restoreHelper = new RestoreSnapshotHelper(
           masterServices.getConfiguration(), fs,
-          snapshot, snapshotDir, hTableDescriptor, tableDir, monitor, status);
+          snapshot, snapshotDir, hTableDescriptor, rootDir, monitor, status);
       RestoreSnapshotHelper.RestoreMetaChanges metaChanges = restoreHelper.restoreHdfsRegions();
 
       // 3. Applies changes to .META.
@@ -134,7 +134,7 @@ public class RestoreSnapshotHandler extends TableEventHandler implements Snapsho
 
       // At this point the restore is complete. Next step is enabling the table.
       LOG.info("Restore snapshot=" + ClientSnapshotDescriptionUtils.toString(snapshot) +
-        " on table=" + Bytes.toString(tableName) + " completed!");
+        " on table=" + tableName + " completed!");
     } catch (IOException e) {
       String msg = "restore snapshot=" + ClientSnapshotDescriptionUtils.toString(snapshot)
           + " failed. Try re-running the restore command.";

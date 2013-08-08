@@ -62,7 +62,7 @@ public class TestRegionServerNoMaster {
   @BeforeClass
   public static void before() throws Exception {
     HTU.startMiniCluster(NB_SERVERS);
-    final byte[] tableName = Bytes.toBytes(TestRegionServerNoMaster.class.getName());
+    final byte[] tableName = Bytes.toBytes(TestRegionServerNoMaster.class.getSimpleName());
 
     // Create table then get the single region for our new table.
     table = HTU.createTable(tableName, HConstants.CATALOG_FAMILY);

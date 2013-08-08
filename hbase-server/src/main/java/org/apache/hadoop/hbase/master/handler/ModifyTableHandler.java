@@ -25,6 +25,7 @@ import java.util.Set;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.Server;
@@ -41,7 +42,7 @@ public class ModifyTableHandler extends TableEventHandler {
 
   private final HTableDescriptor htd;
 
-  public ModifyTableHandler(final byte [] tableName,
+  public ModifyTableHandler(final TableName tableName,
       final HTableDescriptor htd, final Server server,
       final MasterServices masterServices) {
     super(EventType.C_M_MODIFY_TABLE, tableName, server, masterServices);
@@ -82,7 +83,7 @@ public class ModifyTableHandler extends TableEventHandler {
       for (byte[] familyName: oldFamilies) {
         if (!newFamilies.contains(familyName)) {
           LOG.debug("Removing family=" + Bytes.toString(familyName) +
-                    " from table=" + this.tableName);
+                     " from table=" + this.tableName);
           for (HRegionInfo hri: hris) {
             // Delete the family directory in FS for all the regions one by one
             mfs.deleteFamilyFromFS(hri, familyName);
@@ -101,6 +102,6 @@ public class ModifyTableHandler extends TableEventHandler {
       name = server.getServerName().toString();
     }
     return getClass().getSimpleName() + "-" + name + "-" + getSeqid() + "-" +
-      tableNameStr;
+      tableName;
   }
 }

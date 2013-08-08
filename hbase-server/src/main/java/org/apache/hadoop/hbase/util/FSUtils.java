@@ -31,6 +31,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Pattern;
@@ -53,6 +54,7 @@ import org.apache.hadoop.hbase.ClusterId;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HDFSBlocksDistribution;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
@@ -925,17 +927,8 @@ public abstract class FSUtils {
   public static boolean isMajorCompacted(final FileSystem fs,
       final Path hbaseRootDir)
   throws IOException {
-    // Presumes any directory under hbase.rootdir is a table.
-    FileStatus [] tableDirs = fs.listStatus(hbaseRootDir, new DirFilter(fs));
-    for (FileStatus tableDir : tableDirs) {
-      // Skip the .log directory.  All others should be tables.  Inside a table,
-      // there are compaction.dir directories to skip.  Otherwise, all else
-      // should be regions.  Then in each region, should only be family
-      // directories.  Under each of these, should be one file only.
-      Path d = tableDir.getPath();
-      if (d.getName().equals(HConstants.HREGION_LOGDIR_NAME)) {
-        continue;
-      }
+    List<Path> tableDirs = getTableDirs(fs, hbaseRootDir);
+    for (Path d : tableDirs) {
       FileStatus[] regionDirs = fs.listStatus(d, new DirFilter(fs));
       for (FileStatus regionDir : regionDirs) {
         Path dd = regionDir.getPath();
@@ -1010,17 +1003,8 @@ public abstract class FSUtils {
     int cfCountTotal = 0;
     int cfFragTotal = 0;
     DirFilter df = new DirFilter(fs);
-    // presumes any directory under hbase.rootdir is a table
-    FileStatus [] tableDirs = fs.listStatus(hbaseRootDir, df);
-    for (FileStatus tableDir : tableDirs) {
-      // Skip the .log directory.  All others should be tables.  Inside a table,
-      // there are compaction.dir directories to skip.  Otherwise, all else
-      // should be regions.  Then in each region, should only be family
-      // directories.  Under each of these, should be one file only.
-      Path d = tableDir.getPath();
-      if (d.getName().equals(HConstants.HREGION_LOGDIR_NAME)) {
-        continue;
-      }
+    List<Path> tableDirs = getTableDirs(fs, hbaseRootDir);
+    for (Path d : tableDirs) {
       int cfCount = 0;
       int cfFrag = 0;
       FileStatus[] regionDirs = fs.listStatus(d, df);
@@ -1044,7 +1028,8 @@ public abstract class FSUtils {
         }
       }
       // compute percentage per table and store in result list
-      frags.put(d.getName(), Math.round((float) cfFrag / cfCount * 100));
+      frags.put(FSUtils.getTableName(d).getNameAsString(),
+          Math.round((float) cfFrag / cfCount * 100));
     }
     // set overall percentage for all tables
     frags.put("-TOTAL-", Math.round((float) cfFragTotal / cfCountTotal * 100));
@@ -1081,13 +1066,12 @@ public abstract class FSUtils {
       final Path hbaseRootDir)
   throws IOException {
     // Presumes any directory under hbase.rootdir is a table.
-    FileStatus [] tableDirs = fs.listStatus(hbaseRootDir, new DirFilter(fs));
-    for (FileStatus tableDir : tableDirs) {
+    List<Path> tableDirs = getTableDirs(fs, hbaseRootDir);
+    for (Path d: tableDirs) {
       // Inside a table, there are compaction.dir directories to skip.
       // Otherwise, all else should be regions.  Then in each region, should
       // only be family directories.  Under each of these, should be a mapfile
       // and info directory and in these only one file.
-      Path d = tableDir.getPath();
       if (d.getName().equals(HConstants.HREGION_LOGDIR_NAME)) {
         continue;
       }
@@ -1133,6 +1117,45 @@ public abstract class FSUtils {
   }
 
   /**
+   * Returns the {@link org.apache.hadoop.fs.Path} object representing the table directory under
+   * path rootdir
+   *
+   * @param rootdir qualified path of HBase root directory
+   * @param tableName name of table
+   * @return {@link org.apache.hadoop.fs.Path} for table
+   */
+  public static Path getTableDir(Path rootdir, final TableName tableName) {
+    return new Path(getNamespaceDir(rootdir, tableName.getNamespaceAsString()),
+        tableName.getQualifierAsString());
+  }
+
+  /**
+   * Returns the {@link org.apache.hadoop.hbase.TableName} object representing
+   * the table directory under
+   * path rootdir
+   *
+   * @param rootdir qualified path of HBase root directory
+   * @param tablePath path of table
+   * @return {@link org.apache.hadoop.fs.Path} for table
+   */
+  public static TableName getTableName(Path tablePath) {
+    return TableName.valueOf(tablePath.getParent().getName(), tablePath.getName());
+  }
+
+  /**
+   * Returns the {@link org.apache.hadoop.fs.Path} object representing
+   * the namespace directory under path rootdir
+   *
+   * @param rootdir qualified path of HBase root directory
+   * @param namespace namespace name
+   * @return {@link org.apache.hadoop.fs.Path} for table
+   */
+  public static Path getNamespaceDir(Path rootdir, final String namespace) {
+    return new Path(rootdir, new Path(HConstants.BASE_NAMESPACE_DIR,
+        new Path(namespace)));
+  }
+
+  /**
    * A {@link PathFilter} that returns only regular files.
    */
   static class FileFilter implements PathFilter {
@@ -1173,7 +1196,7 @@ public abstract class FSUtils {
           isValid = fs.getFileStatus(p).isDir();
         }
       } catch (IOException e) {
-        LOG.warn("An error occurred while verifying if [" + p.toString() + 
+        LOG.warn("An error occurred while verifying if [" + p.toString() +
                  "] is a valid directory. Returning 'not valid' and continuing.", e);
       }
       return isValid;
@@ -1235,15 +1258,27 @@ public abstract class FSUtils {
   public abstract void recoverFileLease(final FileSystem fs, final Path p,
       Configuration conf, CancelableProgressable reporter) throws IOException;
 
+  public static List<Path> getTableDirs(final FileSystem fs, final Path rootdir)
+      throws IOException {
+    List<Path> tableDirs = new LinkedList<Path>();
+
+    for(FileStatus status :
+        fs.globStatus(new Path(rootdir,
+            new Path(HConstants.BASE_NAMESPACE_DIR, "*")))) {
+      tableDirs.addAll(FSUtils.getLocalTableDirs(fs, status.getPath()));
+    }
+    return tableDirs;
+  }
+
   /**
    * @param fs
    * @param rootdir
    * @return All the table directories under <code>rootdir</code>. Ignore non table hbase folders such as
-   * .logs, .oldlogs, .corrupt, .META., and -ROOT- folders.
+   * .logs, .oldlogs, .corrupt folders.
    * @throws IOException
    */
-  public static List<Path> getTableDirs(final FileSystem fs, final Path rootdir)
-  throws IOException {
+  public static List<Path> getLocalTableDirs(final FileSystem fs, final Path rootdir)
+      throws IOException {
     // presumes any directory under hbase.rootdir is a table
     FileStatus [] dirs = fs.listStatus(rootdir, new DirFilter(fs));
     List<Path> tabledirs = new ArrayList<Path>(dirs.length);
@@ -1255,14 +1290,6 @@ public abstract class FSUtils {
       }
     }
     return tabledirs;
-  }
-
-  public static Path getTablePath(Path rootdir, byte [] tableName) {
-    return getTablePath(rootdir, Bytes.toString(tableName));
-  }
-
-  public static Path getTablePath(Path rootdir, final String tableName) {
-    return new Path(rootdir, tableName);
   }
 
   /**
@@ -1422,14 +1449,14 @@ public abstract class FSUtils {
 
     // if this method looks similar to 'getTableFragmentation' that is because
     // it was borrowed from it.
-    
+
     DirFilter df = new DirFilter(fs);
     // presumes any directory under hbase.rootdir is a table
     FileStatus [] tableDirs = fs.listStatus(hbaseRootDir, df);
     for (FileStatus tableDir : tableDirs) {
       // Skip the .log and other non-table directories.  All others should be tables.
       // Inside a table, there are compaction.dir directories to skip.  Otherwise, all else
-      // should be regions. 
+      // should be regions.
       Path d = tableDir.getPath();
       if (HConstants.HBASE_NON_TABLE_DIRS.contains(d.getName())) {
         continue;

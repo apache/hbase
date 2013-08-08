@@ -30,6 +30,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
@@ -295,10 +296,10 @@ public class IntegrationTestLoadAndVerify  extends Configured implements Tool {
     Path outputDir = getTestDir(TEST_NAME, "load-output");
 
     NMapInputFormat.setNumMapTasks(conf, conf.getInt(NUM_MAP_TASKS_KEY, NUM_MAP_TASKS_DEFAULT));
-    conf.set(TABLE_NAME_KEY, htd.getNameAsString());
+    conf.set(TABLE_NAME_KEY, htd.getTableName().getNameAsString());
 
     Job job = new Job(conf);
-    job.setJobName(TEST_NAME + " Load for " + htd.getNameAsString());
+    job.setJobName(TEST_NAME + " Load for " + htd.getTableName());
     job.setJarByClass(this.getClass());
     job.setMapperClass(LoadMapper.class);
     job.setInputFormatClass(NMapInputFormat.class);
@@ -317,12 +318,12 @@ public class IntegrationTestLoadAndVerify  extends Configured implements Tool {
 
     Job job = new Job(conf);
     job.setJarByClass(this.getClass());
-    job.setJobName(TEST_NAME + " Verification for " + htd.getNameAsString());
+    job.setJobName(TEST_NAME + " Verification for " + htd.getTableName());
 
     Scan scan = new Scan();
 
     TableMapReduceUtil.initTableMapperJob(
-        htd.getNameAsString(), scan, VerifyMapper.class,
+        htd.getTableName().getNameAsString(), scan, VerifyMapper.class,
         BytesWritable.class, BytesWritable.class, job);
     int scannerCaching = conf.getInt("verify.scannercaching", SCANNER_CACHING);
     TableMapReduceUtil.setScannerCaching(job, scannerCaching);
@@ -349,7 +350,7 @@ public class IntegrationTestLoadAndVerify  extends Configured implements Tool {
 
   @Test
   public void testLoadAndVerify() throws Exception {
-    HTableDescriptor htd = new HTableDescriptor(TEST_NAME);
+    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(TEST_NAME));
     htd.addFamily(new HColumnDescriptor(TEST_FAMILY));
 
     HBaseAdmin admin = getTestingUtil().getHBaseAdmin();
@@ -367,20 +368,20 @@ public class IntegrationTestLoadAndVerify  extends Configured implements Tool {
   private void deleteTable(HBaseAdmin admin, HTableDescriptor htd)
     throws IOException, InterruptedException {
     // Use disableTestAsync because disable can take a long time to complete
-    System.out.print("Disabling table " + htd.getNameAsString() +" ");
-    admin.disableTableAsync(htd.getName());
+    System.out.print("Disabling table " + htd.getTableName() +" ");
+    admin.disableTableAsync(htd.getTableName());
 
     long start = System.currentTimeMillis();
     // NOTE tables can be both admin.isTableEnabled=false and
     // isTableDisabled=false, when disabling must use isTableDisabled!
-    while (!admin.isTableDisabled(htd.getName())) {
+    while (!admin.isTableDisabled(htd.getTableName())) {
       System.out.print(".");
       Thread.sleep(1000);
     }
     long delta = System.currentTimeMillis() - start;
     System.out.println(" " + delta +" ms");
-    System.out.println("Deleting table " + htd.getNameAsString() +" ");
-    admin.deleteTable(htd.getName());
+    System.out.println("Deleting table " + htd.getTableName() +" ");
+    admin.deleteTable(htd.getTableName());
   }
 
   public void usage() {
@@ -424,7 +425,7 @@ public class IntegrationTestLoadAndVerify  extends Configured implements Tool {
 
     // create HTableDescriptor for specified table
     String table = getConf().get(TABLE_NAME_KEY, TEST_NAME);
-    HTableDescriptor htd = new HTableDescriptor(table);
+    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(table));
     htd.addFamily(new HColumnDescriptor(TEST_FAMILY));
 
     HBaseAdmin admin = new HBaseAdmin(getConf());

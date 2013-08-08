@@ -66,7 +66,7 @@ class SplitRequest implements Runnable {
 
       //acquire a shared read lock on the table, so that table schema modifications
       //do not happen concurrently
-      tableLock = server.getTableLockManager().readLock(parent.getTableDesc().getName()
+      tableLock = server.getTableLockManager().readLock(parent.getTableDesc().getTableName()
           , "SPLIT_REGION:" + parent.getRegionNameAsString());
       try {
         tableLock.acquire();

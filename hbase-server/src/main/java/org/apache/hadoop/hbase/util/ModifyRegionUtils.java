@@ -95,7 +95,7 @@ public abstract class ModifyRegionUtils {
     if (newRegions == null) return null;
     int regionNumber = newRegions.length;
     ThreadPoolExecutor regionOpenAndInitThreadPool = getRegionOpenAndInitThreadPool(conf,
-        "RegionOpenAndInitThread-" + hTableDescriptor.getNameAsString(), regionNumber);
+        "RegionOpenAndInitThread-" + hTableDescriptor.getTableName(), regionNumber);
     CompletionService<HRegionInfo> completionService = new ExecutorCompletionService<HRegionInfo>(
         regionOpenAndInitThreadPool);
     List<HRegionInfo> regionInfos = new ArrayList<HRegionInfo>();

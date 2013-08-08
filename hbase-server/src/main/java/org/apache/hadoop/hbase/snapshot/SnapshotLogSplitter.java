@@ -29,6 +29,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.io.HLogLink;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
@@ -36,6 +37,7 @@ import org.apache.hadoop.hbase.regionserver.wal.HLogFactory;
 import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
 import org.apache.hadoop.hbase.regionserver.wal.HLogUtil;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.FSUtils;
 
 /**
  * If the snapshot has references to one or more log files,
@@ -95,8 +97,8 @@ class SnapshotLogSplitter implements Closeable {
 
   private final Map<byte[], byte[]> regionsMap;
   private final Configuration conf;
-  private final byte[] snapshotTableName;
-  private final byte[] tableName;
+  private final TableName snapshotTableName;
+  private final TableName tableName;
   private final Path tableDir;
   private final FileSystem fs;
 
@@ -105,11 +107,11 @@ class SnapshotLogSplitter implements Closeable {
    * @params regionsMap maps original region names to the new ones.
    */
   public SnapshotLogSplitter(final Configuration conf, final FileSystem fs,
-      final Path tableDir, final byte[] snapshotTableName,
+      final Path tableDir, final TableName snapshotTableName,
       final Map<byte[], byte[]> regionsMap) {
     this.regionsMap = regionsMap;
     this.snapshotTableName = snapshotTableName;
-    this.tableName = Bytes.toBytes(tableDir.getName());
+    this.tableName = FSUtils.getTableName(tableDir);
     this.tableDir = tableDir;
     this.conf = conf;
     this.fs = fs;
@@ -123,15 +125,15 @@ class SnapshotLogSplitter implements Closeable {
 
   public void splitLog(final String serverName, final String logfile) throws IOException {
     LOG.debug("Restore log=" + logfile + " server=" + serverName +
-              " for snapshotTable=" + Bytes.toString(snapshotTableName) +
-              " to table=" + Bytes.toString(tableName));
+              " for snapshotTable=" + snapshotTableName +
+              " to table=" + tableName);
     splitLog(new HLogLink(conf, serverName, logfile).getAvailablePath(fs));
   }
 
   public void splitRecoveredEdit(final Path editPath) throws IOException {
     LOG.debug("Restore recover.edits=" + editPath +
-              " for snapshotTable=" + Bytes.toString(snapshotTableName) +
-              " to table=" + Bytes.toString(tableName));
+              " for snapshotTable=" + snapshotTableName +
+              " to table=" + tableName);
     splitLog(editPath);
   }
 
@@ -154,7 +156,7 @@ class SnapshotLogSplitter implements Closeable {
         HLogKey key = entry.getKey();
 
         // We're interested only in the snapshot table that we're restoring
-        if (!Bytes.equals(key.getTablename(), snapshotTableName)) continue;
+        if (!key.getTablename().equals(snapshotTableName)) continue;
 
         // Writer for region.
         if (!Bytes.equals(regionName, key.getEncodedRegionName())) {

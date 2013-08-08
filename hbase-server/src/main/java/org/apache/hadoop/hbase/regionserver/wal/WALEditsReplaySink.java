@@ -29,6 +29,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -65,7 +66,7 @@ public class WALEditsReplaySink {
 
   private final Configuration conf;
   private final HConnection conn;
-  private final byte[] tableName;
+  private final TableName tableName;
   private final MetricsWALEditsReplay metrics;
   private final AtomicLong totalReplayedEdits = new AtomicLong();
   private final boolean skipErrors;
@@ -78,7 +79,7 @@ public class WALEditsReplaySink {
    * @param conn
    * @throws IOException
    */
-  public WALEditsReplaySink(Configuration conf, byte[] tableName, HConnection conn)
+  public WALEditsReplaySink(Configuration conf, TableName tableName, HConnection conn)
       throws IOException {
     this.conf = conf;
     this.metrics = new MetricsWALEditsReplay();
@@ -185,7 +186,7 @@ public class WALEditsReplaySink {
     private HRegionInfo regionInfo;
     private List<Action<Row>> actions;
 
-    ReplayServerCallable(final HConnection connection, final byte [] tableName, 
+    ReplayServerCallable(final HConnection connection, final TableName tableName,
         final HRegionLocation regionLoc, final HRegionInfo regionInfo,
         final List<Action<Row>> actions) {
       super(connection, tableName, null);

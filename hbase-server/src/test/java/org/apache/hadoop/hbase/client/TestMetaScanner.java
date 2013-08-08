@@ -34,6 +34,7 @@ import java.util.Random;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -67,7 +68,8 @@ public class TestMetaScanner {
   public void testMetaScanner() throws Exception {
     LOG.info("Starting testMetaScanner");
     setUp();
-    final byte[] TABLENAME = Bytes.toBytes("testMetaScanner");
+    final TableName TABLENAME =
+        TableName.valueOf("testMetaScanner");
     final byte[] FAMILY = Bytes.toBytes("family");
     TEST_UTIL.createTable(TABLENAME, FAMILY);
     Configuration conf = TEST_UTIL.getConfiguration();
@@ -121,7 +123,8 @@ public class TestMetaScanner {
 
     final long runtime = 30 * 1000; //30 sec
     LOG.info("Starting testConcurrentMetaScannerAndCatalogJanitor");
-    final byte[] TABLENAME = Bytes.toBytes("testConcurrentMetaScannerAndCatalogJanitor");
+    final TableName TABLENAME =
+        TableName.valueOf("testConcurrentMetaScannerAndCatalogJanitor");
     final byte[] FAMILY = Bytes.toBytes("family");
     TEST_UTIL.createTable(TABLENAME, FAMILY);
     final CatalogTracker catalogTracker = mock(CatalogTracker.class);
@@ -139,7 +142,7 @@ public class TestMetaScanner {
 
             //select a random region
             HRegionInfo parent = regions.get(random.nextInt(regions.size()));
-            if (parent == null || !Bytes.equals(TABLENAME, parent.getTableName())) {
+            if (parent == null || !TABLENAME.equals(parent.getTableName())) {
               continue;
             }
 

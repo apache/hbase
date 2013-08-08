@@ -119,7 +119,7 @@ public class ReplicationProtbufUtil {
       HLogKey key = entry.getKey();
       keyBuilder.setEncodedRegionName(
         ByteString.copyFrom(key.getEncodedRegionName()));
-      keyBuilder.setTableName(ByteString.copyFrom(key.getTablename()));
+      keyBuilder.setTableName(ByteString.copyFrom(key.getTablename().getName()));
       keyBuilder.setLogSequenceNumber(key.getLogSeqNum());
       keyBuilder.setWriteTime(key.getWriteTime());
       UUID clusterId = key.getClusterId();

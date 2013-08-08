@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
 import java.security.PrivilegedExceptionAction;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 
@@ -28,7 +29,9 @@ import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
+import org.apache.hadoop.hbase.client.coprocessor.Batch;
 import org.apache.hadoop.hbase.client.coprocessor.Batch.Callback;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.AdminService;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ClientService;
@@ -106,24 +109,43 @@ public class HConnectionWrapper implements HConnection {
   }
 
   @Override
-  public boolean isTableEnabled(byte[] tableName) throws IOException {
+  public boolean isTableEnabled(TableName tableName) throws IOException {
     return hconnection.isTableEnabled(tableName);
   }
 
   @Override
-  public boolean isTableDisabled(byte[] tableName) throws IOException {
+  public boolean isTableEnabled(byte[] tableName) throws IOException {
+    return isTableEnabled(TableName.valueOf(tableName));
+  }
+
+  @Override
+  public boolean isTableDisabled(TableName tableName) throws IOException {
     return hconnection.isTableDisabled(tableName);
   }
 
   @Override
-  public boolean isTableAvailable(byte[] tableName) throws IOException {
+  public boolean isTableDisabled(byte[] tableName) throws IOException {
+    return isTableDisabled(TableName.valueOf(tableName));
+  }
+
+  @Override
+  public boolean isTableAvailable(TableName tableName) throws IOException {
     return hconnection.isTableAvailable(tableName);
   }
 
   @Override
-  public boolean isTableAvailable(byte[] tableName, byte[][] splitKeys)
-      throws IOException {
+  public boolean isTableAvailable(byte[] tableName) throws IOException {
+    return isTableAvailable(TableName.valueOf(tableName));
+  }
+
+  @Override
+  public boolean isTableAvailable(TableName tableName, byte[][] splitKeys) throws IOException {
     return hconnection.isTableAvailable(tableName, splitKeys);
+  }
+
+  @Override
+  public boolean isTableAvailable(byte[] tableName, byte[][] splitKeys) throws IOException {
+    return isTableAvailable(TableName.valueOf(tableName), splitKeys);
   }
 
   @Override
@@ -132,15 +154,23 @@ public class HConnectionWrapper implements HConnection {
   }
 
   @Override
-  public HTableDescriptor getHTableDescriptor(byte[] tableName)
-      throws IOException {
+  public HTableDescriptor getHTableDescriptor(TableName tableName) throws IOException {
     return hconnection.getHTableDescriptor(tableName);
   }
 
   @Override
-  public HRegionLocation locateRegion(byte[] tableName, byte[] row)
-      throws IOException {
+  public HTableDescriptor getHTableDescriptor(byte[] tableName) throws IOException {
+    return getHTableDescriptor(TableName.valueOf(tableName));
+  }
+
+  @Override
+  public HRegionLocation locateRegion(TableName tableName, byte[] row) throws IOException {
     return hconnection.locateRegion(tableName, row);
+  }
+
+  @Override
+  public HRegionLocation locateRegion(byte[] tableName, byte[] row) throws IOException {
+    return locateRegion(TableName.valueOf(tableName), row);
   }
 
   @Override
@@ -149,8 +179,13 @@ public class HConnectionWrapper implements HConnection {
   }
 
   @Override
-  public void clearRegionCache(byte[] tableName) {
+  public void clearRegionCache(TableName tableName) {
     hconnection.clearRegionCache(tableName);
+  }
+
+  @Override
+  public void clearRegionCache(byte[] tableName) {
+    clearRegionCache(TableName.valueOf(tableName));
   }
 
   @Override
@@ -159,15 +194,29 @@ public class HConnectionWrapper implements HConnection {
   }
 
   @Override
-  public HRegionLocation relocateRegion(byte[] tableName, byte[] row)
-      throws IOException {
+  public HRegionLocation relocateRegion(TableName tableName, byte[] row) throws IOException {
     return hconnection.relocateRegion(tableName, row);
   }
 
   @Override
-  public void updateCachedLocations(byte[] tableName, byte[] rowkey,
-      Object exception, HRegionLocation source) {
+  public HRegionLocation relocateRegion(byte[] tableName, byte[] row) throws IOException {
+    return relocateRegion(TableName.valueOf(tableName), row);
+  }
+
+  @Override
+  public void updateCachedLocations(TableName tableName,
+                                    byte[] rowkey,
+                                    Object exception,
+                                    HRegionLocation source) {
     hconnection.updateCachedLocations(tableName, rowkey, exception, source);
+  }
+
+  @Override
+  public void updateCachedLocations(byte[] tableName,
+                                    byte[] rowkey,
+                                    Object exception,
+                                    HRegionLocation source) {
+    updateCachedLocations(TableName.valueOf(tableName), rowkey, exception, source);
   }
 
   @Override
@@ -176,15 +225,27 @@ public class HConnectionWrapper implements HConnection {
   }
 
   @Override
-  public List<HRegionLocation> locateRegions(byte[] tableName)
-      throws IOException {
+  public List<HRegionLocation> locateRegions(TableName tableName) throws IOException {
     return hconnection.locateRegions(tableName);
   }
 
   @Override
-  public List<HRegionLocation> locateRegions(byte[] tableName,
-      boolean useCache, boolean offlined) throws IOException {
+  public List<HRegionLocation> locateRegions(byte[] tableName) throws IOException {
+    return locateRegions(TableName.valueOf(tableName));
+  }
+
+  @Override
+  public List<HRegionLocation> locateRegions(TableName tableName,
+                                             boolean useCache,
+                                             boolean offlined) throws IOException {
     return hconnection.locateRegions(tableName, useCache, offlined);
+  }
+
+  @Override
+  public List<HRegionLocation> locateRegions(byte[] tableName,
+                                             boolean useCache,
+                                             boolean offlined) throws IOException {
+    return locateRegions(TableName.valueOf(tableName));
   }
 
   @Override
@@ -237,33 +298,65 @@ public class HConnectionWrapper implements HConnection {
   }
 
   @Override
-  public HRegionLocation getRegionLocation(byte[] tableName, byte[] row,
-      boolean reload) throws IOException {
+  public HRegionLocation getRegionLocation(TableName tableName,
+                                           byte[] row, boolean reload) throws IOException {
     return hconnection.getRegionLocation(tableName, row, reload);
   }
 
   @Override
-  public void processBatch(List<? extends Row> actions, byte[] tableName,
-      ExecutorService pool, Object[] results) throws IOException,
-      InterruptedException {
+  public HRegionLocation getRegionLocation(byte[] tableName,
+                                           byte[] row, boolean reload) throws IOException {
+    return getRegionLocation(TableName.valueOf(tableName), row, reload);
+  }
+
+  @Override
+  public void processBatch(List<? extends Row> actions, TableName tableName, ExecutorService pool,
+                           Object[] results) throws IOException, InterruptedException {
     hconnection.processBatch(actions, tableName, pool, results);
   }
 
   @Override
-  public <R> void processBatchCallback(List<? extends Row> list,
-      byte[] tableName, ExecutorService pool, Object[] results,
-      Callback<R> callback) throws IOException, InterruptedException {
+  public void processBatch(List<? extends Row> actions, byte[] tableName, ExecutorService pool,
+                           Object[] results) throws IOException, InterruptedException {
+    processBatch(actions, TableName.valueOf(tableName), pool, results);
+  }
+
+  @Override
+  public <R> void processBatchCallback(List<? extends Row> list, TableName tableName,
+                                       ExecutorService pool,
+                                       Object[] results,
+                                       Callback<R> callback)
+      throws IOException, InterruptedException {
     hconnection.processBatchCallback(list, tableName, pool, results, callback);
   }
 
   @Override
-  public void setRegionCachePrefetch(byte[] tableName, boolean enable) {
+  public <R> void processBatchCallback(List<? extends Row> list, byte[] tableName,
+                                       ExecutorService pool,
+                                       Object[] results,
+                                       Callback<R> callback)
+      throws IOException, InterruptedException {
+    processBatchCallback(list, TableName.valueOf(tableName), pool, results, callback);
+  }
+
+  @Override
+  public void setRegionCachePrefetch(TableName tableName, boolean enable) {
     hconnection.setRegionCachePrefetch(tableName, enable);
   }
 
   @Override
-  public boolean getRegionCachePrefetch(byte[] tableName) {
+  public void setRegionCachePrefetch(byte[] tableName, boolean enable) {
+    setRegionCachePrefetch(TableName.valueOf(tableName), enable);
+  }
+
+  @Override
+  public boolean getRegionCachePrefetch(TableName tableName) {
     return hconnection.getRegionCachePrefetch(tableName);
+  }
+
+  @Override
+  public boolean getRegionCachePrefetch(byte[] tableName) {
+    return getRegionCachePrefetch(TableName.valueOf(tableName));
   }
 
   @Override
@@ -272,9 +365,19 @@ public class HConnectionWrapper implements HConnection {
   }
 
   @Override
-  public HTableDescriptor[] getHTableDescriptors(List<String> tableNames)
-      throws IOException {
-    return hconnection.getHTableDescriptors(tableNames);
+  public HTableDescriptor[] getHTableDescriptorsByTableName(
+      List<TableName> tableNames) throws IOException {
+    return hconnection.getHTableDescriptorsByTableName(tableNames);
+  }
+
+  @Override
+  public HTableDescriptor[] getHTableDescriptors(
+      List<String> names) throws IOException {
+    List<TableName> tableNames = new ArrayList<TableName>(names.size());
+    for(String name : names) {
+      tableNames.add(TableName.valueOf(name));
+    }
+    return getHTableDescriptorsByTableName(tableNames);
   }
 
   @Override

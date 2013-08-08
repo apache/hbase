@@ -20,12 +20,14 @@ package org.apache.hadoop.hbase.util.hbck;
 import static org.junit.Assert.assertEquals;
 
 import java.util.ArrayList;
-import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 
+import com.google.common.collect.Lists;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.util.HBaseFsck;
 import org.apache.hadoop.hbase.util.HBaseFsck.ErrorReporter.ERROR_CODE;
 
@@ -37,14 +39,15 @@ public class HbckTestingUtil {
   }
 
   public static HBaseFsck doFsck(
-      Configuration conf, boolean fix, String table) throws Exception {
+      Configuration conf, boolean fix, TableName table) throws Exception {
     return doFsck(conf, fix, fix, fix, fix,fix, fix, fix, fix, fix, fix, table);
   }
 
   public static HBaseFsck doFsck(Configuration conf, boolean fixAssignments,
       boolean fixMeta, boolean fixHdfsHoles, boolean fixHdfsOverlaps,
       boolean fixHdfsOrphans, boolean fixTableOrphans, boolean fixVersionFile,
-      boolean fixReferenceFiles, boolean fixEmptyMetaRegionInfo, boolean fixTableLocks, String table) throws Exception {
+      boolean fixReferenceFiles, boolean fixEmptyMetaRegionInfo, boolean fixTableLocks,
+      TableName table) throws Exception {
     HBaseFsck fsck = new HBaseFsck(conf, exec);
     fsck.connect();
     fsck.setDisplayFullReport(); // i.e. -details
@@ -73,8 +76,8 @@ public class HbckTestingUtil {
    * @return <returncode, hbckInstance>
    * @throws Exception
    */
-  public static HBaseFsck doHFileQuarantine(Configuration conf, String table) throws Exception {
-    String[] args = {"-sidelineCorruptHFiles", "-ignorePreCheckPermission", table};
+  public static HBaseFsck doHFileQuarantine(Configuration conf, TableName table) throws Exception {
+    String[] args = {"-sidelineCorruptHFiles", "-ignorePreCheckPermission", table.getNameAsString()};
     HBaseFsck hbck = new HBaseFsck(conf, exec);
     hbck.exec(exec, args);
     return hbck;
@@ -87,6 +90,9 @@ public class HbckTestingUtil {
 
   public static void assertErrors(HBaseFsck fsck, ERROR_CODE[] expectedErrors) {
     List<ERROR_CODE> errs = fsck.getErrors().getErrorList();
-    assertEquals(Arrays.asList(expectedErrors), errs);
+    Collections.sort(errs);
+    List<ERROR_CODE> expErrs = Lists.newArrayList(expectedErrors);
+    Collections.sort(expErrs);
+    assertEquals(expErrs, errs);
   }
 }

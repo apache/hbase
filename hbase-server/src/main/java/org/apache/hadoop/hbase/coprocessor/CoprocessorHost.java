@@ -39,6 +39,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.Server;
@@ -366,10 +367,10 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
      */
     class HTableWrapper implements HTableInterface {
 
-      private byte[] tableName;
+      private TableName tableName;
       private HTable table;
 
-      public HTableWrapper(byte[] tableName) throws IOException {
+      public HTableWrapper(TableName tableName) throws IOException {
         this.tableName = tableName;
         this.table = new HTable(conf, tableName);
         openTables.add(this);
@@ -481,8 +482,14 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
         return table.getTableDescriptor();
       }
 
+      @Override
       public byte[] getTableName() {
-        return tableName;
+        return tableName.getName();
+      }
+
+      @Override
+      public TableName getName() {
+        return table.getName();
       }
 
       @Override
@@ -667,7 +674,7 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
      * @exception java.io.IOException Exception
      */
     @Override
-    public HTableInterface getTable(byte[] tableName) throws IOException {
+    public HTableInterface getTable(TableName tableName) throws IOException {
       return new HTableWrapper(tableName);
     }
   }

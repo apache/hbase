@@ -57,7 +57,7 @@ public class DelimitedKeyPrefixRegionSplitPolicy extends IncreasingToUpperBoundR
           DELIMITER_KEY);
       if (delimiterString == null || delimiterString.length() == 0) {
         LOG.error(DELIMITER_KEY + " not specified for table "
-            + region.getTableDesc().getNameAsString()
+            + region.getTableDesc().getTableName()
             + ". Using default RegionSplitPolicy");
         return;
       }

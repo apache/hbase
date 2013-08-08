@@ -30,6 +30,7 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
+import org.apache.hadoop.hbase.util.Bytes;
 
 /**
  * Class for testing WALObserver coprocessor.
@@ -86,7 +87,7 @@ implements WALObserver {
       HRegionInfo info, HLogKey logKey, WALEdit logEdit) throws IOException {
     boolean bypass = false;
     // check table name matches or not.
-    if (!Arrays.equals(HRegionInfo.getTableName(info.getRegionName()), this.tableName)) {
+    if (!Bytes.equals(info.getTableName().getName(), this.tableName)) {
       return bypass;
     }
     preWALWriteCalled = true;

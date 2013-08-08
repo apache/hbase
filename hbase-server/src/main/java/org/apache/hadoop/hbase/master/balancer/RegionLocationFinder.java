@@ -31,13 +31,13 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ClusterStatus;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HDFSBlocksDistribution;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.regionserver.HRegion;
-import org.apache.hadoop.hbase.util.Bytes;
 
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
@@ -144,15 +144,15 @@ class RegionLocationFinder {
    * @return HTableDescriptor
    * @throws IOException
    */
-  protected HTableDescriptor getTableDescriptor(byte[] tableName) throws IOException {
+  protected HTableDescriptor getTableDescriptor(TableName tableName) throws IOException {
     HTableDescriptor tableDescriptor = null;
     try {
       if (this.services != null) {
-        tableDescriptor = this.services.getTableDescriptors().get(Bytes.toString(tableName));
+        tableDescriptor = this.services.getTableDescriptors().get(tableName);
       }
     } catch (FileNotFoundException fnfe) {
       LOG.debug("FileNotFoundException during getTableDescriptors." + " Current table name = "
-          + Bytes.toStringBinary(tableName), fnfe);
+          + tableName, fnfe);
     }
 
     return tableDescriptor;

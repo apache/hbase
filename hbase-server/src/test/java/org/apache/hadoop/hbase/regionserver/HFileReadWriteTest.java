@@ -51,6 +51,7 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
@@ -343,7 +344,7 @@ public class HFileReadWriteTest {
     columnDescriptor.setCompressionType(compression);
     columnDescriptor.setDataBlockEncoding(dataBlockEncoding);
     HRegionInfo regionInfo = new HRegionInfo();
-    HTableDescriptor htd = new HTableDescriptor(TABLE_NAME);
+    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(TABLE_NAME));
     HRegion region = new HRegion(outputDir, null, fs, conf, regionInfo, htd, null);
     HStore store = new HStore(region, columnDescriptor, conf);
 

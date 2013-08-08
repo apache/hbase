@@ -34,6 +34,7 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
@@ -183,7 +184,7 @@ public class TestMasterCoprocessorExceptionWithRemove {
         BuggyMasterObserver.class.getName();
     assertTrue(master.getLoadedCoprocessors().contains(coprocessorName));
 
-    HTableDescriptor htd1 = new HTableDescriptor(TEST_TABLE1);
+    HTableDescriptor htd1 = new HTableDescriptor(TableName.valueOf(TEST_TABLE1));
     htd1.addFamily(new HColumnDescriptor(TEST_FAMILY1));
 
     boolean threwDNRE = false;
@@ -215,7 +216,7 @@ public class TestMasterCoprocessorExceptionWithRemove {
 
     // Verify that BuggyMasterObserver has been removed due to its misbehavior
     // by creating another table: should not have a problem this time.
-    HTableDescriptor htd2 = new HTableDescriptor(TEST_TABLE2);
+    HTableDescriptor htd2 = new HTableDescriptor(TableName.valueOf(TEST_TABLE2));
     htd2.addFamily(new HColumnDescriptor(TEST_FAMILY2));
     HBaseAdmin admin = UTIL.getHBaseAdmin();
     try {

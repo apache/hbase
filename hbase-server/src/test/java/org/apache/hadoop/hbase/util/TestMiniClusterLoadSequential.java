@@ -26,6 +26,7 @@ import java.util.List;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
@@ -55,7 +56,8 @@ public class TestMiniClusterLoadSequential {
   private static final Log LOG = LogFactory.getLog(
       TestMiniClusterLoadSequential.class);
 
-  protected static final byte[] TABLE = Bytes.toBytes("load_test_tbl");
+  protected static final TableName TABLE =
+      TableName.valueOf("load_test_tbl");
   protected static final byte[] CF = Bytes.toBytes("load_test_cf");
   protected static final int NUM_THREADS = 8;
   protected static final int NUM_RS = 2;
@@ -108,13 +110,13 @@ public class TestMiniClusterLoadSequential {
   }
 
   protected MultiThreadedReader prepareReaderThreads(LoadTestDataGenerator dataGen,
-      Configuration conf, byte[] tableName, double verifyPercent) {
+      Configuration conf, TableName tableName, double verifyPercent) {
     MultiThreadedReader reader = new MultiThreadedReader(dataGen, conf, tableName, verifyPercent);
     return reader;
   }
 
   protected MultiThreadedWriter prepareWriterThreads(LoadTestDataGenerator dataGen,
-      Configuration conf, byte[] tableName) {
+      Configuration conf, TableName tableName) {
     MultiThreadedWriter writer = new MultiThreadedWriter(dataGen, conf, tableName);
     writer.setMultiPut(isMultiPut);
     return writer;
@@ -141,7 +143,7 @@ public class TestMiniClusterLoadSequential {
   protected void createPreSplitLoadTestTable(HTableDescriptor htd, HColumnDescriptor hcd)
       throws IOException {
     HBaseTestingUtility.createPreSplitLoadTestTable(conf, htd, hcd);
-    TEST_UTIL.waitUntilAllRegionsAssigned(htd.getName());
+    TEST_UTIL.waitUntilAllRegionsAssigned(htd.getTableName());
   }
 
   protected void prepareForLoadTest() throws IOException {

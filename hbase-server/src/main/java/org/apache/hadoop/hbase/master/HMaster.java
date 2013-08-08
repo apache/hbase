@@ -28,6 +28,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -40,6 +41,8 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import javax.management.ObjectName;
 
+import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -49,7 +52,11 @@ import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.Chore;
 import org.apache.hadoop.hbase.ClusterId;
 import org.apache.hadoop.hbase.ClusterStatus;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HBaseIOException;
+import org.apache.hadoop.hbase.NamespaceDescriptor;
+import org.apache.hadoop.hbase.constraint.ConstraintException;
+import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -72,12 +79,7 @@ import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitor;
 import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitorBase;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
-import org.apache.hadoop.hbase.exceptions.DeserializationException;
-import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.exceptions.MergeRegionException;
-import org.apache.hadoop.hbase.PleaseHoldException;
-import org.apache.hadoop.hbase.TableNotDisabledException;
-import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.exceptions.UnknownProtocolException;
 import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.executor.ExecutorType;
@@ -108,6 +110,7 @@ import org.apache.hadoop.hbase.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.protobuf.ResponseConverter;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos;
+import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier.RegionSpecifierType;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
@@ -205,6 +208,7 @@ import org.apache.hadoop.hbase.zookeeper.LoadBalancerTracker;
 import org.apache.hadoop.hbase.zookeeper.MasterAddressTracker;
 import org.apache.hadoop.hbase.zookeeper.RegionServerTracker;
 import org.apache.hadoop.hbase.zookeeper.ZKClusterId;
+import org.apache.hadoop.hbase.zookeeper.ZKTable;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperListener;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
@@ -272,6 +276,10 @@ MasterServices, Server {
   // Set after we've called HBaseServer#openServer and ready to receive RPCs.
   // Set back to false after we stop rpcServer.  Used by tests.
   private volatile boolean rpcServerOpen = false;
+
+  /** Namespace stuff */
+  private TableNamespaceManager tableNamespaceManager;
+  private NamespaceJanitor namespaceJanitorChore;
 
   /**
    * This servers address.
@@ -744,6 +752,7 @@ MasterServices, Server {
      */
 
     status.setStatus("Initializing Master file system");
+
     this.masterActiveTime = System.currentTimeMillis();
     // TODO: Do this using Dependency Injection, using PicoContainer, Guice or Spring.
     this.fileSystemManager = new MasterFileSystem(this, this, metricsMaster, masterRecovery);
@@ -841,6 +850,10 @@ MasterServices, Server {
       this.fileSystemManager.splitMetaLog(previouslyFailedMetaRSs);
     }
 
+    status.setStatus("Assigning System tables");
+    // Make sure system tables are assigned before proceeding.
+    assignSystemTables(status);
+
     enableServerShutdownHandler();
 
     status.setStatus("Submitting log splitting work for previously failed region servers");
@@ -870,7 +883,9 @@ MasterServices, Server {
       this.clusterStatusChore = getAndStartClusterStatusChore(this);
       this.balancerChore = getAndStartBalancerChore(this);
       this.catalogJanitorChore = new CatalogJanitor(this, this);
+      this.namespaceJanitorChore = new NamespaceJanitor(this);
       startCatalogJanitorChore();
+      startNamespaceJanitorChore();
     }
 
     status.markComplete("Initialization successful");
@@ -899,6 +914,14 @@ MasterServices, Server {
    */
   protected void startCatalogJanitorChore() {
     Threads.setDaemonThreadRunning(catalogJanitorChore.getThread());
+  }
+
+  /**
+   * Useful for testing purpose also where we have
+   * master restart scenarios.
+   */
+  protected void startNamespaceJanitorChore() {
+    Threads.setDaemonThreadRunning(namespaceJanitorChore.getThread());
   }
 
   /**
@@ -974,9 +997,9 @@ MasterServices, Server {
         this.catalogTracker.getMetaLocation());
     }
 
-    enableCatalogTables(Bytes.toString(HConstants.META_TABLE_NAME));
-    LOG.info(".META. assigned=" + assigned + ", rit=" + rit + ", location="
-        + catalogTracker.getMetaLocation());
+    enableMeta(TableName.META_TABLE_NAME);
+    LOG.info(".META. assigned=" + assigned + ", rit=" + rit +
+      ", location=" + catalogTracker.getMetaLocation());
     status.setStatus("META assigned.");
   }
 
@@ -992,6 +1015,82 @@ MasterServices, Server {
     }
   }
 
+  private void splitLogBeforeAssignment(ServerName currentServer,
+                                        Set<HRegionInfo> regions) throws IOException {
+    if (this.distributedLogReplay) {
+      this.fileSystemManager.prepareLogReplay(currentServer, regions);
+    } else {
+      // In recovered.edits mode: create recovered edits file for region server
+      this.fileSystemManager.splitLog(currentServer);
+    }
+  }
+
+  void assignSystemTables(MonitoredTask status)
+      throws InterruptedException, IOException, KeeperException {
+    // Skip assignment for regions of tables in DISABLING state because during clean cluster startup
+    // no RS is alive and regions map also doesn't have any information about the regions.
+    // See HBASE-6281.
+    Set<TableName> disabledOrDisablingOrEnabling = ZKTable.getDisabledOrDisablingTables(zooKeeper);
+    disabledOrDisablingOrEnabling.addAll(ZKTable.getEnablingTables(zooKeeper));
+    // Scan META for all system regions, skipping any disabled tables
+    Map<HRegionInfo, ServerName> allRegions =
+        MetaReader.fullScan(catalogTracker, disabledOrDisablingOrEnabling, true);
+    for(Iterator<HRegionInfo> iter = allRegions.keySet().iterator();
+        iter.hasNext();) {
+      if (!HTableDescriptor.isSystemTable(iter.next().getTableName())) {
+        iter.remove();
+      }
+    }
+
+    int assigned = 0;
+    boolean beingExpired = false;
+
+    status.setStatus("Assigning System Regions");
+
+    for(Map.Entry<HRegionInfo, ServerName> entry: allRegions.entrySet()) {
+      HRegionInfo regionInfo = entry.getKey();
+      ServerName currServer = entry.getValue();
+
+      assignmentManager.getRegionStates().createRegionState(regionInfo);
+      boolean rit = this.assignmentManager
+          .processRegionInTransitionAndBlockUntilAssigned(regionInfo);
+      boolean regionLocation = false;
+      if (currServer != null) {
+        regionLocation = verifyRegionLocation(currServer, regionInfo);
+      }
+
+      if (!rit && !regionLocation) {
+        beingExpired = expireIfOnline(currServer);
+        if (beingExpired) {
+          splitLogBeforeAssignment(currServer, Sets.newHashSet(regionInfo));
+        }
+        assignmentManager.assign(regionInfo, true);
+        // Make sure a region location is set.
+        this.assignmentManager.waitForAssignment(regionInfo);
+        assigned++;
+        if (beingExpired && this.distributedLogReplay) {
+          // In Replay WAL Mode, we need the new region server online
+          this.fileSystemManager.splitLog(currServer);
+        }
+      } else if (rit && !regionLocation) {
+        if (!waitVerifiedRegionLocation(regionInfo)) return;
+        assigned++;
+      } else {
+        // Region already assigned. We didn't assign it. Add to in-memory state.
+        this.assignmentManager.regionOnline(regionInfo, currServer);
+      }
+
+      if (!this.assignmentManager.getZKTable().isEnabledTable(regionInfo.getTableName())) {
+        this.assignmentManager.setEnabledTable(regionInfo.getTableName());
+      }
+      LOG.info("System Regions assigned=" + assigned + ", rit=" + rit +
+        ", location=" + catalogTracker.getMetaLocation());
+    }
+    status.setStatus("System Regions assigned.");
+
+    initNamespace();
+  }
+
   private void enableSSHandWaitForMeta() throws IOException, InterruptedException {
     enableServerShutdownHandler();
     this.catalogTracker.waitForMeta();
@@ -1000,9 +1099,31 @@ MasterServices, Server {
     this.assignmentManager.waitForAssignment(HRegionInfo.FIRST_META_REGIONINFO);
   }
 
-  private void enableCatalogTables(String catalogTableName) {
-    if (!this.assignmentManager.getZKTable().isEnabledTable(catalogTableName)) {
-      this.assignmentManager.setEnabledTable(catalogTableName);
+  private boolean waitVerifiedRegionLocation(HRegionInfo regionInfo) throws IOException {
+    while (!this.stopped) {
+      Pair<HRegionInfo, ServerName> p = MetaReader.getRegion(catalogTracker,
+          regionInfo.getRegionName());
+      if (verifyRegionLocation(p.getSecond(), p.getFirst())) break;
+    }
+    // We got here because we came of above loop.
+    return !this.stopped;
+  }
+
+  private boolean verifyRegionLocation(ServerName currServer, HRegionInfo regionInfo) {
+    try {
+      return
+          ProtobufUtil.getRegionInfo(HConnectionManager.getConnection(conf)
+              .getAdmin(currServer),
+              regionInfo.getRegionName()) != null;
+    } catch (IOException e) {
+      LOG.info("Failed to contact server: "+currServer, e);
+    }
+    return false;
+  }
+
+  private void enableMeta(TableName metaTableName) {
+    if (!this.assignmentManager.getZKTable().isEnabledTable(metaTableName)) {
+      this.assignmentManager.setEnabledTable(metaTableName);
     }
   }
 
@@ -1020,6 +1141,12 @@ MasterServices, Server {
     LOG.info("Forcing expire of " + sn);
     serverManager.expireServer(sn);
     return true;
+  }
+
+  void initNamespace() throws IOException {
+    //create namespace manager
+    tableNamespaceManager = new TableNamespaceManager(this);
+    tableNamespaceManager.start();
   }
 
   /**
@@ -1198,6 +1325,9 @@ MasterServices, Server {
     }
     if (this.clusterStatusPublisherChore != null){
       clusterStatusPublisherChore.interrupt();
+    }
+    if (this.namespaceJanitorChore != null){
+      namespaceJanitorChore.interrupt();
     }
   }
 
@@ -1380,7 +1510,7 @@ MasterServices, Server {
         }
       }
 
-      Map<String, Map<ServerName, List<HRegionInfo>>> assignmentsByTable =
+      Map<TableName, Map<ServerName, List<HRegionInfo>>> assignmentsByTable =
         this.assignmentManager.getRegionStates().getAssignmentsByTable();
 
       List<RegionPlan> plans = new ArrayList<RegionPlan>();
@@ -1639,13 +1769,18 @@ MasterServices, Server {
       throw new MasterNotRunningException();
     }
 
-    HRegionInfo [] newRegions = getHRegionInfos(hTableDescriptor, splitKeys);
+    String namespace = hTableDescriptor.getTableName().getNamespaceAsString();
+    if (getNamespaceDescriptor(namespace) == null) {
+      throw new ConstraintException("Namespace " + namespace + " does not exist");
+    }
+    
+    HRegionInfo[] newRegions = getHRegionInfos(hTableDescriptor, splitKeys);
     checkInitialized();
     checkCompression(hTableDescriptor);
     if (cpHost != null) {
       cpHost.preCreateTable(hTableDescriptor, newRegions);
     }
-
+    
     this.executorService.submit(new CreateTableHandler(this,
       this.fileSystemManager, hTableDescriptor, conf,
       newRegions, this).prepare());
@@ -1688,7 +1823,7 @@ MasterServices, Server {
     HRegionInfo[] hRegionInfos = null;
     if (splitKeys == null || splitKeys.length == 0) {
       hRegionInfos = new HRegionInfo[]{
-          new HRegionInfo(hTableDescriptor.getName(), null, null)};
+          new HRegionInfo(hTableDescriptor.getTableName(), null, null)};
     } else {
       int numRegions = splitKeys.length + 1;
       hRegionInfos = new HRegionInfo[numRegions];
@@ -1697,19 +1832,19 @@ MasterServices, Server {
       for (int i = 0; i < numRegions; i++) {
         endKey = (i == splitKeys.length) ? null : splitKeys[i];
         hRegionInfos[i] =
-            new HRegionInfo(hTableDescriptor.getName(), startKey, endKey);
+            new HRegionInfo(hTableDescriptor.getTableName(), startKey, endKey);
         startKey = endKey;
       }
     }
     return hRegionInfos;
   }
 
-  private static boolean isCatalogTable(final byte [] tableName) {
-    return Bytes.equals(tableName, HConstants.META_TABLE_NAME);
+  private static boolean isCatalogTable(final TableName tableName) {
+    return tableName.equals(TableName.META_TABLE_NAME);
   }
 
   @Override
-  public void deleteTable(final byte[] tableName) throws IOException {
+  public void deleteTable(final TableName tableName) throws IOException {
     checkInitialized();
     if (cpHost != null) {
       cpHost.preDeleteTable(tableName);
@@ -1724,7 +1859,7 @@ MasterServices, Server {
   public DeleteTableResponse deleteTable(RpcController controller, DeleteTableRequest request)
   throws ServiceException {
     try {
-      deleteTable(request.getTableName().toByteArray());
+      deleteTable(ProtobufUtil.toTableName(request.getTableName()));
     } catch (IOException ioe) {
       throw new ServiceException(ioe);
     }
@@ -1746,7 +1881,7 @@ MasterServices, Server {
     // may overlap with other table operations or the table operation may
     // have completed before querying this API. We need to refactor to a
     // transaction system in the future to avoid these ambiguities.
-    byte [] tableName = req.getTableName().toByteArray();
+    TableName tableName = ProtobufUtil.toTableName(req.getTableName());
 
     try {
       Pair<Integer,Integer> pair = this.assignmentManager.getReopenStatus(tableName);
@@ -1760,7 +1895,7 @@ MasterServices, Server {
   }
 
   @Override
-  public void addColumn(final byte[] tableName, final HColumnDescriptor column)
+  public void addColumn(final TableName tableName, final HColumnDescriptor column)
       throws IOException {
     checkInitialized();
     if (cpHost != null) {
@@ -1780,7 +1915,7 @@ MasterServices, Server {
   public AddColumnResponse addColumn(RpcController controller, AddColumnRequest req)
   throws ServiceException {
     try {
-      addColumn(req.getTableName().toByteArray(),
+      addColumn(ProtobufUtil.toTableName(req.getTableName()),
         HColumnDescriptor.convert(req.getColumnFamilies()));
     } catch (IOException ioe) {
       throw new ServiceException(ioe);
@@ -1789,7 +1924,7 @@ MasterServices, Server {
   }
 
   @Override
-  public void modifyColumn(byte[] tableName, HColumnDescriptor descriptor)
+  public void modifyColumn(TableName tableName, HColumnDescriptor descriptor)
       throws IOException {
     checkInitialized();
     checkCompression(descriptor);
@@ -1809,7 +1944,7 @@ MasterServices, Server {
   public ModifyColumnResponse modifyColumn(RpcController controller, ModifyColumnRequest req)
   throws ServiceException {
     try {
-      modifyColumn(req.getTableName().toByteArray(),
+      modifyColumn(ProtobufUtil.toTableName(req.getTableName()),
         HColumnDescriptor.convert(req.getColumnFamilies()));
     } catch (IOException ioe) {
       throw new ServiceException(ioe);
@@ -1818,7 +1953,7 @@ MasterServices, Server {
   }
 
   @Override
-  public void deleteColumn(final byte[] tableName, final byte[] columnName)
+  public void deleteColumn(final TableName tableName, final byte[] columnName)
       throws IOException {
     checkInitialized();
     if (cpHost != null) {
@@ -1836,7 +1971,8 @@ MasterServices, Server {
   public DeleteColumnResponse deleteColumn(RpcController controller, DeleteColumnRequest req)
   throws ServiceException {
     try {
-      deleteColumn(req.getTableName().toByteArray(), req.getColumnName().toByteArray());
+      deleteColumn(ProtobufUtil.toTableName(req.getTableName()),
+          req.getColumnName().toByteArray());
     } catch (IOException ioe) {
       throw new ServiceException(ioe);
     }
@@ -1844,7 +1980,7 @@ MasterServices, Server {
   }
 
   @Override
-  public void enableTable(final byte[] tableName) throws IOException {
+  public void enableTable(final TableName tableName) throws IOException {
     checkInitialized();
     if (cpHost != null) {
       cpHost.preEnableTable(tableName);
@@ -1860,7 +1996,7 @@ MasterServices, Server {
   public EnableTableResponse enableTable(RpcController controller, EnableTableRequest request)
   throws ServiceException {
     try {
-      enableTable(request.getTableName().toByteArray());
+      enableTable(ProtobufUtil.toTableName(request.getTableName()));
     } catch (IOException ioe) {
       throw new ServiceException(ioe);
     }
@@ -1868,7 +2004,7 @@ MasterServices, Server {
   }
 
   @Override
-  public void disableTable(final byte[] tableName) throws IOException {
+  public void disableTable(final TableName tableName) throws IOException {
     checkInitialized();
     if (cpHost != null) {
       cpHost.preDisableTable(tableName);
@@ -1884,7 +2020,7 @@ MasterServices, Server {
   public DisableTableResponse disableTable(RpcController controller, DisableTableRequest request)
   throws ServiceException {
     try {
-      disableTable(request.getTableName().toByteArray());
+      disableTable(ProtobufUtil.toTableName(request.getTableName()));
     } catch (IOException ioe) {
       throw new ServiceException(ioe);
     }
@@ -1898,7 +2034,7 @@ MasterServices, Server {
    * may be null.
    */
   Pair<HRegionInfo, ServerName> getTableRegionForRow(
-      final byte [] tableName, final byte [] rowKey)
+      final TableName tableName, final byte [] rowKey)
   throws IOException {
     final AtomicReference<Pair<HRegionInfo, ServerName>> result =
       new AtomicReference<Pair<HRegionInfo, ServerName>>(null);
@@ -1914,7 +2050,7 @@ MasterServices, Server {
           if (pair == null) {
             return false;
           }
-          if (!Bytes.equals(pair.getFirst().getTableName(), tableName)) {
+          if (!pair.getFirst().getTableName().equals(tableName)) {
             return false;
           }
           result.set(pair);
@@ -1927,7 +2063,7 @@ MasterServices, Server {
   }
 
   @Override
-  public void modifyTable(final byte[] tableName, final HTableDescriptor descriptor)
+  public void modifyTable(final TableName tableName, final HTableDescriptor descriptor)
       throws IOException {
     checkInitialized();
     checkCompression(descriptor);
@@ -1944,7 +2080,7 @@ MasterServices, Server {
   public ModifyTableResponse modifyTable(RpcController controller, ModifyTableRequest req)
   throws ServiceException {
     try {
-      modifyTable(req.getTableName().toByteArray(),
+      modifyTable(ProtobufUtil.toTableName(req.getTableName()),
         HTableDescriptor.convert(req.getTableSchema()));
     } catch (IOException ioe) {
       throw new ServiceException(ioe);
@@ -1953,17 +2089,16 @@ MasterServices, Server {
   }
 
   @Override
-  public void checkTableModifiable(final byte [] tableName)
+  public void checkTableModifiable(final TableName tableName)
       throws IOException, TableNotFoundException, TableNotDisabledException {
-    String tableNameStr = Bytes.toString(tableName);
     if (isCatalogTable(tableName)) {
       throw new IOException("Can't modify catalog tables");
     }
-    if (!MetaReader.tableExists(getCatalogTracker(), tableNameStr)) {
-      throw new TableNotFoundException(tableNameStr);
+    if (!MetaReader.tableExists(getCatalogTracker(), tableName)) {
+      throw new TableNotFoundException(tableName);
     }
     if (!getAssignmentManager().getZKTable().
-        isDisabledTable(Bytes.toString(tableName))) {
+        isDisabledTable(tableName)) {
       throw new TableNotDisabledException(tableName);
     }
   }
@@ -2430,11 +2565,14 @@ MasterServices, Server {
   public GetTableDescriptorsResponse getTableDescriptors(
 	      RpcController controller, GetTableDescriptorsRequest req) throws ServiceException {
     List<HTableDescriptor> descriptors = new ArrayList<HTableDescriptor>();
-
+    List<TableName> tableNameList = new ArrayList<TableName>();
+    for(HBaseProtos.TableName tableNamePB: req.getTableNamesList()) {
+      tableNameList.add(ProtobufUtil.toTableName(tableNamePB));
+    }
     boolean bypass = false;
     if (this.cpHost != null) {
       try {
-        bypass = this.cpHost.preGetTableDescriptors(req.getTableNamesList(), descriptors);
+        bypass = this.cpHost.preGetTableDescriptors(tableNameList, descriptors);
       } catch (IOException ioe) {
         throw new ServiceException(ioe);
       }
@@ -2450,10 +2588,14 @@ MasterServices, Server {
           LOG.warn("Failed getting all descriptors", e);
         }
         if (descriptorMap != null) {
-          descriptors.addAll(descriptorMap.values());
+          for(HTableDescriptor desc: descriptorMap.values()) {
+            if(!HTableDescriptor.isSystemTable(desc.getTableName())) {
+              descriptors.add(desc);
+            }
+          }
         }
       } else {
-        for (String s: req.getTableNamesList()) {
+        for (TableName s: tableNameList) {
           try {
             HTableDescriptor desc = this.tableDescriptors.get(s);
             if (desc != null) {
@@ -2803,9 +2945,136 @@ MasterServices, Server {
     }
   }
 
+  @Override
+  public MasterAdminProtos.ModifyNamespaceResponse modifyNamespace(RpcController controller,
+      MasterAdminProtos.ModifyNamespaceRequest request) throws ServiceException {
+    try {
+      modifyNamespace(ProtobufUtil.toNamespaceDescriptor(request.getNamespaceDescriptor()));
+      return MasterAdminProtos.ModifyNamespaceResponse.getDefaultInstance();
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+  }
+
+  @Override
+  public MasterAdminProtos.CreateNamespaceResponse createNamespace(RpcController controller,
+     MasterAdminProtos.CreateNamespaceRequest request) throws ServiceException {
+    try {
+      createNamespace(ProtobufUtil.toNamespaceDescriptor(request.getNamespaceDescriptor()));
+      return MasterAdminProtos.CreateNamespaceResponse.getDefaultInstance();
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+  }
+
+  @Override
+  public MasterAdminProtos.DeleteNamespaceResponse deleteNamespace(RpcController controller, MasterAdminProtos.DeleteNamespaceRequest request) throws ServiceException {
+    try {
+      deleteNamespace(request.getNamespaceName());
+      return MasterAdminProtos.DeleteNamespaceResponse.getDefaultInstance();
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+  }
+
+  @Override
+  public MasterAdminProtos.GetNamespaceDescriptorResponse getNamespaceDescriptor(
+      RpcController controller, MasterAdminProtos.GetNamespaceDescriptorRequest request)
+      throws ServiceException {
+    try {
+      return MasterAdminProtos.GetNamespaceDescriptorResponse.newBuilder()
+          .setNamespaceDescriptor(
+              ProtobufUtil.toProtoNamespaceDescriptor(getNamespaceDescriptor(request.getNamespaceName())))
+          .build();
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+  }
+
+  @Override
+  public MasterAdminProtos.ListNamespaceDescriptorsResponse listNamespaceDescriptors(
+      RpcController controller, MasterAdminProtos.ListNamespaceDescriptorsRequest request)
+      throws ServiceException {
+    try {
+      MasterAdminProtos.ListNamespaceDescriptorsResponse.Builder response =
+          MasterAdminProtos.ListNamespaceDescriptorsResponse.newBuilder();
+      for(NamespaceDescriptor ns: listNamespaceDescriptors()) {
+        response.addNamespaceDescriptor(ProtobufUtil.toProtoNamespaceDescriptor(ns));
+      }
+      return response.build();
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+  }
+
+  @Override
+  public MasterAdminProtos.GetTableDescriptorsByNamespaceResponse getTableDescriptorsByNamespace(
+      RpcController controller, MasterAdminProtos.GetTableDescriptorsByNamespaceRequest request)
+      throws ServiceException {
+    try {
+      MasterAdminProtos.GetTableDescriptorsByNamespaceResponse.Builder b =
+          MasterAdminProtos.GetTableDescriptorsByNamespaceResponse.newBuilder();
+      for(HTableDescriptor htd: getTableDescriptorsByNamespace(request.getNamespaceName())) {
+        b.addTableSchema(htd.convert());
+      }
+      return b.build();
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+  }
+
   private boolean isHealthCheckerConfigured() {
     String healthScriptLocation = this.conf.get(HConstants.HEALTH_SCRIPT_LOC);
     return org.apache.commons.lang.StringUtils.isNotBlank(healthScriptLocation);
   }
 
+  public void createNamespace(NamespaceDescriptor descriptor) throws IOException {
+    TableName.isLegalNamespaceName(Bytes.toBytes(descriptor.getName()));
+    if (cpHost != null) {
+      if (cpHost.preCreateNamespace(descriptor)) {
+        return;
+      }
+    }
+    tableNamespaceManager.create(descriptor);
+    if (cpHost != null) {
+      cpHost.postCreateNamespace(descriptor);
+    }
+  }
+
+  public void modifyNamespace(NamespaceDescriptor descriptor) throws IOException {
+    TableName.isLegalNamespaceName(Bytes.toBytes(descriptor.getName()));
+    if (cpHost != null) {
+      if (cpHost.preModifyNamespace(descriptor)) {
+        return;
+      }
+    }
+    tableNamespaceManager.update(descriptor);
+    if (cpHost != null) {
+      cpHost.postModifyNamespace(descriptor);
+    }
+  }
+
+  public void deleteNamespace(String name) throws IOException {
+    if (cpHost != null) {
+      if (cpHost.preDeleteNamespace(name)) {
+        return;
+      }
+    }
+    tableNamespaceManager.remove(name);
+    if (cpHost != null) {
+      cpHost.postDeleteNamespace(name);
+    }
+  }
+
+  public NamespaceDescriptor getNamespaceDescriptor(String name) throws IOException {
+      return tableNamespaceManager.get(name);
+  }
+
+  public List<NamespaceDescriptor> listNamespaceDescriptors() throws IOException {
+    return Lists.newArrayList(tableNamespaceManager.list());
+  }
+
+  public List<HTableDescriptor> getTableDescriptorsByNamespace(String name) throws IOException {
+    return Lists.newArrayList(tableDescriptors.getByNamespace(name).values());
+  }
 }

@@ -262,7 +262,7 @@ public class StoreFileInfo {
 
   /*
    * Return path to the file referred to by a Reference.  Presumes a directory
-   * hierarchy of <code>${hbase.rootdir}/tablename/regionname/familyname</code>.
+   * hierarchy of <code>${hbase.rootdir}/data/${namespace}/tablename/regionname/familyname</code>.
    * @param p Path to a Reference file.
    * @return Calculated path to parent region file.
    * @throws IllegalArgumentException when path regex fails to match.

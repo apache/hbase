@@ -38,9 +38,11 @@ import org.apache.hadoop.hbase.util.Bytes;
 @InterfaceAudience.Public
 @InterfaceStability.Stable
 public final class HConstants {
+  //Bytes.UTF8_ENCODING should be updated if this changed
   /** When we encode strings, we always specify UTF8 encoding */
   public static final String UTF8_ENCODING = "UTF-8";
 
+  //Bytes.UTF8_CHARSET should be updated if this changed
   /** When we encode strings, we always specify UTF8 encoding */
   public static final Charset UTF8_CHARSET = Charset.forName(UTF8_ENCODING);
   /**
@@ -104,9 +106,10 @@ public final class HConstants {
    * Version 5 changes versions in catalog table regions.
    * Version 6 enables blockcaching on catalog tables.
    * Version 7 introduces hfile -- hbase 0.19 to 0.20..
+   * Version 8 introduces namespace
    */
   // public static final String FILE_SYSTEM_VERSION = "6";
-  public static final String FILE_SYSTEM_VERSION = "7";
+  public static final String FILE_SYSTEM_VERSION = "8";
 
   // Configuration parameters
 
@@ -349,11 +352,7 @@ public final class HConstants {
   // be the first to be reassigned if the server(s) they are being served by
   // should go down.
 
-  /** The root table's name.*/
-  public static final byte [] ROOT_TABLE_NAME = Bytes.toBytes("-ROOT-");
-
-  /** The META table's name. */
-  public static final byte [] META_TABLE_NAME = Bytes.toBytes(".META.");
+  public static final String BASE_NAMESPACE_DIR = ".data";
 
   /** delimiter used between portions of a region name */
   public static final int META_ROW_DELIMITER = ',';
@@ -812,12 +811,12 @@ public final class HConstants {
     Collections.unmodifiableList(Arrays.asList(new String[] { HREGION_LOGDIR_NAME,
       HREGION_OLDLOGDIR_NAME, CORRUPT_DIR_NAME, SPLIT_LOGDIR_NAME,
       HBCK_SIDELINEDIR_NAME, HFILE_ARCHIVE_DIRECTORY, SNAPSHOT_DIR_NAME, HBASE_TEMP_DIRECTORY,
-      OLD_SNAPSHOT_DIR_NAME }));
+      OLD_SNAPSHOT_DIR_NAME, BASE_NAMESPACE_DIR}));
 
   /** Directories that are not HBase user table directories */
   public static final List<String> HBASE_NON_USER_TABLE_DIRS =
     Collections.unmodifiableList(Arrays.asList((String[])ArrayUtils.addAll(
-      new String[] { Bytes.toString(META_TABLE_NAME), Bytes.toString(ROOT_TABLE_NAME) },
+      new String[] { TableName.META_TABLE_NAME.getNameAsString(), TableName.ROOT_TABLE_NAME.getNameAsString() },
       HBASE_NON_TABLE_DIRS.toArray())));
 
   /** Health script related settings. */

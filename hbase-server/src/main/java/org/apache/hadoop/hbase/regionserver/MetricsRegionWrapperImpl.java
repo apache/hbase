@@ -57,7 +57,7 @@ public class MetricsRegionWrapperImpl implements MetricsRegionWrapper, Closeable
     if (tableDesc == null) {
       return "";
     }
-    return tableDesc.getNameAsString();
+    return tableDesc.getTableName().getNameAsString();
   }
 
   @Override

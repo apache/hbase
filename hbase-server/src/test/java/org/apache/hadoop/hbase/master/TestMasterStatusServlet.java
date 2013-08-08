@@ -58,9 +58,10 @@ public class TestMasterStatusServlet {
   static final ServerName FAKE_HOST = 
     new ServerName("fakehost", 12345, 1234567890);
   static final HTableDescriptor FAKE_TABLE =
-    new HTableDescriptor("mytable");
+    new HTableDescriptor(TableName.valueOf("mytable"));
   static final HRegionInfo FAKE_HRI =
-      new HRegionInfo(FAKE_TABLE.getName(), Bytes.toBytes("a"), Bytes.toBytes("b"));
+      new HRegionInfo(FAKE_TABLE.getTableName(),
+          Bytes.toBytes("a"), Bytes.toBytes("b"));
 
   @Before
   public void setupBasicMocks() {
@@ -106,8 +107,8 @@ public class TestMasterStatusServlet {
 
   private void setupMockTables() throws IOException {
     HTableDescriptor tables[] = new HTableDescriptor[] {
-        new HTableDescriptor("foo"),
-        new HTableDescriptor("bar")
+        new HTableDescriptor(TableName.valueOf("foo")),
+        new HTableDescriptor(TableName.valueOf("bar"))
     };
     Mockito.doReturn(tables).when(admin).listTables();
   }
@@ -158,7 +159,7 @@ public class TestMasterStatusServlet {
     NavigableMap<String, RegionState> regionsInTransition =
       Maps.newTreeMap();
     for (byte i = 0; i < 100; i++) {
-      HRegionInfo hri = new HRegionInfo(FAKE_TABLE.getName(),
+      HRegionInfo hri = new HRegionInfo(FAKE_TABLE.getTableName(),
           new byte[]{i}, new byte[]{(byte) (i+1)});
       regionsInTransition.put(hri.getEncodedName(),
         new RegionState(hri, RegionState.State.CLOSING, 12345L, FAKE_HOST));

@@ -22,12 +22,16 @@ import static org.junit.Assert.fail;
 
 import java.io.IOException;
 
+import com.google.protobuf.ByteString;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.SmallTests;
+import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.IsSnapshotDoneRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.IsSnapshotDoneResponse;
@@ -100,7 +104,7 @@ public class TestSnapshotFromAdmin {
     // setup the admin and run the test
     HBaseAdmin admin = new HBaseAdmin(mockConnection);
     String snapshot = "snapshot";
-    String table = "table";
+    TableName table = TableName.valueOf("table");
     // get start time
     long start = System.currentTimeMillis();
     admin.snapshot(snapshot, table);
@@ -128,6 +132,7 @@ public class TestSnapshotFromAdmin {
     failSnapshotStart(admin, builder.setName("-snapshot").build());
     failSnapshotStart(admin, builder.setName("snapshot fails").build());
     failSnapshotStart(admin, builder.setName("snap$hot").build());
+    failSnapshotStart(admin, builder.setName("snap:hot").build());
     // check the table name also get verified
     failSnapshotStart(admin, builder.setName("snapshot").setTable(".table").build());
     failSnapshotStart(admin, builder.setName("snapshot").setTable("-table").build());
@@ -144,7 +149,7 @@ public class TestSnapshotFromAdmin {
     IsSnapshotDoneResponse doneResponse = IsSnapshotDoneResponse.newBuilder().setDone(true).build();
     Mockito.when(
       master.isSnapshotDone((RpcController) Mockito.isNull(),
-        Mockito.any(IsSnapshotDoneRequest.class))).thenReturn(doneResponse);
+          Mockito.any(IsSnapshotDoneRequest.class))).thenReturn(doneResponse);
 
       // make sure that we can use valid names
     admin.snapshot(builder.setName("snapshot").setTable("table").build());

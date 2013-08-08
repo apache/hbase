@@ -115,7 +115,7 @@ public class TestLoadIncrementalHFiles {
           new byte[][]{ Bytes.toBytes("fff"), Bytes.toBytes("zzz") },
     });
   }
-  
+
   /**
    * Test loading into a column family that has a ROWCOL bloom filter.
    */
@@ -128,7 +128,7 @@ public class TestLoadIncrementalHFiles {
     });
   }
 
-  private void runTest(String testName, BloomType bloomType, 
+  private void runTest(String testName, BloomType bloomType,
           byte[][][] hfileRanges) throws Exception {
     Path dir = util.getDataTestDirOnTestFS(testName);
     FileSystem fs = util.getTestFileSystem();
@@ -147,7 +147,7 @@ public class TestLoadIncrementalHFiles {
     final byte[] TABLE = Bytes.toBytes("mytable_"+testName);
 
     HBaseAdmin admin = new HBaseAdmin(util.getConfiguration());
-    HTableDescriptor htd = new HTableDescriptor(TABLE);
+    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(TABLE));
     HColumnDescriptor familyDesc = new HColumnDescriptor(FAMILY);
     familyDesc.setBloomFilterType(bloomType);
     htd.addFamily(familyDesc);
@@ -170,7 +170,7 @@ public class TestLoadIncrementalHFiles {
     byte[][][] hfileRanges = new byte[][][] {
       new byte[][]{ Bytes.toBytes("aaa"), Bytes.toBytes("ccc") },
       new byte[][]{ Bytes.toBytes("ddd"), Bytes.toBytes("ooo") },
-    }; 
+    };
 
     Path dir = util.getDataTestDirOnTestFS(testName);
     FileSystem fs = util.getTestFileSystem();
@@ -188,7 +188,7 @@ public class TestLoadIncrementalHFiles {
     final byte[] TABLE = Bytes.toBytes("mytable_"+testName);
 
     HBaseAdmin admin = new HBaseAdmin(util.getConfiguration());
-    HTableDescriptor htd = new HTableDescriptor(TABLE);
+    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(TABLE));
     // set real family name to upper case in purpose to simulate the case that
     // family name in HFiles is invalid
     HColumnDescriptor family =
@@ -342,7 +342,7 @@ public class TestLoadIncrementalHFiles {
     map.put(last, value-1);
   }
 
-  @Test 
+  @Test
   public void testInferBoundaries() {
     TreeMap<byte[], Integer> map = new TreeMap<byte[], Integer>(Bytes.BYTES_COMPARATOR);
 
@@ -352,8 +352,8 @@ public class TestLoadIncrementalHFiles {
      *
      * Should be inferred as:
      * a-----------------k   m-------------q   r--------------t  u---------x
-     * 
-     * The output should be (m,r,u) 
+     *
+     * The output should be (m,r,u)
      */
 
     String first;
@@ -361,7 +361,7 @@ public class TestLoadIncrementalHFiles {
 
     first = "a"; last = "e";
     addStartEndKeysForTest(map, first.getBytes(), last.getBytes());
-    
+
     first = "r"; last = "s";
     addStartEndKeysForTest(map, first.getBytes(), last.getBytes());
 
@@ -382,14 +382,14 @@ public class TestLoadIncrementalHFiles {
 
     first = "s"; last = "t";
     addStartEndKeysForTest(map, first.getBytes(), last.getBytes());
-    
+
     first = "u"; last = "w";
     addStartEndKeysForTest(map, first.getBytes(), last.getBytes());
 
     byte[][] keysArray = LoadIncrementalHFiles.inferBoundaries(map);
     byte[][] compare = new byte[3][];
     compare[0] = "m".getBytes();
-    compare[1] = "r".getBytes(); 
+    compare[1] = "r".getBytes();
     compare[2] = "u".getBytes();
 
     assertEquals(keysArray.length, 3);

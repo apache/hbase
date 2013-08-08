@@ -52,6 +52,7 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
@@ -593,7 +594,7 @@ public class ThriftServerRunner implements Runnable {
         HTableDescriptor[] tables = this.getHBaseAdmin().listTables();
         ArrayList<ByteBuffer> list = new ArrayList<ByteBuffer>(tables.length);
         for (int i = 0; i < tables.length; i++) {
-          list.add(ByteBuffer.wrap(tables[i].getName()));
+          list.add(ByteBuffer.wrap(tables[i].getTableName().getName()));
         }
         return list;
       } catch (IOException e) {
@@ -931,7 +932,7 @@ public class ThriftServerRunner implements Runnable {
         if (getHBaseAdmin().tableExists(tableName)) {
           throw new AlreadyExists("table name already in use");
         }
-        HTableDescriptor desc = new HTableDescriptor(tableName);
+        HTableDescriptor desc = new HTableDescriptor(TableName.valueOf(tableName));
         for (ColumnDescriptor col : columnFamilies) {
           HColumnDescriptor colDesc = ThriftUtilities.colDescFromThrift(col);
           desc.addFamily(colDesc);
@@ -1378,13 +1379,13 @@ public class ThriftServerRunner implements Runnable {
     @Override
     public TRegionInfo getRegionInfo(ByteBuffer searchRow) throws IOError {
       try {
-        HTable table = getTable(HConstants.META_TABLE_NAME);
+        HTable table = getTable(TableName.META_TABLE_NAME.getName());
         byte[] row = getBytes(searchRow);
         Result startRowResult = table.getRowOrBefore(
           row, HConstants.CATALOG_FAMILY);
 
         if (startRowResult == null) {
-          throw new IOException("Cannot find row in .META., row="
+          throw new IOException("Cannot find row in "+ TableName.META_TABLE_NAME+", row="
                                 + Bytes.toStringBinary(row));
         }
 

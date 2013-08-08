@@ -45,12 +45,13 @@ public class TestOfflineMetaRebuildBase extends OfflineMetaRebuildTestCore {
     wipeOutMeta();
 
     // is meta really messed up?
-    assertEquals(0, scanMeta());
+    assertEquals(1, scanMeta());
     assertErrors(doFsck(conf, false),
-        new ERROR_CODE[] { ERROR_CODE.NOT_IN_META_OR_DEPLOYED,
+        new ERROR_CODE[] {
             ERROR_CODE.NOT_IN_META_OR_DEPLOYED,
             ERROR_CODE.NOT_IN_META_OR_DEPLOYED,
-            ERROR_CODE.NOT_IN_META_OR_DEPLOYED, });
+            ERROR_CODE.NOT_IN_META_OR_DEPLOYED,
+            ERROR_CODE.NOT_IN_META_OR_DEPLOYED});
     // Note, would like to check # of tables, but this takes a while to time
     // out.
 
@@ -74,7 +75,7 @@ public class TestOfflineMetaRebuildBase extends OfflineMetaRebuildTestCore {
     LOG.info("No more RIT in ZK, now doing final test verification");
 
     // everything is good again.
-    assertEquals(4, scanMeta());
+    assertEquals(5, scanMeta());
     HTableDescriptor[] htbls = TEST_UTIL.getHBaseAdmin().listTables();
     LOG.info("Tables present after restart: " + Arrays.toString(htbls));
 

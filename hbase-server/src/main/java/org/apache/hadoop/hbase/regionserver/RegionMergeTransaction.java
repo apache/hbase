@@ -163,8 +163,8 @@ public class RegionMergeTransaction {
    *         <code>false</code> if they are not (e.g. its already closed, etc.).
    */
   public boolean prepare(final RegionServerServices services) {
-    if (!region_a.getTableDesc().getNameAsString()
-        .equals(region_b.getTableDesc().getNameAsString())) {
+    if (!region_a.getTableDesc().getTableName()
+        .equals(region_b.getTableDesc().getTableName())) {
       LOG.info("Can't merge regions " + region_a + "," + region_b
           + " because they do not belong to the same table");
       return false;

@@ -63,7 +63,7 @@ public class RootResource extends ResourceBase {
     TableListModel tableList = new TableListModel();
     HTableDescriptor[] list = servlet.getAdmin().listTables();
     for (HTableDescriptor htd: list) {
-      tableList.add(new TableModel(htd.getNameAsString()));
+      tableList.add(new TableModel(htd.getTableName().getNameAsString()));
     }
     return tableList;
   }

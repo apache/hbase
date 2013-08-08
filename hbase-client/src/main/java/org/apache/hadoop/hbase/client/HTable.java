@@ -26,6 +26,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -51,7 +52,6 @@ import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutateResponse;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.CompareType;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
-import org.apache.hadoop.hbase.util.ReflectionUtils;
 import org.apache.hadoop.hbase.util.Threads;
 
 import java.io.Closeable;
@@ -119,7 +119,7 @@ import java.util.concurrent.TimeUnit;
 public class HTable implements HTableInterface {
   private static final Log LOG = LogFactory.getLog(HTable.class);
   protected HConnection connection;
-  private final byte [] tableName;
+  private final TableName tableName;
   private volatile Configuration configuration;
   protected List<Row> writeAsyncBuffer = new LinkedList<Row>();
   private long writeBufferSize;
@@ -150,9 +150,8 @@ public class HTable implements HTableInterface {
    */
   public HTable(Configuration conf, final String tableName)
   throws IOException {
-    this(conf, Bytes.toBytes(tableName));
+    this(conf, TableName.valueOf(tableName));
   }
-
 
   /**
    * Creates an object to access a HBase table.
@@ -164,7 +163,24 @@ public class HTable implements HTableInterface {
    * @param tableName Name of the table.
    * @throws IOException if a remote or network exception occurs
    */
-  public HTable(Configuration conf, final byte [] tableName)
+  public HTable(Configuration conf, final byte[] tableName)
+  throws IOException {
+    this(conf, TableName.valueOf(tableName));
+  }
+
+
+
+  /**
+   * Creates an object to access a HBase table.
+   * Shares zookeeper connection and other resources with other HTable instances
+   * created with the same <code>conf</code> instance.  Uses already-populated
+   * region cache if one is available, populated by any other HTable instances
+   * sharing this <code>conf</code> instance.  Recommended.
+   * @param conf Configuration object to use.
+   * @param tableName table name pojo
+   * @throws IOException if a remote or network exception occurs
+   */
+  public HTable(Configuration conf, final TableName tableName)
   throws IOException {
     this.tableName = tableName;
     this.cleanupPoolOnClose = this.cleanupConnectionOnClose = true;
@@ -206,6 +222,23 @@ public class HTable implements HTableInterface {
    */
   public HTable(Configuration conf, final byte[] tableName, final ExecutorService pool)
       throws IOException {
+    this(conf, TableName.valueOf(tableName), pool);
+  }
+
+  /**
+   * Creates an object to access a HBase table.
+   * Shares zookeeper connection and other resources with other HTable instances
+   * created with the same <code>conf</code> instance.  Uses already-populated
+   * region cache if one is available, populated by any other HTable instances
+   * sharing this <code>conf</code> instance.
+   * Use this constructor when the ExecutorService is externally managed.
+   * @param conf Configuration object to use.
+   * @param tableName Name of the table.
+   * @param pool ExecutorService to be used.
+   * @throws IOException if a remote or network exception occurs
+   */
+  public HTable(Configuration conf, final TableName tableName, final ExecutorService pool)
+      throws IOException {
     this.connection = HConnectionManager.getConnection(conf);
     this.configuration = conf;
     this.pool = pool;
@@ -229,6 +262,22 @@ public class HTable implements HTableInterface {
    */
   public HTable(final byte[] tableName, final HConnection connection,
       final ExecutorService pool) throws IOException {
+    this(TableName.valueOf(tableName), connection, pool);
+  }
+
+  /**
+   * Creates an object to access a HBase table.
+   * Shares zookeeper connection and other resources with other HTable instances
+   * created with the same <code>connection</code> instance.
+   * Use this constructor when the ExecutorService and HConnection instance are
+   * externally managed.
+   * @param tableName Name of the table.
+   * @param connection HConnection to be used.
+   * @param pool ExecutorService to be used.
+   * @throws IOException if a remote or network exception occurs
+   */
+  public HTable(TableName tableName, final HConnection connection,
+      final ExecutorService pool) throws IOException {
     if (connection == null || connection.isClosed()) {
       throw new IllegalArgumentException("Connection is null or closed.");
     }
@@ -245,7 +294,7 @@ public class HTable implements HTableInterface {
    * For internal testing.
    */
   protected HTable(){
-    tableName = new byte[]{};
+    tableName = null;
     cleanupPoolOnClose = false;
     cleanupConnectionOnClose = false;
   }
@@ -255,7 +304,7 @@ public class HTable implements HTableInterface {
    */
   private void finishSetup() throws IOException {
     this.connection.locateRegion(tableName, HConstants.EMPTY_START_ROW);
-    this.operationTimeout = HTableDescriptor.isMetaTable(tableName) ?
+    this.operationTimeout = HTableDescriptor.isSystemTable(tableName) ?
       this.configuration.getInt(HConstants.HBASE_CLIENT_META_OPERATION_TIMEOUT,
         HConstants.DEFAULT_HBASE_CLIENT_OPERATION_TIMEOUT):
       this.configuration.getInt(HConstants.HBASE_CLIENT_OPERATION_TIMEOUT,
@@ -299,7 +348,21 @@ public class HTable implements HTableInterface {
    */
   @Deprecated
   public static boolean isTableEnabled(String tableName) throws IOException {
-    return isTableEnabled(Bytes.toBytes(tableName));
+    return isTableEnabled(TableName.valueOf(tableName));
+  }
+
+  /**
+   * Tells whether or not a table is enabled or not. This method creates a
+   * new HBase configuration, so it might make your unit tests fail due to
+   * incorrect ZK client port.
+   * @param tableName Name of table to check.
+   * @return {@code true} if table is online.
+   * @throws IOException if a remote or network exception occurs
+	* @deprecated use {@link HBaseAdmin#isTableEnabled(byte[])}
+   */
+  @Deprecated
+  public static boolean isTableEnabled(byte[] tableName) throws IOException {
+    return isTableEnabled(TableName.valueOf(tableName));
   }
 
   /**
@@ -312,7 +375,7 @@ public class HTable implements HTableInterface {
    * @deprecated use {@link HBaseAdmin#isTableEnabled(byte[])}
    */
   @Deprecated
-  public static boolean isTableEnabled(byte[] tableName) throws IOException {
+  public static boolean isTableEnabled(TableName tableName) throws IOException {
     return isTableEnabled(HBaseConfiguration.create(), tableName);
   }
 
@@ -327,7 +390,7 @@ public class HTable implements HTableInterface {
   @Deprecated
   public static boolean isTableEnabled(Configuration conf, String tableName)
   throws IOException {
-    return isTableEnabled(conf, Bytes.toBytes(tableName));
+    return isTableEnabled(conf, TableName.valueOf(tableName));
   }
 
   /**
@@ -336,11 +399,25 @@ public class HTable implements HTableInterface {
    * @param tableName Name of table to check.
    * @return {@code true} if table is online.
    * @throws IOException if a remote or network exception occurs
-   * @deprecated use {@link HBaseAdmin#isTableEnabled(byte[] tableName)}
+	 * @deprecated use {@link HBaseAdmin#isTableEnabled(byte[])}
+   */
+  @Deprecated
+  public static boolean isTableEnabled(Configuration conf, byte[] tableName)
+  throws IOException {
+    return isTableEnabled(conf, TableName.valueOf(tableName));
+  }
+
+  /**
+   * Tells whether or not a table is enabled or not.
+   * @param conf The Configuration object to use.
+   * @param tableName Name of table to check.
+   * @return {@code true} if table is online.
+   * @throws IOException if a remote or network exception occurs
+   * @deprecated use {@link HBaseAdmin#isTableEnabled(org.apache.hadoop.hbase.TableName tableName)}
    */
   @Deprecated
   public static boolean isTableEnabled(Configuration conf,
-      final byte[] tableName) throws IOException {
+      final TableName tableName) throws IOException {
     return HConnectionManager.execute(new HConnectable<Boolean>(conf) {
       @Override
       public Boolean connect(HConnection connection) throws IOException {
@@ -388,7 +465,12 @@ public class HTable implements HTableInterface {
    */
   @Override
   public byte [] getTableName() {
-    return this.tableName;
+    return this.tableName.getName();
+  }
+
+  @Override
+  public TableName getName() {
+    return tableName;
   }
 
   /**
@@ -502,7 +584,7 @@ public class HTable implements HTableInterface {
    */
   public NavigableMap<HRegionInfo, ServerName> getRegionLocations() throws IOException {
     // TODO: Odd that this returns a Map of HRI to SN whereas getRegionLocation, singular, returns an HRegionLocation.
-    return MetaScanner.allTableRegions(getConfiguration(), this.connection, getTableName(), false);
+    return MetaScanner.allTableRegions(getConfiguration(), this.connection, getName(), false);
   }
 
   /**
@@ -611,7 +693,8 @@ public class HTable implements HTableInterface {
     if (scan.getCaching() <= 0) {
       scan.setCaching(getScannerCaching());
     }
-    return new ClientScanner(getConfiguration(), scan, getTableName(), this.connection);
+    return new ClientScanner(getConfiguration(), scan,
+        getName(), this.connection);
   }
 
   /**
@@ -641,7 +724,7 @@ public class HTable implements HTableInterface {
   @Override
   public Result get(final Get get) throws IOException {
     RegionServerCallable<Result> callable = new RegionServerCallable<Result>(this.connection,
-        getTableName(), get.getRow()) {
+        getName(), get.getRow()) {
       public Result call() throws IOException {
         return ProtobufUtil.get(getStub(), getLocation().getRegionInfo().getRegionName(), get);
       }
@@ -813,7 +896,7 @@ public class HTable implements HTableInterface {
 
       if (synchronous || ap.hasError()) {
         if (ap.hasError() && LOG.isDebugEnabled()) {
-          LOG.debug(Bytes.toString(tableName) + ": One or more of the operations have failed -" +
+          LOG.debug(tableName + ": One or more of the operations have failed -" +
               " waiting for all operation in progress to finish (successfully or not)");
         }
         ap.waitUntilDone();
@@ -845,7 +928,7 @@ public class HTable implements HTableInterface {
   @Override
   public void mutateRow(final RowMutations rm) throws IOException {
     RegionServerCallable<Void> callable =
-        new RegionServerCallable<Void>(connection, getTableName(), rm.getRow()) {
+        new RegionServerCallable<Void>(connection, getName(), rm.getRow()) {
       public Void call() throws IOException {
         try {
           MultiRequest request = RequestConverter.buildMultiRequest(
@@ -870,7 +953,7 @@ public class HTable implements HTableInterface {
           "Invalid arguments to append, no columns specified");
     }
     RegionServerCallable<Result> callable =
-      new RegionServerCallable<Result>(this.connection, getTableName(), append.getRow()) {
+      new RegionServerCallable<Result>(this.connection, getName(), append.getRow()) {
         public Result call() throws IOException {
           try {
             MutateRequest request = RequestConverter.buildMutateRequest(
@@ -897,7 +980,7 @@ public class HTable implements HTableInterface {
           "Invalid arguments to increment, no columns specified");
     }
     RegionServerCallable<Result> callable = new RegionServerCallable<Result>(this.connection,
-        getTableName(), increment.getRow()) {
+        getName(), increment.getRow()) {
       public Result call() throws IOException {
         try {
           MutateRequest request = RequestConverter.buildMutateRequest(
@@ -944,7 +1027,7 @@ public class HTable implements HTableInterface {
     }
     
     RegionServerCallable<Long> callable =
-      new RegionServerCallable<Long>(connection, getTableName(), row) {
+      new RegionServerCallable<Long>(connection, getName(), row) {
         public Long call() throws IOException {
           try {
             MutateRequest request = RequestConverter.buildMutateRequest(
@@ -972,7 +1055,7 @@ public class HTable implements HTableInterface {
       final Put put)
   throws IOException {
     RegionServerCallable<Boolean> callable =
-      new RegionServerCallable<Boolean>(connection, getTableName(), row) {
+      new RegionServerCallable<Boolean>(connection, getName(), row) {
         public Boolean call() throws IOException {
           try {
             MutateRequest request = RequestConverter.buildMutateRequest(
@@ -998,7 +1081,7 @@ public class HTable implements HTableInterface {
       final Delete delete)
   throws IOException {
     RegionServerCallable<Boolean> callable =
-      new RegionServerCallable<Boolean>(connection, getTableName(), row) {
+      new RegionServerCallable<Boolean>(connection, getName(), row) {
         public Boolean call() throws IOException {
           try {
             MutateRequest request = RequestConverter.buildMutateRequest(
@@ -1020,7 +1103,7 @@ public class HTable implements HTableInterface {
   @Override
   public boolean exists(final Get get) throws IOException {
     RegionServerCallable<Boolean> callable =
-        new RegionServerCallable<Boolean>(connection, getTableName(), get.getRow()) {
+        new RegionServerCallable<Boolean>(connection, getName(), get.getRow()) {
       public Boolean call() throws IOException {
         try {
           GetRequest request = RequestConverter.buildGetRequest(
@@ -1124,7 +1207,7 @@ public class HTable implements HTableInterface {
       Callable<List<Boolean>> callable = new Callable<List<Boolean>>() {
         public List<Boolean> call() throws Exception {
           RegionServerCallable<List<Boolean>> callable =
-            new RegionServerCallable<List<Boolean>>(connection, getTableName(),
+            new RegionServerCallable<List<Boolean>>(connection, getName(),
               getsByRegionEntry.getValue().get(0).getRow()) {
             public List<Boolean> call() throws IOException {
               try {
@@ -1139,7 +1222,7 @@ public class HTable implements HTableInterface {
             }
           };
           return rpcCallerFactory.<List<Boolean>> newCaller().callWithRetries(callable,
-            operationTimeout);
+              operationTimeout);
         }
       };
       futures.put(getsByRegionEntry.getKey(), pool.submit(callable));
@@ -1352,6 +1435,12 @@ public class HTable implements HTableInterface {
    */
   public static void setRegionCachePrefetch(final byte[] tableName,
       final boolean enable) throws IOException {
+    setRegionCachePrefetch(TableName.valueOf(tableName), enable);
+  }
+
+  public static void setRegionCachePrefetch(
+      final TableName tableName,
+      final boolean enable) throws IOException {
     HConnectionManager.execute(new HConnectable<Void>(HBaseConfiguration
         .create()) {
       @Override
@@ -1374,6 +1463,12 @@ public class HTable implements HTableInterface {
    */
   public static void setRegionCachePrefetch(final Configuration conf,
       final byte[] tableName, final boolean enable) throws IOException {
+    setRegionCachePrefetch(conf, TableName.valueOf(tableName), enable);
+  }
+
+  public static void setRegionCachePrefetch(final Configuration conf,
+      final TableName tableName,
+      final boolean enable) throws IOException {
     HConnectionManager.execute(new HConnectable<Void>(conf) {
       @Override
       public Void connect(HConnection connection) throws IOException {
@@ -1393,6 +1488,11 @@ public class HTable implements HTableInterface {
    */
   public static boolean getRegionCachePrefetch(final Configuration conf,
       final byte[] tableName) throws IOException {
+    return getRegionCachePrefetch(conf, TableName.valueOf(tableName));
+  }
+
+  public static boolean getRegionCachePrefetch(final Configuration conf,
+      final TableName tableName) throws IOException {
     return HConnectionManager.execute(new HConnectable<Boolean>(conf) {
       @Override
       public Boolean connect(HConnection connection) throws IOException {
@@ -1409,6 +1509,11 @@ public class HTable implements HTableInterface {
    * @throws IOException
    */
   public static boolean getRegionCachePrefetch(final byte[] tableName) throws IOException {
+    return getRegionCachePrefetch(TableName.valueOf(tableName));
+  }
+
+  public static boolean getRegionCachePrefetch(
+      final TableName tableName) throws IOException {
     return HConnectionManager.execute(new HConnectable<Boolean>(
         HBaseConfiguration.create()) {
       @Override
@@ -1416,7 +1521,7 @@ public class HTable implements HTableInterface {
         return connection.getRegionCachePrefetch(tableName);
       }
     });
- }
+  }
 
   /**
    * Explicitly clears the region cache to fetch the latest value from META.

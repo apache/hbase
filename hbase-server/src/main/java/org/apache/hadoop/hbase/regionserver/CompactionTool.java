@@ -153,7 +153,7 @@ public class CompactionTool extends Configured implements Tool {
         final HRegionInfo hri, final String familyName, final boolean compactOnce,
         final boolean major) throws IOException {
       HStore store = getStore(conf, fs, tableDir, htd, hri, familyName, tmpDir);
-      LOG.info("Compact table=" + htd.getNameAsString() +
+      LOG.info("Compact table=" + htd.getTableName() +
         " region=" + hri.getRegionNameAsString() +
         " family=" + familyName);
       if (major) {

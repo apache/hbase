@@ -855,7 +855,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
     this.hbaseCluster =
         new MiniHBaseCluster(c, numMasters, numSlaves, masterClass, regionserverClass);
     // Don't leave here till we've done a successful scan of the .META.
-    HTable t = new HTable(c, HConstants.META_TABLE_NAME);
+    HTable t = new HTable(c, TableName.META_TABLE_NAME);
     ResultScanner s = t.getScanner(new Scan());
     while (s.next() != null) {
       continue;
@@ -877,7 +877,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
   public void restartHBaseCluster(int servers) throws IOException, InterruptedException {
     this.hbaseCluster = new MiniHBaseCluster(this.conf, servers);
     // Don't leave here till we've done a successful scan of the .META.
-    HTable t = new HTable(new Configuration(this.conf), HConstants.META_TABLE_NAME);
+    HTable t = new HTable(new Configuration(this.conf), TableName.META_TABLE_NAME);
     ResultScanner s = t.getScanner(new Scan());
     while (s.next() != null) {
       // do nothing
@@ -984,7 +984,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
    * Flushes all caches in the mini hbase cluster
    * @throws IOException
    */
-  public void flush(byte [] tableName) throws IOException {
+  public void flush(TableName tableName) throws IOException {
     getMiniHBaseCluster().flushcache(tableName);
   }
 
@@ -1000,7 +1000,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
    * Compact all of a table's reagion in the mini hbase cluster
    * @throws IOException
    */
-  public void compact(byte [] tableName, boolean major) throws IOException {
+  public void compact(TableName tableName, boolean major) throws IOException {
     getMiniHBaseCluster().compact(tableName, major);
   }
 
@@ -1013,23 +1013,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
    */
   public HTable createTable(String tableName, String family)
   throws IOException{
-    return createTable(tableName, new String[] { family });
-  }
-
-  /**
-   * Create a table.
-   * @param tableName
-   * @param families
-   * @return An HTable instance for the created table.
-   * @throws IOException
-   */
-  public HTable createTable(String tableName, String[] families)
-  throws IOException {
-    List<byte[]> fams = new ArrayList<byte[]>(families.length);
-    for (String family : families) {
-      fams.add(Bytes.toBytes(family));
-    }
-    return createTable(Bytes.toBytes(tableName), fams.toArray(new byte[0][]));
+    return createTable(TableName.valueOf(tableName), new String[]{family});
   }
 
   /**
@@ -1041,8 +1025,49 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
    */
   public HTable createTable(byte[] tableName, byte[] family)
   throws IOException{
+    return createTable(TableName.valueOf(tableName), new byte[][]{family});
+  }
+
+  /**
+   * Create a table.
+   * @param tableName
+   * @param families
+   * @return An HTable instance for the created table.
+   * @throws IOException
+   */
+  public HTable createTable(String tableName, String[] families)
+  throws IOException {
+    return createTable(tableName, families);
+  }
+
+  /**
+   * Create a table.
+   * @param tableName
+   * @param families
+   * @return An HTable instance for the created table.
+   * @throws IOException
+   */
+  public HTable createTable(TableName tableName, String[] families)
+  throws IOException {
+    List<byte[]> fams = new ArrayList<byte[]>(families.length);
+    for (String family : families) {
+      fams.add(Bytes.toBytes(family));
+    }
+    return createTable(tableName, fams.toArray(new byte[0][]));
+  }
+
+  /**
+   * Create a table.
+   * @param tableName
+   * @param family
+   * @return An HTable instance for the created table.
+   * @throws IOException
+   */
+  public HTable createTable(TableName tableName, byte[] family)
+  throws IOException{
     return createTable(tableName, new byte[][]{family});
   }
+
 
   /**
    * Create a table.
@@ -1057,7 +1082,32 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
         new Configuration(getConfiguration()));
   }
 
+  /**
+   * Create a table.
+   * @param tableName
+   * @param families
+   * @return An HTable instance for the created table.
+   * @throws IOException
+   */
+  public HTable createTable(TableName tableName, byte[][] families)
+  throws IOException {
+    return createTable(tableName, families,
+        new Configuration(getConfiguration()));
+  }
+
   public HTable createTable(byte[] tableName, byte[][] families,
+      int numVersions, byte[] startKey, byte[] endKey, int numRegions) throws IOException {
+    return createTable(TableName.valueOf(tableName), families, numVersions,
+        startKey, endKey, numRegions);
+  }
+
+  public HTable createTable(String tableName, byte[][] families,
+      int numVersions, byte[] startKey, byte[] endKey, int numRegions) throws IOException {
+    return createTable(TableName.valueOf(tableName), families, numVersions,
+        startKey, endKey, numRegions);
+  }
+
+  public HTable createTable(TableName tableName, byte[][] families,
       int numVersions, byte[] startKey, byte[] endKey, int numRegions)
   throws IOException{
     HTableDescriptor desc = new HTableDescriptor(tableName);
@@ -1080,7 +1130,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
    * @return An HTable instance for the created table.
    * @throws IOException
    */
-  public HTable createTable(byte[] tableName, byte[][] families,
+  public HTable createTable(TableName tableName, byte[][] families,
       final Configuration c)
   throws IOException {
     HTableDescriptor desc = new HTableDescriptor(tableName);
@@ -1103,11 +1153,35 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
    * @param tableName
    * @param families
    * @param c Configuration to use
-   * @param numVersions
    * @return An HTable instance for the created table.
    * @throws IOException
    */
   public HTable createTable(byte[] tableName, byte[][] families,
+      final Configuration c)
+  throws IOException {
+    HTableDescriptor desc = new HTableDescriptor(TableName.valueOf(tableName));
+    for(byte[] family : families) {
+      HColumnDescriptor hcd = new HColumnDescriptor(family);
+      // Disable blooms (they are on by default as of 0.95) but we disable them here because
+      // tests have hard coded counts of what to expect in block cache, etc., and blooms being
+      // on is interfering.
+      hcd.setBloomFilterType(BloomType.NONE);
+      desc.addFamily(hcd);
+    }
+    getHBaseAdmin().createTable(desc);
+    return new HTable(c, tableName);
+  }
+
+  /**
+   * Create a table.
+   * @param tableName
+   * @param families
+   * @param c Configuration to use
+   * @param numVersions
+   * @return An HTable instance for the created table.
+   * @throws IOException
+   */
+  public HTable createTable(TableName tableName, byte[][] families,
       final Configuration c, int numVersions)
   throws IOException {
     HTableDescriptor desc = new HTableDescriptor(tableName);
@@ -1119,6 +1193,28 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
     getHBaseAdmin().createTable(desc);
     // HBaseAdmin only waits for regions to appear in META we should wait until they are assigned
     waitUntilAllRegionsAssigned(tableName);
+    return new HTable(c, tableName);
+  }
+
+  /**
+   * Create a table.
+   * @param tableName
+   * @param families
+   * @param c Configuration to use
+   * @param numVersions
+   * @return An HTable instance for the created table.
+   * @throws IOException
+   */
+  public HTable createTable(byte[] tableName, byte[][] families,
+      final Configuration c, int numVersions)
+  throws IOException {
+    HTableDescriptor desc = new HTableDescriptor(TableName.valueOf(tableName));
+    for(byte[] family : families) {
+      HColumnDescriptor hcd = new HColumnDescriptor(family)
+          .setMaxVersions(numVersions);
+      desc.addFamily(hcd);
+    }
+    getHBaseAdmin().createTable(desc);
     return new HTable(c, tableName);
   }
 
@@ -1138,12 +1234,39 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
   /**
    * Create a table.
    * @param tableName
+   * @param family
+   * @param numVersions
+   * @return An HTable instance for the created table.
+   * @throws IOException
+   */
+  public HTable createTable(TableName tableName, byte[] family, int numVersions)
+  throws IOException {
+    return createTable(tableName, new byte[][]{family}, numVersions);
+  }
+
+  /**
+   * Create a table.
+   * @param tableName
    * @param families
    * @param numVersions
    * @return An HTable instance for the created table.
    * @throws IOException
    */
   public HTable createTable(byte[] tableName, byte[][] families,
+      int numVersions)
+  throws IOException {
+    return createTable(TableName.valueOf(tableName), families, numVersions);
+  }
+
+  /**
+   * Create a table.
+   * @param tableName
+   * @param families
+   * @param numVersions
+   * @return An HTable instance for the created table.
+   * @throws IOException
+   */
+  public HTable createTable(TableName tableName, byte[][] families,
       int numVersions)
   throws IOException {
     HTableDescriptor desc = new HTableDescriptor(tableName);
@@ -1166,6 +1289,20 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
    * @throws IOException
    */
   public HTable createTable(byte[] tableName, byte[][] families,
+    int numVersions, int blockSize) throws IOException {
+    return createTable(TableName.valueOf(tableName),
+        families, numVersions, blockSize);
+  }
+
+  /**
+   * Create a table.
+   * @param tableName
+   * @param families
+   * @param numVersions
+   * @return An HTable instance for the created table.
+   * @throws IOException
+   */
+  public HTable createTable(TableName tableName, byte[][] families,
     int numVersions, int blockSize) throws IOException {
     HTableDescriptor desc = new HTableDescriptor(tableName);
     for (byte[] family : families) {
@@ -1191,6 +1328,20 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
   public HTable createTable(byte[] tableName, byte[][] families,
       int[] numVersions)
   throws IOException {
+    return createTable(TableName.valueOf(tableName), families, numVersions);
+  }
+
+  /**
+   * Create a table.
+   * @param tableName
+   * @param families
+   * @param numVersions
+   * @return An HTable instance for the created table.
+   * @throws IOException
+   */
+  public HTable createTable(TableName tableName, byte[][] families,
+      int[] numVersions)
+  throws IOException {
     HTableDescriptor desc = new HTableDescriptor(tableName);
     int i = 0;
     for (byte[] family : families) {
@@ -1214,6 +1365,19 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
    * @throws IOException
    */
   public HTable createTable(byte[] tableName, byte[] family, byte[][] splitRows)
+    throws IOException{
+    return createTable(TableName.valueOf(tableName), family, splitRows);
+  }
+
+  /**
+   * Create a table.
+   * @param tableName
+   * @param family
+   * @param splitRows
+   * @return An HTable instance for the created table.
+   * @throws IOException
+   */
+  public HTable createTable(TableName tableName, byte[] family, byte[][] splitRows)
       throws IOException {
     HTableDescriptor desc = new HTableDescriptor(tableName);
     HColumnDescriptor hcd = new HColumnDescriptor(family);
@@ -1234,14 +1398,14 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
    */
   public HTable createTable(byte[] tableName, byte[][] families, byte[][] splitRows)
       throws IOException {
-    HTableDescriptor desc = new HTableDescriptor(tableName);
+    HTableDescriptor desc = new HTableDescriptor(TableName.valueOf(tableName));
     for(byte[] family:families) {
       HColumnDescriptor hcd = new HColumnDescriptor(family);
       desc.addFamily(hcd);
     }
     getHBaseAdmin().createTable(desc, splitRows);
     // HBaseAdmin only waits for regions to appear in META we should wait until they are assigned
-    waitUntilAllRegionsAssigned(tableName);
+    waitUntilAllRegionsAssigned(TableName.valueOf(tableName));
     return new HTable(getConfiguration(), tableName);
   }
 
@@ -1250,7 +1414,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
    * @param tableName existing table
    */
   public void deleteTable(String tableName) throws IOException {
-    deleteTable(Bytes.toBytes(tableName));
+    deleteTable(TableName.valueOf(tableName));
   }
 
   /**
@@ -1258,12 +1422,31 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
    * @param tableName existing table
    */
   public void deleteTable(byte[] tableName) throws IOException {
+    deleteTable(TableName.valueOf(tableName));
+  }
+
+  /**
+   * Drop an existing table
+   * @param tableName existing table
+   */
+  public void deleteTable(TableName tableName) throws IOException {
     try {
       getHBaseAdmin().disableTable(tableName);
     } catch (TableNotEnabledException e) {
-      LOG.debug("Table: " + Bytes.toString(tableName) + " already disabled, so just deleting it.");
+      LOG.debug("Table: " + tableName + " already disabled, so just deleting it.");
     }
     getHBaseAdmin().deleteTable(tableName);
+  }
+
+
+  /**
+   * Provide an existing table name to truncate
+   * @param tableName existing table
+   * @return HTable to that new table
+   * @throws IOException
+   */
+  public HTable truncateTable(byte[] tableName) throws IOException {
+    return truncateTable(TableName.valueOf(tableName));
   }
 
   /**
@@ -1272,7 +1455,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
    * @return HTable to that new table
    * @throws IOException
    */
-  public HTable truncateTable(byte [] tableName) throws IOException {
+  public HTable truncateTable(TableName tableName) throws IOException {
     HTable table = new HTable(getConfiguration(), tableName);
     Scan scan = new Scan();
     ResultScanner resScan = table.getScanner(scan);
@@ -1509,7 +1692,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
       final byte[] columnFamily, byte [][] startKeys)
   throws IOException {
     Arrays.sort(startKeys, Bytes.BYTES_COMPARATOR);
-    HTable meta = new HTable(c, HConstants.META_TABLE_NAME);
+    HTable meta = new HTable(c, TableName.META_TABLE_NAME);
     HTableDescriptor htd = table.getTableDescriptor();
     if(!htd.hasFamily(columnFamily)) {
       HColumnDescriptor hcd = new HColumnDescriptor(columnFamily);
@@ -1519,7 +1702,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
     // setup already has the "<tablename>,,123456789" row with an empty start
     // and end key. Adding the custom regions below adds those blindly,
     // including the new start region from empty to "bbb". lg
-    List<byte[]> rows = getMetaTableRows(htd.getName());
+    List<byte[]> rows = getMetaTableRows(htd.getTableName());
     String regionToDeleteInFS = table
         .getRegionsInRange(Bytes.toBytes(""), Bytes.toBytes("")).get(0)
         .getRegionInfo().getEncodedName();
@@ -1528,7 +1711,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
     int count = 0;
     for (int i = 0; i < startKeys.length; i++) {
       int j = (i + 1) % startKeys.length;
-      HRegionInfo hri = new HRegionInfo(table.getTableName(),
+      HRegionInfo hri = new HRegionInfo(table.getName(),
         startKeys[i], startKeys[j]);
       MetaEditor.addRegionToMeta(meta, hri);
       newRegions.add(hri);
@@ -1542,7 +1725,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
     }
     // remove the "old" region from FS
     Path tableDir = new Path(getDefaultRootDirPath().toString()
-        + System.getProperty("file.separator") + htd.getNameAsString()
+        + System.getProperty("file.separator") + htd.getTableName()
         + System.getProperty("file.separator") + regionToDeleteInFS);
     FileSystem.get(c).delete(tableDir);
     // flush cache of regions
@@ -1574,13 +1757,13 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
   public List<HRegionInfo> createMultiRegionsInMeta(final Configuration conf,
       final HTableDescriptor htd, byte [][] startKeys)
   throws IOException {
-    HTable meta = new HTable(conf, HConstants.META_TABLE_NAME);
+    HTable meta = new HTable(conf, TableName.META_TABLE_NAME);
     Arrays.sort(startKeys, Bytes.BYTES_COMPARATOR);
     List<HRegionInfo> newRegions = new ArrayList<HRegionInfo>(startKeys.length);
     // add custom ones
     for (int i = 0; i < startKeys.length; i++) {
       int j = (i + 1) % startKeys.length;
-      HRegionInfo hri = new HRegionInfo(htd.getName(), startKeys[i],
+      HRegionInfo hri = new HRegionInfo(htd.getTableName(), startKeys[i],
           startKeys[j]);
       MetaEditor.addRegionToMeta(meta, hri);
       newRegions.add(hri);
@@ -1597,7 +1780,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
    */
   public List<byte[]> getMetaTableRows() throws IOException {
     // TODO: Redo using MetaReader class
-    HTable t = new HTable(new Configuration(this.conf), HConstants.META_TABLE_NAME);
+    HTable t = new HTable(new Configuration(this.conf), TableName.META_TABLE_NAME);
     List<byte[]> rows = new ArrayList<byte[]>();
     ResultScanner s = t.getScanner(new Scan());
     for (Result result : s) {
@@ -1615,9 +1798,9 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
    *
    * @throws IOException When reading the rows fails.
    */
-  public List<byte[]> getMetaTableRows(byte[] tableName) throws IOException {
+  public List<byte[]> getMetaTableRows(TableName tableName) throws IOException {
     // TODO: Redo using MetaReader.
-    HTable t = new HTable(new Configuration(this.conf), HConstants.META_TABLE_NAME);
+    HTable t = new HTable(new Configuration(this.conf), TableName.META_TABLE_NAME);
     List<byte[]> rows = new ArrayList<byte[]>();
     ResultScanner s = t.getScanner(new Scan());
     for (Result result : s) {
@@ -1628,7 +1811,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
         continue;
       }
 
-      if (Bytes.compareTo(info.getTableName(), tableName) == 0) {
+      if (info.getTableName().equals(tableName)) {
         LOG.info("getMetaTableRows: row -> " +
             Bytes.toStringBinary(result.getRow()) + info);
         rows.add(result.getRow());
@@ -1651,13 +1834,27 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
    * @throws InterruptedException
    */
   public HRegionServer getRSForFirstRegionInTable(byte[] tableName)
-  throws IOException, InterruptedException {
+      throws IOException, InterruptedException {
+    return getRSForFirstRegionInTable(TableName.valueOf(tableName));
+  }
+  /**
+   * Tool to get the reference to the region server object that holds the
+   * region of the specified user table.
+   * It first searches for the meta rows that contain the region of the
+   * specified table, then gets the index of that RS, and finally retrieves
+   * the RS's reference.
+   * @param tableName user table to lookup in .META.
+   * @return region server that holds it, null if the row doesn't exist
+   * @throws IOException
+   */
+  public HRegionServer getRSForFirstRegionInTable(TableName tableName)
+      throws IOException, InterruptedException {
     List<byte[]> metaRows = getMetaTableRows(tableName);
     if (metaRows == null || metaRows.isEmpty()) {
       return null;
     }
     LOG.debug("Found " + metaRows.size() + " rows for table " +
-      Bytes.toString(tableName));
+      tableName);
     byte [] firstrow = metaRows.get(0);
     LOG.debug("FirstRow=" + Bytes.toString(firstrow));
     long pause = getConfiguration().getLong(HConstants.HBASE_CLIENT_PAUSE,
@@ -1902,7 +2099,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
     monitor.close();
 
     if (checkStatus) {
-      new HTable(new Configuration(conf), HConstants.META_TABLE_NAME).close();
+      new HTable(new Configuration(conf), TableName.META_TABLE_NAME).close();
     }
   }
 
@@ -2024,7 +2221,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
    * @param maxAttempts maximum number of attempts, unlimited for value of -1
    * @return the HRegion chosen, null if none was found within limit of maxAttempts
    */
-  public HRegion getSplittableRegion(byte[] tableName, int maxAttempts) {
+  public HRegion getSplittableRegion(TableName tableName, int maxAttempts) {
     List<HRegion> regions = getHBaseCluster().getRegions(tableName);
     int regCount = regions.size();
     Set<Integer> attempted = new HashSet<Integer>();
@@ -2126,7 +2323,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
     // Below we do a get.  The get will retry if a NotServeringRegionException or a
     // RegionOpeningException.  It is crass but when done all will be online.
     try {
-      Canary.sniff(admin, Bytes.toString(table));
+      Canary.sniff(admin, TableName.valueOf(table));
     } catch (Exception e) {
       throw new IOException(e);
     }
@@ -2299,7 +2496,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
    * @param tableName the table name
    * @throws IOException
    */
-  public void waitUntilAllRegionsAssigned(final byte[] tableName) throws IOException {
+  public void waitUntilAllRegionsAssigned(final TableName tableName) throws IOException {
     waitUntilAllRegionsAssigned(tableName, 60000);
   }
 
@@ -2312,9 +2509,9 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
    * @param timeout timeout, in milliseconds
    * @throws IOException
    */
-  public void waitUntilAllRegionsAssigned(final byte[] tableName, final long timeout)
+  public void waitUntilAllRegionsAssigned(final TableName tableName, final long timeout)
       throws IOException {
-    final HTable meta = new HTable(getConfiguration(), HConstants.META_TABLE_NAME);
+    final HTable meta = new HTable(getConfiguration(), TableName.META_TABLE_NAME);
     try {
       waitFor(timeout, 200, true, new Predicate<IOException>() {
         @Override
@@ -2328,7 +2525,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
             while ((r = s.next()) != null) {
               byte [] b = r.getValue(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER);
               HRegionInfo info = HRegionInfo.parseFromOrNull(b);
-              if (info != null && Bytes.equals(info.getTableName(), tableName)) {
+              if (info != null && info.getTableName().equals(tableName)) {
                 b = r.getValue(HConstants.CATALOG_FAMILY, HConstants.SERVER_QUALIFIER);
                 allRegionsAssigned &= (b != null);
               }
@@ -2511,8 +2708,6 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
     final Random rand = new Random(tableName.hashCode() * 17L + 12938197137L);
     final int numCF = families.size();
     final byte[][] cfBytes = new byte[numCF][];
-    final byte[] tableNameBytes = Bytes.toBytes(tableName);
-
     {
       int cfIndex = 0;
       for (String cf : families) {
@@ -2526,14 +2721,14 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
     final int splitStartKey = actualStartKey + keysPerRegion;
     final int splitEndKey = actualEndKey - keysPerRegion;
     final String keyFormat = "%08x";
-    final HTable table = createTable(tableNameBytes, cfBytes,
+    final HTable table = createTable(tableName, cfBytes,
         maxVersions,
         Bytes.toBytes(String.format(keyFormat, splitStartKey)),
         Bytes.toBytes(String.format(keyFormat, splitEndKey)),
         numRegions);
 
     if (hbaseCluster != null) {
-      getMiniHBaseCluster().flushcache(HConstants.META_TABLE_NAME);
+      getMiniHBaseCluster().flushcache(TableName.META_TABLE_NAME);
     }
 
     for (int iFlush = 0; iFlush < numFlushes; ++iFlush) {
@@ -2570,7 +2765,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
       LOG.info("Initiating flush #" + iFlush + " for table " + tableName);
       table.flushCommits();
       if (hbaseCluster != null) {
-        getMiniHBaseCluster().flushcache(tableNameBytes);
+        getMiniHBaseCluster().flushcache(table.getName());
       }
     }
 
@@ -2652,7 +2847,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
    * @return the number of regions the table was split into
    */
   public static int createPreSplitLoadTestTable(Configuration conf,
-      byte[] tableName, byte[] columnFamily, Algorithm compression,
+      TableName tableName, byte[] columnFamily, Algorithm compression,
       DataBlockEncoding dataBlockEncoding) throws IOException {
     HTableDescriptor desc = new HTableDescriptor(tableName);
     HColumnDescriptor hcd = new HColumnDescriptor(columnFamily);
@@ -2697,7 +2892,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
       LOG.error("Master not running", e);
       throw new IOException(e);
     } catch (TableExistsException e) {
-      LOG.warn("Table " + Bytes.toStringBinary(desc.getName()) +
+      LOG.warn("Table " + desc.getTableName() +
           " already exists, continuing");
     } finally {
       admin.close();
@@ -2706,7 +2901,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
   }
 
   public static int getMetaRSPort(Configuration conf) throws IOException {
-    HTable table = new HTable(conf, HConstants.META_TABLE_NAME);
+    HTable table = new HTable(conf, TableName.META_TABLE_NAME);
     HRegionLocation hloc = table.getRegionLocation(Bytes.toBytes(""));
     table.close();
     return hloc.getPort();
@@ -2735,10 +2930,10 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
 
   public HRegion createTestRegion(String tableName, HColumnDescriptor hcd)
       throws IOException {
-    HTableDescriptor htd = new HTableDescriptor(tableName);
+    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(tableName));
     htd.addFamily(hcd);
     HRegionInfo info =
-        new HRegionInfo(Bytes.toBytes(tableName), null, null, false);
+        new HRegionInfo(TableName.valueOf(tableName), null, null, false);
     HRegion region =
         HRegion.createHRegion(info, getDataTestDir(), getConfiguration(), htd);
     return region;

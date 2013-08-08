@@ -70,7 +70,7 @@ class RegionMergeRequest implements Runnable {
 
       //acquire a shared read lock on the table, so that table schema modifications
       //do not happen concurrently
-      tableLock = server.getTableLockManager().readLock(region_a.getTableDesc().getName()
+      tableLock = server.getTableLockManager().readLock(region_a.getTableDesc().getTableName()
           , "MERGE_REGIONS:" + region_a.getRegionNameAsString() + ", " + region_b.getRegionNameAsString());
       try {
         tableLock.acquire();

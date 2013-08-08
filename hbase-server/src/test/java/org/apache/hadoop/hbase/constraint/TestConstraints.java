@@ -27,6 +27,7 @@ import java.util.List;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.SmallTests;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.constraint.TestConstraint.CheckWasRunConstraint;
 import org.apache.hadoop.hbase.constraint.WorksConstraint.NameConstraint;
@@ -43,7 +44,7 @@ public class TestConstraints {
   @SuppressWarnings("unchecked")
   @Test
   public void testSimpleReadWrite() throws Throwable {
-    HTableDescriptor desc = new HTableDescriptor("table");
+    HTableDescriptor desc = new HTableDescriptor(TableName.valueOf("table"));
     Constraints.add(desc, WorksConstraint.class);
 
     List<? extends Constraint> constraints = Constraints.getConstraints(desc,
@@ -68,7 +69,7 @@ public class TestConstraints {
   @SuppressWarnings("unchecked")
   @Test
   public void testReadWriteWithConf() throws Throwable {
-    HTableDescriptor desc = new HTableDescriptor("table");
+    HTableDescriptor desc = new HTableDescriptor(TableName.valueOf("table"));
     Constraints.add(
         desc,
         new Pair<Class<? extends Constraint>, Configuration>(
@@ -101,7 +102,7 @@ public class TestConstraints {
   @SuppressWarnings("unchecked")
   @Test
   public void testEnableDisableRemove() throws Exception {
-    HTableDescriptor desc = new HTableDescriptor("table");
+    HTableDescriptor desc = new HTableDescriptor(TableName.valueOf("table"));
     // check general enabling/disabling of constraints
     // first add a constraint
     Constraints.add(desc, AllPassConstraint.class);
@@ -137,7 +138,7 @@ public class TestConstraints {
   @SuppressWarnings("unchecked")
   @Test
   public void testUpdateConstraint() throws Exception {
-    HTableDescriptor desc = new HTableDescriptor("table");
+    HTableDescriptor desc = new HTableDescriptor(TableName.valueOf("table"));
     Constraints.add(desc, CheckConfigurationConstraint.class,
         CheckWasRunConstraint.class);
     Constraints.setConfiguration(desc, CheckConfigurationConstraint.class,
@@ -163,7 +164,7 @@ public class TestConstraints {
    */
   @Test
   public void testRemoveUnsetConstraint() throws Throwable {
-    HTableDescriptor desc = new HTableDescriptor("table");
+    HTableDescriptor desc = new HTableDescriptor(TableName.valueOf("table"));
     Constraints.remove(desc);
     Constraints.remove(desc, AlsoWorks.class);
   }
@@ -173,7 +174,7 @@ public class TestConstraints {
     Configuration conf = new Configuration();
     conf.setBoolean("_ENABLED", false);
     conf.setLong("_PRIORITY", 10);
-    HTableDescriptor desc = new HTableDescriptor("table");
+    HTableDescriptor desc = new HTableDescriptor(TableName.valueOf("table"));
     Constraints.add(desc, AlsoWorks.class, conf);
     Constraints.add(desc, WorksConstraint.class);
     assertFalse(Constraints.enabled(desc, AlsoWorks.class));

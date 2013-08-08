@@ -89,7 +89,7 @@ public class TestWALActionsListener {
     DummyWALActionsListener laterobserver = new DummyWALActionsListener();
     HLog hlog = HLogFactory.createHLog(fs, TEST_UTIL.getDataTestDir(), logName,
                                        conf, list, null);
-    HRegionInfo hri = new HRegionInfo(SOME_BYTES,
+    HRegionInfo hri = new HRegionInfo(TableName.valueOf(SOME_BYTES),
              SOME_BYTES, SOME_BYTES, false);
 
     for (int i = 0; i < 20; i++) {
@@ -100,7 +100,7 @@ public class TestWALActionsListener {
       HTableDescriptor htd = new HTableDescriptor();
       htd.addFamily(new HColumnDescriptor(b));
 
-      hlog.append(hri, b, edit, 0, htd);
+      hlog.append(hri, TableName.valueOf(b), edit, 0, htd);
       if (i == 10) {
         hlog.registerWALActionsListener(laterobserver);
       }

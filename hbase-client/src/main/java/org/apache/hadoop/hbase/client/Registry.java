@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
 
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HRegionLocation;
 
 /**
@@ -46,7 +47,7 @@ interface Registry {
    * @param enabled Return true if table is enabled
    * @throws IOException
    */
-  boolean isTableOnlineState(byte [] tableName, boolean enabled) throws IOException;
+  boolean isTableOnlineState(TableName tableName, boolean enabled) throws IOException;
 
   /**
    * @return Count of 'running' regionservers

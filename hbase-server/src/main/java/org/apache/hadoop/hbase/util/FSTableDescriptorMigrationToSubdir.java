@@ -26,6 +26,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
 
 /**
@@ -53,8 +54,8 @@ public class FSTableDescriptorMigrationToSubdir {
    * migrated.
    */
   private static boolean needsMigration(FileSystem fs, Path rootDir) throws IOException {
-    Path metaTableDir = FSTableDescriptors.getTableDirectory(rootDir,
-      Bytes.toString(HConstants.META_TABLE_NAME));
+    Path metaTableDir = FSUtils.getTableDir(rootDir,
+      TableName.META_TABLE_NAME);
     FileStatus metaTableInfoStatus =
       FSTableDescriptors.getTableInfoPath(fs, metaTableDir);
     return metaTableInfoStatus == null;
@@ -86,14 +87,13 @@ public class FSTableDescriptorMigrationToSubdir {
     }
     
     LOG.info("Migrating system tables");
-    migrateTableIfExists(fs, rootDir, HConstants.ROOT_TABLE_NAME);
     // migrate meta last because that's what we check to see if migration is complete
-    migrateTableIfExists(fs, rootDir, HConstants.META_TABLE_NAME);
+    migrateTableIfExists(fs, rootDir, TableName.META_TABLE_NAME);
   }
 
-  private static void migrateTableIfExists(FileSystem fs, Path rootDir, byte[] tableName)
+  private static void migrateTableIfExists(FileSystem fs, Path rootDir, TableName tableName)
   throws IOException {
-    Path tableDir = FSTableDescriptors.getTableDirectory(rootDir, Bytes.toString(tableName));
+    Path tableDir = FSUtils.getTableDir(rootDir, tableName);
     if (fs.exists(tableDir)) {
       migrateTable(fs, tableDir);
     }

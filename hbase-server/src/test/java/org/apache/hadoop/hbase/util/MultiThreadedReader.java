@@ -18,8 +18,6 @@ package org.apache.hadoop.hbase.util;
 
 import java.io.IOException;
 import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
@@ -27,13 +25,12 @@ import java.util.concurrent.atomic.AtomicLong;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HRegionLocation;
-import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.util.test.LoadTestDataGenerator;
-import org.apache.hadoop.hbase.util.test.LoadTestKVGenerator;
 
 /** Creates multiple threads that read and verify previously written data */
 public class MultiThreadedReader extends MultiThreadedAction
@@ -75,7 +72,7 @@ public class MultiThreadedReader extends MultiThreadedAction
   private int keyWindow = DEFAULT_KEY_WINDOW;
 
   public MultiThreadedReader(LoadTestDataGenerator dataGen, Configuration conf,
-      byte[] tableName, double verifyPercent) {
+      TableName tableName, double verifyPercent) {
     super(dataGen, conf, tableName, "R");
     this.verifyPercent = verifyPercent;
   }

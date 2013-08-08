@@ -26,9 +26,8 @@ import static org.junit.Assert.assertTrue;
 import java.io.IOException;
 import java.util.Set;
 
-import org.apache.hadoop.fs.FileStatus;
-import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
@@ -37,6 +36,7 @@ import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
+import org.apache.hadoop.hbase.util.FSUtils;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -50,7 +50,8 @@ import org.junit.experimental.categories.Category;
 public class TestTableDescriptorModification {
 
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
-  private static final byte[] TABLE_NAME = Bytes.toBytes("table");
+  private static final TableName TABLE_NAME =
+      TableName.valueOf("table");
   private static final byte[] FAMILY_0 = Bytes.toBytes("cf0");
   private static final byte[] FAMILY_1 = Bytes.toBytes("cf1");
 
@@ -133,8 +134,8 @@ public class TestTableDescriptorModification {
     }
   }
 
-  private void verifyTableDescriptor(final byte[] tableName, final byte[]... families)
-      throws IOException {
+  private void verifyTableDescriptor(final TableName tableName,
+                                     final byte[]... families) throws IOException {
     HBaseAdmin admin = TEST_UTIL.getHBaseAdmin();
 
     // Verify descriptor from master
@@ -143,15 +144,15 @@ public class TestTableDescriptorModification {
 
     // Verify descriptor from HDFS
     MasterFileSystem mfs = TEST_UTIL.getMiniHBaseCluster().getMaster().getMasterFileSystem();
-    Path tableDir = HTableDescriptor.getTableDir(mfs.getRootDir(), tableName);
+    Path tableDir = FSUtils.getTableDir(mfs.getRootDir(), tableName);
     htd = FSTableDescriptors.getTableDescriptorFromFs(mfs.getFileSystem(), tableDir);
     verifyTableDescriptor(htd, tableName, families);
   }
 
   private void verifyTableDescriptor(final HTableDescriptor htd,
-      final byte[] tableName, final byte[]... families) {
+      final TableName tableName, final byte[]... families) {
     Set<byte[]> htdFamilies = htd.getFamiliesKeys();
-    assertTrue(Bytes.equals(tableName, htd.getName()));
+    assertEquals(tableName, htd.getTableName());
     assertEquals(families.length, htdFamilies.size());
     for (byte[] familyName: families) {
       assertTrue("Expected family " + Bytes.toString(familyName), htdFamilies.contains(familyName));

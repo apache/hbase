@@ -90,7 +90,7 @@
 </tr>
 <%   for(HTableDescriptor htDesc : tables ) { %>
 <tr>
-    <td><a href="/table.jsp?name=<%= escapeXml(htDesc.getNameAsString()) %>"><%= escapeXml(htDesc.getNameAsString()) %></a></td>
+    <td><a href="/table.jsp?name=<%= escapeXml(htDesc.getTableName().getNameAsString()) %>"><%= escapeXml(htDesc.getTableName().getNameAsString()) %></a></td>
     <td><%= htDesc.toString() %></td>
 </tr>
 <%   }  %>

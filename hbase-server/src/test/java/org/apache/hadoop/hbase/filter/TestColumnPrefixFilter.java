@@ -46,9 +46,9 @@ public class TestColumnPrefixFilter {
   @Test
   public void testColumnPrefixFilter() throws IOException {
     String family = "Family";
-    HTableDescriptor htd = new HTableDescriptor("TestColumnPrefixFilter");
+    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf("TestColumnPrefixFilter"));
     htd.addFamily((new HColumnDescriptor(family)).setMaxVersions(3));
-    HRegionInfo info = new HRegionInfo(htd.getName(), null, null, false);
+    HRegionInfo info = new HRegionInfo(htd.getTableName(), null, null, false);
     HRegion region = HRegion.createHRegion(info, TEST_UTIL.
       getDataTestDir(), TEST_UTIL.getConfiguration(), htd);
     try {
@@ -108,9 +108,9 @@ public class TestColumnPrefixFilter {
   @Test
   public void testColumnPrefixFilterWithFilterList() throws IOException {
     String family = "Family";
-    HTableDescriptor htd = new HTableDescriptor("TestColumnPrefixFilter");
+    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf("TestColumnPrefixFilter"));
     htd.addFamily((new HColumnDescriptor(family)).setMaxVersions(3));
-    HRegionInfo info = new HRegionInfo(htd.getName(), null, null, false);
+    HRegionInfo info = new HRegionInfo(htd.getTableName(), null, null, false);
     HRegion region = HRegion.createHRegion(info, TEST_UTIL.
       getDataTestDir(), TEST_UTIL.getConfiguration(), htd);
     try {

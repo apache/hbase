@@ -31,6 +31,7 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.LargeTests;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
@@ -71,7 +72,7 @@ public class TestRestoreFlushSnapshotFromClient {
   private byte[] snapshotName2;
   private int snapshot0Rows;
   private int snapshot1Rows;
-  private byte[] tableName;
+  private TableName tableName;
   private HBaseAdmin admin;
 
   @BeforeClass
@@ -106,7 +107,7 @@ public class TestRestoreFlushSnapshotFromClient {
     this.admin = UTIL.getHBaseAdmin();
 
     long tid = System.currentTimeMillis();
-    tableName = Bytes.toBytes("testtb-" + tid);
+    tableName = TableName.valueOf("testtb-" + tid);
     snapshotName0 = Bytes.toBytes("snaptb0-" + tid);
     snapshotName1 = Bytes.toBytes("snaptb1-" + tid);
     snapshotName2 = Bytes.toBytes("snaptb2-" + tid);
@@ -121,7 +122,7 @@ public class TestRestoreFlushSnapshotFromClient {
       logFSTree();
 
       // take a snapshot
-      admin.snapshot(Bytes.toString(snapshotName0), Bytes.toString(tableName),
+      admin.snapshot(Bytes.toString(snapshotName0), tableName,
           SnapshotDescription.Type.FLUSH);
 
       LOG.info("=== after snapshot with 500 rows");
@@ -134,7 +135,7 @@ public class TestRestoreFlushSnapshotFromClient {
       logFSTree();
 
       // take a snapshot of the updated table
-      admin.snapshot(Bytes.toString(snapshotName1), Bytes.toString(tableName),
+      admin.snapshot(Bytes.toString(snapshotName1), tableName,
           SnapshotDescription.Type.FLUSH);
       LOG.info("=== after snapshot with 1000 rows");
       logFSTree();
@@ -183,12 +184,12 @@ public class TestRestoreFlushSnapshotFromClient {
 
   @Test
   public void testCloneSnapshot() throws IOException, InterruptedException {
-    byte[] clonedTableName = Bytes.toBytes("clonedtb-" + System.currentTimeMillis());
+    TableName clonedTableName = TableName.valueOf("clonedtb-" + System.currentTimeMillis());
     testCloneSnapshot(clonedTableName, snapshotName0, snapshot0Rows);
     testCloneSnapshot(clonedTableName, snapshotName1, snapshot1Rows);
   }
 
-  private void testCloneSnapshot(final byte[] tableName, final byte[] snapshotName,
+  private void testCloneSnapshot(final TableName tableName, final byte[] snapshotName,
       int snapshotRows) throws IOException, InterruptedException {
     // create a new table from snapshot
     admin.cloneSnapshot(snapshotName, tableName);
@@ -199,10 +200,10 @@ public class TestRestoreFlushSnapshotFromClient {
 
   @Test
   public void testRestoreSnapshotOfCloned() throws IOException, InterruptedException {
-    byte[] clonedTableName = Bytes.toBytes("clonedtb-" + System.currentTimeMillis());
+    TableName clonedTableName = TableName.valueOf("clonedtb-" + System.currentTimeMillis());
     admin.cloneSnapshot(snapshotName0, clonedTableName);
     SnapshotTestingUtils.verifyRowCount(UTIL, clonedTableName, snapshot0Rows);
-    admin.snapshot(Bytes.toString(snapshotName2), Bytes.toString(clonedTableName), SnapshotDescription.Type.FLUSH);
+    admin.snapshot(Bytes.toString(snapshotName2), clonedTableName, SnapshotDescription.Type.FLUSH);
     UTIL.deleteTable(clonedTableName);
 
     admin.cloneSnapshot(snapshotName2, clonedTableName);

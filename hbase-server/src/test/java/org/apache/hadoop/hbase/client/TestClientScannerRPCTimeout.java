@@ -29,6 +29,7 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.MiniHBaseCluster.MiniHBaseClusterRegionServer;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.ipc.RpcClient;
 import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ScanRequest;
@@ -159,7 +160,8 @@ public class TestClientScannerRPCTimeout {
       } else {
         ScanResponse scanRes = super.scan(controller, request);
         String regionName = Bytes.toString(request.getRegion().getValue().toByteArray());
-        if (!regionName.contains("-ROOT-") && !regionName.contains(".META.")) {
+        if (!regionName.contains(TableName.ROOT_TABLE_NAME.getNameAsString()) &&
+            !regionName.contains(TableName.META_TABLE_NAME.getNameAsString())) {
           tableScannerId = scanRes.getScannerId();
         }
         return scanRes;

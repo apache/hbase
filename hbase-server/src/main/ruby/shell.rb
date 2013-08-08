@@ -254,6 +254,19 @@ Shell.load_command_group(
 )
 
 Shell.load_command_group(
+  'namespace',
+  :full_name => 'NAMESPACE MANAGEMENT COMMANDS',
+  :commands => %w[
+    namespace_create
+    namespace_drop
+    namespace_alter
+    namespace_describe
+    namespace_list
+    namespace_list_tables
+  ]
+)
+
+Shell.load_command_group(
   'dml',
   :full_name => 'DATA MANIPULATION COMMANDS',
   :commands => %w[

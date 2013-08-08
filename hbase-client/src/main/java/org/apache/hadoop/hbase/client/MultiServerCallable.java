@@ -23,6 +23,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.apache.hadoop.hbase.CellScannable;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.ipc.PayloadCarryingRpcController;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
@@ -42,7 +43,7 @@ import com.google.protobuf.ServiceException;
 class MultiServerCallable<R> extends RegionServerCallable<MultiResponse> {
   private final MultiAction<R> multi;
 
-  MultiServerCallable(final HConnection connection, final byte [] tableName,
+  MultiServerCallable(final HConnection connection, final TableName tableName,
       final HRegionLocation location, final MultiAction<R> multi) {
     super(connection, tableName, null);
     this.multi = multi;

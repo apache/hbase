@@ -29,6 +29,7 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.PleaseHoldException;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos;
 import org.junit.Test;
@@ -71,7 +72,8 @@ public class TestHBaseAdminNoCluster {
     // Mock up our admin Interfaces
     HBaseAdmin admin = new HBaseAdmin(configuration);
     try {
-      HTableDescriptor htd = new HTableDescriptor("testMasterMonitorCollableRetries");
+      HTableDescriptor htd =
+          new HTableDescriptor(TableName.valueOf("testMasterMonitorCollableRetries"));
       // Pass any old htable descriptor; not important
       try {
         admin.createTable(htd, HBaseTestingUtility.KEYS_FOR_HBA_CREATE_TABLE);

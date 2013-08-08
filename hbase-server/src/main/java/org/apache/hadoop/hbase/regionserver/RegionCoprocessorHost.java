@@ -147,7 +147,7 @@ public class RegionCoprocessorHost
     loadSystemCoprocessors(conf, REGION_COPROCESSOR_CONF_KEY);
 
     // load system default cp's for user tables from configuration.
-    if (!HTableDescriptor.isMetaTable(region.getRegionInfo().getTableName())) {
+    if (!HTableDescriptor.isSystemTable(region.getRegionInfo().getTableName())) {
       loadSystemCoprocessors(conf, USER_REGION_COPROCESSOR_CONF_KEY);
     }
 
@@ -195,7 +195,7 @@ public class RegionCoprocessorHost
               configured.add(load(path, className, priority, conf));
             }
             LOG.info("Load coprocessor " + className + " from HTD of " +
-              Bytes.toString(region.getTableDesc().getName()) +
+              region.getTableDesc().getTableName().getNameAsString() +
                 " successfully.");
           } else {
             throw new RuntimeException("specification does not match pattern");

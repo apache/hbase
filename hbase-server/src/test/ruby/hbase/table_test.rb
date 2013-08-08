@@ -37,7 +37,7 @@ module Hbase
 
     define_test "Hbase::Table constructor should not fail for existent tables" do
       assert_nothing_raised do
-        table('.META.')
+        table('hbase:meta')
       end
     end
   end
@@ -55,7 +55,7 @@ module Hbase
     end
 
     define_test "is_meta_table? method should return true for the meta table" do
-      assert(table('.META.').is_meta_table?)
+      assert(table('hbase:meta').is_meta_table?)
     end
 
     define_test "is_meta_table? method should return false for a normal table" do
@@ -65,7 +65,7 @@ module Hbase
     #-------------------------------------------------------------------------------
 
     define_test "get_all_columns should return columns list" do
-      cols = table('.META.').get_all_columns
+      cols = table('hbase:meta').get_all_columns
       assert_kind_of(Array, cols)
       assert(cols.length > 0)
     end
@@ -73,19 +73,19 @@ module Hbase
     #-------------------------------------------------------------------------------
 
     define_test "parse_column_name should not return a qualifier for name-only column specifiers" do
-      col, qual = table('.META.').parse_column_name('foo')
+      col, qual = table('hbase:meta').parse_column_name('foo')
       assert_not_nil(col)
       assert_nil(qual)
     end
 
     define_test "parse_column_name should not return a qualifier for family-only column specifiers" do
-      col, qual = table('.META.').parse_column_name('foo:')
+      col, qual = table('hbase:meta').parse_column_name('foo:')
       assert_not_nil(col)
       assert_nil(qual)
     end
 
     define_test "parse_column_name should return a qualifier for family:qualifier column specifiers" do
-      col, qual = table('.META.').parse_column_name('foo:bar')
+      col, qual = table('hbase:meta').parse_column_name('foo:bar')
       assert_not_nil(col)
       assert_not_nil(qual)
     end

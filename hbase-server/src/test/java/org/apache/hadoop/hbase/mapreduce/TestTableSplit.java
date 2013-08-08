@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.mapreduce;
 
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.SmallTests;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -30,8 +31,12 @@ import static org.junit.Assert.assertTrue;
 public class TestTableSplit {
   @Test
   public void testHashCode() {
-    TableSplit split1 = new TableSplit("table".getBytes(), "row-start".getBytes(), "row-end".getBytes(), "location");
-    TableSplit split2 = new TableSplit("table".getBytes(), "row-start".getBytes(), "row-end".getBytes(), "location");
+    TableSplit split1 = new TableSplit(TableName.valueOf("table"),
+        "row-start".getBytes(),
+        "row-end".getBytes(), "location");
+    TableSplit split2 = new TableSplit(TableName.valueOf("table"),
+        "row-start".getBytes(),
+        "row-end".getBytes(), "location");
     assertEquals (split1, split2);
     assertTrue   (split1.hashCode() == split2.hashCode());
     HashSet<TableSplit> set = new HashSet<TableSplit>(2);

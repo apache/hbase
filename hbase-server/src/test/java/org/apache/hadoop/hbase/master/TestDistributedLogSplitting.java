@@ -53,6 +53,7 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
@@ -61,6 +62,7 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.LargeTests;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
+import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.SplitLogCounters;
 import org.apache.hadoop.hbase.Waiter;
@@ -83,14 +85,18 @@ import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.MasterThread;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
 import org.apache.hadoop.hbase.util.Threads;
+import org.apache.hadoop.hbase.zookeeper.MiniZooKeeperCluster;
 import org.apache.hadoop.hbase.zookeeper.ZKAssign;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
+import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.apache.zookeeper.KeeperException;
 import org.junit.After;
+import org.junit.AfterClass;
 import org.junit.Assert;
+import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
@@ -107,13 +113,28 @@ public class TestDistributedLogSplitting {
   }
 
   // Start a cluster with 2 masters and 6 regionservers
-  final int NUM_MASTERS = 2;
-  final int NUM_RS = 6;
+  static final int NUM_MASTERS = 2;
+  static final int NUM_RS = 6;
 
   MiniHBaseCluster cluster;
   HMaster master;
   Configuration conf;
-  HBaseTestingUtility TEST_UTIL;
+  static HBaseTestingUtility TEST_UTIL;
+  static MiniDFSCluster dfsCluster;
+  static MiniZooKeeperCluster zkCluster;
+
+  @BeforeClass
+  public static void setup() throws Exception {
+    TEST_UTIL = new HBaseTestingUtility(HBaseConfiguration.create());
+    dfsCluster = TEST_UTIL.startMiniDFSCluster(1);
+    zkCluster = TEST_UTIL.startMiniZKCluster();
+  }
+
+  @AfterClass
+  public static void tearDown() throws IOException {
+    TEST_UTIL.shutdownMiniZKCluster();
+    TEST_UTIL.shutdownMiniDFSCluster();
+  }
 
   private void startCluster(int num_rs) throws Exception{
     conf = HBaseConfiguration.create();
@@ -130,7 +151,9 @@ public class TestDistributedLogSplitting {
     conf.setInt(HConstants.REGIONSERVER_INFO_PORT, -1);
     conf.setFloat(HConstants.LOAD_BALANCER_SLOP_KEY, (float) 100.0); // no load balancing
     TEST_UTIL = new HBaseTestingUtility(conf);
-    TEST_UTIL.startMiniCluster(NUM_MASTERS, num_rs);
+    TEST_UTIL.setDFSCluster(dfsCluster);
+    TEST_UTIL.setZkCluster(zkCluster);
+    TEST_UTIL.startMiniHBaseCluster(NUM_MASTERS, num_rs);
     cluster = TEST_UTIL.getHBaseCluster();
     LOG.info("Waiting for active/ready master");
     cluster.waitForActiveAndReadyMaster();
@@ -146,7 +169,9 @@ public class TestDistributedLogSplitting {
       mt.getMaster().abort("closing...", new Exception("Trace info"));
     }
 
-    TEST_UTIL.shutdownMiniCluster();
+    TEST_UTIL.shutdownMiniHBaseCluster();
+    TEST_UTIL.getTestFileSystem().delete(FSUtils.getRootDir(TEST_UTIL.getConfiguration()), true);
+    ZKUtil.deleteNodeRecursively(TEST_UTIL.getZooKeeperWatcher(), "/hbase");
   }
 
   @Test (timeout=300000)
@@ -169,7 +194,7 @@ public class TestDistributedLogSplitting {
 
     installTable(new ZooKeeperWatcher(conf, "table-creation", null),
         "table", "family", 40);
-    byte[] table = Bytes.toBytes("table");
+    TableName table = TableName.valueOf("table");
     List<HRegionInfo> regions = null;
     HRegionServer hrs = null;
     for (int i = 0; i < NUM_RS; i++) {
@@ -177,7 +202,7 @@ public class TestDistributedLogSplitting {
       hrs = rsts.get(i).getRegionServer();
       regions = ProtobufUtil.getOnlineRegions(hrs);
       for (HRegionInfo region : regions) {
-        if (region.getTableNameAsString().equalsIgnoreCase("table")) {
+        if (region.getTableName().getNameAsString().equalsIgnoreCase("table")) {
           foundRs = true;
           break;
         }
@@ -191,7 +216,8 @@ public class TestDistributedLogSplitting {
     Iterator<HRegionInfo> it = regions.iterator();
     while (it.hasNext()) {
       HRegionInfo region = it.next();
-      if (region.isMetaTable()) {
+      if (region.getTableName().getNamespaceAsString()
+          .equals(NamespaceDescriptor.SYSTEM_NAMESPACE_NAME_STR)) {
         it.remove();
       }
     }
@@ -202,7 +228,7 @@ public class TestDistributedLogSplitting {
     int count = 0;
     for (HRegionInfo hri : regions) {
 
-      Path tdir = HTableDescriptor.getTableDir(rootdir, table);
+      Path tdir = FSUtils.getTableDir(rootdir, table);
       @SuppressWarnings("deprecation")
       Path editsdir =
         HLogUtil.getRegionDirRecoveredEditsDir(HRegion.getRegionDir(tdir, hri.getEncodedName()));
@@ -639,12 +665,13 @@ public class TestDistributedLogSplitting {
           isCarryingMeta = true;
           break;
         }
-        if (tableName != null && !tableName.equalsIgnoreCase(region.getTableNameAsString())) {
+        if (tableName != null &&
+            !tableName.equalsIgnoreCase(region.getTableName().getNameAsString())) {
           // make sure that we find a RS has online regions for both "table" and "disableTable"
           hasRegionsForBothTables = true;
           break;
         } else if (tableName == null) {
-          tableName = region.getTableNameAsString();
+          tableName = region.getTableName().getNameAsString();
         }
       }
       if (isCarryingMeta) {
@@ -705,7 +732,7 @@ public class TestDistributedLogSplitting {
     int count = 0;
     FileSystem fs = master.getMasterFileSystem().getFileSystem();
     Path rootdir = FSUtils.getRootDir(conf);
-    Path tdir = HTableDescriptor.getTableDir(rootdir, Bytes.toBytes("disableTable"));
+    Path tdir = FSUtils.getTableDir(rootdir, TableName.valueOf("disableTable"));
     for (HRegionInfo hri : regions) {
       @SuppressWarnings("deprecation")
       Path editsdir =
@@ -1059,19 +1086,19 @@ public class TestDistributedLogSplitting {
     LOG.debug("Waiting for no more RIT\n");
     blockUntilNoRIT(zkw, master);
     NavigableSet<String> regions = getAllOnlineRegions(cluster);
-    LOG.debug("Verifying only catalog regions are assigned\n");
-    if (regions.size() != 1) {
+    LOG.debug("Verifying only catalog and namespace regions are assigned\n");
+    if (regions.size() != 2) {
       for (String oregion : regions)
         LOG.debug("Region still online: " + oregion);
     }
-    assertEquals(1 + existingRegions, regions.size());
+    assertEquals(2 + existingRegions, regions.size());
     LOG.debug("Enabling table\n");
     TEST_UTIL.getHBaseAdmin().enableTable(table);
     LOG.debug("Waiting for no more RIT\n");
     blockUntilNoRIT(zkw, master);
     LOG.debug("Verifying there are " + numRegions + " assigned on cluster\n");
     regions = getAllOnlineRegions(cluster);
-    assertEquals(numRegions + 1 + existingRegions, regions.size());
+    assertEquals(numRegions + 2 + existingRegions, regions.size());
     return ht;
   }
 
@@ -1085,7 +1112,7 @@ public class TestDistributedLogSplitting {
       HRegionServer hrs = rst.getRegionServer();
       List<HRegionInfo> hris = ProtobufUtil.getOnlineRegions(hrs);
       for (HRegionInfo hri : hris) {
-        if (hri.isMetaTable()) {
+        if (HTableDescriptor.isSystemTable(hri.getTableName())) {
           continue;
         }
         LOG.debug("adding data to rs = " + rst.getName() +
@@ -1104,16 +1131,22 @@ public class TestDistributedLogSplitting {
 
   public void makeHLog(HLog log, List<HRegionInfo> regions, String tname, String fname,
       int num_edits, int edit_size, boolean closeLog) throws IOException {
-
+    TableName fullTName = TableName.valueOf(tname);
     // remove root and meta region
     regions.remove(HRegionInfo.FIRST_META_REGIONINFO);
-    byte[] table = Bytes.toBytes(tname);
-    HTableDescriptor htd = new HTableDescriptor(tname);
+
+    for(Iterator<HRegionInfo> iter = regions.iterator(); iter.hasNext(); ) {
+      HRegionInfo regionInfo = iter.next();
+      if(HTableDescriptor.isSystemTable(regionInfo.getTableName())) {
+         iter.remove();
+      }
+    }
+    HTableDescriptor htd = new HTableDescriptor(fullTName);
     byte[] value = new byte[edit_size];
 
     List<HRegionInfo> hris = new ArrayList<HRegionInfo>();
     for (HRegionInfo region : regions) {
-      if (!region.getTableNameAsString().equalsIgnoreCase(tname)) {
+      if (!region.getTableName().getNameAsString().equalsIgnoreCase(tname)) {
         continue;
       }
       hris.add(region);
@@ -1139,7 +1172,7 @@ public class TestDistributedLogSplitting {
         byte[] family = Bytes.toBytes(fname);
         byte[] qualifier = Bytes.toBytes("c" + Integer.toString(i));
         e.add(new KeyValue(row, family, qualifier, System.currentTimeMillis(), value));
-        log.append(curRegionInfo, table, e, System.currentTimeMillis(), htd);
+        log.append(curRegionInfo, fullTName, e, System.currentTimeMillis(), htd);
         counts[i % n] += 1;
       }
     }
@@ -1286,7 +1319,7 @@ public class TestDistributedLogSplitting {
         if (region.isMetaRegion()) {
           isCarryingMeta = true;
         }
-        if (tableName == null || region.getTableNameAsString().equalsIgnoreCase(tableName)) {
+        if (tableName == null || region.getTableName().getNameAsString().equals(tableName)) {
           foundTableRegion = true;
         }
         if (foundTableRegion && (isCarryingMeta || !hasMetaRegion)) {

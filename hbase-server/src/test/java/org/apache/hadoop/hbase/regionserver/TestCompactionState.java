@@ -28,13 +28,13 @@ import java.util.Random;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.LargeTests;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetRegionInfoResponse.CompactionState;
-import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -123,7 +123,8 @@ public class TestCompactionState {
       final CompactionState expectedState, boolean singleFamily)
       throws IOException, InterruptedException {
     // Create a table with regions
-    byte [] table = Bytes.toBytes(tableName);
+    TableName table =
+        TableName.valueOf(tableName);
     byte [] family = Bytes.toBytes("family");
     byte [][] families =
       {family, Bytes.add(family, Bytes.toBytes("2")), Bytes.add(family, Bytes.toBytes("3"))};
@@ -139,24 +140,24 @@ public class TestCompactionState {
       HBaseAdmin admin = new HBaseAdmin(TEST_UTIL.getConfiguration());
       if (expectedState == CompactionState.MINOR) {
         if (singleFamily) {
-          admin.compact(table, family);
+          admin.compact(table.getName(), family);
         } else {
-          admin.compact(table);
+          admin.compact(table.getName());
         }
       } else {
         if (singleFamily) {
-          admin.majorCompact(table, family);
+          admin.majorCompact(table.getName(), family);
         } else {
-          admin.majorCompact(table);
+          admin.majorCompact(table.getName());
         }
       }
       long curt = System.currentTimeMillis();
       long waitTime = 5000;
       long endt = curt + waitTime;
-      CompactionState state = admin.getCompactionState(table);
+      CompactionState state = admin.getCompactionState(table.getName());
       while (state == CompactionState.NONE && curt < endt) {
         Thread.sleep(10);
-        state = admin.getCompactionState(table);
+        state = admin.getCompactionState(table.getName());
         curt = System.currentTimeMillis();
       }
       // Now, should have the right compaction state,
@@ -168,10 +169,10 @@ public class TestCompactionState {
         }
       } else {
         // Wait until the compaction is done
-        state = admin.getCompactionState(table);
+        state = admin.getCompactionState(table.getName());
         while (state != CompactionState.NONE && curt < endt) {
           Thread.sleep(10);
-          state = admin.getCompactionState(table);
+          state = admin.getCompactionState(table.getName());
         }
         // Now, compaction should be done.
         assertEquals(CompactionState.NONE, state);

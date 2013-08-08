@@ -53,7 +53,8 @@ public class TestRegionServerCoprocessorExceptionWithRemove {
                        final Put put, final WALEdit edit,
                        final Durability durability) {
       String tableName =
-          c.getEnvironment().getRegion().getRegionInfo().getTableNameAsString();
+          c.getEnvironment().getRegion().getRegionInfo()
+              .getTableName().getNameAsString();
       if (tableName.equals("observed_table")) {
         Integer i = null;
         i = i + 1;
@@ -88,7 +89,8 @@ public class TestRegionServerCoprocessorExceptionWithRemove {
     // execute, which will set the rsZKNodeDeleted flag to true, which will
     // pass this test.
 
-    byte[] TEST_TABLE = Bytes.toBytes("observed_table");
+    TableName TEST_TABLE =
+        TableName.valueOf("observed_table");
     byte[] TEST_FAMILY = Bytes.toBytes("aaa");
 
     HTable table = TEST_UTIL.createTable(TEST_TABLE, TEST_FAMILY);

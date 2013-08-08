@@ -33,6 +33,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.MediumTests;
@@ -213,7 +214,7 @@ public class TestHFileArchiving {
 
   @Test
   public void testArchiveOnTableDelete() throws Exception {
-    List<HRegion> servingRegions = UTIL.getHBaseCluster().getRegions(TABLE_NAME);
+    List<HRegion> servingRegions = UTIL.getHBaseCluster().getRegions(TableName.valueOf(TABLE_NAME));
     // make sure we only have 1 region serving this table
     assertEquals(1, servingRegions.size());
     HRegion region = servingRegions.get(0);
@@ -227,7 +228,7 @@ public class TestHFileArchiving {
     UTIL.loadRegion(region, TEST_FAM);
 
     // get the hfiles in the region
-    List<HRegion> regions = hrs.getOnlineRegions(TABLE_NAME);
+    List<HRegion> regions = hrs.getOnlineRegions(TableName.valueOf(TABLE_NAME));
     assertEquals("More that 1 region for test table.", 1, regions.size());
 
     region = regions.get(0);
@@ -302,7 +303,7 @@ public class TestHFileArchiving {
     UTIL.loadRegion(region, TEST_FAM);
 
     // get the hfiles in the region
-    List<HRegion> regions = hrs.getOnlineRegions(TABLE_NAME);
+    List<HRegion> regions = hrs.getOnlineRegions(TableName.valueOf(TABLE_NAME));
     assertEquals("More that 1 region for test table.", 1, regions.size());
 
     region = regions.get(0);
@@ -320,7 +321,7 @@ public class TestHFileArchiving {
     List<String> storeFiles = getRegionStoreFiles(region);
 
     // then delete the table so the hfiles get archived
-    UTIL.getHBaseAdmin().deleteColumn(TABLE_NAME, TEST_FAM);
+    UTIL.getHBaseAdmin().deleteColumn(TableName.valueOf(TABLE_NAME), TEST_FAM);
 
     assertArchiveFiles(fs, storeFiles, 30000);
     UTIL.deleteTable(TABLE_NAME);
@@ -338,7 +339,8 @@ public class TestHFileArchiving {
     FileSystem fs = UTIL.getTestFileSystem();
 
     Path archiveDir = new Path(rootDir, HConstants.HFILE_ARCHIVE_DIRECTORY);
-    Path regionDir = new Path("table", "abcdef");
+    Path regionDir = new Path(FSUtils.getTableDir(new Path("./"),
+        TableName.valueOf("table")), "abcdef");
     Path familyDir = new Path(regionDir, "cf");
 
     Path sourceRegionDir = new Path(rootDir, regionDir);

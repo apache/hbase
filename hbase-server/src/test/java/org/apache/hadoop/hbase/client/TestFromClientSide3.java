@@ -31,6 +31,7 @@ import java.util.Random;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionLocation;
@@ -150,7 +151,8 @@ public class TestFromClientSide3 {
     TEST_UTIL.getConfiguration().setInt("hbase.hstore.compaction.min", 3);
 
     String tableName = "testAdvancedConfigOverride";
-    byte[] TABLE = Bytes.toBytes(tableName);
+    TableName TABLE =
+        TableName.valueOf(tableName);
     HTable hTable = TEST_UTIL.createTable(TABLE, FAMILY, 10);
     HBaseAdmin admin = new HBaseAdmin(TEST_UTIL.getConfiguration());
     HConnection connection = HConnectionManager.getConnection(TEST_UTIL
@@ -169,7 +171,7 @@ public class TestFromClientSide3 {
       server, regionName, FAMILY).size() > 1);
 
     // Issue a compaction request
-    admin.compact(TABLE);
+    admin.compact(TABLE.getName());
 
     // poll wait for the compactions to happen
     for (int i = 0; i < 10 * 1000 / 40; ++i) {
@@ -205,7 +207,7 @@ public class TestFromClientSide3 {
     performMultiplePutAndFlush(admin, hTable, row, FAMILY, 3, 10);
 
     // Issue a compaction request
-    admin.compact(TABLE);
+    admin.compact(TABLE.getName());
 
     // This time, the compaction request should not happen
     Thread.sleep(10 * 1000);
@@ -229,7 +231,7 @@ public class TestFromClientSide3 {
     LOG.info("alter status finished");
 
     // Issue a compaction request
-    admin.compact(TABLE);
+    admin.compact(TABLE.getName());
 
     // poll wait for the compactions to happen
     for (int i = 0; i < 10 * 1000 / 40; ++i) {
@@ -380,7 +382,7 @@ public class TestFromClientSide3 {
   public void testGetEmptyRow() throws Exception {
     //Create a table and put in 1 row
     HBaseAdmin admin = TEST_UTIL.getHBaseAdmin();
-    HTableDescriptor desc = new HTableDescriptor(Bytes.toBytes("test"));
+    HTableDescriptor desc = new HTableDescriptor(TableName.valueOf(Bytes.toBytes("test")));
     desc.addFamily(new HColumnDescriptor(FAMILY));
     admin.createTable(desc);
     HTable table = new HTable(TEST_UTIL.getConfiguration(), "test");

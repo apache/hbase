@@ -24,6 +24,7 @@ import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -66,8 +67,7 @@ public class TestSnapshotHFileCleaner {
     // write an hfile to the snapshot directory
     String snapshotName = "snapshot";
     byte[] snapshot = Bytes.toBytes(snapshotName);
-    String table = "table";
-    byte[] tableName = Bytes.toBytes(table);
+    TableName tableName = TableName.valueOf("table");
     Path snapshotDir = SnapshotDescriptionUtils.getCompletedSnapshotDir(snapshotName, rootDir);
     HRegionInfo mockRegion = new HRegionInfo(tableName);
     Path regionSnapshotDir = new Path(snapshotDir, mockRegion.getEncodedName());

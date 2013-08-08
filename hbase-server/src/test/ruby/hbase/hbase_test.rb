@@ -39,11 +39,11 @@ module Hbase
     end
 
     define_test "Hbase::Hbase#table should create a new table object when called the first time" do
-      assert_kind_of(::Hbase::Table, @hbase.table('.META.', @formatter))
+      assert_kind_of(::Hbase::Table, @hbase.table('hbase:meta', @formatter))
     end
 
     define_test "Hbase::Hbase#table should create a new table object every call" do
-      assert_not_same(@hbase.table('.META.', @formatter), @hbase.table('.META.', @formatter))
+      assert_not_same(@hbase.table('hbase:meta', @formatter), @hbase.table('hbase:meta', @formatter))
     end
   end
 end

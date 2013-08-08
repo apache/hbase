@@ -42,6 +42,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableExistsException;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
@@ -120,7 +121,7 @@ public class SchemaResource extends ResourceBase {
         .build();
     }
     try {
-      HTableDescriptor htd = new HTableDescriptor(name);
+      HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(name));
       for (Map.Entry<QName,Object> e: model.getAny().entrySet()) {
         htd.setValue(e.getKey().getLocalPart(), e.getValue().toString());
       }

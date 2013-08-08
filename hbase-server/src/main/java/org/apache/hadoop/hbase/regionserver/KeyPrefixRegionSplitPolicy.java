@@ -54,7 +54,7 @@ public class KeyPrefixRegionSplitPolicy extends IncreasingToUpperBoundRegionSpli
         prefixLengthString = region.getTableDesc().getValue(PREFIX_LENGTH_KEY_DEPRECATED);
         if (prefixLengthString == null) {
           LOG.error(PREFIX_LENGTH_KEY + " not specified for table "
-              + region.getTableDesc().getNameAsString()
+              + region.getTableDesc().getTableName()
               + ". Using default RegionSplitPolicy");
           return;
         }
@@ -66,7 +66,7 @@ public class KeyPrefixRegionSplitPolicy extends IncreasingToUpperBoundRegionSpli
       }
       if (prefixLength <= 0) {
         LOG.error("Invalid value for " + PREFIX_LENGTH_KEY + " for table "
-            + region.getTableDesc().getNameAsString() + ":"
+            + region.getTableDesc().getTableName() + ":"
             + prefixLengthString + ". Using default RegionSplitPolicy");
       }
     }

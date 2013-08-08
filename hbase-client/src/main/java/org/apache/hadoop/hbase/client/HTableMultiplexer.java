@@ -25,6 +25,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
@@ -67,7 +68,7 @@ public class HTableMultiplexer {
   
   static final String TABLE_MULTIPLEXER_FLUSH_FREQ_MS = "hbase.tablemultiplexer.flush.frequency.ms";
 
-  private Map<byte[], HTable> tableNameToHTableMap;
+  private Map<TableName, HTable> tableNameToHTableMap;
 
   /** The map between each region server to its corresponding buffer queue */
   private Map<HRegionLocation, LinkedBlockingQueue<PutStatus>>
@@ -92,7 +93,7 @@ public class HTableMultiplexer {
     this.serverToBufferQueueMap = new ConcurrentHashMap<HRegionLocation,
       LinkedBlockingQueue<PutStatus>>();
     this.serverToFlushWorkerMap = new ConcurrentHashMap<HRegionLocation, HTableFlushWorker>();
-    this.tableNameToHTableMap = new ConcurrentSkipListMap<byte[], HTable>(Bytes.BYTES_COMPARATOR);
+    this.tableNameToHTableMap = new ConcurrentSkipListMap<TableName, HTable>();
     this.retryNum = this.conf.getInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER,
         HConstants.DEFAULT_HBASE_CLIENT_RETRIES_NUMBER);
     this.perRegionServerBufferQueueSize = perRegionServerBufferQueueSize;
@@ -101,24 +102,28 @@ public class HTableMultiplexer {
   /**
    * The put request will be buffered by its corresponding buffer queue. Return false if the queue
    * is already full.
-   * @param table
+   * @param tableName
    * @param put
    * @return true if the request can be accepted by its corresponding buffer queue.
    * @throws IOException
    */
-  public boolean put(final byte[] table, final Put put) throws IOException {
-    return put(table, put, this.retryNum);
+  public boolean put(TableName tableName, final Put put) throws IOException {
+    return put(tableName, put, this.retryNum);
+  }
+
+  public boolean put(byte[] tableName, final Put put) throws IOException {
+    return put(TableName.valueOf(tableName), put);
   }
 
   /**
    * The puts request will be buffered by their corresponding buffer queue. 
    * Return the list of puts which could not be queued.
-   * @param table
+   * @param tableName
    * @param puts
    * @return the list of puts which could not be queued
    * @throws IOException
    */
-  public List<Put> put(final byte[] table, final List<Put> puts)
+  public List<Put> put(TableName tableName, final List<Put> puts)
       throws IOException {
     if (puts == null)
       return null;
@@ -126,7 +131,7 @@ public class HTableMultiplexer {
     List <Put> failedPuts = null;
     boolean result;
     for (Put put : puts) {
-      result = put(table, put, this.retryNum);
+      result = put(tableName, put, this.retryNum);
       if (result == false) {
         
         // Create the failed puts list if necessary
@@ -140,24 +145,29 @@ public class HTableMultiplexer {
     return failedPuts;
   }
 
+  public List<Put> put(byte[] tableName, final List<Put> puts) throws IOException {
+    return put(TableName.valueOf(tableName), puts);
+  }
+
+
   /**
    * The put request will be buffered by its corresponding buffer queue. And the put request will be
    * retried before dropping the request.
    * Return false if the queue is already full.
-   * @param table
+   * @param tableName
    * @param put
    * @param retry
    * @return true if the request can be accepted by its corresponding buffer queue.
    * @throws IOException
    */
-  public boolean put(final byte[] table, final Put put, int retry)
+  public boolean put(final TableName tableName, final Put put, int retry)
       throws IOException {
     if (retry <= 0) {
       return false;
     }
 
     LinkedBlockingQueue<PutStatus> queue;
-    HTable htable = getHTable(table);
+    HTable htable = getHTable(tableName);
     try {
       htable.validatePut(put);
       HRegionLocation loc = htable.getRegionLocation(put.getRow(), false);
@@ -175,6 +185,11 @@ public class HTableMultiplexer {
     return false;
   }
 
+  public boolean put(final byte[] tableName, final Put put, int retry)
+      throws IOException {
+    return put(TableName.valueOf(tableName), put, retry);
+  }
+
   /**
    * @return the current HTableMultiplexerStatus
    */
@@ -183,14 +198,14 @@ public class HTableMultiplexer {
   }
 
 
-  private HTable getHTable(final byte[] table) throws IOException {
-    HTable htable = this.tableNameToHTableMap.get(table);
+  private HTable getHTable(TableName tableName) throws IOException {
+    HTable htable = this.tableNameToHTableMap.get(tableName);
     if (htable == null) {
       synchronized (this.tableNameToHTableMap) {
-        htable = this.tableNameToHTableMap.get(table);
+        htable = this.tableNameToHTableMap.get(tableName);
         if (htable == null)  {
-          htable = new HTable(conf, table);
-          this.tableNameToHTableMap.put(table, htable);
+          htable = new HTable(conf, tableName);
+          this.tableNameToHTableMap.put(tableName, htable);
         }
       }
     }
@@ -435,7 +450,7 @@ public class HTableMultiplexer {
         HRegionLocation oldLoc) throws IOException {
       Put failedPut = failedPutStatus.getPut();
       // The currentPut is failed. So get the table name for the currentPut.
-      byte[] tableName = failedPutStatus.getRegionInfo().getTableName();
+      TableName tableName = failedPutStatus.getRegionInfo().getTableName();
       // Decrease the retry count
       int retryCount = failedPutStatus.getRetryCount() - 1;
       

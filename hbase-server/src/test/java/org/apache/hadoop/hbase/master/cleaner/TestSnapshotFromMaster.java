@@ -33,6 +33,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.MediumTests;
@@ -42,6 +43,7 @@ import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.snapshot.DisabledTableSnapshotHandler;
 import org.apache.hadoop.hbase.master.snapshot.SnapshotHFileCleaner;
 import org.apache.hadoop.hbase.master.snapshot.SnapshotManager;
+import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DeleteSnapshotRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.IsSnapshotDoneRequest;
@@ -83,9 +85,9 @@ public class TestSnapshotFromMaster {
 
   // for hfile archiving test.
   private static Path archiveDir;
-  private static final String STRING_TABLE_NAME = "test";
   private static final byte[] TEST_FAM = Bytes.toBytes("fam");
-  private static final byte[] TABLE_NAME = Bytes.toBytes(STRING_TABLE_NAME);
+  private static final TableName TABLE_NAME =
+      TableName.valueOf("test");
   // refresh the cache every 1/2 second
   private static final long cacheRefreshPeriod = 500;
 
@@ -128,7 +130,7 @@ public class TestSnapshotFromMaster {
   @Before
   public void setup() throws Exception {
     UTIL.createTable(TABLE_NAME, TEST_FAM);
-    master.getSnapshotManagerForTesting().setSnapshotHandlerForTesting(STRING_TABLE_NAME, null);
+    master.getSnapshotManagerForTesting().setSnapshotHandlerForTesting(TABLE_NAME, null);
   }
 
   @After
@@ -160,6 +162,7 @@ public class TestSnapshotFromMaster {
   public void testIsDoneContract() throws Exception {
 
     IsSnapshotDoneRequest.Builder builder = IsSnapshotDoneRequest.newBuilder();
+
     String snapshotName = "asyncExpectedFailureTest";
 
     // check that we get an exception when looking up snapshot where one hasn't happened
@@ -168,7 +171,7 @@ public class TestSnapshotFromMaster {
 
     // and that we get the same issue, even if we specify a name
     SnapshotDescription desc = SnapshotDescription.newBuilder()
-      .setName(snapshotName).setTable(STRING_TABLE_NAME).build();
+      .setName(snapshotName).setTable(TABLE_NAME.getNameAsString()).build();
     builder.setSnapshot(desc);
     SnapshotTestingUtils.expectSnapshotDoneException(master, builder.build(),
       UnknownSnapshotException.class);
@@ -182,7 +185,7 @@ public class TestSnapshotFromMaster {
       .thenReturn(EnvironmentEdgeManager.currentTimeMillis());
 
     master.getSnapshotManagerForTesting()
-        .setSnapshotHandlerForTesting(STRING_TABLE_NAME, mockHandler);
+        .setSnapshotHandlerForTesting(TABLE_NAME, mockHandler);
 
     // if we do a lookup without a snapshot name, we should fail - you should always know your name
     builder = IsSnapshotDoneRequest.newBuilder();
@@ -322,7 +325,7 @@ public class TestSnapshotFromMaster {
       LOG.debug(file.getPath());
     }
     // get the archived files for the table
-    Collection<String> files = getArchivedHFiles(archiveDir, rootDir, fs, STRING_TABLE_NAME);
+    Collection<String> files = getArchivedHFiles(archiveDir, rootDir, fs, TABLE_NAME);
 
     // and make sure that there is a proper subset
     for (FileStatus file : snapshotHFiles) {
@@ -349,7 +352,7 @@ public class TestSnapshotFromMaster {
     LOG.info("After delete snapshot cleaners run File-System state");
     FSUtils.logFileSystemState(fs, rootDir, LOG);
 
-    files = getArchivedHFiles(archiveDir, rootDir, fs, STRING_TABLE_NAME);
+    files = getArchivedHFiles(archiveDir, rootDir, fs, TABLE_NAME);
     assertEquals("Still have some hfiles in the archive, when their snapshot has been deleted.", 0,
       files.size());
   }
@@ -359,8 +362,8 @@ public class TestSnapshotFromMaster {
    * @throws IOException on expected failure
    */
   private final Collection<String> getArchivedHFiles(Path archiveDir, Path rootDir,
-      FileSystem fs, String tableName) throws IOException {
-    Path tableArchive = new Path(archiveDir, tableName);
+      FileSystem fs, TableName tableName) throws IOException {
+    Path tableArchive = FSUtils.getTableDir(archiveDir, tableName);
     FileStatus[] archivedHFiles = SnapshotTestingUtils.listHFiles(fs, tableArchive);
     List<String> files = new ArrayList<String>(archivedHFiles.length);
     LOG.debug("Have archived hfiles: " + tableArchive);

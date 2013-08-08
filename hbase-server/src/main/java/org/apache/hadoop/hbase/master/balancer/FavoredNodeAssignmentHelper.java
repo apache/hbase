@@ -33,6 +33,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.ServerName;
@@ -100,7 +101,7 @@ public class FavoredNodeAssignmentHelper {
    * @throws IOException
    */
   public static Map<HRegionInfo, ServerName> fullScan(
-      CatalogTracker catalogTracker, final Set<String> disabledTables,
+      CatalogTracker catalogTracker, final Set<TableName> disabledTables,
       final boolean excludeOfflinedSplitParents,
       FavoredNodeLoadBalancer balancer) throws IOException {
     final Map<HRegionInfo, ServerName> regions =
@@ -114,9 +115,9 @@ public class FavoredNodeAssignmentHelper {
         Pair<HRegionInfo, ServerName> region = HRegionInfo.getHRegionInfoAndServerName(r);
         HRegionInfo hri = region.getFirst();
         if (hri  == null) return true;
-        if (hri.getTableNameAsString() == null) return true;
+        if (hri.getTableName() == null) return true;
         if (disabledTables.contains(
-            hri.getTableNameAsString())) return true;
+            hri.getTableName())) return true;
         // Are we to include split parents in the list?
         if (excludeOfflinedSplitParents && hri.isSplitParent()) return true;
         regions.put(hri, region.getSecond());

@@ -22,6 +22,7 @@ import java.util.List;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.CellScannable;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -904,9 +905,9 @@ public final class RequestConverter {
    * @return an AddColumnRequest
    */
   public static AddColumnRequest buildAddColumnRequest(
-      final byte [] tableName, final HColumnDescriptor column) {
+      final TableName tableName, final HColumnDescriptor column) {
     AddColumnRequest.Builder builder = AddColumnRequest.newBuilder();
-    builder.setTableName(ByteString.copyFrom(tableName));
+    builder.setTableName(ProtobufUtil.toProtoTableName(tableName));
     builder.setColumnFamilies(column.convert());
     return builder.build();
   }
@@ -919,9 +920,9 @@ public final class RequestConverter {
    * @return a DeleteColumnRequest
    */
   public static DeleteColumnRequest buildDeleteColumnRequest(
-      final byte [] tableName, final byte [] columnName) {
+      final TableName tableName, final byte [] columnName) {
     DeleteColumnRequest.Builder builder = DeleteColumnRequest.newBuilder();
-    builder.setTableName(ByteString.copyFrom(tableName));
+    builder.setTableName(ProtobufUtil.toProtoTableName((tableName)));
     builder.setColumnName(ByteString.copyFrom(columnName));
     return builder.build();
   }
@@ -934,9 +935,9 @@ public final class RequestConverter {
    * @return an ModifyColumnRequest
    */
   public static ModifyColumnRequest buildModifyColumnRequest(
-      final byte [] tableName, final HColumnDescriptor column) {
+      final TableName tableName, final HColumnDescriptor column) {
     ModifyColumnRequest.Builder builder = ModifyColumnRequest.newBuilder();
-    builder.setTableName(ByteString.copyFrom(tableName));
+    builder.setTableName(ProtobufUtil.toProtoTableName((tableName)));
     builder.setColumnFamilies(column.convert());
     return builder.build();
   }
@@ -1019,9 +1020,9 @@ public final class RequestConverter {
    * @param tableName
    * @return a DeleteTableRequest
    */
-  public static DeleteTableRequest buildDeleteTableRequest(final byte [] tableName) {
+  public static DeleteTableRequest buildDeleteTableRequest(final TableName tableName) {
     DeleteTableRequest.Builder builder = DeleteTableRequest.newBuilder();
-    builder.setTableName(ByteString.copyFrom(tableName));
+    builder.setTableName(ProtobufUtil.toProtoTableName(tableName));
     return builder.build();
   }
 
@@ -1031,9 +1032,9 @@ public final class RequestConverter {
    * @param tableName
    * @return an EnableTableRequest
    */
-  public static EnableTableRequest buildEnableTableRequest(final byte [] tableName) {
+  public static EnableTableRequest buildEnableTableRequest(final TableName tableName) {
     EnableTableRequest.Builder builder = EnableTableRequest.newBuilder();
-    builder.setTableName(ByteString.copyFrom(tableName));
+    builder.setTableName(ProtobufUtil.toProtoTableName(tableName));
     return builder.build();
   }
 
@@ -1043,9 +1044,9 @@ public final class RequestConverter {
    * @param tableName
    * @return a DisableTableRequest
    */
-  public static DisableTableRequest buildDisableTableRequest(final byte [] tableName) {
+  public static DisableTableRequest buildDisableTableRequest(final TableName tableName) {
     DisableTableRequest.Builder builder = DisableTableRequest.newBuilder();
-    builder.setTableName(ByteString.copyFrom(tableName));
+    builder.setTableName(ProtobufUtil.toProtoTableName((tableName)));
     return builder.build();
   }
 
@@ -1077,9 +1078,9 @@ public final class RequestConverter {
    * @return a ModifyTableRequest
    */
   public static ModifyTableRequest buildModifyTableRequest(
-      final byte [] table, final HTableDescriptor hTableDesc) {
+      final TableName tableName, final HTableDescriptor hTableDesc) {
     ModifyTableRequest.Builder builder = ModifyTableRequest.newBuilder();
-    builder.setTableName(ByteString.copyFrom(table));
+    builder.setTableName(ProtobufUtil.toProtoTableName((tableName)));
     builder.setTableSchema(hTableDesc.convert());
     return builder.build();
   }
@@ -1091,9 +1092,9 @@ public final class RequestConverter {
    * @return a GetSchemaAlterStatusRequest
    */
   public static GetSchemaAlterStatusRequest buildGetSchemaAlterStatusRequest(
-      final byte [] tableName) {
+      final TableName tableName) {
     GetSchemaAlterStatusRequest.Builder builder = GetSchemaAlterStatusRequest.newBuilder();
-    builder.setTableName(ByteString.copyFrom(tableName));
+    builder.setTableName(ProtobufUtil.toProtoTableName((tableName)));
     return builder.build();
   }
 
@@ -1104,11 +1105,11 @@ public final class RequestConverter {
    * @return a GetTableDescriptorsRequest
    */
   public static GetTableDescriptorsRequest buildGetTableDescriptorsRequest(
-      final List<String> tableNames) {
+      final List<TableName> tableNames) {
     GetTableDescriptorsRequest.Builder builder = GetTableDescriptorsRequest.newBuilder();
     if (tableNames != null) {
-      for (String str : tableNames) {
-        builder.addTableNames(str);
+      for (TableName tableName : tableNames) {
+        builder.addTableNames(ProtobufUtil.toProtoTableName(tableName));
       }
     }
     return builder.build();
@@ -1121,9 +1122,9 @@ public final class RequestConverter {
    * @return a GetTableDescriptorsRequest
    */
   public static GetTableDescriptorsRequest buildGetTableDescriptorsRequest(
-      final byte[] tableName) {
+      final TableName tableName) {
     return GetTableDescriptorsRequest.newBuilder()
-      .addTableNames(Bytes.toString(tableName))
+      .addTableNames(ProtobufUtil.toProtoTableName(tableName))
       .build();
   }
 
@@ -1204,22 +1205,22 @@ public final class RequestConverter {
    * Create a request to grant user permissions.
    *
    * @param username the short user name who to grant permissions
-   * @param table optional table name the permissions apply
+   * @param tableName optional table name the permissions apply
    * @param family optional column family
    * @param qualifier optional qualifier
    * @param actions the permissions to be granted
    * @return A {@link AccessControlProtos} GrantRequest
    */
   public static AccessControlProtos.GrantRequest buildGrantRequest(
-      String username, byte[] table, byte[] family, byte[] qualifier,
+      String username, TableName tableName, byte[] family, byte[] qualifier,
       AccessControlProtos.Permission.Action... actions) {
     AccessControlProtos.Permission.Builder permissionBuilder =
         AccessControlProtos.Permission.newBuilder();
     for (AccessControlProtos.Permission.Action a : actions) {
       permissionBuilder.addAction(a);
     }
-    if (table != null) {
-      permissionBuilder.setTable(ByteString.copyFrom(table));
+    if (tableName != null) {
+      permissionBuilder.setTableName(ProtobufUtil.toProtoTableName(tableName));
     }
     if (family != null) {
       permissionBuilder.setFamily(ByteString.copyFrom(family));
@@ -1240,22 +1241,22 @@ public final class RequestConverter {
    * Create a request to revoke user permissions.
    *
    * @param username the short user name whose permissions to be revoked
-   * @param table optional table name the permissions apply
+   * @param tableName optional table name the permissions apply
    * @param family optional column family
    * @param qualifier optional qualifier
    * @param actions the permissions to be revoked
    * @return A {@link AccessControlProtos} RevokeRequest
    */
   public static AccessControlProtos.RevokeRequest buildRevokeRequest(
-      String username, byte[] table, byte[] family, byte[] qualifier,
+      String username, TableName tableName, byte[] family, byte[] qualifier,
       AccessControlProtos.Permission.Action... actions) {
     AccessControlProtos.Permission.Builder permissionBuilder =
         AccessControlProtos.Permission.newBuilder();
     for (AccessControlProtos.Permission.Action a : actions) {
       permissionBuilder.addAction(a);
     }
-    if (table != null) {
-      permissionBuilder.setTable(ByteString.copyFrom(table));
+    if (tableName != null) {
+      permissionBuilder.setTableName(ProtobufUtil.toProtoTableName(tableName));
     }
     if (family != null) {
       permissionBuilder.setFamily(ByteString.copyFrom(family));

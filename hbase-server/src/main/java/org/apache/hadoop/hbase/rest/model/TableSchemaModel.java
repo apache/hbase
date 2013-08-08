@@ -37,6 +37,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.rest.ProtobufMessageHandler;
 import org.apache.hadoop.hbase.rest.protobuf.generated.ColumnSchemaMessage.ColumnSchema;
@@ -83,7 +84,7 @@ public class TableSchemaModel implements Serializable, ProtobufMessageHandler {
    * @param htd the table descriptor
    */
   public TableSchemaModel(HTableDescriptor htd) {
-    setName(htd.getNameAsString());
+    setName(htd.getTableName().getNameAsString());
     for (Map.Entry<ImmutableBytesWritable, ImmutableBytesWritable> e:
         htd.getValues().entrySet()) {
       addAttribute(Bytes.toString(e.getKey().get()), 
@@ -337,7 +338,7 @@ public class TableSchemaModel implements Serializable, ProtobufMessageHandler {
    * @return a table descriptor
    */
   public HTableDescriptor getTableDescriptor() {
-    HTableDescriptor htd = new HTableDescriptor(getName());
+    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(getName()));
     for (Map.Entry<QName, Object> e: getAny().entrySet()) {
       htd.setValue(e.getKey().getLocalPart(), e.getValue().toString());
     }

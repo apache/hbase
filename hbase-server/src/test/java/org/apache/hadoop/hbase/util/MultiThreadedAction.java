@@ -19,7 +19,6 @@ package org.apache.hadoop.hbase.util;
 import java.io.IOException;
 import java.util.Collection;
 import java.util.Map;
-import java.util.NavigableMap;
 import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -28,6 +27,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.util.test.LoadTestDataGenerator;
 import org.apache.hadoop.hbase.util.test.LoadTestKVGenerator;
@@ -40,7 +40,7 @@ import org.apache.hadoop.util.StringUtils;
 public abstract class MultiThreadedAction {
   private static final Log LOG = LogFactory.getLog(MultiThreadedAction.class);
 
-  protected final byte[] tableName;
+  protected final TableName tableName;
   protected final Configuration conf;
 
   protected int numThreads = 1;
@@ -129,8 +129,9 @@ public abstract class MultiThreadedAction {
 
   public static final int REPORTING_INTERVAL_MS = 5000;
 
-  public MultiThreadedAction(LoadTestDataGenerator dataGen, Configuration conf, byte[] tableName,
-      String actionLetter) {
+  public MultiThreadedAction(LoadTestDataGenerator dataGen, Configuration conf,
+                             TableName tableName,
+                             String actionLetter) {
     this.conf = conf;
     this.dataGenerator = dataGen;
     this.tableName = tableName;

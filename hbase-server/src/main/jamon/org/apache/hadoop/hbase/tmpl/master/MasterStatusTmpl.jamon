@@ -39,14 +39,17 @@ org.apache.hadoop.hbase.master.HMaster;
 org.apache.hadoop.hbase.master.AssignmentManager;
 org.apache.hadoop.hbase.master.ServerManager;
 org.apache.hadoop.hbase.HConstants;
+org.apache.hadoop.hbase.NamespaceDescriptor;
 org.apache.hadoop.hbase.ServerLoad;
 org.apache.hadoop.hbase.ServerName;
 org.apache.hadoop.hbase.client.HBaseAdmin;
 org.apache.hadoop.hbase.client.HConnectionManager;
 org.apache.hadoop.hbase.HTableDescriptor;
 org.apache.hadoop.hbase.HBaseConfiguration;
+org.apache.hadoop.hbase.TableName;
 org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
 org.apache.hadoop.hbase.master.DeadServer;
+org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 </%import>
 <%if format.equals("json") %>
   <& ../common/TaskMonitorTmpl; filter = filter; format = "json" &>
@@ -293,27 +296,39 @@ AssignmentManager assignmentManager = master.getAssignmentManager();
   </body>
 </html>
 
-
 <%def catalogTables>
+<%java>
+ HTableDescriptor[] sysTables = admin.getTableDescriptorsByNamespace(NamespaceDescriptor
+ .SYSTEM_NAMESPACE_NAME_STR);
+</%java>
 
 <table class="table table-striped">
 <tr>
+    <th>System Tables</th>
     <th>Table Name</th>
     <%if (frags != null) %>
         <th title="Fragmentation - Will be 0% after a major compaction and fluctuate during normal usage.">Frag.</th>
     </%if>
     <th>Description</th>
 </tr>
-  <%if (metaLocation != null) %>
+<%for HTableDescriptor systemTable : sysTables%>
 <tr>
-    <td><a href="table.jsp?name=<% Bytes.toString(HConstants.META_TABLE_NAME) %>"><% Bytes.toString(HConstants.META_TABLE_NAME) %></a></td>
+<%java>TableName tableName = systemTable.getTableName();</%java>
+    <td><a href="table.jsp?name=<% tableName %>"><% tableName %></a></td>
     <%if (frags != null)%>
-        <td align="center"><% frags.get(".META.") != null ? frags.get(".META.").intValue() + "%" : "n/a" %></td>
+        <td align="center"><% frags.get(tableName.getNameAsString()) != null ? frags.get(tableName.getNameAsString())
+        .intValue() + "%" : "n/a" %></td>
     </%if>
-    <td>The .META. table holds references to all User Table regions</td>
+    <%java>String description = null;
+        if (tableName.equals(TableName.META_TABLE_NAME)){
+            description = "The .META. table holds references to all User Table regions";
+        } else {
+            description = "The .NAMESPACE. table holds information about namespaces.";
+        }
+    </%java>
+    <td><% description %></td>
 </tr>
-
-  </%if>
+</%for>
 </table>
 </%def>
 
@@ -333,11 +348,12 @@ AssignmentManager assignmentManager = master.getAssignmentManager();
     </tr>
     <%for HTableDescriptor htDesc : tables%>
     <tr>
-        <td><a href=table.jsp?name=<% htDesc.getNameAsString() %>><% htDesc.getNameAsString() %></a> </td>
+        <td><a href=table.jsp?name=<% htDesc.getTableName().getNameAsString() %>><% htDesc.getTableName().getNameAsString() %></a> </td>
         <%if (frags != null) %>
-            <td align="center"><% frags.get(htDesc.getNameAsString()) != null ? frags.get(htDesc.getNameAsString()).intValue() + "%" : "n/a" %></td>
+            <td align="center"><% frags.get(htDesc.getTableName().getNameAsString()) != null ? frags.get(htDesc.getTableName().getNameAsString()).intValue() + "%" : "n/a" %></td>
         </%if>
-        <td><% master.getAssignmentManager().getRegionStates().getRegionsOfTable(htDesc.getName()).size() %>
+        <td><% master.getAssignmentManager().getRegionStates().getRegionsOfTable(htDesc
+        .getTableName()).size() %>
         <td><% htDesc.toStringCustomizedValues() %></td>
     </tr>
     </%for>
@@ -358,9 +374,13 @@ AssignmentManager assignmentManager = master.getAssignmentManager();
         <th>Creation Time</th>
     </tr>
     <%for SnapshotDescription snapshotDesc : snapshots%>
+    <%java>
+        TableName snapshotTable = TableName.valueOf(snapshotDesc.getTable());
+    </%java>
     <tr>
         <td><a href="snapshot.jsp?name=<% snapshotDesc.getName() %>"><% snapshotDesc.getName() %></a> </td>
-        <td><a href="table.jsp?name=<% snapshotDesc.getTable() %>"><% snapshotDesc.getTable() %></a></td>
+        <td><a href="table.jsp?name=<% snapshotTable.getNameAsString() %>"><% snapshotTable.getNameAsString() %></a>
+        </td>
         <td><% new Date(snapshotDesc.getCreationTime()) %></td>
     </tr>
     </%for>

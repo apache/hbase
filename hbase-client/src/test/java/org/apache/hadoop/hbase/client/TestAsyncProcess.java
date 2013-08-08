@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.client;
 
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
@@ -47,16 +48,17 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 @Category(MediumTests.class)
 public class TestAsyncProcess {
-  private static final byte[] DUMMY_TABLE = "DUMMY_TABLE".getBytes();
+  private static final TableName DUMMY_TABLE =
+      TableName.valueOf("DUMMY_TABLE");
   private static final byte[] DUMMY_BYTES_1 = "DUMMY_BYTES_1".getBytes();
   private static final byte[] DUMMY_BYTES_2 = "DUMMY_BYTES_2".getBytes();
   private static final byte[] FAILS = "FAILS".getBytes();
   private static final Configuration conf = new Configuration();
 
-
   private static ServerName sn = new ServerName("localhost:10,1254");
-  private static HRegionInfo hri1 = new HRegionInfo(DUMMY_BYTES_1);
-  private static HRegionInfo hri2 = new HRegionInfo(DUMMY_BYTES_1);
+  private static HRegionInfo hri1 = new HRegionInfo(DUMMY_TABLE, DUMMY_BYTES_1, DUMMY_BYTES_2);
+  private static HRegionInfo hri2 =
+      new HRegionInfo(DUMMY_TABLE, DUMMY_BYTES_2, HConstants.EMPTY_END_ROW);
   private static HRegionLocation loc1 = new HRegionLocation(hri1, sn);
   private static HRegionLocation loc2 = new HRegionLocation(hri2, sn);
 
@@ -118,7 +120,8 @@ public class TestAsyncProcess {
     }
 
     @Override
-    protected <R> AsyncProcess createAsyncProcess(byte[] tableName, ExecutorService pool,
+    protected <R> AsyncProcess createAsyncProcess(TableName tableName,
+                                                  ExecutorService pool,
                                                   AsyncProcess.AsyncProcessCallback<R> callback,
                                                   Configuration conf) {
       ap = new MyAsyncProcess<R>(this, callback, conf);
@@ -126,7 +129,7 @@ public class TestAsyncProcess {
     }
 
     @Override
-    public HRegionLocation locateRegion(final byte[] tableName,
+    public HRegionLocation locateRegion(final TableName tableName,
                                         final byte[] row) {
       return loc1;
     }

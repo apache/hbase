@@ -37,6 +37,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
@@ -45,6 +46,7 @@ import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.errorhandling.ForeignExceptionDispatcher;
 import org.apache.hadoop.hbase.io.HFileLink;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
+import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
@@ -107,25 +109,33 @@ public class RestoreSnapshotHelper {
   private final MonitoredTask status;
 
   private final SnapshotDescription snapshotDesc;
+  private final TableName snapshotTable;
   private final Path snapshotDir;
 
   private final HTableDescriptor tableDesc;
+  private final Path rootDir;
   private final Path tableDir;
 
   private final Configuration conf;
   private final FileSystem fs;
 
-  public RestoreSnapshotHelper(final Configuration conf, final FileSystem fs,
-      final SnapshotDescription snapshotDescription, final Path snapshotDir,
-      final HTableDescriptor tableDescriptor, final Path tableDir,
-      final ForeignExceptionDispatcher monitor, final MonitoredTask status)
+  public RestoreSnapshotHelper(final Configuration conf,
+      final FileSystem fs,
+      final SnapshotDescription snapshotDescription,
+      final Path snapshotDir,
+      final HTableDescriptor tableDescriptor,
+      final Path rootDir,
+      final ForeignExceptionDispatcher monitor,
+      final MonitoredTask status)
   {
     this.fs = fs;
     this.conf = conf;
     this.snapshotDesc = snapshotDescription;
+    this.snapshotTable = TableName.valueOf(snapshotDescription.getTable());
     this.snapshotDir = snapshotDir;
     this.tableDesc = tableDescriptor;
-    this.tableDir = tableDir;
+    this.rootDir = rootDir;
+    this.tableDir = FSUtils.getTableDir(rootDir, tableDesc.getTableName());
     this.monitor = monitor;
     this.status = status;
   }
@@ -311,7 +321,7 @@ public class RestoreSnapshotHelper {
     Map<String, List<String>> snapshotFiles =
                 SnapshotReferenceUtil.getRegionHFileReferences(fs, snapshotRegionDir);
     Path regionDir = new Path(tableDir, regionInfo.getEncodedName());
-    String tableName = tableDesc.getNameAsString();
+    String tableName = tableDesc.getTableName().getNameAsString();
 
     // Restore families present in the table
     for (Path familyDir: FSUtils.getFamilyDirs(fs, regionDir)) {
@@ -412,7 +422,7 @@ public class RestoreSnapshotHelper {
     }
 
     // create the regions on disk
-    ModifyRegionUtils.createRegions(conf, tableDir.getParent(),
+    ModifyRegionUtils.createRegions(conf, rootDir,
       tableDesc, clonedRegionsInfo, new ModifyRegionUtils.RegionFillTask() {
         public void fillRegion(final HRegion region) throws IOException {
           cloneRegion(region, snapshotRegions.get(region.getRegionInfo().getEncodedName()));
@@ -437,7 +447,7 @@ public class RestoreSnapshotHelper {
       throws IOException {
     final Path snapshotRegionDir = new Path(snapshotDir, snapshotRegionInfo.getEncodedName());
     final Path regionDir = new Path(tableDir, region.getRegionInfo().getEncodedName());
-    final String tableName = tableDesc.getNameAsString();
+    final String tableName = tableDesc.getTableName().getNameAsString();
     SnapshotReferenceUtil.visitRegionStoreFiles(fs, snapshotRegionDir,
       new FSVisitor.StoreFileVisitor() {
         public void storeFile (final String region, final String family, final String hfile)
@@ -493,9 +503,9 @@ public class RestoreSnapshotHelper {
   private void restoreReferenceFile(final Path familyDir, final HRegionInfo regionInfo,
       final String hfileName) throws IOException {
     // Extract the referred information (hfile name and parent region)
-    String tableName = snapshotDesc.getTable();
-    Path refPath = StoreFileInfo.getReferredToFile(new Path(new Path(new Path(tableName,
-        regionInfo.getEncodedName()), familyDir.getName()), hfileName));
+    Path refPath = StoreFileInfo.getReferredToFile(new Path(new Path(new Path(
+        snapshotTable.getNameAsString(), regionInfo.getEncodedName()), familyDir.getName()),
+        hfileName));
     String snapshotRegionName = refPath.getParent().getParent().getName();
     String fileName = refPath.getName();
 
@@ -506,13 +516,13 @@ public class RestoreSnapshotHelper {
     // The output file should be a reference link table=snapshotRegion-fileName.clonedRegionName
     String refLink = fileName;
     if (!HFileLink.isHFileLink(fileName)) {
-      refLink = HFileLink.createHFileLinkName(tableName, snapshotRegionName, fileName);
+      refLink = HFileLink.createHFileLinkName(snapshotTable, snapshotRegionName, fileName);
     }
     Path outPath = new Path(familyDir, refLink + '.' + clonedRegionName);
 
     // Create the new reference
     Path linkPath = new Path(familyDir,
-      HFileLink.createHFileLinkName(tableName, regionInfo.getEncodedName(), hfileName));
+      HFileLink.createHFileLinkName(snapshotTable, regionInfo.getEncodedName(), hfileName));
     InputStream in = new HFileLink(conf, linkPath).open(fs);
     OutputStream out = fs.create(outPath);
     IOUtils.copyBytes(in, out, conf);
@@ -527,7 +537,7 @@ public class RestoreSnapshotHelper {
    * @return the new HRegion instance
    */
   public HRegionInfo cloneRegionInfo(final HRegionInfo snapshotRegionInfo) {
-    return new HRegionInfo(tableDesc.getName(),
+    return new HRegionInfo(tableDesc.getTableName(),
                       snapshotRegionInfo.getStartKey(), snapshotRegionInfo.getEndKey(),
                       snapshotRegionInfo.isSplit(), snapshotRegionInfo.getRegionId());
   }
@@ -543,7 +553,7 @@ public class RestoreSnapshotHelper {
    */
   private void restoreWALs() throws IOException {
     final SnapshotLogSplitter logSplitter = new SnapshotLogSplitter(conf, fs, tableDir,
-                                Bytes.toBytes(snapshotDesc.getTable()), regionsMap);
+        snapshotTable, regionsMap);
     try {
       // Recover.Edits
       SnapshotReferenceUtil.visitRecoveredEdits(fs, snapshotDir,
@@ -578,7 +588,8 @@ public class RestoreSnapshotHelper {
       HRegionInfo hri = HRegionFileSystem.loadRegionInfoFileContent(fs, regionDir.getPath());
       regions.add(hri);
     }
-    LOG.debug("found " + regions.size() + " regions for table=" + tableDesc.getNameAsString());
+    LOG.debug("found " + regions.size() + " regions for table=" +
+        tableDesc.getTableName().getNameAsString());
     return regions;
   }
 
@@ -591,7 +602,7 @@ public class RestoreSnapshotHelper {
    * @throws IOException
    */
   public static HTableDescriptor cloneTableSchema(final HTableDescriptor snapshotTableDescriptor,
-      final byte[] tableName) throws IOException {
+      final TableName tableName) throws IOException {
     HTableDescriptor htd = new HTableDescriptor(tableName);
     for (HColumnDescriptor hcd: snapshotTableDescriptor.getColumnFamilies()) {
       htd.addFamily(hcd);

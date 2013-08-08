@@ -68,6 +68,10 @@ import com.google.common.primitives.Longs;
 @InterfaceStability.Evolving
 public class KeyValue implements Cell, HeapSize, Cloneable {
   static final Log LOG = LogFactory.getLog(KeyValue.class);
+
+  private static final int META_LENGTH =
+      TableName.META_TABLE_NAME.getName().length; // 'hbase.meta' length
+
   // TODO: Group Key-only comparators and operations into a Key class, just
   // for neatness sake, if can figure what to call it.
 
@@ -123,11 +127,11 @@ public class KeyValue implements Cell, HeapSize, Cloneable {
    * @param tableName  The table name.
    * @return The comparator.
    */
-  public static KeyComparator getRowComparator(byte [] tableName) {
-    if(Bytes.equals(HConstants.ROOT_TABLE_NAME,tableName)) {
+  public static KeyComparator getRowComparator(TableName tableName) {
+    if(TableName.ROOT_TABLE_NAME.equals(tableName)) {
       return ROOT_COMPARATOR.getRawComparator();
     }
-    if(Bytes.equals(HConstants.META_TABLE_NAME, tableName)) {
+    if(TableName.META_TABLE_NAME.equals(tableName)) {
       return META_COMPARATOR.getRawComparator();
     }
     return COMPARATOR.getRawComparator();
@@ -2399,14 +2403,13 @@ public class KeyValue implements Cell, HeapSize, Cloneable {
       // Rows look like this: .META.,ROW_FROM_META,RID
       //        LOG.info("ROOT " + Bytes.toString(left, loffset, llength) +
       //          "---" + Bytes.toString(right, roffset, rlength));
-      final int metalength = 7; // '.META.' length
-      int lmetaOffsetPlusDelimiter = loffset + metalength;
+      int lmetaOffsetPlusDelimiter = loffset + META_LENGTH + 1;
       int leftFarDelimiter = getDelimiterInReverse(left,
           lmetaOffsetPlusDelimiter,
-          llength - metalength, HConstants.DELIMITER);
-      int rmetaOffsetPlusDelimiter = roffset + metalength;
+          llength - META_LENGTH - 1, HConstants.DELIMITER);
+      int rmetaOffsetPlusDelimiter = roffset + META_LENGTH + 1;
       int rightFarDelimiter = getDelimiterInReverse(right,
-          rmetaOffsetPlusDelimiter, rlength - metalength,
+          rmetaOffsetPlusDelimiter, rlength - META_LENGTH - 1,
           HConstants.DELIMITER);
       if (leftFarDelimiter < 0 && rightFarDelimiter >= 0) {
         // Nothing between .META. and regionid.  Its first key.

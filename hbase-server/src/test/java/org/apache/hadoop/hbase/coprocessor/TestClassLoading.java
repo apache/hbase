@@ -36,7 +36,6 @@ import org.apache.hadoop.hbase.RegionLoad;
 
 import java.io.*;
 import java.util.*;
-import java.util.jar.*;
 
 import org.junit.*;
 import org.junit.experimental.categories.Category;
@@ -139,7 +138,7 @@ public class TestClassLoading {
     LOG.info("Copied jar file to HDFS: " + jarFileOnHDFS2);
 
     // create a table that references the coprocessors
-    HTableDescriptor htd = new HTableDescriptor(tableName);
+    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(tableName));
     htd.addFamily(new HColumnDescriptor("test"));
       // without configuration values
     htd.setValue("COPROCESSOR$1", jarFileOnHDFS1.toString() + "|" + cpName1 +
@@ -161,7 +160,7 @@ public class TestClassLoading {
     byte[] startKey = {10, 63};
     byte[] endKey = {12, 43};
     admin.createTable(htd, startKey, endKey, 4);
-    waitForTable(htd.getName());
+    waitForTable(htd.getTableName());
 
     // verify that the coprocessors were loaded
     boolean foundTableRegion=false;
@@ -233,13 +232,13 @@ public class TestClassLoading {
     File jarFile = buildCoprocessorJar(cpName3);
 
     // create a table that references the jar
-    HTableDescriptor htd = new HTableDescriptor(cpName3);
+    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(cpName3));
     htd.addFamily(new HColumnDescriptor("test"));
     htd.setValue("COPROCESSOR$1", getLocalPath(jarFile) + "|" + cpName3 + "|" +
       Coprocessor.PRIORITY_USER);
     HBaseAdmin admin = TEST_UTIL.getHBaseAdmin();
     admin.createTable(htd);
-    waitForTable(htd.getName());
+    waitForTable(htd.getTableName());
 
     // verify that the coprocessor was loaded
     boolean found = false;
@@ -259,13 +258,13 @@ public class TestClassLoading {
     File jarFile = buildCoprocessorJar(cpName4);
 
     // create a table that references the jar
-    HTableDescriptor htd = new HTableDescriptor(cpName4);
+    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(cpName4));
     htd.addFamily(new HColumnDescriptor("test"));
     htd.setValue("COPROCESSOR$1", getLocalPath(jarFile) + "|" + cpName4 + "|" +
       Coprocessor.PRIORITY_USER);
     HBaseAdmin admin = TEST_UTIL.getHBaseAdmin();
     admin.createTable(htd);
-    waitForTable(htd.getName());
+    waitForTable(htd.getTableName());
 
     // verify that the coprocessor was loaded correctly
     boolean found = false;
@@ -307,7 +306,7 @@ public class TestClassLoading {
         " | org.apache.hadoop.hbase.coprocessor.SimpleRegionObserver | | k=v ";
 
     // create a table that references the jar
-    HTableDescriptor htd = new HTableDescriptor(tableName);
+    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(tableName));
     htd.addFamily(new HColumnDescriptor("test"));
 
     // add 3 coprocessors by setting htd attributes directly.
@@ -333,7 +332,7 @@ public class TestClassLoading {
       admin.deleteTable(tableName);
     }
     admin.createTable(htd);
-    waitForTable(htd.getName());
+    waitForTable(htd.getTableName());
 
     // verify that the coprocessor was loaded
     boolean found_2 = false, found_1 = false, found_3 = false,
@@ -409,7 +408,7 @@ public class TestClassLoading {
     LOG.info("Copied jar file to HDFS: " + jarFileOnHDFS);
 
     // create a table that references the coprocessors
-    HTableDescriptor htd = new HTableDescriptor(tableName);
+    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(tableName));
     htd.addFamily(new HColumnDescriptor("test"));
       // without configuration values
     htd.setValue("COPROCESSOR$1", jarFileOnHDFS.toString() + "|" + cpName1 +
@@ -425,7 +424,7 @@ public class TestClassLoading {
       admin.deleteTable(tableName);
     }
     admin.createTable(htd);
-    waitForTable(htd.getName());
+    waitForTable(htd.getTableName());
 
     // verify that the coprocessors were loaded
     boolean found1 = false, found2 = false, found2_k1 = false,
@@ -542,9 +541,9 @@ public class TestClassLoading {
     assertEquals(loadedMasterCoprocessorsVerify, loadedMasterCoprocessors);
   }
 
-  private void waitForTable(byte[] name) throws InterruptedException, IOException {
+  private void waitForTable(TableName name) throws InterruptedException, IOException {
     // First wait until all regions are online
-    TEST_UTIL.waitTableEnabled(name);
+    TEST_UTIL.waitTableEnabled(name.getName());
     // Now wait a bit longer for the coprocessor hosts to load the CPs
     Thread.sleep(1000);
   }

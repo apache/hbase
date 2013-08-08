@@ -27,6 +27,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.KeyValue;
@@ -327,7 +328,7 @@ public interface Store extends HeapSize, StoreConfigInformation {
 
   String getColumnFamilyName();
 
-  String getTableName();
+  TableName getTableName();
 
   /*
    * @param o Observer who wants to know about changes in set of Readers

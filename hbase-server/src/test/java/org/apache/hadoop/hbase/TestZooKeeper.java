@@ -232,8 +232,8 @@ public class TestZooKeeper {
    * @throws Exception
    */
   private void testSanity(final String testName) throws Exception{
-    String tableName = testName + "." + System.currentTimeMillis();
-    HTableDescriptor desc = new HTableDescriptor(tableName);
+    String tableName = testName + "_" + System.currentTimeMillis();
+    HTableDescriptor desc = new HTableDescriptor(TableName.valueOf(tableName));
     HColumnDescriptor family = new HColumnDescriptor("fam");
     desc.addFamily(family);
     LOG.info("Creating table " + tableName);
@@ -258,10 +258,10 @@ public class TestZooKeeper {
   public void testMultipleZK()
   throws IOException, NoSuchMethodException, InvocationTargetException, IllegalAccessException {
     HTable localMeta =
-      new HTable(new Configuration(TEST_UTIL.getConfiguration()), HConstants.META_TABLE_NAME);
+      new HTable(new Configuration(TEST_UTIL.getConfiguration()), TableName.META_TABLE_NAME);
     Configuration otherConf = new Configuration(TEST_UTIL.getConfiguration());
     otherConf.set(HConstants.ZOOKEEPER_QUORUM, "127.0.0.1");
-    HTable ipMeta = new HTable(otherConf, HConstants.META_TABLE_NAME);
+    HTable ipMeta = new HTable(otherConf, TableName.META_TABLE_NAME);
 
     // dummy, just to open the connection
     final byte [] row = new byte [] {'r'};
@@ -483,7 +483,7 @@ public class TestZooKeeper {
         Bytes.toBytes("c"), Bytes.toBytes("d"), Bytes.toBytes("e"), Bytes.toBytes("f"),
         Bytes.toBytes("g"), Bytes.toBytes("h"), Bytes.toBytes("i"), Bytes.toBytes("j") };
       String tableName = "testRegionAssignmentAfterMasterRecoveryDueToZKExpiry";
-      admin.createTable(new HTableDescriptor(tableName), SPLIT_KEYS);
+      admin.createTable(new HTableDescriptor(TableName.valueOf(tableName)), SPLIT_KEYS);
       ZooKeeperWatcher zooKeeperWatcher = HBaseTestingUtility.getZooKeeperWatcher(TEST_UTIL);
       ZKAssign.blockUntilNoRIT(zooKeeperWatcher);
       m.getZooKeeperWatcher().close();
@@ -519,7 +519,7 @@ public class TestZooKeeper {
         Bytes.toBytes("3"), Bytes.toBytes("4"), Bytes.toBytes("5") };
 
       String tableName = "testLogSplittingAfterMasterRecoveryDueToZKExpiry";
-      HTableDescriptor htd = new HTableDescriptor(tableName);
+      HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(tableName));
       HColumnDescriptor hcd = new HColumnDescriptor("col");
       htd.addFamily(hcd);
       admin.createTable(htd, SPLIT_KEYS);

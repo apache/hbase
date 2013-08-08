@@ -23,23 +23,22 @@ import java.util.Set;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.catalog.MetaReader;
 import org.apache.hadoop.hbase.master.MasterServices;
+import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
-import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
 import org.apache.hadoop.hbase.snapshot.CorruptedSnapshotException;
 import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.snapshot.TakeSnapshotUtils;
-import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.HFileArchiveUtil;
@@ -79,7 +78,7 @@ public final class MasterSnapshotVerifier {
   private SnapshotDescription snapshot;
   private FileSystem fs;
   private Path rootDir;
-  private String tableName;
+  private TableName tableName;
   private MasterServices services;
 
   /**
@@ -92,7 +91,7 @@ public final class MasterSnapshotVerifier {
     this.services = services;
     this.snapshot = snapshot;
     this.rootDir = rootDir;
-    this.tableName = snapshot.getTable();
+    this.tableName = TableName.valueOf(snapshot.getTable());
   }
 
   /**
@@ -141,7 +140,7 @@ public final class MasterSnapshotVerifier {
    */
   private void verifyRegions(Path snapshotDir) throws IOException {
     List<HRegionInfo> regions = MetaReader.getTableRegions(this.services.getCatalogTracker(),
-      Bytes.toBytes(tableName));
+        tableName);
     for (HRegionInfo region : regions) {
       // if offline split parent, skip it
       if (region.isOffline() && (region.isSplit() || region.isSplitParent())) {
@@ -189,7 +188,7 @@ public final class MasterSnapshotVerifier {
     if (columnFamilies == null) return;
 
     // setup the suffixes for the snapshot directories
-    Path tableNameSuffix = new Path(tableName);
+    Path tableNameSuffix = FSUtils.getTableDir(new Path("./"), tableName);
     Path regionNameSuffix = new Path(tableNameSuffix, region.getEncodedName());
 
     // get the potential real paths

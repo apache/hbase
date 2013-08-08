@@ -78,9 +78,7 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
    */
   private static final byte TABLE_DESCRIPTOR_VERSION = 7;
 
-  private byte [] name = HConstants.EMPTY_BYTE_ARRAY;
-
-  private String nameAsString = "";
+  private TableName name = null;
 
   /**
    * A map which holds the metadata information of the table. This metadata
@@ -260,10 +258,8 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
    * <em> INTERNAL </em> Private constructor used internally creating table descriptors for
    * catalog tables, <code>.META.</code> and <code>-ROOT-</code>.
    */
-  protected HTableDescriptor(final byte [] name, HColumnDescriptor[] families) {
-    this.name = name.clone();
-    this.nameAsString = Bytes.toString(this.name);
-    setMetaFlags(name);
+  protected HTableDescriptor(final TableName name, HColumnDescriptor[] families) {
+    setName(name);
     for(HColumnDescriptor descriptor : families) {
       this.families.put(descriptor.getName(), descriptor);
     }
@@ -273,11 +269,9 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
    * <em> INTERNAL </em>Private constructor used internally creating table descriptors for
    * catalog tables, <code>.META.</code> and <code>-ROOT-</code>.
    */
-  protected HTableDescriptor(final byte [] name, HColumnDescriptor[] families,
+  protected HTableDescriptor(final TableName name, HColumnDescriptor[] families,
       Map<ImmutableBytesWritable,ImmutableBytesWritable> values) {
-    this.name = name.clone();
-    this.nameAsString = Bytes.toString(this.name);
-    setMetaFlags(name);
+    setName(name);
     for(HColumnDescriptor descriptor : families) {
       this.families.put(descriptor.getName(), descriptor);
     }
@@ -290,7 +284,6 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
   /**
    * Default constructor which constructs an empty object.
    * For deserializing an HTableDescriptor instance only.
-   * @see #HTableDescriptor(byte[])
    * @deprecated Used by Writables and Writables are going away.
    */
   @Deprecated
@@ -299,30 +292,33 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
   }
 
   /**
-   * Construct a table descriptor specifying table name.
+   * Construct a table descriptor specifying a TableName object
    * @param name Table name.
-   * @throws IllegalArgumentException if passed a table name
-   * that is made of other than 'word' characters, underscore or period: i.e.
-   * <code>[a-zA-Z_0-9.].
    * @see <a href="HADOOP-1581">HADOOP-1581 HBASE: Un-openable tablename bug</a>
    */
-  public HTableDescriptor(final String name) {
-    this(Bytes.toBytes(name));
+  public HTableDescriptor(final TableName name) {
+    super();
+    setName(name);
   }
 
   /**
    * Construct a table descriptor specifying a byte array table name
-   * @param name - Table name as a byte array.
-   * @throws IllegalArgumentException if passed a table name
-   * that is made of other than 'word' characters, underscore or period: i.e.
-   * <code>[a-zA-Z_0-9-.].
+   * @param name Table name.
    * @see <a href="HADOOP-1581">HADOOP-1581 HBASE: Un-openable tablename bug</a>
    */
-  public HTableDescriptor(final byte [] name) {
-    super();
-    setMetaFlags(this.name);
-    this.name = this.isMetaRegion()? name: isLegalTableName(name);
-    this.nameAsString = Bytes.toString(this.name);
+  @Deprecated
+  public HTableDescriptor(final byte[] name) {
+    this(TableName.valueOf(name));
+  }
+
+  /**
+   * Construct a table descriptor specifying a String table name
+   * @param name Table name.
+   * @see <a href="HADOOP-1581">HADOOP-1581 HBASE: Un-openable tablename bug</a>
+   */
+  @Deprecated
+  public HTableDescriptor(final String name) {
+    this(TableName.valueOf(name));
   }
 
   /**
@@ -334,8 +330,7 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
    */
   public HTableDescriptor(final HTableDescriptor desc) {
     super();
-    this.name = desc.name.clone();
-    this.nameAsString = Bytes.toString(this.name);
+    setName(desc.name);
     setMetaFlags(this.name);
     for (HColumnDescriptor c: desc.families.values()) {
       this.families.put(c.getName(), new HColumnDescriptor(c));
@@ -356,10 +351,9 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
    * Called by constructors.
    * @param name
    */
-  private void setMetaFlags(final byte [] name) {
-    setRootRegion(Bytes.equals(name, HConstants.ROOT_TABLE_NAME));
+  private void setMetaFlags(final TableName name) {
     setMetaRegion(isRootRegion() ||
-      Bytes.equals(name, HConstants.META_TABLE_NAME));
+        name.equals(TableName.META_TABLE_NAME));
   }
 
   /**
@@ -387,10 +381,10 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
   }
 
   /**
-   * Checks if this table is either <code> -ROOT- </code> or <code> .META. </code>
+   * Checks if this table is <code> .META. </code>
    * region.
    *
-   * @return true if this is either a <code> -ROOT- </code> or <code> .META. </code>
+   * @return true if this table is <code> .META. </code>
    * region
    */
   public boolean isMetaRegion() {
@@ -436,56 +430,15 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
   }
 
   /**
-   * Checks of the tableName being passed represents either
-   * <code > -ROOT- </code> or <code> .META. </code>
+   * Checks of the tableName being passed is a system table
    *
-   * @return true if a tablesName is either <code> -ROOT- </code>
-   * or <code> .META. </code>
+   *
+   * @return true if a tableName is a member of the system
+   * namesapce (aka hbase)
    */
-  public static boolean isMetaTable(final byte [] tableName) {
-    return Bytes.equals(tableName, HConstants.ROOT_TABLE_NAME) ||
-      Bytes.equals(tableName, HConstants.META_TABLE_NAME);
-  }
-
-  // A non-capture group so that this can be embedded.
-  public static final String VALID_USER_TABLE_REGEX = "(?:[a-zA-Z_0-9][a-zA-Z_0-9.-]*)";
-
-  /**
-   * Check passed byte buffer, "tableName", is legal user-space table name.
-   * @return Returns passed <code>tableName</code> param
-   * @throws NullPointerException If passed <code>tableName</code> is null
-   * @throws IllegalArgumentException if passed a tableName
-   * that is made of other than 'word' characters or underscores: i.e.
-   * <code>[a-zA-Z_0-9].
-   */
-  public static byte [] isLegalTableName(final byte [] tableName) {
-    if (tableName == null || tableName.length <= 0) {
-      throw new IllegalArgumentException("Name is null or empty");
-    }
-    if (tableName[0] == '.' || tableName[0] == '-') {
-      throw new IllegalArgumentException("Illegal first character <" + tableName[0] +
-          "> at 0. User-space table names can only start with 'word " +
-          "characters': i.e. [a-zA-Z_0-9]: " + Bytes.toString(tableName));
-    }
-    if (HConstants.CLUSTER_ID_FILE_NAME.equalsIgnoreCase(Bytes
-        .toString(tableName))
-        || HConstants.SPLIT_LOGDIR_NAME.equalsIgnoreCase(Bytes
-            .toString(tableName))
-        || HConstants.VERSION_FILE_NAME.equalsIgnoreCase(Bytes
-            .toString(tableName))) {
-      throw new IllegalArgumentException(Bytes.toString(tableName)
-          + " conflicted with system reserved words");
-    }
-    for (int i = 0; i < tableName.length; i++) {
-      if (Character.isLetterOrDigit(tableName[i]) || tableName[i] == '_' ||
-    		  tableName[i] == '-' || tableName[i] == '.') {
-        continue;
-      }
-      throw new IllegalArgumentException("Illegal character <" + tableName[i] +
-        "> at " + i + ". User-space table names can only contain " +
-        "'word characters': i.e. [a-zA-Z_0-9-.]: " + Bytes.toString(tableName));
-    }
-    return tableName;
+  public static boolean isSystemTable(final TableName tableName) {
+    return tableName.getNamespaceAsString()
+        .equals(NamespaceDescriptor.SYSTEM_NAMESPACE_NAME_STR);
   }
 
   /**
@@ -710,12 +663,21 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
   }
 
   /**
+   * Get the name of the table
+   *
+   * @return TableName
+   */
+  public TableName getTableName() {
+    return name;
+  }
+
+  /**
    * Get the name of the table as a byte array.
    *
    * @return name of table
    */
-  public byte [] getName() {
-    return name;
+  public byte[] getName() {
+    return name.getName();
   }
 
   /**
@@ -724,7 +686,7 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
    * @return name of table as a String
    */
   public String getNameAsString() {
-    return this.nameAsString;
+    return name.getNameAsString();
   }
 
   /**
@@ -744,9 +706,14 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
    *
    * @param name name of table
    */
+  @Deprecated
   public void setName(byte[] name) {
+    setName(TableName.valueOf(name));
+  }
+
+  @Deprecated
+  public void setName(TableName name) {
     this.name = name;
-    this.nameAsString = Bytes.toString(this.name);
     setMetaFlags(this.name);
   }
 
@@ -839,7 +806,7 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
   @Override
   public String toString() {
     StringBuilder s = new StringBuilder();
-    s.append('\'').append(Bytes.toString(name)).append('\'');
+    s.append('\'').append(Bytes.toString(name.getName())).append('\'');
     s.append(getValues(true));
     for (HColumnDescriptor f : families.values()) {
       s.append(", ").append(f);
@@ -853,7 +820,7 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
    */
   public String toStringCustomizedValues() {
     StringBuilder s = new StringBuilder();
-    s.append('\'').append(Bytes.toString(name)).append('\'');
+    s.append('\'').append(Bytes.toString(name.getName())).append('\'');
     s.append(getValues(false));
     for(HColumnDescriptor hcd : families.values()) {
       s.append(", ").append(hcd.toStringCustomizedValues());
@@ -978,7 +945,7 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
    */
   @Override
   public int hashCode() {
-    int result = Bytes.hashCode(this.name);
+    int result = this.name.hashCode();
     result ^= Byte.valueOf(TABLE_DESCRIPTOR_VERSION).hashCode();
     if (this.families != null && this.families.size() > 0) {
       for (HColumnDescriptor e: this.families.values()) {
@@ -1002,8 +969,7 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
     if (version < 3)
       throw new IOException("versions < 3 are not supported (and never existed!?)");
     // version 3+
-    name = Bytes.readByteArray(in);
-    nameAsString = Bytes.toString(this.name);
+    name = TableName.valueOf(Bytes.readByteArray(in));
     setRootRegion(in.readBoolean());
     setMetaRegion(in.readBoolean());
     values.clear();
@@ -1046,8 +1012,8 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
   @Deprecated
   @Override
   public void write(DataOutput out) throws IOException {
-	out.writeInt(TABLE_DESCRIPTOR_VERSION);
-    Bytes.writeByteArray(out, name);
+	  out.writeInt(TABLE_DESCRIPTOR_VERSION);
+    Bytes.writeByteArray(out, name.toBytes());
     out.writeBoolean(isRootRegion());
     out.writeBoolean(isMetaRegion());
     out.writeInt(values.size());
@@ -1080,7 +1046,7 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
    */
   @Override
   public int compareTo(final HTableDescriptor other) {
-    int result = Bytes.compareTo(this.name, other.name);
+    int result = this.name.compareTo(other.name);
     if (result == 0) {
       result = families.size() - other.families.size();
     }
@@ -1350,17 +1316,24 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
    * Returns the {@link Path} object representing the table directory under
    * path rootdir
    *
+   * Deprecated use FSUtils.getTableDir() instead.
+   *
    * @param rootdir qualified path of HBase root directory
    * @param tableName name of table
    * @return {@link Path} for table
    */
+  @Deprecated
   public static Path getTableDir(Path rootdir, final byte [] tableName) {
-    return new Path(rootdir, Bytes.toString(tableName));
+    //This is bad I had to mirror code from FSUTils.getTableDir since
+    //there is no module dependency between hbase-client and hbase-server
+    TableName name = TableName.valueOf(tableName);
+    return new Path(rootdir, new Path(HConstants.BASE_NAMESPACE_DIR,
+              new Path(name.getNamespaceAsString(), new Path(name.getQualifierAsString()))));
   }
 
   /** Table descriptor for <core>-ROOT-</code> catalog table */
   public static final HTableDescriptor ROOT_TABLEDESC = new HTableDescriptor(
-      HConstants.ROOT_TABLE_NAME,
+      TableName.ROOT_TABLE_NAME,
       new HColumnDescriptor[] {
           new HColumnDescriptor(HConstants.CATALOG_FAMILY)
               // Ten is arbitrary number.  Keep versions to help debugging.
@@ -1373,7 +1346,8 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
 
   /** Table descriptor for <code>.META.</code> catalog table */
   public static final HTableDescriptor META_TABLEDESC = new HTableDescriptor(
-      HConstants.META_TABLE_NAME, new HColumnDescriptor[] {
+      TableName.META_TABLE_NAME,
+      new HColumnDescriptor[] {
           new HColumnDescriptor(HConstants.CATALOG_FAMILY)
               // Ten is arbitrary number.  Keep versions to help debugging.
               .setMaxVersions(10)
@@ -1395,6 +1369,21 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
     }
   }
 
+  public final static String NAMESPACE_FAMILY_INFO = "info";
+  public final static byte[] NAMESPACE_FAMILY_INFO_BYTES = Bytes.toBytes(NAMESPACE_FAMILY_INFO);
+  public final static byte[] NAMESPACE_COL_DESC_BYTES = Bytes.toBytes("d");
+
+  /** Table descriptor for namespace table */
+  public static final HTableDescriptor NAMESPACE_TABLEDESC = new HTableDescriptor(
+      TableName.NAMESPACE_TABLE_NAME,
+      new HColumnDescriptor[] {
+          new HColumnDescriptor(NAMESPACE_FAMILY_INFO)
+              // Ten is arbitrary number.  Keep versions to help debugging.
+              .setMaxVersions(10)
+              .setInMemory(true)
+              .setBlocksize(8 * 1024)
+              .setScope(HConstants.REPLICATION_SCOPE_LOCAL)
+      });
 
   @Deprecated
   public void setOwner(User owner) {
@@ -1458,7 +1447,7 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
    */
   public TableSchema convert() {
     TableSchema.Builder builder = TableSchema.newBuilder();
-    builder.setName(ByteString.copyFrom(getName()));
+    builder.setTableName(ProtobufUtil.toProtoTableName(getTableName()));
     for (Map.Entry<ImmutableBytesWritable, ImmutableBytesWritable> e: this.values.entrySet()) {
       BytesBytesPair.Builder aBuilder = BytesBytesPair.newBuilder();
       aBuilder.setFirst(ByteString.copyFrom(e.getKey().get()));
@@ -1488,7 +1477,9 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
     for (ColumnFamilySchema cfs: list) {
       hcds[index++] = HColumnDescriptor.convert(cfs);
     }
-    HTableDescriptor htd = new HTableDescriptor(ts.getName().toByteArray(), hcds);
+    HTableDescriptor htd = new HTableDescriptor(
+        ProtobufUtil.toTableName(ts.getTableName()),
+        hcds);
     for (BytesBytesPair a: ts.getAttributesList()) {
       htd.setValue(a.getFirst().toByteArray(), a.getSecond().toByteArray());
     }

@@ -27,6 +27,7 @@ import java.util.Set;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
@@ -62,7 +63,7 @@ public class TestRestoreSnapshotFromClient {
   private byte[] snapshotName2;
   private int snapshot0Rows;
   private int snapshot1Rows;
-  private byte[] tableName;
+  private TableName tableName;
   private HBaseAdmin admin;
 
   @BeforeClass
@@ -93,7 +94,8 @@ public class TestRestoreSnapshotFromClient {
     this.admin = TEST_UTIL.getHBaseAdmin();
 
     long tid = System.currentTimeMillis();
-    tableName = Bytes.toBytes("testtb-" + tid);
+    tableName =
+        TableName.valueOf("testtb-" + tid);
     emptySnapshot = Bytes.toBytes("emptySnaptb-" + tid);
     snapshotName0 = Bytes.toBytes("snaptb0-" + tid);
     snapshotName1 = Bytes.toBytes("snaptb1-" + tid);
@@ -221,7 +223,8 @@ public class TestRestoreSnapshotFromClient {
 
   @Test
   public void testRestoreSnapshotOfCloned() throws IOException, InterruptedException {
-    byte[] clonedTableName = Bytes.toBytes("clonedtb-" + System.currentTimeMillis());
+    TableName clonedTableName =
+        TableName.valueOf("clonedtb-" + System.currentTimeMillis());
     admin.cloneSnapshot(snapshotName0, clonedTableName);
     SnapshotTestingUtils.verifyRowCount(TEST_UTIL, clonedTableName, snapshot0Rows);
     admin.disableTable(clonedTableName);
@@ -241,10 +244,10 @@ public class TestRestoreSnapshotFromClient {
     TEST_UTIL.getMiniHBaseCluster().getMaster().getHFileCleaner().choreForTesting();
   }
 
-  private Set<String> getFamiliesFromFS(final byte[] tableName) throws IOException {
+  private Set<String> getFamiliesFromFS(final TableName tableName) throws IOException {
     MasterFileSystem mfs = TEST_UTIL.getMiniHBaseCluster().getMaster().getMasterFileSystem();
     Set<String> families = new HashSet<String>();
-    Path tableDir = HTableDescriptor.getTableDir(mfs.getRootDir(), tableName);
+    Path tableDir = FSUtils.getTableDir(mfs.getRootDir(), tableName);
     for (Path regionDir: FSUtils.getRegionDirs(mfs.getFileSystem(), tableDir)) {
       for (Path familyDir: FSUtils.getFamilyDirs(mfs.getFileSystem(), regionDir)) {
         families.add(familyDir.getName());

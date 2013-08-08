@@ -35,6 +35,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
@@ -42,6 +43,7 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
+import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
@@ -100,7 +102,7 @@ public class TestRegionPlacement {
       servers.add(server);
     }
     List<HRegionInfo> regions = new ArrayList<HRegionInfo>(1);
-    HRegionInfo region = new HRegionInfo(("foobar").getBytes());
+    HRegionInfo region = new HRegionInfo(TableName.valueOf("foobar"));
     regions.add(region);
     Map<ServerName,List<HRegionInfo>> assignmentMap = balancer.roundRobinAssignment(regions,
         servers);
@@ -160,7 +162,7 @@ public class TestRegionPlacement {
       servers.add(server);
     }
     List<HRegionInfo> regions = new ArrayList<HRegionInfo>(1);
-    HRegionInfo region = new HRegionInfo(("foobar").getBytes());
+    HRegionInfo region = new HRegionInfo(TableName.valueOf("foobar"));
     regions.add(region);
     ServerName serverBefore = balancer.randomAssignment(region, servers);
     List<ServerName> favoredNodesBefore =
@@ -256,7 +258,8 @@ public class TestRegionPlacement {
     MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
     for (int i = 0; i < SLAVES; i++) {
       HRegionServer rs = cluster.getRegionServer(i);
-      for (HRegion region: rs.getOnlineRegions(Bytes.toBytes("testRegionAssignment"))) {
+      for (HRegion region: rs.getOnlineRegions(
+          TableName.valueOf("testRegionAssignment"))) {
         InetSocketAddress[] favoredSocketAddress = rs.getFavoredNodesForRegion(
             region.getRegionInfo().getEncodedName());
         ServerName[] favoredServerList = favoredNodesAssignmentPlan.get(region.getRegionInfo());
@@ -268,7 +271,7 @@ public class TestRegionPlacement {
           // Verify they are ROOT and META regions since no favored nodes
           assertNull(favoredSocketAddress);
           assertTrue("User region " +
-              region.getTableDesc().getNameAsString() +
+              region.getTableDesc().getTableName() +
               " should have favored nodes",
               (desc.isRootRegion() || desc.isMetaRegion()));
         } else {
@@ -310,6 +313,10 @@ public class TestRegionPlacement {
       public boolean processRow(Result result) throws IOException {
         try {
           HRegionInfo info = MetaScanner.getHRegionInfo(result);
+          if(info.getTableName().getNamespaceAsString()
+              .equals(NamespaceDescriptor.SYSTEM_NAMESPACE_NAME_STR)) {
+            return true;
+          }
           byte[] server = result.getValue(HConstants.CATALOG_FAMILY,
               HConstants.SERVER_QUALIFIER);
           byte[] favoredNodes = result.getValue(HConstants.CATALOG_FAMILY,
@@ -381,7 +388,7 @@ public class TestRegionPlacement {
       splitKeys[i - 1] = new byte[] { splitKey, splitKey, splitKey };
     }
 
-    HTableDescriptor desc = new HTableDescriptor(tableName);
+    HTableDescriptor desc = new HTableDescriptor(TableName.valueOf(tableName));
     desc.addFamily(new HColumnDescriptor(HConstants.CATALOG_FAMILY));
     admin.createTable(desc, splitKeys);
 

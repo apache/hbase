@@ -27,6 +27,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -76,7 +77,7 @@ implements Writable, Comparable<TableSplit> {
   }
   
   private static final Version VERSION = Version.INITIAL;
-  private byte [] tableName;
+  private TableName tableName;
   private byte [] startRow;
   private byte [] endRow;
   private String regionLocation;
@@ -84,7 +85,7 @@ implements Writable, Comparable<TableSplit> {
 
   /** Default constructor. */
   public TableSplit() {
-    this(HConstants.EMPTY_BYTE_ARRAY, null, HConstants.EMPTY_BYTE_ARRAY,
+    this(null, null, HConstants.EMPTY_BYTE_ARRAY,
       HConstants.EMPTY_BYTE_ARRAY, "");
   }
 
@@ -97,7 +98,7 @@ implements Writable, Comparable<TableSplit> {
    * @param endRow  The end row of the split.
    * @param location  The location of the region.
    */
-  public TableSplit(byte [] tableName, Scan scan, byte [] startRow, byte [] endRow,
+  public TableSplit(TableName tableName, Scan scan, byte [] startRow, byte [] endRow,
       final String location) {
     this.tableName = tableName;
     try {
@@ -119,7 +120,7 @@ implements Writable, Comparable<TableSplit> {
    * @param endRow The end row of the split.
    * @param location The location of the region.
    */
-  public TableSplit(byte[] tableName, byte[] startRow, byte[] endRow,
+  public TableSplit(TableName tableName, byte[] startRow, byte[] endRow,
       final String location) {
     this(tableName, null, startRow, endRow, location);
   }
@@ -139,7 +140,7 @@ implements Writable, Comparable<TableSplit> {
    *
    * @return The table name.
    */
-  public byte [] getTableName() {
+  public TableName getTableName() {
     return tableName;
   }
 
@@ -216,8 +217,9 @@ implements Writable, Comparable<TableSplit> {
       version = Version.fromCode(len);
       len = WritableUtils.readVInt(in);
     }
-    tableName = new byte[len];
-    in.readFully(tableName);
+    byte[] tableNameBytes = new byte[len];
+    in.readFully(tableNameBytes);
+    tableName = TableName.valueOf(tableNameBytes);
     startRow = Bytes.readByteArray(in);
     endRow = Bytes.readByteArray(in);
     regionLocation = Bytes.toString(Bytes.readByteArray(in));
@@ -235,7 +237,7 @@ implements Writable, Comparable<TableSplit> {
   @Override
   public void write(DataOutput out) throws IOException {
     WritableUtils.writeVInt(out, VERSION.code);
-    Bytes.writeByteArray(out, tableName);
+    Bytes.writeByteArray(out, tableName.getName());
     Bytes.writeByteArray(out, startRow);
     Bytes.writeByteArray(out, endRow);
     Bytes.writeByteArray(out, Bytes.toBytes(regionLocation));
@@ -266,7 +268,7 @@ implements Writable, Comparable<TableSplit> {
     // If The table name of the two splits is the same then compare start row
     // otherwise compare based on table names
     int tableNameComparison =
-        Bytes.compareTo(getTableName(), split.getTableName());
+        getTableName().compareTo(split.getTableName());
     return tableNameComparison != 0 ? tableNameComparison : Bytes.compareTo(
         getStartRow(), split.getStartRow());
   }
@@ -276,7 +278,7 @@ implements Writable, Comparable<TableSplit> {
     if (o == null || !(o instanceof TableSplit)) {
       return false;
     }
-    return Bytes.equals(tableName, ((TableSplit)o).tableName) &&
+    return tableName.equals(((TableSplit)o).tableName) &&
       Bytes.equals(startRow, ((TableSplit)o).startRow) &&
       Bytes.equals(endRow, ((TableSplit)o).endRow) &&
       regionLocation.equals(((TableSplit)o).regionLocation);
@@ -284,7 +286,7 @@ implements Writable, Comparable<TableSplit> {
 
     @Override
     public int hashCode() {
-        int result = tableName != null ? Arrays.hashCode(tableName) : 0;
+        int result = tableName != null ? tableName.hashCode() : 0;
         result = 31 * result + (scan != null ? scan.hashCode() : 0);
         result = 31 * result + (startRow != null ? Arrays.hashCode(startRow) : 0);
         result = 31 * result + (endRow != null ? Arrays.hashCode(endRow) : 0);

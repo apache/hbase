@@ -31,6 +31,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -98,14 +99,14 @@ public class TestMetaReaderEditor {
    */
   @Test public void testRetrying()
   throws IOException, InterruptedException {
-    final String name = "testRetrying";
+    final TableName name =
+        TableName.valueOf("testRetrying");
     LOG.info("Started " + name);
-    final byte [] nameBytes = Bytes.toBytes(name);
-    HTable t = UTIL.createTable(nameBytes, HConstants.CATALOG_FAMILY);
+    HTable t = UTIL.createTable(name, HConstants.CATALOG_FAMILY);
     int regionCount = UTIL.createMultiRegions(t, HConstants.CATALOG_FAMILY);
     // Test it works getting a region from just made user table.
     final List<HRegionInfo> regions =
-      testGettingTableRegions(CT, nameBytes, regionCount);
+      testGettingTableRegions(CT, name, regionCount);
     MetaTask reader = new MetaTask(CT, "reader") {
       @Override
       void metaTask() throws Throwable {
@@ -218,24 +219,24 @@ public class TestMetaReaderEditor {
   @Test public void testGetRegionsCatalogTables()
   throws IOException, InterruptedException {
     List<HRegionInfo> regions =
-      MetaReader.getTableRegions(CT, HConstants.META_TABLE_NAME);
+      MetaReader.getTableRegions(CT, TableName.META_TABLE_NAME);
     assertTrue(regions.size() >= 1);
     assertTrue(MetaReader.getTableRegionsAndLocations(CT,
-      Bytes.toString(HConstants.META_TABLE_NAME)).size() >= 1);
+      TableName.META_TABLE_NAME).size() >= 1);
   }
 
   @Test public void testTableExists() throws IOException {
-    final String name = "testTableExists";
-    final byte [] nameBytes = Bytes.toBytes(name);
+    final TableName name =
+        TableName.valueOf("testTableExists");
     assertFalse(MetaReader.tableExists(CT, name));
-    UTIL.createTable(nameBytes, HConstants.CATALOG_FAMILY);
+    UTIL.createTable(name, HConstants.CATALOG_FAMILY);
     assertTrue(MetaReader.tableExists(CT, name));
     HBaseAdmin admin = UTIL.getHBaseAdmin();
     admin.disableTable(name);
     admin.deleteTable(name);
     assertFalse(MetaReader.tableExists(CT, name));
     assertTrue(MetaReader.tableExists(CT,
-      Bytes.toString(HConstants.META_TABLE_NAME)));
+      TableName.META_TABLE_NAME));
   }
 
   @Test public void testGetRegion() throws IOException, InterruptedException {
@@ -251,7 +252,8 @@ public class TestMetaReaderEditor {
   // Test for the optimization made in HBASE-3650
   @Test public void testScanMetaForTable()
   throws IOException, InterruptedException {
-    final String name = "testScanMetaForTable";
+    final TableName name =
+        TableName.valueOf("testScanMetaForTable");
     LOG.info("Started " + name);
 
     /** Create 2 tables
@@ -259,21 +261,22 @@ public class TestMetaReaderEditor {
      - testScanMetaForTablf
     **/
 
-    UTIL.createTable(Bytes.toBytes(name), HConstants.CATALOG_FAMILY);
+    UTIL.createTable(name, HConstants.CATALOG_FAMILY);
     // name that is +1 greater than the first one (e+1=f)
-    byte[] greaterName = Bytes.toBytes("testScanMetaForTablf");
+    TableName greaterName =
+        TableName.valueOf("testScanMetaForTablf");
     UTIL.createTable(greaterName, HConstants.CATALOG_FAMILY);
 
     // Now make sure we only get the regions from 1 of the tables at a time
 
-    assertEquals(1, MetaReader.getTableRegions(CT, Bytes.toBytes(name)).size());
+    assertEquals(1, MetaReader.getTableRegions(CT, name).size());
     assertEquals(1, MetaReader.getTableRegions(CT, greaterName).size());
   }
 
   private static List<HRegionInfo> testGettingTableRegions(final CatalogTracker ct,
-      final byte [] nameBytes, final int regionCount)
+      final TableName name, final int regionCount)
   throws IOException, InterruptedException {
-    List<HRegionInfo> regions = MetaReader.getTableRegions(ct, nameBytes);
+    List<HRegionInfo> regions = MetaReader.getTableRegions(ct, name);
     assertEquals(regionCount, regions.size());
     Pair<HRegionInfo, ServerName> pair =
       MetaReader.getRegion(ct, regions.get(0).getRegionName());

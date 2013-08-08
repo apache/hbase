@@ -43,6 +43,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
@@ -82,11 +83,16 @@ import com.google.common.collect.Lists;
 public class TestHCM {
   private static final Log LOG = LogFactory.getLog(TestHCM.class);
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
-  private static final byte[] TABLE_NAME = Bytes.toBytes("test");
-  private static final byte[] TABLE_NAME1 = Bytes.toBytes("test1");
-  private static final byte[] TABLE_NAME2 = Bytes.toBytes("test2");
-  private static final byte[] TABLE_NAME3 = Bytes.toBytes("test3");
-  private static final byte[] TABLE_NAME4 = Bytes.toBytes("test4");
+  private static final TableName TABLE_NAME =
+      TableName.valueOf("test");
+  private static final TableName TABLE_NAME1 =
+      TableName.valueOf("test1");
+  private static final TableName TABLE_NAME2 =
+      TableName.valueOf("test2");
+  private static final TableName TABLE_NAME3 =
+      TableName.valueOf("test3");
+  private static final TableName TABLE_NAME4 =
+      TableName.valueOf("test4");
   private static final byte[] FAM_NAM = Bytes.toBytes("f");
   private static final byte[] ROW = Bytes.toBytes("bbb");
   private static final byte[] ROW_X = Bytes.toBytes("xxx");
@@ -149,7 +155,7 @@ public class TestHCM {
     // and that the table is using it
     assertTrue(t.getPool() == pool);
     t.close();
-    
+
     t = (HTable)con1.getTable(tableName);
     // still using the *same* internal pool
     assertTrue(t.getPool() == pool);
@@ -167,7 +173,8 @@ public class TestHCM {
 
   @Ignore ("Fails in IDEs: HBASE-9042") @Test(expected = RegionServerStoppedException.class)
   public void testClusterStatus() throws Exception {
-    byte[] tn = "testClusterStatus".getBytes();
+    TableName tn =
+        TableName.valueOf("testClusterStatus");
     byte[] cf = "cf".getBytes();
     byte[] rk = "rk1".getBytes();
 
@@ -176,7 +183,7 @@ public class TestHCM {
     final ServerName sn = rs.getRegionServer().getServerName();
 
     HTable t = TEST_UTIL.createTable(tn, cf);
-    TEST_UTIL.waitTableAvailable(tn);
+    TEST_UTIL.waitTableAvailable(tn.getName());
 
     while(TEST_UTIL.getHBaseCluster().getMaster().getAssignmentManager().
         getRegionStates().isRegionsInTransition()){
@@ -342,7 +349,7 @@ public class TestHCM {
     HTable table = new HTable(conf, TABLE_NAME);
 
     TEST_UTIL.createMultiRegions(table, FAM_NAM);
-    TEST_UTIL.waitUntilAllRegionsAssigned(table.getTableName());
+    TEST_UTIL.waitUntilAllRegionsAssigned(table.getName());
     Put put = new Put(ROW);
     put.add(FAM_NAM, ROW, ROW);
     table.put(put);
@@ -350,9 +357,6 @@ public class TestHCM {
       (HConnectionManager.HConnectionImplementation)table.getConnection();
 
     assertNotNull(conn.getCachedLocation(TABLE_NAME, ROW));
-    assertNotNull(conn.getCachedLocation(TABLE_NAME.clone(), ROW.clone()));
-    assertNotNull(conn.getCachedLocation(
-      Bytes.toString(TABLE_NAME).getBytes() , Bytes.toString(ROW).getBytes()));
 
     final int nextPort = conn.getCachedLocation(TABLE_NAME, ROW).getPort() + 1;
     HRegionLocation loc = conn.getCachedLocation(TABLE_NAME, ROW);
@@ -360,7 +364,7 @@ public class TestHCM {
       HConstants.LATEST_TIMESTAMP), HConstants.LATEST_TIMESTAMP);
     Assert.assertEquals(conn.getCachedLocation(TABLE_NAME, ROW).getPort(), nextPort);
 
-    conn.forceDeleteCachedLocation(TABLE_NAME.clone(), ROW.clone());
+    conn.forceDeleteCachedLocation(TABLE_NAME, ROW.clone());
     HRegionLocation rl = conn.getCachedLocation(TABLE_NAME, ROW);
     assertNull("What is this location?? " + rl, rl);
 
@@ -372,6 +376,7 @@ public class TestHCM {
     put2.add(FAM_NAM, ROW, ROW);
     table.put(put2);
     assertNotNull(conn.getCachedLocation(TABLE_NAME, ROW));
+    assertNotNull(conn.getCachedLocation(TableName.valueOf(TABLE_NAME.getName()), ROW.clone()));
 
     TEST_UTIL.getHBaseAdmin().setBalancerRunning(false, false);
     HMaster master = TEST_UTIL.getMiniHBaseCluster().getMaster();
@@ -514,12 +519,11 @@ public class TestHCM {
   public void testConnectionManagement() throws Exception{
     TEST_UTIL.createTable(TABLE_NAME1, FAM_NAM);
     HConnection conn = HConnectionManager.createConnection(TEST_UTIL.getConfiguration());
-    HTableInterface table = conn.getTable(TABLE_NAME1);
-          //new HTable(TABLE_NAME1, conn, pool);
+    HTableInterface table = conn.getTable(TABLE_NAME1.getName());
     table.close();
     assertFalse(conn.isClosed());
     assertFalse(((HTable)table).getPool().isShutdown());
-    table = conn.getTable(TABLE_NAME1);
+    table = conn.getTable(TABLE_NAME1.getName());
     table.close();
     assertFalse(((HTable)table).getPool().isShutdown());
     conn.close();

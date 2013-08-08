@@ -35,7 +35,6 @@ import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.regionserver.wal.HLogFactory;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
-import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.util.ToolRunner;
 import org.junit.experimental.categories.Category;
@@ -68,28 +67,28 @@ public class TestMergeTool extends HBaseTestCase {
     this.conf.set("hbase.hstore.compactionThreshold", "2");
 
     // Create table description
-    this.desc = new HTableDescriptor("TestMergeTool");
+    this.desc = new HTableDescriptor(TableName.valueOf("TestMergeTool"));
     this.desc.addFamily(new HColumnDescriptor(FAMILY));
 
     /*
      * Create the HRegionInfos for the regions.
      */
     // Region 0 will contain the key range [row_0200,row_0300)
-    sourceRegions[0] = new HRegionInfo(this.desc.getName(),
+    sourceRegions[0] = new HRegionInfo(this.desc.getTableName(),
         Bytes.toBytes("row_0200"),
       Bytes.toBytes("row_0300"));
 
     // Region 1 will contain the key range [row_0250,row_0400) and overlaps
     // with Region 0
     sourceRegions[1] =
-      new HRegionInfo(this.desc.getName(),
+      new HRegionInfo(this.desc.getTableName(),
           Bytes.toBytes("row_0250"),
           Bytes.toBytes("row_0400"));
 
     // Region 2 will contain the key range [row_0100,row_0200) and is adjacent
     // to Region 0 or the region resulting from the merge of Regions 0 and 1
     sourceRegions[2] =
-      new HRegionInfo(this.desc.getName(),
+      new HRegionInfo(this.desc.getTableName(),
           Bytes.toBytes("row_0100"),
           Bytes.toBytes("row_0200"));
 
@@ -97,13 +96,13 @@ public class TestMergeTool extends HBaseTestCase {
     // adjacent to any of Regions 0, 1, 2 or the merged result of any or all
     // of those regions
     sourceRegions[3] =
-      new HRegionInfo(this.desc.getName(),
+      new HRegionInfo(this.desc.getTableName(),
           Bytes.toBytes("row_0500"),
           Bytes.toBytes("row_0600"));
 
     // Region 4 will have empty start and end keys and overlaps all regions.
     sourceRegions[4] =
-      new HRegionInfo(this.desc.getName(),
+      new HRegionInfo(this.desc.getTableName(),
           HConstants.EMPTY_BYTE_ARRAY,
           HConstants.EMPTY_BYTE_ARRAY);
 
@@ -195,7 +194,7 @@ public class TestMergeTool extends HBaseTestCase {
     LOG.info(msg);
     LOG.info("fs2=" + this.conf.get("fs.defaultFS"));
     int errCode = ToolRunner.run(this.conf, merger,
-      new String[] {this.desc.getNameAsString(), regionName1, regionName2}
+      new String[] {this.desc.getTableName().getNameAsString(), regionName1, regionName2}
     );
     assertTrue("'" + msg + "' failed with errCode " + errCode, errCode == 0);
     HRegionInfo mergedInfo = merger.getMergedHRegionInfo();

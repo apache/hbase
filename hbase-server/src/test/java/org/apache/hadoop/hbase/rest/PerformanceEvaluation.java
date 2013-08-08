@@ -44,6 +44,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
@@ -107,7 +108,7 @@ public class PerformanceEvaluation  {
 
   protected static final HTableDescriptor TABLE_DESCRIPTOR;
   static {
-    TABLE_DESCRIPTOR = new HTableDescriptor(TABLE_NAME);
+    TABLE_DESCRIPTOR = new HTableDescriptor(TableName.valueOf(TABLE_NAME));
     TABLE_DESCRIPTOR.addFamily(new HColumnDescriptor(FAMILY_NAME));
   }
 
@@ -448,7 +449,7 @@ public class PerformanceEvaluation  {
   private boolean checkTable() throws IOException {
     HTableDescriptor tableDescriptor = getTableDescriptor();
     RemoteAdmin admin = new RemoteAdmin(new Client(cluster), conf);
-    if (!admin.isTableAvailable(tableDescriptor.getName())) {
+    if (!admin.isTableAvailable(tableDescriptor.getTableName().getName())) {
       admin.createTable(tableDescriptor);
       return true;
     }
@@ -1069,7 +1070,7 @@ public class PerformanceEvaluation  {
 
     Test t = null;
     TestOptions options = new TestOptions(startRow, perClientRunRows,
-      totalRows, getTableDescriptor().getName(), rowsPerPut);
+      totalRows, getTableDescriptor().getTableName().getName(), rowsPerPut);
     try {
       Constructor<? extends Test> constructor = cmd.getDeclaredConstructor(
           Configuration.class, TestOptions.class, Status.class);

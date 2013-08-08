@@ -83,7 +83,7 @@ public class TestMasterRestartAfterDisablingTable {
     NavigableSet<String> regions = getAllOnlineRegions(cluster);
     assertEquals(
         "The number of regions for the table tableRestart should be 0 and only"
-            + "the catalog tables should be present.", 1, regions.size());
+            + "the catalog and namespace tables should be present.", 2, regions.size());
 
     List<MasterThread> masterThreads = cluster.getMasterThreads();
     MasterThread activeMaster = null;
@@ -99,7 +99,7 @@ public class TestMasterRestartAfterDisablingTable {
 
     assertTrue("The table should not be in enabled state", cluster.getMaster()
         .getAssignmentManager().getZKTable().isDisablingOrDisabledTable(
-            "tableRestart"));
+            TableName.valueOf("tableRestart")));
     log("Enabling table\n");
     // Need a new Admin, the previous one is on the old master
     HBaseAdmin admin = new HBaseAdmin(TEST_UTIL.getConfiguration());
@@ -110,10 +110,11 @@ public class TestMasterRestartAfterDisablingTable {
     log("Verifying there are " + numRegions + " assigned on cluster\n");
     regions = getAllOnlineRegions(cluster);
     assertEquals(
-        "The assigned regions were not onlined after master switch except for the catalog tables.",
-        5, regions.size());
+        "The assigned regions were not onlined after master switch except for the catalog and namespace tables.",
+        6, regions.size());
     assertTrue("The table should be in enabled state", cluster.getMaster()
-        .getAssignmentManager().getZKTable().isEnabledTable("tableRestart"));
+        .getAssignmentManager().getZKTable()
+        .isEnabledTable(TableName.valueOf("tableRestart")));
     ht.close();
     TEST_UTIL.shutdownMiniCluster();
   }

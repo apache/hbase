@@ -42,6 +42,11 @@ import java.util.concurrent.atomic.AtomicLong;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.commons.logging.impl.Log4JLogger;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.log4j.Level;
+import org.apache.hadoop.hdfs.server.datanode.DataNode;
+import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
+import org.apache.hadoop.hdfs.server.namenode.LeaseManager;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -68,12 +73,8 @@ import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
-import org.apache.hadoop.hdfs.server.datanode.DataNode;
-import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.LeaseExpiredException;
-import org.apache.hadoop.hdfs.server.namenode.LeaseManager;
 import org.apache.hadoop.ipc.RemoteException;
-import org.apache.log4j.Level;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -114,14 +115,15 @@ public class TestHLogSplit {
   private static final int NUM_WRITERS = 10;
   private static final int ENTRIES = 10; // entries per writer per region
 
-  private static final byte[] TABLE_NAME = "t1".getBytes();
+  private static final TableName TABLE_NAME =
+      TableName.valueOf("t1");
   private static final byte[] FAMILY = "f1".getBytes();
   private static final byte[] QUALIFIER = "q1".getBytes();
   private static final byte[] VALUE = "v1".getBytes();
   private static final String HLOG_FILE_PREFIX = "hlog.dat.";
   private static List<String> REGIONS = new ArrayList<String>();
   private static final String HBASE_SKIP_ERRORS = "hbase.hlog.split.skip.errors";
-  private static final Path TABLEDIR = new Path(HBASEDIR, Bytes.toString(TABLE_NAME));
+  private static final Path TABLEDIR = FSUtils.getTableDir(HBASEDIR, TABLE_NAME);
   private static String ROBBER;
   private static String ZOMBIE;
   private static String [] GROUP = new String [] {"supergroup"};
@@ -336,14 +338,14 @@ public class TestHLogSplit {
   public void testRecoveredEditsPathForMeta() throws IOException {
     FileSystem fs = FileSystem.get(TEST_UTIL.getConfiguration());
     byte [] encoded = HRegionInfo.FIRST_META_REGIONINFO.getEncodedNameAsBytes();
-    Path tdir = new Path(HBASEDIR, Bytes.toString(HConstants.META_TABLE_NAME));
+    Path tdir = FSUtils.getTableDir(HBASEDIR, TableName.META_TABLE_NAME);
     Path regiondir = new Path(tdir,
         HRegionInfo.FIRST_META_REGIONINFO.getEncodedName());
     fs.mkdirs(regiondir);
     long now = System.currentTimeMillis();
     HLog.Entry entry =
         new HLog.Entry(new HLogKey(encoded,
-            HConstants.META_TABLE_NAME, 1, now, HConstants.DEFAULT_CLUSTER_ID),
+            TableName.META_TABLE_NAME, 1, now, HConstants.DEFAULT_CLUSTER_ID),
       new WALEdit());
     Path p = HLogSplitter.getRegionSplitEditsPath(fs, entry, HBASEDIR, true);
     String parentOfParent = p.getParent().getParent().getName();
@@ -358,14 +360,14 @@ public class TestHLogSplit {
   public void testOldRecoveredEditsFileSidelined() throws IOException {
     FileSystem fs = FileSystem.get(TEST_UTIL.getConfiguration());
     byte [] encoded = HRegionInfo.FIRST_META_REGIONINFO.getEncodedNameAsBytes();
-    Path tdir = new Path(HBASEDIR, Bytes.toString(HConstants.META_TABLE_NAME));
+    Path tdir = FSUtils.getTableDir(HBASEDIR, TableName.META_TABLE_NAME);
     Path regiondir = new Path(tdir,
         HRegionInfo.FIRST_META_REGIONINFO.getEncodedName());
     fs.mkdirs(regiondir);
     long now = System.currentTimeMillis();
     HLog.Entry entry =
         new HLog.Entry(new HLogKey(encoded,
-            HConstants.META_TABLE_NAME, 1, now, HConstants.DEFAULT_CLUSTER_ID),
+            TableName.META_TABLE_NAME, 1, now, HConstants.DEFAULT_CLUSTER_ID),
       new WALEdit());
     Path parent = HLogUtil.getRegionDirRecoveredEditsDir(regiondir);
     assertEquals(parent.getName(), HConstants.RECOVERED_EDITS_DIR);
@@ -767,9 +769,10 @@ public class TestHLogSplit {
 
     HLogSplitter.split(HBASEDIR, HLOGDIR, OLDLOGDIR, fs, conf);
     fs.rename(OLDLOGDIR, HLOGDIR);
-    Path firstSplitPath = new Path(HBASEDIR, Bytes.toString(TABLE_NAME) + ".first");
-    Path splitPath = new Path(HBASEDIR, Bytes.toString(TABLE_NAME));
-    fs.rename(splitPath, firstSplitPath);
+    Path firstSplitPath = new Path(HBASEDIR, TABLE_NAME+ ".first");
+    Path splitPath = new Path(HBASEDIR, TABLE_NAME.getNameAsString());
+    fs.rename(splitPath,
+            firstSplitPath);
 
     fs.initialize(fs.getUri(), conf);
     HLogSplitter.split(HBASEDIR, HLOGDIR, OLDLOGDIR, fs, conf);
@@ -1081,7 +1084,8 @@ public class TestHLogSplit {
 
     try {
       // put some entries in an HLog
-      byte [] tableName = Bytes.toBytes(this.getClass().getName());
+      TableName tableName =
+          TableName.valueOf(this.getClass().getName());
       HRegionInfo regioninfo = new HRegionInfo(tableName,
           HConstants.EMPTY_START_ROW, HConstants.EMPTY_END_ROW);
       log = HLogFactory.createHLog(fs, HBASEDIR, logName, conf);
@@ -1089,7 +1093,7 @@ public class TestHLogSplit {
       final int total = 20;
       for (int i = 0; i < total; i++) {
         WALEdit kvs = new WALEdit();
-        kvs.add(new KeyValue(Bytes.toBytes(i), tableName, tableName));
+        kvs.add(new KeyValue(Bytes.toBytes(i), tableName.getName(), tableName.getName()));
         HTableDescriptor htd = new HTableDescriptor(tableName);
         htd.addFamily(new HColumnDescriptor("column"));
         log.append(regioninfo, tableName, kvs, System.currentTimeMillis(), htd);
@@ -1151,7 +1155,7 @@ public class TestHLogSplit {
       if (stop.get()) {
         return;
       }
-      Path tableDir = new Path(HBASEDIR, new String(TABLE_NAME));
+      Path tableDir = FSUtils.getTableDir(HBASEDIR, TABLE_NAME);
       Path regionDir = new Path(tableDir, REGIONS.get(0));
       Path recoveredEdits = new Path(regionDir, HConstants.RECOVERED_EDITS_DIR);
       String region = "juliet";
@@ -1166,7 +1170,7 @@ public class TestHLogSplit {
         fs.mkdirs(new Path(tableDir, region));
         HLog.Writer writer = HLogFactory.createWriter(fs,
             julietLog, conf);
-        appendEntry(writer, "juliet".getBytes(), ("juliet").getBytes(),
+        appendEntry(writer, TableName.valueOf("juliet"), ("juliet").getBytes(),
             ("r").getBytes(), FAMILY, QUALIFIER, VALUE, 0);
         writer.close();
         LOG.info("Juliet file creator: created file " + julietLog);
@@ -1224,7 +1228,7 @@ public class TestHLogSplit {
     fs.initialize(fs.getUri(), conf);
 
     HLogSplitter.split(HBASEDIR, HLOGDIR, OLDLOGDIR, fs, conf);
-    Path tdir = HTableDescriptor.getTableDir(HBASEDIR, TABLE_NAME);
+    Path tdir = FSUtils.getTableDir(HBASEDIR, TABLE_NAME);
     assertFalse(fs.exists(tdir));
 
     assertEquals(0, countHLog(fs.listStatus(OLDLOGDIR)[0].getPath(), fs, conf));
@@ -1362,9 +1366,9 @@ public class TestHLogSplit {
     return ws;
   }
 
-  private Path[] getLogForRegion(Path rootdir, byte[] table, String region)
+  private Path[] getLogForRegion(Path rootdir, TableName table, String region)
   throws IOException {
-    Path tdir = HTableDescriptor.getTableDir(rootdir, table);
+    Path tdir = FSUtils.getTableDir(rootdir, table);
     @SuppressWarnings("deprecation")
     Path editsdir = HLogUtil.getRegionDirRecoveredEditsDir(HRegion.getRegionDir(tdir,
       Bytes.toString(region.getBytes())));
@@ -1475,7 +1479,7 @@ public class TestHLogSplit {
   }
 
 
-  public static long appendEntry(HLog.Writer writer, byte[] table, byte[] region,
+  public static long appendEntry(HLog.Writer writer, TableName table, byte[] region,
                           byte[] row, byte[] family, byte[] qualifier,
                           byte[] value, long seq)
           throws IOException {
@@ -1487,7 +1491,7 @@ public class TestHLogSplit {
   }
 
   private static HLog.Entry createTestEntry(
-      byte[] table, byte[] region,
+      TableName table, byte[] region,
       byte[] row, byte[] family, byte[] qualifier,
       byte[] value, long seq) {
     long time = System.nanoTime();

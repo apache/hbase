@@ -32,6 +32,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos.WALTrailer;
@@ -263,12 +264,11 @@ public interface HLog {
   void closeAndDelete() throws IOException;
 
   /**
-   * Same as {@link #appendNoSync(HRegionInfo, byte[], WALEdit, UUID, long, HTableDescriptor)},
+   * Same as {@link #appendNoSync(HRegionInfo, TableName, WALEdit, UUID, long, HTableDescriptor)},
    * except it causes a sync on the log
    */
-  void append(
-    HRegionInfo info, byte[] tableName, WALEdit edits, final long now, HTableDescriptor htd
-  ) throws IOException;
+  public void append(HRegionInfo info, TableName tableName, WALEdit edits,
+      final long now, HTableDescriptor htd) throws IOException;
 
   /**
    * Append a set of edits to the log. Log edits are keyed by (encoded)
@@ -281,14 +281,8 @@ public interface HLog {
    * @param htd
    * @param isInMemstore Whether the record is in memstore. False for system records.
    */
-  void append(
-    HRegionInfo info,
-    byte[] tableName,
-    WALEdit edits,
-    final long now,
-    HTableDescriptor htd,
-    boolean isInMemstore
-  ) throws IOException;
+  public void append(HRegionInfo info, TableName tableName, WALEdit edits,
+      final long now, HTableDescriptor htd, boolean isInMemstore) throws IOException;
 
   /**
    * Append a set of edits to the log. Log edits are keyed by (encoded)
@@ -305,14 +299,8 @@ public interface HLog {
    * @return txid of this transaction
    * @throws IOException
    */
-  long appendNoSync(
-    HRegionInfo info,
-    byte[] tableName,
-    WALEdit edits,
-    UUID clusterId,
-    final long now,
-    HTableDescriptor htd
-  ) throws IOException;
+  public long appendNoSync(HRegionInfo info, TableName tableName, WALEdit edits,
+      UUID clusterId, final long now, HTableDescriptor htd) throws IOException;
 
   void hsync() throws IOException;
 
@@ -333,7 +321,7 @@ public interface HLog {
    * to flush memstore.
    *
    * We stash the oldest seqNum for the region, and let the the next edit inserted in this
-   * region be recorded in {@link #append(HRegionInfo, byte[], WALEdit, long, HTableDescriptor)}
+   * region be recorded in {@link #append(HRegionInfo, TableName, WALEdit, long, HTableDescriptor)}
    * as new oldest seqnum. In case of flush being aborted, we put the stashed value back;
    * in case of flush succeeding, the seqNum of that first edit after start becomes the
    * valid oldest seqNum for this region.

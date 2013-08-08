@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.client;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
 
-import java.io.IOException;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -30,6 +29,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.LargeTests;
@@ -61,7 +61,8 @@ public class TestSnapshotFromClient {
   private static final int NUM_RS = 2;
   private static final String STRING_TABLE_NAME = "test";
   private static final byte[] TEST_FAM = Bytes.toBytes("fam");
-  private static final byte[] TABLE_NAME = Bytes.toBytes(STRING_TABLE_NAME);
+  private static final TableName TABLE_NAME =
+      TableName.valueOf(STRING_TABLE_NAME);
 
   /**
    * Setup the config for the cluster
@@ -121,14 +122,14 @@ public class TestSnapshotFromClient {
     byte[] snapshotName = Bytes.toBytes("metaSnapshot");
 
     try {
-      admin.snapshot(snapshotName, HConstants.META_TABLE_NAME);
+      admin.snapshot(snapshotName, TableName.META_TABLE_NAME);
       fail("taking a snapshot of .META. should not be allowed");
     } catch (IllegalArgumentException e) {
       // expected
     }
 
     try {
-      admin.snapshot(snapshotName, HConstants.ROOT_TABLE_NAME);
+      admin.snapshot(snapshotName, TableName.ROOT_TABLE_NAME);
       fail("taking a snapshot of -ROOT- should not be allowed");
     } catch (IllegalArgumentException e) {
       // expected

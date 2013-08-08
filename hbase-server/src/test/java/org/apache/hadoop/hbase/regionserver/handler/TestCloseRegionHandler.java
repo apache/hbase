@@ -25,6 +25,7 @@ import java.io.IOException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
@@ -57,7 +58,7 @@ public class TestCloseRegionHandler {
   static final Log LOG = LogFactory.getLog(TestCloseRegionHandler.class);
   private final static HBaseTestingUtility HTU = new HBaseTestingUtility();
   private static final HTableDescriptor TEST_HTD =
-    new HTableDescriptor("TestCloseRegionHandler");
+    new HTableDescriptor(TableName.valueOf("TestCloseRegionHandler"));
   private HRegionInfo TEST_HRI;
   private int testIndex = 0;
 
@@ -76,7 +77,7 @@ public class TestCloseRegionHandler {
    */
   @Before
   public void setupHRI() {
-    TEST_HRI = new HRegionInfo(TEST_HTD.getName(),
+    TEST_HRI = new HRegionInfo(TEST_HTD.getTableName(),
       Bytes.toBytes(testIndex),
       Bytes.toBytes(testIndex + 1));
     testIndex++;
@@ -95,7 +96,7 @@ public class TestCloseRegionHandler {
     final RegionServerServices rss = new MockRegionServerServices();
     HTableDescriptor htd = TEST_HTD;
     final HRegionInfo hri =
-      new HRegionInfo(htd.getName(), HConstants.EMPTY_END_ROW,
+      new HRegionInfo(htd.getTableName(), HConstants.EMPTY_END_ROW,
         HConstants.EMPTY_END_ROW);
     HRegion region =
       HRegion.createHRegion(hri, HTU.getDataTestDir(),

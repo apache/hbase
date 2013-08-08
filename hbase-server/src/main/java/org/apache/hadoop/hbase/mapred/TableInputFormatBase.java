@@ -135,7 +135,7 @@ implements InputFormat<ImmutableBytesWritable, Result> {
       lastPos = startKeys.length % realNumSplits > i ? lastPos + 1 : lastPos;
       String regionLocation = table.getRegionLocation(startKeys[startPos]).
         getHostname();
-      splits[i] = new TableSplit(this.table.getTableName(),
+      splits[i] = new TableSplit(this.table.getName(),
         startKeys[startPos], ((i + 1) < realNumSplits) ? startKeys[lastPos]:
           HConstants.EMPTY_START_ROW, regionLocation);
       LOG.info("split: " + i + "->" + splits[i]);

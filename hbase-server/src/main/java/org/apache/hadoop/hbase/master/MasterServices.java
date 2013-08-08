@@ -19,11 +19,14 @@
 package org.apache.hadoop.hbase.master;
 
 import java.io.IOException;
+import java.util.List;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.TableDescriptors;
 import org.apache.hadoop.hbase.TableNotDisabledException;
@@ -75,7 +78,7 @@ public interface MasterServices extends Server {
    * @throws IOException
    */
   // We actually throw the exceptions mentioned in the
-  void checkTableModifiable(final byte[] tableName)
+  void checkTableModifiable(final TableName tableName)
       throws IOException, TableNotFoundException, TableNotDisabledException;
 
   /**
@@ -92,7 +95,7 @@ public interface MasterServices extends Server {
    * @param tableName The table name
    * @throws IOException
    */
-  void deleteTable(final byte[] tableName) throws IOException;
+  void deleteTable(final TableName tableName) throws IOException;
 
   /**
    * Modify the descriptor of an existing table
@@ -100,7 +103,7 @@ public interface MasterServices extends Server {
    * @param descriptor The updated table descriptor
    * @throws IOException
    */
-  void modifyTable(final byte[] tableName, final HTableDescriptor descriptor)
+  void modifyTable(final TableName tableName, final HTableDescriptor descriptor)
       throws IOException;
 
   /**
@@ -108,14 +111,15 @@ public interface MasterServices extends Server {
    * @param tableName The table name
    * @throws IOException
    */
-  void enableTable(final byte[] tableName) throws IOException;
+  void enableTable(final TableName tableName) throws IOException;
 
   /**
    * Disable an existing table
    * @param tableName The table name
    * @throws IOException
    */
-  void disableTable(final byte[] tableName) throws IOException;
+  void disableTable(final TableName tableName) throws IOException;
+
 
   /**
    * Add a new column to an existing table
@@ -123,7 +127,7 @@ public interface MasterServices extends Server {
    * @param column The column definition
    * @throws IOException
    */
-  void addColumn(final byte[] tableName, final HColumnDescriptor column)
+  void addColumn(final TableName tableName, final HColumnDescriptor column)
       throws IOException;
 
   /**
@@ -132,7 +136,7 @@ public interface MasterServices extends Server {
    * @param descriptor The updated column definition
    * @throws IOException
    */
-  void modifyColumn(byte[] tableName, HColumnDescriptor descriptor)
+  void modifyColumn(TableName tableName, HColumnDescriptor descriptor)
       throws IOException;
 
   /**
@@ -141,7 +145,7 @@ public interface MasterServices extends Server {
    * @param columnName The column name
    * @throws IOException
    */
-  void deleteColumn(final byte[] tableName, final byte[] columnName)
+  void deleteColumn(final TableName tableName, final byte[] columnName)
       throws IOException;
 
   /**
@@ -187,4 +191,47 @@ public interface MasterServices extends Server {
    */
   boolean isInitialized();
 
+  /**
+   * Create a new namespace
+   * @param descriptor descriptor which describes the new namespace
+   * @throws IOException
+   */
+  public void createNamespace(NamespaceDescriptor descriptor) throws IOException;
+
+  /**
+   * Modify an existing namespace
+   * @param descriptor descriptor which updates the existing namespace
+   * @throws IOException
+   */
+  public void modifyNamespace(NamespaceDescriptor descriptor) throws IOException;
+
+  /**
+   * Delete an existing namespace. Only empty namespaces (no tables) can be removed.
+   * @param name namespace name
+   * @throws IOException
+   */
+  public void deleteNamespace(String name) throws IOException;
+
+  /**
+   * Get a namespace descriptor by name
+   * @param name name of namespace descriptor
+   * @return
+   * @throws IOException
+   */
+  public NamespaceDescriptor getNamespaceDescriptor(String name) throws IOException;
+
+  /**
+   * List available namespace descriptors
+   * @return
+   * @throws IOException
+   */
+  public List<NamespaceDescriptor> listNamespaceDescriptors() throws IOException;
+
+  /**
+   * Get list of table descriptors by namespace
+   * @param name namespace name
+   * @return
+   * @throws IOException
+   */
+  public List<HTableDescriptor> getTableDescriptorsByNamespace(String name) throws IOException;
 }

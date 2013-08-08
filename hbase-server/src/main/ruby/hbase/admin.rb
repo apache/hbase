@@ -42,7 +42,7 @@ module Hbase
     #----------------------------------------------------------------------------------------------
     # Returns a list of tables in hbase
     def list(regex = ".*")
-        @admin.listTables(regex).map { |t| t.getNameAsString }
+        @admin.listTables(regex).map { |t| t.getTableName().getNameAsString }
     end
 
     #----------------------------------------------------------------------------------------------
@@ -152,7 +152,7 @@ module Hbase
     # Disables all tables matching the given regex
     def disable_all(regex)
       regex = regex.to_s
-      @admin.disableTables(regex).map { |t| t.getNameAsString }
+      @admin.disableTables(regex).map { |t| t.getTableName().getNameAsString }
     end
 
     #---------------------------------------------------------------------------------------------
@@ -180,7 +180,7 @@ module Hbase
     # Drops a table
     def drop_all(regex)
       regex = regex.to_s
-      failed  = @admin.deleteTables(regex).map { |t| t.getNameAsString }
+      failed  = @admin.deleteTables(regex).map { |t| t.getTableName().getNameAsString }
       return failed
     end
 
@@ -201,7 +201,7 @@ module Hbase
       has_columns = false
 
       # Start defining the table
-      htd = org.apache.hadoop.hbase.HTableDescriptor.new(table_name)
+      htd = org.apache.hadoop.hbase.HTableDescriptor.new(org.apache.hadoop.hbase.TableName.valueOf(table_name))
       splits = nil
       # Args are either columns or splits, add them to the table definition
       # TODO: add table options support
@@ -368,7 +368,7 @@ module Hbase
 
       status = Pair.new()
       begin
-        status = @admin.getAlterStatus(table_name.to_java_bytes)
+        status = @admin.getAlterStatus(org.apache.hadoop.hbase.TableName.valueOf(table_name))
         if status.getSecond() != 0
           puts "#{status.getSecond() - status.getFirst()}/#{status.getSecond()} regions updated."
         else
@@ -650,7 +650,8 @@ module Hbase
     # Enables/disables a region by name
     def online(region_name, on_off)
       # Open meta table
-      meta = org.apache.hadoop.hbase.client.HTable.new(org.apache.hadoop.hbase.HConstants::META_TABLE_NAME)
+      meta = org.apache.hadoop.hbase.client.HTable.new(
+          org.apache.hadoop.hbase.TableName::META_TABLE_NAME)
 
       # Read region info
       # FIXME: fail gracefully if can't find the region
@@ -720,6 +721,102 @@ module Hbase
           v = v.to_s unless v.nil?
           descriptor.setConfiguration(k, v)
         end
+    end
+
+    #----------------------------------------------------------------------------------------------
+    # Returns namespace's structure description
+    def describe_namespace(namespace_name)
+      namespace = @admin.getNamespaceDescriptor(namespace_name)
+
+      unless namespace.nil?
+        return namespace.to_s
+      end
+
+      raise(ArgumentError, "Failed to find namespace named #{namespace_name}")
+    end
+
+    #----------------------------------------------------------------------------------------------
+    # Returns a list of namespaces in hbase
+    def list_namespace
+      @admin.listNamespaceDescriptors.map { |ns| ns.getName }
+    end
+
+    #----------------------------------------------------------------------------------------------
+    # Returns a list of tables in namespace
+    def list_namespace_tables(namespace_name)
+      unless namespace_name.nil?
+        return @admin.getTableDescriptorsByNamespace(namespace_name).map { |t| t.getTableName().getNameAsString }
+      end
+
+      raise(ArgumentError, "Failed to find namespace named #{namespace_name}")
+    end
+
+    #----------------------------------------------------------------------------------------------
+    # Creates a namespace
+    def create_namespace(namespace_name, *args)
+      # Fail if table name is not a string
+      raise(ArgumentError, "Namespace name must be of type String") unless namespace_name.kind_of?(String)
+
+      # Flatten params array
+      args = args.flatten.compact
+
+      # Start defining the table
+      nsb = org.apache.hadoop.hbase.NamespaceDescriptor::create(namespace_name)
+      args.each do |arg|
+        unless arg.kind_of?(Hash)
+          raise(ArgumentError, "#{arg.class} of #{arg.inspect} is not of Hash or String type")
+        end
+        for k,v in arg
+          v = v.to_s unless v.nil?
+          nsb.addProperty(k, v)
+        end
+      end
+      @admin.createNamespace(nsb.build());
+    end
+
+    #----------------------------------------------------------------------------------------------
+    # modify a namespace
+    def alter_namespace(namespace_name, *args)
+      # Fail if table name is not a string
+      raise(ArgumentError, "Namespace name must be of type String") unless namespace_name.kind_of?(String)
+
+      nsd = @admin.getNamespaceDescriptor(namespace_name)
+
+      unless nsd
+        raise(ArgumentError, "Namespace does not exist")
+      end
+      nsb = org.apache.hadoop.hbase.NamespaceDescriptor::create(nsd)
+
+      # Flatten params array
+      args = args.flatten.compact
+
+      # Start defining the table
+      args.each do |arg|
+        unless arg.kind_of?(Hash)
+          raise(ArgumentError, "#{arg.class} of #{arg.inspect} is not of Hash type")
+        end
+        method = arg[METHOD]
+        if method == "unset"
+          nsb.removeConfiguration(arg[NAME])
+        elsif  method == "set"
+          arg.delete(METHOD)
+          for k,v in arg
+            v = v.to_s unless v.nil?
+
+            nsb.addConfiguration(k, v)
+          end
+        else
+          raise(ArgumentError, "Unknown method #{method}")
+        end
+      end
+      @admin.modifyNamespace(nsb.build());
+    end
+
+
+    #----------------------------------------------------------------------------------------------
+    # Drops a table
+    def drop_namespace(namespace_name)
+      @admin.deleteNamespace(namespace_name)
     end
 
   end

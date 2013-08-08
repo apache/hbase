@@ -26,6 +26,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
@@ -190,25 +191,26 @@ public class TestSnapshotCloneIndependence {
 
     HBaseAdmin admin = UTIL.getHBaseAdmin();
     final long startTime = System.currentTimeMillis();
-    final String localTableNameAsString = STRING_TABLE_NAME + startTime;
+    final TableName localTableName =
+        TableName.valueOf(STRING_TABLE_NAME + startTime);
 
-    HTable original = UTIL.createTable(Bytes.toBytes(localTableNameAsString), TEST_FAM);
+    HTable original = UTIL.createTable(localTableName, TEST_FAM);
     try {
 
       UTIL.loadTable(original, TEST_FAM);
       final int origTableRowCount = UTIL.countRows(original);
 
       // Take a snapshot
-      final String snapshotNameAsString = "snapshot_" + localTableNameAsString;
+      final String snapshotNameAsString = "snapshot_" + localTableName;
       byte[] snapshotName = Bytes.toBytes(snapshotNameAsString);
 
-      SnapshotTestingUtils.createSnapshotAndValidate(admin, localTableNameAsString, TEST_FAM_STR,
+      SnapshotTestingUtils.createSnapshotAndValidate(admin, localTableName, TEST_FAM_STR,
         snapshotNameAsString, rootDir, fs, online);
 
       if (!online) {
-        admin.enableTable(localTableNameAsString);
+        admin.enableTable(localTableName);
       }
-      byte[] cloneTableName = Bytes.toBytes("test-clone-" + localTableNameAsString);
+      byte[] cloneTableName = Bytes.toBytes("test-clone-" + localTableName);
       admin.cloneSnapshot(snapshotName, cloneTableName);
 
       HTable clonedTable = new HTable(UTIL.getConfiguration(), cloneTableName);
@@ -267,23 +269,24 @@ public class TestSnapshotCloneIndependence {
     // Create a table
     HBaseAdmin admin = UTIL.getHBaseAdmin();
     final long startTime = System.currentTimeMillis();
-    final String localTableNameAsString = STRING_TABLE_NAME + startTime;
-    HTable original = UTIL.createTable(Bytes.toBytes(localTableNameAsString), TEST_FAM);
+    final TableName localTableName =
+        TableName.valueOf(STRING_TABLE_NAME + startTime);
+    HTable original = UTIL.createTable(localTableName, TEST_FAM);
     UTIL.loadTable(original, TEST_FAM);
     final int loadedTableCount = UTIL.countRows(original);
     System.out.println("Original table has: " + loadedTableCount + " rows");
 
-    final String snapshotNameAsString = "snapshot_" + localTableNameAsString;
+    final String snapshotNameAsString = "snapshot_" + localTableName;
 
     // Create a snapshot
-    SnapshotTestingUtils.createSnapshotAndValidate(admin, localTableNameAsString, TEST_FAM_STR,
+    SnapshotTestingUtils.createSnapshotAndValidate(admin, localTableName, TEST_FAM_STR,
       snapshotNameAsString, rootDir, fs, online);
 
     if (!online) {
-      admin.enableTable(localTableNameAsString);
+      admin.enableTable(localTableName);
     }
 
-    byte[] cloneTableName = Bytes.toBytes("test-clone-" + localTableNameAsString);
+    byte[] cloneTableName = Bytes.toBytes("test-clone-" + localTableName);
 
     // Clone the snapshot
     byte[] snapshotName = Bytes.toBytes(snapshotNameAsString);
@@ -291,8 +294,7 @@ public class TestSnapshotCloneIndependence {
 
     // Verify that region information is the same pre-split
     original.clearRegionCache();
-    List<HRegionInfo> originalTableHRegions = admin.getTableRegions(Bytes
-        .toBytes(localTableNameAsString));
+    List<HRegionInfo> originalTableHRegions = admin.getTableRegions(localTableName);
 
     final int originalRegionCount = originalTableHRegions.size();
     final int cloneTableRegionCount = admin.getTableRegions(cloneTableName).size();
@@ -323,20 +325,21 @@ public class TestSnapshotCloneIndependence {
     // Create a table
     HBaseAdmin admin = UTIL.getHBaseAdmin();
     final long startTime = System.currentTimeMillis();
-    final String localTableNameAsString = STRING_TABLE_NAME + startTime;
-    HTable original = UTIL.createTable(Bytes.toBytes(localTableNameAsString), TEST_FAM);
+    final TableName localTableName =
+        TableName.valueOf(STRING_TABLE_NAME + startTime);
+    HTable original = UTIL.createTable(localTableName, TEST_FAM);
     UTIL.loadTable(original, TEST_FAM);
 
-    final String snapshotNameAsString = "snapshot_" + localTableNameAsString;
+    final String snapshotNameAsString = "snapshot_" + localTableName;
 
     // Create a snapshot
-    SnapshotTestingUtils.createSnapshotAndValidate(admin, localTableNameAsString, TEST_FAM_STR,
+    SnapshotTestingUtils.createSnapshotAndValidate(admin, localTableName, TEST_FAM_STR,
       snapshotNameAsString, rootDir, fs, online);
 
     if (!online) {
-      admin.enableTable(localTableNameAsString);
+      admin.enableTable(localTableName);
     }
-    byte[] cloneTableName = Bytes.toBytes("test-clone-" + localTableNameAsString);
+    byte[] cloneTableName = Bytes.toBytes("test-clone-" + localTableName);
 
     // Clone the snapshot
     byte[] snapshotName = Bytes.toBytes(snapshotNameAsString);
@@ -346,11 +349,11 @@ public class TestSnapshotCloneIndependence {
     byte[] TEST_FAM_2 = Bytes.toBytes("fam2");
     HColumnDescriptor hcd = new HColumnDescriptor(TEST_FAM_2);
 
-    admin.disableTable(localTableNameAsString);
-    admin.addColumn(localTableNameAsString, hcd);
+    admin.disableTable(localTableName);
+    admin.addColumn(localTableName, hcd);
 
     // Verify that it is not in the snapshot
-    admin.enableTable(localTableNameAsString);
+    admin.enableTable(localTableName);
 
     // get a description of the cloned table
     // get a list of its families

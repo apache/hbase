@@ -29,6 +29,7 @@ import java.util.TreeMap;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.RegionTransition;
 import org.apache.hadoop.hbase.Server;
@@ -417,13 +418,13 @@ public class RegionStates {
    * @param tableName
    * @return Online regions from <code>tableName</code>
    */
-  public synchronized List<HRegionInfo> getRegionsOfTable(byte[] tableName) {
+  public synchronized List<HRegionInfo> getRegionsOfTable(TableName tableName) {
     List<HRegionInfo> tableRegions = new ArrayList<HRegionInfo>();
     // boundary needs to have table's name but regionID 0 so that it is sorted
     // before all table's regions.
     HRegionInfo boundary = new HRegionInfo(tableName, null, null, false, 0L);
     for (HRegionInfo hri: regionAssignments.tailMap(boundary).keySet()) {
-      if(!Bytes.equals(hri.getTableName(), tableName)) break;
+      if(!hri.getTableName().equals(tableName)) break;
       tableRegions.add(hri);
     }
     return tableRegions;
@@ -503,9 +504,10 @@ public class RegionStates {
    *
    * @return A clone of current assignments by table.
    */
-  protected Map<String, Map<ServerName, List<HRegionInfo>>> getAssignmentsByTable() {
-    Map<String, Map<ServerName, List<HRegionInfo>>> result =
-      new HashMap<String, Map<ServerName,List<HRegionInfo>>>();
+  protected Map<TableName, Map<ServerName, List<HRegionInfo>>>
+      getAssignmentsByTable() {
+    Map<TableName, Map<ServerName, List<HRegionInfo>>> result =
+      new HashMap<TableName, Map<ServerName,List<HRegionInfo>>>();
     synchronized (this) {
       if (!server.getConfiguration().getBoolean("hbase.master.loadbalance.bytable", false)) {
         Map<ServerName, List<HRegionInfo>> svrToRegions =
@@ -513,12 +515,12 @@ public class RegionStates {
         for (Map.Entry<ServerName, Set<HRegionInfo>> e: serverHoldings.entrySet()) {
           svrToRegions.put(e.getKey(), new ArrayList<HRegionInfo>(e.getValue()));
         }
-        result.put("ensemble", svrToRegions);
+        result.put(TableName.valueOf("ensemble"), svrToRegions);
       } else {
         for (Map.Entry<ServerName, Set<HRegionInfo>> e: serverHoldings.entrySet()) {
           for (HRegionInfo hri: e.getValue()) {
             if (hri.isMetaRegion()) continue;
-            String tablename = hri.getTableNameAsString();
+            TableName tablename = hri.getTableName();
             Map<ServerName, List<HRegionInfo>> svrToRegions = result.get(tablename);
             if (svrToRegions == null) {
               svrToRegions = new HashMap<ServerName, List<HRegionInfo>>(serverHoldings.size());

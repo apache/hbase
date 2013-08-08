@@ -63,7 +63,7 @@ public class TestHTableDescriptor {
    */
   @Test
   public void testGetSetRemoveCP() throws Exception {
-    HTableDescriptor desc = new HTableDescriptor("table");
+    HTableDescriptor desc = new HTableDescriptor(TableName.valueOf("table"));
     // simple CP
     String className = BaseRegionObserver.class.getName();
     // add and check that it is present
@@ -80,7 +80,7 @@ public class TestHTableDescriptor {
    */
   @Test
   public void testSetListRemoveCP() throws Exception {
-    HTableDescriptor desc = new HTableDescriptor("testGetSetRemoveCP");
+    HTableDescriptor desc = new HTableDescriptor(TableName.valueOf("testGetSetRemoveCP"));
     // simple CP
     String className1 = BaseRegionObserver.class.getName();
     String className2 = SampleRegionWALObserver.class.getName();
@@ -117,7 +117,7 @@ public class TestHTableDescriptor {
    */
   @Test
   public void testRemoveString() throws Exception {
-    HTableDescriptor desc = new HTableDescriptor("table");
+    HTableDescriptor desc = new HTableDescriptor(TableName.valueOf("table"));
     String key = "Some";
     String value = "value";
     desc.setValue(key, value);
@@ -126,13 +126,18 @@ public class TestHTableDescriptor {
     assertEquals(null, desc.getValue(key));
   }
 
-  String legalTableNames[] = { "foo", "with-dash_under.dot", "_under_start_ok",  };
-  String illegalTableNames[] = { ".dot_start_illegal", "-dash_start_illegal", "spaces not ok" };
+  String legalTableNames[] = { "foo", "with-dash_under.dot", "_under_start_ok",
+      "with-dash.with_underscore", "02-01-2012.my_table_01-02", "xyz._mytable_", "9_9_0.table_02"
+      , "dot1.dot2.table", "new.-mytable", "with-dash.with.dot", "legal..t2", "legal..legal.t2",
+      "trailingdots..", "trailing.dots...", "ns:mytable", "ns:_mytable_", "ns:my_table_01-02"};
+  String illegalTableNames[] = { ".dot_start_illegal", "-dash_start_illegal", "spaces not ok",
+      "-dash-.start_illegal", "new.table with space", "01 .table", "ns:-illegaldash",
+      "new:.illegaldot", "new:illegalcolon1:", "new:illegalcolon1:2"};
 
   @Test
   public void testLegalHTableNames() {
     for (String tn : legalTableNames) {
-      HTableDescriptor.isLegalTableName(Bytes.toBytes(tn));
+      TableName.isLegalFullyQualifiedTableName(Bytes.toBytes(tn));
     }
   }
 
@@ -140,7 +145,7 @@ public class TestHTableDescriptor {
   public void testIllegalHTableNames() {
     for (String tn : illegalTableNames) {
       try {
-        HTableDescriptor.isLegalTableName(Bytes.toBytes(tn));
+        TableName.isLegalFullyQualifiedTableName(Bytes.toBytes(tn));
         fail("invalid tablename " + tn + " should have failed");
       } catch (Exception e) {
         // expected
@@ -151,8 +156,9 @@ public class TestHTableDescriptor {
   @Test
   public void testLegalHTableNamesRegex() {
     for (String tn : legalTableNames) {
-      LOG.info("Testing: '" + tn + "'");
-      assertTrue(Pattern.matches(HTableDescriptor.VALID_USER_TABLE_REGEX, tn));
+      TableName tName = TableName.valueOf(tn);
+      assertTrue("Testing: '" + tn + "'", Pattern.matches(TableName.VALID_USER_TABLE_REGEX,
+          tName.getNameAsString()));
     }
   }
 
@@ -160,7 +166,7 @@ public class TestHTableDescriptor {
   public void testIllegalHTableNamesRegex() {
     for (String tn : illegalTableNames) {
       LOG.info("Testing: '" + tn + "'");
-      assertFalse(Pattern.matches(HTableDescriptor.VALID_USER_TABLE_REGEX, tn));
+      assertFalse(Pattern.matches(TableName.VALID_USER_TABLE_REGEX, tn));
     }
   }
 
@@ -169,7 +175,7 @@ public class TestHTableDescriptor {
    */
   @Test
   public void testGetMaxFileSize() {
-    HTableDescriptor desc = new HTableDescriptor("table");
+    HTableDescriptor desc = new HTableDescriptor(TableName.valueOf("table"));
     assertEquals(-1, desc.getMaxFileSize());
     desc.setMaxFileSize(1111L);
     assertEquals(1111L, desc.getMaxFileSize());
@@ -180,7 +186,7 @@ public class TestHTableDescriptor {
    */
   @Test
   public void testGetMemStoreFlushSize() {
-    HTableDescriptor desc = new HTableDescriptor("table");
+    HTableDescriptor desc = new HTableDescriptor(TableName.valueOf("table"));
     assertEquals(-1, desc.getMemStoreFlushSize());
     desc.setMemStoreFlushSize(1111L);
     assertEquals(1111L, desc.getMemStoreFlushSize());
@@ -191,7 +197,7 @@ public class TestHTableDescriptor {
    */
   @Test
   public void testAddGetRemoveConfiguration() throws Exception {
-    HTableDescriptor desc = new HTableDescriptor("table");
+    HTableDescriptor desc = new HTableDescriptor(TableName.valueOf("table"));
     String key = "Some";
     String value = "value";
     desc.setConfiguration(key, value);

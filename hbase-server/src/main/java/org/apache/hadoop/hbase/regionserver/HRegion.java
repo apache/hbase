@@ -73,6 +73,7 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.RegionTooBusyException;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.UnknownScannerException;
 import org.apache.hadoop.hbase.HConstants.OperationStatusCode;
 import org.apache.hadoop.hbase.HDFSBlocksDistribution;
@@ -90,8 +91,8 @@ import org.apache.hadoop.hbase.client.IsolationLevel;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
-import org.apache.hadoop.hbase.client.Row;
 import org.apache.hadoop.hbase.client.RowMutations;
+import org.apache.hadoop.hbase.client.Row;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.errorhandling.ForeignExceptionSnare;
 import org.apache.hadoop.hbase.exceptions.FailedSanityCheckException;
@@ -760,7 +761,7 @@ public class HRegion implements HeapSize { // , Writable{
   public static HDFSBlocksDistribution computeHDFSBlocksDistribution(final Configuration conf,
       final HTableDescriptor tableDescriptor, final HRegionInfo regionInfo) throws IOException {
     HDFSBlocksDistribution hdfsBlocksDistribution = new HDFSBlocksDistribution();
-    Path tablePath = FSUtils.getTablePath(FSUtils.getRootDir(conf), tableDescriptor.getName());
+    Path tablePath = FSUtils.getTableDir(FSUtils.getRootDir(conf), tableDescriptor.getTableName());
     FileSystem fs = tablePath.getFileSystem(conf);
 
     HRegionFileSystem regionFs = new HRegionFileSystem(conf, fs, tablePath, regionInfo);
@@ -2078,7 +2079,7 @@ public class HRegion implements HeapSize { // , Writable{
           lastIndexExclusive++;
           continue;
         }
-        
+
         // If we haven't got any rows in our batch, we should block to
         // get the next one.
         boolean shouldBlock = numReadyToWrite == 0;
@@ -2159,8 +2160,8 @@ public class HRegion implements HeapSize { // , Writable{
 
       // calling the pre CP hook for batch mutation
       if (!isInReplay && coprocessorHost != null) {
-        MiniBatchOperationInProgress<Mutation> miniBatchOp = 
-          new MiniBatchOperationInProgress<Mutation>(batchOp.operations, 
+        MiniBatchOperationInProgress<Mutation> miniBatchOp =
+          new MiniBatchOperationInProgress<Mutation>(batchOp.operations,
           batchOp.retCodeDetails, batchOp.walEditsFromCoprocessors, firstIndex, lastIndexExclusive);
         if (coprocessorHost.preBatchMutate(miniBatchOp)) return 0L;
       }
@@ -2220,7 +2221,7 @@ public class HRegion implements HeapSize { // , Writable{
       // -------------------------
       Mutation mutation = batchOp.operations[firstIndex];
       if (walEdit.size() > 0) {
-        txid = this.log.appendNoSync(this.getRegionInfo(), this.htableDescriptor.getName(),
+        txid = this.log.appendNoSync(this.getRegionInfo(), this.htableDescriptor.getTableName(),
                walEdit, mutation.getClusterId(), now, this.htableDescriptor);
       }
 
@@ -2232,7 +2233,7 @@ public class HRegion implements HeapSize { // , Writable{
         locked = false;
       }
       releaseRowLocks(acquiredRowLocks);
-      
+
       // -------------------------
       // STEP 7. Sync wal.
       // -------------------------
@@ -2242,8 +2243,8 @@ public class HRegion implements HeapSize { // , Writable{
       walSyncSuccessful = true;
       // calling the post CP hook for batch mutation
       if (!isInReplay && coprocessorHost != null) {
-        MiniBatchOperationInProgress<Mutation> miniBatchOp = 
-          new MiniBatchOperationInProgress<Mutation>(batchOp.operations, 
+        MiniBatchOperationInProgress<Mutation> miniBatchOp =
+          new MiniBatchOperationInProgress<Mutation>(batchOp.operations,
           batchOp.retCodeDetails, batchOp.walEditsFromCoprocessors, firstIndex, lastIndexExclusive);
         coprocessorHost.postBatchMutate(miniBatchOp);
       }
@@ -3210,7 +3211,7 @@ public class HRegion implements HeapSize { // , Writable{
           }
         }
       }
-      
+
       // allocate new lock for this thread
       return rowLockContext.newLock();
     } finally {
@@ -3937,11 +3938,11 @@ public class HRegion implements HeapSize { // , Writable{
                                       final HLog hlog,
                                       final boolean initialize, final boolean ignoreHLog)
       throws IOException {
-    LOG.info("creating HRegion " + info.getTableNameAsString()
+    LOG.info("creating HRegion " + info.getTableName().getNameAsString()
         + " HTD == " + hTableDescriptor + " RootDir = " + rootDir +
-        " Table name == " + info.getTableNameAsString());
+        " Table name == " + info.getTableName().getNameAsString());
 
-    Path tableDir = HTableDescriptor.getTableDir(rootDir, info.getTableName());
+    Path tableDir = FSUtils.getTableDir(rootDir, info.getTableName());
     FileSystem fs = FileSystem.get(conf);
     HRegionFileSystem rfs = HRegionFileSystem.createRegionOnFileSystem(conf, fs, tableDir, info);
     HLog effectiveHLog = hlog;
@@ -4098,8 +4099,10 @@ public class HRegion implements HeapSize { // , Writable{
       final RegionServerServices rsServices, final CancelableProgressable reporter)
       throws IOException {
     if (info == null) throw new NullPointerException("Passed region info is null");
-    LOG.info("Open " + info);
-    Path dir = HTableDescriptor.getTableDir(rootDir, info.getTableName());
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Opening region: " + info);
+    }
+    Path dir = FSUtils.getTableDir(rootDir, info.getTableName());
     HRegion r = HRegion.newHRegion(dir, wal, fs, conf, info, htd, rsServices);
     return r.openHRegion(reporter);
   }
@@ -4228,7 +4231,7 @@ public class HRegion implements HeapSize { // , Writable{
   @Deprecated
   public static Path getRegionDir(final Path rootdir, final HRegionInfo info) {
     return new Path(
-      HTableDescriptor.getTableDir(rootdir, info.getTableName()),
+      FSUtils.getTableDir(rootdir, info.getTableName()),
                                    info.getEncodedName());
   }
 
@@ -4288,8 +4291,8 @@ public class HRegion implements HeapSize { // , Writable{
    * @throws IOException
    */
   public static HRegion merge(final HRegion a, final HRegion b) throws IOException {
-    if (!a.getRegionInfo().getTableNameAsString().equals(
-        b.getRegionInfo().getTableNameAsString())) {
+    if (!a.getRegionInfo().getTableName().equals(
+        b.getRegionInfo().getTableName())) {
       throw new IOException("Regions do not belong to the same table");
     }
 
@@ -4545,7 +4548,7 @@ public class HRegion implements HeapSize { // , Writable{
           // 7. Append no sync
           if (!walEdit.isEmpty()) {
             txid = this.log.appendNoSync(this.getRegionInfo(),
-                this.htableDescriptor.getName(), walEdit,
+                this.htableDescriptor.getTableName(), walEdit,
                 processor.getClusterId(), now, this.htableDescriptor);
           }
           // 8. Release region lock
@@ -4691,10 +4694,10 @@ public class HRegion implements HeapSize { // , Writable{
           long now = EnvironmentEdgeManager.currentTimeMillis();
           // Process each family
           for (Map.Entry<byte[], List<? extends Cell>> family : append.getFamilyMap().entrySet()) {
-  
+
             Store store = stores.get(family.getKey());
             List<KeyValue> kvs = new ArrayList<KeyValue>(family.getValue().size());
-  
+
             Collections.sort((List<KeyValue>)family.getValue(), store.getComparator());
             // Get previous values for all columns in this family
             Get get = new Get(row);
@@ -4703,10 +4706,10 @@ public class HRegion implements HeapSize { // , Writable{
               get.addColumn(family.getKey(), kv.getQualifier());
             }
             List<KeyValue> results = get(get, false);
-  
+
             // Iterate the input columns and update existing values if they were
             // found, otherwise add new column initialized to the append value
-  
+
             // Avoid as much copying as possible. Every byte is copied at most
             // once.
             // Would be nice if KeyValue had scatter/gather logic
@@ -4750,10 +4753,10 @@ public class HRegion implements HeapSize { // , Writable{
               System.arraycopy(kv.getBuffer(), kv.getQualifierOffset(),
                   newKV.getBuffer(), newKV.getQualifierOffset(),
                   kv.getQualifierLength());
-  
+
               newKV.setMemstoreTS(w.getWriteNumber());
               kvs.add(newKV);
-  
+
               // Append update to WAL
               if (writeToWAL) {
                 if (walEdits == null) {
@@ -4762,23 +4765,23 @@ public class HRegion implements HeapSize { // , Writable{
                 walEdits.add(newKV);
               }
             }
-  
+
             //store the kvs to the temporary memstore before writing HLog
             tempMemstore.put(store, kvs);
           }
-  
+
           // Actually write to WAL now
           if (writeToWAL) {
             // Using default cluster id, as this can only happen in the orginating
             // cluster. A slave cluster receives the final value (not the delta)
             // as a Put.
-            txid = this.log.appendNoSync(this.getRegionInfo(), this.htableDescriptor.getName(),
+            txid = this.log.appendNoSync(this.getRegionInfo(), this.htableDescriptor.getTableName(),
               walEdits, HConstants.DEFAULT_CLUSTER_ID, EnvironmentEdgeManager.currentTimeMillis(),
               this.htableDescriptor);
           } else {
             recordMutationWithoutWal(append.getFamilyMap());
           }
-  
+
           //Actually write to Memstore now
           for (Map.Entry<Store, List<KeyValue>> entry : tempMemstore.entrySet()) {
             Store store = entry.getKey();
@@ -4866,10 +4869,10 @@ public class HRegion implements HeapSize { // , Writable{
           // Process each family
           for (Map.Entry<byte [], List<? extends Cell>> family:
               increment.getFamilyMap().entrySet()) {
-  
+
             Store store = stores.get(family.getKey());
             List<KeyValue> kvs = new ArrayList<KeyValue>(family.getValue().size());
-  
+
             // Get previous values for all columns in this family
             Get get = new Get(row);
             for (Cell cell: family.getValue()) {
@@ -4878,7 +4881,7 @@ public class HRegion implements HeapSize { // , Writable{
             }
             get.setTimeRange(tr.getMin(), tr.getMax());
             List<KeyValue> results = get(get, false);
-  
+
             // Iterate the input columns and update existing values if they were
             // found, otherwise add new column initialized to the increment amount
             int idx = 0;
@@ -4897,13 +4900,13 @@ public class HRegion implements HeapSize { // , Writable{
                 }
                 idx++;
               }
-  
+
               // Append new incremented KeyValue to list
               KeyValue newKV =
                 new KeyValue(row, family.getKey(), qualifier, now, Bytes.toBytes(amount));
               newKV.setMemstoreTS(w.getWriteNumber());
               kvs.add(newKV);
-  
+
               // Prepare WAL updates
               if (writeToWAL) {
                 if (walEdits == null) {
@@ -4912,17 +4915,17 @@ public class HRegion implements HeapSize { // , Writable{
                 walEdits.add(newKV);
               }
             }
-  
+
             //store the kvs to the temporary memstore before writing HLog
             tempMemstore.put(store, kvs);
           }
-  
+
           // Actually write to WAL now
           if (writeToWAL) {
             // Using default cluster id, as this can only happen in the orginating
             // cluster. A slave cluster receives the final value (not the delta)
             // as a Put.
-            txid = this.log.appendNoSync(this.getRegionInfo(), this.htableDescriptor.getName(),
+            txid = this.log.appendNoSync(this.getRegionInfo(), this.htableDescriptor.getTableName(),
                 walEdits, HConstants.DEFAULT_CLUSTER_ID, EnvironmentEdgeManager.currentTimeMillis(),
                 this.htableDescriptor);
           } else {
@@ -5141,9 +5144,8 @@ public class HRegion implements HeapSize { // , Writable{
       final boolean majorCompact)
   throws IOException {
     HRegion region = null;
-    String metaStr = Bytes.toString(HConstants.META_TABLE_NAME);
     // Currently expects tables have one region only.
-    if (p.getName().startsWith(metaStr)) {
+    if (FSUtils.getTableName(p).equals(TableName.META_TABLE_NAME)) {
       region = HRegion.newHRegion(p, log, fs, c,
         HRegionInfo.FIRST_META_REGIONINFO, HTableDescriptor.META_TABLEDESC, null);
     } else {
@@ -5211,7 +5213,8 @@ public class HRegion implements HeapSize { // , Writable{
    */
   public byte[] checkSplit() {
     // Can't split META
-    if (this.getRegionInfo().isMetaTable()) {
+    if (this.getRegionInfo().isMetaTable() ||
+        TableName.NAMESPACE_TABLE_NAME.equals(this.getRegionInfo().getTableName())) {
       if (shouldForceSplit()) {
         LOG.warn("Cannot split meta region in HBase 0.20 and above");
       }
@@ -5514,7 +5517,7 @@ public class HRegion implements HeapSize { // , Writable{
     final Configuration c = HBaseConfiguration.create();
     final FileSystem fs = FileSystem.get(c);
     final Path logdir = new Path(c.get("hbase.tmp.dir"));
-    final String logname = "hlog" + tableDir.getName()
+    final String logname = "hlog" + FSUtils.getTableName(tableDir)
       + EnvironmentEdgeManager.currentTimeMillis();
 
     final HLog log = HLogFactory.createHLog(fs, logdir, logname, c);
@@ -5593,7 +5596,7 @@ public class HRegion implements HeapSize { // , Writable{
      */
     void failedBulkLoad(byte[] family, String srcPath) throws IOException;
   }
-  
+
   @VisibleForTesting class RowLockContext {
     private final HashedBytes row;
     private final CountDownLatch latch = new CountDownLatch(1);
@@ -5604,16 +5607,16 @@ public class HRegion implements HeapSize { // , Writable{
       this.row = row;
       this.thread = Thread.currentThread();
     }
-    
+
     boolean ownedByCurrentThread() {
       return thread == Thread.currentThread();
     }
-    
+
     RowLock newLock() {
       lockCount++;
       return new RowLock(this);
     }
-    
+
     void releaseLock() {
       if (!ownedByCurrentThread()) {
         throw new IllegalArgumentException("Lock held by thread: " + thread
@@ -5631,7 +5634,7 @@ public class HRegion implements HeapSize { // , Writable{
       }
     }
   }
-  
+
   /**
    * Row lock held by a given thread.
    * One thread may acquire multiple locks on the same row simultaneously.
@@ -5640,11 +5643,11 @@ public class HRegion implements HeapSize { // , Writable{
   public class RowLock {
     @VisibleForTesting final RowLockContext context;
     private boolean released = false;
-    
+
     @VisibleForTesting RowLock(RowLockContext context) {
       this.context = context;
     }
-    
+
     /**
      * Release the given lock.  If there are no remaining locks held by the current thread
      * then unlock the row and allow other threads to acquire the lock.

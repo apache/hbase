@@ -166,7 +166,7 @@ extends InputFormat<ImmutableBytesWritable, Result> {
         throw new IOException("Expecting at least one region.");
       }
       List<InputSplit> splits = new ArrayList<InputSplit>(1);
-      InputSplit split = new TableSplit(table.getTableName(),
+      InputSplit split = new TableSplit(table.getName(),
           HConstants.EMPTY_BYTE_ARRAY, HConstants.EMPTY_BYTE_ARRAY, regLoc
               .getHostnamePort().split(Addressing.HOSTNAME_PORT_SEPARATOR)[0]);
       splits.add(split);
@@ -206,7 +206,7 @@ extends InputFormat<ImmutableBytesWritable, Result> {
           Bytes.compareTo(keys.getSecond()[i], stopRow) <= 0) &&
           keys.getSecond()[i].length > 0 ?
             keys.getSecond()[i] : stopRow;
-        InputSplit split = new TableSplit(table.getTableName(),
+        InputSplit split = new TableSplit(table.getName(),
           splitStart, splitStop, regionLocation);
         splits.add(split);
         if (LOG.isDebugEnabled()) {

@@ -51,6 +51,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
@@ -61,7 +62,6 @@ import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.RegionServerCallable;
-import org.apache.hadoop.hbase.client.RpcRetryingCaller;
 import org.apache.hadoop.hbase.client.RpcRetryingCallerFactory;
 import org.apache.hadoop.hbase.client.coprocessor.SecureBulkLoadClient;
 import org.apache.hadoop.hbase.io.HalfStoreFileReader;
@@ -200,7 +200,7 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
   {
     final HConnection conn = table.getConnection();
 
-    if (!conn.isTableAvailable(table.getTableName())) {
+    if (!conn.isTableAvailable(table.getName())) {
       throw new TableNotFoundException("Table " +
           Bytes.toStringBinary(table.getTableName()) +
           "is not currently available.");
@@ -261,7 +261,7 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
         if(User.isSecurityEnabled()) {
          userToken = fs.getDelegationToken("renewer");
         }
-        bulkToken = new SecureBulkLoadClient(table).prepareBulkLoad(table.getTableName());
+        bulkToken = new SecureBulkLoadClient(table).prepareBulkLoad(table.getName());
       }
 
       // Assumes that region splits can happen while this occurs.
@@ -339,7 +339,8 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
 
       final Callable<List<LoadQueueItem>> call = new Callable<List<LoadQueueItem>>() {
         public List<LoadQueueItem> call() throws Exception {
-          List<LoadQueueItem> toRetry = tryAtomicRegionLoad(conn, table.getTableName(), first, lqis);
+          List<LoadQueueItem> toRetry =
+              tryAtomicRegionLoad(conn, table.getName(), first, lqis);
           return toRetry;
         }
       };
@@ -420,8 +421,8 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
   }
 
   // unique file name for the table
-  String getUniqueName(byte[] tableName) {
-    String name = Bytes.toStringBinary(tableName) + "," + regionCount.incrementAndGet();
+  String getUniqueName(TableName tableName) {
+    String name = tableName + "," + regionCount.incrementAndGet();
     return name;
   }
 
@@ -437,7 +438,7 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
     LOG.info("HFile at " + hfilePath + " no longer fits inside a single " +
     "region. Splitting...");
 
-    String uniqueName = getUniqueName(table.getTableName());
+    String uniqueName = getUniqueName(table.getName());
     HColumnDescriptor familyDesc = table.getTableDescriptor().getFamily(item.family);
     Path botOut = new Path(tmpDir, uniqueName + ".bottom");
     Path topOut = new Path(tmpDir, uniqueName + ".top");
@@ -530,7 +531,8 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
    * failure
    */
   protected List<LoadQueueItem> tryAtomicRegionLoad(final HConnection conn,
-      byte[] tableName, final byte[] first, Collection<LoadQueueItem> lqis) throws IOException {
+      final TableName tableName,
+      final byte[] first, Collection<LoadQueueItem> lqis) throws IOException {
 
     final List<Pair<byte[], String>> famPaths =
       new ArrayList<Pair<byte[], String>>(lqis.size());
@@ -595,7 +597,7 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
       if (!success) {
         LOG.warn("Attempt to bulk load region containing "
             + Bytes.toStringBinary(first) + " into table "
-            + Bytes.toStringBinary(tableName)  + " with files " + lqis
+            + tableName  + " with files " + lqis
             + " failed.  This is recoverable and they will be retried.");
         toRetry.addAll(lqis); // return lqi's to retry
       }
@@ -678,7 +680,7 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
     return !HFile.isReservedFileInfoKey(key);
   }
 
-  private boolean doesTableExist(String tableName) throws Exception {
+  private boolean doesTableExist(TableName tableName) throws Exception {
     return hbAdmin.tableExists(tableName);
   }
 
@@ -716,7 +718,7 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
    * If the table is created for the first time, then "completebulkload" reads the files twice.
    * More modifications necessary if we want to avoid doing it.
    */
-  private void createTable(String tableName, String dirPath) throws Exception {
+  private void createTable(TableName tableName, String dirPath) throws Exception {
     Path hfofDir = new Path(dirPath);
     FileSystem fs = hfofDir.getFileSystem(getConf());
 
@@ -797,7 +799,7 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
     }
 
     String dirPath   = args[0];
-    String tableName = args[1];
+    TableName tableName = TableName.valueOf(args[1]);
 
     boolean tableExists   = this.doesTableExist(tableName);
     if (!tableExists) this.createTable(tableName,dirPath);

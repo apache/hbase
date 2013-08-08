@@ -21,10 +21,10 @@ import java.io.IOException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.zookeeper.MetaRegionTracker;
 import org.apache.hadoop.hbase.zookeeper.ZKClusterId;
 import org.apache.hadoop.hbase.zookeeper.ZKTableReadOnly;
@@ -95,15 +95,14 @@ class ZooKeeperRegistry implements Registry {
   }
 
   @Override
-  public boolean isTableOnlineState(byte [] tableName, boolean enabled)
+  public boolean isTableOnlineState(TableName tableName, boolean enabled)
   throws IOException {
-    String tableNameStr = Bytes.toString(tableName);
     ZooKeeperKeepAliveConnection zkw = hci.getKeepAliveZooKeeperWatcher();
     try {
       if (enabled) {
-        return ZKTableReadOnly.isEnabledTable(zkw, tableNameStr);
+        return ZKTableReadOnly.isEnabledTable(zkw, tableName);
       }
-      return ZKTableReadOnly.isDisabledTable(zkw, tableNameStr);
+      return ZKTableReadOnly.isDisabledTable(zkw, tableName);
     } catch (KeeperException e) {
       throw new IOException("Enable/Disable failed", e);
     } finally {

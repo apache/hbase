@@ -27,6 +27,7 @@ import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.ParseException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
@@ -50,7 +51,7 @@ public class LoadTestTool extends AbstractHBaseTool {
   private static final Log LOG = LogFactory.getLog(LoadTestTool.class);
 
   /** Table name for the test */
-  protected byte[] tableName;
+  private TableName tableName;
 
   /** Table name to use of not overridden on the command line */
   protected static final String DEFAULT_TABLE_NAME = "cluster_test";
@@ -169,11 +170,11 @@ public class LoadTestTool extends AbstractHBaseTool {
    * Apply column family options such as Bloom filters, compression, and data
    * block encoding.
    */
-  protected void applyColumnFamilyOptions(byte[] tableName,
+  protected void applyColumnFamilyOptions(TableName tableName,
       byte[][] columnFamilies) throws IOException {
     HBaseAdmin admin = new HBaseAdmin(conf);
     HTableDescriptor tableDesc = admin.getTableDescriptor(tableName);
-    LOG.info("Disabling table " + Bytes.toString(tableName));
+    LOG.info("Disabling table " + tableName);
     admin.disableTable(tableName);
     for (byte[] cf : columnFamilies) {
       HColumnDescriptor columnDesc = tableDesc.getFamily(cf);
@@ -200,7 +201,7 @@ public class LoadTestTool extends AbstractHBaseTool {
         admin.modifyColumn(tableName, columnDesc);
       }
     }
-    LOG.info("Enabling table " + Bytes.toString(tableName));
+    LOG.info("Enabling table " + tableName);
     admin.enableTable(tableName);
   }
 
@@ -244,7 +245,7 @@ public class LoadTestTool extends AbstractHBaseTool {
   protected void processOptions(CommandLine cmd) {
     this.cmd = cmd;
 
-    tableName = Bytes.toBytes(cmd.getOptionValue(OPT_TABLE_NAME,
+    tableName = TableName.valueOf(cmd.getOptionValue(OPT_TABLE_NAME,
         DEFAULT_TABLE_NAME));
 
     isWrite = cmd.hasOption(OPT_WRITE);

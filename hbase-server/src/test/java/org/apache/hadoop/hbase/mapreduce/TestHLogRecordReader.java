@@ -27,6 +27,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
@@ -40,7 +41,6 @@ import org.apache.hadoop.hbase.regionserver.wal.HLogFactory;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.mapreduce.InputSplit;
-import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.MapReduceTestUtil;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -57,8 +57,9 @@ public class TestHLogRecordReader {
   private static Configuration conf;
   private static FileSystem fs;
   private static Path hbaseDir;
-  private static final byte [] tableName = Bytes.toBytes(getName());
-  private static final byte [] rowName = tableName;
+  private static final TableName tableName =
+      TableName.valueOf(getName());
+  private static final byte [] rowName = tableName.getName();
   private static final HRegionInfo info = new HRegionInfo(tableName,
       Bytes.toBytes(""), Bytes.toBytes(""), false);
   private static final byte [] family = Bytes.toBytes("column");

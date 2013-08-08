@@ -44,6 +44,7 @@ import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.MultithreadedTestUtil;
 import org.apache.hadoop.hbase.MultithreadedTestUtil.TestContext;
 import org.apache.hadoop.hbase.MultithreadedTestUtil.TestThread;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Append;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
@@ -192,14 +193,14 @@ public class TestAtomicOperation extends HBaseTestCase {
   private void initHRegion (byte [] tableName, String callingMethod, int [] maxVersions,
     byte[] ... families)
   throws IOException {
-    HTableDescriptor htd = new HTableDescriptor(tableName);
+    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(tableName));
     int i=0;
     for(byte [] family : families) {
       HColumnDescriptor hcd = new HColumnDescriptor(family);
       hcd.setMaxVersions(maxVersions != null ? maxVersions[i++] : 1);
       htd.addFamily(hcd);
     }
-    HRegionInfo info = new HRegionInfo(htd.getName(), null, null, false);
+    HRegionInfo info = new HRegionInfo(htd.getTableName(), null, null, false);
     Path path = new Path(DIR + callingMethod);
     if (fs.exists(path)) {
       if (!fs.delete(path, true)) {

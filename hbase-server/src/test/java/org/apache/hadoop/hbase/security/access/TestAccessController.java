@@ -39,6 +39,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hbase.Coprocessor;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
@@ -80,13 +81,10 @@ import org.apache.hadoop.hbase.regionserver.RegionServerCoprocessorHost;
 import org.apache.hadoop.hbase.regionserver.ScanType;
 import org.apache.hadoop.hbase.security.AccessDeniedException;
 import org.apache.hadoop.hbase.security.User;
-import org.apache.hadoop.hbase.security.access.AccessControlLists;
-import org.apache.hadoop.hbase.security.access.Permission;
 import org.apache.hadoop.hbase.security.access.Permission.Action;
-import org.apache.hadoop.hbase.security.access.UserPermission;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
-import org.apache.hadoop.hbase.util.TableName;
+import org.apache.hadoop.hbase.util.TestTableName;
 
 import org.junit.After;
 import org.junit.AfterClass;
@@ -97,7 +95,6 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 import com.google.protobuf.BlockingRpcChannel;
-import com.google.protobuf.ByteString;
 import com.google.protobuf.ServiceException;
 
 /**
@@ -108,7 +105,7 @@ import com.google.protobuf.ServiceException;
 @SuppressWarnings("rawtypes")
 public class TestAccessController {
   private static final Log LOG = LogFactory.getLog(TestAccessController.class);
-  @Rule public TableName TEST_TABLE = new TableName();
+  @Rule public TestTableName TEST_TABLE = new TestTableName();
   private static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static Configuration conf;
 
@@ -127,7 +124,8 @@ public class TestAccessController {
   // user with no permissions
   private static User USER_NONE;
 
-  private static byte[] TEST_TABLE2 = Bytes.toBytes("testtable2");
+  private static TableName TEST_TABLE2 =
+      TableName.valueOf("testtable2");
   private static byte[] TEST_FAMILY = Bytes.toBytes("f1");
 
   private static MasterCoprocessorEnvironment CP_ENV;
@@ -183,7 +181,7 @@ public class TestAccessController {
     htd.addFamily(new HColumnDescriptor(TEST_FAMILY));
     htd.setOwner(USER_OWNER);
     admin.createTable(htd);
-    TEST_UTIL.waitTableEnabled(TEST_TABLE.getTableName());
+    TEST_UTIL.waitTableEnabled(TEST_TABLE.getTableName().getName());
 
     HRegion region = TEST_UTIL.getHBaseCluster().getRegions(TEST_TABLE.getTableName()).get(0);
     RegionCoprocessorHost rcpHost = region.getCoprocessorHost();
@@ -193,7 +191,7 @@ public class TestAccessController {
     // initilize access control
     HTable acl = new HTable(conf, AccessControlLists.ACL_TABLE_NAME);
     try {
-      BlockingRpcChannel service = acl.coprocessorService(TEST_TABLE.getTableName());
+      BlockingRpcChannel service = acl.coprocessorService(TEST_TABLE.getTableName().getName());
       AccessControlService.BlockingInterface protocol =
         AccessControlService.newBlockingStub(service);
 
@@ -232,7 +230,7 @@ public class TestAccessController {
       TEST_UTIL.deleteTable(TEST_TABLE.getTableName());
     } catch (TableNotFoundException ex) {
       // Test deleted the table, no problem
-      LOG.info("Test deleted table " + Bytes.toString(TEST_TABLE.getTableName()));
+      LOG.info("Test deleted table " + TEST_TABLE.getTableName());
     }
     assertEquals(0, AccessControlLists.getTablePermissions(conf, TEST_TABLE.getTableName()).size());
   }
@@ -313,7 +311,7 @@ public class TestAccessController {
   public void testTableCreate() throws Exception {
     PrivilegedExceptionAction createTable = new PrivilegedExceptionAction() {
       public Object run() throws Exception {
-        HTableDescriptor htd = new HTableDescriptor("testnewtable");
+        HTableDescriptor htd = new HTableDescriptor(TableName.valueOf("testnewtable"));
         htd.addFamily(new HColumnDescriptor(TEST_FAMILY));
         ACCESS_CONTROLLER.preCreateTable(ObserverContext.createAndPrepare(CP_ENV, null), htd, null);
         return null;
@@ -416,7 +414,7 @@ public class TestAccessController {
     PrivilegedExceptionAction disableAclTable = new PrivilegedExceptionAction() {
       public Object run() throws Exception {
         ACCESS_CONTROLLER.preDisableTable(ObserverContext.createAndPrepare(CP_ENV, null),
-            AccessControlLists.ACL_TABLE_NAME);
+            AccessControlLists.ACL_TABLE);
         return null;
       }
     };
@@ -872,7 +870,7 @@ public class TestAccessController {
     }
 
     private void bulkLoadHFile(
-        byte[] tableName,
+        TableName tableName,
         byte[] family,
         byte[] qualifier,
         byte[][][] hfileRanges,
@@ -893,7 +891,7 @@ public class TestAccessController {
       HTable table = new HTable(conf, tableName);
       try {
         HBaseAdmin admin = new HBaseAdmin(TEST_UTIL.getConfiguration());
-        TEST_UTIL.waitTableEnabled(admin, tableName);
+        TEST_UTIL.waitTableEnabled(admin, tableName.getName());
         LoadIncrementalHFiles loader = new LoadIncrementalHFiles(conf);
         loader.doBulkLoad(loadPath, table);
       } finally {
@@ -947,7 +945,7 @@ public class TestAccessController {
       public Object run() throws Exception {
         HTable acl = new HTable(conf, AccessControlLists.ACL_TABLE_NAME);
         try {
-          BlockingRpcChannel service = acl.coprocessorService(TEST_TABLE.getTableName());
+          BlockingRpcChannel service = acl.coprocessorService(TEST_TABLE.getTableName().getName());
           AccessControlService.BlockingInterface protocol =
             AccessControlService.newBlockingStub(service);
           ProtobufUtil.grant(protocol, USER_RO.getShortName(), TEST_TABLE.getTableName(),
@@ -963,7 +961,7 @@ public class TestAccessController {
       public Object run() throws Exception {
         HTable acl = new HTable(conf, AccessControlLists.ACL_TABLE_NAME);
         try {
-          BlockingRpcChannel service = acl.coprocessorService(TEST_TABLE.getTableName());
+          BlockingRpcChannel service = acl.coprocessorService(TEST_TABLE.getTableName().getName());
           AccessControlService.BlockingInterface protocol =
             AccessControlService.newBlockingStub(service);
           ProtobufUtil.revoke(protocol, USER_RO.getShortName(), TEST_TABLE.getTableName(),
@@ -979,7 +977,7 @@ public class TestAccessController {
       public Object run() throws Exception {
         HTable acl = new HTable(conf, AccessControlLists.ACL_TABLE_NAME);
         try {
-          BlockingRpcChannel service = acl.coprocessorService(TEST_TABLE.getTableName());
+          BlockingRpcChannel service = acl.coprocessorService(TEST_TABLE.getTableName().getName());
           AccessControlService.BlockingInterface protocol =
             AccessControlService.newBlockingStub(service);
           ProtobufUtil.getUserPermissions(protocol, TEST_TABLE.getTableName());
@@ -1002,7 +1000,8 @@ public class TestAccessController {
 
   @Test
   public void testPostGrantRevoke() throws Exception {
-    final byte[] tableName = Bytes.toBytes("TempTable");
+    final TableName tableName =
+        TableName.valueOf("TempTable");
     final byte[] family1 = Bytes.toBytes("f1");
     final byte[] family2 = Bytes.toBytes("f2");
     final byte[] qualifier = Bytes.toBytes("q");
@@ -1158,7 +1157,7 @@ public class TestAccessController {
     // grant table read permission
     HTable acl = new HTable(conf, AccessControlLists.ACL_TABLE_NAME);
     try {
-      BlockingRpcChannel service = acl.coprocessorService(tableName);
+      BlockingRpcChannel service = acl.coprocessorService(tableName.getName());
       AccessControlService.BlockingInterface protocol =
         AccessControlService.newBlockingStub(service);
       ProtobufUtil.grant(protocol, tblUser.getShortName(),
@@ -1182,7 +1181,7 @@ public class TestAccessController {
     // grant table write permission
     acl = new HTable(conf, AccessControlLists.ACL_TABLE_NAME);
     try {
-      BlockingRpcChannel service = acl.coprocessorService(tableName);
+      BlockingRpcChannel service = acl.coprocessorService(tableName.getName());
       AccessControlService.BlockingInterface protocol =
         AccessControlService.newBlockingStub(service);
       ProtobufUtil.grant(protocol, tblUser.getShortName(),
@@ -1206,7 +1205,7 @@ public class TestAccessController {
     // revoke table permission
     acl = new HTable(conf, AccessControlLists.ACL_TABLE_NAME);
     try {
-      BlockingRpcChannel service = acl.coprocessorService(tableName);
+      BlockingRpcChannel service = acl.coprocessorService(tableName.getName());
       AccessControlService.BlockingInterface protocol =
         AccessControlService.newBlockingStub(service);
       ProtobufUtil.grant(protocol, tblUser.getShortName(), tableName, null, null,
@@ -1230,7 +1229,7 @@ public class TestAccessController {
     // grant column family read permission
     acl = new HTable(conf, AccessControlLists.ACL_TABLE_NAME);
     try {
-      BlockingRpcChannel service = acl.coprocessorService(tableName);
+      BlockingRpcChannel service = acl.coprocessorService(tableName.getName());
       AccessControlService.BlockingInterface protocol =
         AccessControlService.newBlockingStub(service);
       ProtobufUtil.grant(protocol, tblUser.getShortName(),
@@ -1256,7 +1255,7 @@ public class TestAccessController {
     // grant column family write permission
     acl = new HTable(conf, AccessControlLists.ACL_TABLE_NAME);
     try {
-      BlockingRpcChannel service = acl.coprocessorService(tableName);
+      BlockingRpcChannel service = acl.coprocessorService(tableName.getName());
       AccessControlService.BlockingInterface protocol =
         AccessControlService.newBlockingStub(service);
       ProtobufUtil.grant(protocol, tblUser.getShortName(),
@@ -1283,7 +1282,7 @@ public class TestAccessController {
     // revoke column family permission
     acl = new HTable(conf, AccessControlLists.ACL_TABLE_NAME);
     try {
-      BlockingRpcChannel service = acl.coprocessorService(tableName);
+      BlockingRpcChannel service = acl.coprocessorService(tableName.getName());
       AccessControlService.BlockingInterface protocol =
         AccessControlService.newBlockingStub(service);
       ProtobufUtil.revoke(protocol, tblUser.getShortName(), tableName, family2, null);
@@ -1316,7 +1315,8 @@ public class TestAccessController {
 
   @Test
   public void testPostGrantRevokeAtQualifierLevel() throws Exception {
-    final byte[] tableName = Bytes.toBytes("testGrantRevokeAtQualifierLevel");
+    final TableName tableName =
+        TableName.valueOf("testGrantRevokeAtQualifierLevel");
     final byte[] family1 = Bytes.toBytes("f1");
     final byte[] family2 = Bytes.toBytes("f2");
     final byte[] qualifier = Bytes.toBytes("q");
@@ -1378,7 +1378,7 @@ public class TestAccessController {
 
     HTable acl = new HTable(conf, AccessControlLists.ACL_TABLE_NAME);
     try {
-      BlockingRpcChannel service = acl.coprocessorService(tableName);
+      BlockingRpcChannel service = acl.coprocessorService(tableName.getName());
       AccessControlService.BlockingInterface protocol =
         AccessControlService.newBlockingStub(service);
       ProtobufUtil.revoke(protocol, user.getShortName(), tableName, family1, null);
@@ -1394,7 +1394,7 @@ public class TestAccessController {
 
     acl = new HTable(conf, AccessControlLists.ACL_TABLE_NAME);
     try {
-      BlockingRpcChannel service = acl.coprocessorService(tableName);
+      BlockingRpcChannel service = acl.coprocessorService(tableName.getName());
       AccessControlService.BlockingInterface protocol =
         AccessControlService.newBlockingStub(service);
       ProtobufUtil.grant(protocol, user.getShortName(),
@@ -1413,7 +1413,7 @@ public class TestAccessController {
     // TODO: comment this portion after HBASE-3583
     acl = new HTable(conf, AccessControlLists.ACL_TABLE_NAME);
     try {
-      BlockingRpcChannel service = acl.coprocessorService(tableName);
+      BlockingRpcChannel service = acl.coprocessorService(tableName.getName());
       AccessControlService.BlockingInterface protocol =
         AccessControlService.newBlockingStub(service);
       ProtobufUtil.grant(protocol, user.getShortName(),
@@ -1431,7 +1431,7 @@ public class TestAccessController {
     // grant both read and write permission.
     acl = new HTable(conf, AccessControlLists.ACL_TABLE_NAME);
     try {
-      BlockingRpcChannel service = acl.coprocessorService(tableName);
+      BlockingRpcChannel service = acl.coprocessorService(tableName.getName());
       AccessControlService.BlockingInterface protocol =
         AccessControlService.newBlockingStub(service);
       ProtobufUtil.grant(protocol, user.getShortName(),
@@ -1450,7 +1450,7 @@ public class TestAccessController {
     // revoke family level permission won't impact column level.
     acl = new HTable(conf, AccessControlLists.ACL_TABLE_NAME);
     try {
-      BlockingRpcChannel service = acl.coprocessorService(tableName);
+      BlockingRpcChannel service = acl.coprocessorService(tableName.getName());
       AccessControlService.BlockingInterface protocol =
         AccessControlService.newBlockingStub(service);
       ProtobufUtil.revoke(protocol, user.getShortName(),
@@ -1472,7 +1472,8 @@ public class TestAccessController {
 
   @Test
   public void testPermissionList() throws Exception {
-    final byte[] tableName = Bytes.toBytes("testPermissionList2");
+    final TableName tableName =
+        TableName.valueOf("testPermissionList");
     final byte[] family1 = Bytes.toBytes("f1");
     final byte[] family2 = Bytes.toBytes("f2");
     final byte[] qualifier = Bytes.toBytes("q");
@@ -1493,7 +1494,7 @@ public class TestAccessController {
 
     HTable acl = new HTable(conf, AccessControlLists.ACL_TABLE_NAME);
     try {
-      BlockingRpcChannel service = acl.coprocessorService(tableName);
+      BlockingRpcChannel service = acl.coprocessorService(tableName.getName());
       AccessControlService.BlockingInterface protocol =
         AccessControlService.newBlockingStub(service);
       perms = ProtobufUtil.getUserPermissions(protocol, tableName);
@@ -1517,7 +1518,7 @@ public class TestAccessController {
     // grant read permission
     acl = new HTable(conf, AccessControlLists.ACL_TABLE_NAME);
     try {
-      BlockingRpcChannel service = acl.coprocessorService(tableName);
+      BlockingRpcChannel service = acl.coprocessorService(tableName.getName());
       AccessControlService.BlockingInterface protocol =
         AccessControlService.newBlockingStub(service);
       ProtobufUtil.grant(protocol, user.getShortName(),
@@ -1540,7 +1541,7 @@ public class TestAccessController {
     // grant read+write
     acl = new HTable(conf, AccessControlLists.ACL_TABLE_NAME);
     try {
-      BlockingRpcChannel service = acl.coprocessorService(tableName);
+      BlockingRpcChannel service = acl.coprocessorService(tableName.getName());
       AccessControlService.BlockingInterface protocol =
         AccessControlService.newBlockingStub(service);
       ProtobufUtil.grant(protocol, user.getShortName(),
@@ -1558,7 +1559,7 @@ public class TestAccessController {
 
     acl = new HTable(conf, AccessControlLists.ACL_TABLE_NAME);
     try {
-      BlockingRpcChannel service = acl.coprocessorService(tableName);
+      BlockingRpcChannel service = acl.coprocessorService(tableName.getName());
       AccessControlService.BlockingInterface protocol =
         AccessControlService.newBlockingStub(service);
       ProtobufUtil.revoke(protocol, user.getShortName(), tableName, family1, qualifier,
@@ -1580,7 +1581,7 @@ public class TestAccessController {
 
     acl = new HTable(conf, AccessControlLists.ACL_TABLE_NAME);
     try {
-      BlockingRpcChannel service = acl.coprocessorService(tableName);
+      BlockingRpcChannel service = acl.coprocessorService(tableName.getName());
       AccessControlService.BlockingInterface protocol =
         AccessControlService.newBlockingStub(service);
       perms = ProtobufUtil.getUserPermissions(protocol, tableName);
@@ -1610,7 +1611,7 @@ public class TestAccessController {
       acl.close();
     }
     UserPermission adminPerm = new UserPermission(Bytes.toBytes(USER_ADMIN.getShortName()),
-      AccessControlLists.ACL_TABLE_NAME, null, null, Bytes.toBytes("ACRW"));
+      AccessControlLists.ACL_TABLE, null, null, Bytes.toBytes("ACRW"));
     assertTrue("Only user admin has permission on table _acl_ per setup",
       perms.size() == 1 && hasFoundUserPermission(adminPerm, perms));
   }
@@ -1647,7 +1648,7 @@ public class TestAccessController {
     }
   }
 
-  public void checkTablePerms(byte[] table, byte[] family, byte[] column,
+  public void checkTablePerms(TableName table, byte[] family, byte[] column,
       Permission.Action... actions) throws IOException {
     Permission[] perms = new Permission[actions.length];
     for (int i = 0; i < actions.length; i++) {
@@ -1657,7 +1658,7 @@ public class TestAccessController {
     checkTablePerms(table, perms);
   }
 
-  public void checkTablePerms(byte[] table, Permission... perms) throws IOException {
+  public void checkTablePerms(TableName table, Permission... perms) throws IOException {
     CheckPermissionsRequest.Builder request = CheckPermissionsRequest.newBuilder();
     for (Permission p : perms) {
       request.addPermission(ProtobufUtil.toPermission(p));
@@ -1811,7 +1812,7 @@ public class TestAccessController {
     // check for wrong table region
     CheckPermissionsRequest checkRequest = CheckPermissionsRequest.newBuilder()
       .addPermission(AccessControlProtos.Permission.newBuilder()
-        .setTable(ByteString.copyFrom(TEST_TABLE.getTableName()))
+        .setTableName(ProtobufUtil.toProtoTableName(TEST_TABLE.getTableName()))
         .addAction(AccessControlProtos.Permission.Action.CREATE)
       ).build();
     acl = new HTable(conf, AccessControlLists.ACL_TABLE_NAME);
@@ -1926,7 +1927,7 @@ public class TestAccessController {
     // permissions for the new user.
     HTable acl = new HTable(conf, AccessControlLists.ACL_TABLE_NAME);
     try {
-      BlockingRpcChannel service = acl.coprocessorService(TEST_TABLE.getTableName());
+      BlockingRpcChannel service = acl.coprocessorService(TEST_TABLE.getTableName().getName());
       AccessControlService.BlockingInterface protocol =
         AccessControlService.newBlockingStub(service);
       String currentUser = User.getCurrent().getShortName();
@@ -2005,7 +2006,7 @@ public class TestAccessController {
     // Grant TABLE ADMIN privs
     HTable acl = new HTable(conf, AccessControlLists.ACL_TABLE_NAME);
     try {
-      BlockingRpcChannel service = acl.coprocessorService(TEST_TABLE.getTableName());
+      BlockingRpcChannel service = acl.coprocessorService(TEST_TABLE.getTableName().getName());
       AccessControlService.BlockingInterface protocol =
         AccessControlService.newBlockingStub(service);
       ProtobufUtil.grant(protocol, TABLE_ADMIN.getShortName(), TEST_TABLE.getTableName(),
@@ -2052,7 +2053,7 @@ public class TestAccessController {
     // Grant TABLE ADMIN privs
     HTable acl = new HTable(conf, AccessControlLists.ACL_TABLE_NAME);
     try {
-      BlockingRpcChannel service = acl.coprocessorService(TEST_TABLE.getTableName());
+      BlockingRpcChannel service = acl.coprocessorService(TEST_TABLE.getTableName().getName());
       AccessControlService.BlockingInterface protocol =
         AccessControlService.newBlockingStub(service);
       ProtobufUtil.grant(protocol, TABLE_ADMIN.getShortName(), TEST_TABLE.getTableName(),

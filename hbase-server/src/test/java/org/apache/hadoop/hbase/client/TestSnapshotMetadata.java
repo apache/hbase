@@ -24,6 +24,7 @@ import java.util.List;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
@@ -75,8 +76,7 @@ public class TestSnapshotMetadata {
 
   private String originalTableDescription;
   private HTableDescriptor originalTableDescriptor;
-  byte[] originalTableName;
-  String originalTableNameAsString;
+  TableName originalTableName;
 
   private static FileSystem fs;
   private static Path rootDir;
@@ -130,7 +130,7 @@ public class TestSnapshotMetadata {
 
     final long startTime = System.currentTimeMillis();
     final String sourceTableNameAsString = STRING_TABLE_NAME + startTime;
-    originalTableName = Bytes.toBytes(sourceTableNameAsString);
+    originalTableName = TableName.valueOf(sourceTableNameAsString);
 
     // enable replication on a column family
     HColumnDescriptor maxVersionsColumn = new HColumnDescriptor(MAX_VERSIONS_FAM);
@@ -143,7 +143,7 @@ public class TestSnapshotMetadata {
     dataBlockColumn.setDataBlockEncoding(DATA_BLOCK_ENCODING_TYPE);
     blockSizeColumn.setBlocksize(BLOCK_SIZE);
 
-    HTableDescriptor htd = new HTableDescriptor(sourceTableNameAsString);
+    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(sourceTableNameAsString));
     htd.addFamily(maxVersionsColumn);
     htd.addFamily(bloomFilterColumn);
     htd.addFamily(dataBlockColumn);
@@ -151,8 +151,7 @@ public class TestSnapshotMetadata {
 
     admin.createTable(htd);
     HTable original = new HTable(UTIL.getConfiguration(), originalTableName);
-
-    originalTableNameAsString = sourceTableNameAsString;
+    originalTableName = TableName.valueOf(sourceTableNameAsString);
     originalTableDescriptor = original.getTableDescriptor();
     originalTableDescription = originalTableDescriptor.toString();
 
@@ -166,9 +165,9 @@ public class TestSnapshotMetadata {
   @Test (timeout=300000)
   public void testDescribeMatchesAfterClone() throws Exception {
     // Clone the original table
-    final String clonedTableNameAsString = "clone" + originalTableNameAsString;
+    final String clonedTableNameAsString = "clone" + originalTableName;
     final byte[] clonedTableName = Bytes.toBytes(clonedTableNameAsString);
-    final String snapshotNameAsString = "snapshot" + originalTableNameAsString
+    final String snapshotNameAsString = "snapshot" + originalTableName
         + System.currentTimeMillis();
     final byte[] snapshotName = Bytes.toBytes(snapshotNameAsString);
 
@@ -180,13 +179,13 @@ public class TestSnapshotMetadata {
     }
 
     // Create a snapshot in which all families are empty
-    SnapshotTestingUtils.createSnapshotAndValidate(admin, originalTableNameAsString, null,
+    SnapshotTestingUtils.createSnapshotAndValidate(admin, originalTableName, null,
       familiesList, snapshotNameAsString, rootDir, fs);
 
     admin.cloneSnapshot(snapshotName, clonedTableName);
     HTable clonedTable = new HTable(UTIL.getConfiguration(), clonedTableName);
     Assert.assertEquals(
-      originalTableDescription.replace(originalTableNameAsString, clonedTableNameAsString),
+      originalTableDescription.replace(originalTableName.getNameAsString(),clonedTableNameAsString),
       clonedTable.getTableDescriptor().toString());
 
     admin.enableTable(originalTableName);
@@ -255,11 +254,11 @@ public class TestSnapshotMetadata {
     }
 
     // take a snapshot
-    final String snapshotNameAsString = "snapshot" + originalTableNameAsString
+    final String snapshotNameAsString = "snapshot" + originalTableName
         + System.currentTimeMillis();
     final byte[] snapshotName = Bytes.toBytes(snapshotNameAsString);
 
-    SnapshotTestingUtils.createSnapshotAndValidate(admin, originalTableNameAsString,
+    SnapshotTestingUtils.createSnapshotAndValidate(admin, originalTableName,
       familiesWithDataList, emptyFamiliesList, snapshotNameAsString, rootDir, fs);
 
     admin.enableTable(originalTableName);

@@ -21,6 +21,7 @@ import java.io.IOException;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.client.HTable;
@@ -44,7 +45,8 @@ public class RestartMetaTest extends AbstractHBaseTool {
   private static final int DEFAULT_NUM_RS = 2;
 
   /** Table name for the test */
-  private static byte[] TABLE_NAME = Bytes.toBytes("load_test");
+  private static TableName TABLE_NAME =
+      TableName.valueOf("load_test");
 
   /** The number of seconds to sleep after loading the data */
   private static final int SLEEP_SEC_AFTER_DATA_LOAD = 5;
@@ -118,7 +120,7 @@ public class RestartMetaTest extends AbstractHBaseTool {
 
     LOG.debug("Trying to scan meta");
 
-    HTable metaTable = new HTable(conf, HConstants.META_TABLE_NAME);
+    HTable metaTable = new HTable(conf, TableName.META_TABLE_NAME);
     ResultScanner scanner = metaTable.getScanner(new Scan());
     Result result;
     while ((result = scanner.next()) != null) {

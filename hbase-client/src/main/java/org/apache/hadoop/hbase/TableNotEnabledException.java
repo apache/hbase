@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.util.Bytes;
 
 
@@ -41,6 +42,13 @@ public class TableNotEnabledException extends DoNotRetryIOException {
    */
   public TableNotEnabledException(String s) {
     super(s);
+  }
+
+  /**
+   * @param tableName Name of table that is not enabled
+   */
+  public TableNotEnabledException(TableName tableName) {
+    this(tableName.getNameAsString());
   }
 
   /**

@@ -30,6 +30,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
@@ -79,7 +80,7 @@ class HMerge {
    * @throws IOException
    */
   public static void merge(Configuration conf, FileSystem fs,
-    final byte [] tableName)
+    final TableName tableName)
   throws IOException {
     merge(conf, fs, tableName, true);
   }
@@ -100,7 +101,7 @@ class HMerge {
    * @throws IOException
    */
   public static void merge(Configuration conf, FileSystem fs,
-    final byte [] tableName, final boolean testMasterRunning)
+    final TableName tableName, final boolean testMasterRunning)
   throws IOException {
     boolean masterIsRunning = false;
     if (testMasterRunning) {
@@ -112,7 +113,7 @@ class HMerge {
             }
           });
     }
-    if (Bytes.equals(tableName, HConstants.META_TABLE_NAME)) {
+    if (tableName.equals(TableName.META_TABLE_NAME)) {
       if (masterIsRunning) {
         throw new IllegalStateException(
             "Can not compact META table if instance is on-line");
@@ -140,7 +141,7 @@ class HMerge {
     private final long maxFilesize;
 
 
-    protected Merger(Configuration conf, FileSystem fs, final byte [] tableName)
+    protected Merger(Configuration conf, FileSystem fs, final TableName tableName)
     throws IOException {
       this.conf = conf;
       this.fs = fs;
@@ -148,7 +149,7 @@ class HMerge {
           HConstants.DEFAULT_MAX_FILE_SIZE);
 
       this.rootDir = FSUtils.getRootDir(conf);
-      Path tabledir = HTableDescriptor.getTableDir(this.rootDir, tableName);
+      Path tabledir = FSUtils.getTableDir(this.rootDir, tableName);
       this.htd = FSTableDescriptors.getTableDescriptorFromFs(this.fs, tabledir);
       String logname = "merge_" + System.currentTimeMillis() + HConstants.HREGION_LOGDIR_NAME;
 
@@ -225,17 +226,17 @@ class HMerge {
 
   /** Instantiated to compact a normal user table */
   private static class OnlineMerger extends Merger {
-    private final byte [] tableName;
+    private final TableName tableName;
     private final HTable table;
     private final ResultScanner metaScanner;
     private HRegionInfo latestRegion;
 
     OnlineMerger(Configuration conf, FileSystem fs,
-      final byte [] tableName)
+      final TableName tableName)
     throws IOException {
       super(conf, fs, tableName);
       this.tableName = tableName;
-      this.table = new HTable(conf, HConstants.META_TABLE_NAME);
+      this.table = new HTable(conf, TableName.META_TABLE_NAME);
       this.metaScanner = table.getScanner(HConstants.CATALOG_FAMILY,
           HConstants.REGIONINFO_QUALIFIER);
       this.latestRegion = null;
@@ -253,7 +254,7 @@ class HMerge {
               Bytes.toString(HConstants.CATALOG_FAMILY) + ":" +
               Bytes.toString(HConstants.REGIONINFO_QUALIFIER));
         }
-        if (!Bytes.equals(region.getTableName(), this.tableName)) {
+        if (!region.getTableName().equals(this.tableName)) {
           return null;
         }
         return region;
@@ -278,6 +279,11 @@ class HMerge {
         byte[] regionInfoValue = currentRow.getValue(HConstants.CATALOG_FAMILY,
             HConstants.REGIONINFO_QUALIFIER);
         if (regionInfoValue == null || regionInfoValue.length == 0) {
+          currentRow = metaScanner.next();
+          continue;
+        }
+        HRegionInfo region = HRegionInfo.getHRegionInfo(currentRow);
+        if (!region.getTableName().equals(this.tableName)) {
           currentRow = metaScanner.next();
           continue;
         }

@@ -32,6 +32,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
@@ -259,7 +260,7 @@ public class HLogUtil {
   public static void writeCompactionMarker(HLog log, HTableDescriptor htd, HRegionInfo info,
       final CompactionDescriptor c) throws IOException {
     WALEdit e = WALEdit.createCompaction(c);
-    log.append(info, c.getTableName().toByteArray(), e,
+    log.append(info, TableName.valueOf(c.getTableName().toByteArray()), e,
         EnvironmentEdgeManager.currentTimeMillis(), htd, false);
     if (LOG.isTraceEnabled()) {
       LOG.trace("Appended compaction marker " + TextFormat.shortDebugString(c));

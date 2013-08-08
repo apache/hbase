@@ -29,6 +29,7 @@ import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.nio.charset.Charset;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.security.SecureRandom;
@@ -42,7 +43,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.io.RawComparator;
 import org.apache.hadoop.io.WritableComparator;
@@ -61,6 +61,16 @@ import com.google.common.collect.Lists;
 @InterfaceAudience.Public
 @InterfaceStability.Stable
 public class Bytes {
+  //HConstants.UTF8_ENCODING should be updated if this changed
+  /** When we encode strings, we always specify UTF8 encoding */
+  private static final String UTF8_ENCODING = "UTF-8";
+
+  //HConstants.UTF8_CHARSET should be updated if this changed
+  /** When we encode strings, we always specify UTF8 encoding */
+  private static final Charset UTF8_CHARSET = Charset.forName(UTF8_ENCODING);
+
+  //HConstants.EMPTY_BYTE_ARRAY should be updated if this changed
+  private static final byte [] EMPTY_BYTE_ARRAY = new byte [0];
 
   private static final Log LOG = LogFactory.getLog(Bytes.class);
 
@@ -341,7 +351,7 @@ public class Bytes {
     if (len == 0) {
       return "";
     }
-    return new String(b, off, len, HConstants.UTF8_CHARSET);
+    return new String(b, off, len, UTF8_CHARSET);
   }
 
   /**
@@ -463,7 +473,7 @@ public class Bytes {
    * @return the byte array
    */
   public static byte[] toBytes(String s) {
-    return s.getBytes(HConstants.UTF8_CHARSET);
+    return s.getBytes(UTF8_CHARSET);
   }
 
   /**
@@ -1295,7 +1305,7 @@ public class Bytes {
    * @return New array that has a in lower half and b in upper half.
    */
   public static byte [] add(final byte [] a, final byte [] b) {
-    return add(a, b, HConstants.EMPTY_BYTE_ARRAY);
+    return add(a, b, EMPTY_BYTE_ARRAY);
   }
 
   /**

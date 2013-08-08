@@ -33,6 +33,7 @@ import com.google.protobuf.ServiceException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.*;
 import org.apache.hadoop.hbase.client.coprocessor.Batch;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcChannel;
@@ -231,6 +232,11 @@ public class RemoteHTable implements HTableInterface {
 
   public byte[] getTableName() {
     return name.clone();
+  }
+
+  @Override
+  public TableName getName() {
+    return TableName.valueOf(name);
   }
 
   public Configuration getConfiguration() {

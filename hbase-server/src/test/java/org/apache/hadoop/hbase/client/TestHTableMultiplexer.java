@@ -27,6 +27,7 @@ import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -64,7 +65,8 @@ public class TestHTableMultiplexer {
 
   @Test
   public void testHTableMultiplexer() throws Exception {
-    byte[] TABLE = Bytes.toBytes("testHTableMultiplexer");
+    TableName TABLE =
+        TableName.valueOf("testHTableMultiplexer");
     final int NUM_REGIONS = 10;
     final int VERSION = 3;
     List<Put> failedPuts;

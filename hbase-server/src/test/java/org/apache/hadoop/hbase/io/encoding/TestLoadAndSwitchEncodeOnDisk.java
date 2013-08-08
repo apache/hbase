@@ -92,7 +92,7 @@ public class TestLoadAndSwitchEncodeOnDisk extends
     assertAllOnLine(t);
 
     System.err.println("\nCompacting the table\n");
-    admin.majorCompact(TABLE);
+    admin.majorCompact(TABLE.getName());
     // Wait until compaction completes
     Threads.sleepWithoutInterrupt(5000);
     HRegionServer rs = TEST_UTIL.getMiniHBaseCluster().getRegionServer(0);

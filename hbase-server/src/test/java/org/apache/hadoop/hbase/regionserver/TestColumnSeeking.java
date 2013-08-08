@@ -52,14 +52,14 @@ public class TestColumnSeeking {
   public void testDuplicateVersions() throws IOException {
     String family = "Family";
     byte[] familyBytes = Bytes.toBytes("Family");
-    String table = "TestDuplicateVersions";
+    TableName table = TableName.valueOf("TestDuplicateVersions");
 
     HColumnDescriptor hcd =
         new HColumnDescriptor(familyBytes).setMaxVersions(1000);
     hcd.setMaxVersions(3);
     HTableDescriptor htd = new HTableDescriptor(table);
     htd.addFamily(hcd);
-    HRegionInfo info = new HRegionInfo(Bytes.toBytes(table), null, null, false);
+    HRegionInfo info = new HRegionInfo(table, null, null, false);
     HRegion region =
         HRegion.createHRegion(info, TEST_UTIL.getDataTestDir(), TEST_UTIL
             .getConfiguration(), htd);
@@ -166,14 +166,15 @@ public class TestColumnSeeking {
   public void testReseeking() throws IOException {
     String family = "Family";
     byte[] familyBytes = Bytes.toBytes("Family");
-    String table = "TestSingleVersions";
+    TableName table =
+        TableName.valueOf("TestSingleVersions");
 
     HTableDescriptor htd = new HTableDescriptor(table);
     HColumnDescriptor hcd = new HColumnDescriptor(family);
     hcd.setMaxVersions(3);
     htd.addFamily(hcd);
 
-    HRegionInfo info = new HRegionInfo(Bytes.toBytes(table), null, null, false);
+    HRegionInfo info = new HRegionInfo(table, null, null, false);
     HRegion region =
         HRegion.createHRegion(info, TEST_UTIL.getDataTestDir(), TEST_UTIL
             .getConfiguration(), htd);

@@ -30,6 +30,7 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.MediumTests;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.regionserver.wal.HLogFactory;
 import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
@@ -59,7 +60,7 @@ public class TestReplicationHLogReaderManager {
   private static Path hbaseDir;
   private static FileSystem fs;
   private static MiniDFSCluster cluster;
-  private static final byte [] tableName = Bytes.toBytes("tablename");
+  private static final TableName tableName = TableName.valueOf("tablename");
   private static final byte [] family = Bytes.toBytes("column");
   private static final byte [] qualifier = Bytes.toBytes("qualifier");
   private static final HRegionInfo info = new HRegionInfo(tableName,

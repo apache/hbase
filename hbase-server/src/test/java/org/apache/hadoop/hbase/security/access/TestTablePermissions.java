@@ -38,6 +38,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.LargeTests;
@@ -80,8 +81,10 @@ public class TestTablePermissions {
     }
   };
 
-  private static byte[] TEST_TABLE = Bytes.toBytes("perms_test");
-  private static byte[] TEST_TABLE2 = Bytes.toBytes("perms_test2");
+  private static TableName TEST_TABLE =
+      TableName.valueOf("perms_test");
+  private static TableName TEST_TABLE2 =
+      TableName.valueOf("perms_test2");
   private static byte[] TEST_FAMILY = Bytes.toBytes("f1");
   private static byte[] TEST_QUALIFIER = Bytes.toBytes("col1");
 
@@ -113,7 +116,7 @@ public class TestTablePermissions {
     Configuration conf = UTIL.getConfiguration();
     AccessControlLists.removeTablePermissions(conf, TEST_TABLE);
     AccessControlLists.removeTablePermissions(conf, TEST_TABLE2);
-    AccessControlLists.removeTablePermissions(conf, AccessControlLists.ACL_TABLE_NAME);
+    AccessControlLists.removeTablePermissions(conf, AccessControlLists.ACL_TABLE);
   }
 
   /**
@@ -187,8 +190,8 @@ public class TestTablePermissions {
     assertNotNull("Should have permissions for george", userPerms);
     assertEquals("Should have 1 permission for george", 1, userPerms.size());
     TablePermission permission = userPerms.get(0);
-    assertTrue("Permission should be for " + TEST_TABLE,
-        Bytes.equals(TEST_TABLE, permission.getTable()));
+    assertEquals("Permission should be for " + TEST_TABLE,
+        TEST_TABLE, permission.getTable());
     assertNull("Column family should be empty", permission.getFamily());
 
     // check actions
@@ -202,8 +205,8 @@ public class TestTablePermissions {
     assertNotNull("Should have permissions for hubert", userPerms);
     assertEquals("Should have 1 permission for hubert", 1, userPerms.size());
     permission = userPerms.get(0);
-    assertTrue("Permission should be for " + TEST_TABLE,
-        Bytes.equals(TEST_TABLE, permission.getTable()));
+    assertEquals("Permission should be for " + TEST_TABLE,
+        TEST_TABLE, permission.getTable());
     assertNull("Column family should be empty", permission.getFamily());
 
     // check actions
@@ -217,8 +220,8 @@ public class TestTablePermissions {
     assertNotNull("Should have permissions for humphrey", userPerms);
     assertEquals("Should have 1 permission for humphrey", 1, userPerms.size());
     permission = userPerms.get(0);
-    assertTrue("Permission should be for " + TEST_TABLE,
-        Bytes.equals(TEST_TABLE, permission.getTable()));
+    assertEquals("Permission should be for " + TEST_TABLE,
+        TEST_TABLE, permission.getTable());
     assertTrue("Permission should be for family " + TEST_FAMILY,
         Bytes.equals(TEST_FAMILY, permission.getFamily()));
     assertTrue("Permission should be for qualifier " + TEST_QUALIFIER,
@@ -237,7 +240,7 @@ public class TestTablePermissions {
             TablePermission.Action.READ, TablePermission.Action.WRITE));
 
     // check full load
-    Map<byte[],ListMultimap<String,TablePermission>> allPerms =
+    Map<TableName,ListMultimap<String,TablePermission>> allPerms =
         AccessControlLists.loadAll(conf);
     assertEquals("Full permission map should have entries for both test tables",
         2, allPerms.size());
@@ -246,7 +249,7 @@ public class TestTablePermissions {
     assertNotNull(userPerms);
     assertEquals(1, userPerms.size());
     permission = userPerms.get(0);
-    assertTrue(Bytes.equals(TEST_TABLE, permission.getTable()));
+    assertEquals(TEST_TABLE, permission.getTable());
     assertEquals(1, permission.getActions().length);
     assertEquals(TablePermission.Action.READ, permission.getActions()[0]);
 
@@ -254,7 +257,7 @@ public class TestTablePermissions {
     assertNotNull(userPerms);
     assertEquals(1, userPerms.size());
     permission = userPerms.get(0);
-    assertTrue(Bytes.equals(TEST_TABLE2, permission.getTable()));
+    assertEquals(TEST_TABLE2, permission.getTable());
     assertEquals(2, permission.getActions().length);
     actions = Arrays.asList(permission.getActions());
     assertTrue(actions.contains(TablePermission.Action.READ));
@@ -290,7 +293,7 @@ public class TestTablePermissions {
     table.put(new Put(Bytes.toBytes("row2"))
         .add(TEST_FAMILY, TEST_QUALIFIER, Bytes.toBytes("v2")));
     HBaseAdmin admin = UTIL.getHBaseAdmin();
-    admin.split(TEST_TABLE);
+    admin.split(TEST_TABLE.getName());
 
     // wait for split
     Thread.sleep(10000);

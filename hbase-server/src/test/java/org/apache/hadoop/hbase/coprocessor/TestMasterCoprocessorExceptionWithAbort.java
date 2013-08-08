@@ -35,6 +35,7 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
@@ -80,7 +81,7 @@ public class TestMasterCoprocessorExceptionWithAbort {
     public void run() {
       // create a table : master coprocessor will throw an exception and not
       // catch it.
-      HTableDescriptor htd = new HTableDescriptor(TEST_TABLE);
+      HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(TEST_TABLE));
       htd.addFamily(new HColumnDescriptor(TEST_FAMILY));
       try {
         HBaseAdmin admin = UTIL.getHBaseAdmin();

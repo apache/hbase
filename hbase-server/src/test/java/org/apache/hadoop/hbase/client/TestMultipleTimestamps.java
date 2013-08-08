@@ -80,8 +80,9 @@ public class TestMultipleTimestamps {
 
   @Test
   public void testReseeksWithOneColumnMiltipleTimestamp() throws IOException {
-    byte [] TABLE = Bytes.toBytes("testReseeksWithOne" +
-    "ColumnMiltipleTimestamps");
+    TableName TABLE =
+        TableName.valueOf("testReseeksWithOne" +
+            "ColumnMiltipleTimestamps");
     byte [] FAMILY = Bytes.toBytes("event_log");
     byte [][] FAMILIES = new byte[][] { FAMILY };
 
@@ -121,8 +122,9 @@ public class TestMultipleTimestamps {
   @Test
   public void testReseeksWithMultipleColumnOneTimestamp() throws IOException {
     LOG.info("testReseeksWithMultipleColumnOneTimestamp");
-    byte [] TABLE = Bytes.toBytes("testReseeksWithMultiple" +
-    "ColumnOneTimestamps");
+    TableName TABLE =
+        TableName.valueOf("testReseeksWithMultiple" +
+            "ColumnOneTimestamps");
     byte [] FAMILY = Bytes.toBytes("event_log");
     byte [][] FAMILIES = new byte[][] { FAMILY };
 
@@ -162,7 +164,8 @@ public class TestMultipleTimestamps {
   IOException {
     LOG.info("testReseeksWithMultipleColumnMultipleTimestamp");
 
-    byte [] TABLE = Bytes.toBytes("testReseeksWithMultipleColumnMiltipleTimestamps");
+    TableName TABLE =
+        TableName.valueOf("testReseeksWithMultipleColumnMiltipleTimestamps");
     byte [] FAMILY = Bytes.toBytes("event_log");
     byte [][] FAMILIES = new byte[][] { FAMILY };
 
@@ -214,7 +217,8 @@ public class TestMultipleTimestamps {
   @Test
   public void testReseeksWithMultipleFiles() throws IOException {
     LOG.info("testReseeksWithMultipleFiles");
-    byte [] TABLE = Bytes.toBytes("testReseeksWithMultipleFiles");
+    TableName TABLE =
+        TableName.valueOf("testReseeksWithMultipleFiles");
     byte [] FAMILY = Bytes.toBytes("event_log");
     byte [][] FAMILIES = new byte[][] { FAMILY };
 
@@ -282,7 +286,9 @@ public class TestMultipleTimestamps {
 
   public void testWithVersionDeletes(boolean flushTables) throws IOException {
     LOG.info("testWithVersionDeletes_"+ (flushTables ? "flush" : "noflush"));
-    byte [] TABLE = Bytes.toBytes("testWithVersionDeletes_" + (flushTables ? "flush" : "noflush"));
+    TableName TABLE =
+        TableName.valueOf("testWithVersionDeletes_" + (flushTables ?
+            "flush" : "noflush"));
     byte [] FAMILY = Bytes.toBytes("event_log");
     byte [][] FAMILIES = new byte[][] { FAMILY };
 
@@ -315,7 +321,8 @@ public class TestMultipleTimestamps {
   public void testWithMultipleVersionDeletes() throws IOException {
     LOG.info("testWithMultipleVersionDeletes");
 
-    byte [] TABLE = Bytes.toBytes("testWithMultipleVersionDeletes");
+    TableName TABLE =
+        TableName.valueOf("testWithMultipleVersionDeletes");
     byte [] FAMILY = Bytes.toBytes("event_log");
     byte [][] FAMILIES = new byte[][] { FAMILY };
 
@@ -340,7 +347,8 @@ public class TestMultipleTimestamps {
 
   @Test
   public void testWithColumnDeletes() throws IOException {
-    byte [] TABLE = Bytes.toBytes("testWithColumnDeletes");
+    TableName TABLE =
+        TableName.valueOf("testWithColumnDeletes");
     byte [] FAMILY = Bytes.toBytes("event_log");
     byte [][] FAMILIES = new byte[][] { FAMILY };
 
@@ -365,7 +373,8 @@ public class TestMultipleTimestamps {
 
   @Test
   public void testWithFamilyDeletes() throws IOException {
-    byte [] TABLE = Bytes.toBytes("testWithFamilyDeletes");
+    TableName TABLE =
+        TableName.valueOf("testWithFamilyDeletes");
     byte [] FAMILY = Bytes.toBytes("event_log");
     byte [][] FAMILIES = new byte[][] { FAMILY };
 
