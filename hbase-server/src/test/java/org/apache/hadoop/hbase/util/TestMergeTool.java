@@ -67,7 +67,7 @@ public class TestMergeTool extends HBaseTestCase {
     this.conf.set("hbase.hstore.compactionThreshold", "2");
 
     // Create table description
-    this.desc = new HTableDescriptor(TableName.valueOf("TestMergeTool"));
+    this.desc = new HTableDescriptor(org.apache.hadoop.hbase.TableName.valueOf("TestMergeTool"));
     this.desc.addFamily(new HColumnDescriptor(FAMILY));
 
     /*
@@ -268,9 +268,9 @@ public class TestMergeTool extends HBaseTestCase {
       + System.currentTimeMillis();
     LOG.info("Creating log " + logPath.toString() + "/" + logName);
 
-    HLog log = HLogFactory.createHLog(this.fs, logPath, 
+    HLog log = HLogFactory.createHLog(this.fs, logPath,
         logName, this.conf);
-    
+
     try {
        // Merge Region 0 and Region 1
       HRegion merged = mergeAndVerify("merging regions 0 and 1 ",

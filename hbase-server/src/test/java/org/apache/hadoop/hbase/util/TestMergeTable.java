@@ -66,7 +66,7 @@ public class TestMergeTable {
    */
   @Test (timeout=300000) public void testMergeTable() throws Exception {
     // Table we are manually creating offline.
-    HTableDescriptor desc = new HTableDescriptor(TableName.valueOf(Bytes.toBytes("test")));
+    HTableDescriptor desc = new HTableDescriptor(org.apache.hadoop.hbase.TableName.valueOf(Bytes.toBytes("test")));
     desc.addFamily(new HColumnDescriptor(COLUMN_NAME));
 
     // Set maximum regionsize down.
