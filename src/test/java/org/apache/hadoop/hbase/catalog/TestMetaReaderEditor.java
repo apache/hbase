@@ -52,7 +52,7 @@ import org.junit.Test;
 public class TestMetaReaderEditor {
   private static final Log LOG = LogFactory.getLog(TestMetaReaderEditor.class);
   private static final  HBaseTestingUtility UTIL = new HBaseTestingUtility();
-  private ZooKeeperWatcher zkw;
+  private static ZooKeeperWatcher zkw;
   private static CatalogTracker ct;
   private final static Abortable ABORTABLE = new Abortable() {
     private final AtomicBoolean abort = new AtomicBoolean(false);
@@ -72,9 +72,7 @@ public class TestMetaReaderEditor {
 
   @BeforeClass public static void beforeClass() throws Exception {
     UTIL.startMiniCluster(3);
-  }
 
-  @Before public void setup() throws IOException, InterruptedException {
     Configuration c = new Configuration(UTIL.getConfiguration());
     // Tests to 4 retries every 5 seconds. Make it try every 1 second so more
     // responsive.  1 second is default as is ten retries.
@@ -86,7 +84,7 @@ public class TestMetaReaderEditor {
   }
 
   @AfterClass public static void afterClass() throws Exception {
-    ct.stop();
+    ABORTABLE.abort("test ending", null);
     UTIL.shutdownMiniCluster();
   }
 
@@ -97,7 +95,7 @@ public class TestMetaReaderEditor {
    * @throws IOException
    * @throws InterruptedException
    */
-  @Test (timeout = 180000) public void testRetrying()
+  @Test public void testRetrying()
   throws IOException, InterruptedException {
     final String name = "testRetrying";
     LOG.info("Started " + name);
@@ -123,27 +121,48 @@ public class TestMetaReaderEditor {
     };
     reader.start();
     writer.start();
-    // Make sure reader and writer are working.
-    assertTrue(reader.isProgressing());
-    assertTrue(writer.isProgressing());
-    // Kill server hosting meta -- twice  . See if our reader/writer ride over the
-    // meta moves.  They'll need to retry.
-    for (int i = 0; i < 2; i++) {
-      LOG.info("Restart=" + i);
-      UTIL.ensureSomeRegionServersAvailable(2);
-      int index = -1;
-      do {
-        index = UTIL.getMiniHBaseCluster().getServerWithMeta();
-      } while (index == -1);
-      UTIL.getMiniHBaseCluster().abortRegionServer(index);
-      UTIL.getMiniHBaseCluster().waitOnRegionServer(index);
+
+    // We're gonna check how it takes. If it takes too long, we will consider
+    //  it as a fail. We can't put that in the @Test tag as we want to close
+    //  the threads nicely
+    final long timeOut = 180000;
+    long startTime = System.currentTimeMillis();
+
+    try {
+      // Make sure reader and writer are working.
+      assertTrue(reader.isProgressing());
+      assertTrue(writer.isProgressing());
+
+      // Kill server hosting meta -- twice  . See if our reader/writer ride over the
+      // meta moves.  They'll need to retry.
+      for (int i = 0; i < 2; i++) {
+        LOG.info("Restart=" + i);
+        UTIL.ensureSomeRegionServersAvailable(2);
+        int index = -1;
+        do {
+          index = UTIL.getMiniHBaseCluster().getServerWithMeta();
+        }while (index == -1 &&
+          startTime + timeOut < System.currentTimeMillis());
+
+        if (index != -1){
+          UTIL.getMiniHBaseCluster().abortRegionServer(index);
+          UTIL.getMiniHBaseCluster().waitOnRegionServer(index);
+        }
+      }
+
+      assertTrue("reader: "+reader.toString(), reader.isProgressing());
+      assertTrue("writer: "+writer.toString(), writer.isProgressing());
+    } catch (IOException e) {
+      throw e;
+    } finally {
+      reader.stop = true;
+      writer.stop = true;
+      reader.join();
+      writer.join();
+      t.close();
     }
-    assertTrue(reader.toString(), reader.isProgressing());
-    assertTrue(writer.toString(), writer.isProgressing());
-    reader.stop = true;
-    writer.stop = true;
-    reader.join();
-    writer.join();
+    long exeTime = System.currentTimeMillis() - startTime;
+    assertTrue("Timeout: test took " + exeTime / 1000 + " sec", exeTime < timeOut);
   }
 
   /**
@@ -243,18 +262,12 @@ public class TestMetaReaderEditor {
     final String name = "testScanMetaForTable";
     LOG.info("Started " + name);
 
-    /** Create 5 tables
+    /** Create 2 tables
      - testScanMetaForTable
-     - testScanMetaForTable0
-     - testScanMetaForTable1
-     - testScanMetaForTable2
      - testScanMetaForTablf
     **/
 
     UTIL.createTable(Bytes.toBytes(name), HConstants.CATALOG_FAMILY);
-    for (int i = 3; i < 3; i ++) {
-      UTIL.createTable(Bytes.toBytes(name+i), HConstants.CATALOG_FAMILY);
-    }
     // name that is +1 greater than the first one (e+1=f)
     byte[] greaterName = Bytes.toBytes("testScanMetaForTablf");
     UTIL.createTable(greaterName, HConstants.CATALOG_FAMILY);
@@ -262,9 +275,6 @@ public class TestMetaReaderEditor {
     // Now make sure we only get the regions from 1 of the tables at a time
 
     assertEquals(1, MetaReader.getTableRegions(ct, Bytes.toBytes(name)).size());
-    for (int i = 3; i < 3; i ++) {
-      assertEquals(1, MetaReader.getTableRegions(ct, Bytes.toBytes(name+i)).size());
-    }
     assertEquals(1, MetaReader.getTableRegions(ct, greaterName).size());
   }
 
