@@ -288,7 +288,7 @@ public class ThriftUtilities {
 
     // Map<family, List<KeyValue>>
     for (Map.Entry<byte[], List<? extends org.apache.hadoop.hbase.Cell>> familyEntry:
-        in.getFamilyMap().entrySet()) {
+        in.getFamilyCellMap().entrySet()) {
       TColumn column = new TColumn(ByteBuffer.wrap(familyEntry.getKey()));
       for (org.apache.hadoop.hbase.Cell cell: familyEntry.getValue()) {
         KeyValue kv = KeyValueUtil.ensureKeyValue(cell);

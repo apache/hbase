@@ -222,12 +222,12 @@ public class TestCoprocessorScanPolicy {
     public void prePut(final ObserverContext<RegionCoprocessorEnvironment> c, final Put put,
         final WALEdit edit, final Durability durability) throws IOException {
       if (put.getAttribute("ttl") != null) {
-        Cell cell = put.getFamilyMap().values().iterator().next().get(0);
+        Cell cell = put.getFamilyCellMap().values().iterator().next().get(0);
         KeyValue kv = KeyValueUtil.ensureKeyValue(cell);
         ttls.put(TableName.valueOf(kv.getQualifier()), Bytes.toLong(kv.getValue()));
         c.bypass();
       } else if (put.getAttribute("versions") != null) {
-        Cell cell = put.getFamilyMap().values().iterator().next().get(0);
+        Cell cell = put.getFamilyCellMap().values().iterator().next().get(0);
         KeyValue kv = KeyValueUtil.ensureKeyValue(cell);
         versions.put(TableName.valueOf(kv.getQualifier()), Bytes.toInt(kv.getValue()));
         c.bypass();

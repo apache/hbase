@@ -3796,10 +3796,10 @@ public class TestFromClientSide {
     put.add(CONTENTS_FAMILY, null, value);
 
     assertEquals(put.size(), 1);
-    assertEquals(put.getFamilyMap().get(CONTENTS_FAMILY).size(), 1);
+    assertEquals(put.getFamilyCellMap().get(CONTENTS_FAMILY).size(), 1);
 
     // KeyValue v1 expectation.  Cast for now until we go all Cell all the time. TODO
-    KeyValue kv = (KeyValue)put.getFamilyMap().get(CONTENTS_FAMILY).get(0);
+    KeyValue kv = (KeyValue)put.getFamilyCellMap().get(CONTENTS_FAMILY).get(0);
 
     assertTrue(Bytes.equals(kv.getFamily(), CONTENTS_FAMILY));
     // will it return null or an empty byte array?

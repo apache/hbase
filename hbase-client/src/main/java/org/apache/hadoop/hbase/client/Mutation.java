@@ -70,7 +70,7 @@ public abstract class Mutation extends OperationWithAttributes implements Row, C
 
   @Override
   public CellScanner cellScanner() {
-    return CellUtil.createCellScanner(getFamilyMap());
+    return CellUtil.createCellScanner(getFamilyCellMap());
   }
 
   /**
@@ -206,11 +206,33 @@ public abstract class Mutation extends OperationWithAttributes implements Row, C
     return Durability.SKIP_WAL != getDurability();
   }
 
+  /*
+   * Method for retrieving the put's familyMap  (family -> KeyValues)
+   * Application should use the getFamilyCellMap and the Cell interface instead of KeyValue.
+   *
+   * @return familyMap
+   */
+  @Deprecated
+  public Map<byte[], List<KeyValue>> getFamilyMap() {
+    Map<byte[], List<KeyValue>> fm = new TreeMap();
+    for (Map.Entry<byte[], List<? extends Cell>> e : this.familyMap.entrySet()) {
+      byte[] family = e.getKey();
+      List<? extends Cell> cells = e.getValue();
+      List<KeyValue> kvs = new ArrayList(cells.size());
+      for (Cell c : cells) {
+         KeyValue kv = KeyValueUtil.ensureKeyValue(c);
+         kvs.add(kv);
+       }
+       fm.put(family, kvs);
+     }
+     return fm;
+   }
+  
   /**
    * Method for retrieving the put's familyMap
    * @return familyMap
    */
-  public NavigableMap<byte [], List<? extends Cell>> getFamilyMap() {
+  public NavigableMap<byte [], List<? extends Cell>> getFamilyCellMap() {
     return this.familyMap;
   }
 
