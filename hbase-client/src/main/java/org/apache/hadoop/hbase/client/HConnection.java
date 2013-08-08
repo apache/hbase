@@ -106,6 +106,19 @@ public interface HConnection extends Abortable, Closeable {
    * Note that the HConnection needs to be unmanaged
    * (created with {@link HConnectionManager#createConnection(Configuration)}).
    * @param tableName
+   * @return an HTable to use for interactions with this table
+   */
+  public HTableInterface getTable(TableName tableName) throws IOException;
+
+  /**
+   * Retrieve an HTableInterface implementation for access to a table.
+   * The returned HTableInterface is not thread safe, a new instance should
+   * be created for each using thread.
+   * This is a lightweight operation, pooling or caching of the returned HTableInterface
+   * is neither required nor desired.
+   * Note that the HConnection needs to be unmanaged
+   * (created with {@link HConnectionManager#createConnection(Configuration)}).
+   * @param tableName
    * @param pool The thread pool to use for batch operations, null to use a default pool.
    * @return an HTable to use for interactions with this table
    */
@@ -124,6 +137,20 @@ public interface HConnection extends Abortable, Closeable {
    * @return an HTable to use for interactions with this table
    */
   public HTableInterface getTable(byte[] tableName, ExecutorService pool)  throws IOException;
+
+  /**
+   * Retrieve an HTableInterface implementation for access to a table.
+   * The returned HTableInterface is not thread safe, a new instance should
+   * be created for each using thread.
+   * This is a lightweight operation, pooling or caching of the returned HTableInterface
+   * is neither required nor desired.
+   * Note that the HConnection needs to be unmanaged
+   * (created with {@link HConnectionManager#createConnection(Configuration)}).
+   * @param tableName
+   * @param pool The thread pool to use for batch operations, null to use a default pool.
+   * @return an HTable to use for interactions with this table
+   */
+  public HTableInterface getTable(TableName tableName, ExecutorService pool)  throws IOException;
 
   /** @return - true if the master server is running */
   boolean isMasterRunning()
