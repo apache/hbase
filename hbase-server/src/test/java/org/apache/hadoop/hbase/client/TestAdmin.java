@@ -112,7 +112,7 @@ public class TestAdmin {
   public void tearDown() throws Exception {
   }
 
-  @Test
+  @Test (timeout=300000)
   public void testSplitFlushCompactUnknownTable() throws InterruptedException {
     final String unknowntable = "fubar";
     Exception exception = null;
@@ -140,7 +140,7 @@ public class TestAdmin {
     assertTrue(exception instanceof TableNotFoundException);
   }
 
-  @Test
+  @Test (timeout=300000)
   public void testDeleteEditUnknownColumnFamilyAndOrTable() throws IOException {
     // Test we get exception if we try to
     final String nonexistent = "nonexistent";
@@ -233,7 +233,7 @@ public class TestAdmin {
     }
   }
 
-  @Test
+  @Test (timeout=300000)
   public void testDisableAndEnableTable() throws IOException {
     final byte [] row = Bytes.toBytes("row");
     final byte [] qualifier = Bytes.toBytes("qualifier");
@@ -277,7 +277,7 @@ public class TestAdmin {
     ht.close();
   }
 
-  @Test
+  @Test (timeout=300000)
   public void testDisableAndEnableTables() throws IOException {
     final byte [] row = Bytes.toBytes("row");
     final byte [] qualifier = Bytes.toBytes("qualifier");
@@ -328,7 +328,7 @@ public class TestAdmin {
     ht2.close();
   }
 
-  @Test
+  @Test (timeout=300000)
   public void testCreateTable() throws IOException {
     HTableDescriptor [] tables = admin.listTables();
     int numTables = tables.length;
@@ -341,7 +341,7 @@ public class TestAdmin {
             TableName.valueOf("testCreateTable")));
   }
 
-  @Test
+  @Test (timeout=300000)
   public void testGetTableDescriptor() throws IOException {
     HColumnDescriptor fam1 = new HColumnDescriptor("fam1");
     HColumnDescriptor fam2 = new HColumnDescriptor("fam2");
@@ -357,7 +357,7 @@ public class TestAdmin {
     table.close();
   }
 
-  @Test
+  @Test (timeout=300000)
   public void testHColumnValidName() {
        boolean exceptionThrown;
        try {
@@ -368,7 +368,7 @@ public class TestAdmin {
        }
    }
   
-  @Test
+  @Test (timeout=300000)
   public void testIsEnabledOnNonexistentTable() throws IOException {
     try {
       assertFalse(admin.isTableEnabled(Bytes.toBytes("non-existing")));
@@ -381,7 +381,7 @@ public class TestAdmin {
    * @throws IOException
    * @throws InterruptedException
    */
-  @Test
+  @Test (timeout=300000)
   public void testOnlineChangeTableSchema() throws IOException, InterruptedException {
     final TableName tableName =
         TableName.valueOf("changeTableSchemaOnline");
@@ -470,7 +470,7 @@ public class TestAdmin {
     assertFalse(this.admin.tableExists(tableName));
   }
 
-  @Test
+  @Test (timeout=300000)
   public void testShouldFailOnlineSchemaUpdateIfOnlineSchemaIsNotEnabled()
       throws Exception {
     final byte[] tableName = Bytes.toBytes("changeTableSchemaOnlineFailure");
@@ -557,7 +557,7 @@ public class TestAdmin {
     }
   }
 
-  @Test
+  @Test (timeout=300000)
   public void testCreateTableNumberOfRegions() throws IOException, InterruptedException {
     byte[] tableName = Bytes.toBytes("testCreateTableNumberOfRegions");
     HTableDescriptor desc = new HTableDescriptor(TableName.valueOf(tableName));
@@ -606,7 +606,7 @@ public class TestAdmin {
     ht5.close();
   }
 
-  @Test
+  @Test (timeout=300000)
   public void testCreateTableWithRegions() throws IOException, InterruptedException {
 
     byte[] tableName = Bytes.toBytes("testCreateTableWithRegions");
@@ -781,7 +781,7 @@ public class TestAdmin {
     ladmin.close();
   }
 
-  @Test
+  @Test (timeout=300000)
   public void testTableAvailableWithRandomSplitKeys() throws Exception {
     byte[] tableName = Bytes.toBytes("testTableAvailableWithRandomSplitKeys");
     HTableDescriptor desc = new HTableDescriptor(TableName.valueOf(tableName));
@@ -795,8 +795,8 @@ public class TestAdmin {
     boolean tableAvailable = admin.isTableAvailable(Bytes.toString(tableName), splitKeys);
     assertFalse("Table should be created with 1 row in META", tableAvailable);
   }
-  
-  @Test
+
+  @Test (timeout=300000)
   public void testCreateTableWithOnlyEmptyStartRow() throws IOException {
     byte[] tableName = Bytes.toBytes("testCreateTableWithOnlyEmptyStartRow");
     byte[][] splitKeys = new byte[1][];
@@ -809,8 +809,8 @@ public class TestAdmin {
     } catch (IllegalArgumentException e) {
     }
   }
-  
-  @Test
+
+  @Test (timeout=300000)
   public void testCreateTableWithEmptyRowInTheSplitKeys() throws IOException{
     byte[] tableName = Bytes.toBytes("testCreateTableWithEmptyRowInTheSplitKeys");
     byte[][] splitKeys = new byte[3][];
@@ -826,7 +826,7 @@ public class TestAdmin {
     }
   }
 
-  @Test
+  @Test (timeout=300000)
   public void testTableExist() throws IOException {
     final byte [] table = Bytes.toBytes("testTableExist");
     boolean exist;
@@ -842,7 +842,7 @@ public class TestAdmin {
    * @throws Exception
    * @throws IOException
    */
-  @Test
+  @Test (timeout=300000)
   public void testForceSplit() throws Exception {
     byte[][] familyNames = new byte[][] { Bytes.toBytes("cf") };
     int[] rowCounts = new int[] { 6000 };
@@ -859,7 +859,7 @@ public class TestAdmin {
    *
    * @throws IOException
    */
-  @Test
+  @Test (timeout=300000)
   public void testEnableTableRoundRobinAssignment() throws IOException {
     byte[] tableName = Bytes.toBytes("testEnableTableAssignment");
     byte[][] splitKeys = { new byte[] { 1, 1, 1 }, new byte[] { 2, 2, 2 },
@@ -916,7 +916,7 @@ public class TestAdmin {
    * @throws Exception
    * @throws IOException
    */
-  @Test
+  @Test (timeout=300000)
   public void testForceSplitMultiFamily() throws Exception {
     int numVersions = HColumnDescriptor.DEFAULT_VERSIONS;
 
@@ -1086,17 +1086,17 @@ public class TestAdmin {
    * @throws IOException
    */
   @SuppressWarnings("deprecation")
-  @Test (expected=IllegalArgumentException.class)
+  @Test (expected=IllegalArgumentException.class, timeout=300000)
   public void testEmptyHTableDescriptor() throws IOException {
     this.admin.createTable(new HTableDescriptor());
   }
 
-  @Test (expected=IllegalArgumentException.class)
+  @Test (expected=IllegalArgumentException.class, timeout=300000)
   public void testInvalidHColumnDescriptor() throws IOException {
      new HColumnDescriptor("/cfamily/name");
   }
 
-  @Test(timeout=300000)
+  @Test (timeout=300000)
   public void testEnableDisableAddColumnDeleteColumn() throws Exception {
     ZooKeeperWatcher zkw = HBaseTestingUtility.getZooKeeperWatcher(TEST_UTIL);
     TableName tableName = TableName.valueOf("testMasterAdmin");
@@ -1123,7 +1123,7 @@ public class TestAdmin {
     this.admin.deleteTable(tableName);
   }
 
-  @Test
+  @Test (timeout=300000)
   public void testCreateBadTables() throws IOException {
     String msg = null;
     try {
@@ -1181,7 +1181,7 @@ public class TestAdmin {
    * Test for hadoop-1581 'HBASE: Unopenable tablename bug'.
    * @throws Exception
    */
-  @Test
+  @Test (timeout=300000)
   public void testTableNameClash() throws Exception {
     String name = "testTableNameClash";
     admin.createTable(new HTableDescriptor(TableName.valueOf(name + "SOMEUPPERCASE")));
@@ -1197,7 +1197,7 @@ public class TestAdmin {
    * issue anymore
    * @throws Exception
    */
-  @Test
+  @Test (timeout=300000)
   public void testCreateTableRPCTimeOut() throws Exception {
     String name = "testCreateTableRPCTimeOut";
     int oldTimeout = TEST_UTIL.getConfiguration().
@@ -1221,7 +1221,7 @@ public class TestAdmin {
    * Test read only tables
    * @throws Exception
    */
-  @Test
+  @Test (timeout=300000)
   public void testReadOnlyTable() throws Exception {
     byte [] name = Bytes.toBytes("testReadOnlyTable");
     HTable table = TEST_UTIL.createTable(name, HConstants.CATALOG_FAMILY);
@@ -1238,7 +1238,7 @@ public class TestAdmin {
    * start with same. HBASE-771
    * @throws IOException
    */
-  @Test
+  @Test (timeout=300000)
   public void testTableNames() throws IOException {
     byte[][] illegalNames = new byte[][] {
         Bytes.toBytes("-bad"),
@@ -1267,7 +1267,7 @@ public class TestAdmin {
    * For HADOOP-2579
    * @throws IOException
    */
-  @Test (expected=TableExistsException.class)
+  @Test (expected=TableExistsException.class, timeout=300000)
   public void testTableExistsExceptionWithATable() throws IOException {
     final byte [] name = Bytes.toBytes("testTableExistsExceptionWithATable");
     TEST_UTIL.createTable(name, HConstants.CATALOG_FAMILY).close();
@@ -1278,7 +1278,7 @@ public class TestAdmin {
    * Can't disable a table if the table isn't in enabled state
    * @throws IOException
    */
-  @Test (expected=TableNotEnabledException.class)
+  @Test (expected=TableNotEnabledException.class, timeout=300000)
   public void testTableNotEnabledExceptionWithATable() throws IOException {
     final byte [] name = Bytes.toBytes(
       "testTableNotEnabledExceptionWithATable");
@@ -1291,7 +1291,7 @@ public class TestAdmin {
    * Can't enable a table if the table isn't in disabled state
    * @throws IOException
    */
-  @Test (expected=TableNotDisabledException.class)
+  @Test (expected=TableNotDisabledException.class, timeout=300000)
   public void testTableNotDisabledExceptionWithATable() throws IOException {
     final byte [] name = Bytes.toBytes(
       "testTableNotDisabledExceptionWithATable");
@@ -1307,13 +1307,13 @@ public class TestAdmin {
    * For HADOOP-2579
    * @throws IOException
    */
-  @Test (expected=TableNotFoundException.class)
+  @Test (expected=TableNotFoundException.class, timeout=300000)
   public void testTableNotFoundExceptionWithoutAnyTables() throws IOException {
     new HTable(TEST_UTIL.getConfiguration(),"testTableNotFoundExceptionWithoutAnyTables");
   }
 
 
-  @Test
+  @Test (timeout=300000)
   public void testShouldCloseTheRegionBasedOnTheEncodedRegionName()
       throws Exception {
     TableName TABLENAME =
@@ -1341,7 +1341,7 @@ public class TestAdmin {
       isInList);
   }
 
-  @Test
+  @Test (timeout=300000)
   public void testCloseRegionIfInvalidRegionNameIsPassed() throws Exception {
     byte[] TABLENAME = Bytes.toBytes("TestHBACloseRegion1");
     createTableWithDefaultConf(TABLENAME);
@@ -1367,7 +1367,7 @@ public class TestAdmin {
         onlineRegions.contains(info));
   }
 
-  @Test
+  @Test (timeout=300000)
   public void testCloseRegionThatFetchesTheHRIFromMeta() throws Exception {
     TableName TABLENAME =
         TableName.valueOf("TestHBACloseRegion2");
@@ -1398,7 +1398,7 @@ public class TestAdmin {
       isInList);
   }
 
-  @Test
+  @Test (timeout=300000)
   public void testCloseRegionWhenServerNameIsNull() throws Exception {
     byte[] TABLENAME = Bytes.toBytes("TestHBACloseRegion3");
     createTableWithDefaultConf(TABLENAME);
@@ -1422,7 +1422,7 @@ public class TestAdmin {
   }
 
 
-  @Test
+  @Test (timeout=300000)
   public void testCloseRegionWhenServerNameIsEmpty() throws Exception {
     byte[] TABLENAME = Bytes.toBytes("TestHBACloseRegionWhenServerNameIsEmpty");
     createTableWithDefaultConf(TABLENAME);
@@ -1445,7 +1445,7 @@ public class TestAdmin {
     }
   }
 
-  @Test
+  @Test (timeout=300000)
   public void testCloseRegionWhenEncodedRegionNameIsNotGiven() throws Exception {
     byte[] TABLENAME = Bytes.toBytes("TestHBACloseRegion4");
     createTableWithDefaultConf(TABLENAME);
@@ -1501,7 +1501,7 @@ public class TestAdmin {
    * For HBASE-2556
    * @throws IOException
    */
-  @Test
+  @Test (timeout=300000)
   public void testGetTableRegions() throws IOException {
 
     byte[] tableName = Bytes.toBytes("testGetTableRegions");
@@ -1525,7 +1525,7 @@ public class TestAdmin {
 
  }
 
-  @Test
+  @Test (timeout=300000)
   public void testHLogRollWriting() throws Exception {
     setUpforLogRolling();
     String className = this.getClass().getName();
@@ -1552,7 +1552,7 @@ public class TestAdmin {
     assertTrue(("actual count: " + count), count <= 2);
   }
 
-  @Test
+  @Test (timeout=300000)
   public void testMoveToPreviouslyAssignedRS() throws IOException, InterruptedException {
     byte[] tableName = Bytes.toBytes("testMoveToPreviouslyAssignedRS");
     MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
@@ -1650,7 +1650,7 @@ public class TestAdmin {
   /**
    * HBASE-4417 checkHBaseAvailable() doesn't close zk connections
    */
-  @Test
+  @Test (timeout=300000)
   public void testCheckHBaseAvailableClosesConnection() throws Exception {
     Configuration conf = TEST_UTIL.getConfiguration();
 
@@ -1664,7 +1664,7 @@ public class TestAdmin {
   /**
    * Check that we have an exception if the cluster is not there.
    */
-  @Test
+  @Test (timeout=300000)
   public void testCheckHBaseAvailableWithoutCluster() {
     Configuration conf = new Configuration(TEST_UTIL.getConfiguration());
 
@@ -1693,7 +1693,7 @@ public class TestAdmin {
       " HBase was not available");
   }
 
-  @Test
+  @Test (timeout=300000)
   public void testDisableCatalogTable() throws Exception {
     try {
       this.admin.disableTable(TableName.META_TABLE_NAME);
@@ -1708,7 +1708,7 @@ public class TestAdmin {
     TEST_UTIL.getHBaseAdmin().createTable(htd);
   }
 
-  @Test
+  @Test (timeout=300000)
   public void testGetRegion() throws Exception {
     final String name = "testGetRegion";
     LOG.info("Started " + name);
