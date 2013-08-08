@@ -196,7 +196,7 @@ public class TestHLog  {
       }
       log.close();
       HLogSplitter logSplitter = HLogSplitter.createLogSplitter(conf,
-          hbaseDir, logdir, this.oldLogDir, this.fs);
+          hbaseDir, logdir, oldLogDir, fs);
       List<Path> splits =
         logSplitter.splitLog();
       verifySplits(splits, howmany);
@@ -438,8 +438,7 @@ public class TestHLog  {
     Method setLeasePeriod = cluster.getClass()
       .getDeclaredMethod("setLeasePeriod", new Class[]{Long.TYPE, Long.TYPE});
     setLeasePeriod.setAccessible(true);
-    setLeasePeriod.invoke(cluster,
-                          new Object[]{new Long(1000), new Long(1000)});
+    setLeasePeriod.invoke(cluster, 1000l, 1000l);
     try {
       Thread.sleep(1000);
     } catch (InterruptedException e) {
