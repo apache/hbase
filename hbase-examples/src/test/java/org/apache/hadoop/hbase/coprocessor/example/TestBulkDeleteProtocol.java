@@ -31,6 +31,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.MediumTests;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
@@ -216,7 +217,7 @@ public class TestBulkDeleteProtocol {
   // @Ignore @Test
   public void testBulkDeleteFamily() throws Throwable {
     byte[] tableName = Bytes.toBytes("testBulkDeleteFamily");
-    HTableDescriptor htd = new HTableDescriptor(tableName);
+    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(tableName));
     htd.addFamily(new HColumnDescriptor(FAMILY1));
     htd.addFamily(new HColumnDescriptor(FAMILY2));
     TEST_UTIL.getHBaseAdmin().createTable(htd, Bytes.toBytes(0), Bytes.toBytes(120), 5);
@@ -425,7 +426,7 @@ public class TestBulkDeleteProtocol {
   }
 
   private HTable createTable(byte[] tableName) throws IOException {
-    HTableDescriptor htd = new HTableDescriptor(tableName);
+    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(tableName));
     HColumnDescriptor hcd = new HColumnDescriptor(FAMILY1);
     hcd.setMaxVersions(10);// Just setting 10 as I am not testing with more than 10 versions here
     htd.addFamily(hcd);

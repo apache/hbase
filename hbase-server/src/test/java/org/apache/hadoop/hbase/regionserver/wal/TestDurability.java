@@ -31,6 +31,7 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MediumTests;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.regionserver.HRegion;
@@ -150,11 +151,11 @@ public class TestDurability {
   // lifted from TestAtomicOperation
   private HRegion createHRegion (byte [] tableName, String callingMethod, HLog log, boolean isDeferredLogFlush)
     throws IOException {
-      HTableDescriptor htd = new HTableDescriptor(tableName);
+      HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(tableName));
       htd.setDeferredLogFlush(isDeferredLogFlush);
       HColumnDescriptor hcd = new HColumnDescriptor(FAMILY);
       htd.addFamily(hcd);
-      HRegionInfo info = new HRegionInfo(htd.getName(), null, null, false);
+      HRegionInfo info = new HRegionInfo(htd.getTableName(), null, null, false);
       Path path = new Path(DIR + callingMethod);
       if (FS.exists(path)) {
         if (!FS.delete(path, true)) {

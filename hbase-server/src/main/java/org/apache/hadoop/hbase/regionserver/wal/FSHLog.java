@@ -49,6 +49,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.Syncable;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -821,20 +822,20 @@ class FSHLog implements HLog, Syncable {
    * @param clusterId
    * @return New log key.
    */
-  protected HLogKey makeKey(byte[] encodedRegionName, byte[] tableName, long seqnum,
+  protected HLogKey makeKey(byte[] encodedRegionName, TableName tableName, long seqnum,
       long now, UUID clusterId) {
     return new HLogKey(encodedRegionName, tableName, seqnum, now, clusterId);
   }
 
   @Override
-  public void append(HRegionInfo info, byte [] tableName, WALEdit edits,
+  public void append(HRegionInfo info, TableName tableName, WALEdit edits,
     final long now, HTableDescriptor htd)
   throws IOException {
     append(info, tableName, edits, now, htd, true);
   }
 
   @Override
-  public void append(HRegionInfo info, byte [] tableName, WALEdit edits,
+  public void append(HRegionInfo info, TableName tableName, WALEdit edits,
     final long now, HTableDescriptor htd, boolean isInMemstore) throws IOException {
     append(info, tableName, edits, HConstants.DEFAULT_CLUSTER_ID, now, htd, true, isInMemstore);
   }
@@ -866,7 +867,7 @@ class FSHLog implements HLog, Syncable {
    * @throws IOException
    */
   @SuppressWarnings("deprecation")
-  private long append(HRegionInfo info, byte [] tableName, WALEdit edits, UUID clusterId,
+  private long append(HRegionInfo info, TableName tableName, WALEdit edits, UUID clusterId,
       final long now, HTableDescriptor htd, boolean doSync, boolean isInMemstore)
     throws IOException {
       if (edits.isEmpty()) return this.unflushedEntries.get();
@@ -905,7 +906,7 @@ class FSHLog implements HLog, Syncable {
     }
 
   @Override
-  public long appendNoSync(HRegionInfo info, byte [] tableName, WALEdit edits,
+  public long appendNoSync(HRegionInfo info, TableName tableName, WALEdit edits,
     UUID clusterId, final long now, HTableDescriptor htd)
     throws IOException {
     return append(info, tableName, edits, clusterId, now, htd, false, true);

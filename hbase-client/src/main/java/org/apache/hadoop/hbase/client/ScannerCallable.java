@@ -27,6 +27,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CellScanner;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
@@ -89,7 +90,7 @@ public class ScannerCallable extends RegionServerCallable<Result[]> {
    * @param scanMetrics the ScanMetrics to used, if it is null, ScannerCallable
    * won't collect metrics
    */
-  public ScannerCallable (HConnection connection, byte [] tableName, Scan scan,
+  public ScannerCallable (HConnection connection, TableName tableName, Scan scan,
     ScanMetrics scanMetrics) {
     super(connection, tableName, scan.getStartRow());
     this.scan = scan;

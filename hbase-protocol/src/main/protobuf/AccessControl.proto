@@ -22,6 +22,8 @@ option java_generic_services = true;
 option java_generate_equals_and_hash = true;
 option optimize_for = SPEED;
 
+import "hbase.proto";
+
 message Permission {
     enum Action {
         READ = 0;
@@ -31,7 +33,7 @@ message Permission {
         ADMIN = 4;
     }
     repeated Action action = 1;
-    optional bytes table = 2;
+    optional TableName tableName = 2;
     optional bytes family = 3;
     optional bytes qualifier = 4;
 }
@@ -70,7 +72,7 @@ message RevokeResponse {
 
 
 message UserPermissionsRequest {
-    optional bytes table = 1;
+    optional TableName tableName = 1;
 }
 
 message UserPermissionsResponse {

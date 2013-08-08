@@ -29,9 +29,9 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.LargeTests;
-import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -62,7 +62,8 @@ public class TestZKPermissionsWatcher {
     }
   };
 
-  private static byte[] TEST_TABLE = Bytes.toBytes("perms_test");
+  private static TableName TEST_TABLE =
+      TableName.valueOf("perms_test");
 
   @BeforeClass
   public static void beforeClass() throws Exception {

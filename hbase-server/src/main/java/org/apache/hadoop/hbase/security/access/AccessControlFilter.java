@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.hbase.security.access;
 
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.filter.FilterBase;
@@ -41,7 +42,7 @@ import org.apache.hadoop.hbase.security.User;
 class AccessControlFilter extends FilterBase {
 
   private TableAuthManager authManager;
-  private byte[] table;
+  private TableName table;
   private User user;
 
   /**
@@ -51,7 +52,7 @@ class AccessControlFilter extends FilterBase {
   }
 
   AccessControlFilter(TableAuthManager mgr, User ugi,
-      byte[] tableName) {
+      TableName tableName) {
     authManager = mgr;
     table = tableName;
     user = ugi;

@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.security.access;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.util.Bytes;
 
 import java.io.DataInput;
@@ -69,7 +70,7 @@ public class UserPermission extends TablePermission {
    *   table
    * @param assigned the list of allowed actions
    */
-  public UserPermission(byte[] user, byte[] table, byte[] family,
+  public UserPermission(byte[] user, TableName table, byte[] family,
                         Action... assigned) {
     super(table, family, assigned);
     this.user = user;
@@ -86,7 +87,7 @@ public class UserPermission extends TablePermission {
    *   over the entire column family
    * @param assigned the list of allowed actions
    */
-  public UserPermission(byte[] user, byte[] table, byte[] family,
+  public UserPermission(byte[] user, TableName table, byte[] family,
                         byte[] qualifier, Action... assigned) {
     super(table, family, qualifier, assigned);
     this.user = user;
@@ -103,7 +104,7 @@ public class UserPermission extends TablePermission {
    *   over the entire column family
    * @param actionCodes the list of allowed action codes
    */
-  public UserPermission(byte[] user, byte[] table, byte[] family,
+  public UserPermission(byte[] user, TableName table, byte[] family,
                         byte[] qualifier, byte[] actionCodes) {
     super(table, family, qualifier, actionCodes);
     this.user = user;
@@ -117,8 +118,8 @@ public class UserPermission extends TablePermission {
    * Returns true if this permission describes a global user permission.
    */
   public boolean isGlobal() {
-    byte[] tableName = getTable();
-    return(tableName == null || tableName.length == 0);
+    TableName tableName = getTable();
+    return(tableName == null);
   }
 
   @Override

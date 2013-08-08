@@ -244,7 +244,7 @@ public class ServerShutdownHandler extends EventHandler {
             toAssignRegions.add(hri);
           } else if (rit != null) {
             if ((rit.isClosing() || rit.isPendingClose())
-                && am.getZKTable().isDisablingOrDisabledTable(hri.getTableNameAsString())) {
+                && am.getZKTable().isDisablingOrDisabledTable(hri.getTableName())) {
               // If the table was partially disabled and the RS went down, we should clear the RIT
               // and remove the node for the region.
               // The rit that we use may be stale in case the table was in DISABLING state
@@ -330,17 +330,17 @@ public class ServerShutdownHandler extends EventHandler {
       AssignmentManager assignmentManager, CatalogTracker catalogTracker)
   throws IOException {
     boolean tablePresent = assignmentManager.getZKTable().isTablePresent(
-        hri.getTableNameAsString());
+        hri.getTableName());
     if (!tablePresent) {
-      LOG.info("The table " + hri.getTableNameAsString()
+      LOG.info("The table " + hri.getTableName()
           + " was deleted.  Hence not proceeding.");
       return false;
     }
     // If table is not disabled but the region is offlined,
     boolean disabled = assignmentManager.getZKTable().isDisabledTable(
-        hri.getTableNameAsString());
+        hri.getTableName());
     if (disabled){
-      LOG.info("The table " + hri.getTableNameAsString()
+      LOG.info("The table " + hri.getTableName()
           + " was disabled.  Hence not proceeding.");
       return false;
     }
@@ -351,9 +351,9 @@ public class ServerShutdownHandler extends EventHandler {
       return false;
     }
     boolean disabling = assignmentManager.getZKTable().isDisablingTable(
-        hri.getTableNameAsString());
+        hri.getTableName());
     if (disabling) {
-      LOG.info("The table " + hri.getTableNameAsString()
+      LOG.info("The table " + hri.getTableName()
           + " is disabled.  Hence not assigning region" + hri.getEncodedName());
       return false;
     }

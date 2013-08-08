@@ -30,6 +30,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
 import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.Callable;
@@ -43,6 +44,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
@@ -96,7 +98,8 @@ public class TestHFileOutputFormat  {
   private static final byte[][] FAMILIES
     = { Bytes.add(PerformanceEvaluation.FAMILY_NAME, Bytes.toBytes("-A"))
       , Bytes.add(PerformanceEvaluation.FAMILY_NAME, Bytes.toBytes("-B"))};
-  private static final byte[] TABLE_NAME = Bytes.toBytes("TestTable");
+  private static final TableName TABLE_NAME =
+      TableName.valueOf("TestTable");
 
   private HBaseTestingUtility util = new HBaseTestingUtility();
 
@@ -440,7 +443,7 @@ public class TestHFileOutputFormat  {
         LOG.info("Waiting for table to disable");
       }
       admin.enableTable(TABLE_NAME);
-      util.waitTableAvailable(TABLE_NAME);
+      util.waitTableAvailable(TABLE_NAME.getName());
       assertEquals("Data should remain after reopening of regions",
           tableDigestBefore, util.checksumRows(table));
     } finally {
@@ -664,7 +667,7 @@ public class TestHFileOutputFormat  {
 
       // deep inspection: get the StoreFile dir
       final Path storePath = HStore.getStoreHomedir(
-          HTableDescriptor.getTableDir(FSUtils.getRootDir(conf), TABLE_NAME),
+          FSUtils.getTableDir(FSUtils.getRootDir(conf), TABLE_NAME),
           admin.getTableRegions(TABLE_NAME).get(0),
           FAMILIES[0]);
       assertEquals(0, fs.listStatus(storePath).length);
@@ -690,7 +693,7 @@ public class TestHFileOutputFormat  {
       assertEquals(2, fs.listStatus(storePath).length);
 
       // minor compactions shouldn't get rid of the file
-      admin.compact(TABLE_NAME);
+      admin.compact(TABLE_NAME.getName());
       try {
         quickPoll(new Callable<Boolean>() {
           public Boolean call() throws Exception {
@@ -703,7 +706,7 @@ public class TestHFileOutputFormat  {
       }
 
       // a major compaction should work though
-      admin.majorCompact(TABLE_NAME);
+      admin.majorCompact(TABLE_NAME.getName());
       quickPoll(new Callable<Boolean>() {
         public Boolean call() throws Exception {
           return fs.listStatus(storePath).length == 1;
@@ -732,7 +735,7 @@ public class TestHFileOutputFormat  {
 
       // deep inspection: get the StoreFile dir
       final Path storePath = HStore.getStoreHomedir(
-          HTableDescriptor.getTableDir(FSUtils.getRootDir(conf), TABLE_NAME),
+          FSUtils.getTableDir(FSUtils.getRootDir(conf), TABLE_NAME),
           admin.getTableRegions(TABLE_NAME).get(0),
           FAMILIES[0]);
       assertEquals(0, fs.listStatus(storePath).length);
@@ -741,7 +744,7 @@ public class TestHFileOutputFormat  {
       Put p = new Put(Bytes.toBytes("test"));
       p.add(FAMILIES[0], Bytes.toBytes("1"), Bytes.toBytes("1"));
       table.put(p);
-      admin.flush(TABLE_NAME);
+      admin.flush(TABLE_NAME.getName());
       assertEquals(1, util.countRows(table));
       quickPoll(new Callable<Boolean>() {
         public Boolean call() throws Exception {
@@ -767,7 +770,7 @@ public class TestHFileOutputFormat  {
       assertEquals(2, fs.listStatus(storePath).length);
 
       // minor compactions shouldn't get rid of the file
-      admin.compact(TABLE_NAME);
+      admin.compact(TABLE_NAME.getName());
       try {
         quickPoll(new Callable<Boolean>() {
           public Boolean call() throws Exception {
@@ -780,7 +783,7 @@ public class TestHFileOutputFormat  {
       }
 
       // a major compaction should work though
-      admin.majorCompact(TABLE_NAME);
+      admin.majorCompact(TABLE_NAME.getName());
       quickPoll(new Callable<Boolean>() {
         public Boolean call() throws Exception {
           return fs.listStatus(storePath).length == 1;

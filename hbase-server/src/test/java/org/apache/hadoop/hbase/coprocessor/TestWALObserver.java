@@ -220,16 +220,16 @@ public class TestWALObserver {
   public void testWALCoprocessorReplay() throws Exception {
     // WAL replay is handled at HRegion::replayRecoveredEdits(), which is
     // ultimately called by HRegion::initialize()
-    byte[] tableName = Bytes.toBytes("testWALCoprocessorReplay");
-    final HTableDescriptor htd = getBasic3FamilyHTableDescriptor(Bytes
-        .toString(tableName));
+    TableName tableName = TableName.valueOf("testWALCoprocessorReplay");
+    final HTableDescriptor htd = getBasic3FamilyHTableDescriptor(tableName);
     // final HRegionInfo hri =
     // createBasic3FamilyHRegionInfo(Bytes.toString(tableName));
     // final HRegionInfo hri1 =
     // createBasic3FamilyHRegionInfo(Bytes.toString(tableName));
     final HRegionInfo hri = new HRegionInfo(tableName, null, null);
 
-    final Path basedir = new Path(this.hbaseRootDir, Bytes.toString(tableName));
+    final Path basedir =
+        FSUtils.getTableDir(this.hbaseRootDir, tableName);
     deleteDir(basedir);
     fs.mkdirs(new Path(basedir, hri.getEncodedName()));
 
@@ -306,13 +306,13 @@ public class TestWALObserver {
    * @param tableName Name of table to use when we create HTableDescriptor.
    */
   private HRegionInfo createBasic3FamilyHRegionInfo(final String tableName) {
-    HTableDescriptor htd = new HTableDescriptor(tableName);
+    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(tableName));
 
     for (int i = 0; i < TEST_FAMILY.length; i++) {
       HColumnDescriptor a = new HColumnDescriptor(TEST_FAMILY[i]);
       htd.addFamily(a);
     }
-    return new HRegionInfo(htd.getName(), null, null, false);
+    return new HRegionInfo(htd.getTableName(), null, null, false);
   }
 
   /*
@@ -367,7 +367,7 @@ public class TestWALObserver {
     return HLogFactory.createHLog(FileSystem.get(c), hbaseRootDir, logName, c);
   }
 
-  private void addWALEdits(final byte[] tableName, final HRegionInfo hri,
+  private void addWALEdits(final TableName tableName, final HRegionInfo hri,
       final byte[] rowName, final byte[] family, final int count,
       EnvironmentEdge ee, final HLog wal, final HTableDescriptor htd)
       throws IOException {
@@ -383,7 +383,7 @@ public class TestWALObserver {
   }
 
   private HTableDescriptor getBasic3FamilyHTableDescriptor(
-      final String tableName) {
+      final TableName tableName) {
     HTableDescriptor htd = new HTableDescriptor(tableName);
 
     for (int i = 0; i < TEST_FAMILY.length; i++) {
@@ -394,7 +394,7 @@ public class TestWALObserver {
   }
 
   private HTableDescriptor createBasic3FamilyHTD(final String tableName) {
-    HTableDescriptor htd = new HTableDescriptor(tableName);
+    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(tableName));
     HColumnDescriptor a = new HColumnDescriptor(Bytes.toBytes("a"));
     htd.addFamily(a);
     HColumnDescriptor b = new HColumnDescriptor(Bytes.toBytes("b"));

@@ -28,6 +28,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Delete;
@@ -79,7 +80,7 @@ public class WALPlayer extends Configured implements Tool {
     throws IOException {
       try {
         // skip all other tables
-        if (Bytes.equals(table, key.getTablename())) {
+        if (Bytes.equals(table, key.getTablename().getName())) {
           for (KeyValue kv : value.getKeyValues()) {
             if (WALEdit.isMetaEditFamily(kv.getFamily())) continue;
             context.write(new ImmutableBytesWritable(kv.getRow()), kv);
@@ -108,7 +109,8 @@ public class WALPlayer extends Configured implements Tool {
    */
   static class HLogMapper
   extends Mapper<HLogKey, WALEdit, ImmutableBytesWritable, Mutation> {
-    private Map<byte[], byte[]> tables = new TreeMap<byte[], byte[]>(Bytes.BYTES_COMPARATOR);
+    private Map<TableName, TableName> tables =
+        new TreeMap<TableName, TableName>();
 
     @Override
     public void map(HLogKey key, WALEdit value,
@@ -116,10 +118,10 @@ public class WALPlayer extends Configured implements Tool {
     throws IOException {
       try {
         if (tables.isEmpty() || tables.containsKey(key.getTablename())) {
-          byte[] targetTable = tables.isEmpty() ?
+          TableName targetTable = tables.isEmpty() ?
                 key.getTablename() :
                 tables.get(key.getTablename());
-          ImmutableBytesWritable tableOut = new ImmutableBytesWritable(targetTable);
+          ImmutableBytesWritable tableOut = new ImmutableBytesWritable(targetTable.getName());
           Put put = null;
           Delete del = null;
           KeyValue lastKV = null;
@@ -168,7 +170,8 @@ public class WALPlayer extends Configured implements Tool {
       }
       int i = 0;
       for (String table : tablesToUse) {
-        tables.put(Bytes.toBytes(table), Bytes.toBytes(tableMap[i++]));
+        tables.put(TableName.valueOf(table),
+            TableName.valueOf(tableMap[i++]));
       }
     }
   }

@@ -21,8 +21,6 @@ package org.apache.hadoop.hbase.snapshot;
 import java.io.IOException;
 import java.io.FileNotFoundException;
 import java.text.SimpleDateFormat;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.Date;
 
 import org.apache.commons.logging.Log;
@@ -33,6 +31,8 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configured;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
@@ -43,9 +43,6 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.io.HFileLink;
 import org.apache.hadoop.hbase.io.HLogLink;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
-import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
-import org.apache.hadoop.hbase.snapshot.SnapshotReferenceUtil;
-import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
 
@@ -108,12 +105,14 @@ public final class SnapshotInfo extends Configured implements Tool {
     private long logSize = 0;
 
     private final SnapshotDescription snapshot;
+    private final TableName snapshotTable;
     private final Configuration conf;
     private final FileSystem fs;
 
     SnapshotStats(final Configuration conf, final FileSystem fs, final SnapshotDescription snapshot)
     {
       this.snapshot = snapshot;
+      this.snapshotTable = TableName.valueOf(snapshot.getTable());
       this.conf = conf;
       this.fs = fs;
     }
@@ -187,7 +186,7 @@ public final class SnapshotInfo extends Configured implements Tool {
      */
     FileInfo addStoreFile(final String region, final String family, final String hfile)
           throws IOException {
-      String table = this.snapshot.getTable();
+      TableName table = snapshotTable;
       Path path = new Path(family, HFileLink.createHFileLinkName(table, region, hfile));
       HFileLink link = new HFileLink(conf, path);
       boolean inArchive = false;
@@ -330,7 +329,7 @@ public final class SnapshotInfo extends Configured implements Tool {
     System.out.println("----------------------------------------");
     System.out.println("   Name: " + snapshotDesc.getName());
     System.out.println("   Type: " + snapshotDesc.getType());
-    System.out.println("  Table: " + snapshotDesc.getTable());
+    System.out.println("  Table: " + snapshotTableDesc.getTableName().getNameAsString());
     System.out.println(" Format: " + snapshotDesc.getVersion());
     System.out.println("Created: " + df.format(new Date(snapshotDesc.getCreationTime())));
     System.out.println();
@@ -357,7 +356,7 @@ public final class SnapshotInfo extends Configured implements Tool {
     }
 
     // Collect information about hfiles and logs in the snapshot
-    final String table = this.snapshotDesc.getTable();
+    final String table = snapshotTableDesc.getTableName().getNameAsString();
     final SnapshotStats stats = new SnapshotStats(this.getConf(), this.fs, this.snapshotDesc);
     SnapshotReferenceUtil.visitReferencedFiles(fs, snapshotDir,
       new SnapshotReferenceUtil.FileVisitor() {

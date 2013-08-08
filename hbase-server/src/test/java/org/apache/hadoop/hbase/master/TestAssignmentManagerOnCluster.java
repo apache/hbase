@@ -31,6 +31,7 @@ import java.util.Set;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
@@ -94,13 +95,13 @@ public class TestAssignmentManagerOnCluster {
   public void testAssignRegion() throws Exception {
     String table = "testAssignRegion";
     try {
-      HTableDescriptor desc = new HTableDescriptor(table);
+      HTableDescriptor desc = new HTableDescriptor(TableName.valueOf(table));
       desc.addFamily(new HColumnDescriptor(FAMILY));
       admin.createTable(desc);
 
-      HTable meta = new HTable(conf, HConstants.META_TABLE_NAME);
+      HTable meta = new HTable(conf, TableName.META_TABLE_NAME);
       HRegionInfo hri = new HRegionInfo(
-        desc.getName(), Bytes.toBytes("A"), Bytes.toBytes("Z"));
+        desc.getTableName(), Bytes.toBytes("A"), Bytes.toBytes("Z"));
       MetaEditor.addRegionToMeta(meta, hri);
 
       HMaster master = TEST_UTIL.getHBaseCluster().getMaster();
@@ -124,13 +125,13 @@ public class TestAssignmentManagerOnCluster {
     ServerName deadServer = null;
     HMaster master = null;
     try {
-      HTableDescriptor desc = new HTableDescriptor(table);
+      HTableDescriptor desc = new HTableDescriptor(TableName.valueOf(table));
       desc.addFamily(new HColumnDescriptor(FAMILY));
       admin.createTable(desc);
 
-      HTable meta = new HTable(conf, HConstants.META_TABLE_NAME);
+      HTable meta = new HTable(conf, TableName.META_TABLE_NAME);
       HRegionInfo hri = new HRegionInfo(
-        desc.getName(), Bytes.toBytes("A"), Bytes.toBytes("Z"));
+        desc.getTableName(), Bytes.toBytes("A"), Bytes.toBytes("Z"));
       MetaEditor.addRegionToMeta(meta, hri);
 
       master = TEST_UTIL.getHBaseCluster().getMaster();
@@ -178,7 +179,8 @@ public class TestAssignmentManagerOnCluster {
    */
   @Test (timeout=60000)
   public void testOfflineRegion() throws Exception {
-    String table = "testOfflineRegion";
+    TableName table =
+        TableName.valueOf("testOfflineRegion");
     try {
       HRegionInfo hri = createTableAndGetOneRegion(table);
 
@@ -191,7 +193,7 @@ public class TestAssignmentManagerOnCluster {
       long timeoutTime = System.currentTimeMillis() + 800;
       while (true) {
         List<HRegionInfo> regions =
-          regionStates.getRegionsOfTable(Bytes.toBytes(table));
+          regionStates.getRegionsOfTable(table);
         if (!regions.contains(hri)) break;
         long now = System.currentTimeMillis();
         if (now > timeoutTime) {
@@ -203,7 +205,7 @@ public class TestAssignmentManagerOnCluster {
       RegionState regionState = regionStates.getRegionState(hri);
       assertTrue(regionState.isOffline());
     } finally {
-      TEST_UTIL.deleteTable(Bytes.toBytes(table));
+      TEST_UTIL.deleteTable(table);
     }
   }
 
@@ -212,7 +214,8 @@ public class TestAssignmentManagerOnCluster {
    */
   @Test (timeout=50000)
   public void testMoveRegion() throws Exception {
-    String table = "testMoveRegion";
+    TableName table =
+        TableName.valueOf("testMoveRegion");
     try {
       HRegionInfo hri = createTableAndGetOneRegion(table);
 
@@ -248,12 +251,12 @@ public class TestAssignmentManagerOnCluster {
       }
 
     } finally {
-      TEST_UTIL.deleteTable(Bytes.toBytes(table));
+      TEST_UTIL.deleteTable(table);
     }
   }
 
   HRegionInfo createTableAndGetOneRegion(
-      final String tableName) throws IOException, InterruptedException {
+      final TableName tableName) throws IOException, InterruptedException {
     HTableDescriptor desc = new HTableDescriptor(tableName);
     desc.addFamily(new HColumnDescriptor(FAMILY));
     admin.createTable(desc, Bytes.toBytes("A"), Bytes.toBytes("Z"), 5);
@@ -263,7 +266,7 @@ public class TestAssignmentManagerOnCluster {
     long timeoutTime = System.currentTimeMillis() + 1000;
     while (true) {
       List<HRegionInfo> regions = master.getAssignmentManager().
-        getRegionStates().getRegionsOfTable(Bytes.toBytes(tableName));
+        getRegionStates().getRegionsOfTable(tableName);
       if (regions.size() > 3) {
         return regions.get(2);
       }
@@ -286,13 +289,13 @@ public class TestAssignmentManagerOnCluster {
   public void testForceAssignWhileClosing() throws Exception {
     String table = "testForceAssignWhileClosing";
     try {
-      HTableDescriptor desc = new HTableDescriptor(table);
+      HTableDescriptor desc = new HTableDescriptor(TableName.valueOf(table));
       desc.addFamily(new HColumnDescriptor(FAMILY));
       admin.createTable(desc);
 
-      HTable meta = new HTable(conf, HConstants.META_TABLE_NAME);
+      HTable meta = new HTable(conf, TableName.META_TABLE_NAME);
       HRegionInfo hri = new HRegionInfo(
-        desc.getName(), Bytes.toBytes("A"), Bytes.toBytes("Z"));
+        desc.getTableName(), Bytes.toBytes("A"), Bytes.toBytes("Z"));
       MetaEditor.addRegionToMeta(meta, hri);
 
       HMaster master = TEST_UTIL.getHBaseCluster().getMaster();
@@ -332,13 +335,13 @@ public class TestAssignmentManagerOnCluster {
   public void testCloseFailed() throws Exception {
     String table = "testCloseFailed";
     try {
-      HTableDescriptor desc = new HTableDescriptor(table);
+      HTableDescriptor desc = new HTableDescriptor(TableName.valueOf(table));
       desc.addFamily(new HColumnDescriptor(FAMILY));
       admin.createTable(desc);
 
-      HTable meta = new HTable(conf, HConstants.META_TABLE_NAME);
+      HTable meta = new HTable(conf, TableName.META_TABLE_NAME);
       HRegionInfo hri = new HRegionInfo(
-        desc.getName(), Bytes.toBytes("A"), Bytes.toBytes("Z"));
+        desc.getTableName(), Bytes.toBytes("A"), Bytes.toBytes("Z"));
       MetaEditor.addRegionToMeta(meta, hri);
 
       HMaster master = TEST_UTIL.getHBaseCluster().getMaster();
@@ -376,13 +379,13 @@ public class TestAssignmentManagerOnCluster {
   public void testOpenFailed() throws Exception {
     String table = "testOpenFailed";
     try {
-      HTableDescriptor desc = new HTableDescriptor(table);
+      HTableDescriptor desc = new HTableDescriptor(TableName.valueOf(table));
       desc.addFamily(new HColumnDescriptor(FAMILY));
       admin.createTable(desc);
 
-      HTable meta = new HTable(conf, HConstants.META_TABLE_NAME);
+      HTable meta = new HTable(conf, TableName.META_TABLE_NAME);
       HRegionInfo hri = new HRegionInfo(
-        desc.getName(), Bytes.toBytes("A"), Bytes.toBytes("Z"));
+        desc.getTableName(), Bytes.toBytes("A"), Bytes.toBytes("Z"));
       MetaEditor.addRegionToMeta(meta, hri);
 
       MockLoadBalancer.controledRegion = hri.getEncodedName();
@@ -415,19 +418,20 @@ public class TestAssignmentManagerOnCluster {
    */
   @Test (timeout=60000)
   public void testOpenFailedUnrecoverable() throws Exception {
-    String table = "testOpenFailedUnrecoverable";
+    TableName table =
+        TableName.valueOf("testOpenFailedUnrecoverable");
     try {
       HTableDescriptor desc = new HTableDescriptor(table);
       desc.addFamily(new HColumnDescriptor(FAMILY));
       admin.createTable(desc);
 
-      HTable meta = new HTable(conf, HConstants.META_TABLE_NAME);
+      HTable meta = new HTable(conf, TableName.META_TABLE_NAME);
       HRegionInfo hri = new HRegionInfo(
-        desc.getName(), Bytes.toBytes("A"), Bytes.toBytes("Z"));
+        desc.getTableName(), Bytes.toBytes("A"), Bytes.toBytes("Z"));
       MetaEditor.addRegionToMeta(meta, hri);
 
       FileSystem fs = FileSystem.get(conf);
-      Path tableDir= FSUtils.getTablePath(FSUtils.getRootDir(conf), table);
+      Path tableDir= FSUtils.getTableDir(FSUtils.getRootDir(conf), table);
       Path regionDir = new Path(tableDir, hri.getEncodedName());
       // create a file named the same as the region dir to
       // mess up with region opening
@@ -454,13 +458,15 @@ public class TestAssignmentManagerOnCluster {
         getRegionStates().getRegionServerOfRegion(hri);
       TEST_UTIL.assertRegionOnServer(hri, serverName, 200);
     } finally {
-      TEST_UTIL.deleteTable(Bytes.toBytes(table));
+      TEST_UTIL.deleteTable(table);
     }
   }
 
   @Test (timeout=60000)
   public void testSSHWhenDisablingTableRegionsInOpeningOrPendingOpenState() throws Exception {
-    final String table = "testSSHWhenDisablingTableRegionsInOpeningOrPendingOpenState";
+    final TableName table =
+        TableName.valueOf
+            ("testSSHWhenDisablingTableRegionsInOpeningOrPendingOpenState");
     AssignmentManager am = TEST_UTIL.getHBaseCluster().getMaster().getAssignmentManager();
     HRegionInfo hri = null;
     ServerName serverName = null;
@@ -491,7 +497,7 @@ public class TestAssignmentManagerOnCluster {
         am.regionOnline(hri, serverName);
       }
       am.getZKTable().setDisabledTable(table);
-      TEST_UTIL.deleteTable(Bytes.toBytes(table));
+      TEST_UTIL.deleteTable(table);
     }
   }
 

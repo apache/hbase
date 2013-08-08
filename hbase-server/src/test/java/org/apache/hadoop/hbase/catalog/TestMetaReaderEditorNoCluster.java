@@ -32,6 +32,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.CellScannable;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -44,7 +45,6 @@ import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.client.HConnectionTestingUtility;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.ipc.PayloadCarryingRpcController;
-import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ResultCellMeta;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ScanRequest;
@@ -197,9 +197,9 @@ public class TestMetaReaderEditorNoCluster {
       // The ugly format below comes of 'Important gotcha on spying real objects!' from
       // http://mockito.googlecode.com/svn/branches/1.6/javadoc/org/mockito/Mockito.html
       Mockito.doReturn(anyLocation).
-        when(connection).locateRegion((byte[]) Mockito.any(), (byte[]) Mockito.any());
+        when(connection).locateRegion((TableName) Mockito.any(), (byte[]) Mockito.any());
       Mockito.doReturn(anyLocation).
-        when(connection).getRegionLocation((byte[]) Mockito.any(),
+        when(connection).getRegionLocation((TableName) Mockito.any(),
           (byte[]) Mockito.any(), Mockito.anyBoolean());
 
       // Now shove our HRI implementation into the spied-upon connection.

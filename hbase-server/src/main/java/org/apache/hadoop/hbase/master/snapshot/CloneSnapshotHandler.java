@@ -28,6 +28,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.NotAllMetaRegionsOnlineException;
@@ -47,6 +48,7 @@ import org.apache.hadoop.hbase.snapshot.RestoreSnapshotHelper;
 import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
 
 import com.google.common.base.Preconditions;
+import org.apache.hadoop.hbase.util.FSUtils;
 
 /**
  * Handler to Clone a snapshot.
@@ -81,7 +83,7 @@ public class CloneSnapshotHandler extends CreateTableHandler implements Snapshot
     // Monitor
     this.monitor = new ForeignExceptionDispatcher();
     this.status = TaskMonitor.get().createStatus("Cloning  snapshot '" + snapshot.getName() +
-      "' to table " + hTableDescriptor.getNameAsString());
+      "' to table " + hTableDescriptor.getTableName());
   }
 
   @Override
@@ -97,17 +99,16 @@ public class CloneSnapshotHandler extends CreateTableHandler implements Snapshot
    */
   @Override
   protected List<HRegionInfo> handleCreateHdfsRegions(final Path tableRootDir,
-      final String tableName) throws IOException {
+      final TableName tableName) throws IOException {
     status.setStatus("Creating regions for table: " + tableName);
     FileSystem fs = fileSystemManager.getFileSystem();
     Path rootDir = fileSystemManager.getRootDir();
-    Path tableDir = new Path(tableRootDir, tableName);
 
     try {
       // 1. Execute the on-disk Clone
       Path snapshotDir = SnapshotDescriptionUtils.getCompletedSnapshotDir(snapshot, rootDir);
       RestoreSnapshotHelper restoreHelper = new RestoreSnapshotHelper(conf, fs,
-          snapshot, snapshotDir, hTableDescriptor, tableDir, monitor, status);
+          snapshot, snapshotDir, hTableDescriptor, tableRootDir, monitor, status);
       RestoreSnapshotHelper.RestoreMetaChanges metaChanges = restoreHelper.restoreHdfsRegions();
 
       // Clone operation should not have stuff to restore or remove

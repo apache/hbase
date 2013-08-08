@@ -32,6 +32,7 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
@@ -140,7 +141,7 @@ public class TestFilterWrapper {
     assertNotNull("HBaseAdmin is not initialized successfully.", admin);
     if (admin != null) {
 
-      HTableDescriptor desc = new HTableDescriptor(name);
+      HTableDescriptor desc = new HTableDescriptor(TableName.valueOf(name));
       HColumnDescriptor coldef = new HColumnDescriptor(Bytes.toBytes("f1"));
       desc.addFamily(coldef);
 

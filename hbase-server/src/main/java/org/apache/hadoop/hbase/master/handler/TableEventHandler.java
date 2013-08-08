@@ -29,6 +29,7 @@ import java.util.TreeMap;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.InvalidFamilyOperationException;
@@ -60,17 +61,15 @@ import com.google.common.collect.Maps;
 public abstract class TableEventHandler extends EventHandler {
   private static final Log LOG = LogFactory.getLog(TableEventHandler.class);
   protected final MasterServices masterServices;
-  protected final byte [] tableName;
-  protected final String tableNameStr;
+  protected final TableName tableName;
   protected TableLock tableLock;
   private boolean isPrepareCalled = false;
 
-  public TableEventHandler(EventType eventType, byte [] tableName, Server server,
+  public TableEventHandler(EventType eventType, TableName tableName, Server server,
       MasterServices masterServices) {
     super(server, eventType);
     this.masterServices = masterServices;
     this.tableName = tableName;
-    this.tableNameStr = Bytes.toString(this.tableName);
   }
 
   public TableEventHandler prepare() throws IOException {
@@ -122,7 +121,7 @@ public abstract class TableEventHandler extends EventHandler {
     }
     try {
       LOG.info("Handling table operation " + eventType + " on table " +
-          Bytes.toString(tableName));
+          tableName);
 
       List<HRegionInfo> hris =
         MetaReader.getTableRegions(this.server.getCatalogTracker(),
@@ -130,20 +129,20 @@ public abstract class TableEventHandler extends EventHandler {
       handleTableOperation(hris);
       if (eventType.isOnlineSchemaChangeSupported() && this.masterServices.
           getAssignmentManager().getZKTable().
-          isEnabledTable(Bytes.toString(tableName))) {
+          isEnabledTable(tableName)) {
         if (reOpenAllRegions(hris)) {
           LOG.info("Completed table operation " + eventType + " on table " +
-              Bytes.toString(tableName));
+              tableName);
         } else {
           LOG.warn("Error on reopening the regions");
         }
       }
       completed(null);
     } catch (IOException e) {
-      LOG.error("Error manipulating table " + Bytes.toString(tableName), e);
+      LOG.error("Error manipulating table " + tableName, e);
       completed(e);
     } catch (KeeperException e) {
-      LOG.error("Error manipulating table " + Bytes.toString(tableName), e);
+      LOG.error("Error manipulating table " + tableName, e);
       completed(e);
     } finally {
       releaseTableLock();
@@ -226,11 +225,10 @@ public abstract class TableEventHandler extends EventHandler {
    */
   public HTableDescriptor getTableDescriptor()
   throws FileNotFoundException, IOException {
-    final String name = Bytes.toString(tableName);
     HTableDescriptor htd =
-      this.masterServices.getTableDescriptors().get(name);
+      this.masterServices.getTableDescriptors().get(tableName);
     if (htd == null) {
-      throw new IOException("HTableDescriptor missing for " + name);
+      throw new IOException("HTableDescriptor missing for " + tableName);
     }
     return htd;
   }

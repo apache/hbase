@@ -261,7 +261,7 @@ public class TestHTablePool {
 				admin.deleteTable(TABLENAME);
 			}
 
-			HTableDescriptor tableDescriptor = new HTableDescriptor(TABLENAME);
+			HTableDescriptor tableDescriptor = new HTableDescriptor(TableName.valueOf(TABLENAME));
 			tableDescriptor.addFamily(new HColumnDescriptor("randomFamily"));
 			admin.createTable(tableDescriptor);
 
@@ -337,7 +337,7 @@ public class TestHTablePool {
 				admin.deleteTable(TABLENAME);
 			}
 
-			HTableDescriptor tableDescriptor = new HTableDescriptor(TABLENAME);
+			HTableDescriptor tableDescriptor = new HTableDescriptor(TableName.valueOf(TABLENAME));
 			tableDescriptor.addFamily(new HColumnDescriptor("randomFamily"));
 			admin.createTable(tableDescriptor);
 

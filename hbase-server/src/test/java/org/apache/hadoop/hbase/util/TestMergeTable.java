@@ -66,7 +66,7 @@ public class TestMergeTable {
    */
   @Test (timeout=300000) public void testMergeTable() throws Exception {
     // Table we are manually creating offline.
-    HTableDescriptor desc = new HTableDescriptor(Bytes.toBytes("test"));
+    HTableDescriptor desc = new HTableDescriptor(TableName.valueOf(Bytes.toBytes("test")));
     desc.addFamily(new HColumnDescriptor(COLUMN_NAME));
 
     // Set maximum regionsize down.
@@ -114,14 +114,14 @@ public class TestMergeTable {
       CatalogTracker ct = new CatalogTracker(c);
       ct.start();
       List<HRegionInfo> originalTableRegions =
-        MetaReader.getTableRegions(ct, desc.getName());
+        MetaReader.getTableRegions(ct, desc.getTableName());
       LOG.info("originalTableRegions size=" + originalTableRegions.size() +
         "; " + originalTableRegions);
       HBaseAdmin admin = new HBaseAdmin(c);
-      admin.disableTable(desc.getName());
-      HMerge.merge(c, FileSystem.get(c), desc.getName());
+      admin.disableTable(desc.getTableName());
+      HMerge.merge(c, FileSystem.get(c), desc.getTableName());
       List<HRegionInfo> postMergeTableRegions =
-        MetaReader.getTableRegions(ct, desc.getName());
+        MetaReader.getTableRegions(ct, desc.getTableName());
       LOG.info("postMergeTableRegions size=" + postMergeTableRegions.size() +
         "; " + postMergeTableRegions);
       assertTrue("originalTableRegions=" + originalTableRegions.size() +
@@ -137,7 +137,7 @@ public class TestMergeTable {
   private HRegion createRegion(final HTableDescriptor desc,
       byte [] startKey, byte [] endKey, int firstRow, int nrows, Path rootdir)
   throws IOException {
-    HRegionInfo hri = new HRegionInfo(desc.getName(), startKey, endKey);
+    HRegionInfo hri = new HRegionInfo(desc.getTableName(), startKey, endKey);
     HRegion region = HRegion.createHRegion(hri, rootdir, UTIL.getConfiguration(), desc);
     LOG.info("Created region " + region.getRegionNameAsString());
     for(int i = firstRow; i < firstRow + nrows; i++) {

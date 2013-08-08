@@ -26,6 +26,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
@@ -63,7 +64,7 @@ public class ClientScanner extends AbstractClientScanner {
     private ScanMetrics scanMetrics = null;
     private final long maxScannerResultSize;
     private final HConnection connection;
-    private final byte[] tableName;
+    private final TableName tableName;
     private final int scannerTimeout;
     private boolean scanMetricsPublished = false;
     private RpcRetryingCaller<Result []> caller;
@@ -79,7 +80,7 @@ public class ClientScanner extends AbstractClientScanner {
      * @throws IOException
      */
     public ClientScanner(final Configuration conf, final Scan scan,
-        final byte[] tableName) throws IOException {
+        final TableName tableName) throws IOException {
       this(conf, scan, tableName, HConnectionManager.getConnection(conf));
     }
 
@@ -94,7 +95,7 @@ public class ClientScanner extends AbstractClientScanner {
      * @param connection Connection identifying the cluster
      * @throws IOException
      */
-  public ClientScanner(final Configuration conf, final Scan scan, final byte[] tableName,
+  public ClientScanner(final Configuration conf, final Scan scan, final TableName tableName,
       HConnection connection) throws IOException {
     this(conf, scan, tableName, connection, new RpcRetryingCallerFactory(conf));
   }
@@ -108,10 +109,10 @@ public class ClientScanner extends AbstractClientScanner {
    * @param connection Connection identifying the cluster
    * @throws IOException
    */
-  public ClientScanner(final Configuration conf, final Scan scan, final byte[] tableName,
+  public ClientScanner(final Configuration conf, final Scan scan, final TableName tableName,
       HConnection connection, RpcRetryingCallerFactory rpcFactory) throws IOException {
       if (LOG.isTraceEnabled()) {
-        LOG.trace("Scan table=" + Bytes.toString(tableName)
+        LOG.trace("Scan table=" + tableName
             + ", startRow=" + Bytes.toStringBinary(scan.getStartRow()));
       }
       this.scan = scan;
@@ -156,7 +157,7 @@ public class ClientScanner extends AbstractClientScanner {
       return this.connection;
     }
 
-    protected byte[] getTableName() {
+    protected TableName getTableName() {
       return this.tableName;
     }
 

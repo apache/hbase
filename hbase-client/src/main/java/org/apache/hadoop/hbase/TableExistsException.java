@@ -16,6 +16,7 @@ package org.apache.hadoop.hbase;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.hbase.TableName;
 
 /**
  * Thrown when a table exists but should not
@@ -36,5 +37,9 @@ public class TableExistsException extends DoNotRetryIOException {
    */
   public TableExistsException(String s) {
     super(s);
+  }
+
+  public TableExistsException(TableName t) {
+    this(t.getNameAsString());
   }
 }

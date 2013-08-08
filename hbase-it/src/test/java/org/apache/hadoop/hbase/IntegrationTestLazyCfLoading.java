@@ -55,7 +55,8 @@ import org.junit.experimental.categories.Category;
  */
 @Category(IntegrationTests.class)
 public class IntegrationTestLazyCfLoading {
-  private static final String TABLE_NAME = IntegrationTestLazyCfLoading.class.getSimpleName();
+  private static final TableName TABLE_NAME =
+      TableName.valueOf(IntegrationTestLazyCfLoading.class.getSimpleName());
   private static final String TIMEOUT_KEY = "hbase.%s.timeout";
   private static final String ENCODING_KEY = "hbase.%s.datablock.encoding";
 
@@ -183,7 +184,7 @@ public class IntegrationTestLazyCfLoading {
     Configuration conf = util.getConfiguration();
     String encodingKey = String.format(ENCODING_KEY, this.getClass().getSimpleName());
     DataBlockEncoding blockEncoding = DataBlockEncoding.valueOf(conf.get(encodingKey, "FAST_DIFF"));
-    HTableDescriptor htd = new HTableDescriptor(Bytes.toBytes(TABLE_NAME));
+    HTableDescriptor htd = new HTableDescriptor(TABLE_NAME);
     for (byte[] cf : dataGen.getColumnFamilies()) {
       HColumnDescriptor hcd = new HColumnDescriptor(cf);
       hcd.setDataBlockEncoding(blockEncoding);
@@ -221,12 +222,12 @@ public class IntegrationTestLazyCfLoading {
     long maxRuntime = conf.getLong(timeoutKey, DEFAULT_TIMEOUT_MINUTES);
     long serverCount = util.getHBaseClusterInterface().getClusterStatus().getServersSize();
     long keysToWrite = serverCount * KEYS_TO_WRITE_PER_SERVER;
-    HTable table = new HTable(conf, Bytes.toBytes(TABLE_NAME));
+    HTable table = new HTable(conf, TABLE_NAME);
 
     // Create multi-threaded writer and start it. We write multiple columns/CFs and verify
     // their integrity, therefore multi-put is necessary.
     MultiThreadedWriter writer =
-      new MultiThreadedWriter(dataGen, conf, Bytes.toBytes(TABLE_NAME));
+      new MultiThreadedWriter(dataGen, conf, TABLE_NAME);
     writer.setMultiPut(true);
 
     LOG.info("Starting writer; the number of keys to write is " + keysToWrite);

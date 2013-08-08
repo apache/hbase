@@ -81,12 +81,12 @@ module Shell
 
       def translate_hbase_exceptions(*args)
         yield
-      rescue org.apache.hadoop.hbase.exceptions.TableNotFoundException
+      rescue org.apache.hadoop.hbase.TableNotFoundException
         raise "Unknown table #{args.first}!"
-      rescue org.apache.hadoop.hbase.exceptions.NoSuchColumnFamilyException
+      rescue org.apache.hadoop.hbase.regionserver.NoSuchColumnFamilyException
         valid_cols = table(args.first).get_all_columns.map { |c| c + '*' }
         raise "Unknown column family! Valid column names: #{valid_cols.join(", ")}"
-      rescue org.apache.hadoop.hbase.exceptions.TableExistsException => e
+      rescue org.apache.hadoop.hbase.TableExistsException => e
         raise "Table already exists: #{e.message}!"
       end
     end

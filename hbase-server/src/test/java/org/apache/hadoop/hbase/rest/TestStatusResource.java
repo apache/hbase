@@ -27,6 +27,7 @@ import javax.xml.bind.JAXBException;
 
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.MediumTests;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.rest.client.Client;
 import org.apache.hadoop.hbase.rest.client.Cluster;
 import org.apache.hadoop.hbase.rest.client.Response;
@@ -42,7 +43,7 @@ import org.junit.experimental.categories.Category;
 
 @Category(MediumTests.class)
 public class TestStatusResource {
-  private static final byte[] META_REGION_NAME = Bytes.toBytes(".META.,,1");
+  private static final byte[] META_REGION_NAME = Bytes.toBytes(TableName.META_TABLE_NAME+",,1");
 
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static final HBaseRESTTestingUtility REST_TEST_UTIL = 

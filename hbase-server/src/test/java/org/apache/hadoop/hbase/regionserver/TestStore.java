@@ -38,7 +38,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.FilterFileSystem;
 import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
@@ -51,13 +50,13 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.KVComparator;
 import org.apache.hadoop.hbase.MediumTests;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
-import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionContext;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
 import org.apache.hadoop.hbase.regionserver.compactions.DefaultCompactor;
@@ -67,13 +66,12 @@ import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManagerTestHelper;
+import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.IncrementingEnvironmentEdge;
 import org.apache.hadoop.hbase.util.ManualEnvironmentEdge;
 import org.apache.hadoop.util.Progressable;
 import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
-
-import com.google.common.base.Joiner;
 
 /**
  * Test class for the Store
@@ -141,7 +139,7 @@ public class TestStore extends TestCase {
 
   private void init(String methodName, Configuration conf,
       HColumnDescriptor hcd) throws IOException {
-    HTableDescriptor htd = new HTableDescriptor(table);
+    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(table));
     init(methodName, conf, htd, hcd);
   }
 
@@ -149,6 +147,7 @@ public class TestStore extends TestCase {
       HColumnDescriptor hcd) throws IOException {
     //Setting up a Store
     Path basedir = new Path(DIR+methodName);
+    Path tableDir = FSUtils.getTableDir(basedir, htd.getTableName());
     String logName = "logs";
     Path logdir = new Path(basedir, logName);
 
@@ -157,9 +156,9 @@ public class TestStore extends TestCase {
     fs.delete(logdir, true);
 
     htd.addFamily(hcd);
-    HRegionInfo info = new HRegionInfo(htd.getName(), null, null, false);
+    HRegionInfo info = new HRegionInfo(htd.getTableName(), null, null, false);
     HLog hlog = HLogFactory.createHLog(fs, basedir, logName, conf);
-    HRegion region = new HRegion(basedir, hlog, fs, conf, info, htd, null);
+    HRegion region = new HRegion(tableDir, hlog, fs, conf, info, htd, null);
 
     store = new HStore(region, hcd, conf);
   }
@@ -841,7 +840,7 @@ public class TestStore extends TestCase {
 
     // HTD overrides XML.
     --anyValue;
-    HTableDescriptor htd = new HTableDescriptor(table);
+    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(table));
     HColumnDescriptor hcd = new HColumnDescriptor(family);
     htd.setConfiguration(CONFIG_KEY, Long.toString(anyValue));
     init(getName() + "-htd", conf, htd, hcd);

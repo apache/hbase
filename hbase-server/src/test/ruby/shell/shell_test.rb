@@ -39,11 +39,11 @@ class ShellTest < Test::Unit::TestCase
   #-------------------------------------------------------------------------------
 
   define_test "Shell::Shell#hbase_table should return a table instance" do
-    assert_kind_of(Hbase::Table, @shell.hbase_table('.META.'))
+    assert_kind_of(Hbase::Table, @shell.hbase_table('hbase:meta'))
   end
 
   define_test "Shell::Shell#hbase_table should not cache table instances" do
-    assert_not_same(@shell.hbase_table('.META.'), @shell.hbase_table('.META.'))
+    assert_not_same(@shell.hbase_table('hbase:meta'), @shell.hbase_table('hbase:meta'))
   end
 
   #-------------------------------------------------------------------------------

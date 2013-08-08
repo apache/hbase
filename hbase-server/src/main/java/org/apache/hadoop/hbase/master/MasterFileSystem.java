@@ -36,6 +36,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.hbase.ClusterId;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -529,29 +530,8 @@ public class MasterFileSystem {
     HFileArchiver.archiveRegion(conf, fs, region);
   }
 
-  public void deleteTable(byte[] tableName) throws IOException {
-    fs.delete(new Path(rootdir, Bytes.toString(tableName)), true);
-  }
-
-  /**
-   * Move the specified file/directory to the hbase temp directory.
-   * @param path The path of the file/directory to move
-   * @return The temp location of the file/directory moved
-   * @throws IOException in case of file-system failure
-   */
-  public Path moveToTemp(final Path path) throws IOException {
-    Path tempPath = new Path(this.tempdir, path.getName());
-
-    // Ensure temp exists
-    if (!fs.exists(tempdir) && !fs.mkdirs(tempdir)) {
-      throw new IOException("HBase temp directory '" + tempdir + "' creation failure.");
-    }
-
-    if (!fs.rename(path, tempPath)) {
-      throw new IOException("Unable to move '" + path + "' to temp '" + tempPath + "'");
-    }
-
-    return tempPath;
+  public void deleteTable(TableName tableName) throws IOException {
+    fs.delete(FSUtils.getTableDir(rootdir, tableName), true);
   }
 
   /**
@@ -560,8 +540,20 @@ public class MasterFileSystem {
    * @return The temp location of the table moved
    * @throws IOException in case of file-system failure
    */
-  public Path moveTableToTemp(byte[] tableName) throws IOException {
-    return moveToTemp(HTableDescriptor.getTableDir(this.rootdir, tableName));
+  public Path moveTableToTemp(TableName tableName) throws IOException {
+    Path srcPath = FSUtils.getTableDir(rootdir, tableName);
+    Path tempPath = FSUtils.getTableDir(this.tempdir, tableName);
+
+    // Ensure temp exists
+    if (!fs.exists(tempPath.getParent()) && !fs.mkdirs(tempPath.getParent())) {
+      throw new IOException("HBase temp directory '" + tempPath.getParent() + "' creation failure.");
+    }
+
+    if (!fs.rename(srcPath, tempPath)) {
+      throw new IOException("Unable to move '" + srcPath + "' to temp '" + tempPath + "'");
+    }
+
+    return tempPath;
   }
 
   public void updateRegionInfo(HRegionInfo region) {
@@ -573,7 +565,7 @@ public class MasterFileSystem {
   public void deleteFamilyFromFS(HRegionInfo region, byte[] familyName)
       throws IOException {
     // archive family store files
-    Path tableDir = new Path(rootdir, region.getTableNameAsString());
+    Path tableDir = FSUtils.getTableDir(rootdir, region.getTableName());
     HFileArchiver.archiveFamily(fs, conf, region, tableDir, familyName);
 
     // delete the family folder
@@ -600,9 +592,9 @@ public class MasterFileSystem {
    * @return Modified HTableDescriptor with requested column deleted.
    * @throws IOException
    */
-  public HTableDescriptor deleteColumn(byte[] tableName, byte[] familyName)
+  public HTableDescriptor deleteColumn(TableName tableName, byte[] familyName)
       throws IOException {
-    LOG.info("DeleteColumn. Table = " + Bytes.toString(tableName)
+    LOG.info("DeleteColumn. Table = " + tableName
         + " family = " + Bytes.toString(familyName));
     HTableDescriptor htd = this.services.getTableDescriptors().get(tableName);
     htd.removeFamily(familyName);
@@ -617,9 +609,9 @@ public class MasterFileSystem {
    * @return Modified HTableDescriptor with the column modified.
    * @throws IOException
    */
-  public HTableDescriptor modifyColumn(byte[] tableName, HColumnDescriptor hcd)
+  public HTableDescriptor modifyColumn(TableName tableName, HColumnDescriptor hcd)
       throws IOException {
-    LOG.info("AddModifyColumn. Table = " + Bytes.toString(tableName)
+    LOG.info("AddModifyColumn. Table = " + tableName
         + " HCD = " + hcd.toString());
 
     HTableDescriptor htd = this.services.getTableDescriptors().get(tableName);
@@ -640,9 +632,9 @@ public class MasterFileSystem {
    * @return Modified HTableDescriptor with new column added.
    * @throws IOException
    */
-  public HTableDescriptor addColumn(byte[] tableName, HColumnDescriptor hcd)
+  public HTableDescriptor addColumn(TableName tableName, HColumnDescriptor hcd)
       throws IOException {
-    LOG.info("AddColumn. Table = " + Bytes.toString(tableName) + " HCD = " +
+    LOG.info("AddColumn. Table = " + tableName + " HCD = " +
       hcd.toString());
     HTableDescriptor htd = this.services.getTableDescriptors().get(tableName);
     if (htd == null) {

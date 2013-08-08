@@ -59,6 +59,8 @@ import org.apache.hadoop.hbase.CellScannable;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.Chore;
+import org.apache.hadoop.hbase.DaemonThreadFactory;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HConstants.OperationStatusCode;
@@ -2318,13 +2320,13 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
    * @param tableName
    * @return Online regions from <code>tableName</code>
    */
-   @Override
-  public List<HRegion> getOnlineRegions(byte[] tableName) {
+  @Override
+  public List<HRegion> getOnlineRegions(TableName tableName) {
      List<HRegion> tableRegions = new ArrayList<HRegion>();
      synchronized (this.onlineRegions) {
        for (HRegion region: this.onlineRegions.values()) {
          HRegionInfo regionInfo = region.getRegionInfo();
-         if(Bytes.equals(regionInfo.getTableName(), tableName)) {
+         if(regionInfo.getTableName().equals(tableName)) {
            tableRegions.add(region);
          }
        }
@@ -3453,7 +3455,8 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
     requestCount.increment();
     OpenRegionResponse.Builder builder = OpenRegionResponse.newBuilder();
     final int regionCount = request.getOpenInfoCount();
-    final Map<String, HTableDescriptor> htds = new HashMap<String, HTableDescriptor>(regionCount);
+    final Map<TableName, HTableDescriptor> htds =
+        new HashMap<TableName, HTableDescriptor>(regionCount);
     final boolean isBulkAssign = regionCount > 1;
     for (RegionOpenInfo regionOpenInfo : request.getOpenInfoList()) {
       final HRegionInfo region = HRegionInfo.convert(regionOpenInfo.getRegion());
@@ -3495,10 +3498,10 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
           }
         }
         LOG.info("Open " + region.getRegionNameAsString());
-        htd = htds.get(region.getTableNameAsString());
+        htd = htds.get(region.getTableName());
         if (htd == null) {
           htd = this.tableDescriptors.get(region.getTableName());
-          htds.put(region.getTableNameAsString(), htd);
+          htds.put(region.getTableName(), htd);
         }
 
         final Boolean previous = this.regionsInTransitionInRS.putIfAbsent(

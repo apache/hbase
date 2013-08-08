@@ -46,7 +46,7 @@ public class TestWideScanner extends HBaseTestCase {
   static byte[][] COLUMNS = { A, B, C };
   static final Random rng = new Random();
   static final HTableDescriptor TESTTABLEDESC =
-    new HTableDescriptor("testwidescan");
+    new HTableDescriptor(TableName.valueOf("testwidescan"));
   static {
     for (byte[] cfName : new byte[][] { A, B, C }) {
       TESTTABLEDESC.addFamily(new HColumnDescriptor(cfName)

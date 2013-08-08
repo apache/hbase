@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.snapshot;
 import java.io.IOException;
 import java.util.Collections;
 
+import com.google.protobuf.ByteString;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -29,6 +30,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
@@ -270,11 +272,11 @@ public class SnapshotDescriptionUtils {
   }
 
   /**
-   * Read in the {@link SnapshotDescription} stored for the snapshot in the passed directory
+   * Read in the {@link org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription} stored for the snapshot in the passed directory
    * @param fs filesystem where the snapshot was taken
    * @param snapshotDir directory where the snapshot was stored
    * @return the stored snapshot description
-   * @throws org.apache.hadoop.hbase.snapshot.CorruptedSnapshotException if the
+   * @throws CorruptedSnapshotException if the
    * snapshot cannot be read
    */
   public static SnapshotDescription readSnapshotInfo(FileSystem fs, Path snapshotDir)
@@ -284,7 +286,8 @@ public class SnapshotDescriptionUtils {
       FSDataInputStream in = null;
       try {
         in = fs.open(snapshotInfo);
-        return SnapshotDescription.parseFrom(in);
+        SnapshotDescription desc = SnapshotDescription.parseFrom(in);
+        return desc;
       } finally {
         if (in != null) in.close();
       }

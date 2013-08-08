@@ -33,6 +33,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.MediumTests;
@@ -112,7 +113,8 @@ public class TestHFileArchiving {
 
   @Test
   public void testRemovesRegionDirOnArchive() throws Exception {
-    byte[] TABLE_NAME = Bytes.toBytes("testRemovesRegionDirOnArchive");
+    TableName TABLE_NAME =
+        TableName.valueOf("testRemovesRegionDirOnArchive");
     UTIL.createTable(TABLE_NAME, TEST_FAM);
 
     final HBaseAdmin admin = UTIL.getHBaseAdmin();
@@ -162,7 +164,8 @@ public class TestHFileArchiving {
    */
   @Test
   public void testDeleteRegionWithNoStoreFiles() throws Exception {
-    byte[] TABLE_NAME = Bytes.toBytes("testDeleteRegionWithNoStoreFiles");
+    TableName TABLE_NAME =
+        TableName.valueOf("testDeleteRegionWithNoStoreFiles");
     UTIL.createTable(TABLE_NAME, TEST_FAM);
 
     // get the current store files for the region
@@ -210,7 +213,8 @@ public class TestHFileArchiving {
 
   @Test
   public void testArchiveOnTableDelete() throws Exception {
-    byte[] TABLE_NAME = Bytes.toBytes("testArchiveOnTableDelete");
+    TableName TABLE_NAME =
+        TableName.valueOf("testArchiveOnTableDelete");
     UTIL.createTable(TABLE_NAME, TEST_FAM);
 
     List<HRegion> servingRegions = UTIL.getHBaseCluster().getRegions(TABLE_NAME);
@@ -288,7 +292,8 @@ public class TestHFileArchiving {
    */
   @Test
   public void testArchiveOnTableFamilyDelete() throws Exception {
-    byte[] TABLE_NAME = Bytes.toBytes("testArchiveOnTableFamilyDelete");
+    TableName TABLE_NAME =
+        TableName.valueOf("testArchiveOnTableFamilyDelete");
     UTIL.createTable(TABLE_NAME, TEST_FAM);
 
     List<HRegion> servingRegions = UTIL.getHBaseCluster().getRegions(TABLE_NAME);
@@ -342,7 +347,8 @@ public class TestHFileArchiving {
     FileSystem fs = UTIL.getTestFileSystem();
 
     Path archiveDir = new Path(rootDir, HConstants.HFILE_ARCHIVE_DIRECTORY);
-    Path regionDir = new Path("table", "abcdef");
+    Path regionDir = new Path(FSUtils.getTableDir(new Path("./"),
+        TableName.valueOf("table")), "abcdef");
     Path familyDir = new Path(regionDir, "cf");
 
     Path sourceRegionDir = new Path(rootDir, regionDir);

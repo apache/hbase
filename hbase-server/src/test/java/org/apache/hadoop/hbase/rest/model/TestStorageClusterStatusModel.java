@@ -28,6 +28,7 @@ import javax.xml.bind.JAXBContext;
 import javax.xml.bind.JAXBException;
 
 import org.apache.hadoop.hbase.SmallTests;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.util.Base64;
 import org.apache.hadoop.hbase.util.Bytes;
 
@@ -42,8 +43,8 @@ public class TestStorageClusterStatusModel extends TestCase {
     "<DeadNodes/>" + 
     "<LiveNodes><Node startCode=\"1245219839331\" requests=\"0\"" + 
       " name=\"test1\" maxHeapSizeMB=\"1024\" heapSizeMB=\"128\">" + 
-        "<Region stores=\"1\" storefiles=\"1\" storefileSizeMB=\"0\"" + 
-        " storefileIndexSizeMB=\"0\" name=\"LVJPT1QtLCww\"" + 
+        "<Region stores=\"1\" storefiles=\"1\" storefileSizeMB=\"0\"" +
+        " storefileIndexSizeMB=\"0\" name=\"aGJhc2U6cm9vdCwsMA==\"" +
         " memstoreSizeMB=\"0\" readRequestsCount=\"1\"" +
         " writeRequestsCount=\"2\" rootIndexSizeKB=\"1\"" +
         " totalStaticIndexSizeKB=\"1\" totalStaticBloomSizeKB=\"1\"" +
@@ -51,7 +52,7 @@ public class TestStorageClusterStatusModel extends TestCase {
       "<Node startCode=\"1245239331198\" requests=\"0\" name=\"test2\"" + 
         " maxHeapSizeMB=\"1024\" heapSizeMB=\"512\">" + 
         "<Region stores=\"1\" storefiles=\"1\" storefileSizeMB=\"0\"" +
-        " storefileIndexSizeMB=\"0\" name=\"Lk1FVEEuLCwxMjQ2MDAwMDQzNzI0\"" +
+        " storefileIndexSizeMB=\"0\" name=\"aGJhc2U6bWV0YSwsMTI0NjAwMDA0MzcyNA==\"" +
         " memstoreSizeMB=\"0\" readRequestsCount=\"1\"" +
         " writeRequestsCount=\"2\" rootIndexSizeKB=\"1\"" +
         " totalStaticIndexSizeKB=\"1\" totalStaticBloomSizeKB=\"1\"" +
@@ -59,9 +60,10 @@ public class TestStorageClusterStatusModel extends TestCase {
     "</LiveNodes></ClusterStatus>";
 
   private static final String AS_PB =
-  "CjsKBXRlc3QxEOO6i+eeJBgAIIABKIAIMiMKCS1ST09ULSwsMBABGAEgACgAMAA4AUACSAFQAVgB" +
-  "YAFoAQpHCgV0ZXN0MhD+krHwniQYACCABCiACDIvChUuTUVUQS4sLDEyNDYwMDAwNDM3MjQQARgB" +
-  "IAAoADAAOAFAAkgBUAFYAWABaAEYAiAAKQAAAAAAAPA/";
+      "Cj8KBXRlc3QxEOO6i+eeJBgAIIABKIAIMicKDWhiYXNlOnJvb3QsLDAQARgBIAAoADAAOAFAAkgB"+
+      "UAFYAWABaAEKSwoFdGVzdDIQ/pKx8J4kGAAggAQogAgyMwoZaGJhc2U6bWV0YSwsMTI0NjAwMDA0"+
+      "MzcyNBABGAEgACgAMAA4AUACSAFQAVgBYAFoARgCIAApAAAAAAAA8D8=";
+
   
   private JAXBContext context;
 
@@ -76,9 +78,9 @@ public class TestStorageClusterStatusModel extends TestCase {
     model.setRequests(0);
     model.setAverageLoad(1.0);
     model.addLiveNode("test1", 1245219839331L, 128, 1024)
-      .addRegion(Bytes.toBytes("-ROOT-,,0"), 1, 1, 0, 0, 0, 1, 2, 1, 1, 1, 1, 1);
+      .addRegion(Bytes.toBytes(TableName.ROOT_TABLE_NAME+",,0"), 1, 1, 0, 0, 0, 1, 2, 1, 1, 1, 1, 1);
     model.addLiveNode("test2", 1245239331198L, 512, 1024)
-      .addRegion(Bytes.toBytes(".META.,,1246000043724"),1, 1, 0, 0, 0,
+      .addRegion(Bytes.toBytes(TableName.META_TABLE_NAME+",,1246000043724"),1, 1, 0, 0, 0,
           1, 2, 1, 1, 1, 1, 1);
     return model;
   }
@@ -119,7 +121,8 @@ public class TestStorageClusterStatusModel extends TestCase {
     Iterator<StorageClusterStatusModel.Node.Region> regions = 
       node.getRegions().iterator();
     StorageClusterStatusModel.Node.Region region = regions.next();
-    assertTrue(Bytes.toString(region.getName()).equals("-ROOT-,,0"));
+    assertTrue(Bytes.toString(region.getName()).equals(
+        TableName.ROOT_TABLE_NAME+",,0"));
     assertEquals(region.getStores(), 1);
     assertEquals(region.getStorefiles(), 1);
     assertEquals(region.getStorefileSizeMB(), 0);
@@ -140,7 +143,8 @@ public class TestStorageClusterStatusModel extends TestCase {
     assertEquals(node.getMaxHeapSizeMB(), 1024);
     regions = node.getRegions().iterator();
     region = regions.next();
-    assertEquals(Bytes.toString(region.getName()), ".META.,,1246000043724");
+    assertEquals(Bytes.toString(region.getName()),
+        TableName.META_TABLE_NAME+",,1246000043724");
     assertEquals(region.getStores(), 1);
     assertEquals(region.getStorefiles(), 1);
     assertEquals(region.getStorefileSizeMB(), 0);

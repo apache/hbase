@@ -32,6 +32,7 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.SmallTests;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.UnknownScannerException;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
@@ -61,7 +62,7 @@ public class TestScanner extends HBaseTestCase {
   };
 
   static final HTableDescriptor TESTTABLEDESC =
-    new HTableDescriptor("testscanner");
+    new HTableDescriptor(TableName.valueOf("testscanner"));
   static {
     TESTTABLEDESC.addFamily(
         new HColumnDescriptor(HConstants.CATALOG_FAMILY)
@@ -73,7 +74,7 @@ public class TestScanner extends HBaseTestCase {
   }
   /** HRegionInfo for root region */
   public static final HRegionInfo REGION_INFO =
-    new HRegionInfo(TESTTABLEDESC.getName(), HConstants.EMPTY_BYTE_ARRAY,
+    new HRegionInfo(TESTTABLEDESC.getTableName(), HConstants.EMPTY_BYTE_ARRAY,
     HConstants.EMPTY_BYTE_ARRAY);
 
   private static final byte [] ROW_KEY = REGION_INFO.getRegionName();

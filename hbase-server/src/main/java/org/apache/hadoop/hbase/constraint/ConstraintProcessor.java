@@ -75,7 +75,7 @@ public class ConstraintProcessor extends BaseRegionObserver {
 
     if (LOG.isInfoEnabled()) {
       LOG.info("Finished loading " + constraints.size()
-          + " user Constraints on table: " + new String(desc.getName()));
+          + " user Constraints on table: " + desc.getTableName());
     }
 
   }

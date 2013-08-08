@@ -31,6 +31,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorService;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
@@ -150,7 +151,8 @@ public class SecureBulkLoadEndpoint extends SecureBulkLoadService
     try {
       getAccessController().prePrepareBulkLoad(env);
       String bulkToken = createStagingDir(baseStagingDir,
-          getActiveUser(), request.getTableName().toByteArray()).toString();
+          getActiveUser(),
+          TableName.valueOf(request.getTableName().toByteArray())).toString();
       done.run(PrepareBulkLoadResponse.newBuilder().setBulkToken(bulkToken).build());
     } catch (IOException e) {
       ResponseConverter.setControllerException(controller, e);
@@ -166,7 +168,7 @@ public class SecureBulkLoadEndpoint extends SecureBulkLoadService
       getAccessController().preCleanupBulkLoad(env);
       fs.delete(createStagingDir(baseStagingDir,
           getActiveUser(),
-          env.getRegion().getTableDesc().getName(),
+          env.getRegion().getTableDesc().getTableName(),
           new Path(request.getBulkToken()).getName()),
           true);
       done.run(CleanupBulkLoadResponse.newBuilder().build());
@@ -260,15 +262,17 @@ public class SecureBulkLoadEndpoint extends SecureBulkLoadService
         .getCoprocessorHost().findCoprocessor(AccessController.class.getName());
   }
 
-  private Path createStagingDir(Path baseDir, User user, byte[] tableName) throws IOException {
-    String randomDir = user.getShortName()+"__"+Bytes.toString(tableName)+"__"+
+  private Path createStagingDir(Path baseDir,
+                                User user,
+                                TableName tableName) throws IOException {
+    String randomDir = user.getShortName()+"__"+ tableName +"__"+
         (new BigInteger(RANDOM_WIDTH, random).toString(RANDOM_RADIX));
     return createStagingDir(baseDir, user, tableName, randomDir);
   }
 
   private Path createStagingDir(Path baseDir,
                                 User user,
-                                byte[] tableName,
+                                TableName tableName,
                                 String randomDir) throws IOException {
     Path p = new Path(baseDir, randomDir);
     fs.mkdirs(p, PERM_ALL_ACCESS);

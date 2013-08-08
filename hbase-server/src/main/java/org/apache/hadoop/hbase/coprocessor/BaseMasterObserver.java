@@ -21,10 +21,12 @@ package org.apache.hadoop.hbase.coprocessor;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.master.RegionPlan;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
@@ -59,156 +61,180 @@ public class BaseMasterObserver implements MasterObserver {
 
   @Override
   public void preDeleteTable(ObserverContext<MasterCoprocessorEnvironment> ctx,
-      byte[] tableName) throws IOException {
+      TableName tableName) throws IOException {
   }
 
   @Override
   public void postDeleteTable(ObserverContext<MasterCoprocessorEnvironment> ctx,
-      byte[] tableName) throws IOException {
+      TableName tableName) throws IOException {
   }
 
   @Override
   public void preDeleteTableHandler(
-      final ObserverContext<MasterCoprocessorEnvironment> ctx, byte[] tableName)
+      final ObserverContext<MasterCoprocessorEnvironment> ctx, TableName tableName)
       throws IOException{
   }
 
   @Override
   public void postDeleteTableHandler(
-      final ObserverContext<MasterCoprocessorEnvironment> ctx, byte[] tableName)
+      final ObserverContext<MasterCoprocessorEnvironment> ctx, TableName tableName)
       throws IOException {
   }
 
   @Override
   public void preModifyTable(ObserverContext<MasterCoprocessorEnvironment> ctx,
-      byte[] tableName, HTableDescriptor htd) throws IOException {
+      TableName tableName, HTableDescriptor htd) throws IOException {
   }
 
   @Override
   public void postModifyTableHandler(
-      ObserverContext<MasterCoprocessorEnvironment> ctx, byte[] tableName,
+      ObserverContext<MasterCoprocessorEnvironment> ctx, TableName tableName,
       HTableDescriptor htd) throws IOException {
   }
 
   @Override
   public void preModifyTableHandler(
-      ObserverContext<MasterCoprocessorEnvironment> ctx, byte[] tableName,
+      ObserverContext<MasterCoprocessorEnvironment> ctx, TableName tableName,
       HTableDescriptor htd) throws IOException {
   }
 
   @Override
   public void postModifyTable(ObserverContext<MasterCoprocessorEnvironment> ctx,
-      byte[] tableName, HTableDescriptor htd) throws IOException {
+      TableName tableName, HTableDescriptor htd) throws IOException {
+  }
+
+  @Override
+  public void preCreateNamespace(ObserverContext<MasterCoprocessorEnvironment> ctx, NamespaceDescriptor ns) throws IOException {
+  }
+
+  @Override
+  public void postCreateNamespace(ObserverContext<MasterCoprocessorEnvironment> ctx, NamespaceDescriptor ns) throws IOException {
+  }
+
+  @Override
+  public void preDeleteNamespace(ObserverContext<MasterCoprocessorEnvironment> ctx, String namespace) throws IOException {
+  }
+
+  @Override
+  public void postDeleteNamespace(ObserverContext<MasterCoprocessorEnvironment> ctx, String namespace) throws IOException {
+  }
+
+  @Override
+  public void preModifyNamespace(ObserverContext<MasterCoprocessorEnvironment> ctx, NamespaceDescriptor ns) throws IOException {
+  }
+
+  @Override
+  public void postModifyNamespace(ObserverContext<MasterCoprocessorEnvironment> ctx, NamespaceDescriptor ns) throws IOException {
   }
 
   @Override
   public void preAddColumn(ObserverContext<MasterCoprocessorEnvironment> ctx,
-      byte[] tableName, HColumnDescriptor column) throws IOException {
+      TableName tableName, HColumnDescriptor column) throws IOException {
   }
 
   @Override
   public void postAddColumn(ObserverContext<MasterCoprocessorEnvironment> ctx,
-      byte[] tableName, HColumnDescriptor column) throws IOException {
+      TableName tableName, HColumnDescriptor column) throws IOException {
   }
 
   @Override
   public void preAddColumnHandler(
-      ObserverContext<MasterCoprocessorEnvironment> ctx, byte[] tableName,
+      ObserverContext<MasterCoprocessorEnvironment> ctx, TableName tableName,
       HColumnDescriptor column) throws IOException {
   }
 
   @Override
   public void postAddColumnHandler(
-      ObserverContext<MasterCoprocessorEnvironment> ctx, byte[] tableName,
+      ObserverContext<MasterCoprocessorEnvironment> ctx, TableName tableName,
       HColumnDescriptor column) throws IOException {
   }
 
   @Override
   public void preModifyColumn(ObserverContext<MasterCoprocessorEnvironment> ctx,
-      byte[] tableName, HColumnDescriptor descriptor) throws IOException {
+      TableName tableName, HColumnDescriptor descriptor) throws IOException {
   }
 
   @Override
   public void postModifyColumn(ObserverContext<MasterCoprocessorEnvironment> ctx,
-      byte[] tableName, HColumnDescriptor descriptor) throws IOException {
+      TableName tableName, HColumnDescriptor descriptor) throws IOException {
   }
 
   @Override
   public void preModifyColumnHandler(
-      ObserverContext<MasterCoprocessorEnvironment> ctx, byte[] tableName,
+      ObserverContext<MasterCoprocessorEnvironment> ctx, TableName tableName,
       HColumnDescriptor descriptor) throws IOException {
   }
 
   @Override
   public void postModifyColumnHandler(
-      ObserverContext<MasterCoprocessorEnvironment> ctx, byte[] tableName,
+      ObserverContext<MasterCoprocessorEnvironment> ctx, TableName tableName,
       HColumnDescriptor descriptor) throws IOException {
   }
 
   @Override
   public void preDeleteColumn(ObserverContext<MasterCoprocessorEnvironment> ctx,
-      byte[] tableName, byte[] c) throws IOException {
+      TableName tableName, byte[] c) throws IOException {
   }
 
   @Override
   public void postDeleteColumn(ObserverContext<MasterCoprocessorEnvironment> ctx,
-      byte[] tableName, byte[] c) throws IOException {
+      TableName tableName, byte[] c) throws IOException {
   }
 
   @Override
   public void preDeleteColumnHandler(
-      ObserverContext<MasterCoprocessorEnvironment> ctx, byte[] tableName,
+      ObserverContext<MasterCoprocessorEnvironment> ctx, TableName tableName,
       byte[] c) throws IOException {
   }
 
   @Override
   public void postDeleteColumnHandler(
-      ObserverContext<MasterCoprocessorEnvironment> ctx, byte[] tableName,
+      ObserverContext<MasterCoprocessorEnvironment> ctx, TableName tableName,
       byte[] c) throws IOException {
   }
 
 
   @Override
   public void preEnableTable(ObserverContext<MasterCoprocessorEnvironment> ctx,
-      byte[] tableName) throws IOException {
+      TableName tableName) throws IOException {
   }
 
   @Override
   public void postEnableTable(ObserverContext<MasterCoprocessorEnvironment> ctx,
-      byte[] tableName) throws IOException {
+      TableName tableName) throws IOException {
   }
 
   @Override
   public void preEnableTableHandler(
-      ObserverContext<MasterCoprocessorEnvironment> ctx, byte[] tableName)
+      ObserverContext<MasterCoprocessorEnvironment> ctx, TableName tableName)
       throws IOException {
   }
 
   @Override
   public void postEnableTableHandler(
-      ObserverContext<MasterCoprocessorEnvironment> ctx, byte[] tableName)
+      ObserverContext<MasterCoprocessorEnvironment> ctx, TableName tableName)
       throws IOException {
   }
 
   @Override
   public void preDisableTable(ObserverContext<MasterCoprocessorEnvironment> ctx,
-      byte[] tableName) throws IOException {
+      TableName tableName) throws IOException {
   }
 
   @Override
   public void postDisableTable(ObserverContext<MasterCoprocessorEnvironment> ctx,
-      byte[] tableName) throws IOException {
+      TableName tableName) throws IOException {
   }
 
   @Override
   public void preDisableTableHandler(
-      ObserverContext<MasterCoprocessorEnvironment> ctx, byte[] tableName)
+      ObserverContext<MasterCoprocessorEnvironment> ctx, TableName tableName)
       throws IOException {
   }
 
   @Override
   public void postDisableTableHandler(
-      ObserverContext<MasterCoprocessorEnvironment> ctx, byte[] tableName)
+      ObserverContext<MasterCoprocessorEnvironment> ctx, TableName tableName)
       throws IOException {
   }
 
@@ -346,7 +372,8 @@ public class BaseMasterObserver implements MasterObserver {
 
   @Override
   public void preGetTableDescriptors(ObserverContext<MasterCoprocessorEnvironment> ctx,
-      List<String> tableNamesList, List<HTableDescriptor> descriptors) throws IOException {
+      List<TableName> tableNamesList, List<HTableDescriptor> descriptors)
+      throws IOException {
   }
 
   @Override

@@ -77,7 +77,7 @@ public class TestRemoteTable {
     REST_TEST_UTIL.startServletContainer(TEST_UTIL.getConfiguration());
     HBaseAdmin admin = TEST_UTIL.getHBaseAdmin();
     if (!admin.tableExists(TABLE)) {
-      HTableDescriptor htd = new HTableDescriptor(TABLE);
+      HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(TABLE));
       htd.addFamily(new HColumnDescriptor(COLUMN_1).setMaxVersions(3));
       htd.addFamily(new HColumnDescriptor(COLUMN_2).setMaxVersions(3));
       htd.addFamily(new HColumnDescriptor(COLUMN_3).setMaxVersions(3));

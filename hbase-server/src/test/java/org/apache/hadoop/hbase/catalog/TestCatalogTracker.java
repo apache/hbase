@@ -30,6 +30,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -326,10 +327,10 @@ public class TestCatalogTracker {
     // Make it so we return any old location when asked.
     final HRegionLocation anyLocation =
       new HRegionLocation(HRegionInfo.FIRST_META_REGIONINFO, SN);
-    Mockito.when(connection.getRegionLocation((byte[]) Mockito.any(),
+    Mockito.when(connection.getRegionLocation((TableName) Mockito.any(),
         (byte[]) Mockito.any(), Mockito.anyBoolean())).
       thenReturn(anyLocation);
-    Mockito.when(connection.locateRegion((byte[]) Mockito.any(),
+    Mockito.when(connection.locateRegion((TableName) Mockito.any(),
         (byte[]) Mockito.any())).
       thenReturn(anyLocation);
     if (admin != null) {

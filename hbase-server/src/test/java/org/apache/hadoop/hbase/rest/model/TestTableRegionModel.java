@@ -88,7 +88,7 @@ public class TestTableRegionModel extends TestCase {
   public void testGetName() {
     TableRegionModel model = buildTestModel();
     String modelName = model.getName();
-    HRegionInfo hri = new HRegionInfo(Bytes.toBytes(TABLE),
+    HRegionInfo hri = new HRegionInfo(TableName.valueOf(TABLE),
       START_KEY, END_KEY, false, ID);
     assertEquals(modelName, hri.getRegionNameAsString());
   }

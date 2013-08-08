@@ -23,6 +23,7 @@ import org.apache.commons.lang.time.StopWatch;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 
@@ -163,7 +164,7 @@ public final class Canary implements Tool {
 
         if (tables_index >= 0) {
           for (int i = tables_index; i < args.length; i++) {
-            sniff(admin, sink, args[i]);
+            sniff(admin, sink, TableName.valueOf(args[i]));
           }
         } else {
           sniff();
@@ -202,7 +203,7 @@ public final class Canary implements Tool {
    * @param tableName
    * @throws Exception
    */
-  public static void sniff(final HBaseAdmin admin, String tableName)
+  public static void sniff(final HBaseAdmin admin, TableName tableName)
   throws Exception {
     sniff(admin, new StdOutSink(), tableName);
   }
@@ -214,10 +215,10 @@ public final class Canary implements Tool {
    * @param tableName
    * @throws Exception
    */
-  private static void sniff(final HBaseAdmin admin, final Sink sink, String tableName)
+  private static void sniff(final HBaseAdmin admin, final Sink sink, TableName tableName)
   throws Exception {
     if (admin.isTableAvailable(tableName)) {
-      sniff(admin, sink, admin.getTableDescriptor(tableName.getBytes()));
+      sniff(admin, sink, admin.getTableDescriptor(tableName));
     } else {
       LOG.warn(String.format("Table %s is not available", tableName));
     }
@@ -232,12 +233,12 @@ public final class Canary implements Tool {
     HTable table = null;
 
     try {
-      table = new HTable(admin.getConfiguration(), tableDesc.getName());
+      table = new HTable(admin.getConfiguration(), tableDesc.getTableName());
     } catch (TableNotFoundException e) {
       return;
     }
 
-    for (HRegionInfo region : admin.getTableRegions(tableDesc.getName())) {
+    for (HRegionInfo region : admin.getTableRegions(tableDesc.getTableName())) {
       try {
         sniffRegion(admin, sink, region, table);
       } catch (Exception e) {

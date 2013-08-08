@@ -32,6 +32,7 @@ import java.util.TreeSet;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
@@ -90,14 +91,15 @@ public class AccessControlLists {
   /** Internal storage table for access control lists */
   public static final String ACL_TABLE_NAME_STR = "_acl_";
   public static final byte[] ACL_TABLE_NAME = Bytes.toBytes(ACL_TABLE_NAME_STR);
+  public static final TableName ACL_TABLE =
+      TableName.valueOf(ACL_TABLE_NAME);
   public static final byte[] ACL_GLOBAL_NAME = ACL_TABLE_NAME;
   /** Column family used to store ACL grants */
   public static final String ACL_LIST_FAMILY_STR = "l";
   public static final byte[] ACL_LIST_FAMILY = Bytes.toBytes(ACL_LIST_FAMILY_STR);
 
   /** Table descriptor for ACL internal table */
-  public static final HTableDescriptor ACL_TABLEDESC = new HTableDescriptor(
-      ACL_TABLE_NAME);
+  public static final HTableDescriptor ACL_TABLEDESC = new HTableDescriptor(ACL_TABLE);
   static {
     ACL_TABLEDESC.addFamily(
         new HColumnDescriptor(ACL_LIST_FAMILY,
@@ -123,7 +125,7 @@ public class AccessControlLists {
    * @param master reference to HMaster
    */
   static void init(MasterServices master) throws IOException {
-    if (!MetaReader.tableExists(master.getCatalogTracker(), ACL_TABLE_NAME_STR)) {
+    if (!MetaReader.tableExists(master.getCatalogTracker(), ACL_TABLE)) {
       master.createTable(ACL_TABLEDESC, null);
     }
   }
@@ -138,7 +140,7 @@ public class AccessControlLists {
       throws IOException {
     Permission.Action[] actions = userPerm.getActions();
 
-    Put p = new Put(userPerm.isGlobal() ? ACL_GLOBAL_NAME : userPerm.getTable());
+    Put p = new Put(userPerm.isGlobal() ? ACL_GLOBAL_NAME : userPerm.getTable().getName());
     byte[] key = userPermissionKey(userPerm);
 
     if ((actions == null) || (actions.length == 0)) {
@@ -154,7 +156,7 @@ public class AccessControlLists {
     p.add(ACL_LIST_FAMILY, key, value);
     if (LOG.isDebugEnabled()) {
       LOG.debug("Writing permission for table "+
-          Bytes.toString(userPerm.getTable())+" "+
+          userPerm.getTable()+" "+
           Bytes.toString(key)+": "+Bytes.toStringBinary(value)
       );
     }
@@ -183,7 +185,7 @@ public class AccessControlLists {
   static void removeUserPermission(Configuration conf, UserPermission userPerm)
       throws IOException {
 
-    Delete d = new Delete(userPerm.isGlobal() ? ACL_GLOBAL_NAME : userPerm.getTable());
+    Delete d = new Delete(userPerm.isGlobal() ? ACL_GLOBAL_NAME : userPerm.getTable().getName());
     byte[] key = userPermissionKey(userPerm);
 
     if (LOG.isDebugEnabled()) {
@@ -202,12 +204,12 @@ public class AccessControlLists {
   /**
    * Remove specified table from the _acl_ table.
    */
-  static void removeTablePermissions(Configuration conf, byte[] tableName)
+  static void removeTablePermissions(Configuration conf, TableName tableName)
       throws IOException{
-    Delete d = new Delete(tableName);
+    Delete d = new Delete(tableName.getName());
 
     if (LOG.isDebugEnabled()) {
-      LOG.debug("Removing permissions of removed table "+ Bytes.toString(tableName));
+      LOG.debug("Removing permissions of removed table "+ tableName);
     }
 
     HTable acls = null;
@@ -222,12 +224,12 @@ public class AccessControlLists {
   /**
    * Remove specified table column from the _acl_ table.
    */
-  static void removeTablePermissions(Configuration conf, byte[] tableName, byte[] column)
+  static void removeTablePermissions(Configuration conf, TableName tableName, byte[] column)
       throws IOException{
 
     if (LOG.isDebugEnabled()) {
       LOG.debug("Removing permissions of removed column " + Bytes.toString(column) +
-                " from table "+ Bytes.toString(tableName));
+                " from table "+ tableName);
     }
 
     HTable acls = null;
@@ -256,7 +258,7 @@ public class AccessControlLists {
       }
 
       if (qualifierSet.size() > 0) {
-        Delete d = new Delete(tableName);
+        Delete d = new Delete(tableName.getName());
         for (byte[] qualifier : qualifierSet) {
           d.deleteColumns(ACL_LIST_FAMILY, qualifier);
         }
@@ -293,14 +295,14 @@ public class AccessControlLists {
    * metadata table.
    */
   static boolean isAclRegion(HRegion region) {
-    return Bytes.equals(ACL_TABLE_NAME, region.getTableDesc().getName());
+    return ACL_TABLE.equals(region.getTableDesc().getTableName());
   }
 
   /**
    * Returns {@code true} if the given table is {@code _acl_} metadata table.
    */
   static boolean isAclTable(HTableDescriptor desc) {
-    return Bytes.equals(ACL_TABLE_NAME, desc.getName());
+    return ACL_TABLE.equals(desc.getTableName());
   }
 
   /**
@@ -311,7 +313,7 @@ public class AccessControlLists {
    * @return a map of the permissions for this table.
    * @throws IOException
    */
-  static Map<byte[],ListMultimap<String,TablePermission>> loadAll(
+  static Map<TableName,ListMultimap<String,TablePermission>> loadAll(
       HRegion aclRegion)
     throws IOException {
 
@@ -319,8 +321,8 @@ public class AccessControlLists {
       throw new IOException("Can only load permissions from "+ACL_TABLE_NAME_STR);
     }
 
-    Map<byte[],ListMultimap<String,TablePermission>> allPerms =
-        new TreeMap<byte[],ListMultimap<String,TablePermission>>(Bytes.BYTES_COMPARATOR);
+    Map<TableName,ListMultimap<String,TablePermission>> allPerms =
+        new TreeMap<TableName,ListMultimap<String,TablePermission>>();
 
     // do a full scan of _acl_ table
 
@@ -336,10 +338,10 @@ public class AccessControlLists {
 
         boolean hasNext = iScanner.next(row);
         ListMultimap<String,TablePermission> perms = ArrayListMultimap.create();
-        byte[] table = null;
+        TableName table = null;
         for (KeyValue kv : row) {
           if (table == null) {
-            table = kv.getRow();
+            table = TableName.valueOf(kv.getRow());
           }
           Pair<String,TablePermission> permissionsOfUserOnTable =
               parseTablePermissionRecord(table, kv);
@@ -369,10 +371,10 @@ public class AccessControlLists {
    * Load all permissions from the region server holding {@code _acl_},
    * primarily intended for testing purposes.
    */
-  static Map<byte[],ListMultimap<String,TablePermission>> loadAll(
+  static Map<TableName,ListMultimap<String,TablePermission>> loadAll(
       Configuration conf) throws IOException {
-    Map<byte[],ListMultimap<String,TablePermission>> allPerms =
-        new TreeMap<byte[],ListMultimap<String,TablePermission>>(Bytes.BYTES_COMPARATOR);
+    Map<TableName,ListMultimap<String,TablePermission>> allPerms =
+        new TreeMap<TableName,ListMultimap<String,TablePermission>>();
 
     // do a full scan of _acl_, filtering on only first table region rows
 
@@ -385,9 +387,10 @@ public class AccessControlLists {
       acls = new HTable(conf, ACL_TABLE_NAME);
       scanner = acls.getScanner(scan);
       for (Result row : scanner) {
+        TableName tableName = TableName.valueOf(row.getRow());
         ListMultimap<String,TablePermission> resultPerms =
-            parseTablePermissions(row.getRow(), row);
-        allPerms.put(row.getRow(), resultPerms);
+            parseTablePermissions(tableName, row);
+        allPerms.put(tableName, resultPerms);
       }
     } finally {
       if (scanner != null) scanner.close();
@@ -407,22 +410,22 @@ public class AccessControlLists {
    * </p>
    */
   static ListMultimap<String, TablePermission> getTablePermissions(Configuration conf,
-      byte[] tableName) throws IOException {
-    if (tableName == null) tableName = ACL_TABLE_NAME;
+      TableName tableName) throws IOException {
+    if (tableName == null) tableName = ACL_TABLE;
 
     // for normal user tables, we just read the table row from _acl_
     ListMultimap<String, TablePermission> perms = ArrayListMultimap.create();
     HTable acls = null;
     try {
-      acls = new HTable(conf, ACL_TABLE_NAME);
-      Get get = new Get(tableName);
+      acls = new HTable(conf, ACL_TABLE);
+      Get get = new Get(tableName.getName());
       get.addFamily(ACL_LIST_FAMILY);
       Result row = acls.get(get);
       if (!row.isEmpty()) {
         perms = parseTablePermissions(tableName, row);
       } else {
         LOG.info("No permissions found in " + ACL_TABLE_NAME_STR + " for table "
-            + Bytes.toString(tableName));
+            + tableName);
       }
     } finally {
       if (acls != null) acls.close();
@@ -436,7 +439,7 @@ public class AccessControlLists {
    * user plus associated permissions.
    */
   static List<UserPermission> getUserPermissions(
-      Configuration conf, byte[] tableName)
+      Configuration conf, TableName tableName)
   throws IOException {
     ListMultimap<String,TablePermission> allPerms = getTablePermissions(
       conf, tableName);
@@ -453,7 +456,7 @@ public class AccessControlLists {
   }
 
   private static ListMultimap<String,TablePermission> parseTablePermissions(
-      byte[] table, Result result) {
+      TableName table, Result result) {
     ListMultimap<String,TablePermission> perms = ArrayListMultimap.create();
     if (result != null && result.size() > 0) {
       for (KeyValue kv : result.raw()) {
@@ -472,7 +475,7 @@ public class AccessControlLists {
   }
 
   private static Pair<String,TablePermission> parseTablePermissionRecord(
-      byte[] table, KeyValue kv) {
+      TableName table, KeyValue kv) {
     // return X given a set of permissions encoded in the permissionRecord kv.
     byte[] family = kv.getFamily();
 

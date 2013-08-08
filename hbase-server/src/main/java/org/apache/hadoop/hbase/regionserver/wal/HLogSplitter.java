@@ -22,6 +22,8 @@ import java.io.EOFException;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InterruptedIOException;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
 import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -35,6 +37,7 @@ import java.util.TreeSet;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletionService;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorCompletionService;
 import java.util.concurrent.Future;
@@ -51,10 +54,10 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.ServerName;
@@ -114,7 +117,8 @@ public class HLogSplitter {
   OutputSink outputSink;
   EntryBuffers entryBuffers;
 
-  private Set<String> disablingOrDisabledTables = new HashSet<String>();
+  private Set<TableName> disablingOrDisabledTables =
+      new HashSet<TableName>();
   private ZooKeeperWatcher watcher;
 
   // If an exception is thrown by one of the other threads, it will be
@@ -449,7 +453,7 @@ public class HLogSplitter {
   static Path getRegionSplitEditsPath(final FileSystem fs,
       final Entry logEntry, final Path rootDir, boolean isCreate)
   throws IOException {
-    Path tableDir = HTableDescriptor.getTableDir(rootDir, logEntry.getKey().getTablename());
+    Path tableDir = FSUtils.getTableDir(rootDir, logEntry.getKey().getTablename());
     String encodedRegionName = Bytes.toString(logEntry.getKey().getEncodedRegionName());
     Path regiondir = HRegion.getRegionDir(tableDir, encodedRegionName);
     Path dir = HLogUtil.getRegionDirRecoveredEditsDir(regiondir);
@@ -747,11 +751,11 @@ public class HLogSplitter {
   static class RegionEntryBuffer implements HeapSize {
     long heapInBuffer = 0;
     List<Entry> entryBuffer;
-    byte[] tableName;
+    TableName tableName;
     byte[] encodedRegionName;
 
-    RegionEntryBuffer(byte[] table, byte[] region) {
-      this.tableName = table;
+    RegionEntryBuffer(TableName tableName, byte[] region) {
+      this.tableName = tableName;
       this.encodedRegionName = region;
       this.entryBuffer = new LinkedList<Entry>();
     }
@@ -957,7 +961,7 @@ public class HLogSplitter {
     abstract int getNumberOfRecoveredRegions();
 
     /**
-     * @param entry A WAL Edit Entry
+     * @param buffer A WAL Edit Entry
      * @throws IOException
      */
     abstract void append(RegionEntryBuffer buffer) throws IOException;
@@ -1304,8 +1308,8 @@ public class HLogSplitter {
     private final Map<String, HRegionLocation> onlineRegions =
         new ConcurrentHashMap<String, HRegionLocation>();
 
-    private Map<byte[], HConnection> tableNameToHConnectionMap = Collections
-        .synchronizedMap(new TreeMap<byte[], HConnection>(Bytes.BYTES_COMPARATOR));
+    private Map<TableName, HConnection> tableNameToHConnectionMap = Collections
+        .synchronizedMap(new TreeMap<TableName, HConnection>());
     /**
      * Map key -> value layout
      * <servername>:<table name> -> Queue<Row>
@@ -1337,7 +1341,7 @@ public class HLogSplitter {
       }
 
       // check if current region in a disabling or disabled table
-      if (disablingOrDisabledTables.contains(Bytes.toString(buffer.tableName))) {
+      if (disablingOrDisabledTables.contains(buffer.tableName)) {
         // need fall back to old way
         logRecoveredEditsOutputSink.append(buffer);
         hasEditsInDisablingOrDisabledTables = true;
@@ -1387,11 +1391,11 @@ public class HLogSplitter {
      * @throws IOException
      */
     private void groupEditsByServer(List<Entry> entries) throws IOException {
-      Set<byte[]> nonExistentTables = null;
+      Set<TableName> nonExistentTables = null;
       Long cachedLastFlushedSequenceId = -1l;
       for (HLog.Entry entry : entries) {
         WALEdit edit = entry.getEdit();
-        byte[] table = entry.getKey().getTablename();
+        TableName table = entry.getKey().getTablename();
         String encodeRegionNameStr = Bytes.toString(entry.getKey().getEncodedRegionName());
         // skip edits of non-existent tables
         if (nonExistentTables != null && nonExistentTables.contains(table)) {
@@ -1439,11 +1443,11 @@ public class HLogSplitter {
                 encodeRegionNameStr);
             } catch (TableNotFoundException ex) {
               // table has been deleted so skip edits of the table
-              LOG.info("Table " + Bytes.toString(table)
+              LOG.info("Table " + table
                   + " doesn't exist. Skip log replay for region " + encodeRegionNameStr);
               lastFlushedSequenceIds.put(encodeRegionNameStr, Long.MAX_VALUE);
               if (nonExistentTables == null) {
-                nonExistentTables = new TreeSet<byte[]>(Bytes.BYTES_COMPARATOR);
+                nonExistentTables = new TreeSet<TableName>();
               }
               nonExistentTables.add(table);
               this.skippedEdits.incrementAndGet();
@@ -1482,7 +1486,7 @@ public class HLogSplitter {
               put.setClusterId(entry.getKey().getClusterId());
               preRow = put;
             }
-            preKey = loc.getHostnamePort() + KEY_DELIMITER + Bytes.toString(table);
+            preKey = loc.getHostnamePort() + KEY_DELIMITER + table;
             preLoc = loc;
           }
           if (kv.isDelete()) {
@@ -1518,8 +1522,7 @@ public class HLogSplitter {
      * @throws IOException
      */
     private HRegionLocation locateRegionAndRefreshLastFlushedSequenceId(HConnection hconn,
-        byte[] table, byte[] row, String originalEncodedRegionName) throws IOException {
-
+        TableName table, byte[] row, String originalEncodedRegionName) throws IOException {
       // fetch location from cache
       HRegionLocation loc = onlineRegions.get(originalEncodedRegionName);
       if(loc != null) return loc;
@@ -1527,7 +1530,7 @@ public class HLogSplitter {
       loc = hconn.getRegionLocation(table, row, true);
       if (loc == null) {
         throw new IOException("Can't locate location for row:" + Bytes.toString(row)
-            + " of table:" + Bytes.toString(table));
+            + " of table:" + table);
       }
       // check if current row moves to a different region due to region merge/split
       if (!originalEncodedRegionName.equalsIgnoreCase(loc.getRegionInfo().getEncodedName())) {
@@ -1615,7 +1618,7 @@ public class HLogSplitter {
       final long pause = conf.getLong(HConstants.HBASE_CLIENT_PAUSE,
         HConstants.DEFAULT_HBASE_CLIENT_PAUSE);
       boolean reloadLocation = false;
-      byte[] tableName = loc.getRegionInfo().getTableName();
+      TableName tableName = loc.getRegionInfo().getTableName();
       int tries = 0;
       Throwable cause = null;
       while (endTime > EnvironmentEdgeManager.currentTimeMillis()) {
@@ -1741,7 +1744,7 @@ public class HLogSplitter {
 
           // close connections
           synchronized (this.tableNameToHConnectionMap) {
-            for (byte[] tableName : this.tableNameToHConnectionMap.keySet()) {
+            for (TableName tableName : this.tableNameToHConnectionMap.keySet()) {
               HConnection hconn = this.tableNameToHConnectionMap.get(tableName);
               try {
                 hconn.clearRegionCache();
@@ -1783,23 +1786,23 @@ public class HLogSplitter {
         return ret;
       }
 
-      String tableName = getTableFromLocationStr(loc);
-      if(tableName.isEmpty()){
+      TableName tableName = getTableFromLocationStr(loc);
+      if(tableName != null){
         LOG.warn("Invalid location string:" + loc + " found.");
       }
 
-      HConnection hconn = getConnectionByTableName(Bytes.toBytes(tableName));
+      HConnection hconn = getConnectionByTableName(tableName);
       synchronized (writers) {
         ret = writers.get(loc);
         if (ret == null) {
-          ret = new RegionServerWriter(conf, Bytes.toBytes(tableName), hconn);
+          ret = new RegionServerWriter(conf, tableName, hconn);
           writers.put(loc, ret);
         }
       }
       return ret;
     }
 
-    private HConnection getConnectionByTableName(final byte[] tableName) throws IOException {
+    private HConnection getConnectionByTableName(final TableName tableName) throws IOException {
       HConnection hconn = this.tableNameToHConnectionMap.get(tableName);
       if (hconn == null) {
         synchronized (this.tableNameToHConnectionMap) {
@@ -1812,16 +1815,15 @@ public class HLogSplitter {
       }
       return hconn;
     }
-
-    private String getTableFromLocationStr(String loc) {
+    private TableName getTableFromLocationStr(String loc) {
       /**
        * location key is in format <server name:port>#<table name>
        */
       String[] splits = loc.split(KEY_DELIMITER);
       if (splits.length != 2) {
-        return "";
+        return null;
       }
-      return splits[1];
+      return TableName.valueOf(splits[1]);
     }
   }
 
@@ -1832,7 +1834,7 @@ public class HLogSplitter {
   private final static class RegionServerWriter extends SinkWriter {
     final WALEditsReplaySink sink;
 
-    RegionServerWriter(final Configuration conf, final byte[] tableName, final HConnection conn)
+    RegionServerWriter(final Configuration conf, final TableName tableName, final HConnection conn)
         throws IOException {
       this.sink = new WALEditsReplaySink(conf, tableName, conn);
     }

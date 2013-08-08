@@ -26,6 +26,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.HTable;
@@ -99,7 +100,7 @@ public class AggregationClient {
    *           & propagated to it.
    */
   public <R, S, P extends Message, Q extends Message, T extends Message> R max(
-      final byte[] tableName, final ColumnInterpreter<R, S, P, Q, T> ci, final Scan scan)
+      final TableName tableName, final ColumnInterpreter<R, S, P, Q, T> ci, final Scan scan)
       throws Throwable {
     HTable table = null;
     try {
@@ -188,7 +189,7 @@ public class AggregationClient {
    * @throws Throwable
    */
   public <R, S, P extends Message, Q extends Message, T extends Message> R min(
-      final byte[] tableName, final ColumnInterpreter<R, S, P, Q, T> ci, final Scan scan)
+      final TableName tableName, final ColumnInterpreter<R, S, P, Q, T> ci, final Scan scan)
       throws Throwable {
     HTable table = null;
     try {
@@ -268,7 +269,7 @@ public class AggregationClient {
    * @throws Throwable
    */
   public <R, S, P extends Message, Q extends Message, T extends Message> long rowCount(
-      final byte[] tableName, final ColumnInterpreter<R, S, P, Q, T> ci, final Scan scan)
+      final TableName tableName, final ColumnInterpreter<R, S, P, Q, T> ci, final Scan scan)
       throws Throwable {
     HTable table = null;
     try {
@@ -342,7 +343,7 @@ public class AggregationClient {
    * @throws Throwable
    */
   public <R, S, P extends Message, Q extends Message, T extends Message> S sum(
-      final byte[] tableName, final ColumnInterpreter<R, S, P, Q, T> ci, final Scan scan)
+      final TableName tableName, final ColumnInterpreter<R, S, P, Q, T> ci, final Scan scan)
       throws Throwable {
     HTable table = null;
     try {
@@ -415,7 +416,7 @@ public class AggregationClient {
    * @throws Throwable
    */
   private <R, S, P extends Message, Q extends Message, T extends Message> Pair<S, Long> getAvgArgs(
-      final byte[] tableName, final ColumnInterpreter<R, S, P, Q, T> ci, final Scan scan)
+      final TableName tableName, final ColumnInterpreter<R, S, P, Q, T> ci, final Scan scan)
       throws Throwable {
     HTable table = null;
     try {
@@ -498,7 +499,7 @@ public class AggregationClient {
    * @throws Throwable
    */
   public <R, S, P extends Message, Q extends Message, T extends Message>
-  double avg(final byte[] tableName,
+  double avg(final TableName tableName,
       final ColumnInterpreter<R, S, P, Q, T> ci, Scan scan) throws Throwable {
     Pair<S, Long> p = getAvgArgs(tableName, ci, scan);
     return ci.divideForAvg(p.getFirst(), p.getSecond());
@@ -606,7 +607,7 @@ public class AggregationClient {
    * @throws Throwable
    */
   public <R, S, P extends Message, Q extends Message, T extends Message>
-  double std(final byte[] tableName, ColumnInterpreter<R, S, P, Q, T> ci,
+  double std(final TableName tableName, ColumnInterpreter<R, S, P, Q, T> ci,
       Scan scan) throws Throwable {
     HTable table = null;
     try {
@@ -719,7 +720,7 @@ public class AggregationClient {
    * @throws Throwable
    */
   public <R, S, P extends Message, Q extends Message, T extends Message>
-  R median(final byte[] tableName, ColumnInterpreter<R, S, P, Q, T> ci,
+  R median(final TableName tableName, ColumnInterpreter<R, S, P, Q, T> ci,
       Scan scan) throws Throwable {
     HTable table = null;
     try {

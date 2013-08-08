@@ -26,6 +26,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.backup.HFileArchiver;
@@ -46,7 +47,7 @@ import org.apache.zookeeper.KeeperException;
 public class DeleteTableHandler extends TableEventHandler {
   private static final Log LOG = LogFactory.getLog(DeleteTableHandler.class);
 
-  public DeleteTableHandler(byte [] tableName, Server server,
+  public DeleteTableHandler(TableName tableName, Server server,
       final MasterServices masterServices) {
     super(EventType.C_M_DELETE_TABLE, tableName, server, masterServices);
   }
@@ -111,16 +112,15 @@ public class DeleteTableHandler extends TableEventHandler {
         LOG.error("Couldn't delete " + tempTableDir);
       }
 
-      LOG.debug("Table '" + Bytes.toString(tableName) + "' archived!");
+      LOG.debug("Table '" + tableName + "' archived!");
     } finally {
-      String tableNameStr = Bytes.toString(tableName);
       // 6. Update table descriptor cache
-      LOG.debug("Removing '" + tableNameStr + "' descriptor.");
-      this.masterServices.getTableDescriptors().remove(Bytes.toString(tableName));
+      LOG.debug("Removing '" + tableName + "' descriptor.");
+      this.masterServices.getTableDescriptors().remove(tableName);
 
       // 7. If entry for this table in zk, and up in AssignmentManager, remove it.
-      LOG.debug("Marking '" + tableNameStr + "' as deleted.");
-      am.getZKTable().setDeletedTable(tableNameStr);
+      LOG.debug("Marking '" + tableName + "' as deleted.");
+      am.getZKTable().setDeletedTable(tableName);
     }
 
     if (cpHost != null) {
@@ -144,6 +144,6 @@ public class DeleteTableHandler extends TableEventHandler {
     if(server != null && server.getServerName() != null) {
       name = server.getServerName().toString();
     }
-    return getClass().getSimpleName() + "-" + name + "-" + getSeqid() + "-" + tableNameStr;
+    return getClass().getSimpleName() + "-" + name + "-" + getSeqid() + "-" + tableName;
   }
 }

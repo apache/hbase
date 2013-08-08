@@ -27,6 +27,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.InterProcessLock;
 import org.apache.hadoop.hbase.InterProcessLock.MetadataHandler;
 import org.apache.hadoop.hbase.InterProcessReadWriteLock;
@@ -41,7 +42,6 @@ import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.hadoop.hbase.zookeeper.lock.ZKInterProcessReadWriteLock;
 import org.apache.zookeeper.KeeperException;
 
-import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
 
 /**
@@ -104,7 +104,7 @@ public abstract class TableLockManager {
    * @param purpose Human readable reason for locking the table
    * @return A new TableLock object for acquiring a write lock
    */
-  public abstract TableLock writeLock(byte[] tableName, String purpose);
+  public abstract TableLock writeLock(TableName tableName, String purpose);
 
   /**
    * Returns a TableLock for locking the table for shared access among read-lock holders
@@ -112,7 +112,7 @@ public abstract class TableLockManager {
    * @param purpose Human readable reason for locking the table
    * @return A new TableLock object for acquiring a read lock
    */
-  public abstract TableLock readLock(byte[] tableName, String purpose);
+  public abstract TableLock readLock(TableName tableName, String purpose);
 
   /**
    * Visits all table locks(read and write), and lock attempts with the given callback
@@ -148,7 +148,7 @@ public abstract class TableLockManager {
    * @param tableName name of the table
    * @throws IOException If there is an unrecoverable error releasing the lock
    */
-  public abstract void tableDeleted(byte[] tableName)
+  public abstract void tableDeleted(TableName tableName)
       throws IOException;
 
   /**
@@ -186,11 +186,11 @@ public abstract class TableLockManager {
       }
     }
     @Override
-    public TableLock writeLock(byte[] tableName, String purpose) {
+    public TableLock writeLock(TableName tableName, String purpose) {
       return new NullTableLock();
     }
     @Override
-    public TableLock readLock(byte[] tableName, String purpose) {
+    public TableLock readLock(TableName tableName, String purpose) {
       return new NullTableLock();
     }
     @Override
@@ -200,7 +200,7 @@ public abstract class TableLockManager {
     public void reapWriteLocks() throws IOException {
     }
     @Override
-    public void tableDeleted(byte[] tableName) throws IOException {
+    public void tableDeleted(TableName tableName) throws IOException {
     }
     @Override
     public void visitAllLocks(MetadataHandler handler) throws IOException {
@@ -249,18 +249,16 @@ public abstract class TableLockManager {
 
     private static class TableLockImpl implements TableLock {
       long lockTimeoutMs;
-      byte[] tableName;
-      String tableNameStr;
+      TableName tableName;
       InterProcessLock lock;
       boolean isShared;
       ZooKeeperWatcher zkWatcher;
       ServerName serverName;
       String purpose;
 
-      public TableLockImpl(byte[] tableName, ZooKeeperWatcher zkWatcher,
+      public TableLockImpl(TableName tableName, ZooKeeperWatcher zkWatcher,
           ServerName serverName, long lockTimeoutMs, boolean isShared, String purpose) {
         this.tableName = tableName;
-        tableNameStr = Bytes.toString(tableName);
         this.zkWatcher = zkWatcher;
         this.serverName = serverName;
         this.lockTimeoutMs = lockTimeoutMs;
@@ -272,7 +270,7 @@ public abstract class TableLockManager {
       public void acquire() throws IOException {
         if (LOG.isTraceEnabled()) {
           LOG.trace("Attempt to acquire table " + (isShared ? "read" : "write") +
-            " lock on: " + tableNameStr + " for:" + purpose);
+            " lock on: " + tableName + " for:" + purpose);
         }
 
         lock = createTableLock();
@@ -283,47 +281,48 @@ public abstract class TableLockManager {
           } else {
             if (!lock.tryAcquire(lockTimeoutMs)) {
               throw new LockTimeoutException("Timed out acquiring " +
-                (isShared ? "read" : "write") + "lock for table:" + tableNameStr +
+                (isShared ? "read" : "write") + "lock for table:" + tableName +
                 "for:" + purpose + " after " + lockTimeoutMs + " ms.");
             }
           }
         } catch (InterruptedException e) {
-          LOG.warn("Interrupted acquiring a lock for " + tableNameStr, e);
+          LOG.warn("Interrupted acquiring a lock for " + tableName, e);
           Thread.currentThread().interrupt();
           throw new InterruptedIOException("Interrupted acquiring a lock");
         }
         if (LOG.isTraceEnabled()) LOG.trace("Acquired table " + (isShared ? "read" : "write")
-            + " lock on " + tableNameStr + " for " + purpose);
+            + " lock on " + tableName + " for " + purpose);
       }
 
       @Override
       public void release() throws IOException {
         if (LOG.isTraceEnabled()) {
           LOG.trace("Attempt to release table " + (isShared ? "read" : "write")
-              + " lock on " + tableNameStr);
+              + " lock on " + tableName);
         }
         if (lock == null) {
-          throw new IllegalStateException("Table " + tableNameStr +
+          throw new IllegalStateException("Table " + tableName +
             " is not locked!");
         }
 
         try {
           lock.release();
         } catch (InterruptedException e) {
-          LOG.warn("Interrupted while releasing a lock for " + tableNameStr);
+          LOG.warn("Interrupted while releasing a lock for " + tableName);
           Thread.currentThread().interrupt();
           throw new InterruptedIOException();
         }
         if (LOG.isTraceEnabled()) {
-          LOG.trace("Released table lock on " + tableNameStr);
+          LOG.trace("Released table lock on " + tableName);
         }
       }
 
       private InterProcessLock createTableLock() {
-        String tableLockZNode = ZKUtil.joinZNode(zkWatcher.tableLockZNode, tableNameStr);
+        String tableLockZNode = ZKUtil.joinZNode(zkWatcher.tableLockZNode,
+            tableName.getNameAsString());
 
         ZooKeeperProtos.TableLock data = ZooKeeperProtos.TableLock.newBuilder()
-          .setTableName(ByteString.copyFrom(tableName))
+          .setTableName(ProtobufUtil.toProtoTableName(tableName))
           .setLockOwner(ProtobufUtil.toServerName(serverName))
           .setThreadId(Thread.currentThread().getId())
           .setPurpose(purpose)
@@ -367,12 +366,12 @@ public abstract class TableLockManager {
     }
 
     @Override
-    public TableLock writeLock(byte[] tableName, String purpose) {
+    public TableLock writeLock(TableName tableName, String purpose) {
       return new TableLockImpl(tableName, zkWatcher,
           serverName, writeLockTimeoutMs, false, purpose);
     }
 
-    public TableLock readLock(byte[] tableName, String purpose) {
+    public TableLock readLock(TableName tableName, String purpose) {
       return new TableLockImpl(tableName, zkWatcher,
           serverName, readLockTimeoutMs, true, purpose);
     }
@@ -435,9 +434,9 @@ public abstract class TableLockManager {
     }
 
     @Override
-    public void tableDeleted(byte[] tableName) throws IOException {
+    public void tableDeleted(TableName tableName) throws IOException {
       //table write lock from DeleteHandler is already released, just delete the parent znode
-      String tableNameStr = Bytes.toString(tableName);
+      String tableNameStr = tableName.getNameAsString();
       String tableLockZNode = ZKUtil.joinZNode(zkWatcher.tableLockZNode, tableNameStr);
       try {
         ZKUtil.deleteNode(zkWatcher, tableLockZNode);

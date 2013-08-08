@@ -28,6 +28,7 @@ import java.util.List;
 import java.util.TreeMap;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -46,7 +47,7 @@ public class TestRegionSplitPolicy {
   private HTableDescriptor htd;
   private HRegion mockRegion;
   private TreeMap<byte[], HStore> stores;
-  private static final byte [] TABLENAME = new byte [] {'t'};
+  private static final TableName TABLENAME = TableName.valueOf("t");
 
   @Before
   public void setupMocks() {

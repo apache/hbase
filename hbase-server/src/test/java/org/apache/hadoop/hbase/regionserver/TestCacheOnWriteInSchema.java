@@ -38,6 +38,7 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.MediumTests;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
 import org.apache.hadoop.hbase.io.hfile.BlockCacheKey;
@@ -152,7 +153,7 @@ public class TestCacheOnWriteInSchema {
     HColumnDescriptor hcd = new HColumnDescriptor(family);
     hcd.setBloomFilterType(BloomType.ROWCOL);
     cowType.modifyFamilySchema(hcd);
-    HTableDescriptor htd = new HTableDescriptor(table);
+    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(table));
     htd.addFamily(hcd);
 
     // Create a store based on the schema
@@ -161,7 +162,7 @@ public class TestCacheOnWriteInSchema {
     Path logdir = new Path(DIR, logName);
     fs.delete(logdir, true);
 
-    HRegionInfo info = new HRegionInfo(htd.getName(), null, null, false);
+    HRegionInfo info = new HRegionInfo(htd.getTableName(), null, null, false);
     hlog = HLogFactory.createHLog(fs, basedir, logName, conf);
 
     region = new HRegion(basedir, hlog, fs, conf, info, htd, null);

@@ -35,6 +35,7 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.MediumTests;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
@@ -95,7 +96,7 @@ public class TestBlocksRead extends HBaseTestCase {
    */
   private HRegion initHRegion(byte[] tableName, String callingMethod,
       HBaseConfiguration conf, String family) throws IOException {
-    HTableDescriptor htd = new HTableDescriptor(tableName);
+    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(tableName));
     HColumnDescriptor familyDesc;
     for (int i = 0; i < BLOOM_TYPE.length; i++) {
       BloomType bloomType = BLOOM_TYPE[i];
@@ -105,7 +106,7 @@ public class TestBlocksRead extends HBaseTestCase {
       htd.addFamily(familyDesc);
     }
 
-    HRegionInfo info = new HRegionInfo(htd.getName(), null, null, false);
+    HRegionInfo info = new HRegionInfo(htd.getTableName(), null, null, false);
     Path path = new Path(DIR + callingMethod);
     HRegion r = HRegion.createHRegion(info, path, conf, htd);
     blockCache = new CacheConfig(conf).getBlockCache();

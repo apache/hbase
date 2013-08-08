@@ -34,6 +34,8 @@ public class HTestConst {
 
   public static final String DEFAULT_TABLE_STR = "MyTestTable";
   public static final byte[] DEFAULT_TABLE_BYTES = Bytes.toBytes(DEFAULT_TABLE_STR);
+  public static final TableName DEFAULT_TABLE =
+      TableName.valueOf(DEFAULT_TABLE_BYTES);
 
   public static final String DEFAULT_CF_STR = "MyDefaultCF";
   public static final byte[] DEFAULT_CF_BYTES = Bytes.toBytes(DEFAULT_CF_STR);

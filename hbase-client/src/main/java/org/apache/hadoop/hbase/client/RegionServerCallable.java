@@ -29,6 +29,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.NotServingRegionException;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.exceptions.RegionMovedException;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ClientService;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -44,7 +45,7 @@ public abstract class RegionServerCallable<T> implements RetryingCallable<T> {
   // Public because used outside of this package over in ipc.
   static final Log LOG = LogFactory.getLog(RegionServerCallable.class);
   private final HConnection connection;
-  private final byte [] tableName;
+  private final TableName tableName;
   private final byte [] row;
   private HRegionLocation location;
   private ClientService.BlockingInterface stub;
@@ -56,7 +57,7 @@ public abstract class RegionServerCallable<T> implements RetryingCallable<T> {
    * @param tableName Table name to which <code>row</code> belongs.
    * @param row The row we want in <code>tableName</code>.
    */
-  public RegionServerCallable(HConnection connection, byte [] tableName, byte [] row) {
+  public RegionServerCallable(HConnection connection, TableName tableName, byte [] row) {
     this.connection = connection;
     this.tableName = tableName;
     this.row = row;
@@ -71,7 +72,7 @@ public abstract class RegionServerCallable<T> implements RetryingCallable<T> {
   public void prepare(final boolean reload) throws IOException {
     this.location = connection.getRegionLocation(tableName, row, reload);
     if (this.location == null) {
-      throw new IOException("Failed to find location, tableName=" + Bytes.toString(tableName) +
+      throw new IOException("Failed to find location, tableName=" + tableName +
         ", row=" + Bytes.toString(row) + ", reload=" + reload);
     }
     setStub(getConnection().getClient(getLocation().getServerName()));
@@ -100,7 +101,7 @@ public abstract class RegionServerCallable<T> implements RetryingCallable<T> {
     this.location = location;
   }
 
-  public byte [] getTableName() {
+  public TableName getTableName() {
     return this.tableName;
   }
 
@@ -129,7 +130,7 @@ public abstract class RegionServerCallable<T> implements RetryingCallable<T> {
 
   @Override
   public String getExceptionMessageAdditionalDetail() {
-    return "row '" + Bytes.toString(row) + "' on table '" + Bytes.toString(tableName);
+    return "row '" + Bytes.toString(row) + "' on table '" + tableName;
   }
 
   @Override

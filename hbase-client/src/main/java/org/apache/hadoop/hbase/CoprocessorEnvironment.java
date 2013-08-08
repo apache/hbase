@@ -51,5 +51,5 @@ public interface CoprocessorEnvironment {
    * @return an interface for accessing the given table
    * @throws IOException
    */
-  HTableInterface getTable(byte[] tableName) throws IOException;
+  HTableInterface getTable(TableName tableName) throws IOException;
 }

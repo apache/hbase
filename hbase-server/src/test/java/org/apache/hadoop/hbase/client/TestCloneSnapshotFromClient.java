@@ -29,6 +29,8 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.LargeTests;
+import org.apache.hadoop.hbase.NamespaceDescriptor;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.master.snapshot.SnapshotManager;
 import org.apache.hadoop.hbase.snapshot.SnapshotDoesNotExistException;
@@ -58,7 +60,7 @@ public class TestCloneSnapshotFromClient {
   private byte[] snapshotName2;
   private int snapshot0Rows;
   private int snapshot1Rows;
-  private byte[] tableName;
+  private TableName tableName;
   private HBaseAdmin admin;
 
   @BeforeClass
@@ -89,7 +91,7 @@ public class TestCloneSnapshotFromClient {
     this.admin = TEST_UTIL.getHBaseAdmin();
 
     long tid = System.currentTimeMillis();
-    tableName = Bytes.toBytes("testtb-" + tid);
+    tableName = TableName.valueOf("testtb-" + tid);
     emptySnapshot = Bytes.toBytes("emptySnaptb-" + tid);
     snapshotName0 = Bytes.toBytes("snaptb0-" + tid);
     snapshotName1 = Bytes.toBytes("snaptb1-" + tid);
@@ -147,13 +149,13 @@ public class TestCloneSnapshotFromClient {
 
   @Test
   public void testCloneSnapshot() throws IOException, InterruptedException {
-    byte[] clonedTableName = Bytes.toBytes("clonedtb-" + System.currentTimeMillis());
+    TableName clonedTableName = TableName.valueOf("clonedtb-" + System.currentTimeMillis());
     testCloneSnapshot(clonedTableName, snapshotName0, snapshot0Rows);
     testCloneSnapshot(clonedTableName, snapshotName1, snapshot1Rows);
     testCloneSnapshot(clonedTableName, emptySnapshot, 0);
   }
 
-  private void testCloneSnapshot(final byte[] tableName, final byte[] snapshotName,
+  private void testCloneSnapshot(final TableName tableName, final byte[] snapshotName,
       int snapshotRows) throws IOException, InterruptedException {
     // create a new table from snapshot
     admin.cloneSnapshot(snapshotName, tableName);
@@ -162,13 +164,24 @@ public class TestCloneSnapshotFromClient {
     TEST_UTIL.deleteTable(tableName);
   }
 
+  @Test
+  public void testCloneSnapshotCrossNamespace() throws IOException, InterruptedException {
+    String nsName = "testCloneSnapshotCrossNamespace";
+    admin.createNamespace(NamespaceDescriptor.create(nsName).build());
+    TableName clonedTableName =
+        TableName.valueOf(nsName, "clonedtb-" + System.currentTimeMillis());
+    testCloneSnapshot(clonedTableName, snapshotName0, snapshot0Rows);
+    testCloneSnapshot(clonedTableName, snapshotName1, snapshot1Rows);
+    testCloneSnapshot(clonedTableName, emptySnapshot, 0);
+  }
+
   /**
    * Verify that tables created from the snapshot are still alive after source table deletion.
    */
   @Test
   public void testCloneLinksAfterDelete() throws IOException, InterruptedException {
     // Clone a table from the first snapshot
-    byte[] clonedTableName = Bytes.toBytes("clonedtb1-" + System.currentTimeMillis());
+    TableName clonedTableName = TableName.valueOf("clonedtb1-" + System.currentTimeMillis());
     admin.cloneSnapshot(snapshotName0, clonedTableName);
     SnapshotTestingUtils.verifyRowCount(TEST_UTIL, clonedTableName, snapshot0Rows);
 
@@ -177,7 +190,7 @@ public class TestCloneSnapshotFromClient {
     admin.snapshot(snapshotName2, clonedTableName);
 
     // Clone the snapshot of the cloned table
-    byte[] clonedTableName2 = Bytes.toBytes("clonedtb2-" + System.currentTimeMillis());
+    TableName clonedTableName2 = TableName.valueOf("clonedtb2-" + System.currentTimeMillis());
     admin.cloneSnapshot(snapshotName2, clonedTableName2);
     SnapshotTestingUtils.verifyRowCount(TEST_UTIL, clonedTableName2, snapshot0Rows);
     admin.disableTable(clonedTableName2);
@@ -204,7 +217,7 @@ public class TestCloneSnapshotFromClient {
     SnapshotTestingUtils.verifyRowCount(TEST_UTIL, clonedTableName2, snapshot0Rows);
 
     // Clone a new table from cloned
-    byte[] clonedTableName3 = Bytes.toBytes("clonedtb3-" + System.currentTimeMillis());
+    TableName clonedTableName3 = TableName.valueOf("clonedtb3-" + System.currentTimeMillis());
     admin.cloneSnapshot(snapshotName2, clonedTableName3);
     SnapshotTestingUtils.verifyRowCount(TEST_UTIL, clonedTableName3, snapshot0Rows);
 
@@ -217,6 +230,7 @@ public class TestCloneSnapshotFromClient {
   // ==========================================================================
   //  Helpers
   // ==========================================================================
+
   private void waitCleanerRun() throws InterruptedException {
     TEST_UTIL.getMiniHBaseCluster().getMaster().getHFileCleaner().choreForTesting();
   }

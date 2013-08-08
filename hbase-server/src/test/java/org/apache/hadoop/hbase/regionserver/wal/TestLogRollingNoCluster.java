@@ -122,7 +122,7 @@ public class TestLogRollingNoCluster {
           edit.add(new KeyValue(bytes, bytes, bytes, now, EMPTY_1K_ARRAY));
 
           this.wal.append(HRegionInfo.FIRST_META_REGIONINFO,
-              HTableDescriptor.META_TABLEDESC.getName(),
+              HTableDescriptor.META_TABLEDESC.getTableName(),
               edit, now, HTableDescriptor.META_TABLEDESC);
         }
         String msg = getName() + " finished";

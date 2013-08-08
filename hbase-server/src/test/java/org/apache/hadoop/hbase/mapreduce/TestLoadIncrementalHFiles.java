@@ -143,7 +143,7 @@ public class TestLoadIncrementalHFiles {
 
     final byte[] TABLE = Bytes.toBytes("mytable_"+testName);
 
-    HTableDescriptor htd = new HTableDescriptor(TABLE);
+    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(TABLE));
     HColumnDescriptor familyDesc = new HColumnDescriptor(FAMILY);
     familyDesc.setBloomFilterType(bloomType);
     htd.addFamily(familyDesc);
@@ -183,7 +183,7 @@ public class TestLoadIncrementalHFiles {
     final byte[] TABLE = Bytes.toBytes("mytable_"+testName);
 
     HBaseAdmin admin = new HBaseAdmin(util.getConfiguration());
-    HTableDescriptor htd = new HTableDescriptor(TABLE);
+    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(TABLE));
     // set real family name to upper case in purpose to simulate the case that
     // family name in HFiles is invalid
     HColumnDescriptor family =

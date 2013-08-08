@@ -27,6 +27,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -67,9 +68,9 @@ public class TestCreateTableHandler {
   public void testCreateTableHandlerIfCalledTwoTimesAndFirstOneIsUnderProgress() throws Exception {
     final MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
     final HMaster m = cluster.getMaster();
-    final HTableDescriptor desc = new HTableDescriptor(TABLENAME);
+    final HTableDescriptor desc = new HTableDescriptor(TableName.valueOf(TABLENAME));
     desc.addFamily(new HColumnDescriptor(FAMILYNAME));
-    final HRegionInfo[] hRegionInfos = new HRegionInfo[] { new HRegionInfo(desc.getName(), null,
+    final HRegionInfo[] hRegionInfos = new HRegionInfo[] { new HRegionInfo(desc.getTableName(), null,
         null) };
     CustomCreateTableHandler handler = new CustomCreateTableHandler(m, m.getMasterFileSystem(),
         desc, cluster.getConfiguration(), hRegionInfos, m);
@@ -89,15 +90,14 @@ public class TestCreateTableHandler {
     assertTrue(TEST_UTIL.getHBaseAdmin().isTableEnabled(TABLENAME));
 
   }
-
   @Test (timeout=60000)
   public void testMasterRestartAfterEnablingNodeIsCreated() throws Exception {
     byte[] tableName = Bytes.toBytes("testMasterRestartAfterEnablingNodeIsCreated");
     final MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
     final HMaster m = cluster.getMaster();
-    final HTableDescriptor desc = new HTableDescriptor(tableName);
+    final HTableDescriptor desc = new HTableDescriptor(TableName.valueOf(tableName));
     desc.addFamily(new HColumnDescriptor(FAMILYNAME));
-    final HRegionInfo[] hRegionInfos = new HRegionInfo[] { new HRegionInfo(desc.getName(), null,
+    final HRegionInfo[] hRegionInfos = new HRegionInfo[] { new HRegionInfo(desc.getTableName(), null,
         null) };
     CustomCreateTableHandler handler = new CustomCreateTableHandler(m, m.getMasterFileSystem(),
         desc, cluster.getConfiguration(), hRegionInfos, m);
@@ -126,8 +126,8 @@ public class TestCreateTableHandler {
     }
 
     @Override
-    protected List<HRegionInfo> handleCreateHdfsRegions(Path tableRootDir, String tableName)
-        throws IOException {
+    protected List<HRegionInfo> handleCreateHdfsRegions(Path tableRootDir,
+        TableName tableName) throws IOException {
       if (throwException) {
         throw new IOException("Test throws exceptions.");
       }

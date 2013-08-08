@@ -38,6 +38,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.KeyValue;
@@ -140,7 +141,7 @@ public class HFilePrettyPrinter {
       byte[] rn = Bytes.toBytes(regionName);
       byte[][] hri = HRegionInfo.parseRegionName(rn);
       Path rootDir = FSUtils.getRootDir(conf);
-      Path tableDir = new Path(rootDir, Bytes.toString(hri[0]));
+      Path tableDir = FSUtils.getTableDir(rootDir, TableName.valueOf(hri[0]));
       String enc = HRegionInfo.encodeRegionName(rn);
       Path regionDir = new Path(tableDir, enc);
       if (verbose)

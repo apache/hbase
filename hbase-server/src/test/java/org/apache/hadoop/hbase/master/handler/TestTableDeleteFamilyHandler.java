@@ -28,6 +28,7 @@ import java.io.IOException;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
@@ -35,6 +36,7 @@ import org.apache.hadoop.hbase.LargeTests;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.FSUtils;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -45,7 +47,8 @@ import org.junit.experimental.categories.Category;
 public class TestTableDeleteFamilyHandler {
 
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
-  private static final String TABLENAME = "column_family_handlers";
+  private static final TableName TABLENAME =
+      TableName.valueOf("column_family_handlers");
   private static final byte[][] FAMILIES = new byte[][] { Bytes.toBytes("cf1"),
       Bytes.toBytes("cf2"), Bytes.toBytes("cf3") };
 
@@ -61,12 +64,17 @@ public class TestTableDeleteFamilyHandler {
     TEST_UTIL.startMiniCluster(2);
 
     // Create a table of three families. This will assign a region.
-    TEST_UTIL.createTable(Bytes.toBytes(TABLENAME), FAMILIES);
+    TEST_UTIL.createTable(TABLENAME, FAMILIES);
     HTable t = new HTable(TEST_UTIL.getConfiguration(), TABLENAME);
-
+    while(TEST_UTIL.getMiniHBaseCluster().getMaster().getAssignmentManager()
+        .getRegionStates().getRegionsInTransition().size() > 0) {
+      Thread.sleep(100);
+    }
     // Create multiple regions in all the three column families
-    TEST_UTIL.createMultiRegions(t, FAMILIES[0]);
-
+    while(TEST_UTIL.getMiniHBaseCluster().getMaster().getAssignmentManager()
+        .getRegionStates().getRegionsInTransition().size() > 0) {
+      Thread.sleep(100);
+    }
     // Load the table with data for all families
     TEST_UTIL.loadTable(t, FAMILIES);
 
@@ -77,7 +85,7 @@ public class TestTableDeleteFamilyHandler {
 
   @AfterClass
   public static void afterAllTests() throws Exception {
-    TEST_UTIL.deleteTable(Bytes.toBytes(TABLENAME));
+    TEST_UTIL.deleteTable(TABLENAME);
     TEST_UTIL.shutdownMiniCluster();
   }
 
@@ -90,8 +98,7 @@ public class TestTableDeleteFamilyHandler {
   public void deleteColumnFamilyWithMultipleRegions() throws Exception {
 
     HBaseAdmin admin = TEST_UTIL.getHBaseAdmin();
-    HTableDescriptor beforehtd = admin.getTableDescriptor(Bytes
-        .toBytes(TABLENAME));
+    HTableDescriptor beforehtd = admin.getTableDescriptor(TABLENAME);
 
     FileSystem fs = TEST_UTIL.getDFSCluster().getFileSystem();
 
@@ -107,8 +114,7 @@ public class TestTableDeleteFamilyHandler {
     }
 
     // 3 - Check if table exists in FS
-    Path tableDir = new Path(TEST_UTIL.getDefaultRootDirPath().toString() + "/"
-        + TABLENAME);
+    Path tableDir = FSUtils.getTableDir(TEST_UTIL.getDefaultRootDirPath(), TABLENAME);
     assertTrue(fs.exists(tableDir));
 
     // 4 - Check if all the 3 column families exist in FS
@@ -120,7 +126,7 @@ public class TestTableDeleteFamilyHandler {
         for (int j = 0; j < cf.length; j++) {
           if (cf[j].isDir() == true
               && cf[j].getPath().getName().startsWith(".") == false) {
-            assertTrue(cf[j].getPath().getName().equals("cf" + k));
+            assertEquals(cf[j].getPath().getName(), "cf" + k);
             k++;
           }
         }
@@ -129,11 +135,10 @@ public class TestTableDeleteFamilyHandler {
 
     // TEST - Disable and delete the column family
     admin.disableTable(TABLENAME);
-    admin.deleteColumn(TABLENAME, "cf2");
+    admin.deleteColumn(TABLENAME.getName(), "cf2");
 
     // 5 - Check if only 2 column families exist in the descriptor
-    HTableDescriptor afterhtd = admin.getTableDescriptor(Bytes
-        .toBytes(TABLENAME));
+    HTableDescriptor afterhtd = admin.getTableDescriptor(TABLENAME);
     assertEquals(2, afterhtd.getColumnFamilies().length);
     HColumnDescriptor[] newFamilies = afterhtd.getColumnFamilies();
     assertTrue(newFamilies[0].getNameAsString().equals("cf1"));

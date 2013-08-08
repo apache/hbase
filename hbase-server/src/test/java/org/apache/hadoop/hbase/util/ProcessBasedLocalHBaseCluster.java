@@ -46,6 +46,7 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.LargeTests;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
@@ -171,7 +172,7 @@ public class ProcessBasedLocalHBaseCluster {
     int attemptsLeft = 10;
     while (attemptsLeft-- > 0) {
       try {
-        new HTable(conf, HConstants.META_TABLE_NAME);
+        new HTable(conf, TableName.META_TABLE_NAME);
       } catch (Exception e) {
         LOG.info("Waiting for HBase to startup. Retries left: " + attemptsLeft,
             e);

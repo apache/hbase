@@ -20,6 +20,7 @@
 package org.apache.hadoop.hbase.zookeeper;
 
 import com.google.protobuf.InvalidProtocolBufferException;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos;
@@ -50,7 +51,7 @@ public class ZKTableReadOnly {
    * @throws KeeperException
    */
   public static boolean isDisabledTable(final ZooKeeperWatcher zkw,
-      final String tableName)
+      final TableName tableName)
   throws KeeperException {
     ZooKeeperProtos.Table.State state = getTableState(zkw, tableName);
     return isTableState(ZooKeeperProtos.Table.State.DISABLED, state);
@@ -66,7 +67,7 @@ public class ZKTableReadOnly {
    * @throws KeeperException
    */
   public static boolean isEnabledTable(final ZooKeeperWatcher zkw,
-      final String tableName)
+      final TableName tableName)
   throws KeeperException {
     return getTableState(zkw, tableName) == ZooKeeperProtos.Table.State.ENABLED;
   }
@@ -82,7 +83,7 @@ public class ZKTableReadOnly {
    * @throws KeeperException
    */
   public static boolean isDisablingOrDisabledTable(final ZooKeeperWatcher zkw,
-      final String tableName)
+      final TableName tableName)
   throws KeeperException {
     ZooKeeperProtos.Table.State state = getTableState(zkw, tableName);
     return isTableState(ZooKeeperProtos.Table.State.DISABLING, state) ||
@@ -94,14 +95,16 @@ public class ZKTableReadOnly {
    * @return Set of disabled tables, empty Set if none
    * @throws KeeperException
    */
-  public static Set<String> getDisabledTables(ZooKeeperWatcher zkw)
+  public static Set<TableName> getDisabledTables(ZooKeeperWatcher zkw)
   throws KeeperException {
-    Set<String> disabledTables = new HashSet<String>();
+    Set<TableName> disabledTables = new HashSet<TableName>();
     List<String> children =
       ZKUtil.listChildrenNoWatch(zkw, zkw.tableZNode);
     for (String child: children) {
-      ZooKeeperProtos.Table.State state = getTableState(zkw, child);
-      if (state == ZooKeeperProtos.Table.State.DISABLED) disabledTables.add(child);
+      TableName tableName =
+          TableName.valueOf(child);
+      ZooKeeperProtos.Table.State state = getTableState(zkw, tableName);
+      if (state == ZooKeeperProtos.Table.State.DISABLED) disabledTables.add(tableName);
     }
     return disabledTables;
   }
@@ -111,16 +114,18 @@ public class ZKTableReadOnly {
    * @return Set of disabled tables, empty Set if none
    * @throws KeeperException
    */
-  public static Set<String> getDisabledOrDisablingTables(ZooKeeperWatcher zkw)
+  public static Set<TableName> getDisabledOrDisablingTables(ZooKeeperWatcher zkw)
   throws KeeperException {
-    Set<String> disabledTables = new HashSet<String>();
+    Set<TableName> disabledTables = new HashSet<TableName>();
     List<String> children =
       ZKUtil.listChildrenNoWatch(zkw, zkw.tableZNode);
     for (String child: children) {
-      ZooKeeperProtos.Table.State state = getTableState(zkw, child);
+      TableName tableName =
+          TableName.valueOf(child);
+      ZooKeeperProtos.Table.State state = getTableState(zkw, tableName);
       if (state == ZooKeeperProtos.Table.State.DISABLED ||
           state == ZooKeeperProtos.Table.State.DISABLING)
-        disabledTables.add(child);
+        disabledTables.add(tableName);
     }
     return disabledTables;
   }
@@ -132,14 +137,14 @@ public class ZKTableReadOnly {
 
   /**
    * @param zkw
-   * @param child
+   * @param tableName
    * @return Null or {@link ZooKeeperProtos.Table.State} found in znode.
    * @throws KeeperException
    */
   static ZooKeeperProtos.Table.State getTableState(final ZooKeeperWatcher zkw,
-      final String child)
+      final TableName tableName)
   throws KeeperException {
-    String znode = ZKUtil.joinZNode(zkw.tableZNode, child);
+    String znode = ZKUtil.joinZNode(zkw.tableZNode, tableName.getNameAsString());
     byte [] data = ZKUtil.getData(zkw, znode);
     if (data == null || data.length <= 0) return null;
     try {

@@ -26,6 +26,7 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.SmallTests;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -51,7 +52,7 @@ public class TestBlocksScanned extends HBaseTestCase {
      super.setUp();
 
      TEST_UTIL = new HBaseTestingUtility();
-     TESTTABLEDESC = new HTableDescriptor(TABLE);
+     TESTTABLEDESC = new HTableDescriptor(TableName.valueOf(TABLE));
 
      TESTTABLEDESC.addFamily(
          new HColumnDescriptor(FAMILY)

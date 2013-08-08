@@ -32,7 +32,7 @@ import "Client.proto";
 /* Column-level protobufs */
 
 message AddColumnRequest {
-  required bytes table_name = 1;
+  required TableName table_name = 1;
   required ColumnFamilySchema column_families = 2;
 }
 
@@ -40,7 +40,7 @@ message AddColumnResponse {
 }
 
 message DeleteColumnRequest {
-  required bytes table_name = 1;
+  required TableName table_name = 1;
   required bytes column_name = 2;
 }
 
@@ -48,7 +48,7 @@ message DeleteColumnResponse {
 }
 
 message ModifyColumnRequest {
-  required bytes table_name = 1;
+  required TableName table_name = 1;
   required ColumnFamilySchema column_families = 2;
 }
 
@@ -110,33 +110,80 @@ message CreateTableResponse {
 }
 
 message DeleteTableRequest {
-  required bytes table_name = 1;
+  required TableName table_name = 1;
 }
 
 message DeleteTableResponse {
 }
 
 message EnableTableRequest {
-  required bytes table_name = 1;
+  required TableName table_name = 1;
 }
 
 message EnableTableResponse {
 }
 
 message DisableTableRequest {
-  required bytes table_name = 1;
+  required TableName table_name = 1;
 }
 
 message DisableTableResponse {
 }
 
 message ModifyTableRequest {
-  required bytes table_name = 1;
+  required TableName table_name = 1;
   required TableSchema table_schema = 2;
 }
 
 message ModifyTableResponse {
 }
+
+/* Namespace-level protobufs */
+
+message CreateNamespaceRequest {
+  required NamespaceDescriptor namespaceDescriptor = 1;
+}
+
+message CreateNamespaceResponse {
+}
+
+message DeleteNamespaceRequest {
+  required string namespaceName = 1;
+}
+
+message DeleteNamespaceResponse {
+}
+
+message ModifyNamespaceRequest {
+  required NamespaceDescriptor namespaceDescriptor = 1;
+}
+
+message GetNamespaceDescriptorRequest {
+  required string namespaceName = 1;
+}
+
+message GetNamespaceDescriptorResponse {
+  required NamespaceDescriptor namespaceDescriptor = 1;
+}
+
+message ModifyNamespaceResponse {
+}
+
+message ListNamespaceDescriptorsRequest {
+}
+
+message ListNamespaceDescriptorsResponse {
+  repeated NamespaceDescriptor namespaceDescriptor = 1;
+}
+
+message GetTableDescriptorsByNamespaceRequest {
+  required string namespaceName = 1;
+}
+
+message GetTableDescriptorsByNamespaceResponse {
+  repeated TableSchema tableSchema = 1;
+}
+
 
 /* Cluster-level protobufs */
 
@@ -382,6 +429,31 @@ service MasterAdminService {
    */
   rpc IsRestoreSnapshotDone(IsRestoreSnapshotDoneRequest) returns(IsRestoreSnapshotDoneResponse);
 
+
   /** return true if master is available */
   rpc IsMasterRunning(IsMasterRunningRequest) returns(IsMasterRunningResponse);
+
+  /** Modify a namespace's metadata */
+  rpc ModifyNamespace(ModifyNamespaceRequest)
+    returns(ModifyNamespaceResponse);
+
+  /** Creates a new namespace synchronously */
+  rpc CreateNamespace(CreateNamespaceRequest)
+    returns(CreateNamespaceResponse);
+
+  /** Delete's namespace synchronously */
+  rpc DeleteNamespace(DeleteNamespaceRequest)
+    returns(DeleteNamespaceResponse);
+
+  /** Get a namespace descriptor by name */
+  rpc GetNamespaceDescriptor(GetNamespaceDescriptorRequest)
+    returns(GetNamespaceDescriptorResponse);
+
+  /** returns a list of namespaces */
+  rpc ListNamespaceDescriptors(ListNamespaceDescriptorsRequest)
+    returns(ListNamespaceDescriptorsResponse);
+
+  /** returns a list of tables for a given namespace*/
+  rpc GetTableDescriptorsByNamespace(GetTableDescriptorsByNamespaceRequest)
+    returns(GetTableDescriptorsByNamespaceResponse);
 }

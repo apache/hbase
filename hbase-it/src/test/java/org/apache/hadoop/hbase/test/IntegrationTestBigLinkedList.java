@@ -37,6 +37,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
@@ -430,7 +431,7 @@ public class IntegrationTestBigLinkedList extends Configured implements Tool {
 
     protected void createSchema() throws IOException {
       HBaseAdmin admin = new HBaseAdmin(getConf());
-      byte[] tableName = getTableName(getConf());
+      TableName tableName = getTableName(getConf());
       if (!admin.tableExists(tableName)) {
         HTableDescriptor htd = new HTableDescriptor(getTableName(getConf()));
         htd.addFamily(new HColumnDescriptor(FAMILY_NAME));
@@ -630,7 +631,7 @@ public class IntegrationTestBigLinkedList extends Configured implements Tool {
       scan.setCaching(10000);
       scan.setCacheBlocks(false);
 
-      TableMapReduceUtil.initTableMapperJob(getTableName(getConf()), scan,
+      TableMapReduceUtil.initTableMapperJob(getTableName(getConf()).getName(), scan,
           VerifyMapper.class, BytesWritable.class, BytesWritable.class, job);
 
       job.getConfiguration().setBoolean("mapred.map.tasks.speculative.execution", false);
@@ -942,8 +943,8 @@ public class IntegrationTestBigLinkedList extends Configured implements Tool {
     }
   }
 
-  static byte[] getTableName(Configuration conf) {
-    return Bytes.toBytes(conf.get(TABLE_NAME_KEY, DEFAULT_TABLE_NAME));
+  static TableName getTableName(Configuration conf) {
+    return TableName.valueOf(conf.get(TABLE_NAME_KEY, DEFAULT_TABLE_NAME));
   }
 
   private static CINode getCINode(Result result, CINode node) {

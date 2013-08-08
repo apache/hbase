@@ -54,12 +54,13 @@ public class TestOfflineMetaRebuildOverlap extends OfflineMetaRebuildTestCore {
     wipeOutMeta();
 
     // is meta really messed up?
-    assertEquals(0, scanMeta());
+    assertEquals(1, scanMeta());
     assertErrors(doFsck(conf, false),
-        new ERROR_CODE[] { ERROR_CODE.NOT_IN_META_OR_DEPLOYED,
+        new ERROR_CODE[] {
             ERROR_CODE.NOT_IN_META_OR_DEPLOYED,
             ERROR_CODE.NOT_IN_META_OR_DEPLOYED,
-            ERROR_CODE.NOT_IN_META_OR_DEPLOYED, });
+            ERROR_CODE.NOT_IN_META_OR_DEPLOYED,
+            ERROR_CODE.NOT_IN_META_OR_DEPLOYED});
     // Note, would like to check # of tables, but this takes a while to time
     // out.
 
@@ -84,9 +85,17 @@ public class TestOfflineMetaRebuildOverlap extends OfflineMetaRebuildTestCore {
     LOG.info("Waiting for no more RIT");
     ZKAssign.blockUntilNoRIT(zkw);
     LOG.info("No more RIT in ZK, now doing final test verification");
+    int tries = 60;
+    while(TEST_UTIL.getHBaseCluster()
+        .getMaster().getAssignmentManager().getRegionStates().getRegionsInTransition().size() > 0 &&
+        tries-- > 0) {
+      LOG.info("Waiting for RIT: "+TEST_UTIL.getHBaseCluster()
+              .getMaster().getAssignmentManager().getRegionStates().getRegionsInTransition());
+      Thread.sleep(1000);
+    }
     
     // Meta still messed up.
-    assertEquals(0, scanMeta());
+    assertEquals(1, scanMeta());
     HTableDescriptor[] htbls = TEST_UTIL.getHBaseAdmin().listTables();
     LOG.info("Tables present after restart: " + Arrays.toString(htbls));
 
@@ -94,10 +103,11 @@ public class TestOfflineMetaRebuildOverlap extends OfflineMetaRebuildTestCore {
     // so the table is still present and this should be 1.
     assertEquals(1, htbls.length);
     assertErrors(doFsck(conf, false),
-        new ERROR_CODE[] { ERROR_CODE.NOT_IN_META_OR_DEPLOYED,
+        new ERROR_CODE[] {
             ERROR_CODE.NOT_IN_META_OR_DEPLOYED,
             ERROR_CODE.NOT_IN_META_OR_DEPLOYED,
-            ERROR_CODE.NOT_IN_META_OR_DEPLOYED, });
+            ERROR_CODE.NOT_IN_META_OR_DEPLOYED,
+            ERROR_CODE.NOT_IN_META_OR_DEPLOYED});
   }
 
 }

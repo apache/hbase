@@ -37,6 +37,7 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.SmallTests;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Scan;
@@ -129,7 +130,7 @@ public class TestFilter {
 
   @Before
   public void setUp() throws Exception {
-    HTableDescriptor htd = new HTableDescriptor("TestFilter");
+    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf("TestFilter"));
     htd.addFamily(new HColumnDescriptor(FAMILIES[0]));
     htd.addFamily(new HColumnDescriptor(FAMILIES[1]));
     htd.addFamily(new HColumnDescriptor(FAMILIES_1[0]));
@@ -137,7 +138,7 @@ public class TestFilter {
     htd.addFamily(new HColumnDescriptor(NEW_FAMILIES[0]));
     htd.addFamily(new HColumnDescriptor(NEW_FAMILIES[1]));
     htd.addFamily(new HColumnDescriptor(FAMILIES_1[1]));
-    HRegionInfo info = new HRegionInfo(htd.getName(), null, null, false);
+    HRegionInfo info = new HRegionInfo(htd.getTableName(), null, null, false);
     this.region = HRegion.createHRegion(info, TEST_UTIL.getDataTestDir(),
             TEST_UTIL.getConfiguration(), htd);
 
@@ -1770,9 +1771,9 @@ public class TestFilter {
 
   public void testNestedFilterListWithSCVF() throws IOException {
     byte[] columnStatus = Bytes.toBytes("S");
-    HTableDescriptor htd = new HTableDescriptor("testNestedFilterListWithSCVF");
+    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf("testNestedFilterListWithSCVF"));
     htd.addFamily(new HColumnDescriptor(FAMILIES[0]));
-    HRegionInfo info = new HRegionInfo(htd.getName(), null, null, false);
+    HRegionInfo info = new HRegionInfo(htd.getTableName(), null, null, false);
     HRegion testRegion = HRegion.createHRegion(info, TEST_UTIL.getDataTestDir(),
       TEST_UTIL.getConfiguration(), htd);
     for(int i=0; i<10; i++) {

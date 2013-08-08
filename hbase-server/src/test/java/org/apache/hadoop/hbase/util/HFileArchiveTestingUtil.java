@@ -32,11 +32,9 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.Store;
-import org.apache.hadoop.hbase.regionserver.HStore;
 
 /**
  * Test helper for testing archiving of HFiles
@@ -212,9 +210,11 @@ public class HFileArchiveTestingUtil {
    * @param region region that is being archived
    * @return {@link Path} to the archive directory for the given region
    */
-  public static Path getRegionArchiveDir(Configuration conf, HRegion region) {
-    return HFileArchiveUtil.getRegionArchiveDir(region.getRegionFileSystem().getTableDir(),
-        region.getRegionFileSystem().getRegionDir());
+  public static Path getRegionArchiveDir(Configuration conf, HRegion region) throws IOException {
+    return HFileArchiveUtil.getRegionArchiveDir(
+        FSUtils.getRootDir(conf),
+        region.getTableDesc().getTableName(),
+        region.getRegionInfo().getEncodedName());
   }
 
   /**

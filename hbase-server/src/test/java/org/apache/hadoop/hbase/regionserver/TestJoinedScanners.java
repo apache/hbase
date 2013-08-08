@@ -40,6 +40,7 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.LargeTests;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
@@ -92,7 +93,7 @@ public class TestJoinedScanners {
       byte [][] families = {cf_essential, cf_joined};
 
       byte[] tableName = Bytes.toBytes(this.getClass().getSimpleName());
-      HTableDescriptor desc = new HTableDescriptor(tableName);
+      HTableDescriptor desc = new HTableDescriptor(TableName.valueOf(tableName));
       for(byte[] family : families) {
         HColumnDescriptor hcd = new HColumnDescriptor(family);
         hcd.setDataBlockEncoding(blockEncoding);
@@ -177,13 +178,13 @@ public class TestJoinedScanners {
   private static HRegion initHRegion(byte[] tableName, byte[] startKey, byte[] stopKey,
       String callingMethod, Configuration conf, byte[]... families)
       throws IOException {
-    HTableDescriptor htd = new HTableDescriptor(tableName);
+    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(tableName));
     for(byte [] family : families) {
       HColumnDescriptor hcd = new HColumnDescriptor(family);
       hcd.setDataBlockEncoding(DataBlockEncoding.FAST_DIFF);
       htd.addFamily(hcd);
     }
-    HRegionInfo info = new HRegionInfo(htd.getName(), startKey, stopKey, false);
+    HRegionInfo info = new HRegionInfo(htd.getTableName(), startKey, stopKey, false);
     Path path = new Path(DIR + callingMethod);
     FileSystem fs = FileSystem.get(conf);
     if (fs.exists(path)) {

@@ -137,7 +137,7 @@ public class IntegrationTestManyRegions {
     @Override
     public void run() {
       long startTime, endTime;
-      HTableDescriptor desc = new HTableDescriptor(TABLE_NAME);
+      HTableDescriptor desc = new HTableDescriptor(TableName.valueOf(TABLE_NAME));
       desc.addFamily(new HColumnDescriptor(COLUMN_NAME));
       SplitAlgorithm algo = new RegionSplitter.HexStringSplit();
       byte[][] splits = algo.split(REGION_COUNT);

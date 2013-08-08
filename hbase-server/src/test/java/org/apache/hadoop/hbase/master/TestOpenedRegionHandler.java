@@ -117,8 +117,8 @@ public class TestOpenedRegionHandler {
       TEST_UTIL.startMiniZKCluster();
       final Server server = new MockServer(TEST_UTIL);
       HTableDescriptor htd = new HTableDescriptor(
-          "testShouldNotCompeleteOpenedRegionSuccessfullyIfVersionMismatches");
-      HRegionInfo hri = new HRegionInfo(htd.getName(),
+          TableName.valueOf("testShouldNotCompeleteOpenedRegionSuccessfullyIfVersionMismatches"));
+      HRegionInfo hri = new HRegionInfo(htd.getTableName(),
           Bytes.toBytes(testIndex), Bytes.toBytes(testIndex + 1));
       region = HRegion.createHRegion(hri, TEST_UTIL.getDataTestDir(), TEST_UTIL.getConfiguration(), htd);
       assertNotNull(region);

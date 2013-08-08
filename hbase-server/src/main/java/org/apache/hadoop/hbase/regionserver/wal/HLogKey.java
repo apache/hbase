@@ -22,7 +22,6 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.EOFException;
 import java.io.IOException;
-import java.nio.ByteBuffer;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.NavigableMap;
@@ -32,6 +31,7 @@ import java.util.UUID;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos.FamilyScope;
@@ -97,7 +97,7 @@ public class HLogKey implements WritableComparable<HLogKey> {
 
   //  The encoded region name.
   private byte [] encodedRegionName;
-  private byte [] tablename;
+  private TableName tablename;
   private long logSeqNum;
   // Time at which this edit was written.
   private long writeTime;
@@ -125,7 +125,7 @@ public class HLogKey implements WritableComparable<HLogKey> {
    * @param now Time at which this edit was written.
    * @param clusterId of the cluster (used in Replication)
    */
-  public HLogKey(final byte [] encodedRegionName, final byte [] tablename,
+  public HLogKey(final byte [] encodedRegionName, final TableName tablename,
       long logSeqNum, final long now, UUID clusterId) {
     this.logSeqNum = logSeqNum;
     this.writeTime = now;
@@ -155,7 +155,7 @@ public class HLogKey implements WritableComparable<HLogKey> {
   }
 
   /** @return table name */
-  public byte [] getTablename() {
+  public TableName getTablename() {
     return tablename;
   }
 
@@ -197,7 +197,7 @@ public class HLogKey implements WritableComparable<HLogKey> {
 
   @Override
   public String toString() {
-    return Bytes.toString(tablename) + "/" + Bytes.toString(encodedRegionName) + "/" +
+    return tablename + "/" + Bytes.toString(encodedRegionName) + "/" +
       logSeqNum;
   }
 
@@ -210,7 +210,7 @@ public class HLogKey implements WritableComparable<HLogKey> {
    */
   public Map<String, Object> toStringMap() {
     Map<String, Object> stringMap = new HashMap<String, Object>();
-    stringMap.put("table", Bytes.toStringBinary(tablename));
+    stringMap.put("table", tablename);
     stringMap.put("region", Bytes.toStringBinary(encodedRegionName));
     stringMap.put("sequence", logSeqNum);
     return stringMap;
@@ -262,10 +262,10 @@ public class HLogKey implements WritableComparable<HLogKey> {
    * meant to be a general purpose setter - it's only used
    * to collapse references to conserve memory.
    */
-  void internTableName(byte []tablename) {
+  void internTableName(TableName tablename) {
     // We should not use this as a setter - only to swap
     // in a new reference to the same table name.
-    assert Bytes.equals(tablename, this.tablename);
+    assert tablename.equals(this.tablename);
     this.tablename = tablename;
   }
 
@@ -289,12 +289,12 @@ public class HLogKey implements WritableComparable<HLogKey> {
     WritableUtils.writeVInt(out, VERSION.code);
     if (compressionContext == null) {
       Bytes.writeByteArray(out, this.encodedRegionName);
-      Bytes.writeByteArray(out, this.tablename);
+      Bytes.writeByteArray(out, this.tablename.getName());
     } else {
       Compressor.writeCompressed(this.encodedRegionName, 0,
           this.encodedRegionName.length, out,
           compressionContext.regionDict);
-      Compressor.writeCompressed(this.tablename, 0, this.tablename.length, out,
+      Compressor.writeCompressed(this.tablename.getName(), 0, this.tablename.getName().length, out,
           compressionContext.tableDict);
     }
     out.writeLong(this.logSeqNum);
@@ -334,10 +334,12 @@ public class HLogKey implements WritableComparable<HLogKey> {
     if (compressionContext == null || !version.atLeast(Version.COMPRESSED)) {
       this.encodedRegionName = new byte[len];
       in.readFully(this.encodedRegionName);
-      this.tablename = Bytes.readByteArray(in);
+      byte[] tablenameBytes = Bytes.readByteArray(in);
+      this.tablename = TableName.valueOf(tablenameBytes);
     } else {
       this.encodedRegionName = Compressor.readCompressed(in, compressionContext.regionDict);
-      this.tablename = Compressor.readCompressed(in, compressionContext.tableDict);
+      byte[] tablenameBytes = Compressor.readCompressed(in, compressionContext.tableDict);
+      this.tablename =  TableName.valueOf(tablenameBytes);
     }
 
     this.logSeqNum = in.readLong();
@@ -362,11 +364,12 @@ public class HLogKey implements WritableComparable<HLogKey> {
     WALKey.Builder builder = WALKey.newBuilder();
     if (compressionContext == null) {
       builder.setEncodedRegionName(ByteString.copyFrom(this.encodedRegionName));
-      builder.setTableName(ByteString.copyFrom(this.tablename));
+      builder.setTableName(ByteString.copyFrom(this.tablename.getName()));
     } else {
       builder.setEncodedRegionName(
           compressor.compress(this.encodedRegionName, compressionContext.regionDict));
-      builder.setTableName(compressor.compress(this.tablename, compressionContext.tableDict));
+      builder.setTableName(compressor.compress(this.tablename.getName(),
+          compressionContext.tableDict));
     }
     builder.setLogSequenceNumber(this.logSeqNum);
     builder.setWriteTime(writeTime);
@@ -391,11 +394,12 @@ public class HLogKey implements WritableComparable<HLogKey> {
     if (this.compressionContext != null) {
       this.encodedRegionName = uncompressor.uncompress(
           walKey.getEncodedRegionName(), compressionContext.regionDict);
-      this.tablename = uncompressor.uncompress(
+      byte[] tablenameBytes = uncompressor.uncompress(
           walKey.getTableName(), compressionContext.tableDict);
+      this.tablename = TableName.valueOf(tablenameBytes);
     } else {
       this.encodedRegionName = walKey.getEncodedRegionName().toByteArray();
-      this.tablename = walKey.getTableName().toByteArray();
+      this.tablename = TableName.valueOf(walKey.getTableName().toByteArray());
     }
     this.clusterId = HConstants.DEFAULT_CLUSTER_ID;
     if (walKey.hasClusterId()) {

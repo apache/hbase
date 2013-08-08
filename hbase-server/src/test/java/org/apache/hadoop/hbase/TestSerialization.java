@@ -97,7 +97,7 @@ public class TestSerialization {
     byte [] mb = Writables.getBytes(htd);
     HTableDescriptor deserializedHtd =
       (HTableDescriptor)Writables.getWritable(mb, new HTableDescriptor());
-    assertEquals(htd.getNameAsString(), deserializedHtd.getNameAsString());
+    assertEquals(htd.getTableName(), deserializedHtd.getTableName());
   }
 
   /**
@@ -136,12 +136,12 @@ public class TestSerialization {
   }
 
   private HRegionInfo createRandomRegion(final String name) {
-    HTableDescriptor htd = new HTableDescriptor(name);
+    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(name));
     String [] families = new String [] {"info", "anchor"};
     for (int i = 0; i < families.length; i++) {
       htd.addFamily(new HColumnDescriptor(families[i]));
     }
-    return new HRegionInfo(htd.getName(), HConstants.EMPTY_START_ROW,
+    return new HRegionInfo(htd.getTableName(), HConstants.EMPTY_START_ROW,
       HConstants.EMPTY_END_ROW);
   }
 
@@ -543,7 +543,7 @@ public class TestSerialization {
    */
   protected HTableDescriptor createTableDescriptor(final String name,
       final int versions) {
-    HTableDescriptor htd = new HTableDescriptor(name);
+    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(name));
     htd.addFamily(new HColumnDescriptor(fam1)
         .setMaxVersions(versions)
         .setBlockCacheEnabled(false)

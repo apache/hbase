@@ -144,7 +144,7 @@ message ReplicationLock {
  * Metadata associated with a table lock in zookeeper
  */
 message TableLock {
-  optional bytes table_name = 1;
+  optional TableName table_name = 1;
   optional ServerName lock_owner = 2;
   optional int64 thread_id = 3;
   optional bool is_shared = 4;

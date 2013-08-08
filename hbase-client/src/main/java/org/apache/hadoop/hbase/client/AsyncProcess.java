@@ -23,6 +23,9 @@ package org.apache.hadoop.hbase.client;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
@@ -85,7 +88,7 @@ import java.util.concurrent.atomic.AtomicLong;
 class AsyncProcess<CResult> {
   private static final Log LOG = LogFactory.getLog(AsyncProcess.class);
   protected final HConnection hConnection;
-  protected final byte[] tableName;
+  protected final TableName tableName;
   protected final ExecutorService pool;
   protected final AsyncProcessCallback<CResult> callback;
   protected final BatchErrors errors = new BatchErrors();
@@ -167,7 +170,7 @@ class AsyncProcess<CResult> {
     }
   }
 
-  public AsyncProcess(HConnection hc, byte[] tableName, ExecutorService pool,
+  public AsyncProcess(HConnection hc, TableName tableName, ExecutorService pool,
       AsyncProcessCallback<CResult> callback, Configuration conf, 
       RpcRetryingCallerFactory rpcCaller) {
     this.hConnection = hc;
@@ -288,7 +291,7 @@ class AsyncProcess<CResult> {
       loc = hConnection.locateRegion(this.tableName, row.getRow());
       if (loc == null) {
         locationException = new IOException("No location found, aborting submit for" +
-            " tableName=" + Bytes.toString(tableName) +
+            " tableName=" + tableName +
             " rowkey=" + Arrays.toString(row.getRow()));
       }
     } catch (IOException e) {
@@ -530,7 +533,7 @@ class AsyncProcess<CResult> {
     if (toReplay.isEmpty()) {
       LOG.warn("Attempt #" + numAttempt + "/" + numTries + " failed for all (" +
           initialActions.size() + ") operations on server " + location.getServerName() +
-          " NOT resubmitting, tableName=" + Bytes.toString(tableName) + ", location=" + location);
+          " NOT resubmitting, tableName=" + tableName + ", location=" + location);
     } else {
       submit(initialActions, toReplay, numAttempt, true, errorsByServer);
     }
@@ -553,7 +556,7 @@ class AsyncProcess<CResult> {
     if (responses == null) {
       LOG.info("Attempt #" + numAttempt + "/" + numTries + " failed for all operations" +
           " on server " + location.getServerName() + " , trying to resubmit," +
-          " tableName=" + Bytes.toString(tableName) + ", location=" + location);
+          " tableName=" + tableName + ", location=" + location);
       resubmitAll(initialActions, rsActions, location, numAttempt + 1, null, errorsByServer);
       return;
     }
@@ -614,7 +617,7 @@ class AsyncProcess<CResult> {
         //  logs as errors are to be expected wehn region moves, split and so on
         LOG.debug("Attempt #" + numAttempt + "/" + numTries + " failed for " + failureCount +
             " operations on server " + location.getServerName() + ", resubmitting " +
-            toReplay.size() + ", tableName=" + Bytes.toString(tableName) + ", location=" +
+            toReplay.size() + ", tableName=" + tableName + ", location=" +
             location + ", last exception was: " + throwable +
             " - sleeping " + backOffTime + " ms.");
       }
@@ -622,7 +625,7 @@ class AsyncProcess<CResult> {
         Thread.sleep(backOffTime);
       } catch (InterruptedException e) {
         LOG.warn("Not sent: " + toReplay.size() +
-            " operations,  tableName=" + Bytes.toString(tableName) + ", location=" + location, e);
+            " operations,  tableName=" + tableName + ", location=" + location, e);
         Thread.interrupted();
         return;
       }
@@ -631,7 +634,7 @@ class AsyncProcess<CResult> {
     } else if (failureCount != 0) {
       LOG.warn("Attempt #" + numAttempt + "/" + numTries + " failed for " + failureCount +
           " operations on server " + location.getServerName() + " NOT resubmitting." +
-          ", tableName=" + Bytes.toString(tableName) + ", location=" + location);
+          ", tableName=" + tableName + ", location=" + location);
     }
   }
 
@@ -648,7 +651,7 @@ class AsyncProcess<CResult> {
       } catch (InterruptedException e) {
         throw new InterruptedIOException("Interrupted." +
             " currentNumberOfTask=" + currentNumberOfTask +
-            ",  tableName=" + Bytes.toString(tableName) + ", tasksDone=" + tasksDone.get());
+            ",  tableName=" + tableName + ", tasksDone=" + tasksDone.get());
       }
     }
   }
@@ -666,7 +669,7 @@ class AsyncProcess<CResult> {
         lastLog = now;
         LOG.info(": Waiting for the global number of running tasks to be equals or less than "
             + max + ", tasksSent=" + tasksSent.get() + ", tasksDone=" + tasksDone.get() +
-            ", currentTasksDone=" + currentTasksDone + ", tableName=" + Bytes.toString(tableName));
+            ", currentTasksDone=" + currentTasksDone + ", tableName=" + tableName);
       }
       waitForNextTaskDone(currentTasksDone);
       currentTasksDone = this.tasksDone.get();

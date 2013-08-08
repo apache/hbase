@@ -51,6 +51,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
@@ -174,7 +175,7 @@ public class TestFromClientSide {
      HColumnDescriptor hcd = new HColumnDescriptor(FAMILY)
          .setKeepDeletedCells(true).setMaxVersions(3);
 
-     HTableDescriptor desc = new HTableDescriptor(TABLENAME);
+     HTableDescriptor desc = new HTableDescriptor(TableName.valueOf(TABLENAME));
      desc.addFamily(hcd);
      TEST_UTIL.getHBaseAdmin().createTable(desc);
      Configuration c = TEST_UTIL.getConfiguration();
@@ -317,7 +318,8 @@ public class TestFromClientSide {
   @Test
   public void testRegionCachePreWarm() throws Exception {
     LOG.info("Starting testRegionCachePreWarm");
-    final byte [] TABLENAME = Bytes.toBytes("testCachePrewarm");
+    final TableName TABLENAME =
+        TableName.valueOf("testCachePrewarm");
     Configuration conf = TEST_UTIL.getConfiguration();
 
     // Set up test table:
@@ -1212,7 +1214,7 @@ public class TestFromClientSide {
 
     // Null table name (should NOT work)
     try {
-      TEST_UTIL.createTable(null, FAMILY);
+      TEST_UTIL.createTable((TableName)null, FAMILY);
       fail("Creating a table with null name passed, should have failed");
     } catch(Exception e) {}
 
@@ -4081,7 +4083,7 @@ public class TestFromClientSide {
     for (int i = 0; i < tables.length && i < size; i++) {
       boolean found = false;
       for (int j = 0; j < ts.length; j++) {
-        if (Bytes.equals(ts[j].getName(), tables[i])) {
+        if (Bytes.equals(ts[j].getTableName().getName(), tables[i])) {
           found = true;
           break;
         }
@@ -4212,7 +4214,7 @@ public class TestFromClientSide {
     // Test that attribute changes were applied
     desc = a.getTableDescriptor();
     assertTrue("wrong table descriptor returned",
-      Bytes.compareTo(desc.getName(), tableAname) == 0);
+      Bytes.compareTo(desc.getTableName().getName(), tableAname) == 0);
     // check HTD attribute
     value = desc.getValue(attrName);
     assertFalse("missing HTD attribute value", value == null);
@@ -4387,7 +4389,8 @@ public class TestFromClientSide {
   @Test
   public void testIncrementWithDeletes() throws Exception {
     LOG.info("Starting testIncrementWithDeletes");
-    final byte [] TABLENAME = Bytes.toBytes("testIncrementWithDeletes");
+    final TableName TABLENAME =
+        TableName.valueOf("testIncrementWithDeletes");
     HTable ht = TEST_UTIL.createTable(TABLENAME, FAMILY);
     final byte[] COLUMN = Bytes.toBytes("column");
 

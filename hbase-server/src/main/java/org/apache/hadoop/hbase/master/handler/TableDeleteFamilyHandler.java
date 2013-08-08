@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.util.List;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.Server;
@@ -40,7 +41,7 @@ public class TableDeleteFamilyHandler extends TableEventHandler {
 
   private byte [] familyName;
 
-  public TableDeleteFamilyHandler(byte[] tableName, byte [] familyName,
+  public TableDeleteFamilyHandler(TableName tableName, byte [] familyName,
       Server server, final MasterServices masterServices) throws IOException {
     super(EventType.C_M_DELETE_FAMILY, tableName, server, masterServices);
     this.familyName = familyName;
@@ -83,6 +84,7 @@ public class TableDeleteFamilyHandler extends TableEventHandler {
     if(familyName != null) {
       family = Bytes.toString(familyName);
     }
-    return getClass().getSimpleName() + "-" + name + "-" + getSeqid() + "-" + tableNameStr + "-" + family;
+    return getClass().getSimpleName() + "-" + name + "-" + getSeqid() +
+        "-" + tableName + "-" + family;
   }
 }

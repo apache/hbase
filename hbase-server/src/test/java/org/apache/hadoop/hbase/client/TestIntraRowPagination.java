@@ -26,6 +26,7 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.HTestConst;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.SmallTests;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.RegionScanner;
 import org.junit.Test;
@@ -51,8 +52,8 @@ public class TestIntraRowPagination {
     byte [][] FAMILIES = HTestConst.makeNAscii(HTestConst.DEFAULT_CF_BYTES, 3);
     byte [][] QUALIFIERS = HTestConst.makeNAscii(HTestConst.DEFAULT_QUALIFIER_BYTES, 10);
 
-    HTableDescriptor htd = new HTableDescriptor(HTestConst.DEFAULT_TABLE_BYTES);
-    HRegionInfo info = new HRegionInfo(HTestConst.DEFAULT_TABLE_BYTES, null, null, false);
+    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(HTestConst.DEFAULT_TABLE_BYTES));
+    HRegionInfo info = new HRegionInfo(HTestConst.DEFAULT_TABLE, null, null, false);
     for (byte[] family : FAMILIES) {
       HColumnDescriptor hcd = new HColumnDescriptor(family);
       htd.addFamily(hcd);

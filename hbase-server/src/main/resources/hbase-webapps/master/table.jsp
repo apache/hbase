@@ -34,12 +34,14 @@
   import="org.apache.hadoop.hbase.master.HMaster" 
   import="org.apache.hadoop.hbase.util.Bytes"
   import="org.apache.hadoop.hbase.util.FSUtils"
-  import="org.apache.hadoop.hbase.protobuf.ProtobufUtil"%><%
+  import="org.apache.hadoop.hbase.protobuf.ProtobufUtil"%>
+<%@ page import="org.apache.hadoop.hbase.TableName" %>
+<%
   HMaster master = (HMaster)getServletContext().getAttribute(HMaster.MASTER);
   Configuration conf = master.getConfiguration();
   HBaseAdmin hbadmin = new HBaseAdmin(conf);
-  String tableName = request.getParameter("name");
-  HTable table = new HTable(conf, tableName);
+  String fqtn = request.getParameter("name");
+  HTable table = new HTable(conf, fqtn);
   String tableHeader = "<h2>Table Regions</h2><table class=\"table table-striped\"><tr><th>Name</th><th>Region Server</th><th>Start Key</th><th>End Key</th><th>Requests</th></tr>";
   ServerName rl = master.getCatalogTracker().getMetaLocation();
   boolean showFragmentation = conf.getBoolean("hbase.master.ui.fragmentation.enabled", false);
@@ -116,7 +118,7 @@
     if (key != null && key.length() > 0) {
       hbadmin.split(key);
     } else {
-      hbadmin.split(tableName);
+      hbadmin.split(fqtn);
     }
     
     %> Split request accepted. <%
@@ -124,7 +126,7 @@
     if (key != null && key.length() > 0) {
       hbadmin.compact(key);
     } else {
-      hbadmin.compact(tableName);
+      hbadmin.compact(fqtn);
     }
     %> Compact request accepted. <%
   }
@@ -139,7 +141,7 @@
 %>
   <head>
     <meta charset="utf-8">
-    <title>Table: <%= tableName %></title>
+    <title>Table: <%= fqtn %></title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="">
     <meta name="author" content="">
@@ -180,12 +182,12 @@
 
     <div class="row-fluid inner_header">
         <div class="page-header">
-            <h1>Table <small><%= tableName %></small></h1>
+            <h1>Table <small><%= fqtn %></small></h1>
         </div>
     </div>
     <div class="row-fluid">
 <%
-  if(tableName.equals(Bytes.toString(HConstants.META_TABLE_NAME))) {
+  if(fqtn.equals(TableName.META_TABLE_NAME.getNameAsString())) {
 %>
 <%= tableHeader %>
 <%
@@ -226,7 +228,7 @@
 <%  if (showFragmentation) { %>
   <tr>
       <td>Fragmentation</td>
-      <td><%= frags.get(tableName) != null ? frags.get(tableName).intValue() + "%" : "n/a" %></td>
+      <td><%= frags.get(fqtn) != null ? frags.get(fqtn).intValue() + "%" : "n/a" %></td>
       <td>How fragmented is the table. After a major compaction it is 0%.</td>
   </tr>
 <%  } %>
@@ -311,7 +313,7 @@ Actions:
 <tr>
   <form method="get">
   <input type="hidden" name="action" value="compact">
-  <input type="hidden" name="name" value="<%= tableName %>">
+  <input type="hidden" name="name" value="<%= fqtn %>">
   <td style="border-style: none; text-align: center">
       <input style="font-size: 12pt; width: 10em" type="submit" value="Compact" class="btn"></td>
   <td style="border-style: none" width="5%">&nbsp;</td>
@@ -325,7 +327,7 @@ Actions:
 <tr>
   <form method="get">
   <input type="hidden" name="action" value="split">
-  <input type="hidden" name="name" value="<%= tableName %>">
+  <input type="hidden" name="name" value="<%= fqtn %>">
   <td style="border-style: none; text-align: center">
       <input style="font-size: 12pt; width: 10em" type="submit" value="Split" class="btn"></td>
   <td style="border-style: none" width="5%">&nbsp;</td>

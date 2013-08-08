@@ -26,6 +26,7 @@ import java.util.concurrent.ConcurrentSkipListMap;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.catalog.CatalogTracker;
@@ -79,7 +80,7 @@ public class MockRegionServerServices implements RegionServerServices {
     return this.regions.get(encodedRegionName);
   }
 
-  public List<HRegion> getOnlineRegions(byte[] tableName) throws IOException {
+  public List<HRegion> getOnlineRegions(TableName tableName) throws IOException {
     return null;
   }
 

@@ -47,11 +47,11 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.catalog.MetaReader;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
@@ -374,7 +374,7 @@ public class RegionSplitter {
     LOG.debug("Creating table " + tableName + " with " + columnFamilies.length
         + " column families.  Presplitting to " + splitCount + " regions");
 
-    HTableDescriptor desc = new HTableDescriptor(tableName);
+    HTableDescriptor desc = new HTableDescriptor(TableName.valueOf(tableName));
     for (String cf : columnFamilies) {
       desc.addFamily(new HColumnDescriptor(Bytes.toBytes(cf)));
     }
@@ -410,7 +410,7 @@ public class RegionSplitter {
         Math.max(table.getConnection().getCurrentNrHRS() / 2, minOS);
 
     Path hbDir = FSUtils.getRootDir(conf);
-    Path tableDir = HTableDescriptor.getTableDir(hbDir, table.getTableName());
+    Path tableDir = FSUtils.getTableDir(hbDir, table.getName());
     Path splitFile = new Path(tableDir, "_balancedSplit");
     FileSystem fs = FileSystem.get(conf);
 
@@ -640,7 +640,7 @@ public class RegionSplitter {
 
     // get table info
     Path rootDir = FSUtils.getRootDir(table.getConfiguration());
-    Path tableDir = HTableDescriptor.getTableDir(rootDir, table.getTableName());
+    Path tableDir = FSUtils.getTableDir(rootDir, table.getName());
     FileSystem fs = tableDir.getFileSystem(table.getConfiguration());
     HTableDescriptor htd = table.getTableDescriptor();
 
@@ -684,7 +684,7 @@ public class RegionSplitter {
           // check every Column Family for that region
           boolean refFound = false;
           for (HColumnDescriptor c : htd.getFamilies()) {
-            if ((refFound = regionFs.hasReferences(htd.getNameAsString()))) {
+            if ((refFound = regionFs.hasReferences(htd.getTableName().getNameAsString()))) {
               break;
             }
           }
@@ -716,7 +716,7 @@ public class RegionSplitter {
   static LinkedList<Pair<byte[], byte[]>> getSplits(HTable table,
       SplitAlgorithm splitAlgo) throws IOException {
     Path hbDir = FSUtils.getRootDir(table.getConfiguration());
-    Path tableDir = HTableDescriptor.getTableDir(hbDir, table.getTableName());
+    Path tableDir = FSUtils.getTableDir(hbDir, table.getName());
     Path splitFile = new Path(tableDir, "_balancedSplit");
     FileSystem fs = tableDir.getFileSystem(table.getConfiguration());
 

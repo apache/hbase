@@ -38,10 +38,12 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.SmallTests;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.catalog.CatalogTracker;
 import org.apache.hadoop.hbase.errorhandling.ForeignExceptionDispatcher;
 import org.apache.hadoop.hbase.io.HFileLink;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
+import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
@@ -92,23 +94,23 @@ public class TestRestoreSnapshotHelper {
 
     // Test clone a snapshot
     HTableDescriptor htdClone = createTableDescriptor("testtb-clone");
-    testRestore(snapshotDir, htd.getNameAsString(), htdClone);
+    testRestore(snapshotDir, htd.getTableName().getNameAsString(), htdClone);
     verifyRestore(rootDir, htd, htdClone);
 
     // Test clone a clone ("link to link")
-    Path cloneDir = HTableDescriptor.getTableDir(rootDir, htdClone.getName());
+    Path cloneDir = FSUtils.getTableDir(rootDir, htdClone.getTableName());
     HTableDescriptor htdClone2 = createTableDescriptor("testtb-clone2");
-    testRestore(cloneDir, htdClone.getNameAsString(), htdClone2);
+    testRestore(cloneDir, htdClone.getTableName().getNameAsString(), htdClone2);
     verifyRestore(rootDir, htd, htdClone2);
   }
 
   private void verifyRestore(final Path rootDir, final HTableDescriptor sourceHtd,
       final HTableDescriptor htdClone) throws IOException {
-    String[] files = getHFiles(HTableDescriptor.getTableDir(rootDir, htdClone.getName()));
+    String[] files = getHFiles(FSUtils.getTableDir(rootDir, htdClone.getTableName()));
     assertEquals(2, files.length);
     assertTrue(files[0] + " should be a HFileLink", HFileLink.isHFileLink(files[0]));
     assertTrue(files[1] + " should be a Referene", StoreFileInfo.isReference(files[1]));
-    assertEquals(sourceHtd.getNameAsString(), HFileLink.getReferencedTableName(files[0]));
+    assertEquals(sourceHtd.getTableName(), HFileLink.getReferencedTableName(files[0]));
     assertEquals(TEST_HFILE, HFileLink.getReferencedHFileName(files[0]));
     Path refPath = getReferredToFile(files[1]);
     assertTrue(refPath.getName() + " should be a HFileLink", HFileLink.isHFileLink(refPath.getName()));
@@ -123,14 +125,14 @@ public class TestRestoreSnapshotHelper {
    */
   public void testRestore(final Path snapshotDir, final String sourceTableName,
       final HTableDescriptor htdClone) throws IOException {
-    LOG.debug("pre-restore table=" + htdClone.getNameAsString() + " snapshot=" + snapshotDir);
+    LOG.debug("pre-restore table=" + htdClone.getTableName() + " snapshot=" + snapshotDir);
     FSUtils.logFileSystemState(fs, rootDir, LOG);
 
     new FSTableDescriptors(conf).createTableDescriptor(htdClone);
     RestoreSnapshotHelper helper = getRestoreHelper(rootDir, snapshotDir, sourceTableName, htdClone);
     helper.restoreHdfsRegions();
 
-    LOG.debug("post-restore table=" + htdClone.getNameAsString() + " snapshot=" + snapshotDir);
+    LOG.debug("post-restore table=" + htdClone.getTableName() + " snapshot=" + snapshotDir);
     FSUtils.logFileSystemState(fs, rootDir, LOG);
   }
 
@@ -145,37 +147,39 @@ public class TestRestoreSnapshotHelper {
     MonitoredTask status = Mockito.mock(MonitoredTask.class);
 
     SnapshotDescription sd = SnapshotDescription.newBuilder()
-      .setName("snapshot").setTable(sourceTableName).build();
+      .setName("snapshot")
+      .setTable(sourceTableName)
+      .build();
 
     return new RestoreSnapshotHelper(conf, fs, sd, snapshotDir,
-      htdClone, HTableDescriptor.getTableDir(rootDir, htdClone.getName()), monitor, status);
+      htdClone, rootDir, monitor, status);
   }
 
   private void createSnapshot(final Path rootDir, final Path snapshotDir, final HTableDescriptor htd)
       throws IOException {
     // First region, simple with one plain hfile.
-    HRegionInfo hri = new HRegionInfo(htd.getName());
+    HRegionInfo hri = new HRegionInfo(htd.getTableName());
     HRegionFileSystem r0fs = HRegionFileSystem.createRegionOnFileSystem(conf,
-      fs, new Path(archiveDir, hri.getTableNameAsString()), hri);
+      fs, FSUtils.getTableDir(archiveDir, hri.getTableName()), hri);
     Path storeFile = new Path(rootDir, TEST_HFILE);
     fs.createNewFile(storeFile);
     r0fs.commitStoreFile(TEST_FAMILY, storeFile);
 
     // Second region, used to test the split case.
     // This region contains a reference to the hfile in the first region.
-    hri = new HRegionInfo(htd.getName());
+    hri = new HRegionInfo(htd.getTableName());
     HRegionFileSystem r1fs = HRegionFileSystem.createRegionOnFileSystem(conf,
-      fs, new Path(archiveDir, hri.getTableNameAsString()), hri);
+      fs, FSUtils.getTableDir(archiveDir, hri.getTableName()), hri);
     storeFile = new Path(rootDir, TEST_HFILE + '.' + r0fs.getRegionInfo().getEncodedName());
     fs.createNewFile(storeFile);
     r1fs.commitStoreFile(TEST_FAMILY, storeFile);
 
-    Path tableDir = HTableDescriptor.getTableDir(archiveDir, htd.getName());
+    Path tableDir = FSUtils.getTableDir(archiveDir, htd.getTableName());
     FileUtil.copy(fs, tableDir, fs, snapshotDir, false, conf);
   }
 
   private HTableDescriptor createTableDescriptor(final String tableName) {
-    HTableDescriptor htd = new HTableDescriptor(tableName);
+    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(tableName));
     htd.addFamily(new HColumnDescriptor(TEST_FAMILY));
     return htd;
   }

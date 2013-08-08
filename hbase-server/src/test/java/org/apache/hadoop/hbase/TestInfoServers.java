@@ -65,7 +65,7 @@ public class TestInfoServers {
   @Test
   public void testInfoServersRedirect() throws Exception {
     // give the cluster time to start up
-    new HTable(UTIL.getConfiguration(), ".META.").close();
+    new HTable(UTIL.getConfiguration(), TableName.META_TABLE_NAME).close();
     int port = UTIL.getHBaseCluster().getMaster().getInfoServer().getPort();
     assertContainsContent(new URL("http://localhost:" + port +
         "/index.html"), "master-status");
@@ -85,7 +85,7 @@ public class TestInfoServers {
   @Test
   public void testInfoServersStatusPages() throws Exception {
     // give the cluster time to start up
-    new HTable(UTIL.getConfiguration(), ".META.").close();
+    new HTable(UTIL.getConfiguration(), TableName.META_TABLE_NAME).close();
     int port = UTIL.getHBaseCluster().getMaster().getInfoServer().getPort();
     assertContainsContent(new URL("http://localhost:" + port +
         "/master-status"), "META");

@@ -37,11 +37,11 @@ module Hbase
     end
 
     define_test "exists? should return true when a table exists" do
-      assert(admin.exists?('.META.'))
+      assert(admin.exists?('hbase:meta'))
     end
 
     define_test "exists? should return false when a table exists" do
-      assert(!admin.exists?('.NOT.EXISTS.'))
+      assert(!admin.exists?('NOT.EXISTS'))
     end
 
     define_test "enabled? should return true for enabled tables" do
@@ -74,38 +74,38 @@ module Hbase
     end
 
     define_test "list should not return meta tables" do
-      assert(!admin.list.member?('.META.'))
+      assert(!admin.list.member?('hbase:meta'))
     end
 
     #-------------------------------------------------------------------------------
 
     define_test "flush should work" do
-      admin.flush('.META.')
+      admin.flush('hbase:meta')
     end
 
     #-------------------------------------------------------------------------------
 
     define_test "compact should work" do
-      admin.compact('.META.')
+      admin.compact('hbase:meta')
     end
 
     #-------------------------------------------------------------------------------
 
     define_test "major_compact should work" do
-      admin.major_compact('.META.')
+      admin.major_compact('hbase:meta')
     end
 
     #-------------------------------------------------------------------------------
 
     define_test "split should work" do
-      admin.split('.META.', nil)
+      admin.split('hbase:meta', nil)
     end
 
     #-------------------------------------------------------------------------------
 
     define_test "drop should fail on non-existent tables" do
       assert_raise(ArgumentError) do
-        admin.drop('.NOT.EXISTS.')
+        admin.drop('NOT.EXISTS')
       end
     end
 
@@ -243,7 +243,7 @@ module Hbase
 
     define_test "alter should fail with non-existing tables" do
       assert_raise(ArgumentError) do
-        admin.alter('.NOT.EXISTS.', true, METHOD => 'delete', NAME => 'y')
+        admin.alter('NOT.EXISTS', true, METHOD => 'delete', NAME => 'y')
       end
     end
 

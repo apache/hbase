@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.util.List;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
@@ -40,7 +41,7 @@ public class TableAddFamilyHandler extends TableEventHandler {
 
   private final HColumnDescriptor familyDesc;
 
-  public TableAddFamilyHandler(byte[] tableName, HColumnDescriptor familyDesc,
+  public TableAddFamilyHandler(TableName tableName, HColumnDescriptor familyDesc,
       Server server, final MasterServices masterServices) {
     super(EventType.C_M_ADD_FAMILY, tableName, server, masterServices);
     this.familyDesc = familyDesc;
@@ -82,7 +83,7 @@ public class TableAddFamilyHandler extends TableEventHandler {
       family = familyDesc.getNameAsString();
     }
     return getClass().getSimpleName() + "-" + name + "-" +
-                              getSeqid() + "-" + tableNameStr + "-" + family;
+                              getSeqid() + "-" + tableName + "-" + family;
   }
 
 }

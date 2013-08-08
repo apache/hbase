@@ -27,7 +27,6 @@ import static org.junit.Assert.assertTrue;
 import java.io.IOException;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
 import org.apache.commons.logging.Log;
@@ -36,6 +35,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Coprocessor;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -76,7 +76,8 @@ import org.junit.experimental.categories.Category;
 public class TestRegionObserverInterface {
   static final Log LOG = LogFactory.getLog(TestRegionObserverInterface.class);
 
-  public static final byte[] TEST_TABLE = Bytes.toBytes("TestTable");
+  public static final TableName TEST_TABLE =
+      TableName.valueOf("TestTable");
   public final static byte[] A = Bytes.toBytes("a");
   public final static byte[] B = Bytes.toBytes("b");
   public final static byte[] C = Bytes.toBytes("c");
@@ -103,7 +104,7 @@ public class TestRegionObserverInterface {
 
   @Test
   public void testRegionObserver() throws IOException {
-    byte[] tableName = TEST_TABLE;
+    TableName tableName = TEST_TABLE;
     // recreate table every time in order to reset the status of the
     // coprocessor.
     HTable table = util.createTable(tableName, new byte[][] {A, B, C});
@@ -167,7 +168,7 @@ public class TestRegionObserverInterface {
 
   @Test
   public void testRowMutation() throws IOException {
-    byte[] tableName = TEST_TABLE;
+    TableName tableName = TEST_TABLE;
     HTable table = util.createTable(tableName, new byte[][] {A, B, C});
     verifyMethodResult(SimpleRegionObserver.class,
         new String[] {"hadPreGet", "hadPostGet", "hadPrePut", "hadPostPut",
@@ -202,7 +203,7 @@ public class TestRegionObserverInterface {
 
   @Test
   public void testIncrementHook() throws IOException {
-    byte[] tableName = TEST_TABLE;
+    TableName tableName = TEST_TABLE;
 
     HTable table = util.createTable(tableName, new byte[][] {A, B, C});
     Increment inc = new Increment(Bytes.toBytes(0));
@@ -228,7 +229,8 @@ public class TestRegionObserverInterface {
   @Test
   // HBase-3583
   public void testHBase3583() throws IOException {
-    byte[] tableName = Bytes.toBytes("testHBase3583");
+    TableName tableName =
+        TableName.valueOf("testHBase3583");
     util.createTable(tableName, new byte[][] {A, B, C});
 
     verifyMethodResult(SimpleRegionObserver.class,
@@ -278,7 +280,8 @@ public class TestRegionObserverInterface {
   @Test
   // HBase-3758
   public void testHBase3758() throws IOException {
-    byte[] tableName = Bytes.toBytes("testHBase3758");
+    TableName tableName =
+        TableName.valueOf("testHBase3758");
     util.createTable(tableName, new byte[][] {A, B, C});
 
     verifyMethodResult(SimpleRegionObserver.class,
@@ -389,7 +392,7 @@ public class TestRegionObserverInterface {
       admin.deleteTable(compactTable);
     }
 
-    HTableDescriptor htd = new HTableDescriptor(compactTable);
+    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(compactTable));
     htd.addFamily(new HColumnDescriptor(A));
     htd.addCoprocessor(EvenOnlyCompactor.class.getName());
     admin.createTable(htd);
@@ -454,7 +457,7 @@ public class TestRegionObserverInterface {
   @Test
   public void bulkLoadHFileTest() throws Exception {
     String testName = TestRegionObserverInterface.class.getName()+".bulkLoadHFileTest";
-    byte[] tableName = TEST_TABLE;
+    TableName tableName = TEST_TABLE;
     Configuration conf = util.getConfiguration();
     HTable table = util.createTable(tableName, new byte[][] {A, B, C});
 
@@ -483,12 +486,12 @@ public class TestRegionObserverInterface {
   }
 
   // check each region whether the coprocessor upcalls are called or not.
-  private void verifyMethodResult(Class c, String methodName[], byte[] tableName,
+  private void verifyMethodResult(Class c, String methodName[], TableName tableName,
                                   Object value[]) throws IOException {
     try {
       for (JVMClusterUtil.RegionServerThread t : cluster.getRegionServerThreads()) {
         for (HRegionInfo r : ProtobufUtil.getOnlineRegions(t.getRegionServer())) {
-          if (!Arrays.equals(r.getTableName(), tableName)) {
+          if (!r.getTableName().equals(tableName)) {
             continue;
           }
           RegionCoprocessorHost cph = t.getRegionServer().getOnlineRegion(r.getRegionName()).

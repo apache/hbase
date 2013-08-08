@@ -34,7 +34,7 @@ message WALKey {
   required uint64 log_sequence_number = 3;
   required uint64 write_time = 4;
   optional UUID cluster_id = 5;
-  
+
   repeated FamilyScope scopes = 6;
   optional uint32 following_kv_count = 7;
 /*

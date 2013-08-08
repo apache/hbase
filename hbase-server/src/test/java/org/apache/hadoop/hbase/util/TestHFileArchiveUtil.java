@@ -21,24 +21,24 @@ import static org.junit.Assert.*;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.SmallTests;
-import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-import org.mockito.Mockito;
+
+import java.io.IOException;
 
 /**
  * Test that the utility works as expected
  */
 @Category(SmallTests.class)
 public class TestHFileArchiveUtil {
-
+  private Path rootDir = new Path("./");
   @Test
   public void testGetTableArchivePath() {
-    assertNotNull(HFileArchiveUtil.getTableArchivePath(new Path("table")));
-    assertNotNull(HFileArchiveUtil.getTableArchivePath(new Path("root", new Path("table"))));
+    assertNotNull(HFileArchiveUtil.getTableArchivePath(rootDir,
+        TableName.valueOf("table")));
   }
 
   @Test
@@ -50,19 +50,19 @@ public class TestHFileArchiveUtil {
   
   @Test
   public void testRegionArchiveDir() {
-    Path tableDir = new Path("table");
     Path regionDir = new Path("region");
-    assertNotNull(HFileArchiveUtil.getRegionArchiveDir(tableDir, regionDir));
+    assertNotNull(HFileArchiveUtil.getRegionArchiveDir(rootDir,
+        TableName.valueOf("table"), regionDir));
   }
   
   @Test
-  public void testGetStoreArchivePath(){
+  public void testGetStoreArchivePath() throws IOException {
       byte[] family = Bytes.toBytes("Family");
-    Path tabledir = new Path("table");
-    HRegionInfo region = new HRegionInfo(Bytes.toBytes("table"));
-    Configuration conf = null;
-    assertNotNull(HFileArchiveUtil.getStoreArchivePath(conf, region, tabledir, family));
-    conf = new Configuration();
+    Path tabledir = FSUtils.getTableDir(rootDir,
+        TableName.valueOf("table"));
+    HRegionInfo region = new HRegionInfo(TableName.valueOf("table"));
+    Configuration conf = new Configuration();
+    FSUtils.setRootDir(conf, new Path("root"));
     assertNotNull(HFileArchiveUtil.getStoreArchivePath(conf, region, tabledir, family));
   }
 }

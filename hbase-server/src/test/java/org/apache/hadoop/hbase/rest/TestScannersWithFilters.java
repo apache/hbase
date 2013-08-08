@@ -130,7 +130,7 @@ public class TestScannersWithFilters {
       REST_TEST_UTIL.getServletPort()));
     HBaseAdmin admin = TEST_UTIL.getHBaseAdmin();
     if (!admin.tableExists(TABLE)) {
-      HTableDescriptor htd = new HTableDescriptor(TABLE);
+      HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(TABLE));
       htd.addFamily(new HColumnDescriptor(FAMILIES[0]));
       htd.addFamily(new HColumnDescriptor(FAMILIES[1]));
       admin.createTable(htd);

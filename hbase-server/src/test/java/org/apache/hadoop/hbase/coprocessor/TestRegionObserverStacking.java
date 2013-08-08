@@ -32,6 +32,7 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.SmallTests;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.regionserver.HRegion;
@@ -94,11 +95,11 @@ public class TestRegionObserverStacking extends TestCase {
 
   HRegion initHRegion (byte [] tableName, String callingMethod,
       Configuration conf, byte [] ... families) throws IOException {
-    HTableDescriptor htd = new HTableDescriptor(tableName);
+    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(tableName));
     for(byte [] family : families) {
       htd.addFamily(new HColumnDescriptor(family));
     }
-    HRegionInfo info = new HRegionInfo(htd.getName(), null, null, false);
+    HRegionInfo info = new HRegionInfo(htd.getTableName(), null, null, false);
     Path path = new Path(DIR + callingMethod);
     HRegion r = HRegion.createHRegion(info, path, conf, htd);
     // this following piece is a hack. currently a coprocessorHost
@@ -112,7 +113,7 @@ public class TestRegionObserverStacking extends TestCase {
 
   public void testRegionObserverStacking() throws Exception {
     byte[] ROW = Bytes.toBytes("testRow");
-    byte[] TABLE = Bytes.toBytes(getClass().getName());
+    byte[] TABLE = Bytes.toBytes(this.getClass().getSimpleName());
     byte[] A = Bytes.toBytes("A");
     byte[][] FAMILIES = new byte[][] { A } ;
 

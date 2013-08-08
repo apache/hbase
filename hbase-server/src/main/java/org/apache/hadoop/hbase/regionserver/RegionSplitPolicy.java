@@ -121,7 +121,7 @@ public abstract class RegionSplitPolicy extends Configured {
     } catch (Exception  e) {
       throw new IOException(
           "Unable to load configured region split policy '" +
-          className + "' for table '" + htd.getNameAsString() + "'",
+          className + "' for table '" + htd.getTableName() + "'",
           e);
     }
   }

@@ -32,6 +32,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CompatibilityFactory;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -51,11 +52,6 @@ import org.apache.hadoop.hbase.thrift.generated.TRegionInfo;
 import org.apache.hadoop.hbase.thrift.generated.TRowResult;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Threads;
-import org.apache.hadoop.metrics.ContextFactory;
-import org.apache.hadoop.metrics.MetricsContext;
-import org.apache.hadoop.metrics.MetricsUtil;
-import org.apache.hadoop.metrics.spi.NoEmitMetricsContext;
-import org.apache.hadoop.metrics.spi.OutputRecord;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -580,7 +576,8 @@ public class TestThriftServer {
     try {
       handler.mutateRow(tableAname, rowAname, getMutations(), null);
       byte[] searchRow = HRegionInfo.createRegionName(
-          tableAname.array(), rowAname.array(), HConstants.NINES, false);
+          TableName.valueOf(tableAname.array()), rowAname.array(),
+          HConstants.NINES, false);
       TRegionInfo regionInfo = handler.getRegionInfo(ByteBuffer.wrap(searchRow));
       assertTrue(Bytes.toStringBinary(regionInfo.getName()).startsWith(
             Bytes.toStringBinary(tableAname)));

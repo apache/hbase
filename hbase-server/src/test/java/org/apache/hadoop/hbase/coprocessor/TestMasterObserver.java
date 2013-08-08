@@ -73,6 +73,12 @@ public class TestMasterObserver {
     private boolean postDeleteTableCalled;
     private boolean preModifyTableCalled;
     private boolean postModifyTableCalled;
+    private boolean preCreateNamespaceCalled;
+    private boolean postCreateNamespaceCalled;
+    private boolean preDeleteNamespaceCalled;
+    private boolean postDeleteNamespaceCalled;
+    private boolean preModifyNamespaceCalled;
+    private boolean postModifyNamespaceCalled;
     private boolean preAddColumnCalled;
     private boolean postAddColumnCalled;
     private boolean preModifyColumnCalled;
@@ -138,6 +144,12 @@ public class TestMasterObserver {
       postDeleteTableCalled = false;
       preModifyTableCalled = false;
       postModifyTableCalled = false;
+      preCreateNamespaceCalled = false;
+      postCreateNamespaceCalled = false;
+      preDeleteNamespaceCalled = false;
+      postDeleteNamespaceCalled = false;
+      preModifyNamespaceCalled = false;
+      postModifyNamespaceCalled = false;
       preAddColumnCalled = false;
       postAddColumnCalled = false;
       preModifyColumnCalled = false;
@@ -215,7 +227,7 @@ public class TestMasterObserver {
 
     @Override
     public void preDeleteTable(ObserverContext<MasterCoprocessorEnvironment> env,
-        byte[] tableName) throws IOException {
+        TableName tableName) throws IOException {
       if (bypass) {
         env.bypass();
       }
@@ -224,7 +236,7 @@ public class TestMasterObserver {
 
     @Override
     public void postDeleteTable(ObserverContext<MasterCoprocessorEnvironment> env,
-        byte[] tableName) throws IOException {
+        TableName tableName) throws IOException {
       postDeleteTableCalled = true;
     }
 
@@ -238,7 +250,7 @@ public class TestMasterObserver {
 
     @Override
     public void preModifyTable(ObserverContext<MasterCoprocessorEnvironment> env,
-        byte[] tableName, HTableDescriptor htd) throws IOException {
+        TableName tableName, HTableDescriptor htd) throws IOException {
       if (bypass) {
         env.bypass();
       }else{
@@ -249,7 +261,7 @@ public class TestMasterObserver {
 
     @Override
     public void postModifyTable(ObserverContext<MasterCoprocessorEnvironment> env,
-        byte[] tableName, HTableDescriptor htd) throws IOException {
+        TableName tableName, HTableDescriptor htd) throws IOException {
       postModifyTableCalled = true;
     }
 
@@ -262,8 +274,77 @@ public class TestMasterObserver {
     }
 
     @Override
+    public void preCreateNamespace(ObserverContext<MasterCoprocessorEnvironment> env,
+        NamespaceDescriptor ns) throws IOException {
+      if (bypass) {
+        env.bypass();
+      }
+      preCreateNamespaceCalled = true;
+    }
+
+    @Override
+    public void postCreateNamespace(ObserverContext<MasterCoprocessorEnvironment> env,
+        NamespaceDescriptor ns) throws IOException {
+      postCreateNamespaceCalled = true;
+    }
+
+    public boolean wasCreateNamespaceCalled() {
+      return preCreateNamespaceCalled && postCreateNamespaceCalled;
+    }
+
+    public boolean preCreateNamespaceCalledOnly() {
+      return preCreateNamespaceCalled && !postCreateNamespaceCalled;
+    }
+
+    @Override
+    public void preDeleteNamespace(ObserverContext<MasterCoprocessorEnvironment> env,
+        String name) throws IOException {
+      if (bypass) {
+        env.bypass();
+      }
+      preDeleteNamespaceCalled = true;
+    }
+
+    @Override
+    public void postDeleteNamespace(ObserverContext<MasterCoprocessorEnvironment> env,
+        String name) throws IOException {
+      postDeleteNamespaceCalled = true;
+    }
+
+    public boolean wasDeleteNamespaceCalled() {
+      return preDeleteNamespaceCalled && postDeleteNamespaceCalled;
+    }
+
+    public boolean preDeleteNamespaceCalledOnly() {
+      return preDeleteNamespaceCalled && !postDeleteNamespaceCalled;
+    }
+
+    @Override
+    public void preModifyNamespace(ObserverContext<MasterCoprocessorEnvironment> env,
+        NamespaceDescriptor ns) throws IOException {
+      if (bypass) {
+        env.bypass();
+      }
+      preModifyNamespaceCalled = true;
+    }
+
+    @Override
+    public void postModifyNamespace(ObserverContext<MasterCoprocessorEnvironment> env,
+        NamespaceDescriptor ns) throws IOException {
+      postModifyNamespaceCalled = true;
+    }
+
+    public boolean wasModifyNamespaceCalled() {
+      return preModifyNamespaceCalled && postModifyNamespaceCalled;
+    }
+
+    public boolean preModifyNamespaceCalledOnly() {
+      return preModifyNamespaceCalled && !postModifyNamespaceCalled;
+    }
+
+    @Override
     public void preAddColumn(ObserverContext<MasterCoprocessorEnvironment> env,
-        byte[] tableName, HColumnDescriptor column) throws IOException {
+        TableName tableName, HColumnDescriptor column) throws IOException {
       if (bypass) {
         env.bypass();
       }else{
@@ -275,7 +356,7 @@ public class TestMasterObserver {
 
     @Override
     public void postAddColumn(ObserverContext<MasterCoprocessorEnvironment> env,
-        byte[] tableName, HColumnDescriptor column) throws IOException {
+        TableName tableName, HColumnDescriptor column) throws IOException {
       postAddColumnCalled = true;
     }
 
@@ -289,7 +370,7 @@ public class TestMasterObserver {
 
     @Override
     public void preModifyColumn(ObserverContext<MasterCoprocessorEnvironment> env,
-        byte[] tableName, HColumnDescriptor descriptor) throws IOException {
+        TableName tableName, HColumnDescriptor descriptor) throws IOException {
       if (bypass) {
         env.bypass();
       }
@@ -298,7 +379,7 @@ public class TestMasterObserver {
 
     @Override
     public void postModifyColumn(ObserverContext<MasterCoprocessorEnvironment> env,
-        byte[] tableName, HColumnDescriptor descriptor) throws IOException {
+        TableName tableName, HColumnDescriptor descriptor) throws IOException {
       postModifyColumnCalled = true;
     }
 
@@ -312,7 +393,7 @@ public class TestMasterObserver {
 
     @Override
     public void preDeleteColumn(ObserverContext<MasterCoprocessorEnvironment> env,
-        byte[] tableName, byte[] c) throws IOException {
+        TableName tableName, byte[] c) throws IOException {
       if (bypass) {
         env.bypass();
       }
@@ -321,7 +402,7 @@ public class TestMasterObserver {
 
     @Override
     public void postDeleteColumn(ObserverContext<MasterCoprocessorEnvironment> env,
-        byte[] tableName, byte[] c) throws IOException {
+        TableName tableName, byte[] c) throws IOException {
       postDeleteColumnCalled = true;
     }
 
@@ -335,7 +416,7 @@ public class TestMasterObserver {
 
     @Override
     public void preEnableTable(ObserverContext<MasterCoprocessorEnvironment> env,
-        byte[] tableName) throws IOException {
+        TableName tableName) throws IOException {
       if (bypass) {
         env.bypass();
       }
@@ -344,7 +425,7 @@ public class TestMasterObserver {
 
     @Override
     public void postEnableTable(ObserverContext<MasterCoprocessorEnvironment> env,
-        byte[] tableName) throws IOException {
+        TableName tableName) throws IOException {
       postEnableTableCalled = true;
     }
 
@@ -358,7 +439,7 @@ public class TestMasterObserver {
 
     @Override
     public void preDisableTable(ObserverContext<MasterCoprocessorEnvironment> env,
-        byte[] tableName) throws IOException {
+        TableName tableName) throws IOException {
       if (bypass) {
         env.bypass();
       }
@@ -367,7 +448,7 @@ public class TestMasterObserver {
 
     @Override
     public void postDisableTable(ObserverContext<MasterCoprocessorEnvironment> env,
-        byte[] tableName) throws IOException {
+        TableName tableName) throws IOException {
       postDisableTableCalled = true;
     }
 
@@ -654,7 +735,7 @@ public class TestMasterObserver {
 
     @Override
     public void preDeleteTableHandler(
-        ObserverContext<MasterCoprocessorEnvironment> env, byte[] tableName)
+        ObserverContext<MasterCoprocessorEnvironment> env, TableName tableName)
         throws IOException {
       if (bypass) {
         env.bypass();
@@ -664,7 +745,7 @@ public class TestMasterObserver {
 
     @Override
     public void postDeleteTableHandler(
-        ObserverContext<MasterCoprocessorEnvironment> ctx, byte[] tableName)
+        ObserverContext<MasterCoprocessorEnvironment> ctx, TableName tableName)
         throws IOException {
       postDeleteTableHandlerCalled = true;
     }
@@ -678,7 +759,7 @@ public class TestMasterObserver {
     }
     @Override
     public void preModifyTableHandler(
-        ObserverContext<MasterCoprocessorEnvironment> env, byte[] tableName,
+        ObserverContext<MasterCoprocessorEnvironment> env, TableName tableName,
         HTableDescriptor htd) throws IOException {
       if (bypass) {
         env.bypass();
@@ -688,7 +769,7 @@ public class TestMasterObserver {
 
     @Override
     public void postModifyTableHandler(
-        ObserverContext<MasterCoprocessorEnvironment> env, byte[] tableName,
+        ObserverContext<MasterCoprocessorEnvironment> env, TableName tableName,
         HTableDescriptor htd) throws IOException {
       postModifyTableHandlerCalled = true;
     }
@@ -703,7 +784,7 @@ public class TestMasterObserver {
 
     @Override
     public void preAddColumnHandler(
-        ObserverContext<MasterCoprocessorEnvironment> env, byte[] tableName,
+        ObserverContext<MasterCoprocessorEnvironment> env, TableName tableName,
         HColumnDescriptor column) throws IOException {
       if (bypass) {
         env.bypass();
@@ -713,7 +794,7 @@ public class TestMasterObserver {
 
     @Override
     public void postAddColumnHandler(
-        ObserverContext<MasterCoprocessorEnvironment> ctx, byte[] tableName,
+        ObserverContext<MasterCoprocessorEnvironment> ctx, TableName tableName,
         HColumnDescriptor column) throws IOException {
       postAddColumnHandlerCalled = true;
     }
@@ -727,7 +808,7 @@ public class TestMasterObserver {
 
     @Override
     public void preModifyColumnHandler(
-        ObserverContext<MasterCoprocessorEnvironment> env, byte[] tableName,
+        ObserverContext<MasterCoprocessorEnvironment> env, TableName tableName,
         HColumnDescriptor descriptor) throws IOException {
       if (bypass) {
         env.bypass();
@@ -737,7 +818,7 @@ public class TestMasterObserver {
 
     @Override
     public void postModifyColumnHandler(
-        ObserverContext<MasterCoprocessorEnvironment> ctx, byte[] tableName,
+        ObserverContext<MasterCoprocessorEnvironment> ctx, TableName tableName,
         HColumnDescriptor descriptor) throws IOException {
       postModifyColumnHandlerCalled = true;
     }
@@ -751,7 +832,7 @@ public class TestMasterObserver {
     }
     @Override
     public void preDeleteColumnHandler(
-        ObserverContext<MasterCoprocessorEnvironment> env, byte[] tableName,
+        ObserverContext<MasterCoprocessorEnvironment> env, TableName tableName,
         byte[] c) throws IOException {
       if (bypass) {
         env.bypass();
@@ -761,7 +842,7 @@ public class TestMasterObserver {
 
     @Override
     public void postDeleteColumnHandler(
-        ObserverContext<MasterCoprocessorEnvironment> ctx, byte[] tableName,
+        ObserverContext<MasterCoprocessorEnvironment> ctx, TableName tableName,
         byte[] c) throws IOException {
       postDeleteColumnHandlerCalled = true;
     }
@@ -776,7 +857,7 @@ public class TestMasterObserver {
 
     @Override
     public void preEnableTableHandler(
-        ObserverContext<MasterCoprocessorEnvironment> env, byte[] tableName)
+        ObserverContext<MasterCoprocessorEnvironment> env, TableName tableName)
         throws IOException {
       if (bypass) {
         env.bypass();
@@ -786,7 +867,7 @@ public class TestMasterObserver {
 
     @Override
     public void postEnableTableHandler(
-        ObserverContext<MasterCoprocessorEnvironment> ctx, byte[] tableName)
+        ObserverContext<MasterCoprocessorEnvironment> ctx, TableName tableName)
         throws IOException {
       postEnableTableHandlerCalled = true;
     }
@@ -801,7 +882,7 @@ public class TestMasterObserver {
 
     @Override
     public void preDisableTableHandler(
-        ObserverContext<MasterCoprocessorEnvironment> env, byte[] tableName)
+        ObserverContext<MasterCoprocessorEnvironment> env, TableName tableName)
         throws IOException {
       if (bypass) {
         env.bypass();
@@ -811,7 +892,7 @@ public class TestMasterObserver {
 
     @Override
     public void postDisableTableHandler(
-        ObserverContext<MasterCoprocessorEnvironment> ctx, byte[] tableName)
+        ObserverContext<MasterCoprocessorEnvironment> ctx, TableName tableName)
         throws IOException {
       postDisableTableHandlerCalled = true;
     }
@@ -826,7 +907,8 @@ public class TestMasterObserver {
 
     @Override
     public void preGetTableDescriptors(ObserverContext<MasterCoprocessorEnvironment> ctx,
-        List<String> tableNamesList, List<HTableDescriptor> descriptors) throws IOException {
+        List<TableName> tableNamesList, List<HTableDescriptor> descriptors)
+        throws IOException {
       preGetTableDescriptorsCalled = true;
     }
 
@@ -843,7 +925,8 @@ public class TestMasterObserver {
 
   private static HBaseTestingUtility UTIL = new HBaseTestingUtility();
   private static byte[] TEST_SNAPSHOT = Bytes.toBytes("observed_snapshot");
-  private static byte[] TEST_TABLE = Bytes.toBytes("observed_table");
+  private static TableName TEST_TABLE =
+      TableName.valueOf("observed_table");
   private static byte[] TEST_CLONE = Bytes.toBytes("observed_clone");
   private static byte[] TEST_FAMILY = Bytes.toBytes("fam1");
   private static byte[] TEST_FAMILY2 = Bytes.toBytes("fam2");
@@ -1103,12 +1186,64 @@ public class TestMasterObserver {
     }
   }
 
-  private void modifyTableSync(HBaseAdmin admin, byte[] tableName, HTableDescriptor htd)
+  @Test
+  public void testNamespaceOperations() throws Exception {
+    MiniHBaseCluster cluster = UTIL.getHBaseCluster();
+    String testNamespace = "observed_ns";
+    HMaster master = cluster.getMaster();
+    MasterCoprocessorHost host = master.getCoprocessorHost();
+    CPMasterObserver cp = (CPMasterObserver)host.findCoprocessor(
+        CPMasterObserver.class.getName());
+
+    cp.enableBypass(false);
+    cp.resetStates();
+
+
+    // create a table
+    HBaseAdmin admin = UTIL.getHBaseAdmin();
+    admin.createNamespace(NamespaceDescriptor.create(testNamespace).build());
+    assertTrue("Test namespace should be created", cp.wasCreateNamespaceCalled());
+
+    assertNotNull(admin.getNamespaceDescriptor(testNamespace));
+
+    // turn off bypass, run the tests again
+    cp.enableBypass(true);
+    cp.resetStates();
+
+    admin.modifyNamespace(NamespaceDescriptor.create(testNamespace).build());
+    assertTrue("Test namespace should not have been modified",
+        cp.preModifyNamespaceCalledOnly());
+
+    assertNotNull(admin.getNamespaceDescriptor(testNamespace));
+
+    admin.deleteNamespace(testNamespace);
+    assertTrue("Test namespace should not have been deleted", cp.preDeleteNamespaceCalledOnly());
+
+    assertNotNull(admin.getNamespaceDescriptor(testNamespace));
+
+    cp.enableBypass(false);
+    cp.resetStates();
+
+    // delete table
+    admin.modifyNamespace(NamespaceDescriptor.create(testNamespace).build());
+    assertTrue("Test namespace should have been modified", cp.wasModifyNamespaceCalled());
+
+    admin.deleteNamespace(testNamespace);
+    assertTrue("Test namespace should have been deleted", cp.wasDeleteNamespaceCalled());
+
+    cp.enableBypass(true);
+    cp.resetStates();
+
+    admin.createNamespace(NamespaceDescriptor.create(testNamespace).build());
+    assertTrue("Test namespace should not be created", cp.preCreateNamespaceCalledOnly());
+  }
+
+  private void modifyTableSync(HBaseAdmin admin, TableName tableName, HTableDescriptor htd)
       throws IOException {
     admin.modifyTable(tableName, htd);
     //wait until modify table finishes
     for (int t = 0; t < 100; t++) { //10 sec timeout
-      HTableDescriptor td = admin.getTableDescriptor(htd.getName());
+      HTableDescriptor td = admin.getTableDescriptor(htd.getTableName());
       if (td.equals(htd)) {
         break;
       }
@@ -1228,7 +1363,7 @@ public class TestMasterObserver {
     cp.resetStates();
 
     GetTableDescriptorsRequest req =
-        RequestConverter.buildGetTableDescriptorsRequest((List<String>)null);
+        RequestConverter.buildGetTableDescriptorsRequest((List<TableName>)null);
     master.getTableDescriptors(null, req);
 
     assertTrue("Coprocessor should be called on table descriptors request",

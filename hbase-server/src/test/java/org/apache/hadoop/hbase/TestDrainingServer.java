@@ -74,7 +74,6 @@ public class TestDrainingServer {
     final List<String> families = new ArrayList<String>(1);
     families.add("family");
     TEST_UTIL.createRandomTable("table", families, 1, 0, 0, COUNT_OF_REGIONS, 0);
-
     // Ensure a stable env
     TEST_UTIL.getHBaseAdmin().setBalancerRunning(false, false);
 
@@ -306,7 +305,7 @@ public class TestDrainingServer {
   }
 
   private static boolean isAllRegionsOnline() {
-    return TEST_UTIL.getMiniHBaseCluster().countServedRegions() ==
-        (COUNT_OF_REGIONS + 1 /*catalog regions*/);
+    return TEST_UTIL.getMiniHBaseCluster().countServedRegions() >=
+        (COUNT_OF_REGIONS + 2 /*catalog and namespace regions*/);
   }
 }

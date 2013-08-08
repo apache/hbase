@@ -46,6 +46,7 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.LargeTests;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
@@ -190,7 +191,7 @@ public class TestLogRolling  {
 
   private void startAndWriteData() throws IOException, InterruptedException {
     // When the META table can be opened, the region servers are running
-    new HTable(TEST_UTIL.getConfiguration(), HConstants.META_TABLE_NAME);
+    new HTable(TEST_UTIL.getConfiguration(), TableName.META_TABLE_NAME);
     this.server = cluster.getRegionServerThreads().get(0).getRegionServer();
     this.log = server.getWAL();
 
@@ -330,7 +331,7 @@ public class TestLogRolling  {
 
     // Create the test table and open it
     String tableName = getName();
-    HTableDescriptor desc = new HTableDescriptor(tableName);
+    HTableDescriptor desc = new HTableDescriptor(TableName.valueOf(tableName));
     desc.addFamily(new HColumnDescriptor(HConstants.CATALOG_FAMILY));
 
     admin.createTable(desc);
@@ -426,14 +427,14 @@ public class TestLogRolling  {
       fs.getDefaultReplication() > 1);
     LOG.info("Replication=" + fs.getDefaultReplication());
     // When the META table can be opened, the region servers are running
-    new HTable(TEST_UTIL.getConfiguration(), HConstants.META_TABLE_NAME);
+    new HTable(TEST_UTIL.getConfiguration(), TableName.META_TABLE_NAME);
 
     this.server = cluster.getRegionServer(0);
     this.log = server.getWAL();
 
     // Create the test table and open it
     String tableName = getName();
-    HTableDescriptor desc = new HTableDescriptor(tableName);
+    HTableDescriptor desc = new HTableDescriptor(TableName.valueOf(tableName));
     desc.addFamily(new HColumnDescriptor(HConstants.CATALOG_FAMILY));
 
     admin.createTable(desc);
@@ -583,7 +584,7 @@ public class TestLogRolling  {
   @Test
   public void testCompactionRecordDoesntBlockRolling() throws Exception {
     // When the META table can be opened, the region servers are running
-    new HTable(TEST_UTIL.getConfiguration(), HConstants.META_TABLE_NAME);
+    new HTable(TEST_UTIL.getConfiguration(), TableName.META_TABLE_NAME);
 
     String tableName = getName();
     HTable table = createTestTable(tableName);
@@ -593,9 +594,11 @@ public class TestLogRolling  {
     server = TEST_UTIL.getRSForFirstRegionInTable(Bytes.toBytes(tableName));
     this.log = server.getWAL();
     FSHLog fshLog = (FSHLog)log;
-    HRegion region = server.getOnlineRegions(table2.getTableName()).get(0);
+    HRegion region = server.getOnlineRegions(table2.getName()).get(0);
     Store s = region.getStore(HConstants.CATALOG_FAMILY);
 
+    //have to flush namespace to ensure it doesn't affect wall tests
+    admin.flush(TableName.NAMESPACE_TABLE_NAME.getName());
 
     // Put some stuff into table2, to make sure we have some files to compact.
     for (int i = 1; i <= 2; ++i) {
@@ -641,7 +644,7 @@ public class TestLogRolling  {
 
   private HTable createTestTable(String tableName) throws IOException {
     // Create the test table and open it
-    HTableDescriptor desc = new HTableDescriptor(tableName);
+    HTableDescriptor desc = new HTableDescriptor(TableName.valueOf(tableName));
     desc.addFamily(new HColumnDescriptor(HConstants.CATALOG_FAMILY));
     admin.createTable(desc);
     return new HTable(TEST_UTIL.getConfiguration(), tableName);

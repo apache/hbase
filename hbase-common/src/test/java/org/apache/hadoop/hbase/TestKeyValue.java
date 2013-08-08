@@ -130,12 +130,16 @@ public class TestKeyValue extends TestCase {
   public void testMoreComparisons() throws Exception {
     // Root compares
     long now = System.currentTimeMillis();
-    KeyValue a = new KeyValue(Bytes.toBytes(".META.,,99999999999999"), now);
-    KeyValue b = new KeyValue(Bytes.toBytes(".META.,,1"), now);
+    KeyValue a = new KeyValue(
+        Bytes.toBytes(TableName.META_TABLE_NAME.getNameAsString()+",,99999999999999"), now);
+    KeyValue b = new KeyValue(
+        Bytes.toBytes(TableName.META_TABLE_NAME.getNameAsString()+",,1"), now);
     KVComparator c = new KeyValue.RootComparator();
     assertTrue(c.compare(b, a) < 0);
-    KeyValue aa = new KeyValue(Bytes.toBytes(".META.,,1"), now);
-    KeyValue bb = new KeyValue(Bytes.toBytes(".META.,,1"),
+    KeyValue aa = new KeyValue(
+        Bytes.toBytes(TableName.META_TABLE_NAME.getNameAsString()+",,1"), now);
+    KeyValue bb = new KeyValue(
+        Bytes.toBytes(TableName.META_TABLE_NAME.getNameAsString()+",,1"),
         Bytes.toBytes("info"), Bytes.toBytes("regioninfo"), 1235943454602L,
         (byte[])null);
     assertTrue(c.compare(aa, bb) < 0);
@@ -213,32 +217,46 @@ public class TestKeyValue extends TestCase {
         Bytes.toBytes("fam"), Bytes.toBytes(""), Long.MAX_VALUE, (byte[])null);
     assertTrue(KeyValue.META_COMPARATOR.compare(rowA, rowB) < 0);
 
-    rowA = new KeyValue(Bytes.toBytes(".META.,testtable,www.hbase.org/,1234,4321"),
+    rowA = new KeyValue(
+        Bytes.toBytes(TableName.META_TABLE_NAME.getNameAsString()+",testtable,www.hbase.org/,1234,4321"),
         Bytes.toBytes("fam"), Bytes.toBytes(""), Long.MAX_VALUE, (byte[])null);
-    rowB = new KeyValue(Bytes.toBytes(".META.,testtable,www.hbase.org/%20,99999,99999"),
+    rowB = new KeyValue(
+        Bytes.toBytes(TableName.META_TABLE_NAME.getNameAsString()+",testtable,www.hbase.org/%20,99999,99999"),
         Bytes.toBytes("fam"), Bytes.toBytes(""), Long.MAX_VALUE, (byte[])null);
     assertTrue(KeyValue.ROOT_COMPARATOR.compare(rowA, rowB) < 0);
   }
 
   private void metacomparisons(final KeyValue.MetaComparator c) {
     long now = System.currentTimeMillis();
-    assertTrue(c.compare(new KeyValue(Bytes.toBytes(".META.,a,,0,1"), now),
-      new KeyValue(Bytes.toBytes(".META.,a,,0,1"), now)) == 0);
-    KeyValue a = new KeyValue(Bytes.toBytes(".META.,a,,0,1"), now);
-    KeyValue b = new KeyValue(Bytes.toBytes(".META.,a,,0,2"), now);
+    assertTrue(c.compare(new KeyValue(
+        Bytes.toBytes(TableName.META_TABLE_NAME.getNameAsString()+",a,,0,1"), now),
+      new KeyValue(
+          Bytes.toBytes(TableName.META_TABLE_NAME.getNameAsString()+",a,,0,1"), now)) == 0);
+    KeyValue a = new KeyValue(
+        Bytes.toBytes(TableName.META_TABLE_NAME.getNameAsString()+",a,,0,1"), now);
+    KeyValue b = new KeyValue(
+        Bytes.toBytes(TableName.META_TABLE_NAME.getNameAsString()+",a,,0,2"), now);
     assertTrue(c.compare(a, b) < 0);
-    assertTrue(c.compare(new KeyValue(Bytes.toBytes(".META.,a,,0,2"), now),
-      new KeyValue(Bytes.toBytes(".META.,a,,0,1"), now)) > 0);
+    assertTrue(c.compare(new KeyValue(
+        Bytes.toBytes(TableName.META_TABLE_NAME.getNameAsString()+",a,,0,2"), now),
+      new KeyValue(
+          Bytes.toBytes(TableName.META_TABLE_NAME.getNameAsString()+",a,,0,1"), now)) > 0);
   }
 
   private void comparisons(final KeyValue.KVComparator c) {
     long now = System.currentTimeMillis();
-    assertTrue(c.compare(new KeyValue(Bytes.toBytes(".META.,,1"), now),
-      new KeyValue(Bytes.toBytes(".META.,,1"), now)) == 0);
-    assertTrue(c.compare(new KeyValue(Bytes.toBytes(".META.,,1"), now),
-      new KeyValue(Bytes.toBytes(".META.,,2"), now)) < 0);
-    assertTrue(c.compare(new KeyValue(Bytes.toBytes(".META.,,2"), now),
-      new KeyValue(Bytes.toBytes(".META.,,1"), now)) > 0);
+    assertTrue(c.compare(new KeyValue(
+        Bytes.toBytes(TableName.META_TABLE_NAME.getNameAsString()+",,1"), now),
+      new KeyValue(
+          Bytes.toBytes(TableName.META_TABLE_NAME.getNameAsString()+",,1"), now)) == 0);
+    assertTrue(c.compare(new KeyValue(
+        Bytes.toBytes(TableName.META_TABLE_NAME.getNameAsString()+",,1"), now),
+      new KeyValue(
+          Bytes.toBytes(TableName.META_TABLE_NAME.getNameAsString()+",,2"), now)) < 0);
+    assertTrue(c.compare(new KeyValue(
+        Bytes.toBytes(TableName.META_TABLE_NAME.getNameAsString()+",,2"), now),
+      new KeyValue(
+          Bytes.toBytes(TableName.META_TABLE_NAME.getNameAsString()+",,1"), now)) > 0);
   }
 
   public void testBinaryKeys() throws Exception {
@@ -280,12 +298,12 @@ public class TestKeyValue extends TestCase {
     }
     // Make up -ROOT- table keys.
     KeyValue [] rootKeys = {
-        new KeyValue(Bytes.toBytes(".META.,aaaaa,\u0000\u0000,0,2"), fam, qf, 2, nb),
-        new KeyValue(Bytes.toBytes(".META.,aaaaa,\u0001,0,3"), fam, qf, 3, nb),
-        new KeyValue(Bytes.toBytes(".META.,aaaaa,,0,1"), fam, qf, 1, nb),
-        new KeyValue(Bytes.toBytes(".META.,aaaaa,\u1000,0,5"), fam, qf, 5, nb),
-        new KeyValue(Bytes.toBytes(".META.,aaaaa,a,0,4"), fam, qf, 4, nb),
-        new KeyValue(Bytes.toBytes(".META.,,0"), fam, qf, 0, nb),
+        new KeyValue(Bytes.toBytes(TableName.META_TABLE_NAME.getNameAsString()+",aaaaa,\u0000\u0000,0,2"), fam, qf, 2, nb),
+        new KeyValue(Bytes.toBytes(TableName.META_TABLE_NAME.getNameAsString()+",aaaaa,\u0001,0,3"), fam, qf, 3, nb),
+        new KeyValue(Bytes.toBytes(TableName.META_TABLE_NAME.getNameAsString()+",aaaaa,,0,1"), fam, qf, 1, nb),
+        new KeyValue(Bytes.toBytes(TableName.META_TABLE_NAME.getNameAsString()+",aaaaa,\u1000,0,5"), fam, qf, 5, nb),
+        new KeyValue(Bytes.toBytes(TableName.META_TABLE_NAME.getNameAsString()+",aaaaa,a,0,4"), fam, qf, 4, nb),
+        new KeyValue(Bytes.toBytes(TableName.META_TABLE_NAME.getNameAsString()+",,0"), fam, qf, 0, nb),
       };
     // This will output the keys incorrectly.
     set = new TreeSet<KeyValue>(new KeyValue.MetaComparator());

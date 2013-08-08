@@ -30,6 +30,7 @@ import java.util.Collection;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -62,7 +63,8 @@ import org.mockito.internal.util.reflection.Whitebox;
 public class TestZKBasedOpenCloseRegion {
   private static final Log LOG = LogFactory.getLog(TestZKBasedOpenCloseRegion.class);
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
-  private static final String TABLENAME = "TestZKBasedOpenCloseRegion";
+  private static final TableName TABLENAME =
+      TableName.valueOf("TestZKBasedOpenCloseRegion");
   private static final byte [][] FAMILIES = new byte [][] {Bytes.toBytes("a"),
     Bytes.toBytes("b"), Bytes.toBytes("c")};
   private static int countOfRegions;
@@ -72,7 +74,7 @@ public class TestZKBasedOpenCloseRegion {
     c.setBoolean("dfs.support.append", true);
     c.setInt("hbase.regionserver.info.port", 0);
     TEST_UTIL.startMiniCluster(2);
-    TEST_UTIL.createTable(Bytes.toBytes(TABLENAME), FAMILIES);
+    TEST_UTIL.createTable(TABLENAME, FAMILIES);
     HTable t = new HTable(TEST_UTIL.getConfiguration(), TABLENAME);
     countOfRegions = TEST_UTIL.createMultiRegions(t, getTestFamily());
     waitUntilAllRegionsAssigned();
@@ -219,13 +221,13 @@ public class TestZKBasedOpenCloseRegion {
    */
   @Test
   public void testRegionOpenFailsDueToIOException() throws Exception {
-    HRegionInfo REGIONINFO = new HRegionInfo(Bytes.toBytes("t"),
+    HRegionInfo REGIONINFO = new HRegionInfo(TableName.valueOf("t"),
         HConstants.EMPTY_START_ROW, HConstants.EMPTY_START_ROW);
     HRegionServer regionServer = TEST_UTIL.getHBaseCluster().getRegionServer(0);
     TableDescriptors htd = Mockito.mock(TableDescriptors.class);
     Object orizinalState = Whitebox.getInternalState(regionServer,"tableDescriptors");
     Whitebox.setInternalState(regionServer, "tableDescriptors", htd);
-    Mockito.doThrow(new IOException()).when(htd).get((byte[]) Mockito.any());
+    Mockito.doThrow(new IOException()).when(htd).get((TableName) Mockito.any());
     try {
       ProtobufUtil.openRegion(regionServer, REGIONINFO);
       fail("It should throw IOException ");
@@ -238,7 +240,7 @@ public class TestZKBasedOpenCloseRegion {
 
   private static void waitUntilAllRegionsAssigned()
   throws IOException {
-    HTable meta = new HTable(TEST_UTIL.getConfiguration(), HConstants.META_TABLE_NAME);
+    HTable meta = new HTable(TEST_UTIL.getConfiguration(), TableName.META_TABLE_NAME);
     while (true) {
       int rows = 0;
       Scan scan = new Scan();
@@ -273,7 +275,7 @@ public class TestZKBasedOpenCloseRegion {
   private static int addToEachStartKey(final int expected) throws IOException {
     HTable t = new HTable(TEST_UTIL.getConfiguration(), TABLENAME);
     HTable meta = new HTable(TEST_UTIL.getConfiguration(),
-        HConstants.META_TABLE_NAME);
+        TableName.META_TABLE_NAME);
     int rows = 0;
     Scan scan = new Scan();
     scan.addColumn(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER);
@@ -281,7 +283,9 @@ public class TestZKBasedOpenCloseRegion {
     for (Result r = null; (r = s.next()) != null;) {
       HRegionInfo hri = HRegionInfo.getHRegionInfo(r);
       if (hri == null) break;
-
+      if(!hri.getTableName().equals(TABLENAME)) {
+        continue;
+      }
       // If start key, add 'aaa'.
       byte [] row = getStartKey(hri);
       Put p = new Put(row);

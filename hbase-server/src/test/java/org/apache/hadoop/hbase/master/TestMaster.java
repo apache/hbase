@@ -43,7 +43,8 @@ import static org.junit.Assert.*;
 public class TestMaster {
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static final Log LOG = LogFactory.getLog(TestMaster.class);
-  private static final byte[] TABLENAME = Bytes.toBytes("TestMaster");
+  private static final TableName TABLENAME =
+      TableName.valueOf("TestMaster");
   private static final byte[] FAMILYNAME = Bytes.toBytes("fam");
   private static HBaseAdmin admin;
 
@@ -65,14 +66,12 @@ public class TestMaster {
     HMaster m = cluster.getMaster();
 
     HTable ht = TEST_UTIL.createTable(TABLENAME, FAMILYNAME);
-    assertTrue(m.assignmentManager.getZKTable().isEnabledTable
-        (Bytes.toString(TABLENAME)));
+    assertTrue(m.assignmentManager.getZKTable().isEnabledTable(TABLENAME));
     TEST_UTIL.loadTable(ht, FAMILYNAME);
     ht.close();
 
     List<Pair<HRegionInfo, ServerName>> tableRegions =
-      MetaReader.getTableRegionsAndLocations(m.getCatalogTracker(),
-          Bytes.toString(TABLENAME));
+      MetaReader.getTableRegionsAndLocations(m.getCatalogTracker(), TABLENAME);
     LOG.info("Regions after load: " + Joiner.on(',').join(tableRegions));
     assertEquals(1, tableRegions.size());
     assertArrayEquals(HConstants.EMPTY_START_ROW,
@@ -82,7 +81,7 @@ public class TestMaster {
 
     // Now trigger a split and stop when the split is in progress
     LOG.info("Splitting table");
-    TEST_UTIL.getHBaseAdmin().split(TABLENAME);
+    TEST_UTIL.getHBaseAdmin().split(TABLENAME.getName());
     LOG.info("Waiting for split result to be about to open");
     while (!m.assignmentManager.wasSplitHandlerCalled()) {
       Thread.sleep(100);
@@ -122,7 +121,8 @@ public class TestMaster {
 
   @Test
   public void testMoveThrowsUnknownRegionException() throws IOException {
-    byte[] tableName = Bytes.toBytes("testMoveThrowsUnknownRegionException");
+    TableName tableName =
+        TableName.valueOf("testMoveThrowsUnknownRegionException");
     HTableDescriptor htd = new HTableDescriptor(tableName);
     HColumnDescriptor hcd = new HColumnDescriptor("value");
     htd.addFamily(hcd);
@@ -144,7 +144,7 @@ public class TestMaster {
   public void testMoveThrowsPleaseHoldException() throws IOException {
     byte[] tableName = Bytes.toBytes("testMoveThrowsPleaseHoldException");
     HMaster master = TEST_UTIL.getMiniHBaseCluster().getMaster();
-    HTableDescriptor htd = new HTableDescriptor(tableName);
+    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(tableName));
     HColumnDescriptor hcd = new HColumnDescriptor("value");
     htd.addFamily(hcd);
 

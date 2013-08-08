@@ -52,12 +52,13 @@ import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableExistsException;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotDisabledException;
 import org.apache.hadoop.hbase.TableNotEnabledException;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.catalog.CatalogTracker;
-import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.constraint.ConstraintException;
 import org.apache.hadoop.hbase.executor.EventHandler;
 import org.apache.hadoop.hbase.master.AssignmentManager;
 import org.apache.hadoop.hbase.master.HMaster;
@@ -194,8 +195,8 @@ public class TestAdmin {
 
     exception = null;
     try {
-      HTableDescriptor htd = new HTableDescriptor(nonexistent);
-      this.admin.modifyTable(htd.getName(), htd);
+      HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(nonexistent));
+      this.admin.modifyTable(htd.getTableName(), htd);
     } catch (IOException e) {
       exception = e;
     }
@@ -205,13 +206,13 @@ public class TestAdmin {
     // nonexistent column family -- see if we get right exceptions.
     final String tableName =
         "testDeleteEditUnknownColumnFamilyAndOrTable" + System.currentTimeMillis();
-    HTableDescriptor htd = new HTableDescriptor(tableName);
+    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(tableName));
     htd.addFamily(new HColumnDescriptor("cf"));
     this.admin.createTable(htd);
     try {
       exception = null;
       try {
-        this.admin.deleteColumn(htd.getName(), nonexistentHcd.getName());
+        this.admin.deleteColumn(htd.getTableName(), nonexistentHcd.getName());
       } catch (IOException e) {
         exception = e;
       }
@@ -220,7 +221,7 @@ public class TestAdmin {
 
       exception = null;
       try {
-        this.admin.modifyColumn(htd.getName(), nonexistentHcd);
+        this.admin.modifyColumn(htd.getTableName(), nonexistentHcd);
       } catch (IOException e) {
         exception = e;
       }
@@ -246,10 +247,10 @@ public class TestAdmin {
     get.addColumn(HConstants.CATALOG_FAMILY, qualifier);
     ht.get(get);
 
-    this.admin.disableTable(table);
+    this.admin.disableTable(ht.getName());
     assertTrue("Table must be disabled.", TEST_UTIL.getHBaseCluster()
         .getMaster().getAssignmentManager().getZKTable().isDisabledTable(
-            Bytes.toString(table)));
+            ht.getName()));
 
     // Test that table is disabled
     get = new Get(row);
@@ -264,7 +265,7 @@ public class TestAdmin {
     this.admin.enableTable(table);
     assertTrue("Table must be enabled.", TEST_UTIL.getHBaseCluster()
         .getMaster().getAssignmentManager().getZKTable().isEnabledTable(
-            Bytes.toString(table)));
+            ht.getName()));
 
     // Test that table is enabled
     try {
@@ -337,7 +338,7 @@ public class TestAdmin {
     assertEquals(numTables + 1, tables.length);
     assertTrue("Table must be enabled.", TEST_UTIL.getHBaseCluster()
         .getMaster().getAssignmentManager().getZKTable().isEnabledTable(
-            "testCreateTable"));
+            TableName.valueOf("testCreateTable")));
   }
 
   @Test
@@ -345,7 +346,7 @@ public class TestAdmin {
     HColumnDescriptor fam1 = new HColumnDescriptor("fam1");
     HColumnDescriptor fam2 = new HColumnDescriptor("fam2");
     HColumnDescriptor fam3 = new HColumnDescriptor("fam3");
-    HTableDescriptor htd = new HTableDescriptor("myTestTable");
+    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf("myTestTable"));
     htd.addFamily(fam1);
     htd.addFamily(fam2);
     htd.addFamily(fam3);
@@ -382,7 +383,8 @@ public class TestAdmin {
    */
   @Test
   public void testOnlineChangeTableSchema() throws IOException, InterruptedException {
-    final byte [] tableName = Bytes.toBytes("changeTableSchemaOnline");
+    final TableName tableName =
+        TableName.valueOf("changeTableSchemaOnline");
     TEST_UTIL.getMiniHBaseCluster().getMaster().getConfiguration().setBoolean(
         "hbase.online.schema.update.enable", true);
     HTableDescriptor [] tables = admin.listTables();
@@ -558,7 +560,7 @@ public class TestAdmin {
   @Test
   public void testCreateTableNumberOfRegions() throws IOException, InterruptedException {
     byte[] tableName = Bytes.toBytes("testCreateTableNumberOfRegions");
-    HTableDescriptor desc = new HTableDescriptor(tableName);
+    HTableDescriptor desc = new HTableDescriptor(TableName.valueOf(tableName));
     desc.addFamily(new HColumnDescriptor(HConstants.CATALOG_FAMILY));
     admin.createTable(desc);
     HTable ht = new HTable(TEST_UTIL.getConfiguration(), tableName);
@@ -567,7 +569,7 @@ public class TestAdmin {
     ht.close();
 
     byte [] TABLE_2 = Bytes.add(tableName, Bytes.toBytes("_2"));
-    desc = new HTableDescriptor(TABLE_2);
+    desc = new HTableDescriptor(TableName.valueOf(TABLE_2));
     desc.addFamily(new HColumnDescriptor(HConstants.CATALOG_FAMILY));
     admin.createTable(desc, new byte[][]{new byte[]{42}});
     HTable ht2 = new HTable(TEST_UTIL.getConfiguration(), TABLE_2);
@@ -576,7 +578,7 @@ public class TestAdmin {
     ht2.close();
 
     byte [] TABLE_3 = Bytes.add(tableName, Bytes.toBytes("_3"));
-    desc = new HTableDescriptor(TABLE_3);
+    desc = new HTableDescriptor(TableName.valueOf(TABLE_3));
     desc.addFamily(new HColumnDescriptor(HConstants.CATALOG_FAMILY));
     admin.createTable(desc, "a".getBytes(), "z".getBytes(), 3);
     HTable ht3 = new HTable(TEST_UTIL.getConfiguration(), TABLE_3);
@@ -585,7 +587,7 @@ public class TestAdmin {
     ht3.close();
 
     byte [] TABLE_4 = Bytes.add(tableName, Bytes.toBytes("_4"));
-    desc = new HTableDescriptor(TABLE_4);
+    desc = new HTableDescriptor(TableName.valueOf(TABLE_4));
     desc.addFamily(new HColumnDescriptor(HConstants.CATALOG_FAMILY));
     try {
       admin.createTable(desc, "a".getBytes(), "z".getBytes(), 2);
@@ -595,7 +597,7 @@ public class TestAdmin {
     }
 
     byte [] TABLE_5 = Bytes.add(tableName, Bytes.toBytes("_5"));
-    desc = new HTableDescriptor(TABLE_5);
+    desc = new HTableDescriptor(TableName.valueOf(TABLE_5));
     desc.addFamily(new HColumnDescriptor(HConstants.CATALOG_FAMILY));
     admin.createTable(desc, new byte[] {1}, new byte[] {127}, 16);
     HTable ht5 = new HTable(TEST_UTIL.getConfiguration(), TABLE_5);
@@ -622,7 +624,7 @@ public class TestAdmin {
     };
     int expectedRegions = splitKeys.length + 1;
 
-    HTableDescriptor desc = new HTableDescriptor(tableName);
+    HTableDescriptor desc = new HTableDescriptor(TableName.valueOf(tableName));
     desc.addFamily(new HColumnDescriptor(HConstants.CATALOG_FAMILY));
     admin.createTable(desc, splitKeys);
     
@@ -684,7 +686,7 @@ public class TestAdmin {
 
     byte [] TABLE_2 = Bytes.add(tableName, Bytes.toBytes("_2"));
 
-    desc = new HTableDescriptor(TABLE_2);
+    desc = new HTableDescriptor(TableName.valueOf(TABLE_2));
     desc.addFamily(new HColumnDescriptor(HConstants.CATALOG_FAMILY));
     admin = new HBaseAdmin(TEST_UTIL.getConfiguration());
     admin.createTable(desc, startKey, endKey, expectedRegions);
@@ -740,7 +742,7 @@ public class TestAdmin {
 
     byte [] TABLE_3 = Bytes.add(tableName, Bytes.toBytes("_3"));
 
-    desc = new HTableDescriptor(TABLE_3);
+    desc = new HTableDescriptor(TableName.valueOf(TABLE_3));
     desc.addFamily(new HColumnDescriptor(HConstants.CATALOG_FAMILY));
     admin = new HBaseAdmin(TEST_UTIL.getConfiguration());
     admin.createTable(desc, startKey, endKey, expectedRegions);
@@ -766,7 +768,7 @@ public class TestAdmin {
     };
 
     byte [] TABLE_4 = Bytes.add(tableName, Bytes.toBytes("_4"));
-    desc = new HTableDescriptor(TABLE_4);
+    desc = new HTableDescriptor(TableName.valueOf(TABLE_4));
     desc.addFamily(new HColumnDescriptor(HConstants.CATALOG_FAMILY));
     HBaseAdmin ladmin = new HBaseAdmin(TEST_UTIL.getConfiguration());
     try {
@@ -782,7 +784,7 @@ public class TestAdmin {
   @Test
   public void testTableAvailableWithRandomSplitKeys() throws Exception {
     byte[] tableName = Bytes.toBytes("testTableAvailableWithRandomSplitKeys");
-    HTableDescriptor desc = new HTableDescriptor(tableName);
+    HTableDescriptor desc = new HTableDescriptor(TableName.valueOf(tableName));
     desc.addFamily(new HColumnDescriptor("col"));
     byte[][] splitKeys = new byte[1][];
     splitKeys = new byte [][] {
@@ -799,7 +801,7 @@ public class TestAdmin {
     byte[] tableName = Bytes.toBytes("testCreateTableWithOnlyEmptyStartRow");
     byte[][] splitKeys = new byte[1][];
     splitKeys[0] = HConstants.EMPTY_BYTE_ARRAY;
-    HTableDescriptor desc = new HTableDescriptor(tableName);
+    HTableDescriptor desc = new HTableDescriptor(TableName.valueOf(tableName));
     desc.addFamily(new HColumnDescriptor("col"));
     try {
       admin.createTable(desc, splitKeys);
@@ -815,7 +817,7 @@ public class TestAdmin {
     splitKeys[0] = "region1".getBytes();
     splitKeys[1] = HConstants.EMPTY_BYTE_ARRAY;
     splitKeys[2] = "region2".getBytes();
-    HTableDescriptor desc = new HTableDescriptor(tableName);
+    HTableDescriptor desc = new HTableDescriptor(TableName.valueOf(tableName));
     desc.addFamily(new HColumnDescriptor("col"));
     try {
       admin.createTable(desc, splitKeys);
@@ -865,7 +867,7 @@ public class TestAdmin {
         new byte[] { 6, 6, 6 }, new byte[] { 7, 7, 7 }, new byte[] { 8, 8, 8 },
         new byte[] { 9, 9, 9 } };
     int expectedRegions = splitKeys.length + 1;
-    HTableDescriptor desc = new HTableDescriptor(tableName);
+    HTableDescriptor desc = new HTableDescriptor(TableName.valueOf(tableName));
     desc.addFamily(new HColumnDescriptor(HConstants.CATALOG_FAMILY));
     admin.createTable(desc, splitKeys);
     HTable ht = new HTable(TEST_UTIL.getConfiguration(), tableName);
@@ -880,7 +882,7 @@ public class TestAdmin {
 
     // Check the assignment.
     HTable metaTable = new HTable(TEST_UTIL.getConfiguration(),
-        HConstants.META_TABLE_NAME);
+        TableName.META_TABLE_NAME);
     List<HRegionInfo> regionInfos = admin.getTableRegions(tableName);
     Map<String, Integer> serverMap = new HashMap<String, Integer>();
     for (HRegionInfo hri : regionInfos) {
@@ -944,12 +946,12 @@ public class TestAdmin {
 
   void splitTest(byte[] splitPoint, byte[][] familyNames, int[] rowCounts,
     int numVersions, int blockSize) throws Exception {
+    TableName tableName = TableName.valueOf("testForceSplit");
     StringBuilder sb = new StringBuilder();
     // Add tail to String so can see better in logs where a test is running.
     for (int i = 0; i < rowCounts.length; i++) {
       sb.append("_").append(Integer.toString(rowCounts[i]));
     }
-    byte [] tableName = Bytes.toBytes("testForceSplit" + sb.toString());
     assertFalse(admin.tableExists(tableName));
     final HTable table = TEST_UTIL.createTable(tableName, familyNames,
       numVersions, blockSize);
@@ -996,7 +998,7 @@ public class TestAdmin {
     scanner.next();
 
     // Split the table
-    this.admin.split(tableName, splitPoint);
+    this.admin.split(tableName.getName(), splitPoint);
 
     final AtomicInteger count = new AtomicInteger(0);
     Thread t = new Thread("CheckForSplit") {
@@ -1097,9 +1099,10 @@ public class TestAdmin {
   @Test(timeout=300000)
   public void testEnableDisableAddColumnDeleteColumn() throws Exception {
     ZooKeeperWatcher zkw = HBaseTestingUtility.getZooKeeperWatcher(TEST_UTIL);
-    byte [] tableName = Bytes.toBytes("testMasterAdmin");
+    TableName tableName = TableName.valueOf("testMasterAdmin");
     TEST_UTIL.createTable(tableName, HConstants.CATALOG_FAMILY).close();
-    while (!ZKTableReadOnly.isEnabledTable(zkw, "testMasterAdmin")) {
+    while (!ZKTableReadOnly.isEnabledTable(zkw,
+        TableName.valueOf("testMasterAdmin"))) {
       Thread.sleep(10);
     }
     this.admin.disableTable(tableName);
@@ -1124,26 +1127,17 @@ public class TestAdmin {
   public void testCreateBadTables() throws IOException {
     String msg = null;
     try {
-      this.admin.createTable(HTableDescriptor.ROOT_TABLEDESC);
-    } catch (IllegalArgumentException e) {
-      msg = e.toString();
-    }
-    assertTrue("Unexcepted exception message " + msg, msg != null &&
-      msg.startsWith(IllegalArgumentException.class.getName()) &&
-      msg.contains(HTableDescriptor.ROOT_TABLEDESC.getNameAsString()));
-    msg = null;
-    try {
       this.admin.createTable(HTableDescriptor.META_TABLEDESC);
-    } catch(IllegalArgumentException e) {
+    } catch(TableExistsException e) {
       msg = e.toString();
     }
     assertTrue("Unexcepted exception message " + msg, msg != null &&
-      msg.startsWith(IllegalArgumentException.class.getName()) &&
-      msg.contains(HTableDescriptor.META_TABLEDESC.getNameAsString()));
+      msg.startsWith(TableExistsException.class.getName()) &&
+      msg.contains(HTableDescriptor.META_TABLEDESC.getTableName().getNameAsString()));
 
     // Now try and do concurrent creation with a bunch of threads.
     final HTableDescriptor threadDesc =
-      new HTableDescriptor("threaded_testCreateBadTables");
+      new HTableDescriptor(TableName.valueOf("threaded_testCreateBadTables"));
     threadDesc.addFamily(new HColumnDescriptor(HConstants.CATALOG_FAMILY));
     int count = 10;
     Thread [] threads = new Thread [count];
@@ -1190,8 +1184,8 @@ public class TestAdmin {
   @Test
   public void testTableNameClash() throws Exception {
     String name = "testTableNameClash";
-    admin.createTable(new HTableDescriptor(name + "SOMEUPPERCASE"));
-    admin.createTable(new HTableDescriptor(name));
+    admin.createTable(new HTableDescriptor(TableName.valueOf(name + "SOMEUPPERCASE")));
+    admin.createTable(new HTableDescriptor(TableName.valueOf(name)));
     // Before fix, below would fail throwing a NoServerForRegionException.
     new HTable(TEST_UTIL.getConfiguration(), name).close();
   }
@@ -1215,7 +1209,7 @@ public class TestAdmin {
       byte [] startKey = { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 };
       byte [] endKey =   { 9, 9, 9, 9, 9, 9, 9, 9, 9, 9 };
       HBaseAdmin hbaseadmin = new HBaseAdmin(TEST_UTIL.getConfiguration());
-      hbaseadmin.createTable(new HTableDescriptor(name), startKey, endKey,
+      hbaseadmin.createTable(new HTableDescriptor(TableName.valueOf(name)), startKey, endKey,
         expectedRegions);
       hbaseadmin.close();
     } finally {
@@ -1248,13 +1242,11 @@ public class TestAdmin {
   public void testTableNames() throws IOException {
     byte[][] illegalNames = new byte[][] {
         Bytes.toBytes("-bad"),
-        Bytes.toBytes(".bad"),
-        HConstants.ROOT_TABLE_NAME,
-        HConstants.META_TABLE_NAME
+        Bytes.toBytes(".bad")
     };
     for (byte[] illegalName : illegalNames) {
       try {
-        new HTableDescriptor(illegalName);
+        new HTableDescriptor(TableName.valueOf(illegalName));
         throw new IOException("Did not detect '" +
             Bytes.toString(illegalName) + "' as an illegal user table name");
       } catch (IllegalArgumentException e) {
@@ -1263,7 +1255,7 @@ public class TestAdmin {
     }
     byte[] legalName = Bytes.toBytes("g-oo.d");
     try {
-      new HTableDescriptor(legalName);
+      new HTableDescriptor(TableName.valueOf(legalName));
     } catch (IllegalArgumentException e) {
       throw new IOException("Legal user table name: '" +
         Bytes.toString(legalName) + "' caused IllegalArgumentException: " +
@@ -1324,7 +1316,8 @@ public class TestAdmin {
   @Test
   public void testShouldCloseTheRegionBasedOnTheEncodedRegionName()
       throws Exception {
-    byte[] TABLENAME = Bytes.toBytes("TestHBACloseRegion");
+    TableName TABLENAME =
+        TableName.valueOf("TestHBACloseRegion");
     createTableWithDefaultConf(TABLENAME);
 
     HRegionInfo info = null;
@@ -1376,7 +1369,8 @@ public class TestAdmin {
 
   @Test
   public void testCloseRegionThatFetchesTheHRIFromMeta() throws Exception {
-    byte[] TABLENAME = Bytes.toBytes("TestHBACloseRegion2");
+    TableName TABLENAME =
+        TableName.valueOf("TestHBACloseRegion2");
     createTableWithDefaultConf(TABLENAME);
 
     HRegionInfo info = null;
@@ -1483,7 +1477,7 @@ public class TestAdmin {
     Configuration config = TEST_UTIL.getConfiguration();
     HBaseAdmin admin = new HBaseAdmin(config);
 
-    HTableDescriptor htd = new HTableDescriptor(TABLENAME);
+    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(TABLENAME));
     HColumnDescriptor hcd = new HColumnDescriptor("value");
 
     htd.addFamily(hcd);
@@ -1492,6 +1486,10 @@ public class TestAdmin {
   }
 
   private void createTableWithDefaultConf(byte[] TABLENAME) throws IOException {
+    createTableWithDefaultConf(TableName.valueOf(TABLENAME));
+  }
+
+  private void createTableWithDefaultConf(TableName TABLENAME) throws IOException {
     HTableDescriptor htd = new HTableDescriptor(TABLENAME);
     HColumnDescriptor hcd = new HColumnDescriptor("value");
     htd.addFamily(hcd);
@@ -1515,7 +1513,7 @@ public class TestAdmin {
     byte [] endKey =   { 9, 9, 9, 9, 9, 9, 9, 9, 9, 9 };
 
 
-    HTableDescriptor desc = new HTableDescriptor(tableName);
+    HTableDescriptor desc = new HTableDescriptor(TableName.valueOf(tableName));
     desc.addFamily(new HColumnDescriptor(HConstants.CATALOG_FAMILY));
     admin.createTable(desc, startKey, endKey, expectedRegions);
 
@@ -1622,10 +1620,10 @@ public class TestAdmin {
   throws IOException, InterruptedException {
     // When the META table can be opened, the region servers are running
     new HTable(
-      TEST_UTIL.getConfiguration(), HConstants.META_TABLE_NAME).close();
+      TEST_UTIL.getConfiguration(), TableName.META_TABLE_NAME).close();
 
     // Create the test table and open it
-    HTableDescriptor desc = new HTableDescriptor(tableName);
+    HTableDescriptor desc = new HTableDescriptor(TableName.valueOf(tableName));
     desc.addFamily(new HColumnDescriptor(HConstants.CATALOG_FAMILY));
     admin.createTable(desc);
     HTable table = new HTable(TEST_UTIL.getConfiguration(), tableName);
@@ -1698,13 +1696,13 @@ public class TestAdmin {
   @Test
   public void testDisableCatalogTable() throws Exception {
     try {
-      this.admin.disableTable(".META.");
-      fail("Expected to throw IllegalArgumentException");
-    } catch (IllegalArgumentException e) {
+      this.admin.disableTable(TableName.META_TABLE_NAME);
+      fail("Expected to throw ConstraintException");
+    } catch (ConstraintException e) {
     }
     // Before the fix for HBASE-6146, the below table creation was failing as the META table
     // actually getting disabled by the disableTable() call.
-    HTableDescriptor htd = new HTableDescriptor("testDisableCatalogTable".getBytes());
+    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf("testDisableCatalogTable".getBytes()));
     HColumnDescriptor hcd = new HColumnDescriptor("cf1".getBytes());
     htd.addFamily(hcd);
     TEST_UTIL.getHBaseAdmin().createTable(htd);

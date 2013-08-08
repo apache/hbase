@@ -152,7 +152,8 @@ public abstract class MultiTableInputFormatBase extends
                     stopRow) <= 0) && keys.getSecond()[i].length > 0 ? keys
                     .getSecond()[i] : stopRow;
             InputSplit split =
-                new TableSplit(tableName, scan, splitStart, splitStop, regionLocation);
+                new TableSplit(table.getName(),
+                    scan, splitStart, splitStop, regionLocation);
             splits.add(split);
             if (LOG.isDebugEnabled())
               LOG.debug("getSplits: split -> " + (count++) + " -> " + split);

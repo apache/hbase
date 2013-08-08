@@ -28,6 +28,7 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.IntegrationTestingUtility;
 import org.apache.hadoop.hbase.IntegrationTests;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
@@ -107,10 +108,8 @@ public class IntegrationTestMTTR {
   /**
    * Configurable table names.
    */
-  private static String tableName;
-  private static byte[] tableNameBytes;
-  private static String loadTableName;
-  private static byte[] loadTableNameBytes;
+  private static TableName tableName;
+  private static TableName loadTableName;
 
   /**
    * Util to get at the cluster.
@@ -164,13 +163,13 @@ public class IntegrationTestMTTR {
   private static void setupActions() throws IOException {
     // Set up the action that will restart a region server holding a region from our table
     // because this table should only have one region we should be good.
-    restartRSAction = new ChaosMonkey.RestartRsHoldingTable(SLEEP_TIME, tableName);
+    restartRSAction = new ChaosMonkey.RestartRsHoldingTable(SLEEP_TIME, tableName.getNameAsString());
 
     // Set up the action that will kill the region holding meta.
     restartMetaAction = new ChaosMonkey.RestartRsHoldingMeta(SLEEP_TIME);
 
     // Set up the action that will move the regions of our table.
-    moveRegionAction = new ChaosMonkey.MoveRegionsOfTable(SLEEP_TIME, tableName);
+    moveRegionAction = new ChaosMonkey.MoveRegionsOfTable(SLEEP_TIME, tableName.getNameAsString());
 
     // Kill the master
     restartMasterAction = new ChaosMonkey.RestartActiveMaster(1000);
@@ -185,24 +184,22 @@ public class IntegrationTestMTTR {
 
   private static void setupTables() throws IOException {
     // Get the table name.
-    tableName = util.getConfiguration()
-        .get("hbase.IntegrationTestMTTR.tableName", "IntegrationTestMTTR");
-    tableNameBytes = Bytes.toBytes(tableName);
+    tableName = TableName.valueOf(util.getConfiguration()
+        .get("hbase.IntegrationTestMTTR.tableName", "IntegrationTestMTTR"));
 
-    loadTableName = util.getConfiguration()
-        .get("hbase.IntegrationTestMTTR.loadTableName", "IntegrationTestMTTRLoadTestTool");
-    loadTableNameBytes = Bytes.toBytes(loadTableName);
+    loadTableName = TableName.valueOf(util.getConfiguration()
+        .get("hbase.IntegrationTestMTTR.loadTableName", "IntegrationTestMTTRLoadTestTool"));
 
-    if (util.getHBaseAdmin().tableExists(tableNameBytes)) {
-      util.deleteTable(tableNameBytes);
+    if (util.getHBaseAdmin().tableExists(tableName)) {
+      util.deleteTable(tableName);
     }
 
-    if (util.getHBaseAdmin().tableExists(loadTableNameBytes)) {
-      util.deleteTable(loadTableNameBytes);
+    if (util.getHBaseAdmin().tableExists(loadTableName)) {
+      util.deleteTable(loadTableName);
     }
 
     // Create the table.  If this fails then fail everything.
-    HTableDescriptor tableDescriptor = new HTableDescriptor(tableNameBytes);
+    HTableDescriptor tableDescriptor = new HTableDescriptor(tableName);
 
     // Make the max file size huge so that splits don't happen during the test.
     tableDescriptor.setMaxFileSize(Long.MAX_VALUE);
@@ -213,7 +210,7 @@ public class IntegrationTestMTTR {
     util.getHBaseAdmin().createTable(tableDescriptor);
 
     // Setup the table for LoadTestTool
-    int ret = loadTool.run(new String[]{"-tn", loadTableName, "-init_only"});
+    int ret = loadTool.run(new String[]{"-tn", loadTableName.getNameAsString(), "-init_only"});
     assertEquals("Failed to initialize LoadTestTool", 0, ret);
   }
 
@@ -400,7 +397,7 @@ public class IntegrationTestMTTR {
 
     public PutCallable(Future f) throws IOException {
       super(f);
-      this.table = new HTable(util.getConfiguration(), tableNameBytes);
+      this.table = new HTable(util.getConfiguration(), tableName);
     }
 
     @Override
@@ -427,7 +424,7 @@ public class IntegrationTestMTTR {
 
     public ScanCallable(Future f) throws IOException {
       super(f);
-      this.table = new HTable(util.getConfiguration(), tableNameBytes);
+      this.table = new HTable(util.getConfiguration(), tableName);
     }
 
     @Override
@@ -517,7 +514,7 @@ public class IntegrationTestMTTR {
       // But always go in just in case some action completes quickly
       do {
         int ret = loadTool.run(new String[]{
-            "-tn", loadTableName,
+            "-tn", loadTableName.getNameAsString(),
             "-write", String.format("%d:%d:%d", colsPerKey, recordSize, writeThreads),
             "-num_keys", String.valueOf(numKeys),
             "-skip_init"

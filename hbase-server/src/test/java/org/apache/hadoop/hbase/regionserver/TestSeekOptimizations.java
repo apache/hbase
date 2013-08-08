@@ -139,7 +139,7 @@ public class TestSeekOptimizations {
 
   @Test
   public void testMultipleTimestampRanges() throws IOException {
-    region = TEST_UTIL.createTestRegion(TestSeekOptimizations.class.getName(),
+    region = TEST_UTIL.createTestRegion("testMultipleTimestampRanges",
         new HColumnDescriptor(FAMILY)
             .setCompressionType(comprAlgo)
             .setBloomFilterType(bloomType)

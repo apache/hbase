@@ -34,13 +34,13 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.client.MetaScanner;
 import org.apache.hadoop.hbase.rest.model.TableInfoModel;
 import org.apache.hadoop.hbase.rest.model.TableRegionModel;
-import org.apache.hadoop.hbase.util.Bytes;
 
 @InterfaceAudience.Private
 public class RegionsResource extends ResourceBase {
@@ -74,15 +74,15 @@ public class RegionsResource extends ResourceBase {
     }
     servlet.getMetrics().incrementRequests(1);
     try {
-      String tableName = tableResource.getName();
-      TableInfoModel model = new TableInfoModel(tableName);
+      TableName tableName = TableName.valueOf(tableResource.getName());
+      TableInfoModel model = new TableInfoModel(tableName.getNameAsString());
       Map<HRegionInfo,ServerName> regions = MetaScanner.allTableRegions(
-        servlet.getConfiguration(), null, Bytes.toBytes(tableName), false);
+        servlet.getConfiguration(), null, tableName, false);
       for (Map.Entry<HRegionInfo,ServerName> e: regions.entrySet()) {
         HRegionInfo hri = e.getKey();
         ServerName addr = e.getValue();
         model.add(
-          new TableRegionModel(tableName, hri.getRegionId(),
+          new TableRegionModel(tableName.getNameAsString(), hri.getRegionId(),
             hri.getStartKey(), hri.getEndKey(), addr.getHostAndPort()));
       }
       ResponseBuilder response = Response.ok(model);

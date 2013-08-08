@@ -81,7 +81,7 @@ public class TestRegionRebalancing {
   public void before() throws Exception {
     UTIL.getConfiguration().set("hbase.master.loadbalancer.class", this.balancerName);
     UTIL.startMiniCluster(1);
-    this.desc = new HTableDescriptor("test");
+    this.desc = new HTableDescriptor(TableName.valueOf("test"));
     this.desc.addFamily(new HColumnDescriptor(FAMILY_NAME));
   }
 
@@ -97,7 +97,7 @@ public class TestRegionRebalancing {
     HBaseAdmin admin = new HBaseAdmin(UTIL.getConfiguration());
     admin.createTable(this.desc, Arrays.copyOfRange(HBaseTestingUtility.KEYS,
         1, HBaseTestingUtility.KEYS.length));
-    this.table = new HTable(UTIL.getConfiguration(), this.desc.getName());
+    this.table = new HTable(UTIL.getConfiguration(), this.desc.getTableName());
     CatalogTracker ct = new CatalogTracker(UTIL.getConfiguration());
     ct.start();
     try {

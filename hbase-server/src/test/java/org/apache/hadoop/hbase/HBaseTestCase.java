@@ -161,7 +161,7 @@ public abstract class HBaseTestCase extends TestCase {
   public HRegion createNewHRegion(HTableDescriptor desc, byte [] startKey,
       byte [] endKey, Configuration conf)
   throws IOException {
-    HRegionInfo hri = new HRegionInfo(desc.getName(), startKey, endKey);
+    HRegionInfo hri = new HRegionInfo(desc.getTableName(), startKey, endKey);
     return HRegion.createHRegion(hri, testDir, conf, desc);
   }
 
@@ -202,7 +202,7 @@ public abstract class HBaseTestCase extends TestCase {
    */
   protected HTableDescriptor createTableDescriptor(final String name,
       final int minVersions, final int versions, final int ttl, boolean keepDeleted) {
-    HTableDescriptor htd = new HTableDescriptor(name);
+    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(name));
     for (byte[] cfName : new byte[][]{ fam1, fam2, fam3 }) {
       htd.addFamily(new HColumnDescriptor(cfName)
           .setMinVersions(minVersions)

@@ -56,7 +56,7 @@ public class TestOpenRegionHandler {
 
   @BeforeClass public static void before() throws Exception {
     HTU.startMiniZKCluster();
-    TEST_HTD = new HTableDescriptor("TestOpenRegionHandler.java");
+    TEST_HTD = new HTableDescriptor(TableName.valueOf("TestOpenRegionHandler.java"));
   }
 
   @AfterClass public static void after() throws IOException {
@@ -71,7 +71,7 @@ public class TestOpenRegionHandler {
    */
   @Before
   public void setupHRI() {
-    TEST_HRI = new HRegionInfo(TEST_HTD.getName(),
+    TEST_HRI = new HRegionInfo(TEST_HTD.getTableName(),
       Bytes.toBytes(testIndex),
       Bytes.toBytes(testIndex + 1));
     testIndex++;

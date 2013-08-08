@@ -28,6 +28,7 @@ import java.util.SortedMap;
 import java.util.TreeMap;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.ServerName;
@@ -271,7 +272,7 @@ public class TestFavoredNodeAssignmentHelper {
     // create regions
     List<HRegionInfo> regions = new ArrayList<HRegionInfo>(regionCount);
     for (int i = 0; i < regionCount; i++) {
-      HRegionInfo region = new HRegionInfo(("foobar"+i).getBytes());
+      HRegionInfo region = new HRegionInfo(TableName.valueOf("foobar" + i));
       regions.add(region);
     }
     // place the regions
@@ -299,7 +300,7 @@ public class TestFavoredNodeAssignmentHelper {
     // create some regions
     List<HRegionInfo> regions = new ArrayList<HRegionInfo>(regionCount);
     for (int i = 0; i < regionCount; i++) {
-      HRegionInfo region = new HRegionInfo(("foobar" + i).getBytes());
+      HRegionInfo region = new HRegionInfo(TableName.valueOf("foobar" + i));
       regions.add(region);
     }
     // place those regions in primary RSs

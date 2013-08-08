@@ -115,13 +115,13 @@ public class DisabledTableSnapshotHandler extends TakeSnapshotHandler {
         new CopyRecoveredEditsTask(snapshot, monitor, fs, regionDir, snapshotRegionDir).call();
         monitor.rethrowException();
         status.setStatus("Completed copying recovered edits for offline snapshot of table: "
-            + snapshot.getTable());
+            + snapshotTable);
 
         // 2.3 reference all the files in the region
         new ReferenceRegionHFilesTask(snapshot, monitor, regionDir, fs, snapshotRegionDir).call();
         monitor.rethrowException();
         status.setStatus("Completed referencing HFiles for offline snapshot of table: " +
-          snapshot.getTable());
+            snapshotTable);
       }
 
       // 3. write the table info to disk
@@ -131,14 +131,16 @@ public class DisabledTableSnapshotHandler extends TakeSnapshotHandler {
           FSUtils.getRootDir(conf));
       tableInfoCopyTask.call();
       monitor.rethrowException();
-      status.setStatus("Finished copying tableinfo for snapshot of table: " + snapshot.getTable());
+      status.setStatus("Finished copying tableinfo for snapshot of table: " +
+          snapshotTable);
     } catch (Exception e) {
       // make sure we capture the exception to propagate back to the client later
       String reason = "Failed snapshot " + ClientSnapshotDescriptionUtils.toString(snapshot)
           + " due to exception:" + e.getMessage();
       ForeignException ee = new ForeignException(reason, e);
       monitor.receive(ee);
-      status.abort("Snapshot of table: "+ snapshot.getTable() +" failed because " + e.getMessage());
+      status.abort("Snapshot of table: "+ snapshotTable +
+          " failed because " + e.getMessage());
     } finally {
       LOG.debug("Marking snapshot" + ClientSnapshotDescriptionUtils.toString(snapshot)
           + " as finished.");

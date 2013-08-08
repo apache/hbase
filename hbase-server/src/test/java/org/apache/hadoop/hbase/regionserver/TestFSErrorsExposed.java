@@ -180,7 +180,7 @@ public class TestFSErrorsExposed {
       byte[] fam = Bytes.toBytes("fam");
 
       HBaseAdmin admin = new HBaseAdmin(util.getConfiguration());
-      HTableDescriptor desc = new HTableDescriptor(tableName);
+      HTableDescriptor desc = new HTableDescriptor(TableName.valueOf(tableName));
       desc.addFamily(new HColumnDescriptor(fam)
           .setMaxVersions(1)
           .setBlockCacheEnabled(false)

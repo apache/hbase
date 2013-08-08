@@ -29,6 +29,7 @@ import java.util.TreeMap;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
@@ -65,7 +66,8 @@ import static org.junit.Assert.fail;
 public class TestCoprocessorEndpoint {
   private static final Log LOG = LogFactory.getLog(TestCoprocessorEndpoint.class);
 
-  private static final byte[] TEST_TABLE = Bytes.toBytes("TestTable");
+  private static final TableName TEST_TABLE =
+      TableName.valueOf("TestTable");
   private static final byte[] TEST_FAMILY = Bytes.toBytes("TestFamily");
   private static final byte[] TEST_QUALIFIER = Bytes.toBytes("TestQualifier");
   private static byte[] ROW = Bytes.toBytes("testRow");

@@ -38,6 +38,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Chore;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -72,7 +73,8 @@ public class TestTableLockManager {
   private static final Log LOG =
     LogFactory.getLog(TestTableLockManager.class);
 
-  private static final byte[] TABLE_NAME = Bytes.toBytes("TestTableLevelLocks");
+  private static final TableName TABLE_NAME =
+      TableName.valueOf("TestTableLevelLocks");
 
   private static final byte[] FAMILY = Bytes.toBytes("f1");
 
@@ -133,18 +135,18 @@ public class TestTableLockManager {
   public static class TestLockTimeoutExceptionMasterObserver extends BaseMasterObserver {
     @Override
     public void preDeleteColumnHandler(ObserverContext<MasterCoprocessorEnvironment> ctx,
-        byte[] tableName, byte[] c) throws IOException {
+        TableName tableName, byte[] c) throws IOException {
       deleteColumn.countDown();
     }
     @Override
     public void postDeleteColumnHandler(ObserverContext<MasterCoprocessorEnvironment> ctx,
-        byte[] tableName, byte[] c) throws IOException {
+        TableName tableName, byte[] c) throws IOException {
       Threads.sleep(10000);
     }
 
     @Override
     public void preAddColumnHandler(ObserverContext<MasterCoprocessorEnvironment> ctx,
-        byte[] tableName, HColumnDescriptor column) throws IOException {
+        TableName tableName, HColumnDescriptor column) throws IOException {
       fail("Add column should have timeouted out for acquiring the table lock");
     }
   }
@@ -198,14 +200,14 @@ public class TestTableLockManager {
   public static class TestAlterAndDisableMasterObserver extends BaseMasterObserver {
     @Override
     public void preAddColumnHandler(ObserverContext<MasterCoprocessorEnvironment> ctx,
-        byte[] tableName, HColumnDescriptor column) throws IOException {
+        TableName tableName, HColumnDescriptor column) throws IOException {
       LOG.debug("addColumn called");
       addColumn.countDown();
     }
 
     @Override
     public void postAddColumnHandler(ObserverContext<MasterCoprocessorEnvironment> ctx,
-        byte[] tableName, HColumnDescriptor column) throws IOException {
+        TableName tableName, HColumnDescriptor column) throws IOException {
       Threads.sleep(6000);
       try {
         ctx.getEnvironment().getMasterServices().checkTableModifiable(tableName);
@@ -219,7 +221,7 @@ public class TestTableLockManager {
 
     @Override
     public void preDisableTable(ObserverContext<MasterCoprocessorEnvironment> ctx,
-        byte[] tableName) throws IOException {
+                                TableName tableName) throws IOException {
       try {
         LOG.debug("Waiting for addColumn to be processed first");
         //wait for addColumn to be processed first
@@ -232,7 +234,7 @@ public class TestTableLockManager {
 
     @Override
     public void postDisableTableHandler(ObserverContext<MasterCoprocessorEnvironment> ctx,
-        byte[] tableName) throws IOException {
+                                        TableName tableName) throws IOException {
       Threads.sleep(3000);
     }
   }
@@ -247,7 +249,7 @@ public class TestTableLockManager {
 
     //ensure that znode for the table node has been deleted
     final ZooKeeperWatcher zkWatcher = TEST_UTIL.getZooKeeperWatcher();
-    final String znode = ZKUtil.joinZNode(zkWatcher.tableLockZNode, Bytes.toString(TABLE_NAME));
+    final String znode = ZKUtil.joinZNode(zkWatcher.tableLockZNode, TABLE_NAME.getNameAsString());
     
     TEST_UTIL.waitFor(5000, new Waiter.Predicate<Exception>() {
       @Override
@@ -257,7 +259,7 @@ public class TestTableLockManager {
       }
     });
     int ver = ZKUtil.checkExists(zkWatcher,
-      ZKUtil.joinZNode(zkWatcher.tableLockZNode, Bytes.toString(TABLE_NAME)));
+      ZKUtil.joinZNode(zkWatcher.tableLockZNode, TABLE_NAME.getNameAsString()));
     assertTrue("Unexpected znode version " + ver, ver < 0);
 
   }
@@ -285,7 +287,8 @@ public class TestTableLockManager {
           @Override
           public Void call() throws Exception {
             writeLocksAttempted.countDown();
-            lockManager.writeLock(Bytes.toBytes(table), "testReapAllTableLocks").acquire();
+            lockManager.writeLock(TableName.valueOf(table),
+                "testReapAllTableLocks").acquire();
             writeLocksObtained.countDown();
             return null;
           }
@@ -304,7 +307,9 @@ public class TestTableLockManager {
           TEST_UTIL.getConfiguration(), TEST_UTIL.getZooKeeperWatcher(), serverName);
 
     //should not throw table lock timeout exception
-    zeroTimeoutLockManager.writeLock(Bytes.toBytes(tables[tables.length -1]), "zero timeout")
+    zeroTimeoutLockManager.writeLock(
+        TableName.valueOf(tables[tables.length - 1]),
+        "zero timeout")
       .acquire();
 
     executor.shutdownNow();
@@ -321,7 +326,7 @@ public class TestTableLockManager {
     LoadTestTool loadTool = new LoadTestTool();
     loadTool.setConf(TEST_UTIL.getConfiguration());
     int numKeys = 10000;
-    final byte[] tableName = Bytes.toBytes("testTableReadLock");
+    final TableName tableName = TableName.valueOf("testTableReadLock");
     final HBaseAdmin admin = TEST_UTIL.getHBaseAdmin();
     final HTableDescriptor desc = new HTableDescriptor(tableName);
     final byte[] family = Bytes.toBytes("test_cf");
@@ -329,7 +334,7 @@ public class TestTableLockManager {
     admin.createTable(desc); // create with one region
 
     // write some data, not much
-    int ret = loadTool.run(new String[] { "-tn", Bytes.toString(tableName), "-write",
+    int ret = loadTool.run(new String[] { "-tn", tableName.getNameAsString(), "-write",
         String.format("%d:%d:%d", 1, 10, 10), "-num_keys", String.valueOf(numKeys), "-skip_init" });
     if (0 != ret) {
       String errorMsg = "Load failed with error code " + ret;
@@ -406,7 +411,7 @@ public class TestTableLockManager {
     assertTrue(newFamilyValues > familyValues); // at least one alter went
                                                 // through
 
-    ret = loadTool.run(new String[] { "-tn", Bytes.toString(tableName), "-read", "100:10",
+    ret = loadTool.run(new String[] { "-tn", tableName.getNameAsString(), "-read", "100:10",
         "-num_keys", String.valueOf(numKeys), "-skip_init" });
     if (0 != ret) {
       String errorMsg = "Verify failed with error code " + ret;

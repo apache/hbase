@@ -119,7 +119,7 @@ public class TestLogRollAbort {
 
     // When the META table can be opened, the region servers are running
     new HTable(TEST_UTIL.getConfiguration(),
-      HConstants.META_TABLE_NAME).close();
+      TableName.META_TABLE_NAME).close();
 
     // Create the test table and open it
     String tableName = this.getClass().getSimpleName();

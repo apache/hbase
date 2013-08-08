@@ -27,6 +27,7 @@ import java.util.Map;
 import java.util.Set;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -53,7 +54,7 @@ import org.junit.runners.Parameterized.Parameters;
 @Category(SmallTests.class)
 public class TestScannerSelectionUsingKeyRange {
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
-  private static String TABLE = "myTable";
+  private static TableName TABLE = TableName.valueOf("myTable");
   private static String FAMILY = "myCF";
   private static byte[] FAMILY_BYTES = Bytes.toBytes(FAMILY);
   private static final int NUM_ROWS = 8;
@@ -96,7 +97,7 @@ public class TestScannerSelectionUsingKeyRange {
         .setBloomFilterType(bloomType);
     HTableDescriptor htd = new HTableDescriptor(TABLE);
     htd.addFamily(hcd);
-    HRegionInfo info = new HRegionInfo(Bytes.toBytes(TABLE));
+    HRegionInfo info = new HRegionInfo(TABLE);
     HRegion region = HRegion.createHRegion(info, TEST_UTIL.getDataTestDir(), conf, htd);
 
     for (int iFile = 0; iFile < NUM_FILES; ++iFile) {

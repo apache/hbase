@@ -31,19 +31,19 @@ import org.apache.hadoop.classification.InterfaceStability;
 @InterfaceStability.Evolving
 public interface TableDescriptors {
   /**
-   * @param tablename
+   * @param tableName
    * @return HTableDescriptor for tablename
    * @throws IOException
    */
-  HTableDescriptor get(final String tablename)
+  HTableDescriptor get(final TableName tableName)
   throws IOException;
 
   /**
-   * @param tablename
-   * @return HTableDescriptor for tablename
+   * Get Map of all NamespaceDescriptors for a given namespace.
+   * @return Map of all descriptors.
    * @throws IOException
    */
-  HTableDescriptor get(final byte[] tablename)
+  Map<String, HTableDescriptor> getByNamespace(String name)
   throws IOException;
 
   /**
@@ -68,6 +68,6 @@ public interface TableDescriptors {
    * @return Instance of table descriptor or null if none found.
    * @throws IOException
    */
-  HTableDescriptor remove(final String tablename)
+  HTableDescriptor remove(final TableName tablename)
   throws IOException;
 }
