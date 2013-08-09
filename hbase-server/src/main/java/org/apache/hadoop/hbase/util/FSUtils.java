@@ -30,6 +30,7 @@ import java.net.InetSocketAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -51,19 +52,20 @@ import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hbase.ClusterId;
-import org.apache.hadoop.hbase.exceptions.DeserializationException;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HDFSBlocksDistribution;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
+import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.FSProtos;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
+import org.apache.hadoop.hdfs.protocol.FSConstants;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.security.AccessControlException;
@@ -1177,29 +1179,61 @@ public abstract class FSUtils {
   }
 
   /**
-   * A {@link PathFilter} that returns directories.
+   * Directory filter that doesn't include any of the directories in the specified blacklist
    */
-  public static class DirFilter implements PathFilter {
+  public static class BlackListDirFilter implements PathFilter {
     private final FileSystem fs;
+    private List<String> blacklist;
 
-    public DirFilter(final FileSystem fs) {
+    /**
+     * Create a filter on the give filesystem with the specified blacklist
+     * @param fs filesystem to filter
+     * @param directoryNameBlackList list of the names of the directories to filter. If
+     *          <tt>null</tt>, all directories are returned
+     */
+    @SuppressWarnings("unchecked")
+    public BlackListDirFilter(final FileSystem fs, final List<String> directoryNameBlackList) {
       this.fs = fs;
+      blacklist =
+        (List<String>) (directoryNameBlackList == null ? Collections.emptyList()
+          : directoryNameBlackList);
     }
 
     @Override
     public boolean accept(Path p) {
       boolean isValid = false;
       try {
-        if (HConstants.HBASE_NON_USER_TABLE_DIRS.contains(p.toString())) {
+        if (blacklist.contains(p.getName().toString())) {
           isValid = false;
         } else {
           isValid = fs.getFileStatus(p).isDir();
         }
       } catch (IOException e) {
-        LOG.warn("An error occurred while verifying if [" + p.toString() +
-                 "] is a valid directory. Returning 'not valid' and continuing.", e);
+        LOG.warn("An error occurred while verifying if [" + p.toString()
+            + "] is a valid directory. Returning 'not valid' and continuing.", e);
       }
       return isValid;
+    }
+  }
+
+  /**
+   * A {@link PathFilter} that only allows directories.
+   */
+  public static class DirFilter extends BlackListDirFilter {
+
+    public DirFilter(FileSystem fs) {
+      super(fs, null);
+    }
+  }
+
+  /**
+   * A {@link PathFilter} that returns usertable directories. To get all directories use the
+   * {@link BlackListDirFilter} with a <tt>null</tt> blacklist
+   */
+  public static class UserTableDirFilter extends BlackListDirFilter {
+
+    public UserTableDirFilter(FileSystem fs) {
+      super(fs, HConstants.HBASE_NON_TABLE_DIRS);
     }
   }
 
@@ -1280,14 +1314,10 @@ public abstract class FSUtils {
   public static List<Path> getLocalTableDirs(final FileSystem fs, final Path rootdir)
       throws IOException {
     // presumes any directory under hbase.rootdir is a table
-    FileStatus [] dirs = fs.listStatus(rootdir, new DirFilter(fs));
+    FileStatus[] dirs = fs.listStatus(rootdir, new UserTableDirFilter(fs));
     List<Path> tabledirs = new ArrayList<Path>(dirs.length);
     for (FileStatus dir: dirs) {
-      Path p = dir.getPath();
-      String tableName = p.getName();
-      if (!HConstants.HBASE_NON_USER_TABLE_DIRS.contains(tableName)) {
-        tabledirs.add(p);
-      }
+      tabledirs.add(dir.getPath());
     }
     return tabledirs;
   }
@@ -1429,6 +1459,57 @@ public abstract class FSUtils {
     return getRootDir(conf).getFileSystem(conf);
   }
 
+
+  /**
+   * Runs through the HBase rootdir/tablename and creates a reverse lookup map for
+   * table StoreFile names to the full Path.
+   * <br>
+   * Example...<br>
+   * Key = 3944417774205889744  <br>
+   * Value = hdfs://localhost:51169/user/userid/-ROOT-/70236052/info/3944417774205889744
+   *
+   * @param map map to add values.  If null, this method will create and populate one to return
+   * @param fs  The file system to use.
+   * @param hbaseRootDir  The root directory to scan.
+   * @param tableName name of the table to scan.
+   * @return Map keyed by StoreFile name with a value of the full Path.
+   * @throws IOException When scanning the directory fails.
+   */
+  public static Map<String, Path> getTableStoreFilePathMap(Map<String, Path> map,
+  final FileSystem fs, final Path hbaseRootDir, TableName tableName)
+  throws IOException {
+    if (map == null) {
+      map = new HashMap<String, Path>();
+    }
+
+    // only include the directory paths to tables
+    Path tableDir = FSUtils.getTableDir(hbaseRootDir, tableName);
+    // Inside a table, there are compaction.dir directories to skip.  Otherwise, all else
+    // should be regions.
+    PathFilter df = new BlackListDirFilter(fs, HConstants.HBASE_NON_TABLE_DIRS);
+    FileStatus[] regionDirs = fs.listStatus(tableDir);
+    for (FileStatus regionDir : regionDirs) {
+      Path dd = regionDir.getPath();
+      if (dd.getName().equals(HConstants.HREGION_COMPACTIONDIR_NAME)) {
+        continue;
+      }
+      // else its a region name, now look in region for families
+      FileStatus[] familyDirs = fs.listStatus(dd, df);
+      for (FileStatus familyDir : familyDirs) {
+        Path family = familyDir.getPath();
+        // now in family, iterate over the StoreFiles and
+        // put in map
+        FileStatus[] familyStatus = fs.listStatus(family);
+        for (FileStatus sfStatus : familyStatus) {
+          Path sf = sfStatus.getPath();
+          map.put( sf.getName(), sf);
+        }
+      }
+    }
+    return map;
+  }
+
+
   /**
    * Runs through the HBase rootdir and creates a reverse lookup map for
    * table StoreFile names to the full Path.
@@ -1450,39 +1531,12 @@ public abstract class FSUtils {
     // if this method looks similar to 'getTableFragmentation' that is because
     // it was borrowed from it.
 
-    DirFilter df = new DirFilter(fs);
-    // presumes any directory under hbase.rootdir is a table
-    FileStatus [] tableDirs = fs.listStatus(hbaseRootDir, df);
-    for (FileStatus tableDir : tableDirs) {
-      // Skip the .log and other non-table directories.  All others should be tables.
-      // Inside a table, there are compaction.dir directories to skip.  Otherwise, all else
-      // should be regions.
-      Path d = tableDir.getPath();
-      if (HConstants.HBASE_NON_TABLE_DIRS.contains(d.getName())) {
-        continue;
-      }
-      FileStatus[] regionDirs = fs.listStatus(d, df);
-      for (FileStatus regionDir : regionDirs) {
-        Path dd = regionDir.getPath();
-        if (dd.getName().equals(HConstants.HREGION_COMPACTIONDIR_NAME)) {
-          continue;
-        }
-        // else its a region name, now look in region for families
-        FileStatus[] familyDirs = fs.listStatus(dd, df);
-        for (FileStatus familyDir : familyDirs) {
-          Path family = familyDir.getPath();
-          // now in family, iterate over the StoreFiles and
-          // put in map
-          FileStatus[] familyStatus = fs.listStatus(family);
-          for (FileStatus sfStatus : familyStatus) {
-            Path sf = sfStatus.getPath();
-            map.put( sf.getName(), sf);
-          }
-
-        }
-      }
+    // only include the directory paths to tables
+    for (Path tableDir : FSUtils.getTableDirs(fs, hbaseRootDir)) {
+      getTableStoreFilePathMap(map, fs, hbaseRootDir,
+          FSUtils.getTableName(tableDir));
     }
-      return map;
+    return map;
   }
 
   /**
