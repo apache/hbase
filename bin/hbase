@@ -172,9 +172,9 @@ for f in $HBASE_HOME/lib/*.jar; do
   CLASSPATH=${CLASSPATH}:$f;
 done
 
-# Add user-specified CLASSPATH last
+# Add user-specified CLASSPATH first
 if [ "$HBASE_CLASSPATH" != "" ]; then
-  CLASSPATH=${CLASSPATH}:${HBASE_CLASSPATH}
+  CLASSPATH=${HBASE_CLASSPATH}:${CLASSPATH}
 fi
 
 # default log directory & file
