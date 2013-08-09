@@ -26,8 +26,10 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Queue;
+import java.util.Random;
 
 import org.apache.commons.cli.CommandLine;
+import org.apache.commons.lang.RandomStringUtils;
 import org.apache.commons.lang.math.RandomUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -36,7 +38,9 @@ import org.apache.hadoop.hbase.ClusterStatus;
 import org.apache.hadoop.hbase.HBaseCluster;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.IntegrationTestDataIngestWithChaosMonkey;
 import org.apache.hadoop.hbase.IntegrationTestingUtility;
 import org.apache.hadoop.hbase.ServerLoad;
@@ -44,6 +48,7 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.ToolRunner;
 
@@ -758,6 +763,138 @@ public class ChaosMonkey extends AbstractHBaseTool implements Stoppable {
     public void perform() throws Exception {
       LOG.info("Balancing regions");
       forceBalancer();
+    }
+  }
+
+  public static class AddColumnAction extends ChaosMonkey.Action {
+
+    private byte[] tableName;
+    private HBaseAdmin admin;
+
+    public AddColumnAction(String tableName) {
+      this.tableName = Bytes.toBytes(tableName);
+    }
+
+    @Override
+    public void perform() throws Exception {
+      HTableDescriptor tableDescriptor = admin.getTableDescriptor(tableName);
+      HColumnDescriptor columnDescriptor = null;
+
+      while(columnDescriptor == null ||
+          tableDescriptor.getFamily(columnDescriptor.getName()) != null) {
+        columnDescriptor = new HColumnDescriptor(RandomStringUtils.randomAlphabetic(5));
+      }
+
+      tableDescriptor.addFamily(columnDescriptor);
+      admin.modifyTable(tableName, tableDescriptor);
+    }
+  }
+
+  public static class RemoveColumnAction extends ChaosMonkey.Action {
+    private byte[] tableName;
+    private HBaseAdmin admin;
+    private Random random;
+
+    public RemoveColumnAction(String tableName) {
+      this.tableName = Bytes.toBytes(tableName);
+      random = new Random();
+    }
+
+    @Override
+    public void init(ActionContext context) throws IOException {
+      super.init(context);
+      this.admin = context.getHaseIntegrationTestingUtility().getHBaseAdmin();
+    }
+
+    @Override
+    public void perform() throws Exception {
+      HTableDescriptor tableDescriptor = admin.getTableDescriptor(tableName);
+      HColumnDescriptor[] columnDescriptors = tableDescriptor.getColumnFamilies();
+
+      if (columnDescriptors.length <= 1) {
+        return;
+      }
+
+      int index = random.nextInt(columnDescriptors.length);
+      while(columnDescriptors[index].getNameAsString().equals(
+          Bytes.toString(LoadTestTool.COLUMN_FAMILY))) {
+        index = random.nextInt(columnDescriptors.length);
+      }
+
+      tableDescriptor.removeFamily(columnDescriptors[index].getName());
+
+      admin.modifyTable(tableName, tableDescriptor);
+    }
+  }
+
+  public static class ChangeVersionsAction extends ChaosMonkey.Action {
+    private byte[] tableName;
+    private HBaseAdmin admin;
+    private Random random;
+
+    public ChangeVersionsAction(String tableName) {
+      this.tableName = Bytes.toBytes(tableName);
+      random = new Random();
+    }
+
+    @Override
+    public void init(ActionContext context) throws IOException {
+      super.init(context);
+      this.admin = context.getHaseIntegrationTestingUtility().getHBaseAdmin();
+    }
+
+    @Override
+    public void perform() throws Exception {
+      HTableDescriptor tableDescriptor = admin.getTableDescriptor(tableName);
+      HColumnDescriptor[] columnDescriptors = tableDescriptor.getColumnFamilies();
+
+      if ( columnDescriptors == null || columnDescriptors.length == 0) {
+        return;
+      }
+
+      int versions =  random.nextInt(3) + 1;
+      for(HColumnDescriptor descriptor:columnDescriptors) {
+        descriptor.setMaxVersions(versions);
+        descriptor.setMinVersions(versions);
+      }
+
+      admin.modifyTable(tableName, tableDescriptor);
+    }
+  }
+
+  public static class ChangeEncodingAction extends ChaosMonkey.Action {
+    private byte[] tableName;
+    private HBaseAdmin admin;
+    private Random random;
+
+    public ChangeEncodingAction(String tableName) {
+      this.tableName = Bytes.toBytes(tableName);
+      random = new Random();
+    }
+
+    @Override
+    public void init(ActionContext context) throws IOException {
+      super.init(context);
+      this.admin = context.getHaseIntegrationTestingUtility().getHBaseAdmin();
+    }
+
+    @Override
+    public void perform() throws Exception {
+      HTableDescriptor tableDescriptor = admin.getTableDescriptor(tableName);
+      HColumnDescriptor[] columnDescriptors = tableDescriptor.getColumnFamilies();
+
+      if (columnDescriptors == null || columnDescriptors.length == 0) {
+        return;
+      }
+
+      // possible DataBlockEncoding id's
+      int[] possibleIds = {0, 2, 3, 4, 6};
+      for (HColumnDescriptor descriptor : columnDescriptors) {
+        short id = (short) possibleIds[random.nextInt(possibleIds.length)];
+        descriptor.setDataBlockEncoding(DataBlockEncoding.getEncodingById(id));
+      }
+
+      admin.modifyTable(tableName, tableDescriptor);
     }
   }
 

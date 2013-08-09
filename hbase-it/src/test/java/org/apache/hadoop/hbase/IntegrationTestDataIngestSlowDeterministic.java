@@ -76,7 +76,11 @@ public class IntegrationTestDataIngestSlowDeterministic extends IngestIntegratio
     Action[] actions2 = new Action[] {
       new SplitRandomRegionOfTable(tableName),
       new MergeRandomAdjacentRegionsOfTable(tableName),
-      new SnapshotTable(tableName)
+      new SnapshotTable(tableName),
+      new ChaosMonkey.AddColumnAction(tableName),
+      new ChaosMonkey.RemoveColumnAction(tableName),
+      new ChaosMonkey.ChangeEncodingAction(tableName),
+      new ChaosMonkey.ChangeVersionsAction(tableName)
     };
 
     // Destructive actions to mess things around.
