@@ -4694,7 +4694,7 @@ public class HRegion implements HeapSize { // , Writable{
           long now = EnvironmentEdgeManager.currentTimeMillis();
           // Process each family
           for (Map.Entry<byte[], List<? extends Cell>> family : append.getFamilyCellMap().entrySet()) {
-  
+
             Store store = stores.get(family.getKey());
             List<KeyValue> kvs = new ArrayList<KeyValue>(family.getValue().size());
 
@@ -4869,7 +4869,7 @@ public class HRegion implements HeapSize { // , Writable{
           // Process each family
           for (Map.Entry<byte [], List<? extends Cell>> family:
               increment.getFamilyCellMap().entrySet()) {
-  
+
             Store store = stores.get(family.getKey());
             List<KeyValue> kvs = new ArrayList<KeyValue>(family.getValue().size());
 
@@ -5517,8 +5517,7 @@ public class HRegion implements HeapSize { // , Writable{
     final Configuration c = HBaseConfiguration.create();
     final FileSystem fs = FileSystem.get(c);
     final Path logdir = new Path(c.get("hbase.tmp.dir"));
-    final String logname = "hlog" + FSUtils.getTableName(tableDir)
-      + EnvironmentEdgeManager.currentTimeMillis();
+    final String logname = "hlog" + FSUtils.getTableName(tableDir) + System.currentTimeMillis();
 
     final HLog log = HLogFactory.createHLog(fs, logdir, logname, c);
     try {
