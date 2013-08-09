@@ -111,6 +111,7 @@ public class NamespaceUpgrade implements Tool {
 
     //migrate tables including archive and tmp
     for(Path baseDir: baseDirs) {
+      if (!fs.exists(baseDir)) continue;
       List<Path> oldTableDirs = FSUtils.getLocalTableDirs(fs, baseDir);
       for(Path oldTableDir: oldTableDirs) {
         if (!sysTables.contains(oldTableDir.getName())) {
