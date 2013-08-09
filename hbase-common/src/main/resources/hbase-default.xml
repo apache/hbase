@@ -829,11 +829,8 @@ possible configurations would overwhelm and obscure the important.
   </property>
   <property>
     <name>hbase.online.schema.update.enable</name>
-    <value>false</value>
-    <description>Set true to enable online schema changes.  This is an experimental feature.
-    There are known issues modifying table schemas at the same time a region
-    split is happening so your table needs to be quiescent or else you have to
-    be running with splits disabled.</description>
+    <value>true</value>
+    <description>Set true to enable online schema changes.</description>
   </property>
   <property>
     <name>hbase.table.lock.enable</name>
