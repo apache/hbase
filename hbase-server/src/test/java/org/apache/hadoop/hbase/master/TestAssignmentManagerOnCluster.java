@@ -31,7 +31,6 @@ import java.util.Set;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
@@ -40,6 +39,7 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.ServerLoad;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.catalog.MetaEditor;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
@@ -54,6 +54,7 @@ import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.zookeeper.ZKAssign;
+import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -483,10 +484,18 @@ public class TestAssignmentManagerOnCluster {
         }
       }
       am.regionOffline(hri);
-      ZKAssign.createNodeOffline(TEST_UTIL.getHBaseCluster().getMaster().getZooKeeper(), hri,
-        destServerName);
-      ZKAssign.transitionNodeOpening(TEST_UTIL.getHBaseCluster().getMaster().getZooKeeper(), hri,
-        destServerName);
+      ZooKeeperWatcher zkw = TEST_UTIL.getHBaseCluster().getMaster().getZooKeeper();
+      ZKAssign.createNodeOffline(zkw, hri, destServerName);
+      ZKAssign.transitionNodeOpening(zkw, hri, destServerName);
+
+      // Wait till the event is processed and the region is in transition
+      long timeoutTime = System.currentTimeMillis() + 20000;
+      while (!am.getRegionStates().isRegionInTransition(hri)) {
+        assertTrue("Failed to process ZK opening event in time",
+          System.currentTimeMillis() < timeoutTime);
+        Thread.sleep(100);
+      }
+
       am.getZKTable().setDisablingTable(table);
       List<HRegionInfo> toAssignRegions = am.processServerShutdown(destServerName);
       assertTrue("Regions to be assigned should be empty.", toAssignRegions.isEmpty());
