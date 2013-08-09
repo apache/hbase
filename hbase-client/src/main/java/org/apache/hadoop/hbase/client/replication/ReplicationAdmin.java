@@ -30,10 +30,16 @@ import org.apache.hadoop.hbase.replication.ReplicationPeers;
 import org.apache.hadoop.hbase.replication.ReplicationQueuesClient;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.zookeeper.KeeperException;
+import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.HColumnDescriptor;
 
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.Map;
+import java.util.List;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.lang.Integer;
 
 /**
  * <p>
@@ -60,6 +66,15 @@ import java.util.Map;
  */
 public class ReplicationAdmin implements Closeable {
   private static final Log LOG = LogFactory.getLog(ReplicationAdmin.class);
+
+  public static final String TNAME = "tableName";
+  public static final String CFNAME = "columnFamlyName";
+
+  // only Global for now, can add other type
+  // such as, 1) no global replication, or 2) the table is replicated to this cluster, etc.
+  public static final String REPLICATIONTYPE = "replicationType";
+  public static final String REPLICATIONGLOBAL = Integer
+      .toString(HConstants.REPLICATION_SCOPE_GLOBAL);
 
   private final HConnection connection;
   private final ReplicationQueuesClient replicationQueuesClient;
@@ -166,4 +181,38 @@ public class ReplicationAdmin implements Closeable {
       this.connection.close();
     }
   }
+
+  
+  /**
+   * Find all column families that are replicated from this cluster
+   * @return the full list of the replicated column families of this cluster as:
+   *        tableName, family name, replicationType
+   *
+   * Currently replicationType is Global. In the future, more replication
+   * types may be extended here. For example
+   *  1) the replication may only apply to selected peers instead of all peers
+   *  2) the replicationType may indicate the host Cluster servers as Slave
+   *     for the table:columnFam.         
+   */
+  public List<HashMap<String, String>> listReplicated() throws IOException {
+    List<HashMap<String, String>> replicationColFams = new ArrayList<HashMap<String, String>>();
+    HTableDescriptor[] tables = this.connection.listTables();
+
+    for (HTableDescriptor table : tables) {
+      HColumnDescriptor[] columns = table.getColumnFamilies();
+      String tableName = table.getNameAsString();
+      for (HColumnDescriptor column : columns) {
+        if (column.getScope() != HConstants.REPLICATION_SCOPE_LOCAL) {
+          // At this moment, the columfam is replicated to all peers
+          HashMap<String, String> replicationEntry = new HashMap<String, String>();
+          replicationEntry.put(TNAME, tableName);
+          replicationEntry.put(CFNAME, column.getNameAsString());
+          replicationEntry.put(REPLICATIONTYPE, REPLICATIONGLOBAL);
+          replicationColFams.add(replicationEntry);
+        }
+      }
+    }
+
+    return replicationColFams;
+  } 
 }
