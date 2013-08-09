@@ -31,6 +31,7 @@ import org.apache.hadoop.hbase.codec.Codec;
 import org.apache.hadoop.hbase.codec.KeyValueCodec;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ReflectionUtils;
+import org.apache.hadoop.io.IOUtils;
 
 import com.google.common.base.Preconditions;
 import com.google.protobuf.ByteString;
@@ -219,7 +220,7 @@ public class WALCellCodec implements Codec {
       pos += elemLen;
 
       // the rest
-      in.read(backingArray, pos, length - pos);
+      IOUtils.readFully(in, backingArray, pos, length - pos);
       return new KeyValue(backingArray);
     }
 
@@ -229,7 +230,7 @@ public class WALCellCodec implements Codec {
         // status byte indicating that data to be read is not in dictionary.
         // if this isn't in the dictionary, we need to add to the dictionary.
         int length = StreamUtils.readRawVarint32(in);
-        in.read(to, offset, length);
+        IOUtils.readFully(in, to, offset, length);
         dict.addEntry(to, offset, length);
         return length;
       } else {
