@@ -20,17 +20,7 @@ package org.apache.hadoop.hbase;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.util.ChaosMonkey;
-import org.apache.hadoop.hbase.util.ChaosMonkey.Action;
-import org.apache.hadoop.hbase.util.ChaosMonkey.CompactRandomRegionOfTable;
-import org.apache.hadoop.hbase.util.ChaosMonkey.CompactTable;
-import org.apache.hadoop.hbase.util.ChaosMonkey.FlushRandomRegionOfTable;
-import org.apache.hadoop.hbase.util.ChaosMonkey.FlushTable;
-import org.apache.hadoop.hbase.util.ChaosMonkey.MergeRandomAdjacentRegionsOfTable;
-import org.apache.hadoop.hbase.util.ChaosMonkey.MoveRandomRegionOfTable;
-import org.apache.hadoop.hbase.util.ChaosMonkey.MoveRegionsOfTable;
-import org.apache.hadoop.hbase.util.ChaosMonkey.PeriodicRandomActionPolicy;
-import org.apache.hadoop.hbase.util.ChaosMonkey.SnapshotTable;
-import org.apache.hadoop.hbase.util.ChaosMonkey.SplitRandomRegionOfTable;
+import org.apache.hadoop.hbase.util.ChaosMonkey.*;
 import org.apache.hadoop.hbase.util.LoadTestTool;
 import org.junit.After;
 import org.junit.Before;
@@ -88,7 +78,11 @@ public class IntegrationTestDataIngestWithChaosMonkey extends IngestIntegrationT
       new SplitRandomRegionOfTable(tableName),
       new MergeRandomAdjacentRegionsOfTable(tableName),
       new SnapshotTable(tableName),
-      new MoveRegionsOfTable(tableName)
+      new MoveRegionsOfTable(tableName),
+      new AddColumnAction(tableName),
+      new RemoveColumnAction(tableName),
+      new ChangeEncodingAction(tableName),
+      new ChangeVersionsAction(tableName)
     };
 
     monkey = new ChaosMonkey(util,
