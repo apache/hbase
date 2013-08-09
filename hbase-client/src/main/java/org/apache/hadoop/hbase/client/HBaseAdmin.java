@@ -2110,7 +2110,7 @@ public class HBaseAdmin implements Abortable, Closeable {
   /**
    * Get a namespace descriptor by name
    * @param name name of namespace descriptor
-   * @return
+   * @return A descriptor
    * @throws IOException
    */
   public NamespaceDescriptor getNamespaceDescriptor(final String name) throws IOException {
@@ -2128,7 +2128,7 @@ public class HBaseAdmin implements Abortable, Closeable {
 
   /**
    * List available namespace descriptors
-   * @return
+   * @return List of descriptors
    * @throws IOException
    */
   public NamespaceDescriptor[] listNamespaceDescriptors() throws IOException {
@@ -2152,7 +2152,7 @@ public class HBaseAdmin implements Abortable, Closeable {
   /**
    * Get list of table descriptors by namespace
    * @param name namespace name
-   * @return
+   * @return A descriptor
    * @throws IOException
    */
   public HTableDescriptor[] getTableDescriptorsByNamespace(final String name) throws IOException {
@@ -2270,7 +2270,7 @@ public class HBaseAdmin implements Abortable, Closeable {
 
   /**
    * Get tableDescriptors
-   * @param tableNames List of table names
+   * @param names List of table names
    * @return HTD[] the tableDescriptor
    * @throws IOException if a remote or network exception occurs
    */
@@ -2453,8 +2453,7 @@ public class HBaseAdmin implements Abortable, Closeable {
     * snapshot with the same name (even a different type or with different parameters) will fail with
     * a {@link SnapshotCreationException} indicating the duplicate naming.
     * <p>
-    * Snapshot names follow the same naming constraints as tables in HBase. See
-    * {@link HTableDescriptor#isLegalTableName(byte[])}.
+    * Snapshot names follow the same naming constraints as tables in HBase.
     * @param snapshotName name of the snapshot to be created
     * @param tableName name of the table for which snapshot is created
     * @throws IOException if a remote or network exception occurs

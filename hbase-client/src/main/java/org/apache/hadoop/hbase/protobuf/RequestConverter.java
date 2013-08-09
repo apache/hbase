@@ -461,10 +461,10 @@ public final class RequestConverter {
     builder.setScannerId(scannerId);
     return builder.build();
   }
-  
+
   /**
    * Create a protocol buffer ScanRequest for a scanner id
-   * 
+   *
    * @param scannerId
    * @param numberOfRows
    * @param closeScanner
@@ -1073,7 +1073,7 @@ public final class RequestConverter {
   /**
    * Creates a protocol buffer ModifyTableRequest
    *
-   * @param table
+   * @param tableName
    * @param hTableDesc
    * @return a ModifyTableRequest
    */

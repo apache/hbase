@@ -1136,7 +1136,6 @@ public abstract class FSUtils {
    * the table directory under
    * path rootdir
    *
-   * @param rootdir qualified path of HBase root directory
    * @param tablePath path of table
    * @return {@link org.apache.hadoop.fs.Path} for table
    */
