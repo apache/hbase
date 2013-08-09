@@ -317,6 +317,7 @@ Shell.load_command_group(
     list_peers
     enable_peer
     disable_peer
+    list_replicated_tables
   ]
 )
 
