@@ -233,6 +233,16 @@
     <pluginManagement>
       <plugins>
         <plugin>
+          <groupId>org.codehaus.mojo</groupId>
+          <artifactId>findbugs-maven-plugin</artifactId>
+          <version>2.5.2</version>
+          <configuration>
+            <findbugsXmlOutput>true</findbugsXmlOutput>
+            <xmlOutput>true</xmlOutput>
+            <excludeFilterFile>findbugs-exclude.xml</excludeFilterFile>
+          </configuration>
+        </plugin>
+        <plugin>
           <groupId>org.jacoco</groupId>
           <artifactId>jacoco-maven-plugin</artifactId>
           <!-- <version>0.6.4-SNAPSHOT</version> -->
@@ -254,6 +264,11 @@
           </executions>
           <configuration>
             <skip>${hbase.skip-jacoco}</skip>
+            <excludes>
+              <exclude>org/apache/hadoop/hbase/avro/**/*.class</exclude>
+              <exclude>**/generated/**/*.class</exclude>
+              <exclude>org/apache/hadoop/hbase/rest/**/*.class</exclude>
+            </excludes>
           </configuration>
         </plugin>
         <plugin>
@@ -959,17 +974,6 @@
         <artifactId>maven-checkstyle-plugin</artifactId>
         <version>2.5</version>
       </plugin>
-      <plugin>
-        <groupId>org.codehaus.mojo</groupId>
-        <artifactId>findbugs-maven-plugin</artifactId>
-        <version>2.3.1</version>
-        <configuration>
-          <findbugsXmlOutput>true</findbugsXmlOutput>
-          <findbugsXmlWithMessages>true</findbugsXmlWithMessages>
-          <xmlOutput>true</xmlOutput>
-        </configuration>
-      </plugin>
-      
       <plugin>
         <artifactId>maven-site-plugin</artifactId>
         <version>2.1</version>
