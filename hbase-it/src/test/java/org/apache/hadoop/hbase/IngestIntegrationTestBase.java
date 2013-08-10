@@ -115,6 +115,19 @@ public abstract class IngestIntegrationTestBase {
 
       ret = loadTool.run(new String[] {
           "-tn", tableName,
+          "-update", String.format("60:%d", writeThreads),
+          "-start_key", String.valueOf(startKey),
+          "-num_keys", String.valueOf(numKeys),
+          "-skip_init"
+      });
+      if (0 != ret) {
+        String errorMsg = "Update failed with error code " + ret;
+        LOG.error(errorMsg);
+        Assert.fail(errorMsg);
+      }
+
+      ret = loadTool.run(new String[] {
+          "-tn", tableName,
           "-read", "100:20",
           "-start_key", String.valueOf(startKey),
           "-num_keys", String.valueOf(numKeys),
