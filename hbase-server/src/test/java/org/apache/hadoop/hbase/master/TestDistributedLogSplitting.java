@@ -634,7 +634,7 @@ public class TestDistributedLogSplitting {
 
   @Test(timeout = 300000)
   public void testLogReplayForDisablingTable() throws Exception {
-    LOG.info("testLogReplayWithNonMetaRSDown");
+    LOG.info("testLogReplayForDisablingTable");
     Configuration curConf = HBaseConfiguration.create();
     curConf.setBoolean(HConstants.DISTRIBUTED_LOG_REPLAY_KEY, true);
     startCluster(NUM_RS, curConf);

@@ -55,9 +55,15 @@ public class MetaServerShutdownHandler extends ServerShutdownHandler {
     try {
       AssignmentManager am = this.services.getAssignmentManager();
       try {
-        if (this.shouldSplitHlog && !this.distributedLogReplay) {
+        if (this.shouldSplitHlog) {
           LOG.info("Splitting META logs for " + serverName);
-          this.services.getMasterFileSystem().splitMetaLog(serverName);
+          if (this.distributedLogReplay) {
+            Set<HRegionInfo> regions = new HashSet<HRegionInfo>();
+            regions.add(HRegionInfo.FIRST_META_REGIONINFO);
+            this.services.getMasterFileSystem().prepareLogReplay(serverName, regions);
+          } else {
+            this.services.getMasterFileSystem().splitMetaLog(serverName);
+          }
         } 
       } catch (IOException ioe) {
         this.services.getExecutorService().submit(this);
@@ -154,21 +160,6 @@ public class MetaServerShutdownHandler extends ServerShutdownHandler {
 
     long waitTime = this.server.getConfiguration().getLong(
         "hbase.catalog.verification.timeout", 1000);
-
-    if (this.shouldSplitHlog && this.distributedLogReplay) {
-      LOG.info("Splitting META logs for " + serverName
-          + ". Mark META region in recovery before assignment.");
-      Set<HRegionInfo> regions = new HashSet<HRegionInfo>();
-      regions.add(HRegionInfo.FIRST_META_REGIONINFO);
-      try {
-        this.services.getMasterFileSystem().prepareLogReplay(serverName, regions);
-      } catch (IOException ioe) {
-        this.services.getExecutorService().submit(this);
-        this.deadServers.add(serverName);
-        throw new IOException("failed to mark META region in recovery on " + serverName
-            + ", will retry", ioe);
-      }
-    }
 
     int iFlag = 0;
     while (true) {

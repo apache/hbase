@@ -36,6 +36,7 @@ message GetRegionInfoRequest {
 message GetRegionInfoResponse {
   required RegionInfo region_info = 1;
   optional CompactionState compaction_state = 2;
+  optional bool isRecovering = 3;
 
   enum CompactionState {
     NONE = 0;

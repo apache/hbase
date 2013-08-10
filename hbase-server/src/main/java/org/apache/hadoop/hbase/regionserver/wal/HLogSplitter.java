@@ -44,6 +44,7 @@ import java.util.concurrent.Future;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -74,6 +75,9 @@ import org.apache.hadoop.hbase.master.SplitLogManager;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.protobuf.RequestConverter;
+import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetRegionInfoRequest;
+import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetRegionInfoResponse;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.AdminService.BlockingInterface;
 import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.RegionStoreSequenceIds;
 import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.StoreSequenceId;
@@ -97,6 +101,7 @@ import org.apache.zookeeper.KeeperException;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
+import com.google.protobuf.ServiceException;
 
 /**
  * This class is responsible for splitting up a bunch of regionserver commit log
@@ -1541,43 +1546,37 @@ public class HLogSplitter {
       }
 
       Long lastFlushedSequenceId = -1l;
-      loc = waitUntilRegionOnline(loc, row, this.waitRegionOnlineTimeOut);
-      Long cachedLastFlushedSequenceId = lastFlushedSequenceIds.get(loc.getRegionInfo()
-          .getEncodedName());
+      AtomicBoolean isRecovering = new AtomicBoolean(true);
+      loc = waitUntilRegionOnline(loc, row, this.waitRegionOnlineTimeOut, isRecovering);
+      if (!isRecovering.get()) {
+        // region isn't in recovering at all because WAL file may contain a region that has
+        // been moved to somewhere before hosting RS fails
+        lastFlushedSequenceIds.put(loc.getRegionInfo().getEncodedName(), Long.MAX_VALUE);
+        LOG.info("logReplay skip region: " + loc.getRegionInfo().getEncodedName()
+            + " because it's not in recovering.");
+      } else {
+        Long cachedLastFlushedSequenceId =
+            lastFlushedSequenceIds.get(loc.getRegionInfo().getEncodedName());
 
-      // retrieve last flushed sequence Id from ZK. Because region postOpenDeployTasks will
-      // update the value for the region
-      RegionStoreSequenceIds ids =
-          SplitLogManager.getRegionFlushedSequenceId(watcher, failedServerName, loc.getRegionInfo()
-              .getEncodedName());
-      if(ids != null) {
-        lastFlushedSequenceId = ids.getLastFlushedSequenceId();
-        Map<byte[], Long> storeIds = new TreeMap<byte[], Long>(Bytes.BYTES_COMPARATOR);
-        List<StoreSequenceId> maxSeqIdInStores = ids.getStoreSequenceIdList();
-        for (StoreSequenceId id : maxSeqIdInStores) {
-          storeIds.put(id.getFamilyName().toByteArray(), id.getSequenceId());
+        // retrieve last flushed sequence Id from ZK. Because region postOpenDeployTasks will
+        // update the value for the region
+        RegionStoreSequenceIds ids =
+            SplitLogManager.getRegionFlushedSequenceId(watcher, failedServerName, loc
+                .getRegionInfo().getEncodedName());
+        if (ids != null) {
+          lastFlushedSequenceId = ids.getLastFlushedSequenceId();
+          Map<byte[], Long> storeIds = new TreeMap<byte[], Long>(Bytes.BYTES_COMPARATOR);
+          List<StoreSequenceId> maxSeqIdInStores = ids.getStoreSequenceIdList();
+          for (StoreSequenceId id : maxSeqIdInStores) {
+            storeIds.put(id.getFamilyName().toByteArray(), id.getSequenceId());
+          }
+          regionMaxSeqIdInStores.put(loc.getRegionInfo().getEncodedName(), storeIds);
         }
-        regionMaxSeqIdInStores.put(loc.getRegionInfo().getEncodedName(), storeIds);
-      }
 
-      if (cachedLastFlushedSequenceId == null
-          || lastFlushedSequenceId > cachedLastFlushedSequenceId) {
-        lastFlushedSequenceIds.put(loc.getRegionInfo().getEncodedName(), lastFlushedSequenceId);
-      }
-
-      // check if the region to be recovered is marked as recovering in ZK
-      try {
-        if (SplitLogManager.isRegionMarkedRecoveringInZK(watcher, loc.getRegionInfo()
-            .getEncodedName()) == false) {
-          // region isn't in recovering at all because WAL file may contain a region that has
-          // been moved to somewhere before hosting RS fails
-          lastFlushedSequenceIds.put(loc.getRegionInfo().getEncodedName(), Long.MAX_VALUE);
-          LOG.info("logReplay skip region: " + loc.getRegionInfo().getEncodedName()
-              + " because it's not in recovering.");
+        if (cachedLastFlushedSequenceId == null
+            || lastFlushedSequenceId > cachedLastFlushedSequenceId) {
+          lastFlushedSequenceIds.put(loc.getRegionInfo().getEncodedName(), lastFlushedSequenceId);
         }
-      } catch (KeeperException e) {
-        throw new IOException("Failed to retrieve recovering state of region "
-            + loc.getRegionInfo().getEncodedName(), e);
       }
 
       onlineRegions.put(loc.getRegionInfo().getEncodedName(), loc);
@@ -1608,11 +1607,12 @@ public class HLogSplitter {
      * @param loc
      * @param row
      * @param timeout How long to wait
+     * @param isRecovering Recovering state of the region interested on destination region server.
      * @return True when region is online on the destination region server
      * @throws InterruptedException
      */
     private HRegionLocation waitUntilRegionOnline(HRegionLocation loc, byte[] row,
-        final long timeout)
+        final long timeout, AtomicBoolean isRecovering)
         throws IOException {
       final long endTime = EnvironmentEdgeManager.currentTimeMillis() + timeout;
       final long pause = conf.getLong(HConstants.HBASE_CLIENT_PAUSE,
@@ -1630,8 +1630,16 @@ public class HLogSplitter {
           }
           BlockingInterface remoteSvr = hconn.getAdmin(loc.getServerName());
           HRegionInfo region = loc.getRegionInfo();
-          if((region =ProtobufUtil.getRegionInfo(remoteSvr, region.getRegionName())) != null) {
-            return loc;
+          try {
+            GetRegionInfoRequest request =
+                RequestConverter.buildGetRegionInfoRequest(region.getRegionName());
+            GetRegionInfoResponse response = remoteSvr.getRegionInfo(null, request);
+            if (HRegionInfo.convert(response.getRegionInfo()) != null) {
+              isRecovering.set((response.hasIsRecovering()) ? response.getIsRecovering() : true);
+              return loc;
+            }
+          } catch (ServiceException se) {
+            throw ProtobufUtil.getRemoteException(se);
           }
         } catch (IOException e) {
           cause = e.getCause();

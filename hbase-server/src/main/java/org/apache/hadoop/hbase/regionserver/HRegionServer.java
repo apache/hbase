@@ -3368,6 +3368,7 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
       if (request.hasCompactionState() && request.getCompactionState()) {
         builder.setCompactionState(region.getCompactionState());
       }
+      builder.setIsRecovering(region.isRecovering());
       return builder.build();
     } catch (IOException ie) {
       throw new ServiceException(ie);
@@ -3743,6 +3744,7 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
       checkOpen();
       requestCount.increment();
       HRegion region = getRegion(request.getRegion());
+      region.startRegionOperation(Operation.COMPACT_REGION);
       LOG.info("Compacting " + region.getRegionNameAsString());
       boolean major = false;
       byte [] family = null;
@@ -4028,7 +4030,7 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
         cacheFlusher.reclaimMemStoreMemory();
       }
 
-      OperationStatus codes[] = region.batchMutate(mArray);
+      OperationStatus codes[] = region.batchMutate(mArray, isReplay);
       for (i = 0; i < codes.length; i++) {
         switch (codes[i].getOperationStatusCode()) {
           case BAD_FAMILY:
