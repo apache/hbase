@@ -618,7 +618,7 @@ public class TestAdmin {
     HTableDescriptor desc = new HTableDescriptor(TableName.valueOf(tableName));
     desc.addFamily(new HColumnDescriptor(HConstants.CATALOG_FAMILY));
     admin.createTable(desc, splitKeys);
-    
+
     boolean tableAvailable = admin.isTableAvailable(Bytes.toString(tableName), splitKeys);
     assertTrue("Table should be created with splitKyes + 1 rows in META", tableAvailable);
 
@@ -817,7 +817,7 @@ public class TestAdmin {
     }
   }
 
-  @Test (timeout=300000)
+  @Test (timeout=120000)
   public void testTableExist() throws IOException {
     final byte [] table = Bytes.toBytes("testTableExist");
     boolean exist;
