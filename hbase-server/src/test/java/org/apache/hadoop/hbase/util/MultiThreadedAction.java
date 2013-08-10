@@ -16,8 +16,13 @@
  */
 package org.apache.hadoop.hbase.util;
 
+import static org.apache.hadoop.hbase.util.test.LoadTestDataGenerator.INCREMENT;
+import static org.apache.hadoop.hbase.util.test.LoadTestDataGenerator.MUTATE_INFO;
+
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
@@ -27,11 +32,17 @@ import java.util.concurrent.atomic.AtomicLong;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.io.compress.Compression.Algorithm;
+import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.MutationType;
 import org.apache.hadoop.hbase.util.test.LoadTestDataGenerator;
 import org.apache.hadoop.hbase.util.test.LoadTestKVGenerator;
 import org.apache.hadoop.util.StringUtils;
+
+import com.google.common.base.Preconditions;
 
 /**
  * Common base class for reader and writer parts of multi-thread HBase load
@@ -300,7 +311,7 @@ public abstract class MultiThreadedAction {
 
     // See if we have any data at all.
     if (result.isEmpty()) {
-      LOG.error("No data returned for key = [" + rowKeyStr + "]");
+      LOG.error("Error checking data for key [" + rowKeyStr + "], no data returned");
       return false;
     }
 
@@ -311,7 +322,8 @@ public abstract class MultiThreadedAction {
     // See if we have all the CFs.
     byte[][] expectedCfs = dataGenerator.getColumnFamilies();
     if (verifyCfAndColumnIntegrity && (expectedCfs.length != result.getMap().size())) {
-      LOG.error("Bad family count for [" + rowKeyStr + "]: " + result.getMap().size());
+      LOG.error("Error checking data for key [" + rowKeyStr
+        + "], bad family count: " + result.getMap().size());
       return false;
     }
 
@@ -320,34 +332,155 @@ public abstract class MultiThreadedAction {
       String cfStr = Bytes.toString(cf);
       Map<byte[], byte[]> columnValues = result.getFamilyMap(cf);
       if (columnValues == null) {
-        LOG.error("No data for family [" + cfStr + "] for [" + rowKeyStr + "]");
+        LOG.error("Error checking data for key [" + rowKeyStr
+          + "], no data for family [" + cfStr + "]]");
         return false;
       }
-      // See if we have correct columns.
-      if (verifyCfAndColumnIntegrity
-          && !dataGenerator.verify(result.getRow(), cf, columnValues.keySet())) {
-        String colsStr = "";
-        for (byte[] col : columnValues.keySet()) {
-          if (colsStr.length() > 0) {
-            colsStr += ", ";
-          }
-          colsStr += "[" + Bytes.toString(col) + "]";
+
+      Map<String, MutationType> mutateInfo = null;
+      if (verifyCfAndColumnIntegrity || verifyValues) {
+        if (!columnValues.containsKey(MUTATE_INFO)) {
+          LOG.error("Error checking data for key [" + rowKeyStr + "], column family ["
+            + cfStr + "], column [" + Bytes.toString(MUTATE_INFO) + "]; value is not found");
+          return false;
         }
-        LOG.error("Bad columns for family [" + cfStr + "] for [" + rowKeyStr + "]: " + colsStr);
-        return false;
-      }
-      // See if values check out.
-      if (verifyValues) {
-        for (Map.Entry<byte[], byte[]> kv : columnValues.entrySet()) {
-          if (!dataGenerator.verify(result.getRow(), cf, kv.getKey(), kv.getValue())) {
+
+        long cfHash = Arrays.hashCode(cf);
+        // Verify deleted columns, and make up column counts if deleted
+        byte[] mutateInfoValue = columnValues.remove(MUTATE_INFO);
+        mutateInfo = parseMutateInfo(mutateInfoValue);
+        for (Map.Entry<String, MutationType> mutate: mutateInfo.entrySet()) {
+          if (mutate.getValue() == MutationType.DELETE) {
+            byte[] column = Bytes.toBytes(mutate.getKey());
+            long columnHash = Arrays.hashCode(column);
+            long hashCode = cfHash + columnHash;
+            if (hashCode % 2 == 0) {
+              if (columnValues.containsKey(column)) {
+                LOG.error("Error checking data for key [" + rowKeyStr + "], column family ["
+                  + cfStr + "], column [" + mutate.getKey() + "]; should be deleted");
+                return false;
+              }
+              byte[] hashCodeBytes = Bytes.toBytes(hashCode);
+              columnValues.put(column, hashCodeBytes);
+            }
+          }
+        }
+
+        // Verify increment
+        if (!columnValues.containsKey(INCREMENT)) {
+          LOG.error("Error checking data for key [" + rowKeyStr + "], column family ["
+            + cfStr + "], column [" + Bytes.toString(INCREMENT) + "]; value is not found");
+          return false;
+        }
+        long currentValue = Bytes.toLong(columnValues.remove(INCREMENT));
+        if (verifyValues) {
+          long amount = mutateInfo.isEmpty() ? 0 : cfHash;
+          long originalValue = Arrays.hashCode(result.getRow());
+          long extra = currentValue - originalValue;
+          if (extra != 0 && (amount == 0 || extra % amount != 0)) {
             LOG.error("Error checking data for key [" + rowKeyStr + "], column family ["
-              + cfStr + "], column [" + Bytes.toString(kv.getKey()) + "]; value of length " +
-              + kv.getValue().length);
+              + cfStr + "], column [increment], extra [" + extra + "], amount [" + amount + "]");
             return false;
+          }
+          if (amount != 0 && extra != amount) {
+            LOG.warn("Warning checking data for key [" + rowKeyStr + "], column family ["
+              + cfStr + "], column [increment], incremented [" + (extra / amount) + "] times");
+          }
+        }
+
+        // See if we have correct columns.
+        if (verifyCfAndColumnIntegrity
+            && !dataGenerator.verify(result.getRow(), cf, columnValues.keySet())) {
+          String colsStr = "";
+          for (byte[] col : columnValues.keySet()) {
+            if (colsStr.length() > 0) {
+              colsStr += ", ";
+            }
+            colsStr += "[" + Bytes.toString(col) + "]";
+          }
+          LOG.error("Error checking data for key [" + rowKeyStr
+            + "], bad columns for family [" + cfStr + "]: " + colsStr);
+          return false;
+        }
+        // See if values check out.
+        if (verifyValues) {
+          for (Map.Entry<byte[], byte[]> kv : columnValues.entrySet()) {
+            String column = Bytes.toString(kv.getKey());
+            MutationType mutation = mutateInfo.get(column);
+            boolean verificationNeeded = true;
+            byte[] bytes = kv.getValue();
+            if (mutation != null) {
+              boolean mutationVerified = true;
+              long columnHash = Arrays.hashCode(kv.getKey());
+              long hashCode = cfHash + columnHash;
+              byte[] hashCodeBytes = Bytes.toBytes(hashCode);
+              if (mutation == MutationType.APPEND) {
+                int offset = bytes.length - hashCodeBytes.length;
+                mutationVerified = offset > 0 && Bytes.equals(hashCodeBytes,
+                  0, hashCodeBytes.length, bytes, offset, hashCodeBytes.length);
+                if (mutationVerified) {
+                  int n = 1;
+                  while (true) {
+                    int newOffset = offset - hashCodeBytes.length;
+                    if (newOffset < 0 || !Bytes.equals(hashCodeBytes, 0,
+                        hashCodeBytes.length, bytes, newOffset, hashCodeBytes.length)) {
+                      break;
+                    }
+                    offset = newOffset;
+                    n++;
+                  }
+                  if (n > 1) {
+                    LOG.warn("Warning checking data for key [" + rowKeyStr + "], column family ["
+                      + cfStr + "], column [" + column + "], appended [" + n + "] times");
+                  }
+                  byte[] dest = new byte[offset];
+                  System.arraycopy(bytes, 0, dest, 0, offset);
+                  bytes = dest;
+                }
+              } else if (hashCode % 2 == 0) { // checkAndPut
+                mutationVerified = Bytes.equals(bytes, hashCodeBytes);
+                verificationNeeded = false;
+              }
+              if (!mutationVerified) {
+                LOG.error("Error checking data for key [" + rowKeyStr
+                  + "], mutation checking failed for column family [" + cfStr + "], column ["
+                  + column + "]; mutation [" + mutation + "], hashCode ["
+                  + hashCode + "], verificationNeeded ["
+                  + verificationNeeded + "]");
+                return false;
+              }
+            } // end of mutation checking
+            if (verificationNeeded &&
+                !dataGenerator.verify(result.getRow(), cf, kv.getKey(), bytes)) {
+              LOG.error("Error checking data for key [" + rowKeyStr + "], column family ["
+                + cfStr + "], column [" + column + "], mutation [" + mutation
+                + "]; value of length " + bytes.length);
+              return false;
+            }
           }
         }
       }
     }
     return true;
+  }
+
+  // Parse mutate info into a map of <column name> => <update action>
+  private Map<String, MutationType> parseMutateInfo(byte[] mutateInfo) {
+    Map<String, MutationType> mi = new HashMap<String, MutationType>();
+    if (mutateInfo != null) {
+      String mutateInfoStr = Bytes.toString(mutateInfo);
+      String[] mutations = mutateInfoStr.split("#");
+      for (String mutation: mutations) {
+        if (mutation.isEmpty()) continue;
+        Preconditions.checkArgument(mutation.contains(":"),
+          "Invalid mutation info " + mutation);
+        int p = mutation.indexOf(":");
+        String column = mutation.substring(0, p);
+        MutationType type = MutationType.valueOf(
+          Integer.parseInt(mutation.substring(p+1)));
+        mi.put(column, type);
+      }
+    }
+    return mi;
   }
 }

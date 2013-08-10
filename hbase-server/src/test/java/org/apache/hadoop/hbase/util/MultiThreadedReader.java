@@ -18,15 +18,15 @@ package org.apache.hadoop.hbase.util;
 
 import java.io.IOException;
 import java.util.HashSet;
-import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
 
+import org.apache.commons.lang.math.RandomUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HRegionLocation;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Result;
@@ -41,7 +41,7 @@ public class MultiThreadedReader extends MultiThreadedAction
   private final double verifyPercent;
   private volatile boolean aborted;
 
-  private MultiThreadedWriter writer = null;
+  private MultiThreadedWriterBase writer = null;
 
   /**
    * The number of keys verified in a sequence. This will never be larger than
@@ -77,9 +77,9 @@ public class MultiThreadedReader extends MultiThreadedAction
     this.verifyPercent = verifyPercent;
   }
 
-  public void linkToWriter(MultiThreadedWriter writer) {
+  public void linkToWriter(MultiThreadedWriterBase writer) {
     this.writer = writer;
-    writer.setTrackInsertedKeys(true);
+    writer.setTrackWroteKeys(true);
   }
 
   public void setMaxErrors(int maxErrors) {
@@ -108,7 +108,6 @@ public class MultiThreadedReader extends MultiThreadedAction
   public class HBaseReaderThread extends Thread {
     private final int readerId;
     private final HTable table;
-    private final Random random = new Random();
 
     /** The "current" key being read. Increases from startKey to endKey. */
     private long curKey;
@@ -182,13 +181,13 @@ public class MultiThreadedReader extends MultiThreadedAction
      * constraint.
      */
     private long maxKeyWeCanRead() {
-      long insertedUpToKey = writer.insertedUpToKey();
+      long insertedUpToKey = writer.wroteUpToKey();
       if (insertedUpToKey >= endKey - 1) {
         // The writer has finished writing our range, so we can read any
         // key in the range.
         return endKey - 1;
       }
-      return Math.min(endKey - 1, writer.insertedUpToKey() - keyWindow);
+      return Math.min(endKey - 1, writer.wroteUpToKey() - keyWindow);
     }
 
     private long getNextKeyToRead() {
@@ -217,7 +216,7 @@ public class MultiThreadedReader extends MultiThreadedAction
       // later. Set a flag to make sure that we don't count this key towards
       // the set of unique keys we have verified.
       readingRandomKey = true;
-      return startKey + Math.abs(random.nextLong())
+      return startKey + Math.abs(RandomUtils.nextLong())
           % (maxKeyToRead - startKey + 1);
     }
 
@@ -239,7 +238,7 @@ public class MultiThreadedReader extends MultiThreadedAction
         if (verbose) {
           LOG.info("[" + readerId + "] " + "Querying key " + keyToRead + ", cfs " + cfsString);
         }
-        queryKey(get, random.nextInt(100) < verifyPercent);
+        queryKey(get, RandomUtils.nextInt(100) < verifyPercent);
       } catch (IOException e) {
         numReadFailures.addAndGet(1);
         LOG.debug("[" + readerId + "] FAILED read, key = " + (keyToRead + "")
@@ -279,7 +278,7 @@ public class MultiThreadedReader extends MultiThreadedAction
         numCols.addAndGet(cols);
       } else {
         if (writer != null) {
-          LOG.error("At the time of failure, writer inserted " + writer.numKeys.get() + " keys");
+          LOG.error("At the time of failure, writer wrote " + writer.numKeys.get() + " keys");
         }
         numErrorsAfterThis = numReadErrors.incrementAndGet();
       }
@@ -315,5 +314,4 @@ public class MultiThreadedReader extends MultiThreadedAction
     appendToStatus(sb, "READ ERRORS", numReadErrors.get());
     return sb.toString();
   }
-
 }

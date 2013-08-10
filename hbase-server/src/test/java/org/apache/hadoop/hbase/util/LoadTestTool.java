@@ -24,7 +24,6 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
 
 import org.apache.commons.cli.CommandLine;
-import org.apache.commons.cli.ParseException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.TableName;
@@ -70,9 +69,13 @@ public class LoadTestTool extends AbstractHBaseTool {
       "<avg_cols_per_key>:<avg_data_size>" +
       "[:<#threads=" + DEFAULT_NUM_THREADS + ">]";
 
-  /** Usa\ge string for the read option */
+  /** Usage string for the read option */
   protected static final String OPT_USAGE_READ =
       "<verify_percent>[:<#threads=" + DEFAULT_NUM_THREADS + ">]";
+
+  /** Usage string for the update option */
+  protected static final String OPT_USAGE_UPDATE =
+      "<update_percent>[:<#threads=" + DEFAULT_NUM_THREADS + ">]";
 
   protected static final String OPT_USAGE_BLOOM = "Bloom filter type, one of " +
       Arrays.toString(BloomType.values());
@@ -111,6 +114,8 @@ public class LoadTestTool extends AbstractHBaseTool {
   protected static final String OPT_SKIP_INIT = "skip_init";
   protected static final String OPT_INIT_ONLY = "init_only";
   private static final String NUM_TABLES = "num_tables";
+  protected static final String OPT_BATCHUPDATE = "batchupdate";
+  protected static final String OPT_UPDATE = "update";
 
   protected static final long DEFAULT_START_KEY = 0;
 
@@ -119,10 +124,11 @@ public class LoadTestTool extends AbstractHBaseTool {
 
   protected MultiThreadedWriter writerThreads = null;
   protected MultiThreadedReader readerThreads = null;
+  protected MultiThreadedUpdater updaterThreads = null;
 
   protected long startKey, endKey;
 
-  protected boolean isWrite, isRead;
+  protected boolean isWrite, isRead, isUpdate;
 
   // Column family options
   protected DataBlockEncoding dataBlockEncodingAlgo;
@@ -135,6 +141,11 @@ public class LoadTestTool extends AbstractHBaseTool {
   protected int minColsPerKey, maxColsPerKey;
   protected int minColDataSize, maxColDataSize;
   protected boolean isMultiPut;
+
+  // Updater options
+  protected int numUpdaterThreads = DEFAULT_NUM_THREADS;
+  protected int updatePercent;
+  protected boolean isBatchUpdate;
 
   // Reader options
   private int numReaderThreads = DEFAULT_NUM_THREADS;
@@ -212,6 +223,7 @@ public class LoadTestTool extends AbstractHBaseTool {
     addOptWithArg(OPT_TABLE_NAME, "The name of the table to read or write");
     addOptWithArg(OPT_WRITE, OPT_USAGE_LOAD);
     addOptWithArg(OPT_READ, OPT_USAGE_READ);
+    addOptWithArg(OPT_UPDATE, OPT_USAGE_UPDATE);
     addOptNoArg(OPT_INIT_ONLY, "Initialize the test table only, don't do any loading");
     addOptWithArg(OPT_BLOOM, OPT_USAGE_BLOOM);
     addOptWithArg(OPT_COMPRESSION, OPT_USAGE_COMPRESSION);
@@ -225,6 +237,8 @@ public class LoadTestTool extends AbstractHBaseTool {
 
     addOptNoArg(OPT_MULTIPUT, "Whether to use multi-puts as opposed to " +
         "separate puts for every column in a row");
+    addOptNoArg(OPT_BATCHUPDATE, "Whether to use batch as opposed to " +
+        "separate updates for every column in a row");
     addOptNoArg(OPT_ENCODE_IN_CACHE_ONLY, OPT_ENCODE_IN_CACHE_ONLY_USAGE);
     addOptNoArg(OPT_INMEMORY, OPT_USAGE_IN_MEMORY);
 
@@ -250,16 +264,17 @@ public class LoadTestTool extends AbstractHBaseTool {
 
     isWrite = cmd.hasOption(OPT_WRITE);
     isRead = cmd.hasOption(OPT_READ);
+    isUpdate = cmd.hasOption(OPT_UPDATE);
     isInitOnly = cmd.hasOption(OPT_INIT_ONLY);
 
-    if (!isWrite && !isRead && !isInitOnly) {
+    if (!isWrite && !isRead && !isUpdate && !isInitOnly) {
       throw new IllegalArgumentException("Either -" + OPT_WRITE + " or " +
-          "-" + OPT_READ + " has to be specified");
+        "-" + OPT_UPDATE + "-" + OPT_READ + " has to be specified");
     }
 
-    if (isInitOnly && (isRead || isWrite)) {
+    if (isInitOnly && (isRead || isWrite || isUpdate)) {
       throw new IllegalArgumentException(OPT_INIT_ONLY + " cannot be specified with"
-          + " either -" + OPT_WRITE + " or -" + OPT_READ);
+          + " either -" + OPT_WRITE + " or -" + OPT_UPDATE + " or -" + OPT_READ);
     }
 
     if (!isInitOnly) {
@@ -301,6 +316,21 @@ public class LoadTestTool extends AbstractHBaseTool {
           + maxColsPerKey);
       System.out.println("Data size per column: " + minColDataSize + ".."
           + maxColDataSize);
+    }
+
+    if (isUpdate) {
+      String[] mutateOpts = splitColonSeparated(OPT_UPDATE, 1, 2);
+      int colIndex = 0;
+      updatePercent = parseInt(mutateOpts[colIndex++], 0, 100);
+      if (colIndex < mutateOpts.length) {
+        numUpdaterThreads = getNumThreads(mutateOpts[colIndex++]);
+      }
+
+      isBatchUpdate = cmd.hasOption(OPT_BATCHUPDATE);
+
+      System.out.println("Batch updates: " + isBatchUpdate);
+      System.out.println("Percent of keys to update: " + updatePercent);
+      System.out.println("Updater threads: " + numUpdaterThreads);
     }
 
     if (isRead) {
@@ -390,21 +420,37 @@ public class LoadTestTool extends AbstractHBaseTool {
       writerThreads.setMultiPut(isMultiPut);
     }
 
+    if (isUpdate) {
+      updaterThreads = new MultiThreadedUpdater(dataGen, conf, tableName, updatePercent);
+      updaterThreads.setBatchUpdate(isBatchUpdate);
+    }
+
     if (isRead) {
       readerThreads = new MultiThreadedReader(dataGen, conf, tableName, verifyPercent);
       readerThreads.setMaxErrors(maxReadErrors);
       readerThreads.setKeyWindow(keyWindow);
     }
 
-    if (isRead && isWrite) {
-      LOG.info("Concurrent read/write workload: making readers aware of the " +
-          "write point");
-      readerThreads.linkToWriter(writerThreads);
+    if (isUpdate && isWrite) {
+      LOG.info("Concurrent write/update workload: making updaters aware of the " +
+        "write point");
+      updaterThreads.linkToWriter(writerThreads);
+    }
+
+    if (isRead && (isUpdate || isWrite)) {
+      LOG.info("Concurrent write/read workload: making readers aware of the " +
+        "write point");
+      readerThreads.linkToWriter(isUpdate ? updaterThreads : writerThreads);
     }
 
     if (isWrite) {
       System.out.println("Starting to write data...");
       writerThreads.start(startKey, endKey, numWriterThreads);
+    }
+
+    if (isUpdate) {
+      System.out.println("Starting to mutate data...");
+      updaterThreads.start(startKey, endKey, numUpdaterThreads);
     }
 
     if (isRead) {
@@ -416,6 +462,10 @@ public class LoadTestTool extends AbstractHBaseTool {
       writerThreads.waitForFinish();
     }
 
+    if (isUpdate) {
+      updaterThreads.waitForFinish();
+    }
+
     if (isRead) {
       readerThreads.waitForFinish();
     }
@@ -424,13 +474,16 @@ public class LoadTestTool extends AbstractHBaseTool {
     if (isWrite) {
       success = success && writerThreads.getNumWriteFailures() == 0;
     }
+    if (isUpdate) {
+      success = success && updaterThreads.getNumWriteFailures() == 0;
+    }
     if (isRead) {
       success = success && readerThreads.getNumReadErrors() == 0
           && readerThreads.getNumReadFailures() == 0;
     }
-    return success ? EXIT_SUCCESS : this.EXIT_FAILURE;
+    return success ? EXIT_SUCCESS : EXIT_FAILURE;
   }
-  
+
   public static void main(String[] args) {
     new LoadTestTool().doStaticMain(args);
   }
