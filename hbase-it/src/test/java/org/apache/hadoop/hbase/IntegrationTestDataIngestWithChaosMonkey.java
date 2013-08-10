@@ -53,6 +53,7 @@ public class IntegrationTestDataIngestWithChaosMonkey extends IngestIntegrationT
       // smaller enough in order for the replay can complete before ChaosMonkey kills another region
       // server
       conf.setInt("hbase.log.replay.retries.number", 2);
+      conf.setInt("hbase.log.replay.rpc.timeout", 2000);
       conf.setBoolean(HConstants.DISALLOW_WRITES_IN_RECOVERING, true);
     } 
     if(!util.isDistributedCluster()) {

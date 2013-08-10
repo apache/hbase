@@ -182,9 +182,16 @@ public class ServerShutdownHandler extends EventHandler {
       }
 
       try {
-        if (this.shouldSplitHlog && !this.distributedLogReplay) {
+        if (this.shouldSplitHlog) {
           LOG.info("Splitting logs for " + serverName + " before assignment.");
-          this.services.getMasterFileSystem().splitLog(serverName);
+          if (this.distributedLogReplay) {
+            LOG.info("Mark regions in recovery before assignment.");
+            Set<ServerName> serverNames = new HashSet<ServerName>();
+            serverNames.add(serverName);
+            this.services.getMasterFileSystem().prepareLogReplay(serverNames);
+          } else {
+            this.services.getMasterFileSystem().splitLog(serverName);
+          }
         } else {
           LOG.info("Skipping log splitting for " + serverName);
         }
@@ -257,18 +264,6 @@ public class ServerShutdownHandler extends EventHandler {
                 + rit + " not to be assigned by SSH of server " + serverName);
             }
           }
-        }
-      }
-
-      if (this.shouldSplitHlog && this.distributedLogReplay) {
-        try {
-          LOG.info("Splitting logs for " + serverName
-              + ". Mark regions in recovery before assignment.");
-          Set<HRegionInfo> toAssignRegionSet = new HashSet<HRegionInfo>();
-          toAssignRegionSet.addAll(toAssignRegions);
-          this.services.getMasterFileSystem().prepareLogReplay(serverName, toAssignRegionSet);
-        } catch (IOException ioe) {
-          resubmit(serverName, ioe);
         }
       }
  

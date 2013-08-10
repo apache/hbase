@@ -337,6 +337,30 @@ public class MasterFileSystem {
 
   /**
    * Mark regions in recovering state when distributedLogReplay are set true
+   * @param serverNames Set of ServerNames to be replayed wals in order to recover changes contained
+   *          in them
+   * @throws IOException
+   */
+  public void prepareLogReplay(Set<ServerName> serverNames) throws IOException {
+    if (!this.distributedLogReplay) {
+      return;
+    }
+    // mark regions in recovering state
+    for (ServerName serverName : serverNames) {
+      NavigableMap<HRegionInfo, Result> regions = this.getServerUserRegions(serverName);
+      if (regions == null) {
+        continue;
+      }
+      try {
+        this.splitLogManager.markRegionsRecoveringInZK(serverName, regions.keySet());
+      } catch (KeeperException e) {
+        throw new IOException(e);
+      }
+    }
+  }
+
+  /**
+   * Mark regions in recovering state when distributedLogReplay are set true
    * @param serverName Failed region server whose wals to be replayed
    * @param regions Set of regions to be recovered
    * @throws IOException

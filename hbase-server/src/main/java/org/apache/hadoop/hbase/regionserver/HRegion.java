@@ -214,7 +214,7 @@ public class HRegion implements HeapSize { // , Writable{
    */
   protected enum Operation {
     ANY, GET, PUT, DELETE, SCAN, APPEND, INCREMENT, SPLIT_REGION, MERGE_REGION, BATCH_MUTATE,
-    REPLAY_BATCH_MUTATE
+    REPLAY_BATCH_MUTATE, COMPACT_REGION
   }
 
   //////////////////////////////////////////////////////////////////////////////
@@ -5311,6 +5311,7 @@ public class HRegion implements HeapSize { // , Writable{
     case PUT:
     case DELETE:
     case BATCH_MUTATE:
+    case COMPACT_REGION:
       // when a region is in recovering state, no read, split or merge is allowed
       if (this.isRecovering() && (this.disallowWritesInRecovering ||
               (op != Operation.PUT && op != Operation.DELETE && op != Operation.BATCH_MUTATE))) {
@@ -5320,8 +5321,10 @@ public class HRegion implements HeapSize { // , Writable{
     default:
       break;
     }
-    if (op == Operation.MERGE_REGION || op == Operation.SPLIT_REGION) {
-      // split or merge region doesn't need to check the closing/closed state or lock the region
+    if (op == Operation.MERGE_REGION || op == Operation.SPLIT_REGION
+        || op == Operation.COMPACT_REGION) {
+      // split, merge or compact region doesn't need to check the closing/closed state or lock the
+      // region
       return;
     }
     if (this.closing.get()) {
