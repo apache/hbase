@@ -21,13 +21,14 @@ package org.apache.hadoop.hbase.util.bytes;
 import junit.framework.Assert;
 
 import org.apache.hadoop.hbase.util.ByteRange;
+import org.apache.hadoop.hbase.util.SimpleByteRange;
 import org.junit.Test;
 
 public class TestByteRange {
 
   @Test
   public void testConstructor() {
-    ByteRange b = new ByteRange(new byte[] { 0, 1, 2 });
+    ByteRange b = new SimpleByteRange(new byte[] { 0, 1, 2 });
     Assert.assertEquals(3, b.getLength());
   }
 

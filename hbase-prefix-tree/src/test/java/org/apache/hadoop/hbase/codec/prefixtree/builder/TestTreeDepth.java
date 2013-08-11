@@ -21,7 +21,7 @@ package org.apache.hadoop.hbase.codec.prefixtree.builder;
 import java.util.List;
 
 import org.apache.hadoop.hbase.codec.prefixtree.encode.tokenize.Tokenizer;
-import org.apache.hadoop.hbase.util.ByteRange;
+import org.apache.hadoop.hbase.util.SimpleByteRange;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Assert;
 import org.junit.Test;
@@ -75,7 +75,7 @@ public class TestTreeDepth {
   protected void testInternal(List<String> inputs, int expectedTreeDepth) {
     Tokenizer builder = new Tokenizer();
     for (String s : inputs) {
-      ByteRange b = new ByteRange(Bytes.toBytes(s));
+      SimpleByteRange b = new SimpleByteRange(Bytes.toBytes(s));
       builder.addSorted(b);
     }
     Assert.assertEquals(1, builder.getRoot().getNodeDepth());

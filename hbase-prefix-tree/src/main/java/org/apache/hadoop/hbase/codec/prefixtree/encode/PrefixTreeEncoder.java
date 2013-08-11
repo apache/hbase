@@ -36,6 +36,7 @@ import org.apache.hadoop.hbase.codec.prefixtree.encode.tokenize.Tokenizer;
 import org.apache.hadoop.hbase.io.CellOutputStream;
 import org.apache.hadoop.hbase.util.ArrayUtils;
 import org.apache.hadoop.hbase.util.ByteRange;
+import org.apache.hadoop.hbase.util.SimpleByteRange;
 import org.apache.hadoop.hbase.util.byterange.ByteRangeSet;
 import org.apache.hadoop.hbase.util.byterange.impl.ByteRangeHashSet;
 import org.apache.hadoop.hbase.util.byterange.impl.ByteRangeTreeSet;
@@ -146,9 +147,9 @@ public class PrefixTreeEncoder implements CellOutputStream {
   public PrefixTreeEncoder(OutputStream outputStream, boolean includeMvccVersion) {
     // used during cell accumulation
     this.blockMeta = new PrefixTreeBlockMeta();
-    this.rowRange = new ByteRange();
-    this.familyRange = new ByteRange();
-    this.qualifierRange = new ByteRange();
+    this.rowRange = new SimpleByteRange();
+    this.familyRange = new SimpleByteRange();
+    this.qualifierRange = new SimpleByteRange();
     this.timestamps = new long[INITIAL_PER_CELL_ARRAY_SIZES];
     this.mvccVersions = new long[INITIAL_PER_CELL_ARRAY_SIZES];
     this.typeBytes = new byte[INITIAL_PER_CELL_ARRAY_SIZES];
@@ -488,7 +489,7 @@ public class PrefixTreeEncoder implements CellOutputStream {
   }
 
   public ByteRange getValueByteRange() {
-    return new ByteRange(values, 0, totalValueBytes);
+    return new SimpleByteRange(values, 0, totalValueBytes);
   }
 
 }

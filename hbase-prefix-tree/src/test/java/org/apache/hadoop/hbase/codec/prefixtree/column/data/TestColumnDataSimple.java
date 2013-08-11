@@ -22,7 +22,7 @@ import java.util.List;
 
 import org.apache.hadoop.hbase.codec.prefixtree.column.TestColumnData;
 import org.apache.hadoop.hbase.util.ByteRange;
-import org.apache.hadoop.hbase.util.ByteRangeTool;
+import org.apache.hadoop.hbase.util.ByteRangeUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 
 import com.google.common.collect.Lists;
@@ -37,7 +37,7 @@ public class TestColumnDataSimple implements TestColumnData {
     d.add("abc");
     d.add("bbc");
     d.add("abc");
-    return ByteRangeTool.fromArrays(Bytes.getUtf8ByteArrays(d));
+    return ByteRangeUtils.fromArrays(Bytes.getUtf8ByteArrays(d));
   }
 
   @Override
@@ -46,7 +46,7 @@ public class TestColumnDataSimple implements TestColumnData {
     d.add("abc");
     d.add("abcde");
     d.add("bbc");
-    return ByteRangeTool.fromArrays(Bytes.getUtf8ByteArrays(d));
+    return ByteRangeUtils.fromArrays(Bytes.getUtf8ByteArrays(d));
   }
 
 }

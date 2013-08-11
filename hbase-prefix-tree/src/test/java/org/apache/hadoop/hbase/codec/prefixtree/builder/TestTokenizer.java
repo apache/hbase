@@ -24,7 +24,7 @@ import java.util.List;
 import org.apache.hadoop.hbase.codec.prefixtree.encode.tokenize.Tokenizer;
 import org.apache.hadoop.hbase.codec.prefixtree.encode.tokenize.TokenizerNode;
 import org.apache.hadoop.hbase.codec.prefixtree.encode.tokenize.TokenizerRowSearchResult;
-import org.apache.hadoop.hbase.util.ByteRange;
+import org.apache.hadoop.hbase.util.SimpleByteRange;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Assert;
 import org.junit.Test;
@@ -48,7 +48,7 @@ public class TestTokenizer {
     this.inputs = sortedByteArrays.getInputs();
     this.builder = new Tokenizer();
     for (byte[] array : inputs) {
-      builder.addSorted(new ByteRange(array));
+      builder.addSorted(new SimpleByteRange(array));
     }
     this.roundTripped = builder.getArrays();
   }

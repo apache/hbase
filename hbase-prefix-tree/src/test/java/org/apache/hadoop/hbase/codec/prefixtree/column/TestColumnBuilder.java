@@ -29,7 +29,7 @@ import org.apache.hadoop.hbase.codec.prefixtree.encode.column.ColumnSectionWrite
 import org.apache.hadoop.hbase.codec.prefixtree.encode.tokenize.Tokenizer;
 import org.apache.hadoop.hbase.codec.prefixtree.encode.tokenize.TokenizerNode;
 import org.apache.hadoop.hbase.util.ByteRange;
-import org.apache.hadoop.hbase.util.ByteRangeTool;
+import org.apache.hadoop.hbase.util.ByteRangeUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.byterange.impl.ByteRangeTreeSet;
 import org.junit.Assert;
@@ -67,7 +67,7 @@ public class TestColumnBuilder {
     List<ByteRange> inputs = columns.getInputs();
     this.columnSorter = new ByteRangeTreeSet(inputs);
     this.sortedUniqueColumns = columnSorter.compile().getSortedRanges();
-    List<byte[]> copies = ByteRangeTool.copyToNewArrays(sortedUniqueColumns);
+    List<byte[]> copies = ByteRangeUtils.copyToNewArrays(sortedUniqueColumns);
     Assert.assertTrue(Bytes.isSorted(copies));
     this.blockMeta = new PrefixTreeBlockMeta();
     this.blockMeta.setNumMetaBytes(0);

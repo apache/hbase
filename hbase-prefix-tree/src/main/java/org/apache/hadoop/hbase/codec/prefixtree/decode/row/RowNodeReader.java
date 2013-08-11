@@ -20,7 +20,7 @@ package org.apache.hadoop.hbase.codec.prefixtree.decode.row;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.codec.prefixtree.PrefixTreeBlockMeta;
-import org.apache.hadoop.hbase.util.ByteRange;
+import org.apache.hadoop.hbase.util.SimpleByteRange;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.vint.UFIntTool;
 import org.apache.hadoop.hbase.util.vint.UVIntTool;
@@ -202,7 +202,7 @@ public class RowNodeReader {
 
   public byte[] getToken() {
     // TODO pass in reusable ByteRange
-    return new ByteRange(block, tokenOffset, tokenLength).deepCopyToNewArray();
+    return new SimpleByteRange(block, tokenOffset, tokenLength).deepCopyToNewArray();
   }
 
   public int getOffset() {
