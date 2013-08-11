@@ -17,35 +17,33 @@
  */
 package org.apache.hadoop.hbase.util;
 
-import junit.framework.Assert;
-import junit.framework.TestCase;
-
 import org.apache.hadoop.hbase.SmallTests;
+import org.junit.Assert;
+import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-
 @Category(SmallTests.class)
-public class TestByteRange extends TestCase {
+public class TestSimpleByteRange {
 
+  @Test
   public void testEmpty(){
-    Assert.assertTrue(ByteRange.isEmpty(null));
-    ByteRange r = new ByteRange();
-    Assert.assertTrue(ByteRange.isEmpty(r));
-    Assert.assertFalse(ByteRange.notEmpty(r));
+    Assert.assertTrue(SimpleByteRange.isEmpty(null));
+    ByteRange r = new SimpleByteRange();
+    Assert.assertTrue(SimpleByteRange.isEmpty(r));
     Assert.assertTrue(r.isEmpty());
-    Assert.assertFalse(r.notEmpty());
-    Assert.assertNotNull(r.getBytes());//should be empty byte[], but could change this behavior
+    r.set(new byte[0]);
     Assert.assertEquals(0, r.getBytes().length);
     Assert.assertEquals(0, r.getOffset());
     Assert.assertEquals(0, r.getLength());
     Assert.assertTrue(Bytes.equals(new byte[0], r.deepCopyToNewArray()));
-    Assert.assertEquals(0, r.compareTo(new ByteRange(new byte[0], 0, 0)));
+    Assert.assertEquals(0, r.compareTo(new SimpleByteRange(new byte[0], 0, 0)));
     Assert.assertEquals(0, r.hashCode());
   }
 
-  public void testBasics(){
-    ByteRange r = new ByteRange(new byte[]{1, 3, 2});
-    Assert.assertFalse(ByteRange.isEmpty(r));
+  @Test
+  public void testBasics() {
+    ByteRange r = new SimpleByteRange(new byte[] { 1, 3, 2 });
+    Assert.assertFalse(SimpleByteRange.isEmpty(r));
     Assert.assertNotNull(r.getBytes());//should be empty byte[], but could change this behavior
     Assert.assertEquals(3, r.getBytes().length);
     Assert.assertEquals(0, r.getOffset());
@@ -70,6 +68,4 @@ public class TestByteRange extends TestCase {
     r.setLength(2);//verify we retained the 2nd byte, but dangerous in real code
     Assert.assertTrue(Bytes.equals(new byte[]{1, 3}, r.deepCopyToNewArray()));
   }
-
 }
-

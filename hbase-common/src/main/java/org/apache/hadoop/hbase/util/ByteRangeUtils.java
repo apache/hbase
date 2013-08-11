@@ -23,12 +23,29 @@ import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.Collection;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+
 import com.google.common.collect.Lists;
 
 /**
- * Utility methods {@link ByteRange}.
+ * Utility methods for working with {@link ByteRange}.
  */
-public class ByteRangeTool {
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
+public class ByteRangeUtils {
+
+  public static int numEqualPrefixBytes(ByteRange left, ByteRange right, int rightInnerOffset) {
+    int maxCompares = Math.min(left.getLength(), right.getLength() - rightInnerOffset);
+    final byte[] lbytes = left.getBytes(), rbytes = right.getBytes();
+    final int loffset = left.getOffset(), roffset = right.getOffset();
+    for (int i = 0; i < maxCompares; ++i) {
+      if (lbytes[loffset + i] != rbytes[roffset + rightInnerOffset + i]) {
+        return i;
+      }
+    }
+    return maxCompares;
+  }
 
   public static ArrayList<byte[]> copyToNewArrays(Collection<ByteRange> ranges) {
     if (ranges == null) {
@@ -47,7 +64,7 @@ public class ByteRangeTool {
     }
     ArrayList<ByteRange> ranges = Lists.newArrayListWithCapacity(arrays.size());
     for (byte[] array : arrays) {
-      ranges.add(new ByteRange(array));
+      ranges.add(new SimpleByteRange(array));
     }
     return ranges;
   }
