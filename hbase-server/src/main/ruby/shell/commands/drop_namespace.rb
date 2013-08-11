@@ -19,28 +19,17 @@
 
 module Shell
   module Commands
-    class NamespaceList < Command
+    class DropNamespace < Command
       def help
         return <<-EOF
-List all namespaces in hbase. Optional regular expression parameter could
-be used to filter the output. Examples:
-
-  hbase> namespace_list
-  hbase> namespace_list 'abc.*'
+Drop the named namespace. The namespace must be empty.
 EOF
       end
 
-      def command(regex = ".*")
-        now = Time.now
-        formatter.header([ "NAMESPACE" ])
-
-        regex = /#{regex}/ unless regex.is_a?(Regexp)
-        list = admin.list_namespace.grep(regex)
-        list.each do |table|
-          formatter.row([ table ])
+      def command(namespace)
+        format_simple_command do
+          admin.drop_namespace(namespace)
         end
-
-        formatter.footer(now, list.size)
       end
     end
   end

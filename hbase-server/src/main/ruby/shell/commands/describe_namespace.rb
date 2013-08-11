@@ -19,11 +19,11 @@
 
 module Shell
   module Commands
-    class NamespaceDescribe < Command
+    class DescribeNamespace < Command
       def help
         return <<-EOF
 Describe the named namespace. For example:
-  hbase> namespace_describe 'ns1'
+  hbase> describe_namespace 'ns1'
 EOF
       end
 

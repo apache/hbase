@@ -19,22 +19,28 @@
 
 module Shell
   module Commands
-    class NamespaceCreate < Command
+    class ListNamespace < Command
       def help
         return <<-EOF
-Create namespace; pass namespace name,
-and optionally a dictionary of namespace configuration.
-Examples:
+List all namespaces in hbase. Optional regular expression parameter could
+be used to filter the output. Examples:
 
-  hbase> namespace_create 'ns1'
-  hbase> namespace_create 'ns1', {'PROERTY_NAME'=>'PROPERTY_VALUE'}
+  hbase> list_namespace
+  hbase> list_namespace 'abc.*'
 EOF
       end
 
-      def command(namespace, *args)
-        format_simple_command do
-          admin.create_namespace(namespace, *args)
+      def command(regex = ".*")
+        now = Time.now
+        formatter.header([ "NAMESPACE" ])
+
+        regex = /#{regex}/ unless regex.is_a?(Regexp)
+        list = admin.list_namespace.grep(regex)
+        list.each do |table|
+          formatter.row([ table ])
         end
+
+        formatter.footer(now, list.size)
       end
     end
   end

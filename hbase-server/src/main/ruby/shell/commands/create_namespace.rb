@@ -19,26 +19,22 @@
 
 module Shell
   module Commands
-    class NamespaceListTables < Command
+    class CreateNamespace < Command
       def help
         return <<-EOF
-List all tables that are members of the namespace.
+Create namespace; pass namespace name,
+and optionally a dictionary of namespace configuration.
 Examples:
 
-  hbase> namespace_list_tables 'ns1'
+  hbase> create_namespace 'ns1'
+  hbase> create_namespace 'ns1', {'PROERTY_NAME'=>'PROPERTY_VALUE'}
 EOF
       end
 
-      def command(namespace)
-        now = Time.now
-        formatter.header([ "TABLE" ])
-
-        list = admin.list_namespace_tables(namespace)
-        list.each do |table|
-          formatter.row([ table ])
+      def command(namespace, *args)
+        format_simple_command do
+          admin.create_namespace(namespace, *args)
         end
-
-        formatter.footer(now, list.size)
       end
     end
   end
