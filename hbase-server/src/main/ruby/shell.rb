@@ -257,12 +257,12 @@ Shell.load_command_group(
   'namespace',
   :full_name => 'NAMESPACE MANAGEMENT COMMANDS',
   :commands => %w[
-    namespace_create
-    namespace_drop
-    namespace_alter
-    namespace_describe
-    namespace_list
-    namespace_list_tables
+    create_namespace
+    drop_namespace
+    alter_namespace
+    describe_namespace
+    list_namespace
+    list_namespace_tables
   ]
 )
 
