@@ -18,282 +18,229 @@
 
 package org.apache.hadoop.hbase.util;
 
-
-
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 
 /**
- * Lightweight, reusable class for specifying ranges of byte[]'s. CompareTo and equals methods are
- * lexicographic, which is native to HBase.
- * <p/>
- * This class differs from ByteBuffer:
- * <li/>On-heap bytes only
- * <li/>Implements equals, hashCode, and compareTo so that it can be used in standard java
- * Collections, similar to String.
- * <li/>Does not maintain mark/position iterator state inside the class. Doing so leads to many bugs
- * in complex applications.
- * <li/>Allows the addition of simple core methods like this.copyTo(that, offset).
- * <li/>Can be reused in tight loops like a major compaction which can save significant amounts of
- * garbage.
- * <li/>(Without reuse, we throw off garbage like this thing:
- * http://www.youtube.com/watch?v=lkmBH-MjZF4
- * <p/>
- * Mutable, and always evaluates equals, hashCode, and compareTo based on the current contents.
- * <p/>
- * Can contain convenience methods for comparing, printing, cloning, spawning new arrays, copying to
- * other arrays, etc. Please place non-core methods into {@link ByteRangeTool}.
- * <p/>
- * We may consider converting this to an interface and creating separate implementations for a
- * single byte[], a paged byte[] (growable byte[][]), a ByteBuffer, etc
+ * Lightweight, reusable class for specifying ranges of byte[]'s.
+ * <p>
+ * {@code ByteRange} maintains an underlying byte[] and a viewport into that
+ * byte[] as a range of bytes. The {@code ByteRange} is a mutable, reusable
+ * object, so the underlying byte[] can be modified after instantiation. This
+ * is done using the {@link #set(byte[])} and {@link #unset()} methods. Direct
+ * access to the byte[] is also available via {@link #getBytes()}. The viewport
+ * is defined by an {@code offset} into the byte[] and a {@code length}. The
+ * range of bytes is 0-indexed, and is accessed by index via the
+ * {@link #get(int)} and {@link #put(int, byte)} methods.
+ * </p>
+ * <p>
+ * This interface differs from ByteBuffer:
+ * <li>On-heap bytes only</li>
+ * <li>Raw {@code byte} access only; does not encode other primitives.</li>
+ * <li>Implements {@code equals(Object)}, {@code #hashCode()}, and
+ * {@code #compareTo(ByteRange)} so that it can be used in standard java
+ * Collections. Comparison operations are lexicographic, which is native to
+ * HBase.</li>
+ * <li>Allows the addition of simple core methods like the deep and shallow
+ * copy methods.</li>
+ * <li>Can be reused in tight loops like a major compaction which can save
+ * significant amounts of garbage. (Without reuse, we throw off garbage like
+ * <a href="http://www.youtube.com/watch?v=lkmBH-MjZF4">this thing</a>.)</li>
+ * </p>
+ * <p>
+ * Mutable, and always evaluates {@code #equals(Object)}, {@code #hashCode()},
+ * and {@code #compareTo(ByteRange)} based on the current contents.
+ * </p>
+ * <p>
+ * Can contain convenience methods for comparing, printing, cloning, spawning
+ * new arrays, copying to other arrays, etc. Please place non-core methods into
+ * {@link ByteRangeUtils}.
+ * </p>
  */
-public class ByteRange implements Comparable<ByteRange> {
-
-  private static final int UNSET_HASH_VALUE = -1;
-
-
-  /********************** fields *****************************/
-
-  // Do not make these final, as the intention is to reuse objects of this class
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
+public interface ByteRange extends Comparable<ByteRange> {
 
   /**
-   * The array containing the bytes in this range.  It will be >= length.
+   * The underlying byte[].
    */
-  private byte[] bytes;
+  public byte[] getBytes();
 
   /**
-   * The index of the first byte in this range.  ByteRange.get(0) will return bytes[offset].
+   * Nullifies this ByteRange. That is, it becomes a husk, being a range over
+   * no byte[] whatsoever.
+   * @return this
    */
-  private int offset;
+  public ByteRange unset();
 
   /**
-   * The number of bytes in the range.  Offset + length must be <= bytes.length
+   * Reuse this {@code ByteRange} over a new byte[]. {@code offset} is set to
+   * 0 and {@code length} is set to {@code capacity}.
+   * @param capacity the size of a new byte[].
+   * @return this
    */
-  private int length;
+  public ByteRange set(int capacity);
 
   /**
-   * Variable for lazy-caching the hashCode of this range.  Useful for frequently used ranges,
-   * long-lived ranges, or long ranges.
+   * Reuse this {@code ByteRange} over a new byte[]. {@code offset} is set to
+   * 0 and {@code length} is set to {@code bytes.length}. A null {@code bytes}
+   * IS supported, in which case this method will behave equivalently to
+   * {@link #unset()}.
+   * @param bytes the array to wrap.
+   * @return this
    */
-  private int hash = UNSET_HASH_VALUE;
-
-
-  /********************** construct ***********************/
-
-  public ByteRange() {
-    set(new byte[0]);//Could probably get away with a null array if the need arises.
-  }
-
-  public ByteRange(byte[] bytes) {
-    set(bytes);
-  }
-
-  public ByteRange(byte[] bytes, int offset, int length) {
-    set(bytes, offset, length);
-  }
-
-
-  /********************** write methods *************************/
-
-  public ByteRange clear() {
-    clearHashCache();
-    bytes = null;
-    offset = 0;
-    length = 0;
-    return this;
-  }
-
-  public ByteRange set(byte[] bytes) {
-    clearHashCache();
-    this.bytes = bytes;
-    this.offset = 0;
-    this.length = ArrayUtils.length(bytes);
-    return this;
-  }
-
-  public ByteRange set(byte[] bytes, int offset, int length) {
-    clearHashCache();
-    this.bytes = bytes;
-    this.offset = offset;
-    this.length = length;
-    return this;
-  }
-
-  public void setLength(int length) {
-    clearHashCache();
-    this.length = length;
-  }
-
-
-  /*********** read methods (add non-core methods to ByteRangeUtils) *************/
+  public ByteRange set(byte[] bytes);
 
   /**
-   * @param index zero-based index
-   * @return single byte at index
+   * Reuse this {@code ByteRange} over a new byte[]. A null {@code bytes} IS
+   * supported, in which case this method will behave equivalently to
+   * {@link #unset()}, regardless of the values of {@code offset} and
+   * {@code length}.
+   * @param bytes The array to wrap.
+   * @param offset The offset into {@code bytes} considered the beginning of
+   *            this range.
+   * @param length The length of this range.
+   * @return this.
    */
-  public byte get(int index) {
-    return bytes[offset + index];
-  }
+  public ByteRange set(byte[] bytes, int offset, int length);
 
   /**
-   * Instantiate a new byte[] with exact length, which is at least 24 bytes + length.  Copy the
-   * contents of this range into it.
+   * The offset, the index into the underlying byte[] at which this range
+   * begins.
+   * @see #getBytes()
+   */
+  public int getOffset();
+
+  /**
+   * Update the beginning of this range. {@code offset + length} may not be
+   * greater than {@code bytes.length}.
+   * @param offset the new start of this range.
+   * @return this.
+   */
+  public ByteRange setOffset(int offset);
+
+  /**
+   * The length of the range.
+   */
+  public int getLength();
+
+  /**
+   * Update the length of this range. {@code offset + length} should not be
+   * greater than {@code bytes.length}.
+   * @param length The new length of this range.
+   * @return this.
+   */
+  public ByteRange setLength(int length);
+
+  /**
+   * @return true when this range is of zero length, false otherwise.
+   */
+  public boolean isEmpty();
+
+  /**
+   * Retrieve the byte at {@code index}.
+   * @param index zero-based index into this range.
+   * @return single byte at index.
+   */
+  public byte get(int index);
+
+  /**
+   * Fill {@code dst} with bytes from the range, starting from {@code index}.
+   * @param index zero-based index into this range.
+   * @param dst the destination of the copy.
+   * @return this.
+   */
+  public ByteRange get(int index, byte[] dst);
+
+  /**
+   * Fill {@code dst} with bytes from the range, starting from {@code index}.
+   * {@code length} bytes are copied into {@code dst}, starting at {@code offset}.
+   * @param index zero-based index into this range.
+   * @param dst the destination of the copy.
+   * @param offset the offset into {@code dst} to start the copy.
+   * @param length the number of bytes to copy into {@code dst}.
+   * @return this.
+   */
+  public ByteRange get(int index, byte[] dst, int offset, int length);
+
+  /**
+   * Store {@code val} at {@code index}.
+   * @param index the index in the range where {@code val} is stored.
+   * @param val the value to store.
+   * @return this.
+   */
+  public ByteRange put(int index, byte val);
+
+  /**
+   * Store {@code val} at {@code index}.
+   * @param index the index in the range where {@code val} is stored.
+   * @param val the value to store.
+   * @return this.
+   */
+  public ByteRange put(int index, byte[] val);
+
+  /**
+   * Store {@code length} bytes from {@code val} into this range, starting at
+   * {@code index}. Bytes from {@code val} are copied starting at {@code offset}
+   * into the range.
+   * @param index position in this range to start the copy.
+   * @param val the value to store.
+   * @param offset the offset in {@code val} from which to start copying.
+   * @param length the number of bytes to copy from {@code val}.
+   * @return this.
+   */
+  public ByteRange put(int index, byte[] val, int offset, int length);
+
+  /**
+   * Instantiate a new byte[] with exact length, which is at least 24 bytes +
+   * length. Copy the contents of this range into it.
    * @return The newly cloned byte[].
    */
-  public byte[] deepCopyToNewArray() {
-    byte[] result = new byte[length];
-    System.arraycopy(bytes, offset, result, 0, length);
-    return result;
-  }
+  public byte[] deepCopyToNewArray();
 
   /**
-   * Create a new ByteRange with new backing byte[] and copy the state of this range into the new
-   * range.  Copy the hash over if it is already calculated.
+   * Create a new {@code ByteRange} with new backing byte[] containing a copy
+   * of the content from {@code this} range's window.
    * @return Deep copy
    */
-  public ByteRange deepCopy() {
-    ByteRange clone = new ByteRange(deepCopyToNewArray());
-    if (isHashCached()) {
-      clone.hash = hash;
-    }
-    return clone;
-  }
+  public ByteRange deepCopy();
 
   /**
-   * Wrapper for System.arraycopy.  Copy the contents of this range into the provided array.
+   * Wrapper for System.arraycopy. Copy the contents of this range into the
+   * provided array.
    * @param destination Copy to this array
    * @param destinationOffset First index in the destination array.
    */
-  public void deepCopyTo(byte[] destination, int destinationOffset) {
-    System.arraycopy(bytes, offset, destination, destinationOffset, length);
-  }
+  public void deepCopyTo(byte[] destination, int destinationOffset);
 
   /**
-   * Wrapper for System.arraycopy. Copy the contents of this range into the provided array.
-   * @param innerOffset Start copying from this index in this source ByteRange. First byte copied is
-   *          bytes[offset + innerOffset]
+   * Wrapper for System.arraycopy. Copy the contents of this range into the
+   * provided array.
+   * @param innerOffset Start copying from this index in this source
+   *          ByteRange. First byte copied is bytes[offset + innerOffset]
    * @param copyLength Copy this many bytes
    * @param destination Copy to this array
    * @param destinationOffset First index in the destination array.
    */
   public void deepCopySubRangeTo(int innerOffset, int copyLength, byte[] destination,
-      int destinationOffset) {
-    System.arraycopy(bytes, offset + innerOffset, destination, destinationOffset, copyLength);
-  }
+      int destinationOffset);
 
   /**
-   * Create a new ByteRange that points at this range's byte[]. The new range can have different
-   * values for offset and length, but modifying the shallowCopy will modify the bytes in this
-   * range's array. Pass over the hash code if it is already cached.
+   * Create a new {@code ByteRange} that points at this range's byte[].
+   * Modifying the shallowCopy will modify the bytes in this range's array.
+   * Pass over the hash code if it is already cached.
+   * @return new {@code ByteRange} object referencing this range's byte[].
+   */
+  public ByteRange shallowCopy();
+
+  /**
+   * Create a new {@code ByteRange} that points at this range's byte[]. The new
+   * range can have different values for offset and length, but modifying the
+   * shallowCopy will modify the bytes in this range's array. Pass over the
+   * hash code if it is already cached.
    * @param innerOffset First byte of clone will be this.offset + copyOffset.
    * @param copyLength Number of bytes in the clone.
-   * @return new ByteRange object referencing this range's byte[].
+   * @return new {@code ByteRange} object referencing this range's byte[].
    */
-  public ByteRange shallowCopySubRange(int innerOffset, int copyLength) {
-    ByteRange clone = new ByteRange(bytes, offset + innerOffset, copyLength);
-    if (isHashCached()) {
-      clone.hash = hash;
-    }
-    return clone;
-  }
-
-  //TODO move to ByteRangeUtils because it is non-core method
-  public int numEqualPrefixBytes(ByteRange that, int thatInnerOffset) {
-    int maxCompares = Math.min(length, that.length - thatInnerOffset);
-    for (int i = 0; i < maxCompares; ++i) {
-      if (bytes[offset + i] != that.bytes[that.offset + thatInnerOffset + i]) {
-        return i;
-      }
-    }
-    return maxCompares;
-  }
-
-  public byte[] getBytes() {
-    return bytes;
-  }
-
-  public int getOffset() {
-    return offset;
-  }
-
-  public int getLength() {
-    return length;
-  }
-
-  public boolean isEmpty(){
-    return isEmpty(this);
-  }
-
-  public boolean notEmpty(){
-    return notEmpty(this);
-  }
-
-
-  /******************* static methods ************************/
-
-  public static boolean isEmpty(ByteRange range){
-    return range == null || range.length == 0;
-  }
-
-  public static boolean notEmpty(ByteRange range){
-    return range != null && range.length > 0;
-  }
-
-  /******************* standard methods *********************/
-
-  @Override
-  public boolean equals(Object thatObject) {
-    if (thatObject == null){
-      return false;
-    }
-    if (this == thatObject) {
-      return true;
-    }
-    if (hashCode() != thatObject.hashCode()) {
-      return false;
-    }
-    if (!(thatObject instanceof ByteRange)) {
-      return false;
-    }
-    ByteRange that = (ByteRange) thatObject;
-    return Bytes.equals(bytes, offset, length, that.bytes, that.offset, that.length);
-  }
-
-  @Override
-  public int hashCode() {
-    if (isHashCached()) {// hash is already calculated and cached
-      return hash;
-    }
-    if (this.isEmpty()) {// return 0 for empty ByteRange
-      hash = 0;
-      return hash;
-    }
-    int off = offset;
-    hash = 0;
-    for (int i = 0; i < length; i++) {
-      hash = 31 * hash + bytes[off++];
-    }
-    return hash;
-  }
-
-  private boolean isHashCached() {
-    return hash != UNSET_HASH_VALUE;
-  }
-
-  private void clearHashCache() {
-    hash = UNSET_HASH_VALUE;
-  }
-
-  /**
-   * Bitwise comparison of each byte in the array.  Unsigned comparison, not paying attention to
-   * java's signed bytes.
-   */
-  @Override
-  public int compareTo(ByteRange other) {
-    return Bytes.compareTo(bytes, offset, length, other.bytes, other.offset, other.length);
-  }
-
-  @Override
-  public String toString() {
-    return Bytes.toStringBinary(bytes, offset, length);
-  }
-
+  public ByteRange shallowCopySubRange(int innerOffset, int copyLength);
 }

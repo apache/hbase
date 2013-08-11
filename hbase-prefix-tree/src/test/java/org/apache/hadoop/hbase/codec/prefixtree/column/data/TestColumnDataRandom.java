@@ -23,6 +23,7 @@ import java.util.List;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.codec.prefixtree.column.TestColumnData;
 import org.apache.hadoop.hbase.util.ByteRange;
+import org.apache.hadoop.hbase.util.SimpleByteRange;
 import org.apache.hadoop.hbase.util.byterange.ByteRangeSet;
 import org.apache.hadoop.hbase.util.byterange.impl.ByteRangeTreeSet;
 import org.apache.hadoop.hbase.util.test.RedundantKVGenerator;
@@ -39,7 +40,7 @@ public class TestColumnDataRandom implements TestColumnData {
     ByteRangeSet sortedColumns = new ByteRangeTreeSet();
     List<KeyValue> d = generator.generateTestKeyValues(numColumns);
     for (KeyValue col : d) {
-      ByteRange colRange = new ByteRange(col.getQualifier());
+      ByteRange colRange = new SimpleByteRange(col.getQualifier());
       inputs.add(colRange);
       sortedColumns.add(colRange);
     }

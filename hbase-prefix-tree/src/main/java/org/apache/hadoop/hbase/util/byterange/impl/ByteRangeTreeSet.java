@@ -36,7 +36,7 @@ public class ByteRangeTreeSet extends ByteRangeSet {
   /************************ constructors *****************************/
 
   public ByteRangeTreeSet() {
-    this.uniqueIndexByUniqueRange = new TreeMap<ByteRange,Integer>();
+    this.uniqueIndexByUniqueRange = new TreeMap<ByteRange, Integer>();
   }
 
   public ByteRangeTreeSet(List<ByteRange> rawByteArrays) {

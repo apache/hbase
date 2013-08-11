@@ -28,7 +28,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.codec.prefixtree.PrefixTreeBlockMeta;
 import org.apache.hadoop.hbase.codec.prefixtree.encode.PrefixTreeEncoder;
 import org.apache.hadoop.hbase.codec.prefixtree.encode.tokenize.TokenizerNode;
-import org.apache.hadoop.hbase.util.ByteRangeTool;
+import org.apache.hadoop.hbase.util.ByteRangeUtils;
 import org.apache.hadoop.hbase.util.CollectionUtils;
 import org.apache.hadoop.hbase.util.vint.UFIntTool;
 import org.apache.hadoop.hbase.util.vint.UVIntTool;
@@ -155,7 +155,7 @@ public class RowNodeWriter{
   protected void writeRowToken(OutputStream os) throws IOException {
     UVIntTool.writeBytes(tokenWidth, os);
     int tokenStartIndex = tokenizerNode.isRoot() ? 0 : 1;
-    ByteRangeTool.write(os, tokenizerNode.getToken(), tokenStartIndex);
+    ByteRangeUtils.write(os, tokenizerNode.getToken(), tokenStartIndex);
   }
 
   /**

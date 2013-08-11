@@ -23,8 +23,10 @@ import java.util.List;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.util.ByteRange;
+import org.apache.hadoop.hbase.util.ByteRangeUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CollectionUtils;
+import org.apache.hadoop.hbase.util.SimpleByteRange;
 import org.apache.hadoop.hbase.util.Strings;
 
 import com.google.common.collect.Lists;
@@ -135,7 +137,7 @@ public class TokenizerNode{
 
   public TokenizerNode(Tokenizer builder, TokenizerNode parent, int nodeDepth,
       int tokenStartOffset, int tokenOffset, int tokenLength) {
-    this.token = new ByteRange();
+    this.token = new SimpleByteRange();
     reconstruct(builder, parent, nodeDepth, tokenStartOffset, tokenOffset, tokenLength);
     this.children = Lists.newArrayList();
   }
@@ -164,7 +166,7 @@ public class TokenizerNode{
     parent = null;
     nodeDepth = 0;
     tokenStartOffset = 0;
-    token.clear();
+    token.unset();
     numOccurrences = 0;
     children.clear();// branches & nubs
 
@@ -298,7 +300,7 @@ public class TokenizerNode{
   }
 
   protected int numIdenticalBytes(ByteRange bytes) {
-    return token.numEqualPrefixBytes(bytes, tokenStartOffset);
+    return ByteRangeUtils.numEqualPrefixBytes(token, bytes, tokenStartOffset);
   }
 
 
