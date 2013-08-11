@@ -19,17 +19,26 @@
 
 module Shell
   module Commands
-    class NamespaceDrop < Command
+    class ListNamespaceTables < Command
       def help
         return <<-EOF
-Drop the named namespace. The namespace must be empty.
+List all tables that are members of the namespace.
+Examples:
+
+  hbase> list_namespace_tables 'ns1'
 EOF
       end
 
       def command(namespace)
-        format_simple_command do
-          admin.drop_namespace(namespace)
+        now = Time.now
+        formatter.header([ "TABLE" ])
+
+        list = admin.list_namespace_tables(namespace)
+        list.each do |table|
+          formatter.row([ table ])
         end
+
+        formatter.footer(now, list.size)
       end
     end
   end

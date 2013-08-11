@@ -19,18 +19,18 @@
 
 module Shell
   module Commands
-    class NamespaceAlter < Command
+    class AlterNamespace < Command
       def help
         return <<-EOF
 Alter namespace properties.
 
 To add/modify a property:
 
-  hbase> namespace_alter 'ns1', {METHOD => 'set', 'PROERTY_NAME' => 'PROPERTY_VALUE'}
+  hbase> alter_namespace 'ns1', {METHOD => 'set', 'PROERTY_NAME' => 'PROPERTY_VALUE'}
 
 To delete a property:
 
-  hbase> namespace_alter 'ns1', {METHOD => 'unset', NAME=>'PROERTY_NAME'}
+  hbase> alter_namespace 'ns1', {METHOD => 'unset', NAME=>'PROERTY_NAME'}
 EOF
       end
 
