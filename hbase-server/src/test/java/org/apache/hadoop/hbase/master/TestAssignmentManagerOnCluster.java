@@ -49,6 +49,7 @@ import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.RegionObserver;
 import org.apache.hadoop.hbase.executor.EventType;
+import org.apache.hadoop.hbase.master.RegionState.State;
 import org.apache.hadoop.hbase.master.balancer.StochasticLoadBalancer;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -485,6 +486,7 @@ public class TestAssignmentManagerOnCluster {
       }
       am.regionOffline(hri);
       ZooKeeperWatcher zkw = TEST_UTIL.getHBaseCluster().getMaster().getZooKeeper();
+      am.getRegionStates().updateRegionState(hri, State.OFFLINE);
       ZKAssign.createNodeOffline(zkw, hri, destServerName);
       ZKAssign.transitionNodeOpening(zkw, hri, destServerName);
 

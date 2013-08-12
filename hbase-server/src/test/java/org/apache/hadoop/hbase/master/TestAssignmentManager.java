@@ -32,7 +32,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.hadoop.hbase.CellScannable;
 import org.apache.hadoop.hbase.CellUtil;
-import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
@@ -43,6 +42,7 @@ import org.apache.hadoop.hbase.RegionTransition;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerLoad;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.catalog.CatalogTracker;
 import org.apache.hadoop.hbase.catalog.MetaMockingUtil;
@@ -69,6 +69,8 @@ import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ScanRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ScanResponse;
 import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.Table;
 import org.apache.hadoop.hbase.regionserver.RegionOpeningState;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.zookeeper.RecoverableZooKeeper;
 import org.apache.hadoop.hbase.zookeeper.ZKAssign;
@@ -1237,6 +1239,60 @@ public class TestAssignmentManager {
       am.assign(hri, true, true);
       assertEquals("The region should be still in merging state",
         RegionState.State.MERGING, regionStates.getRegionState(hri).getState());
+    } finally {
+      am.shutdown();
+    }
+  }
+
+  /**
+   * Test assignment related ZK events are ignored by AM if the region is not known
+   * by AM to be in transition. During normal operation, all assignments are started
+   * by AM (not considering split/merge), if an event is received but the region
+   * is not in transition, the event must be a very late one. So it can be ignored.
+   * During master failover, since AM watches assignment znodes after failover cleanup
+   * is completed, when an event comes in, AM should already have the region in transition
+   * if ZK is used during the assignment action (only hbck doesn't use ZK for region
+   * assignment). So during master failover, we can ignored such events too.
+   */
+  @Test
+  public void testAssignmentEventIgnoredIfNotExpected() throws KeeperException, IOException {
+    // Region to use in test.
+    final HRegionInfo hri = HRegionInfo.FIRST_META_REGIONINFO;
+    // Need a mocked catalog tracker.
+    CatalogTracker ct = Mockito.mock(CatalogTracker.class);
+    LoadBalancer balancer = LoadBalancerFactory.getLoadBalancer(
+      server.getConfiguration());
+    final AtomicBoolean zkEventProcessed = new AtomicBoolean(false);
+    // Create an AM.
+    AssignmentManager am = new AssignmentManager(this.server,
+      this.serverManager, ct, balancer, null, null, master.getTableLockManager()) {
+
+      @Override
+      void handleRegion(final RegionTransition rt, int expectedVersion) {
+        super.handleRegion(rt, expectedVersion);
+        if (rt != null && Bytes.equals(hri.getRegionName(),
+          rt.getRegionName()) && rt.getEventType() == EventType.RS_ZK_REGION_OPENING) {
+          zkEventProcessed.set(true);
+        }
+      }
+    };
+    try {
+      // First make sure the region is not in transition
+      am.getRegionStates().regionOffline(hri);
+      zkEventProcessed.set(false); // Reset it before faking zk transition
+      this.watcher.registerListenerFirst(am);
+      assertFalse("The region should not be in transition",
+        am.getRegionStates().isRegionInTransition(hri));
+      ZKAssign.createNodeOffline(this.watcher, hri, SERVERNAME_A);
+      // Trigger a transition event
+      ZKAssign.transitionNodeOpening(this.watcher, hri, SERVERNAME_A);
+      long startTime = EnvironmentEdgeManager.currentTimeMillis();
+      while (!zkEventProcessed.get()) {
+        assertTrue("Timed out in waiting for ZK event to be processed",
+          EnvironmentEdgeManager.currentTimeMillis() - startTime < 30000);
+        Threads.sleepWithoutInterrupt(100);
+      }
+      assertFalse(am.getRegionStates().isRegionInTransition(hri));
     } finally {
       am.shutdown();
     }
