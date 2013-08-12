@@ -751,7 +751,7 @@ public class AssignmentManager extends ZooKeeperListener {
    * @param rt
    * @param expectedVersion
    */
-  private void handleRegion(final RegionTransition rt, int expectedVersion) {
+  void handleRegion(final RegionTransition rt, int expectedVersion) {
     if (rt == null) {
       LOG.warn("Unexpected NULL input for RegionTransition rt");
       return;
@@ -892,12 +892,11 @@ public class AssignmentManager extends ZooKeeperListener {
         case M_ZK_REGION_CLOSING:
           // Should see CLOSING after we have asked it to CLOSE or additional
           // times after already being in state of CLOSING
-          if (regionState != null
-              && !regionState.isPendingCloseOrClosingOnServer(sn)) {
+          if (regionState == null
+              || !regionState.isPendingCloseOrClosingOnServer(sn)) {
             LOG.warn("Received CLOSING for " + prettyPrintedRegionName
-              + " from server " + sn + " but region was in the state " + regionState
-              + " and not in expected PENDING_CLOSE or CLOSING states,"
-              + " or not on the expected server");
+              + " from " + sn + " but the region isn't PENDING_CLOSE/CLOSING here: "
+              + regionStates.getRegionState(encodedName));
             return;
           }
           // Transition to CLOSING (or update stamp if already CLOSING)
@@ -906,12 +905,11 @@ public class AssignmentManager extends ZooKeeperListener {
 
         case RS_ZK_REGION_CLOSED:
           // Should see CLOSED after CLOSING but possible after PENDING_CLOSE
-          if (regionState != null
-              && !regionState.isPendingCloseOrClosingOnServer(sn)) {
+          if (regionState == null
+              || !regionState.isPendingCloseOrClosingOnServer(sn)) {
             LOG.warn("Received CLOSED for " + prettyPrintedRegionName
-              + " from server " + sn + " but region was in the state " + regionState
-              + " and not in expected PENDING_CLOSE or CLOSING states,"
-              + " or not on the expected server");
+              + " from " + sn + " but the region isn't PENDING_CLOSE/CLOSING here: "
+              + regionStates.getRegionState(encodedName));
             return;
           }
           // Handle CLOSED by assigning elsewhere or stopping if a disable
@@ -926,12 +924,11 @@ public class AssignmentManager extends ZooKeeperListener {
           break;
 
         case RS_ZK_REGION_FAILED_OPEN:
-          if (regionState != null
-              && !regionState.isPendingOpenOrOpeningOnServer(sn)) {
+          if (regionState == null
+              || !regionState.isPendingOpenOrOpeningOnServer(sn)) {
             LOG.warn("Received FAILED_OPEN for " + prettyPrintedRegionName
-              + " from server " + sn + " but region was in the state " + regionState
-              + " and not in expected PENDING_OPEN or OPENING states,"
-              + " or not on the expected server");
+              + " from " + sn + " but the region isn't PENDING_OPEN/OPENING here: "
+              + regionStates.getRegionState(encodedName));
             return;
           }
           AtomicInteger failedOpenCount = failedOpenTracker.get(encodedName);
@@ -962,12 +959,11 @@ public class AssignmentManager extends ZooKeeperListener {
         case RS_ZK_REGION_OPENING:
           // Should see OPENING after we have asked it to OPEN or additional
           // times after already being in state of OPENING
-          if (regionState != null
-              && !regionState.isPendingOpenOrOpeningOnServer(sn)) {
+          if (regionState == null
+              || !regionState.isPendingOpenOrOpeningOnServer(sn)) {
             LOG.warn("Received OPENING for " + prettyPrintedRegionName
-              + " from server " + sn + " but region was in the state " + regionState
-              + " and not in expected PENDING_OPEN or OPENING states,"
-              + " or not on the expected server");
+              + " from " + sn + " but the region isn't PENDING_OPEN/OPENING here: "
+              + regionStates.getRegionState(encodedName));
             return;
           }
           // Transition to OPENING (or update stamp if already OPENING)
@@ -975,13 +971,13 @@ public class AssignmentManager extends ZooKeeperListener {
           break;
 
         case RS_ZK_REGION_OPENED:
-          // Should see OPENED after OPENING but possible after PENDING_OPEN
-          if (regionState != null
-              && !regionState.isPendingOpenOrOpeningOnServer(sn)) {
+          // Should see OPENED after OPENING but possible after PENDING_OPEN.
+          if (regionState == null
+              || !regionState.isPendingOpenOrOpeningOnServer(sn)) {
             LOG.warn("Received OPENED for " + prettyPrintedRegionName
-              + " from server " + sn + " but region was in the state " + regionState
-              + " and not in expected PENDING_OPEN or OPENING states,"
-              + " or not on the expected server");
+              + " from " + sn + " but the region isn't PENDING_OPEN/OPENING here: "
+              + regionStates.getRegionState(encodedName));
+
             // Close it without updating the internal region states,
             // so as not to create double assignments in unlucky scenarios
             // mentioned in OpenRegionHandler#process
