@@ -69,8 +69,6 @@ import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
 public class ReplicationSink {
 
   private static final Log LOG = LogFactory.getLog(ReplicationSink.class);
-  // Name of the HDFS directory that contains the temporary rep logs
-  public static final String REPLICATION_LOG_DIR = ".replogs";
   private final Configuration conf;
   private final HConnection sharedHtableCon;
   private final MetricsSink metrics;
