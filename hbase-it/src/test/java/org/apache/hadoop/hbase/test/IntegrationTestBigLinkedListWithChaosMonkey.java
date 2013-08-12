@@ -128,10 +128,16 @@ public class IntegrationTestBigLinkedListWithChaosMonkey extends IntegrationTest
     test.NUM_SLAVES_BASE = 3;
     test.setUp();
 
-    // run the test
-    int ret = ToolRunner.run(test.getTestingUtil().getConfiguration(), test, args);
+    int ret = -1;
 
-    test.tearDown();
+    try {
+      // run the test
+      ret = ToolRunner.run(test.getTestingUtil().getConfiguration(), test, args);
+    }finally {
+      // Make 100% sure that the monkey stops.
+      test.tearDown();
+    }
+
     System.exit(ret);
   }
 }
