@@ -80,7 +80,6 @@ extends ConstantSizeRegionSplitPolicy {
           " size=" + size + ", sizeToCheck=" + sizeToCheck +
           ", regionsWithCommonTable=" + tableRegionsCount);
         foundABigStore = true;
-        break;
       }
     }
 

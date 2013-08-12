@@ -44,7 +44,7 @@ public abstract class RegionSplitPolicy extends Configured {
    * The region configured for this split policy.
    */
   protected HRegion region;
-  
+
   /**
    * Upon construction, this method will be called with the region
    * to be governed. It will be called once and only once.
@@ -54,7 +54,7 @@ public abstract class RegionSplitPolicy extends Configured {
         this.region == null,
         "Policy already configured for region {}",
         this.region);
-    
+
     this.region = region;
   }
 
@@ -85,7 +85,7 @@ public abstract class RegionSplitPolicy extends Configured {
         largestStoreSize = storeSize;
       }
     }
-    
+
     return splitPointFromLargestStore;
   }
 
@@ -98,14 +98,13 @@ public abstract class RegionSplitPolicy extends Configured {
    */
   public static RegionSplitPolicy create(HRegion region,
       Configuration conf) throws IOException {
-    
     Class<? extends RegionSplitPolicy> clazz = getSplitPolicyClass(
         region.getTableDesc(), conf);
     RegionSplitPolicy policy = ReflectionUtils.newInstance(clazz, conf);
     policy.configureForRegion(region);
     return policy;
   }
-  
+
   static Class<? extends RegionSplitPolicy> getSplitPolicyClass(
       HTableDescriptor htd, Configuration conf) throws IOException {
     String className = htd.getRegionSplitPolicyClassName();
@@ -125,5 +124,4 @@ public abstract class RegionSplitPolicy extends Configured {
           e);
     }
   }
-
 }
