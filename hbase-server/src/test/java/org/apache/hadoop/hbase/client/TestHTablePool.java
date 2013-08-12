@@ -20,9 +20,6 @@ package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
 
-import junit.framework.Assert;
-import junit.framework.TestCase;
-
 import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.PoolMap.PoolType;
@@ -38,22 +35,23 @@ import org.junit.runners.Suite;
 @Suite.SuiteClasses({TestHTablePool.TestHTableReusablePool.class, TestHTablePool.TestHTableThreadLocalPool.class})
 @Category(MediumTests.class)
 public class TestHTablePool {
-	private static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
-	private final static byte[] TABLENAME = Bytes.toBytes("TestHTablePool");
+  private static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private final static byte[] TABLENAME = Bytes.toBytes("TestHTablePool");
+
+  public abstract static class TestHTablePoolType {
 
     @BeforeClass
     public static void setUpBeforeClass() throws Exception {
-			TEST_UTIL.startMiniCluster(1);
-			TEST_UTIL.createTable(TABLENAME, HConstants.CATALOG_FAMILY);
-		}
+      TEST_UTIL.startMiniCluster(1);
+      TEST_UTIL.createTable(TABLENAME, HConstants.CATALOG_FAMILY);
+    }
 
     @AfterClass
-		public static void tearDownAfterClass() throws Exception {
-			TEST_UTIL.shutdownMiniCluster();
-		}
+    public static void tearDownAfterClass() throws Exception {
+      TEST_UTIL.shutdownMiniCluster();
+    }
 
-	public abstract static class TestHTablePoolType extends TestCase {
-		protected abstract PoolType getPoolType();
+    protected abstract PoolType getPoolType();
 
 		@Test
 		public void testTableWithStringName() throws Exception {
