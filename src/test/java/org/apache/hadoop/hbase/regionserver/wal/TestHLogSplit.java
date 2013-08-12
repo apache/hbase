@@ -33,6 +33,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableSet;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
@@ -217,12 +218,13 @@ public class TestHLogSplit {
       fs.exists(new Path("/hbase/t1")));
 
     generateHLogs(-1);
+    CountDownLatch latch = new CountDownLatch(1);
 
     try {
-    (new ZombieNewLogWriterRegionServer(stop)).start();
+    (new ZombieNewLogWriterRegionServer(stop, latch)).start();
     HLogSplitter logSplitter = HLogSplitter.createLogSplitter(conf,
         hbaseDir, hlogDir, oldLogDir, fs);
-    logSplitter.splitLog();
+    logSplitter.splitLog(latch);
     } finally {
       stop.set(true);
     }
@@ -581,20 +583,23 @@ public class TestHLogSplit {
   throws IOException {
     AtomicBoolean stop = new AtomicBoolean(false);
     generateHLogs(-1);
+    CountDownLatch latch = new CountDownLatch(1);
     fs.initialize(fs.getUri(), conf);
-    Thread zombie = new ZombieNewLogWriterRegionServer(stop);
-
+    Thread zombie = new ZombieNewLogWriterRegionServer(stop, latch);
+    List<Path> splits = null;
     try {
       zombie.start();
       try {
         HLogSplitter logSplitter = HLogSplitter.createLogSplitter(conf,
             hbaseDir, hlogDir, oldLogDir, fs);
-        logSplitter.splitLog();
+        splits = logSplitter.splitLog(latch);
       } catch (IOException ex) {/* expected */}
-      int logFilesNumber = fs.listStatus(hlogDir).length;
+      FileStatus[] files = fs.listStatus(hlogDir);
+      if (files == null) fail("no files in " + hlogDir + " with splits " + splits);
+      int logFilesNumber = files.length;
 
       assertEquals("Log files should not be archived if there's an extra file after split",
-              NUM_WRITERS + 1, logFilesNumber);
+        NUM_WRITERS + 1, logFilesNumber);
     } finally {
       stop.set(true);
     }
@@ -1069,9 +1074,11 @@ public class TestHLogSplit {
    */
   class ZombieNewLogWriterRegionServer extends Thread {
     AtomicBoolean stop;
-    public ZombieNewLogWriterRegionServer(AtomicBoolean stop) {
+    CountDownLatch latch;
+    public ZombieNewLogWriterRegionServer(AtomicBoolean stop, CountDownLatch latch) {
       super("ZombieNewLogWriterRegionServer");
       this.stop = stop;
+      this.latch = latch;
     }
 
     @Override
@@ -1098,6 +1105,7 @@ public class TestHLogSplit {
             ("r").getBytes(), FAMILY, QUALIFIER, VALUE, 0);
         writer.close();
         flushToConsole("Juliet file creator: created file " + julietLog);
+        latch.countDown();
       } catch (IOException e1) {
         assertTrue("Failed to create file " + julietLog, false);
       }

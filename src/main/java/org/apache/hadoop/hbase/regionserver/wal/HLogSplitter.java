@@ -33,6 +33,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicReference;
 
 import org.apache.commons.logging.Log;
@@ -174,7 +175,19 @@ public class HLogSplitter {
    * @throws IOException will throw if corrupted hlogs aren't tolerated
    * @return the list of splits
    */
-  public List<Path> splitLog()
+  public List<Path> splitLog() throws IOException {
+    return splitLog((CountDownLatch) null);
+  }
+
+  /**
+   * Split up a bunch of regionserver commit log files that are no longer being written to, into new
+   * files, one per region for region to replay on startup. Delete the old log files when finished.
+   * @param latch A latch used by tests (TestHlogSplit) to coordinate with log split process before
+   * it archives the log directory.
+   * @throws IOException will throw if corrupted hlogs aren't tolerated
+   * @return the list of splits
+   */
+  public List<Path> splitLog(CountDownLatch latch)
       throws IOException {
     Preconditions.checkState(!hasSplit,
         "An HLogSplitter instance may only be used once");
@@ -199,7 +212,7 @@ public class HLogSplitter {
     }
     logAndReport("Splitting " + logfiles.length + " hlog(s) in "
     + srcDir.toString());
-    splits = splitLog(logfiles);
+    splits = splitLog(logfiles, latch);
 
     splitTime = EnvironmentEdgeManager.currentTimeMillis() - startTime;
     String msg = "hlog file splitting completed in " + splitTime +
@@ -259,7 +272,8 @@ public class HLogSplitter {
    * After the process is complete, the log files are archived to a separate
    * directory.
    */
-  private List<Path> splitLog(final FileStatus[] logfiles) throws IOException {
+  private List<Path> splitLog(final FileStatus[] logfiles, CountDownLatch latch)
+    throws IOException {
     List<Path> processedLogs = new ArrayList<Path>();
     List<Path> corruptedLogs = new ArrayList<Path>();
     List<Path> splits = null;
@@ -300,7 +314,14 @@ public class HLogSplitter {
         }
       }
       status.setStatus("Log splits complete. Checking for orphaned logs.");
-      
+      if (latch != null) {
+        try {
+          latch.await();
+        } catch (InterruptedException ie) {
+          LOG.warn("wait for latch interrupted");
+          Thread.currentThread().interrupt();
+        }
+      }
       if (fs.listStatus(srcDir).length > processedLogs.size()
           + corruptedLogs.size()) {
         throw new OrphanHLogAfterSplitException(
