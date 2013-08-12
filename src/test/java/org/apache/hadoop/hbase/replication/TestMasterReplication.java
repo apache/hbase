@@ -73,6 +73,8 @@ public class TestMasterReplication {
   private static final byte[] row = Bytes.toBytes("row");
   private static final byte[] row1 = Bytes.toBytes("row1");
   private static final byte[] row2 = Bytes.toBytes("row2");
+  private static final byte[] row3 = Bytes.toBytes("row3");
+  private static final byte[] row4 = Bytes.toBytes("row4");
   private static final byte[] noRepfamName = Bytes.toBytes("norep");
 
   private static final byte[] count = Bytes.toBytes("count");
@@ -178,6 +180,21 @@ public class TestMasterReplication {
     assertEquals("Deletes were replicated back ", 3, getCount(htable1, delete));
     assertEquals("Deletes were replicated back ", 3, getCount(htable2, delete));
     assertEquals("Deletes were replicated back ", 3, getCount(htable3, delete));
+
+    // Test HBASE-9158
+    admin2.disablePeer("1");
+    // we now have an edit that was replicated into cluster originating from cluster 1
+    putAndWait(row3, famName, htable1, htable2);
+    // now add a local edit to cluster 2
+    Put put = new Put(row4);
+    put.add(famName, row4, row4);
+    htable2.put(put);
+    // reenable replication from cluster 2 to cluster 3
+    admin2.enablePeer("1");
+    // without HBASE-9158 the edit for row4 would have been marked with cluster 1's id
+    // and hence not replicated to cluster 1
+    wait(row4, htable1);
+
     utility3.shutdownMiniCluster();
     utility2.shutdownMiniCluster();
     utility1.shutdownMiniCluster();
@@ -271,6 +288,10 @@ public class TestMasterReplication {
     put.add(fam, row, row);
     source.put(put);
 
+    wait(row, target);
+  }
+
+  private void wait(byte[] row, HTable target) throws Exception {
     Get get = new Get(row);
     for (int i = 0; i < NB_RETRIES; i++) {
       if (i==NB_RETRIES-1) {
@@ -284,7 +305,7 @@ public class TestMasterReplication {
         assertArrayEquals(res.value(), row);
         break;
       }
-    }
+    }    
   }
 
   /**

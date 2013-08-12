@@ -35,11 +35,13 @@ import org.apache.hadoop.hbase.client.Row;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.Stoppable;
+import org.apache.hadoop.hbase.util.Threads;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
@@ -48,6 +50,7 @@ import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.UUID;
 
 /**
  * This class is responsible for replicating the edits coming
@@ -86,8 +89,8 @@ public class ReplicationSink {
     this.conf = HBaseConfiguration.create(conf);
     decorateConf();
     this.sharedHtableCon = HConnectionManager.createConnection(this.conf);
-    this.sharedThreadPool = new ThreadPoolExecutor(1, 
-        conf.getInt("hbase.htable.threads.max", Integer.MAX_VALUE), 
+    this.sharedThreadPool = new ThreadPoolExecutor(1,
+        conf.getInt("hbase.htable.threads.max", Integer.MAX_VALUE),
         conf.getLong("hbase.htable.threads.keepalivetime", 60), TimeUnit.SECONDS,
         new SynchronousQueue<Runnable>(), Threads.newDaemonThreadFactory("hbase-repl"));
     ((ThreadPoolExecutor)this.sharedThreadPool).allowCoreThreadTimeOut(true);
@@ -121,9 +124,9 @@ public class ReplicationSink {
     // to the same table.
     try {
       long totalReplicated = 0;
-      // Map of table => list of Rows, we only want to flushCommits once per
-      // invocation of this method per table.
-      Map<byte[], List<Row>> rows = new TreeMap<byte[], List<Row>>(Bytes.BYTES_COMPARATOR);
+      // Map of table => list of Rows, grouped by cluster id, we only want to flushCommits once per
+      // invocation of this method per table and cluster id.
+      Map<byte[], Map<UUID,List<Row>>> rowMap = new TreeMap<byte[], Map<UUID,List<Row>>>(Bytes.BYTES_COMPARATOR);
       for (HLog.Entry entry : entries) {
         WALEdit edit = entry.getEdit();
         byte[] table = entry.getKey().getTablename();
@@ -133,14 +136,15 @@ public class ReplicationSink {
         List<KeyValue> kvs = edit.getKeyValues();
         for (KeyValue kv : kvs) {
           if (lastKV == null || lastKV.getType() != kv.getType() || !lastKV.matchingRow(kv)) {
+            UUID clusterId = entry.getKey().getClusterId();
             if (kv.isDelete()) {
               del = new Delete(kv.getRow());
-              del.setClusterId(entry.getKey().getClusterId());
-              addToMultiMap(rows, table, del);
+              del.setClusterId(clusterId);
+              addToHashMultiMap(rowMap, table, clusterId, del);
             } else {
               put = new Put(kv.getRow());
-              put.setClusterId(entry.getKey().getClusterId());
-              addToMultiMap(rows, table, put);
+              put.setClusterId(clusterId);
+              addToHashMultiMap(rowMap, table, clusterId, put);
             }
           }
           if (kv.isDelete()) {
@@ -152,8 +156,8 @@ public class ReplicationSink {
         }
         totalReplicated++;
       }
-      for(byte [] table : rows.keySet()) {
-        batch(table, rows.get(table));
+      for(Map.Entry<byte[], Map<UUID, List<Row>>> entry : rowMap.entrySet()) {
+        batch(entry.getKey(), entry.getValue().values());
       }
       this.metrics.setAgeOfLastAppliedOp(
           entries[entries.length-1].getKey().getWriteTime());
@@ -169,15 +173,21 @@ public class ReplicationSink {
    * Simple helper to a map from key to (a list of) values
    * TODO: Make a general utility method
    * @param map
-   * @param key
+   * @param key1
+   * @param key2
    * @param value
    * @return
    */
-  private <K, V> List<V> addToMultiMap(Map<K, List<V>> map, K key, V value) {
-    List<V> values = map.get(key);
+  private <K1, K2, V> List<V> addToHashMultiMap(Map<K1, Map<K2,List<V>>> map, K1 key1, K2 key2, V value) {
+    Map<K2,List<V>> innerMap = map.get(key1);
+    if (innerMap == null) {
+      innerMap = new HashMap<K2, List<V>>();
+      map.put(key1, innerMap);
+    }
+    List<V> values = innerMap.get(key2);
     if (values == null) {
       values = new ArrayList<V>();
-      map.put(key, values);
+      innerMap.put(key2, values);
     }
     values.add(value);
     return values;
@@ -206,18 +216,20 @@ public class ReplicationSink {
   /**
    * Do the changes and handle the pool
    * @param tableName table to insert into
-   * @param rows list of actions
+   * @param allRows list of actions
    * @throws IOException
    */
-  private void batch(byte[] tableName, List<Row> rows) throws IOException {
-    if (rows.isEmpty()) {
+  private void batch(byte[] tableName, Collection<List<Row>> allRows) throws IOException {
+    if (allRows.isEmpty()) {
       return;
     }
     HTableInterface table = null;
     try {
       table = new HTable(tableName, this.sharedHtableCon, this.sharedThreadPool);
-      table.batch(rows);
-      this.metrics.appliedOpsRate.inc(rows.size());
+      for (List<Row> rows : allRows) {
+        table.batch(rows);
+        this.metrics.appliedOpsRate.inc(rows.size());
+      }
     } catch (InterruptedException ix) {
       throw new IOException(ix);
     } finally {
