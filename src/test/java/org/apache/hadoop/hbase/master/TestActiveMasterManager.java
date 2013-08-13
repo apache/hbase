@@ -84,7 +84,7 @@ public class TestActiveMasterManager {
     MonitoredTask status = Mockito.mock(MonitoredTask.class);
     clusterStatusTracker.setClusterUp();
 
-    activeMasterManager.blockUntilBecomingActiveMaster(status,clusterStatusTracker);
+    activeMasterManager.blockUntilBecomingActiveMaster(status);
     assertTrue(activeMasterManager.clusterHasActiveMaster.get());
     assertMaster(zk, master);
 
@@ -93,7 +93,7 @@ public class TestActiveMasterManager {
     ActiveMasterManager secondActiveMasterManager =
       secondDummyMaster.getActiveMasterManager();
     assertFalse(secondActiveMasterManager.clusterHasActiveMaster.get());
-    activeMasterManager.blockUntilBecomingActiveMaster(status,clusterStatusTracker);
+    activeMasterManager.blockUntilBecomingActiveMaster(status);
     assertTrue(activeMasterManager.clusterHasActiveMaster.get());
     assertMaster(zk, master);
   }
@@ -129,7 +129,7 @@ public class TestActiveMasterManager {
       ms1.getClusterStatusTracker();
     clusterStatusTracker.setClusterUp();
     activeMasterManager.blockUntilBecomingActiveMaster(
-        Mockito.mock(MonitoredTask.class),clusterStatusTracker);
+        Mockito.mock(MonitoredTask.class));
     assertTrue(activeMasterManager.clusterHasActiveMaster.get());
     assertMaster(zk, firstMasterAddress);
 
@@ -211,8 +211,7 @@ public class TestActiveMasterManager {
     @Override
     public void run() {
       manager.blockUntilBecomingActiveMaster(
-          Mockito.mock(MonitoredTask.class),
-          this.dummyMaster.getClusterStatusTracker());
+          Mockito.mock(MonitoredTask.class));
       LOG.info("Second master has become the active master!");
       isActiveMaster = true;
     }
