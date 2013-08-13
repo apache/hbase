@@ -231,6 +231,10 @@ public abstract class TestReplicationStateBasic {
   }
 
   protected void assertConnectedPeerStatus(boolean status, String peerId) throws Exception {
+    // we can first check if the value was changed in the store, if it wasn't then fail right away
+    if (status != rp.getStatusOfPeerFromBackingStore(peerId)) {
+      fail("ConnectedPeerStatus was " + !status + " but expected " + status + " in ZK");
+    }
     while (true) {
       if (status == rp.getStatusOfConnectedPeer(peerId)) {
         return;
