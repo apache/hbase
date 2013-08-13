@@ -694,6 +694,15 @@ Caused by: java.io.FileNotFoundException: File _partition.lst does not exist.
 </programlisting>
        LocalJobRunner means the job is running locally, not on the cluster.
       </para>
+
+      <para>To solve this problem, you should run your MR job with your
+      <code>HADOOP_CLASSPATH</code> set to include the HBase dependencies.
+      The "hbase classpath" utility can be used to do this easily.
+      For example (substitute VERSION with your HBase version):
+      <programlisting>
+          HADOOP_CLASSPATH=`hbase classpath` hadoop jar $HBASE_HOME/hbase-VERSION.jar rowcounter usertable
+      </programlisting>
+      </para>
       <para>See
       <link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/mapreduce/package-summary.html#classpath">
       http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/mapreduce/package-summary.html#classpath</link> for more
