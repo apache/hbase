@@ -284,7 +284,7 @@ extends AggregateService implements CoprocessorService, Coprocessor {
    * entire column family will be returned.
    * <p>
    * The average is computed in
-   * {@link AggregationClient#avg(byte[], ColumnInterpreter, Scan)} by
+   * AggregationClient#avg(byte[], ColumnInterpreter, Scan) by
    * processing results from all regions, so its "ok" to pass sum and a Long
    * type.
    */
