@@ -423,6 +423,7 @@ public class HFilePrettyPrinter {
 
       if (curRowBytes > maxRowBytes && prevKV != null) {
         biggestRow = prevKV.getRow();
+        maxRowBytes = curRowBytes;
       }
 
       curRowBytes = 0;
