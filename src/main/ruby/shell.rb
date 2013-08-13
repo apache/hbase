@@ -286,6 +286,7 @@ Shell.load_command_group(
     disable_peer
     start_replication
     stop_replication
+    list_replicated_tables
   ]
 )
 

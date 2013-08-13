@@ -17,12 +17,18 @@
  */
 package org.apache.hadoop.hbase.replication;
 
+import java.util.HashMap;
+import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.LargeTests;
 import org.apache.hadoop.hbase.client.*;
+import org.apache.hadoop.hbase.client.replication.ReplicationAdmin;
 import org.apache.hadoop.hbase.mapreduce.replication.VerifyReplication;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -35,6 +41,7 @@ import org.junit.experimental.categories.Category;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
+import static org.junit.Assert.assertTrue;
 
 @Category(LargeTests.class)
 public class TestReplicationSmallTests extends TestReplicationBase {
@@ -527,4 +534,58 @@ public class TestReplicationSmallTests extends TestReplicationBase {
         findCounter(VerifyReplication.Verifier.Counters.BADROWS).getValue());
   }
 
+    
+    /**
+     * Test for HBASE-8663
+     * Create two new Tables with colfamilies enabled for replication then run
+     * ReplicationAdmin.listReplicated(). Finally verify the table:colfamilies. Note:
+     * TestReplicationAdmin is a better place for this testing but it would need mocks.
+     * @throws Exception
+     */
+    @Test(timeout = 300000)
+    public void testVerifyListReplicatedTable() throws Exception {
+      LOG.info("testVerifyListReplicatedTable");
+   
+      final String tName = "VerifyListReplicated_";
+      final String colFam = "cf1";
+      final int numOfTables = 3;
+  
+      HBaseAdmin hadmin = new HBaseAdmin(conf1);
+  
+      // Create Tables
+      for (int i = 0; i < numOfTables; i++) {
+        HTableDescriptor ht = new HTableDescriptor(tName + i);
+        HColumnDescriptor cfd = new HColumnDescriptor(colFam);
+        cfd.setScope(HConstants.REPLICATION_SCOPE_GLOBAL);
+        ht.addFamily(cfd);
+        hadmin.createTable(ht);
+      }
+  
+      // verify the result
+      List<HashMap<String, String>> replicationColFams = admin.listReplicated();
+      int[] match = new int[numOfTables]; // array of 3 with init value of zero
+  
+      for (int i = 0; i < replicationColFams.size(); i++) {
+        HashMap<String, String> replicationEntry = replicationColFams.get(i);
+        String tn = replicationEntry.get(ReplicationAdmin.TNAME);
+        if ((tn.startsWith(tName)) && replicationEntry.get(ReplicationAdmin.CFNAME).equals(colFam)) {
+          int m = Integer.parseInt(tn.substring(tn.length() - 1)); // get the last digit
+          match[m]++; // should only increase once
+        }
+      }
+  
+      // check the matching result
+      for (int i = 0; i < match.length; i++) {
+        assertTrue("listReplicated() does not match table " + i, (match[i] == 1));
+      }
+  
+      // drop tables
+      for (int i = 0; i < numOfTables; i++) {
+        String ht = tName + i;
+        hadmin.disableTable(ht);
+        hadmin.deleteTable(ht);
+      }
+  
+      hadmin.close();
+    }  
 }

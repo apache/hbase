@@ -43,6 +43,12 @@ module Hbase
       @replication_admin.removePeer(id)
     end
 
+    #---------------------------------------------------------------------------------------------
+    # Show replcated tables/column families, and their ReplicationType
+    def list_replicated_tables
+       @replication_admin.listReplicated()
+    end
+
     #----------------------------------------------------------------------------------------------
     # List all peer clusters
     def list_peers
