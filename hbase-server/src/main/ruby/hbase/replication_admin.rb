@@ -58,7 +58,7 @@ module Hbase
     #----------------------------------------------------------------------------------------------
     # Get peer cluster state
     def get_peer_state(id)
-      @replication_admin.getPeerState(id)
+      @replication_admin.getPeerState(id) ? "ENABLED" : "DISABLED"
     end
 
     #----------------------------------------------------------------------------------------------

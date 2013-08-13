@@ -76,10 +76,22 @@ public interface ReplicationPeers {
 
   /**
    * Get the replication status for the specified connected remote slave cluster.
+   * The value might be read from cache, so it is recommended to
+   * use {@link #getStatusOfPeerFromBackingStore(String)}
+   * if reading the state after enabling or disabling it.
    * @param peerId a short that identifies the cluster
    * @return true if replication is enabled, false otherwise.
    */
   boolean getStatusOfConnectedPeer(String peerId);
+
+  /**
+   * Get the replication status for the specified remote slave cluster, which doesn't
+   * have to be connected. The state is read directly from the backing store.
+   * @param peerId a short that identifies the cluster
+   * @return true if replication is enabled, false otherwise.
+   * @throws IOException Throws if there's an error contacting the store
+   */
+  boolean getStatusOfPeerFromBackingStore(String peerId) throws IOException;
 
   /**
    * Get a set of all connected remote slave clusters.

@@ -138,6 +138,21 @@ public class ReplicationPeersZKImpl extends ReplicationStateZKBase implements Re
   }
 
   @Override
+  public boolean getStatusOfPeerFromBackingStore(String id) throws IOException {
+    if (!this.getAllPeerIds().contains(id)) {
+      throw new IllegalArgumentException("peer " + id + " doesn't exist");
+    }
+    String peerStateZNode = getPeerStateNode(id);
+    try {
+      return ReplicationPeer.isStateEnabled(ZKUtil.getData(this.zookeeper, peerStateZNode));
+    } catch (KeeperException e) {
+      throw new IOException(e);
+    } catch (DeserializationException e) {
+      throw new IOException(e);
+    }
+  }
+
+  @Override
   public boolean connectToPeer(String peerId) throws IOException, KeeperException {
     if (peerClusters == null) {
       return false;

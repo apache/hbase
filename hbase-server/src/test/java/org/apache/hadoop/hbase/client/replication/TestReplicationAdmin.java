@@ -27,6 +27,8 @@ import org.junit.experimental.categories.Category;
 
 import static org.junit.Assert.fail;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertFalse;
 
 /**
  * Unit testing of ReplicationAdmin
@@ -86,12 +88,33 @@ public class TestReplicationAdmin {
       admin.addPeer(ID_SECOND, KEY_SECOND);
     } catch (IllegalStateException iae) {
       fail();
-      // OK!
     }
     assertEquals(2, admin.getPeersCount());
     // Remove the first peer we added
     admin.removePeer(ID_ONE);
     assertEquals(1, admin.getPeersCount());
+    admin.removePeer(ID_SECOND);
+    assertEquals(0, admin.getPeersCount());
+  }
+
+  /**
+   * basic checks that when we add a peer that it is enabled, and that we can disable
+   * @throws Exception
+   */
+  @Test
+  public void testEnableDisable() throws Exception {
+    admin.addPeer(ID_ONE, KEY_ONE);
+    assertEquals(1, admin.getPeersCount());
+    assertTrue(admin.getPeerState(ID_ONE));
+    admin.disablePeer(ID_ONE);
+
+    assertFalse(admin.getPeerState(ID_ONE));
+    try {
+      admin.getPeerState(ID_SECOND);
+    } catch (IllegalArgumentException iae) {
+      // OK!
+    }
+    admin.removePeer(ID_ONE);
   }
 
 }

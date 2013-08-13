@@ -200,11 +200,12 @@ public class ReplicationPeer implements Abortable, Closeable {
   }
 
   /**
-   * @param bytes
+   * Parse the raw data from ZK to get a peer's state
+   * @param bytes raw ZK data
    * @return True if the passed in <code>bytes</code> are those of a pb serialized ENABLED state.
    * @throws DeserializationException
    */
-  private static boolean isStateEnabled(final byte[] bytes) throws DeserializationException {
+  public static boolean isStateEnabled(final byte[] bytes) throws DeserializationException {
     ZooKeeperProtos.ReplicationState.State state = parseStateFrom(bytes);
     return ZooKeeperProtos.ReplicationState.State.ENABLED == state;
   }

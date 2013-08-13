@@ -175,6 +175,16 @@ public class ReplicationAdmin implements Closeable {
     return this.replicationPeers.getAllPeerClusterKeys();
   }
 
+  /**
+   * Get the state of the specified peer cluster
+   * @param id String format of the Short that identifies the peer, an IllegalArgumentException
+   *           is thrown if it doesn't exist
+   * @return true if replication is enabled to that peer, false if it isn't
+   */
+  public boolean getPeerState(String id) throws IOException {
+    return this.replicationPeers.getStatusOfPeerFromBackingStore(id);
+  }
+
   @Override
   public void close() throws IOException {
     if (this.connection != null) {
