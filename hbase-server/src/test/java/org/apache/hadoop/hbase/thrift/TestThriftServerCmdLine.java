@@ -129,8 +129,7 @@ public class TestThriftServerCmdLine {
   }
 
   private void startCmdLineThread(final String[] args) {
-    LOG.info("Starting HBase Thrift server with command line: " +
-        Joiner.on(" ").join(args));
+    LOG.info("Starting HBase Thrift server with command line: " + Joiner.on(" ").join(args));
 
     cmdLineException = null;
     cmdLineThread = new Thread(new Runnable() {
@@ -148,7 +147,7 @@ public class TestThriftServerCmdLine {
     cmdLineThread.start();
   }
 
-  @Test(timeout=300 * 1000)
+  @Test(timeout=600000)
   public void testRunThriftServer() throws Exception {
     List<String> args = new ArrayList<String>();
     if (implType != null) {
