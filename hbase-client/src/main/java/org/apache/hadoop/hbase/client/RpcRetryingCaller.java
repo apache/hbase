@@ -160,7 +160,8 @@ public class RpcRetryingCaller<T> {
    * @return Calculate how long a single call took
    */
   private long singleCallDuration(final long expectedSleep) {
-    return (this.endTime - this.globalStartTime) + MIN_RPC_TIMEOUT + expectedSleep;
+    return (EnvironmentEdgeManager.currentTimeMillis() - this.globalStartTime)
+      + MIN_RPC_TIMEOUT + expectedSleep;
   }
 
   /**
