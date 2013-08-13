@@ -542,6 +542,21 @@
     used for client / server RPC call marshalling.
     </description>
   </property>
+  <property>
+    <name>hbase.rpc.timeout</name>
+    <value>60000</value>
+    <description>This is for the RPC layer to define how long HBase client applications
+        take for a remote call to time out. It uses pings to check connections
+        but will eventually throw a TimeoutException.</description>
+  </property>
+  <property>
+    <name>hbase.rpc.shortoperation.timeout</name>
+    <value>10000</value>
+    <description>This is another version of "hbase.rpc.timeout". For those RPC operation
+        within cluster, we rely on this configuration to set a short timeout limitation
+        for short operation. For example, short rpc timeout for region server's trying
+        to report to active master can benefit quicker master failover process.</description>
+  </property>
 
   <!-- The following properties configure authentication information for
        HBase processes when using Kerberos security.  There are no default
