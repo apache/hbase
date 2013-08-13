@@ -32,55 +32,76 @@ message Permission {
         CREATE = 3;
         ADMIN = 4;
     }
-    repeated Action action = 1;
-    optional TableName tableName = 2;
-    optional bytes family = 3;
-    optional bytes qualifier = 4;
+    enum Type {
+        Global = 1;
+        Namespace = 2;
+        Table = 3;
+    }
+    required Type type = 1;
+    optional GlobalPermission global_permission = 2;
+    optional NamespacePermission namespace_permission = 3;
+    optional TablePermission table_permission = 4;
+}
+
+message TablePermission {
+    optional TableName table_name = 1;
+    optional bytes family = 2;
+    optional bytes qualifier = 3;
+    repeated Permission.Action action = 4;
+}
+
+message NamespacePermission {
+    optional bytes namespace_name = 1;
+    repeated Permission.Action action = 2;
+}
+
+message GlobalPermission {
+    repeated Permission.Action action = 1;
 }
 
 message UserPermission {
     required bytes user = 1;
-    required Permission permission = 2;
+    required Permission permission = 3;
 }
 
 /**
- * Content of the /hbase/acl/<table> znode.
+ * Content of the /hbase/acl/<table or namespace> znode.
  */
-message UserTablePermissions {
+message UsersAndPermissions {
   message UserPermissions {
     required bytes user = 1;
     repeated Permission permissions = 2;
   }
 
-  repeated UserPermissions permissions = 1;
+  repeated UserPermissions user_permissions = 1;
 }
 
 message GrantRequest {
-    required UserPermission permission = 1;
+  required UserPermission user_permission = 1;
 }
 
 message GrantResponse {
 }
 
 message RevokeRequest {
-    required UserPermission permission = 1;
-
+  required UserPermission user_permission = 1;
 }
 
 message RevokeResponse {
 }
 
-
 message UserPermissionsRequest {
-    optional TableName tableName = 1;
+  optional Permission.Type type = 1;
+  optional TableName table_name = 2;
+  optional bytes namespace_name = 3;
 }
 
 message UserPermissionsResponse {
-    repeated UserPermission permission = 1;
+  repeated UserPermission user_permission = 1;
 }
 
 message CheckPermissionsRequest {
-    repeated Permission permission = 1;
+  repeated Permission permission = 1;
 }
 
 message CheckPermissionsResponse {

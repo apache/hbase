@@ -63,6 +63,29 @@ public class UserPermission extends TablePermission {
   }
 
   /**
+   * Creates a new instance for the given user.
+   * @param user the user
+   * @param namespace
+   * @param assigned the list of allowed actions
+   */
+  public UserPermission(byte[] user, String namespace, Action... assigned) {
+    super(namespace, assigned);
+    this.user = user;
+  }
+
+  /**
+   * Creates a new instance for the given user,
+   * matching the actions with the given codes.
+   * @param user the user
+   * @param namespace
+   * @param actionCodes the list of allowed action codes
+   */
+  public UserPermission(byte[] user, String namespace, byte[] actionCodes) {
+    super(namespace, actionCodes);
+    this.user = user;
+  }
+
+  /**
    * Creates a new instance for the given user, table and column family.
    * @param user the user
    * @param table the table
@@ -110,6 +133,18 @@ public class UserPermission extends TablePermission {
     this.user = user;
   }
 
+  /**
+   * Creates a new instance for the given user, table, column family and
+   * qualifier, matching the actions with the given codes.
+   * @param user the user
+   * @param perm a TablePermission
+   */
+  public UserPermission(byte[] user, TablePermission perm) {
+    super(perm.getNamespace(), perm.getTable(), perm.getFamily(), perm.getQualifier(),
+        perm.actions);
+    this.user = user;
+  }
+
   public byte[] getUser() {
     return user;
   }
@@ -118,8 +153,7 @@ public class UserPermission extends TablePermission {
    * Returns true if this permission describes a global user permission.
    */
   public boolean isGlobal() {
-    TableName tableName = getTable();
-    return(tableName == null);
+    return(!hasTable() && !hasNamespace());
   }
 
   @Override

@@ -18,8 +18,8 @@
 
 package org.apache.hadoop.hbase.security.access;
 
-import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -103,7 +103,7 @@ import com.google.protobuf.ServiceException;
  */
 @Category(LargeTests.class)
 @SuppressWarnings("rawtypes")
-public class TestAccessController {
+public class TestAccessController extends SecureTestUtil {
   private static final Log LOG = LogFactory.getLog(TestAccessController.class);
   @Rule public TestTableName TEST_TABLE = new TestTableName();
   private static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
@@ -156,7 +156,7 @@ public class TestAccessController {
       Coprocessor.PRIORITY_HIGHEST, 1, conf);
 
     // Wait for the ACL table to become available
-    TEST_UTIL.waitTableEnabled(AccessControlLists.ACL_TABLE_NAME);
+    TEST_UTIL.waitTableEnabled(AccessControlLists.ACL_TABLE_NAME.getName());
 
     // create a set of test users
     SUPERUSER = User.createUserForTesting(conf, "admin", new String[] { "supergroup" });
@@ -196,7 +196,6 @@ public class TestAccessController {
         AccessControlService.newBlockingStub(service);
 
       protocol.grant(null, RequestConverter.buildGrantRequest(USER_ADMIN.getShortName(),
-        null, null, null,
         AccessControlProtos.Permission.Action.ADMIN,
         AccessControlProtos.Permission.Action.CREATE,
         AccessControlProtos.Permission.Action.READ,
@@ -233,16 +232,6 @@ public class TestAccessController {
       LOG.info("Test deleted table " + TEST_TABLE.getTableName());
     }
     assertEquals(0, AccessControlLists.getTablePermissions(conf, TEST_TABLE.getTableName()).size());
-  }
-
-  public void verifyAllowed(User user, PrivilegedExceptionAction... actions) throws Exception {
-    for (PrivilegedExceptionAction action : actions) {
-      try {
-        user.runAs(action);
-      } catch (AccessDeniedException ade) {
-        fail("Expected action to pass for user '" + user.getShortName() + "' but was denied");
-      }
-    }
   }
 
   public void verifyAllowed(PrivilegedExceptionAction action, User... users) throws Exception {
@@ -414,7 +403,7 @@ public class TestAccessController {
     PrivilegedExceptionAction disableAclTable = new PrivilegedExceptionAction() {
       public Object run() throws Exception {
         ACCESS_CONTROLLER.preDisableTable(ObserverContext.createAndPrepare(CP_ENV, null),
-            AccessControlLists.ACL_TABLE);
+            AccessControlLists.ACL_TABLE_NAME);
         return null;
       }
     };
@@ -1163,7 +1152,7 @@ public class TestAccessController {
       ProtobufUtil.grant(protocol, tblUser.getShortName(),
         tableName, null, null, Permission.Action.READ);
       ProtobufUtil.grant(protocol, gblUser.getShortName(),
-        null, null, null, Permission.Action.READ);
+          Permission.Action.READ);
     } finally {
       acl.close();
     }
@@ -1187,7 +1176,7 @@ public class TestAccessController {
       ProtobufUtil.grant(protocol, tblUser.getShortName(),
         tableName, null, null, Permission.Action.WRITE);
       ProtobufUtil.grant(protocol, gblUser.getShortName(),
-        null, null, null, Permission.Action.WRITE);
+          Permission.Action.WRITE);
     } finally {
       acl.close();
     }
@@ -1211,7 +1200,7 @@ public class TestAccessController {
       ProtobufUtil.grant(protocol, tblUser.getShortName(), tableName, null, null,
         Permission.Action.READ, Permission.Action.WRITE);
       ProtobufUtil.revoke(protocol, tblUser.getShortName(), tableName, null, null);
-      ProtobufUtil.revoke(protocol, gblUser.getShortName(), null, null, null);
+      ProtobufUtil.revoke(protocol, gblUser.getShortName());
     } finally {
       acl.close();
     }
@@ -1235,7 +1224,7 @@ public class TestAccessController {
       ProtobufUtil.grant(protocol, tblUser.getShortName(),
         tableName, family1, null, Permission.Action.READ);
       ProtobufUtil.grant(protocol, gblUser.getShortName(),
-        null, null, null, Permission.Action.READ);
+          Permission.Action.READ);
     } finally {
       acl.close();
     }
@@ -1261,7 +1250,7 @@ public class TestAccessController {
       ProtobufUtil.grant(protocol, tblUser.getShortName(),
         tableName, family2, null, Permission.Action.WRITE);
       ProtobufUtil.grant(protocol, gblUser.getShortName(),
-        null, null, null, Permission.Action.WRITE);
+          Permission.Action.WRITE);
     } finally {
       acl.close();
     }
@@ -1286,7 +1275,7 @@ public class TestAccessController {
       AccessControlService.BlockingInterface protocol =
         AccessControlService.newBlockingStub(service);
       ProtobufUtil.revoke(protocol, tblUser.getShortName(), tableName, family2, null);
-      ProtobufUtil.revoke(protocol, gblUser.getShortName(), null, null, null);
+      ProtobufUtil.revoke(protocol, gblUser.getShortName());
     } finally {
       acl.close();
     }
@@ -1606,12 +1595,12 @@ public class TestAccessController {
       BlockingRpcChannel service = acl.coprocessorService(HConstants.EMPTY_START_ROW);
       AccessControlService.BlockingInterface protocol =
         AccessControlService.newBlockingStub(service);
-      perms = ProtobufUtil.getUserPermissions(protocol, null);
+      perms = ProtobufUtil.getUserPermissions(protocol);
     } finally {
       acl.close();
     }
     UserPermission adminPerm = new UserPermission(Bytes.toBytes(USER_ADMIN.getShortName()),
-      AccessControlLists.ACL_TABLE, null, null, Bytes.toBytes("ACRW"));
+      AccessControlLists.ACL_TABLE_NAME, null, null, Bytes.toBytes("ACRW"));
     assertTrue("Only user admin has permission on table _acl_ per setup",
       perms.size() == 1 && hasFoundUserPermission(adminPerm, perms));
   }
@@ -1631,7 +1620,10 @@ public class TestAccessController {
     CheckPermissionsRequest.Builder request = CheckPermissionsRequest.newBuilder();
     for (Action a : actions) {
       request.addPermission(AccessControlProtos.Permission.newBuilder()
-          .addAction(ProtobufUtil.toPermissionAction(a)).build());
+          .setType(AccessControlProtos.Permission.Type.Global)
+          .setGlobalPermission(
+              AccessControlProtos.GlobalPermission.newBuilder()
+                  .addAction(ProtobufUtil.toPermissionAction(a)).build()));
     }
     HTable acl = new HTable(conf, AccessControlLists.ACL_TABLE_NAME);
     try {
@@ -1812,8 +1804,11 @@ public class TestAccessController {
     // check for wrong table region
     CheckPermissionsRequest checkRequest = CheckPermissionsRequest.newBuilder()
       .addPermission(AccessControlProtos.Permission.newBuilder()
-        .setTableName(ProtobufUtil.toProtoTableName(TEST_TABLE.getTableName()))
-        .addAction(AccessControlProtos.Permission.Action.CREATE)
+          .setType(AccessControlProtos.Permission.Type.Table)
+          .setTablePermission(
+              AccessControlProtos.TablePermission.newBuilder()
+                  .setTableName(ProtobufUtil.toProtoTableName(TEST_TABLE.getTableName()))
+                  .addAction(AccessControlProtos.Permission.Action.CREATE))
       ).build();
     acl = new HTable(conf, AccessControlLists.ACL_TABLE_NAME);
     try {
@@ -1934,7 +1929,7 @@ public class TestAccessController {
       // User name for the new RegionServer we plan to add.
       String activeUserForNewRs = currentUser + ".hfs."
           + hbaseCluster.getLiveRegionServerThreads().size();
-      ProtobufUtil.grant(protocol, activeUserForNewRs, null, null, null,
+      ProtobufUtil.grant(protocol, activeUserForNewRs,
         Permission.Action.ADMIN, Permission.Action.CREATE,
         Permission.Action.READ, Permission.Action.WRITE);
     } finally {

@@ -97,7 +97,7 @@ public class TestTablePermissions {
     UTIL.startMiniCluster();
 
     // Wait for the ACL table to become available
-    UTIL.waitTableEnabled(AccessControlLists.ACL_TABLE_NAME);
+    UTIL.waitTableEnabled(AccessControlLists.ACL_TABLE_NAME.getName());
 
     ZKW = new ZooKeeperWatcher(UTIL.getConfiguration(),
       "TestTablePermissions", ABORTABLE);
@@ -116,7 +116,7 @@ public class TestTablePermissions {
     Configuration conf = UTIL.getConfiguration();
     AccessControlLists.removeTablePermissions(conf, TEST_TABLE);
     AccessControlLists.removeTablePermissions(conf, TEST_TABLE2);
-    AccessControlLists.removeTablePermissions(conf, AccessControlLists.ACL_TABLE);
+    AccessControlLists.removeTablePermissions(conf, AccessControlLists.ACL_TABLE_NAME);
   }
 
   /**
@@ -240,12 +240,12 @@ public class TestTablePermissions {
             TablePermission.Action.READ, TablePermission.Action.WRITE));
 
     // check full load
-    Map<TableName,ListMultimap<String,TablePermission>> allPerms =
+    Map<byte[], ListMultimap<String,TablePermission>> allPerms =
         AccessControlLists.loadAll(conf);
     assertEquals("Full permission map should have entries for both test tables",
         2, allPerms.size());
 
-    userPerms = allPerms.get(TEST_TABLE).get("hubert");
+    userPerms = allPerms.get(TEST_TABLE.getName()).get("hubert");
     assertNotNull(userPerms);
     assertEquals(1, userPerms.size());
     permission = userPerms.get(0);
@@ -253,7 +253,7 @@ public class TestTablePermissions {
     assertEquals(1, permission.getActions().length);
     assertEquals(TablePermission.Action.READ, permission.getActions()[0]);
 
-    userPerms = allPerms.get(TEST_TABLE2).get("hubert");
+    userPerms = allPerms.get(TEST_TABLE2.getName()).get("hubert");
     assertNotNull(userPerms);
     assertEquals(1, userPerms.size());
     permission = userPerms.get(0);
@@ -310,7 +310,7 @@ public class TestTablePermissions {
     ListMultimap<String,TablePermission> permissions = createPermissions();
     byte[] permsData = AccessControlLists.writePermissionsAsBytes(permissions, conf);
 
-    ListMultimap<String,TablePermission> copy =
+    ListMultimap<String, TablePermission> copy =
         AccessControlLists.readPermissions(permsData, conf);
 
     checkMultimapEqual(permissions, copy);

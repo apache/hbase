@@ -27,6 +27,8 @@ import java.util.TreeSet;
 import com.google.protobuf.RpcCallback;
 import com.google.protobuf.RpcController;
 import com.google.protobuf.Service;
+
+import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -140,16 +142,16 @@ public class AccessController extends BaseRegionObserver
   void initialize(RegionCoprocessorEnvironment e) throws IOException {
     final HRegion region = e.getRegion();
 
-    Map<TableName,ListMultimap<String,TablePermission>> tables =
+    Map<byte[], ListMultimap<String,TablePermission>> tables =
         AccessControlLists.loadAll(region);
     // For each table, write out the table's permissions to the respective
     // znode for that table.
-    for (Map.Entry<TableName,ListMultimap<String,TablePermission>> t:
+    for (Map.Entry<byte[], ListMultimap<String,TablePermission>> t:
       tables.entrySet()) {
-      TableName table = t.getKey();
+      byte[] entry = t.getKey();
       ListMultimap<String,TablePermission> perms = t.getValue();
       byte[] serialized = AccessControlLists.writePermissionsAsBytes(perms, e.getConfiguration());
-      this.authManager.getZKPermissionWatcher().writeToZookeeper(table, serialized);
+      this.authManager.getZKPermissionWatcher().writeToZookeeper(entry, serialized);
     }
   }
 
@@ -160,7 +162,7 @@ public class AccessController extends BaseRegionObserver
    */
   void updateACL(RegionCoprocessorEnvironment e,
       final Map<byte[], List<? extends Cell>> familyMap) {
-    Set<TableName> tableSet = new TreeSet<TableName>();
+    Set<byte[]> entries = new TreeSet<byte[]>(Bytes.BYTES_RAWCOMPARATOR);
     for (Map.Entry<byte[], List<? extends Cell>> f : familyMap.entrySet()) {
       List<? extends Cell> cells = f.getValue();
       for (Cell cell: cells) {
@@ -168,21 +170,21 @@ public class AccessController extends BaseRegionObserver
         if (Bytes.equals(kv.getBuffer(), kv.getFamilyOffset(),
             kv.getFamilyLength(), AccessControlLists.ACL_LIST_FAMILY, 0,
             AccessControlLists.ACL_LIST_FAMILY.length)) {
-          tableSet.add(TableName.valueOf(kv.getRow()));
+          entries.add(kv.getRow());
         }
       }
     }
-
     ZKPermissionWatcher zkw = this.authManager.getZKPermissionWatcher();
     Configuration conf = regionEnv.getConfiguration();
-    for (TableName tableName: tableSet) {
+    for (byte[] entry: entries) {
       try {
         ListMultimap<String,TablePermission> perms =
-          AccessControlLists.getTablePermissions(conf, tableName);
+          AccessControlLists.getPermissions(conf, entry);
         byte[] serialized = AccessControlLists.writePermissionsAsBytes(perms, conf);
-        zkw.writeToZookeeper(tableName, serialized);
+        zkw.writeToZookeeper(entry, serialized);
       } catch (IOException ex) {
-        LOG.error("Failed updating permissions mirror for '" + tableName + "'", ex);
+        LOG.error("Failed updating permissions mirror for '" + Bytes.toString(entry) + "'",
+            ex);
       }
     }
   }
@@ -353,6 +355,35 @@ public class AccessController extends BaseRegionObserver
   }
 
   /**
+   * Authorizes that the current user has any of the given permissions for the
+   * given table, column family and column qualifier.
+   * @param namespace
+   * @throws IOException if obtaining the current user fails
+   * @throws AccessDeniedException if user has no authorization
+   */
+  private void requirePermission(String request, String namespace,
+      Action... permissions) throws IOException {
+    User user = getActiveUser();
+    AuthResult result = null;
+
+    for (Action permission : permissions) {
+      if (authManager.authorize(user, namespace, permission)) {
+        result = AuthResult.allow(request, "Table permission granted", user,
+                                  permission, namespace);
+        break;
+      } else {
+        // rest of the world
+        result = AuthResult.deny(request, "Insufficient permissions", user,
+                                 permission, namespace);
+      }
+    }
+    logResult(result);
+    if (!result.isAllowed()) {
+      throw new AccessDeniedException("Insufficient permissions " + result.toContextString());
+    }
+  }
+
+  /**
    * Authorizes that the current user has global privileges for the given action.
    * @param perm The action being requested
    * @throws IOException if obtaining the current user fails
@@ -393,7 +424,7 @@ public class AccessController extends BaseRegionObserver
    * being authorized, based on the given parameters.
    * @param perm Action being requested
    * @param tableName Affected table name.
-   * @param familiMap Affected column families.
+   * @param familyMap Affected column families.
    */
   private void requireGlobalPermission(String request, Permission.Action perm, TableName tableName,
       Map<byte[], ? extends Collection<byte[]>> familyMap) throws IOException {
@@ -402,6 +433,26 @@ public class AccessController extends BaseRegionObserver
       logResult(AuthResult.allow(request, "Global check allowed", user, perm, tableName, familyMap));
     } else {
       logResult(AuthResult.deny(request, "Global check failed", user, perm, tableName, familyMap));
+      throw new AccessDeniedException("Insufficient permissions for user '" +
+          (user != null ? user.getShortName() : "null") +"' (global, action=" +
+          perm.toString() + ")");
+    }
+  }
+
+  /**
+   * Checks that the user has the given global permission. The generated
+   * audit log message will contain context information for the operation
+   * being authorized, based on the given parameters.
+   * @param perm Action being requested
+   * @param namespace
+   */
+  private void requireGlobalPermission(String request, Permission.Action perm,
+                                       String namespace) throws IOException {
+    User user = getActiveUser();
+    if (authManager.authorize(user, perm)) {
+      logResult(AuthResult.allow(request, "Global check allowed", user, perm, namespace));
+    } else {
+      logResult(AuthResult.deny(request, "Global check failed", user, perm, namespace));
       throw new AccessDeniedException("Insufficient permissions for user '" +
           (user != null ? user.getShortName() : "null") +"' (global, action=" +
           perm.toString() + ")");
@@ -632,7 +683,7 @@ public class AccessController extends BaseRegionObserver
       throws IOException {
     if (Bytes.equals(tableName.getName(), AccessControlLists.ACL_GLOBAL_NAME)) {
       throw new AccessDeniedException("Not allowed to disable "
-          + AccessControlLists.ACL_TABLE_NAME_STR + " table.");
+          + AccessControlLists.ACL_TABLE_NAME + " table.");
     }
     requirePermission("disableTable", tableName, null, null, Action.ADMIN, Action.CREATE);
   }
@@ -779,27 +830,33 @@ public class AccessController extends BaseRegionObserver
 
   @Override
   public void preCreateNamespace(ObserverContext<MasterCoprocessorEnvironment> ctx,
-                                 NamespaceDescriptor ns) throws IOException {
+      NamespaceDescriptor ns) throws IOException {
+    requireGlobalPermission("createNamespace", Action.ADMIN, ns.getName());
   }
 
   @Override
   public void postCreateNamespace(ObserverContext<MasterCoprocessorEnvironment> ctx,
-                                  NamespaceDescriptor ns) throws IOException {
+      NamespaceDescriptor ns) throws IOException {
   }
 
   @Override
-  public void preDeleteNamespace(ObserverContext<MasterCoprocessorEnvironment> ctx,
-                                 String namespace) throws IOException {
+  public void preDeleteNamespace(ObserverContext<MasterCoprocessorEnvironment> ctx, String namespace)
+      throws IOException {
+    requireGlobalPermission("deleteNamespace", Action.ADMIN, namespace);
   }
 
   @Override
   public void postDeleteNamespace(ObserverContext<MasterCoprocessorEnvironment> ctx,
                                   String namespace) throws IOException {
+    AccessControlLists.removeNamespacePermissions(ctx.getEnvironment().getConfiguration(),
+        namespace);
+    LOG.info(namespace + "entry deleted in "+AccessControlLists.ACL_TABLE_NAME+" table.");
   }
 
   @Override
   public void preModifyNamespace(ObserverContext<MasterCoprocessorEnvironment> ctx,
-                                 NamespaceDescriptor ns) throws IOException {
+      NamespaceDescriptor ns) throws IOException {
+    requireGlobalPermission("modifyNamespace", Action.ADMIN, ns.getName());
   }
 
   @Override
@@ -1140,7 +1197,7 @@ public class AccessController extends BaseRegionObserver
         action, e, Collections.EMPTY_MAP);
     if (!authResult.isAllowed()) {
       for(UserPermission userPerm:
-          AccessControlLists.getUserPermissions(regionEnv.getConfiguration(), tableName)) {
+          AccessControlLists.getUserTablePermissions(regionEnv.getConfiguration(), tableName)) {
         for(Permission.Action userAction: userPerm.getActions()) {
           if(userAction.equals(action)) {
             return AuthResult.allow(method, "Access allowed", requestUser,
@@ -1189,7 +1246,7 @@ public class AccessController extends BaseRegionObserver
   public void grant(RpcController controller,
                     AccessControlProtos.GrantRequest request,
                     RpcCallback<AccessControlProtos.GrantResponse> done) {
-    UserPermission perm = ProtobufUtil.toUserPermission(request.getPermission());
+    UserPermission perm = ProtobufUtil.toUserPermission(request.getUserPermission());
     AccessControlProtos.GrantResponse response = null;
     try {
       // verify it's only running at .acl.
@@ -1198,7 +1255,15 @@ public class AccessController extends BaseRegionObserver
           LOG.debug("Received request to grant access permission " + perm.toString());
         }
 
-        requirePermission("grant", perm.getTable(), perm.getFamily(), perm.getQualifier(), Action.ADMIN);
+        switch(request.getUserPermission().getPermission().getType()) {
+          case Global :
+          case Table :
+            requirePermission("grant", perm.getTable(), perm.getFamily(),
+                perm.getQualifier(), Action.ADMIN);
+            break;
+          case Namespace :
+            requireGlobalPermission("grant", Action.ADMIN, perm.getNamespace());
+        }
 
         AccessControlLists.addUserPermission(regionEnv.getConfiguration(), perm);
         if (AUDITLOG.isTraceEnabled()) {
@@ -1207,7 +1272,7 @@ public class AccessController extends BaseRegionObserver
         }
       } else {
         throw new CoprocessorException(AccessController.class, "This method "
-            + "can only execute at " + Bytes.toString(AccessControlLists.ACL_TABLE_NAME) + " table.");
+            + "can only execute at " + AccessControlLists.ACL_TABLE_NAME + " table.");
       }
       response = AccessControlProtos.GrantResponse.getDefaultInstance();
     } catch (IOException ioe) {
@@ -1221,7 +1286,7 @@ public class AccessController extends BaseRegionObserver
   public void revoke(RpcController controller,
                      AccessControlProtos.RevokeRequest request,
                      RpcCallback<AccessControlProtos.RevokeResponse> done) {
-    UserPermission perm = ProtobufUtil.toUserPermission(request.getPermission());
+    UserPermission perm = ProtobufUtil.toUserPermission(request.getUserPermission());
     AccessControlProtos.RevokeResponse response = null;
     try {
       // only allowed to be called on _acl_ region
@@ -1230,8 +1295,15 @@ public class AccessController extends BaseRegionObserver
           LOG.debug("Received request to revoke access permission " + perm.toString());
         }
 
-        requirePermission("revoke", perm.getTable(), perm.getFamily(),
-                          perm.getQualifier(), Action.ADMIN);
+        switch(request.getUserPermission().getPermission().getType()) {
+          case Global :
+          case Table :
+            requirePermission("revoke", perm.getTable(), perm.getFamily(),
+                              perm.getQualifier(), Action.ADMIN);
+            break;
+          case Namespace :
+            requireGlobalPermission("revoke", Action.ADMIN, perm.getNamespace());
+        }
 
         AccessControlLists.removeUserPermission(regionEnv.getConfiguration(), perm);
         if (AUDITLOG.isTraceEnabled()) {
@@ -1240,7 +1312,7 @@ public class AccessController extends BaseRegionObserver
         }
       } else {
         throw new CoprocessorException(AccessController.class, "This method "
-            + "can only execute at " + Bytes.toString(AccessControlLists.ACL_TABLE_NAME) + " table.");
+            + "can only execute at " + AccessControlLists.ACL_TABLE_NAME + " table.");
       }
       response = AccessControlProtos.RevokeResponse.getDefaultInstance();
     } catch (IOException ioe) {
@@ -1255,21 +1327,30 @@ public class AccessController extends BaseRegionObserver
                                  AccessControlProtos.UserPermissionsRequest request,
                                  RpcCallback<AccessControlProtos.UserPermissionsResponse> done) {
     AccessControlProtos.UserPermissionsResponse response = null;
-    TableName table = null;
-    if (request.hasTableName()) {
-      table = ProtobufUtil.toTableName(request.getTableName());
-    }
     try {
       // only allowed to be called on _acl_ region
       if (aclRegion) {
-        requirePermission("userPermissions", table, null, null, Action.ADMIN);
+        List<UserPermission> perms = null;
+        if(request.getType() == AccessControlProtos.Permission.Type.Table) {
+          TableName table = null;
+          if (request.hasTableName()) {
+            table = ProtobufUtil.toTableName(request.getTableName());
+          }
+          requirePermission("userPermissions", table, null, null, Action.ADMIN);
 
-        List<UserPermission> perms = AccessControlLists.getUserPermissions(
-          regionEnv.getConfiguration(), table);
+          perms = AccessControlLists.getUserTablePermissions(
+              regionEnv.getConfiguration(), table);
+        } else if (request.getType() == AccessControlProtos.Permission.Type.Namespace) {
+          perms = AccessControlLists.getUserNamespacePermissions(
+              regionEnv.getConfiguration(), request.getNamespaceName().toStringUtf8());
+        } else {
+          perms = AccessControlLists.getUserPermissions(
+              regionEnv.getConfiguration(), null);
+        }
         response = ResponseConverter.buildUserPermissionsResponse(perms);
       } else {
         throw new CoprocessorException(AccessController.class, "This method "
-            + "can only execute at " + Bytes.toString(AccessControlLists.ACL_TABLE_NAME) + " table.");
+            + "can only execute at " + AccessControlLists.ACL_TABLE_NAME + " table.");
       }
     } catch (IOException ioe) {
       // pass exception back up
@@ -1372,7 +1453,8 @@ public class AccessController extends BaseRegionObserver
 
   private boolean isSpecialTable(HRegionInfo regionInfo) {
     TableName tableName = regionInfo.getTableName();
-    return tableName.equals(AccessControlLists.ACL_TABLE)
+    return tableName.equals(AccessControlLists.ACL_TABLE_NAME)
+        || tableName.equals(TableName.NAMESPACE_TABLE_NAME)
         || tableName.equals(TableName.META_TABLE_NAME);
   }
 

@@ -96,6 +96,9 @@ public class TableAuthManager {
   private ConcurrentSkipListMap<TableName, PermissionCache<TablePermission>> tableCache =
       new ConcurrentSkipListMap<TableName, PermissionCache<TablePermission>>();
 
+  private ConcurrentSkipListMap<String, PermissionCache<TablePermission>> nsCache =
+    new ConcurrentSkipListMap<String, PermissionCache<TablePermission>>();
+
   private Configuration conf;
   private ZKPermissionWatcher zkperms;
 
@@ -147,7 +150,7 @@ public class TableAuthManager {
     return this.zkperms;
   }
 
-  public void refreshCacheFromWritable(TableName table,
+  public void refreshTableCacheFromWritable(TableName table,
                                        byte[] data) throws IOException {
     if (data != null && data.length > 0) {
       ListMultimap<String,TablePermission> perms;
@@ -163,6 +166,22 @@ public class TableAuthManager {
         } else {
           updateTableCache(table, perms);
         }
+      }
+    } else {
+      LOG.debug("Skipping permission cache refresh because writable data is empty");
+    }
+  }
+
+  public void refreshNamespaceCacheFromWritable(String namespace, byte[] data) throws IOException {
+    if (data != null && data.length > 0) {
+      ListMultimap<String,TablePermission> perms;
+      try {
+        perms = AccessControlLists.readPermissions(data, conf);
+      } catch (DeserializationException e) {
+        throw new IOException(e);
+      }
+      if (perms != null) {
+        updateNsCache(namespace, perms);
       }
     } else {
       LOG.debug("Skipping permission cache refresh because writable data is empty");
@@ -216,11 +235,41 @@ public class TableAuthManager {
     tableCache.put(table, newTablePerms);
   }
 
+  /**
+   * Updates the internal permissions cache for a single table, splitting
+   * the permissions listed into separate caches for users and groups to optimize
+   * group lookups.
+   *
+   * @param namespace
+   * @param tablePerms
+   */
+  private void updateNsCache(String namespace,
+                             ListMultimap<String, TablePermission> tablePerms) {
+    PermissionCache<TablePermission> newTablePerms = new PermissionCache<TablePermission>();
+
+    for (Map.Entry<String, TablePermission> entry : tablePerms.entries()) {
+      if (AccessControlLists.isGroupPrincipal(entry.getKey())) {
+        newTablePerms.putGroup(AccessControlLists.getGroupName(entry.getKey()), entry.getValue());
+      } else {
+        newTablePerms.putUser(entry.getKey(), entry.getValue());
+      }
+    }
+
+    nsCache.put(namespace, newTablePerms);
+  }
+
   private PermissionCache<TablePermission> getTablePermissions(TableName table) {
     if (!tableCache.containsKey(table)) {
       tableCache.putIfAbsent(table, new PermissionCache<TablePermission>());
     }
     return tableCache.get(table);
+  }
+
+  private PermissionCache<TablePermission> getNamespacePermissions(String namespace) {
+    if (!nsCache.containsKey(namespace)) {
+      nsCache.putIfAbsent(namespace, new PermissionCache<TablePermission>());
+    }
+    return nsCache.get(namespace);
   }
 
   /**
@@ -329,6 +378,45 @@ public class TableAuthManager {
     return false;
   }
 
+  public boolean authorize(User user, String namespace, Permission.Action action) {
+    if (authorizeUser(user.getShortName(), action)) {
+      return true;
+    }
+    PermissionCache<TablePermission> tablePerms = nsCache.get(namespace);
+    if (tablePerms != null) {
+      List<TablePermission> userPerms = tablePerms.getUser(user.getShortName());
+      if (authorize(userPerms, namespace, action)) {
+        return true;
+      }
+
+      String[] groupNames = user.getGroupNames();
+      if (groupNames != null) {
+        for (String group : groupNames) {
+          List<TablePermission> groupPerms = tablePerms.getGroup(group);
+          if (authorize(groupPerms, namespace, action)) {
+            return true;
+          }
+        }
+      }
+    }
+    return false;
+  }
+
+  private boolean authorize(List<TablePermission> perms, String namespace,
+                            Permission.Action action) {
+    if (perms != null) {
+      for (TablePermission p : perms) {
+        if (p.implies(namespace, action)) {
+          return true;
+        }
+      }
+    } else if (LOG.isDebugEnabled()) {
+      LOG.debug("No permissions for authorize() check, table=" + namespace);
+    }
+
+    return false;
+  }
+
   /**
    * Checks global authorization for a specific action for a user, based on the
    * stored user permissions.
@@ -358,7 +446,7 @@ public class TableAuthManager {
     if (authorizeUser(username, action)) {
       return true;
     }
-    if (table == null) table = AccessControlLists.ACL_TABLE;
+    if (table == null) table = AccessControlLists.ACL_TABLE_NAME;
     return authorize(getTablePermissions(table).getUser(username), table, family,
         qualifier, action);
   }
@@ -387,7 +475,7 @@ public class TableAuthManager {
     if (authorizeGroup(groupName, action)) {
       return true;
     }
-    if (table == null) table = AccessControlLists.ACL_TABLE;
+    if (table == null) table = AccessControlLists.ACL_TABLE_NAME;
     return authorize(getTablePermissions(table).getGroup(groupName), table, family, action);
   }
 
@@ -481,11 +569,11 @@ public class TableAuthManager {
     return false;
   }
 
-  public void remove(byte[] table) {
-    remove(TableName.valueOf(table));
+  public void removeNamespace(byte[] ns) {
+    nsCache.remove(ns);
   }
 
-  public void remove(TableName table) {
+  public void removeTable(TableName table) {
     tableCache.remove(table);
   }
 
@@ -496,11 +584,11 @@ public class TableAuthManager {
    * @param table
    * @param perms
    */
-  public void setUserPermissions(String username, TableName table,
+  public void setTableUserPermissions(String username, TableName table,
       List<TablePermission> perms) {
     PermissionCache<TablePermission> tablePerms = getTablePermissions(table);
     tablePerms.replaceUser(username, perms);
-    writeToZooKeeper(table, tablePerms);
+    writeTableToZooKeeper(table, tablePerms);
   }
 
   /**
@@ -510,20 +598,58 @@ public class TableAuthManager {
    * @param table
    * @param perms
    */
-  public void setGroupPermissions(String group, TableName table,
+  public void setTableGroupPermissions(String group, TableName table,
       List<TablePermission> perms) {
     PermissionCache<TablePermission> tablePerms = getTablePermissions(table);
     tablePerms.replaceGroup(group, perms);
-    writeToZooKeeper(table, tablePerms);
+    writeTableToZooKeeper(table, tablePerms);
   }
 
-  public void writeToZooKeeper(TableName table,
+  /**
+   * Overwrites the existing permission set for a given user for a table, and
+   * triggers an update for zookeeper synchronization.
+   * @param username
+   * @param namespace
+   * @param perms
+   */
+  public void setNamespaceUserPermissions(String username, String namespace,
+      List<TablePermission> perms) {
+    PermissionCache<TablePermission> tablePerms = getNamespacePermissions(namespace);
+    tablePerms.replaceUser(username, perms);
+    writeNamespaceToZooKeeper(namespace, tablePerms);
+  }
+
+  /**
+   * Overwrites the existing permission set for a group and triggers an update
+   * for zookeeper synchronization.
+   * @param group
+   * @param namespace
+   * @param perms
+   */
+  public void setNamespaceGroupPermissions(String group, String namespace,
+      List<TablePermission> perms) {
+    PermissionCache<TablePermission> tablePerms = getNamespacePermissions(namespace);
+    tablePerms.replaceGroup(group, perms);
+    writeNamespaceToZooKeeper(namespace, tablePerms);
+  }
+
+  public void writeTableToZooKeeper(TableName table,
       PermissionCache<TablePermission> tablePerms) {
     byte[] serialized = new byte[0];
     if (tablePerms != null) {
       serialized = AccessControlLists.writePermissionsAsBytes(tablePerms.getAllPermissions(), conf);
     }
-    zkperms.writeToZookeeper(table, serialized);
+    zkperms.writeToZookeeper(table.getName(), serialized);
+  }
+
+  public void writeNamespaceToZooKeeper(String namespace,
+      PermissionCache<TablePermission> tablePerms) {
+    byte[] serialized = new byte[0];
+    if (tablePerms != null) {
+      serialized = AccessControlLists.writePermissionsAsBytes(tablePerms.getAllPermissions(), conf);
+    }
+    zkperms.writeToZookeeper(Bytes.toBytes(AccessControlLists.toNamespaceEntry(namespace)),
+        serialized);
   }
 
   static Map<ZooKeeperWatcher,TableAuthManager> managerMap =

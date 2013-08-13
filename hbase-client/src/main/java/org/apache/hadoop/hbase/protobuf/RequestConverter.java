@@ -1205,6 +1205,32 @@ public final class RequestConverter {
    * Create a request to grant user permissions.
    *
    * @param username the short user name who to grant permissions
+   * @param actions the permissions to be granted
+   * @return A {@link AccessControlProtos} GrantRequest
+   */
+  public static AccessControlProtos.GrantRequest buildGrantRequest(
+      String username, AccessControlProtos.Permission.Action... actions) {
+    AccessControlProtos.Permission.Builder ret =
+        AccessControlProtos.Permission.newBuilder();
+    AccessControlProtos.GlobalPermission.Builder permissionBuilder =
+        AccessControlProtos.GlobalPermission.newBuilder();
+    for (AccessControlProtos.Permission.Action a : actions) {
+      permissionBuilder.addAction(a);
+    }
+    ret.setType(AccessControlProtos.Permission.Type.Global)
+       .setGlobalPermission(permissionBuilder);
+    return AccessControlProtos.GrantRequest.newBuilder()
+      .setUserPermission(
+          AccessControlProtos.UserPermission.newBuilder()
+              .setUser(ByteString.copyFromUtf8(username))
+              .setPermission(ret)
+      ).build();
+  }
+
+  /**
+   * Create a request to grant user permissions.
+   *
+   * @param username the short user name who to grant permissions
    * @param tableName optional table name the permissions apply
    * @param family optional column family
    * @param qualifier optional qualifier
@@ -1214,26 +1240,88 @@ public final class RequestConverter {
   public static AccessControlProtos.GrantRequest buildGrantRequest(
       String username, TableName tableName, byte[] family, byte[] qualifier,
       AccessControlProtos.Permission.Action... actions) {
-    AccessControlProtos.Permission.Builder permissionBuilder =
+    AccessControlProtos.Permission.Builder ret =
         AccessControlProtos.Permission.newBuilder();
+    AccessControlProtos.TablePermission.Builder permissionBuilder =
+        AccessControlProtos.TablePermission.newBuilder();
     for (AccessControlProtos.Permission.Action a : actions) {
       permissionBuilder.addAction(a);
     }
-    if (tableName != null) {
-      permissionBuilder.setTableName(ProtobufUtil.toProtoTableName(tableName));
+    if (tableName == null) {
+      throw new NullPointerException("TableName cannot be null");
     }
+    permissionBuilder.setTableName(ProtobufUtil.toProtoTableName(tableName));
+
     if (family != null) {
       permissionBuilder.setFamily(ByteString.copyFrom(family));
     }
     if (qualifier != null) {
       permissionBuilder.setQualifier(ByteString.copyFrom(qualifier));
     }
-
+    ret.setType(AccessControlProtos.Permission.Type.Table)
+       .setTablePermission(permissionBuilder);
     return AccessControlProtos.GrantRequest.newBuilder()
-      .setPermission(
+      .setUserPermission(
           AccessControlProtos.UserPermission.newBuilder()
               .setUser(ByteString.copyFromUtf8(username))
-              .setPermission(permissionBuilder.build())
+              .setPermission(ret)
+      ).build();
+  }
+
+  /**
+   * Create a request to grant user permissions.
+   *
+   * @param username the short user name who to grant permissions
+   * @param namespace optional table name the permissions apply
+   * @param actions the permissions to be granted
+   * @return A {@link AccessControlProtos} GrantRequest
+   */
+  public static AccessControlProtos.GrantRequest buildGrantRequest(
+      String username, String namespace,
+      AccessControlProtos.Permission.Action... actions) {
+    AccessControlProtos.Permission.Builder ret =
+        AccessControlProtos.Permission.newBuilder();
+    AccessControlProtos.NamespacePermission.Builder permissionBuilder =
+        AccessControlProtos.NamespacePermission.newBuilder();
+    for (AccessControlProtos.Permission.Action a : actions) {
+      permissionBuilder.addAction(a);
+    }
+    if (namespace != null) {
+      permissionBuilder.setNamespaceName(ByteString.copyFromUtf8(namespace));
+    }
+    ret.setType(AccessControlProtos.Permission.Type.Namespace)
+       .setNamespacePermission(permissionBuilder);
+    return AccessControlProtos.GrantRequest.newBuilder()
+      .setUserPermission(
+          AccessControlProtos.UserPermission.newBuilder()
+              .setUser(ByteString.copyFromUtf8(username))
+              .setPermission(ret)
+      ).build();
+  }
+
+  /**
+   * Create a request to revoke user permissions.
+   *
+   * @param username the short user name whose permissions to be revoked
+   * @param actions the permissions to be revoked
+   * @return A {@link AccessControlProtos} RevokeRequest
+   */
+  public static AccessControlProtos.RevokeRequest buildRevokeRequest(
+      String username, AccessControlProtos.Permission.Action... actions) {
+    AccessControlProtos.Permission.Builder ret =
+        AccessControlProtos.Permission.newBuilder();
+    AccessControlProtos.GlobalPermission.Builder permissionBuilder =
+        AccessControlProtos.GlobalPermission.newBuilder();
+    for (AccessControlProtos.Permission.Action a : actions) {
+      permissionBuilder.addAction(a);
+    }
+    ret.setType(AccessControlProtos.Permission.Type.Global)
+       .setGlobalPermission(permissionBuilder);
+    return AccessControlProtos.RevokeRequest.newBuilder()
+      .setUserPermission(
+          AccessControlProtos.UserPermission.newBuilder()
+              .setUser(ByteString.copyFromUtf8(username))
+              .setPermission(ret)
       ).build();
   }
 
@@ -1250,8 +1338,10 @@ public final class RequestConverter {
   public static AccessControlProtos.RevokeRequest buildRevokeRequest(
       String username, TableName tableName, byte[] family, byte[] qualifier,
       AccessControlProtos.Permission.Action... actions) {
-    AccessControlProtos.Permission.Builder permissionBuilder =
+    AccessControlProtos.Permission.Builder ret =
         AccessControlProtos.Permission.newBuilder();
+    AccessControlProtos.TablePermission.Builder permissionBuilder =
+        AccessControlProtos.TablePermission.newBuilder();
     for (AccessControlProtos.Permission.Action a : actions) {
       permissionBuilder.addAction(a);
     }
@@ -1264,12 +1354,44 @@ public final class RequestConverter {
     if (qualifier != null) {
       permissionBuilder.setQualifier(ByteString.copyFrom(qualifier));
     }
-
+    ret.setType(AccessControlProtos.Permission.Type.Table)
+       .setTablePermission(permissionBuilder);
     return AccessControlProtos.RevokeRequest.newBuilder()
-      .setPermission(
+      .setUserPermission(
           AccessControlProtos.UserPermission.newBuilder()
               .setUser(ByteString.copyFromUtf8(username))
-              .setPermission(permissionBuilder.build())
+              .setPermission(ret)
+      ).build();
+  }
+
+  /**
+   * Create a request to revoke user permissions.
+   *
+   * @param username the short user name whose permissions to be revoked
+   * @param namespace optional table name the permissions apply
+   * @param actions the permissions to be revoked
+   * @return A {@link AccessControlProtos} RevokeRequest
+   */
+  public static AccessControlProtos.RevokeRequest buildRevokeRequest(
+      String username, String namespace,
+      AccessControlProtos.Permission.Action... actions) {
+    AccessControlProtos.Permission.Builder ret =
+        AccessControlProtos.Permission.newBuilder();
+    AccessControlProtos.NamespacePermission.Builder permissionBuilder =
+        AccessControlProtos.NamespacePermission.newBuilder();
+    for (AccessControlProtos.Permission.Action a : actions) {
+      permissionBuilder.addAction(a);
+    }
+    if (namespace != null) {
+      permissionBuilder.setNamespaceName(ByteString.copyFromUtf8(namespace));
+    }
+    ret.setType(AccessControlProtos.Permission.Type.Namespace)
+       .setNamespacePermission(permissionBuilder);
+    return AccessControlProtos.RevokeRequest.newBuilder()
+      .setUserPermission(
+          AccessControlProtos.UserPermission.newBuilder()
+              .setUser(ByteString.copyFromUtf8(username))
+              .setPermission(ret)
       ).build();
   }
 
