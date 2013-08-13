@@ -814,6 +814,7 @@ public class TestAdmin {
       admin.createTable(desc, splitKeys);
       fail("Test case should fail as empty split key is passed.");
     } catch (IllegalArgumentException e) {
+      LOG.info("Expected ", e);
     }
   }
 
@@ -1315,7 +1316,7 @@ public class TestAdmin {
     HRegionServer rs = TEST_UTIL.getRSForFirstRegionInTable(TABLENAME);
     List<HRegionInfo> onlineRegions = ProtobufUtil.getOnlineRegions(rs);
     for (HRegionInfo regionInfo : onlineRegions) {
-      if (!regionInfo.isMetaTable()) {
+      if (!HTableDescriptor.isSystemTable(regionInfo.getTableName())) {
         info = regionInfo;
         admin.closeRegionWithEncodedRegionName(regionInfo.getEncodedName(), rs
             .getServerName().getServerName());
