@@ -3822,7 +3822,8 @@ public class Hbase {
       }
     }
 
-    public static class createTable<I extends Iface> extends org.apache.thrift.ProcessFunction<I, createTable_args> {
+    public static class
+        createTable<I extends Iface> extends org.apache.thrift.ProcessFunction<I, createTable_args> {
       public createTable() {
         super("createTable");
       }

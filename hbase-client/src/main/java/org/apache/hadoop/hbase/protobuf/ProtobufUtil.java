@@ -1565,10 +1565,10 @@ public final class ProtobufUtil {
    * @return the converted Permission
    */
   public static Permission toPermission(AccessControlProtos.Permission proto) {
-    if (proto.hasTableName()) {
+    if (proto.getType() != AccessControlProtos.Permission.Type.Global) {
       return toTablePermission(proto);
     } else {
-      List<Permission.Action> actions = toPermissionActions(proto.getActionList());
+      List<Permission.Action> actions = toPermissionActions(proto.getGlobalPermission().getActionList());
       return new Permission(actions.toArray(new Permission.Action[actions.size()]));
     }
   }
@@ -1580,18 +1580,43 @@ public final class ProtobufUtil {
    * @return the converted TablePermission
    */
   public static TablePermission toTablePermission(AccessControlProtos.Permission proto) {
-    List<Permission.Action> actions = toPermissionActions(proto.getActionList());
+    if(proto.getType() == AccessControlProtos.Permission.Type.Global) {
+      AccessControlProtos.GlobalPermission perm = proto.getGlobalPermission();
+      List<Permission.Action> actions = toPermissionActions(perm.getActionList());
 
-    byte[] qualifier = null;
-    byte[] family = null;
-    TableName table = null;
+      return new TablePermission(null, null, null,
+          actions.toArray(new Permission.Action[actions.size()]));
+    }
+    if(proto.getType() == AccessControlProtos.Permission.Type.Namespace) {
+      AccessControlProtos.NamespacePermission perm = proto.getNamespacePermission();
+      List<Permission.Action> actions = toPermissionActions(perm.getActionList());
 
-    if (proto.hasTableName()) table = ProtobufUtil.toTableName(proto.getTableName());
-    if (proto.hasFamily()) family = proto.getFamily().toByteArray();
-    if (proto.hasQualifier()) qualifier = proto.getQualifier().toByteArray();
+      if(!proto.hasNamespacePermission()) {
+        throw new IllegalStateException("Namespace must not be empty in NamespacePermission");
+      }
+      String namespace = perm.getNamespaceName().toStringUtf8();
+      return new TablePermission(namespace, actions.toArray(new Permission.Action[actions.size()]));
+    }
+    if(proto.getType() == AccessControlProtos.Permission.Type.Table) {
+      AccessControlProtos.TablePermission perm = proto.getTablePermission();
+      List<Permission.Action> actions = toPermissionActions(perm.getActionList());
 
-    return new TablePermission(table, family, qualifier,
-        actions.toArray(new Permission.Action[actions.size()]));
+      byte[] qualifier = null;
+      byte[] family = null;
+      TableName table = null;
+
+      if (!perm.hasTableName()) {
+        throw new IllegalStateException("TableName cannot be empty");
+      }
+      table = ProtobufUtil.toTableName(perm.getTableName());
+
+      if (perm.hasFamily()) family = perm.getFamily().toByteArray();
+      if (perm.hasQualifier()) qualifier = perm.getQualifier().toByteArray();
+
+      return new TablePermission(table, family, qualifier,
+          actions.toArray(new Permission.Action[actions.size()]));
+    }
+    throw new IllegalStateException("Unrecognize Perm Type: "+proto.getType());
   }
 
   /**
@@ -1601,23 +1626,47 @@ public final class ProtobufUtil {
    * @return the protobuf Permission
    */
   public static AccessControlProtos.Permission toPermission(Permission perm) {
-    AccessControlProtos.Permission.Builder builder = AccessControlProtos.Permission.newBuilder();
+    AccessControlProtos.Permission.Builder ret = AccessControlProtos.Permission.newBuilder();
     if (perm instanceof TablePermission) {
       TablePermission tablePerm = (TablePermission)perm;
-      if (tablePerm.hasTable()) {
+      if(tablePerm.hasNamespace()) {
+        ret.setType(AccessControlProtos.Permission.Type.Namespace);
+
+        AccessControlProtos.NamespacePermission.Builder builder =
+            AccessControlProtos.NamespacePermission.newBuilder();
+        builder.setNamespaceName(ByteString.copyFromUtf8(tablePerm.getNamespace()));
+        for (Permission.Action a : perm.getActions()) {
+          builder.addAction(toPermissionAction(a));
+        }
+        ret.setNamespacePermission(builder);
+      } else if (tablePerm.hasTable()) {
+        ret.setType(AccessControlProtos.Permission.Type.Table);
+
+        AccessControlProtos.TablePermission.Builder builder =
+            AccessControlProtos.TablePermission.newBuilder();
         builder.setTableName(ProtobufUtil.toProtoTableName(tablePerm.getTable()));
+        if (tablePerm.hasFamily()) {
+          builder.setFamily(ByteString.copyFrom(tablePerm.getFamily()));
+        }
+        if (tablePerm.hasQualifier()) {
+          builder.setQualifier(ByteString.copyFrom(tablePerm.getQualifier()));
+        }
+        for (Permission.Action a : perm.getActions()) {
+          builder.addAction(toPermissionAction(a));
+        }
+        ret.setTablePermission(builder);
       }
-      if (tablePerm.hasFamily()) {
-        builder.setFamily(ByteString.copyFrom(tablePerm.getFamily()));
+    } else {
+      ret.setType(AccessControlProtos.Permission.Type.Global);
+
+      AccessControlProtos.GlobalPermission.Builder builder =
+          AccessControlProtos.GlobalPermission.newBuilder();
+      for (Permission.Action a : perm.getActions()) {
+        builder.addAction(toPermissionAction(a));
       }
-      if (tablePerm.hasQualifier()) {
-        builder.setQualifier(ByteString.copyFrom(tablePerm.getQualifier()));
-      }
+      ret.setGlobalPermission(builder);
     }
-    for (Permission.Action a : perm.getActions()) {
-      builder.addAction(toPermissionAction(a));
-    }
-    return builder.build();
+    return ret.build();
   }
 
   /**
@@ -1688,24 +1737,9 @@ public final class ProtobufUtil {
    * @return the protobuf UserPermission
    */
   public static AccessControlProtos.UserPermission toUserPermission(UserPermission perm) {
-    AccessControlProtos.Permission.Builder permissionBuilder =
-        AccessControlProtos.Permission.newBuilder();
-    for (Permission.Action a : perm.getActions()) {
-      permissionBuilder.addAction(toPermissionAction(a));
-    }
-    if (perm.hasTable()) {
-      permissionBuilder.setTableName(ProtobufUtil.toProtoTableName(perm.getTable()));
-    }
-    if (perm.hasFamily()) {
-      permissionBuilder.setFamily(ByteString.copyFrom(perm.getFamily()));
-    }
-    if (perm.hasQualifier()) {
-      permissionBuilder.setQualifier(ByteString.copyFrom(perm.getQualifier()));
-    }
-
     return AccessControlProtos.UserPermission.newBuilder()
         .setUser(ByteString.copyFrom(perm.getUser()))
-        .setPermission(permissionBuilder)
+        .setPermission(toPermission(perm))
         .build();
   }
 
@@ -1716,20 +1750,8 @@ public final class ProtobufUtil {
    * @return the converted UserPermission
    */
   public static UserPermission toUserPermission(AccessControlProtos.UserPermission proto) {
-    AccessControlProtos.Permission permission = proto.getPermission();
-    List<Permission.Action> actions = toPermissionActions(permission.getActionList());
-
-    byte[] qualifier = null;
-    byte[] family = null;
-    TableName table = null;
-
-    if (permission.hasTableName()) table = ProtobufUtil.toTableName(permission.getTableName());
-    if (permission.hasFamily()) family = permission.getFamily().toByteArray();
-    if (permission.hasQualifier()) qualifier = permission.getQualifier().toByteArray();
-
     return new UserPermission(proto.getUser().toByteArray(),
-        table, family, qualifier,
-        actions.toArray(new Permission.Action[actions.size()]));
+        toTablePermission(proto.getPermission()));
   }
 
   /**
@@ -1739,26 +1761,48 @@ public final class ProtobufUtil {
    * @param perm the list of user and table permissions
    * @return the protobuf UserTablePermissions
    */
-  public static AccessControlProtos.UserTablePermissions toUserTablePermissions(
+  public static AccessControlProtos.UsersAndPermissions toUserTablePermissions(
       ListMultimap<String, TablePermission> perm) {
-    AccessControlProtos.UserTablePermissions.Builder builder =
-                  AccessControlProtos.UserTablePermissions.newBuilder();
+    AccessControlProtos.UsersAndPermissions.Builder builder =
+                  AccessControlProtos.UsersAndPermissions.newBuilder();
     for (Map.Entry<String, Collection<TablePermission>> entry : perm.asMap().entrySet()) {
-      AccessControlProtos.UserTablePermissions.UserPermissions.Builder userPermBuilder =
-                  AccessControlProtos.UserTablePermissions.UserPermissions.newBuilder();
+      AccessControlProtos.UsersAndPermissions.UserPermissions.Builder userPermBuilder =
+                  AccessControlProtos.UsersAndPermissions.UserPermissions.newBuilder();
       userPermBuilder.setUser(ByteString.copyFromUtf8(entry.getKey()));
       for (TablePermission tablePerm: entry.getValue()) {
         userPermBuilder.addPermissions(toPermission(tablePerm));
       }
-      builder.addPermissions(userPermBuilder.build());
+      builder.addUserPermissions(userPermBuilder.build());
     }
     return builder.build();
   }
 
   /**
-   * A utility used to grant a user some permissions. The permissions will
-   * be global if table is not specified.  Otherwise, they are for those
-   * table/column family/qualifier only.
+   * A utility used to grant a user global permissions.
+   * <p>
+   * It's also called by the shell, in case you want to find references.
+   *
+   * @param protocol the AccessControlService protocol proxy
+   * @param userShortName the short name of the user to grant permissions
+   * @param actions the permissions to be granted
+   * @throws ServiceException
+   */
+  public static void grant(AccessControlService.BlockingInterface protocol,
+      String userShortName, Permission.Action... actions) throws ServiceException {
+    List<AccessControlProtos.Permission.Action> permActions =
+        Lists.newArrayListWithCapacity(actions.length);
+    for (Permission.Action a : actions) {
+      permActions.add(ProtobufUtil.toPermissionAction(a));
+    }
+    AccessControlProtos.GrantRequest request = RequestConverter.
+      buildGrantRequest(userShortName, permActions.toArray(
+        new AccessControlProtos.Permission.Action[actions.length]));
+    protocol.grant(null, request);
+  }
+
+  /**
+   * A utility used to grant a user table permissions. The permissions will
+   * be for a table table/column family/qualifier.
    * <p>
    * It's also called by the shell, in case you want to find references.
    *
@@ -1785,9 +1829,55 @@ public final class ProtobufUtil {
   }
 
   /**
-   * A utility used to revoke a user some permissions. The permissions will
-   * be global if table is not specified.  Otherwise, they are for those
-   * table/column family/qualifier only.
+   * A utility used to grant a user namespace permissions.
+   * <p>
+   * It's also called by the shell, in case you want to find references.
+   *
+   * @param protocol the AccessControlService protocol proxy
+   * @param namespace the short name of the user to grant permissions
+   * @param actions the permissions to be granted
+   * @throws ServiceException
+   */
+  public static void grant(AccessControlService.BlockingInterface protocol,
+      String userShortName, String namespace,
+      Permission.Action... actions) throws ServiceException {
+    List<AccessControlProtos.Permission.Action> permActions =
+        Lists.newArrayListWithCapacity(actions.length);
+    for (Permission.Action a : actions) {
+      permActions.add(ProtobufUtil.toPermissionAction(a));
+    }
+    AccessControlProtos.GrantRequest request = RequestConverter.
+      buildGrantRequest(userShortName, namespace, permActions.toArray(
+        new AccessControlProtos.Permission.Action[actions.length]));
+    protocol.grant(null, request);
+  }
+
+  /**
+   * A utility used to revoke a user's global permissions.
+   * <p>
+   * It's also called by the shell, in case you want to find references.
+   *
+   * @param protocol the AccessControlService protocol proxy
+   * @param userShortName the short name of the user to revoke permissions
+   * @param actions the permissions to be revoked
+   * @throws ServiceException
+   */
+  public static void revoke(AccessControlService.BlockingInterface protocol,
+      String userShortName, Permission.Action... actions) throws ServiceException {
+    List<AccessControlProtos.Permission.Action> permActions =
+        Lists.newArrayListWithCapacity(actions.length);
+    for (Permission.Action a : actions) {
+      permActions.add(ProtobufUtil.toPermissionAction(a));
+    }
+    AccessControlProtos.RevokeRequest request = RequestConverter.
+      buildRevokeRequest(userShortName, permActions.toArray(
+        new AccessControlProtos.Permission.Action[actions.length]));
+    protocol.revoke(null, request);
+  }
+
+  /**
+   * A utility used to revoke a user's table permissions. The permissions will
+   * be for a table/column family/qualifier.
    * <p>
    * It's also called by the shell, in case you want to find references.
    *
@@ -1814,7 +1904,55 @@ public final class ProtobufUtil {
   }
 
   /**
-   * A utility used to get user permissions.
+   * A utility used to revoke a user's namespace permissions.
+   * <p>
+   * It's also called by the shell, in case you want to find references.
+   *
+   * @param protocol the AccessControlService protocol proxy
+   * @param userShortName the short name of the user to revoke permissions
+   * @param namespace optional table name
+   * @param actions the permissions to be revoked
+   * @throws ServiceException
+   */
+  public static void revoke(AccessControlService.BlockingInterface protocol,
+      String userShortName, String namespace,
+      Permission.Action... actions) throws ServiceException {
+    List<AccessControlProtos.Permission.Action> permActions =
+        Lists.newArrayListWithCapacity(actions.length);
+    for (Permission.Action a : actions) {
+      permActions.add(ProtobufUtil.toPermissionAction(a));
+    }
+    AccessControlProtos.RevokeRequest request = RequestConverter.
+      buildRevokeRequest(userShortName, namespace, permActions.toArray(
+        new AccessControlProtos.Permission.Action[actions.length]));
+    protocol.revoke(null, request);
+  }
+
+  /**
+   * A utility used to get user's global permissions.
+   * <p>
+   * It's also called by the shell, in case you want to find references.
+   *
+   * @param protocol the AccessControlService protocol proxy
+   * @throws ServiceException
+   */
+  public static List<UserPermission> getUserPermissions(
+      AccessControlService.BlockingInterface protocol) throws ServiceException {
+    AccessControlProtos.UserPermissionsRequest.Builder builder =
+      AccessControlProtos.UserPermissionsRequest.newBuilder();
+    builder.setType(AccessControlProtos.Permission.Type.Global);
+    AccessControlProtos.UserPermissionsRequest request = builder.build();
+    AccessControlProtos.UserPermissionsResponse response =
+      protocol.getUserPermissions(null, request);
+    List<UserPermission> perms = new ArrayList<UserPermission>();
+    for (AccessControlProtos.UserPermission perm: response.getUserPermissionList()) {
+      perms.add(ProtobufUtil.toUserPermission(perm));
+    }
+    return perms;
+  }
+
+  /**
+   * A utility used to get user table permissions.
    * <p>
    * It's also called by the shell, in case you want to find references.
    *
@@ -1830,11 +1968,12 @@ public final class ProtobufUtil {
     if (t != null) {
       builder.setTableName(ProtobufUtil.toProtoTableName(t));
     }
+    builder.setType(AccessControlProtos.Permission.Type.Table);
     AccessControlProtos.UserPermissionsRequest request = builder.build();
     AccessControlProtos.UserPermissionsResponse response =
       protocol.getUserPermissions(null, request);
     List<UserPermission> perms = new ArrayList<UserPermission>();
-    for (AccessControlProtos.UserPermission perm: response.getPermissionList()) {
+    for (AccessControlProtos.UserPermission perm: response.getUserPermissionList()) {
       perms.add(ProtobufUtil.toUserPermission(perm));
     }
     return perms;
@@ -1848,12 +1987,12 @@ public final class ProtobufUtil {
    * @return the converted UserPermission
    */
   public static ListMultimap<String, TablePermission> toUserTablePermissions(
-      AccessControlProtos.UserTablePermissions proto) {
+      AccessControlProtos.UsersAndPermissions proto) {
     ListMultimap<String, TablePermission> perms = ArrayListMultimap.create();
-    AccessControlProtos.UserTablePermissions.UserPermissions userPerm;
+    AccessControlProtos.UsersAndPermissions.UserPermissions userPerm;
 
-    for (int i = 0; i < proto.getPermissionsCount(); i++) {
-      userPerm = proto.getPermissions(i);
+    for (int i = 0; i < proto.getUserPermissionsCount(); i++) {
+      userPerm = proto.getUserPermissions(i);
       for (int j = 0; j < userPerm.getPermissionsCount(); j++) {
         TablePermission tablePerm = toTablePermission(userPerm.getPermissions(j));
         perms.put(userPerm.getUser().toStringUtf8(), tablePerm);

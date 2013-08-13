@@ -23,6 +23,7 @@ import static org.junit.Assert.*;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.List;
 
 import junit.framework.Assert;
 
@@ -41,8 +42,11 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos;
+import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.security.access.AccessControlLists;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.util.ToolRunner;
@@ -63,6 +67,9 @@ import org.junit.experimental.categories.Category;
  *
  * Contains snapshots with snapshot{num}Keys as the contents:
  * snapshot1Keys, snapshot2Keys
+ *
+ * Image also contains _acl_ table with one region and two storefiles.
+ * This is needed to test the acl table migration.
  *
  */
 @Category(MediumTests.class)
@@ -103,6 +110,7 @@ public class TestNamespaceUpgrade {
     Configuration toolConf = TEST_UTIL.getConfiguration();
     conf.set(HConstants.HBASE_DIR, TEST_UTIL.getDefaultRootDirPath().toString());
     ToolRunner.run(toolConf, new NamespaceUpgrade(), new String[]{"--upgrade"});
+    doFsCommand(shell, new String [] {"-lsr", "/"});
 
     assertTrue(FSUtils.getVersion(fs, hbaseRootDir).equals(HConstants.FILE_SYSTEM_VERSION));
     TEST_UTIL.startMiniHBaseCluster(1, 1);
@@ -115,6 +123,22 @@ public class TestNamespaceUpgrade {
       Assert.assertEquals(currentKeys.length, count);
     }
     assertEquals(2, TEST_UTIL.getHBaseAdmin().listNamespaceDescriptors().length);
+
+    //verify ACL table is migrated
+    HTable secureTable = new HTable(conf, AccessControlLists.ACL_TABLE_NAME);
+    ResultScanner scanner = secureTable.getScanner(new Scan());
+    int count = 0;
+    for(Result r : scanner) {
+      count++;
+    }
+    assertEquals(3, count);
+    assertFalse(TEST_UTIL.getHBaseAdmin().tableExists("_acl_"));
+
+    //verify ACL table was compacted
+    List<HRegion> regions = TEST_UTIL.getMiniHBaseCluster().getRegions(secureTable.getName());
+    for(HRegion region : regions) {
+      assertEquals(1, region.getStores().size());
+    }
   }
 
   private static File untar(final File testdir) throws IOException {

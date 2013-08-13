@@ -108,7 +108,7 @@ public class TestZKPermissionsWatcher {
     List<TablePermission> acl = new ArrayList<TablePermission>();
     acl.add(new TablePermission(TEST_TABLE, null, TablePermission.Action.READ,
       TablePermission.Action.WRITE));
-    AUTH_A.setUserPermissions("george", TEST_TABLE, acl);
+    AUTH_A.setTableUserPermissions("george", TEST_TABLE, acl);
     Thread.sleep(100);
 
     // check it
@@ -132,7 +132,7 @@ public class TestZKPermissionsWatcher {
     // update ACL: hubert R
     acl = new ArrayList<TablePermission>();
     acl.add(new TablePermission(TEST_TABLE, null, TablePermission.Action.READ));
-    AUTH_B.setUserPermissions("hubert", TEST_TABLE, acl);
+    AUTH_B.setTableUserPermissions("hubert", TEST_TABLE, acl);
     Thread.sleep(100);
 
     // check it

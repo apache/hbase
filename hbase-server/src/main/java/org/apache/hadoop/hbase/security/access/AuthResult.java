@@ -36,6 +36,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 @InterfaceStability.Evolving
 public class AuthResult {
   private final boolean allowed;
+  private final String namespace;
   private final TableName table;
   private final Permission.Action action;
   private final String request;
@@ -58,6 +59,7 @@ public class AuthResult {
     this.qualifier = qualifier;
     this.action = action;
     this.families = null;
+    this.namespace = null;
   }
 
   public AuthResult(boolean allowed, String request, String reason, User user,
@@ -72,6 +74,21 @@ public class AuthResult {
     this.qualifier = null;
     this.action = action;
     this.families = families;
+    this.namespace = null;
+  }
+
+  public AuthResult(boolean allowed, String request, String reason, User user,
+        Permission.Action action, String namespace) {
+    this.allowed = allowed;
+    this.request = request;
+    this.reason = reason;
+    this.user = user;
+    this.namespace = namespace;
+    this.action = action;
+    this.table = null;
+    this.family = null;
+    this.qualifier = null;
+    this.families = null;
   }
 
   public boolean isAllowed() {
@@ -153,11 +170,13 @@ public class AuthResult {
         .append(user != null ? user.getName() : "UNKNOWN")
         .append(", ");
     sb.append("scope=")
-        .append(table == null ? "GLOBAL" : table)
+        .append(namespace != null ? namespace : table == null ? "GLOBAL" : table);
+    if(namespace == null) {
+      sb.append(", ")
+        .append("family=")
+        .append(toFamilyString())
         .append(", ");
-    sb.append("family=")
-      .append(toFamilyString())
-      .append(", ");
+    }
     sb.append("action=")
         .append(action != null ? action.toString() : "")
         .append(")");
@@ -169,6 +188,11 @@ public class AuthResult {
   }
 
   public static AuthResult allow(String request, String reason, User user,
+      Permission.Action action, String namespace) {
+    return new AuthResult(true, request, reason, user, action, namespace);
+  }
+
+  public static AuthResult allow(String request, String reason, User user,
       Permission.Action action, TableName table, byte[] family, byte[] qualifier) {
     return new AuthResult(true, request, reason, user, action, table, family, qualifier);
   }
@@ -177,6 +201,11 @@ public class AuthResult {
       Permission.Action action, TableName table,
       Map<byte[], ? extends Collection<?>> families) {
     return new AuthResult(true, request, reason, user, action, table, families);
+  }
+
+  public static AuthResult deny(String request, String reason, User user,
+      Permission.Action action, String namespace) {
+    return new AuthResult(false, request, reason, user, action, namespace);
   }
 
   public static AuthResult deny(String request, String reason, User user,

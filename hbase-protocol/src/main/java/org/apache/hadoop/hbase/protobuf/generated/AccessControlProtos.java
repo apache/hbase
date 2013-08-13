@@ -11,23 +11,24 @@ public final class AccessControlProtos {
   public interface PermissionOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
     
-    // repeated .Permission.Action action = 1;
-    java.util.List<org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Permission.Action> getActionList();
-    int getActionCount();
-    org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Permission.Action getAction(int index);
+    // required .Permission.Type type = 1;
+    boolean hasType();
+    org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Permission.Type getType();
     
-    // optional .TableName tableName = 2;
-    boolean hasTableName();
-    org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName getTableName();
-    org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableNameOrBuilder getTableNameOrBuilder();
+    // optional .GlobalPermission global_permission = 2;
+    boolean hasGlobalPermission();
+    org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.GlobalPermission getGlobalPermission();
+    org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.GlobalPermissionOrBuilder getGlobalPermissionOrBuilder();
     
-    // optional bytes family = 3;
-    boolean hasFamily();
-    com.google.protobuf.ByteString getFamily();
+    // optional .NamespacePermission namespace_permission = 3;
+    boolean hasNamespacePermission();
+    org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.NamespacePermission getNamespacePermission();
+    org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.NamespacePermissionOrBuilder getNamespacePermissionOrBuilder();
     
-    // optional bytes qualifier = 4;
-    boolean hasQualifier();
-    com.google.protobuf.ByteString getQualifier();
+    // optional .TablePermission table_permission = 4;
+    boolean hasTablePermission();
+    org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.TablePermission getTablePermission();
+    org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.TablePermissionOrBuilder getTablePermissionOrBuilder();
   }
   public static final class Permission extends
       com.google.protobuf.GeneratedMessage
@@ -135,66 +136,145 @@ public final class AccessControlProtos {
       // @@protoc_insertion_point(enum_scope:Permission.Action)
     }
     
-    private int bitField0_;
-    // repeated .Permission.Action action = 1;
-    public static final int ACTION_FIELD_NUMBER = 1;
-    private java.util.List<org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Permission.Action> action_;
-    public java.util.List<org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Permission.Action> getActionList() {
-      return action_;
-    }
-    public int getActionCount() {
-      return action_.size();
-    }
-    public org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Permission.Action getAction(int index) {
-      return action_.get(index);
+    public enum Type
+        implements com.google.protobuf.ProtocolMessageEnum {
+      Global(0, 1),
+      Namespace(1, 2),
+      Table(2, 3),
+      ;
+      
+      public static final int Global_VALUE = 1;
+      public static final int Namespace_VALUE = 2;
+      public static final int Table_VALUE = 3;
+      
+      
+      public final int getNumber() { return value; }
+      
+      public static Type valueOf(int value) {
+        switch (value) {
+          case 1: return Global;
+          case 2: return Namespace;
+          case 3: return Table;
+          default: return null;
+        }
+      }
+      
+      public static com.google.protobuf.Internal.EnumLiteMap<Type>
+          internalGetValueMap() {
+        return internalValueMap;
+      }
+      private static com.google.protobuf.Internal.EnumLiteMap<Type>
+          internalValueMap =
+            new com.google.protobuf.Internal.EnumLiteMap<Type>() {
+              public Type findValueByNumber(int number) {
+                return Type.valueOf(number);
+              }
+            };
+      
+      public final com.google.protobuf.Descriptors.EnumValueDescriptor
+          getValueDescriptor() {
+        return getDescriptor().getValues().get(index);
+      }
+      public final com.google.protobuf.Descriptors.EnumDescriptor
+          getDescriptorForType() {
+        return getDescriptor();
+      }
+      public static final com.google.protobuf.Descriptors.EnumDescriptor
+          getDescriptor() {
+        return org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Permission.getDescriptor().getEnumTypes().get(1);
+      }
+      
+      private static final Type[] VALUES = {
+        Global, Namespace, Table, 
+      };
+      
+      public static Type valueOf(
+          com.google.protobuf.Descriptors.EnumValueDescriptor desc) {
+        if (desc.getType() != getDescriptor()) {
+          throw new java.lang.IllegalArgumentException(
+            "EnumValueDescriptor is not for this type.");
+        }
+        return VALUES[desc.getIndex()];
+      }
+      
+      private final int index;
+      private final int value;
+      
+      private Type(int index, int value) {
+        this.index = index;
+        this.value = value;
+      }
+      
+      // @@protoc_insertion_point(enum_scope:Permission.Type)
     }
     
-    // optional .TableName tableName = 2;
-    public static final int TABLENAME_FIELD_NUMBER = 2;
-    private org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName tableName_;
-    public boolean hasTableName() {
+    private int bitField0_;
+    // required .Permission.Type type = 1;
+    public static final int TYPE_FIELD_NUMBER = 1;
+    private org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Permission.Type type_;
+    public boolean hasType() {
       return ((bitField0_ & 0x00000001) == 0x00000001);
     }
-    public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName getTableName() {
-      return tableName_;
-    }
-    public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableNameOrBuilder getTableNameOrBuilder() {
-      return tableName_;
+    public org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Permission.Type getType() {
+      return type_;
     }
     
-    // optional bytes family = 3;
-    public static final int FAMILY_FIELD_NUMBER = 3;
-    private com.google.protobuf.ByteString family_;
-    public boolean hasFamily() {
+    // optional .GlobalPermission global_permission = 2;
+    public static final int GLOBAL_PERMISSION_FIELD_NUMBER = 2;
+    private org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.GlobalPermission globalPermission_;
+    public boolean hasGlobalPermission() {
       return ((bitField0_ & 0x00000002) == 0x00000002);
     }
-    public com.google.protobuf.ByteString getFamily() {
-      return family_;
+    public org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.GlobalPermission getGlobalPermission() {
+      return globalPermission_;
+    }
+    public org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.GlobalPermissionOrBuilder getGlobalPermissionOrBuilder() {
+      return globalPermission_;
     }
     
-    // optional bytes qualifier = 4;
-    public static final int QUALIFIER_FIELD_NUMBER = 4;
-    private com.google.protobuf.ByteString qualifier_;
-    public boolean hasQualifier() {
+    // optional .NamespacePermission namespace_permission = 3;
+    public static final int NAMESPACE_PERMISSION_FIELD_NUMBER = 3;
+    private org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.NamespacePermission namespacePermission_;
+    public boolean hasNamespacePermission() {
       return ((bitField0_ & 0x00000004) == 0x00000004);
     }
-    public com.google.protobuf.ByteString getQualifier() {
-      return qualifier_;
+    public org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.NamespacePermission getNamespacePermission() {
+      return namespacePermission_;
+    }
+    public org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.NamespacePermissionOrBuilder getNamespacePermissionOrBuilder() {
+      return namespacePermission_;
+    }
+    
+    // optional .TablePermission table_permission = 4;
+    public static final int TABLE_PERMISSION_FIELD_NUMBER = 4;
+    private org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.TablePermission tablePermission_;
+    public boolean hasTablePermission() {
+      return ((bitField0_ & 0x00000008) == 0x00000008);
+    }
+    public org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.TablePermission getTablePermission() {
+      return tablePermission_;
+    }
+    public org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.TablePermissionOrBuilder getTablePermissionOrBuilder() {
+      return tablePermission_;
     }
     
     private void initFields() {
-      action_ = java.util.Collections.emptyList();
-      tableName_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.getDefaultInstance();
-      family_ = com.google.protobuf.ByteString.EMPTY;
-      qualifier_ = com.google.protobuf.ByteString.EMPTY;
+      type_ = org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Permission.Type.Global;
+      globalPermission_ = org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.GlobalPermission.getDefaultInstance();
+      namespacePermission_ = org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.NamespacePermission.getDefaultInstance();
+      tablePermission_ = org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.TablePermission.getDefaultInstance();
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
       byte isInitialized = memoizedIsInitialized;
       if (isInitialized != -1) return isInitialized == 1;
       
-      if (hasTableName()) {
-        if (!getTableName().isInitialized()) {
+      if (!hasType()) {
+        memoizedIsInitialized = 0;
+        return false;
+      }
+      if (hasTablePermission()) {
+        if (!getTablePermission().isInitialized()) {
           memoizedIsInitialized = 0;
           return false;
         }
@@ -206,17 +286,17 @@ public final class AccessControlProtos {
     public void writeTo(com.google.protobuf.CodedOutputStream output)
                         throws java.io.IOException {
       getSerializedSize();
-      for (int i = 0; i < action_.size(); i++) {
-        output.writeEnum(1, action_.get(i).getNumber());
-      }
       if (((bitField0_ & 0x00000001) == 0x00000001)) {
-        output.writeMessage(2, tableName_);
+        output.writeEnum(1, type_.getNumber());
       }
       if (((bitField0_ & 0x00000002) == 0x00000002)) {
-        output.writeBytes(3, family_);
+        output.writeMessage(2, globalPermission_);
       }
       if (((bitField0_ & 0x00000004) == 0x00000004)) {
-        output.writeBytes(4, qualifier_);
+        output.writeMessage(3, namespacePermission_);
+      }
+      if (((bitField0_ & 0x00000008) == 0x00000008)) {
+        output.writeMessage(4, tablePermission_);
       }
       getUnknownFields().writeTo(output);
     }
@@ -227,26 +307,21 @@ public final class AccessControlProtos {
       if (size != -1) return size;
     
       size = 0;
-      {
-        int dataSize = 0;
-        for (int i = 0; i < action_.size(); i++) {
-          dataSize += com.google.protobuf.CodedOutputStream
-            .computeEnumSizeNoTag(action_.get(i).getNumber());
-        }
-        size += dataSize;
-        size += 1 * action_.size();
-      }
       if (((bitField0_ & 0x00000001) == 0x00000001)) {
         size += com.google.protobuf.CodedOutputStream
-          .computeMessageSize(2, tableName_);
+          .computeEnumSize(1, type_.getNumber());
       }
       if (((bitField0_ & 0x00000002) == 0x00000002)) {
         size += com.google.protobuf.CodedOutputStream
-          .computeBytesSize(3, family_);
+          .computeMessageSize(2, globalPermission_);
       }
       if (((bitField0_ & 0x00000004) == 0x00000004)) {
         size += com.google.protobuf.CodedOutputStream
-          .computeBytesSize(4, qualifier_);
+          .computeMessageSize(3, namespacePermission_);
+      }
+      if (((bitField0_ & 0x00000008) == 0x00000008)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeMessageSize(4, tablePermission_);
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
@@ -271,22 +346,25 @@ public final class AccessControlProtos {
       org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Permission other = (org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Permission) obj;
       
       boolean result = true;
-      result = result && getActionList()
-          .equals(other.getActionList());
-      result = result && (hasTableName() == other.hasTableName());
-      if (hasTableName()) {
-        result = result && getTableName()
-            .equals(other.getTableName());
+      result = result && (hasType() == other.hasType());
+      if (hasType()) {
+        result = result &&
+            (getType() == other.getType());
       }
-      result = result && (hasFamily() == other.hasFamily());
-      if (hasFamily()) {
-        result = result && getFamily()
-            .equals(other.getFamily());
+      result = result && (hasGlobalPermission() == other.hasGlobalPermission());
+      if (hasGlobalPermission()) {
+        result = result && getGlobalPermission()
+            .equals(other.getGlobalPermission());
       }
-      result = result && (hasQualifier() == other.hasQualifier());
-      if (hasQualifier()) {
-        result = result && getQualifier()
-            .equals(other.getQualifier());
+      result = result && (hasNamespacePermission() == other.hasNamespacePermission());
+      if (hasNamespacePermission()) {
+        result = result && getNamespacePermission()
+            .equals(other.getNamespacePermission());
+      }
+      result = result && (hasTablePermission() == other.hasTablePermission());
+      if (hasTablePermission()) {
+        result = result && getTablePermission()
+            .equals(other.getTablePermission());
       }
       result = result &&
           getUnknownFields().equals(other.getUnknownFields());
@@ -297,21 +375,21 @@ public final class AccessControlProtos {
     public int hashCode() {
       int hash = 41;
       hash = (19 * hash) + getDescriptorForType().hashCode();
-      if (getActionCount() > 0) {
-        hash = (37 * hash) + ACTION_FIELD_NUMBER;
-        hash = (53 * hash) + hashEnumList(getActionList());
+      if (hasType()) {
+        hash = (37 * hash) + TYPE_FIELD_NUMBER;
+        hash = (53 * hash) + hashEnum(getType());
       }
-      if (hasTableName()) {
-        hash = (37 * hash) + TABLENAME_FIELD_NUMBER;
-        hash = (53 * hash) + getTableName().hashCode();
+      if (hasGlobalPermission()) {
+        hash = (37 * hash) + GLOBAL_PERMISSION_FIELD_NUMBER;
+        hash = (53 * hash) + getGlobalPermission().hashCode();
       }
-      if (hasFamily()) {
-        hash = (37 * hash) + FAMILY_FIELD_NUMBER;
-        hash = (53 * hash) + getFamily().hashCode();
+      if (hasNamespacePermission()) {
+        hash = (37 * hash) + NAMESPACE_PERMISSION_FIELD_NUMBER;
+        hash = (53 * hash) + getNamespacePermission().hashCode();
       }
-      if (hasQualifier()) {
-        hash = (37 * hash) + QUALIFIER_FIELD_NUMBER;
-        hash = (53 * hash) + getQualifier().hashCode();
+      if (hasTablePermission()) {
+        hash = (37 * hash) + TABLE_PERMISSION_FIELD_NUMBER;
+        hash = (53 * hash) + getTablePermission().hashCode();
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
       return hash;
@@ -421,7 +499,9 @@ public final class AccessControlProtos {
       }
       private void maybeForceBuilderInitialization() {
         if (com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders) {
-          getTableNameFieldBuilder();
+          getGlobalPermissionFieldBuilder();
+          getNamespacePermissionFieldBuilder();
+          getTablePermissionFieldBuilder();
         }
       }
       private static Builder create() {
@@ -430,17 +510,25 @@ public final class AccessControlProtos {
       
       public Builder clear() {
         super.clear();
-        action_ = java.util.Collections.emptyList();
+        type_ = org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Permission.Type.Global;
         bitField0_ = (bitField0_ & ~0x00000001);
-        if (tableNameBuilder_ == null) {
-          tableName_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.getDefaultInstance();
+        if (globalPermissionBuilder_ == null) {
+          globalPermission_ = org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.GlobalPermission.getDefaultInstance();
         } else {
-          tableNameBuilder_.clear();
+          globalPermissionBuilder_.clear();
         }
         bitField0_ = (bitField0_ & ~0x00000002);
-        family_ = com.google.protobuf.ByteString.EMPTY;
+        if (namespacePermissionBuilder_ == null) {
+          namespacePermission_ = org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.NamespacePermission.getDefaultInstance();
+        } else {
+          namespacePermissionBuilder_.clear();
+        }
         bitField0_ = (bitField0_ & ~0x00000004);
-        qualifier_ = com.google.protobuf.ByteString.EMPTY;
+        if (tablePermissionBuilder_ == null) {
+          tablePermission_ = org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.TablePermission.getDefaultInstance();
+        } else {
+          tablePermissionBuilder_.clear();
+        }
         bitField0_ = (bitField0_ & ~0x00000008);
         return this;
       }
@@ -480,27 +568,34 @@ public final class AccessControlProtos {
         org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Permission result = new org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Permission(this);
         int from_bitField0_ = bitField0_;
         int to_bitField0_ = 0;
-        if (((bitField0_ & 0x00000001) == 0x00000001)) {
-          action_ = java.util.Collections.unmodifiableList(action_);
-          bitField0_ = (bitField0_ & ~0x00000001);
-        }
-        result.action_ = action_;
-        if (((from_bitField0_ & 0x00000002) == 0x00000002)) {
+        if (((from_bitField0_ & 0x00000001) == 0x00000001)) {
           to_bitField0_ |= 0x00000001;
         }
-        if (tableNameBuilder_ == null) {
-          result.tableName_ = tableName_;
-        } else {
-          result.tableName_ = tableNameBuilder_.build();
-        }
-        if (((from_bitField0_ & 0x00000004) == 0x00000004)) {
+        result.type_ = type_;
+        if (((from_bitField0_ & 0x00000002) == 0x00000002)) {
           to_bitField0_ |= 0x00000002;
         }
-        result.family_ = family_;
-        if (((from_bitField0_ & 0x00000008) == 0x00000008)) {
+        if (globalPermissionBuilder_ == null) {
+          result.globalPermission_ = globalPermission_;
+        } else {
+          result.globalPermission_ = globalPermissionBuilder_.build();
+        }
+        if (((from_bitField0_ & 0x00000004) == 0x00000004)) {
           to_bitField0_ |= 0x00000004;
         }
-        result.qualifier_ = qualifier_;
+        if (namespacePermissionBuilder_ == null) {
+          result.namespacePermission_ = namespacePermission_;
+        } else {
+          result.namespacePermission_ = namespacePermissionBuilder_.build();
+        }
+        if (((from_bitField0_ & 0x00000008) == 0x00000008)) {
+          to_bitField0_ |= 0x00000008;
+        }
+        if (tablePermissionBuilder_ == null) {
+          result.tablePermission_ = tablePermission_;
+        } else {
+          result.tablePermission_ = tablePermissionBuilder_.build();
+        }
         result.bitField0_ = to_bitField0_;
         onBuilt();
         return result;
@@ -517,16 +612,839 @@ public final class AccessControlProtos {
       
       public Builder mergeFrom(org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Permission other) {
         if (other == org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Permission.getDefaultInstance()) return this;
-        if (!other.action_.isEmpty()) {
-          if (action_.isEmpty()) {
-            action_ = other.action_;
-            bitField0_ = (bitField0_ & ~0x00000001);
+        if (other.hasType()) {
+          setType(other.getType());
+        }
+        if (other.hasGlobalPermission()) {
+          mergeGlobalPermission(other.getGlobalPermission());
+        }
+        if (other.hasNamespacePermission()) {
+          mergeNamespacePermission(other.getNamespacePermission());
+        }
+        if (other.hasTablePermission()) {
+          mergeTablePermission(other.getTablePermission());
+        }
+        this.mergeUnknownFields(other.getUnknownFields());
+        return this;
+      }
+      
+      public final boolean isInitialized() {
+        if (!hasType()) {
+          
+          return false;
+        }
+        if (hasTablePermission()) {
+          if (!getTablePermission().isInitialized()) {
+            
+            return false;
+          }
+        }
+        return true;
+      }
+      
+      public Builder mergeFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws java.io.IOException {
+        com.google.protobuf.UnknownFieldSet.Builder unknownFields =
+          com.google.protobuf.UnknownFieldSet.newBuilder(
+            this.getUnknownFields());
+        while (true) {
+          int tag = input.readTag();
+          switch (tag) {
+            case 0:
+              this.setUnknownFields(unknownFields.build());
+              onChanged();
+              return this;
+            default: {
+              if (!parseUnknownField(input, unknownFields,
+                                     extensionRegistry, tag)) {
+                this.setUnknownFields(unknownFields.build());
+                onChanged();
+                return this;
+              }
+              break;
+            }
+            case 8: {
+              int rawValue = input.readEnum();
+              org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Permission.Type value = org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Permission.Type.valueOf(rawValue);
+              if (value == null) {
+                unknownFields.mergeVarintField(1, rawValue);
+              } else {
+                bitField0_ |= 0x00000001;
+                type_ = value;
+              }
+              break;
+            }
+            case 18: {
+              org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.GlobalPermission.Builder subBuilder = org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.GlobalPermission.newBuilder();
+              if (hasGlobalPermission()) {
+                subBuilder.mergeFrom(getGlobalPermission());
+              }
+              input.readMessage(subBuilder, extensionRegistry);
+              setGlobalPermission(subBuilder.buildPartial());
+              break;
+            }
+            case 26: {
+              org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.NamespacePermission.Builder subBuilder = org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.NamespacePermission.newBuilder();
+              if (hasNamespacePermission()) {
+                subBuilder.mergeFrom(getNamespacePermission());
+              }
+              input.readMessage(subBuilder, extensionRegistry);
+              setNamespacePermission(subBuilder.buildPartial());
+              break;
+            }
+            case 34: {
+              org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.TablePermission.Builder subBuilder = org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.TablePermission.newBuilder();
+              if (hasTablePermission()) {
+                subBuilder.mergeFrom(getTablePermission());
+              }
+              input.readMessage(subBuilder, extensionRegistry);
+              setTablePermission(subBuilder.buildPartial());
+              break;
+            }
+          }
+        }
+      }
+      
+      private int bitField0_;
+      
+      // required .Permission.Type type = 1;
+      private org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Permission.Type type_ = org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Permission.Type.Global;
+      public boolean hasType() {
+        return ((bitField0_ & 0x00000001) == 0x00000001);
+      }
+      public org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Permission.Type getType() {
+        return type_;
+      }
+      public Builder setType(org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Permission.Type value) {
+        if (value == null) {
+          throw new NullPointerException();
+        }
+        bitField0_ |= 0x00000001;
+        type_ = value;
+        onChanged();
+        return this;
+      }
+      public Builder clearType() {
+        bitField0_ = (bitField0_ & ~0x00000001);
+        type_ = org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Permission.Type.Global;
+        onChanged();
+        return this;
+      }
+      
+      // optional .GlobalPermission global_permission = 2;
+      private org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.GlobalPermission globalPermission_ = org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.GlobalPermission.getDefaultInstance();
+      private com.google.protobuf.SingleFieldBuilder<
+          org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.GlobalPermission, org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.GlobalPermission.Builder, org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.GlobalPermissionOrBuilder> globalPermissionBuilder_;
+      public boolean hasGlobalPermission() {
+        return ((bitField0_ & 0x00000002) == 0x00000002);
+      }
+      public org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.GlobalPermission getGlobalPermission() {
+        if (globalPermissionBuilder_ == null) {
+          return globalPermission_;
+        } else {
+          return globalPermissionBuilder_.getMessage();
+        }
+      }
+      public Builder setGlobalPermission(org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.GlobalPermission value) {
+        if (globalPermissionBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          globalPermission_ = value;
+          onChanged();
+        } else {
+          globalPermissionBuilder_.setMessage(value);
+        }
+        bitField0_ |= 0x00000002;
+        return this;
+      }
+      public Builder setGlobalPermission(
+          org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.GlobalPermission.Builder builderForValue) {
+        if (globalPermissionBuilder_ == null) {
+          globalPermission_ = builderForValue.build();
+          onChanged();
+        } else {
+          globalPermissionBuilder_.setMessage(builderForValue.build());
+        }
+        bitField0_ |= 0x00000002;
+        return this;
+      }
+      public Builder mergeGlobalPermission(org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.GlobalPermission value) {
+        if (globalPermissionBuilder_ == null) {
+          if (((bitField0_ & 0x00000002) == 0x00000002) &&
+              globalPermission_ != org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.GlobalPermission.getDefaultInstance()) {
+            globalPermission_ =
+              org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.GlobalPermission.newBuilder(globalPermission_).mergeFrom(value).buildPartial();
           } else {
-            ensureActionIsMutable();
-            action_.addAll(other.action_);
+            globalPermission_ = value;
           }
           onChanged();
+        } else {
+          globalPermissionBuilder_.mergeFrom(value);
         }
+        bitField0_ |= 0x00000002;
+        return this;
+      }
+      public Builder clearGlobalPermission() {
+        if (globalPermissionBuilder_ == null) {
+          globalPermission_ = org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.GlobalPermission.getDefaultInstance();
+          onChanged();
+        } else {
+          globalPermissionBuilder_.clear();
+        }
+        bitField0_ = (bitField0_ & ~0x00000002);
+        return this;
+      }
+      public org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.GlobalPermission.Builder getGlobalPermissionBuilder() {
+        bitField0_ |= 0x00000002;
+        onChanged();
+        return getGlobalPermissionFieldBuilder().getBuilder();
+      }
+      public org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.GlobalPermissionOrBuilder getGlobalPermissionOrBuilder() {
+        if (globalPermissionBuilder_ != null) {
+          return globalPermissionBuilder_.getMessageOrBuilder();
+        } else {
+          return globalPermission_;
+        }
+      }
+      private com.google.protobuf.SingleFieldBuilder<
+          org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.GlobalPermission, org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.GlobalPermission.Builder, org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.GlobalPermissionOrBuilder> 
+          getGlobalPermissionFieldBuilder() {
+        if (globalPermissionBuilder_ == null) {
+          globalPermissionBuilder_ = new com.google.protobuf.SingleFieldBuilder<
+              org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.GlobalPermission, org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.GlobalPermission.Builder, org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.GlobalPermissionOrBuilder>(
+                  globalPermission_,
+                  getParentForChildren(),
+                  isClean());
+          globalPermission_ = null;
+        }
+        return globalPermissionBuilder_;
+      }
+      
+      // optional .NamespacePermission namespace_permission = 3;
+      private org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.NamespacePermission namespacePermission_ = org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.NamespacePermission.getDefaultInstance();
+      private com.google.protobuf.SingleFieldBuilder<
+          org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.NamespacePermission, org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.NamespacePermission.Builder, org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.NamespacePermissionOrBuilder> namespacePermissionBuilder_;
+      public boolean hasNamespacePermission() {
+        return ((bitField0_ & 0x00000004) == 0x00000004);
+      }
+      public org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.NamespacePermission getNamespacePermission() {
+        if (namespacePermissionBuilder_ == null) {
+          return namespacePermission_;
+        } else {
+          return namespacePermissionBuilder_.getMessage();
+        }
+      }
+      public Builder setNamespacePermission(org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.NamespacePermission value) {
+        if (namespacePermissionBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          namespacePermission_ = value;
+          onChanged();
+        } else {
+          namespacePermissionBuilder_.setMessage(value);
+        }
+        bitField0_ |= 0x00000004;
+        return this;
+      }
+      public Builder setNamespacePermission(
+          org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.NamespacePermission.Builder builderForValue) {
+        if (namespacePermissionBuilder_ == null) {
+          namespacePermission_ = builderForValue.build();
+          onChanged();
+        } else {
+          namespacePermissionBuilder_.setMessage(builderForValue.build());
+        }
+        bitField0_ |= 0x00000004;
+        return this;
+      }
+      public Builder mergeNamespacePermission(org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.NamespacePermission value) {
+        if (namespacePermissionBuilder_ == null) {
+          if (((bitField0_ & 0x00000004) == 0x00000004) &&
+              namespacePermission_ != org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.NamespacePermission.getDefaultInstance()) {
+            namespacePermission_ =
+              org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.NamespacePermission.newBuilder(namespacePermission_).mergeFrom(value).buildPartial();
+          } else {
+            namespacePermission_ = value;
+          }
+          onChanged();
+        } else {
+          namespacePermissionBuilder_.mergeFrom(value);
+        }
+        bitField0_ |= 0x00000004;
+        return this;
+      }
+      public Builder clearNamespacePermission() {
+        if (namespacePermissionBuilder_ == null) {
+          namespacePermission_ = org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.NamespacePermission.getDefaultInstance();
+          onChanged();
+        } else {
+          namespacePermissionBuilder_.clear();
+        }
+        bitField0_ = (bitField0_ & ~0x00000004);
+        return this;
+      }
+      public org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.NamespacePermission.Builder getNamespacePermissionBuilder() {
+        bitField0_ |= 0x00000004;
+        onChanged();
+        return getNamespacePermissionFieldBuilder().getBuilder();
+      }
+      public org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.NamespacePermissionOrBuilder getNamespacePermissionOrBuilder() {
+        if (namespacePermissionBuilder_ != null) {
+          return namespacePermissionBuilder_.getMessageOrBuilder();
+        } else {
+          return namespacePermission_;
+        }
+      }
+      private com.google.protobuf.SingleFieldBuilder<
+          org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.NamespacePermission, org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.NamespacePermission.Builder, org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.NamespacePermissionOrBuilder> 
+          getNamespacePermissionFieldBuilder() {
+        if (namespacePermissionBuilder_ == null) {
+          namespacePermissionBuilder_ = new com.google.protobuf.SingleFieldBuilder<
+              org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.NamespacePermission, org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.NamespacePermission.Builder, org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.NamespacePermissionOrBuilder>(
+                  namespacePermission_,
+                  getParentForChildren(),
+                  isClean());
+          namespacePermission_ = null;
+        }
+        return namespacePermissionBuilder_;
+      }
+      
+      // optional .TablePermission table_permission = 4;
+      private org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.TablePermission tablePermission_ = org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.TablePermission.getDefaultInstance();
+      private com.google.protobuf.SingleFieldBuilder<
+          org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.TablePermission, org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.TablePermission.Builder, org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.TablePermissionOrBuilder> tablePermissionBuilder_;
+      public boolean hasTablePermission() {
+        return ((bitField0_ & 0x00000008) == 0x00000008);
+      }
+      public org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.TablePermission getTablePermission() {
+        if (tablePermissionBuilder_ == null) {
+          return tablePermission_;
+        } else {
+          return tablePermissionBuilder_.getMessage();
+        }
+      }
+      public Builder setTablePermission(org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.TablePermission value) {
+        if (tablePermissionBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          tablePermission_ = value;
+          onChanged();
+        } else {
+          tablePermissionBuilder_.setMessage(value);
+        }
+        bitField0_ |= 0x00000008;
+        return this;
+      }
+      public Builder setTablePermission(
+          org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.TablePermission.Builder builderForValue) {
+        if (tablePermissionBuilder_ == null) {
+          tablePermission_ = builderForValue.build();
+          onChanged();
+        } else {
+          tablePermissionBuilder_.setMessage(builderForValue.build());
+        }
+        bitField0_ |= 0x00000008;
+        return this;
+      }
+      public Builder mergeTablePermission(org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.TablePermission value) {
+        if (tablePermissionBuilder_ == null) {
+          if (((bitField0_ & 0x00000008) == 0x00000008) &&
+              tablePermission_ != org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.TablePermission.getDefaultInstance()) {
+            tablePermission_ =
+              org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.TablePermission.newBuilder(tablePermission_).mergeFrom(value).buildPartial();
+          } else {
+            tablePermission_ = value;
+          }
+          onChanged();
+        } else {
+          tablePermissionBuilder_.mergeFrom(value);
+        }
+        bitField0_ |= 0x00000008;
+        return this;
+      }
+      public Builder clearTablePermission() {
+        if (tablePermissionBuilder_ == null) {
+          tablePermission_ = org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.TablePermission.getDefaultInstance();
+          onChanged();
+        } else {
+          tablePermissionBuilder_.clear();
+        }
+        bitField0_ = (bitField0_ & ~0x00000008);
+        return this;
+      }
+      public org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.TablePermission.Builder getTablePermissionBuilder() {
+        bitField0_ |= 0x00000008;
+        onChanged();
+        return getTablePermissionFieldBuilder().getBuilder();
+      }
+      public org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.TablePermissionOrBuilder getTablePermissionOrBuilder() {
+        if (tablePermissionBuilder_ != null) {
+          return tablePermissionBuilder_.getMessageOrBuilder();
+        } else {
+          return tablePermission_;
+        }
+      }
+      private com.google.protobuf.SingleFieldBuilder<
+          org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.TablePermission, org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.TablePermission.Builder, org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.TablePermissionOrBuilder> 
+          getTablePermissionFieldBuilder() {
+        if (tablePermissionBuilder_ == null) {
+          tablePermissionBuilder_ = new com.google.protobuf.SingleFieldBuilder<
+              org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.TablePermission, org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.TablePermission.Builder, org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.TablePermissionOrBuilder>(
+                  tablePermission_,
+                  getParentForChildren(),
+                  isClean());
+          tablePermission_ = null;
+        }
+        return tablePermissionBuilder_;
+      }
+      
+      // @@protoc_insertion_point(builder_scope:Permission)
+    }
+    
+    static {
+      defaultInstance = new Permission(true);
+      defaultInstance.initFields();
+    }
+    
+    // @@protoc_insertion_point(class_scope:Permission)
+  }
+  
+  public interface TablePermissionOrBuilder
+      extends com.google.protobuf.MessageOrBuilder {
+    
+    // optional .TableName table_name = 1;
+    boolean hasTableName();
+    org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName getTableName();
+    org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableNameOrBuilder getTableNameOrBuilder();
+    
+    // optional bytes family = 2;
+    boolean hasFamily();
+    com.google.protobuf.ByteString getFamily();
+    
+    // optional bytes qualifier = 3;
+    boolean hasQualifier();
+    com.google.protobuf.ByteString getQualifier();
+    
+    // repeated .Permission.Action action = 4;
+    java.util.List<org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Permission.Action> getActionList();
+    int getActionCount();
+    org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Permission.Action getAction(int index);
+  }
+  public static final class TablePermission extends
+      com.google.protobuf.GeneratedMessage
+      implements TablePermissionOrBuilder {
+    // Use TablePermission.newBuilder() to construct.
+    private TablePermission(Builder builder) {
+      super(builder);
+    }
+    private TablePermission(boolean noInit) {}
+    
+    private static final TablePermission defaultInstance;
+    public static TablePermission getDefaultInstance() {
+      return defaultInstance;
+    }
+    
+    public TablePermission getDefaultInstanceForType() {
+      return defaultInstance;
+    }
+    
+    public static final com.google.protobuf.Descriptors.Descriptor
+        getDescriptor() {
+      return org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.internal_static_TablePermission_descriptor;
+    }
+    
+    protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+        internalGetFieldAccessorTable() {
+      return org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.internal_static_TablePermission_fieldAccessorTable;
+    }
+    
+    private int bitField0_;
+    // optional .TableName table_name = 1;
+    public static final int TABLE_NAME_FIELD_NUMBER = 1;
+    private org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName tableName_;
+    public boolean hasTableName() {
+      return ((bitField0_ & 0x00000001) == 0x00000001);
+    }
+    public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName getTableName() {
+      return tableName_;
+    }
+    public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableNameOrBuilder getTableNameOrBuilder() {
+      return tableName_;
+    }
+    
+    // optional bytes family = 2;
+    public static final int FAMILY_FIELD_NUMBER = 2;
+    private com.google.protobuf.ByteString family_;
+    public boolean hasFamily() {
+      return ((bitField0_ & 0x00000002) == 0x00000002);
+    }
+    public com.google.protobuf.ByteString getFamily() {
+      return family_;
+    }
+    
+    // optional bytes qualifier = 3;
+    public static final int QUALIFIER_FIELD_NUMBER = 3;
+    private com.google.protobuf.ByteString qualifier_;
+    public boolean hasQualifier() {
+      return ((bitField0_ & 0x00000004) == 0x00000004);
+    }
+    public com.google.protobuf.ByteString getQualifier() {
+      return qualifier_;
+    }
+    
+    // repeated .Permission.Action action = 4;
+    public static final int ACTION_FIELD_NUMBER = 4;
+    private java.util.List<org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Permission.Action> action_;
+    public java.util.List<org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Permission.Action> getActionList() {
+      return action_;
+    }
+    public int getActionCount() {
+      return action_.size();
+    }
+    public org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Permission.Action getAction(int index) {
+      return action_.get(index);
+    }
+    
+    private void initFields() {
+      tableName_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.getDefaultInstance();
+      family_ = com.google.protobuf.ByteString.EMPTY;
+      qualifier_ = com.google.protobuf.ByteString.EMPTY;
+      action_ = java.util.Collections.emptyList();
+    }
+    private byte memoizedIsInitialized = -1;
+    public final boolean isInitialized() {
+      byte isInitialized = memoizedIsInitialized;
+      if (isInitialized != -1) return isInitialized == 1;
+      
+      if (hasTableName()) {
+        if (!getTableName().isInitialized()) {
+          memoizedIsInitialized = 0;
+          return false;
+        }
+      }
+      memoizedIsInitialized = 1;
+      return true;
+    }
+    
+    public void writeTo(com.google.protobuf.CodedOutputStream output)
+                        throws java.io.IOException {
+      getSerializedSize();
+      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+        output.writeMessage(1, tableName_);
+      }
+      if (((bitField0_ & 0x00000002) == 0x00000002)) {
+        output.writeBytes(2, family_);
+      }
+      if (((bitField0_ & 0x00000004) == 0x00000004)) {
+        output.writeBytes(3, qualifier_);
+      }
+      for (int i = 0; i < action_.size(); i++) {
+        output.writeEnum(4, action_.get(i).getNumber());
+      }
+      getUnknownFields().writeTo(output);
+    }
+    
+    private int memoizedSerializedSize = -1;
+    public int getSerializedSize() {
+      int size = memoizedSerializedSize;
+      if (size != -1) return size;
+    
+      size = 0;
+      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeMessageSize(1, tableName_);
+      }
+      if (((bitField0_ & 0x00000002) == 0x00000002)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeBytesSize(2, family_);
+      }
+      if (((bitField0_ & 0x00000004) == 0x00000004)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeBytesSize(3, qualifier_);
+      }
+      {
+        int dataSize = 0;
+        for (int i = 0; i < action_.size(); i++) {
+          dataSize += com.google.protobuf.CodedOutputStream
+            .computeEnumSizeNoTag(action_.get(i).getNumber());
+        }
+        size += dataSize;
+        size += 1 * action_.size();
+      }
+      size += getUnknownFields().getSerializedSize();
+      memoizedSerializedSize = size;
+      return size;
+    }
+    
+    private static final long serialVersionUID = 0L;
+    @java.lang.Override
+    protected java.lang.Object writeReplace()
+        throws java.io.ObjectStreamException {
+      return super.writeReplace();
+    }
+    
+    @java.lang.Override
+    public boolean equals(final java.lang.Object obj) {
+      if (obj == this) {
+       return true;
+      }
+      if (!(obj instanceof org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.TablePermission)) {
+        return super.equals(obj);
+      }
+      org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.TablePermission other = (org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.TablePermission) obj;
+      
+      boolean result = true;
+      result = result && (hasTableName() == other.hasTableName());
+      if (hasTableName()) {
+        result = result && getTableName()
+            .equals(other.getTableName());
+      }
+      result = result && (hasFamily() == other.hasFamily());
+      if (hasFamily()) {
+        result = result && getFamily()
+            .equals(other.getFamily());
+      }
+      result = result && (hasQualifier() == other.hasQualifier());
+      if (hasQualifier()) {
+        result = result && getQualifier()
+            .equals(other.getQualifier());
+      }
+      result = result && getActionList()
+          .equals(other.getActionList());
+      result = result &&
+          getUnknownFields().equals(other.getUnknownFields());
+      return result;
+    }
+    
+    @java.lang.Override
+    public int hashCode() {
+      int hash = 41;
+      hash = (19 * hash) + getDescriptorForType().hashCode();
+      if (hasTableName()) {
+        hash = (37 * hash) + TABLE_NAME_FIELD_NUMBER;
+        hash = (53 * hash) + getTableName().hashCode();
+      }
+      if (hasFamily()) {
+        hash = (37 * hash) + FAMILY_FIELD_NUMBER;
+        hash = (53 * hash) + getFamily().hashCode();
+      }
+      if (hasQualifier()) {
+        hash = (37 * hash) + QUALIFIER_FIELD_NUMBER;
+        hash = (53 * hash) + getQualifier().hashCode();
+      }
+      if (getActionCount() > 0) {
+        hash = (37 * hash) + ACTION_FIELD_NUMBER;
+        hash = (53 * hash) + hashEnumList(getActionList());
+      }
+      hash = (29 * hash) + getUnknownFields().hashCode();
+      return hash;
+    }
+    
+    public static org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.TablePermission parseFrom(
+        com.google.protobuf.ByteString data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return newBuilder().mergeFrom(data).buildParsed();
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.TablePermission parseFrom(
+        com.google.protobuf.ByteString data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return newBuilder().mergeFrom(data, extensionRegistry)
+               .buildParsed();
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.TablePermission parseFrom(byte[] data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return newBuilder().mergeFrom(data).buildParsed();
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.TablePermission parseFrom(
+        byte[] data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return newBuilder().mergeFrom(data, extensionRegistry)
+               .buildParsed();
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.TablePermission parseFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return newBuilder().mergeFrom(input).buildParsed();
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.TablePermission parseFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return newBuilder().mergeFrom(input, extensionRegistry)
+               .buildParsed();
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.TablePermission parseDelimitedFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      Builder builder = newBuilder();
+      if (builder.mergeDelimitedFrom(input)) {
+        return builder.buildParsed();
+      } else {
+        return null;
+      }
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.TablePermission parseDelimitedFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      Builder builder = newBuilder();
+      if (builder.mergeDelimitedFrom(input, extensionRegistry)) {
+        return builder.buildParsed();
+      } else {
+        return null;
+      }
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.TablePermission parseFrom(
+        com.google.protobuf.CodedInputStream input)
+        throws java.io.IOException {
+      return newBuilder().mergeFrom(input).buildParsed();
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.TablePermission parseFrom(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return newBuilder().mergeFrom(input, extensionRegistry)
+               .buildParsed();
+    }
+    
+    public static Builder newBuilder() { return Builder.create(); }
+    public Builder newBuilderForType() { return newBuilder(); }
+    public static Builder newBuilder(org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.TablePermission prototype) {
+      return newBuilder().mergeFrom(prototype);
+    }
+    public Builder toBuilder() { return newBuilder(this); }
+    
+    @java.lang.Override
+    protected Builder newBuilderForType(
+        com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+      Builder builder = new Builder(parent);
+      return builder;
+    }
+    public static final class Builder extends
+        com.google.protobuf.GeneratedMessage.Builder<Builder>
+       implements org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.TablePermissionOrBuilder {
+      public static final com.google.protobuf.Descriptors.Descriptor
+          getDescriptor() {
+        return org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.internal_static_TablePermission_descriptor;
+      }
+      
+      protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+          internalGetFieldAccessorTable() {
+        return org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.internal_static_TablePermission_fieldAccessorTable;
+      }
+      
+      // Construct using org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.TablePermission.newBuilder()
+      private Builder() {
+        maybeForceBuilderInitialization();
+      }
+      
+      private Builder(BuilderParent parent) {
+        super(parent);
+        maybeForceBuilderInitialization();
+      }
+      private void maybeForceBuilderInitialization() {
+        if (com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders) {
+          getTableNameFieldBuilder();
+        }
+      }
+      private static Builder create() {
+        return new Builder();
+      }
+      
+      public Builder clear() {
+        super.clear();
+        if (tableNameBuilder_ == null) {
+          tableName_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.getDefaultInstance();
+        } else {
+          tableNameBuilder_.clear();
+        }
+        bitField0_ = (bitField0_ & ~0x00000001);
+        family_ = com.google.protobuf.ByteString.EMPTY;
+        bitField0_ = (bitField0_ & ~0x00000002);
+        qualifier_ = com.google.protobuf.ByteString.EMPTY;
+        bitField0_ = (bitField0_ & ~0x00000004);
+        action_ = java.util.Collections.emptyList();
+        bitField0_ = (bitField0_ & ~0x00000008);
+        return this;
+      }
+      
+      public Builder clone() {
+        return create().mergeFrom(buildPartial());
+      }
+      
+      public com.google.protobuf.Descriptors.Descriptor
+          getDescriptorForType() {
+        return org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.TablePermission.getDescriptor();
+      }
+      
+      public org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.TablePermission getDefaultInstanceForType() {
+        return org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.TablePermission.getDefaultInstance();
+      }
+      
+      public org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.TablePermission build() {
+        org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.TablePermission result = buildPartial();
+        if (!result.isInitialized()) {
+          throw newUninitializedMessageException(result);
+        }
+        return result;
+      }
+      
+      private org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.TablePermission buildParsed()
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.TablePermission result = buildPartial();
+        if (!result.isInitialized()) {
+          throw newUninitializedMessageException(
+            result).asInvalidProtocolBufferException();
+        }
+        return result;
+      }
+      
+      public org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.TablePermission buildPartial() {
+        org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.TablePermission result = new org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.TablePermission(this);
+        int from_bitField0_ = bitField0_;
+        int to_bitField0_ = 0;
+        if (((from_bitField0_ & 0x00000001) == 0x00000001)) {
+          to_bitField0_ |= 0x00000001;
+        }
+        if (tableNameBuilder_ == null) {
+          result.tableName_ = tableName_;
+        } else {
+          result.tableName_ = tableNameBuilder_.build();
+        }
+        if (((from_bitField0_ & 0x00000002) == 0x00000002)) {
+          to_bitField0_ |= 0x00000002;
+        }
+        result.family_ = family_;
+        if (((from_bitField0_ & 0x00000004) == 0x00000004)) {
+          to_bitField0_ |= 0x00000004;
+        }
+        result.qualifier_ = qualifier_;
+        if (((bitField0_ & 0x00000008) == 0x00000008)) {
+          action_ = java.util.Collections.unmodifiableList(action_);
+          bitField0_ = (bitField0_ & ~0x00000008);
+        }
+        result.action_ = action_;
+        result.bitField0_ = to_bitField0_;
+        onBuilt();
+        return result;
+      }
+      
+      public Builder mergeFrom(com.google.protobuf.Message other) {
+        if (other instanceof org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.TablePermission) {
+          return mergeFrom((org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.TablePermission)other);
+        } else {
+          super.mergeFrom(other);
+          return this;
+        }
+      }
+      
+      public Builder mergeFrom(org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.TablePermission other) {
+        if (other == org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.TablePermission.getDefaultInstance()) return this;
         if (other.hasTableName()) {
           mergeTableName(other.getTableName());
         }
@@ -535,6 +1453,16 @@ public final class AccessControlProtos {
         }
         if (other.hasQualifier()) {
           setQualifier(other.getQualifier());
+        }
+        if (!other.action_.isEmpty()) {
+          if (action_.isEmpty()) {
+            action_ = other.action_;
+            bitField0_ = (bitField0_ & ~0x00000008);
+          } else {
+            ensureActionIsMutable();
+            action_.addAll(other.action_);
+          }
+          onChanged();
         }
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
@@ -547,6 +1475,1099 @@ public final class AccessControlProtos {
             return false;
           }
         }
+        return true;
+      }
+      
+      public Builder mergeFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws java.io.IOException {
+        com.google.protobuf.UnknownFieldSet.Builder unknownFields =
+          com.google.protobuf.UnknownFieldSet.newBuilder(
+            this.getUnknownFields());
+        while (true) {
+          int tag = input.readTag();
+          switch (tag) {
+            case 0:
+              this.setUnknownFields(unknownFields.build());
+              onChanged();
+              return this;
+            default: {
+              if (!parseUnknownField(input, unknownFields,
+                                     extensionRegistry, tag)) {
+                this.setUnknownFields(unknownFields.build());
+                onChanged();
+                return this;
+              }
+              break;
+            }
+            case 10: {
+              org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.Builder subBuilder = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.newBuilder();
+              if (hasTableName()) {
+                subBuilder.mergeFrom(getTableName());
+              }
+              input.readMessage(subBuilder, extensionRegistry);
+              setTableName(subBuilder.buildPartial());
+              break;
+            }
+            case 18: {
+              bitField0_ |= 0x00000002;
+              family_ = input.readBytes();
+              break;
+            }
+            case 26: {
+              bitField0_ |= 0x00000004;
+              qualifier_ = input.readBytes();
+              break;
+            }
+            case 32: {
+              int rawValue = input.readEnum();
+              org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Permission.Action value = org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Permission.Action.valueOf(rawValue);
+              if (value == null) {
+                unknownFields.mergeVarintField(4, rawValue);
+              } else {
+                addAction(value);
+              }
+              break;
+            }
+            case 34: {
+              int length = input.readRawVarint32();
+              int oldLimit = input.pushLimit(length);
+              while(input.getBytesUntilLimit() > 0) {
+                int rawValue = input.readEnum();
+                org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Permission.Action value = org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Permission.Action.valueOf(rawValue);
+                if (value == null) {
+                  unknownFields.mergeVarintField(4, rawValue);
+                } else {
+                  addAction(value);
+                }
+              }
+              input.popLimit(oldLimit);
+              break;
+            }
+          }
+        }
+      }
+      
+      private int bitField0_;
+      
+      // optional .TableName table_name = 1;
+      private org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName tableName_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.getDefaultInstance();
+      private com.google.protobuf.SingleFieldBuilder<
+          org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableNameOrBuilder> tableNameBuilder_;
+      public boolean hasTableName() {
+        return ((bitField0_ & 0x00000001) == 0x00000001);
+      }
+      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName getTableName() {
+        if (tableNameBuilder_ == null) {
+          return tableName_;
+        } else {
+          return tableNameBuilder_.getMessage();
+        }
+      }
+      public Builder setTableName(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName value) {
+        if (tableNameBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          tableName_ = value;
+          onChanged();
+        } else {
+          tableNameBuilder_.setMessage(value);
+        }
+        bitField0_ |= 0x00000001;
+        return this;
+      }
+      public Builder setTableName(
+          org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.Builder builderForValue) {
+        if (tableNameBuilder_ == null) {
+          tableName_ = builderForValue.build();
+          onChanged();
+        } else {
+          tableNameBuilder_.setMessage(builderForValue.build());
+        }
+        bitField0_ |= 0x00000001;
+        return this;
+      }
+      public Builder mergeTableName(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName value) {
+        if (tableNameBuilder_ == null) {
+          if (((bitField0_ & 0x00000001) == 0x00000001) &&
+              tableName_ != org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.getDefaultInstance()) {
+            tableName_ =
+              org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.newBuilder(tableName_).mergeFrom(value).buildPartial();
+          } else {
+            tableName_ = value;
+          }
+          onChanged();
+        } else {
+          tableNameBuilder_.mergeFrom(value);
+        }
+        bitField0_ |= 0x00000001;
+        return this;
+      }
+      public Builder clearTableName() {
+        if (tableNameBuilder_ == null) {
+          tableName_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.getDefaultInstance();
+          onChanged();
+        } else {
+          tableNameBuilder_.clear();
+        }
+        bitField0_ = (bitField0_ & ~0x00000001);
+        return this;
+      }
+      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.Builder getTableNameBuilder() {
+        bitField0_ |= 0x00000001;
+        onChanged();
+        return getTableNameFieldBuilder().getBuilder();
+      }
+      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableNameOrBuilder getTableNameOrBuilder() {
+        if (tableNameBuilder_ != null) {
+          return tableNameBuilder_.getMessageOrBuilder();
+        } else {
+          return tableName_;
+        }
+      }
+      private com.google.protobuf.SingleFieldBuilder<
+          org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableNameOrBuilder> 
+          getTableNameFieldBuilder() {
+        if (tableNameBuilder_ == null) {
+          tableNameBuilder_ = new com.google.protobuf.SingleFieldBuilder<
+              org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableNameOrBuilder>(
+                  tableName_,
+                  getParentForChildren(),
+                  isClean());
+          tableName_ = null;
+        }
+        return tableNameBuilder_;
+      }
+      
+      // optional bytes family = 2;
+      private com.google.protobuf.ByteString family_ = com.google.protobuf.ByteString.EMPTY;
+      public boolean hasFamily() {
+        return ((bitField0_ & 0x00000002) == 0x00000002);
+      }
+      public com.google.protobuf.ByteString getFamily() {
+        return family_;
+      }
+      public Builder setFamily(com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000002;
+        family_ = value;
+        onChanged();
+        return this;
+      }
+      public Builder clearFamily() {
+        bitField0_ = (bitField0_ & ~0x00000002);
+        family_ = getDefaultInstance().getFamily();
+        onChanged();
+        return this;
+      }
+      
+      // optional bytes qualifier = 3;
+      private com.google.protobuf.ByteString qualifier_ = com.google.protobuf.ByteString.EMPTY;
+      public boolean hasQualifier() {
+        return ((bitField0_ & 0x00000004) == 0x00000004);
+      }
+      public com.google.protobuf.ByteString getQualifier() {
+        return qualifier_;
+      }
+      public Builder setQualifier(com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000004;
+        qualifier_ = value;
+        onChanged();
+        return this;
+      }
+      public Builder clearQualifier() {
+        bitField0_ = (bitField0_ & ~0x00000004);
+        qualifier_ = getDefaultInstance().getQualifier();
+        onChanged();
+        return this;
+      }
+      
+      // repeated .Permission.Action action = 4;
+      private java.util.List<org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Permission.Action> action_ =
+        java.util.Collections.emptyList();
+      private void ensureActionIsMutable() {
+        if (!((bitField0_ & 0x00000008) == 0x00000008)) {
+          action_ = new java.util.ArrayList<org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Permission.Action>(action_);
+          bitField0_ |= 0x00000008;
+        }
+      }
+      public java.util.List<org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Permission.Action> getActionList() {
+        return java.util.Collections.unmodifiableList(action_);
+      }
+      public int getActionCount() {
+        return action_.size();
+      }
+      public org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Permission.Action getAction(int index) {
+        return action_.get(index);
+      }
+      public Builder setAction(
+          int index, org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Permission.Action value) {
+        if (value == null) {
+          throw new NullPointerException();
+        }
+        ensureActionIsMutable();
+        action_.set(index, value);
+        onChanged();
+        return this;
+      }
+      public Builder addAction(org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Permission.Action value) {
+        if (value == null) {
+          throw new NullPointerException();
+        }
+        ensureActionIsMutable();
+        action_.add(value);
+        onChanged();
+        return this;
+      }
+      public Builder addAllAction(
+          java.lang.Iterable<? extends org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Permission.Action> values) {
+        ensureActionIsMutable();
+        super.addAll(values, action_);
+        onChanged();
+        return this;
+      }
+      public Builder clearAction() {
+        action_ = java.util.Collections.emptyList();
+        bitField0_ = (bitField0_ & ~0x00000008);
+        onChanged();
+        return this;
+      }
+      
+      // @@protoc_insertion_point(builder_scope:TablePermission)
+    }
+    
+    static {
+      defaultInstance = new TablePermission(true);
+      defaultInstance.initFields();
+    }
+    
+    // @@protoc_insertion_point(class_scope:TablePermission)
+  }
+  
+  public interface NamespacePermissionOrBuilder
+      extends com.google.protobuf.MessageOrBuilder {
+    
+    // optional bytes namespace_name = 1;
+    boolean hasNamespaceName();
+    com.google.protobuf.ByteString getNamespaceName();
+    
+    // repeated .Permission.Action action = 2;
+    java.util.List<org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Permission.Action> getActionList();
+    int getActionCount();
+    org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Permission.Action getAction(int index);
+  }
+  public static final class NamespacePermission extends
+      com.google.protobuf.GeneratedMessage
+      implements NamespacePermissionOrBuilder {
+    // Use NamespacePermission.newBuilder() to construct.
+    private NamespacePermission(Builder builder) {
+      super(builder);
+    }
+    private NamespacePermission(boolean noInit) {}
+    
+    private static final NamespacePermission defaultInstance;
+    public static NamespacePermission getDefaultInstance() {
+      return defaultInstance;
+    }
+    
+    public NamespacePermission getDefaultInstanceForType() {
+      return defaultInstance;
+    }
+    
+    public static final com.google.protobuf.Descriptors.Descriptor
+        getDescriptor() {
+      return org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.internal_static_NamespacePermission_descriptor;
+    }
+    
+    protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+        internalGetFieldAccessorTable() {
+      return org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.internal_static_NamespacePermission_fieldAccessorTable;
+    }
+    
+    private int bitField0_;
+    // optional bytes namespace_name = 1;
+    public static final int NAMESPACE_NAME_FIELD_NUMBER = 1;
+    private com.google.protobuf.ByteString namespaceName_;
+    public boolean hasNamespaceName() {
+      return ((bitField0_ & 0x00000001) == 0x00000001);
+    }
+    public com.google.protobuf.ByteString getNamespaceName() {
+      return namespaceName_;
+    }
+    
+    // repeated .Permission.Action action = 2;
+    public static final int ACTION_FIELD_NUMBER = 2;
+    private java.util.List<org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Permission.Action> action_;
+    public java.util.List<org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Permission.Action> getActionList() {
+      return action_;
+    }
+    public int getActionCount() {
+      return action_.size();
+    }
+    public org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Permission.Action getAction(int index) {
+      return action_.get(index);
+    }
+    
+    private void initFields() {
+      namespaceName_ = com.google.protobuf.ByteString.EMPTY;
+      action_ = java.util.Collections.emptyList();
+    }
+    private byte memoizedIsInitialized = -1;
+    public final boolean isInitialized() {
+      byte isInitialized = memoizedIsInitialized;
+      if (isInitialized != -1) return isInitialized == 1;
+      
+      memoizedIsInitialized = 1;
+      return true;
+    }
+    
+    public void writeTo(com.google.protobuf.CodedOutputStream output)
+                        throws java.io.IOException {
+      getSerializedSize();
+      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+        output.writeBytes(1, namespaceName_);
+      }
+      for (int i = 0; i < action_.size(); i++) {
+        output.writeEnum(2, action_.get(i).getNumber());
+      }
+      getUnknownFields().writeTo(output);
+    }
+    
+    private int memoizedSerializedSize = -1;
+    public int getSerializedSize() {
+      int size = memoizedSerializedSize;
+      if (size != -1) return size;
+    
+      size = 0;
+      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeBytesSize(1, namespaceName_);
+      }
+      {
+        int dataSize = 0;
+        for (int i = 0; i < action_.size(); i++) {
+          dataSize += com.google.protobuf.CodedOutputStream
+            .computeEnumSizeNoTag(action_.get(i).getNumber());
+        }
+        size += dataSize;
+        size += 1 * action_.size();
+      }
+      size += getUnknownFields().getSerializedSize();
+      memoizedSerializedSize = size;
+      return size;
+    }
+    
+    private static final long serialVersionUID = 0L;
+    @java.lang.Override
+    protected java.lang.Object writeReplace()
+        throws java.io.ObjectStreamException {
+      return super.writeReplace();
+    }
+    
+    @java.lang.Override
+    public boolean equals(final java.lang.Object obj) {
+      if (obj == this) {
+       return true;
+      }
+      if (!(obj instanceof org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.NamespacePermission)) {
+        return super.equals(obj);
+      }
+      org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.NamespacePermission other = (org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.NamespacePermission) obj;
+      
+      boolean result = true;
+      result = result && (hasNamespaceName() == other.hasNamespaceName());
+      if (hasNamespaceName()) {
+        result = result && getNamespaceName()
+            .equals(other.getNamespaceName());
+      }
+      result = result && getActionList()
+          .equals(other.getActionList());
+      result = result &&
+          getUnknownFields().equals(other.getUnknownFields());
+      return result;
+    }
+    
+    @java.lang.Override
+    public int hashCode() {
+      int hash = 41;
+      hash = (19 * hash) + getDescriptorForType().hashCode();
+      if (hasNamespaceName()) {
+        hash = (37 * hash) + NAMESPACE_NAME_FIELD_NUMBER;
+        hash = (53 * hash) + getNamespaceName().hashCode();
+      }
+      if (getActionCount() > 0) {
+        hash = (37 * hash) + ACTION_FIELD_NUMBER;
+        hash = (53 * hash) + hashEnumList(getActionList());
+      }
+      hash = (29 * hash) + getUnknownFields().hashCode();
+      return hash;
+    }
+    
+    public static org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.NamespacePermission parseFrom(
+        com.google.protobuf.ByteString data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return newBuilder().mergeFrom(data).buildParsed();
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.NamespacePermission parseFrom(
+        com.google.protobuf.ByteString data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return newBuilder().mergeFrom(data, extensionRegistry)
+               .buildParsed();
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.NamespacePermission parseFrom(byte[] data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return newBuilder().mergeFrom(data).buildParsed();
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.NamespacePermission parseFrom(
+        byte[] data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return newBuilder().mergeFrom(data, extensionRegistry)
+               .buildParsed();
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.NamespacePermission parseFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return newBuilder().mergeFrom(input).buildParsed();
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.NamespacePermission parseFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return newBuilder().mergeFrom(input, extensionRegistry)
+               .buildParsed();
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.NamespacePermission parseDelimitedFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      Builder builder = newBuilder();
+      if (builder.mergeDelimitedFrom(input)) {
+        return builder.buildParsed();
+      } else {
+        return null;
+      }
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.NamespacePermission parseDelimitedFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      Builder builder = newBuilder();
+      if (builder.mergeDelimitedFrom(input, extensionRegistry)) {
+        return builder.buildParsed();
+      } else {
+        return null;
+      }
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.NamespacePermission parseFrom(
+        com.google.protobuf.CodedInputStream input)
+        throws java.io.IOException {
+      return newBuilder().mergeFrom(input).buildParsed();
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.NamespacePermission parseFrom(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return newBuilder().mergeFrom(input, extensionRegistry)
+               .buildParsed();
+    }
+    
+    public static Builder newBuilder() { return Builder.create(); }
+    public Builder newBuilderForType() { return newBuilder(); }
+    public static Builder newBuilder(org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.NamespacePermission prototype) {
+      return newBuilder().mergeFrom(prototype);
+    }
+    public Builder toBuilder() { return newBuilder(this); }
+    
+    @java.lang.Override
+    protected Builder newBuilderForType(
+        com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+      Builder builder = new Builder(parent);
+      return builder;
+    }
+    public static final class Builder extends
+        com.google.protobuf.GeneratedMessage.Builder<Builder>
+       implements org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.NamespacePermissionOrBuilder {
+      public static final com.google.protobuf.Descriptors.Descriptor
+          getDescriptor() {
+        return org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.internal_static_NamespacePermission_descriptor;
+      }
+      
+      protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+          internalGetFieldAccessorTable() {
+        return org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.internal_static_NamespacePermission_fieldAccessorTable;
+      }
+      
+      // Construct using org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.NamespacePermission.newBuilder()
+      private Builder() {
+        maybeForceBuilderInitialization();
+      }
+      
+      private Builder(BuilderParent parent) {
+        super(parent);
+        maybeForceBuilderInitialization();
+      }
+      private void maybeForceBuilderInitialization() {
+        if (com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders) {
+        }
+      }
+      private static Builder create() {
+        return new Builder();
+      }
+      
+      public Builder clear() {
+        super.clear();
+        namespaceName_ = com.google.protobuf.ByteString.EMPTY;
+        bitField0_ = (bitField0_ & ~0x00000001);
+        action_ = java.util.Collections.emptyList();
+        bitField0_ = (bitField0_ & ~0x00000002);
+        return this;
+      }
+      
+      public Builder clone() {
+        return create().mergeFrom(buildPartial());
+      }
+      
+      public com.google.protobuf.Descriptors.Descriptor
+          getDescriptorForType() {
+        return org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.NamespacePermission.getDescriptor();
+      }
+      
+      public org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.NamespacePermission getDefaultInstanceForType() {
+        return org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.NamespacePermission.getDefaultInstance();
+      }
+      
+      public org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.NamespacePermission build() {
+        org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.NamespacePermission result = buildPartial();
+        if (!result.isInitialized()) {
+          throw newUninitializedMessageException(result);
+        }
+        return result;
+      }
+      
+      private org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.NamespacePermission buildParsed()
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.NamespacePermission result = buildPartial();
+        if (!result.isInitialized()) {
+          throw newUninitializedMessageException(
+            result).asInvalidProtocolBufferException();
+        }
+        return result;
+      }
+      
+      public org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.NamespacePermission buildPartial() {
+        org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.NamespacePermission result = new org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.NamespacePermission(this);
+        int from_bitField0_ = bitField0_;
+        int to_bitField0_ = 0;
+        if (((from_bitField0_ & 0x00000001) == 0x00000001)) {
+          to_bitField0_ |= 0x00000001;
+        }
+        result.namespaceName_ = namespaceName_;
+        if (((bitField0_ & 0x00000002) == 0x00000002)) {
+          action_ = java.util.Collections.unmodifiableList(action_);
+          bitField0_ = (bitField0_ & ~0x00000002);
+        }
+        result.action_ = action_;
+        result.bitField0_ = to_bitField0_;
+        onBuilt();
+        return result;
+      }
+      
+      public Builder mergeFrom(com.google.protobuf.Message other) {
+        if (other instanceof org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.NamespacePermission) {
+          return mergeFrom((org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.NamespacePermission)other);
+        } else {
+          super.mergeFrom(other);
+          return this;
+        }
+      }
+      
+      public Builder mergeFrom(org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.NamespacePermission other) {
+        if (other == org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.NamespacePermission.getDefaultInstance()) return this;
+        if (other.hasNamespaceName()) {
+          setNamespaceName(other.getNamespaceName());
+        }
+        if (!other.action_.isEmpty()) {
+          if (action_.isEmpty()) {
+            action_ = other.action_;
+            bitField0_ = (bitField0_ & ~0x00000002);
+          } else {
+            ensureActionIsMutable();
+            action_.addAll(other.action_);
+          }
+          onChanged();
+        }
+        this.mergeUnknownFields(other.getUnknownFields());
+        return this;
+      }
+      
+      public final boolean isInitialized() {
+        return true;
+      }
+      
+      public Builder mergeFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws java.io.IOException {
+        com.google.protobuf.UnknownFieldSet.Builder unknownFields =
+          com.google.protobuf.UnknownFieldSet.newBuilder(
+            this.getUnknownFields());
+        while (true) {
+          int tag = input.readTag();
+          switch (tag) {
+            case 0:
+              this.setUnknownFields(unknownFields.build());
+              onChanged();
+              return this;
+            default: {
+              if (!parseUnknownField(input, unknownFields,
+                                     extensionRegistry, tag)) {
+                this.setUnknownFields(unknownFields.build());
+                onChanged();
+                return this;
+              }
+              break;
+            }
+            case 10: {
+              bitField0_ |= 0x00000001;
+              namespaceName_ = input.readBytes();
+              break;
+            }
+            case 16: {
+              int rawValue = input.readEnum();
+              org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Permission.Action value = org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Permission.Action.valueOf(rawValue);
+              if (value == null) {
+                unknownFields.mergeVarintField(2, rawValue);
+              } else {
+                addAction(value);
+              }
+              break;
+            }
+            case 18: {
+              int length = input.readRawVarint32();
+              int oldLimit = input.pushLimit(length);
+              while(input.getBytesUntilLimit() > 0) {
+                int rawValue = input.readEnum();
+                org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Permission.Action value = org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Permission.Action.valueOf(rawValue);
+                if (value == null) {
+                  unknownFields.mergeVarintField(2, rawValue);
+                } else {
+                  addAction(value);
+                }
+              }
+              input.popLimit(oldLimit);
+              break;
+            }
+          }
+        }
+      }
+      
+      private int bitField0_;
+      
+      // optional bytes namespace_name = 1;
+      private com.google.protobuf.ByteString namespaceName_ = com.google.protobuf.ByteString.EMPTY;
+      public boolean hasNamespaceName() {
+        return ((bitField0_ & 0x00000001) == 0x00000001);
+      }
+      public com.google.protobuf.ByteString getNamespaceName() {
+        return namespaceName_;
+      }
+      public Builder setNamespaceName(com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000001;
+        namespaceName_ = value;
+        onChanged();
+        return this;
+      }
+      public Builder clearNamespaceName() {
+        bitField0_ = (bitField0_ & ~0x00000001);
+        namespaceName_ = getDefaultInstance().getNamespaceName();
+        onChanged();
+        return this;
+      }
+      
+      // repeated .Permission.Action action = 2;
+      private java.util.List<org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Permission.Action> action_ =
+        java.util.Collections.emptyList();
+      private void ensureActionIsMutable() {
+        if (!((bitField0_ & 0x00000002) == 0x00000002)) {
+          action_ = new java.util.ArrayList<org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Permission.Action>(action_);
+          bitField0_ |= 0x00000002;
+        }
+      }
+      public java.util.List<org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Permission.Action> getActionList() {
+        return java.util.Collections.unmodifiableList(action_);
+      }
+      public int getActionCount() {
+        return action_.size();
+      }
+      public org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Permission.Action getAction(int index) {
+        return action_.get(index);
+      }
+      public Builder setAction(
+          int index, org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Permission.Action value) {
+        if (value == null) {
+          throw new NullPointerException();
+        }
+        ensureActionIsMutable();
+        action_.set(index, value);
+        onChanged();
+        return this;
+      }
+      public Builder addAction(org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Permission.Action value) {
+        if (value == null) {
+          throw new NullPointerException();
+        }
+        ensureActionIsMutable();
+        action_.add(value);
+        onChanged();
+        return this;
+      }
+      public Builder addAllAction(
+          java.lang.Iterable<? extends org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Permission.Action> values) {
+        ensureActionIsMutable();
+        super.addAll(values, action_);
+        onChanged();
+        return this;
+      }
+      public Builder clearAction() {
+        action_ = java.util.Collections.emptyList();
+        bitField0_ = (bitField0_ & ~0x00000002);
+        onChanged();
+        return this;
+      }
+      
+      // @@protoc_insertion_point(builder_scope:NamespacePermission)
+    }
+    
+    static {
+      defaultInstance = new NamespacePermission(true);
+      defaultInstance.initFields();
+    }
+    
+    // @@protoc_insertion_point(class_scope:NamespacePermission)
+  }
+  
+  public interface GlobalPermissionOrBuilder
+      extends com.google.protobuf.MessageOrBuilder {
+    
+    // repeated .Permission.Action action = 1;
+    java.util.List<org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Permission.Action> getActionList();
+    int getActionCount();
+    org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Permission.Action getAction(int index);
+  }
+  public static final class GlobalPermission extends
+      com.google.protobuf.GeneratedMessage
+      implements GlobalPermissionOrBuilder {
+    // Use GlobalPermission.newBuilder() to construct.
+    private GlobalPermission(Builder builder) {
+      super(builder);
+    }
+    private GlobalPermission(boolean noInit) {}
+    
+    private static final GlobalPermission defaultInstance;
+    public static GlobalPermission getDefaultInstance() {
+      return defaultInstance;
+    }
+    
+    public GlobalPermission getDefaultInstanceForType() {
+      return defaultInstance;
+    }
+    
+    public static final com.google.protobuf.Descriptors.Descriptor
+        getDescriptor() {
+      return org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.internal_static_GlobalPermission_descriptor;
+    }
+    
+    protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+        internalGetFieldAccessorTable() {
+      return org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.internal_static_GlobalPermission_fieldAccessorTable;
+    }
+    
+    // repeated .Permission.Action action = 1;
+    public static final int ACTION_FIELD_NUMBER = 1;
+    private java.util.List<org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Permission.Action> action_;
+    public java.util.List<org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Permission.Action> getActionList() {
+      return action_;
+    }
+    public int getActionCount() {
+      return action_.size();
+    }
+    public org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Permission.Action getAction(int index) {
+      return action_.get(index);
+    }
+    
+    private void initFields() {
+      action_ = java.util.Collections.emptyList();
+    }
+    private byte memoizedIsInitialized = -1;
+    public final boolean isInitialized() {
+      byte isInitialized = memoizedIsInitialized;
+      if (isInitialized != -1) return isInitialized == 1;
+      
+      memoizedIsInitialized = 1;
+      return true;
+    }
+    
+    public void writeTo(com.google.protobuf.CodedOutputStream output)
+                        throws java.io.IOException {
+      getSerializedSize();
+      for (int i = 0; i < action_.size(); i++) {
+        output.writeEnum(1, action_.get(i).getNumber());
+      }
+      getUnknownFields().writeTo(output);
+    }
+    
+    private int memoizedSerializedSize = -1;
+    public int getSerializedSize() {
+      int size = memoizedSerializedSize;
+      if (size != -1) return size;
+    
+      size = 0;
+      {
+        int dataSize = 0;
+        for (int i = 0; i < action_.size(); i++) {
+          dataSize += com.google.protobuf.CodedOutputStream
+            .computeEnumSizeNoTag(action_.get(i).getNumber());
+        }
+        size += dataSize;
+        size += 1 * action_.size();
+      }
+      size += getUnknownFields().getSerializedSize();
+      memoizedSerializedSize = size;
+      return size;
+    }
+    
+    private static final long serialVersionUID = 0L;
+    @java.lang.Override
+    protected java.lang.Object writeReplace()
+        throws java.io.ObjectStreamException {
+      return super.writeReplace();
+    }
+    
+    @java.lang.Override
+    public boolean equals(final java.lang.Object obj) {
+      if (obj == this) {
+       return true;
+      }
+      if (!(obj instanceof org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.GlobalPermission)) {
+        return super.equals(obj);
+      }
+      org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.GlobalPermission other = (org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.GlobalPermission) obj;
+      
+      boolean result = true;
+      result = result && getActionList()
+          .equals(other.getActionList());
+      result = result &&
+          getUnknownFields().equals(other.getUnknownFields());
+      return result;
+    }
+    
+    @java.lang.Override
+    public int hashCode() {
+      int hash = 41;
+      hash = (19 * hash) + getDescriptorForType().hashCode();
+      if (getActionCount() > 0) {
+        hash = (37 * hash) + ACTION_FIELD_NUMBER;
+        hash = (53 * hash) + hashEnumList(getActionList());
+      }
+      hash = (29 * hash) + getUnknownFields().hashCode();
+      return hash;
+    }
+    
+    public static org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.GlobalPermission parseFrom(
+        com.google.protobuf.ByteString data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return newBuilder().mergeFrom(data).buildParsed();
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.GlobalPermission parseFrom(
+        com.google.protobuf.ByteString data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return newBuilder().mergeFrom(data, extensionRegistry)
+               .buildParsed();
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.GlobalPermission parseFrom(byte[] data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return newBuilder().mergeFrom(data).buildParsed();
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.GlobalPermission parseFrom(
+        byte[] data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return newBuilder().mergeFrom(data, extensionRegistry)
+               .buildParsed();
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.GlobalPermission parseFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return newBuilder().mergeFrom(input).buildParsed();
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.GlobalPermission parseFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return newBuilder().mergeFrom(input, extensionRegistry)
+               .buildParsed();
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.GlobalPermission parseDelimitedFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      Builder builder = newBuilder();
+      if (builder.mergeDelimitedFrom(input)) {
+        return builder.buildParsed();
+      } else {
+        return null;
+      }
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.GlobalPermission parseDelimitedFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      Builder builder = newBuilder();
+      if (builder.mergeDelimitedFrom(input, extensionRegistry)) {
+        return builder.buildParsed();
+      } else {
+        return null;
+      }
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.GlobalPermission parseFrom(
+        com.google.protobuf.CodedInputStream input)
+        throws java.io.IOException {
+      return newBuilder().mergeFrom(input).buildParsed();
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.GlobalPermission parseFrom(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return newBuilder().mergeFrom(input, extensionRegistry)
+               .buildParsed();
+    }
+    
+    public static Builder newBuilder() { return Builder.create(); }
+    public Builder newBuilderForType() { return newBuilder(); }
+    public static Builder newBuilder(org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.GlobalPermission prototype) {
+      return newBuilder().mergeFrom(prototype);
+    }
+    public Builder toBuilder() { return newBuilder(this); }
+    
+    @java.lang.Override
+    protected Builder newBuilderForType(
+        com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+      Builder builder = new Builder(parent);
+      return builder;
+    }
+    public static final class Builder extends
+        com.google.protobuf.GeneratedMessage.Builder<Builder>
+       implements org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.GlobalPermissionOrBuilder {
+      public static final com.google.protobuf.Descriptors.Descriptor
+          getDescriptor() {
+        return org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.internal_static_GlobalPermission_descriptor;
+      }
+      
+      protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+          internalGetFieldAccessorTable() {
+        return org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.internal_static_GlobalPermission_fieldAccessorTable;
+      }
+      
+      // Construct using org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.GlobalPermission.newBuilder()
+      private Builder() {
+        maybeForceBuilderInitialization();
+      }
+      
+      private Builder(BuilderParent parent) {
+        super(parent);
+        maybeForceBuilderInitialization();
+      }
+      private void maybeForceBuilderInitialization() {
+        if (com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders) {
+        }
+      }
+      private static Builder create() {
+        return new Builder();
+      }
+      
+      public Builder clear() {
+        super.clear();
+        action_ = java.util.Collections.emptyList();
+        bitField0_ = (bitField0_ & ~0x00000001);
+        return this;
+      }
+      
+      public Builder clone() {
+        return create().mergeFrom(buildPartial());
+      }
+      
+      public com.google.protobuf.Descriptors.Descriptor
+          getDescriptorForType() {
+        return org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.GlobalPermission.getDescriptor();
+      }
+      
+      public org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.GlobalPermission getDefaultInstanceForType() {
+        return org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.GlobalPermission.getDefaultInstance();
+      }
+      
+      public org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.GlobalPermission build() {
+        org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.GlobalPermission result = buildPartial();
+        if (!result.isInitialized()) {
+          throw newUninitializedMessageException(result);
+        }
+        return result;
+      }
+      
+      private org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.GlobalPermission buildParsed()
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.GlobalPermission result = buildPartial();
+        if (!result.isInitialized()) {
+          throw newUninitializedMessageException(
+            result).asInvalidProtocolBufferException();
+        }
+        return result;
+      }
+      
+      public org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.GlobalPermission buildPartial() {
+        org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.GlobalPermission result = new org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.GlobalPermission(this);
+        int from_bitField0_ = bitField0_;
+        if (((bitField0_ & 0x00000001) == 0x00000001)) {
+          action_ = java.util.Collections.unmodifiableList(action_);
+          bitField0_ = (bitField0_ & ~0x00000001);
+        }
+        result.action_ = action_;
+        onBuilt();
+        return result;
+      }
+      
+      public Builder mergeFrom(com.google.protobuf.Message other) {
+        if (other instanceof org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.GlobalPermission) {
+          return mergeFrom((org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.GlobalPermission)other);
+        } else {
+          super.mergeFrom(other);
+          return this;
+        }
+      }
+      
+      public Builder mergeFrom(org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.GlobalPermission other) {
+        if (other == org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.GlobalPermission.getDefaultInstance()) return this;
+        if (!other.action_.isEmpty()) {
+          if (action_.isEmpty()) {
+            action_ = other.action_;
+            bitField0_ = (bitField0_ & ~0x00000001);
+          } else {
+            ensureActionIsMutable();
+            action_.addAll(other.action_);
+          }
+          onChanged();
+        }
+        this.mergeUnknownFields(other.getUnknownFields());
+        return this;
+      }
+      
+      public final boolean isInitialized() {
         return true;
       }
       
@@ -596,25 +2617,6 @@ public final class AccessControlProtos {
                 }
               }
               input.popLimit(oldLimit);
-              break;
-            }
-            case 18: {
-              org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.Builder subBuilder = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.newBuilder();
-              if (hasTableName()) {
-                subBuilder.mergeFrom(getTableName());
-              }
-              input.readMessage(subBuilder, extensionRegistry);
-              setTableName(subBuilder.buildPartial());
-              break;
-            }
-            case 26: {
-              bitField0_ |= 0x00000004;
-              family_ = input.readBytes();
-              break;
-            }
-            case 34: {
-              bitField0_ |= 0x00000008;
-              qualifier_ = input.readBytes();
               break;
             }
           }
@@ -674,153 +2676,15 @@ public final class AccessControlProtos {
         return this;
       }
       
-      // optional .TableName tableName = 2;
-      private org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName tableName_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.getDefaultInstance();
-      private com.google.protobuf.SingleFieldBuilder<
-          org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableNameOrBuilder> tableNameBuilder_;
-      public boolean hasTableName() {
-        return ((bitField0_ & 0x00000002) == 0x00000002);
-      }
-      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName getTableName() {
-        if (tableNameBuilder_ == null) {
-          return tableName_;
-        } else {
-          return tableNameBuilder_.getMessage();
-        }
-      }
-      public Builder setTableName(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName value) {
-        if (tableNameBuilder_ == null) {
-          if (value == null) {
-            throw new NullPointerException();
-          }
-          tableName_ = value;
-          onChanged();
-        } else {
-          tableNameBuilder_.setMessage(value);
-        }
-        bitField0_ |= 0x00000002;
-        return this;
-      }
-      public Builder setTableName(
-          org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.Builder builderForValue) {
-        if (tableNameBuilder_ == null) {
-          tableName_ = builderForValue.build();
-          onChanged();
-        } else {
-          tableNameBuilder_.setMessage(builderForValue.build());
-        }
-        bitField0_ |= 0x00000002;
-        return this;
-      }
-      public Builder mergeTableName(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName value) {
-        if (tableNameBuilder_ == null) {
-          if (((bitField0_ & 0x00000002) == 0x00000002) &&
-              tableName_ != org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.getDefaultInstance()) {
-            tableName_ =
-              org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.newBuilder(tableName_).mergeFrom(value).buildPartial();
-          } else {
-            tableName_ = value;
-          }
-          onChanged();
-        } else {
-          tableNameBuilder_.mergeFrom(value);
-        }
-        bitField0_ |= 0x00000002;
-        return this;
-      }
-      public Builder clearTableName() {
-        if (tableNameBuilder_ == null) {
-          tableName_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.getDefaultInstance();
-          onChanged();
-        } else {
-          tableNameBuilder_.clear();
-        }
-        bitField0_ = (bitField0_ & ~0x00000002);
-        return this;
-      }
-      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.Builder getTableNameBuilder() {
-        bitField0_ |= 0x00000002;
-        onChanged();
-        return getTableNameFieldBuilder().getBuilder();
-      }
-      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableNameOrBuilder getTableNameOrBuilder() {
-        if (tableNameBuilder_ != null) {
-          return tableNameBuilder_.getMessageOrBuilder();
-        } else {
-          return tableName_;
-        }
-      }
-      private com.google.protobuf.SingleFieldBuilder<
-          org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableNameOrBuilder> 
-          getTableNameFieldBuilder() {
-        if (tableNameBuilder_ == null) {
-          tableNameBuilder_ = new com.google.protobuf.SingleFieldBuilder<
-              org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableNameOrBuilder>(
-                  tableName_,
-                  getParentForChildren(),
-                  isClean());
-          tableName_ = null;
-        }
-        return tableNameBuilder_;
-      }
-      
-      // optional bytes family = 3;
-      private com.google.protobuf.ByteString family_ = com.google.protobuf.ByteString.EMPTY;
-      public boolean hasFamily() {
-        return ((bitField0_ & 0x00000004) == 0x00000004);
-      }
-      public com.google.protobuf.ByteString getFamily() {
-        return family_;
-      }
-      public Builder setFamily(com.google.protobuf.ByteString value) {
-        if (value == null) {
-    throw new NullPointerException();
-  }
-  bitField0_ |= 0x00000004;
-        family_ = value;
-        onChanged();
-        return this;
-      }
-      public Builder clearFamily() {
-        bitField0_ = (bitField0_ & ~0x00000004);
-        family_ = getDefaultInstance().getFamily();
-        onChanged();
-        return this;
-      }
-      
-      // optional bytes qualifier = 4;
-      private com.google.protobuf.ByteString qualifier_ = com.google.protobuf.ByteString.EMPTY;
-      public boolean hasQualifier() {
-        return ((bitField0_ & 0x00000008) == 0x00000008);
-      }
-      public com.google.protobuf.ByteString getQualifier() {
-        return qualifier_;
-      }
-      public Builder setQualifier(com.google.protobuf.ByteString value) {
-        if (value == null) {
-    throw new NullPointerException();
-  }
-  bitField0_ |= 0x00000008;
-        qualifier_ = value;
-        onChanged();
-        return this;
-      }
-      public Builder clearQualifier() {
-        bitField0_ = (bitField0_ & ~0x00000008);
-        qualifier_ = getDefaultInstance().getQualifier();
-        onChanged();
-        return this;
-      }
-      
-      // @@protoc_insertion_point(builder_scope:Permission)
+      // @@protoc_insertion_point(builder_scope:GlobalPermission)
     }
     
     static {
-      defaultInstance = new Permission(true);
+      defaultInstance = new GlobalPermission(true);
       defaultInstance.initFields();
     }
     
-    // @@protoc_insertion_point(class_scope:Permission)
+    // @@protoc_insertion_point(class_scope:GlobalPermission)
   }
   
   public interface UserPermissionOrBuilder
@@ -830,7 +2694,7 @@ public final class AccessControlProtos {
     boolean hasUser();
     com.google.protobuf.ByteString getUser();
     
-    // required .Permission permission = 2;
+    // required .Permission permission = 3;
     boolean hasPermission();
     org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Permission getPermission();
     org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.PermissionOrBuilder getPermissionOrBuilder();
@@ -874,8 +2738,8 @@ public final class AccessControlProtos {
       return user_;
     }
     
-    // required .Permission permission = 2;
-    public static final int PERMISSION_FIELD_NUMBER = 2;
+    // required .Permission permission = 3;
+    public static final int PERMISSION_FIELD_NUMBER = 3;
     private org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Permission permission_;
     public boolean hasPermission() {
       return ((bitField0_ & 0x00000002) == 0x00000002);
@@ -919,7 +2783,7 @@ public final class AccessControlProtos {
         output.writeBytes(1, user_);
       }
       if (((bitField0_ & 0x00000002) == 0x00000002)) {
-        output.writeMessage(2, permission_);
+        output.writeMessage(3, permission_);
       }
       getUnknownFields().writeTo(output);
     }
@@ -936,7 +2800,7 @@ public final class AccessControlProtos {
       }
       if (((bitField0_ & 0x00000002) == 0x00000002)) {
         size += com.google.protobuf.CodedOutputStream
-          .computeMessageSize(2, permission_);
+          .computeMessageSize(3, permission_);
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
@@ -1233,7 +3097,7 @@ public final class AccessControlProtos {
               user_ = input.readBytes();
               break;
             }
-            case 18: {
+            case 26: {
               org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Permission.Builder subBuilder = org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Permission.newBuilder();
               if (hasPermission()) {
                 subBuilder.mergeFrom(getPermission());
@@ -1272,7 +3136,7 @@ public final class AccessControlProtos {
         return this;
       }
       
-      // required .Permission permission = 2;
+      // required .Permission permission = 3;
       private org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Permission permission_ = org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Permission.getDefaultInstance();
       private com.google.protobuf.SingleFieldBuilder<
           org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Permission, org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Permission.Builder, org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.PermissionOrBuilder> permissionBuilder_;
@@ -1373,45 +3237,45 @@ public final class AccessControlProtos {
     // @@protoc_insertion_point(class_scope:UserPermission)
   }
   
-  public interface UserTablePermissionsOrBuilder
+  public interface UsersAndPermissionsOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
     
-    // repeated .UserTablePermissions.UserPermissions permissions = 1;
-    java.util.List<org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserTablePermissions.UserPermissions> 
-        getPermissionsList();
-    org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserTablePermissions.UserPermissions getPermissions(int index);
-    int getPermissionsCount();
-    java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserTablePermissions.UserPermissionsOrBuilder> 
-        getPermissionsOrBuilderList();
-    org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserTablePermissions.UserPermissionsOrBuilder getPermissionsOrBuilder(
+    // repeated .UsersAndPermissions.UserPermissions user_permissions = 1;
+    java.util.List<org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UsersAndPermissions.UserPermissions> 
+        getUserPermissionsList();
+    org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UsersAndPermissions.UserPermissions getUserPermissions(int index);
+    int getUserPermissionsCount();
+    java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UsersAndPermissions.UserPermissionsOrBuilder> 
+        getUserPermissionsOrBuilderList();
+    org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UsersAndPermissions.UserPermissionsOrBuilder getUserPermissionsOrBuilder(
         int index);
   }
-  public static final class UserTablePermissions extends
+  public static final class UsersAndPermissions extends
       com.google.protobuf.GeneratedMessage
-      implements UserTablePermissionsOrBuilder {
-    // Use UserTablePermissions.newBuilder() to construct.
-    private UserTablePermissions(Builder builder) {
+      implements UsersAndPermissionsOrBuilder {
+    // Use UsersAndPermissions.newBuilder() to construct.
+    private UsersAndPermissions(Builder builder) {
       super(builder);
     }
-    private UserTablePermissions(boolean noInit) {}
+    private UsersAndPermissions(boolean noInit) {}
     
-    private static final UserTablePermissions defaultInstance;
-    public static UserTablePermissions getDefaultInstance() {
+    private static final UsersAndPermissions defaultInstance;
+    public static UsersAndPermissions getDefaultInstance() {
       return defaultInstance;
     }
     
-    public UserTablePermissions getDefaultInstanceForType() {
+    public UsersAndPermissions getDefaultInstanceForType() {
       return defaultInstance;
     }
     
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.internal_static_UserTablePermissions_descriptor;
+      return org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.internal_static_UsersAndPermissions_descriptor;
     }
     
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.internal_static_UserTablePermissions_fieldAccessorTable;
+      return org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.internal_static_UsersAndPermissions_fieldAccessorTable;
     }
     
     public interface UserPermissionsOrBuilder
@@ -1451,12 +3315,12 @@ public final class AccessControlProtos {
       
       public static final com.google.protobuf.Descriptors.Descriptor
           getDescriptor() {
-        return org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.internal_static_UserTablePermissions_UserPermissions_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.internal_static_UsersAndPermissions_UserPermissions_descriptor;
       }
       
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.internal_static_UserTablePermissions_UserPermissions_fieldAccessorTable;
+        return org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.internal_static_UsersAndPermissions_UserPermissions_fieldAccessorTable;
       }
       
       private int bitField0_;
@@ -1557,10 +3421,10 @@ public final class AccessControlProtos {
         if (obj == this) {
          return true;
         }
-        if (!(obj instanceof org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserTablePermissions.UserPermissions)) {
+        if (!(obj instanceof org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UsersAndPermissions.UserPermissions)) {
           return super.equals(obj);
         }
-        org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserTablePermissions.UserPermissions other = (org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserTablePermissions.UserPermissions) obj;
+        org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UsersAndPermissions.UserPermissions other = (org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UsersAndPermissions.UserPermissions) obj;
         
         boolean result = true;
         result = result && (hasUser() == other.hasUser());
@@ -1591,41 +3455,41 @@ public final class AccessControlProtos {
         return hash;
       }
       
-      public static org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserTablePermissions.UserPermissions parseFrom(
+      public static org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UsersAndPermissions.UserPermissions parseFrom(
           com.google.protobuf.ByteString data)
           throws com.google.protobuf.InvalidProtocolBufferException {
         return newBuilder().mergeFrom(data).buildParsed();
       }
-      public static org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserTablePermissions.UserPermissions parseFrom(
+      public static org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UsersAndPermissions.UserPermissions parseFrom(
           com.google.protobuf.ByteString data,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws com.google.protobuf.InvalidProtocolBufferException {
         return newBuilder().mergeFrom(data, extensionRegistry)
                  .buildParsed();
       }
-      public static org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserTablePermissions.UserPermissions parseFrom(byte[] data)
+      public static org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UsersAndPermissions.UserPermissions parseFrom(byte[] data)
           throws com.google.protobuf.InvalidProtocolBufferException {
         return newBuilder().mergeFrom(data).buildParsed();
       }
-      public static org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserTablePermissions.UserPermissions parseFrom(
+      public static org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UsersAndPermissions.UserPermissions parseFrom(
           byte[] data,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws com.google.protobuf.InvalidProtocolBufferException {
         return newBuilder().mergeFrom(data, extensionRegistry)
                  .buildParsed();
       }
-      public static org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserTablePermissions.UserPermissions parseFrom(java.io.InputStream input)
+      public static org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UsersAndPermissions.UserPermissions parseFrom(java.io.InputStream input)
           throws java.io.IOException {
         return newBuilder().mergeFrom(input).buildParsed();
       }
-      public static org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserTablePermissions.UserPermissions parseFrom(
+      public static org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UsersAndPermissions.UserPermissions parseFrom(
           java.io.InputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws java.io.IOException {
         return newBuilder().mergeFrom(input, extensionRegistry)
                  .buildParsed();
       }
-      public static org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserTablePermissions.UserPermissions parseDelimitedFrom(java.io.InputStream input)
+      public static org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UsersAndPermissions.UserPermissions parseDelimitedFrom(java.io.InputStream input)
           throws java.io.IOException {
         Builder builder = newBuilder();
         if (builder.mergeDelimitedFrom(input)) {
@@ -1634,7 +3498,7 @@ public final class AccessControlProtos {
           return null;
         }
       }
-      public static org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserTablePermissions.UserPermissions parseDelimitedFrom(
+      public static org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UsersAndPermissions.UserPermissions parseDelimitedFrom(
           java.io.InputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws java.io.IOException {
@@ -1645,12 +3509,12 @@ public final class AccessControlProtos {
           return null;
         }
       }
-      public static org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserTablePermissions.UserPermissions parseFrom(
+      public static org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UsersAndPermissions.UserPermissions parseFrom(
           com.google.protobuf.CodedInputStream input)
           throws java.io.IOException {
         return newBuilder().mergeFrom(input).buildParsed();
       }
-      public static org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserTablePermissions.UserPermissions parseFrom(
+      public static org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UsersAndPermissions.UserPermissions parseFrom(
           com.google.protobuf.CodedInputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws java.io.IOException {
@@ -1660,7 +3524,7 @@ public final class AccessControlProtos {
       
       public static Builder newBuilder() { return Builder.create(); }
       public Builder newBuilderForType() { return newBuilder(); }
-      public static Builder newBuilder(org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserTablePermissions.UserPermissions prototype) {
+      public static Builder newBuilder(org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UsersAndPermissions.UserPermissions prototype) {
         return newBuilder().mergeFrom(prototype);
       }
       public Builder toBuilder() { return newBuilder(this); }
@@ -1673,18 +3537,18 @@ public final class AccessControlProtos {
       }
       public static final class Builder extends
           com.google.protobuf.GeneratedMessage.Builder<Builder>
-         implements org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserTablePermissions.UserPermissionsOrBuilder {
+         implements org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UsersAndPermissions.UserPermissionsOrBuilder {
         public static final com.google.protobuf.Descriptors.Descriptor
             getDescriptor() {
-          return org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.internal_static_UserTablePermissions_UserPermissions_descriptor;
+          return org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.internal_static_UsersAndPermissions_UserPermissions_descriptor;
         }
         
         protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
             internalGetFieldAccessorTable() {
-          return org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.internal_static_UserTablePermissions_UserPermissions_fieldAccessorTable;
+          return org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.internal_static_UsersAndPermissions_UserPermissions_fieldAccessorTable;
         }
         
-        // Construct using org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserTablePermissions.UserPermissions.newBuilder()
+        // Construct using org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UsersAndPermissions.UserPermissions.newBuilder()
         private Builder() {
           maybeForceBuilderInitialization();
         }
@@ -1721,24 +3585,24 @@ public final class AccessControlProtos {
         
         public com.google.protobuf.Descriptors.Descriptor
             getDescriptorForType() {
-          return org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserTablePermissions.UserPermissions.getDescriptor();
+          return org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UsersAndPermissions.UserPermissions.getDescriptor();
         }
         
-        public org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserTablePermissions.UserPermissions getDefaultInstanceForType() {
-          return org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserTablePermissions.UserPermissions.getDefaultInstance();
+        public org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UsersAndPermissions.UserPermissions getDefaultInstanceForType() {
+          return org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UsersAndPermissions.UserPermissions.getDefaultInstance();
         }
         
-        public org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserTablePermissions.UserPermissions build() {
-          org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserTablePermissions.UserPermissions result = buildPartial();
+        public org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UsersAndPermissions.UserPermissions build() {
+          org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UsersAndPermissions.UserPermissions result = buildPartial();
           if (!result.isInitialized()) {
             throw newUninitializedMessageException(result);
           }
           return result;
         }
         
-        private org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserTablePermissions.UserPermissions buildParsed()
+        private org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UsersAndPermissions.UserPermissions buildParsed()
             throws com.google.protobuf.InvalidProtocolBufferException {
-          org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserTablePermissions.UserPermissions result = buildPartial();
+          org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UsersAndPermissions.UserPermissions result = buildPartial();
           if (!result.isInitialized()) {
             throw newUninitializedMessageException(
               result).asInvalidProtocolBufferException();
@@ -1746,8 +3610,8 @@ public final class AccessControlProtos {
           return result;
         }
         
-        public org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserTablePermissions.UserPermissions buildPartial() {
-          org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserTablePermissions.UserPermissions result = new org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserTablePermissions.UserPermissions(this);
+        public org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UsersAndPermissions.UserPermissions buildPartial() {
+          org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UsersAndPermissions.UserPermissions result = new org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UsersAndPermissions.UserPermissions(this);
           int from_bitField0_ = bitField0_;
           int to_bitField0_ = 0;
           if (((from_bitField0_ & 0x00000001) == 0x00000001)) {
@@ -1769,16 +3633,16 @@ public final class AccessControlProtos {
         }
         
         public Builder mergeFrom(com.google.protobuf.Message other) {
-          if (other instanceof org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserTablePermissions.UserPermissions) {
-            return mergeFrom((org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserTablePermissions.UserPermissions)other);
+          if (other instanceof org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UsersAndPermissions.UserPermissions) {
+            return mergeFrom((org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UsersAndPermissions.UserPermissions)other);
           } else {
             super.mergeFrom(other);
             return this;
           }
         }
         
-        public Builder mergeFrom(org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserTablePermissions.UserPermissions other) {
-          if (other == org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserTablePermissions.UserPermissions.getDefaultInstance()) return this;
+        public Builder mergeFrom(org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UsersAndPermissions.UserPermissions other) {
+          if (other == org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UsersAndPermissions.UserPermissions.getDefaultInstance()) return this;
           if (other.hasUser()) {
             setUser(other.getUser());
           }
@@ -2076,7 +3940,7 @@ public final class AccessControlProtos {
           return permissionsBuilder_;
         }
         
-        // @@protoc_insertion_point(builder_scope:UserTablePermissions.UserPermissions)
+        // @@protoc_insertion_point(builder_scope:UsersAndPermissions.UserPermissions)
       }
       
       static {
@@ -2084,40 +3948,40 @@ public final class AccessControlProtos {
         defaultInstance.initFields();
       }
       
-      // @@protoc_insertion_point(class_scope:UserTablePermissions.UserPermissions)
+      // @@protoc_insertion_point(class_scope:UsersAndPermissions.UserPermissions)
     }
     
-    // repeated .UserTablePermissions.UserPermissions permissions = 1;
-    public static final int PERMISSIONS_FIELD_NUMBER = 1;
-    private java.util.List<org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserTablePermissions.UserPermissions> permissions_;
-    public java.util.List<org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserTablePermissions.UserPermissions> getPermissionsList() {
-      return permissions_;
+    // repeated .UsersAndPermissions.UserPermissions user_permissions = 1;
+    public static final int USER_PERMISSIONS_FIELD_NUMBER = 1;
+    private java.util.List<org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UsersAndPermissions.UserPermissions> userPermissions_;
+    public java.util.List<org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UsersAndPermissions.UserPermissions> getUserPermissionsList() {
+      return userPermissions_;
     }
-    public java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserTablePermissions.UserPermissionsOrBuilder> 
-        getPermissionsOrBuilderList() {
-      return permissions_;
+    public java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UsersAndPermissions.UserPermissionsOrBuilder> 
+        getUserPermissionsOrBuilderList() {
+      return userPermissions_;
     }
-    public int getPermissionsCount() {
-      return permissions_.size();
+    public int getUserPermissionsCount() {
+      return userPermissions_.size();
     }
-    public org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserTablePermissions.UserPermissions getPermissions(int index) {
-      return permissions_.get(index);
+    public org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UsersAndPermissions.UserPermissions getUserPermissions(int index) {
+      return userPermissions_.get(index);
     }
-    public org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserTablePermissions.UserPermissionsOrBuilder getPermissionsOrBuilder(
+    public org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UsersAndPermissions.UserPermissionsOrBuilder getUserPermissionsOrBuilder(
         int index) {
-      return permissions_.get(index);
+      return userPermissions_.get(index);
     }
     
     private void initFields() {
-      permissions_ = java.util.Collections.emptyList();
+      userPermissions_ = java.util.Collections.emptyList();
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
       byte isInitialized = memoizedIsInitialized;
       if (isInitialized != -1) return isInitialized == 1;
       
-      for (int i = 0; i < getPermissionsCount(); i++) {
-        if (!getPermissions(i).isInitialized()) {
+      for (int i = 0; i < getUserPermissionsCount(); i++) {
+        if (!getUserPermissions(i).isInitialized()) {
           memoizedIsInitialized = 0;
           return false;
         }
@@ -2129,8 +3993,8 @@ public final class AccessControlProtos {
     public void writeTo(com.google.protobuf.CodedOutputStream output)
                         throws java.io.IOException {
       getSerializedSize();
-      for (int i = 0; i < permissions_.size(); i++) {
-        output.writeMessage(1, permissions_.get(i));
+      for (int i = 0; i < userPermissions_.size(); i++) {
+        output.writeMessage(1, userPermissions_.get(i));
       }
       getUnknownFields().writeTo(output);
     }
@@ -2141,9 +4005,9 @@ public final class AccessControlProtos {
       if (size != -1) return size;
     
       size = 0;
-      for (int i = 0; i < permissions_.size(); i++) {
+      for (int i = 0; i < userPermissions_.size(); i++) {
         size += com.google.protobuf.CodedOutputStream
-          .computeMessageSize(1, permissions_.get(i));
+          .computeMessageSize(1, userPermissions_.get(i));
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
@@ -2162,14 +4026,14 @@ public final class AccessControlProtos {
       if (obj == this) {
        return true;
       }
-      if (!(obj instanceof org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserTablePermissions)) {
+      if (!(obj instanceof org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UsersAndPermissions)) {
         return super.equals(obj);
       }
-      org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserTablePermissions other = (org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserTablePermissions) obj;
+      org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UsersAndPermissions other = (org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UsersAndPermissions) obj;
       
       boolean result = true;
-      result = result && getPermissionsList()
-          .equals(other.getPermissionsList());
+      result = result && getUserPermissionsList()
+          .equals(other.getUserPermissionsList());
       result = result &&
           getUnknownFields().equals(other.getUnknownFields());
       return result;
@@ -2179,49 +4043,49 @@ public final class AccessControlProtos {
     public int hashCode() {
       int hash = 41;
       hash = (19 * hash) + getDescriptorForType().hashCode();
-      if (getPermissionsCount() > 0) {
-        hash = (37 * hash) + PERMISSIONS_FIELD_NUMBER;
-        hash = (53 * hash) + getPermissionsList().hashCode();
+      if (getUserPermissionsCount() > 0) {
+        hash = (37 * hash) + USER_PERMISSIONS_FIELD_NUMBER;
+        hash = (53 * hash) + getUserPermissionsList().hashCode();
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
       return hash;
     }
     
-    public static org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserTablePermissions parseFrom(
+    public static org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UsersAndPermissions parseFrom(
         com.google.protobuf.ByteString data)
         throws com.google.protobuf.InvalidProtocolBufferException {
       return newBuilder().mergeFrom(data).buildParsed();
     }
-    public static org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserTablePermissions parseFrom(
+    public static org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UsersAndPermissions parseFrom(
         com.google.protobuf.ByteString data,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
       return newBuilder().mergeFrom(data, extensionRegistry)
                .buildParsed();
     }
-    public static org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserTablePermissions parseFrom(byte[] data)
+    public static org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UsersAndPermissions parseFrom(byte[] data)
         throws com.google.protobuf.InvalidProtocolBufferException {
       return newBuilder().mergeFrom(data).buildParsed();
     }
-    public static org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserTablePermissions parseFrom(
+    public static org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UsersAndPermissions parseFrom(
         byte[] data,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
       return newBuilder().mergeFrom(data, extensionRegistry)
                .buildParsed();
     }
-    public static org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserTablePermissions parseFrom(java.io.InputStream input)
+    public static org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UsersAndPermissions parseFrom(java.io.InputStream input)
         throws java.io.IOException {
       return newBuilder().mergeFrom(input).buildParsed();
     }
-    public static org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserTablePermissions parseFrom(
+    public static org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UsersAndPermissions parseFrom(
         java.io.InputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
       return newBuilder().mergeFrom(input, extensionRegistry)
                .buildParsed();
     }
-    public static org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserTablePermissions parseDelimitedFrom(java.io.InputStream input)
+    public static org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UsersAndPermissions parseDelimitedFrom(java.io.InputStream input)
         throws java.io.IOException {
       Builder builder = newBuilder();
       if (builder.mergeDelimitedFrom(input)) {
@@ -2230,7 +4094,7 @@ public final class AccessControlProtos {
         return null;
       }
     }
-    public static org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserTablePermissions parseDelimitedFrom(
+    public static org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UsersAndPermissions parseDelimitedFrom(
         java.io.InputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
@@ -2241,12 +4105,12 @@ public final class AccessControlProtos {
         return null;
       }
     }
-    public static org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserTablePermissions parseFrom(
+    public static org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UsersAndPermissions parseFrom(
         com.google.protobuf.CodedInputStream input)
         throws java.io.IOException {
       return newBuilder().mergeFrom(input).buildParsed();
     }
-    public static org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserTablePermissions parseFrom(
+    public static org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UsersAndPermissions parseFrom(
         com.google.protobuf.CodedInputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
@@ -2256,7 +4120,7 @@ public final class AccessControlProtos {
     
     public static Builder newBuilder() { return Builder.create(); }
     public Builder newBuilderForType() { return newBuilder(); }
-    public static Builder newBuilder(org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserTablePermissions prototype) {
+    public static Builder newBuilder(org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UsersAndPermissions prototype) {
       return newBuilder().mergeFrom(prototype);
     }
     public Builder toBuilder() { return newBuilder(this); }
@@ -2269,18 +4133,18 @@ public final class AccessControlProtos {
     }
     public static final class Builder extends
         com.google.protobuf.GeneratedMessage.Builder<Builder>
-       implements org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserTablePermissionsOrBuilder {
+       implements org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UsersAndPermissionsOrBuilder {
       public static final com.google.protobuf.Descriptors.Descriptor
           getDescriptor() {
-        return org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.internal_static_UserTablePermissions_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.internal_static_UsersAndPermissions_descriptor;
       }
       
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.internal_static_UserTablePermissions_fieldAccessorTable;
+        return org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.internal_static_UsersAndPermissions_fieldAccessorTable;
       }
       
-      // Construct using org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserTablePermissions.newBuilder()
+      // Construct using org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UsersAndPermissions.newBuilder()
       private Builder() {
         maybeForceBuilderInitialization();
       }
@@ -2291,7 +4155,7 @@ public final class AccessControlProtos {
       }
       private void maybeForceBuilderInitialization() {
         if (com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders) {
-          getPermissionsFieldBuilder();
+          getUserPermissionsFieldBuilder();
         }
       }
       private static Builder create() {
@@ -2300,11 +4164,11 @@ public final class AccessControlProtos {
       
       public Builder clear() {
         super.clear();
-        if (permissionsBuilder_ == null) {
-          permissions_ = java.util.Collections.emptyList();
+        if (userPermissionsBuilder_ == null) {
+          userPermissions_ = java.util.Collections.emptyList();
           bitField0_ = (bitField0_ & ~0x00000001);
         } else {
-          permissionsBuilder_.clear();
+          userPermissionsBuilder_.clear();
         }
         return this;
       }
@@ -2315,24 +4179,24 @@ public final class AccessControlProtos {
       
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserTablePermissions.getDescriptor();
+        return org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UsersAndPermissions.getDescriptor();
       }
       
-      public org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserTablePermissions getDefaultInstanceForType() {
-        return org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserTablePermissions.getDefaultInstance();
+      public org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UsersAndPermissions getDefaultInstanceForType() {
+        return org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UsersAndPermissions.getDefaultInstance();
       }
       
-      public org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserTablePermissions build() {
-        org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserTablePermissions result = buildPartial();
+      public org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UsersAndPermissions build() {
+        org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UsersAndPermissions result = buildPartial();
         if (!result.isInitialized()) {
           throw newUninitializedMessageException(result);
         }
         return result;
       }
       
-      private org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserTablePermissions buildParsed()
+      private org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UsersAndPermissions buildParsed()
           throws com.google.protobuf.InvalidProtocolBufferException {
-        org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserTablePermissions result = buildPartial();
+        org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UsersAndPermissions result = buildPartial();
         if (!result.isInitialized()) {
           throw newUninitializedMessageException(
             result).asInvalidProtocolBufferException();
@@ -2340,56 +4204,56 @@ public final class AccessControlProtos {
         return result;
       }
       
-      public org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserTablePermissions buildPartial() {
-        org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserTablePermissions result = new org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserTablePermissions(this);
+      public org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UsersAndPermissions buildPartial() {
+        org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UsersAndPermissions result = new org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UsersAndPermissions(this);
         int from_bitField0_ = bitField0_;
-        if (permissionsBuilder_ == null) {
+        if (userPermissionsBuilder_ == null) {
           if (((bitField0_ & 0x00000001) == 0x00000001)) {
-            permissions_ = java.util.Collections.unmodifiableList(permissions_);
+            userPermissions_ = java.util.Collections.unmodifiableList(userPermissions_);
             bitField0_ = (bitField0_ & ~0x00000001);
           }
-          result.permissions_ = permissions_;
+          result.userPermissions_ = userPermissions_;
         } else {
-          result.permissions_ = permissionsBuilder_.build();
+          result.userPermissions_ = userPermissionsBuilder_.build();
         }
         onBuilt();
         return result;
       }
       
       public Builder mergeFrom(com.google.protobuf.Message other) {
-        if (other instanceof org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserTablePermissions) {
-          return mergeFrom((org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserTablePermissions)other);
+        if (other instanceof org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UsersAndPermissions) {
+          return mergeFrom((org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UsersAndPermissions)other);
         } else {
           super.mergeFrom(other);
           return this;
         }
       }
       
-      public Builder mergeFrom(org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserTablePermissions other) {
-        if (other == org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserTablePermissions.getDefaultInstance()) return this;
-        if (permissionsBuilder_ == null) {
-          if (!other.permissions_.isEmpty()) {
-            if (permissions_.isEmpty()) {
-              permissions_ = other.permissions_;
+      public Builder mergeFrom(org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UsersAndPermissions other) {
+        if (other == org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UsersAndPermissions.getDefaultInstance()) return this;
+        if (userPermissionsBuilder_ == null) {
+          if (!other.userPermissions_.isEmpty()) {
+            if (userPermissions_.isEmpty()) {
+              userPermissions_ = other.userPermissions_;
               bitField0_ = (bitField0_ & ~0x00000001);
             } else {
-              ensurePermissionsIsMutable();
-              permissions_.addAll(other.permissions_);
+              ensureUserPermissionsIsMutable();
+              userPermissions_.addAll(other.userPermissions_);
             }
             onChanged();
           }
         } else {
-          if (!other.permissions_.isEmpty()) {
-            if (permissionsBuilder_.isEmpty()) {
-              permissionsBuilder_.dispose();
-              permissionsBuilder_ = null;
-              permissions_ = other.permissions_;
+          if (!other.userPermissions_.isEmpty()) {
+            if (userPermissionsBuilder_.isEmpty()) {
+              userPermissionsBuilder_.dispose();
+              userPermissionsBuilder_ = null;
+              userPermissions_ = other.userPermissions_;
               bitField0_ = (bitField0_ & ~0x00000001);
-              permissionsBuilder_ = 
+              userPermissionsBuilder_ = 
                 com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders ?
-                   getPermissionsFieldBuilder() : null;
+                   getUserPermissionsFieldBuilder() : null;
             } else {
-              permissionsBuilder_.addAllMessages(other.permissions_);
+              userPermissionsBuilder_.addAllMessages(other.userPermissions_);
             }
           }
         }
@@ -2398,8 +4262,8 @@ public final class AccessControlProtos {
       }
       
       public final boolean isInitialized() {
-        for (int i = 0; i < getPermissionsCount(); i++) {
-          if (!getPermissions(i).isInitialized()) {
+        for (int i = 0; i < getUserPermissionsCount(); i++) {
+          if (!getUserPermissions(i).isInitialized()) {
             
             return false;
           }
@@ -2431,9 +4295,9 @@ public final class AccessControlProtos {
               break;
             }
             case 10: {
-              org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserTablePermissions.UserPermissions.Builder subBuilder = org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserTablePermissions.UserPermissions.newBuilder();
+              org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UsersAndPermissions.UserPermissions.Builder subBuilder = org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UsersAndPermissions.UserPermissions.newBuilder();
               input.readMessage(subBuilder, extensionRegistry);
-              addPermissions(subBuilder.buildPartial());
+              addUserPermissions(subBuilder.buildPartial());
               break;
             }
           }
@@ -2442,210 +4306,210 @@ public final class AccessControlProtos {
       
       private int bitField0_;
       
-      // repeated .UserTablePermissions.UserPermissions permissions = 1;
-      private java.util.List<org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserTablePermissions.UserPermissions> permissions_ =
+      // repeated .UsersAndPermissions.UserPermissions user_permissions = 1;
+      private java.util.List<org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UsersAndPermissions.UserPermissions> userPermissions_ =
         java.util.Collections.emptyList();
-      private void ensurePermissionsIsMutable() {
+      private void ensureUserPermissionsIsMutable() {
         if (!((bitField0_ & 0x00000001) == 0x00000001)) {
-          permissions_ = new java.util.ArrayList<org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserTablePermissions.UserPermissions>(permissions_);
+          userPermissions_ = new java.util.ArrayList<org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UsersAndPermissions.UserPermissions>(userPermissions_);
           bitField0_ |= 0x00000001;
          }
       }
       
       private com.google.protobuf.RepeatedFieldBuilder<
-          org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserTablePermissions.UserPermissions, org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserTablePermissions.UserPermissions.Builder, org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserTablePermissions.UserPermissionsOrBuilder> permissionsBuilder_;
+          org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UsersAndPermissions.UserPermissions, org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UsersAndPermissions.UserPermissions.Builder, org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UsersAndPermissions.UserPermissionsOrBuilder> userPermissionsBuilder_;
       
-      public java.util.List<org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserTablePermissions.UserPermissions> getPermissionsList() {
-        if (permissionsBuilder_ == null) {
-          return java.util.Collections.unmodifiableList(permissions_);
+      public java.util.List<org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UsersAndPermissions.UserPermissions> getUserPermissionsList() {
+        if (userPermissionsBuilder_ == null) {
+          return java.util.Collections.unmodifiableList(userPermissions_);
         } else {
-          return permissionsBuilder_.getMessageList();
+          return userPermissionsBuilder_.getMessageList();
         }
       }
-      public int getPermissionsCount() {
-        if (permissionsBuilder_ == null) {
-          return permissions_.size();
+      public int getUserPermissionsCount() {
+        if (userPermissionsBuilder_ == null) {
+          return userPermissions_.size();
         } else {
-          return permissionsBuilder_.getCount();
+          return userPermissionsBuilder_.getCount();
         }
       }
-      public org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserTablePermissions.UserPermissions getPermissions(int index) {
-        if (permissionsBuilder_ == null) {
-          return permissions_.get(index);
+      public org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UsersAndPermissions.UserPermissions getUserPermissions(int index) {
+        if (userPermissionsBuilder_ == null) {
+          return userPermissions_.get(index);
         } else {
-          return permissionsBuilder_.getMessage(index);
+          return userPermissionsBuilder_.getMessage(index);
         }
       }
-      public Builder setPermissions(
-          int index, org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserTablePermissions.UserPermissions value) {
-        if (permissionsBuilder_ == null) {
+      public Builder setUserPermissions(
+          int index, org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UsersAndPermissions.UserPermissions value) {
+        if (userPermissionsBuilder_ == null) {
           if (value == null) {
             throw new NullPointerException();
           }
-          ensurePermissionsIsMutable();
-          permissions_.set(index, value);
+          ensureUserPermissionsIsMutable();
+          userPermissions_.set(index, value);
           onChanged();
         } else {
-          permissionsBuilder_.setMessage(index, value);
+          userPermissionsBuilder_.setMessage(index, value);
         }
         return this;
       }
-      public Builder setPermissions(
-          int index, org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserTablePermissions.UserPermissions.Builder builderForValue) {
-        if (permissionsBuilder_ == null) {
-          ensurePermissionsIsMutable();
-          permissions_.set(index, builderForValue.build());
+      public Builder setUserPermissions(
+          int index, org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UsersAndPermissions.UserPermissions.Builder builderForValue) {
+        if (userPermissionsBuilder_ == null) {
+          ensureUserPermissionsIsMutable();
+          userPermissions_.set(index, builderForValue.build());
           onChanged();
         } else {
-          permissionsBuilder_.setMessage(index, builderForValue.build());
+          userPermissionsBuilder_.setMessage(index, builderForValue.build());
         }
         return this;
       }
-      public Builder addPermissions(org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserTablePermissions.UserPermissions value) {
-        if (permissionsBuilder_ == null) {
+      public Builder addUserPermissions(org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UsersAndPermissions.UserPermissions value) {
+        if (userPermissionsBuilder_ == null) {
           if (value == null) {
             throw new NullPointerException();
           }
-          ensurePermissionsIsMutable();
-          permissions_.add(value);
+          ensureUserPermissionsIsMutable();
+          userPermissions_.add(value);
           onChanged();
         } else {
-          permissionsBuilder_.addMessage(value);
+          userPermissionsBuilder_.addMessage(value);
         }
         return this;
       }
-      public Builder addPermissions(
-          int index, org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserTablePermissions.UserPermissions value) {
-        if (permissionsBuilder_ == null) {
+      public Builder addUserPermissions(
+          int index, org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UsersAndPermissions.UserPermissions value) {
+        if (userPermissionsBuilder_ == null) {
           if (value == null) {
             throw new NullPointerException();
           }
-          ensurePermissionsIsMutable();
-          permissions_.add(index, value);
+          ensureUserPermissionsIsMutable();
+          userPermissions_.add(index, value);
           onChanged();
         } else {
-          permissionsBuilder_.addMessage(index, value);
+          userPermissionsBuilder_.addMessage(index, value);
         }
         return this;
       }
-      public Builder addPermissions(
-          org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserTablePermissions.UserPermissions.Builder builderForValue) {
-        if (permissionsBuilder_ == null) {
-          ensurePermissionsIsMutable();
-          permissions_.add(builderForValue.build());
+      public Builder addUserPermissions(
+          org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UsersAndPermissions.UserPermissions.Builder builderForValue) {
+        if (userPermissionsBuilder_ == null) {
+          ensureUserPermissionsIsMutable();
+          userPermissions_.add(builderForValue.build());
           onChanged();
         } else {
-          permissionsBuilder_.addMessage(builderForValue.build());
+          userPermissionsBuilder_.addMessage(builderForValue.build());
         }
         return this;
       }
-      public Builder addPermissions(
-          int index, org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserTablePermissions.UserPermissions.Builder builderForValue) {
-        if (permissionsBuilder_ == null) {
-          ensurePermissionsIsMutable();
-          permissions_.add(index, builderForValue.build());
+      public Builder addUserPermissions(
+          int index, org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UsersAndPermissions.UserPermissions.Builder builderForValue) {
+        if (userPermissionsBuilder_ == null) {
+          ensureUserPermissionsIsMutable();
+          userPermissions_.add(index, builderForValue.build());
           onChanged();
         } else {
-          permissionsBuilder_.addMessage(index, builderForValue.build());
+          userPermissionsBuilder_.addMessage(index, builderForValue.build());
         }
         return this;
       }
-      public Builder addAllPermissions(
-          java.lang.Iterable<? extends org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserTablePermissions.UserPermissions> values) {
-        if (permissionsBuilder_ == null) {
-          ensurePermissionsIsMutable();
-          super.addAll(values, permissions_);
+      public Builder addAllUserPermissions(
+          java.lang.Iterable<? extends org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UsersAndPermissions.UserPermissions> values) {
+        if (userPermissionsBuilder_ == null) {
+          ensureUserPermissionsIsMutable();
+          super.addAll(values, userPermissions_);
           onChanged();
         } else {
-          permissionsBuilder_.addAllMessages(values);
+          userPermissionsBuilder_.addAllMessages(values);
         }
         return this;
       }
-      public Builder clearPermissions() {
-        if (permissionsBuilder_ == null) {
-          permissions_ = java.util.Collections.emptyList();
+      public Builder clearUserPermissions() {
+        if (userPermissionsBuilder_ == null) {
+          userPermissions_ = java.util.Collections.emptyList();
           bitField0_ = (bitField0_ & ~0x00000001);
           onChanged();
         } else {
-          permissionsBuilder_.clear();
+          userPermissionsBuilder_.clear();
         }
         return this;
       }
-      public Builder removePermissions(int index) {
-        if (permissionsBuilder_ == null) {
-          ensurePermissionsIsMutable();
-          permissions_.remove(index);
+      public Builder removeUserPermissions(int index) {
+        if (userPermissionsBuilder_ == null) {
+          ensureUserPermissionsIsMutable();
+          userPermissions_.remove(index);
           onChanged();
         } else {
-          permissionsBuilder_.remove(index);
+          userPermissionsBuilder_.remove(index);
         }
         return this;
       }
-      public org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserTablePermissions.UserPermissions.Builder getPermissionsBuilder(
+      public org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UsersAndPermissions.UserPermissions.Builder getUserPermissionsBuilder(
           int index) {
-        return getPermissionsFieldBuilder().getBuilder(index);
+        return getUserPermissionsFieldBuilder().getBuilder(index);
       }
-      public org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserTablePermissions.UserPermissionsOrBuilder getPermissionsOrBuilder(
+      public org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UsersAndPermissions.UserPermissionsOrBuilder getUserPermissionsOrBuilder(
           int index) {
-        if (permissionsBuilder_ == null) {
-          return permissions_.get(index);  } else {
-          return permissionsBuilder_.getMessageOrBuilder(index);
+        if (userPermissionsBuilder_ == null) {
+          return userPermissions_.get(index);  } else {
+          return userPermissionsBuilder_.getMessageOrBuilder(index);
         }
       }
-      public java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserTablePermissions.UserPermissionsOrBuilder> 
-           getPermissionsOrBuilderList() {
-        if (permissionsBuilder_ != null) {
-          return permissionsBuilder_.getMessageOrBuilderList();
+      public java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UsersAndPermissions.UserPermissionsOrBuilder> 
+           getUserPermissionsOrBuilderList() {
+        if (userPermissionsBuilder_ != null) {
+          return userPermissionsBuilder_.getMessageOrBuilderList();
         } else {
-          return java.util.Collections.unmodifiableList(permissions_);
+          return java.util.Collections.unmodifiableList(userPermissions_);
         }
       }
-      public org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserTablePermissions.UserPermissions.Builder addPermissionsBuilder() {
-        return getPermissionsFieldBuilder().addBuilder(
-            org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserTablePermissions.UserPermissions.getDefaultInstance());
+      public org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UsersAndPermissions.UserPermissions.Builder addUserPermissionsBuilder() {
+        return getUserPermissionsFieldBuilder().addBuilder(
+            org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UsersAndPermissions.UserPermissions.getDefaultInstance());
       }
-      public org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserTablePermissions.UserPermissions.Builder addPermissionsBuilder(
+      public org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UsersAndPermissions.UserPermissions.Builder addUserPermissionsBuilder(
           int index) {
-        return getPermissionsFieldBuilder().addBuilder(
-            index, org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserTablePermissions.UserPermissions.getDefaultInstance());
+        return getUserPermissionsFieldBuilder().addBuilder(
+            index, org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UsersAndPermissions.UserPermissions.getDefaultInstance());
       }
-      public java.util.List<org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserTablePermissions.UserPermissions.Builder> 
-           getPermissionsBuilderList() {
-        return getPermissionsFieldBuilder().getBuilderList();
+      public java.util.List<org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UsersAndPermissions.UserPermissions.Builder> 
+           getUserPermissionsBuilderList() {
+        return getUserPermissionsFieldBuilder().getBuilderList();
       }
       private com.google.protobuf.RepeatedFieldBuilder<
-          org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserTablePermissions.UserPermissions, org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserTablePermissions.UserPermissions.Builder, org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserTablePermissions.UserPermissionsOrBuilder> 
-          getPermissionsFieldBuilder() {
-        if (permissionsBuilder_ == null) {
-          permissionsBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
-              org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserTablePermissions.UserPermissions, org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserTablePermissions.UserPermissions.Builder, org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserTablePermissions.UserPermissionsOrBuilder>(
-                  permissions_,
+          org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UsersAndPermissions.UserPermissions, org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UsersAndPermissions.UserPermissions.Builder, org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UsersAndPermissions.UserPermissionsOrBuilder> 
+          getUserPermissionsFieldBuilder() {
+        if (userPermissionsBuilder_ == null) {
+          userPermissionsBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
+              org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UsersAndPermissions.UserPermissions, org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UsersAndPermissions.UserPermissions.Builder, org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UsersAndPermissions.UserPermissionsOrBuilder>(
+                  userPermissions_,
                   ((bitField0_ & 0x00000001) == 0x00000001),
                   getParentForChildren(),
                   isClean());
-          permissions_ = null;
+          userPermissions_ = null;
         }
-        return permissionsBuilder_;
+        return userPermissionsBuilder_;
       }
       
-      // @@protoc_insertion_point(builder_scope:UserTablePermissions)
+      // @@protoc_insertion_point(builder_scope:UsersAndPermissions)
     }
     
     static {
-      defaultInstance = new UserTablePermissions(true);
+      defaultInstance = new UsersAndPermissions(true);
       defaultInstance.initFields();
     }
     
-    // @@protoc_insertion_point(class_scope:UserTablePermissions)
+    // @@protoc_insertion_point(class_scope:UsersAndPermissions)
   }
   
   public interface GrantRequestOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
     
-    // required .UserPermission permission = 1;
-    boolean hasPermission();
-    org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermission getPermission();
-    org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermissionOrBuilder getPermissionOrBuilder();
+    // required .UserPermission user_permission = 1;
+    boolean hasUserPermission();
+    org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermission getUserPermission();
+    org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermissionOrBuilder getUserPermissionOrBuilder();
   }
   public static final class GrantRequest extends
       com.google.protobuf.GeneratedMessage
@@ -2676,32 +4540,32 @@ public final class AccessControlProtos {
     }
     
     private int bitField0_;
-    // required .UserPermission permission = 1;
-    public static final int PERMISSION_FIELD_NUMBER = 1;
-    private org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermission permission_;
-    public boolean hasPermission() {
+    // required .UserPermission user_permission = 1;
+    public static final int USER_PERMISSION_FIELD_NUMBER = 1;
+    private org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermission userPermission_;
+    public boolean hasUserPermission() {
       return ((bitField0_ & 0x00000001) == 0x00000001);
     }
-    public org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermission getPermission() {
-      return permission_;
+    public org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermission getUserPermission() {
+      return userPermission_;
     }
-    public org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermissionOrBuilder getPermissionOrBuilder() {
-      return permission_;
+    public org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermissionOrBuilder getUserPermissionOrBuilder() {
+      return userPermission_;
     }
     
     private void initFields() {
-      permission_ = org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermission.getDefaultInstance();
+      userPermission_ = org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermission.getDefaultInstance();
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
       byte isInitialized = memoizedIsInitialized;
       if (isInitialized != -1) return isInitialized == 1;
       
-      if (!hasPermission()) {
+      if (!hasUserPermission()) {
         memoizedIsInitialized = 0;
         return false;
       }
-      if (!getPermission().isInitialized()) {
+      if (!getUserPermission().isInitialized()) {
         memoizedIsInitialized = 0;
         return false;
       }
@@ -2713,7 +4577,7 @@ public final class AccessControlProtos {
                         throws java.io.IOException {
       getSerializedSize();
       if (((bitField0_ & 0x00000001) == 0x00000001)) {
-        output.writeMessage(1, permission_);
+        output.writeMessage(1, userPermission_);
       }
       getUnknownFields().writeTo(output);
     }
@@ -2726,7 +4590,7 @@ public final class AccessControlProtos {
       size = 0;
       if (((bitField0_ & 0x00000001) == 0x00000001)) {
         size += com.google.protobuf.CodedOutputStream
-          .computeMessageSize(1, permission_);
+          .computeMessageSize(1, userPermission_);
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
@@ -2751,10 +4615,10 @@ public final class AccessControlProtos {
       org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.GrantRequest other = (org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.GrantRequest) obj;
       
       boolean result = true;
-      result = result && (hasPermission() == other.hasPermission());
-      if (hasPermission()) {
-        result = result && getPermission()
-            .equals(other.getPermission());
+      result = result && (hasUserPermission() == other.hasUserPermission());
+      if (hasUserPermission()) {
+        result = result && getUserPermission()
+            .equals(other.getUserPermission());
       }
       result = result &&
           getUnknownFields().equals(other.getUnknownFields());
@@ -2765,9 +4629,9 @@ public final class AccessControlProtos {
     public int hashCode() {
       int hash = 41;
       hash = (19 * hash) + getDescriptorForType().hashCode();
-      if (hasPermission()) {
-        hash = (37 * hash) + PERMISSION_FIELD_NUMBER;
-        hash = (53 * hash) + getPermission().hashCode();
+      if (hasUserPermission()) {
+        hash = (37 * hash) + USER_PERMISSION_FIELD_NUMBER;
+        hash = (53 * hash) + getUserPermission().hashCode();
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
       return hash;
@@ -2877,7 +4741,7 @@ public final class AccessControlProtos {
       }
       private void maybeForceBuilderInitialization() {
         if (com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders) {
-          getPermissionFieldBuilder();
+          getUserPermissionFieldBuilder();
         }
       }
       private static Builder create() {
@@ -2886,10 +4750,10 @@ public final class AccessControlProtos {
       
       public Builder clear() {
         super.clear();
-        if (permissionBuilder_ == null) {
-          permission_ = org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermission.getDefaultInstance();
+        if (userPermissionBuilder_ == null) {
+          userPermission_ = org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermission.getDefaultInstance();
         } else {
-          permissionBuilder_.clear();
+          userPermissionBuilder_.clear();
         }
         bitField0_ = (bitField0_ & ~0x00000001);
         return this;
@@ -2933,10 +4797,10 @@ public final class AccessControlProtos {
         if (((from_bitField0_ & 0x00000001) == 0x00000001)) {
           to_bitField0_ |= 0x00000001;
         }
-        if (permissionBuilder_ == null) {
-          result.permission_ = permission_;
+        if (userPermissionBuilder_ == null) {
+          result.userPermission_ = userPermission_;
         } else {
-          result.permission_ = permissionBuilder_.build();
+          result.userPermission_ = userPermissionBuilder_.build();
         }
         result.bitField0_ = to_bitField0_;
         onBuilt();
@@ -2954,19 +4818,19 @@ public final class AccessControlProtos {
       
       public Builder mergeFrom(org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.GrantRequest other) {
         if (other == org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.GrantRequest.getDefaultInstance()) return this;
-        if (other.hasPermission()) {
-          mergePermission(other.getPermission());
+        if (other.hasUserPermission()) {
+          mergeUserPermission(other.getUserPermission());
         }
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
       }
       
       public final boolean isInitialized() {
-        if (!hasPermission()) {
+        if (!hasUserPermission()) {
           
           return false;
         }
-        if (!getPermission().isInitialized()) {
+        if (!getUserPermission().isInitialized()) {
           
           return false;
         }
@@ -2998,11 +4862,11 @@ public final class AccessControlProtos {
             }
             case 10: {
               org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermission.Builder subBuilder = org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermission.newBuilder();
-              if (hasPermission()) {
-                subBuilder.mergeFrom(getPermission());
+              if (hasUserPermission()) {
+                subBuilder.mergeFrom(getUserPermission());
               }
               input.readMessage(subBuilder, extensionRegistry);
-              setPermission(subBuilder.buildPartial());
+              setUserPermission(subBuilder.buildPartial());
               break;
             }
           }
@@ -3011,94 +4875,94 @@ public final class AccessControlProtos {
       
       private int bitField0_;
       
-      // required .UserPermission permission = 1;
-      private org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermission permission_ = org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermission.getDefaultInstance();
+      // required .UserPermission user_permission = 1;
+      private org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermission userPermission_ = org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermission.getDefaultInstance();
       private com.google.protobuf.SingleFieldBuilder<
-          org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermission, org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermission.Builder, org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermissionOrBuilder> permissionBuilder_;
-      public boolean hasPermission() {
+          org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermission, org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermission.Builder, org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermissionOrBuilder> userPermissionBuilder_;
+      public boolean hasUserPermission() {
         return ((bitField0_ & 0x00000001) == 0x00000001);
       }
-      public org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermission getPermission() {
-        if (permissionBuilder_ == null) {
-          return permission_;
+      public org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermission getUserPermission() {
+        if (userPermissionBuilder_ == null) {
+          return userPermission_;
         } else {
-          return permissionBuilder_.getMessage();
+          return userPermissionBuilder_.getMessage();
         }
       }
-      public Builder setPermission(org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermission value) {
-        if (permissionBuilder_ == null) {
+      public Builder setUserPermission(org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermission value) {
+        if (userPermissionBuilder_ == null) {
           if (value == null) {
             throw new NullPointerException();
           }
-          permission_ = value;
+          userPermission_ = value;
           onChanged();
         } else {
-          permissionBuilder_.setMessage(value);
+          userPermissionBuilder_.setMessage(value);
         }
         bitField0_ |= 0x00000001;
         return this;
       }
-      public Builder setPermission(
+      public Builder setUserPermission(
           org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermission.Builder builderForValue) {
-        if (permissionBuilder_ == null) {
-          permission_ = builderForValue.build();
+        if (userPermissionBuilder_ == null) {
+          userPermission_ = builderForValue.build();
           onChanged();
         } else {
-          permissionBuilder_.setMessage(builderForValue.build());
+          userPermissionBuilder_.setMessage(builderForValue.build());
         }
         bitField0_ |= 0x00000001;
         return this;
       }
-      public Builder mergePermission(org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermission value) {
-        if (permissionBuilder_ == null) {
+      public Builder mergeUserPermission(org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermission value) {
+        if (userPermissionBuilder_ == null) {
           if (((bitField0_ & 0x00000001) == 0x00000001) &&
-              permission_ != org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermission.getDefaultInstance()) {
-            permission_ =
-              org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermission.newBuilder(permission_).mergeFrom(value).buildPartial();
+              userPermission_ != org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermission.getDefaultInstance()) {
+            userPermission_ =
+              org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermission.newBuilder(userPermission_).mergeFrom(value).buildPartial();
           } else {
-            permission_ = value;
+            userPermission_ = value;
           }
           onChanged();
         } else {
-          permissionBuilder_.mergeFrom(value);
+          userPermissionBuilder_.mergeFrom(value);
         }
         bitField0_ |= 0x00000001;
         return this;
       }
-      public Builder clearPermission() {
-        if (permissionBuilder_ == null) {
-          permission_ = org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermission.getDefaultInstance();
+      public Builder clearUserPermission() {
+        if (userPermissionBuilder_ == null) {
+          userPermission_ = org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermission.getDefaultInstance();
           onChanged();
         } else {
-          permissionBuilder_.clear();
+          userPermissionBuilder_.clear();
         }
         bitField0_ = (bitField0_ & ~0x00000001);
         return this;
       }
-      public org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermission.Builder getPermissionBuilder() {
+      public org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermission.Builder getUserPermissionBuilder() {
         bitField0_ |= 0x00000001;
         onChanged();
-        return getPermissionFieldBuilder().getBuilder();
+        return getUserPermissionFieldBuilder().getBuilder();
       }
-      public org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermissionOrBuilder getPermissionOrBuilder() {
-        if (permissionBuilder_ != null) {
-          return permissionBuilder_.getMessageOrBuilder();
+      public org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermissionOrBuilder getUserPermissionOrBuilder() {
+        if (userPermissionBuilder_ != null) {
+          return userPermissionBuilder_.getMessageOrBuilder();
         } else {
-          return permission_;
+          return userPermission_;
         }
       }
       private com.google.protobuf.SingleFieldBuilder<
           org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermission, org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermission.Builder, org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermissionOrBuilder> 
-          getPermissionFieldBuilder() {
-        if (permissionBuilder_ == null) {
-          permissionBuilder_ = new com.google.protobuf.SingleFieldBuilder<
+          getUserPermissionFieldBuilder() {
+        if (userPermissionBuilder_ == null) {
+          userPermissionBuilder_ = new com.google.protobuf.SingleFieldBuilder<
               org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermission, org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermission.Builder, org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermissionOrBuilder>(
-                  permission_,
+                  userPermission_,
                   getParentForChildren(),
                   isClean());
-          permission_ = null;
+          userPermission_ = null;
         }
-        return permissionBuilder_;
+        return userPermissionBuilder_;
       }
       
       // @@protoc_insertion_point(builder_scope:GrantRequest)
@@ -3415,10 +5279,10 @@ public final class AccessControlProtos {
   public interface RevokeRequestOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
     
-    // required .UserPermission permission = 1;
-    boolean hasPermission();
-    org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermission getPermission();
-    org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermissionOrBuilder getPermissionOrBuilder();
+    // required .UserPermission user_permission = 1;
+    boolean hasUserPermission();
+    org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermission getUserPermission();
+    org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermissionOrBuilder getUserPermissionOrBuilder();
   }
   public static final class RevokeRequest extends
       com.google.protobuf.GeneratedMessage
@@ -3449,32 +5313,32 @@ public final class AccessControlProtos {
     }
     
     private int bitField0_;
-    // required .UserPermission permission = 1;
-    public static final int PERMISSION_FIELD_NUMBER = 1;
-    private org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermission permission_;
-    public boolean hasPermission() {
+    // required .UserPermission user_permission = 1;
+    public static final int USER_PERMISSION_FIELD_NUMBER = 1;
+    private org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermission userPermission_;
+    public boolean hasUserPermission() {
       return ((bitField0_ & 0x00000001) == 0x00000001);
     }
-    public org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermission getPermission() {
-      return permission_;
+    public org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermission getUserPermission() {
+      return userPermission_;
     }
-    public org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermissionOrBuilder getPermissionOrBuilder() {
-      return permission_;
+    public org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermissionOrBuilder getUserPermissionOrBuilder() {
+      return userPermission_;
     }
     
     private void initFields() {
-      permission_ = org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermission.getDefaultInstance();
+      userPermission_ = org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermission.getDefaultInstance();
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
       byte isInitialized = memoizedIsInitialized;
       if (isInitialized != -1) return isInitialized == 1;
       
-      if (!hasPermission()) {
+      if (!hasUserPermission()) {
         memoizedIsInitialized = 0;
         return false;
       }
-      if (!getPermission().isInitialized()) {
+      if (!getUserPermission().isInitialized()) {
         memoizedIsInitialized = 0;
         return false;
       }
@@ -3486,7 +5350,7 @@ public final class AccessControlProtos {
                         throws java.io.IOException {
       getSerializedSize();
       if (((bitField0_ & 0x00000001) == 0x00000001)) {
-        output.writeMessage(1, permission_);
+        output.writeMessage(1, userPermission_);
       }
       getUnknownFields().writeTo(output);
     }
@@ -3499,7 +5363,7 @@ public final class AccessControlProtos {
       size = 0;
       if (((bitField0_ & 0x00000001) == 0x00000001)) {
         size += com.google.protobuf.CodedOutputStream
-          .computeMessageSize(1, permission_);
+          .computeMessageSize(1, userPermission_);
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
@@ -3524,10 +5388,10 @@ public final class AccessControlProtos {
       org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.RevokeRequest other = (org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.RevokeRequest) obj;
       
       boolean result = true;
-      result = result && (hasPermission() == other.hasPermission());
-      if (hasPermission()) {
-        result = result && getPermission()
-            .equals(other.getPermission());
+      result = result && (hasUserPermission() == other.hasUserPermission());
+      if (hasUserPermission()) {
+        result = result && getUserPermission()
+            .equals(other.getUserPermission());
       }
       result = result &&
           getUnknownFields().equals(other.getUnknownFields());
@@ -3538,9 +5402,9 @@ public final class AccessControlProtos {
     public int hashCode() {
       int hash = 41;
       hash = (19 * hash) + getDescriptorForType().hashCode();
-      if (hasPermission()) {
-        hash = (37 * hash) + PERMISSION_FIELD_NUMBER;
-        hash = (53 * hash) + getPermission().hashCode();
+      if (hasUserPermission()) {
+        hash = (37 * hash) + USER_PERMISSION_FIELD_NUMBER;
+        hash = (53 * hash) + getUserPermission().hashCode();
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
       return hash;
@@ -3650,7 +5514,7 @@ public final class AccessControlProtos {
       }
       private void maybeForceBuilderInitialization() {
         if (com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders) {
-          getPermissionFieldBuilder();
+          getUserPermissionFieldBuilder();
         }
       }
       private static Builder create() {
@@ -3659,10 +5523,10 @@ public final class AccessControlProtos {
       
       public Builder clear() {
         super.clear();
-        if (permissionBuilder_ == null) {
-          permission_ = org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermission.getDefaultInstance();
+        if (userPermissionBuilder_ == null) {
+          userPermission_ = org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermission.getDefaultInstance();
         } else {
-          permissionBuilder_.clear();
+          userPermissionBuilder_.clear();
         }
         bitField0_ = (bitField0_ & ~0x00000001);
         return this;
@@ -3706,10 +5570,10 @@ public final class AccessControlProtos {
         if (((from_bitField0_ & 0x00000001) == 0x00000001)) {
           to_bitField0_ |= 0x00000001;
         }
-        if (permissionBuilder_ == null) {
-          result.permission_ = permission_;
+        if (userPermissionBuilder_ == null) {
+          result.userPermission_ = userPermission_;
         } else {
-          result.permission_ = permissionBuilder_.build();
+          result.userPermission_ = userPermissionBuilder_.build();
         }
         result.bitField0_ = to_bitField0_;
         onBuilt();
@@ -3727,19 +5591,19 @@ public final class AccessControlProtos {
       
       public Builder mergeFrom(org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.RevokeRequest other) {
         if (other == org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.RevokeRequest.getDefaultInstance()) return this;
-        if (other.hasPermission()) {
-          mergePermission(other.getPermission());
+        if (other.hasUserPermission()) {
+          mergeUserPermission(other.getUserPermission());
         }
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
       }
       
       public final boolean isInitialized() {
-        if (!hasPermission()) {
+        if (!hasUserPermission()) {
           
           return false;
         }
-        if (!getPermission().isInitialized()) {
+        if (!getUserPermission().isInitialized()) {
           
           return false;
         }
@@ -3771,11 +5635,11 @@ public final class AccessControlProtos {
             }
             case 10: {
               org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermission.Builder subBuilder = org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermission.newBuilder();
-              if (hasPermission()) {
-                subBuilder.mergeFrom(getPermission());
+              if (hasUserPermission()) {
+                subBuilder.mergeFrom(getUserPermission());
               }
               input.readMessage(subBuilder, extensionRegistry);
-              setPermission(subBuilder.buildPartial());
+              setUserPermission(subBuilder.buildPartial());
               break;
             }
           }
@@ -3784,94 +5648,94 @@ public final class AccessControlProtos {
       
       private int bitField0_;
       
-      // required .UserPermission permission = 1;
-      private org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermission permission_ = org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermission.getDefaultInstance();
+      // required .UserPermission user_permission = 1;
+      private org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermission userPermission_ = org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermission.getDefaultInstance();
       private com.google.protobuf.SingleFieldBuilder<
-          org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermission, org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermission.Builder, org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermissionOrBuilder> permissionBuilder_;
-      public boolean hasPermission() {
+          org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermission, org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermission.Builder, org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermissionOrBuilder> userPermissionBuilder_;
+      public boolean hasUserPermission() {
         return ((bitField0_ & 0x00000001) == 0x00000001);
       }
-      public org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermission getPermission() {
-        if (permissionBuilder_ == null) {
-          return permission_;
+      public org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermission getUserPermission() {
+        if (userPermissionBuilder_ == null) {
+          return userPermission_;
         } else {
-          return permissionBuilder_.getMessage();
+          return userPermissionBuilder_.getMessage();
         }
       }
-      public Builder setPermission(org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermission value) {
-        if (permissionBuilder_ == null) {
+      public Builder setUserPermission(org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermission value) {
+        if (userPermissionBuilder_ == null) {
           if (value == null) {
             throw new NullPointerException();
           }
-          permission_ = value;
+          userPermission_ = value;
           onChanged();
         } else {
-          permissionBuilder_.setMessage(value);
+          userPermissionBuilder_.setMessage(value);
         }
         bitField0_ |= 0x00000001;
         return this;
       }
-      public Builder setPermission(
+      public Builder setUserPermission(
           org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermission.Builder builderForValue) {
-        if (permissionBuilder_ == null) {
-          permission_ = builderForValue.build();
+        if (userPermissionBuilder_ == null) {
+          userPermission_ = builderForValue.build();
           onChanged();
         } else {
-          permissionBuilder_.setMessage(builderForValue.build());
+          userPermissionBuilder_.setMessage(builderForValue.build());
         }
         bitField0_ |= 0x00000001;
         return this;
       }
-      public Builder mergePermission(org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermission value) {
-        if (permissionBuilder_ == null) {
+      public Builder mergeUserPermission(org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermission value) {
+        if (userPermissionBuilder_ == null) {
           if (((bitField0_ & 0x00000001) == 0x00000001) &&
-              permission_ != org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermission.getDefaultInstance()) {
-            permission_ =
-              org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermission.newBuilder(permission_).mergeFrom(value).buildPartial();
+              userPermission_ != org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermission.getDefaultInstance()) {
+            userPermission_ =
+              org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermission.newBuilder(userPermission_).mergeFrom(value).buildPartial();
           } else {
-            permission_ = value;
+            userPermission_ = value;
           }
           onChanged();
         } else {
-          permissionBuilder_.mergeFrom(value);
+          userPermissionBuilder_.mergeFrom(value);
         }
         bitField0_ |= 0x00000001;
         return this;
       }
-      public Builder clearPermission() {
-        if (permissionBuilder_ == null) {
-          permission_ = org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermission.getDefaultInstance();
+      public Builder clearUserPermission() {
+        if (userPermissionBuilder_ == null) {
+          userPermission_ = org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermission.getDefaultInstance();
           onChanged();
         } else {
-          permissionBuilder_.clear();
+          userPermissionBuilder_.clear();
         }
         bitField0_ = (bitField0_ & ~0x00000001);
         return this;
       }
-      public org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermission.Builder getPermissionBuilder() {
+      public org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermission.Builder getUserPermissionBuilder() {
         bitField0_ |= 0x00000001;
         onChanged();
-        return getPermissionFieldBuilder().getBuilder();
+        return getUserPermissionFieldBuilder().getBuilder();
       }
-      public org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermissionOrBuilder getPermissionOrBuilder() {
-        if (permissionBuilder_ != null) {
-          return permissionBuilder_.getMessageOrBuilder();
+      public org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermissionOrBuilder getUserPermissionOrBuilder() {
+        if (userPermissionBuilder_ != null) {
+          return userPermissionBuilder_.getMessageOrBuilder();
         } else {
-          return permission_;
+          return userPermission_;
         }
       }
       private com.google.protobuf.SingleFieldBuilder<
           org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermission, org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermission.Builder, org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermissionOrBuilder> 
-          getPermissionFieldBuilder() {
-        if (permissionBuilder_ == null) {
-          permissionBuilder_ = new com.google.protobuf.SingleFieldBuilder<
+          getUserPermissionFieldBuilder() {
+        if (userPermissionBuilder_ == null) {
+          userPermissionBuilder_ = new com.google.protobuf.SingleFieldBuilder<
               org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermission, org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermission.Builder, org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermissionOrBuilder>(
-                  permission_,
+                  userPermission_,
                   getParentForChildren(),
                   isClean());
-          permission_ = null;
+          userPermission_ = null;
         }
-        return permissionBuilder_;
+        return userPermissionBuilder_;
       }
       
       // @@protoc_insertion_point(builder_scope:RevokeRequest)
@@ -4188,10 +6052,18 @@ public final class AccessControlProtos {
   public interface UserPermissionsRequestOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
     
-    // optional .TableName tableName = 1;
+    // optional .Permission.Type type = 1;
+    boolean hasType();
+    org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Permission.Type getType();
+    
+    // optional .TableName table_name = 2;
     boolean hasTableName();
     org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName getTableName();
     org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableNameOrBuilder getTableNameOrBuilder();
+    
+    // optional bytes namespace_name = 3;
+    boolean hasNamespaceName();
+    com.google.protobuf.ByteString getNamespaceName();
   }
   public static final class UserPermissionsRequest extends
       com.google.protobuf.GeneratedMessage
@@ -4222,11 +6094,21 @@ public final class AccessControlProtos {
     }
     
     private int bitField0_;
-    // optional .TableName tableName = 1;
-    public static final int TABLENAME_FIELD_NUMBER = 1;
+    // optional .Permission.Type type = 1;
+    public static final int TYPE_FIELD_NUMBER = 1;
+    private org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Permission.Type type_;
+    public boolean hasType() {
+      return ((bitField0_ & 0x00000001) == 0x00000001);
+    }
+    public org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Permission.Type getType() {
+      return type_;
+    }
+    
+    // optional .TableName table_name = 2;
+    public static final int TABLE_NAME_FIELD_NUMBER = 2;
     private org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName tableName_;
     public boolean hasTableName() {
-      return ((bitField0_ & 0x00000001) == 0x00000001);
+      return ((bitField0_ & 0x00000002) == 0x00000002);
     }
     public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName getTableName() {
       return tableName_;
@@ -4235,8 +6117,20 @@ public final class AccessControlProtos {
       return tableName_;
     }
     
+    // optional bytes namespace_name = 3;
+    public static final int NAMESPACE_NAME_FIELD_NUMBER = 3;
+    private com.google.protobuf.ByteString namespaceName_;
+    public boolean hasNamespaceName() {
+      return ((bitField0_ & 0x00000004) == 0x00000004);
+    }
+    public com.google.protobuf.ByteString getNamespaceName() {
+      return namespaceName_;
+    }
+    
     private void initFields() {
+      type_ = org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Permission.Type.Global;
       tableName_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.getDefaultInstance();
+      namespaceName_ = com.google.protobuf.ByteString.EMPTY;
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
@@ -4257,7 +6151,13 @@ public final class AccessControlProtos {
                         throws java.io.IOException {
       getSerializedSize();
       if (((bitField0_ & 0x00000001) == 0x00000001)) {
-        output.writeMessage(1, tableName_);
+        output.writeEnum(1, type_.getNumber());
+      }
+      if (((bitField0_ & 0x00000002) == 0x00000002)) {
+        output.writeMessage(2, tableName_);
+      }
+      if (((bitField0_ & 0x00000004) == 0x00000004)) {
+        output.writeBytes(3, namespaceName_);
       }
       getUnknownFields().writeTo(output);
     }
@@ -4270,7 +6170,15 @@ public final class AccessControlProtos {
       size = 0;
       if (((bitField0_ & 0x00000001) == 0x00000001)) {
         size += com.google.protobuf.CodedOutputStream
-          .computeMessageSize(1, tableName_);
+          .computeEnumSize(1, type_.getNumber());
+      }
+      if (((bitField0_ & 0x00000002) == 0x00000002)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeMessageSize(2, tableName_);
+      }
+      if (((bitField0_ & 0x00000004) == 0x00000004)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeBytesSize(3, namespaceName_);
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
@@ -4295,10 +6203,20 @@ public final class AccessControlProtos {
       org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermissionsRequest other = (org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermissionsRequest) obj;
       
       boolean result = true;
+      result = result && (hasType() == other.hasType());
+      if (hasType()) {
+        result = result &&
+            (getType() == other.getType());
+      }
       result = result && (hasTableName() == other.hasTableName());
       if (hasTableName()) {
         result = result && getTableName()
             .equals(other.getTableName());
+      }
+      result = result && (hasNamespaceName() == other.hasNamespaceName());
+      if (hasNamespaceName()) {
+        result = result && getNamespaceName()
+            .equals(other.getNamespaceName());
       }
       result = result &&
           getUnknownFields().equals(other.getUnknownFields());
@@ -4309,9 +6227,17 @@ public final class AccessControlProtos {
     public int hashCode() {
       int hash = 41;
       hash = (19 * hash) + getDescriptorForType().hashCode();
+      if (hasType()) {
+        hash = (37 * hash) + TYPE_FIELD_NUMBER;
+        hash = (53 * hash) + hashEnum(getType());
+      }
       if (hasTableName()) {
-        hash = (37 * hash) + TABLENAME_FIELD_NUMBER;
+        hash = (37 * hash) + TABLE_NAME_FIELD_NUMBER;
         hash = (53 * hash) + getTableName().hashCode();
+      }
+      if (hasNamespaceName()) {
+        hash = (37 * hash) + NAMESPACE_NAME_FIELD_NUMBER;
+        hash = (53 * hash) + getNamespaceName().hashCode();
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
       return hash;
@@ -4430,12 +6356,16 @@ public final class AccessControlProtos {
       
       public Builder clear() {
         super.clear();
+        type_ = org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Permission.Type.Global;
+        bitField0_ = (bitField0_ & ~0x00000001);
         if (tableNameBuilder_ == null) {
           tableName_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.getDefaultInstance();
         } else {
           tableNameBuilder_.clear();
         }
-        bitField0_ = (bitField0_ & ~0x00000001);
+        bitField0_ = (bitField0_ & ~0x00000002);
+        namespaceName_ = com.google.protobuf.ByteString.EMPTY;
+        bitField0_ = (bitField0_ & ~0x00000004);
         return this;
       }
       
@@ -4477,11 +6407,19 @@ public final class AccessControlProtos {
         if (((from_bitField0_ & 0x00000001) == 0x00000001)) {
           to_bitField0_ |= 0x00000001;
         }
+        result.type_ = type_;
+        if (((from_bitField0_ & 0x00000002) == 0x00000002)) {
+          to_bitField0_ |= 0x00000002;
+        }
         if (tableNameBuilder_ == null) {
           result.tableName_ = tableName_;
         } else {
           result.tableName_ = tableNameBuilder_.build();
         }
+        if (((from_bitField0_ & 0x00000004) == 0x00000004)) {
+          to_bitField0_ |= 0x00000004;
+        }
+        result.namespaceName_ = namespaceName_;
         result.bitField0_ = to_bitField0_;
         onBuilt();
         return result;
@@ -4498,8 +6436,14 @@ public final class AccessControlProtos {
       
       public Builder mergeFrom(org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermissionsRequest other) {
         if (other == org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermissionsRequest.getDefaultInstance()) return this;
+        if (other.hasType()) {
+          setType(other.getType());
+        }
         if (other.hasTableName()) {
           mergeTableName(other.getTableName());
+        }
+        if (other.hasNamespaceName()) {
+          setNamespaceName(other.getNamespaceName());
         }
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
@@ -4538,7 +6482,18 @@ public final class AccessControlProtos {
               }
               break;
             }
-            case 10: {
+            case 8: {
+              int rawValue = input.readEnum();
+              org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Permission.Type value = org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Permission.Type.valueOf(rawValue);
+              if (value == null) {
+                unknownFields.mergeVarintField(1, rawValue);
+              } else {
+                bitField0_ |= 0x00000001;
+                type_ = value;
+              }
+              break;
+            }
+            case 18: {
               org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.Builder subBuilder = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.newBuilder();
               if (hasTableName()) {
                 subBuilder.mergeFrom(getTableName());
@@ -4547,18 +6502,47 @@ public final class AccessControlProtos {
               setTableName(subBuilder.buildPartial());
               break;
             }
+            case 26: {
+              bitField0_ |= 0x00000004;
+              namespaceName_ = input.readBytes();
+              break;
+            }
           }
         }
       }
       
       private int bitField0_;
       
-      // optional .TableName tableName = 1;
+      // optional .Permission.Type type = 1;
+      private org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Permission.Type type_ = org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Permission.Type.Global;
+      public boolean hasType() {
+        return ((bitField0_ & 0x00000001) == 0x00000001);
+      }
+      public org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Permission.Type getType() {
+        return type_;
+      }
+      public Builder setType(org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Permission.Type value) {
+        if (value == null) {
+          throw new NullPointerException();
+        }
+        bitField0_ |= 0x00000001;
+        type_ = value;
+        onChanged();
+        return this;
+      }
+      public Builder clearType() {
+        bitField0_ = (bitField0_ & ~0x00000001);
+        type_ = org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Permission.Type.Global;
+        onChanged();
+        return this;
+      }
+      
+      // optional .TableName table_name = 2;
       private org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName tableName_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.getDefaultInstance();
       private com.google.protobuf.SingleFieldBuilder<
           org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableNameOrBuilder> tableNameBuilder_;
       public boolean hasTableName() {
-        return ((bitField0_ & 0x00000001) == 0x00000001);
+        return ((bitField0_ & 0x00000002) == 0x00000002);
       }
       public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName getTableName() {
         if (tableNameBuilder_ == null) {
@@ -4577,7 +6561,7 @@ public final class AccessControlProtos {
         } else {
           tableNameBuilder_.setMessage(value);
         }
-        bitField0_ |= 0x00000001;
+        bitField0_ |= 0x00000002;
         return this;
       }
       public Builder setTableName(
@@ -4588,12 +6572,12 @@ public final class AccessControlProtos {
         } else {
           tableNameBuilder_.setMessage(builderForValue.build());
         }
-        bitField0_ |= 0x00000001;
+        bitField0_ |= 0x00000002;
         return this;
       }
       public Builder mergeTableName(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName value) {
         if (tableNameBuilder_ == null) {
-          if (((bitField0_ & 0x00000001) == 0x00000001) &&
+          if (((bitField0_ & 0x00000002) == 0x00000002) &&
               tableName_ != org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.getDefaultInstance()) {
             tableName_ =
               org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.newBuilder(tableName_).mergeFrom(value).buildPartial();
@@ -4604,7 +6588,7 @@ public final class AccessControlProtos {
         } else {
           tableNameBuilder_.mergeFrom(value);
         }
-        bitField0_ |= 0x00000001;
+        bitField0_ |= 0x00000002;
         return this;
       }
       public Builder clearTableName() {
@@ -4614,11 +6598,11 @@ public final class AccessControlProtos {
         } else {
           tableNameBuilder_.clear();
         }
-        bitField0_ = (bitField0_ & ~0x00000001);
+        bitField0_ = (bitField0_ & ~0x00000002);
         return this;
       }
       public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.Builder getTableNameBuilder() {
-        bitField0_ |= 0x00000001;
+        bitField0_ |= 0x00000002;
         onChanged();
         return getTableNameFieldBuilder().getBuilder();
       }
@@ -4643,6 +6627,30 @@ public final class AccessControlProtos {
         return tableNameBuilder_;
       }
       
+      // optional bytes namespace_name = 3;
+      private com.google.protobuf.ByteString namespaceName_ = com.google.protobuf.ByteString.EMPTY;
+      public boolean hasNamespaceName() {
+        return ((bitField0_ & 0x00000004) == 0x00000004);
+      }
+      public com.google.protobuf.ByteString getNamespaceName() {
+        return namespaceName_;
+      }
+      public Builder setNamespaceName(com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000004;
+        namespaceName_ = value;
+        onChanged();
+        return this;
+      }
+      public Builder clearNamespaceName() {
+        bitField0_ = (bitField0_ & ~0x00000004);
+        namespaceName_ = getDefaultInstance().getNamespaceName();
+        onChanged();
+        return this;
+      }
+      
       // @@protoc_insertion_point(builder_scope:UserPermissionsRequest)
     }
     
@@ -4657,14 +6665,14 @@ public final class AccessControlProtos {
   public interface UserPermissionsResponseOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
     
-    // repeated .UserPermission permission = 1;
+    // repeated .UserPermission user_permission = 1;
     java.util.List<org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermission> 
-        getPermissionList();
-    org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermission getPermission(int index);
-    int getPermissionCount();
+        getUserPermissionList();
+    org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermission getUserPermission(int index);
+    int getUserPermissionCount();
     java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermissionOrBuilder> 
-        getPermissionOrBuilderList();
-    org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermissionOrBuilder getPermissionOrBuilder(
+        getUserPermissionOrBuilderList();
+    org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermissionOrBuilder getUserPermissionOrBuilder(
         int index);
   }
   public static final class UserPermissionsResponse extends
@@ -4695,37 +6703,37 @@ public final class AccessControlProtos {
       return org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.internal_static_UserPermissionsResponse_fieldAccessorTable;
     }
     
-    // repeated .UserPermission permission = 1;
-    public static final int PERMISSION_FIELD_NUMBER = 1;
-    private java.util.List<org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermission> permission_;
-    public java.util.List<org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermission> getPermissionList() {
-      return permission_;
+    // repeated .UserPermission user_permission = 1;
+    public static final int USER_PERMISSION_FIELD_NUMBER = 1;
+    private java.util.List<org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermission> userPermission_;
+    public java.util.List<org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermission> getUserPermissionList() {
+      return userPermission_;
     }
     public java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermissionOrBuilder> 
-        getPermissionOrBuilderList() {
-      return permission_;
+        getUserPermissionOrBuilderList() {
+      return userPermission_;
     }
-    public int getPermissionCount() {
-      return permission_.size();
+    public int getUserPermissionCount() {
+      return userPermission_.size();
     }
-    public org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermission getPermission(int index) {
-      return permission_.get(index);
+    public org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermission getUserPermission(int index) {
+      return userPermission_.get(index);
     }
-    public org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermissionOrBuilder getPermissionOrBuilder(
+    public org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermissionOrBuilder getUserPermissionOrBuilder(
         int index) {
-      return permission_.get(index);
+      return userPermission_.get(index);
     }
     
     private void initFields() {
-      permission_ = java.util.Collections.emptyList();
+      userPermission_ = java.util.Collections.emptyList();
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
       byte isInitialized = memoizedIsInitialized;
       if (isInitialized != -1) return isInitialized == 1;
       
-      for (int i = 0; i < getPermissionCount(); i++) {
-        if (!getPermission(i).isInitialized()) {
+      for (int i = 0; i < getUserPermissionCount(); i++) {
+        if (!getUserPermission(i).isInitialized()) {
           memoizedIsInitialized = 0;
           return false;
         }
@@ -4737,8 +6745,8 @@ public final class AccessControlProtos {
     public void writeTo(com.google.protobuf.CodedOutputStream output)
                         throws java.io.IOException {
       getSerializedSize();
-      for (int i = 0; i < permission_.size(); i++) {
-        output.writeMessage(1, permission_.get(i));
+      for (int i = 0; i < userPermission_.size(); i++) {
+        output.writeMessage(1, userPermission_.get(i));
       }
       getUnknownFields().writeTo(output);
     }
@@ -4749,9 +6757,9 @@ public final class AccessControlProtos {
       if (size != -1) return size;
     
       size = 0;
-      for (int i = 0; i < permission_.size(); i++) {
+      for (int i = 0; i < userPermission_.size(); i++) {
         size += com.google.protobuf.CodedOutputStream
-          .computeMessageSize(1, permission_.get(i));
+          .computeMessageSize(1, userPermission_.get(i));
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
@@ -4776,8 +6784,8 @@ public final class AccessControlProtos {
       org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermissionsResponse other = (org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermissionsResponse) obj;
       
       boolean result = true;
-      result = result && getPermissionList()
-          .equals(other.getPermissionList());
+      result = result && getUserPermissionList()
+          .equals(other.getUserPermissionList());
       result = result &&
           getUnknownFields().equals(other.getUnknownFields());
       return result;
@@ -4787,9 +6795,9 @@ public final class AccessControlProtos {
     public int hashCode() {
       int hash = 41;
       hash = (19 * hash) + getDescriptorForType().hashCode();
-      if (getPermissionCount() > 0) {
-        hash = (37 * hash) + PERMISSION_FIELD_NUMBER;
-        hash = (53 * hash) + getPermissionList().hashCode();
+      if (getUserPermissionCount() > 0) {
+        hash = (37 * hash) + USER_PERMISSION_FIELD_NUMBER;
+        hash = (53 * hash) + getUserPermissionList().hashCode();
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
       return hash;
@@ -4899,7 +6907,7 @@ public final class AccessControlProtos {
       }
       private void maybeForceBuilderInitialization() {
         if (com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders) {
-          getPermissionFieldBuilder();
+          getUserPermissionFieldBuilder();
         }
       }
       private static Builder create() {
@@ -4908,11 +6916,11 @@ public final class AccessControlProtos {
       
       public Builder clear() {
         super.clear();
-        if (permissionBuilder_ == null) {
-          permission_ = java.util.Collections.emptyList();
+        if (userPermissionBuilder_ == null) {
+          userPermission_ = java.util.Collections.emptyList();
           bitField0_ = (bitField0_ & ~0x00000001);
         } else {
-          permissionBuilder_.clear();
+          userPermissionBuilder_.clear();
         }
         return this;
       }
@@ -4951,14 +6959,14 @@ public final class AccessControlProtos {
       public org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermissionsResponse buildPartial() {
         org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermissionsResponse result = new org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermissionsResponse(this);
         int from_bitField0_ = bitField0_;
-        if (permissionBuilder_ == null) {
+        if (userPermissionBuilder_ == null) {
           if (((bitField0_ & 0x00000001) == 0x00000001)) {
-            permission_ = java.util.Collections.unmodifiableList(permission_);
+            userPermission_ = java.util.Collections.unmodifiableList(userPermission_);
             bitField0_ = (bitField0_ & ~0x00000001);
           }
-          result.permission_ = permission_;
+          result.userPermission_ = userPermission_;
         } else {
-          result.permission_ = permissionBuilder_.build();
+          result.userPermission_ = userPermissionBuilder_.build();
         }
         onBuilt();
         return result;
@@ -4975,29 +6983,29 @@ public final class AccessControlProtos {
       
       public Builder mergeFrom(org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermissionsResponse other) {
         if (other == org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermissionsResponse.getDefaultInstance()) return this;
-        if (permissionBuilder_ == null) {
-          if (!other.permission_.isEmpty()) {
-            if (permission_.isEmpty()) {
-              permission_ = other.permission_;
+        if (userPermissionBuilder_ == null) {
+          if (!other.userPermission_.isEmpty()) {
+            if (userPermission_.isEmpty()) {
+              userPermission_ = other.userPermission_;
               bitField0_ = (bitField0_ & ~0x00000001);
             } else {
-              ensurePermissionIsMutable();
-              permission_.addAll(other.permission_);
+              ensureUserPermissionIsMutable();
+              userPermission_.addAll(other.userPermission_);
             }
             onChanged();
           }
         } else {
-          if (!other.permission_.isEmpty()) {
-            if (permissionBuilder_.isEmpty()) {
-              permissionBuilder_.dispose();
-              permissionBuilder_ = null;
-              permission_ = other.permission_;
+          if (!other.userPermission_.isEmpty()) {
+            if (userPermissionBuilder_.isEmpty()) {
+              userPermissionBuilder_.dispose();
+              userPermissionBuilder_ = null;
+              userPermission_ = other.userPermission_;
               bitField0_ = (bitField0_ & ~0x00000001);
-              permissionBuilder_ = 
+              userPermissionBuilder_ = 
                 com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders ?
-                   getPermissionFieldBuilder() : null;
+                   getUserPermissionFieldBuilder() : null;
             } else {
-              permissionBuilder_.addAllMessages(other.permission_);
+              userPermissionBuilder_.addAllMessages(other.userPermission_);
             }
           }
         }
@@ -5006,8 +7014,8 @@ public final class AccessControlProtos {
       }
       
       public final boolean isInitialized() {
-        for (int i = 0; i < getPermissionCount(); i++) {
-          if (!getPermission(i).isInitialized()) {
+        for (int i = 0; i < getUserPermissionCount(); i++) {
+          if (!getUserPermission(i).isInitialized()) {
             
             return false;
           }
@@ -5041,7 +7049,7 @@ public final class AccessControlProtos {
             case 10: {
               org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermission.Builder subBuilder = org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermission.newBuilder();
               input.readMessage(subBuilder, extensionRegistry);
-              addPermission(subBuilder.buildPartial());
+              addUserPermission(subBuilder.buildPartial());
               break;
             }
           }
@@ -5050,190 +7058,190 @@ public final class AccessControlProtos {
       
       private int bitField0_;
       
-      // repeated .UserPermission permission = 1;
-      private java.util.List<org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermission> permission_ =
+      // repeated .UserPermission user_permission = 1;
+      private java.util.List<org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermission> userPermission_ =
         java.util.Collections.emptyList();
-      private void ensurePermissionIsMutable() {
+      private void ensureUserPermissionIsMutable() {
         if (!((bitField0_ & 0x00000001) == 0x00000001)) {
-          permission_ = new java.util.ArrayList<org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermission>(permission_);
+          userPermission_ = new java.util.ArrayList<org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermission>(userPermission_);
           bitField0_ |= 0x00000001;
          }
       }
       
       private com.google.protobuf.RepeatedFieldBuilder<
-          org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermission, org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermission.Builder, org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermissionOrBuilder> permissionBuilder_;
+          org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermission, org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermission.Builder, org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermissionOrBuilder> userPermissionBuilder_;
       
-      public java.util.List<org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermission> getPermissionList() {
-        if (permissionBuilder_ == null) {
-          return java.util.Collections.unmodifiableList(permission_);
+      public java.util.List<org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermission> getUserPermissionList() {
+        if (userPermissionBuilder_ == null) {
+          return java.util.Collections.unmodifiableList(userPermission_);
         } else {
-          return permissionBuilder_.getMessageList();
+          return userPermissionBuilder_.getMessageList();
         }
       }
-      public int getPermissionCount() {
-        if (permissionBuilder_ == null) {
-          return permission_.size();
+      public int getUserPermissionCount() {
+        if (userPermissionBuilder_ == null) {
+          return userPermission_.size();
         } else {
-          return permissionBuilder_.getCount();
+          return userPermissionBuilder_.getCount();
         }
       }
-      public org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermission getPermission(int index) {
-        if (permissionBuilder_ == null) {
-          return permission_.get(index);
+      public org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermission getUserPermission(int index) {
+        if (userPermissionBuilder_ == null) {
+          return userPermission_.get(index);
         } else {
-          return permissionBuilder_.getMessage(index);
+          return userPermissionBuilder_.getMessage(index);
         }
       }
-      public Builder setPermission(
+      public Builder setUserPermission(
           int index, org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermission value) {
-        if (permissionBuilder_ == null) {
+        if (userPermissionBuilder_ == null) {
           if (value == null) {
             throw new NullPointerException();
           }
-          ensurePermissionIsMutable();
-          permission_.set(index, value);
+          ensureUserPermissionIsMutable();
+          userPermission_.set(index, value);
           onChanged();
         } else {
-          permissionBuilder_.setMessage(index, value);
+          userPermissionBuilder_.setMessage(index, value);
         }
         return this;
       }
-      public Builder setPermission(
+      public Builder setUserPermission(
           int index, org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermission.Builder builderForValue) {
-        if (permissionBuilder_ == null) {
-          ensurePermissionIsMutable();
-          permission_.set(index, builderForValue.build());
+        if (userPermissionBuilder_ == null) {
+          ensureUserPermissionIsMutable();
+          userPermission_.set(index, builderForValue.build());
           onChanged();
         } else {
-          permissionBuilder_.setMessage(index, builderForValue.build());
+          userPermissionBuilder_.setMessage(index, builderForValue.build());
         }
         return this;
       }
-      public Builder addPermission(org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermission value) {
-        if (permissionBuilder_ == null) {
+      public Builder addUserPermission(org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermission value) {
+        if (userPermissionBuilder_ == null) {
           if (value == null) {
             throw new NullPointerException();
           }
-          ensurePermissionIsMutable();
-          permission_.add(value);
+          ensureUserPermissionIsMutable();
+          userPermission_.add(value);
           onChanged();
         } else {
-          permissionBuilder_.addMessage(value);
+          userPermissionBuilder_.addMessage(value);
         }
         return this;
       }
-      public Builder addPermission(
+      public Builder addUserPermission(
           int index, org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermission value) {
-        if (permissionBuilder_ == null) {
+        if (userPermissionBuilder_ == null) {
           if (value == null) {
             throw new NullPointerException();
           }
-          ensurePermissionIsMutable();
-          permission_.add(index, value);
+          ensureUserPermissionIsMutable();
+          userPermission_.add(index, value);
           onChanged();
         } else {
-          permissionBuilder_.addMessage(index, value);
+          userPermissionBuilder_.addMessage(index, value);
         }
         return this;
       }
-      public Builder addPermission(
+      public Builder addUserPermission(
           org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermission.Builder builderForValue) {
-        if (permissionBuilder_ == null) {
-          ensurePermissionIsMutable();
-          permission_.add(builderForValue.build());
+        if (userPermissionBuilder_ == null) {
+          ensureUserPermissionIsMutable();
+          userPermission_.add(builderForValue.build());
           onChanged();
         } else {
-          permissionBuilder_.addMessage(builderForValue.build());
+          userPermissionBuilder_.addMessage(builderForValue.build());
         }
         return this;
       }
-      public Builder addPermission(
+      public Builder addUserPermission(
           int index, org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermission.Builder builderForValue) {
-        if (permissionBuilder_ == null) {
-          ensurePermissionIsMutable();
-          permission_.add(index, builderForValue.build());
+        if (userPermissionBuilder_ == null) {
+          ensureUserPermissionIsMutable();
+          userPermission_.add(index, builderForValue.build());
           onChanged();
         } else {
-          permissionBuilder_.addMessage(index, builderForValue.build());
+          userPermissionBuilder_.addMessage(index, builderForValue.build());
         }
         return this;
       }
-      public Builder addAllPermission(
+      public Builder addAllUserPermission(
           java.lang.Iterable<? extends org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermission> values) {
-        if (permissionBuilder_ == null) {
-          ensurePermissionIsMutable();
-          super.addAll(values, permission_);
+        if (userPermissionBuilder_ == null) {
+          ensureUserPermissionIsMutable();
+          super.addAll(values, userPermission_);
           onChanged();
         } else {
-          permissionBuilder_.addAllMessages(values);
+          userPermissionBuilder_.addAllMessages(values);
         }
         return this;
       }
-      public Builder clearPermission() {
-        if (permissionBuilder_ == null) {
-          permission_ = java.util.Collections.emptyList();
+      public Builder clearUserPermission() {
+        if (userPermissionBuilder_ == null) {
+          userPermission_ = java.util.Collections.emptyList();
           bitField0_ = (bitField0_ & ~0x00000001);
           onChanged();
         } else {
-          permissionBuilder_.clear();
+          userPermissionBuilder_.clear();
         }
         return this;
       }
-      public Builder removePermission(int index) {
-        if (permissionBuilder_ == null) {
-          ensurePermissionIsMutable();
-          permission_.remove(index);
+      public Builder removeUserPermission(int index) {
+        if (userPermissionBuilder_ == null) {
+          ensureUserPermissionIsMutable();
+          userPermission_.remove(index);
           onChanged();
         } else {
-          permissionBuilder_.remove(index);
+          userPermissionBuilder_.remove(index);
         }
         return this;
       }
-      public org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermission.Builder getPermissionBuilder(
+      public org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermission.Builder getUserPermissionBuilder(
           int index) {
-        return getPermissionFieldBuilder().getBuilder(index);
+        return getUserPermissionFieldBuilder().getBuilder(index);
       }
-      public org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermissionOrBuilder getPermissionOrBuilder(
+      public org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermissionOrBuilder getUserPermissionOrBuilder(
           int index) {
-        if (permissionBuilder_ == null) {
-          return permission_.get(index);  } else {
-          return permissionBuilder_.getMessageOrBuilder(index);
+        if (userPermissionBuilder_ == null) {
+          return userPermission_.get(index);  } else {
+          return userPermissionBuilder_.getMessageOrBuilder(index);
         }
       }
       public java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermissionOrBuilder> 
-           getPermissionOrBuilderList() {
-        if (permissionBuilder_ != null) {
-          return permissionBuilder_.getMessageOrBuilderList();
+           getUserPermissionOrBuilderList() {
+        if (userPermissionBuilder_ != null) {
+          return userPermissionBuilder_.getMessageOrBuilderList();
         } else {
-          return java.util.Collections.unmodifiableList(permission_);
+          return java.util.Collections.unmodifiableList(userPermission_);
         }
       }
-      public org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermission.Builder addPermissionBuilder() {
-        return getPermissionFieldBuilder().addBuilder(
+      public org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermission.Builder addUserPermissionBuilder() {
+        return getUserPermissionFieldBuilder().addBuilder(
             org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermission.getDefaultInstance());
       }
-      public org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermission.Builder addPermissionBuilder(
+      public org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermission.Builder addUserPermissionBuilder(
           int index) {
-        return getPermissionFieldBuilder().addBuilder(
+        return getUserPermissionFieldBuilder().addBuilder(
             index, org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermission.getDefaultInstance());
       }
       public java.util.List<org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermission.Builder> 
-           getPermissionBuilderList() {
-        return getPermissionFieldBuilder().getBuilderList();
+           getUserPermissionBuilderList() {
+        return getUserPermissionFieldBuilder().getBuilderList();
       }
       private com.google.protobuf.RepeatedFieldBuilder<
           org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermission, org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermission.Builder, org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermissionOrBuilder> 
-          getPermissionFieldBuilder() {
-        if (permissionBuilder_ == null) {
-          permissionBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
+          getUserPermissionFieldBuilder() {
+        if (userPermissionBuilder_ == null) {
+          userPermissionBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
               org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermission, org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermission.Builder, org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermissionOrBuilder>(
-                  permission_,
+                  userPermission_,
                   ((bitField0_ & 0x00000001) == 0x00000001),
                   getParentForChildren(),
                   isClean());
-          permission_ = null;
+          userPermission_ = null;
         }
-        return permissionBuilder_;
+        return userPermissionBuilder_;
       }
       
       // @@protoc_insertion_point(builder_scope:UserPermissionsResponse)
@@ -6562,20 +8570,35 @@ public final class AccessControlProtos {
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_Permission_fieldAccessorTable;
   private static com.google.protobuf.Descriptors.Descriptor
+    internal_static_TablePermission_descriptor;
+  private static
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_TablePermission_fieldAccessorTable;
+  private static com.google.protobuf.Descriptors.Descriptor
+    internal_static_NamespacePermission_descriptor;
+  private static
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_NamespacePermission_fieldAccessorTable;
+  private static com.google.protobuf.Descriptors.Descriptor
+    internal_static_GlobalPermission_descriptor;
+  private static
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_GlobalPermission_fieldAccessorTable;
+  private static com.google.protobuf.Descriptors.Descriptor
     internal_static_UserPermission_descriptor;
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_UserPermission_fieldAccessorTable;
   private static com.google.protobuf.Descriptors.Descriptor
-    internal_static_UserTablePermissions_descriptor;
+    internal_static_UsersAndPermissions_descriptor;
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
-      internal_static_UserTablePermissions_fieldAccessorTable;
+      internal_static_UsersAndPermissions_fieldAccessorTable;
   private static com.google.protobuf.Descriptors.Descriptor
-    internal_static_UserTablePermissions_UserPermissions_descriptor;
+    internal_static_UsersAndPermissions_UserPermissions_descriptor;
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
-      internal_static_UserTablePermissions_UserPermissions_fieldAccessorTable;
+      internal_static_UsersAndPermissions_UserPermissions_fieldAccessorTable;
   private static com.google.protobuf.Descriptors.Descriptor
     internal_static_GrantRequest_descriptor;
   private static
@@ -6625,34 +8648,46 @@ public final class AccessControlProtos {
       descriptor;
   static {
     java.lang.String[] descriptorData = {
-      "\n\023AccessControl.proto\032\013hbase.proto\"\262\001\n\nP" +
-      "ermission\022\"\n\006action\030\001 \003(\0162\022.Permission.A" +
-      "ction\022\035\n\ttableName\030\002 \001(\0132\n.TableName\022\016\n\006" +
-      "family\030\003 \001(\014\022\021\n\tqualifier\030\004 \001(\014\">\n\006Actio" +
-      "n\022\010\n\004READ\020\000\022\t\n\005WRITE\020\001\022\010\n\004EXEC\020\002\022\n\n\006CREA" +
-      "TE\020\003\022\t\n\005ADMIN\020\004\"?\n\016UserPermission\022\014\n\004use" +
-      "r\030\001 \002(\014\022\037\n\npermission\030\002 \002(\0132\013.Permission" +
-      "\"\225\001\n\024UserTablePermissions\022:\n\013permissions" +
-      "\030\001 \003(\0132%.UserTablePermissions.UserPermis" +
-      "sions\032A\n\017UserPermissions\022\014\n\004user\030\001 \002(\014\022 ",
-      "\n\013permissions\030\002 \003(\0132\013.Permission\"3\n\014Gran" +
-      "tRequest\022#\n\npermission\030\001 \002(\0132\017.UserPermi" +
-      "ssion\"\017\n\rGrantResponse\"4\n\rRevokeRequest\022" +
-      "#\n\npermission\030\001 \002(\0132\017.UserPermission\"\020\n\016" +
-      "RevokeResponse\"7\n\026UserPermissionsRequest" +
-      "\022\035\n\ttableName\030\001 \001(\0132\n.TableName\">\n\027UserP" +
-      "ermissionsResponse\022#\n\npermission\030\001 \003(\0132\017" +
-      ".UserPermission\":\n\027CheckPermissionsReque" +
-      "st\022\037\n\npermission\030\001 \003(\0132\013.Permission\"\032\n\030C" +
-      "heckPermissionsResponse2\373\001\n\024AccessContro",
-      "lService\022&\n\005Grant\022\r.GrantRequest\032\016.Grant" +
-      "Response\022)\n\006Revoke\022\016.RevokeRequest\032\017.Rev" +
-      "okeResponse\022G\n\022GetUserPermissions\022\027.User" +
-      "PermissionsRequest\032\030.UserPermissionsResp" +
-      "onse\022G\n\020CheckPermissions\022\030.CheckPermissi" +
-      "onsRequest\032\031.CheckPermissionsResponseBI\n" +
-      "*org.apache.hadoop.hbase.protobuf.genera" +
-      "tedB\023AccessControlProtosH\001\210\001\001\240\001\001"
+      "\n\023AccessControl.proto\032\013hbase.proto\"\250\002\n\nP" +
+      "ermission\022\036\n\004type\030\001 \002(\0162\020.Permission.Typ" +
+      "e\022,\n\021global_permission\030\002 \001(\0132\021.GlobalPer" +
+      "mission\0222\n\024namespace_permission\030\003 \001(\0132\024." +
+      "NamespacePermission\022*\n\020table_permission\030" +
+      "\004 \001(\0132\020.TablePermission\">\n\006Action\022\010\n\004REA" +
+      "D\020\000\022\t\n\005WRITE\020\001\022\010\n\004EXEC\020\002\022\n\n\006CREATE\020\003\022\t\n\005" +
+      "ADMIN\020\004\",\n\004Type\022\n\n\006Global\020\001\022\r\n\tNamespace" +
+      "\020\002\022\t\n\005Table\020\003\"x\n\017TablePermission\022\036\n\ntabl" +
+      "e_name\030\001 \001(\0132\n.TableName\022\016\n\006family\030\002 \001(\014",
+      "\022\021\n\tqualifier\030\003 \001(\014\022\"\n\006action\030\004 \003(\0162\022.Pe" +
+      "rmission.Action\"Q\n\023NamespacePermission\022\026" +
+      "\n\016namespace_name\030\001 \001(\014\022\"\n\006action\030\002 \003(\0162\022" +
+      ".Permission.Action\"6\n\020GlobalPermission\022\"" +
+      "\n\006action\030\001 \003(\0162\022.Permission.Action\"?\n\016Us" +
+      "erPermission\022\014\n\004user\030\001 \002(\014\022\037\n\npermission" +
+      "\030\003 \002(\0132\013.Permission\"\230\001\n\023UsersAndPermissi" +
+      "ons\022>\n\020user_permissions\030\001 \003(\0132$.UsersAnd" +
+      "Permissions.UserPermissions\032A\n\017UserPermi" +
+      "ssions\022\014\n\004user\030\001 \002(\014\022 \n\013permissions\030\002 \003(",
+      "\0132\013.Permission\"8\n\014GrantRequest\022(\n\017user_p" +
+      "ermission\030\001 \002(\0132\017.UserPermission\"\017\n\rGran" +
+      "tResponse\"9\n\rRevokeRequest\022(\n\017user_permi" +
+      "ssion\030\001 \002(\0132\017.UserPermission\"\020\n\016RevokeRe" +
+      "sponse\"p\n\026UserPermissionsRequest\022\036\n\004type" +
+      "\030\001 \001(\0162\020.Permission.Type\022\036\n\ntable_name\030\002" +
+      " \001(\0132\n.TableName\022\026\n\016namespace_name\030\003 \001(\014" +
+      "\"C\n\027UserPermissionsResponse\022(\n\017user_perm" +
+      "ission\030\001 \003(\0132\017.UserPermission\":\n\027CheckPe" +
+      "rmissionsRequest\022\037\n\npermission\030\001 \003(\0132\013.P",
+      "ermission\"\032\n\030CheckPermissionsResponse2\373\001" +
+      "\n\024AccessControlService\022&\n\005Grant\022\r.GrantR" +
+      "equest\032\016.GrantResponse\022)\n\006Revoke\022\016.Revok" +
+      "eRequest\032\017.RevokeResponse\022G\n\022GetUserPerm" +
+      "issions\022\027.UserPermissionsRequest\032\030.UserP" +
+      "ermissionsResponse\022G\n\020CheckPermissions\022\030" +
+      ".CheckPermissionsRequest\032\031.CheckPermissi" +
+      "onsResponseBI\n*org.apache.hadoop.hbase.p" +
+      "rotobuf.generatedB\023AccessControlProtosH\001" +
+      "\210\001\001\240\001\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -6664,43 +8699,67 @@ public final class AccessControlProtos {
           internal_static_Permission_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_Permission_descriptor,
-              new java.lang.String[] { "Action", "TableName", "Family", "Qualifier", },
+              new java.lang.String[] { "Type", "GlobalPermission", "NamespacePermission", "TablePermission", },
               org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Permission.class,
               org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Permission.Builder.class);
-          internal_static_UserPermission_descriptor =
+          internal_static_TablePermission_descriptor =
             getDescriptor().getMessageTypes().get(1);
+          internal_static_TablePermission_fieldAccessorTable = new
+            com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+              internal_static_TablePermission_descriptor,
+              new java.lang.String[] { "TableName", "Family", "Qualifier", "Action", },
+              org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.TablePermission.class,
+              org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.TablePermission.Builder.class);
+          internal_static_NamespacePermission_descriptor =
+            getDescriptor().getMessageTypes().get(2);
+          internal_static_NamespacePermission_fieldAccessorTable = new
+            com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+              internal_static_NamespacePermission_descriptor,
+              new java.lang.String[] { "NamespaceName", "Action", },
+              org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.NamespacePermission.class,
+              org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.NamespacePermission.Builder.class);
+          internal_static_GlobalPermission_descriptor =
+            getDescriptor().getMessageTypes().get(3);
+          internal_static_GlobalPermission_fieldAccessorTable = new
+            com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+              internal_static_GlobalPermission_descriptor,
+              new java.lang.String[] { "Action", },
+              org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.GlobalPermission.class,
+              org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.GlobalPermission.Builder.class);
+          internal_static_UserPermission_descriptor =
+            getDescriptor().getMessageTypes().get(4);
           internal_static_UserPermission_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_UserPermission_descriptor,
               new java.lang.String[] { "User", "Permission", },
               org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermission.class,
               org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermission.Builder.class);
-          internal_static_UserTablePermissions_descriptor =
-            getDescriptor().getMessageTypes().get(2);
-          internal_static_UserTablePermissions_fieldAccessorTable = new
+          internal_static_UsersAndPermissions_descriptor =
+            getDescriptor().getMessageTypes().get(5);
+          internal_static_UsersAndPermissions_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
-              internal_static_UserTablePermissions_descriptor,
-              new java.lang.String[] { "Permissions", },
-              org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserTablePermissions.class,
-              org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserTablePermissions.Builder.class);
-          internal_static_UserTablePermissions_UserPermissions_descriptor =
-            internal_static_UserTablePermissions_descriptor.getNestedTypes().get(0);
-          internal_static_UserTablePermissions_UserPermissions_fieldAccessorTable = new
+              internal_static_UsersAndPermissions_descriptor,
+              new java.lang.String[] { "UserPermissions", },
+              org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UsersAndPermissions.class,
+              org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UsersAndPermissions.Builder.class);
+          internal_static_UsersAndPermissions_UserPermissions_descriptor =
+            internal_static_UsersAndPermissions_descriptor.getNestedTypes().get(0);
+          internal_static_UsersAndPermissions_UserPermissions_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
-              internal_static_UserTablePermissions_UserPermissions_descriptor,
+              internal_static_UsersAndPermissions_UserPermissions_descriptor,
               new java.lang.String[] { "User", "Permissions", },
-              org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserTablePermissions.UserPermissions.class,
-              org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserTablePermissions.UserPermissions.Builder.class);
+              org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UsersAndPermissions.UserPermissions.class,
+              org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UsersAndPermissions.UserPermissions.Builder.class);
           internal_static_GrantRequest_descriptor =
-            getDescriptor().getMessageTypes().get(3);
+            getDescriptor().getMessageTypes().get(6);
           internal_static_GrantRequest_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_GrantRequest_descriptor,
-              new java.lang.String[] { "Permission", },
+              new java.lang.String[] { "UserPermission", },
               org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.GrantRequest.class,
               org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.GrantRequest.Builder.class);
           internal_static_GrantResponse_descriptor =
-            getDescriptor().getMessageTypes().get(4);
+            getDescriptor().getMessageTypes().get(7);
           internal_static_GrantResponse_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_GrantResponse_descriptor,
@@ -6708,15 +8767,15 @@ public final class AccessControlProtos {
               org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.GrantResponse.class,
               org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.GrantResponse.Builder.class);
           internal_static_RevokeRequest_descriptor =
-            getDescriptor().getMessageTypes().get(5);
+            getDescriptor().getMessageTypes().get(8);
           internal_static_RevokeRequest_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_RevokeRequest_descriptor,
-              new java.lang.String[] { "Permission", },
+              new java.lang.String[] { "UserPermission", },
               org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.RevokeRequest.class,
               org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.RevokeRequest.Builder.class);
           internal_static_RevokeResponse_descriptor =
-            getDescriptor().getMessageTypes().get(6);
+            getDescriptor().getMessageTypes().get(9);
           internal_static_RevokeResponse_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_RevokeResponse_descriptor,
@@ -6724,23 +8783,23 @@ public final class AccessControlProtos {
               org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.RevokeResponse.class,
               org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.RevokeResponse.Builder.class);
           internal_static_UserPermissionsRequest_descriptor =
-            getDescriptor().getMessageTypes().get(7);
+            getDescriptor().getMessageTypes().get(10);
           internal_static_UserPermissionsRequest_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_UserPermissionsRequest_descriptor,
-              new java.lang.String[] { "TableName", },
+              new java.lang.String[] { "Type", "TableName", "NamespaceName", },
               org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermissionsRequest.class,
               org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermissionsRequest.Builder.class);
           internal_static_UserPermissionsResponse_descriptor =
-            getDescriptor().getMessageTypes().get(8);
+            getDescriptor().getMessageTypes().get(11);
           internal_static_UserPermissionsResponse_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_UserPermissionsResponse_descriptor,
-              new java.lang.String[] { "Permission", },
+              new java.lang.String[] { "UserPermission", },
               org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermissionsResponse.class,
               org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermissionsResponse.Builder.class);
           internal_static_CheckPermissionsRequest_descriptor =
-            getDescriptor().getMessageTypes().get(9);
+            getDescriptor().getMessageTypes().get(12);
           internal_static_CheckPermissionsRequest_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_CheckPermissionsRequest_descriptor,
@@ -6748,7 +8807,7 @@ public final class AccessControlProtos {
               org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.CheckPermissionsRequest.class,
               org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.CheckPermissionsRequest.Builder.class);
           internal_static_CheckPermissionsResponse_descriptor =
-            getDescriptor().getMessageTypes().get(10);
+            getDescriptor().getMessageTypes().get(13);
           internal_static_CheckPermissionsResponse_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_CheckPermissionsResponse_descriptor,

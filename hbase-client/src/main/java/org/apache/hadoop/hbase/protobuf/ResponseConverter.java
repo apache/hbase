@@ -116,7 +116,7 @@ public final class ResponseConverter {
       final List<UserPermission> permissions) {
     UserPermissionsResponse.Builder builder = UserPermissionsResponse.newBuilder();
     for (UserPermission perm : permissions) {
-      builder.addPermission(ProtobufUtil.toUserPermission(perm));
+      builder.addUserPermission(ProtobufUtil.toUserPermission(perm));
     }
     return builder.build();
   }

@@ -85,7 +85,11 @@ public class ZKPermissionWatcher extends ZooKeeperListener {
   public void nodeDeleted(String path) {
     if (aclZNode.equals(ZKUtil.getParent(path))) {
       String table = ZKUtil.getNodeName(path);
-      authManager.remove(Bytes.toBytes(table));
+      if(AccessControlLists.isNamespaceEntry(table)) {
+        authManager.removeNamespace(Bytes.toBytes(table));
+      } else {
+        authManager.removeTable(TableName.valueOf(table));
+      }
     }
   }
 
@@ -93,14 +97,14 @@ public class ZKPermissionWatcher extends ZooKeeperListener {
   public void nodeDataChanged(String path) {
     if (aclZNode.equals(ZKUtil.getParent(path))) {
       // update cache on an existing table node
-      TableName table = TableName.valueOf(ZKUtil.getNodeName(path));
+      String entry = ZKUtil.getNodeName(path);
       try {
         byte[] data = ZKUtil.getDataAndWatch(watcher, path);
-        authManager.refreshCacheFromWritable(table, data);
+        refreshAuthManager(entry, data);
       } catch (KeeperException ke) {
-        LOG.error("Error reading data from zookeeper for node "+table, ke);
+        LOG.error("Error reading data from zookeeper for node " + entry, ke);
         // only option is to abort
-        watcher.abort("Zookeeper error getting data for node " + table, ke);
+        watcher.abort("Zookeeper error getting data for node " + entry, ke);
       } catch (IOException ioe) {
         LOG.error("Error reading permissions writables", ioe);
       }
@@ -126,36 +130,45 @@ public class ZKPermissionWatcher extends ZooKeeperListener {
     for (ZKUtil.NodeAndData n : nodes) {
       if (n.isEmpty()) continue;
       String path = n.getNode();
-      TableName table = TableName.valueOf(ZKUtil.getNodeName(path));
+      String entry = (ZKUtil.getNodeName(path));
       try {
-        byte[] nodeData = n.getData();
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Updating permissions cache from node "+table+" with data: "+
-              Bytes.toStringBinary(nodeData));
-        }
-        authManager.refreshCacheFromWritable(table, nodeData);
+        refreshAuthManager(entry, n.getData());
       } catch (IOException ioe) {
-        LOG.error("Failed parsing permissions for table '" + table +
+        LOG.error("Failed parsing permissions for table '" + entry +
             "' from zk", ioe);
       }
     }
   }
 
+  private void refreshAuthManager(String entry, byte[] nodeData) throws IOException {
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Updating permissions cache from node "+entry+" with data: "+
+          Bytes.toStringBinary(nodeData));
+    }
+    if(AccessControlLists.isNamespaceEntry(entry)) {
+      authManager.refreshNamespaceCacheFromWritable(
+          AccessControlLists.fromNamespaceEntry(entry), nodeData);
+    } else {
+      authManager.refreshTableCacheFromWritable(TableName.valueOf(entry), nodeData);
+    }
+  }
+
   /***
    * Write a table's access controls to the permissions mirror in zookeeper
-   * @param tableName
+   * @param entry
    * @param permsData
    */
-  public void writeToZookeeper(TableName tableName, byte[] permsData) {
+  public void writeToZookeeper(byte[] entry, byte[] permsData) {
+    String entryName = Bytes.toString(entry);
     String zkNode = ZKUtil.joinZNode(watcher.baseZNode, ACL_NODE);
-    zkNode = ZKUtil.joinZNode(zkNode, tableName.getNameAsString());
+    zkNode = ZKUtil.joinZNode(zkNode, entryName);
 
     try {
       ZKUtil.createWithParents(watcher, zkNode);
       ZKUtil.updateExistingNodeData(watcher, zkNode, permsData, -1);
     } catch (KeeperException e) {
-      LOG.error("Failed updating permissions for table '" + 
-                tableName + "'", e);
+      LOG.error("Failed updating permissions for entry '" +
+          entryName + "'", e);
       watcher.abort("Failed writing node "+zkNode+" to zookeeper", e);
     }
   }
