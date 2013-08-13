@@ -1,5 +1,61 @@
 HBase Change Log
 
+Release 0.94.11 - 8/13/2013
+Sub-task
+
+    [HBASE-8779] - Add mutateRow method support to Thrift2
+    [HBASE-8946] - Add a new function to Thrift 2 to open scanner, get results and close scanner
+    [HBASE-8947] - Thrift 2 : Replace "bool writeToWAL" with "TDurability durability"
+    [HBASE-8948] - Bound table pool size in Thrift 2 server
+
+Bug
+
+    [HBASE-6826] - [WINDOWS] TestFromClientSide failures
+    [HBASE-8067] - TestHFileArchiving.testArchiveOnTableDelete sometimes fails
+    [HBASE-8670] - [0.94] Backport HBASE-8449,HBASE-8204 and HBASE-8699 to 0.94 (Refactor recoverLease retries and pauses)
+    [HBASE-8698] - potential thread creation in MetaScanner.metaScan
+    [HBASE-8935] - IntegrationTestBigLinkedList fails under load on 0.94 due to some scan issues - add logging
+    [HBASE-8949] - hbase.mapreduce.hfileoutputformat.blocksize should configure with blocksize of a table
+    [HBASE-9026] - RestartRsHoldingRoot action in org.apache.hadoop.hbase.util.ChaosMonkey restarting the server holding .META. instead of -ROOT-
+    [HBASE-9032] - Result.getBytes() returns null if backed by KeyValue array
+    [HBASE-9048] - HCM throws NullPointerException under load
+    [HBASE-9050] - HBaseClient#call could hang
+    [HBASE-9060] - ExportSnapshot job fails if target path contains percentage character
+    [HBASE-9079] - FilterList getNextKeyHint skips rows that should be included in the results
+    [HBASE-9080] - Retain assignment should be used when re-enabling table(s)
+    [HBASE-9085] - Integration Tests fails because of bug in teardown phase where the cluster state is not being restored properly.
+    [HBASE-9087] - Handlers being blocked during reads
+    [HBASE-9097] - Set HBASE_CLASSPATH before rest of the classpath
+    [HBASE-9115] - HTableInterface.append operation may overwrites values
+    [HBASE-9120] - ClassFinder logs errors that are not
+    [HBASE-9146] - TestHTablePool hangs when run as part of runMediumTests profile
+    [HBASE-9158] - Serious bug in cyclic replication
+    [HBASE-9189] - IncreasingToUpperBoundRegionSplitPolicy.shouldSplit() should check all the stores before returning.
+    [HBASE-9200] - HFilePrettyPrinter finds incorrect largest row
+
+Improvement
+
+    [HBASE-6580] - Deprecate HTablePool in favor of HConnection.getTable(...)
+    [HBASE-8995] - Add hadoop-1.2 profile
+    [HBASE-9019] - Port HBASE-8690: Reduce unnecessary getFileStatus hdfs calls in TTL hfile and hlog cleanners to 0.94
+    [HBASE-9029] - Backport HBASE-8706 Some improvement in snapshot to 0.94
+    [HBASE-9132] - Use table dir modtime to avoid scanning table dir to check cached table descriptor in 0.94
+    [HBASE-9139] - Independent timeout configuration for rpc channel between cluster nodes
+
+New Feature
+
+    [HBASE-7826] - Improve Hbase Thrift v1 to return results in sorted order
+    [HBASE-8663] - a HBase Shell command to list the tables replicated from current cluster
+
+Test
+
+    [HBASE-8816] - Add support of loading multiple tables into LoadTestTool
+    [HBASE-9075] - [0.94] Backport HBASE-5760 Unit tests should write only under /target to 0.94
+    [HBASE-9090] - cleanup snapshot tests setup/teardown code
+    [HBASE-9106] - Do not fail TestAcidGuarantees for exceptions on table flush
+    [HBASE-9107] - [0.94] Backport HBASE-6950 TestAcidGuarantees system test now flushes too aggressively to 0.94
+
+
 Release 0.94.10 - 7/19/2013
 Sub-task
 
