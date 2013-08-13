@@ -521,8 +521,8 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
       "hbase.regionserver.numregionstoreport", 10);
 
     this.rpcTimeout = conf.getInt(
-      HConstants.HBASE_RPC_TIMEOUT_KEY,
-      HConstants.DEFAULT_HBASE_RPC_TIMEOUT);
+      HConstants.HBASE_RPC_SHORTOPERATION_TIMEOUT_KEY,
+      HConstants.DEFAULT_HBASE_RPC_SHORTOPERATION_TIMEOUT);
 
     this.abortRequested = false;
     this.stopped = false;
