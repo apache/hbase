@@ -652,6 +652,16 @@ public final class HConstants {
   public static int DEFAULT_HBASE_RPC_TIMEOUT = 60000;
 
   /**
+   * timeout for short operation RPC
+   */
+  public static String HBASE_RPC_SHORTOPERATION_TIMEOUT_KEY = "hbase.rpc.shortoperation.timeout";
+
+  /**
+   * Default value of {@link #HBASE_RPC_SHORTOPERATION_TIMEOUT_KEY}
+   */
+  public static int DEFAULT_HBASE_RPC_SHORTOPERATION_TIMEOUT = 10000;
+
+  /**
    * Value indicating the server name was saved with no sequence number.
    */
   public static final long NO_SEQNUM = -1;

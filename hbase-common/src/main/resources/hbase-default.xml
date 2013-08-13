@@ -676,6 +676,14 @@ possible configurations would overwhelm and obscure the important.
         but will eventually throw a TimeoutException.</description>
   </property>
   <property>
+    <name>hbase.rpc.shortoperation.timeout</name>
+    <value>10000</value>
+    <description>This is another version of "hbase.rpc.timeout". For those RPC operation
+        within cluster, we rely on this configuration to set a short timeout limitation
+        for short operation. For example, short rpc timeout for region server's trying
+        to report to active master can benefit quicker master failover process.</description>
+  </property>
+  <property>
     <name>hbase.ipc.client.tcpnodelay</name>
     <value>true</value>
     <description>Set no delay on rpc socket connections.  See
