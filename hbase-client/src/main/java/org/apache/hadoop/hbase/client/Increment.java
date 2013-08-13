@@ -166,8 +166,8 @@ public class Increment extends Mutation implements Comparable<Row> {
   }
 
   /**
-   * Before 0.95, when you called {@link Increment#getFamilyMap()}}, you got back
-   * a map of families to a list of Longs.  Now, {@link #getFamilyMap()} returns
+   * Before 0.95, when you called Increment#getFamilyMap(), you got back
+   * a map of families to a list of Longs.  Now, {@link #getFamilyCellMap()} returns
    * families by list of Cells.  This method has been added so you can have the
    * old behavior.
    * @return Map of families to a Map of qualifers and their Long increments.
