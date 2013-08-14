@@ -40,8 +40,8 @@ module Hbase
 
     #----------------------------------------------------------------------------------------------
     # Returns a list of tables in hbase
-    def list
-      @admin.listTables.map { |t| t.getNameAsString }
+    def list(regex = ".*")
+      @admin.getTableNames(regex)
     end
 
     #----------------------------------------------------------------------------------------------

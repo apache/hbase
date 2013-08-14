@@ -318,4 +318,11 @@ public interface HMasterInterface extends VersionedProtocol {
 
   public boolean isRestoreSnapshotDone(final HSnapshotDescription request)
     throws IOException;
+
+  /**
+   * Return all table names.
+   * @return the list of table names
+   * @throws IOException if an error occurred while getting the list of tables
+   */
+  public String[] getTableNames() throws IOException;
 }

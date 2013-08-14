@@ -78,8 +78,6 @@ import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.util.StringUtils;
 
-import com.google.protobuf.ServiceException;
-
 /**
  * Provides an interface to manage HBase database table metadata + general
  * administrative functions.  Use HBaseAdmin to create, drop, list, enable and
@@ -313,6 +311,40 @@ public class HBaseAdmin implements Abortable, Closeable {
     return listTables(Pattern.compile(regex));
   }
 
+  /**
+   * List all of the names of userspace tables.
+   * @return the list of table names
+   * @throws IOException if a remote or network exception occurs
+   */
+  public String[] getTableNames() throws IOException {
+    return this.connection.getTableNames();
+  }
+
+  /**
+   * List all of the names of userspace tables matching the given pattern
+   * @param pattern The compiled regular expression to match against
+   * @return the list of table names
+   * @throws IOException if a remote or network exception occurs
+   */
+  public String[] getTableNames(Pattern pattern) throws IOException {
+    List<String> matched = new ArrayList<String>();
+    for (String name : this.connection.getTableNames()) {
+      if (pattern.matcher(name).matches()) {
+        matched.add(name);
+      }
+    }
+    return matched.toArray(new String[matched.size()]);
+  }
+
+  /**
+   * List all of the names of userspace tables matching the given regex
+   * @param regex The regular expression to match against
+   * @return the list of table names
+   * @throws IOException if a remote or network exception occurs
+   */
+  public String[] getTableNames(String regex) throws IOException {
+    return getTableNames(Pattern.compile(regex));
+  }
 
   /**
    * Method for getting the tableDescriptor

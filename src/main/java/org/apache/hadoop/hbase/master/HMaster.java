@@ -26,9 +26,11 @@ import java.lang.reflect.Method;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -2242,5 +2244,23 @@ Server {
   public boolean isRestoreSnapshotDone(final HSnapshotDescription request) throws IOException {
     return snapshotManager.isRestoreDone(request.getProto());
   }
-}
 
+  /**
+   * Return all table names.
+   * @return the list of table names
+   * @throws IOException if an error occurred while getting the list of tables
+   */
+  @Override
+  public String[] getTableNames() throws IOException {
+    // Anyone is allowed to see the names of tables, so there is no coprocessor
+    // hook nor AccessController interception necessary
+    Collection<HTableDescriptor> descriptors = tableDescriptors.getAll().values();
+    Iterator<HTableDescriptor> iter = descriptors.iterator();
+    String names[] = new String[descriptors.size()];
+    int i = 0;
+    while (iter.hasNext()) {
+      names[i++] = iter.next().getNameAsString();
+    }
+    return names;
+  }
+}

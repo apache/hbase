@@ -1987,6 +1987,14 @@ public class HConnectionManager {
       return master.getHTableDescriptors(tableNames);
     }
 
+    @Override
+    public String[] getTableNames() throws IOException {
+      if (this.master == null) {
+        this.master = getMaster();
+      }
+      return master.getTableNames();
+    }
+
     public HTableDescriptor getHTableDescriptor(final byte[] tableName)
     throws IOException {
       if (tableName == null || tableName.length == 0) return null;

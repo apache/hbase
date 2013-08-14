@@ -452,6 +452,12 @@ public interface HConnection extends Abortable, Closeable {
   throws IOException;
 
   /**
+   * @return string[] table names
+   * @throws IOException if a remote or network exception occurs
+   */
+  public String[] getTableNames() throws IOException;
+
+  /**
    * @return true if this connection is closed
    */
   public boolean isClosed();
