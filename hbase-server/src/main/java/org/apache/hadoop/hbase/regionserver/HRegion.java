@@ -3607,7 +3607,7 @@ public class HRegion implements HeapSize { // , Writable{
           // client might time out and disconnect while the server side
           // is still processing the request. We should abort aggressively
           // in that case.
-          rpcCall.throwExceptionIfCallerDisconnected();
+          rpcCall.throwExceptionIfCallerDisconnected(getRegionNameAsString());
         }
 
         // Let's see what we have in the storeHeap.
