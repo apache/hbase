@@ -103,10 +103,18 @@ public class TestNamespaceUpgrade {
       // mkdir at first
       fs.mkdirs(hbaseRootDir.getParent());
     }
+    if(org.apache.hadoop.util.VersionInfo.getVersion().startsWith("2.")) {
+      LOG.info("Hadoop version is 2.x, pre-migrating snapshot dir");
+      FileSystem localFS = FileSystem.getLocal(conf);
+      if(!localFS.rename(new Path(untar.toString(), HConstants.OLD_SNAPSHOT_DIR_NAME),
+          new Path(untar.toString(), HConstants.SNAPSHOT_DIR_NAME))) {
+        throw new IllegalStateException("Failed to move snapshot dir to 2.x expectation");
+      }
+    }
     doFsCommand(shell,
       new String [] {"-put", untar.toURI().toString(), hbaseRootDir.toString()});
-    // See whats in minihdfs.
     doFsCommand(shell, new String [] {"-lsr", "/"});
+    // See whats in minihdfs.
     Configuration toolConf = TEST_UTIL.getConfiguration();
     conf.set(HConstants.HBASE_DIR, TEST_UTIL.getDefaultRootDirPath().toString());
     ToolRunner.run(toolConf, new NamespaceUpgrade(), new String[]{"--upgrade"});
