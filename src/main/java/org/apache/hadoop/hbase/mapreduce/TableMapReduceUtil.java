@@ -26,14 +26,16 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.URL;
 import java.net.URLDecoder;
-import java.util.ArrayList;
+import java.util.AbstractMap;
 import java.util.Enumeration;
 import java.util.HashSet;
-import java.util.List;
+import java.util.Map.Entry;
 import java.util.Set;
+import java.util.concurrent.ConcurrentSkipListMap;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseConfiguration;
@@ -47,7 +49,6 @@ import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.util.StringUtils;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.zookeeper.ZooKeeper;
 
 /**
@@ -56,6 +57,10 @@ import org.apache.zookeeper.ZooKeeper;
 @SuppressWarnings("unchecked")
 public class TableMapReduceUtil {
   static Log LOG = LogFactory.getLog(TableMapReduceUtil.class);
+  // This will contain the number of regions for a specific table so we don't need to do more RPC
+  // calls than required
+  static ConcurrentSkipListMap<String, Entry<Job, Integer>> numRegionsCached =
+      new ConcurrentSkipListMap<String, Entry<Job, Integer>>();
 
   /**
    * Use this before submitting a TableMap job. It will appropriately set up
@@ -217,8 +222,10 @@ public class TableMapReduceUtil {
       HTable outputTable = new HTable(conf, table);
       int regions = outputTable.getRegionsInfo().size();
       if (job.getNumReduceTasks() > regions) {
-        job.setNumReduceTasks(outputTable.getRegionsInfo().size());
+        job.setNumReduceTasks(regions);
       }
+      numRegionsCached.put(table, new AbstractMap.SimpleEntry<Job, Integer>(
+          job, regions));// Add this to numRegions cache
     } else if (partitioner != null) {
       job.setPartitionerClass(partitioner);
     }
@@ -234,10 +241,25 @@ public class TableMapReduceUtil {
    */
   public static void limitNumReduceTasks(String table, Job job)
   throws IOException {
-    HTable outputTable = new HTable(job.getConfiguration(), table);
-    int regions = outputTable.getRegionsInfo().size();
-    if (job.getNumReduceTasks() > regions)
-      job.setNumReduceTasks(regions);
+    Entry<Job, Integer> pair = numRegionsCached.get(table);
+    int regions; 
+    /*
+     * If there's no cached regions count or it was for other job then we'll get it again note here
+     * we just check that the two references point to the same object (not the same values)
+     */
+    if (pair == null || pair.getKey() != job) {
+      HTable outputTable = new HTable(job.getConfiguration(), table);
+      regions = outputTable.getRegionsInfo().size();
+      numRegionsCached.put(table, new AbstractMap.SimpleEntry<Job, Integer>(job, regions));
+    } else regions = pair.getValue();
+    if (job.getNumReduceTasks() > regions) job.setNumReduceTasks(regions);
+    if (LOG.isTraceEnabled()) {
+      if (pair != null && pair.getKey() == job) {
+        LOG.trace("numRegions obtained from cache");
+      } else {
+        LOG.trace("numRegions obtained not obtained from cache");
+      }
+    }
   }
 
   /**
@@ -250,8 +272,24 @@ public class TableMapReduceUtil {
    */
   public static void setNumReduceTasks(String table, Job job)
   throws IOException {
-    HTable outputTable = new HTable(job.getConfiguration(), table);
-    int regions = outputTable.getRegionsInfo().size();
+    Entry<Job, Integer> pair = numRegionsCached.get(table);
+    int regions;
+    /*
+     * If there's no cached regions count or it was for other job then we'll get it again note here
+     * we just check that the two references point to the same object (not the same values)
+     */
+    if (pair == null || pair.getKey() != job) {
+      HTable outputTable = new HTable(job.getConfiguration(), table);
+      regions = outputTable.getRegionsInfo().size();
+      numRegionsCached.put(table, new AbstractMap.SimpleEntry<Job, Integer>(job, regions));
+    } else regions = pair.getValue();
+    if (LOG.isTraceEnabled()) {
+      if (pair != null && pair.getKey() == job) {
+        LOG.trace("numRegions obtained from cache");
+      } else {
+        LOG.trace("numRegions obtained not obtained from cache");
+      }
+    }
     job.setNumReduceTasks(regions);
   }
 
@@ -367,6 +405,4 @@ public class TableMapReduceUtil {
     }
     return null;
   }
-
-
 }
