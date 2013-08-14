@@ -62,6 +62,7 @@ import org.apache.zookeeper.data.Stat;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.Test;
 
 /**
@@ -299,6 +300,7 @@ public class TestSplitTransactionOnCluster {
    * @throws IOException
    * @throws InterruptedException
    */
+  @Ignore("See HBASE-9209")
   @Test (timeout=300000) public void testShutdownFixupWhenDaughterHasSplit()
   throws IOException, InterruptedException {
     final byte [] tableName =
