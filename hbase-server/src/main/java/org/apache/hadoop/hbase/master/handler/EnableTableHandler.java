@@ -268,7 +268,7 @@ public class EnableTableHandler extends EventHandler {
             continue;
           }
           final HRegionInfo hri = region;
-          pool.execute(Trace.wrap(new Runnable() {
+          pool.execute(Trace.wrap("BulkEnabler.populatePool",new Runnable() {
             public void run() {
               assignmentManager.assign(hri, true);
             }

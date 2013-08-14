@@ -191,6 +191,7 @@ import org.apache.hadoop.hbase.regionserver.wal.HLogFactory;
 import org.apache.hadoop.hbase.regionserver.wal.HLogUtil;
 import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
 import org.apache.hadoop.hbase.security.User;
+import org.apache.hadoop.hbase.trace.SpanReceiverHost;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CompressionTest;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -376,6 +377,7 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
   public static final String REGIONSERVER_CONF = "regionserver_conf";
 
   private MetricsRegionServer metricsRegionServer;
+  private SpanReceiverHost spanReceiverHost;
 
   /*
    * Check for compactions requests.
@@ -1190,6 +1192,9 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
       this.hlog = setupWALAndReplication();
       // Init in here rather than in constructor after thread name has been set
       this.metricsRegionServer = new MetricsRegionServer(new MetricsRegionServerWrapperImpl(this));
+
+      spanReceiverHost = SpanReceiverHost.getInstance(getConfiguration());
+
       startServiceThreads();
       LOG.info("Serving as " + this.serverNameFromMasterPOV +
         ", RpcServer on " + this.isa +
@@ -1793,6 +1798,9 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
     this.cacheFlusher.join();
     if (this.healthCheckChore != null) {
       Threads.shutdown(this.healthCheckChore.getThread());
+    }
+    if (this.spanReceiverHost != null) {
+      this.spanReceiverHost.closeReceivers();
     }
     if (this.hlogRoller != null) {
       Threads.shutdown(this.hlogRoller.getThread());

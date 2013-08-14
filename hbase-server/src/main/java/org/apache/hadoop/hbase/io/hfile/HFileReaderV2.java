@@ -39,6 +39,8 @@ import org.apache.hadoop.hbase.io.FSDataInputStreamWrapper;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.IdLock;
 import org.apache.hadoop.io.WritableUtils;
+import org.cloudera.htrace.Trace;
+import org.cloudera.htrace.TraceScope;
 
 /**
  * {@link HFile} reader for version 2.
@@ -292,9 +294,9 @@ public class HFileReaderV2 extends AbstractHFileReader {
 
     boolean useLock = false;
     IdLock.Entry lockEntry = null;
+    TraceScope traceScope = Trace.startSpan("HFileReaderV2.readBlock");
     try {
       while (true) {
-
         if (useLock) {
           lockEntry = offsetLock.getLockEntry(dataBlockOffset);
         }
@@ -329,7 +331,9 @@ public class HFileReaderV2 extends AbstractHFileReader {
           useLock = true;
           continue;
         }
-
+        if (Trace.isTracing()) {
+          traceScope.getSpan().addTimelineAnnotation("blockCacheMiss");
+        }
         // Load block from filesystem.
         long startTimeNs = System.nanoTime();
         HFileBlock hfileBlock = fsBlockReader.readBlockData(dataBlockOffset, onDiskBlockSize, -1,
@@ -352,6 +356,7 @@ public class HFileReaderV2 extends AbstractHFileReader {
         return hfileBlock;
       }
     } finally {
+      traceScope.close();
       if (lockEntry != null) {
         offsetLock.releaseLockEntry(lockEntry);
       }

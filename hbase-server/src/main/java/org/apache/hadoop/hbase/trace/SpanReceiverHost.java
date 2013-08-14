@@ -27,6 +27,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.cloudera.htrace.SpanReceiver;
 import org.cloudera.htrace.Trace;
+import org.cloudera.htrace.impl.ZipkinSpanReceiver;
 
 /**
  * This class provides functions for reading the names of SpanReceivers from
@@ -38,8 +39,32 @@ public class SpanReceiverHost {
   private static final Log LOG = LogFactory.getLog(SpanReceiverHost.class);
   private Collection<SpanReceiver> receivers;
   private Configuration conf;
+  private boolean closed = false;
 
-  public SpanReceiverHost(Configuration conf) {
+  private static enum SingleTonholder {
+    INSTANCE;
+    Object lock = new Object();
+    SpanReceiverHost host = null;
+  }
+
+  public static SpanReceiverHost getInstance(Configuration conf) {
+    if (SingleTonholder.INSTANCE.host != null) {
+      return SingleTonholder.INSTANCE.host;
+    }
+    synchronized (SingleTonholder.INSTANCE.lock) {
+      if (SingleTonholder.INSTANCE.host != null) {
+        return SingleTonholder.INSTANCE.host;
+      }
+
+      SpanReceiverHost host = new SpanReceiverHost(conf);
+      host.loadSpanReceivers();
+      SingleTonholder.INSTANCE.host = host;
+      return SingleTonholder.INSTANCE.host;
+    }
+
+  }
+
+  SpanReceiverHost(Configuration conf) {
     receivers = new HashSet<SpanReceiver>();
     this.conf = conf;
   }
@@ -48,13 +73,7 @@ public class SpanReceiverHost {
    * Reads the names of classes specified in the
    * "hbase.trace.spanreceiver.classes" property and instantiates and registers
    * them with the Tracer as SpanReceiver's.
-   * 
-   * The nullary constructor is called during construction, but if the classes
-   * specified implement the Configurable interface, setConfiguration() will be
-   * called on them. This allows SpanReceivers to use values from
-   * hbase-site.xml. See
-   * {@link org.apache.hadoop.hbase.trace.HBaseLocalFileSpanReceiver} for an
-   * example.
+   *
    */
   public void loadSpanReceivers() {
     Class<?> implClass = null;
@@ -67,8 +86,12 @@ public class SpanReceiverHost {
 
       try {
         implClass = Class.forName(className);
-        receivers.add(loadInstance(implClass));
-        LOG.info("SpanReceiver " + className + " was loaded successfully.");
+        SpanReceiver receiver = loadInstance(implClass);
+        if (receiver != null) {
+          receivers.add(receiver);
+          LOG.info("SpanReceiver " + className + " was loaded successfully.");
+        }
+
       } catch (ClassNotFoundException e) {
         LOG.warn("Class " + className + " cannot be found. " + e.getMessage());
       } catch (IOException e) {
@@ -83,16 +106,21 @@ public class SpanReceiverHost {
 
   private SpanReceiver loadInstance(Class<?> implClass)
       throws IOException {
-    SpanReceiver impl;
+    SpanReceiver impl = null;
     try {
-      Object o = ReflectionUtils.newInstance(implClass, conf);
+      Object o = implClass.newInstance();
       impl = (SpanReceiver)o;
+      impl.configure(new HBaseHTraceConfiguration(this.conf));
     } catch (SecurityException e) {
       throw new IOException(e);
     } catch (IllegalArgumentException e) {
       throw new IOException(e);
     } catch (RuntimeException e) {
       throw new IOException(e);
+    } catch (InstantiationException e) {
+      e.printStackTrace();
+    } catch (IllegalAccessException e) {
+      e.printStackTrace();
     }
 
     return impl;
@@ -101,7 +129,9 @@ public class SpanReceiverHost {
   /**
    * Calls close() on all SpanReceivers created by this SpanReceiverHost.
    */
-  public void closeReceivers() {
+  public synchronized void closeReceivers() {
+    if (closed) return;
+    closed = true;
     for (SpanReceiver rcvr : receivers) {
       try {
         rcvr.close();

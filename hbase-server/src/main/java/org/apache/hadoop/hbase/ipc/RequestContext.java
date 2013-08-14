@@ -24,6 +24,8 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.security.User;
 
 import com.google.protobuf.BlockingService;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.cloudera.htrace.Trace;
 
 import java.net.InetAddress;
 
@@ -97,6 +99,16 @@ public class RequestContext {
     ctx.remoteAddress = remoteAddress;
     ctx.service = service;
     ctx.inRequest = true;
+    if (Trace.isTracing()) {
+      if (user != null) {
+        Trace.currentSpan().addKVAnnotation(Bytes.toBytes("user"), Bytes.toBytes(user.getName()));
+      }
+      if (remoteAddress != null) {
+        Trace.currentSpan().addKVAnnotation(
+            Bytes.toBytes("remoteAddress"),
+            Bytes.toBytes(remoteAddress.getHostAddress()));
+      }
+    }
   }
 
   /**

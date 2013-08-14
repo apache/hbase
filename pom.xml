@@ -902,7 +902,7 @@
     <jersey.version>1.8</jersey.version>
     <jruby.version>1.6.8</jruby.version>
     <junit.version>4.11</junit.version>
-    <htrace.version>1.50</htrace.version>
+    <htrace.version>2.00</htrace.version>
     <log4j.version>1.2.17</log4j.version>
     <mockito-all.version>1.9.0</mockito-all.version>
     <protobuf.version>2.4.1</protobuf.version>
@@ -1326,7 +1326,12 @@
       </dependency>
       <dependency>
         <groupId>org.cloudera.htrace</groupId>
-        <artifactId>htrace</artifactId>
+        <artifactId>htrace-core</artifactId>
+        <version>${htrace.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.cloudera.htrace</groupId>
+        <artifactId>htrace-zipkin</artifactId>
         <version>${htrace.version}</version>
       </dependency>
     </dependencies>

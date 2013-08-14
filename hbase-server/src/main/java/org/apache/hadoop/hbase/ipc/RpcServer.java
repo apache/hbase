@@ -114,10 +114,9 @@ import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.util.StringUtils;
 import org.cliffc.high_scale_lib.Counter;
 import org.cloudera.htrace.Sampler;
-import org.cloudera.htrace.Span;
 import org.cloudera.htrace.Trace;
 import org.cloudera.htrace.TraceInfo;
-import org.cloudera.htrace.impl.NullSpan;
+import org.cloudera.htrace.TraceScope;
 import org.codehaus.jackson.map.ObjectMapper;
 
 import com.google.protobuf.BlockingService;
@@ -311,6 +310,14 @@ public class RpcServer implements RpcServerInterface {
       sb.append(" connection: ");
       sb.append(connection.toString());
       return sb.toString();
+    }
+
+    String toTraceString() {
+      String serviceName = this.connection.service != null ?
+                           this.connection.service.getDescriptorForType().getName() : "";
+      String methodName = (this.md != null) ? this.md.getName() : "";
+      String result = serviceName + "." + methodName;
+      return result;
     }
 
     protected synchronized void setSaslTokenResponse(ByteBuffer response) {
@@ -1781,14 +1788,13 @@ public class RpcServer implements RpcServerInterface {
         String error = null;
         Pair<Message, CellScanner> resultPair = null;
         CurCall.set(call);
-        Span currentRequestSpan = NullSpan.getInstance();
+        TraceScope traceScope = null;
         try {
           if (!started) {
             throw new ServerNotRunningYetException("Server is not running yet");
           }
           if (call.tinfo != null) {
-            currentRequestSpan = Trace.startSpan(
-                "handling " + call.toShortString(), call.tinfo, Sampler.ALWAYS);
+            traceScope = Trace.startSpan(call.toTraceString(), call.tinfo);
           }
           User user;
           if (call.effectiveUser == null) {
@@ -1813,7 +1819,9 @@ public class RpcServer implements RpcServerInterface {
           errorThrowable = e;
           error = StringUtils.stringifyException(e);
         } finally {
-          currentRequestSpan.stop();
+          if (traceScope != null) {
+            traceScope.close();
+          }
           // Must always clear the request context to avoid leaking
           // credentials between requests.
           RequestContext.clear();

@@ -50,6 +50,8 @@ import org.apache.hadoop.util.StringUtils;
 import org.cliffc.high_scale_lib.Counter;
 
 import com.google.common.base.Preconditions;
+import org.cloudera.htrace.Trace;
+import org.cloudera.htrace.TraceScope;
 
 /**
  * Thread that flushes cache on request
@@ -505,7 +507,11 @@ class MemStoreFlusher implements FlushRequester {
    * amount of memstore consumption.
    */
   public void reclaimMemStoreMemory() {
+    TraceScope scope = Trace.startSpan("MemStoreFluser.reclaimMemStoreMemory");
     if (isAboveHighWaterMark()) {
+      if (Trace.isTracing()) {
+        scope.getSpan().addTimelineAnnotation("Force Flush. We're above high water mark.");
+      }
       long start = System.currentTimeMillis();
       synchronized (this.blockSignal) {
         boolean blocked = false;
@@ -542,6 +548,7 @@ class MemStoreFlusher implements FlushRequester {
     } else if (isAboveLowWaterMark()) {
       wakeupFlushThread();
     }
+    scope.close();
   }
   @Override
   public String toString() {

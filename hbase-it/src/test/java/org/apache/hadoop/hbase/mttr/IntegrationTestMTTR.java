@@ -42,6 +42,8 @@ import org.apache.hadoop.hbase.util.LoadTestTool;
 import org.cloudera.htrace.Sampler;
 import org.cloudera.htrace.Span;
 import org.cloudera.htrace.Trace;
+import org.cloudera.htrace.TraceScope;
+import org.cloudera.htrace.impl.AlwaysSampler;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -361,9 +363,9 @@ public class IntegrationTestMTTR {
       // Keep trying until the rs is back up and we've gotten a put through
       while (numAfterDone < 10) {
         long start = System.nanoTime();
-        Span span = null;
+        TraceScope scope = null;
         try {
-          span = Trace.startSpan(getSpanName(), Sampler.ALWAYS);
+          scope = Trace.startSpan(getSpanName(), AlwaysSampler.INSTANCE);
           boolean actionResult = doAction();
           if (actionResult && future.isDone()) {
             numAfterDone ++;
@@ -371,11 +373,11 @@ public class IntegrationTestMTTR {
         } catch (Exception e) {
           numAfterDone = 0;
         } finally {
-          if (span != null) {
-            span.stop();
+          if (scope != null) {
+            scope.close();
           }
         }
-        result.addResult(System.nanoTime() - start, span);
+        result.addResult(System.nanoTime() - start, scope.getSpan());
       }
       return result;
     }

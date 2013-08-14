@@ -210,7 +210,11 @@
       </dependency>
       <dependency>
         <groupId>org.cloudera.htrace</groupId>
-        <artifactId>htrace</artifactId>
+        <artifactId>htrace-core</artifactId>
+      </dependency>
+      <dependency>
+        <groupId>org.cloudera.htrace</groupId>
+        <artifactId>htrace-zipkin</artifactId>
       </dependency>
     <!-- General dependencies -->
 

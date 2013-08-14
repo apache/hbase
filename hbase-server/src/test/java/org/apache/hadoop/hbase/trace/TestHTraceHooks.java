@@ -30,6 +30,7 @@ import org.apache.hadoop.hbase.client.Put;
 import org.cloudera.htrace.Sampler;
 import org.cloudera.htrace.Span;
 import org.cloudera.htrace.Trace;
+import org.cloudera.htrace.TraceScope;
 import org.cloudera.htrace.TraceTree;
 import org.cloudera.htrace.impl.POJOSpanReceiver;
 import org.junit.AfterClass;
@@ -60,13 +61,14 @@ public class TestHTraceHooks {
 
   @Test
   public void testTraceCreateTable() throws Exception {
-    Span tableCreationSpan = Trace.startSpan("creating table", Sampler.ALWAYS);
+    TraceScope tableCreationSpan = Trace.startSpan("creating table", Sampler.ALWAYS);
     HTable table; 
     try {
+
       table = TEST_UTIL.createTable("table".getBytes(),
         FAMILY_BYTES);
     } finally {
-      tableCreationSpan.stop();
+      tableCreationSpan.close();
     }
 
     Collection<Span> spans = rcvr.getSpans();
@@ -80,26 +82,26 @@ public class TestHTraceHooks {
     Multimap<Long, Span> spansByParentIdMap = traceTree
         .getSpansByParentIdMap();
 
-    int startsWithHandlingCount = 0;
+    int createTableCount = 0;
 
     for (Span s : spansByParentIdMap.get(createTableRoot.getSpanId())) {
-      if (s.getDescription().startsWith("handling")) {
-        startsWithHandlingCount++;
+      if (s.getDescription().startsWith("MasterAdminService.CreateTable")) {
+        createTableCount++;
       }
     }
 
-    assertTrue(startsWithHandlingCount > 3);
+    assertTrue(createTableCount >= 1);
     assertTrue(spansByParentIdMap.get(createTableRoot.getSpanId()).size() > 3);
     assertTrue(spans.size() > 5);
     
     Put put = new Put("row".getBytes());
     put.add(FAMILY_BYTES, "col".getBytes(), "value".getBytes());
 
-    Span putSpan = Trace.startSpan("doing put", Sampler.ALWAYS);
+    TraceScope putSpan = Trace.startSpan("doing put", Sampler.ALWAYS);
     try {
       table.put(put);
     } finally {
-      putSpan.stop();
+      putSpan.close();
     }
 
     spans = rcvr.getSpans();

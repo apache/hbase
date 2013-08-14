@@ -28,6 +28,8 @@ import org.apache.hadoop.hbase.Server;
 import org.cloudera.htrace.Sampler;
 import org.cloudera.htrace.Span;
 import org.cloudera.htrace.Trace;
+import org.cloudera.htrace.TraceScope;
+import org.cloudera.htrace.impl.AlwaysSampler;
 
 
 /**
@@ -99,7 +101,7 @@ public abstract class EventHandler implements Runnable, Comparable<Runnable> {
    * Default base class constructor.
    */
   public EventHandler(Server server, EventType eventType) {
-    this.parent = Trace.currentTrace();
+    this.parent = Trace.currentSpan();
     this.server = server;
     this.eventType = eventType;
     seqid = seqids.incrementAndGet();
@@ -123,8 +125,7 @@ public abstract class EventHandler implements Runnable, Comparable<Runnable> {
   }
 
   public void run() {
-    Span chunk = Trace.startSpan(Thread.currentThread().getName(), parent,
-          Sampler.ALWAYS);
+    TraceScope chunk = Trace.startSpan(this.getClass().getSimpleName(), parent);
     try {
       if (getListener() != null) getListener().beforeProcess(this);
       process();
@@ -132,7 +133,7 @@ public abstract class EventHandler implements Runnable, Comparable<Runnable> {
     } catch(Throwable t) {
       LOG.error("Caught throwable while processing event " + eventType, t);
     } finally {
-      chunk.stop();
+      chunk.close();
     }
   }
 
