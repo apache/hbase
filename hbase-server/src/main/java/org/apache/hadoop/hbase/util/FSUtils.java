@@ -1322,6 +1322,15 @@ public abstract class FSUtils {
   }
 
   /**
+   * Checks if the given path is the one with 'recovered.edits' dir.
+   * @param path
+   * @return
+   */
+  public static boolean isRecoveredEdits(Path path) {
+    return path.toString().contains(HConstants.RECOVERED_EDITS_DIR);
+  }
+
+  /**
    * Filter for all dirs that don't start with '.'
    */
   public static class RegionDirFilter implements PathFilter {

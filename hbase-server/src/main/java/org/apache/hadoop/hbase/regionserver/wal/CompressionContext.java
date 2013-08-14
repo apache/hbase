@@ -33,7 +33,7 @@ class CompressionContext {
   final Dictionary qualifierDict;
   final Dictionary rowDict;
 
-  public CompressionContext(Class<? extends Dictionary> dictType)
+  public CompressionContext(Class<? extends Dictionary> dictType, boolean recoveredEdits)
   throws SecurityException, NoSuchMethodException, InstantiationException,
       IllegalAccessException, InvocationTargetException {
     Constructor<? extends Dictionary> dictConstructor =
@@ -43,6 +43,17 @@ class CompressionContext {
     familyDict = dictConstructor.newInstance();
     qualifierDict = dictConstructor.newInstance();
     rowDict = dictConstructor.newInstance();
+    if (recoveredEdits) {
+      // This will never change
+      regionDict.init(1);
+      tableDict.init(1);
+    } else {
+      regionDict.init(Short.MAX_VALUE);
+      tableDict.init(Short.MAX_VALUE);
+    }
+    rowDict.init(Short.MAX_VALUE);
+    familyDict.init(Byte.MAX_VALUE);
+    qualifierDict.init(Byte.MAX_VALUE);
   }
 
   void clear() {

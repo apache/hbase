@@ -64,7 +64,7 @@ public class TestKeyValueCompression {
   }
 
   private void runTestCycle(List<KeyValue> kvs) throws Exception {
-    CompressionContext ctx = new CompressionContext(LRUDictionary.class);
+    CompressionContext ctx = new CompressionContext(LRUDictionary.class, false);
     DataOutputBuffer buf = new DataOutputBuffer(BUF_SIZE);
     for (KeyValue kv : kvs) {
       KeyValueCompression.writeKV(buf, kv, ctx);

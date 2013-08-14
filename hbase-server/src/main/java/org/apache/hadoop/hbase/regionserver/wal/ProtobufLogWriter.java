@@ -39,7 +39,7 @@ import org.apache.hadoop.hbase.protobuf.generated.WALProtos.WALTrailer;
  * Writer for protobuf-based WAL.
  */
 @InterfaceAudience.Private
-public class ProtobufLogWriter implements HLog.Writer {
+public class ProtobufLogWriter extends WriterBase {
   private final Log LOG = LogFactory.getLog(this.getClass());
   private FSDataOutputStream output;
   private Codec.Encoder cellEncoder;
@@ -50,10 +50,6 @@ public class ProtobufLogWriter implements HLog.Writer {
   // than this size, it is written/read respectively, with a WARN message in the log.
   private int trailerWarnSize;
 
-  /** Context used by our wal dictionary compressor.
-   * Null if we're not to do our custom dictionary compression. */
-  private CompressionContext compressionContext;
-
   public ProtobufLogWriter() {
     super();
   }
@@ -61,14 +57,7 @@ public class ProtobufLogWriter implements HLog.Writer {
   @Override
   public void init(FileSystem fs, Path path, Configuration conf) throws IOException {
     assert this.output == null;
-    boolean doCompress = conf.getBoolean(HConstants.ENABLE_WAL_COMPRESSION, false);
-    if (doCompress) {
-      try {
-        this.compressionContext = new CompressionContext(LRUDictionary.class);
-      } catch (Exception e) {
-        throw new IOException("Failed to initiate CompressionContext", e);
-      }
-    }
+    boolean doCompress = initializeCompressionContext(conf, path);
     this.trailerWarnSize = conf.getInt(HLog.WAL_TRAILER_WARN_SIZE,
       HLog.DEFAULT_WAL_TRAILER_WARN_SIZE);
     int bufferSize = FSUtils.getDefaultBufferSize(fs);
