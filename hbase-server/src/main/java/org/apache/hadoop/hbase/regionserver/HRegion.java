@@ -2623,7 +2623,7 @@ public class HRegion implements HeapSize { // , Writable{
         Store store = getStore(family);
         for (Cell cell: cells) {
           KeyValue kv = KeyValueUtil.ensureKeyValue(cell);
-          kv.setMemstoreTS(localizedWriteEntry.getWriteNumber());
+          kv.setMvccVersion(localizedWriteEntry.getWriteNumber());
           size += store.add(kv);
         }
       }
@@ -4514,7 +4514,7 @@ public class HRegion implements HeapSize { // , Writable{
           writeEntry = mvcc.beginMemstoreInsert();
           // 6. Apply to memstore
           for (KeyValue kv : mutations) {
-            kv.setMemstoreTS(writeEntry.getWriteNumber());
+            kv.setMvccVersion(writeEntry.getWriteNumber());
             byte[] family = kv.getFamily();
             checkFamily(family);
             addedSize += stores.get(family).add(kv);
@@ -4730,7 +4730,7 @@ public class HRegion implements HeapSize { // , Writable{
                   newKV.getBuffer(), newKV.getQualifierOffset(),
                   kv.getQualifierLength());
   
-              newKV.setMemstoreTS(w.getWriteNumber());
+              newKV.setMvccVersion(w.getWriteNumber());
               kvs.add(newKV);
   
               // Append update to WAL
@@ -4880,7 +4880,7 @@ public class HRegion implements HeapSize { // , Writable{
               // Append new incremented KeyValue to list
               KeyValue newKV =
                 new KeyValue(row, family.getKey(), qualifier, now, Bytes.toBytes(amount));
-              newKV.setMemstoreTS(w.getWriteNumber());
+              newKV.setMvccVersion(w.getWriteNumber());
               kvs.add(newKV);
   
               // Prepare WAL updates

@@ -205,8 +205,8 @@ public abstract class Compactor {
       hasMore = scanner.next(kvs, compactionKVMax);
       // output to writer:
       for (KeyValue kv : kvs) {
-        if (kv.getMemstoreTS() <= smallestReadPoint) {
-          kv.setMemstoreTS(0);
+        if (kv.getMvccVersion() <= smallestReadPoint) {
+          kv.setMvccVersion(0);
         }
         writer.append(kv);
         ++progress.currentCompactedKVs;

@@ -183,7 +183,7 @@ public class StoreFileScanner implements KeyValueScanner {
     // readPoint
     while(enforceMVCC
         && cur != null
-        && (cur.getMemstoreTS() > readPoint)) {
+        && (cur.getMvccVersion() > readPoint)) {
       hfs.next();
       cur = hfs.getKeyValue();
     }
@@ -199,8 +199,8 @@ public class StoreFileScanner implements KeyValueScanner {
     // older KV which was not reset to 0 (because it was
     // not old enough during flush). Make sure that we set it correctly now,
     // so that the comparision order does not change.
-    if (cur.getMemstoreTS() <= readPoint) {
-      cur.setMemstoreTS(0);
+    if (cur.getMvccVersion() <= readPoint) {
+      cur.setMvccVersion(0);
     }
     return true;
   }

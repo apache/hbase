@@ -612,7 +612,7 @@ public class HFileReaderV2 extends AbstractHFileReader {
           KEY_VALUE_LEN_SIZE + currKeyLen + currValueLen,
           currKeyLen);
       if (this.reader.shouldIncludeMemstoreTS()) {
-        ret.setMemstoreTS(currMemstoreTS);
+        ret.setMvccVersion(currMemstoreTS);
       }
       return ret;
     }

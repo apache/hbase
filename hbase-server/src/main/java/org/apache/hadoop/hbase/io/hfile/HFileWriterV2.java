@@ -290,9 +290,9 @@ public class HFileWriterV2 extends AbstractHFileWriter {
    */
   @Override
   public void append(final KeyValue kv) throws IOException {
-    append(kv.getMemstoreTS(), kv.getBuffer(), kv.getKeyOffset(), kv.getKeyLength(),
+    append(kv.getMvccVersion(), kv.getBuffer(), kv.getKeyOffset(), kv.getKeyLength(),
         kv.getBuffer(), kv.getValueOffset(), kv.getValueLength());
-    this.maxMemstoreTS = Math.max(this.maxMemstoreTS, kv.getMemstoreTS());
+    this.maxMemstoreTS = Math.max(this.maxMemstoreTS, kv.getMvccVersion());
   }
 
   /**

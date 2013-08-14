@@ -3213,9 +3213,9 @@ public class TestHRegion extends HBaseTestCase {
               if (Bytes.compareTo(previousKV.getValue(), thisValue) != 0) {
                 LOG.warn("These two KV should have the same value." +
                     " Previous KV:" +
-                    previousKV + "(memStoreTS:" + previousKV.getMemstoreTS() + ")" +
+                    previousKV + "(memStoreTS:" + previousKV.getMvccVersion() + ")" +
                     ", New KV: " +
-                    kv + "(memStoreTS:" + kv.getMemstoreTS() + ")"
+                    kv + "(memStoreTS:" + kv.getMvccVersion() + ")"
                     );
                 assertEquals(0, Bytes.compareTo(previousKV.getValue(), thisValue));
               }
