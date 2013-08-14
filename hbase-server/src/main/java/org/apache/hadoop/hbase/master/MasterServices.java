@@ -230,8 +230,16 @@ public interface MasterServices extends Server {
   /**
    * Get list of table descriptors by namespace
    * @param name namespace name
-   * @return A descriptor
+   * @return descriptors
    * @throws IOException
    */
-  public List<HTableDescriptor> getTableDescriptorsByNamespace(String name) throws IOException;
+  public List<HTableDescriptor> listTableDescriptorsByNamespace(String name) throws IOException;
+
+  /**
+   * Get list of table names by namespace
+   * @param name namespace name
+   * @return table names
+   * @throws IOException
+   */
+  public List<TableName> listTableNamesByNamespace(String name) throws IOException;
 }

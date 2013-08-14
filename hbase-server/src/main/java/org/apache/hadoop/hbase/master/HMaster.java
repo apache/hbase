@@ -25,6 +25,7 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashSet;
@@ -174,6 +175,8 @@ import org.apache.hadoop.hbase.protobuf.generated.MasterMonitorProtos.GetSchemaA
 import org.apache.hadoop.hbase.protobuf.generated.MasterMonitorProtos.GetSchemaAlterStatusResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterMonitorProtos.GetTableDescriptorsRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterMonitorProtos.GetTableDescriptorsResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterMonitorProtos.GetTableNamesRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterMonitorProtos.GetTableNamesResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsMasterRunningRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsMasterRunningResponse;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos;
@@ -2624,6 +2627,27 @@ MasterServices, Server {
   }
 
   /**
+   * Get list of table names
+   * @param controller Unused (set to null).
+   * @param req GetTableNamesRequest
+   * @return GetTableNamesResponse
+   * @throws ServiceException
+   */
+  public GetTableNamesResponse getTableNames(
+        RpcController controller, GetTableNamesRequest req) throws ServiceException {
+    try {
+      Collection<HTableDescriptor> descriptors = this.tableDescriptors.getAll().values();
+      GetTableNamesResponse.Builder builder = GetTableNamesResponse.newBuilder();
+      for (HTableDescriptor descriptor: descriptors) {
+        builder.addTableNames(ProtobufUtil.toProtoTableName(descriptor.getTableName()));
+      }
+      return builder.build();
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+  }
+
+  /**
    * Compute the average load across all region servers.
    * Currently, this uses a very naive computation - just uses the number of
    * regions being served, ignoring stats about number of requests.
@@ -3008,14 +3032,30 @@ MasterServices, Server {
   }
 
   @Override
-  public MasterAdminProtos.GetTableDescriptorsByNamespaceResponse getTableDescriptorsByNamespace(
-      RpcController controller, MasterAdminProtos.GetTableDescriptorsByNamespaceRequest request)
+  public MasterAdminProtos.ListTableDescriptorsByNamespaceResponse listTableDescriptorsByNamespace(
+      RpcController controller, MasterAdminProtos.ListTableDescriptorsByNamespaceRequest request)
       throws ServiceException {
     try {
-      MasterAdminProtos.GetTableDescriptorsByNamespaceResponse.Builder b =
-          MasterAdminProtos.GetTableDescriptorsByNamespaceResponse.newBuilder();
-      for(HTableDescriptor htd: getTableDescriptorsByNamespace(request.getNamespaceName())) {
+      MasterAdminProtos.ListTableDescriptorsByNamespaceResponse.Builder b =
+          MasterAdminProtos.ListTableDescriptorsByNamespaceResponse.newBuilder();
+      for(HTableDescriptor htd: listTableDescriptorsByNamespace(request.getNamespaceName())) {
         b.addTableSchema(htd.convert());
+      }
+      return b.build();
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+  }
+
+  @Override
+  public MasterAdminProtos.ListTableNamesByNamespaceResponse listTableNamesByNamespace(
+      RpcController controller, MasterAdminProtos.ListTableNamesByNamespaceRequest request)
+      throws ServiceException {
+    try {
+      MasterAdminProtos.ListTableNamesByNamespaceResponse.Builder b =
+          MasterAdminProtos.ListTableNamesByNamespaceResponse.newBuilder();
+      for (TableName tableName: listTableNamesByNamespace(request.getNamespaceName())) {
+        b.addTableName(ProtobufUtil.toProtoTableName(tableName));
       }
       return b.build();
     } catch (IOException e) {
@@ -3074,7 +3114,16 @@ MasterServices, Server {
     return Lists.newArrayList(tableNamespaceManager.list());
   }
 
-  public List<HTableDescriptor> getTableDescriptorsByNamespace(String name) throws IOException {
+  public List<HTableDescriptor> listTableDescriptorsByNamespace(String name) throws IOException {
     return Lists.newArrayList(tableDescriptors.getByNamespace(name).values());
   }
+
+  public List<TableName> listTableNamesByNamespace(String name) throws IOException {
+    List<TableName> tableNames = Lists.newArrayList();
+    for (HTableDescriptor descriptor: tableDescriptors.getByNamespace(name).values()) {
+      tableNames.add(TableName.valueOf(name, descriptor.getNameAsString()));
+    }
+    return tableNames;
+  }
+
 }

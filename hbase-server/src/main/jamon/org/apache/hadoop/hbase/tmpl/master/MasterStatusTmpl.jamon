@@ -298,7 +298,7 @@ AssignmentManager assignmentManager = master.getAssignmentManager();
 
 <%def catalogTables>
 <%java>
- HTableDescriptor[] sysTables = admin.getTableDescriptorsByNamespace(NamespaceDescriptor
+ HTableDescriptor[] sysTables = admin.listTableDescriptorsByNamespace(NamespaceDescriptor
  .SYSTEM_NAMESPACE_NAME_STR);
 </%java>
 

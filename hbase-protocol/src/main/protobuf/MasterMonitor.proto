@@ -45,6 +45,13 @@ message GetTableDescriptorsResponse {
   repeated TableSchema table_schema = 1;
 }
 
+message GetTableNamesRequest {
+}
+
+message GetTableNamesResponse {
+  repeated TableName table_names = 1;
+}
+
 message GetClusterStatusRequest {
 }
 
@@ -60,6 +67,10 @@ service MasterMonitorService {
   /** Get list of TableDescriptors for requested tables. */
   rpc GetTableDescriptors(GetTableDescriptorsRequest)
     returns(GetTableDescriptorsResponse);
+
+  /** Get the list of table names. */
+  rpc GetTableNames(GetTableNamesRequest)
+    returns(GetTableNamesResponse);
 
   /** Return cluster status. */
   rpc GetClusterStatus(GetClusterStatusRequest)

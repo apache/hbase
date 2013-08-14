@@ -109,7 +109,7 @@ public class TestNamespace {
         TableName.META_TABLE_NAME,
         TableName.NAMESPACE_TABLE_NAME);
     HTableDescriptor[] descs =
-        admin.getTableDescriptorsByNamespace(NamespaceDescriptor.SYSTEM_NAMESPACE.getName());
+        admin.listTableDescriptorsByNamespace(NamespaceDescriptor.SYSTEM_NAMESPACE.getName());
     assertEquals(systemTables.size(), descs.length);
     for (HTableDescriptor desc : descs) {
       assertTrue(systemTables.contains(desc.getTableName()));
