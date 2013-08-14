@@ -24,6 +24,6 @@ public interface RpcCallContext extends Delayable {
    * If called from outside the context of IPC, this does nothing.
    * @throws CallerDisconnectedException
    */
-  void throwExceptionIfCallerDisconnected() throws CallerDisconnectedException;
+  void throwExceptionIfCallerDisconnected(String regionName) throws CallerDisconnectedException;
 
 }

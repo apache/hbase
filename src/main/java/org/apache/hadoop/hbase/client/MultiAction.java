@@ -119,4 +119,24 @@ public final class MultiAction<R> implements Writable {
     }
   }
 
+  @Override
+  public String toString() {
+    StringBuffer buf = new StringBuffer(256);
+    boolean afterFirst = false;
+    for (Map.Entry<byte[], List<Action<R>>> e : actions.entrySet()) {
+      if (afterFirst) {
+        buf.append(", ");
+      } else {
+        afterFirst = true;
+      }
+      buf.append("Region=");
+      buf.append(Bytes.toString(e.getKey()));
+      buf.append(" of ");
+      buf.append(e.getValue().size());
+      buf.append(" actions and first row key= ");
+      buf.append(Bytes.toString(e.getValue().get(0).getAction().getRow()));
+    }
+    return buf.toString();
+  }
+
 }

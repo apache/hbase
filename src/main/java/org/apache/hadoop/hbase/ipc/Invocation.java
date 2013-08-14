@@ -22,6 +22,7 @@ package org.apache.hadoop.hbase.ipc;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.io.HbaseObjectWritable;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.VersionMismatchException;
 import org.apache.hadoop.io.VersionedWritable;
 
@@ -147,9 +148,12 @@ public class Invocation extends VersionedWritable implements Configurable {
     buffer.append(methodName);
     buffer.append("(");
     for (int i = 0; i < parameters.length; i++) {
-      if (i != 0)
+      if (i != 0) {
         buffer.append(", ");
-      buffer.append(parameters[i]);
+      }
+      // If we see byte[], print smarter
+      buffer.append(parameters[i] instanceof byte[] ?
+          Bytes.toStringBinary((byte[])parameters[i]) : parameters[i]);
     }
     buffer.append(")");
     buffer.append(", rpc version="+RPC_VERSION);
