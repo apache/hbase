@@ -1650,6 +1650,7 @@ public class RpcServer implements RpcServerInterface {
       try {
         if (header.hasRequestParam() && header.getRequestParam()) {
           md = this.service.getDescriptorForType().findMethodByName(header.getMethodName());
+          if (md == null) throw new UnsupportedOperationException(header.getMethodName());
           Builder builder = this.service.getRequestPrototype(md).newBuilderForType();
           // To read the varint, I need an inputstream; might as well be a CIS.
           cis = CodedInputStream.newInstance(buf, offset, buf.length);
