@@ -29,9 +29,12 @@ import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
+import org.apache.hadoop.hbase.protobuf.generated.Tracing;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Pair;
+import org.cloudera.htrace.Span;
+import org.cloudera.htrace.Trace;
 
 import java.io.IOException;
 import java.io.InterruptedIOException;
@@ -407,7 +410,7 @@ class AsyncProcess<CResult> {
 
       incTaskCounters(regionName);
 
-      Runnable runnable = new Runnable() {
+      Runnable runnable = Trace.wrap("AsyncProcess.sendMultiAction", new Runnable() {
         @Override
         public void run() {
           MultiResponse res;
@@ -427,7 +430,7 @@ class AsyncProcess<CResult> {
             decTaskCounters(regionName);
           }
         }
-      };
+      });
 
       try {
         this.pool.submit(runnable);

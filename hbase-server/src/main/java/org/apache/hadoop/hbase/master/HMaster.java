@@ -788,8 +788,7 @@ MasterServices, Server {
       status.setStatus("Initializing master coprocessors");
       this.cpHost = new MasterCoprocessorHost(this, this.conf);
 
-      spanReceiverHost = new SpanReceiverHost(getConfiguration());
-      spanReceiverHost.loadSpanReceivers();
+      spanReceiverHost = SpanReceiverHost.getInstance(getConfiguration());
 
       // start up all service threads.
       status.setStatus("Initializing master service threads");

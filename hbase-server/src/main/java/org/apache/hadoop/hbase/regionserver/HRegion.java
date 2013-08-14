@@ -3421,7 +3421,7 @@ public class HRegion implements HeapSize { // , Writable{
 
     RegionScannerImpl(Scan scan, List<KeyValueScanner> additionalScanners, HRegion region)
         throws IOException {
-      // DebugPrint.println("HRegionScanner.<init>");
+
       this.region = region;
       this.maxResultSize = scan.getMaxResultSize();
       if (scan.hasFilter()) {

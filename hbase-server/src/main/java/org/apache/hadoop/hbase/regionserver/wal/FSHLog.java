@@ -63,6 +63,8 @@ import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.HasThread;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.util.StringUtils;
+import org.cloudera.htrace.Trace;
+import org.cloudera.htrace.TraceScope;
 
 /**
  * HLog stores all the edits to the HStore.  Its the hbase write-ahead-log
@@ -874,35 +876,40 @@ class FSHLog implements HLog, Syncable {
       if (this.closed) {
         throw new IOException("Cannot append; log is closed");
       }
-      long txid = 0;
-      synchronized (this.updateLock) {
-        long seqNum = obtainSeqNum();
-        // The 'lastSeqWritten' map holds the sequence number of the oldest
-        // write for each region (i.e. the first edit added to the particular
-        // memstore). . When the cache is flushed, the entry for the
-        // region being flushed is removed if the sequence number of the flush
-        // is greater than or equal to the value in lastSeqWritten.
-        // Use encoded name.  Its shorter, guaranteed unique and a subset of
-        // actual  name.
-        byte [] encodedRegionName = info.getEncodedNameAsBytes();
-        if (isInMemstore) this.oldestUnflushedSeqNums.putIfAbsent(encodedRegionName, seqNum);
-        HLogKey logKey = makeKey(encodedRegionName, tableName, seqNum, now, clusterId);
-        doWrite(info, logKey, edits, htd);
-        this.numEntries.incrementAndGet();
-        txid = this.unflushedEntries.incrementAndGet();
-        if (htd.isDeferredLogFlush()) {
-          lastDeferredTxid = txid;
+      TraceScope traceScope = Trace.startSpan("FSHlog.append");
+      try {
+        long txid = 0;
+        synchronized (this.updateLock) {
+          long seqNum = obtainSeqNum();
+          // The 'lastSeqWritten' map holds the sequence number of the oldest
+          // write for each region (i.e. the first edit added to the particular
+          // memstore). . When the cache is flushed, the entry for the
+          // region being flushed is removed if the sequence number of the flush
+          // is greater than or equal to the value in lastSeqWritten.
+          // Use encoded name.  Its shorter, guaranteed unique and a subset of
+          // actual  name.
+          byte [] encodedRegionName = info.getEncodedNameAsBytes();
+          if (isInMemstore) this.oldestUnflushedSeqNums.putIfAbsent(encodedRegionName, seqNum);
+          HLogKey logKey = makeKey(encodedRegionName, tableName, seqNum, now, clusterId);
+          doWrite(info, logKey, edits, htd);
+          this.numEntries.incrementAndGet();
+          txid = this.unflushedEntries.incrementAndGet();
+          if (htd.isDeferredLogFlush()) {
+            lastDeferredTxid = txid;
+          }
         }
+        // Sync if catalog region, and if not then check if that table supports
+        // deferred log flushing
+        if (doSync &&
+            (info.isMetaRegion() ||
+            !htd.isDeferredLogFlush())) {
+          // sync txn to file system
+          this.sync(txid);
+        }
+        return txid;
+      } finally {
+        traceScope.close();
       }
-      // Sync if catalog region, and if not then check if that table supports
-      // deferred log flushing
-      if (doSync &&
-          (info.isMetaRegion() ||
-          !htd.isDeferredLogFlush())) {
-        // sync txn to file system
-        this.sync(txid);
-      }
-      return txid;
     }
 
   @Override

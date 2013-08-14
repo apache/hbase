@@ -993,7 +993,7 @@ public class RpcClient {
         RequestHeader.Builder builder = RequestHeader.newBuilder();
         builder.setCallId(call.id);
         if (Trace.isTracing()) {
-          Span s = Trace.currentTrace();
+          Span s = Trace.currentSpan();
           builder.setTraceInfo(RPCTInfo.newBuilder().
             setParentId(s.getSpanId()).setTraceId(s.getTraceId()));
         }
