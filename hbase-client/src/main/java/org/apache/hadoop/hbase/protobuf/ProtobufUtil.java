@@ -2251,4 +2251,16 @@ public final class ProtobufUtil {
         .setNamespace(ByteString.copyFrom(tableName.getNamespace()))
         .setQualifier(ByteString.copyFrom(tableName.getQualifier())).build();
   }
+
+  public static TableName[] getTableNameArray(List<HBaseProtos.TableName> tableNamesList) {
+    if (tableNamesList == null) {
+      return new TableName[0];
+    }
+    TableName[] tableNames = new TableName[tableNamesList.size()];
+    for (int i = 0; i < tableNamesList.size(); i++) {
+      tableNames[i] = toTableName(tableNamesList.get(i));
+    }
+    return tableNames;
+  }
+
 }

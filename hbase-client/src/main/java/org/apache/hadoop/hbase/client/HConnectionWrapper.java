@@ -164,6 +164,16 @@ public class HConnectionWrapper implements HConnection {
   }
 
   @Override
+  public String[] getTableNames() throws IOException {
+    return hconnection.getTableNames();
+  }
+
+  @Override
+  public TableName[] listTableNames() throws IOException {
+    return hconnection.listTableNames();
+  }
+
+  @Override
   public HTableDescriptor getHTableDescriptor(TableName tableName) throws IOException {
     return hconnection.getHTableDescriptor(tableName);
   }

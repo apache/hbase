@@ -220,6 +220,15 @@ public interface HConnection extends Abortable, Closeable {
    */
   HTableDescriptor[] listTables() throws IOException;
 
+  // This is a bit ugly - We call this getTableNames in 0.94 and the
+  // successor function, returning TableName, listTableNames in later versions
+  // because Java polymorphism doesn't consider return value types
+
+  @Deprecated
+  String[] getTableNames() throws IOException;
+
+  TableName[] listTableNames() throws IOException;
+
   /**
    * @param tableName table name
    * @return table metadata

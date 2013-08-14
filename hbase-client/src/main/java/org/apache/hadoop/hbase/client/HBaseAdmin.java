@@ -321,6 +321,52 @@ public class HBaseAdmin implements Abortable, Closeable {
     return listTables(Pattern.compile(regex));
   }
 
+  /**
+   * List all of the names of userspace tables.
+   * @return String[] table names
+   * @throws IOException if a remote or network exception occurs
+   */
+  @Deprecated
+  public String[] getTableNames() throws IOException {
+    return this.connection.getTableNames();
+  }
+
+  /**
+   * List all of the names of userspace tables matching the given regular expression.
+   * @param pattern The regular expression to match against
+   * @return String[] table names
+   * @throws IOException if a remote or network exception occurs
+   */
+  @Deprecated
+  public String[] getTableNames(Pattern pattern) throws IOException {
+    List<String> matched = new ArrayList<String>();
+    for (String name: this.connection.getTableNames()) {
+      if (pattern.matcher(name).matches()) {
+        matched.add(name);
+      }
+    }
+    return matched.toArray(new String[matched.size()]);
+  }
+
+  /**
+   * List all of the names of userspace tables matching the given regular expression.
+   * @param regex The regular expression to match against
+   * @return String[] table names
+   * @throws IOException if a remote or network exception occurs
+   */
+  @Deprecated
+  public String[] getTableNames(String regex) throws IOException {
+    return getTableNames(Pattern.compile(regex));
+  }
+
+  /**
+   * List all of the names of userspace tables.
+   * @return TableName[] table names
+   * @throws IOException if a remote or network exception occurs
+   */
+  public TableName[] listTableNames() throws IOException {
+    return this.connection.listTableNames();
+  }
 
   /**
    * Method for getting the tableDescriptor
@@ -2155,14 +2201,14 @@ public class HBaseAdmin implements Abortable, Closeable {
    * @return A descriptor
    * @throws IOException
    */
-  public HTableDescriptor[] getTableDescriptorsByNamespace(final String name) throws IOException {
+  public HTableDescriptor[] listTableDescriptorsByNamespace(final String name) throws IOException {
     return
         executeCallable(new MasterAdminCallable<HTableDescriptor[]>(getConnection()) {
           @Override
           public HTableDescriptor[] call() throws Exception {
             List<TableSchema> list =
-                masterAdmin.getTableDescriptorsByNamespace(null,
-                    MasterAdminProtos.GetTableDescriptorsByNamespaceRequest.newBuilder()
+                masterAdmin.listTableDescriptorsByNamespace(null,
+                    MasterAdminProtos.ListTableDescriptorsByNamespaceRequest.newBuilder()
                         .setNamespaceName(name).build())
                             .getTableSchemaList();
             HTableDescriptor[] res = new HTableDescriptor[list.size()];
@@ -2171,6 +2217,31 @@ public class HBaseAdmin implements Abortable, Closeable {
               res[i] = HTableDescriptor.convert(list.get(i));
             }
             return res;
+          }
+        });
+  }
+
+  /**
+   * Get list of table names by namespace
+   * @param name namespace name
+   * @return The list of table names in the namespace
+   * @throws IOException
+   */
+  public TableName[] listTableNamesByNamespace(final String name) throws IOException {
+    return
+        executeCallable(new MasterAdminCallable<TableName[]>(getConnection()) {
+          @Override
+          public TableName[] call() throws Exception {
+            List<HBaseProtos.TableName> tableNames =
+                masterAdmin.listTableNamesByNamespace(null,
+                    MasterAdminProtos.ListTableNamesByNamespaceRequest.newBuilder()
+                        .setNamespaceName(name).build())
+                .getTableNameList();
+            TableName[] result = new TableName[tableNames.size()];
+            for (int i = 0; i < tableNames.size(); i++) {
+              result[i] = ProtobufUtil.toTableName(tableNames.get(i));
+            }
+            return result;
           }
         });
   }
@@ -2282,7 +2353,6 @@ public class HBaseAdmin implements Abortable, Closeable {
     }
     return getTableDescriptorsByTableName(tableNames);
   }
-
 
   /**
    * Roll the log writer. That is, start writing log messages to a new file.

@@ -86,9 +86,13 @@ import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos
     .ListNamespaceDescriptorsRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos
-    .GetTableDescriptorsByNamespaceResponse;
+    .ListTableDescriptorsByNamespaceResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos
-    .GetTableDescriptorsByNamespaceRequest;
+    .ListTableDescriptorsByNamespaceRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos
+    .ListTableNamesByNamespaceResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos
+    .ListTableNamesByNamespaceRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.AddColumnRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.AddColumnResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.AssignRegionRequest;
@@ -148,6 +152,8 @@ import org.apache.hadoop.hbase.protobuf.generated.MasterMonitorProtos.GetSchemaA
 import org.apache.hadoop.hbase.protobuf.generated.MasterMonitorProtos.GetSchemaAlterStatusResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterMonitorProtos.GetTableDescriptorsRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterMonitorProtos.GetTableDescriptorsResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterMonitorProtos.GetTableNamesRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterMonitorProtos.GetTableNamesResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterMonitorProtos.MasterMonitorService;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsMasterRunningRequest;
@@ -2114,8 +2120,14 @@ public class HConnectionManager {
         }
 
         @Override
-        public GetTableDescriptorsByNamespaceResponse getTableDescriptorsByNamespace(RpcController controller, GetTableDescriptorsByNamespaceRequest request) throws ServiceException {
-          return stub.getTableDescriptorsByNamespace(controller, request);
+        public ListTableDescriptorsByNamespaceResponse listTableDescriptorsByNamespace(RpcController controller, ListTableDescriptorsByNamespaceRequest request) throws ServiceException {
+          return stub.listTableDescriptorsByNamespace(controller, request);
+        }
+
+        @Override
+        public ListTableNamesByNamespaceResponse listTableNamesByNamespace(RpcController controller,
+              ListTableNamesByNamespaceRequest request) throws ServiceException {
+          return stub.listTableNamesByNamespace(controller, request);
         }
 
         @Override
@@ -2157,6 +2169,13 @@ public class HConnectionManager {
             RpcController controller, GetTableDescriptorsRequest request)
             throws ServiceException {
           return stub.getTableDescriptors(controller, request);
+        }
+
+        @Override
+        public GetTableNamesResponse getTableNames(
+            RpcController controller, GetTableNamesRequest request)
+            throws ServiceException {
+          return stub.getTableNames(controller, request);
         }
 
         @Override
@@ -2612,6 +2631,30 @@ public class HConnectionManager {
         GetTableDescriptorsRequest req =
           RequestConverter.buildGetTableDescriptorsRequest((List<TableName>)null);
         return ProtobufUtil.getHTableDescriptorArray(master.getTableDescriptors(null, req));
+      } catch (ServiceException se) {
+        throw ProtobufUtil.getRemoteException(se);
+      } finally {
+        master.close();
+      }
+    }
+
+    @Override
+    public String[] getTableNames() throws IOException {
+      TableName[] tableNames = listTableNames();
+      String result[] = new String[tableNames.length];
+      for (int i = 0; i < tableNames.length; i++) {
+        result[i] = tableNames[i].getNameAsString();
+      }
+      return result;
+    }
+
+    @Override
+    public TableName[] listTableNames() throws IOException {
+      MasterMonitorKeepAliveConnection master = getKeepAliveMasterMonitorService();
+      try {
+        return ProtobufUtil.getTableNameArray(master.getTableNames(null,
+            GetTableNamesRequest.newBuilder().build())
+          .getTableNamesList());
       } catch (ServiceException se) {
         throw ProtobufUtil.getRemoteException(se);
       } finally {

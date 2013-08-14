@@ -176,14 +176,21 @@ message ListNamespaceDescriptorsResponse {
   repeated NamespaceDescriptor namespaceDescriptor = 1;
 }
 
-message GetTableDescriptorsByNamespaceRequest {
+message ListTableDescriptorsByNamespaceRequest {
   required string namespaceName = 1;
 }
 
-message GetTableDescriptorsByNamespaceResponse {
+message ListTableDescriptorsByNamespaceResponse {
   repeated TableSchema tableSchema = 1;
 }
 
+message ListTableNamesByNamespaceRequest {
+  required string namespaceName = 1;
+}
+
+message ListTableNamesByNamespaceResponse {
+  repeated TableName tableName = 1;
+}
 
 /* Cluster-level protobufs */
 
@@ -454,6 +461,10 @@ service MasterAdminService {
     returns(ListNamespaceDescriptorsResponse);
 
   /** returns a list of tables for a given namespace*/
-  rpc GetTableDescriptorsByNamespace(GetTableDescriptorsByNamespaceRequest)
-    returns(GetTableDescriptorsByNamespaceResponse);
+  rpc ListTableDescriptorsByNamespace(ListTableDescriptorsByNamespaceRequest)
+    returns(ListTableDescriptorsByNamespaceResponse);
+
+  /** returns a list of tables for a given namespace*/
+  rpc ListTableNamesByNamespace(ListTableNamesByNamespaceRequest)
+    returns(ListTableNamesByNamespaceResponse);
 }

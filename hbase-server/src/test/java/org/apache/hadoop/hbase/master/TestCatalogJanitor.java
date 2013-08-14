@@ -330,8 +330,13 @@ public class TestCatalogJanitor {
     }
 
     @Override
-    public List<HTableDescriptor> getTableDescriptorsByNamespace(String name) throws IOException {
+    public List<HTableDescriptor> listTableDescriptorsByNamespace(String name) throws IOException {
       return null;  //To change body of implemented methods use File | Settings | File Templates.
+    }
+
+    @Override
+    public List<TableName> listTableNamesByNamespace(String name) throws IOException {
+      return null;
     }
 
     @Override

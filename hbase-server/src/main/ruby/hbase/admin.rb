@@ -42,7 +42,7 @@ module Hbase
     #----------------------------------------------------------------------------------------------
     # Returns a list of tables in hbase
     def list(regex = ".*")
-        @admin.listTables(regex).map { |t| t.getTableName().getNameAsString }
+        @admin.getTableNames(regex)
     end
 
     #----------------------------------------------------------------------------------------------
@@ -745,7 +745,7 @@ module Hbase
     # Returns a list of tables in namespace
     def list_namespace_tables(namespace_name)
       unless namespace_name.nil?
-        return @admin.getTableDescriptorsByNamespace(namespace_name).map { |t| t.getTableName().getNameAsString }
+        return @admin.listTableNamesByNamespace(namespace_name).map { |t| t.getQualifierAsString() }
       end
 
       raise(ArgumentError, "Failed to find namespace named #{namespace_name}")

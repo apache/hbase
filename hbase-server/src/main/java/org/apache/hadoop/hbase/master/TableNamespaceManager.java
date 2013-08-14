@@ -155,7 +155,7 @@ public class TableNamespaceManager {
     if (NamespaceDescriptor.RESERVED_NAMESPACES.contains(name)) {
       throw new ConstraintException("Reserved namespace "+name+" cannot be removed.");
     }
-    int tableCount = masterServices.getTableDescriptorsByNamespace(name).size();
+    int tableCount = masterServices.listTableDescriptorsByNamespace(name).size();
     if (tableCount > 0) {
       throw new ConstraintException("Only empty namespaces can be removed. " +
           "Namespace "+name+" has "+tableCount+" tables");
