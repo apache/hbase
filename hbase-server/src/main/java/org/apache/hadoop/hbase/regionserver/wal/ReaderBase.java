@@ -27,6 +27,7 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos.WALTrailer;
+import org.apache.hadoop.hbase.util.FSUtils;
 
 @InterfaceAudience.Private
 public abstract class ReaderBase implements HLog.Reader {
@@ -67,7 +68,8 @@ public abstract class ReaderBase implements HLog.Reader {
       // If compression is enabled, new dictionaries are created here.
       try {
         if (compressionContext == null) {
-          compressionContext = new CompressionContext(LRUDictionary.class);
+          compressionContext = new CompressionContext(LRUDictionary.class,
+              FSUtils.isRecoveredEdits(path));
         } else {
           compressionContext.clear();
         }

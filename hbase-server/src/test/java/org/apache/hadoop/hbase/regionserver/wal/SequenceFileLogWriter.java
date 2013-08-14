@@ -46,7 +46,7 @@ import org.apache.hadoop.io.compress.DefaultCodec;
  * SequenceFile.Writer. Legacy implementation only used for compat tests.
  */
 @InterfaceAudience.Private
-public class SequenceFileLogWriter implements HLog.Writer {
+public class SequenceFileLogWriter extends WriterBase {
   private final Log LOG = LogFactory.getLog(this.getClass());
   // The sequence file we delegate to.
   private SequenceFile.Writer writer;
@@ -58,13 +58,6 @@ public class SequenceFileLogWriter implements HLog.Writer {
   private static final Text WAL_VERSION_KEY = new Text("version");
   private static final Text WAL_COMPRESSION_TYPE_KEY = new Text("compression.type");
   private static final Text DICTIONARY_COMPRESSION_TYPE = new Text("dictionary");
-  
-  /**
-   * Context used by our wal dictionary compressor.  Null if we're not to do
-   * our custom dictionary compression.  This custom WAL compression is distinct
-   * from sequencefile native compression.
-   */
-  private CompressionContext compressionContext;
 
   /**
    * Default constructor.
@@ -72,7 +65,6 @@ public class SequenceFileLogWriter implements HLog.Writer {
   public SequenceFileLogWriter() {
     super();
   }
-
   /**
    * Create sequence file Metadata for our WAL file with version and compression
    * type (if any).
@@ -94,19 +86,7 @@ public class SequenceFileLogWriter implements HLog.Writer {
   @Override
   public void init(FileSystem fs, Path path, Configuration conf)
   throws IOException {
-    // Should we do our custom WAL compression?
-    boolean compress = conf.getBoolean(HConstants.ENABLE_WAL_COMPRESSION, false);
-    if (compress) {
-      try {
-        if (this.compressionContext == null) {
-          this.compressionContext = new CompressionContext(LRUDictionary.class);
-        } else {
-          this.compressionContext.clear();
-        }
-      } catch (Exception e) {
-        throw new IOException("Failed to initiate CompressionContext", e);
-      }
-    }
+    boolean compress = initializeCompressionContext(conf, path);
 
     // Create a SF.Writer instance.
     try {

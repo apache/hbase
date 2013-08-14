@@ -74,6 +74,7 @@ public class TestCompressor {
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
     DataOutputStream dos = new DataOutputStream(baos);
     Dictionary dictionary = new LRUDictionary();
+    dictionary.init(Short.MAX_VALUE);
     byte [] blahBytes = Bytes.toBytes("blah");
     Compressor.writeCompressed(blahBytes, 0, blahBytes.length, dos, dictionary);
     dos.close();
@@ -81,6 +82,7 @@ public class TestCompressor {
     DataInputStream dis =
       new DataInputStream(new ByteArrayInputStream(dosbytes));
     dictionary = new LRUDictionary();
+    dictionary.init(Short.MAX_VALUE);
     byte [] product = Compressor.readCompressed(dis, dictionary);
     assertTrue(Bytes.equals(blahBytes, product));
   }

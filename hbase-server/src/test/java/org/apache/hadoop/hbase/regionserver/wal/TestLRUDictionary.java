@@ -41,6 +41,7 @@ public class TestLRUDictionary {
   @Before
   public void setUp() throws Exception {
     testee = new LRUDictionary();
+    testee.init(Short.MAX_VALUE);
   }
 
   @Test
@@ -110,7 +111,7 @@ public class TestLRUDictionary {
   @Test
   public void TestLRUPolicy(){
     //start by filling the dictionary up with byte arrays
-    for (int i = 0; i < LRUDictionary.BidirectionalLRUMap.MAX_SIZE; i++) {
+    for (int i = 0; i < Short.MAX_VALUE; i++) {
       testee.findEntry((BigInteger.valueOf(i)).toByteArray(), 0,
           (BigInteger.valueOf(i)).toByteArray().length);
     }
@@ -132,13 +133,13 @@ public class TestLRUDictionary {
     assertTrue(testee.findEntry(BigInteger.ZERO.toByteArray(), 0,
       BigInteger.ZERO.toByteArray().length) != -1);
     // Now go from beyond 1 to the end.
-    for(int i = 1; i < LRUDictionary.BidirectionalLRUMap.MAX_SIZE; i++) {
+    for(int i = 1; i < Short.MAX_VALUE; i++) {
       assertTrue(testee.findEntry(BigInteger.valueOf(i).toByteArray(), 0,
           BigInteger.valueOf(i).toByteArray().length) == -1);
     }
 
     // check we can find all of these.
-    for (int i = 0; i < LRUDictionary.BidirectionalLRUMap.MAX_SIZE; i++) {
+    for (int i = 0; i < Short.MAX_VALUE; i++) {
       assertTrue(testee.findEntry(BigInteger.valueOf(i).toByteArray(), 0,
           BigInteger.valueOf(i).toByteArray().length) != -1);
     }

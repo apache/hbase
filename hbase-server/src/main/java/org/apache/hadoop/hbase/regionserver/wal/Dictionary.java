@@ -30,6 +30,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 interface Dictionary {
   byte NOT_IN_DICTIONARY = -1;
 
+  void init(int initialSize);
   /**
    * Gets an entry from the dictionary.
    * 
