@@ -18,6 +18,7 @@
 #
 
 include Java
+java_import java.util.Arrays
 java_import org.apache.hadoop.hbase.util.Pair
 java_import org.apache.hadoop.hbase.util.RegionSplitter
 java_import org.apache.hadoop.hbase.util.Bytes
@@ -42,7 +43,7 @@ module Hbase
     #----------------------------------------------------------------------------------------------
     # Returns a list of tables in hbase
     def list(regex = ".*")
-        @admin.getTableNames(regex)
+      Arrays.asList(@admin.getTableNames(regex))
     end
 
     #----------------------------------------------------------------------------------------------
