@@ -444,12 +444,14 @@ public class RpcServer implements RpcServerInterface {
     }
 
     @Override
-    public void throwExceptionIfCallerDisconnected() throws CallerDisconnectedException {
+    public void throwExceptionIfCallerDisconnected(String regionName)
+        throws CallerDisconnectedException {
       if (!connection.channel.isOpen()) {
         long afterTime = System.currentTimeMillis() - timestamp;
         throw new CallerDisconnectedException(
-            "Aborting call " + this + " after " + afterTime + " ms, since " +
-            "caller disconnected");
+            "Aborting on region " + regionName + ", call " +
+             this + " after " + afterTime + " ms, since " +
+             "caller disconnected");
       }
     }
 

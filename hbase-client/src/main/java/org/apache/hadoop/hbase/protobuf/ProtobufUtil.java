@@ -2227,8 +2227,27 @@ public final class ProtobufUtil {
       return TextFormat.shortDebugString(m);
     } else if (m instanceof MutationProto) {
       return toShortString((MutationProto)m);
+    } else if (m instanceof GetRequest) {
+      GetRequest r = (GetRequest) m;
+      return "region= " + getStringForByteString(r.getRegion().getValue()) +
+          ", row=" + getStringForByteString(r.getGet().getRow());
+    } else if (m instanceof ClientProtos.MultiRequest) {
+      ClientProtos.MultiRequest r = (ClientProtos.MultiRequest) m;
+      ClientProtos.MultiAction action = r.getActionList().get(0);
+      return "region= " + getStringForByteString(r.getRegion().getValue()) +
+          ", for " + r.getActionCount() +
+          " actions and 1st row key=" + getStringForByteString(action.hasMutation() ?
+          action.getMutation().getRow() : action.getGet().getRow());
+    } else if (m instanceof ClientProtos.MutateRequest) {
+      ClientProtos.MutateRequest r = (ClientProtos.MutateRequest) m;
+      return "region= " + getStringForByteString(r.getRegion().getValue()) +
+          ", row=" + getStringForByteString(r.getMutation().getRow());
     }
     return "TODO: " + m.getClass().toString();
+  }
+
+  private static String getStringForByteString(ByteString bs) {
+    return Bytes.toStringBinary(bs.toByteArray());
   }
 
   /**
