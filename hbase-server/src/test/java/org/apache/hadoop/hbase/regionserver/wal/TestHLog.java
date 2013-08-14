@@ -726,17 +726,18 @@ public class TestHLog  {
     Assert.assertNull(HLogUtil.getServerNameFromHLogDirectoryName(conf, hl + "qdf"));
     Assert.assertNull(HLogUtil.getServerNameFromHLogDirectoryName(conf, "sfqf" + hl + "qdf"));
 
+    final String wals = "/WALs/";
     ServerName parsed = HLogUtil.getServerNameFromHLogDirectoryName(conf,
-        FSUtils.getRootDir(conf).toUri().toString() +
-            "/.logs/" + sn + "/localhost%2C32984%2C1343316388997.1343316390417");
+      FSUtils.getRootDir(conf).toUri().toString() + wals + sn +
+      "/localhost%2C32984%2C1343316388997.1343316390417");
     Assert.assertEquals("standard",  sn, parsed);
 
     parsed = HLogUtil.getServerNameFromHLogDirectoryName(conf, hl + "/qdf");
     Assert.assertEquals("subdir", sn, parsed);
 
     parsed = HLogUtil.getServerNameFromHLogDirectoryName(conf,
-        FSUtils.getRootDir(conf).toUri().toString() +
-            "/.logs/" + sn + "-splitting/localhost%3A57020.1340474893931");
+      FSUtils.getRootDir(conf).toUri().toString() + wals + sn +
+      "-splitting/localhost%3A57020.1340474893931");
     Assert.assertEquals("split", sn, parsed);
   }
 

@@ -19,8 +19,11 @@
  */
 package org.apache.hadoop.hbase.migration;
 
-import com.google.common.collect.Lists;
-import com.google.common.primitives.Ints;
+import java.io.IOException;
+import java.util.Arrays;
+import java.util.Comparator;
+import java.util.List;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -37,7 +40,6 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.catalog.MetaEditor;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
-import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
@@ -50,9 +52,8 @@ import org.apache.hadoop.hbase.util.FSTableDescriptors;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.util.Tool;
 
-import java.io.IOException;
-import java.util.Comparator;
-import java.util.List;
+import com.google.common.collect.Lists;
+import com.google.common.primitives.Ints;
 
 /**
  * Upgrades old 0.94 filesystem layout to namespace layout
@@ -61,6 +62,8 @@ import java.util.List;
  * - creates system namespace directory and move .META. table there
  * renaming .META. table to hbase:meta,
  * this in turn would require to re-encode the region directory name
+ *
+ * <p>The pre-0.96 paths and dir names are hardcoded in here.
  */
 public class NamespaceUpgrade implements Tool {
   private static final Log LOG = LogFactory.getLog(NamespaceUpgrade.class);
@@ -74,15 +77,38 @@ public class NamespaceUpgrade implements Tool {
   private Path defNsDir;
   private Path baseDirs[];
   private Path backupDir;
+  // First move everything to this tmp .data dir in case there is a table named 'data'
+  private static final String TMP_DATA_DIR = ".data";
+  // Old dir names to migrate.
+  private static final String DOT_LOGS = ".logs";
+  private static final String DOT_OLD_LOGS = ".oldlogs";
+  private static final String DOT_CORRUPT = ".corrupt";
+  private static final String DOT_SPLITLOG = "splitlog";
+  private static final String DOT_ARCHIVE = ".archive";
+  private static final String OLD_ACL = "_acl_";
+  /** Directories that are not HBase table directories */
+  static final List<String> NON_USER_TABLE_DIRS = Arrays.asList(new String[] {
+      DOT_LOGS,
+      DOT_OLD_LOGS,
+      DOT_CORRUPT,
+      DOT_SPLITLOG,
+      HConstants.HBCK_SIDELINEDIR_NAME,
+      DOT_ARCHIVE,
+      HConstants.SNAPSHOT_DIR_NAME,
+      HConstants.HBASE_TEMP_DIRECTORY,
+      TMP_DATA_DIR,
+      OLD_ACL});
 
   public NamespaceUpgrade() throws IOException {
+    super();
   }
 
   public void init() throws IOException {
     this.rootDir = FSUtils.getRootDir(conf);
     this.fs = FileSystem.get(conf);
-    sysNsDir = FSUtils.getNamespaceDir(rootDir, NamespaceDescriptor.SYSTEM_NAMESPACE_NAME_STR);
-    defNsDir = FSUtils.getNamespaceDir(rootDir, NamespaceDescriptor.DEFAULT_NAMESPACE_NAME_STR);
+    Path tmpDataDir = new Path(rootDir, TMP_DATA_DIR);
+    sysNsDir = new Path(tmpDataDir, NamespaceDescriptor.SYSTEM_NAMESPACE_NAME_STR);
+    defNsDir = new Path(tmpDataDir, NamespaceDescriptor.DEFAULT_NAMESPACE_NAME_STR);
     baseDirs = new Path[]{rootDir,
         new Path(rootDir, HConstants.HFILE_ARCHIVE_DIRECTORY),
         new Path(rootDir, HConstants.HBASE_TEMP_DIRECTORY)};
@@ -90,29 +116,95 @@ public class NamespaceUpgrade implements Tool {
   }
 
 
-  public void upgradeTableDirs()
-      throws IOException, DeserializationException {
-
-
-    //if new version is written then upgrade is done
+  public void upgradeTableDirs() throws IOException, DeserializationException {
+    // if new version is written then upgrade is done
     if (verifyNSUpgrade(fs, rootDir)) {
       return;
     }
 
     makeNamespaceDirs();
 
-    migrateMeta();
-
-    migrateACL();
-
     migrateTables();
 
     migrateSnapshots();
 
+    migrateDotDirs();
+
+    migrateMeta();
+
+    migrateACL();
+
+    deleteRoot();
 
     FSUtils.setVersion(fs, rootDir);
   }
 
+  /**
+   * Remove the -ROOT- dir. No longer of use.
+   * @throws IOException
+   */
+  public void deleteRoot() throws IOException {
+    Path rootDir = new Path(this.rootDir, "-ROOT-");
+    if (this.fs.exists(rootDir)) {
+      if (!this.fs.delete(rootDir, true)) LOG.info("Failed remove of " + rootDir);
+      LOG.info("Deleted " + rootDir);
+    }
+  }
+
+  /**
+   * Rename all the dot dirs -- .data, .archive, etc. -- as data, archive, etc.; i.e. minus the dot.
+   * @throws IOException
+   */
+  public void migrateDotDirs() throws IOException {
+    // Dot dirs to rename.  Leave the tmp dir named '.tmp' and snapshots as .hbase-snapshot.
+    final Path archiveDir = new Path(rootDir, HConstants.HFILE_ARCHIVE_DIRECTORY);
+    Path [][] dirs = new Path[][] {
+      new Path [] {new Path(rootDir, DOT_CORRUPT), new Path(rootDir, HConstants.CORRUPT_DIR_NAME)},
+      new Path [] {new Path(rootDir, DOT_LOGS), new Path(rootDir, HConstants.HREGION_LOGDIR_NAME)},
+      new Path [] {new Path(rootDir, DOT_OLD_LOGS),
+        new Path(rootDir, HConstants.HREGION_OLDLOGDIR_NAME)},
+      new Path [] {new Path(rootDir, TMP_DATA_DIR),
+        new Path(rootDir, HConstants.BASE_NAMESPACE_DIR)}};
+    for (Path [] dir: dirs) {
+      Path src = dir[0];
+      Path tgt = dir[1];
+      if (!this.fs.exists(src)) {
+        LOG.info("Does not exist: " + src);
+        continue;
+      }
+      rename(src, tgt);
+    }
+    // Do the .archive dir.  Need to move its subdirs to the default ns dir under data dir... so
+    // from '.archive/foo', to 'archive/data/default/foo'.
+    Path oldArchiveDir = new Path(rootDir, DOT_ARCHIVE);
+    if (this.fs.exists(oldArchiveDir)) {
+      // This is a pain doing two nn calls but portable over h1 and h2.
+      mkdirs(archiveDir);
+      Path archiveDataDir = new Path(archiveDir, HConstants.BASE_NAMESPACE_DIR);
+      mkdirs(archiveDataDir);
+      rename(oldArchiveDir, new Path(archiveDataDir,
+        NamespaceDescriptor.DEFAULT_NAMESPACE_NAME_STR));
+    }
+    // Update the system and user namespace dirs removing the dot in front of .data.
+    Path dataDir = new Path(rootDir, HConstants.BASE_NAMESPACE_DIR);
+    sysNsDir = new Path(dataDir, NamespaceDescriptor.SYSTEM_NAMESPACE_NAME_STR);
+    defNsDir = new Path(dataDir, NamespaceDescriptor.DEFAULT_NAMESPACE_NAME_STR);
+  }
+
+  private void mkdirs(final Path p) throws IOException {
+    if (!this.fs.mkdirs(p)) throw new IOException("Failed make of " + p);
+  }
+
+  private void rename(final Path src, final Path tgt) throws IOException {
+    if (!fs.rename(src, tgt)) {
+      throw new IOException("Failed move " + src + " to " + tgt);
+    }
+  }
+
+  /**
+   * Create the system and default namespaces dirs
+   * @throws IOException
+   */
   public void makeNamespaceDirs() throws IOException {
     if (!fs.exists(sysNsDir)) {
       if (!fs.mkdirs(sysNsDir)) {
@@ -126,27 +218,34 @@ public class NamespaceUpgrade implements Tool {
     }
   }
 
+  /**
+   * Migrate all tables into respective namespaces, either default or system.  We put them into
+   * a temporary location, '.data', in case a user table is name 'data'.  In a later method we will
+   * move stuff from .data to data.
+   * @throws IOException
+   */
   public void migrateTables() throws IOException {
     List<String> sysTables = Lists.newArrayList("-ROOT-",".META.");
 
-    //migrate tables including archive and tmp
-    for(Path baseDir: baseDirs) {
+    // Migrate tables including archive and tmp
+    for (Path baseDir: baseDirs) {
       if (!fs.exists(baseDir)) continue;
       List<Path> oldTableDirs = FSUtils.getLocalTableDirs(fs, baseDir);
-      for(Path oldTableDir: oldTableDirs) {
-        if (!sysTables.contains(oldTableDir.getName())) {
-          Path nsDir = FSUtils.getTableDir(baseDir,
-              TableName.valueOf(oldTableDir.getName()));
-          if(!fs.exists(nsDir.getParent())) {
-            if(!fs.mkdirs(nsDir.getParent())) {
-              throw new IOException("Failed to create namespace dir "+nsDir.getParent());
-            }
+      for (Path oldTableDir: oldTableDirs) {
+        if (NON_USER_TABLE_DIRS.contains(oldTableDir.getName())) continue;
+        if (sysTables.contains(oldTableDir.getName())) continue;
+        // Make the new directory under the ns to which we will move the table.
+        Path nsDir = new Path(this.defNsDir,
+          TableName.valueOf(oldTableDir.getName()).getQualifierAsString());
+        if (!fs.exists(nsDir.getParent())) {
+          if (!fs.mkdirs(nsDir.getParent())) {
+            throw new IOException("Failed to create namespace dir "+nsDir.getParent());
           }
-          if (sysTables.indexOf(oldTableDir.getName()) < 0) {
-            LOG.info("Migrating table " + oldTableDir.getName() + " to " + nsDir);
-            if (!fs.rename(oldTableDir, nsDir)) {
-              throw new IOException("Failed to move "+oldTableDir+" to namespace dir "+nsDir);
-            }
+        }
+        if (sysTables.indexOf(oldTableDir.getName()) < 0) {
+          LOG.info("Migrating table " + oldTableDir.getName() + " to " + nsDir);
+          if (!fs.rename(oldTableDir, nsDir)) {
+            throw new IOException("Failed to move "+oldTableDir+" to namespace dir "+nsDir);
           }
         }
       }
@@ -183,8 +282,9 @@ public class NamespaceUpgrade implements Tool {
   }
 
   public void migrateMeta() throws IOException {
-    Path newMetaRegionDir = HRegion.getRegionDir(rootDir, HRegionInfo.FIRST_META_REGIONINFO);
-    Path newMetaDir = FSUtils.getTableDir(rootDir, TableName.META_TABLE_NAME);
+    Path newMetaDir = new Path(this.sysNsDir, TableName.META_TABLE_NAME.getQualifierAsString());
+    Path newMetaRegionDir =
+      new Path(newMetaDir, HRegionInfo.FIRST_META_REGIONINFO.getEncodedName());
     Path oldMetaDir = new Path(rootDir, ".META.");
     if (fs.exists(oldMetaDir)) {
       LOG.info("Migrating meta table " + oldMetaDir.getName() + " to " + newMetaDir);
@@ -194,10 +294,9 @@ public class NamespaceUpgrade implements Tool {
       }
     }
 
-    //since meta table name has changed
-    //rename meta region dir from it's old encoding to new one
+    // Since meta table name has changed rename meta region dir from it's old encoding to new one
     Path oldMetaRegionDir = HRegion.getRegionDir(rootDir,
-        new Path(newMetaDir, "1028785192").toString());
+      new Path(newMetaDir, "1028785192").toString());
     if (fs.exists(oldMetaRegionDir)) {
       LOG.info("Migrating meta region " + oldMetaRegionDir + " to " + newMetaRegionDir);
       if (!fs.rename(oldMetaRegionDir, newMetaRegionDir)) {
@@ -214,7 +313,7 @@ public class NamespaceUpgrade implements Tool {
 
   public void migrateACL() throws IOException {
 
-    TableName oldTableName = TableName.valueOf("_acl_");
+    TableName oldTableName = TableName.valueOf(OLD_ACL);
     Path oldTablePath = new Path(rootDir, oldTableName.getNameAsString());
 
     if(!fs.exists(oldTablePath)) {
@@ -369,7 +468,7 @@ public class NamespaceUpgrade implements Tool {
 
   @Override
   public int run(String[] args) throws Exception {
-    if(args.length < 1 || !args[0].equals("--upgrade")) {
+    if (args.length < 1 || !args[0].equals("--upgrade")) {
       System.out.println("Usage: <CMD> --upgrade");
       return 0;
     }
