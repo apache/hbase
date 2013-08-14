@@ -49,16 +49,25 @@ public class HRegionServerCommandLine extends ServerCommandLine {
 
   private int start() throws Exception {
     Configuration conf = getConf();
+    try {
+      // If 'local', don't start a region server here. Defer to
+      // LocalHBaseCluster. It manages 'local' clusters.
+      if (LocalHBaseCluster.isLocal(conf)) {
+        LOG.warn("Not starting a distinct region server because "
+            + HConstants.CLUSTER_DISTRIBUTED + " is false");
+      } else {
+        logJVMInfo();
+        HRegionServer hrs = HRegionServer.constructRegionServer(regionServerClass, conf);
+        Thread rsThread = HRegionServer.startRegionServer(hrs);
 
-    // If 'local', don't start a region server here. Defer to
-    // LocalHBaseCluster. It manages 'local' clusters.
-    if (LocalHBaseCluster.isLocal(conf)) {
-      LOG.warn("Not starting a distinct region server because "
-               + HConstants.CLUSTER_DISTRIBUTED + " is false");
-    } else {
-      logJVMInfo();
-      HRegionServer hrs = HRegionServer.constructRegionServer(regionServerClass, conf);
-      HRegionServer.startRegionServer(hrs);
+        rsThread.join();
+        if (hrs.isAborted()) {
+          throw new RuntimeException("HRegionServer Aborted");
+        }
+      }
+    } catch (Throwable t) {
+      LOG.error("Region server exiting", t);
+      return 1;
     }
     return 0;
   }
@@ -66,7 +75,7 @@ public class HRegionServerCommandLine extends ServerCommandLine {
   public int run(String args[]) throws Exception {
     if (args.length != 1) {
       usage(null);
-      return -1;
+      return 1;
     }
 
     String cmd = args[0];
@@ -78,10 +87,10 @@ public class HRegionServerCommandLine extends ServerCommandLine {
         "To shutdown the regionserver run " +
         "bin/hbase-daemon.sh stop regionserver or send a kill signal to" +
         "the regionserver pid");
-      return -1;
+      return 1;
     } else {
       usage("Unknown command: " + args[0]);
-      return -1;
+      return 1;
     }
   }
 }
