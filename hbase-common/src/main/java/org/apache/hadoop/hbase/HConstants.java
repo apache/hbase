@@ -274,17 +274,16 @@ public final class HConstants {
   /** Default HBase client operation timeout, which is tantamount to a blocking call */
   public static final int DEFAULT_HBASE_CLIENT_OPERATION_TIMEOUT = Integer.MAX_VALUE;
 
-  /** Used to construct the name of the log directory for a region server
-   * Use '.' as a special character to seperate the log files from table data */
-  public static final String HREGION_LOGDIR_NAME = ".logs";
+  /** Used to construct the name of the log directory for a region server */
+  public static final String HREGION_LOGDIR_NAME = "WALs";
 
   /** Used to construct the name of the splitlog directory for a region server */
-  public static final String SPLIT_LOGDIR_NAME = "splitlog";
-
-  public static final String CORRUPT_DIR_NAME = ".corrupt";
+  public static final String SPLIT_LOGDIR_NAME = "splitWAL";
 
   /** Like the previous, but for old logs that are about to be deleted */
-  public static final String HREGION_OLDLOGDIR_NAME = ".oldlogs";
+  public static final String HREGION_OLDLOGDIR_NAME = "oldWALs";
+
+  public static final String CORRUPT_DIR_NAME = "corrupt";
 
   /** Used by HBCK to sideline backup data */
   public static final String HBCK_SIDELINEDIR_NAME = ".hbck";
@@ -355,7 +354,7 @@ public final class HConstants {
   // be the first to be reassigned if the server(s) they are being served by
   // should go down.
 
-  public static final String BASE_NAMESPACE_DIR = ".data";
+  public static final String BASE_NAMESPACE_DIR = "data";
 
   /** delimiter used between portions of a region name */
   public static final int META_ROW_DELIMITER = ',';
@@ -818,7 +817,7 @@ public final class HConstants {
   public static final int REPLAY_QOS = 6; // REPLICATION_QOS < REPLAY_QOS < high_QOS
 
   /** Directory under /hbase where archived hfiles are stored */
-  public static final String HFILE_ARCHIVE_DIRECTORY = ".archive";
+  public static final String HFILE_ARCHIVE_DIRECTORY = "archive";
 
   /**
    * Name of the directory to store all snapshots. See SnapshotDescriptionUtils for

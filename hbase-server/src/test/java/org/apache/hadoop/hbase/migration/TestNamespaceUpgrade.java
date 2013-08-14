@@ -19,13 +19,14 @@
  */
 package org.apache.hadoop.hbase.migration;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertFalse;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
-
-import junit.framework.Assert;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -51,6 +52,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.util.ToolRunner;
 import org.junit.AfterClass;
+import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -60,12 +62,12 @@ import org.junit.experimental.categories.Category;
  * Mainly tests that tables are migrated and consistent. Also verifies
  * that snapshots have been migrated correctly.
  *
- * Uses a tarball which is an image of an 0.94 hbase.rootdir.
+ * <p>Uses a tarball which is an image of an 0.94 hbase.rootdir.
  *
- * Contains tables with currentKeys as the stored keys:
+ * <p>Contains tables with currentKeys as the stored keys:
  * foo, ns1.foo, ns2.foo
  *
- * Contains snapshots with snapshot{num}Keys as the contents:
+ * <p>Contains snapshots with snapshot{num}Keys as the contents:
  * snapshot1Keys, snapshot2Keys
  *
  * Image also contains _acl_ table with one region and two storefiles.
@@ -118,9 +120,8 @@ public class TestNamespaceUpgrade {
     Configuration toolConf = TEST_UTIL.getConfiguration();
     conf.set(HConstants.HBASE_DIR, TEST_UTIL.getDefaultRootDirPath().toString());
     ToolRunner.run(toolConf, new NamespaceUpgrade(), new String[]{"--upgrade"});
-    doFsCommand(shell, new String [] {"-lsr", "/"});
-
     assertTrue(FSUtils.getVersion(fs, hbaseRootDir).equals(HConstants.FILE_SYSTEM_VERSION));
+    doFsCommand(shell, new String [] {"-lsr", "/"});
     TEST_UTIL.startMiniHBaseCluster(1, 1);
 
     for(String table: tables) {
@@ -186,7 +187,7 @@ public class TestNamespaceUpgrade {
   @Test
   public void testSnapshots() throws IOException, InterruptedException {
     String snapshots[][] = {snapshot1Keys, snapshot2Keys};
-    for(int i=1; i<=snapshots.length; i++) {
+    for(int i = 1; i <= snapshots.length; i++) {
       for(String table: tables) {
         TEST_UTIL.getHBaseAdmin().cloneSnapshot(table+"_snapshot"+i, table+"_clone"+i);
         FSUtils.logFileSystemState(FileSystem.get(TEST_UTIL.getConfiguration()),
@@ -203,7 +204,7 @@ public class TestNamespaceUpgrade {
   }
 
   @Test
-  public void testRenameUsingSnapshots() throws IOException, InterruptedException {
+  public void testRenameUsingSnapshots() throws Exception {
     String newNS = "newNS";
     TEST_UTIL.getHBaseAdmin().createNamespace(NamespaceDescriptor.create(newNS).build());
     for(String table: tables) {
@@ -212,10 +213,9 @@ public class TestNamespaceUpgrade {
           Scan())) {
         assertEquals(currentKeys[count++], Bytes.toString(res.getRow()));
       }
-      TEST_UTIL.getHBaseAdmin().snapshot(table+"_snapshot3", table);
-      final String newTableName =
-          newNS+ TableName.NAMESPACE_DELIM+table+"_clone3";
-      TEST_UTIL.getHBaseAdmin().cloneSnapshot(table+"_snapshot3", newTableName);
+      TEST_UTIL.getHBaseAdmin().snapshot(table + "_snapshot3", table);
+      final String newTableName = newNS + TableName.NAMESPACE_DELIM + table + "_clone3";
+      TEST_UTIL.getHBaseAdmin().cloneSnapshot(table + "_snapshot3", newTableName);
       Thread.sleep(1000);
       count = 0;
       for(Result res: new HTable(TEST_UTIL.getConfiguration(), newTableName).getScanner(new
@@ -243,12 +243,12 @@ public class TestNamespaceUpgrade {
     String nextNS = "nextNS";
     TEST_UTIL.getHBaseAdmin().createNamespace(NamespaceDescriptor.create(nextNS).build());
     for(String table: tables) {
-      String srcTable = newNS+TableName.NAMESPACE_DELIM+table+"_clone3";
-      TEST_UTIL.getHBaseAdmin().snapshot(table+"_snapshot4", srcTable);
-      String newTableName = nextNS+TableName.NAMESPACE_DELIM+table+"_clone4";
+      String srcTable = newNS + TableName.NAMESPACE_DELIM + table + "_clone3";
+      TEST_UTIL.getHBaseAdmin().snapshot(table + "_snapshot4", srcTable);
+      String newTableName = nextNS + TableName.NAMESPACE_DELIM + table + "_clone4";
       TEST_UTIL.getHBaseAdmin().cloneSnapshot(table+"_snapshot4", newTableName);
-      FSUtils.logFileSystemState(TEST_UTIL.getTestFileSystem(), TEST_UTIL.getDefaultRootDirPath()
-          , LOG);
+      FSUtils.logFileSystemState(TEST_UTIL.getTestFileSystem(), TEST_UTIL.getDefaultRootDirPath(),
+        LOG);
       int count = 0;
       for(Result res: new HTable(TEST_UTIL.getConfiguration(), newTableName).getScanner(new
           Scan())) {
@@ -256,7 +256,31 @@ public class TestNamespaceUpgrade {
       }
       Assert.assertEquals(newTableName, currentKeys.length, count);
     }
+  }
 
+  @Test
+  public void testOldDirsAreGonePostMigration() throws IOException {
+    FileSystem fs = FileSystem.get(TEST_UTIL.getConfiguration());
+    Path hbaseRootDir = TEST_UTIL.getDefaultRootDirPath();
+    List <String> dirs = new ArrayList<String>(NamespaceUpgrade.NON_USER_TABLE_DIRS);
+    // Remove those that are not renamed
+    dirs.remove(HConstants.HBCK_SIDELINEDIR_NAME);
+    dirs.remove(HConstants.SNAPSHOT_DIR_NAME);
+    dirs.remove(HConstants.HBASE_TEMP_DIRECTORY);
+    for (String dir: dirs) {
+      assertFalse(fs.exists(new Path(hbaseRootDir, dir)));
+    }
+  }
+
+  @Test
+  public void testNewDirsArePresentPostMigration() throws IOException {
+    FileSystem fs = FileSystem.get(TEST_UTIL.getConfiguration());
+    // Below list does not include 'corrupt' because there is no 'corrupt' in the tgz
+    String [] newdirs = new String [] {HConstants.BASE_NAMESPACE_DIR,
+      HConstants.HREGION_LOGDIR_NAME};
+    Path hbaseRootDir = TEST_UTIL.getDefaultRootDirPath();
+    for (String dir: newdirs) {
+      assertTrue(dir, fs.exists(new Path(hbaseRootDir, dir)));
+    }
   }
 }
-
