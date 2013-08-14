@@ -2633,7 +2633,7 @@ MasterServices, Server {
   }
 
   /**
-   * Get list of table names
+   * Get list of userspace table names
    * @param controller Unused (set to null).
    * @param req GetTableNamesRequest
    * @return GetTableNamesResponse
@@ -2645,6 +2645,9 @@ MasterServices, Server {
       Collection<HTableDescriptor> descriptors = this.tableDescriptors.getAll().values();
       GetTableNamesResponse.Builder builder = GetTableNamesResponse.newBuilder();
       for (HTableDescriptor descriptor: descriptors) {
+        if (descriptor.isMetaTable()) {
+          continue;
+        }
         builder.addTableNames(ProtobufUtil.toProtoTableName(descriptor.getTableName()));
       }
       return builder.build();
