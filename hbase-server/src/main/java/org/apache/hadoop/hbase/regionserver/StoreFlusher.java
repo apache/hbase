@@ -126,11 +126,11 @@ s   */
           // If we know that this KV is going to be included always, then let us
           // set its memstoreTS to 0. This will help us save space when writing to
           // disk.
-          if (kv.getMemstoreTS() <= smallestReadPoint) {
+          if (kv.getMvccVersion() <= smallestReadPoint) {
             // let us not change the original KV. It could be in the memstore
             // changing its memstoreTS could affect other threads/scanners.
             kv = kv.shallowCopy();
-            kv.setMemstoreTS(0);
+            kv.setMvccVersion(0);
           }
           sink.append(kv);
           flushed += MemStore.heapSizeChange(kv, true);

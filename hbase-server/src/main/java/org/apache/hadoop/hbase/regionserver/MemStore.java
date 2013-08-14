@@ -82,12 +82,6 @@ public class MemStore implements HeapSize {
 
   final KeyValue.KVComparator comparator;
 
-  // Used comparing versions -- same r/c and ts but different type.
-  final KeyValue.KVComparator comparatorIgnoreType;
-
-  // Used comparing versions -- same r/c and type but different timestamp.
-  final KeyValue.KVComparator comparatorIgnoreTimestamp;
-
   // Used to track own heapSize
   final AtomicLong size;
 
@@ -100,8 +94,6 @@ public class MemStore implements HeapSize {
   MemStoreChunkPool chunkPool;
   volatile MemStoreLAB allocator;
   volatile MemStoreLAB snapshotAllocator;
-
-
 
   /**
    * Default constructor. Used for tests.
@@ -118,9 +110,6 @@ public class MemStore implements HeapSize {
                   final KeyValue.KVComparator c) {
     this.conf = conf;
     this.comparator = c;
-    this.comparatorIgnoreTimestamp =
-      this.comparator.getComparatorIgnoringTimestamps();
-    this.comparatorIgnoreType = this.comparator.getComparatorIgnoringType();
     this.kvset = new KeyValueSkipListSet(c);
     this.snapshot = new KeyValueSkipListSet(c);
     timeRangeTracker = new TimeRangeTracker();
@@ -288,7 +277,7 @@ public class MemStore implements HeapSize {
     assert alloc != null && alloc.getData() != null;
     System.arraycopy(kv.getBuffer(), kv.getOffset(), alloc.getData(), alloc.getOffset(), len);
     KeyValue newKv = new KeyValue(alloc.getData(), alloc.getOffset(), len);
-    newKv.setMemstoreTS(kv.getMemstoreTS());
+    newKv.setMvccVersion(kv.getMvccVersion());
     return newKv;
   }
 
@@ -309,12 +298,12 @@ public class MemStore implements HeapSize {
       // yet started because Store.flush() waits for all rwcc transactions to
       // commit before starting the flush to disk.
       KeyValue found = this.snapshot.get(kv);
-      if (found != null && found.getMemstoreTS() == kv.getMemstoreTS()) {
+      if (found != null && found.getMvccVersion() == kv.getMvccVersion()) {
         this.snapshot.remove(kv);
       }
       // If the key is in the memstore, delete it. Update this.size.
       found = this.kvset.get(kv);
-      if (found != null && found.getMemstoreTS() == kv.getMemstoreTS()) {
+      if (found != null && found.getMvccVersion() == kv.getMvccVersion()) {
         removeFromKVSet(kv);
         long s = heapSizeChange(kv, true);
         this.size.addAndGet(-s);
@@ -623,7 +612,7 @@ public class MemStore implements HeapSize {
       // check that this is the row and column we are interested in, otherwise bail
       if (kv.matchingRow(cur) && kv.matchingQualifier(cur)) {
         // only remove Puts that concurrent scanners cannot possibly see
-        if (cur.getType() == KeyValue.Type.Put.getCode() && cur.getMemstoreTS() <= readpoint) {
+        if (cur.getType() == KeyValue.Type.Put.getCode() && cur.getMvccVersion() <= readpoint) {
           if (versionsVisible > 1) {
             // if we get here we have seen at least one version visible to the oldest scanner,
             // which means we can prove that no scanner will see this version
@@ -785,7 +774,7 @@ public class MemStore implements HeapSize {
       try {
         while (it.hasNext()) {
           v = it.next();
-          if (v.getMemstoreTS() <= readPoint) {
+          if (v.getMvccVersion() <= readPoint) {
             return v;
           }
         }
@@ -969,7 +958,7 @@ public class MemStore implements HeapSize {
   }
 
   public final static long FIXED_OVERHEAD = ClassSize.align(
-      ClassSize.OBJECT + (13 * ClassSize.REFERENCE) + Bytes.SIZEOF_LONG);
+      ClassSize.OBJECT + (11 * ClassSize.REFERENCE) + Bytes.SIZEOF_LONG);
 
   public final static long DEEP_OVERHEAD = ClassSize.align(FIXED_OVERHEAD +
       ClassSize.REENTRANT_LOCK + ClassSize.ATOMIC_LONG +

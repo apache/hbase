@@ -27,7 +27,6 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.KeyComparator;
 import org.apache.hadoop.hbase.KeyValue.MetaKeyComparator;
-import org.apache.hadoop.hbase.KeyValue.RootKeyComparator;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.codec.prefixtree.decode.DecoderFactory;
 import org.apache.hadoop.hbase.codec.prefixtree.decode.PrefixTreeArraySearcher;
@@ -196,10 +195,6 @@ public class PrefixTreeCodec implements DataBlockEncoder{
     }
     if(comparator instanceof MetaKeyComparator){
       throw new IllegalArgumentException("DataBlockEncoding.PREFIX_TREE not compatible with META "
-          +"table");
-    }
-    if(comparator instanceof RootKeyComparator){
-      throw new IllegalArgumentException("DataBlockEncoding.PREFIX_TREE not compatible with ROOT "
           +"table");
     }
 

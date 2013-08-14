@@ -238,7 +238,7 @@ public class TestMemStore extends TestCase {
         mvcc.beginMemstoreInsert();
 
     KeyValue kv1 = new KeyValue(row, f, q1, v);
-    kv1.setMemstoreTS(w.getWriteNumber());
+    kv1.setMvccVersion(w.getWriteNumber());
     memstore.add(kv1);
 
     MultiVersionConsistencyControl.resetThreadReadPoint(mvcc);
@@ -253,7 +253,7 @@ public class TestMemStore extends TestCase {
 
     w = mvcc.beginMemstoreInsert();
     KeyValue kv2 = new KeyValue(row, f, q2, v);
-    kv2.setMemstoreTS(w.getWriteNumber());
+    kv2.setMvccVersion(w.getWriteNumber());
     memstore.add(kv2);
 
     MultiVersionConsistencyControl.resetThreadReadPoint(mvcc);
@@ -286,11 +286,11 @@ public class TestMemStore extends TestCase {
         mvcc.beginMemstoreInsert();
 
     KeyValue kv11 = new KeyValue(row, f, q1, v1);
-    kv11.setMemstoreTS(w.getWriteNumber());
+    kv11.setMvccVersion(w.getWriteNumber());
     memstore.add(kv11);
 
     KeyValue kv12 = new KeyValue(row, f, q2, v1);
-    kv12.setMemstoreTS(w.getWriteNumber());
+    kv12.setMvccVersion(w.getWriteNumber());
     memstore.add(kv12);
     mvcc.completeMemstoreInsert(w);
 
@@ -302,11 +302,11 @@ public class TestMemStore extends TestCase {
     // START INSERT 2: Write both columns val2
     w = mvcc.beginMemstoreInsert();
     KeyValue kv21 = new KeyValue(row, f, q1, v2);
-    kv21.setMemstoreTS(w.getWriteNumber());
+    kv21.setMvccVersion(w.getWriteNumber());
     memstore.add(kv21);
 
     KeyValue kv22 = new KeyValue(row, f, q2, v2);
-    kv22.setMemstoreTS(w.getWriteNumber());
+    kv22.setMvccVersion(w.getWriteNumber());
     memstore.add(kv22);
 
     // BEFORE COMPLETING INSERT 2, SEE FIRST KVS
@@ -341,11 +341,11 @@ public class TestMemStore extends TestCase {
         mvcc.beginMemstoreInsert();
 
     KeyValue kv11 = new KeyValue(row, f, q1, v1);
-    kv11.setMemstoreTS(w.getWriteNumber());
+    kv11.setMvccVersion(w.getWriteNumber());
     memstore.add(kv11);
 
     KeyValue kv12 = new KeyValue(row, f, q2, v1);
-    kv12.setMemstoreTS(w.getWriteNumber());
+    kv12.setMvccVersion(w.getWriteNumber());
     memstore.add(kv12);
     mvcc.completeMemstoreInsert(w);
 
@@ -358,7 +358,7 @@ public class TestMemStore extends TestCase {
     w = mvcc.beginMemstoreInsert();
     KeyValue kvDel = new KeyValue(row, f, q2, kv11.getTimestamp(),
         KeyValue.Type.DeleteColumn);
-    kvDel.setMemstoreTS(w.getWriteNumber());
+    kvDel.setMvccVersion(w.getWriteNumber());
     memstore.add(kvDel);
 
     // BEFORE COMPLETING DELETE, SEE FIRST KVS
@@ -418,7 +418,7 @@ public class TestMemStore extends TestCase {
         byte[] v = Bytes.toBytes(i);
 
         KeyValue kv = new KeyValue(row, f, q1, i, v);
-        kv.setMemstoreTS(w.getWriteNumber());
+        kv.setMvccVersion(w.getWriteNumber());
         memstore.add(kv);
         mvcc.completeMemstoreInsert(w);
 
@@ -490,38 +490,6 @@ public class TestMemStore extends TestCase {
 
     assertTrue("Expected memstore to hold 3 values, actually has " +
         m.kvset.size(), m.kvset.size() == 3);
-  }
-
-  public void testBinary() {
-    MemStore mc = new MemStore(new Configuration(), KeyValue.ROOT_COMPARATOR);
-    final int start = 43;
-    final int end = 46;
-    for (int k = start; k <= end; k++) {
-      byte [] kk = Bytes.toBytes(k);
-      byte [] row =
-        Bytes.toBytes(TableName.META_TABLE_NAME+",table," + Bytes.toString(kk) + ",1," + k);
-      KeyValue key = new KeyValue(row, CONTENTS, BASIC,
-        System.currentTimeMillis(),
-        Bytes.toBytes(CONTENTSTR + k));
-      mc.add(key);
-      System.out.println(key);
-//      key = new KeyValue(row, Bytes.toBytes(ANCHORNUM + k),
-//        System.currentTimeMillis(),
-//        Bytes.toBytes(ANCHORSTR + k));
-//      mc.add(key);
-//      System.out.println(key);
-    }
-    int index = start;
-    for (KeyValue kv: mc.kvset) {
-      System.out.println(kv);
-      byte [] b = kv.getRow();
-      // Hardcoded offsets into String
-      String str = Bytes.toString(b, TableName.META_TABLE_NAME.getName().length+7, 4);
-      byte [] bb = Bytes.toBytes(index);
-      String bbStr = Bytes.toString(bb);
-      assertEquals(str, bbStr);
-      index++;
-    }
   }
 
   //////////////////////////////////////////////////////////////////////////////

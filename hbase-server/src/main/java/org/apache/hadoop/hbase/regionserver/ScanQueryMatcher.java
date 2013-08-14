@@ -316,14 +316,14 @@ public class ScanQueryMatcher {
             tr.withinTimeRange(timestamp) :
             tr.withinOrAfterTimeRange(timestamp);
         if (includeDeleteMarker
-            && kv.getMemstoreTS() <= maxReadPointToTrackVersions) {
+            && kv.getMvccVersion() <= maxReadPointToTrackVersions) {
           this.deletes.add(bytes, offset, qualLength, timestamp, type);
         }
         // Can't early out now, because DelFam come before any other keys
       }
       if (retainDeletesInOutput
           || (!isUserScan && (EnvironmentEdgeManager.currentTimeMillis() - timestamp) <= timeToPurgeDeletes)
-          || kv.getMemstoreTS() > maxReadPointToTrackVersions) {
+          || kv.getMvccVersion() > maxReadPointToTrackVersions) {
         // always include or it is not time yet to check whether it is OK
         // to purge deltes or not
         if (!isUserScan) {
@@ -390,7 +390,7 @@ public class ScanQueryMatcher {
     }
 
     MatchCode colChecker = columns.checkColumn(bytes, offset, qualLength,
-        timestamp, type, kv.getMemstoreTS() > maxReadPointToTrackVersions);
+        timestamp, type, kv.getMvccVersion() > maxReadPointToTrackVersions);
     /*
      * According to current implementation, colChecker can only be
      * SEEK_NEXT_COL, SEEK_NEXT_ROW, SKIP or INCLUDE. Therefore, always return

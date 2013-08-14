@@ -167,7 +167,7 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
     public KeyValue getKeyValue() {
       ByteBuffer kvBuf = getKeyValueBuffer();
       KeyValue kv = new KeyValue(kvBuf.array(), kvBuf.arrayOffset());
-      kv.setMemstoreTS(current.memstoreTS);
+      kv.setMvccVersion(current.memstoreTS);
       return kv;
     }
 

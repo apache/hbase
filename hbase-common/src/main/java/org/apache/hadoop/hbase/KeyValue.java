@@ -69,9 +69,6 @@ import com.google.common.primitives.Longs;
 public class KeyValue implements Cell, HeapSize, Cloneable {
   static final Log LOG = LogFactory.getLog(KeyValue.class);
 
-  private static final int META_LENGTH =
-      TableName.META_TABLE_NAME.getName().length; // 'hbase.meta' length
-
   // TODO: Group Key-only comparators and operations into a Key class, just
   // for neatness sake, if can figure what to call it.
 
@@ -107,18 +104,6 @@ public class KeyValue implements Cell, HeapSize, Cloneable {
   public static final KeyComparator META_KEY_COMPARATOR = new MetaKeyComparator();
 
   /**
-   * A {@link KVComparator} for <code>-ROOT-</code> catalog table
-   * {@link KeyValue}s.
-   */
-  public static final KVComparator ROOT_COMPARATOR = new RootComparator();
-
-  /**
-   * A {@link KVComparator} for <code>-ROOT-</code> catalog table
-   * {@link KeyValue} keys.
-   */
-  public static final KeyComparator ROOT_KEY_COMPARATOR = new RootKeyComparator();
-
-  /**
    * Get the appropriate row comparator for the specified table.
    *
    * Hopefully we can get rid of this, I added this here because it's replacing
@@ -128,10 +113,7 @@ public class KeyValue implements Cell, HeapSize, Cloneable {
    * @return The comparator.
    */
   public static KeyComparator getRowComparator(TableName tableName) {
-    if(TableName.ROOT_TABLE_NAME.equals(tableName)) {
-      return ROOT_COMPARATOR.getRawComparator();
-    }
-    if(TableName.META_TABLE_NAME.equals(tableName)) {
+     if(TableName.META_TABLE_NAME.equals(tableName)) {
       return META_COMPARATOR.getRawComparator();
     }
     return COMPARATOR.getRawComparator();
@@ -1783,23 +1765,6 @@ public class KeyValue implements Cell, HeapSize, Cloneable {
   }
 
   /**
-   * A {@link KVComparator} for <code>-ROOT-</code> catalog table
-   * {@link KeyValue}s.
-   */
-  public static class RootComparator extends MetaComparator {
-    private final KeyComparator rawcomparator = new RootKeyComparator();
-
-    public KeyComparator getRawComparator() {
-      return this.rawcomparator;
-    }
-
-    @Override
-    protected Object clone() throws CloneNotSupportedException {
-      return new RootComparator();
-    }
-  }
-
-  /**
    * A {@link KVComparator} for <code>.META.</code> catalog table
    * {@link KeyValue}s.
    */
@@ -1840,7 +1805,7 @@ public class KeyValue implements Cell, HeapSize, Cloneable {
           right.getKeyLength());
       if (ret != 0) return ret;
       // Negate this comparison so later edits show up first
-      return -Longs.compare(left.getMemstoreTS(), right.getMemstoreTS());
+      return -Longs.compare(left.getMvccVersion(), right.getMvccVersion());
     }
 
     public int compareTimestamps(final KeyValue left, final KeyValue right) {
@@ -2000,33 +1965,6 @@ public class KeyValue implements Cell, HeapSize, Cloneable {
       return new KVComparator();
     }
 
-    /**
-     * @return Comparator that ignores timestamps; useful counting versions.
-     */
-    public KVComparator getComparatorIgnoringTimestamps() {
-      KVComparator c = null;
-      try {
-        c = (KVComparator)this.clone();
-        c.getRawComparator().ignoreTimestamp = true;
-      } catch (CloneNotSupportedException e) {
-        LOG.error("Not supported", e);
-      }
-      return c;
-    }
-
-    /**
-     * @return Comparator that ignores key type; useful checking deletes
-     */
-    public KVComparator getComparatorIgnoringType() {
-      KVComparator c = null;
-      try {
-        c = (KVComparator)this.clone();
-        c.getRawComparator().ignoreType = true;
-      } catch (CloneNotSupportedException e) {
-        LOG.error("Not supported", e);
-      }
-      return c;
-    }
   }
 
   /**
@@ -2394,49 +2332,6 @@ public class KeyValue implements Cell, HeapSize, Cloneable {
   }
 
   /**
-   * Compare key portion of a {@link KeyValue} for keys in <code>-ROOT-<code>
-   * table.
-   */
-  public static class RootKeyComparator extends MetaKeyComparator {
-    public int compareRows(byte [] left, int loffset, int llength,
-        byte [] right, int roffset, int rlength) {
-      // Rows look like this: .META.,ROW_FROM_META,RID
-      //        LOG.info("ROOT " + Bytes.toString(left, loffset, llength) +
-      //          "---" + Bytes.toString(right, roffset, rlength));
-      int lmetaOffsetPlusDelimiter = loffset + META_LENGTH + 1;
-      int leftFarDelimiter = getDelimiterInReverse(left,
-          lmetaOffsetPlusDelimiter,
-          llength - META_LENGTH - 1, HConstants.DELIMITER);
-      int rmetaOffsetPlusDelimiter = roffset + META_LENGTH + 1;
-      int rightFarDelimiter = getDelimiterInReverse(right,
-          rmetaOffsetPlusDelimiter, rlength - META_LENGTH - 1,
-          HConstants.DELIMITER);
-      if (leftFarDelimiter < 0 && rightFarDelimiter >= 0) {
-        // Nothing between .META. and regionid.  Its first key.
-        return -1;
-      } else if (rightFarDelimiter < 0 && leftFarDelimiter >= 0) {
-        return 1;
-      } else if (leftFarDelimiter < 0 && rightFarDelimiter < 0) {
-        return 0;
-      }
-      int result = super.compareRows(left, lmetaOffsetPlusDelimiter,
-          leftFarDelimiter - lmetaOffsetPlusDelimiter,
-          right, rmetaOffsetPlusDelimiter,
-          rightFarDelimiter - rmetaOffsetPlusDelimiter);
-      if (result != 0) {
-        return result;
-      }
-      // Compare last part of row, the rowid.
-      leftFarDelimiter++;
-      rightFarDelimiter++;
-      result = compareRowid(left, leftFarDelimiter,
-          llength - (leftFarDelimiter - loffset),
-          right, rightFarDelimiter, rlength - (rightFarDelimiter - roffset));
-      return result;
-    }
-  }
-
-  /**
    * Comparator that compares row component only of a KeyValue.
    */
   public static class RowComparator implements Comparator<KeyValue> {
@@ -2532,8 +2427,6 @@ public class KeyValue implements Cell, HeapSize, Cloneable {
    */
   public static class KeyComparator
       implements RawComparator<byte []>, SamePrefixComparator<byte[]> {
-    volatile boolean ignoreTimestamp = false;
-    volatile boolean ignoreType = false;
 
     public int compare(byte[] left, int loffset, int llength, byte[] right,
         int roffset, int rlength) {
@@ -2672,26 +2565,21 @@ public class KeyValue implements Cell, HeapSize, Cloneable {
     private int compareTimestampAndType(byte[] left, int loffset, int llength,
         byte[] right, int roffset, int rlength, byte ltype, byte rtype) {
       int compare;
-      if (!this.ignoreTimestamp) {
-        // Get timestamps.
-        long ltimestamp = Bytes.toLong(left,
-            loffset + (llength - TIMESTAMP_TYPE_SIZE));
-        long rtimestamp = Bytes.toLong(right,
-            roffset + (rlength - TIMESTAMP_TYPE_SIZE));
-        compare = compareTimestamps(ltimestamp, rtimestamp);
-        if (compare != 0) {
-          return compare;
-        }
+      // Get timestamps.
+      long ltimestamp = Bytes.toLong(left,
+          loffset + (llength - TIMESTAMP_TYPE_SIZE));
+      long rtimestamp = Bytes.toLong(right,
+          roffset + (rlength - TIMESTAMP_TYPE_SIZE));
+      compare = compareTimestamps(ltimestamp, rtimestamp);
+      if (compare != 0) {
+        return compare;
       }
 
-      if (!this.ignoreType) {
-        // Compare types. Let the delete types sort ahead of puts; i.e. types
-        // of higher numbers sort before those of lesser numbers. Maximum (255)
-        // appears ahead of everything, and minimum (0) appears after
-        // everything.
-        return (0xff & rtype) - (0xff & ltype);
-      }
-      return 0;
+      // Compare types. Let the delete types sort ahead of puts; i.e. types
+      // of higher numbers sort before those of lesser numbers. Maximum (255)
+      // appears ahead of everything, and minimum (0) appears after
+      // everything.
+      return (0xff & rtype) - (0xff & ltype);
     }
 
     public int compare(byte[] left, byte[] right) {
