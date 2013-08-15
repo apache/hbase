@@ -66,7 +66,7 @@ public class RpcRetryingCaller<T> {
   private final int retries;
 
   public RpcRetryingCaller(Configuration conf) {
-    this.pause = conf.getLong(HConstants.HBASE_CLIENT_PAUSE, 
+    this.pause = conf.getLong(HConstants.HBASE_CLIENT_PAUSE,
       HConstants.DEFAULT_HBASE_CLIENT_PAUSE);
     this.retries =
         conf.getInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER,

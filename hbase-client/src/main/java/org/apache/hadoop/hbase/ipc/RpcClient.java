@@ -466,6 +466,8 @@ public class RpcClient {
      *  It is up to the user code to check this status.
      * @param call to add
      */
+    @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="NN_NAKED_NOTIFY",
+      justification="Notify because new call available for processing")
     protected synchronized void addCall(Call call) {
       // If the connection is about to close, we manage this as if the call was already added
       //  to the connection calls list. If not, the connection creations are serialized, as
@@ -1149,6 +1151,8 @@ public class RpcClient {
       cleanupCalls(0);
     }
 
+    @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="NN_NAKED_NOTIFY",
+      justification="Notify because timedout")
     protected void cleanupCalls(long rpcTimeout) {
       Iterator<Entry<Integer, Call>> itor = calls.entrySet().iterator();
       while (itor.hasNext()) {
@@ -1184,14 +1188,20 @@ public class RpcClient {
         }
         if (!shouldCloseConnection.get()) {
           closeException = null;
-          if (socket != null) {
-            socket.setSoTimeout((int) rpcTimeout);
-          }
+          setSocketTimeout(socket, (int) rpcTimeout);
         }
       } catch (SocketException e) {
         LOG.debug("Couldn't lower timeout, which may result in longer than expected calls");
       }
     }
+  }
+
+  @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="IS2_INCONSISTENT_SYNC",
+    justification="Presume sync not needed setting socket timeout")
+  private static void setSocketTimeout(final Socket socket, final int rpcTimeout)
+  throws java.net.SocketException {
+    if (socket == null) return;
+    socket.setSoTimeout(rpcTimeout);
   }
 
   /**
