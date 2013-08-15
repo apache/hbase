@@ -38,7 +38,7 @@ import org.apache.hadoop.hbase.errorhandling.ForeignExceptionDispatcher;
 import org.apache.hadoop.hbase.executor.EventType;
 import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.master.MasterServices;
-import org.apache.hadoop.hbase.master.MetricsMaster;
+import org.apache.hadoop.hbase.master.MetricsSnapshot;
 import org.apache.hadoop.hbase.master.SnapshotSentinel;
 import org.apache.hadoop.hbase.master.handler.TableEventHandler;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
@@ -48,7 +48,6 @@ import org.apache.hadoop.hbase.snapshot.ClientSnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.snapshot.RestoreSnapshotException;
 import org.apache.hadoop.hbase.snapshot.RestoreSnapshotHelper;
 import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
-import org.apache.hadoop.hbase.util.FSUtils;
 
 /**
  * Handler to Restore a snapshot.
@@ -64,16 +63,14 @@ public class RestoreSnapshotHandler extends TableEventHandler implements Snapsho
   private final SnapshotDescription snapshot;
 
   private final ForeignExceptionDispatcher monitor;
-  private final MetricsMaster metricsMaster;
+  private final MetricsSnapshot metricsSnapshot = new MetricsSnapshot();
   private final MonitoredTask status;
 
   private volatile boolean stopped = false;
 
   public RestoreSnapshotHandler(final MasterServices masterServices,
-      final SnapshotDescription snapshot, final HTableDescriptor htd,
-      final MetricsMaster metricsMaster) throws IOException {
+      final SnapshotDescription snapshot, final HTableDescriptor htd) throws IOException {
     super(EventType.C_M_RESTORE_SNAPSHOT, htd.getTableName(), masterServices, masterServices);
-    this.metricsMaster = metricsMaster;
 
     // Snapshot information
     this.snapshot = snapshot;
@@ -153,7 +150,7 @@ public class RestoreSnapshotHandler extends TableEventHandler implements Snapsho
     } else {
       status.markComplete("Restore snapshot '"+ snapshot.getName() +"'!");
     }
-    metricsMaster.addSnapshotRestore(status.getCompletionTimestamp() - status.getStartTime());
+    metricsSnapshot.addSnapshotRestore(status.getCompletionTimestamp() - status.getStartTime());
     super.completed(exception);
   }
 

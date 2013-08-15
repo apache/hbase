@@ -15,6 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package org.apache.hadoop.hbase.master;
 
 import org.apache.commons.logging.Log;
@@ -49,78 +50,9 @@ public class MetricsMaster {
   }
 
   /**
-   * Record a single instance of a split
-   * @param time time that the split took
-   * @param size length of original HLogs that were split
-   */
-  public synchronized void addSplit(long time, long size) {
-    masterSource.updateSplitTime(time);
-    masterSource.updateSplitSize(size);
-  }
-
-  /**
-   * Record a single instance of a split
-   * @param time time that the split took
-   * @param size length of original HLogs that were split
-   */
-  public synchronized void addMetaWALSplit(long time, long size) {
-    masterSource.updateMetaWALSplitTime(time);
-    masterSource.updateMetaWALSplitSize(size);
-  }
-
-  /**
    * @param inc How much to add to requests.
    */
   public void incrementRequests(final int inc) {
     masterSource.incRequests(inc);
-
-  }
-
-  /**
-   * set new value for number of regions in transition.
-   * @param ritCount
-   */
-  public void updateRITCount(int ritCount) {
-    masterSource.setRIT(ritCount);
-  }
-
-  /**
-   * update RIT count that are in this state for more than the threshold
-   * as defined by the property rit.metrics.threshold.time.
-   * @param ritCountOverThreshold
-   */
-  public void updateRITCountOverThreshold(int ritCountOverThreshold) {
-    masterSource.setRITCountOverThreshold(ritCountOverThreshold);
-  }
-  /**
-   * update the timestamp for oldest region in transition metrics.
-   * @param timestamp
-   */
-  public void updateRITOldestAge(long timestamp) {
-    masterSource.setRITOldestAge(timestamp);
-  }
-
-  /**
-   * Record a single instance of a snapshot
-   * @param time time that the snapshot took
-   */
-  public void addSnapshot(long time) {
-    masterSource.updateSnapshotTime(time);
-  }
-
-  /**
-   * Record a single instance of a snapshot
-   * @param time time that the snapshot restore took
-   */
-  public void addSnapshotRestore(long time) {
-    masterSource.updateSnapshotRestoreTime(time);
-  }
-
-  /**
-   * Record a single instance of a snapshot cloned table
-   * @param time time that the snapshot clone took
-   */
-  public void addSnapshotClone(long time) {
-    masterSource.updateSnapshotCloneTime(time);
   }
 }

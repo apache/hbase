@@ -246,6 +246,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
 
     long endTime = EnvironmentEdgeManager.currentTimeMillis();
 
+    metricsBalancer.balanceCluster(endTime - startTime);
 
     if (initCost > currentCost) {
       List<RegionPlan> plans = createRegionPlans(cluster);

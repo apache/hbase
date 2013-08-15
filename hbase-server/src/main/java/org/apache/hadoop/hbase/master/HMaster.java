@@ -764,7 +764,7 @@ MasterServices, Server {
 
     this.masterActiveTime = System.currentTimeMillis();
     // TODO: Do this using Dependency Injection, using PicoContainer, Guice or Spring.
-    this.fileSystemManager = new MasterFileSystem(this, this, metricsMaster, masterRecovery);
+    this.fileSystemManager = new MasterFileSystem(this, this, masterRecovery);
 
     this.tableDescriptors =
       new FSTableDescriptors(this.fileSystemManager.getFileSystem(),

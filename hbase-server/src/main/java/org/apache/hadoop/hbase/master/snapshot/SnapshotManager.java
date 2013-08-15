@@ -450,7 +450,7 @@ public class SnapshotManager implements Stoppable {
 
     // Take the snapshot of the disabled table
     DisabledTableSnapshotHandler handler =
-        new DisabledTableSnapshotHandler(snapshot, master, metricsMaster);
+        new DisabledTableSnapshotHandler(snapshot, master);
     snapshotTable(snapshot, handler);
   }
 
@@ -466,7 +466,7 @@ public class SnapshotManager implements Stoppable {
 
     // Take the snapshot of the enabled table
     EnabledTableSnapshotHandler handler =
-        new EnabledTableSnapshotHandler(snapshot, master, this, metricsMaster);
+        new EnabledTableSnapshotHandler(snapshot, master, this);
     snapshotTable(snapshot, handler);
   }
 
@@ -645,7 +645,7 @@ public class SnapshotManager implements Stoppable {
 
     try {
       CloneSnapshotHandler handler =
-        new CloneSnapshotHandler(master, snapshot, hTableDescriptor, metricsMaster).prepare();
+        new CloneSnapshotHandler(master, snapshot, hTableDescriptor).prepare();
       this.executorService.submit(handler);
       this.restoreHandlers.put(tableName, handler);
     } catch (Exception e) {
@@ -738,7 +738,7 @@ public class SnapshotManager implements Stoppable {
 
     try {
       RestoreSnapshotHandler handler =
-        new RestoreSnapshotHandler(master, snapshot, hTableDescriptor, metricsMaster).prepare();
+        new RestoreSnapshotHandler(master, snapshot, hTableDescriptor).prepare();
       this.executorService.submit(handler);
       restoreHandlers.put(tableName, handler);
     } catch (Exception e) {

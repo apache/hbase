@@ -72,7 +72,7 @@ public class MasterFileSystem {
   // master status
   Server master;
   // metrics for master
-  MetricsMaster metricsMaster;
+  private final MetricsMasterFileSystem metricsMasterFilesystem = new MetricsMasterFileSystem();
   // Persisted unique cluster ID
   private ClusterId clusterId;
   // Keep around for convenience.
@@ -103,13 +103,11 @@ public class MasterFileSystem {
     }
   };
 
-  public MasterFileSystem(Server master, MasterServices services,
-      MetricsMaster metricsMaster, boolean masterRecovery)
+  public MasterFileSystem(Server master, MasterServices services, boolean masterRecovery)
   throws IOException {
     this.conf = master.getConfiguration();
     this.master = master;
     this.services = services;
-    this.metricsMaster = metricsMaster;
     // Set filesystem to be that of this.rootdir else we get complaints about
     // mismatched filesystems if hbase.rootdir is hdfs and fs.defaultFS is
     // default localfs.  Presumption is that rootdir is fully-qualified before
@@ -410,11 +408,11 @@ public class MasterFileSystem {
     splitLogSize = splitLogManager.splitLogDistributed(serverNames, logDirs, filter);
     splitTime = EnvironmentEdgeManager.currentTimeMillis() - splitTime;
 
-    if (this.metricsMaster != null) {
+    if (this.metricsMasterFilesystem != null) {
       if (filter == META_FILTER) {
-        this.metricsMaster.addMetaWALSplit(splitTime, splitLogSize);
+        this.metricsMasterFilesystem.addMetaWALSplit(splitTime, splitLogSize);
       } else {
-        this.metricsMaster.addSplit(splitTime, splitLogSize);
+        this.metricsMasterFilesystem.addSplit(splitTime, splitLogSize);
       }
     }
   }

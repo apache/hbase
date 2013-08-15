@@ -64,8 +64,8 @@ public class DisabledTableSnapshotHandler extends TakeSnapshotHandler {
    * @param masterServices master services provider
    */
   public DisabledTableSnapshotHandler(SnapshotDescription snapshot,
-      final MasterServices masterServices, final MetricsMaster metricsMaster) {
-    super(snapshot, masterServices, metricsMaster);
+      final MasterServices masterServices) {
+    super(snapshot, masterServices);
 
     // setup the timer
     timeoutInjector = TakeSnapshotUtils.getMasterTimerAndBindToMonitor(snapshot, conf, monitor);
