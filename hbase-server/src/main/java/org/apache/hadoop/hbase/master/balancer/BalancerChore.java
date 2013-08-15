@@ -18,8 +18,11 @@
 
 package org.apache.hadoop.hbase.master.balancer;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.Chore;
+import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.master.HMaster;
 
 /**
@@ -28,6 +31,7 @@ import org.apache.hadoop.hbase.master.HMaster;
  */
 @InterfaceAudience.Private
 public class BalancerChore extends Chore {
+  private static final Log LOG = LogFactory.getLog(BalancerChore.class);
 
   private final HMaster master;
 
@@ -40,6 +44,10 @@ public class BalancerChore extends Chore {
 
   @Override
   protected void chore() {
-    master.balance();
+    try {
+      master.balance();
+    } catch (HBaseIOException e) {
+      LOG.error("Failed to balance.", e);
+    }
   }
 }

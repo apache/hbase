@@ -35,6 +35,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
@@ -93,7 +94,7 @@ public class TestRegionPlacement {
   }
 
   @Test
-  public void testFavoredNodesPresentForRoundRobinAssignment() {
+  public void testFavoredNodesPresentForRoundRobinAssignment() throws HBaseIOException {
     LoadBalancer balancer = LoadBalancerFactory.getLoadBalancer(TEST_UTIL.getConfiguration());
     balancer.setMasterServices(TEST_UTIL.getMiniHBaseCluster().getMaster());
     List<ServerName> servers = new ArrayList<ServerName>();
@@ -153,7 +154,7 @@ public class TestRegionPlacement {
   }
 
   @Test
-  public void testFavoredNodesPresentForRandomAssignment() {
+  public void testFavoredNodesPresentForRandomAssignment() throws HBaseIOException {
     LoadBalancer balancer = LoadBalancerFactory.getLoadBalancer(TEST_UTIL.getConfiguration());
     balancer.setMasterServices(TEST_UTIL.getMiniHBaseCluster().getMaster());
     List<ServerName> servers = new ArrayList<ServerName>();

@@ -1473,7 +1473,7 @@ MasterServices, Server {
     return balancerCutoffTime;
   }
 
-  public boolean balance() {
+  public boolean balance() throws HBaseIOException {
     // if master not initialized, don't run balancer.
     if (!this.initialized) {
       LOG.debug("Master has not been initialized, don't run balancer.");
@@ -1558,7 +1558,11 @@ MasterServices, Server {
 
   @Override
   public BalanceResponse balance(RpcController c, BalanceRequest request) throws ServiceException {
-    return BalanceResponse.newBuilder().setBalancerRan(balance()).build();
+    try {
+      return BalanceResponse.newBuilder().setBalancerRan(balance()).build();
+    } catch (HBaseIOException ex) {
+      throw new ServiceException(ex);
+    }
   }
 
   enum BalanceSwitchMode {
