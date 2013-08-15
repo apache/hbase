@@ -19,6 +19,7 @@
  */
 package org.apache.hadoop.hbase;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.util.Random;
@@ -74,6 +75,8 @@ public abstract class AbstractMergeTestBase extends HBaseClusterTestCase {
   protected void hBaseClusterSetup() throws Exception {
     if (startMiniHBase) {
       super.hBaseClusterSetup();
+    } else {
+      zookeeperClusterSetup();
     }
   }
 

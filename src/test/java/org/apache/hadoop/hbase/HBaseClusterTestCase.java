@@ -93,14 +93,7 @@ public abstract class HBaseClusterTestCase extends HBaseTestCase {
    * Actually start the MiniHBase instance.
    */
   protected void hBaseClusterSetup() throws Exception {
-    File testDir = new File(getUnitTestdir(getName()).toString());
-
-    // Note that this is done before we create the MiniHBaseCluster because we
-    // need to edit the config to add the ZooKeeper servers.
-    this.zooKeeperCluster = new MiniZooKeeperCluster();
-    int clientPort = this.zooKeeperCluster.startup(testDir);
-    conf.set(HConstants.ZOOKEEPER_CLIENT_PORT, Integer.toString(clientPort));
-
+    zookeeperClusterSetup();
     // start the mini cluster
     this.cluster = new MiniHBaseCluster(conf, regionServers);
 
@@ -108,6 +101,16 @@ public abstract class HBaseClusterTestCase extends HBaseTestCase {
       // opening the META table ensures that cluster is running
       new HTable(conf, HConstants.META_TABLE_NAME);
     }
+  }
+
+  protected void zookeeperClusterSetup() throws Exception {
+    File testDir = new File(getUnitTestdir(getName()).toString());
+
+    // Note that this is done before we create the MiniHBaseCluster because we
+    // need to edit the config to add the ZooKeeper servers.
+    this.zooKeeperCluster = new MiniZooKeeperCluster();
+    int clientPort = this.zooKeeperCluster.startup(testDir);
+    conf.set(HConstants.ZOOKEEPER_CLIENT_PORT, Integer.toString(clientPort));
   }
 
   /**
@@ -127,7 +130,7 @@ public abstract class HBaseClusterTestCase extends HBaseTestCase {
 
         // Set the filesystem
         this.fs = dfsCluster.getFileSystem();
-        conf.set("fs.defaultFS", fs.getUri().toString());
+        conf.set("fs.default.name", fs.getUri().toString());
 
         // Set the testDir
         this.testDir= fs.getHomeDirectory();
