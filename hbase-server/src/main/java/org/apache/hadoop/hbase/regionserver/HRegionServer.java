@@ -767,7 +767,8 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
     movedRegionsCleaner = MovedRegionsCleaner.createAndStart(this);
 
     // Setup RPC client for master communication
-    rpcClient = new RpcClient(conf, clusterId);
+    rpcClient = new RpcClient(conf, clusterId, new InetSocketAddress(
+        this.isa.getAddress(), 0));
   }
 
   /**
