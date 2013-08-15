@@ -24,6 +24,7 @@ import java.util.Map;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.hbase.ClusterStatus;
+import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.ServerName;
 
@@ -64,7 +65,8 @@ public interface LoadBalancer extends Configurable {
    * @param clusterState
    * @return List of plans
    */
-  List<RegionPlan> balanceCluster(Map<ServerName, List<HRegionInfo>> clusterState);
+  List<RegionPlan> balanceCluster(Map<ServerName,
+      List<HRegionInfo>> clusterState) throws HBaseIOException;
 
   /**
    * Perform a Round Robin assignment of regions.
@@ -75,7 +77,7 @@ public interface LoadBalancer extends Configurable {
   Map<ServerName, List<HRegionInfo>> roundRobinAssignment(
     List<HRegionInfo> regions,
     List<ServerName> servers
-  );
+  ) throws HBaseIOException;
 
   /**
    * Assign regions to the previously hosting region server
@@ -86,7 +88,7 @@ public interface LoadBalancer extends Configurable {
   Map<ServerName, List<HRegionInfo>> retainAssignment(
     Map<HRegionInfo, ServerName> regions,
     List<ServerName> servers
-  );
+  ) throws HBaseIOException;
 
   /**
    * Sync assign a region
@@ -97,7 +99,7 @@ public interface LoadBalancer extends Configurable {
   Map<HRegionInfo, ServerName> immediateAssignment(
     List<HRegionInfo> regions,
     List<ServerName> servers
-  );
+  ) throws HBaseIOException;
 
   /**
    * Get a random region server from the list
@@ -107,5 +109,5 @@ public interface LoadBalancer extends Configurable {
    */
   ServerName randomAssignment(
     HRegionInfo regionInfo, List<ServerName> servers
-  );
+  ) throws HBaseIOException;
 }

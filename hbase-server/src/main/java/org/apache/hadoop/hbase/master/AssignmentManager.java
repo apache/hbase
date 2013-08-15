@@ -45,6 +45,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Chore;
+import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
@@ -950,8 +951,12 @@ public class AssignmentManager extends ZooKeeperListener {
             if (regionState != null) {
               // When there are more than one region server a new RS is selected as the
               // destination and the same is updated in the regionplan. (HBASE-5546)
-              getRegionPlan(regionState.getRegion(), sn, true);
-              new ClosedRegionHandler(server, this, regionState.getRegion()).process();
+              try {
+                getRegionPlan(regionState.getRegion(), sn, true);
+                new ClosedRegionHandler(server, this, regionState.getRegion()).process();
+              } catch (HBaseIOException e) {
+                LOG.warn("Failed to get region plan", e);
+              }
             }
           }
           break;
@@ -1824,7 +1829,11 @@ public class AssignmentManager extends ZooKeeperListener {
     RegionOpeningState regionOpenState;
     for (int i = 1; i <= maximumAttempts && !server.isStopped(); i++) {
       if (plan == null) { // Get a server for the region at first
-        plan = getRegionPlan(region, forceNewPlan);
+        try {
+          plan = getRegionPlan(region, forceNewPlan);
+        } catch (HBaseIOException e) {
+          LOG.warn("Failed to get region plan", e);
+        }
       }
       if (plan == null) {
         LOG.warn("Unable to determine a plan to assign " + region);
@@ -1989,8 +1998,12 @@ public class AssignmentManager extends ZooKeeperListener {
         // The new plan could be the same as the existing plan since we don't
         // exclude the server of the original plan, which should not be
         // excluded since it could be the only server up now.
-        RegionPlan newPlan = getRegionPlan(region, true);
-
+        RegionPlan newPlan = null;
+        try {
+          newPlan = getRegionPlan(region, true);
+        } catch (HBaseIOException e) {
+          LOG.warn("Failed to get region plan", e);
+        }
         if (newPlan == null) {
           if (tomActivated) {
             this.timeoutMonitor.setAllRegionServersOffline(true);
@@ -2091,7 +2104,7 @@ public class AssignmentManager extends ZooKeeperListener {
    * if no servers to assign, it returns null).
    */
   private RegionPlan getRegionPlan(final HRegionInfo region,
-      final boolean forceNewPlan) {
+      final boolean forceNewPlan)  throws HBaseIOException  {
     return getRegionPlan(region, null, forceNewPlan);
   }
 
@@ -2105,7 +2118,7 @@ public class AssignmentManager extends ZooKeeperListener {
    * if no servers to assign, it returns null).
    */
   private RegionPlan getRegionPlan(final HRegionInfo region,
-      final ServerName serverToExclude, final boolean forceNewPlan) {
+      final ServerName serverToExclude, final boolean forceNewPlan) throws HBaseIOException {
     // Pickup existing plan or make a new one
     final String encodedName = region.getEncodedName();
     final List<ServerName> destServers =
