@@ -632,7 +632,7 @@
           <sectionAutolabelMaxDepth>100</sectionAutolabelMaxDepth>
           <sectionAutolabel>true</sectionAutolabel>
           <sectionLabelIncludesComponentLabel>true</sectionLabelIncludesComponentLabel>
-          <targetDirectory>${basedir}/target/site/book/</targetDirectory>
+          <targetDirectory>${basedir}/target/site/</targetDirectory>
           <htmlStylesheet>../css/freebsd_docbook.css</htmlStylesheet>
           <htmlCustomization>src/docbkx/customization.xsl</htmlCustomization>
           <imgSrcPath>../images/</imgSrcPath>
