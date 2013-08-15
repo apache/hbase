@@ -70,7 +70,7 @@ if [[ "$#" -ne 2 ]]; then usage; fi
 old_hbase_version="$1"
 new_hbase_version="$2"
 # Get hadoop version from the new hbase version
-hadoop_version=`echo "$new_hbase_version" | sed -n 's/.*-\(hadoop[12]\)-.*/\1/p'`
+hadoop_version=`echo "$new_hbase_version" | sed -n 's/.*-\(hadoop[12]\).*/\1/p'`
 if [[ -z $hadoop_version ]]; then usage ; fi
 
 # Get dir to operate in
