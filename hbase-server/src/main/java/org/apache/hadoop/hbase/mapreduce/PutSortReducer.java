@@ -63,7 +63,7 @@ public class PutSortReducer extends
       // stop at the end or the RAM threshold
       while (iter.hasNext() && curSize < threshold) {
         Put p = iter.next();
-        for (List<? extends Cell> cells: p.getFamilyCellMap().values()) {
+        for (List<Cell> cells: p.getFamilyCellMap().values()) {
           for (Cell cell: cells) {
             KeyValue kv = KeyValueUtil.ensureKeyValue(cell);
             map.add(kv);

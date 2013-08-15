@@ -98,12 +98,6 @@ public class KeyValue implements Cell, HeapSize, Cloneable {
   public static final KVComparator META_COMPARATOR = new MetaComparator();
 
   /**
-   * A {@link KVComparator} for <code>.META.</code> catalog table
-   * {@link KeyValue} keys.
-   */
-  public static final KeyComparator META_KEY_COMPARATOR = new MetaKeyComparator();
-
-  /**
    * Get the appropriate row comparator for the specified table.
    *
    * Hopefully we can get rid of this, I added this here because it's replacing
@@ -255,16 +249,6 @@ public class KeyValue implements Cell, HeapSize, Cloneable {
 
   public void setMvccVersion(long mvccVersion){
     this.memstoreTS = mvccVersion;
-  }
-
-  @Deprecated
-  public long getMemstoreTS() {
-    return getMvccVersion();
-  }
-
-  @Deprecated
-  public void setMemstoreTS(long memstoreTS) {
-    setMvccVersion(memstoreTS);
   }
 
   // default value is 0, aka DNC
@@ -871,7 +855,7 @@ public class KeyValue implements Cell, HeapSize, Cloneable {
     // Important to clone the memstoreTS as well - otherwise memstore's
     // update-in-place methods (eg increment) will end up creating
     // new entries
-    ret.setMemstoreTS(memstoreTS);
+    ret.setMvccVersion(memstoreTS);
     return ret;
   }
 
@@ -882,7 +866,7 @@ public class KeyValue implements Cell, HeapSize, Cloneable {
    */
   public KeyValue shallowCopy() {
     KeyValue shallowCopy = new KeyValue(this.bytes, this.offset, this.length);
-    shallowCopy.setMemstoreTS(this.memstoreTS);
+    shallowCopy.setMvccVersion(this.memstoreTS);
     return shallowCopy;
   }
 
@@ -1779,6 +1763,61 @@ public class KeyValue implements Cell, HeapSize, Cloneable {
     protected Object clone() throws CloneNotSupportedException {
       return new MetaComparator();
     }
+
+    /**
+     * Override the row key comparision to parse and compare the meta row key parts.
+     */
+    @Override
+    protected int compareRowKey(final Cell l, final Cell r) {
+      byte[] left = l.getRowArray();
+      int loffset = l.getRowOffset();
+      int llength = l.getRowLength();
+      byte[] right = r.getRowArray();
+      int roffset = r.getRowOffset();
+      int rlength = r.getRowLength();
+
+      int leftDelimiter = getDelimiter(left, loffset, llength,
+          HConstants.DELIMITER);
+      int rightDelimiter = getDelimiter(right, roffset, rlength,
+          HConstants.DELIMITER);
+      if (leftDelimiter < 0 && rightDelimiter >= 0) {
+        // Nothing between .META. and regionid.  Its first key.
+        return -1;
+      } else if (rightDelimiter < 0 && leftDelimiter >= 0) {
+        return 1;
+      } else if (leftDelimiter < 0 && rightDelimiter < 0) {
+        return 0;
+      }
+      // Compare up to the delimiter
+      int result = Bytes.compareTo(left, loffset, leftDelimiter - loffset,
+          right, roffset, rightDelimiter - roffset);
+      if (result != 0) {
+        return result;
+      }
+      // Compare middle bit of the row.
+      // Move past delimiter
+      leftDelimiter++;
+      rightDelimiter++;
+      int leftFarDelimiter = getRequiredDelimiterInReverse(left, leftDelimiter,
+          llength - (leftDelimiter - loffset), HConstants.DELIMITER);
+      int rightFarDelimiter = getRequiredDelimiterInReverse(right,
+          rightDelimiter, rlength - (rightDelimiter - roffset),
+          HConstants.DELIMITER);
+      // Now compare middlesection of row.
+      result = Bytes.compareTo(
+          left,  leftDelimiter,  leftFarDelimiter - leftDelimiter,
+          right, rightDelimiter, rightFarDelimiter - rightDelimiter);
+      if (result != 0) {
+        return result;
+      }
+      // Compare last part of row, the rowid.
+      leftFarDelimiter++;
+      rightFarDelimiter++;
+      result = Bytes.compareTo(
+          left,  leftFarDelimiter,  llength - (leftFarDelimiter - loffset),
+          right, rightFarDelimiter, rlength - (rightFarDelimiter - roffset));
+      return result;
+    }
   }
 
   /**
@@ -1787,7 +1826,7 @@ public class KeyValue implements Cell, HeapSize, Cloneable {
    * considered the same as far as this Comparator is concerned.
    * Hosts a {@link KeyComparator}.
    */
-  public static class KVComparator implements java.util.Comparator<KeyValue> {
+  public static class KVComparator implements java.util.Comparator<Cell> {
     private final KeyComparator rawcomparator = new KeyComparator();
 
     /**
@@ -1798,12 +1837,81 @@ public class KeyValue implements Cell, HeapSize, Cloneable {
       return this.rawcomparator;
     }
 
-    public int compare(final KeyValue left, final KeyValue right) {
-      int ret = getRawComparator().compare(left.getBuffer(),
-          left.getOffset() + ROW_OFFSET, left.getKeyLength(),
-          right.getBuffer(), right.getOffset() + ROW_OFFSET,
-          right.getKeyLength());
-      if (ret != 0) return ret;
+    protected int compareRowKey(final Cell left, final Cell right) {
+      return Bytes.compareTo(
+          left.getRowArray(),  left.getRowOffset(),  left.getRowLength(),
+          right.getRowArray(), right.getRowOffset(), right.getRowLength());
+    }
+    
+    /**
+     * Compares the Key of a cell -- with fields being more significant in this order:
+     * rowkey, colfam/qual, timestamp, type, mvcc
+     */
+    public int compare(final Cell left, final Cell right) {
+      // compare row
+      int compare = compareRowKey(left, right);
+      if (compare != 0) {
+        return compare;
+      }
+
+
+      // compare vs minimum
+      byte ltype = left.getTypeByte();
+      byte rtype = right.getTypeByte();
+      // If the column is not specified, the "minimum" key type appears the
+      // latest in the sorted order, regardless of the timestamp. This is used
+      // for specifying the last key/value in a given row, because there is no
+      // "lexicographically last column" (it would be infinitely long). The
+      // "maximum" key type does not need this behavior.
+      int lcfqLen = left.getFamilyLength() + left.getQualifierLength() ;
+      int rcfqLen = right.getFamilyLength() + right.getQualifierLength() ;
+      if (lcfqLen == 0 && ltype == Type.Minimum.getCode()) {
+        // left is "bigger", i.e. it appears later in the sorted order
+        return 1;
+      }
+      if (rcfqLen == 0 && rtype == Type.Minimum.getCode()) {
+        return -1;
+      }
+
+
+      // compare col family / col fam + qual
+      // If left family size is not equal to right family size, we need not
+      // compare the qualifiers.
+      compare = Bytes.compareTo(
+        left.getFamilyArray(),  left.getFamilyOffset(),  left.getFamilyLength(),
+        right.getFamilyArray(), right.getFamilyOffset(), right.getFamilyLength());
+      if (compare != 0) {
+        return compare;
+      }
+      
+      // Compare qualifier
+      compare = Bytes.compareTo(
+          left.getQualifierArray(), left.getQualifierOffset(), left.getQualifierLength(),
+          right.getQualifierArray(), right.getQualifierOffset(), right.getQualifierLength());
+      if (compare!= 0) {
+        return compare;
+      }
+
+      
+      // compare timestamp
+      long ltimestamp = left.getTimestamp();
+      long rtimestamp = right.getTimestamp();
+      compare = KeyComparator.compareTimestamps(ltimestamp, rtimestamp);
+      if (compare != 0) {
+        return compare;
+      }
+
+      // Compare types. Let the delete types sort ahead of puts; i.e. types
+      // of higher numbers sort before those of lesser numbers. Maximum (255)
+      // appears ahead of everything, and minimum (0) appears after
+      // everything.
+      compare = (0xff & rtype) - (0xff & ltype);
+      if (compare != 0) {
+        return compare;
+      }
+      
+      // compare Mvcc Version
+
       // Negate this comparison so later edits show up first
       return -Longs.compare(left.getMvccVersion(), right.getMvccVersion());
     }
@@ -1818,7 +1926,7 @@ public class KeyValue implements Cell, HeapSize, Cloneable {
       // Compare timestamps
       long ltimestamp = left.getTimestamp(lkeylength);
       long rtimestamp = right.getTimestamp(rkeylength);
-      return getRawComparator().compareTimestamps(ltimestamp, rtimestamp);
+      return KeyComparator.compareTimestamps(ltimestamp, rtimestamp);
     }
 
     /**
@@ -1964,7 +2072,6 @@ public class KeyValue implements Cell, HeapSize, Cloneable {
     protected Object clone() throws CloneNotSupportedException {
       return new KVComparator();
     }
-
   }
 
   /**
@@ -2353,8 +2460,6 @@ public class KeyValue implements Cell, HeapSize, Cloneable {
   public static class MetaKeyComparator extends KeyComparator {
     public int compareRows(byte [] left, int loffset, int llength,
         byte [] right, int roffset, int rlength) {
-      //        LOG.info("META " + Bytes.toString(left, loffset, llength) +
-      //          "---" + Bytes.toString(right, roffset, rlength));
       int leftDelimiter = getDelimiter(left, loffset, llength,
           HConstants.DELIMITER);
       int rightDelimiter = getDelimiter(right, roffset, rlength,
@@ -2681,7 +2786,7 @@ public class KeyValue implements Cell, HeapSize, Cloneable {
         right, roffset, rlength, rfamilylength);
     }
 
-    int compareTimestamps(final long ltimestamp, final long rtimestamp) {
+    static int compareTimestamps(final long ltimestamp, final long rtimestamp) {
       // The below older timestamps sorting ahead of newer timestamps looks
       // wrong but it is intentional. This way, newer timestamps are first
       // found when we iterate over a memstore and newer versions are the

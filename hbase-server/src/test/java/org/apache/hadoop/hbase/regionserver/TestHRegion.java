@@ -1221,15 +1221,15 @@ public class TestHRegion extends HBaseTestCase {
     String method = this.getName();
     this.region = initHRegion(tableName, method, conf, fam1, fam2, fam3);
     try {
-      List<KeyValue> kvs  = new ArrayList<KeyValue>();
+      List<Cell> kvs  = new ArrayList<Cell>();
       kvs.add(new KeyValue(row1, fam4, null, null));
 
 
       //testing existing family
       byte [] family = fam2;
       try {
-        NavigableMap<byte[], List<? extends Cell>> deleteMap =
-          new TreeMap<byte[], List<? extends Cell>>(Bytes.BYTES_COMPARATOR);
+        NavigableMap<byte[], List<Cell>> deleteMap =
+          new TreeMap<byte[], List<Cell>>(Bytes.BYTES_COMPARATOR);
         deleteMap.put(family, kvs);
         region.delete(deleteMap, HConstants.DEFAULT_CLUSTER_ID, Durability.SYNC_WAL);
       } catch (Exception e) {
@@ -1240,8 +1240,8 @@ public class TestHRegion extends HBaseTestCase {
       boolean ok = false;
       family = fam4;
       try {
-        NavigableMap<byte[], List<? extends Cell>> deleteMap =
-          new TreeMap<byte[], List<? extends Cell>>(Bytes.BYTES_COMPARATOR);
+        NavigableMap<byte[], List<Cell>> deleteMap =
+          new TreeMap<byte[], List<Cell>>(Bytes.BYTES_COMPARATOR);
         deleteMap.put(family, kvs);
         region.delete(deleteMap, HConstants.DEFAULT_CLUSTER_ID, Durability.SYNC_WAL);
       } catch (Exception e) {
@@ -1563,13 +1563,13 @@ public class TestHRegion extends HBaseTestCase {
     this.region = initHRegion(tableName, method, conf, fam1);
     try {
       //Building checkerList
-      List<KeyValue> kvs  = new ArrayList<KeyValue>();
+      List<Cell> kvs  = new ArrayList<Cell>();
       kvs.add(new KeyValue(row1, fam1, col1, null));
       kvs.add(new KeyValue(row1, fam1, col2, null));
       kvs.add(new KeyValue(row1, fam1, col3, null));
 
-      NavigableMap<byte[], List<? extends Cell>> deleteMap =
-        new TreeMap<byte[], List<? extends Cell>>(Bytes.BYTES_COMPARATOR);
+      NavigableMap<byte[], List<Cell>> deleteMap =
+        new TreeMap<byte[], List<Cell>>(Bytes.BYTES_COMPARATOR);
       deleteMap.put(fam1, kvs);
       region.delete(deleteMap, HConstants.DEFAULT_CLUSTER_ID, Durability.SYNC_WAL);
 

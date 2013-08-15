@@ -160,11 +160,11 @@ public class AccessController extends BaseRegionObserver
    * table updates.
    */
   void updateACL(RegionCoprocessorEnvironment e,
-      final Map<byte[], List<? extends Cell>> familyMap) {
+      final Map<byte[], List<Cell>> familyMap) {
     Set<byte[]> entries =
         new TreeSet<byte[]>(Bytes.BYTES_RAWCOMPARATOR);
-    for (Map.Entry<byte[], List<? extends Cell>> f : familyMap.entrySet()) {
-      List<? extends Cell> cells = f.getValue();
+    for (Map.Entry<byte[], List<Cell>> f : familyMap.entrySet()) {
+      List<Cell> cells = f.getValue();
       for (Cell cell: cells) {
         KeyValue kv = KeyValueUtil.ensureKeyValue(cell);
         if (Bytes.equals(kv.getBuffer(), kv.getFamilyOffset(),
@@ -1070,7 +1070,7 @@ public class AccessController extends BaseRegionObserver
       throws IOException {
     // Create a map of family to qualifiers.
     Map<byte[], Set<byte[]>> familyMap = Maps.newTreeMap(Bytes.BYTES_COMPARATOR);
-    for (Map.Entry<byte [], List<? extends Cell>> entry: increment.getFamilyCellMap().entrySet()) {
+    for (Map.Entry<byte [], List<Cell>> entry: increment.getFamilyCellMap().entrySet()) {
       Set<byte[]> qualifiers = Sets.newTreeSet(Bytes.BYTES_COMPARATOR);
       for (Cell cell: entry.getValue()) {
         KeyValue kv = KeyValueUtil.ensureKeyValue(cell);

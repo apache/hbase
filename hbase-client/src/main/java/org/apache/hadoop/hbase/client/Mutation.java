@@ -65,8 +65,8 @@ public abstract class Mutation extends OperationWithAttributes implements Row, C
   protected Durability durability = Durability.USE_DEFAULT;
   
   // A Map sorted by column family.
-  protected NavigableMap<byte [], List<? extends Cell>> familyMap =
-    new TreeMap<byte [], List<? extends Cell>>(Bytes.BYTES_COMPARATOR);
+  protected NavigableMap<byte [], List<Cell>> familyMap =
+    new TreeMap<byte [], List<Cell>>(Bytes.BYTES_COMPARATOR);
 
   @Override
   public CellScanner cellScanner() {
@@ -80,8 +80,8 @@ public abstract class Mutation extends OperationWithAttributes implements Row, C
    * @param family column family
    * @return a list of Cell objects, returns an empty list if one doesn't exist.
    */
-  List<? extends Cell> getCellList(byte[] family) {
-    List<? extends Cell> list = this.familyMap.get(family);
+  List<Cell> getCellList(byte[] family) {
+    List<Cell> list = this.familyMap.get(family);
     if (list == null) {
       list = new ArrayList<Cell>();
     }
@@ -110,7 +110,7 @@ public abstract class Mutation extends OperationWithAttributes implements Row, C
     // ideally, we would also include table information, but that information
     // is not stored in each Operation instance.
     map.put("families", families);
-    for (Map.Entry<byte [], List<? extends Cell>> entry : this.familyMap.entrySet()) {
+    for (Map.Entry<byte [], List<Cell>> entry : this.familyMap.entrySet()) {
       families.add(Bytes.toStringBinary(entry.getKey()));
     }
     return map;
@@ -135,7 +135,7 @@ public abstract class Mutation extends OperationWithAttributes implements Row, C
     map.put("row", Bytes.toStringBinary(this.row));
     int colCount = 0;
     // iterate through all column families affected
-    for (Map.Entry<byte [], List<? extends Cell>> entry : this.familyMap.entrySet()) {
+    for (Map.Entry<byte [], List<Cell>> entry : this.familyMap.entrySet()) {
       // map from this family to details for each cell affected within the family
       List<Map<String, Object>> qualifierDetails = new ArrayList<Map<String, Object>>();
       columns.put(Bytes.toStringBinary(entry.getKey()), qualifierDetails);
@@ -182,14 +182,14 @@ public abstract class Mutation extends OperationWithAttributes implements Row, C
    * Method for retrieving the put's familyMap
    * @return familyMap
    */
-  public NavigableMap<byte [], List<? extends Cell>> getFamilyCellMap() {
+  public NavigableMap<byte [], List<Cell>> getFamilyCellMap() {
     return this.familyMap;
   }
 
   /**
    * Method for setting the put's familyMap
    */
-  public void setFamilyMap(NavigableMap<byte [], List<? extends Cell>> map) {
+  public void setFamilyMap(NavigableMap<byte [], List<Cell>> map) {
     // TODO: Shut this down or move it up to be a Constructor.  Get new object rather than change
     // this internal data member.
     this.familyMap = map;
@@ -253,7 +253,7 @@ public abstract class Mutation extends OperationWithAttributes implements Row, C
    */
   public int size() {
     int size = 0;
-    for (List<? extends Cell> cells : this.familyMap.values()) {
+    for (List<Cell> cells : this.familyMap.values()) {
       size += cells.size();
     }
     return size;
@@ -278,7 +278,7 @@ public abstract class Mutation extends OperationWithAttributes implements Row, C
     // Adding map overhead
     heapsize +=
       ClassSize.align(this.familyMap.size() * ClassSize.MAP_ENTRY);
-    for(Map.Entry<byte [], List<? extends Cell>> entry : this.familyMap.entrySet()) {
+    for(Map.Entry<byte [], List<Cell>> entry : this.familyMap.entrySet()) {
       //Adding key overhead
       heapsize +=
         ClassSize.align(ClassSize.ARRAY + entry.getKey().length);

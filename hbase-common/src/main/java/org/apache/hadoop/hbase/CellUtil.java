@@ -226,11 +226,11 @@ public final class CellUtil {
    * @return CellScanner interface over <code>cellIterable</code>
    */
   public static CellScanner createCellScanner(final NavigableMap<byte [],
-      List<? extends Cell>> map) {
+      List<Cell>> map) {
     return new CellScanner() {
-      private final Iterator<Entry<byte[], List<? extends Cell>>> entries =
+      private final Iterator<Entry<byte[], List<Cell>>> entries =
           map.entrySet().iterator();
-      private Iterator<? extends Cell> currentIterator = null;
+      private Iterator<Cell> currentIterator = null;
       private Cell currentCell;
 
       @Override

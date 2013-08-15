@@ -327,9 +327,9 @@ public final class HLogPerformanceEvaluation extends Configured implements Tool 
     return put;
   }
 
-  private void addFamilyMapToWALEdit(Map<byte[], List<? extends Cell>> familyMap,
+  private void addFamilyMapToWALEdit(Map<byte[], List<Cell>> familyMap,
       WALEdit walEdit) {
-    for (List<? extends Cell> edits : familyMap.values()) {
+    for (List<Cell> edits : familyMap.values()) {
       for (Cell cell : edits) {
         KeyValue kv = KeyValueUtil.ensureKeyValue(cell);
         walEdit.add(kv);

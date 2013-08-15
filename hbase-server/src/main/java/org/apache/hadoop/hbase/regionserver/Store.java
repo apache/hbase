@@ -113,7 +113,7 @@ public interface Store extends HeapSize, StoreConfigInformation {
    * @return memstore size delta
    * @throws IOException
    */
-  long upsert(Iterable<? extends Cell> cells, long readpoint) throws IOException;
+  long upsert(Iterable<Cell> cells, long readpoint) throws IOException;
 
   /**
    * Adds a value to the memstore

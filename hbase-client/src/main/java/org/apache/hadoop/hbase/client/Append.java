@@ -105,15 +105,12 @@ public class Append extends Mutation {
     // Presume it is KeyValue for now.
     KeyValue kv = KeyValueUtil.ensureKeyValue(cell);
     byte [] family = kv.getFamily();
-    List<? extends Cell> list = this.familyMap.get(family);
+    List<Cell> list = this.familyMap.get(family);
     if (list == null) {
       list  = new ArrayList<Cell>();
     }
-    // Cast so explicit list type rather than ? extends Cell.  Help the compiler out.  See
-    // http://stackoverflow.com/questions/6474784/java-using-generics-with-lists-and-interfaces
-    List<KeyValue> l = (List<KeyValue>)list;
     // find where the new entry should be placed in the List
-    l.add(kv);
+    list.add(kv);
     this.familyMap.put(family, list);
     return this;
   }

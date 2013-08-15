@@ -56,17 +56,17 @@ public class PutCombiner<K> extends Reducer<K, Put, K, Put> {
     int cnt = 0;
     long curSize = 0;
     Put put = null;
-    Map<byte[], List<? extends Cell>> familyMap = null;
+    Map<byte[], List<Cell>> familyMap = null;
     for (Put p : vals) {
       cnt++;
       if (put == null) {
         put = p;
         familyMap = put.getFamilyCellMap();
       } else {
-        for (Entry<byte[], List<? extends Cell>> entry : p.getFamilyCellMap()
+        for (Entry<byte[], List<Cell>> entry : p.getFamilyCellMap()
             .entrySet()) {
-          List<? extends Cell> cells = familyMap.get(entry.getKey());
-          List<KeyValue> kvs = (cells != null) ? (List<KeyValue>) cells : null;
+          List<Cell> cells = familyMap.get(entry.getKey());
+          List<Cell> kvs = (cells != null) ? (List<Cell>) cells : null;
           for (Cell cell : entry.getValue()) {
             KeyValue kv = KeyValueUtil.ensureKeyValue(cell);
             curSize += kv.heapSize();

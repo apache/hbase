@@ -184,7 +184,7 @@ public class RemoteHTable implements HTableInterface {
   protected CellSetModel buildModelFromPut(Put put) {
     RowModel row = new RowModel(put.getRow());
     long ts = put.getTimeStamp();
-    for (List<? extends Cell> cells: put.getFamilyCellMap().values()) {
+    for (List<Cell> cells: put.getFamilyCellMap().values()) {
       for (Cell cell: cells) {
         KeyValue kv = KeyValueUtil.ensureKeyValue(cell);
         row.addCell(new CellModel(kv.getFamily(), kv.getQualifier(),
@@ -404,7 +404,7 @@ public class RemoteHTable implements HTableInterface {
         cells = new ArrayList<Cell>();
         map.put(row, cells);
       }
-      for (List<? extends Cell> l: put.getFamilyCellMap().values()) {
+      for (List<Cell> l: put.getFamilyCellMap().values()) {
         cells.addAll(l);
       }
     }

@@ -29,6 +29,7 @@ import java.util.NavigableMap;
 import java.util.TreeMap;
 import java.util.UUID;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.KeyValue;
@@ -47,6 +48,7 @@ import org.apache.hadoop.hbase.util.Pair;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.ServiceException;
 
+@InterfaceAudience.Private
 public class ReplicationProtbufUtil {
   /**
    * Get the HLog entries from a list of protocol buffer WALEntry

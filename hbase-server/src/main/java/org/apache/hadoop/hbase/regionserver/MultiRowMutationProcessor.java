@@ -73,7 +73,7 @@ MultiRowMutationProcessorResponse> {
     // Check mutations and apply edits to a single WALEdit
     for (Mutation m : mutations) {
       if (m instanceof Put) {
-        Map<byte[], List<? extends Cell>> familyMap = m.getFamilyCellMap();
+        Map<byte[], List<Cell>> familyMap = m.getFamilyCellMap();
         region.checkFamilies(familyMap.keySet());
         region.checkTimestamps(familyMap, now);
         region.updateKVTimestamps(familyMap.values(), byteNow);
@@ -86,7 +86,7 @@ MultiRowMutationProcessorResponse> {
             "Action must be Put or Delete. But was: "
             + m.getClass().getName());
       }
-      for (List<? extends Cell> cells: m.getFamilyCellMap().values()) {
+      for (List<Cell> cells: m.getFamilyCellMap().values()) {
         boolean writeToWAL = m.getDurability() != Durability.SKIP_WAL;
         for (Cell cell : cells) {
           KeyValue kv = KeyValueUtil.ensureKeyValue(cell);
