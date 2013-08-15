@@ -315,14 +315,14 @@ public class SimpleRegionObserver extends BaseRegionObserver {
   public void prePut(final ObserverContext<RegionCoprocessorEnvironment> c, 
       final Put put, final WALEdit edit,
       final Durability durability) throws IOException {
-    Map<byte[], List<? extends Cell>> familyMap  = put.getFamilyCellMap();
+    Map<byte[], List<Cell>> familyMap  = put.getFamilyCellMap();
     RegionCoprocessorEnvironment e = c.getEnvironment();
     assertNotNull(e);
     assertNotNull(e.getRegion());
     assertNotNull(familyMap);
     if (e.getRegion().getTableDesc().getTableName().equals(
         TestRegionObserverInterface.TEST_TABLE)) {
-      List<? extends Cell> cells = familyMap.get(TestRegionObserverInterface.A);
+      List<Cell> cells = familyMap.get(TestRegionObserverInterface.A);
       assertNotNull(cells);
       assertNotNull(cells.get(0));
       KeyValue kv = (KeyValue)cells.get(0);
@@ -348,12 +348,12 @@ public class SimpleRegionObserver extends BaseRegionObserver {
   public void postPut(final ObserverContext<RegionCoprocessorEnvironment> c,
       final Put put, final WALEdit edit,
       final Durability durability) throws IOException {
-    Map<byte[], List<? extends Cell>> familyMap  = put.getFamilyCellMap();
+    Map<byte[], List<Cell>> familyMap  = put.getFamilyCellMap();
     RegionCoprocessorEnvironment e = c.getEnvironment();
     assertNotNull(e);
     assertNotNull(e.getRegion());
     assertNotNull(familyMap);
-    List<? extends Cell> cells = familyMap.get(TestRegionObserverInterface.A);
+    List<Cell> cells = familyMap.get(TestRegionObserverInterface.A);
     if (e.getRegion().getTableDesc().getTableName().equals(
         TestRegionObserverInterface.TEST_TABLE)) {
       assertNotNull(cells);
@@ -381,7 +381,7 @@ public class SimpleRegionObserver extends BaseRegionObserver {
   public void preDelete(final ObserverContext<RegionCoprocessorEnvironment> c, 
       final Delete delete, final WALEdit edit,
       final Durability durability) throws IOException {
-    Map<byte[], List<? extends Cell>> familyMap  = delete.getFamilyCellMap();
+    Map<byte[], List<Cell>> familyMap  = delete.getFamilyCellMap();
     RegionCoprocessorEnvironment e = c.getEnvironment();
     assertNotNull(e);
     assertNotNull(e.getRegion());
@@ -395,7 +395,7 @@ public class SimpleRegionObserver extends BaseRegionObserver {
   public void postDelete(final ObserverContext<RegionCoprocessorEnvironment> c, 
       final Delete delete, final WALEdit edit,
       final Durability durability) throws IOException {
-    Map<byte[], List<? extends Cell>> familyMap  = delete.getFamilyCellMap();
+    Map<byte[], List<Cell>> familyMap  = delete.getFamilyCellMap();
     RegionCoprocessorEnvironment e = c.getEnvironment();
     assertNotNull(e);
     assertNotNull(e.getRegion());

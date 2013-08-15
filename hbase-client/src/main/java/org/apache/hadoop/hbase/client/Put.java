@@ -92,8 +92,8 @@ public class Put extends Mutation implements HeapSize, Comparable<Row> {
    */
   public Put(Put putToCopy) {
     this(putToCopy.getRow(), putToCopy.ts);
-    this.familyMap = new TreeMap<byte [], List<? extends Cell>>(Bytes.BYTES_COMPARATOR);
-    for(Map.Entry<byte [], List<? extends Cell>> entry: putToCopy.getFamilyCellMap().entrySet()) {
+    this.familyMap = new TreeMap<byte [], List<Cell>>(Bytes.BYTES_COMPARATOR);
+    for(Map.Entry<byte [], List<Cell>> entry: putToCopy.getFamilyCellMap().entrySet()) {
       this.familyMap.put(entry.getKey(), entry.getValue());
     }
     this.durability = putToCopy.durability;
@@ -121,9 +121,9 @@ public class Put extends Mutation implements HeapSize, Comparable<Row> {
    */
   @SuppressWarnings("unchecked")
   public Put add(byte [] family, byte [] qualifier, long ts, byte [] value) {
-    List<? extends Cell> list = getCellList(family);
+    List<Cell> list = getCellList(family);
     KeyValue kv = createPutKeyValue(family, qualifier, ts, value);
-    ((List<KeyValue>)list).add(kv);
+    list.add(kv);
     familyMap.put(kv.getFamily(), list);
     return this;
   }
@@ -139,7 +139,7 @@ public class Put extends Mutation implements HeapSize, Comparable<Row> {
   @SuppressWarnings("unchecked")
   public Put add(KeyValue kv) throws IOException{
     byte [] family = kv.getFamily();
-    List<? extends Cell> list = getCellList(family);
+    List<Cell> list = getCellList(family);
     //Checking that the row of the kv is the same as the put
     int res = Bytes.compareTo(this.row, 0, row.length,
         kv.getBuffer(), kv.getRowOffset(), kv.getRowLength());
@@ -147,7 +147,7 @@ public class Put extends Mutation implements HeapSize, Comparable<Row> {
       throw new WrongRowIOException("The row in " + kv.toString() +
         " doesn't match the original one " +  Bytes.toStringBinary(this.row));
     }
-    ((List<KeyValue>)list).add(kv);
+    list.add(kv);
     familyMap.put(family, list);
     return this;
   }
@@ -228,7 +228,7 @@ public class Put extends Mutation implements HeapSize, Comparable<Row> {
    */
   private boolean has(byte[] family, byte[] qualifier, long ts, byte[] value,
                       boolean ignoreTS, boolean ignoreValue) {
-    List<? extends Cell> list = getCellList(family);
+    List<Cell> list = getCellList(family);
     if (list.size() == 0) {
       return false;
     }

@@ -40,16 +40,16 @@ public class TestReplicationProtobuf {
    */
   @Test
   public void testGetCellScanner() throws IOException {
-    List<KeyValue> a = new ArrayList<KeyValue>();
+    List<Cell> a = new ArrayList<Cell>();
     KeyValue akv = new KeyValue(Bytes.toBytes("a"), -1L);
     a.add(akv);
     // Add a few just to make it less regular.
     a.add(new KeyValue(Bytes.toBytes("aa"), -1L));
     a.add(new KeyValue(Bytes.toBytes("aaa"), -1L));
-    List<KeyValue> b = new ArrayList<KeyValue>();
+    List<Cell> b = new ArrayList<Cell>();
     KeyValue bkv = new KeyValue(Bytes.toBytes("b"), -1L);
     a.add(bkv);
-    List<KeyValue> c = new ArrayList<KeyValue>();
+    List<Cell> c = new ArrayList<Cell>();
     KeyValue ckv = new KeyValue(Bytes.toBytes("c"), -1L);
     c.add(ckv);
     List<List<? extends Cell>> all = new ArrayList<List<? extends Cell>>();

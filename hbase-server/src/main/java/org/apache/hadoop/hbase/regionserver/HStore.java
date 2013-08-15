@@ -1774,7 +1774,7 @@ public class HStore implements Store {
   }
 
   @Override
-  public long upsert(Iterable<? extends Cell> cells, long readpoint) throws IOException {
+  public long upsert(Iterable<Cell> cells, long readpoint) throws IOException {
     this.lock.readLock().lock();
     try {
       return this.memstore.upsert(cells, readpoint);

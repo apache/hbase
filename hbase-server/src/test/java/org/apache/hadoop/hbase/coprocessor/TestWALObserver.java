@@ -157,7 +157,7 @@ public class TestWALObserver {
     // Use a Put to create familyMap.
     Put p = creatPutWith2Families(TEST_ROW);
 
-    Map<byte[], List<? extends Cell>> familyMap = p.getFamilyCellMap();
+    Map<byte[], List<Cell>> familyMap = p.getFamilyCellMap();
     WALEdit edit = new WALEdit();
     addFamilyMapToWALEdit(familyMap, edit);
 
@@ -342,9 +342,9 @@ public class TestWALObserver {
    * @param walEdit
    *          the destination entry to append into
    */
-  private void addFamilyMapToWALEdit(Map<byte[], List<? extends Cell>> familyMap,
+  private void addFamilyMapToWALEdit(Map<byte[], List<Cell>> familyMap,
       WALEdit walEdit) {
-    for (List<? extends Cell> edits : familyMap.values()) {
+    for (List<Cell> edits : familyMap.values()) {
       for (Cell cell : edits) {
         // KeyValue v1 expectation. Cast for now until we go all Cell all the time. TODO.
         walEdit.add((KeyValue)cell);

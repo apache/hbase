@@ -161,13 +161,11 @@ public class Delete extends Mutation implements Comparable<Row> {
         " doesn't match the original one " +  Bytes.toStringBinary(this.row));
     }
     byte [] family = kv.getFamily();
-    List<? extends Cell> list = familyMap.get(family);
+    List<Cell> list = familyMap.get(family);
     if (list == null) {
       list = new ArrayList<Cell>();
     }
-    // Cast so explicit list type rather than ? extends Cell.  Help the compiler out.  See
-    // http://stackoverflow.com/questions/6474784/java-using-generics-with-lists-and-interfaces
-    ((List<KeyValue>)list).add(kv);
+    list.add(kv);
     familyMap.put(family, list);
     return this;
   }
@@ -197,16 +195,14 @@ public class Delete extends Mutation implements Comparable<Row> {
    */
   @SuppressWarnings("unchecked")
   public Delete deleteFamily(byte [] family, long timestamp) {
-    List<? extends Cell> list = familyMap.get(family);
+    List<Cell> list = familyMap.get(family);
     if(list == null) {
       list = new ArrayList<Cell>();
     } else if(!list.isEmpty()) {
       list.clear();
     }
     KeyValue kv = new KeyValue(row, family, null, timestamp, KeyValue.Type.DeleteFamily);
-    // Cast so explicit list type rather than ? extends Cell.  Help the compiler out.  See
-    // http://stackoverflow.com/questions/6474784/java-using-generics-with-lists-and-interfaces
-    ((List<KeyValue>)list).add(kv);
+    list.add(kv);
     familyMap.put(family, list);
     return this;
   }
@@ -219,11 +215,11 @@ public class Delete extends Mutation implements Comparable<Row> {
    * @return this for invocation chaining
    */
   public Delete deleteFamilyVersion(byte [] family, long timestamp) {
-    List<? extends Cell> list = familyMap.get(family);
+    List<Cell> list = familyMap.get(family);
     if(list == null) {
       list = new ArrayList<Cell>();
     }
-    ((List<KeyValue>)list).add(new KeyValue(row, family, null, timestamp,
+    list.add(new KeyValue(row, family, null, timestamp,
           KeyValue.Type.DeleteFamilyVersion));
     familyMap.put(family, list);
     return this;
@@ -251,13 +247,11 @@ public class Delete extends Mutation implements Comparable<Row> {
    */
   @SuppressWarnings("unchecked")
   public Delete deleteColumns(byte [] family, byte [] qualifier, long timestamp) {
-    List<? extends Cell> list = familyMap.get(family);
+    List<Cell> list = familyMap.get(family);
     if (list == null) {
       list = new ArrayList<Cell>();
     }
-    // Cast so explicit list type rather than ? extends Cell.  Help the compiler out.  See
-    // http://stackoverflow.com/questions/6474784/java-using-generics-with-lists-and-interfaces
-    ((List<KeyValue>)list).add(new KeyValue(this.row, family, qualifier, timestamp,
+    list.add(new KeyValue(this.row, family, qualifier, timestamp,
         KeyValue.Type.DeleteColumn));
     familyMap.put(family, list);
     return this;
@@ -286,14 +280,12 @@ public class Delete extends Mutation implements Comparable<Row> {
    */
   @SuppressWarnings("unchecked")
   public Delete deleteColumn(byte [] family, byte [] qualifier, long timestamp) {
-    List<? extends Cell> list = familyMap.get(family);
+    List<Cell> list = familyMap.get(family);
     if(list == null) {
       list = new ArrayList<Cell>();
     }
-    // Cast so explicit list type rather than ? extends Cell.  Help the compiler out.  See
-    // http://stackoverflow.com/questions/6474784/java-using-generics-with-lists-and-interfaces
     KeyValue kv = new KeyValue(this.row, family, qualifier, timestamp, KeyValue.Type.Delete);
-    ((List<KeyValue>)list).add(kv);
+    list.add(kv);
     familyMap.put(family, list);
     return this;
   }

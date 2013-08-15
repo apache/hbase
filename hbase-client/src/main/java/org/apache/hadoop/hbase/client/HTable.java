@@ -1328,7 +1328,7 @@ public class HTable implements HTableInterface {
       throw new IllegalArgumentException("No columns to insert");
     }
     if (maxKeyValueSize > 0) {
-      for (List<? extends Cell> list : put.getFamilyCellMap().values()) {
+      for (List<Cell> list : put.getFamilyCellMap().values()) {
         for (Cell cell : list) {
           // KeyValue v1 expectation.  Cast for now.
           KeyValue kv = KeyValueUtil.ensureKeyValue(cell);

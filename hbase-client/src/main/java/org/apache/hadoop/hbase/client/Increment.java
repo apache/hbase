@@ -83,7 +83,7 @@ public class Increment extends Mutation implements Comparable<Row> {
   public Increment add(Cell cell) throws IOException{
     KeyValue kv = KeyValueUtil.ensureKeyValue(cell);
     byte [] family = kv.getFamily();
-    List<? extends Cell> list = getCellList(family);
+    List<Cell> list = getCellList(family);
     //Checking that the row of the kv is the same as the put
     int res = Bytes.compareTo(this.row, 0, row.length,
         kv.getBuffer(), kv.getRowOffset(), kv.getRowLength());
@@ -91,7 +91,7 @@ public class Increment extends Mutation implements Comparable<Row> {
       throw new WrongRowIOException("The row in " + kv.toString() +
         " doesn't match the original one " +  Bytes.toStringBinary(this.row));
     }
-    ((List<KeyValue>)list).add(kv);
+    list.add(kv);
     familyMap.put(family, list);
     return this;
   }
@@ -114,9 +114,9 @@ public class Increment extends Mutation implements Comparable<Row> {
     if (qualifier == null) {
       throw new IllegalArgumentException("qualifier cannot be null");
     }
-    List<? extends Cell> list = getCellList(family);
+    List<Cell> list = getCellList(family);
     KeyValue kv = createPutKeyValue(family, qualifier, ts, Bytes.toBytes(amount));
-    ((List<KeyValue>)list).add(kv);
+    list.add(kv);
     familyMap.put(kv.getFamily(), list);
     return this;
   }
@@ -174,10 +174,10 @@ public class Increment extends Mutation implements Comparable<Row> {
    * @since 0.95.0
    */
   public Map<byte[], NavigableMap<byte [], Long>> getFamilyMapOfLongs() {
-    NavigableMap<byte[], List<? extends Cell>> map = super.getFamilyCellMap();
+    NavigableMap<byte[], List<Cell>> map = super.getFamilyCellMap();
     Map<byte [], NavigableMap<byte[], Long>> results =
       new TreeMap<byte[], NavigableMap<byte [], Long>>(Bytes.BYTES_COMPARATOR);
-    for (Map.Entry<byte [], List<? extends Cell>> entry: map.entrySet()) {
+    for (Map.Entry<byte [], List<Cell>> entry: map.entrySet()) {
       NavigableMap<byte [], Long> longs = new TreeMap<byte [], Long>(Bytes.BYTES_COMPARATOR);
       for (Cell cell: entry.getValue()) {
         KeyValue kv = KeyValueUtil.ensureKeyValue(cell);
@@ -202,7 +202,7 @@ public class Increment extends Mutation implements Comparable<Row> {
     }
     sb.append(", families=");
     boolean moreThanOne = false;
-    for(Map.Entry<byte [], List<? extends Cell>> entry: this.familyMap.entrySet()) {
+    for(Map.Entry<byte [], List<Cell>> entry: this.familyMap.entrySet()) {
       if(moreThanOne) {
         sb.append("), ");
       } else {

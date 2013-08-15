@@ -555,7 +555,7 @@ public class MemStore implements HeapSize {
    * @param readpoint readpoint below which we can safely remove duplicate KVs 
    * @return change in memstore size
    */
-  public long upsert(Iterable<? extends Cell> cells, long readpoint) {
+  public long upsert(Iterable<Cell> cells, long readpoint) {
    this.lock.readLock().lock();
     try {
       long size = 0;
