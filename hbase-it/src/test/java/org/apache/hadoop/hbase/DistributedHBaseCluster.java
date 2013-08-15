@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase;
 import java.io.IOException;
 import java.util.HashMap;
 
+import com.google.common.collect.Sets;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ClusterManager.ServiceType;
@@ -34,8 +35,6 @@ import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos;
 import org.apache.hadoop.hbase.protobuf.generated.MasterMonitorProtos;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Threads;
-
-import com.google.common.collect.Sets;
 
 /**
  * Manages the interactions with an already deployed distributed cluster (as opposed to

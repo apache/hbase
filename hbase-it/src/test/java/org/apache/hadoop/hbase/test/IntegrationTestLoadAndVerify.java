@@ -17,27 +17,28 @@
  */
 package org.apache.hadoop.hbase.test;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-
 import java.io.IOException;
 import java.util.Random;
+import java.util.Set;
 import java.util.UUID;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
+import org.apache.commons.cli.CommandLine;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.IntegrationTestBase;
 import org.apache.hadoop.hbase.IntegrationTestingUtility;
 import org.apache.hadoop.hbase.IntegrationTests;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
@@ -56,14 +57,14 @@ import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.mapreduce.Reducer;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
-import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-import com.google.common.collect.Lists;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 /**
  * A large test which loads a lot of data that has internal references, and
@@ -83,7 +84,7 @@ import com.google.common.collect.Lists;
  * Originally taken from Apache Bigtop.
  */
 @Category(IntegrationTests.class)
-public class IntegrationTestLoadAndVerify  extends Configured implements Tool {
+public class IntegrationTestLoadAndVerify  extends IntegrationTestBase  {
   private static final String TEST_NAME = "IntegrationTestLoadAndVerify";
   private static final byte[] TEST_FAMILY = Bytes.toBytes("f1");
   private static final byte[] TEST_QUALIFIER = Bytes.toBytes("q1");
@@ -107,6 +108,8 @@ public class IntegrationTestLoadAndVerify  extends Configured implements Tool {
 
   private IntegrationTestingUtility util;
 
+  private String toRun = null;
+
   private enum Counters {
     ROWS_WRITTEN,
     REFERENCES_WRITTEN,
@@ -115,17 +118,12 @@ public class IntegrationTestLoadAndVerify  extends Configured implements Tool {
 
   @Before
   public void setUp() throws Exception {
-    util = getTestingUtil();
+    util = getTestingUtil(getConf());
     util.initializeCluster(3);
     this.setConf(util.getConfiguration());
     getConf().setLong(NUM_TO_WRITE_KEY, NUM_TO_WRITE_DEFAULT / 100);
     getConf().setInt(NUM_MAP_TASKS_KEY, NUM_MAP_TASKS_DEFAULT / 100);
     getConf().setInt(NUM_REDUCE_TASKS_KEY, NUM_REDUCE_TASKS_DEFAULT / 10);
-  }
-
-  @After
-  public void tearDown() throws Exception {
-    util.restoreCluster();
   }
 
   /**
@@ -145,6 +143,12 @@ public class IntegrationTestLoadAndVerify  extends Configured implements Tool {
       ( ( ( value >> 40 ) & 0xff ) << 16 ) +
       ( ( ( value >> 48 ) & 0xff ) << 8 ) +
       ( ( ( value >> 56 ) & 0xff ) << 0 );
+  }
+
+  @Override
+  @After
+  public void cleanUp() throws Exception {
+    util.restoreCluster();
   }
 
   public static class LoadMapper
@@ -353,7 +357,7 @@ public class IntegrationTestLoadAndVerify  extends Configured implements Tool {
     HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(TEST_NAME));
     htd.addFamily(new HColumnDescriptor(TEST_FAMILY));
 
-    HBaseAdmin admin = getTestingUtil().getHBaseAdmin();
+    HBaseAdmin admin = getTestingUtil(getConf()).getHBaseAdmin();
     int numPreCreate = 40;
     admin.createTable(htd, Bytes.toBytes(0L), Bytes.toBytes(-1L), numPreCreate);
 
@@ -398,33 +402,41 @@ public class IntegrationTestLoadAndVerify  extends Configured implements Tool {
     System.err.println("  -Dverify.scannercaching=<n>      Number hbase scanner caching rows to read (default 50)");
   }
 
-  public int run(String argv[]) throws Exception {
-    if (argv.length < 1 || argv.length > 1) {
-      usage();
-      return 1;
-    }
 
+  @Override
+  protected void processOptions(CommandLine cmd) {
+    super.processOptions(cmd);
+
+    String[] args = cmd.getArgs();
+    if (args == null || args.length < 1 || args.length > 1) {
+      usage();
+      throw new RuntimeException("Incorrect Number of args.");
+    }
+    toRun = args[0];
+  }
+
+  public int runTestFromCommandLine() throws Exception {
     IntegrationTestingUtility.setUseDistributedCluster(getConf());
     boolean doLoad = false;
     boolean doVerify = false;
     boolean doDelete = getConf().getBoolean("loadmapper.deleteAfter",true);
     int numPresplits = getConf().getInt("loadmapper.numPresplits", 40);
 
-    if (argv[0].equals("load")) {
+    if (toRun.equals("load")) {
       doLoad = true;
-    } else if (argv[0].equals("verify")) {
+    } else if (toRun.equals("verify")) {
       doVerify= true;
-    } else if (argv[0].equals("loadAndVerify")) {
+    } else if (toRun.equals("loadAndVerify")) {
       doLoad=true;
       doVerify= true;
     } else {
-      System.err.println("Invalid argument " + argv[0]);
+      System.err.println("Invalid argument " + toRun);
       usage();
       return 1;
     }
 
     // create HTableDescriptor for specified table
-    String table = getConf().get(TABLE_NAME_KEY, TEST_NAME);
+    String table = getTablename();
     HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(table));
     htd.addFamily(new HColumnDescriptor(TEST_FAMILY));
 
@@ -442,19 +454,19 @@ public class IntegrationTestLoadAndVerify  extends Configured implements Tool {
     return 0;
   }
 
-  private IntegrationTestingUtility getTestingUtil() {
-    if (this.util == null) {
-      if (getConf() == null) {
-        this.util = new IntegrationTestingUtility();
-      } else {
-        this.util = new IntegrationTestingUtility(getConf());
-      }
-    }
-    return util;
+  @Override
+  public String getTablename() {
+    return getConf().get(TABLE_NAME_KEY, TEST_NAME);
+  }
+
+  @Override
+  protected Set<String> getColumnFamilies() {
+    return Sets.newHashSet(Bytes.toString(TEST_FAMILY));
   }
 
   public static void main(String argv[]) throws Exception {
     Configuration conf = HBaseConfiguration.create();
+    IntegrationTestingUtility.setUseDistributedCluster(conf);
     int ret = ToolRunner.run(conf, new IntegrationTestLoadAndVerify(), argv);
     System.exit(ret);
   }
