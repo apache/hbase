@@ -119,6 +119,7 @@ import org.apache.hadoop.hbase.zookeeper.ClusterId;
 import org.apache.hadoop.hbase.zookeeper.ClusterStatusTracker;
 import org.apache.hadoop.hbase.zookeeper.DrainingServerTracker;
 import org.apache.hadoop.hbase.zookeeper.RegionServerTracker;
+import org.apache.hadoop.hbase.zookeeper.ZKAssign;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.hadoop.io.MapWritable;
@@ -751,7 +752,7 @@ Server {
     }
   }
 
-  void fixupDaughters(final MonitoredTask status) throws IOException {
+  void fixupDaughters(final MonitoredTask status) throws IOException, KeeperException {
     final Map<HRegionInfo, Result> offlineSplitParents =
       new HashMap<HRegionInfo, Result>();
     // This visitor collects offline split parents in the .META. table
@@ -775,8 +776,12 @@ Server {
     // Now work on our list of found parents. See if any we can clean up.
     int fixups = 0;
     for (Map.Entry<HRegionInfo, Result> e : offlineSplitParents.entrySet()) {
-      fixups += ServerShutdownHandler.fixupDaughters(
+      String node = ZKAssign.getNodeName(zooKeeper, e.getKey().getEncodedName());
+      byte[] data = ZKUtil.getData(zooKeeper, node);
+      if (data == null) { // otherwise, splitting is still going on, skip it
+        fixups += ServerShutdownHandler.fixupDaughters(
           e.getValue(), assignmentManager, catalogTracker);
+      }
     }
     if (fixups != 0) {
       LOG.info("Scanned the catalog and fixed up " + fixups +

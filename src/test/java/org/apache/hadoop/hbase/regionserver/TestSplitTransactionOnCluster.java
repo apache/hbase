@@ -70,6 +70,7 @@ import org.junit.experimental.categories.Category;
  * is tests against a bare {@link HRegion}.
  */
 @Category(LargeTests.class)
+@SuppressWarnings("deprecation")
 public class TestSplitTransactionOnCluster {
   private static final Log LOG =
     LogFactory.getLog(TestSplitTransactionOnCluster.class);
@@ -1015,14 +1016,18 @@ public class TestSplitTransactionOnCluster {
       LOG.debug("Customised master executed.");
     }
   }
-  
+
   private static class TransitionToSplittingFailedException extends IOException {
+    private static final long serialVersionUID = 7025885032995944524L;
+
     public TransitionToSplittingFailedException() {
       super();
     }
   }
 
   private static class SplittingNodeCreationFailedException  extends IOException {
+    private static final long serialVersionUID = 1652404976265623004L;
+
     public SplittingNodeCreationFailedException () {
       super();
     }
