@@ -120,7 +120,7 @@ public class TestSplitTransactionOnCluster {
       Bytes.toBytes("ephemeral");
 
     // Create table then get the single region for our new table.
-    HTable t = TESTING_UTIL.createTable(tableName, HConstants.CATALOG_FAMILY);
+    HTable t = createTableAndWait(tableName, HConstants.CATALOG_FAMILY);
 
     List<HRegion> regions = cluster.getRegions(tableName);
     HRegionInfo hri = getAndCheckSingleTableRegion(regions);
@@ -144,8 +144,7 @@ public class TestSplitTransactionOnCluster {
       // Now try splitting and it should work.
       split(hri, server, regionCount);
       // Get daughters
-      List<HRegion> daughters = cluster.getRegions(tableName);
-      assertTrue(daughters.size() >= 2);
+      List<HRegion> daughters = checkAndGetDaughters(tableName);
       // Assert the ephemeral node is up in zk.
       String path = ZKAssign.getNodeName(t.getConnection().getZooKeeperWatcher(),
         hri.getEncodedName());
@@ -190,7 +189,7 @@ public class TestSplitTransactionOnCluster {
       Bytes.toBytes("testExistingZnodeBlocksSplitAndWeRollback");
 
     // Create table then get the single region for our new table.
-    HTable t = TESTING_UTIL.createTable(tableName, HConstants.CATALOG_FAMILY);
+    HTable t = createTableAndWait(tableName, HConstants.CATALOG_FAMILY);
 
     List<HRegion> regions = cluster.getRegions(tableName);
     HRegionInfo hri = getAndCheckSingleTableRegion(regions);
@@ -227,8 +226,7 @@ public class TestSplitTransactionOnCluster {
       // Now try splitting and it should work.
       split(hri, server, regionCount);
       // Get daughters
-      List<HRegion> daughters = cluster.getRegions(tableName);
-      assertTrue(daughters.size() >= 2);
+      checkAndGetDaughters(tableName);
       // OK, so split happened after we cleared the blocking node.
     } finally {
       admin.balanceSwitch(true);
@@ -249,7 +247,7 @@ public class TestSplitTransactionOnCluster {
     final byte [] tableName = Bytes.toBytes("testShutdownSimpleFixup");
 
     // Create table then get the single region for our new table.
-    HTable t = TESTING_UTIL.createTable(tableName, HConstants.CATALOG_FAMILY);
+    HTable t = createTableAndWait(tableName, HConstants.CATALOG_FAMILY);
 
     List<HRegion> regions = cluster.getRegions(tableName);
     HRegionInfo hri = getAndCheckSingleTableRegion(regions);
@@ -270,8 +268,7 @@ public class TestSplitTransactionOnCluster {
       // Now split.
       split(hri, server, regionCount);
       // Get daughters
-      List<HRegion> daughters = cluster.getRegions(tableName);
-      assertTrue(daughters.size() >= 2);
+      List<HRegion> daughters = checkAndGetDaughters(tableName);
       // Remove one of the daughters from .META. to simulate failed insert of
       // daughter region up into .META.
       removeDaughterFromMeta(daughters.get(0).getRegionName());
@@ -300,14 +297,13 @@ public class TestSplitTransactionOnCluster {
    * @throws IOException
    * @throws InterruptedException
    */
-  @Ignore("See HBASE-9209")
   @Test (timeout=300000) public void testShutdownFixupWhenDaughterHasSplit()
   throws IOException, InterruptedException {
     final byte [] tableName =
       Bytes.toBytes("testShutdownFixupWhenDaughterHasSplit");
 
     // Create table then get the single region for our new table.
-    HTable t = TESTING_UTIL.createTable(tableName, HConstants.CATALOG_FAMILY);
+    HTable t = createTableAndWait(tableName, HConstants.CATALOG_FAMILY);
 
     List<HRegion> regions = cluster.getRegions(tableName);
     HRegionInfo hri = getAndCheckSingleTableRegion(regions);
@@ -328,8 +324,7 @@ public class TestSplitTransactionOnCluster {
       // Now split.
       split(hri, server, regionCount);
       // Get daughters
-      List<HRegion> daughters = cluster.getRegions(tableName);
-      assertTrue(daughters.size() >= 2);
+      List<HRegion> daughters = checkAndGetDaughters(tableName);
       // Now split one of the daughters.
       regionCount = server.getOnlineRegions().size();
       HRegionInfo daughter = daughters.get(0).getRegionInfo();
@@ -385,7 +380,7 @@ public class TestSplitTransactionOnCluster {
     final byte[] tableName = Bytes.toBytes("testMasterRestartWhenSplittingIsPartial");
 
     // Create table then get the single region for our new table.
-    HTable t = TESTING_UTIL.createTable(tableName, HConstants.CATALOG_FAMILY);
+    HTable t = createTableAndWait(tableName, HConstants.CATALOG_FAMILY);
 
     List<HRegion> regions = cluster.getRegions(tableName);
     HRegionInfo hri = getAndCheckSingleTableRegion(regions);
@@ -410,8 +405,7 @@ public class TestSplitTransactionOnCluster {
       // Now try splitting and it should work.
       split(hri, server, regionCount);
       // Get daughters
-      List<HRegion> daughters = cluster.getRegions(tableName);
-      assertTrue(daughters.size() >= 2);
+      checkAndGetDaughters(tableName);
       // Assert the ephemeral node is up in zk.
       String path = ZKAssign.getNodeName(t.getConnection()
           .getZooKeeperWatcher(), hri.getEncodedName());
@@ -488,8 +482,7 @@ public class TestSplitTransactionOnCluster {
       
       split(hri, server, regionCount);
       // Get daughters
-      List<HRegion> daughters = cluster.getRegions(tableName);
-      assertTrue(daughters.size() >= 2);
+      checkAndGetDaughters(tableName);
       // Assert the ephemeral node is up in zk.
       String path = ZKAssign.getNodeName(t.getConnection()
           .getZooKeeperWatcher(), hri.getEncodedName());
@@ -538,14 +531,12 @@ public class TestSplitTransactionOnCluster {
    * @throws KeeperException
    */
   @Test
-  public void testSplitBeforeSettingSplittingInZK() throws IOException,
-      InterruptedException, KeeperException {
+  public void testSplitBeforeSettingSplittingInZK() throws Exception {
     testSplitBeforeSettingSplittingInZK(true);
     testSplitBeforeSettingSplittingInZK(false);
   }
 
-  private void testSplitBeforeSettingSplittingInZK(boolean nodeCreated) throws IOException,
-      KeeperException {
+  private void testSplitBeforeSettingSplittingInZK(boolean nodeCreated) throws Exception {
     final byte[] tableName = Bytes.toBytes("testSplitBeforeSettingSplittingInZK");
     HBaseAdmin admin = TESTING_UTIL.getHBaseAdmin();
     try {
@@ -554,7 +545,12 @@ public class TestSplitTransactionOnCluster {
       htd.addFamily(new HColumnDescriptor("cf"));
       admin.createTable(htd);
 
-      List<HRegion> regions = cluster.getRegions(tableName);
+      List<HRegion> regions = null;
+      for (int i=0; i<100; i++) {
+        regions = cluster.getRegions(tableName);
+        if (regions.size() > 0) break;
+        Thread.sleep(100);
+      }
       int regionServerIndex = cluster.getServerWith(regions.get(0).getRegionName());
       HRegionServer regionServer = cluster.getRegionServer(regionServerIndex);
       SplitTransaction st = null;
@@ -579,7 +575,14 @@ public class TestSplitTransactionOnCluster {
         st.execute(regionServer, regionServer);
       } catch (IOException e) {
         String node = ZKAssign.getNodeName(regionServer.getZooKeeper(), regions.get(0)
-            .getRegionInfo().getEncodedName());
+          .getRegionInfo().getEncodedName());
+        // make sure the client is uptodate
+        regionServer.getZooKeeper().sync(node);
+        for (int i = 0; i < 100; i++) {
+          if (ZKUtil.checkExists(regionServer.getZooKeeper(), node) != -1) {
+            Thread.sleep(100);
+          }
+        }
         if (nodeCreated) {
           assertFalse(ZKUtil.checkExists(regionServer.getZooKeeper(), node) == -1);
         } else {
@@ -659,7 +662,29 @@ public class TestSplitTransactionOnCluster {
     
   }
 
-  
+  private List<HRegion> checkAndGetDaughters(byte[] tableName)
+      throws InterruptedException {    
+    List<HRegion> daughters = null;
+    // try up to 10s
+    for (int i=0; i<100; i++) {
+      daughters = cluster.getRegions(tableName);
+      if (daughters.size() >= 2) break;
+      Thread.sleep(100);
+    }
+    assertTrue(daughters.size() >= 2);
+    return daughters;
+  }
+
+  private HTable createTableAndWait(byte[] tableName, byte[] cf) throws IOException,
+      InterruptedException {
+    HTable t = TESTING_UTIL.createTable(tableName, cf);
+    for (int i = 0; cluster.getRegions(tableName).size() == 0 && i < 100; i++) {
+      Thread.sleep(100);
+    }
+    assertTrue("Table not online: "+Bytes.toString(tableName), cluster.getRegions(tableName).size() != 0);
+    return t;
+  }
+
   private MockMasterWithoutCatalogJanitor abortAndWaitForMaster() 
   throws IOException, InterruptedException {
     cluster.abortMaster(0);
@@ -722,17 +747,24 @@ public class TestSplitTransactionOnCluster {
       LOG.
         info("Moving " + hri.getRegionNameAsString() + " to " +
         hrs.getServerName() + "; metaServerIndex=" + metaServerIndex);
+      for (int i = 0; cluster.getMaster().getAssignmentManager()
+          .getRegionServerOfRegion(hri) == null
+          && i < 100; i++) {
+        Thread.sleep(10);
+      }
       admin.move(hri.getEncodedNameAsBytes(),
         Bytes.toBytes(hrs.getServerName().toString()));
     }
     // Wait till table region is up on the server that is NOT carrying .META..
-    while (true) {
+    for (int i=0; i<100; i++) {
       tableRegionIndex = cluster.getServerWith(hri.getRegionName());
       if (tableRegionIndex != -1 && tableRegionIndex != metaServerIndex) break;
       LOG.debug("Waiting on region move off the .META. server; current index " +
         tableRegionIndex + " and metaServerIndex=" + metaServerIndex);
       Thread.sleep(100);
     }
+    assertTrue("Region not moved off .META. server", tableRegionIndex != -1
+        && tableRegionIndex != metaServerIndex);
     // Verify for sure table region is not on same server as .META.
     tableRegionIndex = cluster.getServerWith(hri.getRegionName());
     assertTrue(tableRegionIndex != -1);
