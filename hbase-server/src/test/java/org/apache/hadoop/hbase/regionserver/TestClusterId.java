@@ -21,11 +21,19 @@ package org.apache.hadoop.hbase.regionserver;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 
+import java.util.UUID;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.MediumTests;
+import org.apache.hadoop.hbase.master.HMaster;
+import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.apache.hadoop.hbase.zookeeper.ZKClusterId;
 import org.junit.After;
@@ -84,5 +92,29 @@ public class TestClusterId {
     assertNotNull(clusterId);
     assertEquals(clusterId, rst.getRegionServer().getClusterId());
   }
+  
+  @Test
+  public void testRewritingClusterIdToPB() throws Exception {
+    TEST_UTIL.startMiniZKCluster();
+    TEST_UTIL.startMiniDFSCluster(1);
+    TEST_UTIL.createRootDir();
+    TEST_UTIL.getConfiguration().setBoolean("hbase.replication", true);
+    Path rootDir = FSUtils.getRootDir(TEST_UTIL.getConfiguration());
+    FileSystem fs = rootDir.getFileSystem(TEST_UTIL.getConfiguration());
+    Path filePath = new Path(rootDir, HConstants.CLUSTER_ID_FILE_NAME);
+    FSDataOutputStream s = null;
+    try {
+      s = fs.create(filePath);
+      s.writeUTF(UUID.randomUUID().toString());
+    } finally {
+      if (s != null) {
+        s.close();
+      }
+    }
+    TEST_UTIL.startMiniHBaseCluster(1, 1);
+    HMaster master = TEST_UTIL.getHBaseCluster().getMaster();
+    assertEquals(1, master.getServerManager().getOnlineServersList().size());
+  }
+  
 }
 

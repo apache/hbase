@@ -43,7 +43,7 @@ public class ClusterId {
     this(UUID.randomUUID().toString());
   }
 
-  ClusterId(final String uuid) {
+  public ClusterId(final String uuid) {
     this.id = uuid;
   }
 
