@@ -310,6 +310,8 @@ public class TablePermission extends Permission {
   }
 
   @Override
+  @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="NP_NULL_ON_SOME_PATH",
+    justification="Passed on construction except on constructor not to be used")
   public boolean equals(Object obj) {
     if (!(obj instanceof TablePermission)) {
       return false;
