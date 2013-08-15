@@ -18,6 +18,14 @@
 
 package org.apache.hadoop.hbase.mttr;
 
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+
 import com.google.common.base.Objects;
 import org.apache.commons.lang.RandomStringUtils;
 import org.apache.commons.logging.Log;
@@ -29,6 +37,11 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.IntegrationTestingUtility;
 import org.apache.hadoop.hbase.IntegrationTests;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.chaos.actions.Action;
+import org.apache.hadoop.hbase.chaos.actions.MoveRegionsOfTableAction;
+import org.apache.hadoop.hbase.chaos.actions.RestartActiveMasterAction;
+import org.apache.hadoop.hbase.chaos.actions.RestartRsHoldingMetaAction;
+import org.apache.hadoop.hbase.chaos.actions.RestartRsHoldingTableAction;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
@@ -37,7 +50,6 @@ import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.filter.KeyOnlyFilter;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.ChaosMonkey;
 import org.apache.hadoop.hbase.util.LoadTestTool;
 import org.cloudera.htrace.Sampler;
 import org.cloudera.htrace.Span;
@@ -48,14 +60,6 @@ import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
-import java.util.concurrent.TimeUnit;
 
 import static junit.framework.Assert.assertEquals;
 
@@ -126,10 +130,10 @@ public class IntegrationTestMTTR {
   /**
    * All of the chaos monkey actions used.
    */
-  private static ChaosMonkey.Action restartRSAction;
-  private static ChaosMonkey.Action restartMetaAction;
-  private static ChaosMonkey.Action moveRegionAction;
-  private static ChaosMonkey.Action restartMasterAction;
+  private static Action restartRSAction;
+  private static Action restartMetaAction;
+  private static Action moveRegionAction;
+  private static Action restartMasterAction;
 
   /**
    * The load test tool used to create load and make sure that HLogs aren't empty.
@@ -165,19 +169,19 @@ public class IntegrationTestMTTR {
   private static void setupActions() throws IOException {
     // Set up the action that will restart a region server holding a region from our table
     // because this table should only have one region we should be good.
-    restartRSAction = new ChaosMonkey.RestartRsHoldingTable(SLEEP_TIME, tableName.getNameAsString());
+    restartRSAction = new RestartRsHoldingTableAction(SLEEP_TIME, tableName.getNameAsString());
 
     // Set up the action that will kill the region holding meta.
-    restartMetaAction = new ChaosMonkey.RestartRsHoldingMeta(SLEEP_TIME);
+    restartMetaAction = new RestartRsHoldingMetaAction(SLEEP_TIME);
 
     // Set up the action that will move the regions of our table.
-    moveRegionAction = new ChaosMonkey.MoveRegionsOfTable(SLEEP_TIME, tableName.getNameAsString());
+    moveRegionAction = new MoveRegionsOfTableAction(SLEEP_TIME, tableName.getNameAsString());
 
     // Kill the master
-    restartMasterAction = new ChaosMonkey.RestartActiveMaster(1000);
+    restartMasterAction = new RestartActiveMasterAction(1000);
 
     // Give the action the access to the cluster.
-    ChaosMonkey.ActionContext actionContext = new ChaosMonkey.ActionContext(util);
+    Action.ActionContext actionContext = new Action.ActionContext(util);
     restartRSAction.init(actionContext);
     restartMetaAction.init(actionContext);
     moveRegionAction.init(actionContext);
@@ -237,7 +241,7 @@ public class IntegrationTestMTTR {
 
   @Test
   public void testRestartRsHoldingTable() throws Exception {
-    run(new ActionCallable(restartRSAction), "RestartRsHoldingTable");
+    run(new ActionCallable(restartRSAction), "RestartRsHoldingTableAction");
   }
 
   @Test
@@ -478,9 +482,9 @@ public class IntegrationTestMTTR {
 
 
   public class ActionCallable implements Callable<Boolean> {
-    private final ChaosMonkey.Action action;
+    private final Action action;
 
-    public ActionCallable(ChaosMonkey.Action action) {
+    public ActionCallable(Action action) {
       this.action = action;
     }
 

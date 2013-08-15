@@ -25,6 +25,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
+import java.util.Set;
 import java.util.UUID;
 
 import org.apache.commons.cli.CommandLine;
@@ -37,12 +38,13 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.IntegrationTestBase;
 import org.apache.hadoop.hbase.IntegrationTestingUtility;
 import org.apache.hadoop.hbase.IntegrationTests;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
@@ -147,7 +149,7 @@ import org.junit.experimental.categories.Category;
  * This class can be run as a unit test, as an integration test, or from the command line
  */
 @Category(IntegrationTests.class)
-public class IntegrationTestBigLinkedList extends Configured implements Tool {
+public class IntegrationTestBigLinkedList extends IntegrationTestBase {
   private static final byte[] NO_KEY = new byte[1];
 
   protected static String TABLE_NAME_KEY = "IntegrationTestBigLinkedList.table";
@@ -182,8 +184,10 @@ public class IntegrationTestBigLinkedList extends Configured implements Tool {
 
   private static final int WIDTH_DEFAULT = 1000000;
   private static final int WRAP_DEFAULT = 25;
-
   private static final int ROWKEY_LENGTH = 16;
+
+  private String toRun;
+  private String[] otherArgs;
 
   static class CINode {
     byte[] key;
@@ -970,38 +974,29 @@ public class IntegrationTestBigLinkedList extends Configured implements Tool {
   protected IntegrationTestingUtility util;
 
   @Before
+  @Override
   public void setUp() throws Exception {
-    util = getTestingUtil();
+    util = getTestingUtil(getConf());
     util.initializeCluster(this.NUM_SLAVES_BASE);
     this.setConf(util.getConfiguration());
   }
 
   @After
-  public void tearDown() throws Exception {
+  @Override
+  public void cleanUp() throws Exception {
     util.restoreCluster();
   }
 
   @Test
   public void testContinuousIngest() throws IOException, Exception {
     //Loop <num iterations> <num mappers> <num nodes per mapper> <output dir> <num reducers>
-    int ret = ToolRunner.run(getTestingUtil().getConfiguration(), new Loop(),
+    int ret = ToolRunner.run(getTestingUtil(getConf()).getConfiguration(), new Loop(),
         new String[] {"1", "1", "2000000",
                      util.getDataTestDirOnTestFS("IntegrationTestBigLinkedList").toString(), "1"});
     org.junit.Assert.assertEquals(0, ret);
   }
 
-  protected IntegrationTestingUtility getTestingUtil() {
-    if (this.util == null) {
-      if (getConf() == null) {
-        this.util = new IntegrationTestingUtility();
-      } else {
-        this.util = new IntegrationTestingUtility(getConf());
-      }
-    }
-    return util;
-  }
-
-  private int printUsage() {
+  private void usage() {
     System.err.println("Usage: " + this.getClass().getSimpleName() + " COMMAND [COMMAND options]");
     System.err.println("  where COMMAND is one of:");
     System.err.println("");
@@ -1021,39 +1016,55 @@ public class IntegrationTestBigLinkedList extends Configured implements Tool {
     System.err.println("  Loop                       A program to Loop through Generator and");
     System.err.println("                             Verify steps");
     System.err.println("\t  ");
-    return 1;
+    System.err.flush();
   }
 
   @Override
-  public int run(String[] args) throws Exception {
+  protected void processOptions(CommandLine cmd) {
+    super.processOptions(cmd);
+    String[] args = cmd.getArgs();
     //get the class, run with the conf
     if (args.length < 1) {
-      return printUsage();
+      printUsage();
+      throw new RuntimeException("Incorrect Number of args.");
     }
-    Tool tool = null;
-    if (args[0].equals("Generator")) {
-      tool = new Generator();
-    } else if (args[0].equals("Verify")) {
-      tool = new Verify();
-    } else if (args[0].equals("Loop")) {
-      tool = new Loop();
-    } else if (args[0].equals("Walker")) {
-      tool = new Walker();
-    } else if (args[0].equals("Print")) {
-      tool = new Print();
-    } else if (args[0].equals("Delete")) {
-      tool = new Delete();
-    } else {
-      return printUsage();
-    }
-
-    args = Arrays.copyOfRange(args, 1, args.length);
-    return ToolRunner.run(getConf(), tool, args);
+    toRun = args[0];
+    otherArgs = Arrays.copyOfRange(args, 1, args.length);
   }
 
-  public static void main(String[] args) throws Exception {
-    int ret = ToolRunner.run(HBaseConfiguration.create(), new IntegrationTestBigLinkedList(), args);
-    System.exit(ret);
+  @Override
+  public int runTestFromCommandLine() throws Exception {
+
+    Tool tool = null;
+    if (toRun.equals("Generator")) {
+      tool = new Generator();
+    } else if (toRun.equals("Verify")) {
+      tool = new Verify();
+    } else if (toRun.equals("Loop")) {
+      tool = new Loop();
+    } else if (toRun.equals("Walker")) {
+      tool = new Walker();
+    } else if (toRun.equals("Print")) {
+      tool = new Print();
+    } else if (toRun.equals("Delete")) {
+      tool = new Delete();
+    } else {
+      usage();
+      throw new RuntimeException("Unknown arg");
+    }
+
+    return ToolRunner.run(getConf(), tool, otherArgs);
+  }
+
+  @Override
+  public String getTablename() {
+    Configuration c = getConf();
+    return c.get(TABLE_NAME_KEY, DEFAULT_TABLE_NAME);
+  }
+
+  @Override
+  protected Set<String> getColumnFamilies() {
+    return null;
   }
 
   private static void setJobConf(Job job, int numMappers, long numNodes,
@@ -1072,5 +1083,12 @@ public class IntegrationTestBigLinkedList extends Configured implements Tool {
     // Make sure scanners log something useful to make debugging possible.
     job.getConfiguration().setBoolean(ScannerCallable.LOG_SCANNER_ACTIVITY, true);
     job.getConfiguration().setInt(TableRecordReaderImpl.LOG_PER_ROW_COUNT, 100000);
+  }
+
+  public static void main(String[] args) throws Exception {
+    Configuration conf = HBaseConfiguration.create();
+    IntegrationTestingUtility.setUseDistributedCluster(conf);
+    int ret = ToolRunner.run(conf, new IntegrationTestBigLinkedList(), args);
+    System.exit(ret);
   }
 }

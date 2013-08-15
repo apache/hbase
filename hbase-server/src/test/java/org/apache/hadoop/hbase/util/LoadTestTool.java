@@ -56,7 +56,7 @@ public class LoadTestTool extends AbstractHBaseTool {
   protected static final String DEFAULT_TABLE_NAME = "cluster_test";
 
   /** Column family used by the test */
-  protected static byte[] COLUMN_FAMILY = Bytes.toBytes("test_cf");
+  public static byte[] COLUMN_FAMILY = Bytes.toBytes("test_cf");
 
   /** Column families used by the test */
   protected static final byte[][] COLUMN_FAMILIES = { COLUMN_FAMILY };

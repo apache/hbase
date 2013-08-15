@@ -19,32 +19,41 @@
 package org.apache.hadoop.hbase;
 
 import java.io.IOException;
+import java.util.Set;
 
+import com.google.common.collect.Sets;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.LoadTestTool;
+import org.apache.hadoop.util.ToolRunner;
 import org.junit.Assert;
+import org.junit.Test;
+import org.junit.experimental.categories.Category;
 
 /**
  * A base class for tests that do something with the cluster while running
  * {@link LoadTestTool} to write and verify some data.
  */
-public abstract class IngestIntegrationTestBase {
+@Category(IntegrationTests.class)
+public class IntegrationTestIngest extends IntegrationTestBase {
+  private static final int SERVER_COUNT = 4; // number of slaves for the smallest cluster
+  private static final long DEFAULT_RUN_TIME = 20 * 60 * 1000;
+
   protected static String tableName = null;
 
   /** A soft limit on how long we should run */
   private static final String RUN_TIME_KEY = "hbase.%s.runtime";
 
-  protected static final Log LOG = LogFactory.getLog(IngestIntegrationTestBase.class);
+  protected static final Log LOG = LogFactory.getLog(IntegrationTestIngest.class);
   protected IntegrationTestingUtility util;
   protected HBaseCluster cluster;
   private LoadTestTool loadTool;
 
-  protected void setUp(int numSlavesBase, Configuration conf) throws Exception {
+  protected void setUp(int numSlavesBase) throws Exception {
     tableName = this.getClass().getSimpleName();
-    util = getTestingUtil(conf);
+    util = getTestingUtil(null);
     LOG.debug("Initializing/checking cluster has " + numSlavesBase + " servers");
     util.initializeCluster(numSlavesBase);
     LOG.debug("Done initializing/checking cluster");
@@ -58,25 +67,37 @@ public abstract class IngestIntegrationTestBase {
     Assert.assertEquals("Failed to initialize LoadTestTool", 0, ret);
   }
 
-  protected IntegrationTestingUtility getTestingUtil(Configuration conf) {
-    if (this.util == null) {
-      if (conf == null) {
-        this.util = new IntegrationTestingUtility();
-      } else {
-        this.util = new IntegrationTestingUtility(conf);
-      }
-    }
-    return util;
+  @Override
+  public void setUp() throws Exception {
+    setUp(SERVER_COUNT);
   }
 
-  protected void setUp(int numSlavesBase) throws Exception {
-    setUp(numSlavesBase, null);
-  }
-
-  protected void tearDown() throws Exception {
+  @Override
+  public void cleanUp() throws Exception {
     LOG.debug("Restoring the cluster");
     util.restoreCluster();
     LOG.debug("Done restoring the cluster");
+  }
+
+  @Override
+  public int runTestFromCommandLine() throws Exception {
+    internalRunIngestTest();
+    return 0;
+  }
+
+  @Test
+  public void internalRunIngestTest() throws Exception {
+    runIngestTest(DEFAULT_RUN_TIME, 2500, 10, 1024, 10);
+  }
+
+  @Override
+  public String getTablename() {
+    return tableName;
+  }
+
+  @Override
+  protected Set<String> getColumnFamilies() {
+    return Sets.newHashSet(Bytes.toString(LoadTestTool.COLUMN_FAMILY));
   }
 
   private void deleteTableIfNecessary() throws IOException {
@@ -147,5 +168,12 @@ public abstract class IngestIntegrationTestBase {
       throws IOException {
     int numRegionServers = cluster.getClusterStatus().getServersSize();
     return keysPerServer * numRegionServers;
+  }
+
+  public static void main(String[] args) throws Exception {
+    Configuration conf = HBaseConfiguration.create();
+    IntegrationTestingUtility.setUseDistributedCluster(conf);
+    int ret = ToolRunner.run(conf, new IntegrationTestIngest(), args);
+    System.exit(ret);
   }
 }

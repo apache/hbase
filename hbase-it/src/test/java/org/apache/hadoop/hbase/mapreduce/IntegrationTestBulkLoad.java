@@ -18,11 +18,20 @@
  */
 package org.apache.hadoop.hbase.mapreduce;
 
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Random;
+import java.util.Set;
+
 import org.apache.commons.lang.RandomStringUtils;
-import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.IntegrationTestBase;
 import org.apache.hadoop.hbase.IntegrationTestingUtility;
 import org.apache.hadoop.hbase.IntegrationTests;
 import org.apache.hadoop.hbase.KeyValue;
@@ -31,7 +40,6 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.EnvironmentEdge;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.RegionSplitter;
 import org.apache.hadoop.io.LongWritable;
@@ -51,21 +59,11 @@ import org.apache.hadoop.mapreduce.Reducer;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.lib.input.FileSplit;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
-import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
+import org.junit.After;
+import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-
-import java.io.DataInput;
-import java.io.DataOutput;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Random;
-import java.util.UUID;
 
 import static org.junit.Assert.assertEquals;
 
@@ -101,7 +99,7 @@ import static org.junit.Assert.assertEquals;
  *
  */
 @Category(IntegrationTests.class)
-public class IntegrationTestBulkLoad implements Configurable, Tool {
+public class IntegrationTestBulkLoad extends IntegrationTestBase {
 
   private static byte[] CHAIN_FAM = Bytes.toBytes("L");
   private static byte[] SORT_FAM  = Bytes.toBytes("S");
@@ -119,11 +117,6 @@ public class IntegrationTestBulkLoad implements Configurable, Tool {
 
   private static String TABLE_NAME_KEY = "hbase.IntegrationTestBulkLoad.tableName";
   private static String TABLE_NAME = "IntegrationTestBulkLoad";
-
-  private static IntegrationTestingUtility util;
-
-  private String tableName;
-  private byte[] tableNameBytes;
 
   @Test
   public void testBulkLoad() throws Exception {
@@ -143,14 +136,12 @@ public class IntegrationTestBulkLoad implements Configurable, Tool {
   }
 
   private void setupTable() throws IOException {
-    tableName = getConf().get(TABLE_NAME_KEY, TABLE_NAME);
-    tableNameBytes = Bytes.toBytes(tableName);
-    if (util.getHBaseAdmin().tableExists(tableNameBytes)) {
-      util.deleteTable(tableNameBytes);
+    if (util.getHBaseAdmin().tableExists(getTablename())) {
+      util.deleteTable(getTablename());
     }
 
     util.createTable(
-        tableNameBytes,
+        Bytes.toBytes(getTablename()),
         new byte[][]{CHAIN_FAM, SORT_FAM, DATA_FAM},
         getSplits(16)
     );
@@ -160,8 +151,8 @@ public class IntegrationTestBulkLoad implements Configurable, Tool {
     String jobName =  IntegrationTestBulkLoad.class.getSimpleName() + " - " +
         EnvironmentEdgeManager.currentTimeMillis();
     Configuration conf = new Configuration(util.getConfiguration());
-    Path p = util.getDataTestDirOnTestFS(tableName +  "-" + iteration);
-    HTable table = new HTable(conf, tableName);
+    Path p = util.getDataTestDirOnTestFS(getTablename() +  "-" + iteration);
+    HTable table = new HTable(conf, getTablename());
 
     conf.setBoolean("mapreduce.map.speculative", false);
     conf.setBoolean("mapreduce.reduce.speculative", false);
@@ -532,7 +523,7 @@ public class IntegrationTestBulkLoad implements Configurable, Tool {
    */
   private void runCheck() throws IOException, ClassNotFoundException, InterruptedException {
     Configuration conf = getConf();
-    String jobName = tableName + "_check" + EnvironmentEdgeManager.currentTimeMillis();
+    String jobName = getTablename() + "_check" + EnvironmentEdgeManager.currentTimeMillis();
     Path p = util.getDataTestDirOnTestFS(jobName);
 
     Job job = new Job(conf);
@@ -551,7 +542,7 @@ public class IntegrationTestBulkLoad implements Configurable, Tool {
     s.setBatch(100);
 
     TableMapReduceUtil.initTableMapperJob(
-        Bytes.toBytes(tableName),
+        Bytes.toBytes(getTablename()),
         new Scan(),
         LinkedListCheckingMapper.class,
         LinkKey.class,
@@ -571,12 +562,10 @@ public class IntegrationTestBulkLoad implements Configurable, Tool {
     util.getTestFileSystem().delete(p, true);
   }
 
-  @BeforeClass
-  public static void provisionCluster() throws Exception {
-    if (null == util) {
-      util = new IntegrationTestingUtility();
-    }
-
+  @Before
+  @Override
+  public void setUp() throws Exception {
+    util = getTestingUtil(getConf());
     util.initializeCluster(1);
 
     // Scale this up on a real cluster
@@ -590,30 +579,27 @@ public class IntegrationTestBulkLoad implements Configurable, Tool {
     }
   }
 
-  @AfterClass
-  public static void releaseCluster() throws Exception {
+  @After
+  @Override
+  public void cleanUp() throws Exception {
     util.restoreCluster();
     util = null;
   }
 
   @Override
-  public int run(String[] args) throws Exception {
-    provisionCluster();
-    testBulkLoad();
-    releaseCluster();
+  public int runTestFromCommandLine() throws Exception {
+    runCheck();
     return 0;
   }
 
-  public void setConf(Configuration conf) {
-    if (util != null) {
-      throw new IllegalArgumentException("setConf not supported after the cluster has been started.");
-    }
-    util = new IntegrationTestingUtility(conf);
+  @Override
+  public String getTablename() {
+    return getConf().get(TABLE_NAME_KEY, TABLE_NAME);
   }
 
   @Override
-  public Configuration getConf() {
-    return util.getConfiguration();
+  protected Set<String> getColumnFamilies() {
+    return null;
   }
 
   public static void main(String[] args) throws Exception {
