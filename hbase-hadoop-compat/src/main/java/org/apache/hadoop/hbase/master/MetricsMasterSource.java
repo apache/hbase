@@ -55,17 +55,9 @@ public interface MetricsMasterSource extends BaseSource {
   String SERVER_NAME_NAME = "serverName";
   String CLUSTER_ID_NAME = "clusterId";
   String IS_ACTIVE_MASTER_NAME = "isActiveMaster";
-  String SPLIT_TIME_NAME = "hlogSplitTime";
-  String SPLIT_SIZE_NAME = "hlogSplitSize";
-  String SNAPSHOT_TIME_NAME = "snapshotTime";
-  String SNAPSHOT_RESTORE_TIME_NAME = "snapshotRestoreTime";
-  String SNAPSHOT_CLONE_TIME_NAME = "snapshotCloneTime";
-  String META_SPLIT_TIME_NAME = "metaHlogSplitTime";
-  String META_SPLIT_SIZE_NAME = "metaHlogSplitSize";
+
+
   String CLUSTER_REQUESTS_NAME = "clusterRequests";
-  String RIT_COUNT_NAME = "ritCount";
-  String RIT_COUNT_OVER_THRESHOLD_NAME = "ritCountOverThreshold";
-  String RIT_OLDEST_AGE_NAME = "ritOldestAge";
   String MASTER_ACTIVE_TIME_DESC = "Master Active Time";
   String MASTER_START_TIME_DESC = "Master Start Time";
   String AVERAGE_LOAD_DESC = "AverageLoad";
@@ -75,13 +67,8 @@ public interface MetricsMasterSource extends BaseSource {
   String SERVER_NAME_DESC = "Server Name";
   String CLUSTER_ID_DESC = "Cluster Id";
   String IS_ACTIVE_MASTER_DESC = "Is Active Master";
-  String SPLIT_TIME_DESC = "Time it takes to finish HLog.splitLog()";
-  String SPLIT_SIZE_DESC = "Size of HLog files being split";
-  String SNAPSHOT_TIME_DESC = "Time it takes to finish snapshot()";
-  String SNAPSHOT_RESTORE_TIME_DESC = "Time it takes to finish restoreSnapshot()";
-  String SNAPSHOT_CLONE_TIME_DESC = "Time it takes to finish cloneSnapshot()";
-  String META_SPLIT_TIME_DESC = "Time it takes to finish splitMetaLog()";
-  String META_SPLIT_SIZE_DESC = "Size of META HLog files being split";
+
+
 
   /**
    * Increment the number of requests the cluster has seen.
@@ -90,39 +77,7 @@ public interface MetricsMasterSource extends BaseSource {
    */
   void incRequests(final int inc);
 
-  /**
-   * Set the number of regions in transition.
-   *
-   * @param ritCount count of the regions in transition.
-   */
-  void setRIT(int ritCount);
-
-  /**
-   * Set the count of the number of regions that have been in transition over the threshold time.
-   *
-   * @param ritCountOverThreshold number of regions in transition for longer than threshold.
-   */
-  void setRITCountOverThreshold(int ritCountOverThreshold);
-
-  /**
-   * Set the oldest region in transition.
-   *
-   * @param age age of the oldest RIT.
-   */
-  void setRITOldestAge(long age);
-
-  void updateSplitTime(long time);
-
-  void updateSplitSize(long size);
-
-  void updateSnapshotTime(long time);
-
-  void updateSnapshotCloneTime(long time);
-
-  void updateSnapshotRestoreTime(long time);
   
-  void updateMetaWALSplitTime(long time);
 
-  void updateMetaWALSplitSize(long size);
 
 }

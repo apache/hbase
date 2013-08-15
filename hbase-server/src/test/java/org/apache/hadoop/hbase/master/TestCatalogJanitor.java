@@ -178,7 +178,7 @@ public class TestCatalogJanitor {
     private final AssignmentManager asm;
 
     MockMasterServices(final Server server) throws IOException {
-      this.mfs = new MasterFileSystem(server, this, null, false);
+      this.mfs = new MasterFileSystem(server, this, false);
       this.asm = Mockito.mock(AssignmentManager.class);
     }
 

@@ -342,6 +342,8 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
   private Configuration config;
   private static final Random RANDOM = new Random(System.currentTimeMillis());
   private static final Log LOG = LogFactory.getLog(BaseLoadBalancer.class);
+
+  protected final MetricsBalancer metricsBalancer = new MetricsBalancer();
   protected MasterServices services;
 
   @Override
@@ -409,6 +411,8 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
    */
   public Map<ServerName, List<HRegionInfo>> roundRobinAssignment(List<HRegionInfo> regions,
       List<ServerName> servers) {
+    metricsBalancer.incrMiscInvocations();
+
     if (regions.isEmpty() || servers.isEmpty()) {
       return null;
     }
@@ -452,6 +456,8 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
    */
   public Map<HRegionInfo, ServerName> immediateAssignment(List<HRegionInfo> regions,
       List<ServerName> servers) {
+    metricsBalancer.incrMiscInvocations();
+
     Map<HRegionInfo, ServerName> assignments = new TreeMap<HRegionInfo, ServerName>();
     for (HRegionInfo region : regions) {
       assignments.put(region, randomAssignment(region, servers));
@@ -463,6 +469,8 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
    * Used to assign a single region to a random server.
    */
   public ServerName randomAssignment(HRegionInfo regionInfo, List<ServerName> servers) {
+    metricsBalancer.incrMiscInvocations();
+
     if (servers == null || servers.isEmpty()) {
       LOG.warn("Wanted to do random assignment but no servers to assign to");
       return null;
@@ -489,6 +497,9 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
    */
   public Map<ServerName, List<HRegionInfo>> retainAssignment(Map<HRegionInfo, ServerName> regions,
       List<ServerName> servers) {
+    // Update metrics
+    metricsBalancer.incrMiscInvocations();
+
     // Group all of the old assignments by their hostname.
     // We can't group directly by ServerName since the servers all have
     // new start-codes.

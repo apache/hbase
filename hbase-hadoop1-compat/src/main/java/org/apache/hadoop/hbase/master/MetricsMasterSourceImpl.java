@@ -40,16 +40,7 @@ public class MetricsMasterSourceImpl
 
   private final MetricsMasterWrapper masterWrapper;
   private MetricMutableCounterLong clusterRequestsCounter;
-  private MetricMutableGaugeLong ritGauge;
-  private MetricMutableGaugeLong ritCountOverThresholdGauge;
-  private MetricMutableGaugeLong ritOldestAgeGauge;
-  private MetricMutableHistogram splitTimeHisto;
-  private MetricMutableHistogram splitSizeHisto;
-  private MetricMutableStat snapshotTimeHisto;
-  private MetricMutableStat snapshotCloneTimeHisto;
-  private MetricMutableStat snapshotRestoreTimeHisto;
-  private MetricMutableHistogram metaSplitTimeHisto;
-  private MetricMutableHistogram metaSplitSizeHisto;
+
 
   public MetricsMasterSourceImpl(MetricsMasterWrapper masterWrapper) {
     this(METRICS_NAME, METRICS_DESCRIPTION, METRICS_CONTEXT, METRICS_JMX_CONTEXT, masterWrapper);
@@ -68,70 +59,10 @@ public class MetricsMasterSourceImpl
   public void init() {
     super.init();
     clusterRequestsCounter = metricsRegistry.newCounter(CLUSTER_REQUESTS_NAME, "", 0l);
-    ritGauge = metricsRegistry.newGauge(RIT_COUNT_NAME, "", 0l);
-    ritCountOverThresholdGauge = metricsRegistry.newGauge(RIT_COUNT_OVER_THRESHOLD_NAME, "", 0l);
-    ritOldestAgeGauge = metricsRegistry.newGauge(RIT_OLDEST_AGE_NAME, "", 0l);
-    splitSizeHisto = metricsRegistry.newHistogram(SPLIT_SIZE_NAME, SPLIT_SIZE_DESC);
-    splitTimeHisto = metricsRegistry.newHistogram(SPLIT_TIME_NAME, SPLIT_TIME_DESC);
-    snapshotTimeHisto = metricsRegistry.newStat(
-        SNAPSHOT_TIME_NAME, SNAPSHOT_TIME_DESC, "Ops", "Time", true);
-    snapshotCloneTimeHisto = metricsRegistry.newStat(
-        SNAPSHOT_CLONE_TIME_NAME, SNAPSHOT_CLONE_TIME_DESC, "Ops", "Time", true);
-    snapshotRestoreTimeHisto = metricsRegistry.newStat(
-        SNAPSHOT_RESTORE_TIME_NAME, SNAPSHOT_RESTORE_TIME_DESC, "Ops", "Time", true);
-    metaSplitTimeHisto = metricsRegistry.newHistogram(META_SPLIT_TIME_NAME, META_SPLIT_TIME_DESC);
-    metaSplitSizeHisto = metricsRegistry.newHistogram(META_SPLIT_SIZE_NAME, META_SPLIT_SIZE_DESC);
   }
 
   public void incRequests(final int inc) {
     this.clusterRequestsCounter.incr(inc);
-  }
-
-  public void setRIT(int ritCount) {
-    ritGauge.set(ritCount);
-  }
-
-  public void setRITCountOverThreshold(int ritCount) {
-    ritCountOverThresholdGauge.set(ritCount);
-  }
-
-  public void setRITOldestAge(long ritCount) {
-    ritOldestAgeGauge.set(ritCount);
-  }
-
-  @Override
-  public void updateSplitTime(long time) {
-    splitTimeHisto.add(time);
-  }
-
-  @Override
-  public void updateSplitSize(long size) {
-    splitSizeHisto.add(size);
-  }
-
-  @Override
-  public void updateSnapshotTime(long time) {
-    snapshotTimeHisto.add(time);
-  }
-
-  @Override
-  public void updateSnapshotCloneTime(long time) {
-    snapshotCloneTimeHisto.add(time);
-  }
-
-  @Override
-  public void updateSnapshotRestoreTime(long time) {
-    snapshotRestoreTimeHisto.add(time);
-  }
-
-  @Override
-  public void updateMetaWALSplitTime(long time) {
-    metaSplitTimeHisto.add(time);
-  }
-
-  @Override
-  public void updateMetaWALSplitSize(long size) {
-    metaSplitSizeHisto.add(size);
   }
 
   /**
