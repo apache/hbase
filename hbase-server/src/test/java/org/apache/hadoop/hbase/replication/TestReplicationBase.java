@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.replication;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -30,9 +31,11 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.replication.ReplicationAdmin;
+import org.apache.hadoop.hbase.replication.regionserver.ReplicationSource;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.zookeeper.MiniZooKeeperCluster;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
+import org.apache.log4j.Level;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 
@@ -43,6 +46,10 @@ import org.junit.BeforeClass;
  * All other tests should have their own classes and extend this one
  */
 public class TestReplicationBase {
+
+  {
+    ((Log4JLogger) ReplicationSource.LOG).getLogger().setLevel(Level.ALL);
+  }
 
   private static final Log LOG = LogFactory.getLog(TestReplicationBase.class);
 
