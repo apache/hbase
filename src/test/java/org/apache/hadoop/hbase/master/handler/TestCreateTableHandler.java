@@ -18,6 +18,7 @@
  */
 package org.apache.hadoop.hbase.master.handler;
 
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
@@ -26,6 +27,7 @@ import java.util.List;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
@@ -40,16 +42,11 @@ import org.apache.hadoop.hbase.catalog.CatalogTracker;
 import org.apache.hadoop.hbase.master.AssignmentManager;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.MasterFileSystem;
-import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.ServerManager;
-import org.apache.hadoop.hbase.master.TestMaster;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.zookeeper.ZKTable;
-import org.apache.hadoop.hbase.zookeeper.ZKUtil;
+import org.apache.hadoop.hbase.util.FSUtils;
 import org.junit.After;
-import org.junit.AfterClass;
 import org.junit.Before;
-import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
@@ -57,7 +54,6 @@ import org.junit.experimental.categories.Category;
 public class TestCreateTableHandler {
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static final Log LOG = LogFactory.getLog(TestCreateTableHandler.class);
-  private static final byte[] TABLENAME = Bytes.toBytes("TestCreateTableHandler");
   private static final byte[] FAMILYNAME = Bytes.toBytes("fam");
   private static boolean throwException = false;
 
@@ -73,10 +69,11 @@ public class TestCreateTableHandler {
   }
 
   @Test
-  public void testCreateTableHandlerIfCalledTwoTimesAndFirstOneIsUnderProgress() throws Exception {
+  public void testCreateTableCalledTwiceAndFirstOneInProgress() throws Exception {
+    final byte[] tableName = Bytes.toBytes("testCreateTableCalledTwiceAndFirstOneInProgress");
     final MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
     final HMaster m = cluster.getMaster();
-    final HTableDescriptor desc = new HTableDescriptor(TABLENAME);
+    final HTableDescriptor desc = new HTableDescriptor(tableName);
     desc.addFamily(new HColumnDescriptor(FAMILYNAME));
     final HRegionInfo[] hRegionInfos = new HRegionInfo[] { new HRegionInfo(desc.getName(), null,
         null) };
@@ -91,14 +88,47 @@ public class TestCreateTableHandler {
         m.getCatalogTracker(), m.getAssignmentManager());
     handler1.process();
     for (int i = 0; i < 100; i++) {
-      if (!TEST_UTIL.getHBaseAdmin().isTableAvailable(TABLENAME)) {
+      if (!TEST_UTIL.getHBaseAdmin().isTableAvailable(tableName)) {
         Thread.sleep(200);
       }
     }
-    assertTrue(TEST_UTIL.getHBaseAdmin().isTableEnabled(TABLENAME));
-
+    assertTrue(TEST_UTIL.getHBaseAdmin().isTableEnabled(tableName));
   }
-  
+
+  @Test (timeout=300000)
+  public void testCreateTableWithSplitRegion() throws Exception {
+    final byte[] tableName = Bytes.toBytes("testCreateTableWithSplitRegion");
+    final MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
+    final HMaster m = cluster.getMaster();
+    final HTableDescriptor desc = new HTableDescriptor(tableName);
+    desc.addFamily(new HColumnDescriptor(FAMILYNAME));
+    byte[] splitPoint = Bytes.toBytes("split-point");
+    long ts = System.currentTimeMillis();
+    HRegionInfo d1 = new HRegionInfo(tableName, null, splitPoint, false, ts);
+    HRegionInfo d2 = new HRegionInfo(tableName, splitPoint, null, false, ts + 1);
+    HRegionInfo parent = new HRegionInfo(tableName, null, null, true, ts + 2);
+    parent.setOffline(true);
+
+    Path tempdir = m.getMasterFileSystem().getTempDir();
+    FileSystem fs = m.getMasterFileSystem().getFileSystem();
+    Path tempTableDir = FSUtils.getTablePath(tempdir, tableName);
+    fs.delete(tempTableDir, true); // Clean up temp table dir if exists
+
+    final HRegionInfo[] hRegionInfos = new HRegionInfo[] {d1, d2, parent};
+    CreateTableHandler handler = new CreateTableHandler(m, m.getMasterFileSystem(),
+      m.getServerManager(), desc, cluster.getConfiguration(), hRegionInfos,
+      m.getCatalogTracker(), m.getAssignmentManager());
+    handler.process();
+    for (int i = 0; i < 200; i++) {
+      if (!TEST_UTIL.getHBaseAdmin().isTableAvailable(tableName)) {
+        Thread.sleep(300);
+      }
+    }
+    assertTrue(TEST_UTIL.getHBaseAdmin().isTableEnabled(tableName));
+    List<HRegionInfo> regions = m.getAssignmentManager().getRegionsOfTable(tableName);
+    assertFalse("Split parent should not be assigned", regions.contains(parent));
+  }
+
   @Test (timeout=60000)
   public void testMasterRestartAfterEnablingNodeIsCreated() throws Exception {
     byte[] tableName = Bytes.toBytes("testMasterRestartAfterEnablingNodeIsCreated");
@@ -115,9 +145,8 @@ public class TestCreateTableHandler {
     handler.process();
     abortAndStartNewMaster(cluster);
     assertTrue(cluster.getLiveMasterThreads().size() == 1);
-    
   }
-  
+
   private void abortAndStartNewMaster(final MiniHBaseCluster cluster) throws IOException {
     cluster.abortMaster(0);
     cluster.waitOnMaster(0);

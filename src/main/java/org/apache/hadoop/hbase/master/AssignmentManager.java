@@ -22,7 +22,6 @@ package org.apache.hadoop.hbase.master;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
-import java.lang.Thread.UncaughtExceptionHandler;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -1418,6 +1417,9 @@ public class AssignmentManager extends ZooKeeperListener {
         region.getRegionNameAsString());
       return;
     }
+    if (isAssigningSplitParentRegion(region)) {
+      return;
+    }
     RegionState state = addToRegionsInTransition(region,
         hijack);
     synchronized (state) {
@@ -1844,6 +1846,15 @@ public class AssignmentManager extends ZooKeeperListener {
         }
       }
     }
+  }
+
+  private static boolean isAssigningSplitParentRegion(final HRegionInfo region) {
+    if (region.isSplitParent()) {
+      LOG.info("Skipping assign of " + region.getRegionNameAsString()
+        + ", already split, or still splitting");
+      return true;
+    }
+    return false;
   }
 
   private boolean isDisabledorDisablingRegionInRIT(final HRegionInfo region) {
@@ -2527,28 +2538,6 @@ public class AssignmentManager extends ZooKeeperListener {
   }
 
   /**
-   * Bulk user region assigner.
-   * If failed assign, lets timeout in RIT do cleanup.
-   */
-  static class GeneralBulkAssigner extends StartupBulkAssigner {
-    GeneralBulkAssigner(final Server server,
-        final Map<ServerName, List<HRegionInfo>> bulkPlan,
-        final AssignmentManager am) {
-      super(server, bulkPlan, am);
-    }
-
-    @Override
-    protected UncaughtExceptionHandler getUncaughtExceptionHandler() {
-      return new UncaughtExceptionHandler() {
-        @Override
-        public void uncaughtException(Thread t, Throwable e) {
-          LOG.warn("Assigning regions in " + t.getName(), e);
-        }
-      };
-    }
-  }
-
-  /**
    * Manage bulk assigning to a server.
    */
   static class SingleServerBulkAssigner implements Runnable {
@@ -2558,6 +2547,11 @@ public class AssignmentManager extends ZooKeeperListener {
 
     SingleServerBulkAssigner(final ServerName regionserver,
         final List<HRegionInfo> regions, final AssignmentManager am) {
+      for (Iterator<HRegionInfo> it = regions.iterator(); it.hasNext(); ) {
+        if (isAssigningSplitParentRegion(it.next())) {
+          it.remove();
+        }
+      }
       this.regionserver = regionserver;
       this.regions = regions;
       this.assignmentManager = am;

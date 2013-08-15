@@ -22,7 +22,6 @@ package org.apache.hadoop.hbase.util;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletionService;
@@ -35,18 +34,11 @@ import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.backup.HFileArchiver;
-import org.apache.hadoop.hbase.catalog.CatalogTracker;
-import org.apache.hadoop.hbase.catalog.MetaEditor;
-import org.apache.hadoop.hbase.client.Delete;
-import org.apache.hadoop.hbase.master.AssignmentManager;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 
 /**
@@ -156,21 +148,5 @@ public abstract class ModifyRegionUtils {
           }
         });
     return regionOpenAndInitThreadPool;
-  }
-
-  /**
-   * Trigger immediate assignment of the regions in round-robin fashion
-   *
-   * @param assignmentManager
-   * @param regions
-   */
-  public static void assignRegions(final AssignmentManager assignmentManager,
-      final List<HRegionInfo> regions) throws IOException {
-    try {
-      assignmentManager.assignUserRegionsToOnlineServers(regions);
-    } catch (InterruptedException ie) {
-      LOG.error("Caught " + ie + " during round-robin assignment");
-      throw new InterruptedIOException(ie.getMessage());
-    }
   }
 }
