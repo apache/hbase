@@ -170,12 +170,6 @@ public class DemoClient {
         client.mutateRow(ByteBuffer.wrap(t), ByteBuffer.wrap(bytes("foo")), 
             mutations, dummyAttributes);
 
-        // try empty strings
-        mutations = new ArrayList<Mutation>();
-        mutations.add(new Mutation(false, ByteBuffer.wrap(bytes("entry:")), 
-            ByteBuffer.wrap(bytes("")), writeToWal));
-        client.mutateRow(ByteBuffer.wrap(t), ByteBuffer.wrap(bytes("")), 
-            mutations, dummyAttributes);
 
         // this row name is valid utf8
         mutations = new ArrayList<Mutation>();
