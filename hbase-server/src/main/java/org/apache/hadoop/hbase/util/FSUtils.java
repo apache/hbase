@@ -711,7 +711,19 @@ public abstract class FSUtils {
         throw new IOException("content=" + Bytes.toString(content), e);
       }
       // If not pb'd, make it so.
-      if (!ProtobufUtil.isPBMagicPrefix(content)) rewriteAsPb(fs, rootdir, idPath, clusterId);
+      if (!ProtobufUtil.isPBMagicPrefix(content)) {
+        String cid = new String();
+        in = fs.open(idPath);
+        try {
+          cid = in.readUTF();
+          clusterId = new ClusterId(cid);
+        } catch (EOFException eof) {
+          LOG.warn("Cluster ID file " + idPath.toString() + " was empty");
+        } finally {
+          in.close();
+        }
+        rewriteAsPb(fs, rootdir, idPath, clusterId);
+      }
       return clusterId;
     } else {
       LOG.warn("Cluster ID file does not exist at " + idPath.toString());
@@ -1324,7 +1336,7 @@ public abstract class FSUtils {
   /**
    * Checks if the given path is the one with 'recovered.edits' dir.
    * @param path
-   * @return
+   * @return True if we recovered edits
    */
   public static boolean isRecoveredEdits(Path path) {
     return path.toString().contains(HConstants.RECOVERED_EDITS_DIR);
