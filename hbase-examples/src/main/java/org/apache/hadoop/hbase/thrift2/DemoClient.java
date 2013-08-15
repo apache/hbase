@@ -38,10 +38,20 @@ import org.apache.thrift.transport.TTransport;
 public class DemoClient {
   public static void main(String[] args) throws TIOError, TException {
     System.out.println("Thrift2 Demo");
+    System.out.println("Usage: DemoClient [host=localhost] [port=9090]");
     System.out.println("This demo assumes you have a table called \"example\" with a column family called \"family1\"");
     
     String host = "localhost";
     int port = 9090;
+
+    // use passed in arguments instead of defaults
+    if (args.length >= 1) {
+      host = args[0];
+    }
+    if (args.length >= 2) {
+      port = Integer.parseInt(args[1]);
+    }
+
     int timeout = 10000;
     boolean framed = false;
 
