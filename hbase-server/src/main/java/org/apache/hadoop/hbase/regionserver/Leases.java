@@ -56,6 +56,7 @@ import java.io.IOException;
 @InterfaceAudience.Private
 public class Leases extends HasThread {
   private static final Log LOG = LogFactory.getLog(Leases.class.getName());
+  public static final int MIN_WAIT_TIME = 100;
   private final Map<String, Lease> leases = new ConcurrentHashMap<String, Lease>();
 
   protected final int leaseCheckFrequency;
@@ -87,7 +88,10 @@ public class Leases extends HasThread {
         if (nextLease != null) {
           toWait = nextLease.getDelay(TimeUnit.MILLISECONDS);
         }
+
         toWait = Math.min(leaseCheckFrequency, toWait);
+        toWait = Math.max(MIN_WAIT_TIME, toWait);
+
         Thread.sleep(toWait);
       } catch (InterruptedException e) {
         continue;
