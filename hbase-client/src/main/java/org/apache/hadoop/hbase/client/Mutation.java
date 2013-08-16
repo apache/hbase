@@ -214,11 +214,11 @@ public abstract class Mutation extends OperationWithAttributes implements Row, C
    */
   @Deprecated
   public Map<byte[], List<KeyValue>> getFamilyMap() {
-    Map<byte[], List<KeyValue>> fm = new TreeMap();
+    Map<byte[], List<KeyValue>> fm = new TreeMap<byte[], List<KeyValue>>(Bytes.BYTES_COMPARATOR);
     for (Map.Entry<byte[], List<Cell>> e : this.familyMap.entrySet()) {
       byte[] family = e.getKey();
       List<Cell> cells = e.getValue();
-      List<KeyValue> kvs = new ArrayList(cells.size());
+      List<KeyValue> kvs = new ArrayList<KeyValue>(cells.size());
       for (Cell c : cells) {
          KeyValue kv = KeyValueUtil.ensureKeyValue(c);
          kvs.add(kv);
