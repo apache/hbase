@@ -70,11 +70,11 @@ public abstract class IntegrationTestBase extends AbstractHBaseTool {
 
   @Override
   protected int doWork() throws Exception {
-    setUpMonkey();
     setUp();
+    setUpMonkey();
     int result = -1;
     try {
-      runTestFromCommandLine();
+      result = runTestFromCommandLine();
     } finally {
       cleanUpMonkey();
       cleanUp();
@@ -90,6 +90,7 @@ public abstract class IntegrationTestBase extends AbstractHBaseTool {
     monkey = fact.setUtil(util)
                  .setTableName(getTablename())
                  .setColumnFamilies(getColumnFamilies()).build();
+    monkey.start();
   }
 
   @After
