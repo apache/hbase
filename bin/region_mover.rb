@@ -60,7 +60,7 @@ def getTable(config, name)
   if not $TABLES
     $TABLES = {}
   end
-  key = Bytes.toString(name)
+  key = name.toString()
   if not $TABLES[key]
     $TABLES[key] = HTable.new(config, name)
   end
