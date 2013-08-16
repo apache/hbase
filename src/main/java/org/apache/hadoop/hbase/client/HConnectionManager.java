@@ -892,7 +892,7 @@ public class HConnectionManager {
           byte[] value = row.getValue(HConstants.CATALOG_FAMILY,
               HConstants.REGIONINFO_QUALIFIER);
           HRegionInfo info = Writables.getHRegionInfoOrNull(value);
-          if (info != null) {
+          if (info != null && !info.isSplitParent()) {
             if (Bytes.equals(tableName, info.getTableName())) {
               value = row.getValue(HConstants.CATALOG_FAMILY,
                   HConstants.SERVER_QUALIFIER);
