@@ -1484,8 +1484,6 @@ public class HRegion implements HeapSize { // , Writable{
     }
     final long startTime = EnvironmentEdgeManager.currentTimeMillis();
     // Clear flush flag.
-    // Record latest flush time
-    this.lastFlushTime = startTime;
     // If nothing to flush, return and avoid logging start/stop flush.
     if (this.memstoreSize.get() <= 0) {
       return false;
@@ -1615,6 +1613,9 @@ public class HRegion implements HeapSize { // , Writable{
       wal.completeCacheFlush(this.getRegionInfo().getEncodedNameAsBytes());
     }
 
+    // Record latest flush time
+    this.lastFlushTime = EnvironmentEdgeManager.currentTimeMillis();
+    
     // Update the last flushed sequence id for region
     if (this.rsServices != null) {
       completeSequenceId = flushSeqId;
