@@ -19,6 +19,7 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -109,13 +110,13 @@ public class TestStoreFileBlockCacheSummary {
      bc.getBlockCacheColumnFamilySummaries(TEST_UTIL.getConfiguration());
    LOG.info("blockCacheSummary: " + bcs);
 
-   assertEquals("blockCache summary has entries", 2, bcs.size());
+   assertTrue("blockCache summary has " + bcs.size() + " entries", bcs.size() >= 2);
 
-   BlockCacheColumnFamilySummary e = bcs.get(0);
+   BlockCacheColumnFamilySummary e = bcs.get(bcs.size()-2);
    assertEquals("table", TEST_TABLE, e.getTable());
    assertEquals("cf", TEST_CF, e.getColumnFamily());
 
-   e = bcs.get(1);
+   e = bcs.get(bcs.size()-1);
    assertEquals("table", TEST_TABLE2, e.getTable());
    assertEquals("cf", TEST_CF, e.getColumnFamily());
 
