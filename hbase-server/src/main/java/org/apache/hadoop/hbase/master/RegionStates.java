@@ -29,12 +29,12 @@ import java.util.TreeMap;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.RegionTransition;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerLoad;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.catalog.MetaReader;
 import org.apache.hadoop.hbase.master.RegionState.State;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -173,8 +173,9 @@ public class RegionStates {
   }
 
   /**
-   * Add a list of regions to RegionStates. The initial state is OFFLINE.
-   * If any region is already in RegionStates, that region will be skipped.
+   * Add a list of regions to RegionStates. If a region is split
+   * and offline, its state will be SPLIT. Otherwise, its state will
+   * be OFFLINE. Region already in RegionStates will be skipped.
    */
   public synchronized void createRegionStates(
       final List<HRegionInfo> hris) {
@@ -184,18 +185,20 @@ public class RegionStates {
   }
 
   /**
-   * Add a region to RegionStates. The initial state is OFFLINE.
-   * If it is already in RegionStates, this call has no effect,
-   * and the original state is returned.
+   * Add a region to RegionStates. If the region is split
+   * and offline, its state will be SPLIT. Otherwise, its state will
+   * be OFFLINE. If it is already in RegionStates, this call has
+   * no effect, and the original state is returned.
    */
   public synchronized RegionState createRegionState(final HRegionInfo hri) {
+    State newState = (hri.isOffline() && hri.isSplit()) ? State.SPLIT : State.OFFLINE;
     String regionName = hri.getEncodedName();
     RegionState regionState = regionStates.get(regionName);
     if (regionState != null) {
-      LOG.warn("Tried to create a state of a region already in RegionStates, " +
-        "used existing state: " + regionState + ", ignored new state: state=OFFLINE, server=null");
+      LOG.warn("Tried to create a state for a region already in RegionStates, "
+        + "used existing: " + regionState + ", ignored new: " + newState);
     } else {
-      regionState = new RegionState(hri, State.OFFLINE);
+      regionState = new RegionState(hri, newState);
       regionStates.put(regionName, regionState);
     }
     return regionState;
@@ -579,8 +582,8 @@ public class RegionStates {
       }
       return hri;
     } catch (IOException e) {
-      server.abort("Aborting because error occoured while reading " +
-        Bytes.toStringBinary(regionName) + " from .META.", e);
+      server.abort("Aborting because error occoured while reading "
+        + Bytes.toStringBinary(regionName) + " from .META.", e);
       return null;
     }
   }
