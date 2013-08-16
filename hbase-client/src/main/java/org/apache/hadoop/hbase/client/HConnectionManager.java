@@ -868,7 +868,7 @@ public class HConnectionManager {
         @Override
         public boolean processRow(Result row) throws IOException {
           HRegionInfo info = MetaScanner.getHRegionInfo(row);
-          if (info != null) {
+          if (info != null && !info.isSplitParent()) {
             if (tableName.equals(info.getTableName())) {
               ServerName server = HRegionInfo.getServerName(row);
               if (server == null) {
@@ -903,7 +903,7 @@ public class HConnectionManager {
         @Override
         public boolean processRow(Result row) throws IOException {
           HRegionInfo info = MetaScanner.getHRegionInfo(row);
-          if (info != null) {
+          if (info != null && !info.isSplitParent()) {
             if (tableName.equals(info.getTableName())) {
               ServerName server = HRegionInfo.getServerName(row);
               if (server == null) {

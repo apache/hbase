@@ -124,6 +124,8 @@ public class TestCreateTableHandler {
       }
     }
     assertTrue(TEST_UTIL.getHBaseAdmin().isTableEnabled(tableName));
+    assertTrue(TEST_UTIL.getHBaseAdmin().isTableAvailable(tableName));
+    assertTrue(TEST_UTIL.getHBaseAdmin().isTableAvailable(tableName, new byte[][] { splitPoint }));
     RegionStates regionStates = m.getAssignmentManager().getRegionStates();
     assertTrue("Parent should be in SPLIT state",
       regionStates.isRegionInState(parent, State.SPLIT));
