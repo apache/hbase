@@ -41,8 +41,6 @@ public class IntegrationTestIngest extends IntegrationTestBase {
   private static final int SERVER_COUNT = 4; // number of slaves for the smallest cluster
   private static final long DEFAULT_RUN_TIME = 20 * 60 * 1000;
 
-  protected static String tableName = null;
-
   /** A soft limit on how long we should run */
   private static final String RUN_TIME_KEY = "hbase.%s.runtime";
 
@@ -52,7 +50,6 @@ public class IntegrationTestIngest extends IntegrationTestBase {
   private LoadTestTool loadTool;
 
   protected void setUp(int numSlavesBase) throws Exception {
-    tableName = this.getClass().getSimpleName();
     util = getTestingUtil(null);
     LOG.debug("Initializing/checking cluster has " + numSlavesBase + " servers");
     util.initializeCluster(numSlavesBase);
@@ -63,7 +60,7 @@ public class IntegrationTestIngest extends IntegrationTestBase {
     loadTool.setConf(util.getConfiguration());
     // Initialize load test tool before we start breaking things;
     // LoadTestTool init, even when it is a no-op, is very fragile.
-    int ret = loadTool.run(new String[] { "-tn", tableName, "-init_only" });
+    int ret = loadTool.run(new String[] { "-tn", getTablename(), "-init_only" });
     Assert.assertEquals("Failed to initialize LoadTestTool", 0, ret);
   }
 
@@ -92,7 +89,7 @@ public class IntegrationTestIngest extends IntegrationTestBase {
 
   @Override
   public String getTablename() {
-    return tableName;
+    return this.getClass().getSimpleName();
   }
 
   @Override
@@ -101,8 +98,8 @@ public class IntegrationTestIngest extends IntegrationTestBase {
   }
 
   private void deleteTableIfNecessary() throws IOException {
-    if (util.getHBaseAdmin().tableExists(tableName)) {
-      util.deleteTable(Bytes.toBytes(tableName));
+    if (util.getHBaseAdmin().tableExists(getTablename())) {
+      util.deleteTable(Bytes.toBytes(getTablename()));
     }
   }
 
@@ -122,7 +119,7 @@ public class IntegrationTestIngest extends IntegrationTestBase {
           ((runtime - (System.currentTimeMillis() - start))/60000) + " min");
 
       int ret = loadTool.run(new String[] {
-          "-tn", tableName,
+          "-tn", getTablename(),
           "-write", String.format("%d:%d:%d", colsPerKey, recordSize, writeThreads),
           "-start_key", String.valueOf(startKey),
           "-num_keys", String.valueOf(numKeys),
@@ -135,7 +132,7 @@ public class IntegrationTestIngest extends IntegrationTestBase {
       }
 
       ret = loadTool.run(new String[] {
-          "-tn", tableName,
+          "-tn", getTablename(),
           "-update", String.format("60:%d", writeThreads),
           "-start_key", String.valueOf(startKey),
           "-num_keys", String.valueOf(numKeys),
@@ -148,7 +145,7 @@ public class IntegrationTestIngest extends IntegrationTestBase {
       }
 
       ret = loadTool.run(new String[] {
-          "-tn", tableName,
+          "-tn", getTablename(),
           "-read", "100:20",
           "-start_key", String.valueOf(startKey),
           "-num_keys", String.valueOf(numKeys),

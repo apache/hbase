@@ -139,6 +139,10 @@ public class PolicyBasedChaosMonkey extends ChaosMonkey {
 
   @Override
   public void stop(String why) {
+    if (policies == null) {
+      return;
+    }
+
     for (Policy policy : policies) {
       policy.stop(why);
     }
@@ -155,6 +159,9 @@ public class PolicyBasedChaosMonkey extends ChaosMonkey {
    */
   @Override
   public void waitForStop() throws InterruptedException {
+    if (monkeyThreads == null) {
+      return;
+    }
     for (Thread monkeyThread : monkeyThreads) {
       monkeyThread.join();
     }

@@ -57,6 +57,7 @@ import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.mapreduce.TableMapReduceUtil;
 import org.apache.hadoop.hbase.mapreduce.TableMapper;
 import org.apache.hadoop.hbase.mapreduce.TableRecordReaderImpl;
+import org.apache.hadoop.hbase.util.AbstractHBaseTool;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.io.NullWritable;
@@ -494,6 +495,7 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
 
       job.getConfiguration().setBoolean("mapred.map.tasks.speculative.execution", false);
       TableMapReduceUtil.addDependencyJars(job);
+      TableMapReduceUtil.addDependencyJars(job.getConfiguration(), AbstractHBaseTool.class);
       TableMapReduceUtil.initCredentials(job);
 
       boolean success = job.waitForCompletion(true);
@@ -637,6 +639,7 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
 
       TableMapReduceUtil.initTableMapperJob(getTableName(getConf()).getName(), scan,
           VerifyMapper.class, BytesWritable.class, BytesWritable.class, job);
+      TableMapReduceUtil.addDependencyJars(job.getConfiguration(), AbstractHBaseTool.class);
 
       job.getConfiguration().setBoolean("mapred.map.tasks.speculative.execution", false);
 

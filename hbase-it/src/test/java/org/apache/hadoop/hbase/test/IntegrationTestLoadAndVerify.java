@@ -48,6 +48,7 @@ import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.mapreduce.NMapInputFormat;
 import org.apache.hadoop.hbase.mapreduce.TableMapReduceUtil;
 import org.apache.hadoop.hbase.mapreduce.TableMapper;
+import org.apache.hadoop.hbase.util.AbstractHBaseTool;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.io.NullWritable;
@@ -311,8 +312,8 @@ public class IntegrationTestLoadAndVerify  extends IntegrationTestBase  {
     FileOutputFormat.setOutputPath(job, outputDir);
 
     TableMapReduceUtil.addDependencyJars(job);
-    TableMapReduceUtil.addDependencyJars(
-        job.getConfiguration(), HTable.class, Lists.class);
+
+    TableMapReduceUtil.addDependencyJars(job.getConfiguration(), AbstractHBaseTool.class);
     TableMapReduceUtil.initCredentials(job);
     assertTrue(job.waitForCompletion(true));
   }
@@ -329,6 +330,7 @@ public class IntegrationTestLoadAndVerify  extends IntegrationTestBase  {
     TableMapReduceUtil.initTableMapperJob(
         htd.getTableName().getNameAsString(), scan, VerifyMapper.class,
         BytesWritable.class, BytesWritable.class, job);
+    TableMapReduceUtil.addDependencyJars(job.getConfiguration(), AbstractHBaseTool.class);
     int scannerCaching = conf.getInt("verify.scannercaching", SCANNER_CACHING);
     TableMapReduceUtil.setScannerCaching(job, scannerCaching);
 
