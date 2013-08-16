@@ -84,6 +84,7 @@ public class TestCreateTableHandler {
       }
     }
     assertTrue(TEST_UTIL.getHBaseAdmin().isTableEnabled(tableName));
+    assertTrue(TEST_UTIL.getHBaseAdmin().isTableAvailable(tableName));
     List<HRegionInfo> regions = m.getAssignmentManager().getRegionsOfTable(tableName);
     assertFalse("Split parent should not be assigned", regions.contains(parent));
   }
