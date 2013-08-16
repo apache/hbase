@@ -655,17 +655,28 @@ public class AssignmentManager extends ZooKeeperListener {
           LOG.warn("Processed region " + prettyPrintedRegionName + " in state : " + et +
               " on a dead regionserver: " + sn + " doing nothing");
         } else {
+          // Splitting region should be online. We could have skipped it during
+          // user region rebuilding since we may consider the split is completed.
+          // Put it in SPLITTING state to avoid complications.
+          regionStates.regionOnline(regionInfo, sn);
           regionStates.updateRegionState(rt, RegionState.State.SPLITTING);
           LOG.info("Processed " + prettyPrintedRegionName + " in state : " + et);
         }
         break;
       case RS_ZK_REGION_SPLIT:
         if (!serverManager.isServerOnline(sn)) {
-          forceOffline(regionInfo, rt);
+          // The region is already in SPLIT state, do nothing
+          LOG.warn("Processed " + prettyPrintedRegionName
+            + " in state : " + et + " on a dead regionserver: " + sn
+            + " doing nothing");
         } else {
-          LOG.info("Processed " + prettyPrintedRegionName + " in state : " + et +
-            " nothing to do.");
-          // We don't do anything. The regionserver is supposed to update the znode
+          // Splitting region should be online. We could have skipped it during
+          // user region rebuilding since we may consider the split is completed.
+          // Put it in SPLITTING state to avoid complications.
+          regionStates.regionOnline(regionInfo, sn);
+          regionStates.updateRegionState(rt, RegionState.State.SPLITTING);
+          LOG.info("Processed " + prettyPrintedRegionName + " in state : " + et);
+          // Move the region to splitting state. The regionserver is supposed to update the znode
           // multiple times so if it's still up we will receive an update soon.
         }
         break;
@@ -684,13 +695,18 @@ public class AssignmentManager extends ZooKeeperListener {
         break;
       case RS_ZK_REGION_MERGED:
         if (!serverManager.isServerOnline(sn)) {
-          // ServerShutdownHandler would handle this region
+          // Do nothing, merging regions are already removed from meta,
+          // so they are not in region states map any more.
+          // The new region will be assigned by the ServerShutdownHandler
           LOG.warn("Processed " + prettyPrintedRegionName
-              + " in state : " + et + " on a dead regionserver: " + sn
-              + " doing nothing");
+            + " in state : " + et + " on a dead regionserver: " + sn
+            + " doing nothing");
         } else {
+          // Merging regions are already removed from meta. It doesn't hurt to
+          // do nothing here, no need to set them to merging state here. We are fine
+          // to put the new region to online state during user region rebuilding.
           LOG.info("Processed " + prettyPrintedRegionName + " in state : " +
-              et + " nothing to do.");
+            et + " nothing to do.");
           // We don't do anything. The regionserver is supposed to update the znode
           // multiple times so if it's still up we will receive an update soon.
         }
@@ -1786,34 +1802,34 @@ public class AssignmentManager extends ZooKeeperListener {
     if (state == null) {
       LOG.warn("Assigning a region not in region states: " + region);
       state = regionStates.createRegionState(region);
-    } else {
-      switch (state.getState()) {
-      case OPEN:
-      case OPENING:
-      case PENDING_OPEN:
-        if (!forceNewPlan) {
-          LOG.debug("Attempting to assign region " +
-            region + " but it is already in transition: " + state);
-          return null;
-        }
-      case CLOSING:
-      case PENDING_CLOSE:
-      case FAILED_CLOSE:
-      case FAILED_OPEN:
-        unassign(region, state, -1, null, false, null);
-        state = regionStates.getRegionState(region);
-        if (state.isOffline()) break;
-      case CLOSED:
-        LOG.debug("Forcing OFFLINE; was=" + state);
-        state = regionStates.updateRegionState(
-          region, RegionState.State.OFFLINE);
-      case OFFLINE:
-        break;
-      default:
-        LOG.error("Trying to assign region " + region
-          + ", which is in state " + state);
+    }
+
+    switch (state.getState()) {
+    case OPEN:
+    case OPENING:
+    case PENDING_OPEN:
+      if (!forceNewPlan) {
+        LOG.debug("Attempting to assign region " +
+          region + " but it is already in transition: " + state);
         return null;
       }
+    case CLOSING:
+    case PENDING_CLOSE:
+    case FAILED_CLOSE:
+    case FAILED_OPEN:
+      unassign(region, state, -1, null, false, null);
+      state = regionStates.getRegionState(region);
+      if (state.isOffline()) break;
+    case CLOSED:
+      LOG.debug("Forcing OFFLINE; was=" + state);
+      state = regionStates.updateRegionState(
+        region, RegionState.State.OFFLINE);
+    case OFFLINE:
+      break;
+    default:
+      LOG.error("Trying to assign region " + region
+        + ", which is in state " + state);
+      return null;
     }
     return state;
   }
@@ -2640,6 +2656,13 @@ public class AssignmentManager extends ZooKeeperListener {
       ServerName regionLocation = region.getSecond();
       if (regionInfo == null) continue;
       regionStates.createRegionState(regionInfo);
+      if (regionStates.isRegionInState(regionInfo, State.SPLIT)) {
+        // Split is considered to be completed. If the split znode still
+        // exists, the region will be put back to SPLITTING state later
+        LOG.debug("Region " + regionInfo.getRegionNameAsString()
+           + " split is completed. Hence need not add to regions list");
+        continue;
+      }
       TableName tableName = regionInfo.getTableName();
       if (regionLocation == null) {
         // regionLocation could be null if createTable didn't finish properly.
@@ -2672,19 +2695,6 @@ public class AssignmentManager extends ZooKeeperListener {
           setEnabledTable(tableName);
         }
       } else {
-        // If region is in offline and split state check the ZKNode
-        if (regionInfo.isOffline() && regionInfo.isSplit()) {
-          String node = ZKAssign.getNodeName(this.watcher, regionInfo
-              .getEncodedName());
-          Stat stat = new Stat();
-          byte[] data = ZKUtil.getDataNoWatch(this.watcher, node, stat);
-          // If znode does not exist, don't consider this region
-          if (data == null) {
-            LOG.debug("Region "	+  regionInfo.getRegionNameAsString()
-               + " split is completed. Hence need not add to regions list");
-            continue;
-          }
-        }
         // Region is being served and on an active server
         // add only if region not in disabled or enabling table
         if (!disabledOrEnablingTables.contains(tableName)) {

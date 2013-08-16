@@ -34,8 +34,6 @@ import java.util.concurrent.CountDownLatch;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HBaseIOException;
@@ -71,8 +69,6 @@ import org.apache.hadoop.hbase.master.handler.SplitRegionHandler;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.apache.hadoop.hbase.util.FSUtils;
-import org.apache.hadoop.hbase.util.HBaseFsck;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.zookeeper.ZKAssign;
@@ -550,7 +546,7 @@ public class TestSplitTransactionOnCluster {
    * @throws KeeperException
    * @throws DeserializationException
    */
-  @Test(timeout = 300000)
+  @Test(timeout = 400000)
   public void testMasterRestartWhenSplittingIsPartial()
       throws IOException, InterruptedException, NodeExistsException,
       KeeperException, DeserializationException, ServiceException {
@@ -598,13 +594,30 @@ public class TestSplitTransactionOnCluster {
 
       this.admin = new HBaseAdmin(TESTING_UTIL.getConfiguration());
 
-      // update the hri to be offlined and splitted.
+      // Update the region to be offline and split, so that HRegionInfo#equals
+      // returns true in checking rebuilt region states map.
       hri.setOffline(true);
       hri.setSplit(true);
       ServerName regionServerOfRegion = master.getAssignmentManager()
         .getRegionStates().getRegionServerOfRegion(hri);
       assertTrue(regionServerOfRegion != null);
 
+      // Remove the block so that split can move ahead.
+      SplitRegionHandler.TEST_SKIP = false;
+      String node = ZKAssign.getNodeName(zkw, hri.getEncodedName());
+      Stat stat = new Stat();
+      byte[] data = ZKUtil.getDataNoWatch(zkw, node, stat);
+      // ZKUtil.create
+      for (int i=0; data != null && i<60; i++) {
+        Thread.sleep(1000);
+        data = ZKUtil.getDataNoWatch(zkw, node, stat);
+      }
+      assertNull("Waited too long for ZK node to be removed: "+node, data);
+      RegionStates regionStates = master.getAssignmentManager().getRegionStates();
+      assertTrue("Split parent should be in SPLIT state",
+        regionStates.isRegionInState(hri, State.SPLIT));
+      regionServerOfRegion = regionStates.getRegionServerOfRegion(hri);
+      assertTrue(regionServerOfRegion == null);
     } finally {
       // Set this flag back.
       SplitRegionHandler.TEST_SKIP = false;
@@ -663,7 +676,6 @@ public class TestSplitTransactionOnCluster {
       for (int i=0; data != null && i<60; i++) {
         Thread.sleep(1000);
         data = ZKUtil.getDataNoWatch(zkw, node, stat);
-
       }
       assertNull("Waited too long for ZK node to be removed: "+node, data);
 
@@ -671,10 +683,14 @@ public class TestSplitTransactionOnCluster {
 
       this.admin = new HBaseAdmin(TESTING_UTIL.getConfiguration());
 
+      // Update the region to be offline and split, so that HRegionInfo#equals
+      // returns true in checking rebuilt region states map.
       hri.setOffline(true);
       hri.setSplit(true);
-      ServerName regionServerOfRegion = master.getAssignmentManager()
-        .getRegionStates().getRegionServerOfRegion(hri);
+      RegionStates regionStates = master.getAssignmentManager().getRegionStates();
+      assertTrue("Split parent should be in SPLIT state",
+        regionStates.isRegionInState(hri, State.SPLIT));
+      ServerName regionServerOfRegion = regionStates.getRegionServerOfRegion(hri);
       assertTrue(regionServerOfRegion == null);
     } finally {
       // Set this flag back.
@@ -815,7 +831,7 @@ public class TestSplitTransactionOnCluster {
     final byte[] tableName = Bytes.toBytes("testSplitBeforeSettingSplittingInZK");
     try {
       // Create table then get the single region for our new table.
-      HTable t = createTableAndWait(tableName, CF);
+      createTableAndWait(tableName, CF);
 
       List<HRegion> regions = awaitTableRegions(tableName);
       assertTrue("Table not online", cluster.getRegions(tableName).size() != 0);
@@ -908,7 +924,6 @@ public class TestSplitTransactionOnCluster {
   }
 
   private HRegion findSplittableRegion(final List<HRegion> regions) throws InterruptedException {
-    HRegion region = null;
     for (int i = 0; i < 5; ++i) {
       for (HRegion r: regions) {
         if (r.isSplittable()) {
@@ -955,17 +970,6 @@ public class TestSplitTransactionOnCluster {
 
     assertFalse("Waited too long for split",
         ProtobufUtil.getOnlineRegions(server).size() <= regionCount);
-  }
-
-  private void removeDaughterFromMeta(final byte [] regionName) throws IOException {
-    HTable metaTable = new HTable(TESTING_UTIL.getConfiguration(), TableName.META_TABLE_NAME);
-    try {
-      Delete d = new Delete(regionName);
-      LOG.info("Deleted " + Bytes.toString(regionName));
-      metaTable.delete(d);
-    } finally {
-      metaTable.close();
-    }
   }
 
   /**
@@ -1100,10 +1104,11 @@ public class TestSplitTransactionOnCluster {
   }
 
   private static class SplittingNodeCreationFailedException  extends IOException {
+    private static final long serialVersionUID = 1652404976265623004L;
+
     public SplittingNodeCreationFailedException () {
       super();
     }
   }
-
 }
 
