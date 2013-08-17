@@ -580,12 +580,13 @@ public class TestAsyncProcess {
   }
 
   @Test
-  public void testErrorsServers() throws InterruptedIOException,
-      RetriesExhaustedWithDetailsException {
+  public void testErrorsServers() throws IOException {
     HTable ht = new HTable();
     Configuration configuration = new Configuration(conf);
     configuration.setBoolean(HConnectionManager.RETRIES_BY_SERVER_KEY, true);
     configuration.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 20);
+    // set default writeBufferSize
+    ht.setWriteBufferSize(configuration.getLong("hbase.client.write.buffer", 2097152));
 
     MyConnectionImpl mci = new MyConnectionImpl(configuration);
     ht.connection = mci;
