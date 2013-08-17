@@ -1379,7 +1379,6 @@ public class HRegion implements HeapSize {
     // again so its value will represent the size of the updates received
     // during the flush
     long sequenceId = -1L;
-    long completeSequenceId = -1L;
 
     // We have to take a write lock during snapshot, or else a write could
     // end up in both snapshot and memstore (makes it difficult to do atomic
@@ -1387,11 +1386,6 @@ public class HRegion implements HeapSize {
     status.setStatus("Obtaining lock to block concurrent updates");
     long t0, t1;
 
-    if (wal != null) {
-      // We will ask the WAL to avoid rolling the log, until the flush is done.
-      // This may stall. So, doing this before we get the updatesLock.
-        wal.startCacheFlush();
-    }
     this.updatesLock.writeLock().lock();
     t0 = EnvironmentEdgeManager.currentTimeMillis();
     status.setStatus("Preparing to flush by snapshotting stores");
@@ -1400,11 +1394,13 @@ public class HRegion implements HeapSize {
     List<StoreFlusher> storeFlushers = new ArrayList<StoreFlusher>(
         stores.size());
     try {
-      sequenceId = (wal == null)? myseqid :
-        wal.getStartCacheFlushSeqNum(this.regionInfo.getRegionName());
-      completeSequenceId = this.getCompleteCacheFlushSequenceId(sequenceId);
+      if (wal != null) {
+        sequenceId = wal.startCacheFlush(this.regionInfo.getRegionName());
+      } else {
+        sequenceId = myseqid;
+      }
       for (Store s : stores.values()) {
-        storeFlushers.add(s.getStoreFlusher(completeSequenceId));
+        storeFlushers.add(s.getStoreFlusher(sequenceId));
       }
 
       // prepare flush (take a snapshot)
@@ -1507,7 +1503,7 @@ public class HRegion implements HeapSize {
     //     log-sequence-ids can be safely ignored.
     if (wal != null) {
       wal.completeCacheFlush(getRegionName(),
-        regionInfo.getTableDesc().getName(), completeSequenceId,
+        regionInfo.getTableDesc().getName(), sequenceId,
         this.getRegionInfo().isMetaRegion());
     }
 
@@ -1515,7 +1511,7 @@ public class HRegion implements HeapSize {
     if (this.regionServer != null) {
       this.regionServer.getServerInfo().setFlushedSequenceIdForRegion(
           getRegionName(),
-          completeSequenceId);
+          sequenceId);
     }
     // C. Finally notify anyone waiting on memstore to clear:
     // e.g. checkResources().
@@ -1550,18 +1546,6 @@ public class HRegion implements HeapSize {
    protected Callable<Void> internalPreFlushcacheCommit() throws IOException {
      return null;
    }
-
-   /**
-   * Get the sequence number to be associated with this cache flush. Used by
-   * TransactionalRegion to not complete pending transactions.
-   *
-   *
-   * @param currentSequenceId
-   * @return sequence id to complete the cache flush with
-   */
-  protected long getCompleteCacheFlushSequenceId(long currentSequenceId) {
-    return currentSequenceId;
-  }
 
   //////////////////////////////////////////////////////////////////////////////
   // get() methods for client use.

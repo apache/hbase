@@ -71,7 +71,7 @@ public class SequenceFileLogWriter implements HLog.Writer {
 
     // Create a SF.Writer instance.
     try {
-    	this.generateWriter(fs,path,conf);
+      this.generateWriter(fs,path,conf);
     } catch (InvocationTargetException ite) {
       // function was properly called, but threw it's own exception
       throw new IOException(ite.getCause());

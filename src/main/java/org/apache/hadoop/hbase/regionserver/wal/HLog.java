@@ -28,7 +28,6 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.io.OutputStream;
-import java.io.UnsupportedEncodingException;
 import java.lang.reflect.Method;
 import java.net.URLEncoder;
 import java.text.ParseException;
@@ -45,6 +44,8 @@ import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.concurrent.Callable;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentNavigableMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ExecutionException;
@@ -210,12 +211,23 @@ public class HLog implements Syncable {
   final SortedMap<Long, Path> outputfiles =
     Collections.synchronizedSortedMap(new TreeMap<Long, Path>());
 
+  /**
+   * The purpose of this lock is to synchronize operations on firstSeqWrittenInCurrentMemstore
+   * and firstSeqWrittenInSnapshotMemstore, so that the data transfer and deletion in cache flushing
+   * won't cause log rolling to behave wrongly, for example, achieving all old log files which may
+   * still contain unflushed entries.
+   */
+  private final Object oldestSeqNumsLock = new Object();
+
+  /** The lock is used to ensure that close() waits for all log rolls and flushes to finish. */
+  private final ReentrantReadWriteLock closeLock = new ReentrantReadWriteLock();
+
   /*
    * Map of regions to first sequence/edit id in their memstore.
    */
-  private final ConcurrentSkipListMap<byte [], Long> firstSeqWrittenInCurrentMemstore =
-    new ConcurrentSkipListMap<byte [], Long>(Bytes.BYTES_COMPARATOR);
-  private final ConcurrentSkipListMap<byte [], Long> firstSeqWrittenInSnapshotMemstore =
+  private final ConcurrentNavigableMap<byte [], Long> firstSeqWrittenInCurrentMemstore =
+    new ConcurrentSkipListMap<byte[], Long>(Bytes.BYTES_COMPARATOR);
+  private final ConcurrentNavigableMap<byte [], Long> firstSeqWrittenInSnapshotMemstore =
     new ConcurrentSkipListMap<byte [], Long>(Bytes.BYTES_COMPARATOR);
 
   private volatile boolean closed = false;
@@ -231,10 +243,6 @@ public class HLog implements Syncable {
   // If > than this size, roll the log. This is typically 0.95 times the size
   // of the default Hdfs block size.
   private final long logrollsize;
-
-  // This lock prevents starting a log roll during a cache flush.
-  // synchronized is insufficient because a cache flush spans two method calls.
-  private final ReentrantReadWriteLock cacheFlushLock = new ReentrantReadWriteLock();
 
   // We synchronize on updateLock to prevent updates and to prevent a log roll
   // during an update
@@ -550,26 +558,18 @@ public class HLog implements Syncable {
 
   /**
    * Roll the log writer. That is, start writing log messages to a new file.
-   *
-   * Because a log cannot be rolled during a cache flush, and a cache flush
-   * spans two method calls, a special lock needs to be obtained so that a cache
-   * flush cannot start when the log is being rolled and the log cannot be
-   * rolled during a cache flush.
-   *
-   * <p>Note that this method cannot be synchronized because it is possible that
-   * startCacheFlush runs, obtaining the cacheFlushLock, then this method could
-   * start which would obtain the lock on this but block on obtaining the
-   * cacheFlushLock and then completeCacheFlush could be called which would wait
-   * for the lock on this and consequently never release the cacheFlushLock
+   * This method is synchronized because only one log rolling is allowed at the
+   * same time.
    *
    * @return If lots of logs, flush the returned regions so next time through
    * we can clean logs. Returns null if nothing to flush.
    * @throws org.apache.hadoop.hbase.regionserver.wal.FailedLogCloseException
    * @throws IOException
    */
-  public byte [][] rollWriter() throws IOException {
+  public synchronized byte [][] rollWriter() throws IOException {
     // Return if nothing to flush.
     if (this.closed || this.writer != null && this.numEntries.get() <= 0) {
+      LOG.debug(this.hlogName + "HLog closing or no outstanding transactions. Skipping log rolling");
       return null;
     }
     byte [][] regionsToFlush = null;
@@ -600,18 +600,21 @@ public class HLog implements Syncable {
       throw ioe;
     }
 
-    Writer oldWriter;
-    long oldFileLogSeqNum, oldFileNum;
-    int oldNumEntries;
-    long t0 = 0;
-    long t1 = 0;
-    this.cacheFlushLock.writeLock().lock();
+    this.closeLock.readLock().lock();
     try {
+      Writer oldWriter;
+      long oldFileLogSeqNum, oldFileNum;
+      int oldNumEntries;
+      long t0 = 0;
+      long t1 = 0;
       synchronized (updateLock) {
-        t0 = EnvironmentEdgeManager.currentTimeMillis();
-        if (closed) {
-          return regionsToFlush;
+        // Ensure hlog is not closed once more since we don't want to enlarge the
+        //   scope of updateLock.
+        if (this.closed) {
+          LOG.debug(this.hlogName + "HLog closing. Skipping log rolling");
+          return null;
         }
+        t0 = EnvironmentEdgeManager.currentTimeMillis();
 
         // Clean up current writer.
         syncWriter(this.writer);
@@ -632,48 +635,35 @@ public class HLog implements Syncable {
         lastLogRollStartTimeMillis = t0;
         lastLogRollDurationMillis = (t1 - t0);
       }
-    } finally {
-      this.cacheFlushLock.writeLock().unlock();
-    }
 
-    Path oldFile = null;
-    try {
-      oldFile = closeWriter(oldWriter, oldFileNum, oldFileLogSeqNum);
-    } catch (IOException e) {
-      LOG.info("Ignoring Exception while closing old Log file "
-          + FSUtils.getPath(oldFile), e);
-    }
-
-    LOG.info(hlogName + (oldFile != null ? "Roll " + FSUtils.getPath(oldFile)
-        + ", entries=" + oldNumEntries + ", filesize="
-        + this.fs.getFileStatus(oldFile).getLen() + ". " : "")
-        + "New hlog " + FSUtils.getPath(newPath)
-        + " Held updateLock for " + (t1 -t0) + " ms.");
-    // Tell our listeners that a new log was created
-    if (!this.actionListeners.isEmpty()) {
-      for (LogActionsListener list : this.actionListeners) {
-        list.logRolled(newPath);
+      Path oldFile = null;
+      try {
+        oldFile = closeWriter(oldWriter, oldFileNum, oldFileLogSeqNum);
+      } catch (IOException e) {
+        LOG.info("Ignoring Exception while closing old Log file "
+            + FSUtils.getPath(oldFile), e);
       }
-    }
 
-    // Can we delete any of the old log files?
-    if (this.outputfiles.size() > 0) {
-      if (this.firstSeqWrittenInCurrentMemstore.size() <= 0
-          && this.firstSeqWrittenInSnapshotMemstore.size() <= 0) {
-        LOG.debug("Last sequence written is empty. Deleting all old hlogs");
-       // If so, then no new writes have come in since all regions were
-        // flushed (and removed from the firstSeqWrittenInXXX maps). Means can
-        // remove all but currently open log file.
-        TreeSet<Long> tempSet = new TreeSet<Long>(outputfiles.keySet());
-        for (Long seqNum : tempSet) {
-          archiveLogFile(outputfiles.get(seqNum), seqNum);
-          outputfiles.remove(seqNum);
+      LOG.info(hlogName + (oldFile != null ? "Roll " + FSUtils.getPath(oldFile)
+          + ", entries=" + oldNumEntries + ", filesize="
+          + this.fs.getFileStatus(oldFile).getLen() + ". " : "")
+          + "New hlog " + FSUtils.getPath(newPath)
+          + " Held updateLock for " + (t1 -t0) + " ms.");
+      // Tell our listeners that a new log was created
+      if (!this.actionListeners.isEmpty()) {
+        for (LogActionsListener list : this.actionListeners) {
+          list.logRolled(newPath);
         }
-        assert outputfiles.size() == 0 : "Someone added new log files? How?";
-      } else {
-        regionsToFlush = cleanOldLogs();
       }
+
+      // Can we delete any of the old log files?
+      if (this.outputfiles.size() > 0) {
+        regionsToFlush = cleanOldLogs(getOldestOutstandingSeqNum());
+      }
+    } finally {
+      this.closeLock.readLock().unlock();
     }
+
     return regionsToFlush;
   }
 
@@ -736,13 +726,15 @@ public class HLog implements Syncable {
    * we can clean logs. Returns null if nothing to flush.
    * @throws IOException
    */
-  private byte [][] cleanOldLogs() throws IOException {
-    Long oldestOutstandingSeqNum = getOldestOutstandingSeqNum();
+  private byte [][] cleanOldLogs(long oldestOutstandingSeqNum) throws IOException {
     // Get the set of all log files whose last sequence number is smaller than
     // the oldest edit's sequence number.
-    TreeSet<Long> sequenceNumbers =
-      new TreeSet<Long>(this.outputfiles.headMap(
-        (Long.valueOf(oldestOutstandingSeqNum.longValue()))).keySet());
+    // If oldestOutstandingSeqNum == Long.MAX_VALUE, then no new writes have come
+    // in since all regions were flushed (and removed from the firstSeqWrittenInXXX
+    // maps). We can remove all old log files.
+    TreeSet<Long> sequenceNumbers = new TreeSet<Long>(this.outputfiles.headMap(
+        (oldestOutstandingSeqNum)).keySet());
+
     // Now remove old log files (if any)
     int logsToRemove = sequenceNumbers.size();
     if (logsToRemove > 0) {
@@ -761,12 +753,16 @@ public class HLog implements Syncable {
     }
 
     // If too many log files, figure which regions we need to flush.
+    // Transactions in these regions have not been flushed, which
+    // prevent log roller from archiving oldest HLog file. Flush requests
+    // will be sent to these regions after log rolling.
     byte [][] regions = null;
     int logCount = this.outputfiles.size();
-    if (logCount > this.maxLogs && this.outputfiles != null &&
-        this.outputfiles.size() > 0) {
-      regions = findMemstoresWithEditsEqualOrOlderThan(this.outputfiles.firstKey(),
-        this.firstSeqWrittenInCurrentMemstore, this.firstSeqWrittenInSnapshotMemstore);
+    if (logCount > this.maxLogs) {
+      regions = findMemstoresWithEditsEqualOrOlderThan(
+          this.outputfiles.firstKey(),
+          this.firstSeqWrittenInCurrentMemstore,
+          this.firstSeqWrittenInSnapshotMemstore);
 
       if (regions != null) {
         StringBuilder sb = new StringBuilder();
@@ -785,8 +781,14 @@ public class HLog implements Syncable {
   /**
    * Return regions (memstores) that have edits that are equal or less than
    * the passed <code>oldestWALseqid</code>.
+   *
+   * We don't synchronize on sequence maps because when race condition happens,
+   * in worst case we only miss some region that prevents the oldest HLog file
+   * from being archived. The affect is ignorable.
+   *
    * @param oldestWALseqid
-   * @param regionsToSeqids
+   * @param regionsToCurSeqids
+   * @param regionsToPrevSeqids
    * @return All regions whose seqid is < than <code>oldestWALseqid</code> (Not
    * necessarily in order).  Null if no regions found.
    */
@@ -794,38 +796,38 @@ public class HLog implements Syncable {
       final Map<byte [], Long> regionsToCurSeqids,
       final Map<byte [], Long> regionsToPrevSeqids) {
     //  This method is static so it can be unit tested the easier.
-    List<byte []> regions = null;
+    List<byte []> regions = new ArrayList<byte []>();
     for (Map.Entry<byte [], Long> e: regionsToCurSeqids.entrySet()) {
-      if (e.getValue().longValue() <= oldestWALseqid) {
-        if (regions == null) regions = new ArrayList<byte []>();
+      if (e.getValue() <= oldestWALseqid) {
         byte [] region = e.getKey();
         if (!regions.contains(region))
           regions.add(region);
       }
     }
     for (Map.Entry<byte [], Long> e: regionsToPrevSeqids.entrySet()) {
-      if (e.getValue().longValue() <= oldestWALseqid) {
-        if (regions == null) regions = new ArrayList<byte []>();
+      if (e.getValue() <= oldestWALseqid) {
         byte [] region = e.getKey();
         if (!regions.contains(region))
           regions.add(region);
       }
     }
-    return regions == null?
-      null: regions.toArray(new byte [][] {HConstants.EMPTY_BYTE_ARRAY});
+    return regions.isEmpty() ?
+      null : regions.toArray(new byte [][] {HConstants.EMPTY_BYTE_ARRAY});
   }
 
   /*
    * @return Logs older than this id are safe to remove.
    */
-  private Long getOldestOutstandingSeqNum() {
+  private long getOldestOutstandingSeqNum() {
     long oldest = Long.MAX_VALUE;
-    if (this.firstSeqWrittenInCurrentMemstore.size() > 0) {
-      oldest = Collections.min(this.firstSeqWrittenInCurrentMemstore.values());
-    }
-    if (this.firstSeqWrittenInSnapshotMemstore.size() > 0) {
-      oldest = Math.min(oldest,
-          Collections.min(this.firstSeqWrittenInSnapshotMemstore.values()));
+    synchronized (oldestSeqNumsLock) {
+      if (!this.firstSeqWrittenInCurrentMemstore.isEmpty()) {
+        oldest = Collections.min(this.firstSeqWrittenInCurrentMemstore.values());
+      }
+      if (!this.firstSeqWrittenInSnapshotMemstore.isEmpty()) {
+        oldest = Math.min(oldest,
+            Collections.min(this.firstSeqWrittenInSnapshotMemstore.values()));
+      }
     }
 
     return oldest;
@@ -965,6 +967,11 @@ public class HLog implements Syncable {
    * @throws IOException
    */
   public void close() throws IOException {
+    if (this.closed) {
+      return;
+    }
+    // Prevent all further flushing and rolling.
+    this.closeLock.writeLock().lock();
     try {
       logSyncerThread.syncerShuttingDown = true;
       // wait for 2 seconds to gracefully close the syncer
@@ -975,22 +982,18 @@ public class HLog implements Syncable {
         LOG.warn("Could not shutdown log-syncer in 2s. Interrupting it now");
         logSyncerThread.interrupt();
       }
-    } catch (InterruptedException e) {
-      LOG.error(hlogName + "Exception while waiting for syncer thread to die", e);
-    }
 
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("closing hlog writer in " + this.dir.toString());
-    }
-
-    cacheFlushLock.writeLock().lock();
-    try {
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("closing hlog writer in " + this.dir.toString());
+      }
       synchronized (updateLock) {
         this.closed = true;
         cleanupCurrentWriter(-1);
       }
+    } catch (InterruptedException e) {
+      LOG.error(this.hlogName + "Exception while waiting for syncer thread to die", e);
     } finally {
-      cacheFlushLock.writeLock().unlock();
+      this.closeLock.writeLock().unlock();
     }
   }
 
@@ -1337,15 +1340,9 @@ public class HLog implements Syncable {
 
 
   /**
-   * Acquire a lock so that we do not roll the log between the start and
-   * completion of a cache-flush. Otherwise the log-seq-id for the flush will
-   * not appear in the correct logfile.
-   */
-  public void startCacheFlush() {
-    this.cacheFlushLock.readLock().lock();
-  }
-
-  /**
+   * Acquire a lock so that we do not close between the start and
+   * completion of a cache-flush or a log rolling.
+   *
    * By acquiring a log sequence ID, we can allow log messages to continue while
    * we flush the cache.
    *
@@ -1360,15 +1357,18 @@ public class HLog implements Syncable {
    * @see #completeCacheFlush(byte[], byte[], long, boolean)
    * @see #abortCacheFlush()
    */
-  public long getStartCacheFlushSeqNum(final byte [] regionName) {
-    if (this.firstSeqWrittenInSnapshotMemstore.containsKey(regionName)) {
-      LOG.warn("Requested a startCacheFlush while firstSeqWrittenInSnapshotMemstore still"
-          + " contains " + Bytes.toString(regionName) + " . Did the previous flush fail?"
-          + " Will try to complete it");
-    } else {
-      Long seq = this.firstSeqWrittenInCurrentMemstore.remove(regionName);
-      if (seq != null) {
-        this.firstSeqWrittenInSnapshotMemstore.put(regionName, seq);
+  public long startCacheFlush(final byte [] regionName) {
+    this.closeLock.readLock().lock();
+    synchronized (oldestSeqNumsLock) {
+      if (this.firstSeqWrittenInSnapshotMemstore.containsKey(regionName)) {
+        LOG.warn("Requested a startCacheFlush while firstSeqWrittenInSnapshotMemstore still"
+            + " contains " + Bytes.toString(regionName) + " . Did the previous flush fail?"
+            + " Will try to complete it");
+      } else {
+        Long seq = this.firstSeqWrittenInCurrentMemstore.remove(regionName);
+        if (seq != null) {
+          this.firstSeqWrittenInSnapshotMemstore.put(regionName, seq);
+        }
       }
     }
     return obtainSeqNum();
@@ -1388,8 +1388,12 @@ public class HLog implements Syncable {
       final long logSeqId, final boolean isMetaRegion) {
     // Cleaning up of lastSeqWritten is in the finally clause because we
     // don't want to confuse getOldestOutstandingSeqNum()
-    this.firstSeqWrittenInSnapshotMemstore.remove(regionName);
-    this.cacheFlushLock.readLock().unlock();
+    // Synchronization prevents possible race condition that makes Collections.min()
+    // throw NoSuchElementException.
+    synchronized (oldestSeqNumsLock) {
+      this.firstSeqWrittenInSnapshotMemstore.remove(regionName);
+    }
+    this.closeLock.readLock().unlock();
   }
 
   /**
@@ -1400,9 +1404,8 @@ public class HLog implements Syncable {
    */
   public void abortCacheFlush(byte[] regionName) {
     LOG.debug(hlogName + "Aborting cache flush of region " +
-              Bytes.toString(regionName));
-    // Let us leave the old Seq number in this.firstSeqWrittenInPrevMemstore
-   this.cacheFlushLock.readLock().unlock();
+    Bytes.toString(regionName));
+    this.closeLock.readLock().unlock();
   }
 
   /**
