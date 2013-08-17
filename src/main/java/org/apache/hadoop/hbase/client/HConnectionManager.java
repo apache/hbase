@@ -1497,6 +1497,7 @@ public class HConnectionManager {
      * @returns zookeeper reference
      * @throws ZooKeeperConnectionException if there's a problem connecting to zk
      */
+    @Deprecated
     public synchronized ZooKeeperWatcher getZooKeeperWatcher()
         throws ZooKeeperConnectionException {
       if(zooKeeper == null) {
