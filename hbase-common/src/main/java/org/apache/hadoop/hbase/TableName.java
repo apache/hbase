@@ -84,6 +84,7 @@ public final class TableName implements Comparable<TableName> {
   private String namespaceAsString;
   private byte[] qualifier;
   private String qualifierAsString;
+  private boolean systemTable;
 
   private TableName() {}
 
@@ -209,6 +210,10 @@ public final class TableName implements Comparable<TableName> {
     return name;
   }
 
+  public boolean isSystemTable() {
+    return systemTable;
+  }
+
   @Override
   public String toString() {
     return nameAsString;
@@ -251,6 +256,8 @@ public final class TableName implements Comparable<TableName> {
     tableName.nameAsString =
         createFullyQualified(tableName.namespaceAsString, tableName.qualifierAsString);
     tableName.name = Bytes.toBytes(tableName.nameAsString);
+    tableName.systemTable = Bytes.equals(
+      tableName.namespace, NamespaceDescriptor.SYSTEM_NAMESPACE_NAME);
   }
 
   public static TableName valueOf(byte[] name) {

@@ -2655,6 +2655,8 @@ public class AssignmentManager extends ZooKeeperListener {
       HRegionInfo regionInfo = region.getFirst();
       ServerName regionLocation = region.getSecond();
       if (regionInfo == null) continue;
+      TableName tableName = regionInfo.getTableName();
+      if (tableName.isSystemTable()) continue;
       regionStates.createRegionState(regionInfo);
       if (regionStates.isRegionInState(regionInfo, State.SPLIT)) {
         // Split is considered to be completed. If the split znode still
@@ -2663,7 +2665,6 @@ public class AssignmentManager extends ZooKeeperListener {
            + " split is completed. Hence need not add to regions list");
         continue;
       }
-      TableName tableName = regionInfo.getTableName();
       if (regionLocation == null) {
         // regionLocation could be null if createTable didn't finish properly.
         // When createTable is in progress, HMaster restarts.
