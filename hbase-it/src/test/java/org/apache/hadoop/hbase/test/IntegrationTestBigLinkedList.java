@@ -28,6 +28,7 @@ import java.util.Random;
 import java.util.Set;
 import java.util.UUID;
 
+import com.google.common.collect.Sets;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.GnuParser;
 import org.apache.commons.cli.HelpFormatter;
@@ -204,10 +205,6 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
 
     private static final Log LOG = LogFactory.getLog(Generator.class);
 
-    public static enum Counts {
-      UNREFERENCED, UNDEFINED, REFERENCED, CORRUPT
-    }
-
     static class GeneratorInputFormat extends InputFormat<BytesWritable,NullWritable> {
       static class GeneratorInputSplit extends InputSplit implements Writable {
         @Override
@@ -322,7 +319,6 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
      */
     static class GeneratorMapper
       extends Mapper<BytesWritable, NullWritable, NullWritable, NullWritable> {
-      Random rand = new Random();
 
       byte[][] first = null;
       byte[][] prev = null;
@@ -350,11 +346,11 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
         if (this.numNodes < this.wrap) {
           this.wrap = this.numNodes;
         }
-      };
+      }
 
       protected void cleanup(Context context) throws IOException ,InterruptedException {
         table.close();
-      };
+      }
 
       @Override
       protected void map(BytesWritable key, NullWritable value, Context output) throws IOException {
@@ -593,7 +589,9 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
           context.getCounter(Counts.UNREFERENCED).increment(1);
         } else {
           if (refs.size() > 1) {
-            context.write(new Text(keyString), new Text(refsSb.toString()));
+            if (refsSb != null) {
+              context.write(new Text(keyString), new Text(refsSb.toString()));
+            }
             context.getCounter(Counts.EXTRAREFERENCES).increment(refs.size() - 1);
           }
           // node is defined and referenced
@@ -1067,18 +1065,18 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
 
   @Override
   protected Set<String> getColumnFamilies() {
-    return null;
+    return Sets.newHashSet(Bytes.toString(FAMILY_NAME));
   }
 
   private static void setJobConf(Job job, int numMappers, long numNodes,
-      Integer width, Integer wrapMuplitplier) {
+      Integer width, Integer wrapMultiplier) {
     job.getConfiguration().setInt(GENERATOR_NUM_MAPPERS_KEY, numMappers);
     job.getConfiguration().setLong(GENERATOR_NUM_ROWS_PER_MAP_KEY, numNodes);
     if (width != null) {
-      job.getConfiguration().setInt(GENERATOR_WIDTH_KEY, width.intValue());
+      job.getConfiguration().setInt(GENERATOR_WIDTH_KEY, width);
     }
-    if (wrapMuplitplier != null) {
-      job.getConfiguration().setInt(GENERATOR_WRAP_KEY, wrapMuplitplier.intValue());
+    if (wrapMultiplier != null) {
+      job.getConfiguration().setInt(GENERATOR_WRAP_KEY, wrapMultiplier);
     }
   }
 

@@ -22,8 +22,8 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.chaos.monkies.PolicyBasedChaosMonkey;
 
 /**
-* Created by eclark on 8/12/13.
-*/
+ * Action that restarts a random HRegionServer
+ */
 public class RestartRandomRsAction extends RestartActionBaseAction {
   public RestartRandomRsAction(long sleepTime) {
     super(sleepTime);

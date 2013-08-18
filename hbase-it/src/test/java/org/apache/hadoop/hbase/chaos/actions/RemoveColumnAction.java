@@ -58,7 +58,8 @@ public class RemoveColumnAction extends Action {
     }
 
     int index = random.nextInt(columnDescriptors.length);
-    while(protectedColumns.contains(columnDescriptors[index].getNameAsString())) {
+    while(protectedColumns != null &&
+          protectedColumns.contains(columnDescriptors[index].getNameAsString())) {
       index = random.nextInt(columnDescriptors.length);
     }
 

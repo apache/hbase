@@ -24,8 +24,8 @@ import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.util.Bytes;
 
 /**
-* Created by eclark on 8/12/13.
-*/
+ * Action that queues a table compaction.
+ */
 public class CompactTableAction extends Action {
   private final byte[] tableNameBytes;
   private final int majorRatio;

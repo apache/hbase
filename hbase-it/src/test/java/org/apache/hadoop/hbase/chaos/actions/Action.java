@@ -56,7 +56,7 @@ public class Action {
     initialServers = regionServers.toArray(new ServerName[regionServers.size()]);
   }
 
-  public void perform() throws Exception { };
+  public void perform() throws Exception { }
 
   /** Returns current region servers */
   protected ServerName[] getCurrentServers() throws IOException {

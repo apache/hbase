@@ -167,7 +167,7 @@ public class IntegrationTestLazyCfLoading {
       scf.setFilterIfMissing(true);
       return scf;
     }
-  };
+  }
 
   @Before
   public void setUp() throws Exception {

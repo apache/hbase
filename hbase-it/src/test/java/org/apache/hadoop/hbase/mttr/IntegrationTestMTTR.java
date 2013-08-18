@@ -445,7 +445,7 @@ public class IntegrationTestMTTR {
 
       rs = table.getScanner(s);
       Result result = rs.next();
-      return rs != null && result != null && result.size() > 0;
+      return result != null && result.size() > 0;
       } finally {
         if (rs != null) {
           rs.close();
@@ -510,7 +510,6 @@ public class IntegrationTestMTTR {
     @Override
     public Boolean call() throws Exception {
       int colsPerKey = 10;
-      int recordSize = 500;
       int numServers = util.getHBaseClusterInterface().getInitialClusterStatus().getServersSize();
       int numKeys = numServers * 5000;
       int writeThreads = 10;
@@ -521,7 +520,7 @@ public class IntegrationTestMTTR {
       do {
         int ret = loadTool.run(new String[]{
             "-tn", loadTableName.getNameAsString(),
-            "-write", String.format("%d:%d:%d", colsPerKey, recordSize, writeThreads),
+            "-write", String.format("%d:%d:%d", colsPerKey, 500, writeThreads),
             "-num_keys", String.valueOf(numKeys),
             "-skip_init"
         });
