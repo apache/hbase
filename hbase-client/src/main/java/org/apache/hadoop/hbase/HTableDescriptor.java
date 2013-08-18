@@ -1331,19 +1331,6 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
               new Path(name.getNamespaceAsString(), new Path(name.getQualifierAsString()))));
   }
 
-  /** Table descriptor for <core>-ROOT-</code> catalog table */
-  public static final HTableDescriptor ROOT_TABLEDESC = new HTableDescriptor(
-      TableName.ROOT_TABLE_NAME,
-      new HColumnDescriptor[] {
-          new HColumnDescriptor(HConstants.CATALOG_FAMILY)
-              // Ten is arbitrary number.  Keep versions to help debugging.
-              .setMaxVersions(10)
-              .setInMemory(true)
-              .setBlocksize(8 * 1024)
-              .setTimeToLive(HConstants.FOREVER)
-              .setScope(HConstants.REPLICATION_SCOPE_LOCAL)
-      });
-
   /** Table descriptor for <code>.META.</code> catalog table */
   public static final HTableDescriptor META_TABLEDESC = new HTableDescriptor(
       TableName.META_TABLE_NAME,

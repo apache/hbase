@@ -78,7 +78,7 @@ public class TestStorageClusterStatusModel extends TestCase {
     model.setRequests(0);
     model.setAverageLoad(1.0);
     model.addLiveNode("test1", 1245219839331L, 128, 1024)
-      .addRegion(Bytes.toBytes(TableName.ROOT_TABLE_NAME+",,0"), 1, 1, 0, 0, 0, 1, 2, 1, 1, 1, 1, 1);
+      .addRegion(Bytes.toBytes("hbase:root,,0"), 1, 1, 0, 0, 0, 1, 2, 1, 1, 1, 1, 1);
     model.addLiveNode("test2", 1245239331198L, 512, 1024)
       .addRegion(Bytes.toBytes(TableName.META_TABLE_NAME+",,1246000043724"),1, 1, 0, 0, 0,
           1, 2, 1, 1, 1, 1, 1);
@@ -122,7 +122,7 @@ public class TestStorageClusterStatusModel extends TestCase {
       node.getRegions().iterator();
     StorageClusterStatusModel.Node.Region region = regions.next();
     assertTrue(Bytes.toString(region.getName()).equals(
-        TableName.ROOT_TABLE_NAME+",,0"));
+        "hbase:root,,0"));
     assertEquals(region.getStores(), 1);
     assertEquals(region.getStorefiles(), 1);
     assertEquals(region.getStorefileSizeMB(), 0);

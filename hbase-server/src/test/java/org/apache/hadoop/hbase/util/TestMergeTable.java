@@ -104,7 +104,7 @@ public class TestMergeTable {
 
     // Now create the root and meta regions and insert the data regions
     // created above into .META.
-    setupROOTAndMeta(rootdir, regions);
+    setupMeta(rootdir, regions);
     try {
       LOG.info("Starting mini zk cluster");
       UTIL.startMiniZKCluster();
@@ -154,20 +154,15 @@ public class TestMergeTable {
     return region;
   }
 
-  protected void setupROOTAndMeta(Path rootdir, final HRegion [] regions)
+  protected void setupMeta(Path rootdir, final HRegion [] regions)
   throws IOException {
-    HRegion root =
-      HRegion.createHRegion(HRegionInfo.ROOT_REGIONINFO, rootdir,
-          UTIL.getConfiguration(), HTableDescriptor.ROOT_TABLEDESC);
     HRegion meta =
       HRegion.createHRegion(HRegionInfo.FIRST_META_REGIONINFO, rootdir,
       UTIL.getConfiguration(), HTableDescriptor.META_TABLEDESC);
-    HRegion.addRegionToMETA(root, meta);
     for (HRegion r: regions) {
       HRegion.addRegionToMETA(meta, r);
     }
     HRegion.closeHRegion(meta);
-    HRegion.closeHRegion(root);
   }
 
 }

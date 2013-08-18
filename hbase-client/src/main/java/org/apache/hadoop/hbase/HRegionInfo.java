@@ -191,10 +191,6 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
   // Current TableName
   private TableName tableName = null;
 
-  /** HRegionInfo for root region */
-  public static final HRegionInfo ROOT_REGIONINFO =
-      new HRegionInfo(0L, TableName.ROOT_TABLE_NAME);
-
   /** HRegionInfo for first meta region */
   public static final HRegionInfo FIRST_META_REGIONINFO =
       new HRegionInfo(1L, TableName.META_TABLE_NAME);

@@ -127,13 +127,6 @@ public class TestSnapshotFromClient {
     } catch (IllegalArgumentException e) {
       // expected
     }
-
-    try {
-      admin.snapshot(snapshotName, TableName.ROOT_TABLE_NAME);
-      fail("taking a snapshot of -ROOT- should not be allowed");
-    } catch (IllegalArgumentException e) {
-      // expected
-    }
   }
 
   /**

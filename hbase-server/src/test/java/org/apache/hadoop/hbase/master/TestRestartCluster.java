@@ -68,8 +68,6 @@ public class TestRestartCluster {
 
     ServerName sn = new ServerName(HMaster.MASTER, -1, System.currentTimeMillis());
 
-    ZKAssign.createNodeOffline(zooKeeper, HRegionInfo.ROOT_REGIONINFO, sn);
-
     ZKAssign.createNodeOffline(zooKeeper, HRegionInfo.FIRST_META_REGIONINFO, sn);
 
     LOG.debug("Created UNASSIGNED zNode for ROOT and META regions in state " +

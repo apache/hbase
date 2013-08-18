@@ -144,15 +144,11 @@ public class FSTableDescriptors implements TableDescriptors {
   public HTableDescriptor get(final TableName tablename)
   throws IOException {
     invocations++;
-    if (HTableDescriptor.ROOT_TABLEDESC.getTableName().equals(tablename)) {
-      cachehits++;
-      return HTableDescriptor.ROOT_TABLEDESC;
-    }
     if (HTableDescriptor.META_TABLEDESC.getTableName().equals(tablename)) {
       cachehits++;
       return HTableDescriptor.META_TABLEDESC;
     }
-    // .META. and -ROOT- is already handled. If some one tries to get the descriptor for
+    // .META. is already handled. If some one tries to get the descriptor for
     // .logs, .oldlogs or .corrupt throw an exception.
     if (HConstants.HBASE_NON_USER_TABLE_DIRS.contains(tablename.getNameAsString())) {
        throw new IOException("No descriptor found for non table = " + tablename);
@@ -494,8 +490,7 @@ public class FSTableDescriptors implements TableDescriptors {
   private TableDescriptorAndModtime getTableDescriptorAndModtime(TableName tableName)
   throws IOException {
     // ignore both -ROOT- and .META. tables
-    if (tableName.equals(TableName.ROOT_TABLE_NAME)
-        || tableName.equals(TableName.META_TABLE_NAME)) {
+    if (tableName.equals(TableName.META_TABLE_NAME)) {
       return null;
     }
     return getTableDescriptorAndModtime(getTableDir(tableName));
