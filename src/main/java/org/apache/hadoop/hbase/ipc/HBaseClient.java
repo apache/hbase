@@ -445,8 +445,14 @@ public class HBaseClient {
 
         // start the receiver thread after the socket connection has been set up
         start();
-      } catch (IOException e) {
+      } catch (Throwable t) {
         failedServers.addToFailedServers(remoteId.address);
+        IOException e;
+        if (t instanceof IOException) {
+          e = (IOException)t;
+        } else {
+          e = new IOException("Could not set up IO Streams", t);
+        }
         markClosed(e);
         close();
 
