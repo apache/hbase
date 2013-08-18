@@ -498,8 +498,8 @@ class AsyncProcess<CResult> {
       if (callback != null) {
         callback.failure(originalIndex, region, row, throwable);
       }
-      this.hasError.set(true);
       errors.add(throwable, row, location);
+      this.hasError.set(true);
     }
 
     return canRetry;
