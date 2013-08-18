@@ -184,17 +184,8 @@ public class  TestRollingRestart {
     Thread.sleep(1000);
     assertRegionsAssigned(cluster, regions);
 
-    // Bring the RS hosting ROOT down and the RS hosting META down at once
-    RegionServerThread rootServer = getServerHostingRoot(cluster);
+    // Bring the RS hosting META down
     RegionServerThread metaServer = getServerHostingMeta(cluster);
-    if (rootServer == metaServer) {
-      log("ROOT and META on the same server so killing another random server");
-      int i=0;
-      while (rootServer == metaServer) {
-        metaServer = cluster.getRegionServerThreads().get(i);
-        i++;
-      }
-    }
     log("Stopping server hosting META #1");
     metaServer.getRegionServer().stop("Stopping META server");
     cluster.hbaseCluster.waitOnRegionServer(metaServer);
@@ -326,11 +317,6 @@ public class  TestRollingRestart {
   private RegionServerThread getServerHostingMeta(MiniHBaseCluster cluster)
       throws IOException {
     return getServerHosting(cluster, HRegionInfo.FIRST_META_REGIONINFO);
-  }
-
-  private RegionServerThread getServerHostingRoot(MiniHBaseCluster cluster)
-      throws IOException {
-    return getServerHosting(cluster, HRegionInfo.ROOT_REGIONINFO);
   }
 
   private RegionServerThread getServerHosting(MiniHBaseCluster cluster,

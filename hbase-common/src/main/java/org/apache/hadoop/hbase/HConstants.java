@@ -842,7 +842,7 @@ public final class HConstants {
   /** Directories that are not HBase user table directories */
   public static final List<String> HBASE_NON_USER_TABLE_DIRS =
     Collections.unmodifiableList(Arrays.asList((String[])ArrayUtils.addAll(
-      new String[] { TableName.META_TABLE_NAME.getNameAsString(), TableName.ROOT_TABLE_NAME.getNameAsString() },
+      new String[] { TableName.META_TABLE_NAME.getNameAsString() },
       HBASE_NON_TABLE_DIRS.toArray())));
 
   /** Health script related settings. */

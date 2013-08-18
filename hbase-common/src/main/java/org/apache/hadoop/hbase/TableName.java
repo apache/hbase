@@ -63,10 +63,6 @@ public final class TableName implements Comparable<TableName> {
       "(?:(?:(?:"+VALID_NAMESPACE_REGEX+"\\"+NAMESPACE_DELIM+")?)" +
          "(?:"+VALID_TABLE_QUALIFIER_REGEX+"))";
 
-  /** The root table's name.*/
-  public static final TableName ROOT_TABLE_NAME =
-      valueOf(NamespaceDescriptor.SYSTEM_NAMESPACE_NAME_STR, "root");
-
   /** The META table's name. */
   public static final TableName META_TABLE_NAME =
       valueOf(NamespaceDescriptor.SYSTEM_NAMESPACE_NAME_STR, "meta");
