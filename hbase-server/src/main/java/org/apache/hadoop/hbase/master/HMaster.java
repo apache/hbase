@@ -3127,7 +3127,7 @@ MasterServices, Server {
   public List<TableName> listTableNamesByNamespace(String name) throws IOException {
     List<TableName> tableNames = Lists.newArrayList();
     for (HTableDescriptor descriptor: tableDescriptors.getByNamespace(name).values()) {
-      tableNames.add(TableName.valueOf(name, descriptor.getNameAsString()));
+      tableNames.add(descriptor.getTableName());
     }
     return tableNames;
   }
