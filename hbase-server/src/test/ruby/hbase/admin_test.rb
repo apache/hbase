@@ -77,6 +77,14 @@ module Hbase
       assert(!admin.list.member?('hbase:meta'))
     end
 
+    define_test "list_namespace_tables for the system namespace should return a list of tables" do
+      assert(admin.list_namespace_tables('hbase').count > 0)
+    end
+
+    define_test "list_namespace_tables for the default namespace should return a list of tables" do
+      assert(admin.list_namespace_tables('default').count > 0)
+    end
+
     #-------------------------------------------------------------------------------
 
     define_test "flush should work" do
