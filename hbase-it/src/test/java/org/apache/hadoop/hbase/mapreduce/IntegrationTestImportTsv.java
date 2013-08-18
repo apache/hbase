@@ -339,7 +339,9 @@ public class IntegrationTestImportTsv implements Configurable, Tool {
       fout.write(Bytes.toBytes("testRunFromOutputCommitter\n"));
       LOG.debug(format("Wrote test data to file: %s", inputPath));
     } finally {
-      fout.close();
+      if (fout != null) {
+        fout.close();
+      }
     }
 
     // create a parent job that ships the HBase dependencies. This is

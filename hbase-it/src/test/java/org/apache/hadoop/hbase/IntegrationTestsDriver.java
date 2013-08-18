@@ -102,8 +102,8 @@ public class IntegrationTestsDriver extends AbstractHBaseTool {
     IntegrationTestingUtility.setUseDistributedCluster(conf);
     Class<?>[] classes = findIntegrationTestClasses();
     LOG.info("Found " + classes.length + " integration tests to run:");
-    for (int i = 0; i < classes.length; i++) {
-      LOG.info("  " + classes[i]);
+    for (Class<?> aClass : classes) {
+      LOG.info("  " + aClass);
     }
     JUnitCore junit = new JUnitCore();
     junit.addListener(new TextListener(System.out));

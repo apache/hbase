@@ -31,13 +31,11 @@ import org.apache.hadoop.hbase.util.Bytes;
  * Action the adds a column family to a table.
  */
 public class AddColumnAction extends Action {
-  private final Random random;
   private final byte[] tableName;
   private HBaseAdmin admin;
 
   public AddColumnAction(String tableName) {
     this.tableName = Bytes.toBytes(tableName);
-    this.random = new Random();
   }
 
   @Override

@@ -24,7 +24,6 @@ import java.util.UUID;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import org.apache.commons.cli.CommandLine;
 import org.apache.hadoop.conf.Configuration;
@@ -114,7 +113,7 @@ public class IntegrationTestLoadAndVerify  extends IntegrationTestBase  {
   private enum Counters {
     ROWS_WRITTEN,
     REFERENCES_WRITTEN,
-    REFERENCES_CHECKED;
+    REFERENCES_CHECKED
   }
 
   @Before
@@ -122,9 +121,11 @@ public class IntegrationTestLoadAndVerify  extends IntegrationTestBase  {
     util = getTestingUtil(getConf());
     util.initializeCluster(3);
     this.setConf(util.getConfiguration());
-    getConf().setLong(NUM_TO_WRITE_KEY, NUM_TO_WRITE_DEFAULT / 100);
-    getConf().setInt(NUM_MAP_TASKS_KEY, NUM_MAP_TASKS_DEFAULT / 100);
-    getConf().setInt(NUM_REDUCE_TASKS_KEY, NUM_REDUCE_TASKS_DEFAULT / 10);
+    if (!util.isDistributedCluster()) {
+      getConf().setLong(NUM_TO_WRITE_KEY, NUM_TO_WRITE_DEFAULT / 100);
+      getConf().setInt(NUM_MAP_TASKS_KEY, NUM_MAP_TASKS_DEFAULT / 100);
+      getConf().setInt(NUM_REDUCE_TASKS_KEY, NUM_REDUCE_TASKS_DEFAULT / 10);
+    }
   }
 
   /**
@@ -360,8 +361,7 @@ public class IntegrationTestLoadAndVerify  extends IntegrationTestBase  {
     htd.addFamily(new HColumnDescriptor(TEST_FAMILY));
 
     HBaseAdmin admin = getTestingUtil(getConf()).getHBaseAdmin();
-    int numPreCreate = 40;
-    admin.createTable(htd, Bytes.toBytes(0L), Bytes.toBytes(-1L), numPreCreate);
+    admin.createTable(htd, Bytes.toBytes(0L), Bytes.toBytes(-1L), 40);
 
     doLoad(getConf(), htd);
     doVerify(getConf(), htd);

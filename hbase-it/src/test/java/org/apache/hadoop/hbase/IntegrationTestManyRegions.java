@@ -85,7 +85,7 @@ public class IntegrationTestManyRegions {
       LOG.info(String.format("Deleting existing table %s.", TABLE_NAME));
       if (admin.isTableEnabled(TABLE_NAME)) admin.disableTable(TABLE_NAME);
       admin.deleteTable(TABLE_NAME);
-      LOG.info(String.format("Existing table %s deleted."));
+      LOG.info(String.format("Existing table %s deleted.", TABLE_NAME));
     }
     LOG.info("Cluster ready");
   }
