@@ -31,6 +31,7 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.io.SequenceFile;
@@ -165,6 +166,7 @@ public class TestHFilePerformance extends TestCase {
             .withOutputStream(fout)
             .withBlockSize(minBlockSize)
             .withCompression(codecName)
+            .withComparator(new KeyValue.RawKeyComparator())
             .create();
 
         // Writing value in one shot.

@@ -519,7 +519,6 @@ public class TestRegionObserverInterface {
       byte[] family, byte[] qualifier) throws IOException {
     HFile.Writer writer = HFile.getWriterFactory(conf, new CacheConfig(conf))
         .withPath(fs, path)
-        .withComparator(KeyValue.KEY_COMPARATOR)
         .create();
     long now = System.currentTimeMillis();
     try {
@@ -532,14 +531,4 @@ public class TestRegionObserverInterface {
     }
   }
 
-  private static byte [][] makeN(byte [] base, int n) {
-    byte [][] ret = new byte[n][];
-    for(int i=0;i<n;i++) {
-      ret[i] = Bytes.add(base, Bytes.toBytes(String.format("%02d", i)));
-    }
-    return ret;
-  }
-
 }
-
-

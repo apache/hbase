@@ -39,7 +39,6 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hbase.Coprocessor;
-import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
@@ -49,6 +48,7 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.LargeTests;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.client.Append;
 import org.apache.hadoop.hbase.client.Delete;
@@ -85,7 +85,6 @@ import org.apache.hadoop.hbase.security.access.Permission.Action;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.apache.hadoop.hbase.util.TestTableName;
-
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -845,7 +844,6 @@ public class TestAccessController extends SecureTestUtil {
       try {
         writer = HFile.getWriterFactory(conf, new CacheConfig(conf))
             .withPath(fs, path)
-            .withComparator(KeyValue.KEY_COMPARATOR)
             .create();
         // subtract 2 since numRows doesn't include boundary keys
         for (byte[] key : Bytes.iterateOnSplits(startKey, endKey, true, numRows-2)) {

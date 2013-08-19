@@ -489,7 +489,6 @@ public class TestHFileBlockIndex {
                 .withPath(fs, hfilePath)
                 .withBlockSize(SMALL_BLOCK_SIZE)
                 .withCompression(compr)
-                .withComparator(KeyValue.KEY_COMPARATOR)
                 .create();
         Random rand = new Random(19231737);
 

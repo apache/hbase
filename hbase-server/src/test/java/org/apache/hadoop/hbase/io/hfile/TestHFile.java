@@ -34,6 +34,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestCase;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.KeyComparator;
 import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.io.compress.Compression;
@@ -214,6 +215,8 @@ public class TestHFile extends HBaseTestCase {
         .withOutputStream(fout)
         .withBlockSize(minBlockSize)
         .withCompression(codec)
+        // NOTE: This test is dependent on this deprecated nonstandard comparator
+        .withComparator(new KeyValue.RawKeyComparator())
         .create();
     LOG.info(writer);
     writeRecords(writer);

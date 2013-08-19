@@ -98,7 +98,6 @@ public class TestHFileWriterV2 {
             .withPath(fs, hfilePath)
             .withBlockSize(4096)
             .withCompression(compressAlgo)
-            .withComparator(KeyValue.KEY_COMPARATOR)
             .create();
 
     Random rand = new Random(9713312); // Just a fixed seed.

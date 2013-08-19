@@ -1281,7 +1281,7 @@ public class HConnectionManager {
       // checking is actually the last region in the table.
       byte[] endKey = possibleRegion.getRegionInfo().getEndKey();
       if (Bytes.equals(endKey, HConstants.EMPTY_END_ROW) ||
-          KeyValue.getRowComparator(tableName).compareRows(
+          tableName.getRowComparator().compareRows(
               endKey, 0, endKey.length, row, 0, row.length) > 0) {
         return possibleRegion;
       }

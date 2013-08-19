@@ -173,28 +173,9 @@ public class HFileWriterV2 extends AbstractHFileWriter {
     lastDataBlockOffset = outputStream.getPos();
     fsBlockWriter.writeHeaderAndData(outputStream);
     int onDiskSize = fsBlockWriter.getOnDiskSizeWithHeader();
-    // Generate a shorter faked key into index block. For example, consider a block boundary
-    // between the keys "the quick brown fox" and "the who test text".  We can use "the r" as the 
-    // key for the index block entry since it is > all entries in the previous block and <= all
-    // entries in subsequent blocks.
-    if (comparator instanceof KeyComparator) {
-      byte[] fakeKey = ((KeyComparator) comparator).getShortMidpointKey(
-        lastKeyOfPreviousBlock, firstKeyInBlock);
-      if (comparator.compare(fakeKey, firstKeyInBlock) > 0) {
-        throw new IOException("Unexpected getShortMidpointKey result, fakeKey:"
-            + Bytes.toStringBinary(fakeKey) + ", firstKeyInBlock:"
-            + Bytes.toStringBinary(firstKeyInBlock));
-      }
-      if (lastKeyOfPreviousBlock != null && comparator.compare(lastKeyOfPreviousBlock,
-        fakeKey) >= 0) {
-        throw new IOException("Unexpected getShortMidpointKey result, lastKeyOfPreviousBlock:" +
-            Bytes.toStringBinary(lastKeyOfPreviousBlock) + ", fakeKey:" +
-            Bytes.toStringBinary(fakeKey));
-      }
-      dataBlockIndexWriter.addEntry(fakeKey, lastDataBlockOffset,onDiskSize);
-    } else {
-      dataBlockIndexWriter.addEntry(firstKeyInBlock, lastDataBlockOffset,onDiskSize);
-    }
+
+    byte[] indexKey = comparator.calcIndexKey(lastKeyOfPreviousBlock, firstKeyInBlock);
+    dataBlockIndexWriter.addEntry(indexKey, lastDataBlockOffset, onDiskSize);
     totalUncompressedBytes += fsBlockWriter.getUncompressedSizeWithHeader();
     HFile.offerWriteLatency(System.nanoTime() - startTimeNs);
     if (cacheConf.shouldCacheDataOnWrite()) {

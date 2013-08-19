@@ -32,12 +32,12 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.KeyComparator;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.hfile.HFile.FileInfo;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
-import org.apache.hadoop.io.RawComparator;
 import org.apache.hadoop.io.Writable;
 
 /**
@@ -77,7 +77,7 @@ public abstract class AbstractHFileWriter implements HFile.Writer {
   protected long totalUncompressedBytes = 0;
 
   /** Key comparator. Used to ensure we write in order. */
-  protected final RawComparator<byte[]> comparator;
+  protected final KeyComparator comparator;
 
   /** Meta block names. */
   protected List<byte[]> metaNames = new ArrayList<byte[]>();
@@ -124,7 +124,7 @@ public abstract class AbstractHFileWriter implements HFile.Writer {
     this.blockEncoder = dataBlockEncoder != null
         ? dataBlockEncoder : NoOpDataBlockEncoder.INSTANCE;
     this.comparator = comparator != null ? comparator
-        : Bytes.BYTES_RAWCOMPARATOR;
+        : KeyValue.KEY_COMPARATOR;
 
     closeOutputStream = path != null;
     this.cacheConf = cacheConf;
