@@ -775,7 +775,7 @@ public class TestDistributedLogSplitting {
     curConf.setBoolean(HConstants.DISALLOW_WRITES_IN_RECOVERING, true);
     startCluster(NUM_RS, curConf);
     final int NUM_REGIONS_TO_CREATE = 40;
-    final int NUM_LOG_LINES = 20000;
+    final int NUM_LOG_LINES = 30000;
     // turn off load balancing to prevent regions from moving around otherwise
     // they will consume recovered.edits
     master.balanceSwitch(false);
@@ -821,7 +821,16 @@ public class TestDistributedLogSplitting {
     } catch (IOException ioe) {
       Assert.assertTrue(ioe instanceof RetriesExhaustedWithDetailsException);
       RetriesExhaustedWithDetailsException re = (RetriesExhaustedWithDetailsException) ioe;
-      Assert.assertTrue(re.getCause(0) instanceof RegionInRecoveryException);
+      boolean foundRegionInRecoveryException = false;
+      for (Throwable t : re.getCauses()) {
+        if (t instanceof RegionInRecoveryException) {
+          foundRegionInRecoveryException = true;
+          break;
+        }
+      }
+      Assert.assertTrue(
+        "No RegionInRecoveryException. Following exceptions returned=" + re.getCauses(),
+        foundRegionInRecoveryException);
     }
 
     ht.close();
@@ -881,7 +890,7 @@ public class TestDistributedLogSplitting {
         Thread.yield();
         curt = System.currentTimeMillis();
       } else {
-        assertEquals(1, (tot_wkr_task_resigned.get() + tot_wkr_task_err.get() +
+        assertTrue(1 <= (tot_wkr_task_resigned.get() + tot_wkr_task_err.get() +
             tot_wkr_final_transition_failed.get() + tot_wkr_task_done.get() +
             tot_wkr_preempt_task.get()));
         return;
