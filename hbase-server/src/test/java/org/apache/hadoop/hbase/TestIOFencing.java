@@ -255,7 +255,8 @@ public class TestIOFencing {
 
       // Wait till flush has happened, otherwise there won't be multiple store files
       long startWaitTime = System.currentTimeMillis();
-      while (compactingRegion.getLastFlushTime() <= lastFlushTime) {
+      while (compactingRegion.getLastFlushTime() <= lastFlushTime ||
+          compactingRegion.countStoreFiles() <= 1) {
         LOG.info("Waiting for the region to flush " + compactingRegion.getRegionNameAsString());
         Thread.sleep(1000);
         assertTrue("Timed out waiting for the region to flush",
