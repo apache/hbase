@@ -39,7 +39,6 @@ public class TestFSHDFSUtils {
   private static final HBaseTestingUtility HTU = new HBaseTestingUtility();
   static {
     Configuration conf = HTU.getConfiguration();
-    conf.setInt("hbase.lease.recovery.dfs.timeout", 1000);
     conf.setInt("hbase.lease.recovery.first.pause", 10);
     conf.setInt("hbase.lease.recovery.pause", 10);
   };
@@ -58,6 +57,7 @@ public class TestFSHDFSUtils {
    */
   @Test (timeout = 30000)
   public void testRecoverLease() throws IOException {
+    HTU.getConfiguration().setInt("hbase.lease.recovery.dfs.timeout", 1000);
     CancelableProgressable reporter = Mockito.mock(CancelableProgressable.class);
     Mockito.when(reporter.progress()).thenReturn(true);
     DistributedFileSystem dfs = Mockito.mock(DistributedFileSystem.class);
