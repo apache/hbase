@@ -19,6 +19,8 @@
 
 package org.apache.hadoop.hbase.filter;
 
+import static org.apache.hadoop.hbase.util.Bytes.len;
+
 import com.google.common.base.Preconditions;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
@@ -214,8 +216,8 @@ public class ColumnRangeFilter extends FilterBase {
   public KeyValue getNextKeyHint(KeyValue kv) {
     return KeyValue.createFirstOnRow(kv.getBuffer(), kv.getRowOffset(), kv
         .getRowLength(), kv.getBuffer(), kv.getFamilyOffset(), kv
-        .getFamilyLength(), this.minColumn, 0, this.minColumn == null ? 0
-        : this.minColumn.length);
+        .getFamilyLength(), this.minColumn, 0, len(this.minColumn));
+
   }
 
   @Override

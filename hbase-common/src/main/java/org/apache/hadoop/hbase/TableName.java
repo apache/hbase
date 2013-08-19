@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.hbase.KeyValue.KeyComparator;
 import org.apache.hadoop.hbase.util.Bytes;
 
 /**
@@ -305,5 +306,17 @@ public final class TableName implements Comparable<TableName> {
   @Override
   public int compareTo(TableName tableName) {
     return this.nameAsString.compareTo(tableName.getNameAsString());
+  }
+
+  /**
+   * Get the appropriate row comparator for this table.
+   *
+   * @return The comparator.
+   */
+  public KeyComparator getRowComparator() {
+     if(TableName.META_TABLE_NAME.equals(this)) {
+      return KeyValue.META_COMPARATOR.getRawComparator();
+    }
+    return KeyValue.COMPARATOR.getRawComparator();
   }
 }

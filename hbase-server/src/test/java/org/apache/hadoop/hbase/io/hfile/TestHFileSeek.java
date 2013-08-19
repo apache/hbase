@@ -41,6 +41,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RawLocalFileSystem;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.io.hfile.HFile.Reader;
 import org.apache.hadoop.hbase.io.hfile.HFile.Writer;
@@ -130,6 +131,7 @@ public class TestHFileSeek extends TestCase {
           .withOutputStream(fout)
           .withBlockSize(options.minBlockSize)
           .withCompression(options.compress)
+          .withComparator(new KeyValue.RawKeyComparator())
           .create();
       try {
         BytesWritable key = new BytesWritable();

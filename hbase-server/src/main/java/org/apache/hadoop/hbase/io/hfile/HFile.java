@@ -336,7 +336,7 @@ public class HFile {
     protected Compression.Algorithm compression =
         HFile.DEFAULT_COMPRESSION_ALGORITHM;
     protected HFileDataBlockEncoder encoder = NoOpDataBlockEncoder.INSTANCE;
-    protected KeyComparator comparator;
+    protected KeyComparator comparator = KeyValue.KEY_COMPARATOR;
     protected InetSocketAddress[] favoredNodes;
     protected ChecksumType checksumType = HFile.DEFAULT_CHECKSUM_TYPE;
     protected int bytesPerChecksum = DEFAULT_BYTES_PER_CHECKSUM;

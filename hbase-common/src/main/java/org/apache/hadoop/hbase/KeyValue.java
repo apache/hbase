@@ -19,6 +19,8 @@
  */
 package org.apache.hadoop.hbase;
 
+import static org.apache.hadoop.hbase.util.Bytes.len;
+
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
@@ -106,6 +108,7 @@ public class KeyValue implements Cell, HeapSize, Cloneable {
    * @param tableName  The table name.
    * @return The comparator.
    */
+  @Deprecated // use TableName#getRowComparator
   public static KeyComparator getRowComparator(TableName tableName) {
      if(TableName.META_TABLE_NAME.equals(tableName)) {
       return META_COMPARATOR.getRawComparator();
@@ -327,7 +330,7 @@ public class KeyValue implements Cell, HeapSize, Cloneable {
    * @param timestamp
    */
   public KeyValue(final byte [] row, final long timestamp) {
-    this(row, timestamp, Type.Maximum);
+    this(row, null, null, timestamp, Type.Maximum, null);
   }
 
   /**
@@ -403,8 +406,8 @@ public class KeyValue implements Cell, HeapSize, Cloneable {
   public KeyValue(final byte[] row, final byte[] family,
       final byte[] qualifier, final long timestamp, Type type,
       final byte[] value) {
-    this(row, family, qualifier, 0, qualifier==null ? 0 : qualifier.length,
-        timestamp, type, value, 0, value==null ? 0 : value.length);
+    this(row, 0, len(row),   family, 0, len(family),   qualifier, 0, len(qualifier),
+        timestamp, type,   value, 0, len(value));
   }
 
   /**
@@ -421,13 +424,14 @@ public class KeyValue implements Cell, HeapSize, Cloneable {
    * @param vlength value length
    * @throws IllegalArgumentException
    */
+    @Deprecated // removing redundant
   public KeyValue(byte [] row, byte [] family,
       byte [] qualifier, int qoffset, int qlength, long timestamp, Type type,
       byte [] value, int voffset, int vlength) {
-    this(row, 0, row==null ? 0 : row.length,
-        family, 0, family==null ? 0 : family.length,
-        qualifier, qoffset, qlength, timestamp, type,
-        value, voffset, vlength);
+      this(row, 0, len(row),
+	   family, 0, len(family),
+	   qualifier,qoffset, qlength, timestamp, type,
+	   value, voffset, vlength);
   }
 
   /**
@@ -563,6 +567,7 @@ public class KeyValue implements Cell, HeapSize, Cloneable {
    * @throws IllegalArgumentException an illegal value was passed or there is insufficient space
    * remaining in the buffer
    */
+  @Deprecated  // removing redundant
   public KeyValue(byte [] buffer,
       final byte [] row, final int roffset, final int rlength,
       final byte [] family, final int foffset, final int flength,
@@ -603,6 +608,7 @@ public class KeyValue implements Cell, HeapSize, Cloneable {
    * @throws IllegalArgumentException an illegal value was passed or there is insufficient space
    * remaining in the buffer
    */
+  @Deprecated // removing redundant
   public KeyValue(byte [] buffer, final int boffset,
       final byte [] row, final int roffset, final int rlength,
       final byte [] family, final int foffset, final int flength,
@@ -693,7 +699,7 @@ public class KeyValue implements Cell, HeapSize, Cloneable {
    * @throws IllegalArgumentException an illegal value was passed or there is insufficient space
    * remaining in the buffer
    */
-  static int writeByteArray(byte [] buffer, final int boffset,
+  private static int writeByteArray(byte [] buffer, final int boffset,
       final byte [] row, final int roffset, final int rlength,
       final byte [] family, final int foffset, int flength,
       final byte [] qualifier, final int qoffset, int qlength,
@@ -1093,7 +1099,8 @@ public class KeyValue implements Cell, HeapSize, Cloneable {
   /**
    * @return Family offset
    */
-  public int getFamilyOffset(int rlength) {
+  @Deprecated // making private
+  public  int getFamilyOffset(int rlength) {
     return this.offset + ROW_OFFSET + Bytes.SIZEOF_SHORT + rlength + Bytes.SIZEOF_BYTE;
   }
 
@@ -1131,6 +1138,7 @@ public class KeyValue implements Cell, HeapSize, Cloneable {
   /**
    * @return Qualifier offset
    */
+  @Deprecated // making private
   public int getQualifierOffset(int foffset) {
     return foffset + getFamilyLength(foffset);
   }
@@ -1146,6 +1154,7 @@ public class KeyValue implements Cell, HeapSize, Cloneable {
   /**
    * @return Qualifier length
    */
+  @Deprecated // making private
   public int getQualifierLength(int rlength, int flength) {
     return getKeyLength() - (int) getKeyDataStructureSize(rlength, flength, 0);
   }
@@ -1162,7 +1171,7 @@ public class KeyValue implements Cell, HeapSize, Cloneable {
   /**
    * @return Column (family + qualifier) length
    */
-  public int getTotalColumnLength(int rlength, int foffset) {
+  private int getTotalColumnLength(int rlength, int foffset) {
     int flength = getFamilyLength(foffset);
     int qlength = getQualifierLength(rlength,flength);
     return flength + qlength;
@@ -1179,6 +1188,7 @@ public class KeyValue implements Cell, HeapSize, Cloneable {
    * @param keylength Pass if you have it to save on a int creation.
    * @return Timestamp offset
    */
+  @Deprecated // making private
   public int getTimestampOffset(final int keylength) {
     return getKeyOffset() + keylength - TIMESTAMP_TYPE_SIZE;
   }
@@ -1308,8 +1318,9 @@ public class KeyValue implements Cell, HeapSize, Cloneable {
   /**
    * @return Type of this KeyValue.
    */
+  @Deprecated // use getTypeByte()
   public byte getType() {
-    return getType(getKeyLength());
+    return getTypeByte();
   }
 
   /**
@@ -1317,15 +1328,7 @@ public class KeyValue implements Cell, HeapSize, Cloneable {
    */
   @Override
   public byte getTypeByte() {
-    return getType(getKeyLength());
-  }
-
-  /**
-   * @param keylength Pass if you have it to save on a int creation.
-   * @return Type of this KeyValue.
-   */
-  byte getType(final int keylength) {
-    return this.bytes[this.offset + keylength - 1 + ROW_OFFSET];
+    return this.bytes[this.offset + getKeyLength() - 1 + ROW_OFFSET];
   }
 
   /**
@@ -1342,21 +1345,21 @@ public class KeyValue implements Cell, HeapSize, Cloneable {
    */
   public boolean isDeleteType() {
     // TODO: Fix this method name vis-a-vis isDelete!
-    return getType() == Type.Delete.getCode();
+    return getTypeByte() == Type.Delete.getCode();
   }
 
   /**
    * @return True if this KV is a delete family type.
    */
   public boolean isDeleteFamily() {
-    return getType() == Type.DeleteFamily.getCode();
+    return getTypeByte() == Type.DeleteFamily.getCode();
   }
 
   /**
    * @return True if this KV is a delete family-version type.
    */
   public boolean isDeleteFamilyVersion() {
-    return getType() == Type.DeleteFamilyVersion.getCode();
+    return getTypeByte() == Type.DeleteFamilyVersion.getCode();
   }
 
   /**
@@ -1364,7 +1367,7 @@ public class KeyValue implements Cell, HeapSize, Cloneable {
    * @return True if this KV is a delete family or column type.
    */
   public boolean isDeleteColumnOrFamily() {
-    int t = getType();
+    int t = getTypeByte();
     return t == Type.DeleteColumn.getCode() || t == Type.DeleteFamily.getCode();
   }
 
@@ -1549,8 +1552,7 @@ public class KeyValue implements Cell, HeapSize, Cloneable {
    * @return True if column matches
    */
   public boolean matchingColumn(final byte[] family, final byte[] qualifier) {
-    return matchingColumn(family, 0, family == null ? 0 : family.length,
-        qualifier, 0, qualifier == null ? 0 : qualifier.length);
+    return matchingColumn(family, 0, len(family), qualifier, 0, len(qualifier));
   }
 
   /**
@@ -2262,12 +2264,11 @@ public class KeyValue implements Cell, HeapSize, Cloneable {
       throw new IllegalArgumentException("Buffer size " + (buffer.length - boffset) + " < " +
           iLength);
     }
-    return new KeyValue(buffer, boffset,
-        row, roffset, rlength,
-        family, foffset, flength,
-        qualifier, qoffset, qlength,
-        HConstants.LATEST_TIMESTAMP, KeyValue.Type.Maximum,
+
+    int len = writeByteArray(buffer, boffset, row, roffset, rlength, family, foffset, flength,
+        qualifier, qoffset, qlength, HConstants.LATEST_TIMESTAMP, KeyValue.Type.Maximum,
         null, 0, 0);
+    return new KeyValue(buffer, boffset, len);
   }
 
   /**
@@ -2543,6 +2544,7 @@ public class KeyValue implements Cell, HeapSize, Cloneable {
   public static class KeyComparator
       implements RawComparator<byte []>, SamePrefixComparator<byte[]> {
 
+    @Override
     public int compare(byte[] left, int loffset, int llength, byte[] right,
         int roffset, int rlength) {
       // Compare row
@@ -2716,7 +2718,7 @@ public class KeyValue implements Cell, HeapSize, Cloneable {
      * @param rightKey the current block's real start key usually
      * @return newKey: the newly generated faked key
      */
-    public byte[] getShortMidpointKey(final byte[] leftKey, final byte[] rightKey) {
+    protected byte[] getShortMidpointKey(final byte[] leftKey, final byte[] rightKey) {
       if (rightKey == null) {
         throw new IllegalArgumentException("rightKey can not be null");
       }
@@ -2807,6 +2809,50 @@ public class KeyValue implements Cell, HeapSize, Cloneable {
         return -1;
       }
       return 0;
+    }
+
+    /**
+     * Generate a shorter faked key into index block. For example, consider a block boundary
+     * between the keys "the quick brown fox" and "the who test text".  We can use "the r" as the
+     * key for the index block entry since it is > all entries in the previous block and <= all
+     * entries in subsequent blocks.
+     *
+     * @param lastKeyOfPreviousBlock
+     * @param firstKeyInBlock
+     * @return a shortened null key, or if there are unexpected results, the firstKeyIn (new) Block
+     */
+    public byte[] calcIndexKey(byte[] lastKeyOfPreviousBlock, byte[] firstKeyInBlock) {
+      byte[] fakeKey = getShortMidpointKey(lastKeyOfPreviousBlock, firstKeyInBlock);
+      if (compare(fakeKey, firstKeyInBlock) > 0) {
+        LOG.error("Unexpected getShortMidpointKey result, fakeKey:"
+            + Bytes.toStringBinary(fakeKey) + ", firstKeyInBlock:"
+            + Bytes.toStringBinary(firstKeyInBlock));
+        return firstKeyInBlock;
+      }
+      if (lastKeyOfPreviousBlock != null && compare(lastKeyOfPreviousBlock, fakeKey) >= 0) {
+        LOG.error("Unexpected getShortMidpointKey result, lastKeyOfPreviousBlock:" +
+            Bytes.toStringBinary(lastKeyOfPreviousBlock) + ", fakeKey:" +
+            Bytes.toStringBinary(fakeKey));
+        return firstKeyInBlock;
+      }
+      return fakeKey;
+    }
+  }
+
+  /**
+   * This is a TEST only Comparator used in TestSeekTo and TestReseekTo.
+   */
+  @Deprecated
+  public static class RawKeyComparator extends KeyComparator {
+    RawComparator<byte []> getRawComparator() { return Bytes.BYTES_RAWCOMPARATOR; }
+    
+    public int compare(byte[] left, int loffset, int llength, byte[] right,
+        int roffset, int rlength) {
+      return getRawComparator().compare(left,  loffset, llength, right, roffset, rlength);
+    }
+    
+    public byte[] calcIndexKey(byte[] lastKeyOfPreviousBlock, byte[] firstKeyInBlock) {
+      return firstKeyInBlock;
     }
   }
 

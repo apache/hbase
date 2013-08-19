@@ -318,7 +318,6 @@ public class TestLoadIncrementalHFiles {
         .withPath(fs, path)
         .withBlockSize(BLOCKSIZE)
         .withCompression(COMPRESSION)
-        .withComparator(KeyValue.KEY_COMPARATOR)
         .create();
     long now = System.currentTimeMillis();
     try {

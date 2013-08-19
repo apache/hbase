@@ -18,20 +18,19 @@
  */
 package org.apache.hadoop.hbase.io.hfile;
 
+import static org.junit.Assert.assertEquals;
+
 import java.util.ArrayList;
 import java.util.List;
-
-import junit.framework.Assert;
 
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-
-import static org.junit.Assert.*;
 
 /**
  * Test {@link HFileScanner#reseekTo(byte[])}
@@ -51,6 +50,8 @@ public class TestReseekTo {
         TEST_UTIL.getConfiguration(), cacheConf)
             .withOutputStream(fout)
             .withBlockSize(4000)
+            // NOTE: This test is dependent on this deprecated nonstandard comparator
+            .withComparator(new KeyValue.RawKeyComparator())
             .create();
     int numberOfKeys = 1000;
 

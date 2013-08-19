@@ -123,6 +123,17 @@ public class Bytes {
   // SizeOf which uses java.lang.instrument says 24 bytes. (3 longs?)
   public static final int ESTIMATED_HEAP_TAX = 16;
 
+  
+  /**
+   * Returns length of the byte array, returning 0 if the array is null.
+   * Useful for calculating sizes.
+   * @param b byte array, which can be null
+   * @return 0 if b is null, otherwise returns length
+   */
+  final public static int len(byte[] b) {
+    return b == null ? 0 : b.length;
+  }
+
   /**
    * Byte array comparator class.
    */
