@@ -31,8 +31,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.NavigableMap;
 
-import junit.framework.Assert;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -470,7 +468,6 @@ public class TestMasterObserver {
   }
 
   private static HBaseTestingUtility UTIL = new HBaseTestingUtility();
-  private static byte[] TEST_TABLE = Bytes.toBytes("observed_table");
   private static byte[] TEST_FAMILY = Bytes.toBytes("fam1");
   private static byte[] TEST_FAMILY2 = Bytes.toBytes("fam2");
 
@@ -488,11 +485,14 @@ public class TestMasterObserver {
     UTIL.shutdownMiniCluster();
   }
 
-  @Test
+  @Test(timeout=60000)
   public void testStarted() throws Exception {
     MiniHBaseCluster cluster = UTIL.getHBaseCluster();
 
     HMaster master = cluster.getMaster();
+    while (!master.isInitialized()) {
+      Thread.sleep(100);
+    }
     assertTrue("Master should be active", master.isActiveMaster());
     MasterCoprocessorHost host = master.getCoprocessorHost();
     assertNotNull("CoprocessorHost should not be null", host);
@@ -506,8 +506,9 @@ public class TestMasterObserver {
         cp.wasStartMasterCalled());
   }
 
-  @Test
+  @Test(timeout=120000)
   public void testTableOperations() throws Exception {
+    byte[] tableName = Bytes.toBytes("testTableOperations");
     MiniHBaseCluster cluster = UTIL.getHBaseCluster();
 
     HMaster master = cluster.getMaster();
@@ -519,107 +520,108 @@ public class TestMasterObserver {
     assertFalse("No table created yet", cp.wasCreateTableCalled());
 
     // create a table
-    HTableDescriptor htd = new HTableDescriptor(TEST_TABLE);
+    HTableDescriptor htd = new HTableDescriptor(tableName);
     htd.addFamily(new HColumnDescriptor(TEST_FAMILY));
     HBaseAdmin admin = UTIL.getHBaseAdmin();
 
     admin.createTable(htd);
+    UTIL.waitTableAvailable(htd.getName(), 5000);
+
     // preCreateTable can't bypass default action.
     assertTrue("Test table should be created", cp.wasCreateTableCalled());
 
-    admin.disableTable(TEST_TABLE);
-    assertTrue(admin.isTableDisabled(TEST_TABLE));
+    admin.disableTable(tableName);
+    assertTrue(admin.isTableDisabled(tableName));
     // preDisableTable can't bypass default action.
     assertTrue("Coprocessor should have been called on table disable",
       cp.wasDisableTableCalled());
 
     // enable
     assertFalse(cp.wasEnableTableCalled());
-    admin.enableTable(TEST_TABLE);
-    assertTrue(admin.isTableEnabled(TEST_TABLE));
+    admin.enableTable(tableName);
+    assertTrue(admin.isTableEnabled(tableName));
     // preEnableTable can't bypass default action.
     assertTrue("Coprocessor should have been called on table enable",
       cp.wasEnableTableCalled());
 
-    admin.disableTable(TEST_TABLE);
-    assertTrue(admin.isTableDisabled(TEST_TABLE));
+    admin.disableTable(tableName);
+    assertTrue(admin.isTableDisabled(tableName));
 
     // modify table
     htd.setMaxFileSize(512 * 1024 * 1024);
-    admin.modifyTable(TEST_TABLE, htd);
+    admin.modifyTable(tableName, htd);
     // preModifyTable can't bypass default action.
     assertTrue("Test table should have been modified",
       cp.wasModifyTableCalled());
 
     // add a column family
-    admin.addColumn(TEST_TABLE, new HColumnDescriptor(TEST_FAMILY2));
+    admin.addColumn(tableName, new HColumnDescriptor(TEST_FAMILY2));
     assertTrue("New column family shouldn't have been added to test table",
       cp.preAddColumnCalledOnly());
 
     // modify a column family
     HColumnDescriptor hcd1 = new HColumnDescriptor(TEST_FAMILY2);
     hcd1.setMaxVersions(25);
-    admin.modifyColumn(TEST_TABLE, hcd1);
+    admin.modifyColumn(tableName, hcd1);
     assertTrue("Second column family should be modified",
       cp.preModifyColumnCalledOnly());
 
     // delete table
-    admin.deleteTable(TEST_TABLE);
+    admin.deleteTable(tableName);
     assertFalse("Test table should have been deleted",
-        admin.tableExists(TEST_TABLE));
+        admin.tableExists(tableName));
     // preDeleteTable can't bypass default action.
     assertTrue("Coprocessor should have been called on table delete",
       cp.wasDeleteTableCalled());
-
 
     // turn off bypass, run the tests again
     cp.enableBypass(false);
     cp.resetStates();
 
     admin.createTable(htd);
+    UTIL.waitTableAvailable(htd.getName(), 5000);
     assertTrue("Test table should be created", cp.wasCreateTableCalled());
 
     // disable
     assertFalse(cp.wasDisableTableCalled());
-
-    admin.disableTable(TEST_TABLE);
-    assertTrue(admin.isTableDisabled(TEST_TABLE));
+    admin.disableTable(tableName);
+    assertTrue(admin.isTableDisabled(tableName));
     assertTrue("Coprocessor should have been called on table disable",
       cp.wasDisableTableCalled());
 
     // modify table
     htd.setMaxFileSize(512 * 1024 * 1024);
-    admin.modifyTable(TEST_TABLE, htd);
+    admin.modifyTable(tableName, htd);
     assertTrue("Test table should have been modified",
         cp.wasModifyTableCalled());
 
     // add a column family
-    admin.addColumn(TEST_TABLE, new HColumnDescriptor(TEST_FAMILY2));
+    admin.addColumn(tableName, new HColumnDescriptor(TEST_FAMILY2));
     assertTrue("New column family should have been added to test table",
         cp.wasAddColumnCalled());
 
     // modify a column family
     HColumnDescriptor hcd = new HColumnDescriptor(TEST_FAMILY2);
     hcd.setMaxVersions(25);
-    admin.modifyColumn(TEST_TABLE, hcd);
+    admin.modifyColumn(tableName, hcd);
     assertTrue("Second column family should be modified",
         cp.wasModifyColumnCalled());
 
     // enable
     assertFalse(cp.wasEnableTableCalled());
-    admin.enableTable(TEST_TABLE);
-    assertTrue(admin.isTableEnabled(TEST_TABLE));
+    admin.enableTable(tableName);
+    assertTrue(admin.isTableEnabled(tableName));
     assertTrue("Coprocessor should have been called on table enable",
         cp.wasEnableTableCalled());
 
     // disable again
-    admin.disableTable(TEST_TABLE);
-    assertTrue(admin.isTableDisabled(TEST_TABLE));
+    admin.disableTable(tableName);
+    assertTrue(admin.isTableDisabled(tableName));
 
     // delete column
     assertFalse("No column family deleted yet", cp.wasDeleteColumnCalled());
-    admin.deleteColumn(TEST_TABLE, TEST_FAMILY2);
-    HTableDescriptor tableDesc = admin.getTableDescriptor(TEST_TABLE);
+    admin.deleteColumn(tableName, TEST_FAMILY2);
+    HTableDescriptor tableDesc = admin.getTableDescriptor(tableName);
     assertNull("'"+Bytes.toString(TEST_FAMILY2)+"' should have been removed",
         tableDesc.getFamily(TEST_FAMILY2));
     assertTrue("Coprocessor should have been called on column delete",
@@ -627,15 +629,16 @@ public class TestMasterObserver {
 
     // delete table
     assertFalse("No table deleted yet", cp.wasDeleteTableCalled());
-    admin.deleteTable(TEST_TABLE);
+    admin.deleteTable(tableName);
     assertFalse("Test table should have been deleted",
-        admin.tableExists(TEST_TABLE));
+        admin.tableExists(tableName));
     assertTrue("Coprocessor should have been called on table delete",
         cp.wasDeleteTableCalled());
   }
 
-  @Test
+  @Test(timeout=120000)
   public void testRegionTransitionOperations() throws Exception {
+    byte[] tableName = Bytes.toBytes("testRegionTransitionOperations");
     MiniHBaseCluster cluster = UTIL.getHBaseCluster();
 
     HMaster master = cluster.getMaster();
@@ -645,7 +648,7 @@ public class TestMasterObserver {
     cp.enableBypass(false);
     cp.resetStates();
 
-    HTable table = UTIL.createTable(TEST_TABLE, TEST_FAMILY);
+    HTable table = UTIL.createTable(tableName, TEST_FAMILY);
     int countOfRegions = UTIL.createMultiRegions(table, TEST_FAMILY);
     UTIL.waitUntilAllRegionsAssigned(countOfRegions);
     

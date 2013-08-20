@@ -78,14 +78,14 @@ public class TestFSTableDescriptors {
     Path testdir = UTIL.getDataTestDir("testSequenceidAdvancesOnTableInfo");
     HTableDescriptor htd = new HTableDescriptor("testSequenceidAdvancesOnTableInfo");
     FileSystem fs = FileSystem.get(UTIL.getConfiguration());
-    Path p0 = FSTableDescriptors.updateHTableDescriptor(fs, testdir, htd);
+    Path p0 = FSTableDescriptors.updateHTableDescriptor(fs, testdir, htd).getPath();
     int i0 = FSTableDescriptors.getTableInfoSequenceid(p0);
-    Path p1 = FSTableDescriptors.updateHTableDescriptor(fs, testdir, htd);
+    Path p1 = FSTableDescriptors.updateHTableDescriptor(fs, testdir, htd).getPath();
     // Assert we cleaned up the old file.
     assertTrue(!fs.exists(p0));
     int i1 = FSTableDescriptors.getTableInfoSequenceid(p1);
     assertTrue(i1 == i0 + 1);
-    Path p2 = FSTableDescriptors.updateHTableDescriptor(fs, testdir, htd);
+    Path p2 = FSTableDescriptors.updateHTableDescriptor(fs, testdir, htd).getPath();
     // Assert we cleaned up the old file.
     assertTrue(!fs.exists(p1));
     int i2 = FSTableDescriptors.getTableInfoSequenceid(p2);

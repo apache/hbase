@@ -155,6 +155,10 @@ public class FSTableDescriptors implements TableDescriptors {
     if (tdm != null) {
       if (modtime <= tdm.getModtime()) {
         cachehits++;
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Hit: modtime=" + modtime + " cached=" + tdm.getModtime() + " htd=" +
+            tdm.getTableDescriptor());
+        }
         return tdm.getTableDescriptor();
       }
     }
@@ -175,6 +179,9 @@ public class FSTableDescriptors implements TableDescriptors {
         "doesn't contain a table descriptor, " +
         "do consider deleting it: " + tablename);
     } else {
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Miss: modtime=" + modtime + " htd=" + htd);
+      }
       this.cache.put(tablename, new TableDescriptorModtime(modtime, htd));
     }
     return htd;
@@ -214,8 +221,15 @@ public class FSTableDescriptors implements TableDescriptors {
     if (HConstants.HBASE_NON_USER_TABLE_DIRS.contains(htd.getNameAsString())) {
       throw new NotImplementedException();
     }
-    if (!this.fsreadonly) updateHTableDescriptor(this.fs, this.rootdir, htd);
-    long modtime = getTableInfoModtime(this.fs, this.rootdir, htd.getNameAsString());
+    if (fsreadonly) {
+      // Cannot cache here.
+      // We can't know if a modtime from the most recent file found in a
+      // directory listing at some arbitrary point in time still corresponds
+      // to the latest, nor that our htd is the latest.
+      return;
+    }
+    // Cache with the modtime of the descriptor we wrote
+    long modtime = updateHTableDescriptor(this.fs, this.rootdir, htd).getModificationTime();
     this.cache.put(htd.getNameAsString(), new TableDescriptorModtime(modtime, htd));
   }
 
@@ -419,6 +433,9 @@ public class FSTableDescriptors implements TableDescriptors {
     } finally {
       fsDataInputStream.close();
     }
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Read table descriptor from " + status.getPath() + ": " + hTableDescriptor);
+    }
     return hTableDescriptor;
   }
 
@@ -430,7 +447,7 @@ public class FSTableDescriptors implements TableDescriptors {
    * @return New tableinfo or null if we failed update.
    * @throws IOException Thrown if failed update.
    */
-  static Path updateHTableDescriptor(FileSystem fs, Path rootdir,
+  static FileStatus updateHTableDescriptor(FileSystem fs, Path rootdir,
       HTableDescriptor hTableDescriptor)
   throws IOException {
     Path tableDir = FSUtils.getTablePath(rootdir, hTableDescriptor.getName());
@@ -438,7 +455,11 @@ public class FSTableDescriptors implements TableDescriptors {
       getTableInfoPath(fs, tableDir));
     if (p == null) throw new IOException("Failed update");
     LOG.info("Updated tableinfo=" + p);
-    return p;
+    FileStatus[] status = FSUtils.listStatus(fs, p, null);
+    if (status == null || status.length != 1) {
+      throw new IOException("listStatus failed to return expected result");
+    }
+    return status[0];
   }
 
   /**
