@@ -52,6 +52,7 @@ import org.apache.hadoop.mapreduce.Job;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.Test;
 
 public class TestReplication {
@@ -616,6 +617,7 @@ public class TestReplication {
    *
    * @throws Exception
    */
+  @Ignore("Disabled by HBASE-9216")
   @Test(timeout=300000)
   public void queueFailover() throws Exception {
     utility1.createMultiRegions(htable1, famName);
