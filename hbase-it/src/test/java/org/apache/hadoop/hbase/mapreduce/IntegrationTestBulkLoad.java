@@ -329,6 +329,8 @@ public class IntegrationTestBulkLoad extends IntegrationTestBase {
 
     private Long order;
 
+    public LinkKey() {}
+
     public LinkKey(long chainId, long order) {
       this.chainId = chainId;
       this.order = order;
@@ -368,6 +370,8 @@ public class IntegrationTestBulkLoad extends IntegrationTestBase {
     public Long getRk() {
       return rk;
     }
+
+    public LinkChain() {}
 
     public LinkChain(Long rk, Long next) {
       this.rk = rk;
