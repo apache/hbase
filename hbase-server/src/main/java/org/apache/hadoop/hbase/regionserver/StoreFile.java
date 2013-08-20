@@ -236,6 +236,14 @@ public class StoreFile {
   }
 
   /**
+   * @return the StoreFile object associated to this StoreFile.
+   *         null if the StoreFile is not a reference.
+   */
+  StoreFileInfo getFileInfo() {
+    return this.fileInfo;
+  }
+
+  /**
    * @return Path or null if this StoreFile was made with a Stream.
    */
   public Path getPath() {

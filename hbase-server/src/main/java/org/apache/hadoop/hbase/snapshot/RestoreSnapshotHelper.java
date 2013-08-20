@@ -42,6 +42,8 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.backup.HFileArchiver;
+import org.apache.hadoop.hbase.catalog.CatalogTracker;
+import org.apache.hadoop.hbase.catalog.MetaEditor;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.errorhandling.ForeignExceptionDispatcher;
 import org.apache.hadoop.hbase.io.HFileLink;
@@ -55,6 +57,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.FSVisitor;
 import org.apache.hadoop.hbase.util.ModifyRegionUtils;
+import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.io.IOUtils;
 
 /**
@@ -105,6 +108,9 @@ public class RestoreSnapshotHelper {
   private final Map<byte[], byte[]> regionsMap =
         new TreeMap<byte[], byte[]>(Bytes.BYTES_COMPARATOR);
 
+  private final Map<String, Pair<String, String> > parentsMap =
+      new HashMap<String, Pair<String, String> >();
+
   private final ForeignExceptionDispatcher monitor;
   private final MonitoredTask status;
 
@@ -152,7 +158,7 @@ public class RestoreSnapshotHelper {
       return null;
     }
 
-    RestoreMetaChanges metaChanges = new RestoreMetaChanges();
+    RestoreMetaChanges metaChanges = new RestoreMetaChanges(parentsMap);
 
     // Identify which region are still available and which not.
     // NOTE: we rely upon the region name as: "table name, start key, end key"
@@ -216,9 +222,15 @@ public class RestoreSnapshotHelper {
    * Describe the set of operations needed to update META after restore.
    */
   public static class RestoreMetaChanges {
+    private final Map<String, Pair<String, String> > parentsMap;
+
     private List<HRegionInfo> regionsToRestore = null;
     private List<HRegionInfo> regionsToRemove = null;
     private List<HRegionInfo> regionsToAdd = null;
+
+    RestoreMetaChanges(final Map<String, Pair<String, String> > parentsMap) {
+      this.parentsMap = parentsMap;
+    }
 
     /**
      * @return true if there're new regions
@@ -290,6 +302,43 @@ public class RestoreSnapshotHelper {
         regionsToRestore = new LinkedList<HRegionInfo>();
       }
       regionsToRestore.add(hri);
+    }
+
+    public void updateMetaParentRegions(final CatalogTracker catalogTracker,
+        final List<HRegionInfo> regionInfos) throws IOException {
+      if (regionInfos == null || parentsMap.isEmpty()) return;
+
+      // Extract region names and offlined regions
+      Map<String, HRegionInfo> regionsByName = new HashMap<String, HRegionInfo>(regionInfos.size());
+      List<HRegionInfo> parentRegions = new LinkedList();
+      for (HRegionInfo regionInfo: regionInfos) {
+        if (regionInfo.isSplitParent()) {
+          parentRegions.add(regionInfo);
+        } else {
+          regionsByName.put(regionInfo.getEncodedName(), regionInfo);
+        }
+      }
+
+      // Update Offline parents
+      for (HRegionInfo regionInfo: parentRegions) {
+        Pair<String, String> daughters = parentsMap.get(regionInfo.getEncodedName());
+        if (daughters == null) {
+          // The snapshot contains an unreferenced region.
+          // It will be removed by the CatalogJanitor.
+          LOG.warn("Skip update of unreferenced offline parent: " + regionInfo);
+          continue;
+        }
+
+        // One side of the split is already compacted
+        if (daughters.getSecond() == null) {
+          daughters.setSecond(daughters.getFirst());
+        }
+
+        LOG.debug("Update splits parent " + regionInfo.getEncodedName() + " -> " + daughters);
+        MetaEditor.addRegionToMeta(catalogTracker, regionInfo,
+            regionsByName.get(daughters.getFirst()),
+            regionsByName.get(daughters.getSecond()));
+      }
     }
   }
 
@@ -514,18 +563,40 @@ public class RestoreSnapshotHelper {
     if (clonedRegionName == null) clonedRegionName = snapshotRegionName;
 
     // The output file should be a reference link table=snapshotRegion-fileName.clonedRegionName
+    Path linkPath = null;
     String refLink = fileName;
     if (!HFileLink.isHFileLink(fileName)) {
       refLink = HFileLink.createHFileLinkName(snapshotTable, snapshotRegionName, fileName);
+      linkPath = new Path(familyDir,
+        HFileLink.createHFileLinkName(snapshotTable, regionInfo.getEncodedName(), hfileName));
     }
+
     Path outPath = new Path(familyDir, refLink + '.' + clonedRegionName);
 
     // Create the new reference
-    Path linkPath = new Path(familyDir,
-      HFileLink.createHFileLinkName(snapshotTable, regionInfo.getEncodedName(), hfileName));
-    InputStream in = new HFileLink(conf, linkPath).open(fs);
+    InputStream in;
+    if (linkPath != null) {
+      in = new HFileLink(conf, linkPath).open(fs);
+    } else {
+      linkPath = new Path(new Path(HRegion.getRegionDir(snapshotDir, regionInfo.getEncodedName()),
+                      familyDir.getName()), hfileName);
+      in = fs.open(linkPath);
+    }
     OutputStream out = fs.create(outPath);
     IOUtils.copyBytes(in, out, conf);
+
+    // Add the daughter region to the map
+    String regionName = Bytes.toString(regionsMap.get(regionInfo.getEncodedNameAsBytes()));
+    LOG.debug("Restore reference " + regionName + " to " + clonedRegionName);
+    synchronized (parentsMap) {
+      Pair<String, String> daughters = parentsMap.get(clonedRegionName);
+      if (daughters == null) {
+        daughters = new Pair<String, String>(regionName, null);
+        parentsMap.put(clonedRegionName, daughters);
+      } else if (!regionName.equals(daughters.getFirst())) {
+        daughters.setSecond(regionName);
+      }
+    }
   }
 
   /**
@@ -537,9 +608,11 @@ public class RestoreSnapshotHelper {
    * @return the new HRegion instance
    */
   public HRegionInfo cloneRegionInfo(final HRegionInfo snapshotRegionInfo) {
-    return new HRegionInfo(tableDesc.getTableName(),
+    HRegionInfo regionInfo = new HRegionInfo(tableDesc.getTableName(),
                       snapshotRegionInfo.getStartKey(), snapshotRegionInfo.getEndKey(),
                       snapshotRegionInfo.isSplit(), snapshotRegionInfo.getRegionId());
+    regionInfo.setOffline(snapshotRegionInfo.isOffline());
+    return regionInfo;
   }
 
   /**

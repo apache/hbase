@@ -126,6 +126,14 @@ public class StoreFileInfo {
     }
   }
 
+  /*
+   * @return the Reference object associated to this StoreFileInfo.
+   *         null if the StoreFile is not a reference.
+   */
+  Reference getReference() {
+    return this.reference;
+  }
+
   /** @return True if the store file is a Reference */
   public boolean isReference() {
     return this.reference != null;

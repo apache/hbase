@@ -385,7 +385,7 @@ public final class ExportSnapshot extends Configured implements Tool {
       new SnapshotReferenceUtil.FileVisitor() {
         public void storeFile (final String region, final String family, final String hfile)
             throws IOException {
-          Path path = new Path(family, HFileLink.createHFileLinkName(table, region, hfile));
+          Path path = HFileLink.createPath(table, region, family, hfile);
           long size = new HFileLink(conf, path).getFileStatus(fs).getLen();
           files.add(new Pair<Path, Long>(path, size));
         }

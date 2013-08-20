@@ -2470,14 +2470,22 @@ public class HRegion implements HeapSize { // , Writable{
         if (exnSnare != null) {
           exnSnare.rethrowException();
         }
-        Path file = storeFiles.get(i).getPath();
-        // create "reference" to this store file.  It is intentionally an empty file -- all
-        // necessary infomration is captured by its fs location and filename.  This allows us to
-        // only figure out what needs to be done via a single nn operation (instead of having to
-        // open and read the files as well).
+        StoreFile storeFile = storeFiles.get(i);
+        Path file = storeFile.getPath();
+
         LOG.debug("Creating reference for file (" + (i+1) + "/" + sz + ") : " + file);
         Path referenceFile = new Path(dstStoreDir, file.getName());
-        boolean success = fs.getFileSystem().createNewFile(referenceFile);
+        boolean success = true;
+        if (storeFile.isReference()) {
+          // write the Reference object to the snapshot
+          storeFile.getFileInfo().getReference().write(fs.getFileSystem(), referenceFile);
+        } else {
+          // create "reference" to this store file.  It is intentionally an empty file -- all
+          // necessary information is captured by its fs location and filename.  This allows us to
+          // only figure out what needs to be done via a single nn operation (instead of having to
+          // open and read the files as well).
+          success = fs.getFileSystem().createNewFile(referenceFile);
+        }
         if (!success) {
           throw new IOException("Failed to create reference file:" + referenceFile);
         }

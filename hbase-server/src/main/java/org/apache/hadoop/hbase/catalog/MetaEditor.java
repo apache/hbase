@@ -238,6 +238,23 @@ public class MetaEditor {
   }
 
   /**
+   * Adds a (single) META row for the specified new region and its daughters. Note that this does
+   * not add its daughter's as different rows, but adds information about the daughters
+   * in the same row as the parent. Use
+   * {@link #splitRegion(CatalogTracker, HRegionInfo, HRegionInfo, HRegionInfo, ServerName)}
+   * if you want to do that.
+   * @param catalogTracker CatalogTracker on whose back we will ride the edit.
+   * @param regionInfo region information
+   * @param splitA first split daughter of the parent regionInfo
+   * @param splitB second split daughter of the parent regionInfo
+   * @throws IOException if problem connecting or updating meta
+   */
+  public static void addRegionToMeta(CatalogTracker catalogTracker, HRegionInfo regionInfo,
+      HRegionInfo splitA, HRegionInfo splitB) throws IOException {
+    addRegionToMeta(MetaReader.getMetaHTable(catalogTracker), regionInfo, splitA, splitB);
+  }
+
+  /**
    * Adds a META row for each of the specified new regions.
    * @param catalogTracker CatalogTracker
    * @param regionInfos region information list
