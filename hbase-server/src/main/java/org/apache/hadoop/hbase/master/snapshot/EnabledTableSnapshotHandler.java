@@ -25,6 +25,7 @@ import java.util.Set;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.errorhandling.ForeignException;
@@ -34,6 +35,7 @@ import org.apache.hadoop.hbase.procedure.Procedure;
 import org.apache.hadoop.hbase.procedure.ProcedureCoordinator;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.snapshot.HBaseSnapshotException;
+import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.util.Pair;
 
 import com.google.common.collect.Lists;
@@ -70,10 +72,14 @@ public class EnabledTableSnapshotHandler extends TakeSnapshotHandler {
    */
   @Override
   protected void snapshotRegions(List<Pair<HRegionInfo, ServerName>> regions)
-      throws HBaseSnapshotException {
+      throws HBaseSnapshotException, IOException {
     Set<String> regionServers = new HashSet<String>(regions.size());
     for (Pair<HRegionInfo, ServerName> region : regions) {
-      regionServers.add(region.getSecond().toString());
+      if (region != null && region.getFirst() != null && region.getSecond() != null) {
+        HRegionInfo hri = region.getFirst();
+        if (hri.isOffline() && (hri.isSplit() || hri.isSplitParent())) continue;
+        regionServers.add(region.getSecond().toString());
+      }
     }
 
     // start the snapshot on the RS
@@ -90,7 +96,19 @@ public class EnabledTableSnapshotHandler extends TakeSnapshotHandler {
       // wait for the snapshot to complete.  A timer thread is kicked off that should cancel this
       // if it takes too long.
       proc.waitForCompleted();
-      LOG.info("Done waiting - snapshot for " + this.snapshot.getName() + " finished!");
+      LOG.info("Done waiting - online snapshot for " + this.snapshot.getName());
+
+      // Take the offline regions as disabled
+      Path snapshotDir = SnapshotDescriptionUtils.getWorkingSnapshotDir(snapshot, rootDir);
+      for (Pair<HRegionInfo, ServerName> region : regions) {
+        HRegionInfo regionInfo = region.getFirst();
+        if (regionInfo.isOffline() && (regionInfo.isSplit() || regionInfo.isSplitParent())) {
+          if (!fs.exists(new Path(snapshotDir, regionInfo.getEncodedName()))) {
+            LOG.info("Take disabled snapshot of offline region=" + regionInfo);
+            snapshotDisabledRegion(regionInfo);
+          }
+        }
+      }
     } catch (InterruptedException e) {
       ForeignException ee =
           new ForeignException("Interrupted while waiting for snapshot to finish", e);
