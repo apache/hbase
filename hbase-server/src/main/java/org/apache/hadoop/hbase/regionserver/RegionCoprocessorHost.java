@@ -39,7 +39,6 @@ import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Append;
 import org.apache.hadoop.hbase.client.Delete;
@@ -147,7 +146,7 @@ public class RegionCoprocessorHost
     loadSystemCoprocessors(conf, REGION_COPROCESSOR_CONF_KEY);
 
     // load system default cp's for user tables from configuration.
-    if (!HTableDescriptor.isSystemTable(region.getRegionInfo().getTableName())) {
+    if (!region.getRegionInfo().getTableName().isSystemTable()) {
       loadSystemCoprocessors(conf, USER_REGION_COPROCESSOR_CONF_KEY);
     }
 

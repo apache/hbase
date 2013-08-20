@@ -430,18 +430,6 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
   }
 
   /**
-   * Checks of the tableName being passed is a system table
-   *
-   *
-   * @return true if a tableName is a member of the system
-   * namesapce (aka hbase)
-   */
-  public static boolean isSystemTable(final TableName tableName) {
-    return tableName.getNamespaceAsString()
-        .equals(NamespaceDescriptor.SYSTEM_NAMESPACE_NAME_STR);
-  }
-
-  /**
    * Getter for accessing the metadata associated with the key
    *
    * @param key The key.

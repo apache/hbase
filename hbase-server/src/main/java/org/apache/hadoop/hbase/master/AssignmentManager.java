@@ -47,7 +47,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Chore;
 import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -453,7 +452,7 @@ public class AssignmentManager extends ZooKeeperListener {
       // its a clean cluster startup, else its a failover.
       Map<HRegionInfo, ServerName> regions = regionStates.getRegionAssignments();
       for (Map.Entry<HRegionInfo, ServerName> e: regions.entrySet()) {
-        if (!HTableDescriptor.isSystemTable(e.getKey().getTableName())
+        if (!e.getKey().getTableName().isSystemTable()
             && e.getValue() != null) {
           LOG.debug("Found " + e + " out on cluster");
           failover = true;
@@ -2575,7 +2574,7 @@ public class AssignmentManager extends ZooKeeperListener {
     //remove system tables because they would have been assigned earlier
     for(Iterator<HRegionInfo> iter = allRegions.keySet().iterator();
         iter.hasNext();) {
-      if (HTableDescriptor.isSystemTable(iter.next().getTableName())) {
+      if (iter.next().getTableName().isSystemTable()) {
         iter.remove();
       }
     }

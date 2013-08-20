@@ -1121,7 +1121,7 @@ public class TestDistributedLogSplitting {
       HRegionServer hrs = rst.getRegionServer();
       List<HRegionInfo> hris = ProtobufUtil.getOnlineRegions(hrs);
       for (HRegionInfo hri : hris) {
-        if (HTableDescriptor.isSystemTable(hri.getTableName())) {
+        if (hri.getTableName().isSystemTable()) {
           continue;
         }
         LOG.debug("adding data to rs = " + rst.getName() +
@@ -1146,7 +1146,7 @@ public class TestDistributedLogSplitting {
 
     for(Iterator<HRegionInfo> iter = regions.iterator(); iter.hasNext(); ) {
       HRegionInfo regionInfo = iter.next();
-      if(HTableDescriptor.isSystemTable(regionInfo.getTableName())) {
+      if(regionInfo.getTableName().isSystemTable()) {
          iter.remove();
       }
     }
