@@ -315,6 +315,12 @@ row10	c1	c2
             for how to build the optional library and have it run on startup.
         </para>
     </section>
+    <section xml:id="compaction.tool">
+        <title>Offline Compaction Tool</title>
+        <para>See the usage for the <link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/regionserver/CompactionTool.html">Compaction Tool</link>.
+            Run it like this <command>./bin/hbase org.apache.hadoop.hbase.regionserver.CompactionTool</command>
+        </para>
+    </section>
 
     </section>  <!--  tools -->
 
@@ -563,8 +569,8 @@ false
   </section>
    <section xml:id="rs_metrics_ganglia">
      <title>Warning To Ganglia Users</title>
-     <para>Warning to Ganglia Users:  by default, HBase will emit a LOT of metrics per RegionServer which may swamp your installation.  
-     Options include either increasing Ganglia server capacity, or configuring HBase to emit fewer metrics. 
+     <para>Warning to Ganglia Users:  by default, HBase will emit a LOT of metrics per RegionServer which may swamp your installation.
+     Options include either increasing Ganglia server capacity, or configuring HBase to emit fewer metrics.
      </para>
    </section>
    <section xml:id="rs_metrics">
@@ -606,7 +612,7 @@ false
           <section xml:id="hbase.regionserver.writeRequestsCount"><title><varname>writeRequestsCount</varname></title>
           <para>Number of write requests for this RegionServer since startup.  Note:  this is a 32-bit integer and can roll. </para>
 		  </section>
-   
+
    </section>
    <section xml:id="rs_metrics_other">
    <title>Other RegionServer Metrics</title>
@@ -638,19 +644,19 @@ false
 		  </section>
           <section xml:id="hbase.regionserver.fsReadLatency"><title><varname>fsReadLatency*</varname></title>
           <para>There are several filesystem read latency (ms) metrics, all measured from RegionServer startup.  The issue with
-          interpretation is that ALL reads go into this metric (e.g., single-record Gets, full table Scans), including 
-          reads required for compactions.  This metric is only interesting "over time" when comparing 
+          interpretation is that ALL reads go into this metric (e.g., single-record Gets, full table Scans), including
+          reads required for compactions.  This metric is only interesting "over time" when comparing
           major releases of HBase or your own code.</para>
 		  </section>
           <section xml:id="hbase.regionserver.fsWriteLatency"><title><varname>fsWriteLatency*</varname></title>
           <para>There are several filesystem write latency (ms) metrics, all measured from RegionServer startup.  The issue with
           interpretation is that ALL writes go into this metric (e.g., single-record Puts, full table re-writes due to compaction).
-          This metric is only interesting "over time" when comparing 
+          This metric is only interesting "over time" when comparing
           major releases of HBase or your own code.</para>
 		  </section>
           <section xml:id="hbase.regionserver.stores"><title><varname>NumberOfStores</varname></title>
-          <para>Point in time number of Stores open on the RegionServer.  A Store corresponds to a ColumnFamily.  For example, 
-          if a table (which contains the column family) has 3 regions on a RegionServer, there will be 3 stores open for that 
+          <para>Point in time number of Stores open on the RegionServer.  A Store corresponds to a ColumnFamily.  For example,
+          if a table (which contains the column family) has 3 regions on a RegionServer, there will be 3 stores open for that
           column family. </para>
 		  </section>
           <section xml:id="hbase.regionserver.storeFiles"><title><varname>NumberOfStorefiles</varname></title>
