@@ -109,6 +109,37 @@ public class HFileLink extends FileLink {
   }
 
   /**
+   * Create an HFileLink relative path for the table/region/family/hfile location
+   * @param table Table name
+   * @param region Region Name
+   * @param family Family Name
+   * @param hfile HFile Name
+   * @return the relative Path to open the specified table/region/family/hfile link
+   */
+  public static Path createPath(final String table, final String region,
+      final String family, final String hfile) {
+    if (HFileLink.isHFileLink(hfile)) {
+      return new Path(family, hfile);
+    }
+    return new Path(family, HFileLink.createHFileLinkName(table, region, hfile));
+  }
+
+  /**
+   * Create an HFileLink instance from table/region/family/hfile location
+   * @param conf {@link Configuration} from which to extract specific archive locations
+   * @param table Table name
+   * @param region Region Name
+   * @param family Family Name
+   * @param hfile HFile Name
+   * @return Link to the file with the specified table/region/family/hfile location
+   * @throws IOException on unexpected error.
+   */
+  public static HFileLink create(final Configuration conf, final String table,
+      final String region, final String family, final String hfile) throws IOException {
+    return new HFileLink(conf, createPath(table, region, family, hfile));
+  }
+
+  /**
    * @return the origin path of the hfile.
    */
   public Path getOriginPath() {
@@ -129,7 +160,6 @@ public class HFileLink extends FileLink {
   public static boolean isHFileLink(final Path path) {
     return isHFileLink(path.getName());
   }
-
 
   /**
    * @param fileName File name to check.
@@ -206,6 +236,15 @@ public class HFileLink extends FileLink {
       throw new IllegalArgumentException(fileName + " is not a valid HFileLink name!");
     }
     return(m.group(1));
+  }
+
+  /**
+   * Returns true if the HFileLink exists
+   */
+  public boolean exists(final FileSystem fs) throws IOException {
+    return fs.exists(this.originPath) ||
+           fs.exists(this.tempPath) ||
+           fs.exists(this.archivePath);
   }
 
   /**

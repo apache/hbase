@@ -37,8 +37,6 @@ import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.regionserver.HRegion;
-import org.apache.hadoop.hbase.snapshot.CopyRecoveredEditsTask;
-import org.apache.hadoop.hbase.snapshot.ReferenceRegionHFilesTask;
 import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.snapshot.TableInfoCopyTask;
 import org.apache.hadoop.hbase.snapshot.TakeSnapshotUtils;
@@ -81,36 +79,16 @@ public class DisabledTableSnapshotHandler extends TakeSnapshotHandler {
       // 1. get all the regions hosting this table.
 
       // extract each pair to separate lists
-      Set<String> serverNames = new HashSet<String>();
       Set<HRegionInfo> regions = new HashSet<HRegionInfo>();
       for (Pair<HRegionInfo, ServerName> p : regionsAndLocations) {
         regions.add(p.getFirst());
-        serverNames.add(p.getSecond().toString());
       }
 
       // 2. for each region, write all the info to disk
       LOG.info("Starting to write region info and WALs for regions for offline snapshot:"
           + SnapshotDescriptionUtils.toString(snapshot));
       for (HRegionInfo regionInfo : regions) {
-        // 2.1 copy the regionInfo files to the snapshot
-        Path snapshotRegionDir = TakeSnapshotUtils.getRegionSnapshotDirectory(snapshot, rootDir,
-          regionInfo.getEncodedName());
-        HRegion.writeRegioninfoOnFilesystem(regionInfo, snapshotRegionDir, fs, conf);
-        // check for error for each region
-        monitor.rethrowException();
-
-        // 2.2 for each region, copy over its recovered.edits directory
-        Path regionDir = HRegion.getRegionDir(rootDir, regionInfo);
-        new CopyRecoveredEditsTask(snapshot, monitor, fs, regionDir, snapshotRegionDir).call();
-        monitor.rethrowException();
-        status.setStatus("Completed copying recovered edits for offline snapshot of table: "
-            + snapshot.getTable());
-
-        // 2.3 reference all the files in the region
-        new ReferenceRegionHFilesTask(snapshot, monitor, regionDir, fs, snapshotRegionDir).call();
-        monitor.rethrowException();
-        status.setStatus("Completed referencing HFiles for offline snapshot of table: " +
-          snapshot.getTable());
+        snapshotDisabledRegion(regionInfo);
       }
 
       // 3. write the table info to disk

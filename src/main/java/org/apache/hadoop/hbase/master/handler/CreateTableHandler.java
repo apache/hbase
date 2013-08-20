@@ -185,7 +185,7 @@ public class CreateTableHandler extends EventHandler {
 
     if (regionInfos != null && regionInfos.size() > 0) {
       // 4. Add regions to META
-      MetaEditor.addRegionsToMeta(this.catalogTracker, regionInfos);
+      addRegionsToMeta(this.catalogTracker, regionInfos);
 
       // 5. Trigger immediate assignment of the regions in round-robin fashion
       List<ServerName> servers = serverManager.getOnlineServersList();
@@ -221,5 +221,13 @@ public class CreateTableHandler extends EventHandler {
       throws IOException {
     return ModifyRegionUtils.createRegions(conf, tableRootDir,
         hTableDescriptor, newRegions, null);
+  }
+
+  /**
+   * Add the specified set of regions to the META table.
+   */
+  protected void addRegionsToMeta(final CatalogTracker ct, final List<HRegionInfo> regionInfos)
+      throws IOException {
+    MetaEditor.addRegionsToMeta(this.catalogTracker, regionInfos);
   }
 }

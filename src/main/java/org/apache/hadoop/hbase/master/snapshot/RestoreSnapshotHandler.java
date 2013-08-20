@@ -125,6 +125,7 @@ public class RestoreSnapshotHandler extends TableEventHandler implements Snapsho
       if (metaChanges.hasRegionsToRestore()) hris.addAll(metaChanges.getRegionsToRestore());
       List<HRegionInfo> hrisToRemove = metaChanges.getRegionsToRemove();
       MetaEditor.mutateRegions(catalogTracker, hrisToRemove, hris);
+      metaChanges.updateMetaParentRegions(catalogTracker, hris);
 
       // At this point the restore is complete. Next step is enabling the table.
       LOG.info("Restore snapshot=" + SnapshotDescriptionUtils.toString(snapshot) + " on table=" +
