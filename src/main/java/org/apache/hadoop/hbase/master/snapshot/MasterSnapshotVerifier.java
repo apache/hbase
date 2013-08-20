@@ -21,6 +21,8 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Set;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.FSDataInputStream;
@@ -32,6 +34,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.catalog.MetaReader;
+import org.apache.hadoop.hbase.io.HFileLink;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription.Type;
@@ -39,10 +42,12 @@ import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.snapshot.CorruptedSnapshotException;
 import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
+import org.apache.hadoop.hbase.snapshot.SnapshotReferenceUtil;
 import org.apache.hadoop.hbase.snapshot.TakeSnapshotUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
 import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.FSVisitor;
 import org.apache.hadoop.hbase.util.HFileArchiveUtil;
 
 /**
@@ -76,6 +81,7 @@ import org.apache.hadoop.hbase.util.HFileArchiveUtil;
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
 public final class MasterSnapshotVerifier {
+  private static final Log LOG = LogFactory.getLog(MasterSnapshotVerifier.class);
 
   private SnapshotDescription snapshot;
   private FileSystem fs;
@@ -143,10 +149,28 @@ public final class MasterSnapshotVerifier {
   private void verifyRegions(Path snapshotDir) throws IOException {
     List<HRegionInfo> regions = MetaReader.getTableRegions(this.services.getCatalogTracker(),
       Bytes.toBytes(tableName));
+
+    Set<String> snapshotRegions = SnapshotReferenceUtil.getSnapshotRegionNames(fs, snapshotDir);
+    if (snapshotRegions == null) {
+      String msg = "Snapshot " + SnapshotDescriptionUtils.toString(snapshot) + " looks empty";
+      LOG.error(msg);
+      throw new CorruptedSnapshotException(msg);
+    }
+
+    if (snapshotRegions.size() != regions.size()) {
+      String msg = "Regions moved during the snapshot '" + 
+                   SnapshotDescriptionUtils.toString(snapshot) + "'. expected=" +
+                   regions.size() + " snapshotted=" + snapshotRegions.size();
+      LOG.error(msg);
+      throw new CorruptedSnapshotException(msg);
+    }
+
     for (HRegionInfo region : regions) {
-      // if offline split parent, skip it
-      if (region.isOffline() && (region.isSplit() || region.isSplitParent())) {
-        continue;
+      if (!snapshotRegions.contains(region.getEncodedName())) {
+        // could happen due to a move or split race.
+        String msg = "No region directory found for region:" + region;
+        LOG.error(msg);
+        throw new CorruptedSnapshotException(msg, snapshot);
       }
 
       verifyRegion(fs, snapshotDir, region);
@@ -159,20 +183,18 @@ public final class MasterSnapshotVerifier {
    * @param snapshotDir snapshot directory to check
    * @param region the region to check
    */
-  private void verifyRegion(FileSystem fs, Path snapshotDir, HRegionInfo region) throws IOException {
+  private void verifyRegion(final FileSystem fs, final Path snapshotDir, final HRegionInfo region)
+      throws IOException {
     // make sure we have region in the snapshot
     Path regionDir = new Path(snapshotDir, region.getEncodedName());
-    if (!fs.exists(regionDir)) {
-      // could happen due to a move or split race.
-      throw new CorruptedSnapshotException("No region directory found for region:" + region,
-          snapshot);
-    }
+
     // make sure we have the region info in the snapshot
     Path regionInfo = new Path(regionDir, HRegion.REGIONINFO_FILE);
     // make sure the file exists
     if (!fs.exists(regionInfo)) {
       throw new CorruptedSnapshotException("No region info found for region:" + region, snapshot);
     }
+
     FSDataInputStream in = fs.open(regionInfo);
     HRegionInfo found = new HRegionInfo();
     try {
@@ -188,46 +210,44 @@ public final class MasterSnapshotVerifier {
     // make sure we have the expected recovered edits files
     TakeSnapshotUtils.verifyRecoveredEdits(fs, snapshotDir, found, snapshot);
 
-    // check for the existance of each hfile
-    PathFilter familiesDirs = new FSUtils.FamilyDirFilter(fs);
-    FileStatus[] columnFamilies = FSUtils.listStatus(fs, regionDir, familiesDirs);
-    // should we do some checking here to make sure the cfs are correct?
-    if (columnFamilies == null) return;
-
-    // setup the suffixes for the snapshot directories
-    Path tableNameSuffix = new Path(tableName);
-    Path regionNameSuffix = new Path(tableNameSuffix, region.getEncodedName());
-
-    // get the potential real paths
-    Path archivedRegion = new Path(HFileArchiveUtil.getArchivePath(services.getConfiguration()),
-        regionNameSuffix);
-    Path realRegion = new Path(rootDir, regionNameSuffix);
-
-    // loop through each cf and check we can find each of the hfiles
-    for (FileStatus cf : columnFamilies) {
-      FileStatus[] hfiles = FSUtils.listStatus(fs, cf.getPath(), null);
-      // should we check if there should be hfiles?
-      if (hfiles == null || hfiles.length == 0) continue;
-
-      Path realCfDir = new Path(realRegion, cf.getPath().getName());
-      Path archivedCfDir = new Path(archivedRegion, cf.getPath().getName());
-      for (FileStatus hfile : hfiles) {
-        // make sure the name is correct
-        if (!StoreFile.validateStoreFileName(hfile.getPath().getName())) {
-          throw new CorruptedSnapshotException("HFile: " + hfile.getPath()
-              + " is not a valid hfile name.", snapshot);
-        }
-
-        // check to see if hfile is present in the real table
-        String fileName = hfile.getPath().getName();
-        Path file = new Path(realCfDir, fileName);
-        Path archived = new Path(archivedCfDir, fileName);
-        if (!fs.exists(file) && !fs.exists(archived)) {
-          throw new CorruptedSnapshotException("Can't find hfile: " + hfile.getPath()
-              + " in the real (" + realCfDir + ") or archive (" + archivedCfDir
-              + ") directory for the primary table.", snapshot);
-        }
+    // make sure we have all the expected store files
+    SnapshotReferenceUtil.visitRegionStoreFiles(fs, regionDir, new FSVisitor.StoreFileVisitor() {
+      public void storeFile(final String regionNameSuffix, final String family,
+          final String hfileName) throws IOException {
+        verifyStoreFile(snapshotDir, region, family, hfileName);
       }
+    });
+  }
+
+  private void verifyStoreFile(final Path snapshotDir, final HRegionInfo regionInfo,
+      final String family, final String fileName) throws IOException {
+    Path refPath = null;
+    if (StoreFile.isReference(fileName)) {
+      // If is a reference file check if the parent file is present in the snapshot
+      Path snapshotHFilePath = new Path(new Path(
+          new Path(snapshotDir, regionInfo.getEncodedName()), family), fileName);
+      refPath = StoreFile.getReferredToFile(snapshotHFilePath);
+      if (!fs.exists(refPath)) {
+        throw new CorruptedSnapshotException("Missing parent hfile for: " + fileName, snapshot);
+      }
+    }
+
+    Path linkPath;
+    if (refPath != null && HFileLink.isHFileLink(refPath)) {
+      linkPath = new Path(family, refPath.getName());
+    } else if (HFileLink.isHFileLink(fileName)) {
+      linkPath = new Path(family, fileName);
+    } else {
+      linkPath = new Path(family, HFileLink.createHFileLinkName(tableName,
+        regionInfo.getEncodedName(), fileName));
+    }
+
+    // check if the linked file exists (in the archive, or in the table dir)
+    HFileLink link = new HFileLink(services.getConfiguration(), linkPath);
+    if (!link.exists(fs)) {
+      throw new CorruptedSnapshotException("Can't find hfile: " + fileName
+          + " in the real (" + link.getOriginPath() + ") or archive (" + link.getArchivePath()
+          + ") directory for the primary table.", snapshot);
     }
   }
 

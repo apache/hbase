@@ -322,6 +322,14 @@ public class StoreFile extends SchemaConfigured {
   }
 
   /**
+   * @return the Reference object associated to this StoreFile.
+   *         null if the StoreFile is not a reference.
+   */
+  Reference getReference() {
+    return this.reference;
+  }
+
+  /**
    * @return <tt>true</tt> if this StoreFile is an HFileLink
    */
   boolean isLink() {

@@ -188,8 +188,7 @@ public final class SnapshotInfo extends Configured implements Tool {
     FileInfo addStoreFile(final String region, final String family, final String hfile)
           throws IOException {
       String table = this.snapshot.getTable();
-      Path path = new Path(family, HFileLink.createHFileLinkName(table, region, hfile));
-      HFileLink link = new HFileLink(conf, path);
+      HFileLink link = HFileLink.create(conf, table, region, family, hfile);
       boolean inArchive = false;
       long size = -1;
       try {

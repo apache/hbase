@@ -388,7 +388,7 @@ public final class ExportSnapshot extends Configured implements Tool {
       new SnapshotReferenceUtil.FileVisitor() {
         public void storeFile (final String region, final String family, final String hfile)
             throws IOException {
-          Path path = new Path(family, HFileLink.createHFileLinkName(table, region, hfile));
+          Path path = HFileLink.createPath(table, region, family, hfile);
           long size = new HFileLink(conf, path).getFileStatus(fs).getLen();
           files.add(new Pair<Path, Long>(path, size));
         }
@@ -627,7 +627,7 @@ public final class ExportSnapshot extends Configured implements Tool {
     if (outputFs.exists(snapshotTmpDir)) {
       System.err.println("A snapshot with the same name '" + snapshotName + "' may be in-progress");
       System.err.println("Please check " + snapshotTmpDir + ". If the snapshot has completed, ");
-      System.err.println("consider removing " + snapshotTmpDir + " before retrying export"); 
+      System.err.println("consider removing " + snapshotTmpDir + " before retrying export");
       return 1;
     }
 

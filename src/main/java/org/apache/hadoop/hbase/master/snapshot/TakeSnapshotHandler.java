@@ -44,9 +44,13 @@ import org.apache.hadoop.hbase.master.metrics.MasterMetrics;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
+import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.snapshot.CopyRecoveredEditsTask;
+import org.apache.hadoop.hbase.snapshot.ReferenceRegionHFilesTask;
 import org.apache.hadoop.hbase.snapshot.SnapshotCreationException;
 import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.snapshot.TableInfoCopyTask;
+import org.apache.hadoop.hbase.snapshot.TakeSnapshotUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.zookeeper.KeeperException;
@@ -143,7 +147,7 @@ public abstract class TakeSnapshotHandler extends EventHandler implements Snapsh
 
       List<Pair<HRegionInfo, ServerName>> regionsAndLocations =
           MetaReader.getTableRegionsAndLocations(this.server.getCatalogTracker(),
-            Bytes.toBytes(snapshot.getTable()), true);
+            Bytes.toBytes(snapshot.getTable()), false);
 
       // run the snapshot
       snapshotRegions(regionsAndLocations);
@@ -152,7 +156,11 @@ public abstract class TakeSnapshotHandler extends EventHandler implements Snapsh
       // extract each pair to separate lists
       Set<String> serverNames = new HashSet<String>();
       for (Pair<HRegionInfo, ServerName> p : regionsAndLocations) {
-        serverNames.add(p.getSecond().toString());
+        if (p != null && p.getFirst() != null && p.getSecond() != null) {
+          HRegionInfo hri = p.getFirst();
+          if (hri.isOffline() && (hri.isSplit() || hri.isSplitParent())) continue;
+          serverNames.add(p.getSecond().toString());
+        }
       }
 
       // verify the snapshot is valid
@@ -207,6 +215,32 @@ public abstract class TakeSnapshotHandler extends EventHandler implements Snapsh
           + ") to completed directory(" + snapshotDir + ").");
     }
     finished = true;
+  }
+
+  /**
+   * Take a snapshot of the specified disabled region
+   */
+  protected void snapshotDisabledRegion(final HRegionInfo regionInfo)
+      throws IOException {
+    // 1 copy the regionInfo files to the snapshot
+    Path snapshotRegionDir = TakeSnapshotUtils.getRegionSnapshotDirectory(snapshot, rootDir,
+      regionInfo.getEncodedName());
+    HRegion.writeRegioninfoOnFilesystem(regionInfo, snapshotRegionDir, fs, conf);
+    // check for error for each region
+    monitor.rethrowException();
+
+    // 2 for each region, copy over its recovered.edits directory
+    Path regionDir = HRegion.getRegionDir(rootDir, regionInfo);
+    new CopyRecoveredEditsTask(snapshot, monitor, fs, regionDir, snapshotRegionDir).call();
+    monitor.rethrowException();
+    status.setStatus("Completed copying recovered edits for offline snapshot of table: "
+        + snapshot.getTable());
+
+    // 3 reference all the files in the region
+    new ReferenceRegionHFilesTask(snapshot, monitor, regionDir, fs, snapshotRegionDir).call();
+    monitor.rethrowException();
+    status.setStatus("Completed referencing HFiles for offline snapshot of table: " +
+      snapshot.getTable());
   }
 
   /**
