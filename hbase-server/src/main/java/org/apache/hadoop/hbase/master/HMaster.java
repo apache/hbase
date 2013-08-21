@@ -836,10 +836,16 @@ MasterServices, Server {
     Set<ServerName> previouslyFailedMetaRSs = getPreviouselyFailedMetaServersFromZK();
 
     this.initializationBeforeMetaAssignment = true;
+
+    //initialize load balancer
+    this.balancer.setClusterStatus(getClusterStatus());
+    this.balancer.setMasterServices(this);
+    this.balancer.initialize();
+
     // Make sure meta assigned before proceeding.
     status.setStatus("Assigning Meta Region");
     assignMeta(status);
-    // check if master is shutting down because above assignMeta could return even META isn't 
+    // check if master is shutting down because above assignMeta could return even META isn't
     // assigned when master is shutting down
     if(this.stopped) return;
 
@@ -877,11 +883,11 @@ MasterServices, Server {
     org.apache.hadoop.hbase.catalog.MetaMigrationConvertingToPB
       .updateMetaIfNecessary(this);
 
-    this.balancer.setMasterServices(this);
     // Fix up assignment manager status
     status.setStatus("Starting assignment manager");
     this.assignmentManager.joinCluster();
 
+    //set cluster status again after user regions are assigned
     this.balancer.setClusterStatus(getClusterStatus());
 
     if (!masterRecovery) {
@@ -974,7 +980,7 @@ MasterServices, Server {
     boolean beingExpired = false;
 
     status.setStatus("Assigning META region");
-    
+
     assignmentManager.getRegionStates().createRegionState(HRegionInfo.FIRST_META_REGIONINFO);
     boolean rit = this.assignmentManager
         .processRegionInTransitionAndBlockUntilAssigned(HRegionInfo.FIRST_META_REGIONINFO);
@@ -1217,11 +1223,11 @@ MasterServices, Server {
   public ActiveMasterManager getActiveMasterManager() {
     return this.activeMasterManager;
   }
-  
+
   public MasterAddressTracker getMasterAddressManager() {
     return this.masterAddressManager;
   }
-  
+
   /*
    * Start up all services. If any of these threads gets an unhandled exception
    * then they just die with a logged message.  This should be fine because
@@ -1785,14 +1791,14 @@ MasterServices, Server {
     if (getNamespaceDescriptor(namespace) == null) {
       throw new ConstraintException("Namespace " + namespace + " does not exist");
     }
-    
+
     HRegionInfo[] newRegions = getHRegionInfos(hTableDescriptor, splitKeys);
     checkInitialized();
     checkCompression(hTableDescriptor);
     if (cpHost != null) {
       cpHost.preCreateTable(hTableDescriptor, newRegions);
     }
-    
+
     this.executorService.submit(new CreateTableHandler(this,
       this.fileSystemManager, hTableDescriptor, conf,
       newRegions, this).prepare());

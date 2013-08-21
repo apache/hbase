@@ -27,6 +27,7 @@ import org.apache.hadoop.hbase.ClusterStatus;
 import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.Stoppable;
 
 /**
  * Makes decisions about the placement and movement of Regions across
@@ -45,7 +46,7 @@ import org.apache.hadoop.hbase.ServerName;
  * <p>This classes produces plans for the {@link AssignmentManager} to execute.
  */
 @InterfaceAudience.Public
-public interface LoadBalancer extends Configurable {
+public interface LoadBalancer extends Configurable, Stoppable {
 
   /**
    * Set the current cluster status.  This allows a LoadBalancer to map host name to a server
@@ -110,4 +111,10 @@ public interface LoadBalancer extends Configurable {
   ServerName randomAssignment(
     HRegionInfo regionInfo, List<ServerName> servers
   ) throws HBaseIOException;
+
+  /**
+   * Initialize the load balancer. Must be called after setters.
+   * @throws HBaseIOException
+   */
+  void initialize() throws HBaseIOException;
 }
