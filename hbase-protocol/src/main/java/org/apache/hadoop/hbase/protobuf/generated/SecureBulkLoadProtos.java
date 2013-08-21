@@ -10,135 +10,313 @@ public final class SecureBulkLoadProtos {
   }
   public interface SecureBulkLoadHFilesRequestOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
-    
+
     // repeated .BulkLoadHFileRequest.FamilyPath family_path = 1;
+    /**
+     * <code>repeated .BulkLoadHFileRequest.FamilyPath family_path = 1;</code>
+     */
     java.util.List<org.apache.hadoop.hbase.protobuf.generated.ClientProtos.BulkLoadHFileRequest.FamilyPath> 
         getFamilyPathList();
+    /**
+     * <code>repeated .BulkLoadHFileRequest.FamilyPath family_path = 1;</code>
+     */
     org.apache.hadoop.hbase.protobuf.generated.ClientProtos.BulkLoadHFileRequest.FamilyPath getFamilyPath(int index);
+    /**
+     * <code>repeated .BulkLoadHFileRequest.FamilyPath family_path = 1;</code>
+     */
     int getFamilyPathCount();
+    /**
+     * <code>repeated .BulkLoadHFileRequest.FamilyPath family_path = 1;</code>
+     */
     java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.ClientProtos.BulkLoadHFileRequest.FamilyPathOrBuilder> 
         getFamilyPathOrBuilderList();
+    /**
+     * <code>repeated .BulkLoadHFileRequest.FamilyPath family_path = 1;</code>
+     */
     org.apache.hadoop.hbase.protobuf.generated.ClientProtos.BulkLoadHFileRequest.FamilyPathOrBuilder getFamilyPathOrBuilder(
         int index);
-    
+
     // optional bool assign_seq_num = 2;
+    /**
+     * <code>optional bool assign_seq_num = 2;</code>
+     */
     boolean hasAssignSeqNum();
+    /**
+     * <code>optional bool assign_seq_num = 2;</code>
+     */
     boolean getAssignSeqNum();
-    
+
     // required .DelegationTokenProto fs_token = 3;
+    /**
+     * <code>required .DelegationTokenProto fs_token = 3;</code>
+     */
     boolean hasFsToken();
+    /**
+     * <code>required .DelegationTokenProto fs_token = 3;</code>
+     */
     org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationTokenProto getFsToken();
+    /**
+     * <code>required .DelegationTokenProto fs_token = 3;</code>
+     */
     org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationTokenProtoOrBuilder getFsTokenOrBuilder();
-    
+
     // required string bulk_token = 4;
+    /**
+     * <code>required string bulk_token = 4;</code>
+     */
     boolean hasBulkToken();
-    String getBulkToken();
+    /**
+     * <code>required string bulk_token = 4;</code>
+     */
+    java.lang.String getBulkToken();
+    /**
+     * <code>required string bulk_token = 4;</code>
+     */
+    com.google.protobuf.ByteString
+        getBulkTokenBytes();
   }
+  /**
+   * Protobuf type {@code SecureBulkLoadHFilesRequest}
+   */
   public static final class SecureBulkLoadHFilesRequest extends
       com.google.protobuf.GeneratedMessage
       implements SecureBulkLoadHFilesRequestOrBuilder {
     // Use SecureBulkLoadHFilesRequest.newBuilder() to construct.
-    private SecureBulkLoadHFilesRequest(Builder builder) {
+    private SecureBulkLoadHFilesRequest(com.google.protobuf.GeneratedMessage.Builder<?> builder) {
       super(builder);
+      this.unknownFields = builder.getUnknownFields();
     }
-    private SecureBulkLoadHFilesRequest(boolean noInit) {}
-    
+    private SecureBulkLoadHFilesRequest(boolean noInit) { this.unknownFields = com.google.protobuf.UnknownFieldSet.getDefaultInstance(); }
+
     private static final SecureBulkLoadHFilesRequest defaultInstance;
     public static SecureBulkLoadHFilesRequest getDefaultInstance() {
       return defaultInstance;
     }
-    
+
     public SecureBulkLoadHFilesRequest getDefaultInstanceForType() {
       return defaultInstance;
     }
-    
+
+    private final com.google.protobuf.UnknownFieldSet unknownFields;
+    @java.lang.Override
+    public final com.google.protobuf.UnknownFieldSet
+        getUnknownFields() {
+      return this.unknownFields;
+    }
+    private SecureBulkLoadHFilesRequest(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      initFields();
+      int mutable_bitField0_ = 0;
+      com.google.protobuf.UnknownFieldSet.Builder unknownFields =
+          com.google.protobuf.UnknownFieldSet.newBuilder();
+      try {
+        boolean done = false;
+        while (!done) {
+          int tag = input.readTag();
+          switch (tag) {
+            case 0:
+              done = true;
+              break;
+            default: {
+              if (!parseUnknownField(input, unknownFields,
+                                     extensionRegistry, tag)) {
+                done = true;
+              }
+              break;
+            }
+            case 10: {
+              if (!((mutable_bitField0_ & 0x00000001) == 0x00000001)) {
+                familyPath_ = new java.util.ArrayList<org.apache.hadoop.hbase.protobuf.generated.ClientProtos.BulkLoadHFileRequest.FamilyPath>();
+                mutable_bitField0_ |= 0x00000001;
+              }
+              familyPath_.add(input.readMessage(org.apache.hadoop.hbase.protobuf.generated.ClientProtos.BulkLoadHFileRequest.FamilyPath.PARSER, extensionRegistry));
+              break;
+            }
+            case 16: {
+              bitField0_ |= 0x00000001;
+              assignSeqNum_ = input.readBool();
+              break;
+            }
+            case 26: {
+              org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationTokenProto.Builder subBuilder = null;
+              if (((bitField0_ & 0x00000002) == 0x00000002)) {
+                subBuilder = fsToken_.toBuilder();
+              }
+              fsToken_ = input.readMessage(org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationTokenProto.PARSER, extensionRegistry);
+              if (subBuilder != null) {
+                subBuilder.mergeFrom(fsToken_);
+                fsToken_ = subBuilder.buildPartial();
+              }
+              bitField0_ |= 0x00000002;
+              break;
+            }
+            case 34: {
+              bitField0_ |= 0x00000004;
+              bulkToken_ = input.readBytes();
+              break;
+            }
+          }
+        }
+      } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+        throw e.setUnfinishedMessage(this);
+      } catch (java.io.IOException e) {
+        throw new com.google.protobuf.InvalidProtocolBufferException(
+            e.getMessage()).setUnfinishedMessage(this);
+      } finally {
+        if (((mutable_bitField0_ & 0x00000001) == 0x00000001)) {
+          familyPath_ = java.util.Collections.unmodifiableList(familyPath_);
+        }
+        this.unknownFields = unknownFields.build();
+        makeExtensionsImmutable();
+      }
+    }
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
       return org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.internal_static_SecureBulkLoadHFilesRequest_descriptor;
     }
-    
+
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.internal_static_SecureBulkLoadHFilesRequest_fieldAccessorTable;
+      return org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.internal_static_SecureBulkLoadHFilesRequest_fieldAccessorTable
+          .ensureFieldAccessorsInitialized(
+              org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.SecureBulkLoadHFilesRequest.class, org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.SecureBulkLoadHFilesRequest.Builder.class);
     }
-    
+
+    public static com.google.protobuf.Parser<SecureBulkLoadHFilesRequest> PARSER =
+        new com.google.protobuf.AbstractParser<SecureBulkLoadHFilesRequest>() {
+      public SecureBulkLoadHFilesRequest parsePartialFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        return new SecureBulkLoadHFilesRequest(input, extensionRegistry);
+      }
+    };
+
+    @java.lang.Override
+    public com.google.protobuf.Parser<SecureBulkLoadHFilesRequest> getParserForType() {
+      return PARSER;
+    }
+
     private int bitField0_;
     // repeated .BulkLoadHFileRequest.FamilyPath family_path = 1;
     public static final int FAMILY_PATH_FIELD_NUMBER = 1;
     private java.util.List<org.apache.hadoop.hbase.protobuf.generated.ClientProtos.BulkLoadHFileRequest.FamilyPath> familyPath_;
+    /**
+     * <code>repeated .BulkLoadHFileRequest.FamilyPath family_path = 1;</code>
+     */
     public java.util.List<org.apache.hadoop.hbase.protobuf.generated.ClientProtos.BulkLoadHFileRequest.FamilyPath> getFamilyPathList() {
       return familyPath_;
     }
+    /**
+     * <code>repeated .BulkLoadHFileRequest.FamilyPath family_path = 1;</code>
+     */
     public java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.ClientProtos.BulkLoadHFileRequest.FamilyPathOrBuilder> 
         getFamilyPathOrBuilderList() {
       return familyPath_;
     }
+    /**
+     * <code>repeated .BulkLoadHFileRequest.FamilyPath family_path = 1;</code>
+     */
     public int getFamilyPathCount() {
       return familyPath_.size();
     }
+    /**
+     * <code>repeated .BulkLoadHFileRequest.FamilyPath family_path = 1;</code>
+     */
     public org.apache.hadoop.hbase.protobuf.generated.ClientProtos.BulkLoadHFileRequest.FamilyPath getFamilyPath(int index) {
       return familyPath_.get(index);
     }
+    /**
+     * <code>repeated .BulkLoadHFileRequest.FamilyPath family_path = 1;</code>
+     */
     public org.apache.hadoop.hbase.protobuf.generated.ClientProtos.BulkLoadHFileRequest.FamilyPathOrBuilder getFamilyPathOrBuilder(
         int index) {
       return familyPath_.get(index);
     }
-    
+
     // optional bool assign_seq_num = 2;
     public static final int ASSIGN_SEQ_NUM_FIELD_NUMBER = 2;
     private boolean assignSeqNum_;
+    /**
+     * <code>optional bool assign_seq_num = 2;</code>
+     */
     public boolean hasAssignSeqNum() {
       return ((bitField0_ & 0x00000001) == 0x00000001);
     }
+    /**
+     * <code>optional bool assign_seq_num = 2;</code>
+     */
     public boolean getAssignSeqNum() {
       return assignSeqNum_;
     }
-    
+
     // required .DelegationTokenProto fs_token = 3;
     public static final int FS_TOKEN_FIELD_NUMBER = 3;
     private org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationTokenProto fsToken_;
+    /**
+     * <code>required .DelegationTokenProto fs_token = 3;</code>
+     */
     public boolean hasFsToken() {
       return ((bitField0_ & 0x00000002) == 0x00000002);
     }
+    /**
+     * <code>required .DelegationTokenProto fs_token = 3;</code>
+     */
     public org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationTokenProto getFsToken() {
       return fsToken_;
     }
+    /**
+     * <code>required .DelegationTokenProto fs_token = 3;</code>
+     */
     public org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationTokenProtoOrBuilder getFsTokenOrBuilder() {
       return fsToken_;
     }
-    
+
     // required string bulk_token = 4;
     public static final int BULK_TOKEN_FIELD_NUMBER = 4;
     private java.lang.Object bulkToken_;
+    /**
+     * <code>required string bulk_token = 4;</code>
+     */
     public boolean hasBulkToken() {
       return ((bitField0_ & 0x00000004) == 0x00000004);
     }
-    public String getBulkToken() {
+    /**
+     * <code>required string bulk_token = 4;</code>
+     */
+    public java.lang.String getBulkToken() {
       java.lang.Object ref = bulkToken_;
-      if (ref instanceof String) {
-        return (String) ref;
+      if (ref instanceof java.lang.String) {
+        return (java.lang.String) ref;
       } else {
         com.google.protobuf.ByteString bs = 
             (com.google.protobuf.ByteString) ref;
-        String s = bs.toStringUtf8();
-        if (com.google.protobuf.Internal.isValidUtf8(bs)) {
+        java.lang.String s = bs.toStringUtf8();
+        if (bs.isValidUtf8()) {
           bulkToken_ = s;
         }
         return s;
       }
     }
-    private com.google.protobuf.ByteString getBulkTokenBytes() {
+    /**
+     * <code>required string bulk_token = 4;</code>
+     */
+    public com.google.protobuf.ByteString
+        getBulkTokenBytes() {
       java.lang.Object ref = bulkToken_;
-      if (ref instanceof String) {
+      if (ref instanceof java.lang.String) {
         com.google.protobuf.ByteString b = 
-            com.google.protobuf.ByteString.copyFromUtf8((String) ref);
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
         bulkToken_ = b;
         return b;
       } else {
         return (com.google.protobuf.ByteString) ref;
       }
     }
-    
+
     private void initFields() {
       familyPath_ = java.util.Collections.emptyList();
       assignSeqNum_ = false;
@@ -149,7 +327,7 @@ public final class SecureBulkLoadProtos {
     public final boolean isInitialized() {
       byte isInitialized = memoizedIsInitialized;
       if (isInitialized != -1) return isInitialized == 1;
-      
+
       if (!hasFsToken()) {
         memoizedIsInitialized = 0;
         return false;
@@ -167,7 +345,7 @@ public final class SecureBulkLoadProtos {
       memoizedIsInitialized = 1;
       return true;
     }
-    
+
     public void writeTo(com.google.protobuf.CodedOutputStream output)
                         throws java.io.IOException {
       getSerializedSize();
@@ -185,12 +363,12 @@ public final class SecureBulkLoadProtos {
       }
       getUnknownFields().writeTo(output);
     }
-    
+
     private int memoizedSerializedSize = -1;
     public int getSerializedSize() {
       int size = memoizedSerializedSize;
       if (size != -1) return size;
-    
+
       size = 0;
       for (int i = 0; i < familyPath_.size(); i++) {
         size += com.google.protobuf.CodedOutputStream
@@ -212,14 +390,14 @@ public final class SecureBulkLoadProtos {
       memoizedSerializedSize = size;
       return size;
     }
-    
+
     private static final long serialVersionUID = 0L;
     @java.lang.Override
     protected java.lang.Object writeReplace()
         throws java.io.ObjectStreamException {
       return super.writeReplace();
     }
-    
+
     @java.lang.Override
     public boolean equals(final java.lang.Object obj) {
       if (obj == this) {
@@ -229,7 +407,7 @@ public final class SecureBulkLoadProtos {
         return super.equals(obj);
       }
       org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.SecureBulkLoadHFilesRequest other = (org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.SecureBulkLoadHFilesRequest) obj;
-      
+
       boolean result = true;
       result = result && getFamilyPathList()
           .equals(other.getFamilyPathList());
@@ -252,9 +430,13 @@ public final class SecureBulkLoadProtos {
           getUnknownFields().equals(other.getUnknownFields());
       return result;
     }
-    
+
+    private int memoizedHashCode = 0;
     @java.lang.Override
     public int hashCode() {
+      if (memoizedHashCode != 0) {
+        return memoizedHashCode;
+      }
       int hash = 41;
       hash = (19 * hash) + getDescriptorForType().hashCode();
       if (getFamilyPathCount() > 0) {
@@ -274,89 +456,79 @@ public final class SecureBulkLoadProtos {
         hash = (53 * hash) + getBulkToken().hashCode();
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
+      memoizedHashCode = hash;
       return hash;
     }
-    
+
     public static org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.SecureBulkLoadHFilesRequest parseFrom(
         com.google.protobuf.ByteString data)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return newBuilder().mergeFrom(data).buildParsed();
+      return PARSER.parseFrom(data);
     }
     public static org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.SecureBulkLoadHFilesRequest parseFrom(
         com.google.protobuf.ByteString data,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return newBuilder().mergeFrom(data, extensionRegistry)
-               .buildParsed();
+      return PARSER.parseFrom(data, extensionRegistry);
     }
     public static org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.SecureBulkLoadHFilesRequest parseFrom(byte[] data)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return newBuilder().mergeFrom(data).buildParsed();
+      return PARSER.parseFrom(data);
     }
     public static org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.SecureBulkLoadHFilesRequest parseFrom(
         byte[] data,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return newBuilder().mergeFrom(data, extensionRegistry)
-               .buildParsed();
+      return PARSER.parseFrom(data, extensionRegistry);
     }
     public static org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.SecureBulkLoadHFilesRequest parseFrom(java.io.InputStream input)
         throws java.io.IOException {
-      return newBuilder().mergeFrom(input).buildParsed();
+      return PARSER.parseFrom(input);
     }
     public static org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.SecureBulkLoadHFilesRequest parseFrom(
         java.io.InputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
-      return newBuilder().mergeFrom(input, extensionRegistry)
-               .buildParsed();
+      return PARSER.parseFrom(input, extensionRegistry);
     }
     public static org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.SecureBulkLoadHFilesRequest parseDelimitedFrom(java.io.InputStream input)
         throws java.io.IOException {
-      Builder builder = newBuilder();
-      if (builder.mergeDelimitedFrom(input)) {
-        return builder.buildParsed();
-      } else {
-        return null;
-      }
+      return PARSER.parseDelimitedFrom(input);
     }
     public static org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.SecureBulkLoadHFilesRequest parseDelimitedFrom(
         java.io.InputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
-      Builder builder = newBuilder();
-      if (builder.mergeDelimitedFrom(input, extensionRegistry)) {
-        return builder.buildParsed();
-      } else {
-        return null;
-      }
+      return PARSER.parseDelimitedFrom(input, extensionRegistry);
     }
     public static org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.SecureBulkLoadHFilesRequest parseFrom(
         com.google.protobuf.CodedInputStream input)
         throws java.io.IOException {
-      return newBuilder().mergeFrom(input).buildParsed();
+      return PARSER.parseFrom(input);
     }
     public static org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.SecureBulkLoadHFilesRequest parseFrom(
         com.google.protobuf.CodedInputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
-      return newBuilder().mergeFrom(input, extensionRegistry)
-               .buildParsed();
+      return PARSER.parseFrom(input, extensionRegistry);
     }
-    
+
     public static Builder newBuilder() { return Builder.create(); }
     public Builder newBuilderForType() { return newBuilder(); }
     public static Builder newBuilder(org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.SecureBulkLoadHFilesRequest prototype) {
       return newBuilder().mergeFrom(prototype);
     }
     public Builder toBuilder() { return newBuilder(this); }
-    
+
     @java.lang.Override
     protected Builder newBuilderForType(
         com.google.protobuf.GeneratedMessage.BuilderParent parent) {
       Builder builder = new Builder(parent);
       return builder;
     }
+    /**
+     * Protobuf type {@code SecureBulkLoadHFilesRequest}
+     */
     public static final class Builder extends
         com.google.protobuf.GeneratedMessage.Builder<Builder>
        implements org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.SecureBulkLoadHFilesRequestOrBuilder {
@@ -364,18 +536,21 @@ public final class SecureBulkLoadProtos {
           getDescriptor() {
         return org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.internal_static_SecureBulkLoadHFilesRequest_descriptor;
       }
-      
+
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.internal_static_SecureBulkLoadHFilesRequest_fieldAccessorTable;
+        return org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.internal_static_SecureBulkLoadHFilesRequest_fieldAccessorTable
+            .ensureFieldAccessorsInitialized(
+                org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.SecureBulkLoadHFilesRequest.class, org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.SecureBulkLoadHFilesRequest.Builder.class);
       }
-      
+
       // Construct using org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.SecureBulkLoadHFilesRequest.newBuilder()
       private Builder() {
         maybeForceBuilderInitialization();
       }
-      
-      private Builder(BuilderParent parent) {
+
+      private Builder(
+          com.google.protobuf.GeneratedMessage.BuilderParent parent) {
         super(parent);
         maybeForceBuilderInitialization();
       }
@@ -388,7 +563,7 @@ public final class SecureBulkLoadProtos {
       private static Builder create() {
         return new Builder();
       }
-      
+
       public Builder clear() {
         super.clear();
         if (familyPathBuilder_ == null) {
@@ -409,20 +584,20 @@ public final class SecureBulkLoadProtos {
         bitField0_ = (bitField0_ & ~0x00000008);
         return this;
       }
-      
+
       public Builder clone() {
         return create().mergeFrom(buildPartial());
       }
-      
+
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.SecureBulkLoadHFilesRequest.getDescriptor();
+        return org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.internal_static_SecureBulkLoadHFilesRequest_descriptor;
       }
-      
+
       public org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.SecureBulkLoadHFilesRequest getDefaultInstanceForType() {
         return org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.SecureBulkLoadHFilesRequest.getDefaultInstance();
       }
-      
+
       public org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.SecureBulkLoadHFilesRequest build() {
         org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.SecureBulkLoadHFilesRequest result = buildPartial();
         if (!result.isInitialized()) {
@@ -430,17 +605,7 @@ public final class SecureBulkLoadProtos {
         }
         return result;
       }
-      
-      private org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.SecureBulkLoadHFilesRequest buildParsed()
-          throws com.google.protobuf.InvalidProtocolBufferException {
-        org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.SecureBulkLoadHFilesRequest result = buildPartial();
-        if (!result.isInitialized()) {
-          throw newUninitializedMessageException(
-            result).asInvalidProtocolBufferException();
-        }
-        return result;
-      }
-      
+
       public org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.SecureBulkLoadHFilesRequest buildPartial() {
         org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.SecureBulkLoadHFilesRequest result = new org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.SecureBulkLoadHFilesRequest(this);
         int from_bitField0_ = bitField0_;
@@ -474,7 +639,7 @@ public final class SecureBulkLoadProtos {
         onBuilt();
         return result;
       }
-      
+
       public Builder mergeFrom(com.google.protobuf.Message other) {
         if (other instanceof org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.SecureBulkLoadHFilesRequest) {
           return mergeFrom((org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.SecureBulkLoadHFilesRequest)other);
@@ -483,7 +648,7 @@ public final class SecureBulkLoadProtos {
           return this;
         }
       }
-      
+
       public Builder mergeFrom(org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.SecureBulkLoadHFilesRequest other) {
         if (other == org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.SecureBulkLoadHFilesRequest.getDefaultInstance()) return this;
         if (familyPathBuilder_ == null) {
@@ -519,12 +684,14 @@ public final class SecureBulkLoadProtos {
           mergeFsToken(other.getFsToken());
         }
         if (other.hasBulkToken()) {
-          setBulkToken(other.getBulkToken());
+          bitField0_ |= 0x00000008;
+          bulkToken_ = other.bulkToken_;
+          onChanged();
         }
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
       }
-      
+
       public final boolean isInitialized() {
         if (!hasFsToken()) {
           
@@ -542,61 +709,26 @@ public final class SecureBulkLoadProtos {
         }
         return true;
       }
-      
+
       public Builder mergeFrom(
           com.google.protobuf.CodedInputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws java.io.IOException {
-        com.google.protobuf.UnknownFieldSet.Builder unknownFields =
-          com.google.protobuf.UnknownFieldSet.newBuilder(
-            this.getUnknownFields());
-        while (true) {
-          int tag = input.readTag();
-          switch (tag) {
-            case 0:
-              this.setUnknownFields(unknownFields.build());
-              onChanged();
-              return this;
-            default: {
-              if (!parseUnknownField(input, unknownFields,
-                                     extensionRegistry, tag)) {
-                this.setUnknownFields(unknownFields.build());
-                onChanged();
-                return this;
-              }
-              break;
-            }
-            case 10: {
-              org.apache.hadoop.hbase.protobuf.generated.ClientProtos.BulkLoadHFileRequest.FamilyPath.Builder subBuilder = org.apache.hadoop.hbase.protobuf.generated.ClientProtos.BulkLoadHFileRequest.FamilyPath.newBuilder();
-              input.readMessage(subBuilder, extensionRegistry);
-              addFamilyPath(subBuilder.buildPartial());
-              break;
-            }
-            case 16: {
-              bitField0_ |= 0x00000002;
-              assignSeqNum_ = input.readBool();
-              break;
-            }
-            case 26: {
-              org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationTokenProto.Builder subBuilder = org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationTokenProto.newBuilder();
-              if (hasFsToken()) {
-                subBuilder.mergeFrom(getFsToken());
-              }
-              input.readMessage(subBuilder, extensionRegistry);
-              setFsToken(subBuilder.buildPartial());
-              break;
-            }
-            case 34: {
-              bitField0_ |= 0x00000008;
-              bulkToken_ = input.readBytes();
-              break;
-            }
+        org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.SecureBulkLoadHFilesRequest parsedMessage = null;
+        try {
+          parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
+        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+          parsedMessage = (org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.SecureBulkLoadHFilesRequest) e.getUnfinishedMessage();
+          throw e;
+        } finally {
+          if (parsedMessage != null) {
+            mergeFrom(parsedMessage);
           }
         }
+        return this;
       }
-      
       private int bitField0_;
-      
+
       // repeated .BulkLoadHFileRequest.FamilyPath family_path = 1;
       private java.util.List<org.apache.hadoop.hbase.protobuf.generated.ClientProtos.BulkLoadHFileRequest.FamilyPath> familyPath_ =
         java.util.Collections.emptyList();
@@ -606,10 +738,13 @@ public final class SecureBulkLoadProtos {
           bitField0_ |= 0x00000001;
          }
       }
-      
+
       private com.google.protobuf.RepeatedFieldBuilder<
           org.apache.hadoop.hbase.protobuf.generated.ClientProtos.BulkLoadHFileRequest.FamilyPath, org.apache.hadoop.hbase.protobuf.generated.ClientProtos.BulkLoadHFileRequest.FamilyPath.Builder, org.apache.hadoop.hbase.protobuf.generated.ClientProtos.BulkLoadHFileRequest.FamilyPathOrBuilder> familyPathBuilder_;
-      
+
+      /**
+       * <code>repeated .BulkLoadHFileRequest.FamilyPath family_path = 1;</code>
+       */
       public java.util.List<org.apache.hadoop.hbase.protobuf.generated.ClientProtos.BulkLoadHFileRequest.FamilyPath> getFamilyPathList() {
         if (familyPathBuilder_ == null) {
           return java.util.Collections.unmodifiableList(familyPath_);
@@ -617,6 +752,9 @@ public final class SecureBulkLoadProtos {
           return familyPathBuilder_.getMessageList();
         }
       }
+      /**
+       * <code>repeated .BulkLoadHFileRequest.FamilyPath family_path = 1;</code>
+       */
       public int getFamilyPathCount() {
         if (familyPathBuilder_ == null) {
           return familyPath_.size();
@@ -624,6 +762,9 @@ public final class SecureBulkLoadProtos {
           return familyPathBuilder_.getCount();
         }
       }
+      /**
+       * <code>repeated .BulkLoadHFileRequest.FamilyPath family_path = 1;</code>
+       */
       public org.apache.hadoop.hbase.protobuf.generated.ClientProtos.BulkLoadHFileRequest.FamilyPath getFamilyPath(int index) {
         if (familyPathBuilder_ == null) {
           return familyPath_.get(index);
@@ -631,6 +772,9 @@ public final class SecureBulkLoadProtos {
           return familyPathBuilder_.getMessage(index);
         }
       }
+      /**
+       * <code>repeated .BulkLoadHFileRequest.FamilyPath family_path = 1;</code>
+       */
       public Builder setFamilyPath(
           int index, org.apache.hadoop.hbase.protobuf.generated.ClientProtos.BulkLoadHFileRequest.FamilyPath value) {
         if (familyPathBuilder_ == null) {
@@ -645,6 +789,9 @@ public final class SecureBulkLoadProtos {
         }
         return this;
       }
+      /**
+       * <code>repeated .BulkLoadHFileRequest.FamilyPath family_path = 1;</code>
+       */
       public Builder setFamilyPath(
           int index, org.apache.hadoop.hbase.protobuf.generated.ClientProtos.BulkLoadHFileRequest.FamilyPath.Builder builderForValue) {
         if (familyPathBuilder_ == null) {
@@ -656,6 +803,9 @@ public final class SecureBulkLoadProtos {
         }
         return this;
       }
+      /**
+       * <code>repeated .BulkLoadHFileRequest.FamilyPath family_path = 1;</code>
+       */
       public Builder addFamilyPath(org.apache.hadoop.hbase.protobuf.generated.ClientProtos.BulkLoadHFileRequest.FamilyPath value) {
         if (familyPathBuilder_ == null) {
           if (value == null) {
@@ -669,6 +819,9 @@ public final class SecureBulkLoadProtos {
         }
         return this;
       }
+      /**
+       * <code>repeated .BulkLoadHFileRequest.FamilyPath family_path = 1;</code>
+       */
       public Builder addFamilyPath(
           int index, org.apache.hadoop.hbase.protobuf.generated.ClientProtos.BulkLoadHFileRequest.FamilyPath value) {
         if (familyPathBuilder_ == null) {
@@ -683,6 +836,9 @@ public final class SecureBulkLoadProtos {
         }
         return this;
       }
+      /**
+       * <code>repeated .BulkLoadHFileRequest.FamilyPath family_path = 1;</code>
+       */
       public Builder addFamilyPath(
           org.apache.hadoop.hbase.protobuf.generated.ClientProtos.BulkLoadHFileRequest.FamilyPath.Builder builderForValue) {
         if (familyPathBuilder_ == null) {
@@ -694,6 +850,9 @@ public final class SecureBulkLoadProtos {
         }
         return this;
       }
+      /**
+       * <code>repeated .BulkLoadHFileRequest.FamilyPath family_path = 1;</code>
+       */
       public Builder addFamilyPath(
           int index, org.apache.hadoop.hbase.protobuf.generated.ClientProtos.BulkLoadHFileRequest.FamilyPath.Builder builderForValue) {
         if (familyPathBuilder_ == null) {
@@ -705,6 +864,9 @@ public final class SecureBulkLoadProtos {
         }
         return this;
       }
+      /**
+       * <code>repeated .BulkLoadHFileRequest.FamilyPath family_path = 1;</code>
+       */
       public Builder addAllFamilyPath(
           java.lang.Iterable<? extends org.apache.hadoop.hbase.protobuf.generated.ClientProtos.BulkLoadHFileRequest.FamilyPath> values) {
         if (familyPathBuilder_ == null) {
@@ -716,6 +878,9 @@ public final class SecureBulkLoadProtos {
         }
         return this;
       }
+      /**
+       * <code>repeated .BulkLoadHFileRequest.FamilyPath family_path = 1;</code>
+       */
       public Builder clearFamilyPath() {
         if (familyPathBuilder_ == null) {
           familyPath_ = java.util.Collections.emptyList();
@@ -726,6 +891,9 @@ public final class SecureBulkLoadProtos {
         }
         return this;
       }
+      /**
+       * <code>repeated .BulkLoadHFileRequest.FamilyPath family_path = 1;</code>
+       */
       public Builder removeFamilyPath(int index) {
         if (familyPathBuilder_ == null) {
           ensureFamilyPathIsMutable();
@@ -736,10 +904,16 @@ public final class SecureBulkLoadProtos {
         }
         return this;
       }
+      /**
+       * <code>repeated .BulkLoadHFileRequest.FamilyPath family_path = 1;</code>
+       */
       public org.apache.hadoop.hbase.protobuf.generated.ClientProtos.BulkLoadHFileRequest.FamilyPath.Builder getFamilyPathBuilder(
           int index) {
         return getFamilyPathFieldBuilder().getBuilder(index);
       }
+      /**
+       * <code>repeated .BulkLoadHFileRequest.FamilyPath family_path = 1;</code>
+       */
       public org.apache.hadoop.hbase.protobuf.generated.ClientProtos.BulkLoadHFileRequest.FamilyPathOrBuilder getFamilyPathOrBuilder(
           int index) {
         if (familyPathBuilder_ == null) {
@@ -747,6 +921,9 @@ public final class SecureBulkLoadProtos {
           return familyPathBuilder_.getMessageOrBuilder(index);
         }
       }
+      /**
+       * <code>repeated .BulkLoadHFileRequest.FamilyPath family_path = 1;</code>
+       */
       public java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.ClientProtos.BulkLoadHFileRequest.FamilyPathOrBuilder> 
            getFamilyPathOrBuilderList() {
         if (familyPathBuilder_ != null) {
@@ -755,15 +932,24 @@ public final class SecureBulkLoadProtos {
           return java.util.Collections.unmodifiableList(familyPath_);
         }
       }
+      /**
+       * <code>repeated .BulkLoadHFileRequest.FamilyPath family_path = 1;</code>
+       */
       public org.apache.hadoop.hbase.protobuf.generated.ClientProtos.BulkLoadHFileRequest.FamilyPath.Builder addFamilyPathBuilder() {
         return getFamilyPathFieldBuilder().addBuilder(
             org.apache.hadoop.hbase.protobuf.generated.ClientProtos.BulkLoadHFileRequest.FamilyPath.getDefaultInstance());
       }
+      /**
+       * <code>repeated .BulkLoadHFileRequest.FamilyPath family_path = 1;</code>
+       */
       public org.apache.hadoop.hbase.protobuf.generated.ClientProtos.BulkLoadHFileRequest.FamilyPath.Builder addFamilyPathBuilder(
           int index) {
         return getFamilyPathFieldBuilder().addBuilder(
             index, org.apache.hadoop.hbase.protobuf.generated.ClientProtos.BulkLoadHFileRequest.FamilyPath.getDefaultInstance());
       }
+      /**
+       * <code>repeated .BulkLoadHFileRequest.FamilyPath family_path = 1;</code>
+       */
       public java.util.List<org.apache.hadoop.hbase.protobuf.generated.ClientProtos.BulkLoadHFileRequest.FamilyPath.Builder> 
            getFamilyPathBuilderList() {
         return getFamilyPathFieldBuilder().getBuilderList();
@@ -782,35 +968,53 @@ public final class SecureBulkLoadProtos {
         }
         return familyPathBuilder_;
       }
-      
+
       // optional bool assign_seq_num = 2;
       private boolean assignSeqNum_ ;
+      /**
+       * <code>optional bool assign_seq_num = 2;</code>
+       */
       public boolean hasAssignSeqNum() {
         return ((bitField0_ & 0x00000002) == 0x00000002);
       }
+      /**
+       * <code>optional bool assign_seq_num = 2;</code>
+       */
       public boolean getAssignSeqNum() {
         return assignSeqNum_;
       }
+      /**
+       * <code>optional bool assign_seq_num = 2;</code>
+       */
       public Builder setAssignSeqNum(boolean value) {
         bitField0_ |= 0x00000002;
         assignSeqNum_ = value;
         onChanged();
         return this;
       }
+      /**
+       * <code>optional bool assign_seq_num = 2;</code>
+       */
       public Builder clearAssignSeqNum() {
         bitField0_ = (bitField0_ & ~0x00000002);
         assignSeqNum_ = false;
         onChanged();
         return this;
       }
-      
+
       // required .DelegationTokenProto fs_token = 3;
       private org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationTokenProto fsToken_ = org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationTokenProto.getDefaultInstance();
       private com.google.protobuf.SingleFieldBuilder<
           org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationTokenProto, org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationTokenProto.Builder, org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationTokenProtoOrBuilder> fsTokenBuilder_;
+      /**
+       * <code>required .DelegationTokenProto fs_token = 3;</code>
+       */
       public boolean hasFsToken() {
         return ((bitField0_ & 0x00000004) == 0x00000004);
       }
+      /**
+       * <code>required .DelegationTokenProto fs_token = 3;</code>
+       */
       public org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationTokenProto getFsToken() {
         if (fsTokenBuilder_ == null) {
           return fsToken_;
@@ -818,6 +1022,9 @@ public final class SecureBulkLoadProtos {
           return fsTokenBuilder_.getMessage();
         }
       }
+      /**
+       * <code>required .DelegationTokenProto fs_token = 3;</code>
+       */
       public Builder setFsToken(org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationTokenProto value) {
         if (fsTokenBuilder_ == null) {
           if (value == null) {
@@ -831,6 +1038,9 @@ public final class SecureBulkLoadProtos {
         bitField0_ |= 0x00000004;
         return this;
       }
+      /**
+       * <code>required .DelegationTokenProto fs_token = 3;</code>
+       */
       public Builder setFsToken(
           org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationTokenProto.Builder builderForValue) {
         if (fsTokenBuilder_ == null) {
@@ -842,6 +1052,9 @@ public final class SecureBulkLoadProtos {
         bitField0_ |= 0x00000004;
         return this;
       }
+      /**
+       * <code>required .DelegationTokenProto fs_token = 3;</code>
+       */
       public Builder mergeFsToken(org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationTokenProto value) {
         if (fsTokenBuilder_ == null) {
           if (((bitField0_ & 0x00000004) == 0x00000004) &&
@@ -858,6 +1071,9 @@ public final class SecureBulkLoadProtos {
         bitField0_ |= 0x00000004;
         return this;
       }
+      /**
+       * <code>required .DelegationTokenProto fs_token = 3;</code>
+       */
       public Builder clearFsToken() {
         if (fsTokenBuilder_ == null) {
           fsToken_ = org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationTokenProto.getDefaultInstance();
@@ -868,11 +1084,17 @@ public final class SecureBulkLoadProtos {
         bitField0_ = (bitField0_ & ~0x00000004);
         return this;
       }
+      /**
+       * <code>required .DelegationTokenProto fs_token = 3;</code>
+       */
       public org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationTokenProto.Builder getFsTokenBuilder() {
         bitField0_ |= 0x00000004;
         onChanged();
         return getFsTokenFieldBuilder().getBuilder();
       }
+      /**
+       * <code>required .DelegationTokenProto fs_token = 3;</code>
+       */
       public org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationTokenProtoOrBuilder getFsTokenOrBuilder() {
         if (fsTokenBuilder_ != null) {
           return fsTokenBuilder_.getMessageOrBuilder();
@@ -880,6 +1102,9 @@ public final class SecureBulkLoadProtos {
           return fsToken_;
         }
       }
+      /**
+       * <code>required .DelegationTokenProto fs_token = 3;</code>
+       */
       private com.google.protobuf.SingleFieldBuilder<
           org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationTokenProto, org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationTokenProto.Builder, org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationTokenProtoOrBuilder> 
           getFsTokenFieldBuilder() {
@@ -893,23 +1118,50 @@ public final class SecureBulkLoadProtos {
         }
         return fsTokenBuilder_;
       }
-      
+
       // required string bulk_token = 4;
       private java.lang.Object bulkToken_ = "";
+      /**
+       * <code>required string bulk_token = 4;</code>
+       */
       public boolean hasBulkToken() {
         return ((bitField0_ & 0x00000008) == 0x00000008);
       }
-      public String getBulkToken() {
+      /**
+       * <code>required string bulk_token = 4;</code>
+       */
+      public java.lang.String getBulkToken() {
         java.lang.Object ref = bulkToken_;
-        if (!(ref instanceof String)) {
-          String s = ((com.google.protobuf.ByteString) ref).toStringUtf8();
+        if (!(ref instanceof java.lang.String)) {
+          java.lang.String s = ((com.google.protobuf.ByteString) ref)
+              .toStringUtf8();
           bulkToken_ = s;
           return s;
         } else {
-          return (String) ref;
+          return (java.lang.String) ref;
         }
       }
-      public Builder setBulkToken(String value) {
+      /**
+       * <code>required string bulk_token = 4;</code>
+       */
+      public com.google.protobuf.ByteString
+          getBulkTokenBytes() {
+        java.lang.Object ref = bulkToken_;
+        if (ref instanceof String) {
+          com.google.protobuf.ByteString b = 
+              com.google.protobuf.ByteString.copyFromUtf8(
+                  (java.lang.String) ref);
+          bulkToken_ = b;
+          return b;
+        } else {
+          return (com.google.protobuf.ByteString) ref;
+        }
+      }
+      /**
+       * <code>required string bulk_token = 4;</code>
+       */
+      public Builder setBulkToken(
+          java.lang.String value) {
         if (value == null) {
     throw new NullPointerException();
   }
@@ -918,75 +1170,165 @@ public final class SecureBulkLoadProtos {
         onChanged();
         return this;
       }
+      /**
+       * <code>required string bulk_token = 4;</code>
+       */
       public Builder clearBulkToken() {
         bitField0_ = (bitField0_ & ~0x00000008);
         bulkToken_ = getDefaultInstance().getBulkToken();
         onChanged();
         return this;
       }
-      void setBulkToken(com.google.protobuf.ByteString value) {
-        bitField0_ |= 0x00000008;
+      /**
+       * <code>required string bulk_token = 4;</code>
+       */
+      public Builder setBulkTokenBytes(
+          com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000008;
         bulkToken_ = value;
         onChanged();
+        return this;
       }
-      
+
       // @@protoc_insertion_point(builder_scope:SecureBulkLoadHFilesRequest)
     }
-    
+
     static {
       defaultInstance = new SecureBulkLoadHFilesRequest(true);
       defaultInstance.initFields();
     }
-    
+
     // @@protoc_insertion_point(class_scope:SecureBulkLoadHFilesRequest)
   }
-  
+
   public interface SecureBulkLoadHFilesResponseOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
-    
+
     // required bool loaded = 1;
+    /**
+     * <code>required bool loaded = 1;</code>
+     */
     boolean hasLoaded();
+    /**
+     * <code>required bool loaded = 1;</code>
+     */
     boolean getLoaded();
   }
+  /**
+   * Protobuf type {@code SecureBulkLoadHFilesResponse}
+   */
   public static final class SecureBulkLoadHFilesResponse extends
       com.google.protobuf.GeneratedMessage
       implements SecureBulkLoadHFilesResponseOrBuilder {
     // Use SecureBulkLoadHFilesResponse.newBuilder() to construct.
-    private SecureBulkLoadHFilesResponse(Builder builder) {
+    private SecureBulkLoadHFilesResponse(com.google.protobuf.GeneratedMessage.Builder<?> builder) {
       super(builder);
+      this.unknownFields = builder.getUnknownFields();
     }
-    private SecureBulkLoadHFilesResponse(boolean noInit) {}
-    
+    private SecureBulkLoadHFilesResponse(boolean noInit) { this.unknownFields = com.google.protobuf.UnknownFieldSet.getDefaultInstance(); }
+
     private static final SecureBulkLoadHFilesResponse defaultInstance;
     public static SecureBulkLoadHFilesResponse getDefaultInstance() {
       return defaultInstance;
     }
-    
+
     public SecureBulkLoadHFilesResponse getDefaultInstanceForType() {
       return defaultInstance;
     }
-    
+
+    private final com.google.protobuf.UnknownFieldSet unknownFields;
+    @java.lang.Override
+    public final com.google.protobuf.UnknownFieldSet
+        getUnknownFields() {
+      return this.unknownFields;
+    }
+    private SecureBulkLoadHFilesResponse(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      initFields();
+      int mutable_bitField0_ = 0;
+      com.google.protobuf.UnknownFieldSet.Builder unknownFields =
+          com.google.protobuf.UnknownFieldSet.newBuilder();
+      try {
+        boolean done = false;
+        while (!done) {
+          int tag = input.readTag();
+          switch (tag) {
+            case 0:
+              done = true;
+              break;
+            default: {
+              if (!parseUnknownField(input, unknownFields,
+                                     extensionRegistry, tag)) {
+                done = true;
+              }
+              break;
+            }
+            case 8: {
+              bitField0_ |= 0x00000001;
+              loaded_ = input.readBool();
+              break;
+            }
+          }
+        }
+      } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+        throw e.setUnfinishedMessage(this);
+      } catch (java.io.IOException e) {
+        throw new com.google.protobuf.InvalidProtocolBufferException(
+            e.getMessage()).setUnfinishedMessage(this);
+      } finally {
+        this.unknownFields = unknownFields.build();
+        makeExtensionsImmutable();
+      }
+    }
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
       return org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.internal_static_SecureBulkLoadHFilesResponse_descriptor;
     }
-    
+
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.internal_static_SecureBulkLoadHFilesResponse_fieldAccessorTable;
+      return org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.internal_static_SecureBulkLoadHFilesResponse_fieldAccessorTable
+          .ensureFieldAccessorsInitialized(
+              org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.SecureBulkLoadHFilesResponse.class, org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.SecureBulkLoadHFilesResponse.Builder.class);
     }
-    
+
+    public static com.google.protobuf.Parser<SecureBulkLoadHFilesResponse> PARSER =
+        new com.google.protobuf.AbstractParser<SecureBulkLoadHFilesResponse>() {
+      public SecureBulkLoadHFilesResponse parsePartialFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        return new SecureBulkLoadHFilesResponse(input, extensionRegistry);
+      }
+    };
+
+    @java.lang.Override
+    public com.google.protobuf.Parser<SecureBulkLoadHFilesResponse> getParserForType() {
+      return PARSER;
+    }
+
     private int bitField0_;
     // required bool loaded = 1;
     public static final int LOADED_FIELD_NUMBER = 1;
     private boolean loaded_;
+    /**
+     * <code>required bool loaded = 1;</code>
+     */
     public boolean hasLoaded() {
       return ((bitField0_ & 0x00000001) == 0x00000001);
     }
+    /**
+     * <code>required bool loaded = 1;</code>
+     */
     public boolean getLoaded() {
       return loaded_;
     }
-    
+
     private void initFields() {
       loaded_ = false;
     }
@@ -994,7 +1336,7 @@ public final class SecureBulkLoadProtos {
     public final boolean isInitialized() {
       byte isInitialized = memoizedIsInitialized;
       if (isInitialized != -1) return isInitialized == 1;
-      
+
       if (!hasLoaded()) {
         memoizedIsInitialized = 0;
         return false;
@@ -1002,7 +1344,7 @@ public final class SecureBulkLoadProtos {
       memoizedIsInitialized = 1;
       return true;
     }
-    
+
     public void writeTo(com.google.protobuf.CodedOutputStream output)
                         throws java.io.IOException {
       getSerializedSize();
@@ -1011,12 +1353,12 @@ public final class SecureBulkLoadProtos {
       }
       getUnknownFields().writeTo(output);
     }
-    
+
     private int memoizedSerializedSize = -1;
     public int getSerializedSize() {
       int size = memoizedSerializedSize;
       if (size != -1) return size;
-    
+
       size = 0;
       if (((bitField0_ & 0x00000001) == 0x00000001)) {
         size += com.google.protobuf.CodedOutputStream
@@ -1026,14 +1368,14 @@ public final class SecureBulkLoadProtos {
       memoizedSerializedSize = size;
       return size;
     }
-    
+
     private static final long serialVersionUID = 0L;
     @java.lang.Override
     protected java.lang.Object writeReplace()
         throws java.io.ObjectStreamException {
       return super.writeReplace();
     }
-    
+
     @java.lang.Override
     public boolean equals(final java.lang.Object obj) {
       if (obj == this) {
@@ -1043,7 +1385,7 @@ public final class SecureBulkLoadProtos {
         return super.equals(obj);
       }
       org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.SecureBulkLoadHFilesResponse other = (org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.SecureBulkLoadHFilesResponse) obj;
-      
+
       boolean result = true;
       result = result && (hasLoaded() == other.hasLoaded());
       if (hasLoaded()) {
@@ -1054,9 +1396,13 @@ public final class SecureBulkLoadProtos {
           getUnknownFields().equals(other.getUnknownFields());
       return result;
     }
-    
+
+    private int memoizedHashCode = 0;
     @java.lang.Override
     public int hashCode() {
+      if (memoizedHashCode != 0) {
+        return memoizedHashCode;
+      }
       int hash = 41;
       hash = (19 * hash) + getDescriptorForType().hashCode();
       if (hasLoaded()) {
@@ -1064,89 +1410,79 @@ public final class SecureBulkLoadProtos {
         hash = (53 * hash) + hashBoolean(getLoaded());
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
+      memoizedHashCode = hash;
       return hash;
     }
-    
+
     public static org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.SecureBulkLoadHFilesResponse parseFrom(
         com.google.protobuf.ByteString data)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return newBuilder().mergeFrom(data).buildParsed();
+      return PARSER.parseFrom(data);
     }
     public static org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.SecureBulkLoadHFilesResponse parseFrom(
         com.google.protobuf.ByteString data,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return newBuilder().mergeFrom(data, extensionRegistry)
-               .buildParsed();
+      return PARSER.parseFrom(data, extensionRegistry);
     }
     public static org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.SecureBulkLoadHFilesResponse parseFrom(byte[] data)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return newBuilder().mergeFrom(data).buildParsed();
+      return PARSER.parseFrom(data);
     }
     public static org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.SecureBulkLoadHFilesResponse parseFrom(
         byte[] data,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return newBuilder().mergeFrom(data, extensionRegistry)
-               .buildParsed();
+      return PARSER.parseFrom(data, extensionRegistry);
     }
     public static org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.SecureBulkLoadHFilesResponse parseFrom(java.io.InputStream input)
         throws java.io.IOException {
-      return newBuilder().mergeFrom(input).buildParsed();
+      return PARSER.parseFrom(input);
     }
     public static org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.SecureBulkLoadHFilesResponse parseFrom(
         java.io.InputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
-      return newBuilder().mergeFrom(input, extensionRegistry)
-               .buildParsed();
+      return PARSER.parseFrom(input, extensionRegistry);
     }
     public static org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.SecureBulkLoadHFilesResponse parseDelimitedFrom(java.io.InputStream input)
         throws java.io.IOException {
-      Builder builder = newBuilder();
-      if (builder.mergeDelimitedFrom(input)) {
-        return builder.buildParsed();
-      } else {
-        return null;
-      }
+      return PARSER.parseDelimitedFrom(input);
     }
     public static org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.SecureBulkLoadHFilesResponse parseDelimitedFrom(
         java.io.InputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
-      Builder builder = newBuilder();
-      if (builder.mergeDelimitedFrom(input, extensionRegistry)) {
-        return builder.buildParsed();
-      } else {
-        return null;
-      }
+      return PARSER.parseDelimitedFrom(input, extensionRegistry);
     }
     public static org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.SecureBulkLoadHFilesResponse parseFrom(
         com.google.protobuf.CodedInputStream input)
         throws java.io.IOException {
-      return newBuilder().mergeFrom(input).buildParsed();
+      return PARSER.parseFrom(input);
     }
     public static org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.SecureBulkLoadHFilesResponse parseFrom(
         com.google.protobuf.CodedInputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
-      return newBuilder().mergeFrom(input, extensionRegistry)
-               .buildParsed();
+      return PARSER.parseFrom(input, extensionRegistry);
     }
-    
+
     public static Builder newBuilder() { return Builder.create(); }
     public Builder newBuilderForType() { return newBuilder(); }
     public static Builder newBuilder(org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.SecureBulkLoadHFilesResponse prototype) {
       return newBuilder().mergeFrom(prototype);
     }
     public Builder toBuilder() { return newBuilder(this); }
-    
+
     @java.lang.Override
     protected Builder newBuilderForType(
         com.google.protobuf.GeneratedMessage.BuilderParent parent) {
       Builder builder = new Builder(parent);
       return builder;
     }
+    /**
+     * Protobuf type {@code SecureBulkLoadHFilesResponse}
+     */
     public static final class Builder extends
         com.google.protobuf.GeneratedMessage.Builder<Builder>
        implements org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.SecureBulkLoadHFilesResponseOrBuilder {
@@ -1154,18 +1490,21 @@ public final class SecureBulkLoadProtos {
           getDescriptor() {
         return org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.internal_static_SecureBulkLoadHFilesResponse_descriptor;
       }
-      
+
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.internal_static_SecureBulkLoadHFilesResponse_fieldAccessorTable;
+        return org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.internal_static_SecureBulkLoadHFilesResponse_fieldAccessorTable
+            .ensureFieldAccessorsInitialized(
+                org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.SecureBulkLoadHFilesResponse.class, org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.SecureBulkLoadHFilesResponse.Builder.class);
       }
-      
+
       // Construct using org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.SecureBulkLoadHFilesResponse.newBuilder()
       private Builder() {
         maybeForceBuilderInitialization();
       }
-      
-      private Builder(BuilderParent parent) {
+
+      private Builder(
+          com.google.protobuf.GeneratedMessage.BuilderParent parent) {
         super(parent);
         maybeForceBuilderInitialization();
       }
@@ -1176,27 +1515,27 @@ public final class SecureBulkLoadProtos {
       private static Builder create() {
         return new Builder();
       }
-      
+
       public Builder clear() {
         super.clear();
         loaded_ = false;
         bitField0_ = (bitField0_ & ~0x00000001);
         return this;
       }
-      
+
       public Builder clone() {
         return create().mergeFrom(buildPartial());
       }
-      
+
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.SecureBulkLoadHFilesResponse.getDescriptor();
+        return org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.internal_static_SecureBulkLoadHFilesResponse_descriptor;
       }
-      
+
       public org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.SecureBulkLoadHFilesResponse getDefaultInstanceForType() {
         return org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.SecureBulkLoadHFilesResponse.getDefaultInstance();
       }
-      
+
       public org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.SecureBulkLoadHFilesResponse build() {
         org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.SecureBulkLoadHFilesResponse result = buildPartial();
         if (!result.isInitialized()) {
@@ -1204,17 +1543,7 @@ public final class SecureBulkLoadProtos {
         }
         return result;
       }
-      
-      private org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.SecureBulkLoadHFilesResponse buildParsed()
-          throws com.google.protobuf.InvalidProtocolBufferException {
-        org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.SecureBulkLoadHFilesResponse result = buildPartial();
-        if (!result.isInitialized()) {
-          throw newUninitializedMessageException(
-            result).asInvalidProtocolBufferException();
-        }
-        return result;
-      }
-      
+
       public org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.SecureBulkLoadHFilesResponse buildPartial() {
         org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.SecureBulkLoadHFilesResponse result = new org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.SecureBulkLoadHFilesResponse(this);
         int from_bitField0_ = bitField0_;
@@ -1227,7 +1556,7 @@ public final class SecureBulkLoadProtos {
         onBuilt();
         return result;
       }
-      
+
       public Builder mergeFrom(com.google.protobuf.Message other) {
         if (other instanceof org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.SecureBulkLoadHFilesResponse) {
           return mergeFrom((org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.SecureBulkLoadHFilesResponse)other);
@@ -1236,7 +1565,7 @@ public final class SecureBulkLoadProtos {
           return this;
         }
       }
-      
+
       public Builder mergeFrom(org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.SecureBulkLoadHFilesResponse other) {
         if (other == org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.SecureBulkLoadHFilesResponse.getDefaultInstance()) return this;
         if (other.hasLoaded()) {
@@ -1245,7 +1574,7 @@ public final class SecureBulkLoadProtos {
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
       }
-      
+
       public final boolean isInitialized() {
         if (!hasLoaded()) {
           
@@ -1253,562 +1582,171 @@ public final class SecureBulkLoadProtos {
         }
         return true;
       }
-      
+
       public Builder mergeFrom(
           com.google.protobuf.CodedInputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws java.io.IOException {
-        com.google.protobuf.UnknownFieldSet.Builder unknownFields =
-          com.google.protobuf.UnknownFieldSet.newBuilder(
-            this.getUnknownFields());
-        while (true) {
-          int tag = input.readTag();
-          switch (tag) {
-            case 0:
-              this.setUnknownFields(unknownFields.build());
-              onChanged();
-              return this;
-            default: {
-              if (!parseUnknownField(input, unknownFields,
-                                     extensionRegistry, tag)) {
-                this.setUnknownFields(unknownFields.build());
-                onChanged();
-                return this;
-              }
-              break;
-            }
-            case 8: {
-              bitField0_ |= 0x00000001;
-              loaded_ = input.readBool();
-              break;
-            }
+        org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.SecureBulkLoadHFilesResponse parsedMessage = null;
+        try {
+          parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
+        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+          parsedMessage = (org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.SecureBulkLoadHFilesResponse) e.getUnfinishedMessage();
+          throw e;
+        } finally {
+          if (parsedMessage != null) {
+            mergeFrom(parsedMessage);
           }
         }
+        return this;
       }
-      
       private int bitField0_;
-      
+
       // required bool loaded = 1;
       private boolean loaded_ ;
+      /**
+       * <code>required bool loaded = 1;</code>
+       */
       public boolean hasLoaded() {
         return ((bitField0_ & 0x00000001) == 0x00000001);
       }
+      /**
+       * <code>required bool loaded = 1;</code>
+       */
       public boolean getLoaded() {
         return loaded_;
       }
+      /**
+       * <code>required bool loaded = 1;</code>
+       */
       public Builder setLoaded(boolean value) {
         bitField0_ |= 0x00000001;
         loaded_ = value;
         onChanged();
         return this;
       }
+      /**
+       * <code>required bool loaded = 1;</code>
+       */
       public Builder clearLoaded() {
         bitField0_ = (bitField0_ & ~0x00000001);
         loaded_ = false;
         onChanged();
         return this;
       }
-      
+
       // @@protoc_insertion_point(builder_scope:SecureBulkLoadHFilesResponse)
     }
-    
+
     static {
       defaultInstance = new SecureBulkLoadHFilesResponse(true);
       defaultInstance.initFields();
     }
-    
+
     // @@protoc_insertion_point(class_scope:SecureBulkLoadHFilesResponse)
   }
-  
+
   public interface DelegationTokenProtoOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
-    
+
     // optional bytes identifier = 1;
+    /**
+     * <code>optional bytes identifier = 1;</code>
+     */
     boolean hasIdentifier();
+    /**
+     * <code>optional bytes identifier = 1;</code>
+     */
     com.google.protobuf.ByteString getIdentifier();
-    
+
     // optional bytes password = 2;
+    /**
+     * <code>optional bytes password = 2;</code>
+     */
     boolean hasPassword();
+    /**
+     * <code>optional bytes password = 2;</code>
+     */
     com.google.protobuf.ByteString getPassword();
-    
+
     // optional string kind = 3;
+    /**
+     * <code>optional string kind = 3;</code>
+     */
     boolean hasKind();
-    String getKind();
-    
+    /**
+     * <code>optional string kind = 3;</code>
+     */
+    java.lang.String getKind();
+    /**
+     * <code>optional string kind = 3;</code>
+     */
+    com.google.protobuf.ByteString
+        getKindBytes();
+
     // optional string service = 4;
+    /**
+     * <code>optional string service = 4;</code>
+     */
     boolean hasService();
-    String getService();
+    /**
+     * <code>optional string service = 4;</code>
+     */
+    java.lang.String getService();
+    /**
+     * <code>optional string service = 4;</code>
+     */
+    com.google.protobuf.ByteString
+        getServiceBytes();
   }
+  /**
+   * Protobuf type {@code DelegationTokenProto}
+   */
   public static final class DelegationTokenProto extends
       com.google.protobuf.GeneratedMessage
       implements DelegationTokenProtoOrBuilder {
     // Use DelegationTokenProto.newBuilder() to construct.
-    private DelegationTokenProto(Builder builder) {
+    private DelegationTokenProto(com.google.protobuf.GeneratedMessage.Builder<?> builder) {
       super(builder);
+      this.unknownFields = builder.getUnknownFields();
     }
-    private DelegationTokenProto(boolean noInit) {}
-    
+    private DelegationTokenProto(boolean noInit) { this.unknownFields = com.google.protobuf.UnknownFieldSet.getDefaultInstance(); }
+
     private static final DelegationTokenProto defaultInstance;
     public static DelegationTokenProto getDefaultInstance() {
       return defaultInstance;
     }
-    
+
     public DelegationTokenProto getDefaultInstanceForType() {
       return defaultInstance;
     }
-    
-    public static final com.google.protobuf.Descriptors.Descriptor
-        getDescriptor() {
-      return org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.internal_static_DelegationTokenProto_descriptor;
-    }
-    
-    protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
-        internalGetFieldAccessorTable() {
-      return org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.internal_static_DelegationTokenProto_fieldAccessorTable;
-    }
-    
-    private int bitField0_;
-    // optional bytes identifier = 1;
-    public static final int IDENTIFIER_FIELD_NUMBER = 1;
-    private com.google.protobuf.ByteString identifier_;
-    public boolean hasIdentifier() {
-      return ((bitField0_ & 0x00000001) == 0x00000001);
-    }
-    public com.google.protobuf.ByteString getIdentifier() {
-      return identifier_;
-    }
-    
-    // optional bytes password = 2;
-    public static final int PASSWORD_FIELD_NUMBER = 2;
-    private com.google.protobuf.ByteString password_;
-    public boolean hasPassword() {
-      return ((bitField0_ & 0x00000002) == 0x00000002);
-    }
-    public com.google.protobuf.ByteString getPassword() {
-      return password_;
-    }
-    
-    // optional string kind = 3;
-    public static final int KIND_FIELD_NUMBER = 3;
-    private java.lang.Object kind_;
-    public boolean hasKind() {
-      return ((bitField0_ & 0x00000004) == 0x00000004);
-    }
-    public String getKind() {
-      java.lang.Object ref = kind_;
-      if (ref instanceof String) {
-        return (String) ref;
-      } else {
-        com.google.protobuf.ByteString bs = 
-            (com.google.protobuf.ByteString) ref;
-        String s = bs.toStringUtf8();
-        if (com.google.protobuf.Internal.isValidUtf8(bs)) {
-          kind_ = s;
-        }
-        return s;
-      }
-    }
-    private com.google.protobuf.ByteString getKindBytes() {
-      java.lang.Object ref = kind_;
-      if (ref instanceof String) {
-        com.google.protobuf.ByteString b = 
-            com.google.protobuf.ByteString.copyFromUtf8((String) ref);
-        kind_ = b;
-        return b;
-      } else {
-        return (com.google.protobuf.ByteString) ref;
-      }
-    }
-    
-    // optional string service = 4;
-    public static final int SERVICE_FIELD_NUMBER = 4;
-    private java.lang.Object service_;
-    public boolean hasService() {
-      return ((bitField0_ & 0x00000008) == 0x00000008);
-    }
-    public String getService() {
-      java.lang.Object ref = service_;
-      if (ref instanceof String) {
-        return (String) ref;
-      } else {
-        com.google.protobuf.ByteString bs = 
-            (com.google.protobuf.ByteString) ref;
-        String s = bs.toStringUtf8();
-        if (com.google.protobuf.Internal.isValidUtf8(bs)) {
-          service_ = s;
-        }
-        return s;
-      }
-    }
-    private com.google.protobuf.ByteString getServiceBytes() {
-      java.lang.Object ref = service_;
-      if (ref instanceof String) {
-        com.google.protobuf.ByteString b = 
-            com.google.protobuf.ByteString.copyFromUtf8((String) ref);
-        service_ = b;
-        return b;
-      } else {
-        return (com.google.protobuf.ByteString) ref;
-      }
-    }
-    
-    private void initFields() {
-      identifier_ = com.google.protobuf.ByteString.EMPTY;
-      password_ = com.google.protobuf.ByteString.EMPTY;
-      kind_ = "";
-      service_ = "";
-    }
-    private byte memoizedIsInitialized = -1;
-    public final boolean isInitialized() {
-      byte isInitialized = memoizedIsInitialized;
-      if (isInitialized != -1) return isInitialized == 1;
-      
-      memoizedIsInitialized = 1;
-      return true;
-    }
-    
-    public void writeTo(com.google.protobuf.CodedOutputStream output)
-                        throws java.io.IOException {
-      getSerializedSize();
-      if (((bitField0_ & 0x00000001) == 0x00000001)) {
-        output.writeBytes(1, identifier_);
-      }
-      if (((bitField0_ & 0x00000002) == 0x00000002)) {
-        output.writeBytes(2, password_);
-      }
-      if (((bitField0_ & 0x00000004) == 0x00000004)) {
-        output.writeBytes(3, getKindBytes());
-      }
-      if (((bitField0_ & 0x00000008) == 0x00000008)) {
-        output.writeBytes(4, getServiceBytes());
-      }
-      getUnknownFields().writeTo(output);
-    }
-    
-    private int memoizedSerializedSize = -1;
-    public int getSerializedSize() {
-      int size = memoizedSerializedSize;
-      if (size != -1) return size;
-    
-      size = 0;
-      if (((bitField0_ & 0x00000001) == 0x00000001)) {
-        size += com.google.protobuf.CodedOutputStream
-          .computeBytesSize(1, identifier_);
-      }
-      if (((bitField0_ & 0x00000002) == 0x00000002)) {
-        size += com.google.protobuf.CodedOutputStream
-          .computeBytesSize(2, password_);
-      }
-      if (((bitField0_ & 0x00000004) == 0x00000004)) {
-        size += com.google.protobuf.CodedOutputStream
-          .computeBytesSize(3, getKindBytes());
-      }
-      if (((bitField0_ & 0x00000008) == 0x00000008)) {
-        size += com.google.protobuf.CodedOutputStream
-          .computeBytesSize(4, getServiceBytes());
-      }
-      size += getUnknownFields().getSerializedSize();
-      memoizedSerializedSize = size;
-      return size;
-    }
-    
-    private static final long serialVersionUID = 0L;
+
+    private final com.google.protobuf.UnknownFieldSet unknownFields;
     @java.lang.Override
-    protected java.lang.Object writeReplace()
-        throws java.io.ObjectStreamException {
-      return super.writeReplace();
+    public final com.google.protobuf.UnknownFieldSet
+        getUnknownFields() {
+      return this.unknownFields;
     }
-    
-    @java.lang.Override
-    public boolean equals(final java.lang.Object obj) {
-      if (obj == this) {
-       return true;
-      }
-      if (!(obj instanceof org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationTokenProto)) {
-        return super.equals(obj);
-      }
-      org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationTokenProto other = (org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationTokenProto) obj;
-      
-      boolean result = true;
-      result = result && (hasIdentifier() == other.hasIdentifier());
-      if (hasIdentifier()) {
-        result = result && getIdentifier()
-            .equals(other.getIdentifier());
-      }
-      result = result && (hasPassword() == other.hasPassword());
-      if (hasPassword()) {
-        result = result && getPassword()
-            .equals(other.getPassword());
-      }
-      result = result && (hasKind() == other.hasKind());
-      if (hasKind()) {
-        result = result && getKind()
-            .equals(other.getKind());
-      }
-      result = result && (hasService() == other.hasService());
-      if (hasService()) {
-        result = result && getService()
-            .equals(other.getService());
-      }
-      result = result &&
-          getUnknownFields().equals(other.getUnknownFields());
-      return result;
-    }
-    
-    @java.lang.Override
-    public int hashCode() {
-      int hash = 41;
-      hash = (19 * hash) + getDescriptorForType().hashCode();
-      if (hasIdentifier()) {
-        hash = (37 * hash) + IDENTIFIER_FIELD_NUMBER;
-        hash = (53 * hash) + getIdentifier().hashCode();
-      }
-      if (hasPassword()) {
-        hash = (37 * hash) + PASSWORD_FIELD_NUMBER;
-        hash = (53 * hash) + getPassword().hashCode();
-      }
-      if (hasKind()) {
-        hash = (37 * hash) + KIND_FIELD_NUMBER;
-        hash = (53 * hash) + getKind().hashCode();
-      }
-      if (hasService()) {
-        hash = (37 * hash) + SERVICE_FIELD_NUMBER;
-        hash = (53 * hash) + getService().hashCode();
-      }
-      hash = (29 * hash) + getUnknownFields().hashCode();
-      return hash;
-    }
-    
-    public static org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationTokenProto parseFrom(
-        com.google.protobuf.ByteString data)
-        throws com.google.protobuf.InvalidProtocolBufferException {
-      return newBuilder().mergeFrom(data).buildParsed();
-    }
-    public static org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationTokenProto parseFrom(
-        com.google.protobuf.ByteString data,
-        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-        throws com.google.protobuf.InvalidProtocolBufferException {
-      return newBuilder().mergeFrom(data, extensionRegistry)
-               .buildParsed();
-    }
-    public static org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationTokenProto parseFrom(byte[] data)
-        throws com.google.protobuf.InvalidProtocolBufferException {
-      return newBuilder().mergeFrom(data).buildParsed();
-    }
-    public static org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationTokenProto parseFrom(
-        byte[] data,
-        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-        throws com.google.protobuf.InvalidProtocolBufferException {
-      return newBuilder().mergeFrom(data, extensionRegistry)
-               .buildParsed();
-    }
-    public static org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationTokenProto parseFrom(java.io.InputStream input)
-        throws java.io.IOException {
-      return newBuilder().mergeFrom(input).buildParsed();
-    }
-    public static org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationTokenProto parseFrom(
-        java.io.InputStream input,
-        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-        throws java.io.IOException {
-      return newBuilder().mergeFrom(input, extensionRegistry)
-               .buildParsed();
-    }
-    public static org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationTokenProto parseDelimitedFrom(java.io.InputStream input)
-        throws java.io.IOException {
-      Builder builder = newBuilder();
-      if (builder.mergeDelimitedFrom(input)) {
-        return builder.buildParsed();
-      } else {
-        return null;
-      }
-    }
-    public static org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationTokenProto parseDelimitedFrom(
-        java.io.InputStream input,
-        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-        throws java.io.IOException {
-      Builder builder = newBuilder();
-      if (builder.mergeDelimitedFrom(input, extensionRegistry)) {
-        return builder.buildParsed();
-      } else {
-        return null;
-      }
-    }
-    public static org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationTokenProto parseFrom(
-        com.google.protobuf.CodedInputStream input)
-        throws java.io.IOException {
-      return newBuilder().mergeFrom(input).buildParsed();
-    }
-    public static org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationTokenProto parseFrom(
+    private DelegationTokenProto(
         com.google.protobuf.CodedInputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-        throws java.io.IOException {
-      return newBuilder().mergeFrom(input, extensionRegistry)
-               .buildParsed();
-    }
-    
-    public static Builder newBuilder() { return Builder.create(); }
-    public Builder newBuilderForType() { return newBuilder(); }
-    public static Builder newBuilder(org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationTokenProto prototype) {
-      return newBuilder().mergeFrom(prototype);
-    }
-    public Builder toBuilder() { return newBuilder(this); }
-    
-    @java.lang.Override
-    protected Builder newBuilderForType(
-        com.google.protobuf.GeneratedMessage.BuilderParent parent) {
-      Builder builder = new Builder(parent);
-      return builder;
-    }
-    public static final class Builder extends
-        com.google.protobuf.GeneratedMessage.Builder<Builder>
-       implements org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationTokenProtoOrBuilder {
-      public static final com.google.protobuf.Descriptors.Descriptor
-          getDescriptor() {
-        return org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.internal_static_DelegationTokenProto_descriptor;
-      }
-      
-      protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
-          internalGetFieldAccessorTable() {
-        return org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.internal_static_DelegationTokenProto_fieldAccessorTable;
-      }
-      
-      // Construct using org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationTokenProto.newBuilder()
-      private Builder() {
-        maybeForceBuilderInitialization();
-      }
-      
-      private Builder(BuilderParent parent) {
-        super(parent);
-        maybeForceBuilderInitialization();
-      }
-      private void maybeForceBuilderInitialization() {
-        if (com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders) {
-        }
-      }
-      private static Builder create() {
-        return new Builder();
-      }
-      
-      public Builder clear() {
-        super.clear();
-        identifier_ = com.google.protobuf.ByteString.EMPTY;
-        bitField0_ = (bitField0_ & ~0x00000001);
-        password_ = com.google.protobuf.ByteString.EMPTY;
-        bitField0_ = (bitField0_ & ~0x00000002);
-        kind_ = "";
-        bitField0_ = (bitField0_ & ~0x00000004);
-        service_ = "";
-        bitField0_ = (bitField0_ & ~0x00000008);
-        return this;
-      }
-      
-      public Builder clone() {
-        return create().mergeFrom(buildPartial());
-      }
-      
-      public com.google.protobuf.Descriptors.Descriptor
-          getDescriptorForType() {
-        return org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationTokenProto.getDescriptor();
-      }
-      
-      public org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationTokenProto getDefaultInstanceForType() {
-        return org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationTokenProto.getDefaultInstance();
-      }
-      
-      public org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationTokenProto build() {
-        org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationTokenProto result = buildPartial();
-        if (!result.isInitialized()) {
-          throw newUninitializedMessageException(result);
-        }
-        return result;
-      }
-      
-      private org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationTokenProto buildParsed()
-          throws com.google.protobuf.InvalidProtocolBufferException {
-        org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationTokenProto result = buildPartial();
-        if (!result.isInitialized()) {
-          throw newUninitializedMessageException(
-            result).asInvalidProtocolBufferException();
-        }
-        return result;
-      }
-      
-      public org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationTokenProto buildPartial() {
-        org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationTokenProto result = new org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationTokenProto(this);
-        int from_bitField0_ = bitField0_;
-        int to_bitField0_ = 0;
-        if (((from_bitField0_ & 0x00000001) == 0x00000001)) {
-          to_bitField0_ |= 0x00000001;
-        }
-        result.identifier_ = identifier_;
-        if (((from_bitField0_ & 0x00000002) == 0x00000002)) {
-          to_bitField0_ |= 0x00000002;
-        }
-        result.password_ = password_;
-        if (((from_bitField0_ & 0x00000004) == 0x00000004)) {
-          to_bitField0_ |= 0x00000004;
-        }
-        result.kind_ = kind_;
-        if (((from_bitField0_ & 0x00000008) == 0x00000008)) {
-          to_bitField0_ |= 0x00000008;
-        }
-        result.service_ = service_;
-        result.bitField0_ = to_bitField0_;
-        onBuilt();
-        return result;
-      }
-      
-      public Builder mergeFrom(com.google.protobuf.Message other) {
-        if (other instanceof org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationTokenProto) {
-          return mergeFrom((org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationTokenProto)other);
-        } else {
-          super.mergeFrom(other);
-          return this;
-        }
-      }
-      
-      public Builder mergeFrom(org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationTokenProto other) {
-        if (other == org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationTokenProto.getDefaultInstance()) return this;
-        if (other.hasIdentifier()) {
-          setIdentifier(other.getIdentifier());
-        }
-        if (other.hasPassword()) {
-          setPassword(other.getPassword());
-        }
-        if (other.hasKind()) {
-          setKind(other.getKind());
-        }
-        if (other.hasService()) {
-          setService(other.getService());
-        }
-        this.mergeUnknownFields(other.getUnknownFields());
-        return this;
-      }
-      
-      public final boolean isInitialized() {
-        return true;
-      }
-      
-      public Builder mergeFrom(
-          com.google.protobuf.CodedInputStream input,
-          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-          throws java.io.IOException {
-        com.google.protobuf.UnknownFieldSet.Builder unknownFields =
-          com.google.protobuf.UnknownFieldSet.newBuilder(
-            this.getUnknownFields());
-        while (true) {
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      initFields();
+      int mutable_bitField0_ = 0;
+      com.google.protobuf.UnknownFieldSet.Builder unknownFields =
+          com.google.protobuf.UnknownFieldSet.newBuilder();
+      try {
+        boolean done = false;
+        while (!done) {
           int tag = input.readTag();
           switch (tag) {
             case 0:
-              this.setUnknownFields(unknownFields.build());
-              onChanged();
-              return this;
+              done = true;
+              break;
             default: {
               if (!parseUnknownField(input, unknownFields,
                                      extensionRegistry, tag)) {
-                this.setUnknownFields(unknownFields.build());
-                onChanged();
-                return this;
+                done = true;
               }
               break;
             }
@@ -1834,18 +1772,526 @@ public final class SecureBulkLoadProtos {
             }
           }
         }
+      } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+        throw e.setUnfinishedMessage(this);
+      } catch (java.io.IOException e) {
+        throw new com.google.protobuf.InvalidProtocolBufferException(
+            e.getMessage()).setUnfinishedMessage(this);
+      } finally {
+        this.unknownFields = unknownFields.build();
+        makeExtensionsImmutable();
       }
-      
+    }
+    public static final com.google.protobuf.Descriptors.Descriptor
+        getDescriptor() {
+      return org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.internal_static_DelegationTokenProto_descriptor;
+    }
+
+    protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+        internalGetFieldAccessorTable() {
+      return org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.internal_static_DelegationTokenProto_fieldAccessorTable
+          .ensureFieldAccessorsInitialized(
+              org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationTokenProto.class, org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationTokenProto.Builder.class);
+    }
+
+    public static com.google.protobuf.Parser<DelegationTokenProto> PARSER =
+        new com.google.protobuf.AbstractParser<DelegationTokenProto>() {
+      public DelegationTokenProto parsePartialFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        return new DelegationTokenProto(input, extensionRegistry);
+      }
+    };
+
+    @java.lang.Override
+    public com.google.protobuf.Parser<DelegationTokenProto> getParserForType() {
+      return PARSER;
+    }
+
+    private int bitField0_;
+    // optional bytes identifier = 1;
+    public static final int IDENTIFIER_FIELD_NUMBER = 1;
+    private com.google.protobuf.ByteString identifier_;
+    /**
+     * <code>optional bytes identifier = 1;</code>
+     */
+    public boolean hasIdentifier() {
+      return ((bitField0_ & 0x00000001) == 0x00000001);
+    }
+    /**
+     * <code>optional bytes identifier = 1;</code>
+     */
+    public com.google.protobuf.ByteString getIdentifier() {
+      return identifier_;
+    }
+
+    // optional bytes password = 2;
+    public static final int PASSWORD_FIELD_NUMBER = 2;
+    private com.google.protobuf.ByteString password_;
+    /**
+     * <code>optional bytes password = 2;</code>
+     */
+    public boolean hasPassword() {
+      return ((bitField0_ & 0x00000002) == 0x00000002);
+    }
+    /**
+     * <code>optional bytes password = 2;</code>
+     */
+    public com.google.protobuf.ByteString getPassword() {
+      return password_;
+    }
+
+    // optional string kind = 3;
+    public static final int KIND_FIELD_NUMBER = 3;
+    private java.lang.Object kind_;
+    /**
+     * <code>optional string kind = 3;</code>
+     */
+    public boolean hasKind() {
+      return ((bitField0_ & 0x00000004) == 0x00000004);
+    }
+    /**
+     * <code>optional string kind = 3;</code>
+     */
+    public java.lang.String getKind() {
+      java.lang.Object ref = kind_;
+      if (ref instanceof java.lang.String) {
+        return (java.lang.String) ref;
+      } else {
+        com.google.protobuf.ByteString bs = 
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        if (bs.isValidUtf8()) {
+          kind_ = s;
+        }
+        return s;
+      }
+    }
+    /**
+     * <code>optional string kind = 3;</code>
+     */
+    public com.google.protobuf.ByteString
+        getKindBytes() {
+      java.lang.Object ref = kind_;
+      if (ref instanceof java.lang.String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        kind_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+
+    // optional string service = 4;
+    public static final int SERVICE_FIELD_NUMBER = 4;
+    private java.lang.Object service_;
+    /**
+     * <code>optional string service = 4;</code>
+     */
+    public boolean hasService() {
+      return ((bitField0_ & 0x00000008) == 0x00000008);
+    }
+    /**
+     * <code>optional string service = 4;</code>
+     */
+    public java.lang.String getService() {
+      java.lang.Object ref = service_;
+      if (ref instanceof java.lang.String) {
+        return (java.lang.String) ref;
+      } else {
+        com.google.protobuf.ByteString bs = 
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        if (bs.isValidUtf8()) {
+          service_ = s;
+        }
+        return s;
+      }
+    }
+    /**
+     * <code>optional string service = 4;</code>
+     */
+    public com.google.protobuf.ByteString
+        getServiceBytes() {
+      java.lang.Object ref = service_;
+      if (ref instanceof java.lang.String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        service_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+
+    private void initFields() {
+      identifier_ = com.google.protobuf.ByteString.EMPTY;
+      password_ = com.google.protobuf.ByteString.EMPTY;
+      kind_ = "";
+      service_ = "";
+    }
+    private byte memoizedIsInitialized = -1;
+    public final boolean isInitialized() {
+      byte isInitialized = memoizedIsInitialized;
+      if (isInitialized != -1) return isInitialized == 1;
+
+      memoizedIsInitialized = 1;
+      return true;
+    }
+
+    public void writeTo(com.google.protobuf.CodedOutputStream output)
+                        throws java.io.IOException {
+      getSerializedSize();
+      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+        output.writeBytes(1, identifier_);
+      }
+      if (((bitField0_ & 0x00000002) == 0x00000002)) {
+        output.writeBytes(2, password_);
+      }
+      if (((bitField0_ & 0x00000004) == 0x00000004)) {
+        output.writeBytes(3, getKindBytes());
+      }
+      if (((bitField0_ & 0x00000008) == 0x00000008)) {
+        output.writeBytes(4, getServiceBytes());
+      }
+      getUnknownFields().writeTo(output);
+    }
+
+    private int memoizedSerializedSize = -1;
+    public int getSerializedSize() {
+      int size = memoizedSerializedSize;
+      if (size != -1) return size;
+
+      size = 0;
+      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeBytesSize(1, identifier_);
+      }
+      if (((bitField0_ & 0x00000002) == 0x00000002)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeBytesSize(2, password_);
+      }
+      if (((bitField0_ & 0x00000004) == 0x00000004)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeBytesSize(3, getKindBytes());
+      }
+      if (((bitField0_ & 0x00000008) == 0x00000008)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeBytesSize(4, getServiceBytes());
+      }
+      size += getUnknownFields().getSerializedSize();
+      memoizedSerializedSize = size;
+      return size;
+    }
+
+    private static final long serialVersionUID = 0L;
+    @java.lang.Override
+    protected java.lang.Object writeReplace()
+        throws java.io.ObjectStreamException {
+      return super.writeReplace();
+    }
+
+    @java.lang.Override
+    public boolean equals(final java.lang.Object obj) {
+      if (obj == this) {
+       return true;
+      }
+      if (!(obj instanceof org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationTokenProto)) {
+        return super.equals(obj);
+      }
+      org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationTokenProto other = (org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationTokenProto) obj;
+
+      boolean result = true;
+      result = result && (hasIdentifier() == other.hasIdentifier());
+      if (hasIdentifier()) {
+        result = result && getIdentifier()
+            .equals(other.getIdentifier());
+      }
+      result = result && (hasPassword() == other.hasPassword());
+      if (hasPassword()) {
+        result = result && getPassword()
+            .equals(other.getPassword());
+      }
+      result = result && (hasKind() == other.hasKind());
+      if (hasKind()) {
+        result = result && getKind()
+            .equals(other.getKind());
+      }
+      result = result && (hasService() == other.hasService());
+      if (hasService()) {
+        result = result && getService()
+            .equals(other.getService());
+      }
+      result = result &&
+          getUnknownFields().equals(other.getUnknownFields());
+      return result;
+    }
+
+    private int memoizedHashCode = 0;
+    @java.lang.Override
+    public int hashCode() {
+      if (memoizedHashCode != 0) {
+        return memoizedHashCode;
+      }
+      int hash = 41;
+      hash = (19 * hash) + getDescriptorForType().hashCode();
+      if (hasIdentifier()) {
+        hash = (37 * hash) + IDENTIFIER_FIELD_NUMBER;
+        hash = (53 * hash) + getIdentifier().hashCode();
+      }
+      if (hasPassword()) {
+        hash = (37 * hash) + PASSWORD_FIELD_NUMBER;
+        hash = (53 * hash) + getPassword().hashCode();
+      }
+      if (hasKind()) {
+        hash = (37 * hash) + KIND_FIELD_NUMBER;
+        hash = (53 * hash) + getKind().hashCode();
+      }
+      if (hasService()) {
+        hash = (37 * hash) + SERVICE_FIELD_NUMBER;
+        hash = (53 * hash) + getService().hashCode();
+      }
+      hash = (29 * hash) + getUnknownFields().hashCode();
+      memoizedHashCode = hash;
+      return hash;
+    }
+
+    public static org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationTokenProto parseFrom(
+        com.google.protobuf.ByteString data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationTokenProto parseFrom(
+        com.google.protobuf.ByteString data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationTokenProto parseFrom(byte[] data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationTokenProto parseFrom(
+        byte[] data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationTokenProto parseFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationTokenProto parseFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationTokenProto parseDelimitedFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return PARSER.parseDelimitedFrom(input);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationTokenProto parseDelimitedFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return PARSER.parseDelimitedFrom(input, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationTokenProto parseFrom(
+        com.google.protobuf.CodedInputStream input)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationTokenProto parseFrom(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input, extensionRegistry);
+    }
+
+    public static Builder newBuilder() { return Builder.create(); }
+    public Builder newBuilderForType() { return newBuilder(); }
+    public static Builder newBuilder(org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationTokenProto prototype) {
+      return newBuilder().mergeFrom(prototype);
+    }
+    public Builder toBuilder() { return newBuilder(this); }
+
+    @java.lang.Override
+    protected Builder newBuilderForType(
+        com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+      Builder builder = new Builder(parent);
+      return builder;
+    }
+    /**
+     * Protobuf type {@code DelegationTokenProto}
+     */
+    public static final class Builder extends
+        com.google.protobuf.GeneratedMessage.Builder<Builder>
+       implements org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationTokenProtoOrBuilder {
+      public static final com.google.protobuf.Descriptors.Descriptor
+          getDescriptor() {
+        return org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.internal_static_DelegationTokenProto_descriptor;
+      }
+
+      protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+          internalGetFieldAccessorTable() {
+        return org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.internal_static_DelegationTokenProto_fieldAccessorTable
+            .ensureFieldAccessorsInitialized(
+                org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationTokenProto.class, org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationTokenProto.Builder.class);
+      }
+
+      // Construct using org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationTokenProto.newBuilder()
+      private Builder() {
+        maybeForceBuilderInitialization();
+      }
+
+      private Builder(
+          com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+        super(parent);
+        maybeForceBuilderInitialization();
+      }
+      private void maybeForceBuilderInitialization() {
+        if (com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders) {
+        }
+      }
+      private static Builder create() {
+        return new Builder();
+      }
+
+      public Builder clear() {
+        super.clear();
+        identifier_ = com.google.protobuf.ByteString.EMPTY;
+        bitField0_ = (bitField0_ & ~0x00000001);
+        password_ = com.google.protobuf.ByteString.EMPTY;
+        bitField0_ = (bitField0_ & ~0x00000002);
+        kind_ = "";
+        bitField0_ = (bitField0_ & ~0x00000004);
+        service_ = "";
+        bitField0_ = (bitField0_ & ~0x00000008);
+        return this;
+      }
+
+      public Builder clone() {
+        return create().mergeFrom(buildPartial());
+      }
+
+      public com.google.protobuf.Descriptors.Descriptor
+          getDescriptorForType() {
+        return org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.internal_static_DelegationTokenProto_descriptor;
+      }
+
+      public org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationTokenProto getDefaultInstanceForType() {
+        return org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationTokenProto.getDefaultInstance();
+      }
+
+      public org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationTokenProto build() {
+        org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationTokenProto result = buildPartial();
+        if (!result.isInitialized()) {
+          throw newUninitializedMessageException(result);
+        }
+        return result;
+      }
+
+      public org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationTokenProto buildPartial() {
+        org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationTokenProto result = new org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationTokenProto(this);
+        int from_bitField0_ = bitField0_;
+        int to_bitField0_ = 0;
+        if (((from_bitField0_ & 0x00000001) == 0x00000001)) {
+          to_bitField0_ |= 0x00000001;
+        }
+        result.identifier_ = identifier_;
+        if (((from_bitField0_ & 0x00000002) == 0x00000002)) {
+          to_bitField0_ |= 0x00000002;
+        }
+        result.password_ = password_;
+        if (((from_bitField0_ & 0x00000004) == 0x00000004)) {
+          to_bitField0_ |= 0x00000004;
+        }
+        result.kind_ = kind_;
+        if (((from_bitField0_ & 0x00000008) == 0x00000008)) {
+          to_bitField0_ |= 0x00000008;
+        }
+        result.service_ = service_;
+        result.bitField0_ = to_bitField0_;
+        onBuilt();
+        return result;
+      }
+
+      public Builder mergeFrom(com.google.protobuf.Message other) {
+        if (other instanceof org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationTokenProto) {
+          return mergeFrom((org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationTokenProto)other);
+        } else {
+          super.mergeFrom(other);
+          return this;
+        }
+      }
+
+      public Builder mergeFrom(org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationTokenProto other) {
+        if (other == org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationTokenProto.getDefaultInstance()) return this;
+        if (other.hasIdentifier()) {
+          setIdentifier(other.getIdentifier());
+        }
+        if (other.hasPassword()) {
+          setPassword(other.getPassword());
+        }
+        if (other.hasKind()) {
+          bitField0_ |= 0x00000004;
+          kind_ = other.kind_;
+          onChanged();
+        }
+        if (other.hasService()) {
+          bitField0_ |= 0x00000008;
+          service_ = other.service_;
+          onChanged();
+        }
+        this.mergeUnknownFields(other.getUnknownFields());
+        return this;
+      }
+
+      public final boolean isInitialized() {
+        return true;
+      }
+
+      public Builder mergeFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws java.io.IOException {
+        org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationTokenProto parsedMessage = null;
+        try {
+          parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
+        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+          parsedMessage = (org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationTokenProto) e.getUnfinishedMessage();
+          throw e;
+        } finally {
+          if (parsedMessage != null) {
+            mergeFrom(parsedMessage);
+          }
+        }
+        return this;
+      }
       private int bitField0_;
-      
+
       // optional bytes identifier = 1;
       private com.google.protobuf.ByteString identifier_ = com.google.protobuf.ByteString.EMPTY;
+      /**
+       * <code>optional bytes identifier = 1;</code>
+       */
       public boolean hasIdentifier() {
         return ((bitField0_ & 0x00000001) == 0x00000001);
       }
+      /**
+       * <code>optional bytes identifier = 1;</code>
+       */
       public com.google.protobuf.ByteString getIdentifier() {
         return identifier_;
       }
+      /**
+       * <code>optional bytes identifier = 1;</code>
+       */
       public Builder setIdentifier(com.google.protobuf.ByteString value) {
         if (value == null) {
     throw new NullPointerException();
@@ -1855,21 +2301,33 @@ public final class SecureBulkLoadProtos {
         onChanged();
         return this;
       }
+      /**
+       * <code>optional bytes identifier = 1;</code>
+       */
       public Builder clearIdentifier() {
         bitField0_ = (bitField0_ & ~0x00000001);
         identifier_ = getDefaultInstance().getIdentifier();
         onChanged();
         return this;
       }
-      
+
       // optional bytes password = 2;
       private com.google.protobuf.ByteString password_ = com.google.protobuf.ByteString.EMPTY;
+      /**
+       * <code>optional bytes password = 2;</code>
+       */
       public boolean hasPassword() {
         return ((bitField0_ & 0x00000002) == 0x00000002);
       }
+      /**
+       * <code>optional bytes password = 2;</code>
+       */
       public com.google.protobuf.ByteString getPassword() {
         return password_;
       }
+      /**
+       * <code>optional bytes password = 2;</code>
+       */
       public Builder setPassword(com.google.protobuf.ByteString value) {
         if (value == null) {
     throw new NullPointerException();
@@ -1879,29 +2337,59 @@ public final class SecureBulkLoadProtos {
         onChanged();
         return this;
       }
+      /**
+       * <code>optional bytes password = 2;</code>
+       */
       public Builder clearPassword() {
         bitField0_ = (bitField0_ & ~0x00000002);
         password_ = getDefaultInstance().getPassword();
         onChanged();
         return this;
       }
-      
+
       // optional string kind = 3;
       private java.lang.Object kind_ = "";
+      /**
+       * <code>optional string kind = 3;</code>
+       */
       public boolean hasKind() {
         return ((bitField0_ & 0x00000004) == 0x00000004);
       }
-      public String getKind() {
+      /**
+       * <code>optional string kind = 3;</code>
+       */
+      public java.lang.String getKind() {
         java.lang.Object ref = kind_;
-        if (!(ref instanceof String)) {
-          String s = ((com.google.protobuf.ByteString) ref).toStringUtf8();
+        if (!(ref instanceof java.lang.String)) {
+          java.lang.String s = ((com.google.protobuf.ByteString) ref)
+              .toStringUtf8();
           kind_ = s;
           return s;
         } else {
-          return (String) ref;
+          return (java.lang.String) ref;
         }
       }
-      public Builder setKind(String value) {
+      /**
+       * <code>optional string kind = 3;</code>
+       */
+      public com.google.protobuf.ByteString
+          getKindBytes() {
+        java.lang.Object ref = kind_;
+        if (ref instanceof String) {
+          com.google.protobuf.ByteString b = 
+              com.google.protobuf.ByteString.copyFromUtf8(
+                  (java.lang.String) ref);
+          kind_ = b;
+          return b;
+        } else {
+          return (com.google.protobuf.ByteString) ref;
+        }
+      }
+      /**
+       * <code>optional string kind = 3;</code>
+       */
+      public Builder setKind(
+          java.lang.String value) {
         if (value == null) {
     throw new NullPointerException();
   }
@@ -1910,34 +2398,72 @@ public final class SecureBulkLoadProtos {
         onChanged();
         return this;
       }
+      /**
+       * <code>optional string kind = 3;</code>
+       */
       public Builder clearKind() {
         bitField0_ = (bitField0_ & ~0x00000004);
         kind_ = getDefaultInstance().getKind();
         onChanged();
         return this;
       }
-      void setKind(com.google.protobuf.ByteString value) {
-        bitField0_ |= 0x00000004;
+      /**
+       * <code>optional string kind = 3;</code>
+       */
+      public Builder setKindBytes(
+          com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000004;
         kind_ = value;
         onChanged();
+        return this;
       }
-      
+
       // optional string service = 4;
       private java.lang.Object service_ = "";
+      /**
+       * <code>optional string service = 4;</code>
+       */
       public boolean hasService() {
         return ((bitField0_ & 0x00000008) == 0x00000008);
       }
-      public String getService() {
+      /**
+       * <code>optional string service = 4;</code>
+       */
+      public java.lang.String getService() {
         java.lang.Object ref = service_;
-        if (!(ref instanceof String)) {
-          String s = ((com.google.protobuf.ByteString) ref).toStringUtf8();
+        if (!(ref instanceof java.lang.String)) {
+          java.lang.String s = ((com.google.protobuf.ByteString) ref)
+              .toStringUtf8();
           service_ = s;
           return s;
         } else {
-          return (String) ref;
+          return (java.lang.String) ref;
         }
       }
-      public Builder setService(String value) {
+      /**
+       * <code>optional string service = 4;</code>
+       */
+      public com.google.protobuf.ByteString
+          getServiceBytes() {
+        java.lang.Object ref = service_;
+        if (ref instanceof String) {
+          com.google.protobuf.ByteString b = 
+              com.google.protobuf.ByteString.copyFromUtf8(
+                  (java.lang.String) ref);
+          service_ = b;
+          return b;
+        } else {
+          return (com.google.protobuf.ByteString) ref;
+        }
+      }
+      /**
+       * <code>optional string service = 4;</code>
+       */
+      public Builder setService(
+          java.lang.String value) {
         if (value == null) {
     throw new NullPointerException();
   }
@@ -1946,79 +2472,183 @@ public final class SecureBulkLoadProtos {
         onChanged();
         return this;
       }
+      /**
+       * <code>optional string service = 4;</code>
+       */
       public Builder clearService() {
         bitField0_ = (bitField0_ & ~0x00000008);
         service_ = getDefaultInstance().getService();
         onChanged();
         return this;
       }
-      void setService(com.google.protobuf.ByteString value) {
-        bitField0_ |= 0x00000008;
+      /**
+       * <code>optional string service = 4;</code>
+       */
+      public Builder setServiceBytes(
+          com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000008;
         service_ = value;
         onChanged();
+        return this;
       }
-      
+
       // @@protoc_insertion_point(builder_scope:DelegationTokenProto)
     }
-    
+
     static {
       defaultInstance = new DelegationTokenProto(true);
       defaultInstance.initFields();
     }
-    
+
     // @@protoc_insertion_point(class_scope:DelegationTokenProto)
   }
-  
+
   public interface PrepareBulkLoadRequestOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
-    
+
     // required .TableName table_name = 1;
+    /**
+     * <code>required .TableName table_name = 1;</code>
+     */
     boolean hasTableName();
+    /**
+     * <code>required .TableName table_name = 1;</code>
+     */
     org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName getTableName();
+    /**
+     * <code>required .TableName table_name = 1;</code>
+     */
     org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableNameOrBuilder getTableNameOrBuilder();
   }
+  /**
+   * Protobuf type {@code PrepareBulkLoadRequest}
+   */
   public static final class PrepareBulkLoadRequest extends
       com.google.protobuf.GeneratedMessage
       implements PrepareBulkLoadRequestOrBuilder {
     // Use PrepareBulkLoadRequest.newBuilder() to construct.
-    private PrepareBulkLoadRequest(Builder builder) {
+    private PrepareBulkLoadRequest(com.google.protobuf.GeneratedMessage.Builder<?> builder) {
       super(builder);
+      this.unknownFields = builder.getUnknownFields();
     }
-    private PrepareBulkLoadRequest(boolean noInit) {}
-    
+    private PrepareBulkLoadRequest(boolean noInit) { this.unknownFields = com.google.protobuf.UnknownFieldSet.getDefaultInstance(); }
+
     private static final PrepareBulkLoadRequest defaultInstance;
     public static PrepareBulkLoadRequest getDefaultInstance() {
       return defaultInstance;
     }
-    
+
     public PrepareBulkLoadRequest getDefaultInstanceForType() {
       return defaultInstance;
     }
-    
+
+    private final com.google.protobuf.UnknownFieldSet unknownFields;
+    @java.lang.Override
+    public final com.google.protobuf.UnknownFieldSet
+        getUnknownFields() {
+      return this.unknownFields;
+    }
+    private PrepareBulkLoadRequest(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      initFields();
+      int mutable_bitField0_ = 0;
+      com.google.protobuf.UnknownFieldSet.Builder unknownFields =
+          com.google.protobuf.UnknownFieldSet.newBuilder();
+      try {
+        boolean done = false;
+        while (!done) {
+          int tag = input.readTag();
+          switch (tag) {
+            case 0:
+              done = true;
+              break;
+            default: {
+              if (!parseUnknownField(input, unknownFields,
+                                     extensionRegistry, tag)) {
+                done = true;
+              }
+              break;
+            }
+            case 10: {
+              org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.Builder subBuilder = null;
+              if (((bitField0_ & 0x00000001) == 0x00000001)) {
+                subBuilder = tableName_.toBuilder();
+              }
+              tableName_ = input.readMessage(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.PARSER, extensionRegistry);
+              if (subBuilder != null) {
+                subBuilder.mergeFrom(tableName_);
+                tableName_ = subBuilder.buildPartial();
+              }
+              bitField0_ |= 0x00000001;
+              break;
+            }
+          }
+        }
+      } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+        throw e.setUnfinishedMessage(this);
+      } catch (java.io.IOException e) {
+        throw new com.google.protobuf.InvalidProtocolBufferException(
+            e.getMessage()).setUnfinishedMessage(this);
+      } finally {
+        this.unknownFields = unknownFields.build();
+        makeExtensionsImmutable();
+      }
+    }
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
       return org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.internal_static_PrepareBulkLoadRequest_descriptor;
     }
-    
+
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.internal_static_PrepareBulkLoadRequest_fieldAccessorTable;
+      return org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.internal_static_PrepareBulkLoadRequest_fieldAccessorTable
+          .ensureFieldAccessorsInitialized(
+              org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.PrepareBulkLoadRequest.class, org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.PrepareBulkLoadRequest.Builder.class);
     }
-    
+
+    public static com.google.protobuf.Parser<PrepareBulkLoadRequest> PARSER =
+        new com.google.protobuf.AbstractParser<PrepareBulkLoadRequest>() {
+      public PrepareBulkLoadRequest parsePartialFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        return new PrepareBulkLoadRequest(input, extensionRegistry);
+      }
+    };
+
+    @java.lang.Override
+    public com.google.protobuf.Parser<PrepareBulkLoadRequest> getParserForType() {
+      return PARSER;
+    }
+
     private int bitField0_;
     // required .TableName table_name = 1;
     public static final int TABLE_NAME_FIELD_NUMBER = 1;
     private org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName tableName_;
+    /**
+     * <code>required .TableName table_name = 1;</code>
+     */
     public boolean hasTableName() {
       return ((bitField0_ & 0x00000001) == 0x00000001);
     }
+    /**
+     * <code>required .TableName table_name = 1;</code>
+     */
     public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName getTableName() {
       return tableName_;
     }
+    /**
+     * <code>required .TableName table_name = 1;</code>
+     */
     public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableNameOrBuilder getTableNameOrBuilder() {
       return tableName_;
     }
-    
+
     private void initFields() {
       tableName_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.getDefaultInstance();
     }
@@ -2026,7 +2656,7 @@ public final class SecureBulkLoadProtos {
     public final boolean isInitialized() {
       byte isInitialized = memoizedIsInitialized;
       if (isInitialized != -1) return isInitialized == 1;
-      
+
       if (!hasTableName()) {
         memoizedIsInitialized = 0;
         return false;
@@ -2038,7 +2668,7 @@ public final class SecureBulkLoadProtos {
       memoizedIsInitialized = 1;
       return true;
     }
-    
+
     public void writeTo(com.google.protobuf.CodedOutputStream output)
                         throws java.io.IOException {
       getSerializedSize();
@@ -2047,12 +2677,12 @@ public final class SecureBulkLoadProtos {
       }
       getUnknownFields().writeTo(output);
     }
-    
+
     private int memoizedSerializedSize = -1;
     public int getSerializedSize() {
       int size = memoizedSerializedSize;
       if (size != -1) return size;
-    
+
       size = 0;
       if (((bitField0_ & 0x00000001) == 0x00000001)) {
         size += com.google.protobuf.CodedOutputStream
@@ -2062,14 +2692,14 @@ public final class SecureBulkLoadProtos {
       memoizedSerializedSize = size;
       return size;
     }
-    
+
     private static final long serialVersionUID = 0L;
     @java.lang.Override
     protected java.lang.Object writeReplace()
         throws java.io.ObjectStreamException {
       return super.writeReplace();
     }
-    
+
     @java.lang.Override
     public boolean equals(final java.lang.Object obj) {
       if (obj == this) {
@@ -2079,7 +2709,7 @@ public final class SecureBulkLoadProtos {
         return super.equals(obj);
       }
       org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.PrepareBulkLoadRequest other = (org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.PrepareBulkLoadRequest) obj;
-      
+
       boolean result = true;
       result = result && (hasTableName() == other.hasTableName());
       if (hasTableName()) {
@@ -2090,9 +2720,13 @@ public final class SecureBulkLoadProtos {
           getUnknownFields().equals(other.getUnknownFields());
       return result;
     }
-    
+
+    private int memoizedHashCode = 0;
     @java.lang.Override
     public int hashCode() {
+      if (memoizedHashCode != 0) {
+        return memoizedHashCode;
+      }
       int hash = 41;
       hash = (19 * hash) + getDescriptorForType().hashCode();
       if (hasTableName()) {
@@ -2100,89 +2734,79 @@ public final class SecureBulkLoadProtos {
         hash = (53 * hash) + getTableName().hashCode();
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
+      memoizedHashCode = hash;
       return hash;
     }
-    
+
     public static org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.PrepareBulkLoadRequest parseFrom(
         com.google.protobuf.ByteString data)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return newBuilder().mergeFrom(data).buildParsed();
+      return PARSER.parseFrom(data);
     }
     public static org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.PrepareBulkLoadRequest parseFrom(
         com.google.protobuf.ByteString data,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return newBuilder().mergeFrom(data, extensionRegistry)
-               .buildParsed();
+      return PARSER.parseFrom(data, extensionRegistry);
     }
     public static org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.PrepareBulkLoadRequest parseFrom(byte[] data)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return newBuilder().mergeFrom(data).buildParsed();
+      return PARSER.parseFrom(data);
     }
     public static org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.PrepareBulkLoadRequest parseFrom(
         byte[] data,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return newBuilder().mergeFrom(data, extensionRegistry)
-               .buildParsed();
+      return PARSER.parseFrom(data, extensionRegistry);
     }
     public static org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.PrepareBulkLoadRequest parseFrom(java.io.InputStream input)
         throws java.io.IOException {
-      return newBuilder().mergeFrom(input).buildParsed();
+      return PARSER.parseFrom(input);
     }
     public static org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.PrepareBulkLoadRequest parseFrom(
         java.io.InputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
-      return newBuilder().mergeFrom(input, extensionRegistry)
-               .buildParsed();
+      return PARSER.parseFrom(input, extensionRegistry);
     }
     public static org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.PrepareBulkLoadRequest parseDelimitedFrom(java.io.InputStream input)
         throws java.io.IOException {
-      Builder builder = newBuilder();
-      if (builder.mergeDelimitedFrom(input)) {
-        return builder.buildParsed();
-      } else {
-        return null;
-      }
+      return PARSER.parseDelimitedFrom(input);
     }
     public static org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.PrepareBulkLoadRequest parseDelimitedFrom(
         java.io.InputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
-      Builder builder = newBuilder();
-      if (builder.mergeDelimitedFrom(input, extensionRegistry)) {
-        return builder.buildParsed();
-      } else {
-        return null;
-      }
+      return PARSER.parseDelimitedFrom(input, extensionRegistry);
     }
     public static org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.PrepareBulkLoadRequest parseFrom(
         com.google.protobuf.CodedInputStream input)
         throws java.io.IOException {
-      return newBuilder().mergeFrom(input).buildParsed();
+      return PARSER.parseFrom(input);
     }
     public static org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.PrepareBulkLoadRequest parseFrom(
         com.google.protobuf.CodedInputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
-      return newBuilder().mergeFrom(input, extensionRegistry)
-               .buildParsed();
+      return PARSER.parseFrom(input, extensionRegistry);
     }
-    
+
     public static Builder newBuilder() { return Builder.create(); }
     public Builder newBuilderForType() { return newBuilder(); }
     public static Builder newBuilder(org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.PrepareBulkLoadRequest prototype) {
       return newBuilder().mergeFrom(prototype);
     }
     public Builder toBuilder() { return newBuilder(this); }
-    
+
     @java.lang.Override
     protected Builder newBuilderForType(
         com.google.protobuf.GeneratedMessage.BuilderParent parent) {
       Builder builder = new Builder(parent);
       return builder;
     }
+    /**
+     * Protobuf type {@code PrepareBulkLoadRequest}
+     */
     public static final class Builder extends
         com.google.protobuf.GeneratedMessage.Builder<Builder>
        implements org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.PrepareBulkLoadRequestOrBuilder {
@@ -2190,18 +2814,21 @@ public final class SecureBulkLoadProtos {
           getDescriptor() {
         return org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.internal_static_PrepareBulkLoadRequest_descriptor;
       }
-      
+
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.internal_static_PrepareBulkLoadRequest_fieldAccessorTable;
+        return org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.internal_static_PrepareBulkLoadRequest_fieldAccessorTable
+            .ensureFieldAccessorsInitialized(
+                org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.PrepareBulkLoadRequest.class, org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.PrepareBulkLoadRequest.Builder.class);
       }
-      
+
       // Construct using org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.PrepareBulkLoadRequest.newBuilder()
       private Builder() {
         maybeForceBuilderInitialization();
       }
-      
-      private Builder(BuilderParent parent) {
+
+      private Builder(
+          com.google.protobuf.GeneratedMessage.BuilderParent parent) {
         super(parent);
         maybeForceBuilderInitialization();
       }
@@ -2213,7 +2840,7 @@ public final class SecureBulkLoadProtos {
       private static Builder create() {
         return new Builder();
       }
-      
+
       public Builder clear() {
         super.clear();
         if (tableNameBuilder_ == null) {
@@ -2224,20 +2851,20 @@ public final class SecureBulkLoadProtos {
         bitField0_ = (bitField0_ & ~0x00000001);
         return this;
       }
-      
+
       public Builder clone() {
         return create().mergeFrom(buildPartial());
       }
-      
+
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.PrepareBulkLoadRequest.getDescriptor();
+        return org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.internal_static_PrepareBulkLoadRequest_descriptor;
       }
-      
+
       public org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.PrepareBulkLoadRequest getDefaultInstanceForType() {
         return org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.PrepareBulkLoadRequest.getDefaultInstance();
       }
-      
+
       public org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.PrepareBulkLoadRequest build() {
         org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.PrepareBulkLoadRequest result = buildPartial();
         if (!result.isInitialized()) {
@@ -2245,17 +2872,7 @@ public final class SecureBulkLoadProtos {
         }
         return result;
       }
-      
-      private org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.PrepareBulkLoadRequest buildParsed()
-          throws com.google.protobuf.InvalidProtocolBufferException {
-        org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.PrepareBulkLoadRequest result = buildPartial();
-        if (!result.isInitialized()) {
-          throw newUninitializedMessageException(
-            result).asInvalidProtocolBufferException();
-        }
-        return result;
-      }
-      
+
       public org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.PrepareBulkLoadRequest buildPartial() {
         org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.PrepareBulkLoadRequest result = new org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.PrepareBulkLoadRequest(this);
         int from_bitField0_ = bitField0_;
@@ -2272,7 +2889,7 @@ public final class SecureBulkLoadProtos {
         onBuilt();
         return result;
       }
-      
+
       public Builder mergeFrom(com.google.protobuf.Message other) {
         if (other instanceof org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.PrepareBulkLoadRequest) {
           return mergeFrom((org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.PrepareBulkLoadRequest)other);
@@ -2281,7 +2898,7 @@ public final class SecureBulkLoadProtos {
           return this;
         }
       }
-      
+
       public Builder mergeFrom(org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.PrepareBulkLoadRequest other) {
         if (other == org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.PrepareBulkLoadRequest.getDefaultInstance()) return this;
         if (other.hasTableName()) {
@@ -2290,7 +2907,7 @@ public final class SecureBulkLoadProtos {
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
       }
-      
+
       public final boolean isInitialized() {
         if (!hasTableName()) {
           
@@ -2302,52 +2919,39 @@ public final class SecureBulkLoadProtos {
         }
         return true;
       }
-      
+
       public Builder mergeFrom(
           com.google.protobuf.CodedInputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws java.io.IOException {
-        com.google.protobuf.UnknownFieldSet.Builder unknownFields =
-          com.google.protobuf.UnknownFieldSet.newBuilder(
-            this.getUnknownFields());
-        while (true) {
-          int tag = input.readTag();
-          switch (tag) {
-            case 0:
-              this.setUnknownFields(unknownFields.build());
-              onChanged();
-              return this;
-            default: {
-              if (!parseUnknownField(input, unknownFields,
-                                     extensionRegistry, tag)) {
-                this.setUnknownFields(unknownFields.build());
-                onChanged();
-                return this;
-              }
-              break;
-            }
-            case 10: {
-              org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.Builder subBuilder = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.newBuilder();
-              if (hasTableName()) {
-                subBuilder.mergeFrom(getTableName());
-              }
-              input.readMessage(subBuilder, extensionRegistry);
-              setTableName(subBuilder.buildPartial());
-              break;
-            }
+        org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.PrepareBulkLoadRequest parsedMessage = null;
+        try {
+          parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
+        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+          parsedMessage = (org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.PrepareBulkLoadRequest) e.getUnfinishedMessage();
+          throw e;
+        } finally {
+          if (parsedMessage != null) {
+            mergeFrom(parsedMessage);
           }
         }
+        return this;
       }
-      
       private int bitField0_;
-      
+
       // required .TableName table_name = 1;
       private org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName tableName_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.getDefaultInstance();
       private com.google.protobuf.SingleFieldBuilder<
           org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableNameOrBuilder> tableNameBuilder_;
+      /**
+       * <code>required .TableName table_name = 1;</code>
+       */
       public boolean hasTableName() {
         return ((bitField0_ & 0x00000001) == 0x00000001);
       }
+      /**
+       * <code>required .TableName table_name = 1;</code>
+       */
       public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName getTableName() {
         if (tableNameBuilder_ == null) {
           return tableName_;
@@ -2355,6 +2959,9 @@ public final class SecureBulkLoadProtos {
           return tableNameBuilder_.getMessage();
         }
       }
+      /**
+       * <code>required .TableName table_name = 1;</code>
+       */
       public Builder setTableName(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName value) {
         if (tableNameBuilder_ == null) {
           if (value == null) {
@@ -2368,6 +2975,9 @@ public final class SecureBulkLoadProtos {
         bitField0_ |= 0x00000001;
         return this;
       }
+      /**
+       * <code>required .TableName table_name = 1;</code>
+       */
       public Builder setTableName(
           org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.Builder builderForValue) {
         if (tableNameBuilder_ == null) {
@@ -2379,6 +2989,9 @@ public final class SecureBulkLoadProtos {
         bitField0_ |= 0x00000001;
         return this;
       }
+      /**
+       * <code>required .TableName table_name = 1;</code>
+       */
       public Builder mergeTableName(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName value) {
         if (tableNameBuilder_ == null) {
           if (((bitField0_ & 0x00000001) == 0x00000001) &&
@@ -2395,6 +3008,9 @@ public final class SecureBulkLoadProtos {
         bitField0_ |= 0x00000001;
         return this;
       }
+      /**
+       * <code>required .TableName table_name = 1;</code>
+       */
       public Builder clearTableName() {
         if (tableNameBuilder_ == null) {
           tableName_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.getDefaultInstance();
@@ -2405,11 +3021,17 @@ public final class SecureBulkLoadProtos {
         bitField0_ = (bitField0_ & ~0x00000001);
         return this;
       }
+      /**
+       * <code>required .TableName table_name = 1;</code>
+       */
       public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.Builder getTableNameBuilder() {
         bitField0_ |= 0x00000001;
         onChanged();
         return getTableNameFieldBuilder().getBuilder();
       }
+      /**
+       * <code>required .TableName table_name = 1;</code>
+       */
       public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableNameOrBuilder getTableNameOrBuilder() {
         if (tableNameBuilder_ != null) {
           return tableNameBuilder_.getMessageOrBuilder();
@@ -2417,6 +3039,9 @@ public final class SecureBulkLoadProtos {
           return tableName_;
         }
       }
+      /**
+       * <code>required .TableName table_name = 1;</code>
+       */
       private com.google.protobuf.SingleFieldBuilder<
           org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableNameOrBuilder> 
           getTableNameFieldBuilder() {
@@ -2430,86 +3055,175 @@ public final class SecureBulkLoadProtos {
         }
         return tableNameBuilder_;
       }
-      
+
       // @@protoc_insertion_point(builder_scope:PrepareBulkLoadRequest)
     }
-    
+
     static {
       defaultInstance = new PrepareBulkLoadRequest(true);
       defaultInstance.initFields();
     }
-    
+
     // @@protoc_insertion_point(class_scope:PrepareBulkLoadRequest)
   }
-  
+
   public interface PrepareBulkLoadResponseOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
-    
+
     // required string bulk_token = 1;
+    /**
+     * <code>required string bulk_token = 1;</code>
+     */
     boolean hasBulkToken();
-    String getBulkToken();
+    /**
+     * <code>required string bulk_token = 1;</code>
+     */
+    java.lang.String getBulkToken();
+    /**
+     * <code>required string bulk_token = 1;</code>
+     */
+    com.google.protobuf.ByteString
+        getBulkTokenBytes();
   }
+  /**
+   * Protobuf type {@code PrepareBulkLoadResponse}
+   */
   public static final class PrepareBulkLoadResponse extends
       com.google.protobuf.GeneratedMessage
       implements PrepareBulkLoadResponseOrBuilder {
     // Use PrepareBulkLoadResponse.newBuilder() to construct.
-    private PrepareBulkLoadResponse(Builder builder) {
+    private PrepareBulkLoadResponse(com.google.protobuf.GeneratedMessage.Builder<?> builder) {
       super(builder);
+      this.unknownFields = builder.getUnknownFields();
     }
-    private PrepareBulkLoadResponse(boolean noInit) {}
-    
+    private PrepareBulkLoadResponse(boolean noInit) { this.unknownFields = com.google.protobuf.UnknownFieldSet.getDefaultInstance(); }
+
     private static final PrepareBulkLoadResponse defaultInstance;
     public static PrepareBulkLoadResponse getDefaultInstance() {
       return defaultInstance;
     }
-    
+
     public PrepareBulkLoadResponse getDefaultInstanceForType() {
       return defaultInstance;
     }
-    
+
+    private final com.google.protobuf.UnknownFieldSet unknownFields;
+    @java.lang.Override
+    public final com.google.protobuf.UnknownFieldSet
+        getUnknownFields() {
+      return this.unknownFields;
+    }
+    private PrepareBulkLoadResponse(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      initFields();
+      int mutable_bitField0_ = 0;
+      com.google.protobuf.UnknownFieldSet.Builder unknownFields =
+          com.google.protobuf.UnknownFieldSet.newBuilder();
+      try {
+        boolean done = false;
+        while (!done) {
+          int tag = input.readTag();
+          switch (tag) {
+            case 0:
+              done = true;
+              break;
+            default: {
+              if (!parseUnknownField(input, unknownFields,
+                                     extensionRegistry, tag)) {
+                done = true;
+              }
+              break;
+            }
+            case 10: {
+              bitField0_ |= 0x00000001;
+              bulkToken_ = input.readBytes();
+              break;
+            }
+          }
+        }
+      } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+        throw e.setUnfinishedMessage(this);
+      } catch (java.io.IOException e) {
+        throw new com.google.protobuf.InvalidProtocolBufferException(
+            e.getMessage()).setUnfinishedMessage(this);
+      } finally {
+        this.unknownFields = unknownFields.build();
+        makeExtensionsImmutable();
+      }
+    }
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
       return org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.internal_static_PrepareBulkLoadResponse_descriptor;
     }
-    
+
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.internal_static_PrepareBulkLoadResponse_fieldAccessorTable;
+      return org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.internal_static_PrepareBulkLoadResponse_fieldAccessorTable
+          .ensureFieldAccessorsInitialized(
+              org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.PrepareBulkLoadResponse.class, org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.PrepareBulkLoadResponse.Builder.class);
     }
-    
+
+    public static com.google.protobuf.Parser<PrepareBulkLoadResponse> PARSER =
+        new com.google.protobuf.AbstractParser<PrepareBulkLoadResponse>() {
+      public PrepareBulkLoadResponse parsePartialFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        return new PrepareBulkLoadResponse(input, extensionRegistry);
+      }
+    };
+
+    @java.lang.Override
+    public com.google.protobuf.Parser<PrepareBulkLoadResponse> getParserForType() {
+      return PARSER;
+    }
+
     private int bitField0_;
     // required string bulk_token = 1;
     public static final int BULK_TOKEN_FIELD_NUMBER = 1;
     private java.lang.Object bulkToken_;
+    /**
+     * <code>required string bulk_token = 1;</code>
+     */
     public boolean hasBulkToken() {
       return ((bitField0_ & 0x00000001) == 0x00000001);
     }
-    public String getBulkToken() {
+    /**
+     * <code>required string bulk_token = 1;</code>
+     */
+    public java.lang.String getBulkToken() {
       java.lang.Object ref = bulkToken_;
-      if (ref instanceof String) {
-        return (String) ref;
+      if (ref instanceof java.lang.String) {
+        return (java.lang.String) ref;
       } else {
         com.google.protobuf.ByteString bs = 
             (com.google.protobuf.ByteString) ref;
-        String s = bs.toStringUtf8();
-        if (com.google.protobuf.Internal.isValidUtf8(bs)) {
+        java.lang.String s = bs.toStringUtf8();
+        if (bs.isValidUtf8()) {
           bulkToken_ = s;
         }
         return s;
       }
     }
-    private com.google.protobuf.ByteString getBulkTokenBytes() {
+    /**
+     * <code>required string bulk_token = 1;</code>
+     */
+    public com.google.protobuf.ByteString
+        getBulkTokenBytes() {
       java.lang.Object ref = bulkToken_;
-      if (ref instanceof String) {
+      if (ref instanceof java.lang.String) {
         com.google.protobuf.ByteString b = 
-            com.google.protobuf.ByteString.copyFromUtf8((String) ref);
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
         bulkToken_ = b;
         return b;
       } else {
         return (com.google.protobuf.ByteString) ref;
       }
     }
-    
+
     private void initFields() {
       bulkToken_ = "";
     }
@@ -2517,7 +3231,7 @@ public final class SecureBulkLoadProtos {
     public final boolean isInitialized() {
       byte isInitialized = memoizedIsInitialized;
       if (isInitialized != -1) return isInitialized == 1;
-      
+
       if (!hasBulkToken()) {
         memoizedIsInitialized = 0;
         return false;
@@ -2525,7 +3239,7 @@ public final class SecureBulkLoadProtos {
       memoizedIsInitialized = 1;
       return true;
     }
-    
+
     public void writeTo(com.google.protobuf.CodedOutputStream output)
                         throws java.io.IOException {
       getSerializedSize();
@@ -2534,12 +3248,12 @@ public final class SecureBulkLoadProtos {
       }
       getUnknownFields().writeTo(output);
     }
-    
+
     private int memoizedSerializedSize = -1;
     public int getSerializedSize() {
       int size = memoizedSerializedSize;
       if (size != -1) return size;
-    
+
       size = 0;
       if (((bitField0_ & 0x00000001) == 0x00000001)) {
         size += com.google.protobuf.CodedOutputStream
@@ -2549,14 +3263,14 @@ public final class SecureBulkLoadProtos {
       memoizedSerializedSize = size;
       return size;
     }
-    
+
     private static final long serialVersionUID = 0L;
     @java.lang.Override
     protected java.lang.Object writeReplace()
         throws java.io.ObjectStreamException {
       return super.writeReplace();
     }
-    
+
     @java.lang.Override
     public boolean equals(final java.lang.Object obj) {
       if (obj == this) {
@@ -2566,7 +3280,7 @@ public final class SecureBulkLoadProtos {
         return super.equals(obj);
       }
       org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.PrepareBulkLoadResponse other = (org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.PrepareBulkLoadResponse) obj;
-      
+
       boolean result = true;
       result = result && (hasBulkToken() == other.hasBulkToken());
       if (hasBulkToken()) {
@@ -2577,9 +3291,13 @@ public final class SecureBulkLoadProtos {
           getUnknownFields().equals(other.getUnknownFields());
       return result;
     }
-    
+
+    private int memoizedHashCode = 0;
     @java.lang.Override
     public int hashCode() {
+      if (memoizedHashCode != 0) {
+        return memoizedHashCode;
+      }
       int hash = 41;
       hash = (19 * hash) + getDescriptorForType().hashCode();
       if (hasBulkToken()) {
@@ -2587,89 +3305,79 @@ public final class SecureBulkLoadProtos {
         hash = (53 * hash) + getBulkToken().hashCode();
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
+      memoizedHashCode = hash;
       return hash;
     }
-    
+
     public static org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.PrepareBulkLoadResponse parseFrom(
         com.google.protobuf.ByteString data)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return newBuilder().mergeFrom(data).buildParsed();
+      return PARSER.parseFrom(data);
     }
     public static org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.PrepareBulkLoadResponse parseFrom(
         com.google.protobuf.ByteString data,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return newBuilder().mergeFrom(data, extensionRegistry)
-               .buildParsed();
+      return PARSER.parseFrom(data, extensionRegistry);
     }
     public static org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.PrepareBulkLoadResponse parseFrom(byte[] data)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return newBuilder().mergeFrom(data).buildParsed();
+      return PARSER.parseFrom(data);
     }
     public static org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.PrepareBulkLoadResponse parseFrom(
         byte[] data,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return newBuilder().mergeFrom(data, extensionRegistry)
-               .buildParsed();
+      return PARSER.parseFrom(data, extensionRegistry);
     }
     public static org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.PrepareBulkLoadResponse parseFrom(java.io.InputStream input)
         throws java.io.IOException {
-      return newBuilder().mergeFrom(input).buildParsed();
+      return PARSER.parseFrom(input);
     }
     public static org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.PrepareBulkLoadResponse parseFrom(
         java.io.InputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
-      return newBuilder().mergeFrom(input, extensionRegistry)
-               .buildParsed();
+      return PARSER.parseFrom(input, extensionRegistry);
     }
     public static org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.PrepareBulkLoadResponse parseDelimitedFrom(java.io.InputStream input)
         throws java.io.IOException {
-      Builder builder = newBuilder();
-      if (builder.mergeDelimitedFrom(input)) {
-        return builder.buildParsed();
-      } else {
-        return null;
-      }
+      return PARSER.parseDelimitedFrom(input);
     }
     public static org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.PrepareBulkLoadResponse parseDelimitedFrom(
         java.io.InputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
-      Builder builder = newBuilder();
-      if (builder.mergeDelimitedFrom(input, extensionRegistry)) {
-        return builder.buildParsed();
-      } else {
-        return null;
-      }
+      return PARSER.parseDelimitedFrom(input, extensionRegistry);
     }
     public static org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.PrepareBulkLoadResponse parseFrom(
         com.google.protobuf.CodedInputStream input)
         throws java.io.IOException {
-      return newBuilder().mergeFrom(input).buildParsed();
+      return PARSER.parseFrom(input);
     }
     public static org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.PrepareBulkLoadResponse parseFrom(
         com.google.protobuf.CodedInputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
-      return newBuilder().mergeFrom(input, extensionRegistry)
-               .buildParsed();
+      return PARSER.parseFrom(input, extensionRegistry);
     }
-    
+
     public static Builder newBuilder() { return Builder.create(); }
     public Builder newBuilderForType() { return newBuilder(); }
     public static Builder newBuilder(org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.PrepareBulkLoadResponse prototype) {
       return newBuilder().mergeFrom(prototype);
     }
     public Builder toBuilder() { return newBuilder(this); }
-    
+
     @java.lang.Override
     protected Builder newBuilderForType(
         com.google.protobuf.GeneratedMessage.BuilderParent parent) {
       Builder builder = new Builder(parent);
       return builder;
     }
+    /**
+     * Protobuf type {@code PrepareBulkLoadResponse}
+     */
     public static final class Builder extends
         com.google.protobuf.GeneratedMessage.Builder<Builder>
        implements org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.PrepareBulkLoadResponseOrBuilder {
@@ -2677,18 +3385,21 @@ public final class SecureBulkLoadProtos {
           getDescriptor() {
         return org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.internal_static_PrepareBulkLoadResponse_descriptor;
       }
-      
+
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.internal_static_PrepareBulkLoadResponse_fieldAccessorTable;
+        return org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.internal_static_PrepareBulkLoadResponse_fieldAccessorTable
+            .ensureFieldAccessorsInitialized(
+                org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.PrepareBulkLoadResponse.class, org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.PrepareBulkLoadResponse.Builder.class);
       }
-      
+
       // Construct using org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.PrepareBulkLoadResponse.newBuilder()
       private Builder() {
         maybeForceBuilderInitialization();
       }
-      
-      private Builder(BuilderParent parent) {
+
+      private Builder(
+          com.google.protobuf.GeneratedMessage.BuilderParent parent) {
         super(parent);
         maybeForceBuilderInitialization();
       }
@@ -2699,27 +3410,27 @@ public final class SecureBulkLoadProtos {
       private static Builder create() {
         return new Builder();
       }
-      
+
       public Builder clear() {
         super.clear();
         bulkToken_ = "";
         bitField0_ = (bitField0_ & ~0x00000001);
         return this;
       }
-      
+
       public Builder clone() {
         return create().mergeFrom(buildPartial());
       }
-      
+
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.PrepareBulkLoadResponse.getDescriptor();
+        return org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.internal_static_PrepareBulkLoadResponse_descriptor;
       }
-      
+
       public org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.PrepareBulkLoadResponse getDefaultInstanceForType() {
         return org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.PrepareBulkLoadResponse.getDefaultInstance();
       }
-      
+
       public org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.PrepareBulkLoadResponse build() {
         org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.PrepareBulkLoadResponse result = buildPartial();
         if (!result.isInitialized()) {
@@ -2727,17 +3438,7 @@ public final class SecureBulkLoadProtos {
         }
         return result;
       }
-      
-      private org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.PrepareBulkLoadResponse buildParsed()
-          throws com.google.protobuf.InvalidProtocolBufferException {
-        org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.PrepareBulkLoadResponse result = buildPartial();
-        if (!result.isInitialized()) {
-          throw newUninitializedMessageException(
-            result).asInvalidProtocolBufferException();
-        }
-        return result;
-      }
-      
+
       public org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.PrepareBulkLoadResponse buildPartial() {
         org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.PrepareBulkLoadResponse result = new org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.PrepareBulkLoadResponse(this);
         int from_bitField0_ = bitField0_;
@@ -2750,7 +3451,7 @@ public final class SecureBulkLoadProtos {
         onBuilt();
         return result;
       }
-      
+
       public Builder mergeFrom(com.google.protobuf.Message other) {
         if (other instanceof org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.PrepareBulkLoadResponse) {
           return mergeFrom((org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.PrepareBulkLoadResponse)other);
@@ -2759,16 +3460,18 @@ public final class SecureBulkLoadProtos {
           return this;
         }
       }
-      
+
       public Builder mergeFrom(org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.PrepareBulkLoadResponse other) {
         if (other == org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.PrepareBulkLoadResponse.getDefaultInstance()) return this;
         if (other.hasBulkToken()) {
-          setBulkToken(other.getBulkToken());
+          bitField0_ |= 0x00000001;
+          bulkToken_ = other.bulkToken_;
+          onChanged();
         }
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
       }
-      
+
       public final boolean isInitialized() {
         if (!hasBulkToken()) {
           
@@ -2776,27 +3479,177 @@ public final class SecureBulkLoadProtos {
         }
         return true;
       }
-      
+
       public Builder mergeFrom(
           com.google.protobuf.CodedInputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws java.io.IOException {
-        com.google.protobuf.UnknownFieldSet.Builder unknownFields =
-          com.google.protobuf.UnknownFieldSet.newBuilder(
-            this.getUnknownFields());
-        while (true) {
+        org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.PrepareBulkLoadResponse parsedMessage = null;
+        try {
+          parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
+        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+          parsedMessage = (org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.PrepareBulkLoadResponse) e.getUnfinishedMessage();
+          throw e;
+        } finally {
+          if (parsedMessage != null) {
+            mergeFrom(parsedMessage);
+          }
+        }
+        return this;
+      }
+      private int bitField0_;
+
+      // required string bulk_token = 1;
+      private java.lang.Object bulkToken_ = "";
+      /**
+       * <code>required string bulk_token = 1;</code>
+       */
+      public boolean hasBulkToken() {
+        return ((bitField0_ & 0x00000001) == 0x00000001);
+      }
+      /**
+       * <code>required string bulk_token = 1;</code>
+       */
+      public java.lang.String getBulkToken() {
+        java.lang.Object ref = bulkToken_;
+        if (!(ref instanceof java.lang.String)) {
+          java.lang.String s = ((com.google.protobuf.ByteString) ref)
+              .toStringUtf8();
+          bulkToken_ = s;
+          return s;
+        } else {
+          return (java.lang.String) ref;
+        }
+      }
+      /**
+       * <code>required string bulk_token = 1;</code>
+       */
+      public com.google.protobuf.ByteString
+          getBulkTokenBytes() {
+        java.lang.Object ref = bulkToken_;
+        if (ref instanceof String) {
+          com.google.protobuf.ByteString b = 
+              com.google.protobuf.ByteString.copyFromUtf8(
+                  (java.lang.String) ref);
+          bulkToken_ = b;
+          return b;
+        } else {
+          return (com.google.protobuf.ByteString) ref;
+        }
+      }
+      /**
+       * <code>required string bulk_token = 1;</code>
+       */
+      public Builder setBulkToken(
+          java.lang.String value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000001;
+        bulkToken_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>required string bulk_token = 1;</code>
+       */
+      public Builder clearBulkToken() {
+        bitField0_ = (bitField0_ & ~0x00000001);
+        bulkToken_ = getDefaultInstance().getBulkToken();
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>required string bulk_token = 1;</code>
+       */
+      public Builder setBulkTokenBytes(
+          com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000001;
+        bulkToken_ = value;
+        onChanged();
+        return this;
+      }
+
+      // @@protoc_insertion_point(builder_scope:PrepareBulkLoadResponse)
+    }
+
+    static {
+      defaultInstance = new PrepareBulkLoadResponse(true);
+      defaultInstance.initFields();
+    }
+
+    // @@protoc_insertion_point(class_scope:PrepareBulkLoadResponse)
+  }
+
+  public interface CleanupBulkLoadRequestOrBuilder
+      extends com.google.protobuf.MessageOrBuilder {
+
+    // required string bulk_token = 1;
+    /**
+     * <code>required string bulk_token = 1;</code>
+     */
+    boolean hasBulkToken();
+    /**
+     * <code>required string bulk_token = 1;</code>
+     */
+    java.lang.String getBulkToken();
+    /**
+     * <code>required string bulk_token = 1;</code>
+     */
+    com.google.protobuf.ByteString
+        getBulkTokenBytes();
+  }
+  /**
+   * Protobuf type {@code CleanupBulkLoadRequest}
+   */
+  public static final class CleanupBulkLoadRequest extends
+      com.google.protobuf.GeneratedMessage
+      implements CleanupBulkLoadRequestOrBuilder {
+    // Use CleanupBulkLoadRequest.newBuilder() to construct.
+    private CleanupBulkLoadRequest(com.google.protobuf.GeneratedMessage.Builder<?> builder) {
+      super(builder);
+      this.unknownFields = builder.getUnknownFields();
+    }
+    private CleanupBulkLoadRequest(boolean noInit) { this.unknownFields = com.google.protobuf.UnknownFieldSet.getDefaultInstance(); }
+
+    private static final CleanupBulkLoadRequest defaultInstance;
+    public static CleanupBulkLoadRequest getDefaultInstance() {
+      return defaultInstance;
+    }
+
+    public CleanupBulkLoadRequest getDefaultInstanceForType() {
+      return defaultInstance;
+    }
+
+    private final com.google.protobuf.UnknownFieldSet unknownFields;
+    @java.lang.Override
+    public final com.google.protobuf.UnknownFieldSet
+        getUnknownFields() {
+      return this.unknownFields;
+    }
+    private CleanupBulkLoadRequest(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      initFields();
+      int mutable_bitField0_ = 0;
+      com.google.protobuf.UnknownFieldSet.Builder unknownFields =
+          com.google.protobuf.UnknownFieldSet.newBuilder();
+      try {
+        boolean done = false;
+        while (!done) {
           int tag = input.readTag();
           switch (tag) {
             case 0:
-              this.setUnknownFields(unknownFields.build());
-              onChanged();
-              return this;
+              done = true;
+              break;
             default: {
               if (!parseUnknownField(input, unknownFields,
                                      extensionRegistry, tag)) {
-                this.setUnknownFields(unknownFields.build());
-                onChanged();
-                return this;
+                done = true;
               }
               break;
             }
@@ -2807,125 +3660,87 @@ public final class SecureBulkLoadProtos {
             }
           }
         }
+      } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+        throw e.setUnfinishedMessage(this);
+      } catch (java.io.IOException e) {
+        throw new com.google.protobuf.InvalidProtocolBufferException(
+            e.getMessage()).setUnfinishedMessage(this);
+      } finally {
+        this.unknownFields = unknownFields.build();
+        makeExtensionsImmutable();
       }
-      
-      private int bitField0_;
-      
-      // required string bulk_token = 1;
-      private java.lang.Object bulkToken_ = "";
-      public boolean hasBulkToken() {
-        return ((bitField0_ & 0x00000001) == 0x00000001);
-      }
-      public String getBulkToken() {
-        java.lang.Object ref = bulkToken_;
-        if (!(ref instanceof String)) {
-          String s = ((com.google.protobuf.ByteString) ref).toStringUtf8();
-          bulkToken_ = s;
-          return s;
-        } else {
-          return (String) ref;
-        }
-      }
-      public Builder setBulkToken(String value) {
-        if (value == null) {
-    throw new NullPointerException();
-  }
-  bitField0_ |= 0x00000001;
-        bulkToken_ = value;
-        onChanged();
-        return this;
-      }
-      public Builder clearBulkToken() {
-        bitField0_ = (bitField0_ & ~0x00000001);
-        bulkToken_ = getDefaultInstance().getBulkToken();
-        onChanged();
-        return this;
-      }
-      void setBulkToken(com.google.protobuf.ByteString value) {
-        bitField0_ |= 0x00000001;
-        bulkToken_ = value;
-        onChanged();
-      }
-      
-      // @@protoc_insertion_point(builder_scope:PrepareBulkLoadResponse)
     }
-    
-    static {
-      defaultInstance = new PrepareBulkLoadResponse(true);
-      defaultInstance.initFields();
-    }
-    
-    // @@protoc_insertion_point(class_scope:PrepareBulkLoadResponse)
-  }
-  
-  public interface CleanupBulkLoadRequestOrBuilder
-      extends com.google.protobuf.MessageOrBuilder {
-    
-    // required string bulk_token = 1;
-    boolean hasBulkToken();
-    String getBulkToken();
-  }
-  public static final class CleanupBulkLoadRequest extends
-      com.google.protobuf.GeneratedMessage
-      implements CleanupBulkLoadRequestOrBuilder {
-    // Use CleanupBulkLoadRequest.newBuilder() to construct.
-    private CleanupBulkLoadRequest(Builder builder) {
-      super(builder);
-    }
-    private CleanupBulkLoadRequest(boolean noInit) {}
-    
-    private static final CleanupBulkLoadRequest defaultInstance;
-    public static CleanupBulkLoadRequest getDefaultInstance() {
-      return defaultInstance;
-    }
-    
-    public CleanupBulkLoadRequest getDefaultInstanceForType() {
-      return defaultInstance;
-    }
-    
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
       return org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.internal_static_CleanupBulkLoadRequest_descriptor;
     }
-    
+
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.internal_static_CleanupBulkLoadRequest_fieldAccessorTable;
+      return org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.internal_static_CleanupBulkLoadRequest_fieldAccessorTable
+          .ensureFieldAccessorsInitialized(
+              org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.CleanupBulkLoadRequest.class, org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.CleanupBulkLoadRequest.Builder.class);
     }
-    
+
+    public static com.google.protobuf.Parser<CleanupBulkLoadRequest> PARSER =
+        new com.google.protobuf.AbstractParser<CleanupBulkLoadRequest>() {
+      public CleanupBulkLoadRequest parsePartialFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        return new CleanupBulkLoadRequest(input, extensionRegistry);
+      }
+    };
+
+    @java.lang.Override
+    public com.google.protobuf.Parser<CleanupBulkLoadRequest> getParserForType() {
+      return PARSER;
+    }
+
     private int bitField0_;
     // required string bulk_token = 1;
     public static final int BULK_TOKEN_FIELD_NUMBER = 1;
     private java.lang.Object bulkToken_;
+    /**
+     * <code>required string bulk_token = 1;</code>
+     */
     public boolean hasBulkToken() {
       return ((bitField0_ & 0x00000001) == 0x00000001);
     }
-    public String getBulkToken() {
+    /**
+     * <code>required string bulk_token = 1;</code>
+     */
+    public java.lang.String getBulkToken() {
       java.lang.Object ref = bulkToken_;
-      if (ref instanceof String) {
-        return (String) ref;
+      if (ref instanceof java.lang.String) {
+        return (java.lang.String) ref;
       } else {
         com.google.protobuf.ByteString bs = 
             (com.google.protobuf.ByteString) ref;
-        String s = bs.toStringUtf8();
-        if (com.google.protobuf.Internal.isValidUtf8(bs)) {
+        java.lang.String s = bs.toStringUtf8();
+        if (bs.isValidUtf8()) {
           bulkToken_ = s;
         }
         return s;
       }
     }
-    private com.google.protobuf.ByteString getBulkTokenBytes() {
+    /**
+     * <code>required string bulk_token = 1;</code>
+     */
+    public com.google.protobuf.ByteString
+        getBulkTokenBytes() {
       java.lang.Object ref = bulkToken_;
-      if (ref instanceof String) {
+      if (ref instanceof java.lang.String) {
         com.google.protobuf.ByteString b = 
-            com.google.protobuf.ByteString.copyFromUtf8((String) ref);
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
         bulkToken_ = b;
         return b;
       } else {
         return (com.google.protobuf.ByteString) ref;
       }
     }
-    
+
     private void initFields() {
       bulkToken_ = "";
     }
@@ -2933,7 +3748,7 @@ public final class SecureBulkLoadProtos {
     public final boolean isInitialized() {
       byte isInitialized = memoizedIsInitialized;
       if (isInitialized != -1) return isInitialized == 1;
-      
+
       if (!hasBulkToken()) {
         memoizedIsInitialized = 0;
         return false;
@@ -2941,7 +3756,7 @@ public final class SecureBulkLoadProtos {
       memoizedIsInitialized = 1;
       return true;
     }
-    
+
     public void writeTo(com.google.protobuf.CodedOutputStream output)
                         throws java.io.IOException {
       getSerializedSize();
@@ -2950,12 +3765,12 @@ public final class SecureBulkLoadProtos {
       }
       getUnknownFields().writeTo(output);
     }
-    
+
     private int memoizedSerializedSize = -1;
     public int getSerializedSize() {
       int size = memoizedSerializedSize;
       if (size != -1) return size;
-    
+
       size = 0;
       if (((bitField0_ & 0x00000001) == 0x00000001)) {
         size += com.google.protobuf.CodedOutputStream
@@ -2965,14 +3780,14 @@ public final class SecureBulkLoadProtos {
       memoizedSerializedSize = size;
       return size;
     }
-    
+
     private static final long serialVersionUID = 0L;
     @java.lang.Override
     protected java.lang.Object writeReplace()
         throws java.io.ObjectStreamException {
       return super.writeReplace();
     }
-    
+
     @java.lang.Override
     public boolean equals(final java.lang.Object obj) {
       if (obj == this) {
@@ -2982,7 +3797,7 @@ public final class SecureBulkLoadProtos {
         return super.equals(obj);
       }
       org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.CleanupBulkLoadRequest other = (org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.CleanupBulkLoadRequest) obj;
-      
+
       boolean result = true;
       result = result && (hasBulkToken() == other.hasBulkToken());
       if (hasBulkToken()) {
@@ -2993,9 +3808,13 @@ public final class SecureBulkLoadProtos {
           getUnknownFields().equals(other.getUnknownFields());
       return result;
     }
-    
+
+    private int memoizedHashCode = 0;
     @java.lang.Override
     public int hashCode() {
+      if (memoizedHashCode != 0) {
+        return memoizedHashCode;
+      }
       int hash = 41;
       hash = (19 * hash) + getDescriptorForType().hashCode();
       if (hasBulkToken()) {
@@ -3003,89 +3822,79 @@ public final class SecureBulkLoadProtos {
         hash = (53 * hash) + getBulkToken().hashCode();
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
+      memoizedHashCode = hash;
       return hash;
     }
-    
+
     public static org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.CleanupBulkLoadRequest parseFrom(
         com.google.protobuf.ByteString data)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return newBuilder().mergeFrom(data).buildParsed();
+      return PARSER.parseFrom(data);
     }
     public static org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.CleanupBulkLoadRequest parseFrom(
         com.google.protobuf.ByteString data,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return newBuilder().mergeFrom(data, extensionRegistry)
-               .buildParsed();
+      return PARSER.parseFrom(data, extensionRegistry);
     }
     public static org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.CleanupBulkLoadRequest parseFrom(byte[] data)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return newBuilder().mergeFrom(data).buildParsed();
+      return PARSER.parseFrom(data);
     }
     public static org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.CleanupBulkLoadRequest parseFrom(
         byte[] data,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return newBuilder().mergeFrom(data, extensionRegistry)
-               .buildParsed();
+      return PARSER.parseFrom(data, extensionRegistry);
     }
     public static org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.CleanupBulkLoadRequest parseFrom(java.io.InputStream input)
         throws java.io.IOException {
-      return newBuilder().mergeFrom(input).buildParsed();
+      return PARSER.parseFrom(input);
     }
     public static org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.CleanupBulkLoadRequest parseFrom(
         java.io.InputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
-      return newBuilder().mergeFrom(input, extensionRegistry)
-               .buildParsed();
+      return PARSER.parseFrom(input, extensionRegistry);
     }
     public static org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.CleanupBulkLoadRequest parseDelimitedFrom(java.io.InputStream input)
         throws java.io.IOException {
-      Builder builder = newBuilder();
-      if (builder.mergeDelimitedFrom(input)) {
-        return builder.buildParsed();
-      } else {
-        return null;
-      }
+      return PARSER.parseDelimitedFrom(input);
     }
     public static org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.CleanupBulkLoadRequest parseDelimitedFrom(
         java.io.InputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
-      Builder builder = newBuilder();
-      if (builder.mergeDelimitedFrom(input, extensionRegistry)) {
-        return builder.buildParsed();
-      } else {
-        return null;
-      }
+      return PARSER.parseDelimitedFrom(input, extensionRegistry);
     }
     public static org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.CleanupBulkLoadRequest parseFrom(
         com.google.protobuf.CodedInputStream input)
         throws java.io.IOException {
-      return newBuilder().mergeFrom(input).buildParsed();
+      return PARSER.parseFrom(input);
     }
     public static org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.CleanupBulkLoadRequest parseFrom(
         com.google.protobuf.CodedInputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
-      return newBuilder().mergeFrom(input, extensionRegistry)
-               .buildParsed();
+      return PARSER.parseFrom(input, extensionRegistry);
     }
-    
+
     public static Builder newBuilder() { return Builder.create(); }
     public Builder newBuilderForType() { return newBuilder(); }
     public static Builder newBuilder(org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.CleanupBulkLoadRequest prototype) {
       return newBuilder().mergeFrom(prototype);
     }
     public Builder toBuilder() { return newBuilder(this); }
-    
+
     @java.lang.Override
     protected Builder newBuilderForType(
         com.google.protobuf.GeneratedMessage.BuilderParent parent) {
       Builder builder = new Builder(parent);
       return builder;
     }
+    /**
+     * Protobuf type {@code CleanupBulkLoadRequest}
+     */
     public static final class Builder extends
         com.google.protobuf.GeneratedMessage.Builder<Builder>
        implements org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.CleanupBulkLoadRequestOrBuilder {
@@ -3093,18 +3902,21 @@ public final class SecureBulkLoadProtos {
           getDescriptor() {
         return org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.internal_static_CleanupBulkLoadRequest_descriptor;
       }
-      
+
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.internal_static_CleanupBulkLoadRequest_fieldAccessorTable;
+        return org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.internal_static_CleanupBulkLoadRequest_fieldAccessorTable
+            .ensureFieldAccessorsInitialized(
+                org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.CleanupBulkLoadRequest.class, org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.CleanupBulkLoadRequest.Builder.class);
       }
-      
+
       // Construct using org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.CleanupBulkLoadRequest.newBuilder()
       private Builder() {
         maybeForceBuilderInitialization();
       }
-      
-      private Builder(BuilderParent parent) {
+
+      private Builder(
+          com.google.protobuf.GeneratedMessage.BuilderParent parent) {
         super(parent);
         maybeForceBuilderInitialization();
       }
@@ -3115,27 +3927,27 @@ public final class SecureBulkLoadProtos {
       private static Builder create() {
         return new Builder();
       }
-      
+
       public Builder clear() {
         super.clear();
         bulkToken_ = "";
         bitField0_ = (bitField0_ & ~0x00000001);
         return this;
       }
-      
+
       public Builder clone() {
         return create().mergeFrom(buildPartial());
       }
-      
+
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.CleanupBulkLoadRequest.getDescriptor();
+        return org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.internal_static_CleanupBulkLoadRequest_descriptor;
       }
-      
+
       public org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.CleanupBulkLoadRequest getDefaultInstanceForType() {
         return org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.CleanupBulkLoadRequest.getDefaultInstance();
       }
-      
+
       public org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.CleanupBulkLoadRequest build() {
         org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.CleanupBulkLoadRequest result = buildPartial();
         if (!result.isInitialized()) {
@@ -3143,17 +3955,7 @@ public final class SecureBulkLoadProtos {
         }
         return result;
       }
-      
-      private org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.CleanupBulkLoadRequest buildParsed()
-          throws com.google.protobuf.InvalidProtocolBufferException {
-        org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.CleanupBulkLoadRequest result = buildPartial();
-        if (!result.isInitialized()) {
-          throw newUninitializedMessageException(
-            result).asInvalidProtocolBufferException();
-        }
-        return result;
-      }
-      
+
       public org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.CleanupBulkLoadRequest buildPartial() {
         org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.CleanupBulkLoadRequest result = new org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.CleanupBulkLoadRequest(this);
         int from_bitField0_ = bitField0_;
@@ -3166,7 +3968,7 @@ public final class SecureBulkLoadProtos {
         onBuilt();
         return result;
       }
-      
+
       public Builder mergeFrom(com.google.protobuf.Message other) {
         if (other instanceof org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.CleanupBulkLoadRequest) {
           return mergeFrom((org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.CleanupBulkLoadRequest)other);
@@ -3175,16 +3977,18 @@ public final class SecureBulkLoadProtos {
           return this;
         }
       }
-      
+
       public Builder mergeFrom(org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.CleanupBulkLoadRequest other) {
         if (other == org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.CleanupBulkLoadRequest.getDefaultInstance()) return this;
         if (other.hasBulkToken()) {
-          setBulkToken(other.getBulkToken());
+          bitField0_ |= 0x00000001;
+          bulkToken_ = other.bulkToken_;
+          onChanged();
         }
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
       }
-      
+
       public final boolean isInitialized() {
         if (!hasBulkToken()) {
           
@@ -3192,57 +3996,69 @@ public final class SecureBulkLoadProtos {
         }
         return true;
       }
-      
+
       public Builder mergeFrom(
           com.google.protobuf.CodedInputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws java.io.IOException {
-        com.google.protobuf.UnknownFieldSet.Builder unknownFields =
-          com.google.protobuf.UnknownFieldSet.newBuilder(
-            this.getUnknownFields());
-        while (true) {
-          int tag = input.readTag();
-          switch (tag) {
-            case 0:
-              this.setUnknownFields(unknownFields.build());
-              onChanged();
-              return this;
-            default: {
-              if (!parseUnknownField(input, unknownFields,
-                                     extensionRegistry, tag)) {
-                this.setUnknownFields(unknownFields.build());
-                onChanged();
-                return this;
-              }
-              break;
-            }
-            case 10: {
-              bitField0_ |= 0x00000001;
-              bulkToken_ = input.readBytes();
-              break;
-            }
+        org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.CleanupBulkLoadRequest parsedMessage = null;
+        try {
+          parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
+        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+          parsedMessage = (org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.CleanupBulkLoadRequest) e.getUnfinishedMessage();
+          throw e;
+        } finally {
+          if (parsedMessage != null) {
+            mergeFrom(parsedMessage);
           }
         }
+        return this;
       }
-      
       private int bitField0_;
-      
+
       // required string bulk_token = 1;
       private java.lang.Object bulkToken_ = "";
+      /**
+       * <code>required string bulk_token = 1;</code>
+       */
       public boolean hasBulkToken() {
         return ((bitField0_ & 0x00000001) == 0x00000001);
       }
-      public String getBulkToken() {
+      /**
+       * <code>required string bulk_token = 1;</code>
+       */
+      public java.lang.String getBulkToken() {
         java.lang.Object ref = bulkToken_;
-        if (!(ref instanceof String)) {
-          String s = ((com.google.protobuf.ByteString) ref).toStringUtf8();
+        if (!(ref instanceof java.lang.String)) {
+          java.lang.String s = ((com.google.protobuf.ByteString) ref)
+              .toStringUtf8();
           bulkToken_ = s;
           return s;
         } else {
-          return (String) ref;
+          return (java.lang.String) ref;
         }
       }
-      public Builder setBulkToken(String value) {
+      /**
+       * <code>required string bulk_token = 1;</code>
+       */
+      public com.google.protobuf.ByteString
+          getBulkTokenBytes() {
+        java.lang.Object ref = bulkToken_;
+        if (ref instanceof String) {
+          com.google.protobuf.ByteString b = 
+              com.google.protobuf.ByteString.copyFromUtf8(
+                  (java.lang.String) ref);
+          bulkToken_ = b;
+          return b;
+        } else {
+          return (com.google.protobuf.ByteString) ref;
+        }
+      }
+      /**
+       * <code>required string bulk_token = 1;</code>
+       */
+      public Builder setBulkToken(
+          java.lang.String value) {
         if (value == null) {
     throw new NullPointerException();
   }
@@ -3251,95 +4067,167 @@ public final class SecureBulkLoadProtos {
         onChanged();
         return this;
       }
+      /**
+       * <code>required string bulk_token = 1;</code>
+       */
       public Builder clearBulkToken() {
         bitField0_ = (bitField0_ & ~0x00000001);
         bulkToken_ = getDefaultInstance().getBulkToken();
         onChanged();
         return this;
       }
-      void setBulkToken(com.google.protobuf.ByteString value) {
-        bitField0_ |= 0x00000001;
+      /**
+       * <code>required string bulk_token = 1;</code>
+       */
+      public Builder setBulkTokenBytes(
+          com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000001;
         bulkToken_ = value;
         onChanged();
+        return this;
       }
-      
+
       // @@protoc_insertion_point(builder_scope:CleanupBulkLoadRequest)
     }
-    
+
     static {
       defaultInstance = new CleanupBulkLoadRequest(true);
       defaultInstance.initFields();
     }
-    
+
     // @@protoc_insertion_point(class_scope:CleanupBulkLoadRequest)
   }
-  
+
   public interface CleanupBulkLoadResponseOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
   }
+  /**
+   * Protobuf type {@code CleanupBulkLoadResponse}
+   */
   public static final class CleanupBulkLoadResponse extends
       com.google.protobuf.GeneratedMessage
       implements CleanupBulkLoadResponseOrBuilder {
     // Use CleanupBulkLoadResponse.newBuilder() to construct.
-    private CleanupBulkLoadResponse(Builder builder) {
+    private CleanupBulkLoadResponse(com.google.protobuf.GeneratedMessage.Builder<?> builder) {
       super(builder);
+      this.unknownFields = builder.getUnknownFields();
     }
-    private CleanupBulkLoadResponse(boolean noInit) {}
-    
+    private CleanupBulkLoadResponse(boolean noInit) { this.unknownFields = com.google.protobuf.UnknownFieldSet.getDefaultInstance(); }
+
     private static final CleanupBulkLoadResponse defaultInstance;
     public static CleanupBulkLoadResponse getDefaultInstance() {
       return defaultInstance;
     }
-    
+
     public CleanupBulkLoadResponse getDefaultInstanceForType() {
       return defaultInstance;
     }
-    
+
+    private final com.google.protobuf.UnknownFieldSet unknownFields;
+    @java.lang.Override
+    public final com.google.protobuf.UnknownFieldSet
+        getUnknownFields() {
+      return this.unknownFields;
+    }
+    private CleanupBulkLoadResponse(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      initFields();
+      com.google.protobuf.UnknownFieldSet.Builder unknownFields =
+          com.google.protobuf.UnknownFieldSet.newBuilder();
+      try {
+        boolean done = false;
+        while (!done) {
+          int tag = input.readTag();
+          switch (tag) {
+            case 0:
+              done = true;
+              break;
+            default: {
+              if (!parseUnknownField(input, unknownFields,
+                                     extensionRegistry, tag)) {
+                done = true;
+              }
+              break;
+            }
+          }
+        }
+      } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+        throw e.setUnfinishedMessage(this);
+      } catch (java.io.IOException e) {
+        throw new com.google.protobuf.InvalidProtocolBufferException(
+            e.getMessage()).setUnfinishedMessage(this);
+      } finally {
+        this.unknownFields = unknownFields.build();
+        makeExtensionsImmutable();
+      }
+    }
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
       return org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.internal_static_CleanupBulkLoadResponse_descriptor;
     }
-    
+
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.internal_static_CleanupBulkLoadResponse_fieldAccessorTable;
+      return org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.internal_static_CleanupBulkLoadResponse_fieldAccessorTable
+          .ensureFieldAccessorsInitialized(
+              org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.CleanupBulkLoadResponse.class, org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.CleanupBulkLoadResponse.Builder.class);
     }
-    
+
+    public static com.google.protobuf.Parser<CleanupBulkLoadResponse> PARSER =
+        new com.google.protobuf.AbstractParser<CleanupBulkLoadResponse>() {
+      public CleanupBulkLoadResponse parsePartialFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        return new CleanupBulkLoadResponse(input, extensionRegistry);
+      }
+    };
+
+    @java.lang.Override
+    public com.google.protobuf.Parser<CleanupBulkLoadResponse> getParserForType() {
+      return PARSER;
+    }
+
     private void initFields() {
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
       byte isInitialized = memoizedIsInitialized;
       if (isInitialized != -1) return isInitialized == 1;
-      
+
       memoizedIsInitialized = 1;
       return true;
     }
-    
+
     public void writeTo(com.google.protobuf.CodedOutputStream output)
                         throws java.io.IOException {
       getSerializedSize();
       getUnknownFields().writeTo(output);
     }
-    
+
     private int memoizedSerializedSize = -1;
     public int getSerializedSize() {
       int size = memoizedSerializedSize;
       if (size != -1) return size;
-    
+
       size = 0;
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
       return size;
     }
-    
+
     private static final long serialVersionUID = 0L;
     @java.lang.Override
     protected java.lang.Object writeReplace()
         throws java.io.ObjectStreamException {
       return super.writeReplace();
     }
-    
+
     @java.lang.Override
     public boolean equals(final java.lang.Object obj) {
       if (obj == this) {
@@ -3349,101 +4237,95 @@ public final class SecureBulkLoadProtos {
         return super.equals(obj);
       }
       org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.CleanupBulkLoadResponse other = (org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.CleanupBulkLoadResponse) obj;
-      
+
       boolean result = true;
       result = result &&
           getUnknownFields().equals(other.getUnknownFields());
       return result;
     }
-    
+
+    private int memoizedHashCode = 0;
     @java.lang.Override
     public int hashCode() {
+      if (memoizedHashCode != 0) {
+        return memoizedHashCode;
+      }
       int hash = 41;
       hash = (19 * hash) + getDescriptorForType().hashCode();
       hash = (29 * hash) + getUnknownFields().hashCode();
+      memoizedHashCode = hash;
       return hash;
     }
-    
+
     public static org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.CleanupBulkLoadResponse parseFrom(
         com.google.protobuf.ByteString data)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return newBuilder().mergeFrom(data).buildParsed();
+      return PARSER.parseFrom(data);
     }
     public static org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.CleanupBulkLoadResponse parseFrom(
         com.google.protobuf.ByteString data,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return newBuilder().mergeFrom(data, extensionRegistry)
-               .buildParsed();
+      return PARSER.parseFrom(data, extensionRegistry);
     }
     public static org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.CleanupBulkLoadResponse parseFrom(byte[] data)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return newBuilder().mergeFrom(data).buildParsed();
+      return PARSER.parseFrom(data);
     }
     public static org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.CleanupBulkLoadResponse parseFrom(
         byte[] data,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return newBuilder().mergeFrom(data, extensionRegistry)
-               .buildParsed();
+      return PARSER.parseFrom(data, extensionRegistry);
     }
     public static org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.CleanupBulkLoadResponse parseFrom(java.io.InputStream input)
         throws java.io.IOException {
-      return newBuilder().mergeFrom(input).buildParsed();
+      return PARSER.parseFrom(input);
     }
     public static org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.CleanupBulkLoadResponse parseFrom(
         java.io.InputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
-      return newBuilder().mergeFrom(input, extensionRegistry)
-               .buildParsed();
+      return PARSER.parseFrom(input, extensionRegistry);
     }
     public static org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.CleanupBulkLoadResponse parseDelimitedFrom(java.io.InputStream input)
         throws java.io.IOException {
-      Builder builder = newBuilder();
-      if (builder.mergeDelimitedFrom(input)) {
-        return builder.buildParsed();
-      } else {
-        return null;
-      }
+      return PARSER.parseDelimitedFrom(input);
     }
     public static org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.CleanupBulkLoadResponse parseDelimitedFrom(
         java.io.InputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
-      Builder builder = newBuilder();
-      if (builder.mergeDelimitedFrom(input, extensionRegistry)) {
-        return builder.buildParsed();
-      } else {
-        return null;
-      }
+      return PARSER.parseDelimitedFrom(input, extensionRegistry);
     }
     public static org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.CleanupBulkLoadResponse parseFrom(
         com.google.protobuf.CodedInputStream input)
         throws java.io.IOException {
-      return newBuilder().mergeFrom(input).buildParsed();
+      return PARSER.parseFrom(input);
     }
     public static org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.CleanupBulkLoadResponse parseFrom(
         com.google.protobuf.CodedInputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
-      return newBuilder().mergeFrom(input, extensionRegistry)
-               .buildParsed();
+      return PARSER.parseFrom(input, extensionRegistry);
     }
-    
+
     public static Builder newBuilder() { return Builder.create(); }
     public Builder newBuilderForType() { return newBuilder(); }
     public static Builder newBuilder(org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.CleanupBulkLoadResponse prototype) {
       return newBuilder().mergeFrom(prototype);
     }
     public Builder toBuilder() { return newBuilder(this); }
-    
+
     @java.lang.Override
     protected Builder newBuilderForType(
         com.google.protobuf.GeneratedMessage.BuilderParent parent) {
       Builder builder = new Builder(parent);
       return builder;
     }
+    /**
+     * Protobuf type {@code CleanupBulkLoadResponse}
+     */
     public static final class Builder extends
         com.google.protobuf.GeneratedMessage.Builder<Builder>
        implements org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.CleanupBulkLoadResponseOrBuilder {
@@ -3451,18 +4333,21 @@ public final class SecureBulkLoadProtos {
           getDescriptor() {
         return org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.internal_static_CleanupBulkLoadResponse_descriptor;
       }
-      
+
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.internal_static_CleanupBulkLoadResponse_fieldAccessorTable;
+        return org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.internal_static_CleanupBulkLoadResponse_fieldAccessorTable
+            .ensureFieldAccessorsInitialized(
+                org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.CleanupBulkLoadResponse.class, org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.CleanupBulkLoadResponse.Builder.class);
       }
-      
+
       // Construct using org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.CleanupBulkLoadResponse.newBuilder()
       private Builder() {
         maybeForceBuilderInitialization();
       }
-      
-      private Builder(BuilderParent parent) {
+
+      private Builder(
+          com.google.protobuf.GeneratedMessage.BuilderParent parent) {
         super(parent);
         maybeForceBuilderInitialization();
       }
@@ -3473,25 +4358,25 @@ public final class SecureBulkLoadProtos {
       private static Builder create() {
         return new Builder();
       }
-      
+
       public Builder clear() {
         super.clear();
         return this;
       }
-      
+
       public Builder clone() {
         return create().mergeFrom(buildPartial());
       }
-      
+
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.CleanupBulkLoadResponse.getDescriptor();
+        return org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.internal_static_CleanupBulkLoadResponse_descriptor;
       }
-      
+
       public org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.CleanupBulkLoadResponse getDefaultInstanceForType() {
         return org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.CleanupBulkLoadResponse.getDefaultInstance();
       }
-      
+
       public org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.CleanupBulkLoadResponse build() {
         org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.CleanupBulkLoadResponse result = buildPartial();
         if (!result.isInitialized()) {
@@ -3499,23 +4384,13 @@ public final class SecureBulkLoadProtos {
         }
         return result;
       }
-      
-      private org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.CleanupBulkLoadResponse buildParsed()
-          throws com.google.protobuf.InvalidProtocolBufferException {
-        org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.CleanupBulkLoadResponse result = buildPartial();
-        if (!result.isInitialized()) {
-          throw newUninitializedMessageException(
-            result).asInvalidProtocolBufferException();
-        }
-        return result;
-      }
-      
+
       public org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.CleanupBulkLoadResponse buildPartial() {
         org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.CleanupBulkLoadResponse result = new org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.CleanupBulkLoadResponse(this);
         onBuilt();
         return result;
       }
-      
+
       public Builder mergeFrom(com.google.protobuf.Message other) {
         if (other instanceof org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.CleanupBulkLoadResponse) {
           return mergeFrom((org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.CleanupBulkLoadResponse)other);
@@ -3524,78 +4399,80 @@ public final class SecureBulkLoadProtos {
           return this;
         }
       }
-      
+
       public Builder mergeFrom(org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.CleanupBulkLoadResponse other) {
         if (other == org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.CleanupBulkLoadResponse.getDefaultInstance()) return this;
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
       }
-      
+
       public final boolean isInitialized() {
         return true;
       }
-      
+
       public Builder mergeFrom(
           com.google.protobuf.CodedInputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws java.io.IOException {
-        com.google.protobuf.UnknownFieldSet.Builder unknownFields =
-          com.google.protobuf.UnknownFieldSet.newBuilder(
-            this.getUnknownFields());
-        while (true) {
-          int tag = input.readTag();
-          switch (tag) {
-            case 0:
-              this.setUnknownFields(unknownFields.build());
-              onChanged();
-              return this;
-            default: {
-              if (!parseUnknownField(input, unknownFields,
-                                     extensionRegistry, tag)) {
-                this.setUnknownFields(unknownFields.build());
-                onChanged();
-                return this;
-              }
-              break;
-            }
+        org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.CleanupBulkLoadResponse parsedMessage = null;
+        try {
+          parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
+        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+          parsedMessage = (org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.CleanupBulkLoadResponse) e.getUnfinishedMessage();
+          throw e;
+        } finally {
+          if (parsedMessage != null) {
+            mergeFrom(parsedMessage);
           }
         }
+        return this;
       }
-      
-      
+
       // @@protoc_insertion_point(builder_scope:CleanupBulkLoadResponse)
     }
-    
+
     static {
       defaultInstance = new CleanupBulkLoadResponse(true);
       defaultInstance.initFields();
     }
-    
+
     // @@protoc_insertion_point(class_scope:CleanupBulkLoadResponse)
   }
-  
+
+  /**
+   * Protobuf service {@code SecureBulkLoadService}
+   */
   public static abstract class SecureBulkLoadService
       implements com.google.protobuf.Service {
     protected SecureBulkLoadService() {}
-    
+
     public interface Interface {
+      /**
+       * <code>rpc PrepareBulkLoad(.PrepareBulkLoadRequest) returns (.PrepareBulkLoadResponse);</code>
+       */
       public abstract void prepareBulkLoad(
           com.google.protobuf.RpcController controller,
           org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.PrepareBulkLoadRequest request,
           com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.PrepareBulkLoadResponse> done);
-      
+
+      /**
+       * <code>rpc SecureBulkLoadHFiles(.SecureBulkLoadHFilesRequest) returns (.SecureBulkLoadHFilesResponse);</code>
+       */
       public abstract void secureBulkLoadHFiles(
           com.google.protobuf.RpcController controller,
           org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.SecureBulkLoadHFilesRequest request,
           com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.SecureBulkLoadHFilesResponse> done);
-      
+
+      /**
+       * <code>rpc CleanupBulkLoad(.CleanupBulkLoadRequest) returns (.CleanupBulkLoadResponse);</code>
+       */
       public abstract void cleanupBulkLoad(
           com.google.protobuf.RpcController controller,
           org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.CleanupBulkLoadRequest request,
           com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.CleanupBulkLoadResponse> done);
-      
+
     }
-    
+
     public static com.google.protobuf.Service newReflectiveService(
         final Interface impl) {
       return new SecureBulkLoadService() {
@@ -3606,7 +4483,7 @@ public final class SecureBulkLoadProtos {
             com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.PrepareBulkLoadResponse> done) {
           impl.prepareBulkLoad(controller, request, done);
         }
-        
+
         @java.lang.Override
         public  void secureBulkLoadHFiles(
             com.google.protobuf.RpcController controller,
@@ -3614,7 +4491,7 @@ public final class SecureBulkLoadProtos {
             com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.SecureBulkLoadHFilesResponse> done) {
           impl.secureBulkLoadHFiles(controller, request, done);
         }
-        
+
         @java.lang.Override
         public  void cleanupBulkLoad(
             com.google.protobuf.RpcController controller,
@@ -3622,10 +4499,10 @@ public final class SecureBulkLoadProtos {
             com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.CleanupBulkLoadResponse> done) {
           impl.cleanupBulkLoad(controller, request, done);
         }
-        
+
       };
     }
-    
+
     public static com.google.protobuf.BlockingService
         newReflectiveBlockingService(final BlockingInterface impl) {
       return new com.google.protobuf.BlockingService() {
@@ -3633,7 +4510,7 @@ public final class SecureBulkLoadProtos {
             getDescriptorForType() {
           return getDescriptor();
         }
-        
+
         public final com.google.protobuf.Message callBlockingMethod(
             com.google.protobuf.Descriptors.MethodDescriptor method,
             com.google.protobuf.RpcController controller,
@@ -3655,7 +4532,7 @@ public final class SecureBulkLoadProtos {
               throw new java.lang.AssertionError("Can't get here.");
           }
         }
-        
+
         public final com.google.protobuf.Message
             getRequestPrototype(
             com.google.protobuf.Descriptors.MethodDescriptor method) {
@@ -3675,7 +4552,7 @@ public final class SecureBulkLoadProtos {
               throw new java.lang.AssertionError("Can't get here.");
           }
         }
-        
+
         public final com.google.protobuf.Message
             getResponsePrototype(
             com.google.protobuf.Descriptors.MethodDescriptor method) {
@@ -3695,25 +4572,34 @@ public final class SecureBulkLoadProtos {
               throw new java.lang.AssertionError("Can't get here.");
           }
         }
-        
+
       };
     }
-    
+
+    /**
+     * <code>rpc PrepareBulkLoad(.PrepareBulkLoadRequest) returns (.PrepareBulkLoadResponse);</code>
+     */
     public abstract void prepareBulkLoad(
         com.google.protobuf.RpcController controller,
         org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.PrepareBulkLoadRequest request,
         com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.PrepareBulkLoadResponse> done);
-    
+
+    /**
+     * <code>rpc SecureBulkLoadHFiles(.SecureBulkLoadHFilesRequest) returns (.SecureBulkLoadHFilesResponse);</code>
+     */
     public abstract void secureBulkLoadHFiles(
         com.google.protobuf.RpcController controller,
         org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.SecureBulkLoadHFilesRequest request,
         com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.SecureBulkLoadHFilesResponse> done);
-    
+
+    /**
+     * <code>rpc CleanupBulkLoad(.CleanupBulkLoadRequest) returns (.CleanupBulkLoadResponse);</code>
+     */
     public abstract void cleanupBulkLoad(
         com.google.protobuf.RpcController controller,
         org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.CleanupBulkLoadRequest request,
         com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.CleanupBulkLoadResponse> done);
-    
+
     public static final
         com.google.protobuf.Descriptors.ServiceDescriptor
         getDescriptor() {
@@ -3723,7 +4609,7 @@ public final class SecureBulkLoadProtos {
         getDescriptorForType() {
       return getDescriptor();
     }
-    
+
     public final void callMethod(
         com.google.protobuf.Descriptors.MethodDescriptor method,
         com.google.protobuf.RpcController controller,
@@ -3755,7 +4641,7 @@ public final class SecureBulkLoadProtos {
           throw new java.lang.AssertionError("Can't get here.");
       }
     }
-    
+
     public final com.google.protobuf.Message
         getRequestPrototype(
         com.google.protobuf.Descriptors.MethodDescriptor method) {
@@ -3775,7 +4661,7 @@ public final class SecureBulkLoadProtos {
           throw new java.lang.AssertionError("Can't get here.");
       }
     }
-    
+
     public final com.google.protobuf.Message
         getResponsePrototype(
         com.google.protobuf.Descriptors.MethodDescriptor method) {
@@ -3795,23 +4681,23 @@ public final class SecureBulkLoadProtos {
           throw new java.lang.AssertionError("Can't get here.");
       }
     }
-    
+
     public static Stub newStub(
         com.google.protobuf.RpcChannel channel) {
       return new Stub(channel);
     }
-    
+
     public static final class Stub extends org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.SecureBulkLoadService implements Interface {
       private Stub(com.google.protobuf.RpcChannel channel) {
         this.channel = channel;
       }
-      
+
       private final com.google.protobuf.RpcChannel channel;
-      
+
       public com.google.protobuf.RpcChannel getChannel() {
         return channel;
       }
-      
+
       public  void prepareBulkLoad(
           com.google.protobuf.RpcController controller,
           org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.PrepareBulkLoadRequest request,
@@ -3826,7 +4712,7 @@ public final class SecureBulkLoadProtos {
             org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.PrepareBulkLoadResponse.class,
             org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.PrepareBulkLoadResponse.getDefaultInstance()));
       }
-      
+
       public  void secureBulkLoadHFiles(
           com.google.protobuf.RpcController controller,
           org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.SecureBulkLoadHFilesRequest request,
@@ -3841,7 +4727,7 @@ public final class SecureBulkLoadProtos {
             org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.SecureBulkLoadHFilesResponse.class,
             org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.SecureBulkLoadHFilesResponse.getDefaultInstance()));
       }
-      
+
       public  void cleanupBulkLoad(
           com.google.protobuf.RpcController controller,
           org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.CleanupBulkLoadRequest request,
@@ -3857,36 +4743,36 @@ public final class SecureBulkLoadProtos {
             org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.CleanupBulkLoadResponse.getDefaultInstance()));
       }
     }
-    
+
     public static BlockingInterface newBlockingStub(
         com.google.protobuf.BlockingRpcChannel channel) {
       return new BlockingStub(channel);
     }
-    
+
     public interface BlockingInterface {
       public org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.PrepareBulkLoadResponse prepareBulkLoad(
           com.google.protobuf.RpcController controller,
           org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.PrepareBulkLoadRequest request)
           throws com.google.protobuf.ServiceException;
-      
+
       public org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.SecureBulkLoadHFilesResponse secureBulkLoadHFiles(
           com.google.protobuf.RpcController controller,
           org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.SecureBulkLoadHFilesRequest request)
           throws com.google.protobuf.ServiceException;
-      
+
       public org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.CleanupBulkLoadResponse cleanupBulkLoad(
           com.google.protobuf.RpcController controller,
           org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.CleanupBulkLoadRequest request)
           throws com.google.protobuf.ServiceException;
     }
-    
+
     private static final class BlockingStub implements BlockingInterface {
       private BlockingStub(com.google.protobuf.BlockingRpcChannel channel) {
         this.channel = channel;
       }
-      
+
       private final com.google.protobuf.BlockingRpcChannel channel;
-      
+
       public org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.PrepareBulkLoadResponse prepareBulkLoad(
           com.google.protobuf.RpcController controller,
           org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.PrepareBulkLoadRequest request)
@@ -3897,8 +4783,8 @@ public final class SecureBulkLoadProtos {
           request,
           org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.PrepareBulkLoadResponse.getDefaultInstance());
       }
-      
-      
+
+
       public org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.SecureBulkLoadHFilesResponse secureBulkLoadHFiles(
           com.google.protobuf.RpcController controller,
           org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.SecureBulkLoadHFilesRequest request)
@@ -3909,8 +4795,8 @@ public final class SecureBulkLoadProtos {
           request,
           org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.SecureBulkLoadHFilesResponse.getDefaultInstance());
       }
-      
-      
+
+
       public org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.CleanupBulkLoadResponse cleanupBulkLoad(
           com.google.protobuf.RpcController controller,
           org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.CleanupBulkLoadRequest request)
@@ -3921,10 +4807,12 @@ public final class SecureBulkLoadProtos {
           request,
           org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.CleanupBulkLoadResponse.getDefaultInstance());
       }
-      
+
     }
+
+    // @@protoc_insertion_point(class_scope:SecureBulkLoadService)
   }
-  
+
   private static com.google.protobuf.Descriptors.Descriptor
     internal_static_SecureBulkLoadHFilesRequest_descriptor;
   private static
@@ -3960,7 +4848,7 @@ public final class SecureBulkLoadProtos {
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_CleanupBulkLoadResponse_fieldAccessorTable;
-  
+
   public static com.google.protobuf.Descriptors.FileDescriptor
       getDescriptor() {
     return descriptor;
@@ -4002,57 +4890,43 @@ public final class SecureBulkLoadProtos {
           internal_static_SecureBulkLoadHFilesRequest_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_SecureBulkLoadHFilesRequest_descriptor,
-              new java.lang.String[] { "FamilyPath", "AssignSeqNum", "FsToken", "BulkToken", },
-              org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.SecureBulkLoadHFilesRequest.class,
-              org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.SecureBulkLoadHFilesRequest.Builder.class);
+              new java.lang.String[] { "FamilyPath", "AssignSeqNum", "FsToken", "BulkToken", });
           internal_static_SecureBulkLoadHFilesResponse_descriptor =
             getDescriptor().getMessageTypes().get(1);
           internal_static_SecureBulkLoadHFilesResponse_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_SecureBulkLoadHFilesResponse_descriptor,
-              new java.lang.String[] { "Loaded", },
-              org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.SecureBulkLoadHFilesResponse.class,
-              org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.SecureBulkLoadHFilesResponse.Builder.class);
+              new java.lang.String[] { "Loaded", });
           internal_static_DelegationTokenProto_descriptor =
             getDescriptor().getMessageTypes().get(2);
           internal_static_DelegationTokenProto_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_DelegationTokenProto_descriptor,
-              new java.lang.String[] { "Identifier", "Password", "Kind", "Service", },
-              org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationTokenProto.class,
-              org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationTokenProto.Builder.class);
+              new java.lang.String[] { "Identifier", "Password", "Kind", "Service", });
           internal_static_PrepareBulkLoadRequest_descriptor =
             getDescriptor().getMessageTypes().get(3);
           internal_static_PrepareBulkLoadRequest_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_PrepareBulkLoadRequest_descriptor,
-              new java.lang.String[] { "TableName", },
-              org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.PrepareBulkLoadRequest.class,
-              org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.PrepareBulkLoadRequest.Builder.class);
+              new java.lang.String[] { "TableName", });
           internal_static_PrepareBulkLoadResponse_descriptor =
             getDescriptor().getMessageTypes().get(4);
           internal_static_PrepareBulkLoadResponse_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_PrepareBulkLoadResponse_descriptor,
-              new java.lang.String[] { "BulkToken", },
-              org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.PrepareBulkLoadResponse.class,
-              org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.PrepareBulkLoadResponse.Builder.class);
+              new java.lang.String[] { "BulkToken", });
           internal_static_CleanupBulkLoadRequest_descriptor =
             getDescriptor().getMessageTypes().get(5);
           internal_static_CleanupBulkLoadRequest_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_CleanupBulkLoadRequest_descriptor,
-              new java.lang.String[] { "BulkToken", },
-              org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.CleanupBulkLoadRequest.class,
-              org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.CleanupBulkLoadRequest.Builder.class);
+              new java.lang.String[] { "BulkToken", });
           internal_static_CleanupBulkLoadResponse_descriptor =
             getDescriptor().getMessageTypes().get(6);
           internal_static_CleanupBulkLoadResponse_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_CleanupBulkLoadResponse_descriptor,
-              new java.lang.String[] { },
-              org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.CleanupBulkLoadResponse.class,
-              org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.CleanupBulkLoadResponse.Builder.class);
+              new java.lang.String[] { });
           return null;
         }
       };
@@ -4063,6 +4937,6 @@ public final class SecureBulkLoadProtos {
           org.apache.hadoop.hbase.protobuf.generated.ClientProtos.getDescriptor(),
         }, assigner);
   }
-  
+
   // @@protoc_insertion_point(outer_class_scope)
 }

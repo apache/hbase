@@ -132,6 +132,7 @@ import com.google.common.collect.Lists;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.Message;
+import com.google.protobuf.Parser;
 import com.google.protobuf.RpcChannel;
 import com.google.protobuf.Service;
 import com.google.protobuf.ServiceException;
@@ -2055,17 +2056,19 @@ public final class ProtobufUtil {
   }
 
   public static ScanMetrics toScanMetrics(final byte[] bytes) {
-    MapReduceProtos.ScanMetrics.Builder builder = MapReduceProtos.ScanMetrics.newBuilder();
+    Parser<MapReduceProtos.ScanMetrics> parser = MapReduceProtos.ScanMetrics.PARSER;
+    MapReduceProtos.ScanMetrics pScanMetrics = null;
     try {
-      builder.mergeFrom(bytes);
+      pScanMetrics = parser.parseFrom(bytes);
     } catch (InvalidProtocolBufferException e) {
       //Ignored there are just no key values to add.
     }
-    MapReduceProtos.ScanMetrics pScanMetrics = builder.build();
     ScanMetrics scanMetrics = new ScanMetrics();
-    for (HBaseProtos.NameInt64Pair pair : pScanMetrics.getMetricsList()) {
-      if (pair.hasName() && pair.hasValue()) {
-        scanMetrics.setCounter(pair.getName(), pair.getValue());
+    if (pScanMetrics != null) {
+      for (HBaseProtos.NameInt64Pair pair : pScanMetrics.getMetricsList()) {
+        if (pair.hasName() && pair.hasValue()) {
+          scanMetrics.setCounter(pair.getName(), pair.getValue());
+        }
       }
     }
     return scanMetrics;

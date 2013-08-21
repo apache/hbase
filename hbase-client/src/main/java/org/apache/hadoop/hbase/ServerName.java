@@ -345,7 +345,7 @@ public class ServerName implements Comparable<ServerName>, Serializable {
       int prefixLen = ProtobufUtil.lengthOfPBMagic();
       try {
         MetaRegionServer rss =
-          MetaRegionServer.newBuilder().mergeFrom(data, prefixLen, data.length - prefixLen).build();
+          MetaRegionServer.PARSER.parseFrom(data, prefixLen, data.length - prefixLen);
         org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName sn = rss.getServer();
         return new ServerName(sn.getHostName(), sn.getPort(), sn.getStartCode());
       } catch (InvalidProtocolBufferException e) {

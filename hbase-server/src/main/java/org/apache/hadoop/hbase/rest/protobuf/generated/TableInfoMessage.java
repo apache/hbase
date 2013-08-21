@@ -10,517 +10,264 @@ public final class TableInfoMessage {
   }
   public interface TableInfoOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
-    
+
     // required string name = 1;
+    /**
+     * <code>required string name = 1;</code>
+     */
     boolean hasName();
-    String getName();
-    
+    /**
+     * <code>required string name = 1;</code>
+     */
+    java.lang.String getName();
+    /**
+     * <code>required string name = 1;</code>
+     */
+    com.google.protobuf.ByteString
+        getNameBytes();
+
     // repeated .org.apache.hadoop.hbase.rest.protobuf.generated.TableInfo.Region regions = 2;
+    /**
+     * <code>repeated .org.apache.hadoop.hbase.rest.protobuf.generated.TableInfo.Region regions = 2;</code>
+     */
     java.util.List<org.apache.hadoop.hbase.rest.protobuf.generated.TableInfoMessage.TableInfo.Region> 
         getRegionsList();
+    /**
+     * <code>repeated .org.apache.hadoop.hbase.rest.protobuf.generated.TableInfo.Region regions = 2;</code>
+     */
     org.apache.hadoop.hbase.rest.protobuf.generated.TableInfoMessage.TableInfo.Region getRegions(int index);
+    /**
+     * <code>repeated .org.apache.hadoop.hbase.rest.protobuf.generated.TableInfo.Region regions = 2;</code>
+     */
     int getRegionsCount();
+    /**
+     * <code>repeated .org.apache.hadoop.hbase.rest.protobuf.generated.TableInfo.Region regions = 2;</code>
+     */
     java.util.List<? extends org.apache.hadoop.hbase.rest.protobuf.generated.TableInfoMessage.TableInfo.RegionOrBuilder> 
         getRegionsOrBuilderList();
+    /**
+     * <code>repeated .org.apache.hadoop.hbase.rest.protobuf.generated.TableInfo.Region regions = 2;</code>
+     */
     org.apache.hadoop.hbase.rest.protobuf.generated.TableInfoMessage.TableInfo.RegionOrBuilder getRegionsOrBuilder(
         int index);
   }
+  /**
+   * Protobuf type {@code org.apache.hadoop.hbase.rest.protobuf.generated.TableInfo}
+   */
   public static final class TableInfo extends
       com.google.protobuf.GeneratedMessage
       implements TableInfoOrBuilder {
     // Use TableInfo.newBuilder() to construct.
-    private TableInfo(Builder builder) {
+    private TableInfo(com.google.protobuf.GeneratedMessage.Builder<?> builder) {
       super(builder);
+      this.unknownFields = builder.getUnknownFields();
     }
-    private TableInfo(boolean noInit) {}
-    
+    private TableInfo(boolean noInit) { this.unknownFields = com.google.protobuf.UnknownFieldSet.getDefaultInstance(); }
+
     private static final TableInfo defaultInstance;
     public static TableInfo getDefaultInstance() {
       return defaultInstance;
     }
-    
+
     public TableInfo getDefaultInstanceForType() {
       return defaultInstance;
     }
-    
+
+    private final com.google.protobuf.UnknownFieldSet unknownFields;
+    @java.lang.Override
+    public final com.google.protobuf.UnknownFieldSet
+        getUnknownFields() {
+      return this.unknownFields;
+    }
+    private TableInfo(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      initFields();
+      int mutable_bitField0_ = 0;
+      com.google.protobuf.UnknownFieldSet.Builder unknownFields =
+          com.google.protobuf.UnknownFieldSet.newBuilder();
+      try {
+        boolean done = false;
+        while (!done) {
+          int tag = input.readTag();
+          switch (tag) {
+            case 0:
+              done = true;
+              break;
+            default: {
+              if (!parseUnknownField(input, unknownFields,
+                                     extensionRegistry, tag)) {
+                done = true;
+              }
+              break;
+            }
+            case 10: {
+              bitField0_ |= 0x00000001;
+              name_ = input.readBytes();
+              break;
+            }
+            case 18: {
+              if (!((mutable_bitField0_ & 0x00000002) == 0x00000002)) {
+                regions_ = new java.util.ArrayList<org.apache.hadoop.hbase.rest.protobuf.generated.TableInfoMessage.TableInfo.Region>();
+                mutable_bitField0_ |= 0x00000002;
+              }
+              regions_.add(input.readMessage(org.apache.hadoop.hbase.rest.protobuf.generated.TableInfoMessage.TableInfo.Region.PARSER, extensionRegistry));
+              break;
+            }
+          }
+        }
+      } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+        throw e.setUnfinishedMessage(this);
+      } catch (java.io.IOException e) {
+        throw new com.google.protobuf.InvalidProtocolBufferException(
+            e.getMessage()).setUnfinishedMessage(this);
+      } finally {
+        if (((mutable_bitField0_ & 0x00000002) == 0x00000002)) {
+          regions_ = java.util.Collections.unmodifiableList(regions_);
+        }
+        this.unknownFields = unknownFields.build();
+        makeExtensionsImmutable();
+      }
+    }
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
       return org.apache.hadoop.hbase.rest.protobuf.generated.TableInfoMessage.internal_static_org_apache_hadoop_hbase_rest_protobuf_generated_TableInfo_descriptor;
     }
-    
+
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return org.apache.hadoop.hbase.rest.protobuf.generated.TableInfoMessage.internal_static_org_apache_hadoop_hbase_rest_protobuf_generated_TableInfo_fieldAccessorTable;
+      return org.apache.hadoop.hbase.rest.protobuf.generated.TableInfoMessage.internal_static_org_apache_hadoop_hbase_rest_protobuf_generated_TableInfo_fieldAccessorTable
+          .ensureFieldAccessorsInitialized(
+              org.apache.hadoop.hbase.rest.protobuf.generated.TableInfoMessage.TableInfo.class, org.apache.hadoop.hbase.rest.protobuf.generated.TableInfoMessage.TableInfo.Builder.class);
     }
-    
+
+    public static com.google.protobuf.Parser<TableInfo> PARSER =
+        new com.google.protobuf.AbstractParser<TableInfo>() {
+      public TableInfo parsePartialFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        return new TableInfo(input, extensionRegistry);
+      }
+    };
+
+    @java.lang.Override
+    public com.google.protobuf.Parser<TableInfo> getParserForType() {
+      return PARSER;
+    }
+
     public interface RegionOrBuilder
         extends com.google.protobuf.MessageOrBuilder {
-      
+
       // required string name = 1;
+      /**
+       * <code>required string name = 1;</code>
+       */
       boolean hasName();
-      String getName();
-      
+      /**
+       * <code>required string name = 1;</code>
+       */
+      java.lang.String getName();
+      /**
+       * <code>required string name = 1;</code>
+       */
+      com.google.protobuf.ByteString
+          getNameBytes();
+
       // optional bytes startKey = 2;
+      /**
+       * <code>optional bytes startKey = 2;</code>
+       */
       boolean hasStartKey();
+      /**
+       * <code>optional bytes startKey = 2;</code>
+       */
       com.google.protobuf.ByteString getStartKey();
-      
+
       // optional bytes endKey = 3;
+      /**
+       * <code>optional bytes endKey = 3;</code>
+       */
       boolean hasEndKey();
+      /**
+       * <code>optional bytes endKey = 3;</code>
+       */
       com.google.protobuf.ByteString getEndKey();
-      
+
       // optional int64 id = 4;
+      /**
+       * <code>optional int64 id = 4;</code>
+       */
       boolean hasId();
+      /**
+       * <code>optional int64 id = 4;</code>
+       */
       long getId();
-      
+
       // optional string location = 5;
+      /**
+       * <code>optional string location = 5;</code>
+       */
       boolean hasLocation();
-      String getLocation();
+      /**
+       * <code>optional string location = 5;</code>
+       */
+      java.lang.String getLocation();
+      /**
+       * <code>optional string location = 5;</code>
+       */
+      com.google.protobuf.ByteString
+          getLocationBytes();
     }
+    /**
+     * Protobuf type {@code org.apache.hadoop.hbase.rest.protobuf.generated.TableInfo.Region}
+     */
     public static final class Region extends
         com.google.protobuf.GeneratedMessage
         implements RegionOrBuilder {
       // Use Region.newBuilder() to construct.
-      private Region(Builder builder) {
+      private Region(com.google.protobuf.GeneratedMessage.Builder<?> builder) {
         super(builder);
+        this.unknownFields = builder.getUnknownFields();
       }
-      private Region(boolean noInit) {}
-      
+      private Region(boolean noInit) { this.unknownFields = com.google.protobuf.UnknownFieldSet.getDefaultInstance(); }
+
       private static final Region defaultInstance;
       public static Region getDefaultInstance() {
         return defaultInstance;
       }
-      
+
       public Region getDefaultInstanceForType() {
         return defaultInstance;
       }
-      
-      public static final com.google.protobuf.Descriptors.Descriptor
-          getDescriptor() {
-        return org.apache.hadoop.hbase.rest.protobuf.generated.TableInfoMessage.internal_static_org_apache_hadoop_hbase_rest_protobuf_generated_TableInfo_Region_descriptor;
-      }
-      
-      protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
-          internalGetFieldAccessorTable() {
-        return org.apache.hadoop.hbase.rest.protobuf.generated.TableInfoMessage.internal_static_org_apache_hadoop_hbase_rest_protobuf_generated_TableInfo_Region_fieldAccessorTable;
-      }
-      
-      private int bitField0_;
-      // required string name = 1;
-      public static final int NAME_FIELD_NUMBER = 1;
-      private java.lang.Object name_;
-      public boolean hasName() {
-        return ((bitField0_ & 0x00000001) == 0x00000001);
-      }
-      public String getName() {
-        java.lang.Object ref = name_;
-        if (ref instanceof String) {
-          return (String) ref;
-        } else {
-          com.google.protobuf.ByteString bs = 
-              (com.google.protobuf.ByteString) ref;
-          String s = bs.toStringUtf8();
-          if (com.google.protobuf.Internal.isValidUtf8(bs)) {
-            name_ = s;
-          }
-          return s;
-        }
-      }
-      private com.google.protobuf.ByteString getNameBytes() {
-        java.lang.Object ref = name_;
-        if (ref instanceof String) {
-          com.google.protobuf.ByteString b = 
-              com.google.protobuf.ByteString.copyFromUtf8((String) ref);
-          name_ = b;
-          return b;
-        } else {
-          return (com.google.protobuf.ByteString) ref;
-        }
-      }
-      
-      // optional bytes startKey = 2;
-      public static final int STARTKEY_FIELD_NUMBER = 2;
-      private com.google.protobuf.ByteString startKey_;
-      public boolean hasStartKey() {
-        return ((bitField0_ & 0x00000002) == 0x00000002);
-      }
-      public com.google.protobuf.ByteString getStartKey() {
-        return startKey_;
-      }
-      
-      // optional bytes endKey = 3;
-      public static final int ENDKEY_FIELD_NUMBER = 3;
-      private com.google.protobuf.ByteString endKey_;
-      public boolean hasEndKey() {
-        return ((bitField0_ & 0x00000004) == 0x00000004);
-      }
-      public com.google.protobuf.ByteString getEndKey() {
-        return endKey_;
-      }
-      
-      // optional int64 id = 4;
-      public static final int ID_FIELD_NUMBER = 4;
-      private long id_;
-      public boolean hasId() {
-        return ((bitField0_ & 0x00000008) == 0x00000008);
-      }
-      public long getId() {
-        return id_;
-      }
-      
-      // optional string location = 5;
-      public static final int LOCATION_FIELD_NUMBER = 5;
-      private java.lang.Object location_;
-      public boolean hasLocation() {
-        return ((bitField0_ & 0x00000010) == 0x00000010);
-      }
-      public String getLocation() {
-        java.lang.Object ref = location_;
-        if (ref instanceof String) {
-          return (String) ref;
-        } else {
-          com.google.protobuf.ByteString bs = 
-              (com.google.protobuf.ByteString) ref;
-          String s = bs.toStringUtf8();
-          if (com.google.protobuf.Internal.isValidUtf8(bs)) {
-            location_ = s;
-          }
-          return s;
-        }
-      }
-      private com.google.protobuf.ByteString getLocationBytes() {
-        java.lang.Object ref = location_;
-        if (ref instanceof String) {
-          com.google.protobuf.ByteString b = 
-              com.google.protobuf.ByteString.copyFromUtf8((String) ref);
-          location_ = b;
-          return b;
-        } else {
-          return (com.google.protobuf.ByteString) ref;
-        }
-      }
-      
-      private void initFields() {
-        name_ = "";
-        startKey_ = com.google.protobuf.ByteString.EMPTY;
-        endKey_ = com.google.protobuf.ByteString.EMPTY;
-        id_ = 0L;
-        location_ = "";
-      }
-      private byte memoizedIsInitialized = -1;
-      public final boolean isInitialized() {
-        byte isInitialized = memoizedIsInitialized;
-        if (isInitialized != -1) return isInitialized == 1;
-        
-        if (!hasName()) {
-          memoizedIsInitialized = 0;
-          return false;
-        }
-        memoizedIsInitialized = 1;
-        return true;
-      }
-      
-      public void writeTo(com.google.protobuf.CodedOutputStream output)
-                          throws java.io.IOException {
-        getSerializedSize();
-        if (((bitField0_ & 0x00000001) == 0x00000001)) {
-          output.writeBytes(1, getNameBytes());
-        }
-        if (((bitField0_ & 0x00000002) == 0x00000002)) {
-          output.writeBytes(2, startKey_);
-        }
-        if (((bitField0_ & 0x00000004) == 0x00000004)) {
-          output.writeBytes(3, endKey_);
-        }
-        if (((bitField0_ & 0x00000008) == 0x00000008)) {
-          output.writeInt64(4, id_);
-        }
-        if (((bitField0_ & 0x00000010) == 0x00000010)) {
-          output.writeBytes(5, getLocationBytes());
-        }
-        getUnknownFields().writeTo(output);
-      }
-      
-      private int memoizedSerializedSize = -1;
-      public int getSerializedSize() {
-        int size = memoizedSerializedSize;
-        if (size != -1) return size;
-      
-        size = 0;
-        if (((bitField0_ & 0x00000001) == 0x00000001)) {
-          size += com.google.protobuf.CodedOutputStream
-            .computeBytesSize(1, getNameBytes());
-        }
-        if (((bitField0_ & 0x00000002) == 0x00000002)) {
-          size += com.google.protobuf.CodedOutputStream
-            .computeBytesSize(2, startKey_);
-        }
-        if (((bitField0_ & 0x00000004) == 0x00000004)) {
-          size += com.google.protobuf.CodedOutputStream
-            .computeBytesSize(3, endKey_);
-        }
-        if (((bitField0_ & 0x00000008) == 0x00000008)) {
-          size += com.google.protobuf.CodedOutputStream
-            .computeInt64Size(4, id_);
-        }
-        if (((bitField0_ & 0x00000010) == 0x00000010)) {
-          size += com.google.protobuf.CodedOutputStream
-            .computeBytesSize(5, getLocationBytes());
-        }
-        size += getUnknownFields().getSerializedSize();
-        memoizedSerializedSize = size;
-        return size;
-      }
-      
-      private static final long serialVersionUID = 0L;
+
+      private final com.google.protobuf.UnknownFieldSet unknownFields;
       @java.lang.Override
-      protected java.lang.Object writeReplace()
-          throws java.io.ObjectStreamException {
-        return super.writeReplace();
+      public final com.google.protobuf.UnknownFieldSet
+          getUnknownFields() {
+        return this.unknownFields;
       }
-      
-      public static org.apache.hadoop.hbase.rest.protobuf.generated.TableInfoMessage.TableInfo.Region parseFrom(
-          com.google.protobuf.ByteString data)
-          throws com.google.protobuf.InvalidProtocolBufferException {
-        return newBuilder().mergeFrom(data).buildParsed();
-      }
-      public static org.apache.hadoop.hbase.rest.protobuf.generated.TableInfoMessage.TableInfo.Region parseFrom(
-          com.google.protobuf.ByteString data,
-          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-          throws com.google.protobuf.InvalidProtocolBufferException {
-        return newBuilder().mergeFrom(data, extensionRegistry)
-                 .buildParsed();
-      }
-      public static org.apache.hadoop.hbase.rest.protobuf.generated.TableInfoMessage.TableInfo.Region parseFrom(byte[] data)
-          throws com.google.protobuf.InvalidProtocolBufferException {
-        return newBuilder().mergeFrom(data).buildParsed();
-      }
-      public static org.apache.hadoop.hbase.rest.protobuf.generated.TableInfoMessage.TableInfo.Region parseFrom(
-          byte[] data,
-          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-          throws com.google.protobuf.InvalidProtocolBufferException {
-        return newBuilder().mergeFrom(data, extensionRegistry)
-                 .buildParsed();
-      }
-      public static org.apache.hadoop.hbase.rest.protobuf.generated.TableInfoMessage.TableInfo.Region parseFrom(java.io.InputStream input)
-          throws java.io.IOException {
-        return newBuilder().mergeFrom(input).buildParsed();
-      }
-      public static org.apache.hadoop.hbase.rest.protobuf.generated.TableInfoMessage.TableInfo.Region parseFrom(
-          java.io.InputStream input,
-          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-          throws java.io.IOException {
-        return newBuilder().mergeFrom(input, extensionRegistry)
-                 .buildParsed();
-      }
-      public static org.apache.hadoop.hbase.rest.protobuf.generated.TableInfoMessage.TableInfo.Region parseDelimitedFrom(java.io.InputStream input)
-          throws java.io.IOException {
-        Builder builder = newBuilder();
-        if (builder.mergeDelimitedFrom(input)) {
-          return builder.buildParsed();
-        } else {
-          return null;
-        }
-      }
-      public static org.apache.hadoop.hbase.rest.protobuf.generated.TableInfoMessage.TableInfo.Region parseDelimitedFrom(
-          java.io.InputStream input,
-          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-          throws java.io.IOException {
-        Builder builder = newBuilder();
-        if (builder.mergeDelimitedFrom(input, extensionRegistry)) {
-          return builder.buildParsed();
-        } else {
-          return null;
-        }
-      }
-      public static org.apache.hadoop.hbase.rest.protobuf.generated.TableInfoMessage.TableInfo.Region parseFrom(
-          com.google.protobuf.CodedInputStream input)
-          throws java.io.IOException {
-        return newBuilder().mergeFrom(input).buildParsed();
-      }
-      public static org.apache.hadoop.hbase.rest.protobuf.generated.TableInfoMessage.TableInfo.Region parseFrom(
+      private Region(
           com.google.protobuf.CodedInputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-          throws java.io.IOException {
-        return newBuilder().mergeFrom(input, extensionRegistry)
-                 .buildParsed();
-      }
-      
-      public static Builder newBuilder() { return Builder.create(); }
-      public Builder newBuilderForType() { return newBuilder(); }
-      public static Builder newBuilder(org.apache.hadoop.hbase.rest.protobuf.generated.TableInfoMessage.TableInfo.Region prototype) {
-        return newBuilder().mergeFrom(prototype);
-      }
-      public Builder toBuilder() { return newBuilder(this); }
-      
-      @java.lang.Override
-      protected Builder newBuilderForType(
-          com.google.protobuf.GeneratedMessage.BuilderParent parent) {
-        Builder builder = new Builder(parent);
-        return builder;
-      }
-      public static final class Builder extends
-          com.google.protobuf.GeneratedMessage.Builder<Builder>
-         implements org.apache.hadoop.hbase.rest.protobuf.generated.TableInfoMessage.TableInfo.RegionOrBuilder {
-        public static final com.google.protobuf.Descriptors.Descriptor
-            getDescriptor() {
-          return org.apache.hadoop.hbase.rest.protobuf.generated.TableInfoMessage.internal_static_org_apache_hadoop_hbase_rest_protobuf_generated_TableInfo_Region_descriptor;
-        }
-        
-        protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
-            internalGetFieldAccessorTable() {
-          return org.apache.hadoop.hbase.rest.protobuf.generated.TableInfoMessage.internal_static_org_apache_hadoop_hbase_rest_protobuf_generated_TableInfo_Region_fieldAccessorTable;
-        }
-        
-        // Construct using org.apache.hadoop.hbase.rest.protobuf.generated.TableInfoMessage.TableInfo.Region.newBuilder()
-        private Builder() {
-          maybeForceBuilderInitialization();
-        }
-        
-        private Builder(BuilderParent parent) {
-          super(parent);
-          maybeForceBuilderInitialization();
-        }
-        private void maybeForceBuilderInitialization() {
-          if (com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders) {
-          }
-        }
-        private static Builder create() {
-          return new Builder();
-        }
-        
-        public Builder clear() {
-          super.clear();
-          name_ = "";
-          bitField0_ = (bitField0_ & ~0x00000001);
-          startKey_ = com.google.protobuf.ByteString.EMPTY;
-          bitField0_ = (bitField0_ & ~0x00000002);
-          endKey_ = com.google.protobuf.ByteString.EMPTY;
-          bitField0_ = (bitField0_ & ~0x00000004);
-          id_ = 0L;
-          bitField0_ = (bitField0_ & ~0x00000008);
-          location_ = "";
-          bitField0_ = (bitField0_ & ~0x00000010);
-          return this;
-        }
-        
-        public Builder clone() {
-          return create().mergeFrom(buildPartial());
-        }
-        
-        public com.google.protobuf.Descriptors.Descriptor
-            getDescriptorForType() {
-          return org.apache.hadoop.hbase.rest.protobuf.generated.TableInfoMessage.TableInfo.Region.getDescriptor();
-        }
-        
-        public org.apache.hadoop.hbase.rest.protobuf.generated.TableInfoMessage.TableInfo.Region getDefaultInstanceForType() {
-          return org.apache.hadoop.hbase.rest.protobuf.generated.TableInfoMessage.TableInfo.Region.getDefaultInstance();
-        }
-        
-        public org.apache.hadoop.hbase.rest.protobuf.generated.TableInfoMessage.TableInfo.Region build() {
-          org.apache.hadoop.hbase.rest.protobuf.generated.TableInfoMessage.TableInfo.Region result = buildPartial();
-          if (!result.isInitialized()) {
-            throw newUninitializedMessageException(result);
-          }
-          return result;
-        }
-        
-        private org.apache.hadoop.hbase.rest.protobuf.generated.TableInfoMessage.TableInfo.Region buildParsed()
-            throws com.google.protobuf.InvalidProtocolBufferException {
-          org.apache.hadoop.hbase.rest.protobuf.generated.TableInfoMessage.TableInfo.Region result = buildPartial();
-          if (!result.isInitialized()) {
-            throw newUninitializedMessageException(
-              result).asInvalidProtocolBufferException();
-          }
-          return result;
-        }
-        
-        public org.apache.hadoop.hbase.rest.protobuf.generated.TableInfoMessage.TableInfo.Region buildPartial() {
-          org.apache.hadoop.hbase.rest.protobuf.generated.TableInfoMessage.TableInfo.Region result = new org.apache.hadoop.hbase.rest.protobuf.generated.TableInfoMessage.TableInfo.Region(this);
-          int from_bitField0_ = bitField0_;
-          int to_bitField0_ = 0;
-          if (((from_bitField0_ & 0x00000001) == 0x00000001)) {
-            to_bitField0_ |= 0x00000001;
-          }
-          result.name_ = name_;
-          if (((from_bitField0_ & 0x00000002) == 0x00000002)) {
-            to_bitField0_ |= 0x00000002;
-          }
-          result.startKey_ = startKey_;
-          if (((from_bitField0_ & 0x00000004) == 0x00000004)) {
-            to_bitField0_ |= 0x00000004;
-          }
-          result.endKey_ = endKey_;
-          if (((from_bitField0_ & 0x00000008) == 0x00000008)) {
-            to_bitField0_ |= 0x00000008;
-          }
-          result.id_ = id_;
-          if (((from_bitField0_ & 0x00000010) == 0x00000010)) {
-            to_bitField0_ |= 0x00000010;
-          }
-          result.location_ = location_;
-          result.bitField0_ = to_bitField0_;
-          onBuilt();
-          return result;
-        }
-        
-        public Builder mergeFrom(com.google.protobuf.Message other) {
-          if (other instanceof org.apache.hadoop.hbase.rest.protobuf.generated.TableInfoMessage.TableInfo.Region) {
-            return mergeFrom((org.apache.hadoop.hbase.rest.protobuf.generated.TableInfoMessage.TableInfo.Region)other);
-          } else {
-            super.mergeFrom(other);
-            return this;
-          }
-        }
-        
-        public Builder mergeFrom(org.apache.hadoop.hbase.rest.protobuf.generated.TableInfoMessage.TableInfo.Region other) {
-          if (other == org.apache.hadoop.hbase.rest.protobuf.generated.TableInfoMessage.TableInfo.Region.getDefaultInstance()) return this;
-          if (other.hasName()) {
-            setName(other.getName());
-          }
-          if (other.hasStartKey()) {
-            setStartKey(other.getStartKey());
-          }
-          if (other.hasEndKey()) {
-            setEndKey(other.getEndKey());
-          }
-          if (other.hasId()) {
-            setId(other.getId());
-          }
-          if (other.hasLocation()) {
-            setLocation(other.getLocation());
-          }
-          this.mergeUnknownFields(other.getUnknownFields());
-          return this;
-        }
-        
-        public final boolean isInitialized() {
-          if (!hasName()) {
-            
-            return false;
-          }
-          return true;
-        }
-        
-        public Builder mergeFrom(
-            com.google.protobuf.CodedInputStream input,
-            com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-            throws java.io.IOException {
-          com.google.protobuf.UnknownFieldSet.Builder unknownFields =
-            com.google.protobuf.UnknownFieldSet.newBuilder(
-              this.getUnknownFields());
-          while (true) {
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        initFields();
+        int mutable_bitField0_ = 0;
+        com.google.protobuf.UnknownFieldSet.Builder unknownFields =
+            com.google.protobuf.UnknownFieldSet.newBuilder();
+        try {
+          boolean done = false;
+          while (!done) {
             int tag = input.readTag();
             switch (tag) {
               case 0:
-                this.setUnknownFields(unknownFields.build());
-                onChanged();
-                return this;
+                done = true;
+                break;
               default: {
                 if (!parseUnknownField(input, unknownFields,
                                        extensionRegistry, tag)) {
-                  this.setUnknownFields(unknownFields.build());
-                  onChanged();
-                  return this;
+                  done = true;
                 }
                 break;
               }
@@ -551,26 +298,528 @@ public final class TableInfoMessage {
               }
             }
           }
+        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+          throw e.setUnfinishedMessage(this);
+        } catch (java.io.IOException e) {
+          throw new com.google.protobuf.InvalidProtocolBufferException(
+              e.getMessage()).setUnfinishedMessage(this);
+        } finally {
+          this.unknownFields = unknownFields.build();
+          makeExtensionsImmutable();
         }
-        
+      }
+      public static final com.google.protobuf.Descriptors.Descriptor
+          getDescriptor() {
+        return org.apache.hadoop.hbase.rest.protobuf.generated.TableInfoMessage.internal_static_org_apache_hadoop_hbase_rest_protobuf_generated_TableInfo_Region_descriptor;
+      }
+
+      protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+          internalGetFieldAccessorTable() {
+        return org.apache.hadoop.hbase.rest.protobuf.generated.TableInfoMessage.internal_static_org_apache_hadoop_hbase_rest_protobuf_generated_TableInfo_Region_fieldAccessorTable
+            .ensureFieldAccessorsInitialized(
+                org.apache.hadoop.hbase.rest.protobuf.generated.TableInfoMessage.TableInfo.Region.class, org.apache.hadoop.hbase.rest.protobuf.generated.TableInfoMessage.TableInfo.Region.Builder.class);
+      }
+
+      public static com.google.protobuf.Parser<Region> PARSER =
+          new com.google.protobuf.AbstractParser<Region>() {
+        public Region parsePartialFrom(
+            com.google.protobuf.CodedInputStream input,
+            com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+            throws com.google.protobuf.InvalidProtocolBufferException {
+          return new Region(input, extensionRegistry);
+        }
+      };
+
+      @java.lang.Override
+      public com.google.protobuf.Parser<Region> getParserForType() {
+        return PARSER;
+      }
+
+      private int bitField0_;
+      // required string name = 1;
+      public static final int NAME_FIELD_NUMBER = 1;
+      private java.lang.Object name_;
+      /**
+       * <code>required string name = 1;</code>
+       */
+      public boolean hasName() {
+        return ((bitField0_ & 0x00000001) == 0x00000001);
+      }
+      /**
+       * <code>required string name = 1;</code>
+       */
+      public java.lang.String getName() {
+        java.lang.Object ref = name_;
+        if (ref instanceof java.lang.String) {
+          return (java.lang.String) ref;
+        } else {
+          com.google.protobuf.ByteString bs = 
+              (com.google.protobuf.ByteString) ref;
+          java.lang.String s = bs.toStringUtf8();
+          if (bs.isValidUtf8()) {
+            name_ = s;
+          }
+          return s;
+        }
+      }
+      /**
+       * <code>required string name = 1;</code>
+       */
+      public com.google.protobuf.ByteString
+          getNameBytes() {
+        java.lang.Object ref = name_;
+        if (ref instanceof java.lang.String) {
+          com.google.protobuf.ByteString b = 
+              com.google.protobuf.ByteString.copyFromUtf8(
+                  (java.lang.String) ref);
+          name_ = b;
+          return b;
+        } else {
+          return (com.google.protobuf.ByteString) ref;
+        }
+      }
+
+      // optional bytes startKey = 2;
+      public static final int STARTKEY_FIELD_NUMBER = 2;
+      private com.google.protobuf.ByteString startKey_;
+      /**
+       * <code>optional bytes startKey = 2;</code>
+       */
+      public boolean hasStartKey() {
+        return ((bitField0_ & 0x00000002) == 0x00000002);
+      }
+      /**
+       * <code>optional bytes startKey = 2;</code>
+       */
+      public com.google.protobuf.ByteString getStartKey() {
+        return startKey_;
+      }
+
+      // optional bytes endKey = 3;
+      public static final int ENDKEY_FIELD_NUMBER = 3;
+      private com.google.protobuf.ByteString endKey_;
+      /**
+       * <code>optional bytes endKey = 3;</code>
+       */
+      public boolean hasEndKey() {
+        return ((bitField0_ & 0x00000004) == 0x00000004);
+      }
+      /**
+       * <code>optional bytes endKey = 3;</code>
+       */
+      public com.google.protobuf.ByteString getEndKey() {
+        return endKey_;
+      }
+
+      // optional int64 id = 4;
+      public static final int ID_FIELD_NUMBER = 4;
+      private long id_;
+      /**
+       * <code>optional int64 id = 4;</code>
+       */
+      public boolean hasId() {
+        return ((bitField0_ & 0x00000008) == 0x00000008);
+      }
+      /**
+       * <code>optional int64 id = 4;</code>
+       */
+      public long getId() {
+        return id_;
+      }
+
+      // optional string location = 5;
+      public static final int LOCATION_FIELD_NUMBER = 5;
+      private java.lang.Object location_;
+      /**
+       * <code>optional string location = 5;</code>
+       */
+      public boolean hasLocation() {
+        return ((bitField0_ & 0x00000010) == 0x00000010);
+      }
+      /**
+       * <code>optional string location = 5;</code>
+       */
+      public java.lang.String getLocation() {
+        java.lang.Object ref = location_;
+        if (ref instanceof java.lang.String) {
+          return (java.lang.String) ref;
+        } else {
+          com.google.protobuf.ByteString bs = 
+              (com.google.protobuf.ByteString) ref;
+          java.lang.String s = bs.toStringUtf8();
+          if (bs.isValidUtf8()) {
+            location_ = s;
+          }
+          return s;
+        }
+      }
+      /**
+       * <code>optional string location = 5;</code>
+       */
+      public com.google.protobuf.ByteString
+          getLocationBytes() {
+        java.lang.Object ref = location_;
+        if (ref instanceof java.lang.String) {
+          com.google.protobuf.ByteString b = 
+              com.google.protobuf.ByteString.copyFromUtf8(
+                  (java.lang.String) ref);
+          location_ = b;
+          return b;
+        } else {
+          return (com.google.protobuf.ByteString) ref;
+        }
+      }
+
+      private void initFields() {
+        name_ = "";
+        startKey_ = com.google.protobuf.ByteString.EMPTY;
+        endKey_ = com.google.protobuf.ByteString.EMPTY;
+        id_ = 0L;
+        location_ = "";
+      }
+      private byte memoizedIsInitialized = -1;
+      public final boolean isInitialized() {
+        byte isInitialized = memoizedIsInitialized;
+        if (isInitialized != -1) return isInitialized == 1;
+
+        if (!hasName()) {
+          memoizedIsInitialized = 0;
+          return false;
+        }
+        memoizedIsInitialized = 1;
+        return true;
+      }
+
+      public void writeTo(com.google.protobuf.CodedOutputStream output)
+                          throws java.io.IOException {
+        getSerializedSize();
+        if (((bitField0_ & 0x00000001) == 0x00000001)) {
+          output.writeBytes(1, getNameBytes());
+        }
+        if (((bitField0_ & 0x00000002) == 0x00000002)) {
+          output.writeBytes(2, startKey_);
+        }
+        if (((bitField0_ & 0x00000004) == 0x00000004)) {
+          output.writeBytes(3, endKey_);
+        }
+        if (((bitField0_ & 0x00000008) == 0x00000008)) {
+          output.writeInt64(4, id_);
+        }
+        if (((bitField0_ & 0x00000010) == 0x00000010)) {
+          output.writeBytes(5, getLocationBytes());
+        }
+        getUnknownFields().writeTo(output);
+      }
+
+      private int memoizedSerializedSize = -1;
+      public int getSerializedSize() {
+        int size = memoizedSerializedSize;
+        if (size != -1) return size;
+
+        size = 0;
+        if (((bitField0_ & 0x00000001) == 0x00000001)) {
+          size += com.google.protobuf.CodedOutputStream
+            .computeBytesSize(1, getNameBytes());
+        }
+        if (((bitField0_ & 0x00000002) == 0x00000002)) {
+          size += com.google.protobuf.CodedOutputStream
+            .computeBytesSize(2, startKey_);
+        }
+        if (((bitField0_ & 0x00000004) == 0x00000004)) {
+          size += com.google.protobuf.CodedOutputStream
+            .computeBytesSize(3, endKey_);
+        }
+        if (((bitField0_ & 0x00000008) == 0x00000008)) {
+          size += com.google.protobuf.CodedOutputStream
+            .computeInt64Size(4, id_);
+        }
+        if (((bitField0_ & 0x00000010) == 0x00000010)) {
+          size += com.google.protobuf.CodedOutputStream
+            .computeBytesSize(5, getLocationBytes());
+        }
+        size += getUnknownFields().getSerializedSize();
+        memoizedSerializedSize = size;
+        return size;
+      }
+
+      private static final long serialVersionUID = 0L;
+      @java.lang.Override
+      protected java.lang.Object writeReplace()
+          throws java.io.ObjectStreamException {
+        return super.writeReplace();
+      }
+
+      public static org.apache.hadoop.hbase.rest.protobuf.generated.TableInfoMessage.TableInfo.Region parseFrom(
+          com.google.protobuf.ByteString data)
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        return PARSER.parseFrom(data);
+      }
+      public static org.apache.hadoop.hbase.rest.protobuf.generated.TableInfoMessage.TableInfo.Region parseFrom(
+          com.google.protobuf.ByteString data,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        return PARSER.parseFrom(data, extensionRegistry);
+      }
+      public static org.apache.hadoop.hbase.rest.protobuf.generated.TableInfoMessage.TableInfo.Region parseFrom(byte[] data)
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        return PARSER.parseFrom(data);
+      }
+      public static org.apache.hadoop.hbase.rest.protobuf.generated.TableInfoMessage.TableInfo.Region parseFrom(
+          byte[] data,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        return PARSER.parseFrom(data, extensionRegistry);
+      }
+      public static org.apache.hadoop.hbase.rest.protobuf.generated.TableInfoMessage.TableInfo.Region parseFrom(java.io.InputStream input)
+          throws java.io.IOException {
+        return PARSER.parseFrom(input);
+      }
+      public static org.apache.hadoop.hbase.rest.protobuf.generated.TableInfoMessage.TableInfo.Region parseFrom(
+          java.io.InputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws java.io.IOException {
+        return PARSER.parseFrom(input, extensionRegistry);
+      }
+      public static org.apache.hadoop.hbase.rest.protobuf.generated.TableInfoMessage.TableInfo.Region parseDelimitedFrom(java.io.InputStream input)
+          throws java.io.IOException {
+        return PARSER.parseDelimitedFrom(input);
+      }
+      public static org.apache.hadoop.hbase.rest.protobuf.generated.TableInfoMessage.TableInfo.Region parseDelimitedFrom(
+          java.io.InputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws java.io.IOException {
+        return PARSER.parseDelimitedFrom(input, extensionRegistry);
+      }
+      public static org.apache.hadoop.hbase.rest.protobuf.generated.TableInfoMessage.TableInfo.Region parseFrom(
+          com.google.protobuf.CodedInputStream input)
+          throws java.io.IOException {
+        return PARSER.parseFrom(input);
+      }
+      public static org.apache.hadoop.hbase.rest.protobuf.generated.TableInfoMessage.TableInfo.Region parseFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws java.io.IOException {
+        return PARSER.parseFrom(input, extensionRegistry);
+      }
+
+      public static Builder newBuilder() { return Builder.create(); }
+      public Builder newBuilderForType() { return newBuilder(); }
+      public static Builder newBuilder(org.apache.hadoop.hbase.rest.protobuf.generated.TableInfoMessage.TableInfo.Region prototype) {
+        return newBuilder().mergeFrom(prototype);
+      }
+      public Builder toBuilder() { return newBuilder(this); }
+
+      @java.lang.Override
+      protected Builder newBuilderForType(
+          com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+        Builder builder = new Builder(parent);
+        return builder;
+      }
+      /**
+       * Protobuf type {@code org.apache.hadoop.hbase.rest.protobuf.generated.TableInfo.Region}
+       */
+      public static final class Builder extends
+          com.google.protobuf.GeneratedMessage.Builder<Builder>
+         implements org.apache.hadoop.hbase.rest.protobuf.generated.TableInfoMessage.TableInfo.RegionOrBuilder {
+        public static final com.google.protobuf.Descriptors.Descriptor
+            getDescriptor() {
+          return org.apache.hadoop.hbase.rest.protobuf.generated.TableInfoMessage.internal_static_org_apache_hadoop_hbase_rest_protobuf_generated_TableInfo_Region_descriptor;
+        }
+
+        protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+            internalGetFieldAccessorTable() {
+          return org.apache.hadoop.hbase.rest.protobuf.generated.TableInfoMessage.internal_static_org_apache_hadoop_hbase_rest_protobuf_generated_TableInfo_Region_fieldAccessorTable
+              .ensureFieldAccessorsInitialized(
+                  org.apache.hadoop.hbase.rest.protobuf.generated.TableInfoMessage.TableInfo.Region.class, org.apache.hadoop.hbase.rest.protobuf.generated.TableInfoMessage.TableInfo.Region.Builder.class);
+        }
+
+        // Construct using org.apache.hadoop.hbase.rest.protobuf.generated.TableInfoMessage.TableInfo.Region.newBuilder()
+        private Builder() {
+          maybeForceBuilderInitialization();
+        }
+
+        private Builder(
+            com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+          super(parent);
+          maybeForceBuilderInitialization();
+        }
+        private void maybeForceBuilderInitialization() {
+          if (com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders) {
+          }
+        }
+        private static Builder create() {
+          return new Builder();
+        }
+
+        public Builder clear() {
+          super.clear();
+          name_ = "";
+          bitField0_ = (bitField0_ & ~0x00000001);
+          startKey_ = com.google.protobuf.ByteString.EMPTY;
+          bitField0_ = (bitField0_ & ~0x00000002);
+          endKey_ = com.google.protobuf.ByteString.EMPTY;
+          bitField0_ = (bitField0_ & ~0x00000004);
+          id_ = 0L;
+          bitField0_ = (bitField0_ & ~0x00000008);
+          location_ = "";
+          bitField0_ = (bitField0_ & ~0x00000010);
+          return this;
+        }
+
+        public Builder clone() {
+          return create().mergeFrom(buildPartial());
+        }
+
+        public com.google.protobuf.Descriptors.Descriptor
+            getDescriptorForType() {
+          return org.apache.hadoop.hbase.rest.protobuf.generated.TableInfoMessage.internal_static_org_apache_hadoop_hbase_rest_protobuf_generated_TableInfo_Region_descriptor;
+        }
+
+        public org.apache.hadoop.hbase.rest.protobuf.generated.TableInfoMessage.TableInfo.Region getDefaultInstanceForType() {
+          return org.apache.hadoop.hbase.rest.protobuf.generated.TableInfoMessage.TableInfo.Region.getDefaultInstance();
+        }
+
+        public org.apache.hadoop.hbase.rest.protobuf.generated.TableInfoMessage.TableInfo.Region build() {
+          org.apache.hadoop.hbase.rest.protobuf.generated.TableInfoMessage.TableInfo.Region result = buildPartial();
+          if (!result.isInitialized()) {
+            throw newUninitializedMessageException(result);
+          }
+          return result;
+        }
+
+        public org.apache.hadoop.hbase.rest.protobuf.generated.TableInfoMessage.TableInfo.Region buildPartial() {
+          org.apache.hadoop.hbase.rest.protobuf.generated.TableInfoMessage.TableInfo.Region result = new org.apache.hadoop.hbase.rest.protobuf.generated.TableInfoMessage.TableInfo.Region(this);
+          int from_bitField0_ = bitField0_;
+          int to_bitField0_ = 0;
+          if (((from_bitField0_ & 0x00000001) == 0x00000001)) {
+            to_bitField0_ |= 0x00000001;
+          }
+          result.name_ = name_;
+          if (((from_bitField0_ & 0x00000002) == 0x00000002)) {
+            to_bitField0_ |= 0x00000002;
+          }
+          result.startKey_ = startKey_;
+          if (((from_bitField0_ & 0x00000004) == 0x00000004)) {
+            to_bitField0_ |= 0x00000004;
+          }
+          result.endKey_ = endKey_;
+          if (((from_bitField0_ & 0x00000008) == 0x00000008)) {
+            to_bitField0_ |= 0x00000008;
+          }
+          result.id_ = id_;
+          if (((from_bitField0_ & 0x00000010) == 0x00000010)) {
+            to_bitField0_ |= 0x00000010;
+          }
+          result.location_ = location_;
+          result.bitField0_ = to_bitField0_;
+          onBuilt();
+          return result;
+        }
+
+        public Builder mergeFrom(com.google.protobuf.Message other) {
+          if (other instanceof org.apache.hadoop.hbase.rest.protobuf.generated.TableInfoMessage.TableInfo.Region) {
+            return mergeFrom((org.apache.hadoop.hbase.rest.protobuf.generated.TableInfoMessage.TableInfo.Region)other);
+          } else {
+            super.mergeFrom(other);
+            return this;
+          }
+        }
+
+        public Builder mergeFrom(org.apache.hadoop.hbase.rest.protobuf.generated.TableInfoMessage.TableInfo.Region other) {
+          if (other == org.apache.hadoop.hbase.rest.protobuf.generated.TableInfoMessage.TableInfo.Region.getDefaultInstance()) return this;
+          if (other.hasName()) {
+            bitField0_ |= 0x00000001;
+            name_ = other.name_;
+            onChanged();
+          }
+          if (other.hasStartKey()) {
+            setStartKey(other.getStartKey());
+          }
+          if (other.hasEndKey()) {
+            setEndKey(other.getEndKey());
+          }
+          if (other.hasId()) {
+            setId(other.getId());
+          }
+          if (other.hasLocation()) {
+            bitField0_ |= 0x00000010;
+            location_ = other.location_;
+            onChanged();
+          }
+          this.mergeUnknownFields(other.getUnknownFields());
+          return this;
+        }
+
+        public final boolean isInitialized() {
+          if (!hasName()) {
+            
+            return false;
+          }
+          return true;
+        }
+
+        public Builder mergeFrom(
+            com.google.protobuf.CodedInputStream input,
+            com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+            throws java.io.IOException {
+          org.apache.hadoop.hbase.rest.protobuf.generated.TableInfoMessage.TableInfo.Region parsedMessage = null;
+          try {
+            parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
+          } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+            parsedMessage = (org.apache.hadoop.hbase.rest.protobuf.generated.TableInfoMessage.TableInfo.Region) e.getUnfinishedMessage();
+            throw e;
+          } finally {
+            if (parsedMessage != null) {
+              mergeFrom(parsedMessage);
+            }
+          }
+          return this;
+        }
         private int bitField0_;
-        
+
         // required string name = 1;
         private java.lang.Object name_ = "";
+        /**
+         * <code>required string name = 1;</code>
+         */
         public boolean hasName() {
           return ((bitField0_ & 0x00000001) == 0x00000001);
         }
-        public String getName() {
+        /**
+         * <code>required string name = 1;</code>
+         */
+        public java.lang.String getName() {
           java.lang.Object ref = name_;
-          if (!(ref instanceof String)) {
-            String s = ((com.google.protobuf.ByteString) ref).toStringUtf8();
+          if (!(ref instanceof java.lang.String)) {
+            java.lang.String s = ((com.google.protobuf.ByteString) ref)
+                .toStringUtf8();
             name_ = s;
             return s;
           } else {
-            return (String) ref;
+            return (java.lang.String) ref;
           }
         }
-        public Builder setName(String value) {
+        /**
+         * <code>required string name = 1;</code>
+         */
+        public com.google.protobuf.ByteString
+            getNameBytes() {
+          java.lang.Object ref = name_;
+          if (ref instanceof String) {
+            com.google.protobuf.ByteString b =
+                com.google.protobuf.ByteString.copyFromUtf8(
+                    (java.lang.String) ref);
+            name_ = b;
+            return b;
+          } else {
+            return (com.google.protobuf.ByteString) ref;
+          }
+        }
+        /**
+         * <code>required string name = 1;</code>
+         */
+        public Builder setName(
+            java.lang.String value) {
           if (value == null) {
     throw new NullPointerException();
   }
@@ -579,26 +828,46 @@ public final class TableInfoMessage {
           onChanged();
           return this;
         }
+        /**
+         * <code>required string name = 1;</code>
+         */
         public Builder clearName() {
           bitField0_ = (bitField0_ & ~0x00000001);
           name_ = getDefaultInstance().getName();
           onChanged();
           return this;
         }
-        void setName(com.google.protobuf.ByteString value) {
-          bitField0_ |= 0x00000001;
+        /**
+         * <code>required string name = 1;</code>
+         */
+        public Builder setNameBytes(
+            com.google.protobuf.ByteString value) {
+          if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000001;
           name_ = value;
           onChanged();
+          return this;
         }
-        
+
         // optional bytes startKey = 2;
         private com.google.protobuf.ByteString startKey_ = com.google.protobuf.ByteString.EMPTY;
+        /**
+         * <code>optional bytes startKey = 2;</code>
+         */
         public boolean hasStartKey() {
           return ((bitField0_ & 0x00000002) == 0x00000002);
         }
+        /**
+         * <code>optional bytes startKey = 2;</code>
+         */
         public com.google.protobuf.ByteString getStartKey() {
           return startKey_;
         }
+        /**
+         * <code>optional bytes startKey = 2;</code>
+         */
         public Builder setStartKey(com.google.protobuf.ByteString value) {
           if (value == null) {
     throw new NullPointerException();
@@ -608,21 +877,33 @@ public final class TableInfoMessage {
           onChanged();
           return this;
         }
+        /**
+         * <code>optional bytes startKey = 2;</code>
+         */
         public Builder clearStartKey() {
           bitField0_ = (bitField0_ & ~0x00000002);
           startKey_ = getDefaultInstance().getStartKey();
           onChanged();
           return this;
         }
-        
+
         // optional bytes endKey = 3;
         private com.google.protobuf.ByteString endKey_ = com.google.protobuf.ByteString.EMPTY;
+        /**
+         * <code>optional bytes endKey = 3;</code>
+         */
         public boolean hasEndKey() {
           return ((bitField0_ & 0x00000004) == 0x00000004);
         }
+        /**
+         * <code>optional bytes endKey = 3;</code>
+         */
         public com.google.protobuf.ByteString getEndKey() {
           return endKey_;
         }
+        /**
+         * <code>optional bytes endKey = 3;</code>
+         */
         public Builder setEndKey(com.google.protobuf.ByteString value) {
           if (value == null) {
     throw new NullPointerException();
@@ -632,50 +913,92 @@ public final class TableInfoMessage {
           onChanged();
           return this;
         }
+        /**
+         * <code>optional bytes endKey = 3;</code>
+         */
         public Builder clearEndKey() {
           bitField0_ = (bitField0_ & ~0x00000004);
           endKey_ = getDefaultInstance().getEndKey();
           onChanged();
           return this;
         }
-        
+
         // optional int64 id = 4;
         private long id_ ;
+        /**
+         * <code>optional int64 id = 4;</code>
+         */
         public boolean hasId() {
           return ((bitField0_ & 0x00000008) == 0x00000008);
         }
+        /**
+         * <code>optional int64 id = 4;</code>
+         */
         public long getId() {
           return id_;
         }
+        /**
+         * <code>optional int64 id = 4;</code>
+         */
         public Builder setId(long value) {
           bitField0_ |= 0x00000008;
           id_ = value;
           onChanged();
           return this;
         }
+        /**
+         * <code>optional int64 id = 4;</code>
+         */
         public Builder clearId() {
           bitField0_ = (bitField0_ & ~0x00000008);
           id_ = 0L;
           onChanged();
           return this;
         }
-        
+
         // optional string location = 5;
         private java.lang.Object location_ = "";
+        /**
+         * <code>optional string location = 5;</code>
+         */
         public boolean hasLocation() {
           return ((bitField0_ & 0x00000010) == 0x00000010);
         }
-        public String getLocation() {
+        /**
+         * <code>optional string location = 5;</code>
+         */
+        public java.lang.String getLocation() {
           java.lang.Object ref = location_;
-          if (!(ref instanceof String)) {
-            String s = ((com.google.protobuf.ByteString) ref).toStringUtf8();
+          if (!(ref instanceof java.lang.String)) {
+            java.lang.String s = ((com.google.protobuf.ByteString) ref)
+                .toStringUtf8();
             location_ = s;
             return s;
           } else {
-            return (String) ref;
+            return (java.lang.String) ref;
           }
         }
-        public Builder setLocation(String value) {
+        /**
+         * <code>optional string location = 5;</code>
+         */
+        public com.google.protobuf.ByteString
+            getLocationBytes() {
+          java.lang.Object ref = location_;
+          if (ref instanceof String) {
+            com.google.protobuf.ByteString b =
+                com.google.protobuf.ByteString.copyFromUtf8(
+                    (java.lang.String) ref);
+            location_ = b;
+            return b;
+          } else {
+            return (com.google.protobuf.ByteString) ref;
+          }
+        }
+        /**
+         * <code>optional string location = 5;</code>
+         */
+        public Builder setLocation(
+            java.lang.String value) {
           if (value == null) {
     throw new NullPointerException();
   }
@@ -684,83 +1007,120 @@ public final class TableInfoMessage {
           onChanged();
           return this;
         }
+        /**
+         * <code>optional string location = 5;</code>
+         */
         public Builder clearLocation() {
           bitField0_ = (bitField0_ & ~0x00000010);
           location_ = getDefaultInstance().getLocation();
           onChanged();
           return this;
         }
-        void setLocation(com.google.protobuf.ByteString value) {
-          bitField0_ |= 0x00000010;
+        /**
+         * <code>optional string location = 5;</code>
+         */
+        public Builder setLocationBytes(
+            com.google.protobuf.ByteString value) {
+          if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000010;
           location_ = value;
           onChanged();
+          return this;
         }
-        
+
         // @@protoc_insertion_point(builder_scope:org.apache.hadoop.hbase.rest.protobuf.generated.TableInfo.Region)
       }
-      
+
       static {
         defaultInstance = new Region(true);
         defaultInstance.initFields();
       }
-      
+
       // @@protoc_insertion_point(class_scope:org.apache.hadoop.hbase.rest.protobuf.generated.TableInfo.Region)
     }
-    
+
     private int bitField0_;
     // required string name = 1;
     public static final int NAME_FIELD_NUMBER = 1;
     private java.lang.Object name_;
+    /**
+     * <code>required string name = 1;</code>
+     */
     public boolean hasName() {
       return ((bitField0_ & 0x00000001) == 0x00000001);
     }
-    public String getName() {
+    /**
+     * <code>required string name = 1;</code>
+     */
+    public java.lang.String getName() {
       java.lang.Object ref = name_;
-      if (ref instanceof String) {
-        return (String) ref;
+      if (ref instanceof java.lang.String) {
+        return (java.lang.String) ref;
       } else {
         com.google.protobuf.ByteString bs = 
             (com.google.protobuf.ByteString) ref;
-        String s = bs.toStringUtf8();
-        if (com.google.protobuf.Internal.isValidUtf8(bs)) {
+        java.lang.String s = bs.toStringUtf8();
+        if (bs.isValidUtf8()) {
           name_ = s;
         }
         return s;
       }
     }
-    private com.google.protobuf.ByteString getNameBytes() {
+    /**
+     * <code>required string name = 1;</code>
+     */
+    public com.google.protobuf.ByteString
+        getNameBytes() {
       java.lang.Object ref = name_;
-      if (ref instanceof String) {
+      if (ref instanceof java.lang.String) {
         com.google.protobuf.ByteString b = 
-            com.google.protobuf.ByteString.copyFromUtf8((String) ref);
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
         name_ = b;
         return b;
       } else {
         return (com.google.protobuf.ByteString) ref;
       }
     }
-    
+
     // repeated .org.apache.hadoop.hbase.rest.protobuf.generated.TableInfo.Region regions = 2;
     public static final int REGIONS_FIELD_NUMBER = 2;
     private java.util.List<org.apache.hadoop.hbase.rest.protobuf.generated.TableInfoMessage.TableInfo.Region> regions_;
+    /**
+     * <code>repeated .org.apache.hadoop.hbase.rest.protobuf.generated.TableInfo.Region regions = 2;</code>
+     */
     public java.util.List<org.apache.hadoop.hbase.rest.protobuf.generated.TableInfoMessage.TableInfo.Region> getRegionsList() {
       return regions_;
     }
+    /**
+     * <code>repeated .org.apache.hadoop.hbase.rest.protobuf.generated.TableInfo.Region regions = 2;</code>
+     */
     public java.util.List<? extends org.apache.hadoop.hbase.rest.protobuf.generated.TableInfoMessage.TableInfo.RegionOrBuilder> 
         getRegionsOrBuilderList() {
       return regions_;
     }
+    /**
+     * <code>repeated .org.apache.hadoop.hbase.rest.protobuf.generated.TableInfo.Region regions = 2;</code>
+     */
     public int getRegionsCount() {
       return regions_.size();
     }
+    /**
+     * <code>repeated .org.apache.hadoop.hbase.rest.protobuf.generated.TableInfo.Region regions = 2;</code>
+     */
     public org.apache.hadoop.hbase.rest.protobuf.generated.TableInfoMessage.TableInfo.Region getRegions(int index) {
       return regions_.get(index);
     }
+    /**
+     * <code>repeated .org.apache.hadoop.hbase.rest.protobuf.generated.TableInfo.Region regions = 2;</code>
+     */
     public org.apache.hadoop.hbase.rest.protobuf.generated.TableInfoMessage.TableInfo.RegionOrBuilder getRegionsOrBuilder(
         int index) {
       return regions_.get(index);
     }
-    
+
     private void initFields() {
       name_ = "";
       regions_ = java.util.Collections.emptyList();
@@ -769,7 +1129,7 @@ public final class TableInfoMessage {
     public final boolean isInitialized() {
       byte isInitialized = memoizedIsInitialized;
       if (isInitialized != -1) return isInitialized == 1;
-      
+
       if (!hasName()) {
         memoizedIsInitialized = 0;
         return false;
@@ -783,7 +1143,7 @@ public final class TableInfoMessage {
       memoizedIsInitialized = 1;
       return true;
     }
-    
+
     public void writeTo(com.google.protobuf.CodedOutputStream output)
                         throws java.io.IOException {
       getSerializedSize();
@@ -795,12 +1155,12 @@ public final class TableInfoMessage {
       }
       getUnknownFields().writeTo(output);
     }
-    
+
     private int memoizedSerializedSize = -1;
     public int getSerializedSize() {
       int size = memoizedSerializedSize;
       if (size != -1) return size;
-    
+
       size = 0;
       if (((bitField0_ & 0x00000001) == 0x00000001)) {
         size += com.google.protobuf.CodedOutputStream
@@ -814,94 +1174,83 @@ public final class TableInfoMessage {
       memoizedSerializedSize = size;
       return size;
     }
-    
+
     private static final long serialVersionUID = 0L;
     @java.lang.Override
     protected java.lang.Object writeReplace()
         throws java.io.ObjectStreamException {
       return super.writeReplace();
     }
-    
+
     public static org.apache.hadoop.hbase.rest.protobuf.generated.TableInfoMessage.TableInfo parseFrom(
         com.google.protobuf.ByteString data)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return newBuilder().mergeFrom(data).buildParsed();
+      return PARSER.parseFrom(data);
     }
     public static org.apache.hadoop.hbase.rest.protobuf.generated.TableInfoMessage.TableInfo parseFrom(
         com.google.protobuf.ByteString data,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return newBuilder().mergeFrom(data, extensionRegistry)
-               .buildParsed();
+      return PARSER.parseFrom(data, extensionRegistry);
     }
     public static org.apache.hadoop.hbase.rest.protobuf.generated.TableInfoMessage.TableInfo parseFrom(byte[] data)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return newBuilder().mergeFrom(data).buildParsed();
+      return PARSER.parseFrom(data);
     }
     public static org.apache.hadoop.hbase.rest.protobuf.generated.TableInfoMessage.TableInfo parseFrom(
         byte[] data,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return newBuilder().mergeFrom(data, extensionRegistry)
-               .buildParsed();
+      return PARSER.parseFrom(data, extensionRegistry);
     }
     public static org.apache.hadoop.hbase.rest.protobuf.generated.TableInfoMessage.TableInfo parseFrom(java.io.InputStream input)
         throws java.io.IOException {
-      return newBuilder().mergeFrom(input).buildParsed();
+      return PARSER.parseFrom(input);
     }
     public static org.apache.hadoop.hbase.rest.protobuf.generated.TableInfoMessage.TableInfo parseFrom(
         java.io.InputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
-      return newBuilder().mergeFrom(input, extensionRegistry)
-               .buildParsed();
+      return PARSER.parseFrom(input, extensionRegistry);
     }
     public static org.apache.hadoop.hbase.rest.protobuf.generated.TableInfoMessage.TableInfo parseDelimitedFrom(java.io.InputStream input)
         throws java.io.IOException {
-      Builder builder = newBuilder();
-      if (builder.mergeDelimitedFrom(input)) {
-        return builder.buildParsed();
-      } else {
-        return null;
-      }
+      return PARSER.parseDelimitedFrom(input);
     }
     public static org.apache.hadoop.hbase.rest.protobuf.generated.TableInfoMessage.TableInfo parseDelimitedFrom(
         java.io.InputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
-      Builder builder = newBuilder();
-      if (builder.mergeDelimitedFrom(input, extensionRegistry)) {
-        return builder.buildParsed();
-      } else {
-        return null;
-      }
+      return PARSER.parseDelimitedFrom(input, extensionRegistry);
     }
     public static org.apache.hadoop.hbase.rest.protobuf.generated.TableInfoMessage.TableInfo parseFrom(
         com.google.protobuf.CodedInputStream input)
         throws java.io.IOException {
-      return newBuilder().mergeFrom(input).buildParsed();
+      return PARSER.parseFrom(input);
     }
     public static org.apache.hadoop.hbase.rest.protobuf.generated.TableInfoMessage.TableInfo parseFrom(
         com.google.protobuf.CodedInputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
-      return newBuilder().mergeFrom(input, extensionRegistry)
-               .buildParsed();
+      return PARSER.parseFrom(input, extensionRegistry);
     }
-    
+
     public static Builder newBuilder() { return Builder.create(); }
     public Builder newBuilderForType() { return newBuilder(); }
     public static Builder newBuilder(org.apache.hadoop.hbase.rest.protobuf.generated.TableInfoMessage.TableInfo prototype) {
       return newBuilder().mergeFrom(prototype);
     }
     public Builder toBuilder() { return newBuilder(this); }
-    
+
     @java.lang.Override
     protected Builder newBuilderForType(
         com.google.protobuf.GeneratedMessage.BuilderParent parent) {
       Builder builder = new Builder(parent);
       return builder;
     }
+    /**
+     * Protobuf type {@code org.apache.hadoop.hbase.rest.protobuf.generated.TableInfo}
+     */
     public static final class Builder extends
         com.google.protobuf.GeneratedMessage.Builder<Builder>
        implements org.apache.hadoop.hbase.rest.protobuf.generated.TableInfoMessage.TableInfoOrBuilder {
@@ -909,18 +1258,21 @@ public final class TableInfoMessage {
           getDescriptor() {
         return org.apache.hadoop.hbase.rest.protobuf.generated.TableInfoMessage.internal_static_org_apache_hadoop_hbase_rest_protobuf_generated_TableInfo_descriptor;
       }
-      
+
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return org.apache.hadoop.hbase.rest.protobuf.generated.TableInfoMessage.internal_static_org_apache_hadoop_hbase_rest_protobuf_generated_TableInfo_fieldAccessorTable;
+        return org.apache.hadoop.hbase.rest.protobuf.generated.TableInfoMessage.internal_static_org_apache_hadoop_hbase_rest_protobuf_generated_TableInfo_fieldAccessorTable
+            .ensureFieldAccessorsInitialized(
+                org.apache.hadoop.hbase.rest.protobuf.generated.TableInfoMessage.TableInfo.class, org.apache.hadoop.hbase.rest.protobuf.generated.TableInfoMessage.TableInfo.Builder.class);
       }
-      
+
       // Construct using org.apache.hadoop.hbase.rest.protobuf.generated.TableInfoMessage.TableInfo.newBuilder()
       private Builder() {
         maybeForceBuilderInitialization();
       }
-      
-      private Builder(BuilderParent parent) {
+
+      private Builder(
+          com.google.protobuf.GeneratedMessage.BuilderParent parent) {
         super(parent);
         maybeForceBuilderInitialization();
       }
@@ -932,7 +1284,7 @@ public final class TableInfoMessage {
       private static Builder create() {
         return new Builder();
       }
-      
+
       public Builder clear() {
         super.clear();
         name_ = "";
@@ -945,20 +1297,20 @@ public final class TableInfoMessage {
         }
         return this;
       }
-      
+
       public Builder clone() {
         return create().mergeFrom(buildPartial());
       }
-      
+
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return org.apache.hadoop.hbase.rest.protobuf.generated.TableInfoMessage.TableInfo.getDescriptor();
+        return org.apache.hadoop.hbase.rest.protobuf.generated.TableInfoMessage.internal_static_org_apache_hadoop_hbase_rest_protobuf_generated_TableInfo_descriptor;
       }
-      
+
       public org.apache.hadoop.hbase.rest.protobuf.generated.TableInfoMessage.TableInfo getDefaultInstanceForType() {
         return org.apache.hadoop.hbase.rest.protobuf.generated.TableInfoMessage.TableInfo.getDefaultInstance();
       }
-      
+
       public org.apache.hadoop.hbase.rest.protobuf.generated.TableInfoMessage.TableInfo build() {
         org.apache.hadoop.hbase.rest.protobuf.generated.TableInfoMessage.TableInfo result = buildPartial();
         if (!result.isInitialized()) {
@@ -966,17 +1318,7 @@ public final class TableInfoMessage {
         }
         return result;
       }
-      
-      private org.apache.hadoop.hbase.rest.protobuf.generated.TableInfoMessage.TableInfo buildParsed()
-          throws com.google.protobuf.InvalidProtocolBufferException {
-        org.apache.hadoop.hbase.rest.protobuf.generated.TableInfoMessage.TableInfo result = buildPartial();
-        if (!result.isInitialized()) {
-          throw newUninitializedMessageException(
-            result).asInvalidProtocolBufferException();
-        }
-        return result;
-      }
-      
+
       public org.apache.hadoop.hbase.rest.protobuf.generated.TableInfoMessage.TableInfo buildPartial() {
         org.apache.hadoop.hbase.rest.protobuf.generated.TableInfoMessage.TableInfo result = new org.apache.hadoop.hbase.rest.protobuf.generated.TableInfoMessage.TableInfo(this);
         int from_bitField0_ = bitField0_;
@@ -998,7 +1340,7 @@ public final class TableInfoMessage {
         onBuilt();
         return result;
       }
-      
+
       public Builder mergeFrom(com.google.protobuf.Message other) {
         if (other instanceof org.apache.hadoop.hbase.rest.protobuf.generated.TableInfoMessage.TableInfo) {
           return mergeFrom((org.apache.hadoop.hbase.rest.protobuf.generated.TableInfoMessage.TableInfo)other);
@@ -1007,11 +1349,13 @@ public final class TableInfoMessage {
           return this;
         }
       }
-      
+
       public Builder mergeFrom(org.apache.hadoop.hbase.rest.protobuf.generated.TableInfoMessage.TableInfo other) {
         if (other == org.apache.hadoop.hbase.rest.protobuf.generated.TableInfoMessage.TableInfo.getDefaultInstance()) return this;
         if (other.hasName()) {
-          setName(other.getName());
+          bitField0_ |= 0x00000001;
+          name_ = other.name_;
+          onChanged();
         }
         if (regionsBuilder_ == null) {
           if (!other.regions_.isEmpty()) {
@@ -1042,7 +1386,7 @@ public final class TableInfoMessage {
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
       }
-      
+
       public final boolean isInitialized() {
         if (!hasName()) {
           
@@ -1056,63 +1400,69 @@ public final class TableInfoMessage {
         }
         return true;
       }
-      
+
       public Builder mergeFrom(
           com.google.protobuf.CodedInputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws java.io.IOException {
-        com.google.protobuf.UnknownFieldSet.Builder unknownFields =
-          com.google.protobuf.UnknownFieldSet.newBuilder(
-            this.getUnknownFields());
-        while (true) {
-          int tag = input.readTag();
-          switch (tag) {
-            case 0:
-              this.setUnknownFields(unknownFields.build());
-              onChanged();
-              return this;
-            default: {
-              if (!parseUnknownField(input, unknownFields,
-                                     extensionRegistry, tag)) {
-                this.setUnknownFields(unknownFields.build());
-                onChanged();
-                return this;
-              }
-              break;
-            }
-            case 10: {
-              bitField0_ |= 0x00000001;
-              name_ = input.readBytes();
-              break;
-            }
-            case 18: {
-              org.apache.hadoop.hbase.rest.protobuf.generated.TableInfoMessage.TableInfo.Region.Builder subBuilder = org.apache.hadoop.hbase.rest.protobuf.generated.TableInfoMessage.TableInfo.Region.newBuilder();
-              input.readMessage(subBuilder, extensionRegistry);
-              addRegions(subBuilder.buildPartial());
-              break;
-            }
+        org.apache.hadoop.hbase.rest.protobuf.generated.TableInfoMessage.TableInfo parsedMessage = null;
+        try {
+          parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
+        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+          parsedMessage = (org.apache.hadoop.hbase.rest.protobuf.generated.TableInfoMessage.TableInfo) e.getUnfinishedMessage();
+          throw e;
+        } finally {
+          if (parsedMessage != null) {
+            mergeFrom(parsedMessage);
           }
         }
+        return this;
       }
-      
       private int bitField0_;
-      
+
       // required string name = 1;
       private java.lang.Object name_ = "";
+      /**
+       * <code>required string name = 1;</code>
+       */
       public boolean hasName() {
         return ((bitField0_ & 0x00000001) == 0x00000001);
       }
-      public String getName() {
+      /**
+       * <code>required string name = 1;</code>
+       */
+      public java.lang.String getName() {
         java.lang.Object ref = name_;
-        if (!(ref instanceof String)) {
-          String s = ((com.google.protobuf.ByteString) ref).toStringUtf8();
+        if (!(ref instanceof java.lang.String)) {
+          java.lang.String s = ((com.google.protobuf.ByteString) ref)
+              .toStringUtf8();
           name_ = s;
           return s;
         } else {
-          return (String) ref;
+          return (java.lang.String) ref;
         }
       }
-      public Builder setName(String value) {
+      /**
+       * <code>required string name = 1;</code>
+       */
+      public com.google.protobuf.ByteString
+          getNameBytes() {
+        java.lang.Object ref = name_;
+        if (ref instanceof String) {
+          com.google.protobuf.ByteString b =
+              com.google.protobuf.ByteString.copyFromUtf8(
+                  (java.lang.String) ref);
+          name_ = b;
+          return b;
+        } else {
+          return (com.google.protobuf.ByteString) ref;
+        }
+      }
+      /**
+       * <code>required string name = 1;</code>
+       */
+      public Builder setName(
+          java.lang.String value) {
         if (value == null) {
     throw new NullPointerException();
   }
@@ -1121,18 +1471,29 @@ public final class TableInfoMessage {
         onChanged();
         return this;
       }
+      /**
+       * <code>required string name = 1;</code>
+       */
       public Builder clearName() {
         bitField0_ = (bitField0_ & ~0x00000001);
         name_ = getDefaultInstance().getName();
         onChanged();
         return this;
       }
-      void setName(com.google.protobuf.ByteString value) {
-        bitField0_ |= 0x00000001;
+      /**
+       * <code>required string name = 1;</code>
+       */
+      public Builder setNameBytes(
+          com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000001;
         name_ = value;
         onChanged();
+        return this;
       }
-      
+
       // repeated .org.apache.hadoop.hbase.rest.protobuf.generated.TableInfo.Region regions = 2;
       private java.util.List<org.apache.hadoop.hbase.rest.protobuf.generated.TableInfoMessage.TableInfo.Region> regions_ =
         java.util.Collections.emptyList();
@@ -1142,10 +1503,13 @@ public final class TableInfoMessage {
           bitField0_ |= 0x00000002;
          }
       }
-      
+
       private com.google.protobuf.RepeatedFieldBuilder<
           org.apache.hadoop.hbase.rest.protobuf.generated.TableInfoMessage.TableInfo.Region, org.apache.hadoop.hbase.rest.protobuf.generated.TableInfoMessage.TableInfo.Region.Builder, org.apache.hadoop.hbase.rest.protobuf.generated.TableInfoMessage.TableInfo.RegionOrBuilder> regionsBuilder_;
-      
+
+      /**
+       * <code>repeated .org.apache.hadoop.hbase.rest.protobuf.generated.TableInfo.Region regions = 2;</code>
+       */
       public java.util.List<org.apache.hadoop.hbase.rest.protobuf.generated.TableInfoMessage.TableInfo.Region> getRegionsList() {
         if (regionsBuilder_ == null) {
           return java.util.Collections.unmodifiableList(regions_);
@@ -1153,6 +1517,9 @@ public final class TableInfoMessage {
           return regionsBuilder_.getMessageList();
         }
       }
+      /**
+       * <code>repeated .org.apache.hadoop.hbase.rest.protobuf.generated.TableInfo.Region regions = 2;</code>
+       */
       public int getRegionsCount() {
         if (regionsBuilder_ == null) {
           return regions_.size();
@@ -1160,6 +1527,9 @@ public final class TableInfoMessage {
           return regionsBuilder_.getCount();
         }
       }
+      /**
+       * <code>repeated .org.apache.hadoop.hbase.rest.protobuf.generated.TableInfo.Region regions = 2;</code>
+       */
       public org.apache.hadoop.hbase.rest.protobuf.generated.TableInfoMessage.TableInfo.Region getRegions(int index) {
         if (regionsBuilder_ == null) {
           return regions_.get(index);
@@ -1167,6 +1537,9 @@ public final class TableInfoMessage {
           return regionsBuilder_.getMessage(index);
         }
       }
+      /**
+       * <code>repeated .org.apache.hadoop.hbase.rest.protobuf.generated.TableInfo.Region regions = 2;</code>
+       */
       public Builder setRegions(
           int index, org.apache.hadoop.hbase.rest.protobuf.generated.TableInfoMessage.TableInfo.Region value) {
         if (regionsBuilder_ == null) {
@@ -1181,6 +1554,9 @@ public final class TableInfoMessage {
         }
         return this;
       }
+      /**
+       * <code>repeated .org.apache.hadoop.hbase.rest.protobuf.generated.TableInfo.Region regions = 2;</code>
+       */
       public Builder setRegions(
           int index, org.apache.hadoop.hbase.rest.protobuf.generated.TableInfoMessage.TableInfo.Region.Builder builderForValue) {
         if (regionsBuilder_ == null) {
@@ -1192,6 +1568,9 @@ public final class TableInfoMessage {
         }
         return this;
       }
+      /**
+       * <code>repeated .org.apache.hadoop.hbase.rest.protobuf.generated.TableInfo.Region regions = 2;</code>
+       */
       public Builder addRegions(org.apache.hadoop.hbase.rest.protobuf.generated.TableInfoMessage.TableInfo.Region value) {
         if (regionsBuilder_ == null) {
           if (value == null) {
@@ -1205,6 +1584,9 @@ public final class TableInfoMessage {
         }
         return this;
       }
+      /**
+       * <code>repeated .org.apache.hadoop.hbase.rest.protobuf.generated.TableInfo.Region regions = 2;</code>
+       */
       public Builder addRegions(
           int index, org.apache.hadoop.hbase.rest.protobuf.generated.TableInfoMessage.TableInfo.Region value) {
         if (regionsBuilder_ == null) {
@@ -1219,6 +1601,9 @@ public final class TableInfoMessage {
         }
         return this;
       }
+      /**
+       * <code>repeated .org.apache.hadoop.hbase.rest.protobuf.generated.TableInfo.Region regions = 2;</code>
+       */
       public Builder addRegions(
           org.apache.hadoop.hbase.rest.protobuf.generated.TableInfoMessage.TableInfo.Region.Builder builderForValue) {
         if (regionsBuilder_ == null) {
@@ -1230,6 +1615,9 @@ public final class TableInfoMessage {
         }
         return this;
       }
+      /**
+       * <code>repeated .org.apache.hadoop.hbase.rest.protobuf.generated.TableInfo.Region regions = 2;</code>
+       */
       public Builder addRegions(
           int index, org.apache.hadoop.hbase.rest.protobuf.generated.TableInfoMessage.TableInfo.Region.Builder builderForValue) {
         if (regionsBuilder_ == null) {
@@ -1241,6 +1629,9 @@ public final class TableInfoMessage {
         }
         return this;
       }
+      /**
+       * <code>repeated .org.apache.hadoop.hbase.rest.protobuf.generated.TableInfo.Region regions = 2;</code>
+       */
       public Builder addAllRegions(
           java.lang.Iterable<? extends org.apache.hadoop.hbase.rest.protobuf.generated.TableInfoMessage.TableInfo.Region> values) {
         if (regionsBuilder_ == null) {
@@ -1252,6 +1643,9 @@ public final class TableInfoMessage {
         }
         return this;
       }
+      /**
+       * <code>repeated .org.apache.hadoop.hbase.rest.protobuf.generated.TableInfo.Region regions = 2;</code>
+       */
       public Builder clearRegions() {
         if (regionsBuilder_ == null) {
           regions_ = java.util.Collections.emptyList();
@@ -1262,6 +1656,9 @@ public final class TableInfoMessage {
         }
         return this;
       }
+      /**
+       * <code>repeated .org.apache.hadoop.hbase.rest.protobuf.generated.TableInfo.Region regions = 2;</code>
+       */
       public Builder removeRegions(int index) {
         if (regionsBuilder_ == null) {
           ensureRegionsIsMutable();
@@ -1272,10 +1669,16 @@ public final class TableInfoMessage {
         }
         return this;
       }
+      /**
+       * <code>repeated .org.apache.hadoop.hbase.rest.protobuf.generated.TableInfo.Region regions = 2;</code>
+       */
       public org.apache.hadoop.hbase.rest.protobuf.generated.TableInfoMessage.TableInfo.Region.Builder getRegionsBuilder(
           int index) {
         return getRegionsFieldBuilder().getBuilder(index);
       }
+      /**
+       * <code>repeated .org.apache.hadoop.hbase.rest.protobuf.generated.TableInfo.Region regions = 2;</code>
+       */
       public org.apache.hadoop.hbase.rest.protobuf.generated.TableInfoMessage.TableInfo.RegionOrBuilder getRegionsOrBuilder(
           int index) {
         if (regionsBuilder_ == null) {
@@ -1283,6 +1686,9 @@ public final class TableInfoMessage {
           return regionsBuilder_.getMessageOrBuilder(index);
         }
       }
+      /**
+       * <code>repeated .org.apache.hadoop.hbase.rest.protobuf.generated.TableInfo.Region regions = 2;</code>
+       */
       public java.util.List<? extends org.apache.hadoop.hbase.rest.protobuf.generated.TableInfoMessage.TableInfo.RegionOrBuilder> 
            getRegionsOrBuilderList() {
         if (regionsBuilder_ != null) {
@@ -1291,15 +1697,24 @@ public final class TableInfoMessage {
           return java.util.Collections.unmodifiableList(regions_);
         }
       }
+      /**
+       * <code>repeated .org.apache.hadoop.hbase.rest.protobuf.generated.TableInfo.Region regions = 2;</code>
+       */
       public org.apache.hadoop.hbase.rest.protobuf.generated.TableInfoMessage.TableInfo.Region.Builder addRegionsBuilder() {
         return getRegionsFieldBuilder().addBuilder(
             org.apache.hadoop.hbase.rest.protobuf.generated.TableInfoMessage.TableInfo.Region.getDefaultInstance());
       }
+      /**
+       * <code>repeated .org.apache.hadoop.hbase.rest.protobuf.generated.TableInfo.Region regions = 2;</code>
+       */
       public org.apache.hadoop.hbase.rest.protobuf.generated.TableInfoMessage.TableInfo.Region.Builder addRegionsBuilder(
           int index) {
         return getRegionsFieldBuilder().addBuilder(
             index, org.apache.hadoop.hbase.rest.protobuf.generated.TableInfoMessage.TableInfo.Region.getDefaultInstance());
       }
+      /**
+       * <code>repeated .org.apache.hadoop.hbase.rest.protobuf.generated.TableInfo.Region regions = 2;</code>
+       */
       public java.util.List<org.apache.hadoop.hbase.rest.protobuf.generated.TableInfoMessage.TableInfo.Region.Builder> 
            getRegionsBuilderList() {
         return getRegionsFieldBuilder().getBuilderList();
@@ -1318,18 +1733,18 @@ public final class TableInfoMessage {
         }
         return regionsBuilder_;
       }
-      
+
       // @@protoc_insertion_point(builder_scope:org.apache.hadoop.hbase.rest.protobuf.generated.TableInfo)
     }
-    
+
     static {
       defaultInstance = new TableInfo(true);
       defaultInstance.initFields();
     }
-    
+
     // @@protoc_insertion_point(class_scope:org.apache.hadoop.hbase.rest.protobuf.generated.TableInfo)
   }
-  
+
   private static com.google.protobuf.Descriptors.Descriptor
     internal_static_org_apache_hadoop_hbase_rest_protobuf_generated_TableInfo_descriptor;
   private static
@@ -1340,7 +1755,7 @@ public final class TableInfoMessage {
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_org_apache_hadoop_hbase_rest_protobuf_generated_TableInfo_Region_fieldAccessorTable;
-  
+
   public static com.google.protobuf.Descriptors.FileDescriptor
       getDescriptor() {
     return descriptor;
@@ -1367,17 +1782,13 @@ public final class TableInfoMessage {
           internal_static_org_apache_hadoop_hbase_rest_protobuf_generated_TableInfo_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_org_apache_hadoop_hbase_rest_protobuf_generated_TableInfo_descriptor,
-              new java.lang.String[] { "Name", "Regions", },
-              org.apache.hadoop.hbase.rest.protobuf.generated.TableInfoMessage.TableInfo.class,
-              org.apache.hadoop.hbase.rest.protobuf.generated.TableInfoMessage.TableInfo.Builder.class);
+              new java.lang.String[] { "Name", "Regions", });
           internal_static_org_apache_hadoop_hbase_rest_protobuf_generated_TableInfo_Region_descriptor =
             internal_static_org_apache_hadoop_hbase_rest_protobuf_generated_TableInfo_descriptor.getNestedTypes().get(0);
           internal_static_org_apache_hadoop_hbase_rest_protobuf_generated_TableInfo_Region_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_org_apache_hadoop_hbase_rest_protobuf_generated_TableInfo_Region_descriptor,
-              new java.lang.String[] { "Name", "StartKey", "EndKey", "Id", "Location", },
-              org.apache.hadoop.hbase.rest.protobuf.generated.TableInfoMessage.TableInfo.Region.class,
-              org.apache.hadoop.hbase.rest.protobuf.generated.TableInfoMessage.TableInfo.Region.Builder.class);
+              new java.lang.String[] { "Name", "StartKey", "EndKey", "Id", "Location", });
           return null;
         }
       };
@@ -1386,6 +1797,6 @@ public final class TableInfoMessage {
         new com.google.protobuf.Descriptors.FileDescriptor[] {
         }, assigner);
   }
-  
+
   // @@protoc_insertion_point(outer_class_scope)
 }

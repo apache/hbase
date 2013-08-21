@@ -366,6 +366,10 @@
   </developers>
   <repositories>
     <repository>
+      <id>Arun Staging 2.1.0-beta RCs</id>
+      <url>https://repository.apache.org/content/repositories/orgapachehadoop-099/</url>
+    </repository>
+    <repository>
       <id>cloudbees netty</id>
       <url>http://repository-netty.forge.cloudbees.com/snapshot/</url>
     </repository>
@@ -881,7 +885,7 @@
     <buildDate>${maven.build.timestamp}</buildDate>
     <compileSource>1.6</compileSource>
     <!-- Dependencies -->
-    <hadoop-two.version>2.0.5-alpha</hadoop-two.version>
+    <hadoop-two.version>2.1.0-beta</hadoop-two.version>
     <hadoop-one.version>1.2.1</hadoop-one.version>
     <commons-cli.version>1.2</commons-cli.version>
     <commons-codec.version>1.7</commons-codec.version>
@@ -905,7 +909,7 @@
     <htrace.version>2.00</htrace.version>
     <log4j.version>1.2.17</log4j.version>
     <mockito-all.version>1.9.0</mockito-all.version>
-    <protobuf.version>2.4.1</protobuf.version>
+    <protobuf.version>2.5.0</protobuf.version>
     <stax-api.version>1.0.1</stax-api.version>
     <thrift.version>0.9.0</thrift.version>
     <zookeeper.version>3.4.5</zookeeper.version>

@@ -27,7 +27,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 
 /**
@@ -90,11 +89,22 @@ public class HBaseCommonTestingUtility {
     }
 
     String randomStr = UUID.randomUUID().toString();
-    Path testPath= new Path(getBaseTestDir(), randomStr);
+    Path testPath = new Path(getBaseTestDir(), randomStr);
 
     this.dataTestDir = new File(testPath.toString()).getAbsoluteFile();
-    this.dataTestDir.deleteOnExit();
+    // Set this property so if mapreduce jobs run, they will use this as their home dir.
+    System.setProperty("test.build.dir", this.dataTestDir.toString());
+    if (deleteOnExit()) this.dataTestDir.deleteOnExit();
     return testPath;
+  }
+
+  /**
+   * @return True if we should delete testing dirs on exit.
+   */
+  boolean deleteOnExit() {
+    String v = System.getProperty("hbase.testing.preserve.testdir");
+    // Let default be true, to delete on exit.
+    return v == null? true: !Boolean.parseBoolean(v);
   }
 
   /**
@@ -146,7 +156,7 @@ public class HBaseCommonTestingUtility {
       return true;
     }
     try {
-      FileUtils.deleteDirectory(dir);
+      if (deleteOnExit()) FileUtils.deleteDirectory(dir);
       return true;
     } catch (IOException ex) {
       LOG.warn("Failed to delete " + dir.getAbsolutePath());
