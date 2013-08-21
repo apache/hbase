@@ -19,7 +19,9 @@ package org.apache.hadoop.hbase.master.balancer;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Comparator;
+import java.util.Deque;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -63,7 +65,7 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
     ServerName[] servers;
     ArrayList<String> tables;
     HRegionInfo[] regions;
-    List<RegionLoad>[] regionLoads;
+    Deque<RegionLoad>[] regionLoads;
     int[][] regionLocations; //regionIndex -> list of serverIndex sorted by locality
 
     int[][] regionsPerServer;            //serverIndex -> region list
@@ -85,7 +87,7 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
     int numMovedRegions = 0; //num moved regions from the initial configuration
     int numMovedMetaRegions = 0;       //num of moved regions that are META
 
-    protected Cluster(Map<ServerName, List<HRegionInfo>> clusterState,  Map<String, List<RegionLoad>> loads,
+    protected Cluster(Map<ServerName, List<HRegionInfo>> clusterState,  Map<String, Deque<RegionLoad>> loads,
         RegionLocationFinder regionFinder) {
 
       serversToIndex = new HashMap<String, Integer>();
@@ -121,7 +123,7 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
       regionIndexToServerIndex = new int[numRegions];
       initialRegionIndexToServerIndex = new int[numRegions];
       regionIndexToTableIndex = new int[numRegions];
-      regionLoads = new List[numRegions];
+      regionLoads = new Deque[numRegions];
       regionLocations = new int[numRegions][];
       serverIndicesSortedByRegionCount = new Integer[numServers];
 
@@ -162,7 +164,7 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
 
           // region load
           if (loads != null) {
-            List<RegionLoad> rl = loads.get(region.getRegionNameAsString());
+            Deque<RegionLoad> rl = loads.get(region.getRegionNameAsString());
             // That could have failed if the RegionLoad is using the other regionName
             if (rl == null) {
               // Try getting the region load using encoded name.

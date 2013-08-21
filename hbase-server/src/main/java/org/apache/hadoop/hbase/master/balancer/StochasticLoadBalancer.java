@@ -17,7 +17,9 @@
  */
 package org.apache.hadoop.hbase.master.balancer;
 
-import java.util.ArrayList;
+import java.util.ArrayDeque;
+import java.util.Collection;
+import java.util.Deque;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -101,7 +103,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
 
   private final RegionLocationFinder regionFinder = new RegionLocationFinder();
   private ClusterStatus clusterStatus = null;
-  private Map<String, List<RegionLoad>> loads = new HashMap<String, List<RegionLoad>>();
+  Map<String, Deque<RegionLoad>> loads = new HashMap<String, Deque<RegionLoad>>();
 
   // values are defaults
   private int maxSteps = 1000000;
@@ -183,9 +185,9 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
    */
   @Override
   public List<RegionPlan> balanceCluster(Map<ServerName, List<HRegionInfo>> clusterState) {
-    //if (!needsBalance(new ClusterLoadState(clusterState))) {
-    //  return null;
-    //}
+    if (!needsBalance(new ClusterLoadState(clusterState))) {
+      return null;
+    }
 
     long startTime = EnvironmentEdgeManager.currentTimeMillis();
 
@@ -303,8 +305,8 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
   private synchronized void updateRegionLoad() {
     // We create a new hashmap so that regions that are no longer there are removed.
     // However we temporarily need the old loads so we can use them to keep the rolling average.
-    Map<String, List<RegionLoad>> oldLoads = loads;
-    loads = new HashMap<String, List<RegionLoad>>();
+    Map<String, Deque<RegionLoad>> oldLoads = loads;
+    loads = new HashMap<String, Deque<RegionLoad>>();
 
     for (ServerName sn : clusterStatus.getServers()) {
       ServerLoad sl = clusterStatus.getLoad(sn);
@@ -312,17 +314,12 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
         continue;
       }
       for (Entry<byte[], RegionLoad> entry : sl.getRegionsLoad().entrySet()) {
-        List<RegionLoad> rLoads = oldLoads.get(Bytes.toString(entry.getKey()));
-        if (rLoads != null) {
-          // We're only going to keep 15.  So if there are that many already take the last 14
-          if (rLoads.size() >= numRegionLoadsToRemember) {
-            int numToRemove = 1 + (rLoads.size() - numRegionLoadsToRemember);
-            rLoads = rLoads.subList(numToRemove, rLoads.size());
-          }
-
-        } else {
+        Deque<RegionLoad> rLoads = oldLoads.get(Bytes.toString(entry.getKey()));
+        if (rLoads == null) {
           // There was nothing there
-          rLoads = new ArrayList<RegionLoad>();
+          rLoads = new ArrayDeque<RegionLoad>();
+        } else if (rLoads.size() >= 15) {
+          rLoads.remove();
         }
         rLoads.add(entry.getValue());
         loads.put(Bytes.toString(entry.getKey()), rLoads);
@@ -806,7 +803,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
   public abstract static class CostFromRegionLoadFunction extends CostFunction {
 
     private ClusterStatus clusterStatus = null;
-    private Map<String, List<RegionLoad>> loads = null;
+    private Map<String, Deque<RegionLoad>> loads = null;
     private double[] stats = null;
     CostFromRegionLoadFunction(Configuration conf) {
       super(conf);
@@ -816,7 +813,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
       this.clusterStatus = status;
     }
 
-    void setLoads(Map<String, List<RegionLoad>> l) {
+    void setLoads(Map<String, Deque<RegionLoad>> l) {
       this.loads = l;
     }
 
@@ -836,7 +833,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
 
         // for every region on this server get the rl
         for(int regionIndex:cluster.regionsPerServer[i]) {
-          List<RegionLoad> regionLoadList =  cluster.regionLoads[regionIndex];
+          Collection<RegionLoad> regionLoadList =  cluster.regionLoads[regionIndex];
 
           // Now if we found a region load get the type of cost that was requested.
           if (regionLoadList != null) {
@@ -852,7 +849,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
       return costFromArray(stats);
     }
 
-    protected double getRegionLoadCost(List<RegionLoad> regionLoadList) {
+    protected double getRegionLoadCost(Collection<RegionLoad> regionLoadList) {
       double cost = 0;
 
       for (RegionLoad rl : regionLoadList) {
