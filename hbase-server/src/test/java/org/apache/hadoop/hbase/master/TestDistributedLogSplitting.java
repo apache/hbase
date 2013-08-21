@@ -824,6 +824,7 @@ public class TestDistributedLogSplitting {
       Put put = new Put(key);
       put.add(Bytes.toBytes("family"), Bytes.toBytes("c1"), new byte[]{'b'});
       ht.put(put);
+      ht.close();
     } catch (IOException ioe) {
       Assert.assertTrue(ioe instanceof RetriesExhaustedWithDetailsException);
       RetriesExhaustedWithDetailsException re = (RetriesExhaustedWithDetailsException) ioe;
@@ -839,7 +840,6 @@ public class TestDistributedLogSplitting {
         foundRegionInRecoveryException);
     }
 
-    ht.close();
     zkw.close();
   }
 
