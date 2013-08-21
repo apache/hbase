@@ -21,8 +21,6 @@ package org.apache.hadoop.hbase.snapshot;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.util.Bytes;
 
@@ -46,7 +44,7 @@ public class ClientSnapshotDescriptionUtils {
       // make sure the table name is valid, this will implicitly check validity
       TableName tableName = TableName.valueOf(snapshot.getTable());
 
-      if (HTableDescriptor.isSystemTable(tableName)) {
+      if (tableName.isSystemTable()) {
         throw new IllegalArgumentException("System table snapshots are not allowed");
       }
     }

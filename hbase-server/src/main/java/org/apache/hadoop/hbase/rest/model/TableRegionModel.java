@@ -27,7 +27,6 @@ import javax.xml.bind.annotation.XmlRootElement;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.util.Bytes;
 
 /**
@@ -96,10 +95,9 @@ public class TableRegionModel implements Serializable {
   @XmlAttribute
   public String getName() {
     byte [] tableNameAsBytes = Bytes.toBytes(this.table);
+    TableName tableName = TableName.valueOf(tableNameAsBytes);
     byte [] nameAsBytes = HRegionInfo.createRegionName(
-        TableName.valueOf(tableNameAsBytes),
-      this.startKey, this.id,
-      !HTableDescriptor.isSystemTable(TableName.valueOf(tableNameAsBytes)));
+      tableName, this.startKey, this.id, !tableName.isSystemTable());
     return Bytes.toString(nameAsBytes);
   }
 

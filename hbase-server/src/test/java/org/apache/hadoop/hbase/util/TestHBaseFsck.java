@@ -1868,8 +1868,7 @@ public class TestHBaseFsck {
 
         @Override
         public boolean processRow(Result rowResult) throws IOException {
-          if(!HTableDescriptor.isSystemTable(MetaScanner.getHRegionInfo(rowResult)
-              .getTableName())) {
+          if(!MetaScanner.getHRegionInfo(rowResult).getTableName().isSystemTable()) {
             Delete delete = new Delete(rowResult.getRow());
             delete.deleteColumn(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER);
             deletes.add(delete);

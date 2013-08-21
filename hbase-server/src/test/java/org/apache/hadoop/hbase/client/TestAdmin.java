@@ -1316,7 +1316,7 @@ public class TestAdmin {
     HRegionServer rs = TEST_UTIL.getRSForFirstRegionInTable(TABLENAME);
     List<HRegionInfo> onlineRegions = ProtobufUtil.getOnlineRegions(rs);
     for (HRegionInfo regionInfo : onlineRegions) {
-      if (!HTableDescriptor.isSystemTable(regionInfo.getTableName())) {
+      if (!regionInfo.getTableName().isSystemTable()) {
         info = regionInfo;
         admin.closeRegionWithEncodedRegionName(regionInfo.getEncodedName(), rs
             .getServerName().getServerName());

@@ -304,7 +304,7 @@ public class HTable implements HTableInterface {
    */
   private void finishSetup() throws IOException {
     this.connection.locateRegion(tableName, HConstants.EMPTY_START_ROW);
-    this.operationTimeout = HTableDescriptor.isSystemTable(tableName) ?
+    this.operationTimeout = tableName.isSystemTable() ?
       this.configuration.getInt(HConstants.HBASE_CLIENT_META_OPERATION_TIMEOUT,
         HConstants.DEFAULT_HBASE_CLIENT_OPERATION_TIMEOUT):
       this.configuration.getInt(HConstants.HBASE_CLIENT_OPERATION_TIMEOUT,
