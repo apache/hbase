@@ -33,6 +33,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ClusterStatus;
+import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.RegionLoad;
 import org.apache.hadoop.hbase.ServerName;
@@ -51,6 +52,7 @@ import com.google.common.collect.Sets;
  *
  */
 public abstract class BaseLoadBalancer implements LoadBalancer {
+  private volatile boolean stopped = false;
 
   /**
    * An efficient array based implementation similar to ClusterState for keeping
@@ -566,4 +568,18 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
     return assignments;
   }
 
+  @Override
+  public void initialize() throws HBaseIOException{
+  }
+
+  @Override
+  public boolean isStopped() {
+    return stopped;
+  }
+
+  @Override
+  public void stop(String why) {
+    LOG.info("Load Balancer stop requested: "+why);
+    stopped = true;
+  }
 }
