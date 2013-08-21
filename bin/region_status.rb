@@ -47,7 +47,7 @@ require 'java'
 
 import org.apache.hadoop.hbase.HBaseConfiguration
 import org.apache.hadoop.hbase.HConstants
-import org.apache.hadoop.hbase.exceptions.MasterNotRunningException
+import org.apache.hadoop.hbase.MasterNotRunningException
 import org.apache.hadoop.hbase.client.HBaseAdmin
 import org.apache.hadoop.hbase.client.HTable
 import org.apache.hadoop.hbase.client.Scan

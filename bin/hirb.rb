@@ -114,6 +114,7 @@ require 'shell/formatter'
 
 # Setup console
 @shell = Shell::Shell.new(@hbase, @formatter)
+@shell.debug = @shell_debug
 
 # Add commands to this namespace
 @shell.export_commands(self)
