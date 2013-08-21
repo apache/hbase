@@ -33,9 +33,13 @@ module Shell
         #(everything is a message, so this is just the formal semantics to support that idiom)
         translate_hbase_exceptions(*args) { send(cmd,*args) }
       rescue => e
+        rootCause = e
+        while rootCause != nil && rootCause.respond_to?(:cause) && rootCause.cause != nil
+          rootCause = rootCause.cause
+        end
         puts
-        puts "ERROR: #{e}"
-        puts "Backtrace: #{e.backtrace.join("\n           ")}" if debug
+        puts "ERROR: #{rootCause}"
+        puts "Backtrace: #{rootCause.backtrace.join("\n           ")}" if debug
         puts
         puts "Here is some help for this command:"
         puts help
