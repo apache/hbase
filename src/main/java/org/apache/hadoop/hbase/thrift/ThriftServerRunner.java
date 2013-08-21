@@ -573,10 +573,10 @@ public class ThriftServerRunner implements Runnable {
     @Override
     public List<ByteBuffer> getTableNames() throws IOError {
       try {
-        HTableDescriptor[] tables = this.admin.listTables();
-        ArrayList<ByteBuffer> list = new ArrayList<ByteBuffer>(tables.length);
-        for (int i = 0; i < tables.length; i++) {
-          list.add(ByteBuffer.wrap(tables[i].getName()));
+        String[] tableNames = this.admin.getTableNames();
+        ArrayList<ByteBuffer> list = new ArrayList<ByteBuffer>(tableNames.length);
+        for (int i = 0; i < tableNames.length; i++) {
+          list.add(ByteBuffer.wrap(Bytes.toBytes(tableNames[i])));
         }
         return list;
       } catch (IOException e) {
