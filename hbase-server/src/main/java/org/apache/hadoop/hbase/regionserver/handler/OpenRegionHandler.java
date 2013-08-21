@@ -370,7 +370,8 @@ public class OpenRegionHandler extends EventHandler {
           "so now unassigning -- closing region on server: " +
           this.server.getServerName());
       } else {
-        LOG.debug("Transitioned " + r.getEncodedName() + " to OPENED in zk on " + this.server.getServerName());
+        LOG.debug("Transitioned " + r.getRegionInfo().getEncodedName() +
+          " to OPENED in zk on " + this.server.getServerName());
         result = true;
       }
     } catch (KeeperException e) {
