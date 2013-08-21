@@ -69,7 +69,7 @@
               <goal>build-classpath</goal>
             </goals>
             <configuration>
-              <outputFile>${project.build.directory}/../../target/cached_classpath.txt</outputFile>
+              <outputFile>${project.parent.basedir}/target/cached_classpath.txt</outputFile>
             </configuration>
           </execution>
         </executions>
