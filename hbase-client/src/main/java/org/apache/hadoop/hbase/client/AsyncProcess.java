@@ -535,8 +535,8 @@ class AsyncProcess<CResult> {
 
     if (toReplay.isEmpty()) {
       LOG.warn("Attempt #" + numAttempt + "/" + numTries + " failed for all " +
-        initialActions.size() + "ops, NOT resubmitting,
-        tableName=" + tableName + ", location=" + location);
+        initialActions.size() + "ops, NOT resubmitting, tableName=" + tableName +
+        ", location=" + location);
     } else {
       submit(initialActions, toReplay, numAttempt, true, errorsByServer);
     }
