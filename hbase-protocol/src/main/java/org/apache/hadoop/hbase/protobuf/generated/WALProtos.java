@@ -8,18 +8,33 @@ public final class WALProtos {
   public static void registerAllExtensions(
       com.google.protobuf.ExtensionRegistry registry) {
   }
+  /**
+   * Protobuf enum {@code ScopeType}
+   */
   public enum ScopeType
       implements com.google.protobuf.ProtocolMessageEnum {
+    /**
+     * <code>REPLICATION_SCOPE_LOCAL = 0;</code>
+     */
     REPLICATION_SCOPE_LOCAL(0, 0),
+    /**
+     * <code>REPLICATION_SCOPE_GLOBAL = 1;</code>
+     */
     REPLICATION_SCOPE_GLOBAL(1, 1),
     ;
-    
+
+    /**
+     * <code>REPLICATION_SCOPE_LOCAL = 0;</code>
+     */
     public static final int REPLICATION_SCOPE_LOCAL_VALUE = 0;
+    /**
+     * <code>REPLICATION_SCOPE_GLOBAL = 1;</code>
+     */
     public static final int REPLICATION_SCOPE_GLOBAL_VALUE = 1;
-    
-    
+
+
     public final int getNumber() { return value; }
-    
+
     public static ScopeType valueOf(int value) {
       switch (value) {
         case 0: return REPLICATION_SCOPE_LOCAL;
@@ -27,7 +42,7 @@ public final class WALProtos {
         default: return null;
       }
     }
-    
+
     public static com.google.protobuf.Internal.EnumLiteMap<ScopeType>
         internalGetValueMap() {
       return internalValueMap;
@@ -39,7 +54,7 @@ public final class WALProtos {
               return ScopeType.valueOf(number);
             }
           };
-    
+
     public final com.google.protobuf.Descriptors.EnumValueDescriptor
         getValueDescriptor() {
       return getDescriptor().getValues().get(index);
@@ -52,11 +67,9 @@ public final class WALProtos {
         getDescriptor() {
       return org.apache.hadoop.hbase.protobuf.generated.WALProtos.getDescriptor().getEnumTypes().get(0);
     }
-    
-    private static final ScopeType[] VALUES = {
-      REPLICATION_SCOPE_LOCAL, REPLICATION_SCOPE_GLOBAL, 
-    };
-    
+
+    private static final ScopeType[] VALUES = values();
+
     public static ScopeType valueOf(
         com.google.protobuf.Descriptors.EnumValueDescriptor desc) {
       if (desc.getType() != getDescriptor()) {
@@ -65,64 +78,143 @@ public final class WALProtos {
       }
       return VALUES[desc.getIndex()];
     }
-    
+
     private final int index;
     private final int value;
-    
+
     private ScopeType(int index, int value) {
       this.index = index;
       this.value = value;
     }
-    
+
     // @@protoc_insertion_point(enum_scope:ScopeType)
   }
-  
+
   public interface WALHeaderOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
-    
+
     // optional bool has_compression = 1;
+    /**
+     * <code>optional bool has_compression = 1;</code>
+     */
     boolean hasHasCompression();
+    /**
+     * <code>optional bool has_compression = 1;</code>
+     */
     boolean getHasCompression();
   }
+  /**
+   * Protobuf type {@code WALHeader}
+   */
   public static final class WALHeader extends
       com.google.protobuf.GeneratedMessage
       implements WALHeaderOrBuilder {
     // Use WALHeader.newBuilder() to construct.
-    private WALHeader(Builder builder) {
+    private WALHeader(com.google.protobuf.GeneratedMessage.Builder<?> builder) {
       super(builder);
+      this.unknownFields = builder.getUnknownFields();
     }
-    private WALHeader(boolean noInit) {}
-    
+    private WALHeader(boolean noInit) { this.unknownFields = com.google.protobuf.UnknownFieldSet.getDefaultInstance(); }
+
     private static final WALHeader defaultInstance;
     public static WALHeader getDefaultInstance() {
       return defaultInstance;
     }
-    
+
     public WALHeader getDefaultInstanceForType() {
       return defaultInstance;
     }
-    
+
+    private final com.google.protobuf.UnknownFieldSet unknownFields;
+    @java.lang.Override
+    public final com.google.protobuf.UnknownFieldSet
+        getUnknownFields() {
+      return this.unknownFields;
+    }
+    private WALHeader(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      initFields();
+      int mutable_bitField0_ = 0;
+      com.google.protobuf.UnknownFieldSet.Builder unknownFields =
+          com.google.protobuf.UnknownFieldSet.newBuilder();
+      try {
+        boolean done = false;
+        while (!done) {
+          int tag = input.readTag();
+          switch (tag) {
+            case 0:
+              done = true;
+              break;
+            default: {
+              if (!parseUnknownField(input, unknownFields,
+                                     extensionRegistry, tag)) {
+                done = true;
+              }
+              break;
+            }
+            case 8: {
+              bitField0_ |= 0x00000001;
+              hasCompression_ = input.readBool();
+              break;
+            }
+          }
+        }
+      } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+        throw e.setUnfinishedMessage(this);
+      } catch (java.io.IOException e) {
+        throw new com.google.protobuf.InvalidProtocolBufferException(
+            e.getMessage()).setUnfinishedMessage(this);
+      } finally {
+        this.unknownFields = unknownFields.build();
+        makeExtensionsImmutable();
+      }
+    }
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
       return org.apache.hadoop.hbase.protobuf.generated.WALProtos.internal_static_WALHeader_descriptor;
     }
-    
+
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return org.apache.hadoop.hbase.protobuf.generated.WALProtos.internal_static_WALHeader_fieldAccessorTable;
+      return org.apache.hadoop.hbase.protobuf.generated.WALProtos.internal_static_WALHeader_fieldAccessorTable
+          .ensureFieldAccessorsInitialized(
+              org.apache.hadoop.hbase.protobuf.generated.WALProtos.WALHeader.class, org.apache.hadoop.hbase.protobuf.generated.WALProtos.WALHeader.Builder.class);
     }
-    
+
+    public static com.google.protobuf.Parser<WALHeader> PARSER =
+        new com.google.protobuf.AbstractParser<WALHeader>() {
+      public WALHeader parsePartialFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        return new WALHeader(input, extensionRegistry);
+      }
+    };
+
+    @java.lang.Override
+    public com.google.protobuf.Parser<WALHeader> getParserForType() {
+      return PARSER;
+    }
+
     private int bitField0_;
     // optional bool has_compression = 1;
     public static final int HAS_COMPRESSION_FIELD_NUMBER = 1;
     private boolean hasCompression_;
+    /**
+     * <code>optional bool has_compression = 1;</code>
+     */
     public boolean hasHasCompression() {
       return ((bitField0_ & 0x00000001) == 0x00000001);
     }
+    /**
+     * <code>optional bool has_compression = 1;</code>
+     */
     public boolean getHasCompression() {
       return hasCompression_;
     }
-    
+
     private void initFields() {
       hasCompression_ = false;
     }
@@ -130,11 +222,11 @@ public final class WALProtos {
     public final boolean isInitialized() {
       byte isInitialized = memoizedIsInitialized;
       if (isInitialized != -1) return isInitialized == 1;
-      
+
       memoizedIsInitialized = 1;
       return true;
     }
-    
+
     public void writeTo(com.google.protobuf.CodedOutputStream output)
                         throws java.io.IOException {
       getSerializedSize();
@@ -143,12 +235,12 @@ public final class WALProtos {
       }
       getUnknownFields().writeTo(output);
     }
-    
+
     private int memoizedSerializedSize = -1;
     public int getSerializedSize() {
       int size = memoizedSerializedSize;
       if (size != -1) return size;
-    
+
       size = 0;
       if (((bitField0_ & 0x00000001) == 0x00000001)) {
         size += com.google.protobuf.CodedOutputStream
@@ -158,14 +250,14 @@ public final class WALProtos {
       memoizedSerializedSize = size;
       return size;
     }
-    
+
     private static final long serialVersionUID = 0L;
     @java.lang.Override
     protected java.lang.Object writeReplace()
         throws java.io.ObjectStreamException {
       return super.writeReplace();
     }
-    
+
     @java.lang.Override
     public boolean equals(final java.lang.Object obj) {
       if (obj == this) {
@@ -175,7 +267,7 @@ public final class WALProtos {
         return super.equals(obj);
       }
       org.apache.hadoop.hbase.protobuf.generated.WALProtos.WALHeader other = (org.apache.hadoop.hbase.protobuf.generated.WALProtos.WALHeader) obj;
-      
+
       boolean result = true;
       result = result && (hasHasCompression() == other.hasHasCompression());
       if (hasHasCompression()) {
@@ -186,9 +278,13 @@ public final class WALProtos {
           getUnknownFields().equals(other.getUnknownFields());
       return result;
     }
-    
+
+    private int memoizedHashCode = 0;
     @java.lang.Override
     public int hashCode() {
+      if (memoizedHashCode != 0) {
+        return memoizedHashCode;
+      }
       int hash = 41;
       hash = (19 * hash) + getDescriptorForType().hashCode();
       if (hasHasCompression()) {
@@ -196,89 +292,79 @@ public final class WALProtos {
         hash = (53 * hash) + hashBoolean(getHasCompression());
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
+      memoizedHashCode = hash;
       return hash;
     }
-    
+
     public static org.apache.hadoop.hbase.protobuf.generated.WALProtos.WALHeader parseFrom(
         com.google.protobuf.ByteString data)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return newBuilder().mergeFrom(data).buildParsed();
+      return PARSER.parseFrom(data);
     }
     public static org.apache.hadoop.hbase.protobuf.generated.WALProtos.WALHeader parseFrom(
         com.google.protobuf.ByteString data,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return newBuilder().mergeFrom(data, extensionRegistry)
-               .buildParsed();
+      return PARSER.parseFrom(data, extensionRegistry);
     }
     public static org.apache.hadoop.hbase.protobuf.generated.WALProtos.WALHeader parseFrom(byte[] data)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return newBuilder().mergeFrom(data).buildParsed();
+      return PARSER.parseFrom(data);
     }
     public static org.apache.hadoop.hbase.protobuf.generated.WALProtos.WALHeader parseFrom(
         byte[] data,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return newBuilder().mergeFrom(data, extensionRegistry)
-               .buildParsed();
+      return PARSER.parseFrom(data, extensionRegistry);
     }
     public static org.apache.hadoop.hbase.protobuf.generated.WALProtos.WALHeader parseFrom(java.io.InputStream input)
         throws java.io.IOException {
-      return newBuilder().mergeFrom(input).buildParsed();
+      return PARSER.parseFrom(input);
     }
     public static org.apache.hadoop.hbase.protobuf.generated.WALProtos.WALHeader parseFrom(
         java.io.InputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
-      return newBuilder().mergeFrom(input, extensionRegistry)
-               .buildParsed();
+      return PARSER.parseFrom(input, extensionRegistry);
     }
     public static org.apache.hadoop.hbase.protobuf.generated.WALProtos.WALHeader parseDelimitedFrom(java.io.InputStream input)
         throws java.io.IOException {
-      Builder builder = newBuilder();
-      if (builder.mergeDelimitedFrom(input)) {
-        return builder.buildParsed();
-      } else {
-        return null;
-      }
+      return PARSER.parseDelimitedFrom(input);
     }
     public static org.apache.hadoop.hbase.protobuf.generated.WALProtos.WALHeader parseDelimitedFrom(
         java.io.InputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
-      Builder builder = newBuilder();
-      if (builder.mergeDelimitedFrom(input, extensionRegistry)) {
-        return builder.buildParsed();
-      } else {
-        return null;
-      }
+      return PARSER.parseDelimitedFrom(input, extensionRegistry);
     }
     public static org.apache.hadoop.hbase.protobuf.generated.WALProtos.WALHeader parseFrom(
         com.google.protobuf.CodedInputStream input)
         throws java.io.IOException {
-      return newBuilder().mergeFrom(input).buildParsed();
+      return PARSER.parseFrom(input);
     }
     public static org.apache.hadoop.hbase.protobuf.generated.WALProtos.WALHeader parseFrom(
         com.google.protobuf.CodedInputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
-      return newBuilder().mergeFrom(input, extensionRegistry)
-               .buildParsed();
+      return PARSER.parseFrom(input, extensionRegistry);
     }
-    
+
     public static Builder newBuilder() { return Builder.create(); }
     public Builder newBuilderForType() { return newBuilder(); }
     public static Builder newBuilder(org.apache.hadoop.hbase.protobuf.generated.WALProtos.WALHeader prototype) {
       return newBuilder().mergeFrom(prototype);
     }
     public Builder toBuilder() { return newBuilder(this); }
-    
+
     @java.lang.Override
     protected Builder newBuilderForType(
         com.google.protobuf.GeneratedMessage.BuilderParent parent) {
       Builder builder = new Builder(parent);
       return builder;
     }
+    /**
+     * Protobuf type {@code WALHeader}
+     */
     public static final class Builder extends
         com.google.protobuf.GeneratedMessage.Builder<Builder>
        implements org.apache.hadoop.hbase.protobuf.generated.WALProtos.WALHeaderOrBuilder {
@@ -286,18 +372,21 @@ public final class WALProtos {
           getDescriptor() {
         return org.apache.hadoop.hbase.protobuf.generated.WALProtos.internal_static_WALHeader_descriptor;
       }
-      
+
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return org.apache.hadoop.hbase.protobuf.generated.WALProtos.internal_static_WALHeader_fieldAccessorTable;
+        return org.apache.hadoop.hbase.protobuf.generated.WALProtos.internal_static_WALHeader_fieldAccessorTable
+            .ensureFieldAccessorsInitialized(
+                org.apache.hadoop.hbase.protobuf.generated.WALProtos.WALHeader.class, org.apache.hadoop.hbase.protobuf.generated.WALProtos.WALHeader.Builder.class);
       }
-      
+
       // Construct using org.apache.hadoop.hbase.protobuf.generated.WALProtos.WALHeader.newBuilder()
       private Builder() {
         maybeForceBuilderInitialization();
       }
-      
-      private Builder(BuilderParent parent) {
+
+      private Builder(
+          com.google.protobuf.GeneratedMessage.BuilderParent parent) {
         super(parent);
         maybeForceBuilderInitialization();
       }
@@ -308,27 +397,27 @@ public final class WALProtos {
       private static Builder create() {
         return new Builder();
       }
-      
+
       public Builder clear() {
         super.clear();
         hasCompression_ = false;
         bitField0_ = (bitField0_ & ~0x00000001);
         return this;
       }
-      
+
       public Builder clone() {
         return create().mergeFrom(buildPartial());
       }
-      
+
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return org.apache.hadoop.hbase.protobuf.generated.WALProtos.WALHeader.getDescriptor();
+        return org.apache.hadoop.hbase.protobuf.generated.WALProtos.internal_static_WALHeader_descriptor;
       }
-      
+
       public org.apache.hadoop.hbase.protobuf.generated.WALProtos.WALHeader getDefaultInstanceForType() {
         return org.apache.hadoop.hbase.protobuf.generated.WALProtos.WALHeader.getDefaultInstance();
       }
-      
+
       public org.apache.hadoop.hbase.protobuf.generated.WALProtos.WALHeader build() {
         org.apache.hadoop.hbase.protobuf.generated.WALProtos.WALHeader result = buildPartial();
         if (!result.isInitialized()) {
@@ -336,17 +425,7 @@ public final class WALProtos {
         }
         return result;
       }
-      
-      private org.apache.hadoop.hbase.protobuf.generated.WALProtos.WALHeader buildParsed()
-          throws com.google.protobuf.InvalidProtocolBufferException {
-        org.apache.hadoop.hbase.protobuf.generated.WALProtos.WALHeader result = buildPartial();
-        if (!result.isInitialized()) {
-          throw newUninitializedMessageException(
-            result).asInvalidProtocolBufferException();
-        }
-        return result;
-      }
-      
+
       public org.apache.hadoop.hbase.protobuf.generated.WALProtos.WALHeader buildPartial() {
         org.apache.hadoop.hbase.protobuf.generated.WALProtos.WALHeader result = new org.apache.hadoop.hbase.protobuf.generated.WALProtos.WALHeader(this);
         int from_bitField0_ = bitField0_;
@@ -359,7 +438,7 @@ public final class WALProtos {
         onBuilt();
         return result;
       }
-      
+
       public Builder mergeFrom(com.google.protobuf.Message other) {
         if (other instanceof org.apache.hadoop.hbase.protobuf.generated.WALProtos.WALHeader) {
           return mergeFrom((org.apache.hadoop.hbase.protobuf.generated.WALProtos.WALHeader)other);
@@ -368,7 +447,7 @@ public final class WALProtos {
           return this;
         }
       }
-      
+
       public Builder mergeFrom(org.apache.hadoop.hbase.protobuf.generated.WALProtos.WALHeader other) {
         if (other == org.apache.hadoop.hbase.protobuf.generated.WALProtos.WALHeader.getDefaultInstance()) return this;
         if (other.hasHasCompression()) {
@@ -377,228 +456,484 @@ public final class WALProtos {
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
       }
-      
+
       public final boolean isInitialized() {
         return true;
       }
-      
+
       public Builder mergeFrom(
           com.google.protobuf.CodedInputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws java.io.IOException {
-        com.google.protobuf.UnknownFieldSet.Builder unknownFields =
-          com.google.protobuf.UnknownFieldSet.newBuilder(
-            this.getUnknownFields());
-        while (true) {
-          int tag = input.readTag();
-          switch (tag) {
-            case 0:
-              this.setUnknownFields(unknownFields.build());
-              onChanged();
-              return this;
-            default: {
-              if (!parseUnknownField(input, unknownFields,
-                                     extensionRegistry, tag)) {
-                this.setUnknownFields(unknownFields.build());
-                onChanged();
-                return this;
-              }
-              break;
-            }
-            case 8: {
-              bitField0_ |= 0x00000001;
-              hasCompression_ = input.readBool();
-              break;
-            }
+        org.apache.hadoop.hbase.protobuf.generated.WALProtos.WALHeader parsedMessage = null;
+        try {
+          parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
+        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+          parsedMessage = (org.apache.hadoop.hbase.protobuf.generated.WALProtos.WALHeader) e.getUnfinishedMessage();
+          throw e;
+        } finally {
+          if (parsedMessage != null) {
+            mergeFrom(parsedMessage);
           }
         }
+        return this;
       }
-      
       private int bitField0_;
-      
+
       // optional bool has_compression = 1;
       private boolean hasCompression_ ;
+      /**
+       * <code>optional bool has_compression = 1;</code>
+       */
       public boolean hasHasCompression() {
         return ((bitField0_ & 0x00000001) == 0x00000001);
       }
+      /**
+       * <code>optional bool has_compression = 1;</code>
+       */
       public boolean getHasCompression() {
         return hasCompression_;
       }
+      /**
+       * <code>optional bool has_compression = 1;</code>
+       */
       public Builder setHasCompression(boolean value) {
         bitField0_ |= 0x00000001;
         hasCompression_ = value;
         onChanged();
         return this;
       }
+      /**
+       * <code>optional bool has_compression = 1;</code>
+       */
       public Builder clearHasCompression() {
         bitField0_ = (bitField0_ & ~0x00000001);
         hasCompression_ = false;
         onChanged();
         return this;
       }
-      
+
       // @@protoc_insertion_point(builder_scope:WALHeader)
     }
-    
+
     static {
       defaultInstance = new WALHeader(true);
       defaultInstance.initFields();
     }
-    
+
     // @@protoc_insertion_point(class_scope:WALHeader)
   }
-  
+
   public interface WALKeyOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
-    
+
     // required bytes encoded_region_name = 1;
+    /**
+     * <code>required bytes encoded_region_name = 1;</code>
+     */
     boolean hasEncodedRegionName();
+    /**
+     * <code>required bytes encoded_region_name = 1;</code>
+     */
     com.google.protobuf.ByteString getEncodedRegionName();
-    
+
     // required bytes table_name = 2;
+    /**
+     * <code>required bytes table_name = 2;</code>
+     */
     boolean hasTableName();
+    /**
+     * <code>required bytes table_name = 2;</code>
+     */
     com.google.protobuf.ByteString getTableName();
-    
+
     // required uint64 log_sequence_number = 3;
+    /**
+     * <code>required uint64 log_sequence_number = 3;</code>
+     */
     boolean hasLogSequenceNumber();
+    /**
+     * <code>required uint64 log_sequence_number = 3;</code>
+     */
     long getLogSequenceNumber();
-    
+
     // required uint64 write_time = 4;
+    /**
+     * <code>required uint64 write_time = 4;</code>
+     */
     boolean hasWriteTime();
+    /**
+     * <code>required uint64 write_time = 4;</code>
+     */
     long getWriteTime();
-    
+
     // optional .UUID cluster_id = 5;
+    /**
+     * <code>optional .UUID cluster_id = 5;</code>
+     */
     boolean hasClusterId();
+    /**
+     * <code>optional .UUID cluster_id = 5;</code>
+     */
     org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.UUID getClusterId();
+    /**
+     * <code>optional .UUID cluster_id = 5;</code>
+     */
     org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.UUIDOrBuilder getClusterIdOrBuilder();
-    
+
     // repeated .FamilyScope scopes = 6;
+    /**
+     * <code>repeated .FamilyScope scopes = 6;</code>
+     */
     java.util.List<org.apache.hadoop.hbase.protobuf.generated.WALProtos.FamilyScope> 
         getScopesList();
+    /**
+     * <code>repeated .FamilyScope scopes = 6;</code>
+     */
     org.apache.hadoop.hbase.protobuf.generated.WALProtos.FamilyScope getScopes(int index);
+    /**
+     * <code>repeated .FamilyScope scopes = 6;</code>
+     */
     int getScopesCount();
+    /**
+     * <code>repeated .FamilyScope scopes = 6;</code>
+     */
     java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.WALProtos.FamilyScopeOrBuilder> 
         getScopesOrBuilderList();
+    /**
+     * <code>repeated .FamilyScope scopes = 6;</code>
+     */
     org.apache.hadoop.hbase.protobuf.generated.WALProtos.FamilyScopeOrBuilder getScopesOrBuilder(
         int index);
-    
+
     // optional uint32 following_kv_count = 7;
+    /**
+     * <code>optional uint32 following_kv_count = 7;</code>
+     *
+     * <pre>
+     *
+     *optional CustomEntryType custom_entry_type = 8;
+     *
+     *enum CustomEntryType {
+     *COMPACTION = 0;
+     *}
+     * </pre>
+     */
     boolean hasFollowingKvCount();
+    /**
+     * <code>optional uint32 following_kv_count = 7;</code>
+     *
+     * <pre>
+     *
+     *optional CustomEntryType custom_entry_type = 8;
+     *
+     *enum CustomEntryType {
+     *COMPACTION = 0;
+     *}
+     * </pre>
+     */
     int getFollowingKvCount();
   }
+  /**
+   * Protobuf type {@code WALKey}
+   *
+   * <pre>
+   * Protocol buffer version of HLogKey; see HLogKey comment, not really a key but WALEdit header for some KVs
+   * </pre>
+   */
   public static final class WALKey extends
       com.google.protobuf.GeneratedMessage
       implements WALKeyOrBuilder {
     // Use WALKey.newBuilder() to construct.
-    private WALKey(Builder builder) {
+    private WALKey(com.google.protobuf.GeneratedMessage.Builder<?> builder) {
       super(builder);
+      this.unknownFields = builder.getUnknownFields();
     }
-    private WALKey(boolean noInit) {}
-    
+    private WALKey(boolean noInit) { this.unknownFields = com.google.protobuf.UnknownFieldSet.getDefaultInstance(); }
+
     private static final WALKey defaultInstance;
     public static WALKey getDefaultInstance() {
       return defaultInstance;
     }
-    
+
     public WALKey getDefaultInstanceForType() {
       return defaultInstance;
     }
-    
+
+    private final com.google.protobuf.UnknownFieldSet unknownFields;
+    @java.lang.Override
+    public final com.google.protobuf.UnknownFieldSet
+        getUnknownFields() {
+      return this.unknownFields;
+    }
+    private WALKey(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      initFields();
+      int mutable_bitField0_ = 0;
+      com.google.protobuf.UnknownFieldSet.Builder unknownFields =
+          com.google.protobuf.UnknownFieldSet.newBuilder();
+      try {
+        boolean done = false;
+        while (!done) {
+          int tag = input.readTag();
+          switch (tag) {
+            case 0:
+              done = true;
+              break;
+            default: {
+              if (!parseUnknownField(input, unknownFields,
+                                     extensionRegistry, tag)) {
+                done = true;
+              }
+              break;
+            }
+            case 10: {
+              bitField0_ |= 0x00000001;
+              encodedRegionName_ = input.readBytes();
+              break;
+            }
+            case 18: {
+              bitField0_ |= 0x00000002;
+              tableName_ = input.readBytes();
+              break;
+            }
+            case 24: {
+              bitField0_ |= 0x00000004;
+              logSequenceNumber_ = input.readUInt64();
+              break;
+            }
+            case 32: {
+              bitField0_ |= 0x00000008;
+              writeTime_ = input.readUInt64();
+              break;
+            }
+            case 42: {
+              org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.UUID.Builder subBuilder = null;
+              if (((bitField0_ & 0x00000010) == 0x00000010)) {
+                subBuilder = clusterId_.toBuilder();
+              }
+              clusterId_ = input.readMessage(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.UUID.PARSER, extensionRegistry);
+              if (subBuilder != null) {
+                subBuilder.mergeFrom(clusterId_);
+                clusterId_ = subBuilder.buildPartial();
+              }
+              bitField0_ |= 0x00000010;
+              break;
+            }
+            case 50: {
+              if (!((mutable_bitField0_ & 0x00000020) == 0x00000020)) {
+                scopes_ = new java.util.ArrayList<org.apache.hadoop.hbase.protobuf.generated.WALProtos.FamilyScope>();
+                mutable_bitField0_ |= 0x00000020;
+              }
+              scopes_.add(input.readMessage(org.apache.hadoop.hbase.protobuf.generated.WALProtos.FamilyScope.PARSER, extensionRegistry));
+              break;
+            }
+            case 56: {
+              bitField0_ |= 0x00000020;
+              followingKvCount_ = input.readUInt32();
+              break;
+            }
+          }
+        }
+      } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+        throw e.setUnfinishedMessage(this);
+      } catch (java.io.IOException e) {
+        throw new com.google.protobuf.InvalidProtocolBufferException(
+            e.getMessage()).setUnfinishedMessage(this);
+      } finally {
+        if (((mutable_bitField0_ & 0x00000020) == 0x00000020)) {
+          scopes_ = java.util.Collections.unmodifiableList(scopes_);
+        }
+        this.unknownFields = unknownFields.build();
+        makeExtensionsImmutable();
+      }
+    }
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
       return org.apache.hadoop.hbase.protobuf.generated.WALProtos.internal_static_WALKey_descriptor;
     }
-    
+
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return org.apache.hadoop.hbase.protobuf.generated.WALProtos.internal_static_WALKey_fieldAccessorTable;
+      return org.apache.hadoop.hbase.protobuf.generated.WALProtos.internal_static_WALKey_fieldAccessorTable
+          .ensureFieldAccessorsInitialized(
+              org.apache.hadoop.hbase.protobuf.generated.WALProtos.WALKey.class, org.apache.hadoop.hbase.protobuf.generated.WALProtos.WALKey.Builder.class);
     }
-    
+
+    public static com.google.protobuf.Parser<WALKey> PARSER =
+        new com.google.protobuf.AbstractParser<WALKey>() {
+      public WALKey parsePartialFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        return new WALKey(input, extensionRegistry);
+      }
+    };
+
+    @java.lang.Override
+    public com.google.protobuf.Parser<WALKey> getParserForType() {
+      return PARSER;
+    }
+
     private int bitField0_;
     // required bytes encoded_region_name = 1;
     public static final int ENCODED_REGION_NAME_FIELD_NUMBER = 1;
     private com.google.protobuf.ByteString encodedRegionName_;
+    /**
+     * <code>required bytes encoded_region_name = 1;</code>
+     */
     public boolean hasEncodedRegionName() {
       return ((bitField0_ & 0x00000001) == 0x00000001);
     }
+    /**
+     * <code>required bytes encoded_region_name = 1;</code>
+     */
     public com.google.protobuf.ByteString getEncodedRegionName() {
       return encodedRegionName_;
     }
-    
+
     // required bytes table_name = 2;
     public static final int TABLE_NAME_FIELD_NUMBER = 2;
     private com.google.protobuf.ByteString tableName_;
+    /**
+     * <code>required bytes table_name = 2;</code>
+     */
     public boolean hasTableName() {
       return ((bitField0_ & 0x00000002) == 0x00000002);
     }
+    /**
+     * <code>required bytes table_name = 2;</code>
+     */
     public com.google.protobuf.ByteString getTableName() {
       return tableName_;
     }
-    
+
     // required uint64 log_sequence_number = 3;
     public static final int LOG_SEQUENCE_NUMBER_FIELD_NUMBER = 3;
     private long logSequenceNumber_;
+    /**
+     * <code>required uint64 log_sequence_number = 3;</code>
+     */
     public boolean hasLogSequenceNumber() {
       return ((bitField0_ & 0x00000004) == 0x00000004);
     }
+    /**
+     * <code>required uint64 log_sequence_number = 3;</code>
+     */
     public long getLogSequenceNumber() {
       return logSequenceNumber_;
     }
-    
+
     // required uint64 write_time = 4;
     public static final int WRITE_TIME_FIELD_NUMBER = 4;
     private long writeTime_;
+    /**
+     * <code>required uint64 write_time = 4;</code>
+     */
     public boolean hasWriteTime() {
       return ((bitField0_ & 0x00000008) == 0x00000008);
     }
+    /**
+     * <code>required uint64 write_time = 4;</code>
+     */
     public long getWriteTime() {
       return writeTime_;
     }
-    
+
     // optional .UUID cluster_id = 5;
     public static final int CLUSTER_ID_FIELD_NUMBER = 5;
     private org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.UUID clusterId_;
+    /**
+     * <code>optional .UUID cluster_id = 5;</code>
+     */
     public boolean hasClusterId() {
       return ((bitField0_ & 0x00000010) == 0x00000010);
     }
+    /**
+     * <code>optional .UUID cluster_id = 5;</code>
+     */
     public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.UUID getClusterId() {
       return clusterId_;
     }
+    /**
+     * <code>optional .UUID cluster_id = 5;</code>
+     */
     public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.UUIDOrBuilder getClusterIdOrBuilder() {
       return clusterId_;
     }
-    
+
     // repeated .FamilyScope scopes = 6;
     public static final int SCOPES_FIELD_NUMBER = 6;
     private java.util.List<org.apache.hadoop.hbase.protobuf.generated.WALProtos.FamilyScope> scopes_;
+    /**
+     * <code>repeated .FamilyScope scopes = 6;</code>
+     */
     public java.util.List<org.apache.hadoop.hbase.protobuf.generated.WALProtos.FamilyScope> getScopesList() {
       return scopes_;
     }
+    /**
+     * <code>repeated .FamilyScope scopes = 6;</code>
+     */
     public java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.WALProtos.FamilyScopeOrBuilder> 
         getScopesOrBuilderList() {
       return scopes_;
     }
+    /**
+     * <code>repeated .FamilyScope scopes = 6;</code>
+     */
     public int getScopesCount() {
       return scopes_.size();
     }
+    /**
+     * <code>repeated .FamilyScope scopes = 6;</code>
+     */
     public org.apache.hadoop.hbase.protobuf.generated.WALProtos.FamilyScope getScopes(int index) {
       return scopes_.get(index);
     }
+    /**
+     * <code>repeated .FamilyScope scopes = 6;</code>
+     */
     public org.apache.hadoop.hbase.protobuf.generated.WALProtos.FamilyScopeOrBuilder getScopesOrBuilder(
         int index) {
       return scopes_.get(index);
     }
-    
+
     // optional uint32 following_kv_count = 7;
     public static final int FOLLOWING_KV_COUNT_FIELD_NUMBER = 7;
     private int followingKvCount_;
+    /**
+     * <code>optional uint32 following_kv_count = 7;</code>
+     *
+     * <pre>
+     *
+     *optional CustomEntryType custom_entry_type = 8;
+     *
+     *enum CustomEntryType {
+     *COMPACTION = 0;
+     *}
+     * </pre>
+     */
     public boolean hasFollowingKvCount() {
       return ((bitField0_ & 0x00000020) == 0x00000020);
     }
+    /**
+     * <code>optional uint32 following_kv_count = 7;</code>
+     *
+     * <pre>
+     *
+     *optional CustomEntryType custom_entry_type = 8;
+     *
+     *enum CustomEntryType {
+     *COMPACTION = 0;
+     *}
+     * </pre>
+     */
     public int getFollowingKvCount() {
       return followingKvCount_;
     }
-    
+
     private void initFields() {
       encodedRegionName_ = com.google.protobuf.ByteString.EMPTY;
       tableName_ = com.google.protobuf.ByteString.EMPTY;
@@ -612,7 +947,7 @@ public final class WALProtos {
     public final boolean isInitialized() {
       byte isInitialized = memoizedIsInitialized;
       if (isInitialized != -1) return isInitialized == 1;
-      
+
       if (!hasEncodedRegionName()) {
         memoizedIsInitialized = 0;
         return false;
@@ -644,7 +979,7 @@ public final class WALProtos {
       memoizedIsInitialized = 1;
       return true;
     }
-    
+
     public void writeTo(com.google.protobuf.CodedOutputStream output)
                         throws java.io.IOException {
       getSerializedSize();
@@ -671,12 +1006,12 @@ public final class WALProtos {
       }
       getUnknownFields().writeTo(output);
     }
-    
+
     private int memoizedSerializedSize = -1;
     public int getSerializedSize() {
       int size = memoizedSerializedSize;
       if (size != -1) return size;
-    
+
       size = 0;
       if (((bitField0_ & 0x00000001) == 0x00000001)) {
         size += com.google.protobuf.CodedOutputStream
@@ -710,14 +1045,14 @@ public final class WALProtos {
       memoizedSerializedSize = size;
       return size;
     }
-    
+
     private static final long serialVersionUID = 0L;
     @java.lang.Override
     protected java.lang.Object writeReplace()
         throws java.io.ObjectStreamException {
       return super.writeReplace();
     }
-    
+
     @java.lang.Override
     public boolean equals(final java.lang.Object obj) {
       if (obj == this) {
@@ -727,7 +1062,7 @@ public final class WALProtos {
         return super.equals(obj);
       }
       org.apache.hadoop.hbase.protobuf.generated.WALProtos.WALKey other = (org.apache.hadoop.hbase.protobuf.generated.WALProtos.WALKey) obj;
-      
+
       boolean result = true;
       result = result && (hasEncodedRegionName() == other.hasEncodedRegionName());
       if (hasEncodedRegionName()) {
@@ -765,9 +1100,13 @@ public final class WALProtos {
           getUnknownFields().equals(other.getUnknownFields());
       return result;
     }
-    
+
+    private int memoizedHashCode = 0;
     @java.lang.Override
     public int hashCode() {
+      if (memoizedHashCode != 0) {
+        return memoizedHashCode;
+      }
       int hash = 41;
       hash = (19 * hash) + getDescriptorForType().hashCode();
       if (hasEncodedRegionName()) {
@@ -799,89 +1138,83 @@ public final class WALProtos {
         hash = (53 * hash) + getFollowingKvCount();
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
+      memoizedHashCode = hash;
       return hash;
     }
-    
+
     public static org.apache.hadoop.hbase.protobuf.generated.WALProtos.WALKey parseFrom(
         com.google.protobuf.ByteString data)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return newBuilder().mergeFrom(data).buildParsed();
+      return PARSER.parseFrom(data);
     }
     public static org.apache.hadoop.hbase.protobuf.generated.WALProtos.WALKey parseFrom(
         com.google.protobuf.ByteString data,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return newBuilder().mergeFrom(data, extensionRegistry)
-               .buildParsed();
+      return PARSER.parseFrom(data, extensionRegistry);
     }
     public static org.apache.hadoop.hbase.protobuf.generated.WALProtos.WALKey parseFrom(byte[] data)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return newBuilder().mergeFrom(data).buildParsed();
+      return PARSER.parseFrom(data);
     }
     public static org.apache.hadoop.hbase.protobuf.generated.WALProtos.WALKey parseFrom(
         byte[] data,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return newBuilder().mergeFrom(data, extensionRegistry)
-               .buildParsed();
+      return PARSER.parseFrom(data, extensionRegistry);
     }
     public static org.apache.hadoop.hbase.protobuf.generated.WALProtos.WALKey parseFrom(java.io.InputStream input)
         throws java.io.IOException {
-      return newBuilder().mergeFrom(input).buildParsed();
+      return PARSER.parseFrom(input);
     }
     public static org.apache.hadoop.hbase.protobuf.generated.WALProtos.WALKey parseFrom(
         java.io.InputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
-      return newBuilder().mergeFrom(input, extensionRegistry)
-               .buildParsed();
+      return PARSER.parseFrom(input, extensionRegistry);
     }
     public static org.apache.hadoop.hbase.protobuf.generated.WALProtos.WALKey parseDelimitedFrom(java.io.InputStream input)
         throws java.io.IOException {
-      Builder builder = newBuilder();
-      if (builder.mergeDelimitedFrom(input)) {
-        return builder.buildParsed();
-      } else {
-        return null;
-      }
+      return PARSER.parseDelimitedFrom(input);
     }
     public static org.apache.hadoop.hbase.protobuf.generated.WALProtos.WALKey parseDelimitedFrom(
         java.io.InputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
-      Builder builder = newBuilder();
-      if (builder.mergeDelimitedFrom(input, extensionRegistry)) {
-        return builder.buildParsed();
-      } else {
-        return null;
-      }
+      return PARSER.parseDelimitedFrom(input, extensionRegistry);
     }
     public static org.apache.hadoop.hbase.protobuf.generated.WALProtos.WALKey parseFrom(
         com.google.protobuf.CodedInputStream input)
         throws java.io.IOException {
-      return newBuilder().mergeFrom(input).buildParsed();
+      return PARSER.parseFrom(input);
     }
     public static org.apache.hadoop.hbase.protobuf.generated.WALProtos.WALKey parseFrom(
         com.google.protobuf.CodedInputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
-      return newBuilder().mergeFrom(input, extensionRegistry)
-               .buildParsed();
+      return PARSER.parseFrom(input, extensionRegistry);
     }
-    
+
     public static Builder newBuilder() { return Builder.create(); }
     public Builder newBuilderForType() { return newBuilder(); }
     public static Builder newBuilder(org.apache.hadoop.hbase.protobuf.generated.WALProtos.WALKey prototype) {
       return newBuilder().mergeFrom(prototype);
     }
     public Builder toBuilder() { return newBuilder(this); }
-    
+
     @java.lang.Override
     protected Builder newBuilderForType(
         com.google.protobuf.GeneratedMessage.BuilderParent parent) {
       Builder builder = new Builder(parent);
       return builder;
     }
+    /**
+     * Protobuf type {@code WALKey}
+     *
+     * <pre>
+     * Protocol buffer version of HLogKey; see HLogKey comment, not really a key but WALEdit header for some KVs
+     * </pre>
+     */
     public static final class Builder extends
         com.google.protobuf.GeneratedMessage.Builder<Builder>
        implements org.apache.hadoop.hbase.protobuf.generated.WALProtos.WALKeyOrBuilder {
@@ -889,18 +1222,21 @@ public final class WALProtos {
           getDescriptor() {
         return org.apache.hadoop.hbase.protobuf.generated.WALProtos.internal_static_WALKey_descriptor;
       }
-      
+
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return org.apache.hadoop.hbase.protobuf.generated.WALProtos.internal_static_WALKey_fieldAccessorTable;
+        return org.apache.hadoop.hbase.protobuf.generated.WALProtos.internal_static_WALKey_fieldAccessorTable
+            .ensureFieldAccessorsInitialized(
+                org.apache.hadoop.hbase.protobuf.generated.WALProtos.WALKey.class, org.apache.hadoop.hbase.protobuf.generated.WALProtos.WALKey.Builder.class);
       }
-      
+
       // Construct using org.apache.hadoop.hbase.protobuf.generated.WALProtos.WALKey.newBuilder()
       private Builder() {
         maybeForceBuilderInitialization();
       }
-      
-      private Builder(BuilderParent parent) {
+
+      private Builder(
+          com.google.protobuf.GeneratedMessage.BuilderParent parent) {
         super(parent);
         maybeForceBuilderInitialization();
       }
@@ -913,7 +1249,7 @@ public final class WALProtos {
       private static Builder create() {
         return new Builder();
       }
-      
+
       public Builder clear() {
         super.clear();
         encodedRegionName_ = com.google.protobuf.ByteString.EMPTY;
@@ -940,20 +1276,20 @@ public final class WALProtos {
         bitField0_ = (bitField0_ & ~0x00000040);
         return this;
       }
-      
+
       public Builder clone() {
         return create().mergeFrom(buildPartial());
       }
-      
+
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return org.apache.hadoop.hbase.protobuf.generated.WALProtos.WALKey.getDescriptor();
+        return org.apache.hadoop.hbase.protobuf.generated.WALProtos.internal_static_WALKey_descriptor;
       }
-      
+
       public org.apache.hadoop.hbase.protobuf.generated.WALProtos.WALKey getDefaultInstanceForType() {
         return org.apache.hadoop.hbase.protobuf.generated.WALProtos.WALKey.getDefaultInstance();
       }
-      
+
       public org.apache.hadoop.hbase.protobuf.generated.WALProtos.WALKey build() {
         org.apache.hadoop.hbase.protobuf.generated.WALProtos.WALKey result = buildPartial();
         if (!result.isInitialized()) {
@@ -961,17 +1297,7 @@ public final class WALProtos {
         }
         return result;
       }
-      
-      private org.apache.hadoop.hbase.protobuf.generated.WALProtos.WALKey buildParsed()
-          throws com.google.protobuf.InvalidProtocolBufferException {
-        org.apache.hadoop.hbase.protobuf.generated.WALProtos.WALKey result = buildPartial();
-        if (!result.isInitialized()) {
-          throw newUninitializedMessageException(
-            result).asInvalidProtocolBufferException();
-        }
-        return result;
-      }
-      
+
       public org.apache.hadoop.hbase.protobuf.generated.WALProtos.WALKey buildPartial() {
         org.apache.hadoop.hbase.protobuf.generated.WALProtos.WALKey result = new org.apache.hadoop.hbase.protobuf.generated.WALProtos.WALKey(this);
         int from_bitField0_ = bitField0_;
@@ -1017,7 +1343,7 @@ public final class WALProtos {
         onBuilt();
         return result;
       }
-      
+
       public Builder mergeFrom(com.google.protobuf.Message other) {
         if (other instanceof org.apache.hadoop.hbase.protobuf.generated.WALProtos.WALKey) {
           return mergeFrom((org.apache.hadoop.hbase.protobuf.generated.WALProtos.WALKey)other);
@@ -1026,7 +1352,7 @@ public final class WALProtos {
           return this;
         }
       }
-      
+
       public Builder mergeFrom(org.apache.hadoop.hbase.protobuf.generated.WALProtos.WALKey other) {
         if (other == org.apache.hadoop.hbase.protobuf.generated.WALProtos.WALKey.getDefaultInstance()) return this;
         if (other.hasEncodedRegionName()) {
@@ -1076,7 +1402,7 @@ public final class WALProtos {
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
       }
-      
+
       public final boolean isInitialized() {
         if (!hasEncodedRegionName()) {
           
@@ -1108,84 +1434,43 @@ public final class WALProtos {
         }
         return true;
       }
-      
+
       public Builder mergeFrom(
           com.google.protobuf.CodedInputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws java.io.IOException {
-        com.google.protobuf.UnknownFieldSet.Builder unknownFields =
-          com.google.protobuf.UnknownFieldSet.newBuilder(
-            this.getUnknownFields());
-        while (true) {
-          int tag = input.readTag();
-          switch (tag) {
-            case 0:
-              this.setUnknownFields(unknownFields.build());
-              onChanged();
-              return this;
-            default: {
-              if (!parseUnknownField(input, unknownFields,
-                                     extensionRegistry, tag)) {
-                this.setUnknownFields(unknownFields.build());
-                onChanged();
-                return this;
-              }
-              break;
-            }
-            case 10: {
-              bitField0_ |= 0x00000001;
-              encodedRegionName_ = input.readBytes();
-              break;
-            }
-            case 18: {
-              bitField0_ |= 0x00000002;
-              tableName_ = input.readBytes();
-              break;
-            }
-            case 24: {
-              bitField0_ |= 0x00000004;
-              logSequenceNumber_ = input.readUInt64();
-              break;
-            }
-            case 32: {
-              bitField0_ |= 0x00000008;
-              writeTime_ = input.readUInt64();
-              break;
-            }
-            case 42: {
-              org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.UUID.Builder subBuilder = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.UUID.newBuilder();
-              if (hasClusterId()) {
-                subBuilder.mergeFrom(getClusterId());
-              }
-              input.readMessage(subBuilder, extensionRegistry);
-              setClusterId(subBuilder.buildPartial());
-              break;
-            }
-            case 50: {
-              org.apache.hadoop.hbase.protobuf.generated.WALProtos.FamilyScope.Builder subBuilder = org.apache.hadoop.hbase.protobuf.generated.WALProtos.FamilyScope.newBuilder();
-              input.readMessage(subBuilder, extensionRegistry);
-              addScopes(subBuilder.buildPartial());
-              break;
-            }
-            case 56: {
-              bitField0_ |= 0x00000040;
-              followingKvCount_ = input.readUInt32();
-              break;
-            }
+        org.apache.hadoop.hbase.protobuf.generated.WALProtos.WALKey parsedMessage = null;
+        try {
+          parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
+        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+          parsedMessage = (org.apache.hadoop.hbase.protobuf.generated.WALProtos.WALKey) e.getUnfinishedMessage();
+          throw e;
+        } finally {
+          if (parsedMessage != null) {
+            mergeFrom(parsedMessage);
           }
         }
+        return this;
       }
-      
       private int bitField0_;
-      
+
       // required bytes encoded_region_name = 1;
       private com.google.protobuf.ByteString encodedRegionName_ = com.google.protobuf.ByteString.EMPTY;
+      /**
+       * <code>required bytes encoded_region_name = 1;</code>
+       */
       public boolean hasEncodedRegionName() {
         return ((bitField0_ & 0x00000001) == 0x00000001);
       }
+      /**
+       * <code>required bytes encoded_region_name = 1;</code>
+       */
       public com.google.protobuf.ByteString getEncodedRegionName() {
         return encodedRegionName_;
       }
+      /**
+       * <code>required bytes encoded_region_name = 1;</code>
+       */
       public Builder setEncodedRegionName(com.google.protobuf.ByteString value) {
         if (value == null) {
     throw new NullPointerException();
@@ -1195,21 +1480,33 @@ public final class WALProtos {
         onChanged();
         return this;
       }
+      /**
+       * <code>required bytes encoded_region_name = 1;</code>
+       */
       public Builder clearEncodedRegionName() {
         bitField0_ = (bitField0_ & ~0x00000001);
         encodedRegionName_ = getDefaultInstance().getEncodedRegionName();
         onChanged();
         return this;
       }
-      
+
       // required bytes table_name = 2;
       private com.google.protobuf.ByteString tableName_ = com.google.protobuf.ByteString.EMPTY;
+      /**
+       * <code>required bytes table_name = 2;</code>
+       */
       public boolean hasTableName() {
         return ((bitField0_ & 0x00000002) == 0x00000002);
       }
+      /**
+       * <code>required bytes table_name = 2;</code>
+       */
       public com.google.protobuf.ByteString getTableName() {
         return tableName_;
       }
+      /**
+       * <code>required bytes table_name = 2;</code>
+       */
       public Builder setTableName(com.google.protobuf.ByteString value) {
         if (value == null) {
     throw new NullPointerException();
@@ -1219,62 +1516,95 @@ public final class WALProtos {
         onChanged();
         return this;
       }
+      /**
+       * <code>required bytes table_name = 2;</code>
+       */
       public Builder clearTableName() {
         bitField0_ = (bitField0_ & ~0x00000002);
         tableName_ = getDefaultInstance().getTableName();
         onChanged();
         return this;
       }
-      
+
       // required uint64 log_sequence_number = 3;
       private long logSequenceNumber_ ;
+      /**
+       * <code>required uint64 log_sequence_number = 3;</code>
+       */
       public boolean hasLogSequenceNumber() {
         return ((bitField0_ & 0x00000004) == 0x00000004);
       }
+      /**
+       * <code>required uint64 log_sequence_number = 3;</code>
+       */
       public long getLogSequenceNumber() {
         return logSequenceNumber_;
       }
+      /**
+       * <code>required uint64 log_sequence_number = 3;</code>
+       */
       public Builder setLogSequenceNumber(long value) {
         bitField0_ |= 0x00000004;
         logSequenceNumber_ = value;
         onChanged();
         return this;
       }
+      /**
+       * <code>required uint64 log_sequence_number = 3;</code>
+       */
       public Builder clearLogSequenceNumber() {
         bitField0_ = (bitField0_ & ~0x00000004);
         logSequenceNumber_ = 0L;
         onChanged();
         return this;
       }
-      
+
       // required uint64 write_time = 4;
       private long writeTime_ ;
+      /**
+       * <code>required uint64 write_time = 4;</code>
+       */
       public boolean hasWriteTime() {
         return ((bitField0_ & 0x00000008) == 0x00000008);
       }
+      /**
+       * <code>required uint64 write_time = 4;</code>
+       */
       public long getWriteTime() {
         return writeTime_;
       }
+      /**
+       * <code>required uint64 write_time = 4;</code>
+       */
       public Builder setWriteTime(long value) {
         bitField0_ |= 0x00000008;
         writeTime_ = value;
         onChanged();
         return this;
       }
+      /**
+       * <code>required uint64 write_time = 4;</code>
+       */
       public Builder clearWriteTime() {
         bitField0_ = (bitField0_ & ~0x00000008);
         writeTime_ = 0L;
         onChanged();
         return this;
       }
-      
+
       // optional .UUID cluster_id = 5;
       private org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.UUID clusterId_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.UUID.getDefaultInstance();
       private com.google.protobuf.SingleFieldBuilder<
           org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.UUID, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.UUID.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.UUIDOrBuilder> clusterIdBuilder_;
+      /**
+       * <code>optional .UUID cluster_id = 5;</code>
+       */
       public boolean hasClusterId() {
         return ((bitField0_ & 0x00000010) == 0x00000010);
       }
+      /**
+       * <code>optional .UUID cluster_id = 5;</code>
+       */
       public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.UUID getClusterId() {
         if (clusterIdBuilder_ == null) {
           return clusterId_;
@@ -1282,6 +1612,9 @@ public final class WALProtos {
           return clusterIdBuilder_.getMessage();
         }
       }
+      /**
+       * <code>optional .UUID cluster_id = 5;</code>
+       */
       public Builder setClusterId(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.UUID value) {
         if (clusterIdBuilder_ == null) {
           if (value == null) {
@@ -1295,6 +1628,9 @@ public final class WALProtos {
         bitField0_ |= 0x00000010;
         return this;
       }
+      /**
+       * <code>optional .UUID cluster_id = 5;</code>
+       */
       public Builder setClusterId(
           org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.UUID.Builder builderForValue) {
         if (clusterIdBuilder_ == null) {
@@ -1306,6 +1642,9 @@ public final class WALProtos {
         bitField0_ |= 0x00000010;
         return this;
       }
+      /**
+       * <code>optional .UUID cluster_id = 5;</code>
+       */
       public Builder mergeClusterId(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.UUID value) {
         if (clusterIdBuilder_ == null) {
           if (((bitField0_ & 0x00000010) == 0x00000010) &&
@@ -1322,6 +1661,9 @@ public final class WALProtos {
         bitField0_ |= 0x00000010;
         return this;
       }
+      /**
+       * <code>optional .UUID cluster_id = 5;</code>
+       */
       public Builder clearClusterId() {
         if (clusterIdBuilder_ == null) {
           clusterId_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.UUID.getDefaultInstance();
@@ -1332,11 +1674,17 @@ public final class WALProtos {
         bitField0_ = (bitField0_ & ~0x00000010);
         return this;
       }
+      /**
+       * <code>optional .UUID cluster_id = 5;</code>
+       */
       public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.UUID.Builder getClusterIdBuilder() {
         bitField0_ |= 0x00000010;
         onChanged();
         return getClusterIdFieldBuilder().getBuilder();
       }
+      /**
+       * <code>optional .UUID cluster_id = 5;</code>
+       */
       public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.UUIDOrBuilder getClusterIdOrBuilder() {
         if (clusterIdBuilder_ != null) {
           return clusterIdBuilder_.getMessageOrBuilder();
@@ -1344,6 +1692,9 @@ public final class WALProtos {
           return clusterId_;
         }
       }
+      /**
+       * <code>optional .UUID cluster_id = 5;</code>
+       */
       private com.google.protobuf.SingleFieldBuilder<
           org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.UUID, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.UUID.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.UUIDOrBuilder> 
           getClusterIdFieldBuilder() {
@@ -1357,7 +1708,7 @@ public final class WALProtos {
         }
         return clusterIdBuilder_;
       }
-      
+
       // repeated .FamilyScope scopes = 6;
       private java.util.List<org.apache.hadoop.hbase.protobuf.generated.WALProtos.FamilyScope> scopes_ =
         java.util.Collections.emptyList();
@@ -1367,10 +1718,13 @@ public final class WALProtos {
           bitField0_ |= 0x00000020;
          }
       }
-      
+
       private com.google.protobuf.RepeatedFieldBuilder<
           org.apache.hadoop.hbase.protobuf.generated.WALProtos.FamilyScope, org.apache.hadoop.hbase.protobuf.generated.WALProtos.FamilyScope.Builder, org.apache.hadoop.hbase.protobuf.generated.WALProtos.FamilyScopeOrBuilder> scopesBuilder_;
-      
+
+      /**
+       * <code>repeated .FamilyScope scopes = 6;</code>
+       */
       public java.util.List<org.apache.hadoop.hbase.protobuf.generated.WALProtos.FamilyScope> getScopesList() {
         if (scopesBuilder_ == null) {
           return java.util.Collections.unmodifiableList(scopes_);
@@ -1378,6 +1732,9 @@ public final class WALProtos {
           return scopesBuilder_.getMessageList();
         }
       }
+      /**
+       * <code>repeated .FamilyScope scopes = 6;</code>
+       */
       public int getScopesCount() {
         if (scopesBuilder_ == null) {
           return scopes_.size();
@@ -1385,6 +1742,9 @@ public final class WALProtos {
           return scopesBuilder_.getCount();
         }
       }
+      /**
+       * <code>repeated .FamilyScope scopes = 6;</code>
+       */
       public org.apache.hadoop.hbase.protobuf.generated.WALProtos.FamilyScope getScopes(int index) {
         if (scopesBuilder_ == null) {
           return scopes_.get(index);
@@ -1392,6 +1752,9 @@ public final class WALProtos {
           return scopesBuilder_.getMessage(index);
         }
       }
+      /**
+       * <code>repeated .FamilyScope scopes = 6;</code>
+       */
       public Builder setScopes(
           int index, org.apache.hadoop.hbase.protobuf.generated.WALProtos.FamilyScope value) {
         if (scopesBuilder_ == null) {
@@ -1406,6 +1769,9 @@ public final class WALProtos {
         }
         return this;
       }
+      /**
+       * <code>repeated .FamilyScope scopes = 6;</code>
+       */
       public Builder setScopes(
           int index, org.apache.hadoop.hbase.protobuf.generated.WALProtos.FamilyScope.Builder builderForValue) {
         if (scopesBuilder_ == null) {
@@ -1417,6 +1783,9 @@ public final class WALProtos {
         }
         return this;
       }
+      /**
+       * <code>repeated .FamilyScope scopes = 6;</code>
+       */
       public Builder addScopes(org.apache.hadoop.hbase.protobuf.generated.WALProtos.FamilyScope value) {
         if (scopesBuilder_ == null) {
           if (value == null) {
@@ -1430,6 +1799,9 @@ public final class WALProtos {
         }
         return this;
       }
+      /**
+       * <code>repeated .FamilyScope scopes = 6;</code>
+       */
       public Builder addScopes(
           int index, org.apache.hadoop.hbase.protobuf.generated.WALProtos.FamilyScope value) {
         if (scopesBuilder_ == null) {
@@ -1444,6 +1816,9 @@ public final class WALProtos {
         }
         return this;
       }
+      /**
+       * <code>repeated .FamilyScope scopes = 6;</code>
+       */
       public Builder addScopes(
           org.apache.hadoop.hbase.protobuf.generated.WALProtos.FamilyScope.Builder builderForValue) {
         if (scopesBuilder_ == null) {
@@ -1455,6 +1830,9 @@ public final class WALProtos {
         }
         return this;
       }
+      /**
+       * <code>repeated .FamilyScope scopes = 6;</code>
+       */
       public Builder addScopes(
           int index, org.apache.hadoop.hbase.protobuf.generated.WALProtos.FamilyScope.Builder builderForValue) {
         if (scopesBuilder_ == null) {
@@ -1466,6 +1844,9 @@ public final class WALProtos {
         }
         return this;
       }
+      /**
+       * <code>repeated .FamilyScope scopes = 6;</code>
+       */
       public Builder addAllScopes(
           java.lang.Iterable<? extends org.apache.hadoop.hbase.protobuf.generated.WALProtos.FamilyScope> values) {
         if (scopesBuilder_ == null) {
@@ -1477,6 +1858,9 @@ public final class WALProtos {
         }
         return this;
       }
+      /**
+       * <code>repeated .FamilyScope scopes = 6;</code>
+       */
       public Builder clearScopes() {
         if (scopesBuilder_ == null) {
           scopes_ = java.util.Collections.emptyList();
@@ -1487,6 +1871,9 @@ public final class WALProtos {
         }
         return this;
       }
+      /**
+       * <code>repeated .FamilyScope scopes = 6;</code>
+       */
       public Builder removeScopes(int index) {
         if (scopesBuilder_ == null) {
           ensureScopesIsMutable();
@@ -1497,10 +1884,16 @@ public final class WALProtos {
         }
         return this;
       }
+      /**
+       * <code>repeated .FamilyScope scopes = 6;</code>
+       */
       public org.apache.hadoop.hbase.protobuf.generated.WALProtos.FamilyScope.Builder getScopesBuilder(
           int index) {
         return getScopesFieldBuilder().getBuilder(index);
       }
+      /**
+       * <code>repeated .FamilyScope scopes = 6;</code>
+       */
       public org.apache.hadoop.hbase.protobuf.generated.WALProtos.FamilyScopeOrBuilder getScopesOrBuilder(
           int index) {
         if (scopesBuilder_ == null) {
@@ -1508,6 +1901,9 @@ public final class WALProtos {
           return scopesBuilder_.getMessageOrBuilder(index);
         }
       }
+      /**
+       * <code>repeated .FamilyScope scopes = 6;</code>
+       */
       public java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.WALProtos.FamilyScopeOrBuilder> 
            getScopesOrBuilderList() {
         if (scopesBuilder_ != null) {
@@ -1516,15 +1912,24 @@ public final class WALProtos {
           return java.util.Collections.unmodifiableList(scopes_);
         }
       }
+      /**
+       * <code>repeated .FamilyScope scopes = 6;</code>
+       */
       public org.apache.hadoop.hbase.protobuf.generated.WALProtos.FamilyScope.Builder addScopesBuilder() {
         return getScopesFieldBuilder().addBuilder(
             org.apache.hadoop.hbase.protobuf.generated.WALProtos.FamilyScope.getDefaultInstance());
       }
+      /**
+       * <code>repeated .FamilyScope scopes = 6;</code>
+       */
       public org.apache.hadoop.hbase.protobuf.generated.WALProtos.FamilyScope.Builder addScopesBuilder(
           int index) {
         return getScopesFieldBuilder().addBuilder(
             index, org.apache.hadoop.hbase.protobuf.generated.WALProtos.FamilyScope.getDefaultInstance());
       }
+      /**
+       * <code>repeated .FamilyScope scopes = 6;</code>
+       */
       public java.util.List<org.apache.hadoop.hbase.protobuf.generated.WALProtos.FamilyScope.Builder> 
            getScopesBuilderList() {
         return getScopesFieldBuilder().getBuilderList();
@@ -1543,420 +1948,158 @@ public final class WALProtos {
         }
         return scopesBuilder_;
       }
-      
+
       // optional uint32 following_kv_count = 7;
       private int followingKvCount_ ;
+      /**
+       * <code>optional uint32 following_kv_count = 7;</code>
+       *
+       * <pre>
+       *
+       *optional CustomEntryType custom_entry_type = 8;
+       *
+       *enum CustomEntryType {
+       *COMPACTION = 0;
+       *}
+       * </pre>
+       */
       public boolean hasFollowingKvCount() {
         return ((bitField0_ & 0x00000040) == 0x00000040);
       }
+      /**
+       * <code>optional uint32 following_kv_count = 7;</code>
+       *
+       * <pre>
+       *
+       *optional CustomEntryType custom_entry_type = 8;
+       *
+       *enum CustomEntryType {
+       *COMPACTION = 0;
+       *}
+       * </pre>
+       */
       public int getFollowingKvCount() {
         return followingKvCount_;
       }
+      /**
+       * <code>optional uint32 following_kv_count = 7;</code>
+       *
+       * <pre>
+       *
+       *optional CustomEntryType custom_entry_type = 8;
+       *
+       *enum CustomEntryType {
+       *COMPACTION = 0;
+       *}
+       * </pre>
+       */
       public Builder setFollowingKvCount(int value) {
         bitField0_ |= 0x00000040;
         followingKvCount_ = value;
         onChanged();
         return this;
       }
+      /**
+       * <code>optional uint32 following_kv_count = 7;</code>
+       *
+       * <pre>
+       *
+       *optional CustomEntryType custom_entry_type = 8;
+       *
+       *enum CustomEntryType {
+       *COMPACTION = 0;
+       *}
+       * </pre>
+       */
       public Builder clearFollowingKvCount() {
         bitField0_ = (bitField0_ & ~0x00000040);
         followingKvCount_ = 0;
         onChanged();
         return this;
       }
-      
+
       // @@protoc_insertion_point(builder_scope:WALKey)
     }
-    
+
     static {
       defaultInstance = new WALKey(true);
       defaultInstance.initFields();
     }
-    
+
     // @@protoc_insertion_point(class_scope:WALKey)
   }
-  
+
   public interface FamilyScopeOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
-    
+
     // required bytes family = 1;
+    /**
+     * <code>required bytes family = 1;</code>
+     */
     boolean hasFamily();
+    /**
+     * <code>required bytes family = 1;</code>
+     */
     com.google.protobuf.ByteString getFamily();
-    
+
     // required .ScopeType scope_type = 2;
+    /**
+     * <code>required .ScopeType scope_type = 2;</code>
+     */
     boolean hasScopeType();
+    /**
+     * <code>required .ScopeType scope_type = 2;</code>
+     */
     org.apache.hadoop.hbase.protobuf.generated.WALProtos.ScopeType getScopeType();
   }
+  /**
+   * Protobuf type {@code FamilyScope}
+   */
   public static final class FamilyScope extends
       com.google.protobuf.GeneratedMessage
       implements FamilyScopeOrBuilder {
     // Use FamilyScope.newBuilder() to construct.
-    private FamilyScope(Builder builder) {
+    private FamilyScope(com.google.protobuf.GeneratedMessage.Builder<?> builder) {
       super(builder);
+      this.unknownFields = builder.getUnknownFields();
     }
-    private FamilyScope(boolean noInit) {}
-    
+    private FamilyScope(boolean noInit) { this.unknownFields = com.google.protobuf.UnknownFieldSet.getDefaultInstance(); }
+
     private static final FamilyScope defaultInstance;
     public static FamilyScope getDefaultInstance() {
       return defaultInstance;
     }
-    
+
     public FamilyScope getDefaultInstanceForType() {
       return defaultInstance;
     }
-    
-    public static final com.google.protobuf.Descriptors.Descriptor
-        getDescriptor() {
-      return org.apache.hadoop.hbase.protobuf.generated.WALProtos.internal_static_FamilyScope_descriptor;
-    }
-    
-    protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
-        internalGetFieldAccessorTable() {
-      return org.apache.hadoop.hbase.protobuf.generated.WALProtos.internal_static_FamilyScope_fieldAccessorTable;
-    }
-    
-    private int bitField0_;
-    // required bytes family = 1;
-    public static final int FAMILY_FIELD_NUMBER = 1;
-    private com.google.protobuf.ByteString family_;
-    public boolean hasFamily() {
-      return ((bitField0_ & 0x00000001) == 0x00000001);
-    }
-    public com.google.protobuf.ByteString getFamily() {
-      return family_;
-    }
-    
-    // required .ScopeType scope_type = 2;
-    public static final int SCOPE_TYPE_FIELD_NUMBER = 2;
-    private org.apache.hadoop.hbase.protobuf.generated.WALProtos.ScopeType scopeType_;
-    public boolean hasScopeType() {
-      return ((bitField0_ & 0x00000002) == 0x00000002);
-    }
-    public org.apache.hadoop.hbase.protobuf.generated.WALProtos.ScopeType getScopeType() {
-      return scopeType_;
-    }
-    
-    private void initFields() {
-      family_ = com.google.protobuf.ByteString.EMPTY;
-      scopeType_ = org.apache.hadoop.hbase.protobuf.generated.WALProtos.ScopeType.REPLICATION_SCOPE_LOCAL;
-    }
-    private byte memoizedIsInitialized = -1;
-    public final boolean isInitialized() {
-      byte isInitialized = memoizedIsInitialized;
-      if (isInitialized != -1) return isInitialized == 1;
-      
-      if (!hasFamily()) {
-        memoizedIsInitialized = 0;
-        return false;
-      }
-      if (!hasScopeType()) {
-        memoizedIsInitialized = 0;
-        return false;
-      }
-      memoizedIsInitialized = 1;
-      return true;
-    }
-    
-    public void writeTo(com.google.protobuf.CodedOutputStream output)
-                        throws java.io.IOException {
-      getSerializedSize();
-      if (((bitField0_ & 0x00000001) == 0x00000001)) {
-        output.writeBytes(1, family_);
-      }
-      if (((bitField0_ & 0x00000002) == 0x00000002)) {
-        output.writeEnum(2, scopeType_.getNumber());
-      }
-      getUnknownFields().writeTo(output);
-    }
-    
-    private int memoizedSerializedSize = -1;
-    public int getSerializedSize() {
-      int size = memoizedSerializedSize;
-      if (size != -1) return size;
-    
-      size = 0;
-      if (((bitField0_ & 0x00000001) == 0x00000001)) {
-        size += com.google.protobuf.CodedOutputStream
-          .computeBytesSize(1, family_);
-      }
-      if (((bitField0_ & 0x00000002) == 0x00000002)) {
-        size += com.google.protobuf.CodedOutputStream
-          .computeEnumSize(2, scopeType_.getNumber());
-      }
-      size += getUnknownFields().getSerializedSize();
-      memoizedSerializedSize = size;
-      return size;
-    }
-    
-    private static final long serialVersionUID = 0L;
+
+    private final com.google.protobuf.UnknownFieldSet unknownFields;
     @java.lang.Override
-    protected java.lang.Object writeReplace()
-        throws java.io.ObjectStreamException {
-      return super.writeReplace();
+    public final com.google.protobuf.UnknownFieldSet
+        getUnknownFields() {
+      return this.unknownFields;
     }
-    
-    @java.lang.Override
-    public boolean equals(final java.lang.Object obj) {
-      if (obj == this) {
-       return true;
-      }
-      if (!(obj instanceof org.apache.hadoop.hbase.protobuf.generated.WALProtos.FamilyScope)) {
-        return super.equals(obj);
-      }
-      org.apache.hadoop.hbase.protobuf.generated.WALProtos.FamilyScope other = (org.apache.hadoop.hbase.protobuf.generated.WALProtos.FamilyScope) obj;
-      
-      boolean result = true;
-      result = result && (hasFamily() == other.hasFamily());
-      if (hasFamily()) {
-        result = result && getFamily()
-            .equals(other.getFamily());
-      }
-      result = result && (hasScopeType() == other.hasScopeType());
-      if (hasScopeType()) {
-        result = result &&
-            (getScopeType() == other.getScopeType());
-      }
-      result = result &&
-          getUnknownFields().equals(other.getUnknownFields());
-      return result;
-    }
-    
-    @java.lang.Override
-    public int hashCode() {
-      int hash = 41;
-      hash = (19 * hash) + getDescriptorForType().hashCode();
-      if (hasFamily()) {
-        hash = (37 * hash) + FAMILY_FIELD_NUMBER;
-        hash = (53 * hash) + getFamily().hashCode();
-      }
-      if (hasScopeType()) {
-        hash = (37 * hash) + SCOPE_TYPE_FIELD_NUMBER;
-        hash = (53 * hash) + hashEnum(getScopeType());
-      }
-      hash = (29 * hash) + getUnknownFields().hashCode();
-      return hash;
-    }
-    
-    public static org.apache.hadoop.hbase.protobuf.generated.WALProtos.FamilyScope parseFrom(
-        com.google.protobuf.ByteString data)
-        throws com.google.protobuf.InvalidProtocolBufferException {
-      return newBuilder().mergeFrom(data).buildParsed();
-    }
-    public static org.apache.hadoop.hbase.protobuf.generated.WALProtos.FamilyScope parseFrom(
-        com.google.protobuf.ByteString data,
-        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-        throws com.google.protobuf.InvalidProtocolBufferException {
-      return newBuilder().mergeFrom(data, extensionRegistry)
-               .buildParsed();
-    }
-    public static org.apache.hadoop.hbase.protobuf.generated.WALProtos.FamilyScope parseFrom(byte[] data)
-        throws com.google.protobuf.InvalidProtocolBufferException {
-      return newBuilder().mergeFrom(data).buildParsed();
-    }
-    public static org.apache.hadoop.hbase.protobuf.generated.WALProtos.FamilyScope parseFrom(
-        byte[] data,
-        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-        throws com.google.protobuf.InvalidProtocolBufferException {
-      return newBuilder().mergeFrom(data, extensionRegistry)
-               .buildParsed();
-    }
-    public static org.apache.hadoop.hbase.protobuf.generated.WALProtos.FamilyScope parseFrom(java.io.InputStream input)
-        throws java.io.IOException {
-      return newBuilder().mergeFrom(input).buildParsed();
-    }
-    public static org.apache.hadoop.hbase.protobuf.generated.WALProtos.FamilyScope parseFrom(
-        java.io.InputStream input,
-        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-        throws java.io.IOException {
-      return newBuilder().mergeFrom(input, extensionRegistry)
-               .buildParsed();
-    }
-    public static org.apache.hadoop.hbase.protobuf.generated.WALProtos.FamilyScope parseDelimitedFrom(java.io.InputStream input)
-        throws java.io.IOException {
-      Builder builder = newBuilder();
-      if (builder.mergeDelimitedFrom(input)) {
-        return builder.buildParsed();
-      } else {
-        return null;
-      }
-    }
-    public static org.apache.hadoop.hbase.protobuf.generated.WALProtos.FamilyScope parseDelimitedFrom(
-        java.io.InputStream input,
-        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-        throws java.io.IOException {
-      Builder builder = newBuilder();
-      if (builder.mergeDelimitedFrom(input, extensionRegistry)) {
-        return builder.buildParsed();
-      } else {
-        return null;
-      }
-    }
-    public static org.apache.hadoop.hbase.protobuf.generated.WALProtos.FamilyScope parseFrom(
-        com.google.protobuf.CodedInputStream input)
-        throws java.io.IOException {
-      return newBuilder().mergeFrom(input).buildParsed();
-    }
-    public static org.apache.hadoop.hbase.protobuf.generated.WALProtos.FamilyScope parseFrom(
+    private FamilyScope(
         com.google.protobuf.CodedInputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-        throws java.io.IOException {
-      return newBuilder().mergeFrom(input, extensionRegistry)
-               .buildParsed();
-    }
-    
-    public static Builder newBuilder() { return Builder.create(); }
-    public Builder newBuilderForType() { return newBuilder(); }
-    public static Builder newBuilder(org.apache.hadoop.hbase.protobuf.generated.WALProtos.FamilyScope prototype) {
-      return newBuilder().mergeFrom(prototype);
-    }
-    public Builder toBuilder() { return newBuilder(this); }
-    
-    @java.lang.Override
-    protected Builder newBuilderForType(
-        com.google.protobuf.GeneratedMessage.BuilderParent parent) {
-      Builder builder = new Builder(parent);
-      return builder;
-    }
-    public static final class Builder extends
-        com.google.protobuf.GeneratedMessage.Builder<Builder>
-       implements org.apache.hadoop.hbase.protobuf.generated.WALProtos.FamilyScopeOrBuilder {
-      public static final com.google.protobuf.Descriptors.Descriptor
-          getDescriptor() {
-        return org.apache.hadoop.hbase.protobuf.generated.WALProtos.internal_static_FamilyScope_descriptor;
-      }
-      
-      protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
-          internalGetFieldAccessorTable() {
-        return org.apache.hadoop.hbase.protobuf.generated.WALProtos.internal_static_FamilyScope_fieldAccessorTable;
-      }
-      
-      // Construct using org.apache.hadoop.hbase.protobuf.generated.WALProtos.FamilyScope.newBuilder()
-      private Builder() {
-        maybeForceBuilderInitialization();
-      }
-      
-      private Builder(BuilderParent parent) {
-        super(parent);
-        maybeForceBuilderInitialization();
-      }
-      private void maybeForceBuilderInitialization() {
-        if (com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders) {
-        }
-      }
-      private static Builder create() {
-        return new Builder();
-      }
-      
-      public Builder clear() {
-        super.clear();
-        family_ = com.google.protobuf.ByteString.EMPTY;
-        bitField0_ = (bitField0_ & ~0x00000001);
-        scopeType_ = org.apache.hadoop.hbase.protobuf.generated.WALProtos.ScopeType.REPLICATION_SCOPE_LOCAL;
-        bitField0_ = (bitField0_ & ~0x00000002);
-        return this;
-      }
-      
-      public Builder clone() {
-        return create().mergeFrom(buildPartial());
-      }
-      
-      public com.google.protobuf.Descriptors.Descriptor
-          getDescriptorForType() {
-        return org.apache.hadoop.hbase.protobuf.generated.WALProtos.FamilyScope.getDescriptor();
-      }
-      
-      public org.apache.hadoop.hbase.protobuf.generated.WALProtos.FamilyScope getDefaultInstanceForType() {
-        return org.apache.hadoop.hbase.protobuf.generated.WALProtos.FamilyScope.getDefaultInstance();
-      }
-      
-      public org.apache.hadoop.hbase.protobuf.generated.WALProtos.FamilyScope build() {
-        org.apache.hadoop.hbase.protobuf.generated.WALProtos.FamilyScope result = buildPartial();
-        if (!result.isInitialized()) {
-          throw newUninitializedMessageException(result);
-        }
-        return result;
-      }
-      
-      private org.apache.hadoop.hbase.protobuf.generated.WALProtos.FamilyScope buildParsed()
-          throws com.google.protobuf.InvalidProtocolBufferException {
-        org.apache.hadoop.hbase.protobuf.generated.WALProtos.FamilyScope result = buildPartial();
-        if (!result.isInitialized()) {
-          throw newUninitializedMessageException(
-            result).asInvalidProtocolBufferException();
-        }
-        return result;
-      }
-      
-      public org.apache.hadoop.hbase.protobuf.generated.WALProtos.FamilyScope buildPartial() {
-        org.apache.hadoop.hbase.protobuf.generated.WALProtos.FamilyScope result = new org.apache.hadoop.hbase.protobuf.generated.WALProtos.FamilyScope(this);
-        int from_bitField0_ = bitField0_;
-        int to_bitField0_ = 0;
-        if (((from_bitField0_ & 0x00000001) == 0x00000001)) {
-          to_bitField0_ |= 0x00000001;
-        }
-        result.family_ = family_;
-        if (((from_bitField0_ & 0x00000002) == 0x00000002)) {
-          to_bitField0_ |= 0x00000002;
-        }
-        result.scopeType_ = scopeType_;
-        result.bitField0_ = to_bitField0_;
-        onBuilt();
-        return result;
-      }
-      
-      public Builder mergeFrom(com.google.protobuf.Message other) {
-        if (other instanceof org.apache.hadoop.hbase.protobuf.generated.WALProtos.FamilyScope) {
-          return mergeFrom((org.apache.hadoop.hbase.protobuf.generated.WALProtos.FamilyScope)other);
-        } else {
-          super.mergeFrom(other);
-          return this;
-        }
-      }
-      
-      public Builder mergeFrom(org.apache.hadoop.hbase.protobuf.generated.WALProtos.FamilyScope other) {
-        if (other == org.apache.hadoop.hbase.protobuf.generated.WALProtos.FamilyScope.getDefaultInstance()) return this;
-        if (other.hasFamily()) {
-          setFamily(other.getFamily());
-        }
-        if (other.hasScopeType()) {
-          setScopeType(other.getScopeType());
-        }
-        this.mergeUnknownFields(other.getUnknownFields());
-        return this;
-      }
-      
-      public final boolean isInitialized() {
-        if (!hasFamily()) {
-          
-          return false;
-        }
-        if (!hasScopeType()) {
-          
-          return false;
-        }
-        return true;
-      }
-      
-      public Builder mergeFrom(
-          com.google.protobuf.CodedInputStream input,
-          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-          throws java.io.IOException {
-        com.google.protobuf.UnknownFieldSet.Builder unknownFields =
-          com.google.protobuf.UnknownFieldSet.newBuilder(
-            this.getUnknownFields());
-        while (true) {
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      initFields();
+      int mutable_bitField0_ = 0;
+      com.google.protobuf.UnknownFieldSet.Builder unknownFields =
+          com.google.protobuf.UnknownFieldSet.newBuilder();
+      try {
+        boolean done = false;
+        while (!done) {
           int tag = input.readTag();
           switch (tag) {
             case 0:
-              this.setUnknownFields(unknownFields.build());
-              onChanged();
-              return this;
+              done = true;
+              break;
             default: {
               if (!parseUnknownField(input, unknownFields,
                                      extensionRegistry, tag)) {
-                this.setUnknownFields(unknownFields.build());
-                onChanged();
-                return this;
+                done = true;
               }
               break;
             }
@@ -1978,18 +2121,400 @@ public final class WALProtos {
             }
           }
         }
+      } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+        throw e.setUnfinishedMessage(this);
+      } catch (java.io.IOException e) {
+        throw new com.google.protobuf.InvalidProtocolBufferException(
+            e.getMessage()).setUnfinishedMessage(this);
+      } finally {
+        this.unknownFields = unknownFields.build();
+        makeExtensionsImmutable();
       }
-      
+    }
+    public static final com.google.protobuf.Descriptors.Descriptor
+        getDescriptor() {
+      return org.apache.hadoop.hbase.protobuf.generated.WALProtos.internal_static_FamilyScope_descriptor;
+    }
+
+    protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+        internalGetFieldAccessorTable() {
+      return org.apache.hadoop.hbase.protobuf.generated.WALProtos.internal_static_FamilyScope_fieldAccessorTable
+          .ensureFieldAccessorsInitialized(
+              org.apache.hadoop.hbase.protobuf.generated.WALProtos.FamilyScope.class, org.apache.hadoop.hbase.protobuf.generated.WALProtos.FamilyScope.Builder.class);
+    }
+
+    public static com.google.protobuf.Parser<FamilyScope> PARSER =
+        new com.google.protobuf.AbstractParser<FamilyScope>() {
+      public FamilyScope parsePartialFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        return new FamilyScope(input, extensionRegistry);
+      }
+    };
+
+    @java.lang.Override
+    public com.google.protobuf.Parser<FamilyScope> getParserForType() {
+      return PARSER;
+    }
+
+    private int bitField0_;
+    // required bytes family = 1;
+    public static final int FAMILY_FIELD_NUMBER = 1;
+    private com.google.protobuf.ByteString family_;
+    /**
+     * <code>required bytes family = 1;</code>
+     */
+    public boolean hasFamily() {
+      return ((bitField0_ & 0x00000001) == 0x00000001);
+    }
+    /**
+     * <code>required bytes family = 1;</code>
+     */
+    public com.google.protobuf.ByteString getFamily() {
+      return family_;
+    }
+
+    // required .ScopeType scope_type = 2;
+    public static final int SCOPE_TYPE_FIELD_NUMBER = 2;
+    private org.apache.hadoop.hbase.protobuf.generated.WALProtos.ScopeType scopeType_;
+    /**
+     * <code>required .ScopeType scope_type = 2;</code>
+     */
+    public boolean hasScopeType() {
+      return ((bitField0_ & 0x00000002) == 0x00000002);
+    }
+    /**
+     * <code>required .ScopeType scope_type = 2;</code>
+     */
+    public org.apache.hadoop.hbase.protobuf.generated.WALProtos.ScopeType getScopeType() {
+      return scopeType_;
+    }
+
+    private void initFields() {
+      family_ = com.google.protobuf.ByteString.EMPTY;
+      scopeType_ = org.apache.hadoop.hbase.protobuf.generated.WALProtos.ScopeType.REPLICATION_SCOPE_LOCAL;
+    }
+    private byte memoizedIsInitialized = -1;
+    public final boolean isInitialized() {
+      byte isInitialized = memoizedIsInitialized;
+      if (isInitialized != -1) return isInitialized == 1;
+
+      if (!hasFamily()) {
+        memoizedIsInitialized = 0;
+        return false;
+      }
+      if (!hasScopeType()) {
+        memoizedIsInitialized = 0;
+        return false;
+      }
+      memoizedIsInitialized = 1;
+      return true;
+    }
+
+    public void writeTo(com.google.protobuf.CodedOutputStream output)
+                        throws java.io.IOException {
+      getSerializedSize();
+      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+        output.writeBytes(1, family_);
+      }
+      if (((bitField0_ & 0x00000002) == 0x00000002)) {
+        output.writeEnum(2, scopeType_.getNumber());
+      }
+      getUnknownFields().writeTo(output);
+    }
+
+    private int memoizedSerializedSize = -1;
+    public int getSerializedSize() {
+      int size = memoizedSerializedSize;
+      if (size != -1) return size;
+
+      size = 0;
+      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeBytesSize(1, family_);
+      }
+      if (((bitField0_ & 0x00000002) == 0x00000002)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeEnumSize(2, scopeType_.getNumber());
+      }
+      size += getUnknownFields().getSerializedSize();
+      memoizedSerializedSize = size;
+      return size;
+    }
+
+    private static final long serialVersionUID = 0L;
+    @java.lang.Override
+    protected java.lang.Object writeReplace()
+        throws java.io.ObjectStreamException {
+      return super.writeReplace();
+    }
+
+    @java.lang.Override
+    public boolean equals(final java.lang.Object obj) {
+      if (obj == this) {
+       return true;
+      }
+      if (!(obj instanceof org.apache.hadoop.hbase.protobuf.generated.WALProtos.FamilyScope)) {
+        return super.equals(obj);
+      }
+      org.apache.hadoop.hbase.protobuf.generated.WALProtos.FamilyScope other = (org.apache.hadoop.hbase.protobuf.generated.WALProtos.FamilyScope) obj;
+
+      boolean result = true;
+      result = result && (hasFamily() == other.hasFamily());
+      if (hasFamily()) {
+        result = result && getFamily()
+            .equals(other.getFamily());
+      }
+      result = result && (hasScopeType() == other.hasScopeType());
+      if (hasScopeType()) {
+        result = result &&
+            (getScopeType() == other.getScopeType());
+      }
+      result = result &&
+          getUnknownFields().equals(other.getUnknownFields());
+      return result;
+    }
+
+    private int memoizedHashCode = 0;
+    @java.lang.Override
+    public int hashCode() {
+      if (memoizedHashCode != 0) {
+        return memoizedHashCode;
+      }
+      int hash = 41;
+      hash = (19 * hash) + getDescriptorForType().hashCode();
+      if (hasFamily()) {
+        hash = (37 * hash) + FAMILY_FIELD_NUMBER;
+        hash = (53 * hash) + getFamily().hashCode();
+      }
+      if (hasScopeType()) {
+        hash = (37 * hash) + SCOPE_TYPE_FIELD_NUMBER;
+        hash = (53 * hash) + hashEnum(getScopeType());
+      }
+      hash = (29 * hash) + getUnknownFields().hashCode();
+      memoizedHashCode = hash;
+      return hash;
+    }
+
+    public static org.apache.hadoop.hbase.protobuf.generated.WALProtos.FamilyScope parseFrom(
+        com.google.protobuf.ByteString data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.WALProtos.FamilyScope parseFrom(
+        com.google.protobuf.ByteString data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.WALProtos.FamilyScope parseFrom(byte[] data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.WALProtos.FamilyScope parseFrom(
+        byte[] data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.WALProtos.FamilyScope parseFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.WALProtos.FamilyScope parseFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.WALProtos.FamilyScope parseDelimitedFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return PARSER.parseDelimitedFrom(input);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.WALProtos.FamilyScope parseDelimitedFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return PARSER.parseDelimitedFrom(input, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.WALProtos.FamilyScope parseFrom(
+        com.google.protobuf.CodedInputStream input)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.WALProtos.FamilyScope parseFrom(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input, extensionRegistry);
+    }
+
+    public static Builder newBuilder() { return Builder.create(); }
+    public Builder newBuilderForType() { return newBuilder(); }
+    public static Builder newBuilder(org.apache.hadoop.hbase.protobuf.generated.WALProtos.FamilyScope prototype) {
+      return newBuilder().mergeFrom(prototype);
+    }
+    public Builder toBuilder() { return newBuilder(this); }
+
+    @java.lang.Override
+    protected Builder newBuilderForType(
+        com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+      Builder builder = new Builder(parent);
+      return builder;
+    }
+    /**
+     * Protobuf type {@code FamilyScope}
+     */
+    public static final class Builder extends
+        com.google.protobuf.GeneratedMessage.Builder<Builder>
+       implements org.apache.hadoop.hbase.protobuf.generated.WALProtos.FamilyScopeOrBuilder {
+      public static final com.google.protobuf.Descriptors.Descriptor
+          getDescriptor() {
+        return org.apache.hadoop.hbase.protobuf.generated.WALProtos.internal_static_FamilyScope_descriptor;
+      }
+
+      protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+          internalGetFieldAccessorTable() {
+        return org.apache.hadoop.hbase.protobuf.generated.WALProtos.internal_static_FamilyScope_fieldAccessorTable
+            .ensureFieldAccessorsInitialized(
+                org.apache.hadoop.hbase.protobuf.generated.WALProtos.FamilyScope.class, org.apache.hadoop.hbase.protobuf.generated.WALProtos.FamilyScope.Builder.class);
+      }
+
+      // Construct using org.apache.hadoop.hbase.protobuf.generated.WALProtos.FamilyScope.newBuilder()
+      private Builder() {
+        maybeForceBuilderInitialization();
+      }
+
+      private Builder(
+          com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+        super(parent);
+        maybeForceBuilderInitialization();
+      }
+      private void maybeForceBuilderInitialization() {
+        if (com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders) {
+        }
+      }
+      private static Builder create() {
+        return new Builder();
+      }
+
+      public Builder clear() {
+        super.clear();
+        family_ = com.google.protobuf.ByteString.EMPTY;
+        bitField0_ = (bitField0_ & ~0x00000001);
+        scopeType_ = org.apache.hadoop.hbase.protobuf.generated.WALProtos.ScopeType.REPLICATION_SCOPE_LOCAL;
+        bitField0_ = (bitField0_ & ~0x00000002);
+        return this;
+      }
+
+      public Builder clone() {
+        return create().mergeFrom(buildPartial());
+      }
+
+      public com.google.protobuf.Descriptors.Descriptor
+          getDescriptorForType() {
+        return org.apache.hadoop.hbase.protobuf.generated.WALProtos.internal_static_FamilyScope_descriptor;
+      }
+
+      public org.apache.hadoop.hbase.protobuf.generated.WALProtos.FamilyScope getDefaultInstanceForType() {
+        return org.apache.hadoop.hbase.protobuf.generated.WALProtos.FamilyScope.getDefaultInstance();
+      }
+
+      public org.apache.hadoop.hbase.protobuf.generated.WALProtos.FamilyScope build() {
+        org.apache.hadoop.hbase.protobuf.generated.WALProtos.FamilyScope result = buildPartial();
+        if (!result.isInitialized()) {
+          throw newUninitializedMessageException(result);
+        }
+        return result;
+      }
+
+      public org.apache.hadoop.hbase.protobuf.generated.WALProtos.FamilyScope buildPartial() {
+        org.apache.hadoop.hbase.protobuf.generated.WALProtos.FamilyScope result = new org.apache.hadoop.hbase.protobuf.generated.WALProtos.FamilyScope(this);
+        int from_bitField0_ = bitField0_;
+        int to_bitField0_ = 0;
+        if (((from_bitField0_ & 0x00000001) == 0x00000001)) {
+          to_bitField0_ |= 0x00000001;
+        }
+        result.family_ = family_;
+        if (((from_bitField0_ & 0x00000002) == 0x00000002)) {
+          to_bitField0_ |= 0x00000002;
+        }
+        result.scopeType_ = scopeType_;
+        result.bitField0_ = to_bitField0_;
+        onBuilt();
+        return result;
+      }
+
+      public Builder mergeFrom(com.google.protobuf.Message other) {
+        if (other instanceof org.apache.hadoop.hbase.protobuf.generated.WALProtos.FamilyScope) {
+          return mergeFrom((org.apache.hadoop.hbase.protobuf.generated.WALProtos.FamilyScope)other);
+        } else {
+          super.mergeFrom(other);
+          return this;
+        }
+      }
+
+      public Builder mergeFrom(org.apache.hadoop.hbase.protobuf.generated.WALProtos.FamilyScope other) {
+        if (other == org.apache.hadoop.hbase.protobuf.generated.WALProtos.FamilyScope.getDefaultInstance()) return this;
+        if (other.hasFamily()) {
+          setFamily(other.getFamily());
+        }
+        if (other.hasScopeType()) {
+          setScopeType(other.getScopeType());
+        }
+        this.mergeUnknownFields(other.getUnknownFields());
+        return this;
+      }
+
+      public final boolean isInitialized() {
+        if (!hasFamily()) {
+          
+          return false;
+        }
+        if (!hasScopeType()) {
+          
+          return false;
+        }
+        return true;
+      }
+
+      public Builder mergeFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws java.io.IOException {
+        org.apache.hadoop.hbase.protobuf.generated.WALProtos.FamilyScope parsedMessage = null;
+        try {
+          parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
+        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+          parsedMessage = (org.apache.hadoop.hbase.protobuf.generated.WALProtos.FamilyScope) e.getUnfinishedMessage();
+          throw e;
+        } finally {
+          if (parsedMessage != null) {
+            mergeFrom(parsedMessage);
+          }
+        }
+        return this;
+      }
       private int bitField0_;
-      
+
       // required bytes family = 1;
       private com.google.protobuf.ByteString family_ = com.google.protobuf.ByteString.EMPTY;
+      /**
+       * <code>required bytes family = 1;</code>
+       */
       public boolean hasFamily() {
         return ((bitField0_ & 0x00000001) == 0x00000001);
       }
+      /**
+       * <code>required bytes family = 1;</code>
+       */
       public com.google.protobuf.ByteString getFamily() {
         return family_;
       }
+      /**
+       * <code>required bytes family = 1;</code>
+       */
       public Builder setFamily(com.google.protobuf.ByteString value) {
         if (value == null) {
     throw new NullPointerException();
@@ -1999,21 +2524,33 @@ public final class WALProtos {
         onChanged();
         return this;
       }
+      /**
+       * <code>required bytes family = 1;</code>
+       */
       public Builder clearFamily() {
         bitField0_ = (bitField0_ & ~0x00000001);
         family_ = getDefaultInstance().getFamily();
         onChanged();
         return this;
       }
-      
+
       // required .ScopeType scope_type = 2;
       private org.apache.hadoop.hbase.protobuf.generated.WALProtos.ScopeType scopeType_ = org.apache.hadoop.hbase.protobuf.generated.WALProtos.ScopeType.REPLICATION_SCOPE_LOCAL;
+      /**
+       * <code>required .ScopeType scope_type = 2;</code>
+       */
       public boolean hasScopeType() {
         return ((bitField0_ & 0x00000002) == 0x00000002);
       }
+      /**
+       * <code>required .ScopeType scope_type = 2;</code>
+       */
       public org.apache.hadoop.hbase.protobuf.generated.WALProtos.ScopeType getScopeType() {
         return scopeType_;
       }
+      /**
+       * <code>required .ScopeType scope_type = 2;</code>
+       */
       public Builder setScopeType(org.apache.hadoop.hbase.protobuf.generated.WALProtos.ScopeType value) {
         if (value == null) {
           throw new NullPointerException();
@@ -2023,172 +2560,423 @@ public final class WALProtos {
         onChanged();
         return this;
       }
+      /**
+       * <code>required .ScopeType scope_type = 2;</code>
+       */
       public Builder clearScopeType() {
         bitField0_ = (bitField0_ & ~0x00000002);
         scopeType_ = org.apache.hadoop.hbase.protobuf.generated.WALProtos.ScopeType.REPLICATION_SCOPE_LOCAL;
         onChanged();
         return this;
       }
-      
+
       // @@protoc_insertion_point(builder_scope:FamilyScope)
     }
-    
+
     static {
       defaultInstance = new FamilyScope(true);
       defaultInstance.initFields();
     }
-    
+
     // @@protoc_insertion_point(class_scope:FamilyScope)
   }
-  
+
   public interface CompactionDescriptorOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
-    
+
     // required bytes table_name = 1;
+    /**
+     * <code>required bytes table_name = 1;</code>
+     *
+     * <pre>
+     * TODO: WALKey already stores these, might remove
+     * </pre>
+     */
     boolean hasTableName();
+    /**
+     * <code>required bytes table_name = 1;</code>
+     *
+     * <pre>
+     * TODO: WALKey already stores these, might remove
+     * </pre>
+     */
     com.google.protobuf.ByteString getTableName();
-    
+
     // required bytes encoded_region_name = 2;
+    /**
+     * <code>required bytes encoded_region_name = 2;</code>
+     */
     boolean hasEncodedRegionName();
+    /**
+     * <code>required bytes encoded_region_name = 2;</code>
+     */
     com.google.protobuf.ByteString getEncodedRegionName();
-    
+
     // required bytes family_name = 3;
+    /**
+     * <code>required bytes family_name = 3;</code>
+     */
     boolean hasFamilyName();
+    /**
+     * <code>required bytes family_name = 3;</code>
+     */
     com.google.protobuf.ByteString getFamilyName();
-    
+
     // repeated string compaction_input = 4;
-    java.util.List<String> getCompactionInputList();
+    /**
+     * <code>repeated string compaction_input = 4;</code>
+     */
+    java.util.List<java.lang.String>
+    getCompactionInputList();
+    /**
+     * <code>repeated string compaction_input = 4;</code>
+     */
     int getCompactionInputCount();
-    String getCompactionInput(int index);
-    
+    /**
+     * <code>repeated string compaction_input = 4;</code>
+     */
+    java.lang.String getCompactionInput(int index);
+    /**
+     * <code>repeated string compaction_input = 4;</code>
+     */
+    com.google.protobuf.ByteString
+        getCompactionInputBytes(int index);
+
     // repeated string compaction_output = 5;
-    java.util.List<String> getCompactionOutputList();
+    /**
+     * <code>repeated string compaction_output = 5;</code>
+     */
+    java.util.List<java.lang.String>
+    getCompactionOutputList();
+    /**
+     * <code>repeated string compaction_output = 5;</code>
+     */
     int getCompactionOutputCount();
-    String getCompactionOutput(int index);
-    
+    /**
+     * <code>repeated string compaction_output = 5;</code>
+     */
+    java.lang.String getCompactionOutput(int index);
+    /**
+     * <code>repeated string compaction_output = 5;</code>
+     */
+    com.google.protobuf.ByteString
+        getCompactionOutputBytes(int index);
+
     // required string store_home_dir = 6;
+    /**
+     * <code>required string store_home_dir = 6;</code>
+     */
     boolean hasStoreHomeDir();
-    String getStoreHomeDir();
+    /**
+     * <code>required string store_home_dir = 6;</code>
+     */
+    java.lang.String getStoreHomeDir();
+    /**
+     * <code>required string store_home_dir = 6;</code>
+     */
+    com.google.protobuf.ByteString
+        getStoreHomeDirBytes();
   }
+  /**
+   * Protobuf type {@code CompactionDescriptor}
+   *
+   * <pre>
+   **
+   * Special WAL entry to hold all related to a compaction.
+   * Written to WAL before completing compaction.  There is
+   * sufficient info in the below message to complete later
+   * the * compaction should we fail the WAL write.
+   * </pre>
+   */
   public static final class CompactionDescriptor extends
       com.google.protobuf.GeneratedMessage
       implements CompactionDescriptorOrBuilder {
     // Use CompactionDescriptor.newBuilder() to construct.
-    private CompactionDescriptor(Builder builder) {
+    private CompactionDescriptor(com.google.protobuf.GeneratedMessage.Builder<?> builder) {
       super(builder);
+      this.unknownFields = builder.getUnknownFields();
     }
-    private CompactionDescriptor(boolean noInit) {}
-    
+    private CompactionDescriptor(boolean noInit) { this.unknownFields = com.google.protobuf.UnknownFieldSet.getDefaultInstance(); }
+
     private static final CompactionDescriptor defaultInstance;
     public static CompactionDescriptor getDefaultInstance() {
       return defaultInstance;
     }
-    
+
     public CompactionDescriptor getDefaultInstanceForType() {
       return defaultInstance;
     }
-    
+
+    private final com.google.protobuf.UnknownFieldSet unknownFields;
+    @java.lang.Override
+    public final com.google.protobuf.UnknownFieldSet
+        getUnknownFields() {
+      return this.unknownFields;
+    }
+    private CompactionDescriptor(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      initFields();
+      int mutable_bitField0_ = 0;
+      com.google.protobuf.UnknownFieldSet.Builder unknownFields =
+          com.google.protobuf.UnknownFieldSet.newBuilder();
+      try {
+        boolean done = false;
+        while (!done) {
+          int tag = input.readTag();
+          switch (tag) {
+            case 0:
+              done = true;
+              break;
+            default: {
+              if (!parseUnknownField(input, unknownFields,
+                                     extensionRegistry, tag)) {
+                done = true;
+              }
+              break;
+            }
+            case 10: {
+              bitField0_ |= 0x00000001;
+              tableName_ = input.readBytes();
+              break;
+            }
+            case 18: {
+              bitField0_ |= 0x00000002;
+              encodedRegionName_ = input.readBytes();
+              break;
+            }
+            case 26: {
+              bitField0_ |= 0x00000004;
+              familyName_ = input.readBytes();
+              break;
+            }
+            case 34: {
+              if (!((mutable_bitField0_ & 0x00000008) == 0x00000008)) {
+                compactionInput_ = new com.google.protobuf.LazyStringArrayList();
+                mutable_bitField0_ |= 0x00000008;
+              }
+              compactionInput_.add(input.readBytes());
+              break;
+            }
+            case 42: {
+              if (!((mutable_bitField0_ & 0x00000010) == 0x00000010)) {
+                compactionOutput_ = new com.google.protobuf.LazyStringArrayList();
+                mutable_bitField0_ |= 0x00000010;
+              }
+              compactionOutput_.add(input.readBytes());
+              break;
+            }
+            case 50: {
+              bitField0_ |= 0x00000008;
+              storeHomeDir_ = input.readBytes();
+              break;
+            }
+          }
+        }
+      } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+        throw e.setUnfinishedMessage(this);
+      } catch (java.io.IOException e) {
+        throw new com.google.protobuf.InvalidProtocolBufferException(
+            e.getMessage()).setUnfinishedMessage(this);
+      } finally {
+        if (((mutable_bitField0_ & 0x00000008) == 0x00000008)) {
+          compactionInput_ = new com.google.protobuf.UnmodifiableLazyStringList(compactionInput_);
+        }
+        if (((mutable_bitField0_ & 0x00000010) == 0x00000010)) {
+          compactionOutput_ = new com.google.protobuf.UnmodifiableLazyStringList(compactionOutput_);
+        }
+        this.unknownFields = unknownFields.build();
+        makeExtensionsImmutable();
+      }
+    }
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
       return org.apache.hadoop.hbase.protobuf.generated.WALProtos.internal_static_CompactionDescriptor_descriptor;
     }
-    
+
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return org.apache.hadoop.hbase.protobuf.generated.WALProtos.internal_static_CompactionDescriptor_fieldAccessorTable;
+      return org.apache.hadoop.hbase.protobuf.generated.WALProtos.internal_static_CompactionDescriptor_fieldAccessorTable
+          .ensureFieldAccessorsInitialized(
+              org.apache.hadoop.hbase.protobuf.generated.WALProtos.CompactionDescriptor.class, org.apache.hadoop.hbase.protobuf.generated.WALProtos.CompactionDescriptor.Builder.class);
     }
-    
+
+    public static com.google.protobuf.Parser<CompactionDescriptor> PARSER =
+        new com.google.protobuf.AbstractParser<CompactionDescriptor>() {
+      public CompactionDescriptor parsePartialFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        return new CompactionDescriptor(input, extensionRegistry);
+      }
+    };
+
+    @java.lang.Override
+    public com.google.protobuf.Parser<CompactionDescriptor> getParserForType() {
+      return PARSER;
+    }
+
     private int bitField0_;
     // required bytes table_name = 1;
     public static final int TABLE_NAME_FIELD_NUMBER = 1;
     private com.google.protobuf.ByteString tableName_;
+    /**
+     * <code>required bytes table_name = 1;</code>
+     *
+     * <pre>
+     * TODO: WALKey already stores these, might remove
+     * </pre>
+     */
     public boolean hasTableName() {
       return ((bitField0_ & 0x00000001) == 0x00000001);
     }
+    /**
+     * <code>required bytes table_name = 1;</code>
+     *
+     * <pre>
+     * TODO: WALKey already stores these, might remove
+     * </pre>
+     */
     public com.google.protobuf.ByteString getTableName() {
       return tableName_;
     }
-    
+
     // required bytes encoded_region_name = 2;
     public static final int ENCODED_REGION_NAME_FIELD_NUMBER = 2;
     private com.google.protobuf.ByteString encodedRegionName_;
+    /**
+     * <code>required bytes encoded_region_name = 2;</code>
+     */
     public boolean hasEncodedRegionName() {
       return ((bitField0_ & 0x00000002) == 0x00000002);
     }
+    /**
+     * <code>required bytes encoded_region_name = 2;</code>
+     */
     public com.google.protobuf.ByteString getEncodedRegionName() {
       return encodedRegionName_;
     }
-    
+
     // required bytes family_name = 3;
     public static final int FAMILY_NAME_FIELD_NUMBER = 3;
     private com.google.protobuf.ByteString familyName_;
+    /**
+     * <code>required bytes family_name = 3;</code>
+     */
     public boolean hasFamilyName() {
       return ((bitField0_ & 0x00000004) == 0x00000004);
     }
+    /**
+     * <code>required bytes family_name = 3;</code>
+     */
     public com.google.protobuf.ByteString getFamilyName() {
       return familyName_;
     }
-    
+
     // repeated string compaction_input = 4;
     public static final int COMPACTION_INPUT_FIELD_NUMBER = 4;
     private com.google.protobuf.LazyStringList compactionInput_;
-    public java.util.List<String>
+    /**
+     * <code>repeated string compaction_input = 4;</code>
+     */
+    public java.util.List<java.lang.String>
         getCompactionInputList() {
       return compactionInput_;
     }
+    /**
+     * <code>repeated string compaction_input = 4;</code>
+     */
     public int getCompactionInputCount() {
       return compactionInput_.size();
     }
-    public String getCompactionInput(int index) {
+    /**
+     * <code>repeated string compaction_input = 4;</code>
+     */
+    public java.lang.String getCompactionInput(int index) {
       return compactionInput_.get(index);
     }
-    
+    /**
+     * <code>repeated string compaction_input = 4;</code>
+     */
+    public com.google.protobuf.ByteString
+        getCompactionInputBytes(int index) {
+      return compactionInput_.getByteString(index);
+    }
+
     // repeated string compaction_output = 5;
     public static final int COMPACTION_OUTPUT_FIELD_NUMBER = 5;
     private com.google.protobuf.LazyStringList compactionOutput_;
-    public java.util.List<String>
+    /**
+     * <code>repeated string compaction_output = 5;</code>
+     */
+    public java.util.List<java.lang.String>
         getCompactionOutputList() {
       return compactionOutput_;
     }
+    /**
+     * <code>repeated string compaction_output = 5;</code>
+     */
     public int getCompactionOutputCount() {
       return compactionOutput_.size();
     }
-    public String getCompactionOutput(int index) {
+    /**
+     * <code>repeated string compaction_output = 5;</code>
+     */
+    public java.lang.String getCompactionOutput(int index) {
       return compactionOutput_.get(index);
     }
-    
+    /**
+     * <code>repeated string compaction_output = 5;</code>
+     */
+    public com.google.protobuf.ByteString
+        getCompactionOutputBytes(int index) {
+      return compactionOutput_.getByteString(index);
+    }
+
     // required string store_home_dir = 6;
     public static final int STORE_HOME_DIR_FIELD_NUMBER = 6;
     private java.lang.Object storeHomeDir_;
+    /**
+     * <code>required string store_home_dir = 6;</code>
+     */
     public boolean hasStoreHomeDir() {
       return ((bitField0_ & 0x00000008) == 0x00000008);
     }
-    public String getStoreHomeDir() {
+    /**
+     * <code>required string store_home_dir = 6;</code>
+     */
+    public java.lang.String getStoreHomeDir() {
       java.lang.Object ref = storeHomeDir_;
-      if (ref instanceof String) {
-        return (String) ref;
+      if (ref instanceof java.lang.String) {
+        return (java.lang.String) ref;
       } else {
         com.google.protobuf.ByteString bs = 
             (com.google.protobuf.ByteString) ref;
-        String s = bs.toStringUtf8();
-        if (com.google.protobuf.Internal.isValidUtf8(bs)) {
+        java.lang.String s = bs.toStringUtf8();
+        if (bs.isValidUtf8()) {
           storeHomeDir_ = s;
         }
         return s;
       }
     }
-    private com.google.protobuf.ByteString getStoreHomeDirBytes() {
+    /**
+     * <code>required string store_home_dir = 6;</code>
+     */
+    public com.google.protobuf.ByteString
+        getStoreHomeDirBytes() {
       java.lang.Object ref = storeHomeDir_;
-      if (ref instanceof String) {
+      if (ref instanceof java.lang.String) {
         com.google.protobuf.ByteString b = 
-            com.google.protobuf.ByteString.copyFromUtf8((String) ref);
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
         storeHomeDir_ = b;
         return b;
       } else {
         return (com.google.protobuf.ByteString) ref;
       }
     }
-    
+
     private void initFields() {
       tableName_ = com.google.protobuf.ByteString.EMPTY;
       encodedRegionName_ = com.google.protobuf.ByteString.EMPTY;
@@ -2201,7 +2989,7 @@ public final class WALProtos {
     public final boolean isInitialized() {
       byte isInitialized = memoizedIsInitialized;
       if (isInitialized != -1) return isInitialized == 1;
-      
+
       if (!hasTableName()) {
         memoizedIsInitialized = 0;
         return false;
@@ -2221,7 +3009,7 @@ public final class WALProtos {
       memoizedIsInitialized = 1;
       return true;
     }
-    
+
     public void writeTo(com.google.protobuf.CodedOutputStream output)
                         throws java.io.IOException {
       getSerializedSize();
@@ -2245,12 +3033,12 @@ public final class WALProtos {
       }
       getUnknownFields().writeTo(output);
     }
-    
+
     private int memoizedSerializedSize = -1;
     public int getSerializedSize() {
       int size = memoizedSerializedSize;
       if (size != -1) return size;
-    
+
       size = 0;
       if (((bitField0_ & 0x00000001) == 0x00000001)) {
         size += com.google.protobuf.CodedOutputStream
@@ -2290,14 +3078,14 @@ public final class WALProtos {
       memoizedSerializedSize = size;
       return size;
     }
-    
+
     private static final long serialVersionUID = 0L;
     @java.lang.Override
     protected java.lang.Object writeReplace()
         throws java.io.ObjectStreamException {
       return super.writeReplace();
     }
-    
+
     @java.lang.Override
     public boolean equals(final java.lang.Object obj) {
       if (obj == this) {
@@ -2307,7 +3095,7 @@ public final class WALProtos {
         return super.equals(obj);
       }
       org.apache.hadoop.hbase.protobuf.generated.WALProtos.CompactionDescriptor other = (org.apache.hadoop.hbase.protobuf.generated.WALProtos.CompactionDescriptor) obj;
-      
+
       boolean result = true;
       result = result && (hasTableName() == other.hasTableName());
       if (hasTableName()) {
@@ -2337,9 +3125,13 @@ public final class WALProtos {
           getUnknownFields().equals(other.getUnknownFields());
       return result;
     }
-    
+
+    private int memoizedHashCode = 0;
     @java.lang.Override
     public int hashCode() {
+      if (memoizedHashCode != 0) {
+        return memoizedHashCode;
+      }
       int hash = 41;
       hash = (19 * hash) + getDescriptorForType().hashCode();
       if (hasTableName()) {
@@ -2367,89 +3159,87 @@ public final class WALProtos {
         hash = (53 * hash) + getStoreHomeDir().hashCode();
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
+      memoizedHashCode = hash;
       return hash;
     }
-    
+
     public static org.apache.hadoop.hbase.protobuf.generated.WALProtos.CompactionDescriptor parseFrom(
         com.google.protobuf.ByteString data)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return newBuilder().mergeFrom(data).buildParsed();
+      return PARSER.parseFrom(data);
     }
     public static org.apache.hadoop.hbase.protobuf.generated.WALProtos.CompactionDescriptor parseFrom(
         com.google.protobuf.ByteString data,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return newBuilder().mergeFrom(data, extensionRegistry)
-               .buildParsed();
+      return PARSER.parseFrom(data, extensionRegistry);
     }
     public static org.apache.hadoop.hbase.protobuf.generated.WALProtos.CompactionDescriptor parseFrom(byte[] data)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return newBuilder().mergeFrom(data).buildParsed();
+      return PARSER.parseFrom(data);
     }
     public static org.apache.hadoop.hbase.protobuf.generated.WALProtos.CompactionDescriptor parseFrom(
         byte[] data,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return newBuilder().mergeFrom(data, extensionRegistry)
-               .buildParsed();
+      return PARSER.parseFrom(data, extensionRegistry);
     }
     public static org.apache.hadoop.hbase.protobuf.generated.WALProtos.CompactionDescriptor parseFrom(java.io.InputStream input)
         throws java.io.IOException {
-      return newBuilder().mergeFrom(input).buildParsed();
+      return PARSER.parseFrom(input);
     }
     public static org.apache.hadoop.hbase.protobuf.generated.WALProtos.CompactionDescriptor parseFrom(
         java.io.InputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
-      return newBuilder().mergeFrom(input, extensionRegistry)
-               .buildParsed();
+      return PARSER.parseFrom(input, extensionRegistry);
     }
     public static org.apache.hadoop.hbase.protobuf.generated.WALProtos.CompactionDescriptor parseDelimitedFrom(java.io.InputStream input)
         throws java.io.IOException {
-      Builder builder = newBuilder();
-      if (builder.mergeDelimitedFrom(input)) {
-        return builder.buildParsed();
-      } else {
-        return null;
-      }
+      return PARSER.parseDelimitedFrom(input);
     }
     public static org.apache.hadoop.hbase.protobuf.generated.WALProtos.CompactionDescriptor parseDelimitedFrom(
         java.io.InputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
-      Builder builder = newBuilder();
-      if (builder.mergeDelimitedFrom(input, extensionRegistry)) {
-        return builder.buildParsed();
-      } else {
-        return null;
-      }
+      return PARSER.parseDelimitedFrom(input, extensionRegistry);
     }
     public static org.apache.hadoop.hbase.protobuf.generated.WALProtos.CompactionDescriptor parseFrom(
         com.google.protobuf.CodedInputStream input)
         throws java.io.IOException {
-      return newBuilder().mergeFrom(input).buildParsed();
+      return PARSER.parseFrom(input);
     }
     public static org.apache.hadoop.hbase.protobuf.generated.WALProtos.CompactionDescriptor parseFrom(
         com.google.protobuf.CodedInputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
-      return newBuilder().mergeFrom(input, extensionRegistry)
-               .buildParsed();
+      return PARSER.parseFrom(input, extensionRegistry);
     }
-    
+
     public static Builder newBuilder() { return Builder.create(); }
     public Builder newBuilderForType() { return newBuilder(); }
     public static Builder newBuilder(org.apache.hadoop.hbase.protobuf.generated.WALProtos.CompactionDescriptor prototype) {
       return newBuilder().mergeFrom(prototype);
     }
     public Builder toBuilder() { return newBuilder(this); }
-    
+
     @java.lang.Override
     protected Builder newBuilderForType(
         com.google.protobuf.GeneratedMessage.BuilderParent parent) {
       Builder builder = new Builder(parent);
       return builder;
     }
+    /**
+     * Protobuf type {@code CompactionDescriptor}
+     *
+     * <pre>
+     **
+     * Special WAL entry to hold all related to a compaction.
+     * Written to WAL before completing compaction.  There is
+     * sufficient info in the below message to complete later
+     * the * compaction should we fail the WAL write.
+     * </pre>
+     */
     public static final class Builder extends
         com.google.protobuf.GeneratedMessage.Builder<Builder>
        implements org.apache.hadoop.hbase.protobuf.generated.WALProtos.CompactionDescriptorOrBuilder {
@@ -2457,18 +3247,21 @@ public final class WALProtos {
           getDescriptor() {
         return org.apache.hadoop.hbase.protobuf.generated.WALProtos.internal_static_CompactionDescriptor_descriptor;
       }
-      
+
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return org.apache.hadoop.hbase.protobuf.generated.WALProtos.internal_static_CompactionDescriptor_fieldAccessorTable;
+        return org.apache.hadoop.hbase.protobuf.generated.WALProtos.internal_static_CompactionDescriptor_fieldAccessorTable
+            .ensureFieldAccessorsInitialized(
+                org.apache.hadoop.hbase.protobuf.generated.WALProtos.CompactionDescriptor.class, org.apache.hadoop.hbase.protobuf.generated.WALProtos.CompactionDescriptor.Builder.class);
       }
-      
+
       // Construct using org.apache.hadoop.hbase.protobuf.generated.WALProtos.CompactionDescriptor.newBuilder()
       private Builder() {
         maybeForceBuilderInitialization();
       }
-      
-      private Builder(BuilderParent parent) {
+
+      private Builder(
+          com.google.protobuf.GeneratedMessage.BuilderParent parent) {
         super(parent);
         maybeForceBuilderInitialization();
       }
@@ -2479,7 +3272,7 @@ public final class WALProtos {
       private static Builder create() {
         return new Builder();
       }
-      
+
       public Builder clear() {
         super.clear();
         tableName_ = com.google.protobuf.ByteString.EMPTY;
@@ -2496,20 +3289,20 @@ public final class WALProtos {
         bitField0_ = (bitField0_ & ~0x00000020);
         return this;
       }
-      
+
       public Builder clone() {
         return create().mergeFrom(buildPartial());
       }
-      
+
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return org.apache.hadoop.hbase.protobuf.generated.WALProtos.CompactionDescriptor.getDescriptor();
+        return org.apache.hadoop.hbase.protobuf.generated.WALProtos.internal_static_CompactionDescriptor_descriptor;
       }
-      
+
       public org.apache.hadoop.hbase.protobuf.generated.WALProtos.CompactionDescriptor getDefaultInstanceForType() {
         return org.apache.hadoop.hbase.protobuf.generated.WALProtos.CompactionDescriptor.getDefaultInstance();
       }
-      
+
       public org.apache.hadoop.hbase.protobuf.generated.WALProtos.CompactionDescriptor build() {
         org.apache.hadoop.hbase.protobuf.generated.WALProtos.CompactionDescriptor result = buildPartial();
         if (!result.isInitialized()) {
@@ -2517,17 +3310,7 @@ public final class WALProtos {
         }
         return result;
       }
-      
-      private org.apache.hadoop.hbase.protobuf.generated.WALProtos.CompactionDescriptor buildParsed()
-          throws com.google.protobuf.InvalidProtocolBufferException {
-        org.apache.hadoop.hbase.protobuf.generated.WALProtos.CompactionDescriptor result = buildPartial();
-        if (!result.isInitialized()) {
-          throw newUninitializedMessageException(
-            result).asInvalidProtocolBufferException();
-        }
-        return result;
-      }
-      
+
       public org.apache.hadoop.hbase.protobuf.generated.WALProtos.CompactionDescriptor buildPartial() {
         org.apache.hadoop.hbase.protobuf.generated.WALProtos.CompactionDescriptor result = new org.apache.hadoop.hbase.protobuf.generated.WALProtos.CompactionDescriptor(this);
         int from_bitField0_ = bitField0_;
@@ -2564,7 +3347,7 @@ public final class WALProtos {
         onBuilt();
         return result;
       }
-      
+
       public Builder mergeFrom(com.google.protobuf.Message other) {
         if (other instanceof org.apache.hadoop.hbase.protobuf.generated.WALProtos.CompactionDescriptor) {
           return mergeFrom((org.apache.hadoop.hbase.protobuf.generated.WALProtos.CompactionDescriptor)other);
@@ -2573,7 +3356,7 @@ public final class WALProtos {
           return this;
         }
       }
-      
+
       public Builder mergeFrom(org.apache.hadoop.hbase.protobuf.generated.WALProtos.CompactionDescriptor other) {
         if (other == org.apache.hadoop.hbase.protobuf.generated.WALProtos.CompactionDescriptor.getDefaultInstance()) return this;
         if (other.hasTableName()) {
@@ -2606,12 +3389,14 @@ public final class WALProtos {
           onChanged();
         }
         if (other.hasStoreHomeDir()) {
-          setStoreHomeDir(other.getStoreHomeDir());
+          bitField0_ |= 0x00000020;
+          storeHomeDir_ = other.storeHomeDir_;
+          onChanged();
         }
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
       }
-      
+
       public final boolean isInitialized() {
         if (!hasTableName()) {
           
@@ -2631,74 +3416,55 @@ public final class WALProtos {
         }
         return true;
       }
-      
+
       public Builder mergeFrom(
           com.google.protobuf.CodedInputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws java.io.IOException {
-        com.google.protobuf.UnknownFieldSet.Builder unknownFields =
-          com.google.protobuf.UnknownFieldSet.newBuilder(
-            this.getUnknownFields());
-        while (true) {
-          int tag = input.readTag();
-          switch (tag) {
-            case 0:
-              this.setUnknownFields(unknownFields.build());
-              onChanged();
-              return this;
-            default: {
-              if (!parseUnknownField(input, unknownFields,
-                                     extensionRegistry, tag)) {
-                this.setUnknownFields(unknownFields.build());
-                onChanged();
-                return this;
-              }
-              break;
-            }
-            case 10: {
-              bitField0_ |= 0x00000001;
-              tableName_ = input.readBytes();
-              break;
-            }
-            case 18: {
-              bitField0_ |= 0x00000002;
-              encodedRegionName_ = input.readBytes();
-              break;
-            }
-            case 26: {
-              bitField0_ |= 0x00000004;
-              familyName_ = input.readBytes();
-              break;
-            }
-            case 34: {
-              ensureCompactionInputIsMutable();
-              compactionInput_.add(input.readBytes());
-              break;
-            }
-            case 42: {
-              ensureCompactionOutputIsMutable();
-              compactionOutput_.add(input.readBytes());
-              break;
-            }
-            case 50: {
-              bitField0_ |= 0x00000020;
-              storeHomeDir_ = input.readBytes();
-              break;
-            }
+        org.apache.hadoop.hbase.protobuf.generated.WALProtos.CompactionDescriptor parsedMessage = null;
+        try {
+          parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
+        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+          parsedMessage = (org.apache.hadoop.hbase.protobuf.generated.WALProtos.CompactionDescriptor) e.getUnfinishedMessage();
+          throw e;
+        } finally {
+          if (parsedMessage != null) {
+            mergeFrom(parsedMessage);
           }
         }
+        return this;
       }
-      
       private int bitField0_;
-      
+
       // required bytes table_name = 1;
       private com.google.protobuf.ByteString tableName_ = com.google.protobuf.ByteString.EMPTY;
+      /**
+       * <code>required bytes table_name = 1;</code>
+       *
+       * <pre>
+       * TODO: WALKey already stores these, might remove
+       * </pre>
+       */
       public boolean hasTableName() {
         return ((bitField0_ & 0x00000001) == 0x00000001);
       }
+      /**
+       * <code>required bytes table_name = 1;</code>
+       *
+       * <pre>
+       * TODO: WALKey already stores these, might remove
+       * </pre>
+       */
       public com.google.protobuf.ByteString getTableName() {
         return tableName_;
       }
+      /**
+       * <code>required bytes table_name = 1;</code>
+       *
+       * <pre>
+       * TODO: WALKey already stores these, might remove
+       * </pre>
+       */
       public Builder setTableName(com.google.protobuf.ByteString value) {
         if (value == null) {
     throw new NullPointerException();
@@ -2708,21 +3474,37 @@ public final class WALProtos {
         onChanged();
         return this;
       }
+      /**
+       * <code>required bytes table_name = 1;</code>
+       *
+       * <pre>
+       * TODO: WALKey already stores these, might remove
+       * </pre>
+       */
       public Builder clearTableName() {
         bitField0_ = (bitField0_ & ~0x00000001);
         tableName_ = getDefaultInstance().getTableName();
         onChanged();
         return this;
       }
-      
+
       // required bytes encoded_region_name = 2;
       private com.google.protobuf.ByteString encodedRegionName_ = com.google.protobuf.ByteString.EMPTY;
+      /**
+       * <code>required bytes encoded_region_name = 2;</code>
+       */
       public boolean hasEncodedRegionName() {
         return ((bitField0_ & 0x00000002) == 0x00000002);
       }
+      /**
+       * <code>required bytes encoded_region_name = 2;</code>
+       */
       public com.google.protobuf.ByteString getEncodedRegionName() {
         return encodedRegionName_;
       }
+      /**
+       * <code>required bytes encoded_region_name = 2;</code>
+       */
       public Builder setEncodedRegionName(com.google.protobuf.ByteString value) {
         if (value == null) {
     throw new NullPointerException();
@@ -2732,21 +3514,33 @@ public final class WALProtos {
         onChanged();
         return this;
       }
+      /**
+       * <code>required bytes encoded_region_name = 2;</code>
+       */
       public Builder clearEncodedRegionName() {
         bitField0_ = (bitField0_ & ~0x00000002);
         encodedRegionName_ = getDefaultInstance().getEncodedRegionName();
         onChanged();
         return this;
       }
-      
+
       // required bytes family_name = 3;
       private com.google.protobuf.ByteString familyName_ = com.google.protobuf.ByteString.EMPTY;
+      /**
+       * <code>required bytes family_name = 3;</code>
+       */
       public boolean hasFamilyName() {
         return ((bitField0_ & 0x00000004) == 0x00000004);
       }
+      /**
+       * <code>required bytes family_name = 3;</code>
+       */
       public com.google.protobuf.ByteString getFamilyName() {
         return familyName_;
       }
+      /**
+       * <code>required bytes family_name = 3;</code>
+       */
       public Builder setFamilyName(com.google.protobuf.ByteString value) {
         if (value == null) {
     throw new NullPointerException();
@@ -2756,13 +3550,16 @@ public final class WALProtos {
         onChanged();
         return this;
       }
+      /**
+       * <code>required bytes family_name = 3;</code>
+       */
       public Builder clearFamilyName() {
         bitField0_ = (bitField0_ & ~0x00000004);
         familyName_ = getDefaultInstance().getFamilyName();
         onChanged();
         return this;
       }
-      
+
       // repeated string compaction_input = 4;
       private com.google.protobuf.LazyStringList compactionInput_ = com.google.protobuf.LazyStringArrayList.EMPTY;
       private void ensureCompactionInputIsMutable() {
@@ -2771,18 +3568,37 @@ public final class WALProtos {
           bitField0_ |= 0x00000008;
          }
       }
-      public java.util.List<String>
+      /**
+       * <code>repeated string compaction_input = 4;</code>
+       */
+      public java.util.List<java.lang.String>
           getCompactionInputList() {
         return java.util.Collections.unmodifiableList(compactionInput_);
       }
+      /**
+       * <code>repeated string compaction_input = 4;</code>
+       */
       public int getCompactionInputCount() {
         return compactionInput_.size();
       }
-      public String getCompactionInput(int index) {
+      /**
+       * <code>repeated string compaction_input = 4;</code>
+       */
+      public java.lang.String getCompactionInput(int index) {
         return compactionInput_.get(index);
       }
+      /**
+       * <code>repeated string compaction_input = 4;</code>
+       */
+      public com.google.protobuf.ByteString
+          getCompactionInputBytes(int index) {
+        return compactionInput_.getByteString(index);
+      }
+      /**
+       * <code>repeated string compaction_input = 4;</code>
+       */
       public Builder setCompactionInput(
-          int index, String value) {
+          int index, java.lang.String value) {
         if (value == null) {
     throw new NullPointerException();
   }
@@ -2791,7 +3607,11 @@ public final class WALProtos {
         onChanged();
         return this;
       }
-      public Builder addCompactionInput(String value) {
+      /**
+       * <code>repeated string compaction_input = 4;</code>
+       */
+      public Builder addCompactionInput(
+          java.lang.String value) {
         if (value == null) {
     throw new NullPointerException();
   }
@@ -2800,25 +3620,39 @@ public final class WALProtos {
         onChanged();
         return this;
       }
+      /**
+       * <code>repeated string compaction_input = 4;</code>
+       */
       public Builder addAllCompactionInput(
-          java.lang.Iterable<String> values) {
+          java.lang.Iterable<java.lang.String> values) {
         ensureCompactionInputIsMutable();
         super.addAll(values, compactionInput_);
         onChanged();
         return this;
       }
+      /**
+       * <code>repeated string compaction_input = 4;</code>
+       */
       public Builder clearCompactionInput() {
         compactionInput_ = com.google.protobuf.LazyStringArrayList.EMPTY;
         bitField0_ = (bitField0_ & ~0x00000008);
         onChanged();
         return this;
       }
-      void addCompactionInput(com.google.protobuf.ByteString value) {
-        ensureCompactionInputIsMutable();
+      /**
+       * <code>repeated string compaction_input = 4;</code>
+       */
+      public Builder addCompactionInputBytes(
+          com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  ensureCompactionInputIsMutable();
         compactionInput_.add(value);
         onChanged();
+        return this;
       }
-      
+
       // repeated string compaction_output = 5;
       private com.google.protobuf.LazyStringList compactionOutput_ = com.google.protobuf.LazyStringArrayList.EMPTY;
       private void ensureCompactionOutputIsMutable() {
@@ -2827,18 +3661,37 @@ public final class WALProtos {
           bitField0_ |= 0x00000010;
          }
       }
-      public java.util.List<String>
+      /**
+       * <code>repeated string compaction_output = 5;</code>
+       */
+      public java.util.List<java.lang.String>
           getCompactionOutputList() {
         return java.util.Collections.unmodifiableList(compactionOutput_);
       }
+      /**
+       * <code>repeated string compaction_output = 5;</code>
+       */
       public int getCompactionOutputCount() {
         return compactionOutput_.size();
       }
-      public String getCompactionOutput(int index) {
+      /**
+       * <code>repeated string compaction_output = 5;</code>
+       */
+      public java.lang.String getCompactionOutput(int index) {
         return compactionOutput_.get(index);
       }
+      /**
+       * <code>repeated string compaction_output = 5;</code>
+       */
+      public com.google.protobuf.ByteString
+          getCompactionOutputBytes(int index) {
+        return compactionOutput_.getByteString(index);
+      }
+      /**
+       * <code>repeated string compaction_output = 5;</code>
+       */
       public Builder setCompactionOutput(
-          int index, String value) {
+          int index, java.lang.String value) {
         if (value == null) {
     throw new NullPointerException();
   }
@@ -2847,7 +3700,11 @@ public final class WALProtos {
         onChanged();
         return this;
       }
-      public Builder addCompactionOutput(String value) {
+      /**
+       * <code>repeated string compaction_output = 5;</code>
+       */
+      public Builder addCompactionOutput(
+          java.lang.String value) {
         if (value == null) {
     throw new NullPointerException();
   }
@@ -2856,41 +3713,82 @@ public final class WALProtos {
         onChanged();
         return this;
       }
+      /**
+       * <code>repeated string compaction_output = 5;</code>
+       */
       public Builder addAllCompactionOutput(
-          java.lang.Iterable<String> values) {
+          java.lang.Iterable<java.lang.String> values) {
         ensureCompactionOutputIsMutable();
         super.addAll(values, compactionOutput_);
         onChanged();
         return this;
       }
+      /**
+       * <code>repeated string compaction_output = 5;</code>
+       */
       public Builder clearCompactionOutput() {
         compactionOutput_ = com.google.protobuf.LazyStringArrayList.EMPTY;
         bitField0_ = (bitField0_ & ~0x00000010);
         onChanged();
         return this;
       }
-      void addCompactionOutput(com.google.protobuf.ByteString value) {
-        ensureCompactionOutputIsMutable();
+      /**
+       * <code>repeated string compaction_output = 5;</code>
+       */
+      public Builder addCompactionOutputBytes(
+          com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  ensureCompactionOutputIsMutable();
         compactionOutput_.add(value);
         onChanged();
+        return this;
       }
-      
+
       // required string store_home_dir = 6;
       private java.lang.Object storeHomeDir_ = "";
+      /**
+       * <code>required string store_home_dir = 6;</code>
+       */
       public boolean hasStoreHomeDir() {
         return ((bitField0_ & 0x00000020) == 0x00000020);
       }
-      public String getStoreHomeDir() {
+      /**
+       * <code>required string store_home_dir = 6;</code>
+       */
+      public java.lang.String getStoreHomeDir() {
         java.lang.Object ref = storeHomeDir_;
-        if (!(ref instanceof String)) {
-          String s = ((com.google.protobuf.ByteString) ref).toStringUtf8();
+        if (!(ref instanceof java.lang.String)) {
+          java.lang.String s = ((com.google.protobuf.ByteString) ref)
+              .toStringUtf8();
           storeHomeDir_ = s;
           return s;
         } else {
-          return (String) ref;
+          return (java.lang.String) ref;
         }
       }
-      public Builder setStoreHomeDir(String value) {
+      /**
+       * <code>required string store_home_dir = 6;</code>
+       */
+      public com.google.protobuf.ByteString
+          getStoreHomeDirBytes() {
+        java.lang.Object ref = storeHomeDir_;
+        if (ref instanceof String) {
+          com.google.protobuf.ByteString b = 
+              com.google.protobuf.ByteString.copyFromUtf8(
+                  (java.lang.String) ref);
+          storeHomeDir_ = b;
+          return b;
+        } else {
+          return (com.google.protobuf.ByteString) ref;
+        }
+      }
+      /**
+       * <code>required string store_home_dir = 6;</code>
+       */
+      public Builder setStoreHomeDir(
+          java.lang.String value) {
         if (value == null) {
     throw new NullPointerException();
   }
@@ -2899,95 +3797,173 @@ public final class WALProtos {
         onChanged();
         return this;
       }
+      /**
+       * <code>required string store_home_dir = 6;</code>
+       */
       public Builder clearStoreHomeDir() {
         bitField0_ = (bitField0_ & ~0x00000020);
         storeHomeDir_ = getDefaultInstance().getStoreHomeDir();
         onChanged();
         return this;
       }
-      void setStoreHomeDir(com.google.protobuf.ByteString value) {
-        bitField0_ |= 0x00000020;
+      /**
+       * <code>required string store_home_dir = 6;</code>
+       */
+      public Builder setStoreHomeDirBytes(
+          com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000020;
         storeHomeDir_ = value;
         onChanged();
+        return this;
       }
-      
+
       // @@protoc_insertion_point(builder_scope:CompactionDescriptor)
     }
-    
+
     static {
       defaultInstance = new CompactionDescriptor(true);
       defaultInstance.initFields();
     }
-    
+
     // @@protoc_insertion_point(class_scope:CompactionDescriptor)
   }
-  
+
   public interface WALTrailerOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
   }
+  /**
+   * Protobuf type {@code WALTrailer}
+   *
+   * <pre>
+   **
+   * A trailer that is appended to the end of a properly closed HLog WAL file.
+   * If missing, this is either a legacy or a corrupted WAL file.
+   * </pre>
+   */
   public static final class WALTrailer extends
       com.google.protobuf.GeneratedMessage
       implements WALTrailerOrBuilder {
     // Use WALTrailer.newBuilder() to construct.
-    private WALTrailer(Builder builder) {
+    private WALTrailer(com.google.protobuf.GeneratedMessage.Builder<?> builder) {
       super(builder);
+      this.unknownFields = builder.getUnknownFields();
     }
-    private WALTrailer(boolean noInit) {}
-    
+    private WALTrailer(boolean noInit) { this.unknownFields = com.google.protobuf.UnknownFieldSet.getDefaultInstance(); }
+
     private static final WALTrailer defaultInstance;
     public static WALTrailer getDefaultInstance() {
       return defaultInstance;
     }
-    
+
     public WALTrailer getDefaultInstanceForType() {
       return defaultInstance;
     }
-    
+
+    private final com.google.protobuf.UnknownFieldSet unknownFields;
+    @java.lang.Override
+    public final com.google.protobuf.UnknownFieldSet
+        getUnknownFields() {
+      return this.unknownFields;
+    }
+    private WALTrailer(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      initFields();
+      com.google.protobuf.UnknownFieldSet.Builder unknownFields =
+          com.google.protobuf.UnknownFieldSet.newBuilder();
+      try {
+        boolean done = false;
+        while (!done) {
+          int tag = input.readTag();
+          switch (tag) {
+            case 0:
+              done = true;
+              break;
+            default: {
+              if (!parseUnknownField(input, unknownFields,
+                                     extensionRegistry, tag)) {
+                done = true;
+              }
+              break;
+            }
+          }
+        }
+      } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+        throw e.setUnfinishedMessage(this);
+      } catch (java.io.IOException e) {
+        throw new com.google.protobuf.InvalidProtocolBufferException(
+            e.getMessage()).setUnfinishedMessage(this);
+      } finally {
+        this.unknownFields = unknownFields.build();
+        makeExtensionsImmutable();
+      }
+    }
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
       return org.apache.hadoop.hbase.protobuf.generated.WALProtos.internal_static_WALTrailer_descriptor;
     }
-    
+
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return org.apache.hadoop.hbase.protobuf.generated.WALProtos.internal_static_WALTrailer_fieldAccessorTable;
+      return org.apache.hadoop.hbase.protobuf.generated.WALProtos.internal_static_WALTrailer_fieldAccessorTable
+          .ensureFieldAccessorsInitialized(
+              org.apache.hadoop.hbase.protobuf.generated.WALProtos.WALTrailer.class, org.apache.hadoop.hbase.protobuf.generated.WALProtos.WALTrailer.Builder.class);
     }
-    
+
+    public static com.google.protobuf.Parser<WALTrailer> PARSER =
+        new com.google.protobuf.AbstractParser<WALTrailer>() {
+      public WALTrailer parsePartialFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        return new WALTrailer(input, extensionRegistry);
+      }
+    };
+
+    @java.lang.Override
+    public com.google.protobuf.Parser<WALTrailer> getParserForType() {
+      return PARSER;
+    }
+
     private void initFields() {
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
       byte isInitialized = memoizedIsInitialized;
       if (isInitialized != -1) return isInitialized == 1;
-      
+
       memoizedIsInitialized = 1;
       return true;
     }
-    
+
     public void writeTo(com.google.protobuf.CodedOutputStream output)
                         throws java.io.IOException {
       getSerializedSize();
       getUnknownFields().writeTo(output);
     }
-    
+
     private int memoizedSerializedSize = -1;
     public int getSerializedSize() {
       int size = memoizedSerializedSize;
       if (size != -1) return size;
-    
+
       size = 0;
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
       return size;
     }
-    
+
     private static final long serialVersionUID = 0L;
     @java.lang.Override
     protected java.lang.Object writeReplace()
         throws java.io.ObjectStreamException {
       return super.writeReplace();
     }
-    
+
     @java.lang.Override
     public boolean equals(final java.lang.Object obj) {
       if (obj == this) {
@@ -2997,101 +3973,101 @@ public final class WALProtos {
         return super.equals(obj);
       }
       org.apache.hadoop.hbase.protobuf.generated.WALProtos.WALTrailer other = (org.apache.hadoop.hbase.protobuf.generated.WALProtos.WALTrailer) obj;
-      
+
       boolean result = true;
       result = result &&
           getUnknownFields().equals(other.getUnknownFields());
       return result;
     }
-    
+
+    private int memoizedHashCode = 0;
     @java.lang.Override
     public int hashCode() {
+      if (memoizedHashCode != 0) {
+        return memoizedHashCode;
+      }
       int hash = 41;
       hash = (19 * hash) + getDescriptorForType().hashCode();
       hash = (29 * hash) + getUnknownFields().hashCode();
+      memoizedHashCode = hash;
       return hash;
     }
-    
+
     public static org.apache.hadoop.hbase.protobuf.generated.WALProtos.WALTrailer parseFrom(
         com.google.protobuf.ByteString data)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return newBuilder().mergeFrom(data).buildParsed();
+      return PARSER.parseFrom(data);
     }
     public static org.apache.hadoop.hbase.protobuf.generated.WALProtos.WALTrailer parseFrom(
         com.google.protobuf.ByteString data,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return newBuilder().mergeFrom(data, extensionRegistry)
-               .buildParsed();
+      return PARSER.parseFrom(data, extensionRegistry);
     }
     public static org.apache.hadoop.hbase.protobuf.generated.WALProtos.WALTrailer parseFrom(byte[] data)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return newBuilder().mergeFrom(data).buildParsed();
+      return PARSER.parseFrom(data);
     }
     public static org.apache.hadoop.hbase.protobuf.generated.WALProtos.WALTrailer parseFrom(
         byte[] data,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return newBuilder().mergeFrom(data, extensionRegistry)
-               .buildParsed();
+      return PARSER.parseFrom(data, extensionRegistry);
     }
     public static org.apache.hadoop.hbase.protobuf.generated.WALProtos.WALTrailer parseFrom(java.io.InputStream input)
         throws java.io.IOException {
-      return newBuilder().mergeFrom(input).buildParsed();
+      return PARSER.parseFrom(input);
     }
     public static org.apache.hadoop.hbase.protobuf.generated.WALProtos.WALTrailer parseFrom(
         java.io.InputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
-      return newBuilder().mergeFrom(input, extensionRegistry)
-               .buildParsed();
+      return PARSER.parseFrom(input, extensionRegistry);
     }
     public static org.apache.hadoop.hbase.protobuf.generated.WALProtos.WALTrailer parseDelimitedFrom(java.io.InputStream input)
         throws java.io.IOException {
-      Builder builder = newBuilder();
-      if (builder.mergeDelimitedFrom(input)) {
-        return builder.buildParsed();
-      } else {
-        return null;
-      }
+      return PARSER.parseDelimitedFrom(input);
     }
     public static org.apache.hadoop.hbase.protobuf.generated.WALProtos.WALTrailer parseDelimitedFrom(
         java.io.InputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
-      Builder builder = newBuilder();
-      if (builder.mergeDelimitedFrom(input, extensionRegistry)) {
-        return builder.buildParsed();
-      } else {
-        return null;
-      }
+      return PARSER.parseDelimitedFrom(input, extensionRegistry);
     }
     public static org.apache.hadoop.hbase.protobuf.generated.WALProtos.WALTrailer parseFrom(
         com.google.protobuf.CodedInputStream input)
         throws java.io.IOException {
-      return newBuilder().mergeFrom(input).buildParsed();
+      return PARSER.parseFrom(input);
     }
     public static org.apache.hadoop.hbase.protobuf.generated.WALProtos.WALTrailer parseFrom(
         com.google.protobuf.CodedInputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
-      return newBuilder().mergeFrom(input, extensionRegistry)
-               .buildParsed();
+      return PARSER.parseFrom(input, extensionRegistry);
     }
-    
+
     public static Builder newBuilder() { return Builder.create(); }
     public Builder newBuilderForType() { return newBuilder(); }
     public static Builder newBuilder(org.apache.hadoop.hbase.protobuf.generated.WALProtos.WALTrailer prototype) {
       return newBuilder().mergeFrom(prototype);
     }
     public Builder toBuilder() { return newBuilder(this); }
-    
+
     @java.lang.Override
     protected Builder newBuilderForType(
         com.google.protobuf.GeneratedMessage.BuilderParent parent) {
       Builder builder = new Builder(parent);
       return builder;
     }
+    /**
+     * Protobuf type {@code WALTrailer}
+     *
+     * <pre>
+     **
+     * A trailer that is appended to the end of a properly closed HLog WAL file.
+     * If missing, this is either a legacy or a corrupted WAL file.
+     * </pre>
+     */
     public static final class Builder extends
         com.google.protobuf.GeneratedMessage.Builder<Builder>
        implements org.apache.hadoop.hbase.protobuf.generated.WALProtos.WALTrailerOrBuilder {
@@ -3099,18 +4075,21 @@ public final class WALProtos {
           getDescriptor() {
         return org.apache.hadoop.hbase.protobuf.generated.WALProtos.internal_static_WALTrailer_descriptor;
       }
-      
+
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return org.apache.hadoop.hbase.protobuf.generated.WALProtos.internal_static_WALTrailer_fieldAccessorTable;
+        return org.apache.hadoop.hbase.protobuf.generated.WALProtos.internal_static_WALTrailer_fieldAccessorTable
+            .ensureFieldAccessorsInitialized(
+                org.apache.hadoop.hbase.protobuf.generated.WALProtos.WALTrailer.class, org.apache.hadoop.hbase.protobuf.generated.WALProtos.WALTrailer.Builder.class);
       }
-      
+
       // Construct using org.apache.hadoop.hbase.protobuf.generated.WALProtos.WALTrailer.newBuilder()
       private Builder() {
         maybeForceBuilderInitialization();
       }
-      
-      private Builder(BuilderParent parent) {
+
+      private Builder(
+          com.google.protobuf.GeneratedMessage.BuilderParent parent) {
         super(parent);
         maybeForceBuilderInitialization();
       }
@@ -3121,25 +4100,25 @@ public final class WALProtos {
       private static Builder create() {
         return new Builder();
       }
-      
+
       public Builder clear() {
         super.clear();
         return this;
       }
-      
+
       public Builder clone() {
         return create().mergeFrom(buildPartial());
       }
-      
+
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return org.apache.hadoop.hbase.protobuf.generated.WALProtos.WALTrailer.getDescriptor();
+        return org.apache.hadoop.hbase.protobuf.generated.WALProtos.internal_static_WALTrailer_descriptor;
       }
-      
+
       public org.apache.hadoop.hbase.protobuf.generated.WALProtos.WALTrailer getDefaultInstanceForType() {
         return org.apache.hadoop.hbase.protobuf.generated.WALProtos.WALTrailer.getDefaultInstance();
       }
-      
+
       public org.apache.hadoop.hbase.protobuf.generated.WALProtos.WALTrailer build() {
         org.apache.hadoop.hbase.protobuf.generated.WALProtos.WALTrailer result = buildPartial();
         if (!result.isInitialized()) {
@@ -3147,23 +4126,13 @@ public final class WALProtos {
         }
         return result;
       }
-      
-      private org.apache.hadoop.hbase.protobuf.generated.WALProtos.WALTrailer buildParsed()
-          throws com.google.protobuf.InvalidProtocolBufferException {
-        org.apache.hadoop.hbase.protobuf.generated.WALProtos.WALTrailer result = buildPartial();
-        if (!result.isInitialized()) {
-          throw newUninitializedMessageException(
-            result).asInvalidProtocolBufferException();
-        }
-        return result;
-      }
-      
+
       public org.apache.hadoop.hbase.protobuf.generated.WALProtos.WALTrailer buildPartial() {
         org.apache.hadoop.hbase.protobuf.generated.WALProtos.WALTrailer result = new org.apache.hadoop.hbase.protobuf.generated.WALProtos.WALTrailer(this);
         onBuilt();
         return result;
       }
-      
+
       public Builder mergeFrom(com.google.protobuf.Message other) {
         if (other instanceof org.apache.hadoop.hbase.protobuf.generated.WALProtos.WALTrailer) {
           return mergeFrom((org.apache.hadoop.hbase.protobuf.generated.WALProtos.WALTrailer)other);
@@ -3172,56 +4141,46 @@ public final class WALProtos {
           return this;
         }
       }
-      
+
       public Builder mergeFrom(org.apache.hadoop.hbase.protobuf.generated.WALProtos.WALTrailer other) {
         if (other == org.apache.hadoop.hbase.protobuf.generated.WALProtos.WALTrailer.getDefaultInstance()) return this;
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
       }
-      
+
       public final boolean isInitialized() {
         return true;
       }
-      
+
       public Builder mergeFrom(
           com.google.protobuf.CodedInputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws java.io.IOException {
-        com.google.protobuf.UnknownFieldSet.Builder unknownFields =
-          com.google.protobuf.UnknownFieldSet.newBuilder(
-            this.getUnknownFields());
-        while (true) {
-          int tag = input.readTag();
-          switch (tag) {
-            case 0:
-              this.setUnknownFields(unknownFields.build());
-              onChanged();
-              return this;
-            default: {
-              if (!parseUnknownField(input, unknownFields,
-                                     extensionRegistry, tag)) {
-                this.setUnknownFields(unknownFields.build());
-                onChanged();
-                return this;
-              }
-              break;
-            }
+        org.apache.hadoop.hbase.protobuf.generated.WALProtos.WALTrailer parsedMessage = null;
+        try {
+          parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
+        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+          parsedMessage = (org.apache.hadoop.hbase.protobuf.generated.WALProtos.WALTrailer) e.getUnfinishedMessage();
+          throw e;
+        } finally {
+          if (parsedMessage != null) {
+            mergeFrom(parsedMessage);
           }
         }
+        return this;
       }
-      
-      
+
       // @@protoc_insertion_point(builder_scope:WALTrailer)
     }
-    
+
     static {
       defaultInstance = new WALTrailer(true);
       defaultInstance.initFields();
     }
-    
+
     // @@protoc_insertion_point(class_scope:WALTrailer)
   }
-  
+
   private static com.google.protobuf.Descriptors.Descriptor
     internal_static_WALHeader_descriptor;
   private static
@@ -3247,7 +4206,7 @@ public final class WALProtos {
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_WALTrailer_fieldAccessorTable;
-  
+
   public static com.google.protobuf.Descriptors.FileDescriptor
       getDescriptor() {
     return descriptor;
@@ -3284,41 +4243,31 @@ public final class WALProtos {
           internal_static_WALHeader_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_WALHeader_descriptor,
-              new java.lang.String[] { "HasCompression", },
-              org.apache.hadoop.hbase.protobuf.generated.WALProtos.WALHeader.class,
-              org.apache.hadoop.hbase.protobuf.generated.WALProtos.WALHeader.Builder.class);
+              new java.lang.String[] { "HasCompression", });
           internal_static_WALKey_descriptor =
             getDescriptor().getMessageTypes().get(1);
           internal_static_WALKey_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_WALKey_descriptor,
-              new java.lang.String[] { "EncodedRegionName", "TableName", "LogSequenceNumber", "WriteTime", "ClusterId", "Scopes", "FollowingKvCount", },
-              org.apache.hadoop.hbase.protobuf.generated.WALProtos.WALKey.class,
-              org.apache.hadoop.hbase.protobuf.generated.WALProtos.WALKey.Builder.class);
+              new java.lang.String[] { "EncodedRegionName", "TableName", "LogSequenceNumber", "WriteTime", "ClusterId", "Scopes", "FollowingKvCount", });
           internal_static_FamilyScope_descriptor =
             getDescriptor().getMessageTypes().get(2);
           internal_static_FamilyScope_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_FamilyScope_descriptor,
-              new java.lang.String[] { "Family", "ScopeType", },
-              org.apache.hadoop.hbase.protobuf.generated.WALProtos.FamilyScope.class,
-              org.apache.hadoop.hbase.protobuf.generated.WALProtos.FamilyScope.Builder.class);
+              new java.lang.String[] { "Family", "ScopeType", });
           internal_static_CompactionDescriptor_descriptor =
             getDescriptor().getMessageTypes().get(3);
           internal_static_CompactionDescriptor_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_CompactionDescriptor_descriptor,
-              new java.lang.String[] { "TableName", "EncodedRegionName", "FamilyName", "CompactionInput", "CompactionOutput", "StoreHomeDir", },
-              org.apache.hadoop.hbase.protobuf.generated.WALProtos.CompactionDescriptor.class,
-              org.apache.hadoop.hbase.protobuf.generated.WALProtos.CompactionDescriptor.Builder.class);
+              new java.lang.String[] { "TableName", "EncodedRegionName", "FamilyName", "CompactionInput", "CompactionOutput", "StoreHomeDir", });
           internal_static_WALTrailer_descriptor =
             getDescriptor().getMessageTypes().get(4);
           internal_static_WALTrailer_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_WALTrailer_descriptor,
-              new java.lang.String[] { },
-              org.apache.hadoop.hbase.protobuf.generated.WALProtos.WALTrailer.class,
-              org.apache.hadoop.hbase.protobuf.generated.WALProtos.WALTrailer.Builder.class);
+              new java.lang.String[] { });
           return null;
         }
       };
@@ -3328,6 +4277,6 @@ public final class WALProtos {
           org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.getDescriptor(),
         }, assigner);
   }
-  
+
   // @@protoc_insertion_point(outer_class_scope)
 }

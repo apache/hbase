@@ -824,15 +824,26 @@ public final class RequestConverter {
    return builder.build();
  }
 
+ /**
+  * @see {@link #buildRollWALWriterRequest()
+  */
+ private static RollWALWriterRequest ROLL_WAL_WRITER_REQUEST =
+     RollWALWriterRequest.newBuilder().build();
+
   /**
   * Create a new RollWALWriterRequest
   *
   * @return a ReplicateWALEntryRequest
   */
  public static RollWALWriterRequest buildRollWALWriterRequest() {
-   RollWALWriterRequest.Builder builder = RollWALWriterRequest.newBuilder();
-   return builder.build();
+   return ROLL_WAL_WRITER_REQUEST;
  }
+
+ /**
+  * @see {@link #buildGetServerInfoRequest()}
+  */
+ private static GetServerInfoRequest GET_SERVER_INFO_REQUEST =
+   GetServerInfoRequest.newBuilder().build();
 
  /**
   * Create a new GetServerInfoRequest
@@ -840,8 +851,7 @@ public final class RequestConverter {
   * @return a GetServerInfoRequest
   */
  public static GetServerInfoRequest buildGetServerInfoRequest() {
-   GetServerInfoRequest.Builder builder =  GetServerInfoRequest.newBuilder();
-   return builder.build();
+   return GET_SERVER_INFO_REQUEST;
  }
 
  /**
@@ -1158,20 +1168,32 @@ public final class RequestConverter {
   }
 
   /**
+   * @see {@link #buildGetClusterStatusRequest}
+   */
+  private static final GetClusterStatusRequest GET_CLUSTER_STATUS_REQUEST =
+      GetClusterStatusRequest.newBuilder().build();
+
+  /**
    * Creates a protocol buffer GetClusterStatusRequest
    *
    * @return A GetClusterStatusRequest
    */
   public static GetClusterStatusRequest buildGetClusterStatusRequest() {
-    return GetClusterStatusRequest.newBuilder().build();
+    return GET_CLUSTER_STATUS_REQUEST;
   }
+
+  /**
+   * @see {@link #buildCatalogScanRequest}
+   */
+  private static final CatalogScanRequest CATALOG_SCAN_REQUEST =
+    CatalogScanRequest.newBuilder().build();
 
   /**
    * Creates a request for running a catalog scan
    * @return A {@link CatalogScanRequest}
    */
   public static CatalogScanRequest buildCatalogScanRequest() {
-    return CatalogScanRequest.newBuilder().build();
+    return CATALOG_SCAN_REQUEST;
   }
 
   /**
@@ -1183,11 +1205,17 @@ public final class RequestConverter {
   }
 
   /**
+   * @see {@link #buildIsCatalogJanitorEnabledRequest()}
+   */
+  private static final IsCatalogJanitorEnabledRequest IS_CATALOG_JANITOR_ENABLED_REQUEST =
+    IsCatalogJanitorEnabledRequest.newBuilder().build();
+
+  /**
    * Creates a request for querying the master whether the catalog janitor is enabled
    * @return A {@link IsCatalogJanitorEnabledRequest}
    */
   public static IsCatalogJanitorEnabledRequest buildIsCatalogJanitorEnabledRequest() {
-    return IsCatalogJanitorEnabledRequest.newBuilder().build();
+    return IS_CATALOG_JANITOR_ENABLED_REQUEST;
   }
 
   /**

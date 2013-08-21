@@ -10,82 +10,379 @@ public final class ClusterStatusProtos {
   }
   public interface RegionStateOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
-    
+
     // required .RegionInfo region_info = 1;
+    /**
+     * <code>required .RegionInfo region_info = 1;</code>
+     */
     boolean hasRegionInfo();
+    /**
+     * <code>required .RegionInfo region_info = 1;</code>
+     */
     org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo getRegionInfo();
+    /**
+     * <code>required .RegionInfo region_info = 1;</code>
+     */
     org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfoOrBuilder getRegionInfoOrBuilder();
-    
+
     // required .RegionState.State state = 2;
+    /**
+     * <code>required .RegionState.State state = 2;</code>
+     */
     boolean hasState();
+    /**
+     * <code>required .RegionState.State state = 2;</code>
+     */
     org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionState.State getState();
-    
+
     // optional uint64 stamp = 3;
+    /**
+     * <code>optional uint64 stamp = 3;</code>
+     */
     boolean hasStamp();
+    /**
+     * <code>optional uint64 stamp = 3;</code>
+     */
     long getStamp();
   }
+  /**
+   * Protobuf type {@code RegionState}
+   */
   public static final class RegionState extends
       com.google.protobuf.GeneratedMessage
       implements RegionStateOrBuilder {
     // Use RegionState.newBuilder() to construct.
-    private RegionState(Builder builder) {
+    private RegionState(com.google.protobuf.GeneratedMessage.Builder<?> builder) {
       super(builder);
+      this.unknownFields = builder.getUnknownFields();
     }
-    private RegionState(boolean noInit) {}
-    
+    private RegionState(boolean noInit) { this.unknownFields = com.google.protobuf.UnknownFieldSet.getDefaultInstance(); }
+
     private static final RegionState defaultInstance;
     public static RegionState getDefaultInstance() {
       return defaultInstance;
     }
-    
+
     public RegionState getDefaultInstanceForType() {
       return defaultInstance;
     }
-    
+
+    private final com.google.protobuf.UnknownFieldSet unknownFields;
+    @java.lang.Override
+    public final com.google.protobuf.UnknownFieldSet
+        getUnknownFields() {
+      return this.unknownFields;
+    }
+    private RegionState(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      initFields();
+      int mutable_bitField0_ = 0;
+      com.google.protobuf.UnknownFieldSet.Builder unknownFields =
+          com.google.protobuf.UnknownFieldSet.newBuilder();
+      try {
+        boolean done = false;
+        while (!done) {
+          int tag = input.readTag();
+          switch (tag) {
+            case 0:
+              done = true;
+              break;
+            default: {
+              if (!parseUnknownField(input, unknownFields,
+                                     extensionRegistry, tag)) {
+                done = true;
+              }
+              break;
+            }
+            case 10: {
+              org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo.Builder subBuilder = null;
+              if (((bitField0_ & 0x00000001) == 0x00000001)) {
+                subBuilder = regionInfo_.toBuilder();
+              }
+              regionInfo_ = input.readMessage(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo.PARSER, extensionRegistry);
+              if (subBuilder != null) {
+                subBuilder.mergeFrom(regionInfo_);
+                regionInfo_ = subBuilder.buildPartial();
+              }
+              bitField0_ |= 0x00000001;
+              break;
+            }
+            case 16: {
+              int rawValue = input.readEnum();
+              org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionState.State value = org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionState.State.valueOf(rawValue);
+              if (value == null) {
+                unknownFields.mergeVarintField(2, rawValue);
+              } else {
+                bitField0_ |= 0x00000002;
+                state_ = value;
+              }
+              break;
+            }
+            case 24: {
+              bitField0_ |= 0x00000004;
+              stamp_ = input.readUInt64();
+              break;
+            }
+          }
+        }
+      } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+        throw e.setUnfinishedMessage(this);
+      } catch (java.io.IOException e) {
+        throw new com.google.protobuf.InvalidProtocolBufferException(
+            e.getMessage()).setUnfinishedMessage(this);
+      } finally {
+        this.unknownFields = unknownFields.build();
+        makeExtensionsImmutable();
+      }
+    }
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
       return org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.internal_static_RegionState_descriptor;
     }
-    
+
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.internal_static_RegionState_fieldAccessorTable;
+      return org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.internal_static_RegionState_fieldAccessorTable
+          .ensureFieldAccessorsInitialized(
+              org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionState.class, org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionState.Builder.class);
     }
-    
+
+    public static com.google.protobuf.Parser<RegionState> PARSER =
+        new com.google.protobuf.AbstractParser<RegionState>() {
+      public RegionState parsePartialFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        return new RegionState(input, extensionRegistry);
+      }
+    };
+
+    @java.lang.Override
+    public com.google.protobuf.Parser<RegionState> getParserForType() {
+      return PARSER;
+    }
+
+    /**
+     * Protobuf enum {@code RegionState.State}
+     */
     public enum State
         implements com.google.protobuf.ProtocolMessageEnum {
+      /**
+       * <code>OFFLINE = 0;</code>
+       *
+       * <pre>
+       * region is in an offline state
+       * </pre>
+       */
       OFFLINE(0, 0),
+      /**
+       * <code>PENDING_OPEN = 1;</code>
+       *
+       * <pre>
+       * sent rpc to server to open but has not begun
+       * </pre>
+       */
       PENDING_OPEN(1, 1),
+      /**
+       * <code>OPENING = 2;</code>
+       *
+       * <pre>
+       * server has begun to open but not yet done
+       * </pre>
+       */
       OPENING(2, 2),
+      /**
+       * <code>OPEN = 3;</code>
+       *
+       * <pre>
+       * server opened region and updated meta
+       * </pre>
+       */
       OPEN(3, 3),
+      /**
+       * <code>PENDING_CLOSE = 4;</code>
+       *
+       * <pre>
+       * sent rpc to server to close but has not begun
+       * </pre>
+       */
       PENDING_CLOSE(4, 4),
+      /**
+       * <code>CLOSING = 5;</code>
+       *
+       * <pre>
+       * server has begun to close but not yet done
+       * </pre>
+       */
       CLOSING(5, 5),
+      /**
+       * <code>CLOSED = 6;</code>
+       *
+       * <pre>
+       * server closed region and updated meta
+       * </pre>
+       */
       CLOSED(6, 6),
+      /**
+       * <code>SPLITTING = 7;</code>
+       *
+       * <pre>
+       * server started split of a region
+       * </pre>
+       */
       SPLITTING(7, 7),
+      /**
+       * <code>SPLIT = 8;</code>
+       *
+       * <pre>
+       * server completed split of a region
+       * </pre>
+       */
       SPLIT(8, 8),
+      /**
+       * <code>FAILED_OPEN = 9;</code>
+       *
+       * <pre>
+       * failed to open, and won't retry any more
+       * </pre>
+       */
       FAILED_OPEN(9, 9),
+      /**
+       * <code>FAILED_CLOSE = 10;</code>
+       *
+       * <pre>
+       * failed to close, and won't retry any more
+       * </pre>
+       */
       FAILED_CLOSE(10, 10),
+      /**
+       * <code>MERGING = 11;</code>
+       *
+       * <pre>
+       * server started merge a region
+       * </pre>
+       */
       MERGING(11, 11),
+      /**
+       * <code>MERGED = 12;</code>
+       *
+       * <pre>
+       * server completed merge of a region
+       * </pre>
+       */
       MERGED(12, 12),
       ;
-      
+
+      /**
+       * <code>OFFLINE = 0;</code>
+       *
+       * <pre>
+       * region is in an offline state
+       * </pre>
+       */
       public static final int OFFLINE_VALUE = 0;
+      /**
+       * <code>PENDING_OPEN = 1;</code>
+       *
+       * <pre>
+       * sent rpc to server to open but has not begun
+       * </pre>
+       */
       public static final int PENDING_OPEN_VALUE = 1;
+      /**
+       * <code>OPENING = 2;</code>
+       *
+       * <pre>
+       * server has begun to open but not yet done
+       * </pre>
+       */
       public static final int OPENING_VALUE = 2;
+      /**
+       * <code>OPEN = 3;</code>
+       *
+       * <pre>
+       * server opened region and updated meta
+       * </pre>
+       */
       public static final int OPEN_VALUE = 3;
+      /**
+       * <code>PENDING_CLOSE = 4;</code>
+       *
+       * <pre>
+       * sent rpc to server to close but has not begun
+       * </pre>
+       */
       public static final int PENDING_CLOSE_VALUE = 4;
+      /**
+       * <code>CLOSING = 5;</code>
+       *
+       * <pre>
+       * server has begun to close but not yet done
+       * </pre>
+       */
       public static final int CLOSING_VALUE = 5;
+      /**
+       * <code>CLOSED = 6;</code>
+       *
+       * <pre>
+       * server closed region and updated meta
+       * </pre>
+       */
       public static final int CLOSED_VALUE = 6;
+      /**
+       * <code>SPLITTING = 7;</code>
+       *
+       * <pre>
+       * server started split of a region
+       * </pre>
+       */
       public static final int SPLITTING_VALUE = 7;
+      /**
+       * <code>SPLIT = 8;</code>
+       *
+       * <pre>
+       * server completed split of a region
+       * </pre>
+       */
       public static final int SPLIT_VALUE = 8;
+      /**
+       * <code>FAILED_OPEN = 9;</code>
+       *
+       * <pre>
+       * failed to open, and won't retry any more
+       * </pre>
+       */
       public static final int FAILED_OPEN_VALUE = 9;
+      /**
+       * <code>FAILED_CLOSE = 10;</code>
+       *
+       * <pre>
+       * failed to close, and won't retry any more
+       * </pre>
+       */
       public static final int FAILED_CLOSE_VALUE = 10;
+      /**
+       * <code>MERGING = 11;</code>
+       *
+       * <pre>
+       * server started merge a region
+       * </pre>
+       */
       public static final int MERGING_VALUE = 11;
+      /**
+       * <code>MERGED = 12;</code>
+       *
+       * <pre>
+       * server completed merge of a region
+       * </pre>
+       */
       public static final int MERGED_VALUE = 12;
-      
-      
+
+
       public final int getNumber() { return value; }
-      
+
       public static State valueOf(int value) {
         switch (value) {
           case 0: return OFFLINE;
@@ -104,7 +401,7 @@ public final class ClusterStatusProtos {
           default: return null;
         }
       }
-      
+
       public static com.google.protobuf.Internal.EnumLiteMap<State>
           internalGetValueMap() {
         return internalValueMap;
@@ -116,7 +413,7 @@ public final class ClusterStatusProtos {
                 return State.valueOf(number);
               }
             };
-      
+
       public final com.google.protobuf.Descriptors.EnumValueDescriptor
           getValueDescriptor() {
         return getDescriptor().getValues().get(index);
@@ -129,11 +426,9 @@ public final class ClusterStatusProtos {
           getDescriptor() {
         return org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionState.getDescriptor().getEnumTypes().get(0);
       }
-      
-      private static final State[] VALUES = {
-        OFFLINE, PENDING_OPEN, OPENING, OPEN, PENDING_CLOSE, CLOSING, CLOSED, SPLITTING, SPLIT, FAILED_OPEN, FAILED_CLOSE, MERGING, MERGED, 
-      };
-      
+
+      private static final State[] VALUES = values();
+
       public static State valueOf(
           com.google.protobuf.Descriptors.EnumValueDescriptor desc) {
         if (desc.getType() != getDescriptor()) {
@@ -142,52 +437,73 @@ public final class ClusterStatusProtos {
         }
         return VALUES[desc.getIndex()];
       }
-      
+
       private final int index;
       private final int value;
-      
+
       private State(int index, int value) {
         this.index = index;
         this.value = value;
       }
-      
+
       // @@protoc_insertion_point(enum_scope:RegionState.State)
     }
-    
+
     private int bitField0_;
     // required .RegionInfo region_info = 1;
     public static final int REGION_INFO_FIELD_NUMBER = 1;
     private org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo regionInfo_;
+    /**
+     * <code>required .RegionInfo region_info = 1;</code>
+     */
     public boolean hasRegionInfo() {
       return ((bitField0_ & 0x00000001) == 0x00000001);
     }
+    /**
+     * <code>required .RegionInfo region_info = 1;</code>
+     */
     public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo getRegionInfo() {
       return regionInfo_;
     }
+    /**
+     * <code>required .RegionInfo region_info = 1;</code>
+     */
     public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfoOrBuilder getRegionInfoOrBuilder() {
       return regionInfo_;
     }
-    
+
     // required .RegionState.State state = 2;
     public static final int STATE_FIELD_NUMBER = 2;
     private org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionState.State state_;
+    /**
+     * <code>required .RegionState.State state = 2;</code>
+     */
     public boolean hasState() {
       return ((bitField0_ & 0x00000002) == 0x00000002);
     }
+    /**
+     * <code>required .RegionState.State state = 2;</code>
+     */
     public org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionState.State getState() {
       return state_;
     }
-    
+
     // optional uint64 stamp = 3;
     public static final int STAMP_FIELD_NUMBER = 3;
     private long stamp_;
+    /**
+     * <code>optional uint64 stamp = 3;</code>
+     */
     public boolean hasStamp() {
       return ((bitField0_ & 0x00000004) == 0x00000004);
     }
+    /**
+     * <code>optional uint64 stamp = 3;</code>
+     */
     public long getStamp() {
       return stamp_;
     }
-    
+
     private void initFields() {
       regionInfo_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo.getDefaultInstance();
       state_ = org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionState.State.OFFLINE;
@@ -197,7 +513,7 @@ public final class ClusterStatusProtos {
     public final boolean isInitialized() {
       byte isInitialized = memoizedIsInitialized;
       if (isInitialized != -1) return isInitialized == 1;
-      
+
       if (!hasRegionInfo()) {
         memoizedIsInitialized = 0;
         return false;
@@ -213,7 +529,7 @@ public final class ClusterStatusProtos {
       memoizedIsInitialized = 1;
       return true;
     }
-    
+
     public void writeTo(com.google.protobuf.CodedOutputStream output)
                         throws java.io.IOException {
       getSerializedSize();
@@ -228,12 +544,12 @@ public final class ClusterStatusProtos {
       }
       getUnknownFields().writeTo(output);
     }
-    
+
     private int memoizedSerializedSize = -1;
     public int getSerializedSize() {
       int size = memoizedSerializedSize;
       if (size != -1) return size;
-    
+
       size = 0;
       if (((bitField0_ & 0x00000001) == 0x00000001)) {
         size += com.google.protobuf.CodedOutputStream
@@ -251,14 +567,14 @@ public final class ClusterStatusProtos {
       memoizedSerializedSize = size;
       return size;
     }
-    
+
     private static final long serialVersionUID = 0L;
     @java.lang.Override
     protected java.lang.Object writeReplace()
         throws java.io.ObjectStreamException {
       return super.writeReplace();
     }
-    
+
     @java.lang.Override
     public boolean equals(final java.lang.Object obj) {
       if (obj == this) {
@@ -268,7 +584,7 @@ public final class ClusterStatusProtos {
         return super.equals(obj);
       }
       org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionState other = (org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionState) obj;
-      
+
       boolean result = true;
       result = result && (hasRegionInfo() == other.hasRegionInfo());
       if (hasRegionInfo()) {
@@ -289,9 +605,13 @@ public final class ClusterStatusProtos {
           getUnknownFields().equals(other.getUnknownFields());
       return result;
     }
-    
+
+    private int memoizedHashCode = 0;
     @java.lang.Override
     public int hashCode() {
+      if (memoizedHashCode != 0) {
+        return memoizedHashCode;
+      }
       int hash = 41;
       hash = (19 * hash) + getDescriptorForType().hashCode();
       if (hasRegionInfo()) {
@@ -307,89 +627,79 @@ public final class ClusterStatusProtos {
         hash = (53 * hash) + hashLong(getStamp());
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
+      memoizedHashCode = hash;
       return hash;
     }
-    
+
     public static org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionState parseFrom(
         com.google.protobuf.ByteString data)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return newBuilder().mergeFrom(data).buildParsed();
+      return PARSER.parseFrom(data);
     }
     public static org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionState parseFrom(
         com.google.protobuf.ByteString data,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return newBuilder().mergeFrom(data, extensionRegistry)
-               .buildParsed();
+      return PARSER.parseFrom(data, extensionRegistry);
     }
     public static org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionState parseFrom(byte[] data)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return newBuilder().mergeFrom(data).buildParsed();
+      return PARSER.parseFrom(data);
     }
     public static org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionState parseFrom(
         byte[] data,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return newBuilder().mergeFrom(data, extensionRegistry)
-               .buildParsed();
+      return PARSER.parseFrom(data, extensionRegistry);
     }
     public static org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionState parseFrom(java.io.InputStream input)
         throws java.io.IOException {
-      return newBuilder().mergeFrom(input).buildParsed();
+      return PARSER.parseFrom(input);
     }
     public static org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionState parseFrom(
         java.io.InputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
-      return newBuilder().mergeFrom(input, extensionRegistry)
-               .buildParsed();
+      return PARSER.parseFrom(input, extensionRegistry);
     }
     public static org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionState parseDelimitedFrom(java.io.InputStream input)
         throws java.io.IOException {
-      Builder builder = newBuilder();
-      if (builder.mergeDelimitedFrom(input)) {
-        return builder.buildParsed();
-      } else {
-        return null;
-      }
+      return PARSER.parseDelimitedFrom(input);
     }
     public static org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionState parseDelimitedFrom(
         java.io.InputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
-      Builder builder = newBuilder();
-      if (builder.mergeDelimitedFrom(input, extensionRegistry)) {
-        return builder.buildParsed();
-      } else {
-        return null;
-      }
+      return PARSER.parseDelimitedFrom(input, extensionRegistry);
     }
     public static org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionState parseFrom(
         com.google.protobuf.CodedInputStream input)
         throws java.io.IOException {
-      return newBuilder().mergeFrom(input).buildParsed();
+      return PARSER.parseFrom(input);
     }
     public static org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionState parseFrom(
         com.google.protobuf.CodedInputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
-      return newBuilder().mergeFrom(input, extensionRegistry)
-               .buildParsed();
+      return PARSER.parseFrom(input, extensionRegistry);
     }
-    
+
     public static Builder newBuilder() { return Builder.create(); }
     public Builder newBuilderForType() { return newBuilder(); }
     public static Builder newBuilder(org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionState prototype) {
       return newBuilder().mergeFrom(prototype);
     }
     public Builder toBuilder() { return newBuilder(this); }
-    
+
     @java.lang.Override
     protected Builder newBuilderForType(
         com.google.protobuf.GeneratedMessage.BuilderParent parent) {
       Builder builder = new Builder(parent);
       return builder;
     }
+    /**
+     * Protobuf type {@code RegionState}
+     */
     public static final class Builder extends
         com.google.protobuf.GeneratedMessage.Builder<Builder>
        implements org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionStateOrBuilder {
@@ -397,18 +707,21 @@ public final class ClusterStatusProtos {
           getDescriptor() {
         return org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.internal_static_RegionState_descriptor;
       }
-      
+
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.internal_static_RegionState_fieldAccessorTable;
+        return org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.internal_static_RegionState_fieldAccessorTable
+            .ensureFieldAccessorsInitialized(
+                org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionState.class, org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionState.Builder.class);
       }
-      
+
       // Construct using org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionState.newBuilder()
       private Builder() {
         maybeForceBuilderInitialization();
       }
-      
-      private Builder(BuilderParent parent) {
+
+      private Builder(
+          com.google.protobuf.GeneratedMessage.BuilderParent parent) {
         super(parent);
         maybeForceBuilderInitialization();
       }
@@ -420,7 +733,7 @@ public final class ClusterStatusProtos {
       private static Builder create() {
         return new Builder();
       }
-      
+
       public Builder clear() {
         super.clear();
         if (regionInfoBuilder_ == null) {
@@ -435,20 +748,20 @@ public final class ClusterStatusProtos {
         bitField0_ = (bitField0_ & ~0x00000004);
         return this;
       }
-      
+
       public Builder clone() {
         return create().mergeFrom(buildPartial());
       }
-      
+
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionState.getDescriptor();
+        return org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.internal_static_RegionState_descriptor;
       }
-      
+
       public org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionState getDefaultInstanceForType() {
         return org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionState.getDefaultInstance();
       }
-      
+
       public org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionState build() {
         org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionState result = buildPartial();
         if (!result.isInitialized()) {
@@ -456,17 +769,7 @@ public final class ClusterStatusProtos {
         }
         return result;
       }
-      
-      private org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionState buildParsed()
-          throws com.google.protobuf.InvalidProtocolBufferException {
-        org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionState result = buildPartial();
-        if (!result.isInitialized()) {
-          throw newUninitializedMessageException(
-            result).asInvalidProtocolBufferException();
-        }
-        return result;
-      }
-      
+
       public org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionState buildPartial() {
         org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionState result = new org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionState(this);
         int from_bitField0_ = bitField0_;
@@ -491,7 +794,7 @@ public final class ClusterStatusProtos {
         onBuilt();
         return result;
       }
-      
+
       public Builder mergeFrom(com.google.protobuf.Message other) {
         if (other instanceof org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionState) {
           return mergeFrom((org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionState)other);
@@ -500,7 +803,7 @@ public final class ClusterStatusProtos {
           return this;
         }
       }
-      
+
       public Builder mergeFrom(org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionState other) {
         if (other == org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionState.getDefaultInstance()) return this;
         if (other.hasRegionInfo()) {
@@ -515,7 +818,7 @@ public final class ClusterStatusProtos {
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
       }
-      
+
       public final boolean isInitialized() {
         if (!hasRegionInfo()) {
           
@@ -531,68 +834,39 @@ public final class ClusterStatusProtos {
         }
         return true;
       }
-      
+
       public Builder mergeFrom(
           com.google.protobuf.CodedInputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws java.io.IOException {
-        com.google.protobuf.UnknownFieldSet.Builder unknownFields =
-          com.google.protobuf.UnknownFieldSet.newBuilder(
-            this.getUnknownFields());
-        while (true) {
-          int tag = input.readTag();
-          switch (tag) {
-            case 0:
-              this.setUnknownFields(unknownFields.build());
-              onChanged();
-              return this;
-            default: {
-              if (!parseUnknownField(input, unknownFields,
-                                     extensionRegistry, tag)) {
-                this.setUnknownFields(unknownFields.build());
-                onChanged();
-                return this;
-              }
-              break;
-            }
-            case 10: {
-              org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo.Builder subBuilder = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo.newBuilder();
-              if (hasRegionInfo()) {
-                subBuilder.mergeFrom(getRegionInfo());
-              }
-              input.readMessage(subBuilder, extensionRegistry);
-              setRegionInfo(subBuilder.buildPartial());
-              break;
-            }
-            case 16: {
-              int rawValue = input.readEnum();
-              org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionState.State value = org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionState.State.valueOf(rawValue);
-              if (value == null) {
-                unknownFields.mergeVarintField(2, rawValue);
-              } else {
-                bitField0_ |= 0x00000002;
-                state_ = value;
-              }
-              break;
-            }
-            case 24: {
-              bitField0_ |= 0x00000004;
-              stamp_ = input.readUInt64();
-              break;
-            }
+        org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionState parsedMessage = null;
+        try {
+          parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
+        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+          parsedMessage = (org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionState) e.getUnfinishedMessage();
+          throw e;
+        } finally {
+          if (parsedMessage != null) {
+            mergeFrom(parsedMessage);
           }
         }
+        return this;
       }
-      
       private int bitField0_;
-      
+
       // required .RegionInfo region_info = 1;
       private org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo regionInfo_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo.getDefaultInstance();
       private com.google.protobuf.SingleFieldBuilder<
           org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfoOrBuilder> regionInfoBuilder_;
+      /**
+       * <code>required .RegionInfo region_info = 1;</code>
+       */
       public boolean hasRegionInfo() {
         return ((bitField0_ & 0x00000001) == 0x00000001);
       }
+      /**
+       * <code>required .RegionInfo region_info = 1;</code>
+       */
       public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo getRegionInfo() {
         if (regionInfoBuilder_ == null) {
           return regionInfo_;
@@ -600,6 +874,9 @@ public final class ClusterStatusProtos {
           return regionInfoBuilder_.getMessage();
         }
       }
+      /**
+       * <code>required .RegionInfo region_info = 1;</code>
+       */
       public Builder setRegionInfo(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo value) {
         if (regionInfoBuilder_ == null) {
           if (value == null) {
@@ -613,6 +890,9 @@ public final class ClusterStatusProtos {
         bitField0_ |= 0x00000001;
         return this;
       }
+      /**
+       * <code>required .RegionInfo region_info = 1;</code>
+       */
       public Builder setRegionInfo(
           org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo.Builder builderForValue) {
         if (regionInfoBuilder_ == null) {
@@ -624,6 +904,9 @@ public final class ClusterStatusProtos {
         bitField0_ |= 0x00000001;
         return this;
       }
+      /**
+       * <code>required .RegionInfo region_info = 1;</code>
+       */
       public Builder mergeRegionInfo(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo value) {
         if (regionInfoBuilder_ == null) {
           if (((bitField0_ & 0x00000001) == 0x00000001) &&
@@ -640,6 +923,9 @@ public final class ClusterStatusProtos {
         bitField0_ |= 0x00000001;
         return this;
       }
+      /**
+       * <code>required .RegionInfo region_info = 1;</code>
+       */
       public Builder clearRegionInfo() {
         if (regionInfoBuilder_ == null) {
           regionInfo_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo.getDefaultInstance();
@@ -650,11 +936,17 @@ public final class ClusterStatusProtos {
         bitField0_ = (bitField0_ & ~0x00000001);
         return this;
       }
+      /**
+       * <code>required .RegionInfo region_info = 1;</code>
+       */
       public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo.Builder getRegionInfoBuilder() {
         bitField0_ |= 0x00000001;
         onChanged();
         return getRegionInfoFieldBuilder().getBuilder();
       }
+      /**
+       * <code>required .RegionInfo region_info = 1;</code>
+       */
       public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfoOrBuilder getRegionInfoOrBuilder() {
         if (regionInfoBuilder_ != null) {
           return regionInfoBuilder_.getMessageOrBuilder();
@@ -662,6 +954,9 @@ public final class ClusterStatusProtos {
           return regionInfo_;
         }
       }
+      /**
+       * <code>required .RegionInfo region_info = 1;</code>
+       */
       private com.google.protobuf.SingleFieldBuilder<
           org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfoOrBuilder> 
           getRegionInfoFieldBuilder() {
@@ -675,15 +970,24 @@ public final class ClusterStatusProtos {
         }
         return regionInfoBuilder_;
       }
-      
+
       // required .RegionState.State state = 2;
       private org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionState.State state_ = org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionState.State.OFFLINE;
+      /**
+       * <code>required .RegionState.State state = 2;</code>
+       */
       public boolean hasState() {
         return ((bitField0_ & 0x00000002) == 0x00000002);
       }
+      /**
+       * <code>required .RegionState.State state = 2;</code>
+       */
       public org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionState.State getState() {
         return state_;
       }
+      /**
+       * <code>required .RegionState.State state = 2;</code>
+       */
       public Builder setState(org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionState.State value) {
         if (value == null) {
           throw new NullPointerException();
@@ -693,113 +997,252 @@ public final class ClusterStatusProtos {
         onChanged();
         return this;
       }
+      /**
+       * <code>required .RegionState.State state = 2;</code>
+       */
       public Builder clearState() {
         bitField0_ = (bitField0_ & ~0x00000002);
         state_ = org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionState.State.OFFLINE;
         onChanged();
         return this;
       }
-      
+
       // optional uint64 stamp = 3;
       private long stamp_ ;
+      /**
+       * <code>optional uint64 stamp = 3;</code>
+       */
       public boolean hasStamp() {
         return ((bitField0_ & 0x00000004) == 0x00000004);
       }
+      /**
+       * <code>optional uint64 stamp = 3;</code>
+       */
       public long getStamp() {
         return stamp_;
       }
+      /**
+       * <code>optional uint64 stamp = 3;</code>
+       */
       public Builder setStamp(long value) {
         bitField0_ |= 0x00000004;
         stamp_ = value;
         onChanged();
         return this;
       }
+      /**
+       * <code>optional uint64 stamp = 3;</code>
+       */
       public Builder clearStamp() {
         bitField0_ = (bitField0_ & ~0x00000004);
         stamp_ = 0L;
         onChanged();
         return this;
       }
-      
+
       // @@protoc_insertion_point(builder_scope:RegionState)
     }
-    
+
     static {
       defaultInstance = new RegionState(true);
       defaultInstance.initFields();
     }
-    
+
     // @@protoc_insertion_point(class_scope:RegionState)
   }
-  
+
   public interface RegionInTransitionOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
-    
+
     // required .RegionSpecifier spec = 1;
+    /**
+     * <code>required .RegionSpecifier spec = 1;</code>
+     */
     boolean hasSpec();
+    /**
+     * <code>required .RegionSpecifier spec = 1;</code>
+     */
     org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier getSpec();
+    /**
+     * <code>required .RegionSpecifier spec = 1;</code>
+     */
     org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifierOrBuilder getSpecOrBuilder();
-    
+
     // required .RegionState region_state = 2;
+    /**
+     * <code>required .RegionState region_state = 2;</code>
+     */
     boolean hasRegionState();
+    /**
+     * <code>required .RegionState region_state = 2;</code>
+     */
     org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionState getRegionState();
+    /**
+     * <code>required .RegionState region_state = 2;</code>
+     */
     org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionStateOrBuilder getRegionStateOrBuilder();
   }
+  /**
+   * Protobuf type {@code RegionInTransition}
+   */
   public static final class RegionInTransition extends
       com.google.protobuf.GeneratedMessage
       implements RegionInTransitionOrBuilder {
     // Use RegionInTransition.newBuilder() to construct.
-    private RegionInTransition(Builder builder) {
+    private RegionInTransition(com.google.protobuf.GeneratedMessage.Builder<?> builder) {
       super(builder);
+      this.unknownFields = builder.getUnknownFields();
     }
-    private RegionInTransition(boolean noInit) {}
-    
+    private RegionInTransition(boolean noInit) { this.unknownFields = com.google.protobuf.UnknownFieldSet.getDefaultInstance(); }
+
     private static final RegionInTransition defaultInstance;
     public static RegionInTransition getDefaultInstance() {
       return defaultInstance;
     }
-    
+
     public RegionInTransition getDefaultInstanceForType() {
       return defaultInstance;
     }
-    
+
+    private final com.google.protobuf.UnknownFieldSet unknownFields;
+    @java.lang.Override
+    public final com.google.protobuf.UnknownFieldSet
+        getUnknownFields() {
+      return this.unknownFields;
+    }
+    private RegionInTransition(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      initFields();
+      int mutable_bitField0_ = 0;
+      com.google.protobuf.UnknownFieldSet.Builder unknownFields =
+          com.google.protobuf.UnknownFieldSet.newBuilder();
+      try {
+        boolean done = false;
+        while (!done) {
+          int tag = input.readTag();
+          switch (tag) {
+            case 0:
+              done = true;
+              break;
+            default: {
+              if (!parseUnknownField(input, unknownFields,
+                                     extensionRegistry, tag)) {
+                done = true;
+              }
+              break;
+            }
+            case 10: {
+              org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier.Builder subBuilder = null;
+              if (((bitField0_ & 0x00000001) == 0x00000001)) {
+                subBuilder = spec_.toBuilder();
+              }
+              spec_ = input.readMessage(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier.PARSER, extensionRegistry);
+              if (subBuilder != null) {
+                subBuilder.mergeFrom(spec_);
+                spec_ = subBuilder.buildPartial();
+              }
+              bitField0_ |= 0x00000001;
+              break;
+            }
+            case 18: {
+              org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionState.Builder subBuilder = null;
+              if (((bitField0_ & 0x00000002) == 0x00000002)) {
+                subBuilder = regionState_.toBuilder();
+              }
+              regionState_ = input.readMessage(org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionState.PARSER, extensionRegistry);
+              if (subBuilder != null) {
+                subBuilder.mergeFrom(regionState_);
+                regionState_ = subBuilder.buildPartial();
+              }
+              bitField0_ |= 0x00000002;
+              break;
+            }
+          }
+        }
+      } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+        throw e.setUnfinishedMessage(this);
+      } catch (java.io.IOException e) {
+        throw new com.google.protobuf.InvalidProtocolBufferException(
+            e.getMessage()).setUnfinishedMessage(this);
+      } finally {
+        this.unknownFields = unknownFields.build();
+        makeExtensionsImmutable();
+      }
+    }
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
       return org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.internal_static_RegionInTransition_descriptor;
     }
-    
+
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.internal_static_RegionInTransition_fieldAccessorTable;
+      return org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.internal_static_RegionInTransition_fieldAccessorTable
+          .ensureFieldAccessorsInitialized(
+              org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionInTransition.class, org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionInTransition.Builder.class);
     }
-    
+
+    public static com.google.protobuf.Parser<RegionInTransition> PARSER =
+        new com.google.protobuf.AbstractParser<RegionInTransition>() {
+      public RegionInTransition parsePartialFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        return new RegionInTransition(input, extensionRegistry);
+      }
+    };
+
+    @java.lang.Override
+    public com.google.protobuf.Parser<RegionInTransition> getParserForType() {
+      return PARSER;
+    }
+
     private int bitField0_;
     // required .RegionSpecifier spec = 1;
     public static final int SPEC_FIELD_NUMBER = 1;
     private org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier spec_;
+    /**
+     * <code>required .RegionSpecifier spec = 1;</code>
+     */
     public boolean hasSpec() {
       return ((bitField0_ & 0x00000001) == 0x00000001);
     }
+    /**
+     * <code>required .RegionSpecifier spec = 1;</code>
+     */
     public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier getSpec() {
       return spec_;
     }
+    /**
+     * <code>required .RegionSpecifier spec = 1;</code>
+     */
     public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifierOrBuilder getSpecOrBuilder() {
       return spec_;
     }
-    
+
     // required .RegionState region_state = 2;
     public static final int REGION_STATE_FIELD_NUMBER = 2;
     private org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionState regionState_;
+    /**
+     * <code>required .RegionState region_state = 2;</code>
+     */
     public boolean hasRegionState() {
       return ((bitField0_ & 0x00000002) == 0x00000002);
     }
+    /**
+     * <code>required .RegionState region_state = 2;</code>
+     */
     public org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionState getRegionState() {
       return regionState_;
     }
+    /**
+     * <code>required .RegionState region_state = 2;</code>
+     */
     public org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionStateOrBuilder getRegionStateOrBuilder() {
       return regionState_;
     }
-    
+
     private void initFields() {
       spec_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier.getDefaultInstance();
       regionState_ = org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionState.getDefaultInstance();
@@ -808,7 +1251,7 @@ public final class ClusterStatusProtos {
     public final boolean isInitialized() {
       byte isInitialized = memoizedIsInitialized;
       if (isInitialized != -1) return isInitialized == 1;
-      
+
       if (!hasSpec()) {
         memoizedIsInitialized = 0;
         return false;
@@ -828,7 +1271,7 @@ public final class ClusterStatusProtos {
       memoizedIsInitialized = 1;
       return true;
     }
-    
+
     public void writeTo(com.google.protobuf.CodedOutputStream output)
                         throws java.io.IOException {
       getSerializedSize();
@@ -840,12 +1283,12 @@ public final class ClusterStatusProtos {
       }
       getUnknownFields().writeTo(output);
     }
-    
+
     private int memoizedSerializedSize = -1;
     public int getSerializedSize() {
       int size = memoizedSerializedSize;
       if (size != -1) return size;
-    
+
       size = 0;
       if (((bitField0_ & 0x00000001) == 0x00000001)) {
         size += com.google.protobuf.CodedOutputStream
@@ -859,14 +1302,14 @@ public final class ClusterStatusProtos {
       memoizedSerializedSize = size;
       return size;
     }
-    
+
     private static final long serialVersionUID = 0L;
     @java.lang.Override
     protected java.lang.Object writeReplace()
         throws java.io.ObjectStreamException {
       return super.writeReplace();
     }
-    
+
     @java.lang.Override
     public boolean equals(final java.lang.Object obj) {
       if (obj == this) {
@@ -876,7 +1319,7 @@ public final class ClusterStatusProtos {
         return super.equals(obj);
       }
       org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionInTransition other = (org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionInTransition) obj;
-      
+
       boolean result = true;
       result = result && (hasSpec() == other.hasSpec());
       if (hasSpec()) {
@@ -892,9 +1335,13 @@ public final class ClusterStatusProtos {
           getUnknownFields().equals(other.getUnknownFields());
       return result;
     }
-    
+
+    private int memoizedHashCode = 0;
     @java.lang.Override
     public int hashCode() {
+      if (memoizedHashCode != 0) {
+        return memoizedHashCode;
+      }
       int hash = 41;
       hash = (19 * hash) + getDescriptorForType().hashCode();
       if (hasSpec()) {
@@ -906,89 +1353,79 @@ public final class ClusterStatusProtos {
         hash = (53 * hash) + getRegionState().hashCode();
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
+      memoizedHashCode = hash;
       return hash;
     }
-    
+
     public static org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionInTransition parseFrom(
         com.google.protobuf.ByteString data)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return newBuilder().mergeFrom(data).buildParsed();
+      return PARSER.parseFrom(data);
     }
     public static org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionInTransition parseFrom(
         com.google.protobuf.ByteString data,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return newBuilder().mergeFrom(data, extensionRegistry)
-               .buildParsed();
+      return PARSER.parseFrom(data, extensionRegistry);
     }
     public static org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionInTransition parseFrom(byte[] data)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return newBuilder().mergeFrom(data).buildParsed();
+      return PARSER.parseFrom(data);
     }
     public static org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionInTransition parseFrom(
         byte[] data,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return newBuilder().mergeFrom(data, extensionRegistry)
-               .buildParsed();
+      return PARSER.parseFrom(data, extensionRegistry);
     }
     public static org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionInTransition parseFrom(java.io.InputStream input)
         throws java.io.IOException {
-      return newBuilder().mergeFrom(input).buildParsed();
+      return PARSER.parseFrom(input);
     }
     public static org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionInTransition parseFrom(
         java.io.InputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
-      return newBuilder().mergeFrom(input, extensionRegistry)
-               .buildParsed();
+      return PARSER.parseFrom(input, extensionRegistry);
     }
     public static org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionInTransition parseDelimitedFrom(java.io.InputStream input)
         throws java.io.IOException {
-      Builder builder = newBuilder();
-      if (builder.mergeDelimitedFrom(input)) {
-        return builder.buildParsed();
-      } else {
-        return null;
-      }
+      return PARSER.parseDelimitedFrom(input);
     }
     public static org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionInTransition parseDelimitedFrom(
         java.io.InputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
-      Builder builder = newBuilder();
-      if (builder.mergeDelimitedFrom(input, extensionRegistry)) {
-        return builder.buildParsed();
-      } else {
-        return null;
-      }
+      return PARSER.parseDelimitedFrom(input, extensionRegistry);
     }
     public static org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionInTransition parseFrom(
         com.google.protobuf.CodedInputStream input)
         throws java.io.IOException {
-      return newBuilder().mergeFrom(input).buildParsed();
+      return PARSER.parseFrom(input);
     }
     public static org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionInTransition parseFrom(
         com.google.protobuf.CodedInputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
-      return newBuilder().mergeFrom(input, extensionRegistry)
-               .buildParsed();
+      return PARSER.parseFrom(input, extensionRegistry);
     }
-    
+
     public static Builder newBuilder() { return Builder.create(); }
     public Builder newBuilderForType() { return newBuilder(); }
     public static Builder newBuilder(org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionInTransition prototype) {
       return newBuilder().mergeFrom(prototype);
     }
     public Builder toBuilder() { return newBuilder(this); }
-    
+
     @java.lang.Override
     protected Builder newBuilderForType(
         com.google.protobuf.GeneratedMessage.BuilderParent parent) {
       Builder builder = new Builder(parent);
       return builder;
     }
+    /**
+     * Protobuf type {@code RegionInTransition}
+     */
     public static final class Builder extends
         com.google.protobuf.GeneratedMessage.Builder<Builder>
        implements org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionInTransitionOrBuilder {
@@ -996,18 +1433,21 @@ public final class ClusterStatusProtos {
           getDescriptor() {
         return org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.internal_static_RegionInTransition_descriptor;
       }
-      
+
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.internal_static_RegionInTransition_fieldAccessorTable;
+        return org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.internal_static_RegionInTransition_fieldAccessorTable
+            .ensureFieldAccessorsInitialized(
+                org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionInTransition.class, org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionInTransition.Builder.class);
       }
-      
+
       // Construct using org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionInTransition.newBuilder()
       private Builder() {
         maybeForceBuilderInitialization();
       }
-      
-      private Builder(BuilderParent parent) {
+
+      private Builder(
+          com.google.protobuf.GeneratedMessage.BuilderParent parent) {
         super(parent);
         maybeForceBuilderInitialization();
       }
@@ -1020,7 +1460,7 @@ public final class ClusterStatusProtos {
       private static Builder create() {
         return new Builder();
       }
-      
+
       public Builder clear() {
         super.clear();
         if (specBuilder_ == null) {
@@ -1037,20 +1477,20 @@ public final class ClusterStatusProtos {
         bitField0_ = (bitField0_ & ~0x00000002);
         return this;
       }
-      
+
       public Builder clone() {
         return create().mergeFrom(buildPartial());
       }
-      
+
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionInTransition.getDescriptor();
+        return org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.internal_static_RegionInTransition_descriptor;
       }
-      
+
       public org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionInTransition getDefaultInstanceForType() {
         return org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionInTransition.getDefaultInstance();
       }
-      
+
       public org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionInTransition build() {
         org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionInTransition result = buildPartial();
         if (!result.isInitialized()) {
@@ -1058,17 +1498,7 @@ public final class ClusterStatusProtos {
         }
         return result;
       }
-      
-      private org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionInTransition buildParsed()
-          throws com.google.protobuf.InvalidProtocolBufferException {
-        org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionInTransition result = buildPartial();
-        if (!result.isInitialized()) {
-          throw newUninitializedMessageException(
-            result).asInvalidProtocolBufferException();
-        }
-        return result;
-      }
-      
+
       public org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionInTransition buildPartial() {
         org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionInTransition result = new org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionInTransition(this);
         int from_bitField0_ = bitField0_;
@@ -1093,7 +1523,7 @@ public final class ClusterStatusProtos {
         onBuilt();
         return result;
       }
-      
+
       public Builder mergeFrom(com.google.protobuf.Message other) {
         if (other instanceof org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionInTransition) {
           return mergeFrom((org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionInTransition)other);
@@ -1102,7 +1532,7 @@ public final class ClusterStatusProtos {
           return this;
         }
       }
-      
+
       public Builder mergeFrom(org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionInTransition other) {
         if (other == org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionInTransition.getDefaultInstance()) return this;
         if (other.hasSpec()) {
@@ -1114,7 +1544,7 @@ public final class ClusterStatusProtos {
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
       }
-      
+
       public final boolean isInitialized() {
         if (!hasSpec()) {
           
@@ -1134,61 +1564,39 @@ public final class ClusterStatusProtos {
         }
         return true;
       }
-      
+
       public Builder mergeFrom(
           com.google.protobuf.CodedInputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws java.io.IOException {
-        com.google.protobuf.UnknownFieldSet.Builder unknownFields =
-          com.google.protobuf.UnknownFieldSet.newBuilder(
-            this.getUnknownFields());
-        while (true) {
-          int tag = input.readTag();
-          switch (tag) {
-            case 0:
-              this.setUnknownFields(unknownFields.build());
-              onChanged();
-              return this;
-            default: {
-              if (!parseUnknownField(input, unknownFields,
-                                     extensionRegistry, tag)) {
-                this.setUnknownFields(unknownFields.build());
-                onChanged();
-                return this;
-              }
-              break;
-            }
-            case 10: {
-              org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier.Builder subBuilder = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier.newBuilder();
-              if (hasSpec()) {
-                subBuilder.mergeFrom(getSpec());
-              }
-              input.readMessage(subBuilder, extensionRegistry);
-              setSpec(subBuilder.buildPartial());
-              break;
-            }
-            case 18: {
-              org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionState.Builder subBuilder = org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionState.newBuilder();
-              if (hasRegionState()) {
-                subBuilder.mergeFrom(getRegionState());
-              }
-              input.readMessage(subBuilder, extensionRegistry);
-              setRegionState(subBuilder.buildPartial());
-              break;
-            }
+        org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionInTransition parsedMessage = null;
+        try {
+          parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
+        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+          parsedMessage = (org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionInTransition) e.getUnfinishedMessage();
+          throw e;
+        } finally {
+          if (parsedMessage != null) {
+            mergeFrom(parsedMessage);
           }
         }
+        return this;
       }
-      
       private int bitField0_;
-      
+
       // required .RegionSpecifier spec = 1;
       private org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier spec_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier.getDefaultInstance();
       private com.google.protobuf.SingleFieldBuilder<
           org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifierOrBuilder> specBuilder_;
+      /**
+       * <code>required .RegionSpecifier spec = 1;</code>
+       */
       public boolean hasSpec() {
         return ((bitField0_ & 0x00000001) == 0x00000001);
       }
+      /**
+       * <code>required .RegionSpecifier spec = 1;</code>
+       */
       public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier getSpec() {
         if (specBuilder_ == null) {
           return spec_;
@@ -1196,6 +1604,9 @@ public final class ClusterStatusProtos {
           return specBuilder_.getMessage();
         }
       }
+      /**
+       * <code>required .RegionSpecifier spec = 1;</code>
+       */
       public Builder setSpec(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier value) {
         if (specBuilder_ == null) {
           if (value == null) {
@@ -1209,6 +1620,9 @@ public final class ClusterStatusProtos {
         bitField0_ |= 0x00000001;
         return this;
       }
+      /**
+       * <code>required .RegionSpecifier spec = 1;</code>
+       */
       public Builder setSpec(
           org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier.Builder builderForValue) {
         if (specBuilder_ == null) {
@@ -1220,6 +1634,9 @@ public final class ClusterStatusProtos {
         bitField0_ |= 0x00000001;
         return this;
       }
+      /**
+       * <code>required .RegionSpecifier spec = 1;</code>
+       */
       public Builder mergeSpec(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier value) {
         if (specBuilder_ == null) {
           if (((bitField0_ & 0x00000001) == 0x00000001) &&
@@ -1236,6 +1653,9 @@ public final class ClusterStatusProtos {
         bitField0_ |= 0x00000001;
         return this;
       }
+      /**
+       * <code>required .RegionSpecifier spec = 1;</code>
+       */
       public Builder clearSpec() {
         if (specBuilder_ == null) {
           spec_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier.getDefaultInstance();
@@ -1246,11 +1666,17 @@ public final class ClusterStatusProtos {
         bitField0_ = (bitField0_ & ~0x00000001);
         return this;
       }
+      /**
+       * <code>required .RegionSpecifier spec = 1;</code>
+       */
       public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier.Builder getSpecBuilder() {
         bitField0_ |= 0x00000001;
         onChanged();
         return getSpecFieldBuilder().getBuilder();
       }
+      /**
+       * <code>required .RegionSpecifier spec = 1;</code>
+       */
       public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifierOrBuilder getSpecOrBuilder() {
         if (specBuilder_ != null) {
           return specBuilder_.getMessageOrBuilder();
@@ -1258,6 +1684,9 @@ public final class ClusterStatusProtos {
           return spec_;
         }
       }
+      /**
+       * <code>required .RegionSpecifier spec = 1;</code>
+       */
       private com.google.protobuf.SingleFieldBuilder<
           org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifierOrBuilder> 
           getSpecFieldBuilder() {
@@ -1271,14 +1700,20 @@ public final class ClusterStatusProtos {
         }
         return specBuilder_;
       }
-      
+
       // required .RegionState region_state = 2;
       private org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionState regionState_ = org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionState.getDefaultInstance();
       private com.google.protobuf.SingleFieldBuilder<
           org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionState, org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionState.Builder, org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionStateOrBuilder> regionStateBuilder_;
+      /**
+       * <code>required .RegionState region_state = 2;</code>
+       */
       public boolean hasRegionState() {
         return ((bitField0_ & 0x00000002) == 0x00000002);
       }
+      /**
+       * <code>required .RegionState region_state = 2;</code>
+       */
       public org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionState getRegionState() {
         if (regionStateBuilder_ == null) {
           return regionState_;
@@ -1286,6 +1721,9 @@ public final class ClusterStatusProtos {
           return regionStateBuilder_.getMessage();
         }
       }
+      /**
+       * <code>required .RegionState region_state = 2;</code>
+       */
       public Builder setRegionState(org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionState value) {
         if (regionStateBuilder_ == null) {
           if (value == null) {
@@ -1299,6 +1737,9 @@ public final class ClusterStatusProtos {
         bitField0_ |= 0x00000002;
         return this;
       }
+      /**
+       * <code>required .RegionState region_state = 2;</code>
+       */
       public Builder setRegionState(
           org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionState.Builder builderForValue) {
         if (regionStateBuilder_ == null) {
@@ -1310,6 +1751,9 @@ public final class ClusterStatusProtos {
         bitField0_ |= 0x00000002;
         return this;
       }
+      /**
+       * <code>required .RegionState region_state = 2;</code>
+       */
       public Builder mergeRegionState(org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionState value) {
         if (regionStateBuilder_ == null) {
           if (((bitField0_ & 0x00000002) == 0x00000002) &&
@@ -1326,6 +1770,9 @@ public final class ClusterStatusProtos {
         bitField0_ |= 0x00000002;
         return this;
       }
+      /**
+       * <code>required .RegionState region_state = 2;</code>
+       */
       public Builder clearRegionState() {
         if (regionStateBuilder_ == null) {
           regionState_ = org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionState.getDefaultInstance();
@@ -1336,11 +1783,17 @@ public final class ClusterStatusProtos {
         bitField0_ = (bitField0_ & ~0x00000002);
         return this;
       }
+      /**
+       * <code>required .RegionState region_state = 2;</code>
+       */
       public org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionState.Builder getRegionStateBuilder() {
         bitField0_ |= 0x00000002;
         onChanged();
         return getRegionStateFieldBuilder().getBuilder();
       }
+      /**
+       * <code>required .RegionState region_state = 2;</code>
+       */
       public org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionStateOrBuilder getRegionStateOrBuilder() {
         if (regionStateBuilder_ != null) {
           return regionStateBuilder_.getMessageOrBuilder();
@@ -1348,6 +1801,9 @@ public final class ClusterStatusProtos {
           return regionState_;
         }
       }
+      /**
+       * <code>required .RegionState region_state = 2;</code>
+       */
       private com.google.protobuf.SingleFieldBuilder<
           org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionState, org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionState.Builder, org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionStateOrBuilder> 
           getRegionStateFieldBuilder() {
@@ -1361,264 +1817,859 @@ public final class ClusterStatusProtos {
         }
         return regionStateBuilder_;
       }
-      
+
       // @@protoc_insertion_point(builder_scope:RegionInTransition)
     }
-    
+
     static {
       defaultInstance = new RegionInTransition(true);
       defaultInstance.initFields();
     }
-    
+
     // @@protoc_insertion_point(class_scope:RegionInTransition)
   }
-  
+
   public interface RegionLoadOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
-    
+
     // required .RegionSpecifier region_specifier = 1;
+    /**
+     * <code>required .RegionSpecifier region_specifier = 1;</code>
+     *
+     * <pre>
+     ** the region specifier 
+     * </pre>
+     */
     boolean hasRegionSpecifier();
+    /**
+     * <code>required .RegionSpecifier region_specifier = 1;</code>
+     *
+     * <pre>
+     ** the region specifier 
+     * </pre>
+     */
     org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier getRegionSpecifier();
+    /**
+     * <code>required .RegionSpecifier region_specifier = 1;</code>
+     *
+     * <pre>
+     ** the region specifier 
+     * </pre>
+     */
     org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifierOrBuilder getRegionSpecifierOrBuilder();
-    
+
     // optional uint32 stores = 2;
+    /**
+     * <code>optional uint32 stores = 2;</code>
+     *
+     * <pre>
+     ** the number of stores for the region 
+     * </pre>
+     */
     boolean hasStores();
+    /**
+     * <code>optional uint32 stores = 2;</code>
+     *
+     * <pre>
+     ** the number of stores for the region 
+     * </pre>
+     */
     int getStores();
-    
+
     // optional uint32 storefiles = 3;
+    /**
+     * <code>optional uint32 storefiles = 3;</code>
+     *
+     * <pre>
+     ** the number of storefiles for the region 
+     * </pre>
+     */
     boolean hasStorefiles();
+    /**
+     * <code>optional uint32 storefiles = 3;</code>
+     *
+     * <pre>
+     ** the number of storefiles for the region 
+     * </pre>
+     */
     int getStorefiles();
-    
+
     // optional uint32 store_uncompressed_size_MB = 4;
+    /**
+     * <code>optional uint32 store_uncompressed_size_MB = 4;</code>
+     *
+     * <pre>
+     ** the total size of the store files for the region, uncompressed, in MB 
+     * </pre>
+     */
     boolean hasStoreUncompressedSizeMB();
+    /**
+     * <code>optional uint32 store_uncompressed_size_MB = 4;</code>
+     *
+     * <pre>
+     ** the total size of the store files for the region, uncompressed, in MB 
+     * </pre>
+     */
     int getStoreUncompressedSizeMB();
-    
+
     // optional uint32 storefile_size_MB = 5;
+    /**
+     * <code>optional uint32 storefile_size_MB = 5;</code>
+     *
+     * <pre>
+     ** the current total size of the store files for the region, in MB 
+     * </pre>
+     */
     boolean hasStorefileSizeMB();
+    /**
+     * <code>optional uint32 storefile_size_MB = 5;</code>
+     *
+     * <pre>
+     ** the current total size of the store files for the region, in MB 
+     * </pre>
+     */
     int getStorefileSizeMB();
-    
+
     // optional uint32 memstore_size_MB = 6;
+    /**
+     * <code>optional uint32 memstore_size_MB = 6;</code>
+     *
+     * <pre>
+     ** the current size of the memstore for the region, in MB 
+     * </pre>
+     */
     boolean hasMemstoreSizeMB();
+    /**
+     * <code>optional uint32 memstore_size_MB = 6;</code>
+     *
+     * <pre>
+     ** the current size of the memstore for the region, in MB 
+     * </pre>
+     */
     int getMemstoreSizeMB();
-    
+
     // optional uint32 storefile_index_size_MB = 7;
+    /**
+     * <code>optional uint32 storefile_index_size_MB = 7;</code>
+     *
+     * <pre>
+     **
+     * The current total size of root-level store file indexes for the region,
+     * in MB. The same as {&#64;link #rootIndexSizeKB} but in MB.
+     * </pre>
+     */
     boolean hasStorefileIndexSizeMB();
+    /**
+     * <code>optional uint32 storefile_index_size_MB = 7;</code>
+     *
+     * <pre>
+     **
+     * The current total size of root-level store file indexes for the region,
+     * in MB. The same as {&#64;link #rootIndexSizeKB} but in MB.
+     * </pre>
+     */
     int getStorefileIndexSizeMB();
-    
+
     // optional uint64 read_requests_count = 8;
+    /**
+     * <code>optional uint64 read_requests_count = 8;</code>
+     *
+     * <pre>
+     ** the current total read requests made to region 
+     * </pre>
+     */
     boolean hasReadRequestsCount();
+    /**
+     * <code>optional uint64 read_requests_count = 8;</code>
+     *
+     * <pre>
+     ** the current total read requests made to region 
+     * </pre>
+     */
     long getReadRequestsCount();
-    
+
     // optional uint64 write_requests_count = 9;
+    /**
+     * <code>optional uint64 write_requests_count = 9;</code>
+     *
+     * <pre>
+     ** the current total write requests made to region 
+     * </pre>
+     */
     boolean hasWriteRequestsCount();
+    /**
+     * <code>optional uint64 write_requests_count = 9;</code>
+     *
+     * <pre>
+     ** the current total write requests made to region 
+     * </pre>
+     */
     long getWriteRequestsCount();
-    
+
     // optional uint64 total_compacting_KVs = 10;
+    /**
+     * <code>optional uint64 total_compacting_KVs = 10;</code>
+     *
+     * <pre>
+     ** the total compacting key values in currently running compaction 
+     * </pre>
+     */
     boolean hasTotalCompactingKVs();
+    /**
+     * <code>optional uint64 total_compacting_KVs = 10;</code>
+     *
+     * <pre>
+     ** the total compacting key values in currently running compaction 
+     * </pre>
+     */
     long getTotalCompactingKVs();
-    
+
     // optional uint64 current_compacted_KVs = 11;
+    /**
+     * <code>optional uint64 current_compacted_KVs = 11;</code>
+     *
+     * <pre>
+     ** the completed count of key values in currently running compaction 
+     * </pre>
+     */
     boolean hasCurrentCompactedKVs();
+    /**
+     * <code>optional uint64 current_compacted_KVs = 11;</code>
+     *
+     * <pre>
+     ** the completed count of key values in currently running compaction 
+     * </pre>
+     */
     long getCurrentCompactedKVs();
-    
+
     // optional uint32 root_index_size_KB = 12;
+    /**
+     * <code>optional uint32 root_index_size_KB = 12;</code>
+     *
+     * <pre>
+     ** The current total size of root-level indexes for the region, in KB. 
+     * </pre>
+     */
     boolean hasRootIndexSizeKB();
+    /**
+     * <code>optional uint32 root_index_size_KB = 12;</code>
+     *
+     * <pre>
+     ** The current total size of root-level indexes for the region, in KB. 
+     * </pre>
+     */
     int getRootIndexSizeKB();
-    
+
     // optional uint32 total_static_index_size_KB = 13;
+    /**
+     * <code>optional uint32 total_static_index_size_KB = 13;</code>
+     *
+     * <pre>
+     ** The total size of all index blocks, not just the root level, in KB. 
+     * </pre>
+     */
     boolean hasTotalStaticIndexSizeKB();
+    /**
+     * <code>optional uint32 total_static_index_size_KB = 13;</code>
+     *
+     * <pre>
+     ** The total size of all index blocks, not just the root level, in KB. 
+     * </pre>
+     */
     int getTotalStaticIndexSizeKB();
-    
+
     // optional uint32 total_static_bloom_size_KB = 14;
+    /**
+     * <code>optional uint32 total_static_bloom_size_KB = 14;</code>
+     *
+     * <pre>
+     **
+     * The total size of all Bloom filter blocks, not just loaded into the
+     * block cache, in KB.
+     * </pre>
+     */
     boolean hasTotalStaticBloomSizeKB();
+    /**
+     * <code>optional uint32 total_static_bloom_size_KB = 14;</code>
+     *
+     * <pre>
+     **
+     * The total size of all Bloom filter blocks, not just loaded into the
+     * block cache, in KB.
+     * </pre>
+     */
     int getTotalStaticBloomSizeKB();
-    
+
     // optional uint64 complete_sequence_id = 15;
+    /**
+     * <code>optional uint64 complete_sequence_id = 15;</code>
+     *
+     * <pre>
+     ** the most recent sequence Id from cache flush 
+     * </pre>
+     */
     boolean hasCompleteSequenceId();
+    /**
+     * <code>optional uint64 complete_sequence_id = 15;</code>
+     *
+     * <pre>
+     ** the most recent sequence Id from cache flush 
+     * </pre>
+     */
     long getCompleteSequenceId();
   }
+  /**
+   * Protobuf type {@code RegionLoad}
+   */
   public static final class RegionLoad extends
       com.google.protobuf.GeneratedMessage
       implements RegionLoadOrBuilder {
     // Use RegionLoad.newBuilder() to construct.
-    private RegionLoad(Builder builder) {
+    private RegionLoad(com.google.protobuf.GeneratedMessage.Builder<?> builder) {
       super(builder);
+      this.unknownFields = builder.getUnknownFields();
     }
-    private RegionLoad(boolean noInit) {}
-    
+    private RegionLoad(boolean noInit) { this.unknownFields = com.google.protobuf.UnknownFieldSet.getDefaultInstance(); }
+
     private static final RegionLoad defaultInstance;
     public static RegionLoad getDefaultInstance() {
       return defaultInstance;
     }
-    
+
     public RegionLoad getDefaultInstanceForType() {
       return defaultInstance;
     }
-    
+
+    private final com.google.protobuf.UnknownFieldSet unknownFields;
+    @java.lang.Override
+    public final com.google.protobuf.UnknownFieldSet
+        getUnknownFields() {
+      return this.unknownFields;
+    }
+    private RegionLoad(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      initFields();
+      int mutable_bitField0_ = 0;
+      com.google.protobuf.UnknownFieldSet.Builder unknownFields =
+          com.google.protobuf.UnknownFieldSet.newBuilder();
+      try {
+        boolean done = false;
+        while (!done) {
+          int tag = input.readTag();
+          switch (tag) {
+            case 0:
+              done = true;
+              break;
+            default: {
+              if (!parseUnknownField(input, unknownFields,
+                                     extensionRegistry, tag)) {
+                done = true;
+              }
+              break;
+            }
+            case 10: {
+              org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier.Builder subBuilder = null;
+              if (((bitField0_ & 0x00000001) == 0x00000001)) {
+                subBuilder = regionSpecifier_.toBuilder();
+              }
+              regionSpecifier_ = input.readMessage(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier.PARSER, extensionRegistry);
+              if (subBuilder != null) {
+                subBuilder.mergeFrom(regionSpecifier_);
+                regionSpecifier_ = subBuilder.buildPartial();
+              }
+              bitField0_ |= 0x00000001;
+              break;
+            }
+            case 16: {
+              bitField0_ |= 0x00000002;
+              stores_ = input.readUInt32();
+              break;
+            }
+            case 24: {
+              bitField0_ |= 0x00000004;
+              storefiles_ = input.readUInt32();
+              break;
+            }
+            case 32: {
+              bitField0_ |= 0x00000008;
+              storeUncompressedSizeMB_ = input.readUInt32();
+              break;
+            }
+            case 40: {
+              bitField0_ |= 0x00000010;
+              storefileSizeMB_ = input.readUInt32();
+              break;
+            }
+            case 48: {
+              bitField0_ |= 0x00000020;
+              memstoreSizeMB_ = input.readUInt32();
+              break;
+            }
+            case 56: {
+              bitField0_ |= 0x00000040;
+              storefileIndexSizeMB_ = input.readUInt32();
+              break;
+            }
+            case 64: {
+              bitField0_ |= 0x00000080;
+              readRequestsCount_ = input.readUInt64();
+              break;
+            }
+            case 72: {
+              bitField0_ |= 0x00000100;
+              writeRequestsCount_ = input.readUInt64();
+              break;
+            }
+            case 80: {
+              bitField0_ |= 0x00000200;
+              totalCompactingKVs_ = input.readUInt64();
+              break;
+            }
+            case 88: {
+              bitField0_ |= 0x00000400;
+              currentCompactedKVs_ = input.readUInt64();
+              break;
+            }
+            case 96: {
+              bitField0_ |= 0x00000800;
+              rootIndexSizeKB_ = input.readUInt32();
+              break;
+            }
+            case 104: {
+              bitField0_ |= 0x00001000;
+              totalStaticIndexSizeKB_ = input.readUInt32();
+              break;
+            }
+            case 112: {
+              bitField0_ |= 0x00002000;
+              totalStaticBloomSizeKB_ = input.readUInt32();
+              break;
+            }
+            case 120: {
+              bitField0_ |= 0x00004000;
+              completeSequenceId_ = input.readUInt64();
+              break;
+            }
+          }
+        }
+      } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+        throw e.setUnfinishedMessage(this);
+      } catch (java.io.IOException e) {
+        throw new com.google.protobuf.InvalidProtocolBufferException(
+            e.getMessage()).setUnfinishedMessage(this);
+      } finally {
+        this.unknownFields = unknownFields.build();
+        makeExtensionsImmutable();
+      }
+    }
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
       return org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.internal_static_RegionLoad_descriptor;
     }
-    
+
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.internal_static_RegionLoad_fieldAccessorTable;
+      return org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.internal_static_RegionLoad_fieldAccessorTable
+          .ensureFieldAccessorsInitialized(
+              org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionLoad.class, org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionLoad.Builder.class);
     }
-    
+
+    public static com.google.protobuf.Parser<RegionLoad> PARSER =
+        new com.google.protobuf.AbstractParser<RegionLoad>() {
+      public RegionLoad parsePartialFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        return new RegionLoad(input, extensionRegistry);
+      }
+    };
+
+    @java.lang.Override
+    public com.google.protobuf.Parser<RegionLoad> getParserForType() {
+      return PARSER;
+    }
+
     private int bitField0_;
     // required .RegionSpecifier region_specifier = 1;
     public static final int REGION_SPECIFIER_FIELD_NUMBER = 1;
     private org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier regionSpecifier_;
+    /**
+     * <code>required .RegionSpecifier region_specifier = 1;</code>
+     *
+     * <pre>
+     ** the region specifier 
+     * </pre>
+     */
     public boolean hasRegionSpecifier() {
       return ((bitField0_ & 0x00000001) == 0x00000001);
     }
+    /**
+     * <code>required .RegionSpecifier region_specifier = 1;</code>
+     *
+     * <pre>
+     ** the region specifier 
+     * </pre>
+     */
     public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier getRegionSpecifier() {
       return regionSpecifier_;
     }
+    /**
+     * <code>required .RegionSpecifier region_specifier = 1;</code>
+     *
+     * <pre>
+     ** the region specifier 
+     * </pre>
+     */
     public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifierOrBuilder getRegionSpecifierOrBuilder() {
       return regionSpecifier_;
     }
-    
+
     // optional uint32 stores = 2;
     public static final int STORES_FIELD_NUMBER = 2;
     private int stores_;
+    /**
+     * <code>optional uint32 stores = 2;</code>
+     *
+     * <pre>
+     ** the number of stores for the region 
+     * </pre>
+     */
     public boolean hasStores() {
       return ((bitField0_ & 0x00000002) == 0x00000002);
     }
+    /**
+     * <code>optional uint32 stores = 2;</code>
+     *
+     * <pre>
+     ** the number of stores for the region 
+     * </pre>
+     */
     public int getStores() {
       return stores_;
     }
-    
+
     // optional uint32 storefiles = 3;
     public static final int STOREFILES_FIELD_NUMBER = 3;
     private int storefiles_;
+    /**
+     * <code>optional uint32 storefiles = 3;</code>
+     *
+     * <pre>
+     ** the number of storefiles for the region 
+     * </pre>
+     */
     public boolean hasStorefiles() {
       return ((bitField0_ & 0x00000004) == 0x00000004);
     }
+    /**
+     * <code>optional uint32 storefiles = 3;</code>
+     *
+     * <pre>
+     ** the number of storefiles for the region 
+     * </pre>
+     */
     public int getStorefiles() {
       return storefiles_;
     }
-    
+
     // optional uint32 store_uncompressed_size_MB = 4;
     public static final int STORE_UNCOMPRESSED_SIZE_MB_FIELD_NUMBER = 4;
     private int storeUncompressedSizeMB_;
+    /**
+     * <code>optional uint32 store_uncompressed_size_MB = 4;</code>
+     *
+     * <pre>
+     ** the total size of the store files for the region, uncompressed, in MB 
+     * </pre>
+     */
     public boolean hasStoreUncompressedSizeMB() {
       return ((bitField0_ & 0x00000008) == 0x00000008);
     }
+    /**
+     * <code>optional uint32 store_uncompressed_size_MB = 4;</code>
+     *
+     * <pre>
+     ** the total size of the store files for the region, uncompressed, in MB 
+     * </pre>
+     */
     public int getStoreUncompressedSizeMB() {
       return storeUncompressedSizeMB_;
     }
-    
+
     // optional uint32 storefile_size_MB = 5;
     public static final int STOREFILE_SIZE_MB_FIELD_NUMBER = 5;
     private int storefileSizeMB_;
+    /**
+     * <code>optional uint32 storefile_size_MB = 5;</code>
+     *
+     * <pre>
+     ** the current total size of the store files for the region, in MB 
+     * </pre>
+     */
     public boolean hasStorefileSizeMB() {
       return ((bitField0_ & 0x00000010) == 0x00000010);
     }
+    /**
+     * <code>optional uint32 storefile_size_MB = 5;</code>
+     *
+     * <pre>
+     ** the current total size of the store files for the region, in MB 
+     * </pre>
+     */
     public int getStorefileSizeMB() {
       return storefileSizeMB_;
     }
-    
+
     // optional uint32 memstore_size_MB = 6;
     public static final int MEMSTORE_SIZE_MB_FIELD_NUMBER = 6;
     private int memstoreSizeMB_;
+    /**
+     * <code>optional uint32 memstore_size_MB = 6;</code>
+     *
+     * <pre>
+     ** the current size of the memstore for the region, in MB 
+     * </pre>
+     */
     public boolean hasMemstoreSizeMB() {
       return ((bitField0_ & 0x00000020) == 0x00000020);
     }
+    /**
+     * <code>optional uint32 memstore_size_MB = 6;</code>
+     *
+     * <pre>
+     ** the current size of the memstore for the region, in MB 
+     * </pre>
+     */
     public int getMemstoreSizeMB() {
       return memstoreSizeMB_;
     }
-    
+
     // optional uint32 storefile_index_size_MB = 7;
     public static final int STOREFILE_INDEX_SIZE_MB_FIELD_NUMBER = 7;
     private int storefileIndexSizeMB_;
+    /**
+     * <code>optional uint32 storefile_index_size_MB = 7;</code>
+     *
+     * <pre>
+     **
+     * The current total size of root-level store file indexes for the region,
+     * in MB. The same as {&#64;link #rootIndexSizeKB} but in MB.
+     * </pre>
+     */
     public boolean hasStorefileIndexSizeMB() {
       return ((bitField0_ & 0x00000040) == 0x00000040);
     }
+    /**
+     * <code>optional uint32 storefile_index_size_MB = 7;</code>
+     *
+     * <pre>
+     **
+     * The current total size of root-level store file indexes for the region,
+     * in MB. The same as {&#64;link #rootIndexSizeKB} but in MB.
+     * </pre>
+     */
     public int getStorefileIndexSizeMB() {
       return storefileIndexSizeMB_;
     }
-    
+
     // optional uint64 read_requests_count = 8;
     public static final int READ_REQUESTS_COUNT_FIELD_NUMBER = 8;
     private long readRequestsCount_;
+    /**
+     * <code>optional uint64 read_requests_count = 8;</code>
+     *
+     * <pre>
+     ** the current total read requests made to region 
+     * </pre>
+     */
     public boolean hasReadRequestsCount() {
       return ((bitField0_ & 0x00000080) == 0x00000080);
     }
+    /**
+     * <code>optional uint64 read_requests_count = 8;</code>
+     *
+     * <pre>
+     ** the current total read requests made to region 
+     * </pre>
+     */
     public long getReadRequestsCount() {
       return readRequestsCount_;
     }
-    
+
     // optional uint64 write_requests_count = 9;
     public static final int WRITE_REQUESTS_COUNT_FIELD_NUMBER = 9;
     private long writeRequestsCount_;
+    /**
+     * <code>optional uint64 write_requests_count = 9;</code>
+     *
+     * <pre>
+     ** the current total write requests made to region 
+     * </pre>
+     */
     public boolean hasWriteRequestsCount() {
       return ((bitField0_ & 0x00000100) == 0x00000100);
     }
+    /**
+     * <code>optional uint64 write_requests_count = 9;</code>
+     *
+     * <pre>
+     ** the current total write requests made to region 
+     * </pre>
+     */
     public long getWriteRequestsCount() {
       return writeRequestsCount_;
     }
-    
+
     // optional uint64 total_compacting_KVs = 10;
     public static final int TOTAL_COMPACTING_KVS_FIELD_NUMBER = 10;
     private long totalCompactingKVs_;
+    /**
+     * <code>optional uint64 total_compacting_KVs = 10;</code>
+     *
+     * <pre>
+     ** the total compacting key values in currently running compaction 
+     * </pre>
+     */
     public boolean hasTotalCompactingKVs() {
       return ((bitField0_ & 0x00000200) == 0x00000200);
     }
+    /**
+     * <code>optional uint64 total_compacting_KVs = 10;</code>
+     *
+     * <pre>
+     ** the total compacting key values in currently running compaction 
+     * </pre>
+     */
     public long getTotalCompactingKVs() {
       return totalCompactingKVs_;
     }
-    
+
     // optional uint64 current_compacted_KVs = 11;
     public static final int CURRENT_COMPACTED_KVS_FIELD_NUMBER = 11;
     private long currentCompactedKVs_;
+    /**
+     * <code>optional uint64 current_compacted_KVs = 11;</code>
+     *
+     * <pre>
+     ** the completed count of key values in currently running compaction 
+     * </pre>
+     */
     public boolean hasCurrentCompactedKVs() {
       return ((bitField0_ & 0x00000400) == 0x00000400);
     }
+    /**
+     * <code>optional uint64 current_compacted_KVs = 11;</code>
+     *
+     * <pre>
+     ** the completed count of key values in currently running compaction 
+     * </pre>
+     */
     public long getCurrentCompactedKVs() {
       return currentCompactedKVs_;
     }
-    
+
     // optional uint32 root_index_size_KB = 12;
     public static final int ROOT_INDEX_SIZE_KB_FIELD_NUMBER = 12;
     private int rootIndexSizeKB_;
+    /**
+     * <code>optional uint32 root_index_size_KB = 12;</code>
+     *
+     * <pre>
+     ** The current total size of root-level indexes for the region, in KB. 
+     * </pre>
+     */
     public boolean hasRootIndexSizeKB() {
       return ((bitField0_ & 0x00000800) == 0x00000800);
     }
+    /**
+     * <code>optional uint32 root_index_size_KB = 12;</code>
+     *
+     * <pre>
+     ** The current total size of root-level indexes for the region, in KB. 
+     * </pre>
+     */
     public int getRootIndexSizeKB() {
       return rootIndexSizeKB_;
     }
-    
+
     // optional uint32 total_static_index_size_KB = 13;
     public static final int TOTAL_STATIC_INDEX_SIZE_KB_FIELD_NUMBER = 13;
     private int totalStaticIndexSizeKB_;
+    /**
+     * <code>optional uint32 total_static_index_size_KB = 13;</code>
+     *
+     * <pre>
+     ** The total size of all index blocks, not just the root level, in KB. 
+     * </pre>
+     */
     public boolean hasTotalStaticIndexSizeKB() {
       return ((bitField0_ & 0x00001000) == 0x00001000);
     }
+    /**
+     * <code>optional uint32 total_static_index_size_KB = 13;</code>
+     *
+     * <pre>
+     ** The total size of all index blocks, not just the root level, in KB. 
+     * </pre>
+     */
     public int getTotalStaticIndexSizeKB() {
       return totalStaticIndexSizeKB_;
     }
-    
+
     // optional uint32 total_static_bloom_size_KB = 14;
     public static final int TOTAL_STATIC_BLOOM_SIZE_KB_FIELD_NUMBER = 14;
     private int totalStaticBloomSizeKB_;
+    /**
+     * <code>optional uint32 total_static_bloom_size_KB = 14;</code>
+     *
+     * <pre>
+     **
+     * The total size of all Bloom filter blocks, not just loaded into the
+     * block cache, in KB.
+     * </pre>
+     */
     public boolean hasTotalStaticBloomSizeKB() {
       return ((bitField0_ & 0x00002000) == 0x00002000);
     }
+    /**
+     * <code>optional uint32 total_static_bloom_size_KB = 14;</code>
+     *
+     * <pre>
+     **
+     * The total size of all Bloom filter blocks, not just loaded into the
+     * block cache, in KB.
+     * </pre>
+     */
     public int getTotalStaticBloomSizeKB() {
       return totalStaticBloomSizeKB_;
     }
-    
+
     // optional uint64 complete_sequence_id = 15;
     public static final int COMPLETE_SEQUENCE_ID_FIELD_NUMBER = 15;
     private long completeSequenceId_;
+    /**
+     * <code>optional uint64 complete_sequence_id = 15;</code>
+     *
+     * <pre>
+     ** the most recent sequence Id from cache flush 
+     * </pre>
+     */
     public boolean hasCompleteSequenceId() {
       return ((bitField0_ & 0x00004000) == 0x00004000);
     }
+    /**
+     * <code>optional uint64 complete_sequence_id = 15;</code>
+     *
+     * <pre>
+     ** the most recent sequence Id from cache flush 
+     * </pre>
+     */
     public long getCompleteSequenceId() {
       return completeSequenceId_;
     }
-    
+
     private void initFields() {
       regionSpecifier_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier.getDefaultInstance();
       stores_ = 0;
@@ -1640,7 +2691,7 @@ public final class ClusterStatusProtos {
     public final boolean isInitialized() {
       byte isInitialized = memoizedIsInitialized;
       if (isInitialized != -1) return isInitialized == 1;
-      
+
       if (!hasRegionSpecifier()) {
         memoizedIsInitialized = 0;
         return false;
@@ -1652,7 +2703,7 @@ public final class ClusterStatusProtos {
       memoizedIsInitialized = 1;
       return true;
     }
-    
+
     public void writeTo(com.google.protobuf.CodedOutputStream output)
                         throws java.io.IOException {
       getSerializedSize();
@@ -1703,12 +2754,12 @@ public final class ClusterStatusProtos {
       }
       getUnknownFields().writeTo(output);
     }
-    
+
     private int memoizedSerializedSize = -1;
     public int getSerializedSize() {
       int size = memoizedSerializedSize;
       if (size != -1) return size;
-    
+
       size = 0;
       if (((bitField0_ & 0x00000001) == 0x00000001)) {
         size += com.google.protobuf.CodedOutputStream
@@ -1774,14 +2825,14 @@ public final class ClusterStatusProtos {
       memoizedSerializedSize = size;
       return size;
     }
-    
+
     private static final long serialVersionUID = 0L;
     @java.lang.Override
     protected java.lang.Object writeReplace()
         throws java.io.ObjectStreamException {
       return super.writeReplace();
     }
-    
+
     @java.lang.Override
     public boolean equals(final java.lang.Object obj) {
       if (obj == this) {
@@ -1791,7 +2842,7 @@ public final class ClusterStatusProtos {
         return super.equals(obj);
       }
       org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionLoad other = (org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionLoad) obj;
-      
+
       boolean result = true;
       result = result && (hasRegionSpecifier() == other.hasRegionSpecifier());
       if (hasRegionSpecifier()) {
@@ -1872,9 +2923,13 @@ public final class ClusterStatusProtos {
           getUnknownFields().equals(other.getUnknownFields());
       return result;
     }
-    
+
+    private int memoizedHashCode = 0;
     @java.lang.Override
     public int hashCode() {
+      if (memoizedHashCode != 0) {
+        return memoizedHashCode;
+      }
       int hash = 41;
       hash = (19 * hash) + getDescriptorForType().hashCode();
       if (hasRegionSpecifier()) {
@@ -1938,89 +2993,79 @@ public final class ClusterStatusProtos {
         hash = (53 * hash) + hashLong(getCompleteSequenceId());
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
+      memoizedHashCode = hash;
       return hash;
     }
-    
+
     public static org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionLoad parseFrom(
         com.google.protobuf.ByteString data)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return newBuilder().mergeFrom(data).buildParsed();
+      return PARSER.parseFrom(data);
     }
     public static org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionLoad parseFrom(
         com.google.protobuf.ByteString data,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return newBuilder().mergeFrom(data, extensionRegistry)
-               .buildParsed();
+      return PARSER.parseFrom(data, extensionRegistry);
     }
     public static org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionLoad parseFrom(byte[] data)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return newBuilder().mergeFrom(data).buildParsed();
+      return PARSER.parseFrom(data);
     }
     public static org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionLoad parseFrom(
         byte[] data,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return newBuilder().mergeFrom(data, extensionRegistry)
-               .buildParsed();
+      return PARSER.parseFrom(data, extensionRegistry);
     }
     public static org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionLoad parseFrom(java.io.InputStream input)
         throws java.io.IOException {
-      return newBuilder().mergeFrom(input).buildParsed();
+      return PARSER.parseFrom(input);
     }
     public static org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionLoad parseFrom(
         java.io.InputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
-      return newBuilder().mergeFrom(input, extensionRegistry)
-               .buildParsed();
+      return PARSER.parseFrom(input, extensionRegistry);
     }
     public static org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionLoad parseDelimitedFrom(java.io.InputStream input)
         throws java.io.IOException {
-      Builder builder = newBuilder();
-      if (builder.mergeDelimitedFrom(input)) {
-        return builder.buildParsed();
-      } else {
-        return null;
-      }
+      return PARSER.parseDelimitedFrom(input);
     }
     public static org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionLoad parseDelimitedFrom(
         java.io.InputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
-      Builder builder = newBuilder();
-      if (builder.mergeDelimitedFrom(input, extensionRegistry)) {
-        return builder.buildParsed();
-      } else {
-        return null;
-      }
+      return PARSER.parseDelimitedFrom(input, extensionRegistry);
     }
     public static org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionLoad parseFrom(
         com.google.protobuf.CodedInputStream input)
         throws java.io.IOException {
-      return newBuilder().mergeFrom(input).buildParsed();
+      return PARSER.parseFrom(input);
     }
     public static org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionLoad parseFrom(
         com.google.protobuf.CodedInputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
-      return newBuilder().mergeFrom(input, extensionRegistry)
-               .buildParsed();
+      return PARSER.parseFrom(input, extensionRegistry);
     }
-    
+
     public static Builder newBuilder() { return Builder.create(); }
     public Builder newBuilderForType() { return newBuilder(); }
     public static Builder newBuilder(org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionLoad prototype) {
       return newBuilder().mergeFrom(prototype);
     }
     public Builder toBuilder() { return newBuilder(this); }
-    
+
     @java.lang.Override
     protected Builder newBuilderForType(
         com.google.protobuf.GeneratedMessage.BuilderParent parent) {
       Builder builder = new Builder(parent);
       return builder;
     }
+    /**
+     * Protobuf type {@code RegionLoad}
+     */
     public static final class Builder extends
         com.google.protobuf.GeneratedMessage.Builder<Builder>
        implements org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionLoadOrBuilder {
@@ -2028,18 +3073,21 @@ public final class ClusterStatusProtos {
           getDescriptor() {
         return org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.internal_static_RegionLoad_descriptor;
       }
-      
+
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.internal_static_RegionLoad_fieldAccessorTable;
+        return org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.internal_static_RegionLoad_fieldAccessorTable
+            .ensureFieldAccessorsInitialized(
+                org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionLoad.class, org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionLoad.Builder.class);
       }
-      
+
       // Construct using org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionLoad.newBuilder()
       private Builder() {
         maybeForceBuilderInitialization();
       }
-      
-      private Builder(BuilderParent parent) {
+
+      private Builder(
+          com.google.protobuf.GeneratedMessage.BuilderParent parent) {
         super(parent);
         maybeForceBuilderInitialization();
       }
@@ -2051,7 +3099,7 @@ public final class ClusterStatusProtos {
       private static Builder create() {
         return new Builder();
       }
-      
+
       public Builder clear() {
         super.clear();
         if (regionSpecifierBuilder_ == null) {
@@ -2090,20 +3138,20 @@ public final class ClusterStatusProtos {
         bitField0_ = (bitField0_ & ~0x00004000);
         return this;
       }
-      
+
       public Builder clone() {
         return create().mergeFrom(buildPartial());
       }
-      
+
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionLoad.getDescriptor();
+        return org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.internal_static_RegionLoad_descriptor;
       }
-      
+
       public org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionLoad getDefaultInstanceForType() {
         return org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionLoad.getDefaultInstance();
       }
-      
+
       public org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionLoad build() {
         org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionLoad result = buildPartial();
         if (!result.isInitialized()) {
@@ -2111,17 +3159,7 @@ public final class ClusterStatusProtos {
         }
         return result;
       }
-      
-      private org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionLoad buildParsed()
-          throws com.google.protobuf.InvalidProtocolBufferException {
-        org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionLoad result = buildPartial();
-        if (!result.isInitialized()) {
-          throw newUninitializedMessageException(
-            result).asInvalidProtocolBufferException();
-        }
-        return result;
-      }
-      
+
       public org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionLoad buildPartial() {
         org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionLoad result = new org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionLoad(this);
         int from_bitField0_ = bitField0_;
@@ -2194,7 +3232,7 @@ public final class ClusterStatusProtos {
         onBuilt();
         return result;
       }
-      
+
       public Builder mergeFrom(com.google.protobuf.Message other) {
         if (other instanceof org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionLoad) {
           return mergeFrom((org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionLoad)other);
@@ -2203,7 +3241,7 @@ public final class ClusterStatusProtos {
           return this;
         }
       }
-      
+
       public Builder mergeFrom(org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionLoad other) {
         if (other == org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionLoad.getDefaultInstance()) return this;
         if (other.hasRegionSpecifier()) {
@@ -2254,7 +3292,7 @@ public final class ClusterStatusProtos {
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
       }
-      
+
       public final boolean isInitialized() {
         if (!hasRegionSpecifier()) {
           
@@ -2266,122 +3304,47 @@ public final class ClusterStatusProtos {
         }
         return true;
       }
-      
+
       public Builder mergeFrom(
           com.google.protobuf.CodedInputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws java.io.IOException {
-        com.google.protobuf.UnknownFieldSet.Builder unknownFields =
-          com.google.protobuf.UnknownFieldSet.newBuilder(
-            this.getUnknownFields());
-        while (true) {
-          int tag = input.readTag();
-          switch (tag) {
-            case 0:
-              this.setUnknownFields(unknownFields.build());
-              onChanged();
-              return this;
-            default: {
-              if (!parseUnknownField(input, unknownFields,
-                                     extensionRegistry, tag)) {
-                this.setUnknownFields(unknownFields.build());
-                onChanged();
-                return this;
-              }
-              break;
-            }
-            case 10: {
-              org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier.Builder subBuilder = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier.newBuilder();
-              if (hasRegionSpecifier()) {
-                subBuilder.mergeFrom(getRegionSpecifier());
-              }
-              input.readMessage(subBuilder, extensionRegistry);
-              setRegionSpecifier(subBuilder.buildPartial());
-              break;
-            }
-            case 16: {
-              bitField0_ |= 0x00000002;
-              stores_ = input.readUInt32();
-              break;
-            }
-            case 24: {
-              bitField0_ |= 0x00000004;
-              storefiles_ = input.readUInt32();
-              break;
-            }
-            case 32: {
-              bitField0_ |= 0x00000008;
-              storeUncompressedSizeMB_ = input.readUInt32();
-              break;
-            }
-            case 40: {
-              bitField0_ |= 0x00000010;
-              storefileSizeMB_ = input.readUInt32();
-              break;
-            }
-            case 48: {
-              bitField0_ |= 0x00000020;
-              memstoreSizeMB_ = input.readUInt32();
-              break;
-            }
-            case 56: {
-              bitField0_ |= 0x00000040;
-              storefileIndexSizeMB_ = input.readUInt32();
-              break;
-            }
-            case 64: {
-              bitField0_ |= 0x00000080;
-              readRequestsCount_ = input.readUInt64();
-              break;
-            }
-            case 72: {
-              bitField0_ |= 0x00000100;
-              writeRequestsCount_ = input.readUInt64();
-              break;
-            }
-            case 80: {
-              bitField0_ |= 0x00000200;
-              totalCompactingKVs_ = input.readUInt64();
-              break;
-            }
-            case 88: {
-              bitField0_ |= 0x00000400;
-              currentCompactedKVs_ = input.readUInt64();
-              break;
-            }
-            case 96: {
-              bitField0_ |= 0x00000800;
-              rootIndexSizeKB_ = input.readUInt32();
-              break;
-            }
-            case 104: {
-              bitField0_ |= 0x00001000;
-              totalStaticIndexSizeKB_ = input.readUInt32();
-              break;
-            }
-            case 112: {
-              bitField0_ |= 0x00002000;
-              totalStaticBloomSizeKB_ = input.readUInt32();
-              break;
-            }
-            case 120: {
-              bitField0_ |= 0x00004000;
-              completeSequenceId_ = input.readUInt64();
-              break;
-            }
+        org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionLoad parsedMessage = null;
+        try {
+          parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
+        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+          parsedMessage = (org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionLoad) e.getUnfinishedMessage();
+          throw e;
+        } finally {
+          if (parsedMessage != null) {
+            mergeFrom(parsedMessage);
           }
         }
+        return this;
       }
-      
       private int bitField0_;
-      
+
       // required .RegionSpecifier region_specifier = 1;
       private org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier regionSpecifier_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier.getDefaultInstance();
       private com.google.protobuf.SingleFieldBuilder<
           org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifierOrBuilder> regionSpecifierBuilder_;
+      /**
+       * <code>required .RegionSpecifier region_specifier = 1;</code>
+       *
+       * <pre>
+       ** the region specifier 
+       * </pre>
+       */
       public boolean hasRegionSpecifier() {
         return ((bitField0_ & 0x00000001) == 0x00000001);
       }
+      /**
+       * <code>required .RegionSpecifier region_specifier = 1;</code>
+       *
+       * <pre>
+       ** the region specifier 
+       * </pre>
+       */
       public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier getRegionSpecifier() {
         if (regionSpecifierBuilder_ == null) {
           return regionSpecifier_;
@@ -2389,6 +3352,13 @@ public final class ClusterStatusProtos {
           return regionSpecifierBuilder_.getMessage();
         }
       }
+      /**
+       * <code>required .RegionSpecifier region_specifier = 1;</code>
+       *
+       * <pre>
+       ** the region specifier 
+       * </pre>
+       */
       public Builder setRegionSpecifier(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier value) {
         if (regionSpecifierBuilder_ == null) {
           if (value == null) {
@@ -2402,6 +3372,13 @@ public final class ClusterStatusProtos {
         bitField0_ |= 0x00000001;
         return this;
       }
+      /**
+       * <code>required .RegionSpecifier region_specifier = 1;</code>
+       *
+       * <pre>
+       ** the region specifier 
+       * </pre>
+       */
       public Builder setRegionSpecifier(
           org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier.Builder builderForValue) {
         if (regionSpecifierBuilder_ == null) {
@@ -2413,6 +3390,13 @@ public final class ClusterStatusProtos {
         bitField0_ |= 0x00000001;
         return this;
       }
+      /**
+       * <code>required .RegionSpecifier region_specifier = 1;</code>
+       *
+       * <pre>
+       ** the region specifier 
+       * </pre>
+       */
       public Builder mergeRegionSpecifier(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier value) {
         if (regionSpecifierBuilder_ == null) {
           if (((bitField0_ & 0x00000001) == 0x00000001) &&
@@ -2429,6 +3413,13 @@ public final class ClusterStatusProtos {
         bitField0_ |= 0x00000001;
         return this;
       }
+      /**
+       * <code>required .RegionSpecifier region_specifier = 1;</code>
+       *
+       * <pre>
+       ** the region specifier 
+       * </pre>
+       */
       public Builder clearRegionSpecifier() {
         if (regionSpecifierBuilder_ == null) {
           regionSpecifier_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier.getDefaultInstance();
@@ -2439,11 +3430,25 @@ public final class ClusterStatusProtos {
         bitField0_ = (bitField0_ & ~0x00000001);
         return this;
       }
+      /**
+       * <code>required .RegionSpecifier region_specifier = 1;</code>
+       *
+       * <pre>
+       ** the region specifier 
+       * </pre>
+       */
       public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier.Builder getRegionSpecifierBuilder() {
         bitField0_ |= 0x00000001;
         onChanged();
         return getRegionSpecifierFieldBuilder().getBuilder();
       }
+      /**
+       * <code>required .RegionSpecifier region_specifier = 1;</code>
+       *
+       * <pre>
+       ** the region specifier 
+       * </pre>
+       */
       public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifierOrBuilder getRegionSpecifierOrBuilder() {
         if (regionSpecifierBuilder_ != null) {
           return regionSpecifierBuilder_.getMessageOrBuilder();
@@ -2451,6 +3456,13 @@ public final class ClusterStatusProtos {
           return regionSpecifier_;
         }
       }
+      /**
+       * <code>required .RegionSpecifier region_specifier = 1;</code>
+       *
+       * <pre>
+       ** the region specifier 
+       * </pre>
+       */
       private com.google.protobuf.SingleFieldBuilder<
           org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifierOrBuilder> 
           getRegionSpecifierFieldBuilder() {
@@ -2464,504 +3476,1425 @@ public final class ClusterStatusProtos {
         }
         return regionSpecifierBuilder_;
       }
-      
+
       // optional uint32 stores = 2;
       private int stores_ ;
+      /**
+       * <code>optional uint32 stores = 2;</code>
+       *
+       * <pre>
+       ** the number of stores for the region 
+       * </pre>
+       */
       public boolean hasStores() {
         return ((bitField0_ & 0x00000002) == 0x00000002);
       }
+      /**
+       * <code>optional uint32 stores = 2;</code>
+       *
+       * <pre>
+       ** the number of stores for the region 
+       * </pre>
+       */
       public int getStores() {
         return stores_;
       }
+      /**
+       * <code>optional uint32 stores = 2;</code>
+       *
+       * <pre>
+       ** the number of stores for the region 
+       * </pre>
+       */
       public Builder setStores(int value) {
         bitField0_ |= 0x00000002;
         stores_ = value;
         onChanged();
         return this;
       }
+      /**
+       * <code>optional uint32 stores = 2;</code>
+       *
+       * <pre>
+       ** the number of stores for the region 
+       * </pre>
+       */
       public Builder clearStores() {
         bitField0_ = (bitField0_ & ~0x00000002);
         stores_ = 0;
         onChanged();
         return this;
       }
-      
+
       // optional uint32 storefiles = 3;
       private int storefiles_ ;
+      /**
+       * <code>optional uint32 storefiles = 3;</code>
+       *
+       * <pre>
+       ** the number of storefiles for the region 
+       * </pre>
+       */
       public boolean hasStorefiles() {
         return ((bitField0_ & 0x00000004) == 0x00000004);
       }
+      /**
+       * <code>optional uint32 storefiles = 3;</code>
+       *
+       * <pre>
+       ** the number of storefiles for the region 
+       * </pre>
+       */
       public int getStorefiles() {
         return storefiles_;
       }
+      /**
+       * <code>optional uint32 storefiles = 3;</code>
+       *
+       * <pre>
+       ** the number of storefiles for the region 
+       * </pre>
+       */
       public Builder setStorefiles(int value) {
         bitField0_ |= 0x00000004;
         storefiles_ = value;
         onChanged();
         return this;
       }
+      /**
+       * <code>optional uint32 storefiles = 3;</code>
+       *
+       * <pre>
+       ** the number of storefiles for the region 
+       * </pre>
+       */
       public Builder clearStorefiles() {
         bitField0_ = (bitField0_ & ~0x00000004);
         storefiles_ = 0;
         onChanged();
         return this;
       }
-      
+
       // optional uint32 store_uncompressed_size_MB = 4;
       private int storeUncompressedSizeMB_ ;
+      /**
+       * <code>optional uint32 store_uncompressed_size_MB = 4;</code>
+       *
+       * <pre>
+       ** the total size of the store files for the region, uncompressed, in MB 
+       * </pre>
+       */
       public boolean hasStoreUncompressedSizeMB() {
         return ((bitField0_ & 0x00000008) == 0x00000008);
       }
+      /**
+       * <code>optional uint32 store_uncompressed_size_MB = 4;</code>
+       *
+       * <pre>
+       ** the total size of the store files for the region, uncompressed, in MB 
+       * </pre>
+       */
       public int getStoreUncompressedSizeMB() {
         return storeUncompressedSizeMB_;
       }
+      /**
+       * <code>optional uint32 store_uncompressed_size_MB = 4;</code>
+       *
+       * <pre>
+       ** the total size of the store files for the region, uncompressed, in MB 
+       * </pre>
+       */
       public Builder setStoreUncompressedSizeMB(int value) {
         bitField0_ |= 0x00000008;
         storeUncompressedSizeMB_ = value;
         onChanged();
         return this;
       }
+      /**
+       * <code>optional uint32 store_uncompressed_size_MB = 4;</code>
+       *
+       * <pre>
+       ** the total size of the store files for the region, uncompressed, in MB 
+       * </pre>
+       */
       public Builder clearStoreUncompressedSizeMB() {
         bitField0_ = (bitField0_ & ~0x00000008);
         storeUncompressedSizeMB_ = 0;
         onChanged();
         return this;
       }
-      
+
       // optional uint32 storefile_size_MB = 5;
       private int storefileSizeMB_ ;
+      /**
+       * <code>optional uint32 storefile_size_MB = 5;</code>
+       *
+       * <pre>
+       ** the current total size of the store files for the region, in MB 
+       * </pre>
+       */
       public boolean hasStorefileSizeMB() {
         return ((bitField0_ & 0x00000010) == 0x00000010);
       }
+      /**
+       * <code>optional uint32 storefile_size_MB = 5;</code>
+       *
+       * <pre>
+       ** the current total size of the store files for the region, in MB 
+       * </pre>
+       */
       public int getStorefileSizeMB() {
         return storefileSizeMB_;
       }
+      /**
+       * <code>optional uint32 storefile_size_MB = 5;</code>
+       *
+       * <pre>
+       ** the current total size of the store files for the region, in MB 
+       * </pre>
+       */
       public Builder setStorefileSizeMB(int value) {
         bitField0_ |= 0x00000010;
         storefileSizeMB_ = value;
         onChanged();
         return this;
       }
+      /**
+       * <code>optional uint32 storefile_size_MB = 5;</code>
+       *
+       * <pre>
+       ** the current total size of the store files for the region, in MB 
+       * </pre>
+       */
       public Builder clearStorefileSizeMB() {
         bitField0_ = (bitField0_ & ~0x00000010);
         storefileSizeMB_ = 0;
         onChanged();
         return this;
       }
-      
+
       // optional uint32 memstore_size_MB = 6;
       private int memstoreSizeMB_ ;
+      /**
+       * <code>optional uint32 memstore_size_MB = 6;</code>
+       *
+       * <pre>
+       ** the current size of the memstore for the region, in MB 
+       * </pre>
+       */
       public boolean hasMemstoreSizeMB() {
         return ((bitField0_ & 0x00000020) == 0x00000020);
       }
+      /**
+       * <code>optional uint32 memstore_size_MB = 6;</code>
+       *
+       * <pre>
+       ** the current size of the memstore for the region, in MB 
+       * </pre>
+       */
       public int getMemstoreSizeMB() {
         return memstoreSizeMB_;
       }
+      /**
+       * <code>optional uint32 memstore_size_MB = 6;</code>
+       *
+       * <pre>
+       ** the current size of the memstore for the region, in MB 
+       * </pre>
+       */
       public Builder setMemstoreSizeMB(int value) {
         bitField0_ |= 0x00000020;
         memstoreSizeMB_ = value;
         onChanged();
         return this;
       }
+      /**
+       * <code>optional uint32 memstore_size_MB = 6;</code>
+       *
+       * <pre>
+       ** the current size of the memstore for the region, in MB 
+       * </pre>
+       */
       public Builder clearMemstoreSizeMB() {
         bitField0_ = (bitField0_ & ~0x00000020);
         memstoreSizeMB_ = 0;
         onChanged();
         return this;
       }
-      
+
       // optional uint32 storefile_index_size_MB = 7;
       private int storefileIndexSizeMB_ ;
+      /**
+       * <code>optional uint32 storefile_index_size_MB = 7;</code>
+       *
+       * <pre>
+       **
+       * The current total size of root-level store file indexes for the region,
+       * in MB. The same as {&#64;link #rootIndexSizeKB} but in MB.
+       * </pre>
+       */
       public boolean hasStorefileIndexSizeMB() {
         return ((bitField0_ & 0x00000040) == 0x00000040);
       }
+      /**
+       * <code>optional uint32 storefile_index_size_MB = 7;</code>
+       *
+       * <pre>
+       **
+       * The current total size of root-level store file indexes for the region,
+       * in MB. The same as {&#64;link #rootIndexSizeKB} but in MB.
+       * </pre>
+       */
       public int getStorefileIndexSizeMB() {
         return storefileIndexSizeMB_;
       }
+      /**
+       * <code>optional uint32 storefile_index_size_MB = 7;</code>
+       *
+       * <pre>
+       **
+       * The current total size of root-level store file indexes for the region,
+       * in MB. The same as {&#64;link #rootIndexSizeKB} but in MB.
+       * </pre>
+       */
       public Builder setStorefileIndexSizeMB(int value) {
         bitField0_ |= 0x00000040;
         storefileIndexSizeMB_ = value;
         onChanged();
         return this;
       }
+      /**
+       * <code>optional uint32 storefile_index_size_MB = 7;</code>
+       *
+       * <pre>
+       **
+       * The current total size of root-level store file indexes for the region,
+       * in MB. The same as {&#64;link #rootIndexSizeKB} but in MB.
+       * </pre>
+       */
       public Builder clearStorefileIndexSizeMB() {
         bitField0_ = (bitField0_ & ~0x00000040);
         storefileIndexSizeMB_ = 0;
         onChanged();
         return this;
       }
-      
+
       // optional uint64 read_requests_count = 8;
       private long readRequestsCount_ ;
+      /**
+       * <code>optional uint64 read_requests_count = 8;</code>
+       *
+       * <pre>
+       ** the current total read requests made to region 
+       * </pre>
+       */
       public boolean hasReadRequestsCount() {
         return ((bitField0_ & 0x00000080) == 0x00000080);
       }
+      /**
+       * <code>optional uint64 read_requests_count = 8;</code>
+       *
+       * <pre>
+       ** the current total read requests made to region 
+       * </pre>
+       */
       public long getReadRequestsCount() {
         return readRequestsCount_;
       }
+      /**
+       * <code>optional uint64 read_requests_count = 8;</code>
+       *
+       * <pre>
+       ** the current total read requests made to region 
+       * </pre>
+       */
       public Builder setReadRequestsCount(long value) {
         bitField0_ |= 0x00000080;
         readRequestsCount_ = value;
         onChanged();
         return this;
       }
+      /**
+       * <code>optional uint64 read_requests_count = 8;</code>
+       *
+       * <pre>
+       ** the current total read requests made to region 
+       * </pre>
+       */
       public Builder clearReadRequestsCount() {
         bitField0_ = (bitField0_ & ~0x00000080);
         readRequestsCount_ = 0L;
         onChanged();
         return this;
       }
-      
+
       // optional uint64 write_requests_count = 9;
       private long writeRequestsCount_ ;
+      /**
+       * <code>optional uint64 write_requests_count = 9;</code>
+       *
+       * <pre>
+       ** the current total write requests made to region 
+       * </pre>
+       */
       public boolean hasWriteRequestsCount() {
         return ((bitField0_ & 0x00000100) == 0x00000100);
       }
+      /**
+       * <code>optional uint64 write_requests_count = 9;</code>
+       *
+       * <pre>
+       ** the current total write requests made to region 
+       * </pre>
+       */
       public long getWriteRequestsCount() {
         return writeRequestsCount_;
       }
+      /**
+       * <code>optional uint64 write_requests_count = 9;</code>
+       *
+       * <pre>
+       ** the current total write requests made to region 
+       * </pre>
+       */
       public Builder setWriteRequestsCount(long value) {
         bitField0_ |= 0x00000100;
         writeRequestsCount_ = value;
         onChanged();
         return this;
       }
+      /**
+       * <code>optional uint64 write_requests_count = 9;</code>
+       *
+       * <pre>
+       ** the current total write requests made to region 
+       * </pre>
+       */
       public Builder clearWriteRequestsCount() {
         bitField0_ = (bitField0_ & ~0x00000100);
         writeRequestsCount_ = 0L;
         onChanged();
         return this;
       }
-      
+
       // optional uint64 total_compacting_KVs = 10;
       private long totalCompactingKVs_ ;
+      /**
+       * <code>optional uint64 total_compacting_KVs = 10;</code>
+       *
+       * <pre>
+       ** the total compacting key values in currently running compaction 
+       * </pre>
+       */
       public boolean hasTotalCompactingKVs() {
         return ((bitField0_ & 0x00000200) == 0x00000200);
       }
+      /**
+       * <code>optional uint64 total_compacting_KVs = 10;</code>
+       *
+       * <pre>
+       ** the total compacting key values in currently running compaction 
+       * </pre>
+       */
       public long getTotalCompactingKVs() {
         return totalCompactingKVs_;
       }
+      /**
+       * <code>optional uint64 total_compacting_KVs = 10;</code>
+       *
+       * <pre>
+       ** the total compacting key values in currently running compaction 
+       * </pre>
+       */
       public Builder setTotalCompactingKVs(long value) {
         bitField0_ |= 0x00000200;
         totalCompactingKVs_ = value;
         onChanged();
         return this;
       }
+      /**
+       * <code>optional uint64 total_compacting_KVs = 10;</code>
+       *
+       * <pre>
+       ** the total compacting key values in currently running compaction 
+       * </pre>
+       */
       public Builder clearTotalCompactingKVs() {
         bitField0_ = (bitField0_ & ~0x00000200);
         totalCompactingKVs_ = 0L;
         onChanged();
         return this;
       }
-      
+
       // optional uint64 current_compacted_KVs = 11;
       private long currentCompactedKVs_ ;
+      /**
+       * <code>optional uint64 current_compacted_KVs = 11;</code>
+       *
+       * <pre>
+       ** the completed count of key values in currently running compaction 
+       * </pre>
+       */
       public boolean hasCurrentCompactedKVs() {
         return ((bitField0_ & 0x00000400) == 0x00000400);
       }
+      /**
+       * <code>optional uint64 current_compacted_KVs = 11;</code>
+       *
+       * <pre>
+       ** the completed count of key values in currently running compaction 
+       * </pre>
+       */
       public long getCurrentCompactedKVs() {
         return currentCompactedKVs_;
       }
+      /**
+       * <code>optional uint64 current_compacted_KVs = 11;</code>
+       *
+       * <pre>
+       ** the completed count of key values in currently running compaction 
+       * </pre>
+       */
       public Builder setCurrentCompactedKVs(long value) {
         bitField0_ |= 0x00000400;
         currentCompactedKVs_ = value;
         onChanged();
         return this;
       }
+      /**
+       * <code>optional uint64 current_compacted_KVs = 11;</code>
+       *
+       * <pre>
+       ** the completed count of key values in currently running compaction 
+       * </pre>
+       */
       public Builder clearCurrentCompactedKVs() {
         bitField0_ = (bitField0_ & ~0x00000400);
         currentCompactedKVs_ = 0L;
         onChanged();
         return this;
       }
-      
+
       // optional uint32 root_index_size_KB = 12;
       private int rootIndexSizeKB_ ;
+      /**
+       * <code>optional uint32 root_index_size_KB = 12;</code>
+       *
+       * <pre>
+       ** The current total size of root-level indexes for the region, in KB. 
+       * </pre>
+       */
       public boolean hasRootIndexSizeKB() {
         return ((bitField0_ & 0x00000800) == 0x00000800);
       }
+      /**
+       * <code>optional uint32 root_index_size_KB = 12;</code>
+       *
+       * <pre>
+       ** The current total size of root-level indexes for the region, in KB. 
+       * </pre>
+       */
       public int getRootIndexSizeKB() {
         return rootIndexSizeKB_;
       }
+      /**
+       * <code>optional uint32 root_index_size_KB = 12;</code>
+       *
+       * <pre>
+       ** The current total size of root-level indexes for the region, in KB. 
+       * </pre>
+       */
       public Builder setRootIndexSizeKB(int value) {
         bitField0_ |= 0x00000800;
         rootIndexSizeKB_ = value;
         onChanged();
         return this;
       }
+      /**
+       * <code>optional uint32 root_index_size_KB = 12;</code>
+       *
+       * <pre>
+       ** The current total size of root-level indexes for the region, in KB. 
+       * </pre>
+       */
       public Builder clearRootIndexSizeKB() {
         bitField0_ = (bitField0_ & ~0x00000800);
         rootIndexSizeKB_ = 0;
         onChanged();
         return this;
       }
-      
+
       // optional uint32 total_static_index_size_KB = 13;
       private int totalStaticIndexSizeKB_ ;
+      /**
+       * <code>optional uint32 total_static_index_size_KB = 13;</code>
+       *
+       * <pre>
+       ** The total size of all index blocks, not just the root level, in KB. 
+       * </pre>
+       */
       public boolean hasTotalStaticIndexSizeKB() {
         return ((bitField0_ & 0x00001000) == 0x00001000);
       }
+      /**
+       * <code>optional uint32 total_static_index_size_KB = 13;</code>
+       *
+       * <pre>
+       ** The total size of all index blocks, not just the root level, in KB. 
+       * </pre>
+       */
       public int getTotalStaticIndexSizeKB() {
         return totalStaticIndexSizeKB_;
       }
+      /**
+       * <code>optional uint32 total_static_index_size_KB = 13;</code>
+       *
+       * <pre>
+       ** The total size of all index blocks, not just the root level, in KB. 
+       * </pre>
+       */
       public Builder setTotalStaticIndexSizeKB(int value) {
         bitField0_ |= 0x00001000;
         totalStaticIndexSizeKB_ = value;
         onChanged();
         return this;
       }
+      /**
+       * <code>optional uint32 total_static_index_size_KB = 13;</code>
+       *
+       * <pre>
+       ** The total size of all index blocks, not just the root level, in KB. 
+       * </pre>
+       */
       public Builder clearTotalStaticIndexSizeKB() {
         bitField0_ = (bitField0_ & ~0x00001000);
         totalStaticIndexSizeKB_ = 0;
         onChanged();
         return this;
       }
-      
+
       // optional uint32 total_static_bloom_size_KB = 14;
       private int totalStaticBloomSizeKB_ ;
+      /**
+       * <code>optional uint32 total_static_bloom_size_KB = 14;</code>
+       *
+       * <pre>
+       **
+       * The total size of all Bloom filter blocks, not just loaded into the
+       * block cache, in KB.
+       * </pre>
+       */
       public boolean hasTotalStaticBloomSizeKB() {
         return ((bitField0_ & 0x00002000) == 0x00002000);
       }
+      /**
+       * <code>optional uint32 total_static_bloom_size_KB = 14;</code>
+       *
+       * <pre>
+       **
+       * The total size of all Bloom filter blocks, not just loaded into the
+       * block cache, in KB.
+       * </pre>
+       */
       public int getTotalStaticBloomSizeKB() {
         return totalStaticBloomSizeKB_;
       }
+      /**
+       * <code>optional uint32 total_static_bloom_size_KB = 14;</code>
+       *
+       * <pre>
+       **
+       * The total size of all Bloom filter blocks, not just loaded into the
+       * block cache, in KB.
+       * </pre>
+       */
       public Builder setTotalStaticBloomSizeKB(int value) {
         bitField0_ |= 0x00002000;
         totalStaticBloomSizeKB_ = value;
         onChanged();
         return this;
       }
+      /**
+       * <code>optional uint32 total_static_bloom_size_KB = 14;</code>
+       *
+       * <pre>
+       **
+       * The total size of all Bloom filter blocks, not just loaded into the
+       * block cache, in KB.
+       * </pre>
+       */
       public Builder clearTotalStaticBloomSizeKB() {
         bitField0_ = (bitField0_ & ~0x00002000);
         totalStaticBloomSizeKB_ = 0;
         onChanged();
         return this;
       }
-      
+
       // optional uint64 complete_sequence_id = 15;
       private long completeSequenceId_ ;
+      /**
+       * <code>optional uint64 complete_sequence_id = 15;</code>
+       *
+       * <pre>
+       ** the most recent sequence Id from cache flush 
+       * </pre>
+       */
       public boolean hasCompleteSequenceId() {
         return ((bitField0_ & 0x00004000) == 0x00004000);
       }
+      /**
+       * <code>optional uint64 complete_sequence_id = 15;</code>
+       *
+       * <pre>
+       ** the most recent sequence Id from cache flush 
+       * </pre>
+       */
       public long getCompleteSequenceId() {
         return completeSequenceId_;
       }
+      /**
+       * <code>optional uint64 complete_sequence_id = 15;</code>
+       *
+       * <pre>
+       ** the most recent sequence Id from cache flush 
+       * </pre>
+       */
       public Builder setCompleteSequenceId(long value) {
         bitField0_ |= 0x00004000;
         completeSequenceId_ = value;
         onChanged();
         return this;
       }
+      /**
+       * <code>optional uint64 complete_sequence_id = 15;</code>
+       *
+       * <pre>
+       ** the most recent sequence Id from cache flush 
+       * </pre>
+       */
       public Builder clearCompleteSequenceId() {
         bitField0_ = (bitField0_ & ~0x00004000);
         completeSequenceId_ = 0L;
         onChanged();
         return this;
       }
-      
+
       // @@protoc_insertion_point(builder_scope:RegionLoad)
     }
-    
+
     static {
       defaultInstance = new RegionLoad(true);
       defaultInstance.initFields();
     }
-    
+
     // @@protoc_insertion_point(class_scope:RegionLoad)
   }
-  
+
   public interface ServerLoadOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
-    
+
     // optional uint32 number_of_requests = 1;
+    /**
+     * <code>optional uint32 number_of_requests = 1;</code>
+     *
+     * <pre>
+     ** Number of requests since last report. 
+     * </pre>
+     */
     boolean hasNumberOfRequests();
+    /**
+     * <code>optional uint32 number_of_requests = 1;</code>
+     *
+     * <pre>
+     ** Number of requests since last report. 
+     * </pre>
+     */
     int getNumberOfRequests();
-    
+
     // optional uint32 total_number_of_requests = 2;
+    /**
+     * <code>optional uint32 total_number_of_requests = 2;</code>
+     *
+     * <pre>
+     ** Total Number of requests from the start of the region server. 
+     * </pre>
+     */
     boolean hasTotalNumberOfRequests();
+    /**
+     * <code>optional uint32 total_number_of_requests = 2;</code>
+     *
+     * <pre>
+     ** Total Number of requests from the start of the region server. 
+     * </pre>
+     */
     int getTotalNumberOfRequests();
-    
+
     // optional uint32 used_heap_MB = 3;
+    /**
+     * <code>optional uint32 used_heap_MB = 3;</code>
+     *
+     * <pre>
+     ** the amount of used heap, in MB. 
+     * </pre>
+     */
     boolean hasUsedHeapMB();
+    /**
+     * <code>optional uint32 used_heap_MB = 3;</code>
+     *
+     * <pre>
+     ** the amount of used heap, in MB. 
+     * </pre>
+     */
     int getUsedHeapMB();
-    
+
     // optional uint32 max_heap_MB = 4;
+    /**
+     * <code>optional uint32 max_heap_MB = 4;</code>
+     *
+     * <pre>
+     ** the maximum allowable size of the heap, in MB. 
+     * </pre>
+     */
     boolean hasMaxHeapMB();
+    /**
+     * <code>optional uint32 max_heap_MB = 4;</code>
+     *
+     * <pre>
+     ** the maximum allowable size of the heap, in MB. 
+     * </pre>
+     */
     int getMaxHeapMB();
-    
+
     // repeated .RegionLoad region_loads = 5;
+    /**
+     * <code>repeated .RegionLoad region_loads = 5;</code>
+     *
+     * <pre>
+     ** Information on the load of individual regions. 
+     * </pre>
+     */
     java.util.List<org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionLoad> 
         getRegionLoadsList();
+    /**
+     * <code>repeated .RegionLoad region_loads = 5;</code>
+     *
+     * <pre>
+     ** Information on the load of individual regions. 
+     * </pre>
+     */
     org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionLoad getRegionLoads(int index);
+    /**
+     * <code>repeated .RegionLoad region_loads = 5;</code>
+     *
+     * <pre>
+     ** Information on the load of individual regions. 
+     * </pre>
+     */
     int getRegionLoadsCount();
+    /**
+     * <code>repeated .RegionLoad region_loads = 5;</code>
+     *
+     * <pre>
+     ** Information on the load of individual regions. 
+     * </pre>
+     */
     java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionLoadOrBuilder> 
         getRegionLoadsOrBuilderList();
+    /**
+     * <code>repeated .RegionLoad region_loads = 5;</code>
+     *
+     * <pre>
+     ** Information on the load of individual regions. 
+     * </pre>
+     */
     org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionLoadOrBuilder getRegionLoadsOrBuilder(
         int index);
-    
+
     // repeated .Coprocessor coprocessors = 6;
+    /**
+     * <code>repeated .Coprocessor coprocessors = 6;</code>
+     *
+     * <pre>
+     **
+     * Regionserver-level coprocessors, e.g., WALObserver implementations.
+     * Region-level coprocessors, on the other hand, are stored inside RegionLoad
+     * objects.
+     * </pre>
+     */
     java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Coprocessor> 
         getCoprocessorsList();
+    /**
+     * <code>repeated .Coprocessor coprocessors = 6;</code>
+     *
+     * <pre>
+     **
+     * Regionserver-level coprocessors, e.g., WALObserver implementations.
+     * Region-level coprocessors, on the other hand, are stored inside RegionLoad
+     * objects.
+     * </pre>
+     */
     org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Coprocessor getCoprocessors(int index);
+    /**
+     * <code>repeated .Coprocessor coprocessors = 6;</code>
+     *
+     * <pre>
+     **
+     * Regionserver-level coprocessors, e.g., WALObserver implementations.
+     * Region-level coprocessors, on the other hand, are stored inside RegionLoad
+     * objects.
+     * </pre>
+     */
     int getCoprocessorsCount();
+    /**
+     * <code>repeated .Coprocessor coprocessors = 6;</code>
+     *
+     * <pre>
+     **
+     * Regionserver-level coprocessors, e.g., WALObserver implementations.
+     * Region-level coprocessors, on the other hand, are stored inside RegionLoad
+     * objects.
+     * </pre>
+     */
     java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.CoprocessorOrBuilder> 
         getCoprocessorsOrBuilderList();
+    /**
+     * <code>repeated .Coprocessor coprocessors = 6;</code>
+     *
+     * <pre>
+     **
+     * Regionserver-level coprocessors, e.g., WALObserver implementations.
+     * Region-level coprocessors, on the other hand, are stored inside RegionLoad
+     * objects.
+     * </pre>
+     */
     org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.CoprocessorOrBuilder getCoprocessorsOrBuilder(
         int index);
-    
+
     // optional uint64 report_start_time = 7;
+    /**
+     * <code>optional uint64 report_start_time = 7;</code>
+     *
+     * <pre>
+     **
+     * Time when incremental (non-total) counts began being calculated (e.g. number_of_requests)
+     * time is measured as the difference, measured in milliseconds, between the current time
+     * and midnight, January 1, 1970 UTC.
+     * </pre>
+     */
     boolean hasReportStartTime();
+    /**
+     * <code>optional uint64 report_start_time = 7;</code>
+     *
+     * <pre>
+     **
+     * Time when incremental (non-total) counts began being calculated (e.g. number_of_requests)
+     * time is measured as the difference, measured in milliseconds, between the current time
+     * and midnight, January 1, 1970 UTC.
+     * </pre>
+     */
     long getReportStartTime();
-    
+
     // optional uint64 report_end_time = 8;
+    /**
+     * <code>optional uint64 report_end_time = 8;</code>
+     *
+     * <pre>
+     **
+     * Time when report was generated.
+     * time is measured as the difference, measured in milliseconds, between the current time
+     * and midnight, January 1, 1970 UTC.
+     * </pre>
+     */
     boolean hasReportEndTime();
+    /**
+     * <code>optional uint64 report_end_time = 8;</code>
+     *
+     * <pre>
+     **
+     * Time when report was generated.
+     * time is measured as the difference, measured in milliseconds, between the current time
+     * and midnight, January 1, 1970 UTC.
+     * </pre>
+     */
     long getReportEndTime();
-    
+
     // optional uint32 info_server_port = 9;
+    /**
+     * <code>optional uint32 info_server_port = 9;</code>
+     *
+     * <pre>
+     **
+     * The port number that this region server is hosing an info server on.
+     * </pre>
+     */
     boolean hasInfoServerPort();
+    /**
+     * <code>optional uint32 info_server_port = 9;</code>
+     *
+     * <pre>
+     **
+     * The port number that this region server is hosing an info server on.
+     * </pre>
+     */
     int getInfoServerPort();
   }
+  /**
+   * Protobuf type {@code ServerLoad}
+   */
   public static final class ServerLoad extends
       com.google.protobuf.GeneratedMessage
       implements ServerLoadOrBuilder {
     // Use ServerLoad.newBuilder() to construct.
-    private ServerLoad(Builder builder) {
+    private ServerLoad(com.google.protobuf.GeneratedMessage.Builder<?> builder) {
       super(builder);
+      this.unknownFields = builder.getUnknownFields();
     }
-    private ServerLoad(boolean noInit) {}
-    
+    private ServerLoad(boolean noInit) { this.unknownFields = com.google.protobuf.UnknownFieldSet.getDefaultInstance(); }
+
     private static final ServerLoad defaultInstance;
     public static ServerLoad getDefaultInstance() {
       return defaultInstance;
     }
-    
+
     public ServerLoad getDefaultInstanceForType() {
       return defaultInstance;
     }
-    
+
+    private final com.google.protobuf.UnknownFieldSet unknownFields;
+    @java.lang.Override
+    public final com.google.protobuf.UnknownFieldSet
+        getUnknownFields() {
+      return this.unknownFields;
+    }
+    private ServerLoad(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      initFields();
+      int mutable_bitField0_ = 0;
+      com.google.protobuf.UnknownFieldSet.Builder unknownFields =
+          com.google.protobuf.UnknownFieldSet.newBuilder();
+      try {
+        boolean done = false;
+        while (!done) {
+          int tag = input.readTag();
+          switch (tag) {
+            case 0:
+              done = true;
+              break;
+            default: {
+              if (!parseUnknownField(input, unknownFields,
+                                     extensionRegistry, tag)) {
+                done = true;
+              }
+              break;
+            }
+            case 8: {
+              bitField0_ |= 0x00000001;
+              numberOfRequests_ = input.readUInt32();
+              break;
+            }
+            case 16: {
+              bitField0_ |= 0x00000002;
+              totalNumberOfRequests_ = input.readUInt32();
+              break;
+            }
+            case 24: {
+              bitField0_ |= 0x00000004;
+              usedHeapMB_ = input.readUInt32();
+              break;
+            }
+            case 32: {
+              bitField0_ |= 0x00000008;
+              maxHeapMB_ = input.readUInt32();
+              break;
+            }
+            case 42: {
+              if (!((mutable_bitField0_ & 0x00000010) == 0x00000010)) {
+                regionLoads_ = new java.util.ArrayList<org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionLoad>();
+                mutable_bitField0_ |= 0x00000010;
+              }
+              regionLoads_.add(input.readMessage(org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionLoad.PARSER, extensionRegistry));
+              break;
+            }
+            case 50: {
+              if (!((mutable_bitField0_ & 0x00000020) == 0x00000020)) {
+                coprocessors_ = new java.util.ArrayList<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Coprocessor>();
+                mutable_bitField0_ |= 0x00000020;
+              }
+              coprocessors_.add(input.readMessage(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Coprocessor.PARSER, extensionRegistry));
+              break;
+            }
+            case 56: {
+              bitField0_ |= 0x00000010;
+              reportStartTime_ = input.readUInt64();
+              break;
+            }
+            case 64: {
+              bitField0_ |= 0x00000020;
+              reportEndTime_ = input.readUInt64();
+              break;
+            }
+            case 72: {
+              bitField0_ |= 0x00000040;
+              infoServerPort_ = input.readUInt32();
+              break;
+            }
+          }
+        }
+      } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+        throw e.setUnfinishedMessage(this);
+      } catch (java.io.IOException e) {
+        throw new com.google.protobuf.InvalidProtocolBufferException(
+            e.getMessage()).setUnfinishedMessage(this);
+      } finally {
+        if (((mutable_bitField0_ & 0x00000010) == 0x00000010)) {
+          regionLoads_ = java.util.Collections.unmodifiableList(regionLoads_);
+        }
+        if (((mutable_bitField0_ & 0x00000020) == 0x00000020)) {
+          coprocessors_ = java.util.Collections.unmodifiableList(coprocessors_);
+        }
+        this.unknownFields = unknownFields.build();
+        makeExtensionsImmutable();
+      }
+    }
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
       return org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.internal_static_ServerLoad_descriptor;
     }
-    
+
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.internal_static_ServerLoad_fieldAccessorTable;
+      return org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.internal_static_ServerLoad_fieldAccessorTable
+          .ensureFieldAccessorsInitialized(
+              org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ServerLoad.class, org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ServerLoad.Builder.class);
     }
-    
+
+    public static com.google.protobuf.Parser<ServerLoad> PARSER =
+        new com.google.protobuf.AbstractParser<ServerLoad>() {
+      public ServerLoad parsePartialFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        return new ServerLoad(input, extensionRegistry);
+      }
+    };
+
+    @java.lang.Override
+    public com.google.protobuf.Parser<ServerLoad> getParserForType() {
+      return PARSER;
+    }
+
     private int bitField0_;
     // optional uint32 number_of_requests = 1;
     public static final int NUMBER_OF_REQUESTS_FIELD_NUMBER = 1;
     private int numberOfRequests_;
+    /**
+     * <code>optional uint32 number_of_requests = 1;</code>
+     *
+     * <pre>
+     ** Number of requests since last report. 
+     * </pre>
+     */
     public boolean hasNumberOfRequests() {
       return ((bitField0_ & 0x00000001) == 0x00000001);
     }
+    /**
+     * <code>optional uint32 number_of_requests = 1;</code>
+     *
+     * <pre>
+     ** Number of requests since last report. 
+     * </pre>
+     */
     public int getNumberOfRequests() {
       return numberOfRequests_;
     }
-    
+
     // optional uint32 total_number_of_requests = 2;
     public static final int TOTAL_NUMBER_OF_REQUESTS_FIELD_NUMBER = 2;
     private int totalNumberOfRequests_;
+    /**
+     * <code>optional uint32 total_number_of_requests = 2;</code>
+     *
+     * <pre>
+     ** Total Number of requests from the start of the region server. 
+     * </pre>
+     */
     public boolean hasTotalNumberOfRequests() {
       return ((bitField0_ & 0x00000002) == 0x00000002);
     }
+    /**
+     * <code>optional uint32 total_number_of_requests = 2;</code>
+     *
+     * <pre>
+     ** Total Number of requests from the start of the region server. 
+     * </pre>
+     */
     public int getTotalNumberOfRequests() {
       return totalNumberOfRequests_;
     }
-    
+
     // optional uint32 used_heap_MB = 3;
     public static final int USED_HEAP_MB_FIELD_NUMBER = 3;
     private int usedHeapMB_;
+    /**
+     * <code>optional uint32 used_heap_MB = 3;</code>
+     *
+     * <pre>
+     ** the amount of used heap, in MB. 
+     * </pre>
+     */
     public boolean hasUsedHeapMB() {
       return ((bitField0_ & 0x00000004) == 0x00000004);
     }
+    /**
+     * <code>optional uint32 used_heap_MB = 3;</code>
+     *
+     * <pre>
+     ** the amount of used heap, in MB. 
+     * </pre>
+     */
     public int getUsedHeapMB() {
       return usedHeapMB_;
     }
-    
+
     // optional uint32 max_heap_MB = 4;
     public static final int MAX_HEAP_MB_FIELD_NUMBER = 4;
     private int maxHeapMB_;
+    /**
+     * <code>optional uint32 max_heap_MB = 4;</code>
+     *
+     * <pre>
+     ** the maximum allowable size of the heap, in MB. 
+     * </pre>
+     */
     public boolean hasMaxHeapMB() {
       return ((bitField0_ & 0x00000008) == 0x00000008);
     }
+    /**
+     * <code>optional uint32 max_heap_MB = 4;</code>
+     *
+     * <pre>
+     ** the maximum allowable size of the heap, in MB. 
+     * </pre>
+     */
     public int getMaxHeapMB() {
       return maxHeapMB_;
     }
-    
+
     // repeated .RegionLoad region_loads = 5;
     public static final int REGION_LOADS_FIELD_NUMBER = 5;
     private java.util.List<org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionLoad> regionLoads_;
+    /**
+     * <code>repeated .RegionLoad region_loads = 5;</code>
+     *
+     * <pre>
+     ** Information on the load of individual regions. 
+     * </pre>
+     */
     public java.util.List<org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionLoad> getRegionLoadsList() {
       return regionLoads_;
     }
+    /**
+     * <code>repeated .RegionLoad region_loads = 5;</code>
+     *
+     * <pre>
+     ** Information on the load of individual regions. 
+     * </pre>
+     */
     public java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionLoadOrBuilder> 
         getRegionLoadsOrBuilderList() {
       return regionLoads_;
     }
+    /**
+     * <code>repeated .RegionLoad region_loads = 5;</code>
+     *
+     * <pre>
+     ** Information on the load of individual regions. 
+     * </pre>
+     */
     public int getRegionLoadsCount() {
       return regionLoads_.size();
     }
+    /**
+     * <code>repeated .RegionLoad region_loads = 5;</code>
+     *
+     * <pre>
+     ** Information on the load of individual regions. 
+     * </pre>
+     */
     public org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionLoad getRegionLoads(int index) {
       return regionLoads_.get(index);
     }
+    /**
+     * <code>repeated .RegionLoad region_loads = 5;</code>
+     *
+     * <pre>
+     ** Information on the load of individual regions. 
+     * </pre>
+     */
     public org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionLoadOrBuilder getRegionLoadsOrBuilder(
         int index) {
       return regionLoads_.get(index);
     }
-    
+
     // repeated .Coprocessor coprocessors = 6;
     public static final int COPROCESSORS_FIELD_NUMBER = 6;
     private java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Coprocessor> coprocessors_;
+    /**
+     * <code>repeated .Coprocessor coprocessors = 6;</code>
+     *
+     * <pre>
+     **
+     * Regionserver-level coprocessors, e.g., WALObserver implementations.
+     * Region-level coprocessors, on the other hand, are stored inside RegionLoad
+     * objects.
+     * </pre>
+     */
     public java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Coprocessor> getCoprocessorsList() {
       return coprocessors_;
     }
+    /**
+     * <code>repeated .Coprocessor coprocessors = 6;</code>
+     *
+     * <pre>
+     **
+     * Regionserver-level coprocessors, e.g., WALObserver implementations.
+     * Region-level coprocessors, on the other hand, are stored inside RegionLoad
+     * objects.
+     * </pre>
+     */
     public java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.CoprocessorOrBuilder> 
         getCoprocessorsOrBuilderList() {
       return coprocessors_;
     }
+    /**
+     * <code>repeated .Coprocessor coprocessors = 6;</code>
+     *
+     * <pre>
+     **
+     * Regionserver-level coprocessors, e.g., WALObserver implementations.
+     * Region-level coprocessors, on the other hand, are stored inside RegionLoad
+     * objects.
+     * </pre>
+     */
     public int getCoprocessorsCount() {
       return coprocessors_.size();
     }
+    /**
+     * <code>repeated .Coprocessor coprocessors = 6;</code>
+     *
+     * <pre>
+     **
+     * Regionserver-level coprocessors, e.g., WALObserver implementations.
+     * Region-level coprocessors, on the other hand, are stored inside RegionLoad
+     * objects.
+     * </pre>
+     */
     public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Coprocessor getCoprocessors(int index) {
       return coprocessors_.get(index);
     }
+    /**
+     * <code>repeated .Coprocessor coprocessors = 6;</code>
+     *
+     * <pre>
+     **
+     * Regionserver-level coprocessors, e.g., WALObserver implementations.
+     * Region-level coprocessors, on the other hand, are stored inside RegionLoad
+     * objects.
+     * </pre>
+     */
     public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.CoprocessorOrBuilder getCoprocessorsOrBuilder(
         int index) {
       return coprocessors_.get(index);
     }
-    
+
     // optional uint64 report_start_time = 7;
     public static final int REPORT_START_TIME_FIELD_NUMBER = 7;
     private long reportStartTime_;
+    /**
+     * <code>optional uint64 report_start_time = 7;</code>
+     *
+     * <pre>
+     **
+     * Time when incremental (non-total) counts began being calculated (e.g. number_of_requests)
+     * time is measured as the difference, measured in milliseconds, between the current time
+     * and midnight, January 1, 1970 UTC.
+     * </pre>
+     */
     public boolean hasReportStartTime() {
       return ((bitField0_ & 0x00000010) == 0x00000010);
     }
+    /**
+     * <code>optional uint64 report_start_time = 7;</code>
+     *
+     * <pre>
+     **
+     * Time when incremental (non-total) counts began being calculated (e.g. number_of_requests)
+     * time is measured as the difference, measured in milliseconds, between the current time
+     * and midnight, January 1, 1970 UTC.
+     * </pre>
+     */
     public long getReportStartTime() {
       return reportStartTime_;
     }
-    
+
     // optional uint64 report_end_time = 8;
     public static final int REPORT_END_TIME_FIELD_NUMBER = 8;
     private long reportEndTime_;
+    /**
+     * <code>optional uint64 report_end_time = 8;</code>
+     *
+     * <pre>
+     **
+     * Time when report was generated.
+     * time is measured as the difference, measured in milliseconds, between the current time
+     * and midnight, January 1, 1970 UTC.
+     * </pre>
+     */
     public boolean hasReportEndTime() {
       return ((bitField0_ & 0x00000020) == 0x00000020);
     }
+    /**
+     * <code>optional uint64 report_end_time = 8;</code>
+     *
+     * <pre>
+     **
+     * Time when report was generated.
+     * time is measured as the difference, measured in milliseconds, between the current time
+     * and midnight, January 1, 1970 UTC.
+     * </pre>
+     */
     public long getReportEndTime() {
       return reportEndTime_;
     }
-    
+
     // optional uint32 info_server_port = 9;
     public static final int INFO_SERVER_PORT_FIELD_NUMBER = 9;
     private int infoServerPort_;
+    /**
+     * <code>optional uint32 info_server_port = 9;</code>
+     *
+     * <pre>
+     **
+     * The port number that this region server is hosing an info server on.
+     * </pre>
+     */
     public boolean hasInfoServerPort() {
       return ((bitField0_ & 0x00000040) == 0x00000040);
     }
+    /**
+     * <code>optional uint32 info_server_port = 9;</code>
+     *
+     * <pre>
+     **
+     * The port number that this region server is hosing an info server on.
+     * </pre>
+     */
     public int getInfoServerPort() {
       return infoServerPort_;
     }
-    
+
     private void initFields() {
       numberOfRequests_ = 0;
       totalNumberOfRequests_ = 0;
@@ -2977,7 +4910,7 @@ public final class ClusterStatusProtos {
     public final boolean isInitialized() {
       byte isInitialized = memoizedIsInitialized;
       if (isInitialized != -1) return isInitialized == 1;
-      
+
       for (int i = 0; i < getRegionLoadsCount(); i++) {
         if (!getRegionLoads(i).isInitialized()) {
           memoizedIsInitialized = 0;
@@ -2993,7 +4926,7 @@ public final class ClusterStatusProtos {
       memoizedIsInitialized = 1;
       return true;
     }
-    
+
     public void writeTo(com.google.protobuf.CodedOutputStream output)
                         throws java.io.IOException {
       getSerializedSize();
@@ -3026,12 +4959,12 @@ public final class ClusterStatusProtos {
       }
       getUnknownFields().writeTo(output);
     }
-    
+
     private int memoizedSerializedSize = -1;
     public int getSerializedSize() {
       int size = memoizedSerializedSize;
       if (size != -1) return size;
-    
+
       size = 0;
       if (((bitField0_ & 0x00000001) == 0x00000001)) {
         size += com.google.protobuf.CodedOutputStream
@@ -3073,14 +5006,14 @@ public final class ClusterStatusProtos {
       memoizedSerializedSize = size;
       return size;
     }
-    
+
     private static final long serialVersionUID = 0L;
     @java.lang.Override
     protected java.lang.Object writeReplace()
         throws java.io.ObjectStreamException {
       return super.writeReplace();
     }
-    
+
     @java.lang.Override
     public boolean equals(final java.lang.Object obj) {
       if (obj == this) {
@@ -3090,7 +5023,7 @@ public final class ClusterStatusProtos {
         return super.equals(obj);
       }
       org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ServerLoad other = (org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ServerLoad) obj;
-      
+
       boolean result = true;
       result = result && (hasNumberOfRequests() == other.hasNumberOfRequests());
       if (hasNumberOfRequests()) {
@@ -3135,9 +5068,13 @@ public final class ClusterStatusProtos {
           getUnknownFields().equals(other.getUnknownFields());
       return result;
     }
-    
+
+    private int memoizedHashCode = 0;
     @java.lang.Override
     public int hashCode() {
+      if (memoizedHashCode != 0) {
+        return memoizedHashCode;
+      }
       int hash = 41;
       hash = (19 * hash) + getDescriptorForType().hashCode();
       if (hasNumberOfRequests()) {
@@ -3177,89 +5114,79 @@ public final class ClusterStatusProtos {
         hash = (53 * hash) + getInfoServerPort();
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
+      memoizedHashCode = hash;
       return hash;
     }
-    
+
     public static org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ServerLoad parseFrom(
         com.google.protobuf.ByteString data)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return newBuilder().mergeFrom(data).buildParsed();
+      return PARSER.parseFrom(data);
     }
     public static org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ServerLoad parseFrom(
         com.google.protobuf.ByteString data,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return newBuilder().mergeFrom(data, extensionRegistry)
-               .buildParsed();
+      return PARSER.parseFrom(data, extensionRegistry);
     }
     public static org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ServerLoad parseFrom(byte[] data)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return newBuilder().mergeFrom(data).buildParsed();
+      return PARSER.parseFrom(data);
     }
     public static org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ServerLoad parseFrom(
         byte[] data,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return newBuilder().mergeFrom(data, extensionRegistry)
-               .buildParsed();
+      return PARSER.parseFrom(data, extensionRegistry);
     }
     public static org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ServerLoad parseFrom(java.io.InputStream input)
         throws java.io.IOException {
-      return newBuilder().mergeFrom(input).buildParsed();
+      return PARSER.parseFrom(input);
     }
     public static org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ServerLoad parseFrom(
         java.io.InputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
-      return newBuilder().mergeFrom(input, extensionRegistry)
-               .buildParsed();
+      return PARSER.parseFrom(input, extensionRegistry);
     }
     public static org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ServerLoad parseDelimitedFrom(java.io.InputStream input)
         throws java.io.IOException {
-      Builder builder = newBuilder();
-      if (builder.mergeDelimitedFrom(input)) {
-        return builder.buildParsed();
-      } else {
-        return null;
-      }
+      return PARSER.parseDelimitedFrom(input);
     }
     public static org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ServerLoad parseDelimitedFrom(
         java.io.InputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
-      Builder builder = newBuilder();
-      if (builder.mergeDelimitedFrom(input, extensionRegistry)) {
-        return builder.buildParsed();
-      } else {
-        return null;
-      }
+      return PARSER.parseDelimitedFrom(input, extensionRegistry);
     }
     public static org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ServerLoad parseFrom(
         com.google.protobuf.CodedInputStream input)
         throws java.io.IOException {
-      return newBuilder().mergeFrom(input).buildParsed();
+      return PARSER.parseFrom(input);
     }
     public static org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ServerLoad parseFrom(
         com.google.protobuf.CodedInputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
-      return newBuilder().mergeFrom(input, extensionRegistry)
-               .buildParsed();
+      return PARSER.parseFrom(input, extensionRegistry);
     }
-    
+
     public static Builder newBuilder() { return Builder.create(); }
     public Builder newBuilderForType() { return newBuilder(); }
     public static Builder newBuilder(org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ServerLoad prototype) {
       return newBuilder().mergeFrom(prototype);
     }
     public Builder toBuilder() { return newBuilder(this); }
-    
+
     @java.lang.Override
     protected Builder newBuilderForType(
         com.google.protobuf.GeneratedMessage.BuilderParent parent) {
       Builder builder = new Builder(parent);
       return builder;
     }
+    /**
+     * Protobuf type {@code ServerLoad}
+     */
     public static final class Builder extends
         com.google.protobuf.GeneratedMessage.Builder<Builder>
        implements org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ServerLoadOrBuilder {
@@ -3267,18 +5194,21 @@ public final class ClusterStatusProtos {
           getDescriptor() {
         return org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.internal_static_ServerLoad_descriptor;
       }
-      
+
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.internal_static_ServerLoad_fieldAccessorTable;
+        return org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.internal_static_ServerLoad_fieldAccessorTable
+            .ensureFieldAccessorsInitialized(
+                org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ServerLoad.class, org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ServerLoad.Builder.class);
       }
-      
+
       // Construct using org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ServerLoad.newBuilder()
       private Builder() {
         maybeForceBuilderInitialization();
       }
-      
-      private Builder(BuilderParent parent) {
+
+      private Builder(
+          com.google.protobuf.GeneratedMessage.BuilderParent parent) {
         super(parent);
         maybeForceBuilderInitialization();
       }
@@ -3291,7 +5221,7 @@ public final class ClusterStatusProtos {
       private static Builder create() {
         return new Builder();
       }
-      
+
       public Builder clear() {
         super.clear();
         numberOfRequests_ = 0;
@@ -3322,20 +5252,20 @@ public final class ClusterStatusProtos {
         bitField0_ = (bitField0_ & ~0x00000100);
         return this;
       }
-      
+
       public Builder clone() {
         return create().mergeFrom(buildPartial());
       }
-      
+
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ServerLoad.getDescriptor();
+        return org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.internal_static_ServerLoad_descriptor;
       }
-      
+
       public org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ServerLoad getDefaultInstanceForType() {
         return org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ServerLoad.getDefaultInstance();
       }
-      
+
       public org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ServerLoad build() {
         org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ServerLoad result = buildPartial();
         if (!result.isInitialized()) {
@@ -3343,17 +5273,7 @@ public final class ClusterStatusProtos {
         }
         return result;
       }
-      
-      private org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ServerLoad buildParsed()
-          throws com.google.protobuf.InvalidProtocolBufferException {
-        org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ServerLoad result = buildPartial();
-        if (!result.isInitialized()) {
-          throw newUninitializedMessageException(
-            result).asInvalidProtocolBufferException();
-        }
-        return result;
-      }
-      
+
       public org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ServerLoad buildPartial() {
         org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ServerLoad result = new org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ServerLoad(this);
         int from_bitField0_ = bitField0_;
@@ -3408,7 +5328,7 @@ public final class ClusterStatusProtos {
         onBuilt();
         return result;
       }
-      
+
       public Builder mergeFrom(com.google.protobuf.Message other) {
         if (other instanceof org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ServerLoad) {
           return mergeFrom((org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ServerLoad)other);
@@ -3417,7 +5337,7 @@ public final class ClusterStatusProtos {
           return this;
         }
       }
-      
+
       public Builder mergeFrom(org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ServerLoad other) {
         if (other == org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ServerLoad.getDefaultInstance()) return this;
         if (other.hasNumberOfRequests()) {
@@ -3496,7 +5416,7 @@ public final class ClusterStatusProtos {
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
       }
-      
+
       public final boolean isInitialized() {
         for (int i = 0; i < getRegionLoadsCount(); i++) {
           if (!getRegionLoads(i).isInitialized()) {
@@ -3512,167 +5432,222 @@ public final class ClusterStatusProtos {
         }
         return true;
       }
-      
+
       public Builder mergeFrom(
           com.google.protobuf.CodedInputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws java.io.IOException {
-        com.google.protobuf.UnknownFieldSet.Builder unknownFields =
-          com.google.protobuf.UnknownFieldSet.newBuilder(
-            this.getUnknownFields());
-        while (true) {
-          int tag = input.readTag();
-          switch (tag) {
-            case 0:
-              this.setUnknownFields(unknownFields.build());
-              onChanged();
-              return this;
-            default: {
-              if (!parseUnknownField(input, unknownFields,
-                                     extensionRegistry, tag)) {
-                this.setUnknownFields(unknownFields.build());
-                onChanged();
-                return this;
-              }
-              break;
-            }
-            case 8: {
-              bitField0_ |= 0x00000001;
-              numberOfRequests_ = input.readUInt32();
-              break;
-            }
-            case 16: {
-              bitField0_ |= 0x00000002;
-              totalNumberOfRequests_ = input.readUInt32();
-              break;
-            }
-            case 24: {
-              bitField0_ |= 0x00000004;
-              usedHeapMB_ = input.readUInt32();
-              break;
-            }
-            case 32: {
-              bitField0_ |= 0x00000008;
-              maxHeapMB_ = input.readUInt32();
-              break;
-            }
-            case 42: {
-              org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionLoad.Builder subBuilder = org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionLoad.newBuilder();
-              input.readMessage(subBuilder, extensionRegistry);
-              addRegionLoads(subBuilder.buildPartial());
-              break;
-            }
-            case 50: {
-              org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Coprocessor.Builder subBuilder = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Coprocessor.newBuilder();
-              input.readMessage(subBuilder, extensionRegistry);
-              addCoprocessors(subBuilder.buildPartial());
-              break;
-            }
-            case 56: {
-              bitField0_ |= 0x00000040;
-              reportStartTime_ = input.readUInt64();
-              break;
-            }
-            case 64: {
-              bitField0_ |= 0x00000080;
-              reportEndTime_ = input.readUInt64();
-              break;
-            }
-            case 72: {
-              bitField0_ |= 0x00000100;
-              infoServerPort_ = input.readUInt32();
-              break;
-            }
+        org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ServerLoad parsedMessage = null;
+        try {
+          parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
+        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+          parsedMessage = (org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ServerLoad) e.getUnfinishedMessage();
+          throw e;
+        } finally {
+          if (parsedMessage != null) {
+            mergeFrom(parsedMessage);
           }
         }
+        return this;
       }
-      
       private int bitField0_;
-      
+
       // optional uint32 number_of_requests = 1;
       private int numberOfRequests_ ;
+      /**
+       * <code>optional uint32 number_of_requests = 1;</code>
+       *
+       * <pre>
+       ** Number of requests since last report. 
+       * </pre>
+       */
       public boolean hasNumberOfRequests() {
         return ((bitField0_ & 0x00000001) == 0x00000001);
       }
+      /**
+       * <code>optional uint32 number_of_requests = 1;</code>
+       *
+       * <pre>
+       ** Number of requests since last report. 
+       * </pre>
+       */
       public int getNumberOfRequests() {
         return numberOfRequests_;
       }
+      /**
+       * <code>optional uint32 number_of_requests = 1;</code>
+       *
+       * <pre>
+       ** Number of requests since last report. 
+       * </pre>
+       */
       public Builder setNumberOfRequests(int value) {
         bitField0_ |= 0x00000001;
         numberOfRequests_ = value;
         onChanged();
         return this;
       }
+      /**
+       * <code>optional uint32 number_of_requests = 1;</code>
+       *
+       * <pre>
+       ** Number of requests since last report. 
+       * </pre>
+       */
       public Builder clearNumberOfRequests() {
         bitField0_ = (bitField0_ & ~0x00000001);
         numberOfRequests_ = 0;
         onChanged();
         return this;
       }
-      
+
       // optional uint32 total_number_of_requests = 2;
       private int totalNumberOfRequests_ ;
+      /**
+       * <code>optional uint32 total_number_of_requests = 2;</code>
+       *
+       * <pre>
+       ** Total Number of requests from the start of the region server. 
+       * </pre>
+       */
       public boolean hasTotalNumberOfRequests() {
         return ((bitField0_ & 0x00000002) == 0x00000002);
       }
+      /**
+       * <code>optional uint32 total_number_of_requests = 2;</code>
+       *
+       * <pre>
+       ** Total Number of requests from the start of the region server. 
+       * </pre>
+       */
       public int getTotalNumberOfRequests() {
         return totalNumberOfRequests_;
       }
+      /**
+       * <code>optional uint32 total_number_of_requests = 2;</code>
+       *
+       * <pre>
+       ** Total Number of requests from the start of the region server. 
+       * </pre>
+       */
       public Builder setTotalNumberOfRequests(int value) {
         bitField0_ |= 0x00000002;
         totalNumberOfRequests_ = value;
         onChanged();
         return this;
       }
+      /**
+       * <code>optional uint32 total_number_of_requests = 2;</code>
+       *
+       * <pre>
+       ** Total Number of requests from the start of the region server. 
+       * </pre>
+       */
       public Builder clearTotalNumberOfRequests() {
         bitField0_ = (bitField0_ & ~0x00000002);
         totalNumberOfRequests_ = 0;
         onChanged();
         return this;
       }
-      
+
       // optional uint32 used_heap_MB = 3;
       private int usedHeapMB_ ;
+      /**
+       * <code>optional uint32 used_heap_MB = 3;</code>
+       *
+       * <pre>
+       ** the amount of used heap, in MB. 
+       * </pre>
+       */
       public boolean hasUsedHeapMB() {
         return ((bitField0_ & 0x00000004) == 0x00000004);
       }
+      /**
+       * <code>optional uint32 used_heap_MB = 3;</code>
+       *
+       * <pre>
+       ** the amount of used heap, in MB. 
+       * </pre>
+       */
       public int getUsedHeapMB() {
         return usedHeapMB_;
       }
+      /**
+       * <code>optional uint32 used_heap_MB = 3;</code>
+       *
+       * <pre>
+       ** the amount of used heap, in MB. 
+       * </pre>
+       */
       public Builder setUsedHeapMB(int value) {
         bitField0_ |= 0x00000004;
         usedHeapMB_ = value;
         onChanged();
         return this;
       }
+      /**
+       * <code>optional uint32 used_heap_MB = 3;</code>
+       *
+       * <pre>
+       ** the amount of used heap, in MB. 
+       * </pre>
+       */
       public Builder clearUsedHeapMB() {
         bitField0_ = (bitField0_ & ~0x00000004);
         usedHeapMB_ = 0;
         onChanged();
         return this;
       }
-      
+
       // optional uint32 max_heap_MB = 4;
       private int maxHeapMB_ ;
+      /**
+       * <code>optional uint32 max_heap_MB = 4;</code>
+       *
+       * <pre>
+       ** the maximum allowable size of the heap, in MB. 
+       * </pre>
+       */
       public boolean hasMaxHeapMB() {
         return ((bitField0_ & 0x00000008) == 0x00000008);
       }
+      /**
+       * <code>optional uint32 max_heap_MB = 4;</code>
+       *
+       * <pre>
+       ** the maximum allowable size of the heap, in MB. 
+       * </pre>
+       */
       public int getMaxHeapMB() {
         return maxHeapMB_;
       }
+      /**
+       * <code>optional uint32 max_heap_MB = 4;</code>
+       *
+       * <pre>
+       ** the maximum allowable size of the heap, in MB. 
+       * </pre>
+       */
       public Builder setMaxHeapMB(int value) {
         bitField0_ |= 0x00000008;
         maxHeapMB_ = value;
         onChanged();
         return this;
       }
+      /**
+       * <code>optional uint32 max_heap_MB = 4;</code>
+       *
+       * <pre>
+       ** the maximum allowable size of the heap, in MB. 
+       * </pre>
+       */
       public Builder clearMaxHeapMB() {
         bitField0_ = (bitField0_ & ~0x00000008);
         maxHeapMB_ = 0;
         onChanged();
         return this;
       }
-      
+
       // repeated .RegionLoad region_loads = 5;
       private java.util.List<org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionLoad> regionLoads_ =
         java.util.Collections.emptyList();
@@ -3682,10 +5657,17 @@ public final class ClusterStatusProtos {
           bitField0_ |= 0x00000010;
          }
       }
-      
+
       private com.google.protobuf.RepeatedFieldBuilder<
           org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionLoad, org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionLoad.Builder, org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionLoadOrBuilder> regionLoadsBuilder_;
-      
+
+      /**
+       * <code>repeated .RegionLoad region_loads = 5;</code>
+       *
+       * <pre>
+       ** Information on the load of individual regions. 
+       * </pre>
+       */
       public java.util.List<org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionLoad> getRegionLoadsList() {
         if (regionLoadsBuilder_ == null) {
           return java.util.Collections.unmodifiableList(regionLoads_);
@@ -3693,6 +5675,13 @@ public final class ClusterStatusProtos {
           return regionLoadsBuilder_.getMessageList();
         }
       }
+      /**
+       * <code>repeated .RegionLoad region_loads = 5;</code>
+       *
+       * <pre>
+       ** Information on the load of individual regions. 
+       * </pre>
+       */
       public int getRegionLoadsCount() {
         if (regionLoadsBuilder_ == null) {
           return regionLoads_.size();
@@ -3700,6 +5689,13 @@ public final class ClusterStatusProtos {
           return regionLoadsBuilder_.getCount();
         }
       }
+      /**
+       * <code>repeated .RegionLoad region_loads = 5;</code>
+       *
+       * <pre>
+       ** Information on the load of individual regions. 
+       * </pre>
+       */
       public org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionLoad getRegionLoads(int index) {
         if (regionLoadsBuilder_ == null) {
           return regionLoads_.get(index);
@@ -3707,6 +5703,13 @@ public final class ClusterStatusProtos {
           return regionLoadsBuilder_.getMessage(index);
         }
       }
+      /**
+       * <code>repeated .RegionLoad region_loads = 5;</code>
+       *
+       * <pre>
+       ** Information on the load of individual regions. 
+       * </pre>
+       */
       public Builder setRegionLoads(
           int index, org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionLoad value) {
         if (regionLoadsBuilder_ == null) {
@@ -3721,6 +5724,13 @@ public final class ClusterStatusProtos {
         }
         return this;
       }
+      /**
+       * <code>repeated .RegionLoad region_loads = 5;</code>
+       *
+       * <pre>
+       ** Information on the load of individual regions. 
+       * </pre>
+       */
       public Builder setRegionLoads(
           int index, org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionLoad.Builder builderForValue) {
         if (regionLoadsBuilder_ == null) {
@@ -3732,6 +5742,13 @@ public final class ClusterStatusProtos {
         }
         return this;
       }
+      /**
+       * <code>repeated .RegionLoad region_loads = 5;</code>
+       *
+       * <pre>
+       ** Information on the load of individual regions. 
+       * </pre>
+       */
       public Builder addRegionLoads(org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionLoad value) {
         if (regionLoadsBuilder_ == null) {
           if (value == null) {
@@ -3745,6 +5762,13 @@ public final class ClusterStatusProtos {
         }
         return this;
       }
+      /**
+       * <code>repeated .RegionLoad region_loads = 5;</code>
+       *
+       * <pre>
+       ** Information on the load of individual regions. 
+       * </pre>
+       */
       public Builder addRegionLoads(
           int index, org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionLoad value) {
         if (regionLoadsBuilder_ == null) {
@@ -3759,6 +5783,13 @@ public final class ClusterStatusProtos {
         }
         return this;
       }
+      /**
+       * <code>repeated .RegionLoad region_loads = 5;</code>
+       *
+       * <pre>
+       ** Information on the load of individual regions. 
+       * </pre>
+       */
       public Builder addRegionLoads(
           org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionLoad.Builder builderForValue) {
         if (regionLoadsBuilder_ == null) {
@@ -3770,6 +5801,13 @@ public final class ClusterStatusProtos {
         }
         return this;
       }
+      /**
+       * <code>repeated .RegionLoad region_loads = 5;</code>
+       *
+       * <pre>
+       ** Information on the load of individual regions. 
+       * </pre>
+       */
       public Builder addRegionLoads(
           int index, org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionLoad.Builder builderForValue) {
         if (regionLoadsBuilder_ == null) {
@@ -3781,6 +5819,13 @@ public final class ClusterStatusProtos {
         }
         return this;
       }
+      /**
+       * <code>repeated .RegionLoad region_loads = 5;</code>
+       *
+       * <pre>
+       ** Information on the load of individual regions. 
+       * </pre>
+       */
       public Builder addAllRegionLoads(
           java.lang.Iterable<? extends org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionLoad> values) {
         if (regionLoadsBuilder_ == null) {
@@ -3792,6 +5837,13 @@ public final class ClusterStatusProtos {
         }
         return this;
       }
+      /**
+       * <code>repeated .RegionLoad region_loads = 5;</code>
+       *
+       * <pre>
+       ** Information on the load of individual regions. 
+       * </pre>
+       */
       public Builder clearRegionLoads() {
         if (regionLoadsBuilder_ == null) {
           regionLoads_ = java.util.Collections.emptyList();
@@ -3802,6 +5854,13 @@ public final class ClusterStatusProtos {
         }
         return this;
       }
+      /**
+       * <code>repeated .RegionLoad region_loads = 5;</code>
+       *
+       * <pre>
+       ** Information on the load of individual regions. 
+       * </pre>
+       */
       public Builder removeRegionLoads(int index) {
         if (regionLoadsBuilder_ == null) {
           ensureRegionLoadsIsMutable();
@@ -3812,10 +5871,24 @@ public final class ClusterStatusProtos {
         }
         return this;
       }
+      /**
+       * <code>repeated .RegionLoad region_loads = 5;</code>
+       *
+       * <pre>
+       ** Information on the load of individual regions. 
+       * </pre>
+       */
       public org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionLoad.Builder getRegionLoadsBuilder(
           int index) {
         return getRegionLoadsFieldBuilder().getBuilder(index);
       }
+      /**
+       * <code>repeated .RegionLoad region_loads = 5;</code>
+       *
+       * <pre>
+       ** Information on the load of individual regions. 
+       * </pre>
+       */
       public org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionLoadOrBuilder getRegionLoadsOrBuilder(
           int index) {
         if (regionLoadsBuilder_ == null) {
@@ -3823,6 +5896,13 @@ public final class ClusterStatusProtos {
           return regionLoadsBuilder_.getMessageOrBuilder(index);
         }
       }
+      /**
+       * <code>repeated .RegionLoad region_loads = 5;</code>
+       *
+       * <pre>
+       ** Information on the load of individual regions. 
+       * </pre>
+       */
       public java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionLoadOrBuilder> 
            getRegionLoadsOrBuilderList() {
         if (regionLoadsBuilder_ != null) {
@@ -3831,15 +5911,36 @@ public final class ClusterStatusProtos {
           return java.util.Collections.unmodifiableList(regionLoads_);
         }
       }
+      /**
+       * <code>repeated .RegionLoad region_loads = 5;</code>
+       *
+       * <pre>
+       ** Information on the load of individual regions. 
+       * </pre>
+       */
       public org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionLoad.Builder addRegionLoadsBuilder() {
         return getRegionLoadsFieldBuilder().addBuilder(
             org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionLoad.getDefaultInstance());
       }
+      /**
+       * <code>repeated .RegionLoad region_loads = 5;</code>
+       *
+       * <pre>
+       ** Information on the load of individual regions. 
+       * </pre>
+       */
       public org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionLoad.Builder addRegionLoadsBuilder(
           int index) {
         return getRegionLoadsFieldBuilder().addBuilder(
             index, org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionLoad.getDefaultInstance());
       }
+      /**
+       * <code>repeated .RegionLoad region_loads = 5;</code>
+       *
+       * <pre>
+       ** Information on the load of individual regions. 
+       * </pre>
+       */
       public java.util.List<org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionLoad.Builder> 
            getRegionLoadsBuilderList() {
         return getRegionLoadsFieldBuilder().getBuilderList();
@@ -3858,7 +5959,7 @@ public final class ClusterStatusProtos {
         }
         return regionLoadsBuilder_;
       }
-      
+
       // repeated .Coprocessor coprocessors = 6;
       private java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Coprocessor> coprocessors_ =
         java.util.Collections.emptyList();
@@ -3868,10 +5969,20 @@ public final class ClusterStatusProtos {
           bitField0_ |= 0x00000020;
          }
       }
-      
+
       private com.google.protobuf.RepeatedFieldBuilder<
           org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Coprocessor, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Coprocessor.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.CoprocessorOrBuilder> coprocessorsBuilder_;
-      
+
+      /**
+       * <code>repeated .Coprocessor coprocessors = 6;</code>
+       *
+       * <pre>
+       **
+       * Regionserver-level coprocessors, e.g., WALObserver implementations.
+       * Region-level coprocessors, on the other hand, are stored inside RegionLoad
+       * objects.
+       * </pre>
+       */
       public java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Coprocessor> getCoprocessorsList() {
         if (coprocessorsBuilder_ == null) {
           return java.util.Collections.unmodifiableList(coprocessors_);
@@ -3879,6 +5990,16 @@ public final class ClusterStatusProtos {
           return coprocessorsBuilder_.getMessageList();
         }
       }
+      /**
+       * <code>repeated .Coprocessor coprocessors = 6;</code>
+       *
+       * <pre>
+       **
+       * Regionserver-level coprocessors, e.g., WALObserver implementations.
+       * Region-level coprocessors, on the other hand, are stored inside RegionLoad
+       * objects.
+       * </pre>
+       */
       public int getCoprocessorsCount() {
         if (coprocessorsBuilder_ == null) {
           return coprocessors_.size();
@@ -3886,6 +6007,16 @@ public final class ClusterStatusProtos {
           return coprocessorsBuilder_.getCount();
         }
       }
+      /**
+       * <code>repeated .Coprocessor coprocessors = 6;</code>
+       *
+       * <pre>
+       **
+       * Regionserver-level coprocessors, e.g., WALObserver implementations.
+       * Region-level coprocessors, on the other hand, are stored inside RegionLoad
+       * objects.
+       * </pre>
+       */
       public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Coprocessor getCoprocessors(int index) {
         if (coprocessorsBuilder_ == null) {
           return coprocessors_.get(index);
@@ -3893,6 +6024,16 @@ public final class ClusterStatusProtos {
           return coprocessorsBuilder_.getMessage(index);
         }
       }
+      /**
+       * <code>repeated .Coprocessor coprocessors = 6;</code>
+       *
+       * <pre>
+       **
+       * Regionserver-level coprocessors, e.g., WALObserver implementations.
+       * Region-level coprocessors, on the other hand, are stored inside RegionLoad
+       * objects.
+       * </pre>
+       */
       public Builder setCoprocessors(
           int index, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Coprocessor value) {
         if (coprocessorsBuilder_ == null) {
@@ -3907,6 +6048,16 @@ public final class ClusterStatusProtos {
         }
         return this;
       }
+      /**
+       * <code>repeated .Coprocessor coprocessors = 6;</code>
+       *
+       * <pre>
+       **
+       * Regionserver-level coprocessors, e.g., WALObserver implementations.
+       * Region-level coprocessors, on the other hand, are stored inside RegionLoad
+       * objects.
+       * </pre>
+       */
       public Builder setCoprocessors(
           int index, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Coprocessor.Builder builderForValue) {
         if (coprocessorsBuilder_ == null) {
@@ -3918,6 +6069,16 @@ public final class ClusterStatusProtos {
         }
         return this;
       }
+      /**
+       * <code>repeated .Coprocessor coprocessors = 6;</code>
+       *
+       * <pre>
+       **
+       * Regionserver-level coprocessors, e.g., WALObserver implementations.
+       * Region-level coprocessors, on the other hand, are stored inside RegionLoad
+       * objects.
+       * </pre>
+       */
       public Builder addCoprocessors(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Coprocessor value) {
         if (coprocessorsBuilder_ == null) {
           if (value == null) {
@@ -3931,6 +6092,16 @@ public final class ClusterStatusProtos {
         }
         return this;
       }
+      /**
+       * <code>repeated .Coprocessor coprocessors = 6;</code>
+       *
+       * <pre>
+       **
+       * Regionserver-level coprocessors, e.g., WALObserver implementations.
+       * Region-level coprocessors, on the other hand, are stored inside RegionLoad
+       * objects.
+       * </pre>
+       */
       public Builder addCoprocessors(
           int index, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Coprocessor value) {
         if (coprocessorsBuilder_ == null) {
@@ -3945,6 +6116,16 @@ public final class ClusterStatusProtos {
         }
         return this;
       }
+      /**
+       * <code>repeated .Coprocessor coprocessors = 6;</code>
+       *
+       * <pre>
+       **
+       * Regionserver-level coprocessors, e.g., WALObserver implementations.
+       * Region-level coprocessors, on the other hand, are stored inside RegionLoad
+       * objects.
+       * </pre>
+       */
       public Builder addCoprocessors(
           org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Coprocessor.Builder builderForValue) {
         if (coprocessorsBuilder_ == null) {
@@ -3956,6 +6137,16 @@ public final class ClusterStatusProtos {
         }
         return this;
       }
+      /**
+       * <code>repeated .Coprocessor coprocessors = 6;</code>
+       *
+       * <pre>
+       **
+       * Regionserver-level coprocessors, e.g., WALObserver implementations.
+       * Region-level coprocessors, on the other hand, are stored inside RegionLoad
+       * objects.
+       * </pre>
+       */
       public Builder addCoprocessors(
           int index, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Coprocessor.Builder builderForValue) {
         if (coprocessorsBuilder_ == null) {
@@ -3967,6 +6158,16 @@ public final class ClusterStatusProtos {
         }
         return this;
       }
+      /**
+       * <code>repeated .Coprocessor coprocessors = 6;</code>
+       *
+       * <pre>
+       **
+       * Regionserver-level coprocessors, e.g., WALObserver implementations.
+       * Region-level coprocessors, on the other hand, are stored inside RegionLoad
+       * objects.
+       * </pre>
+       */
       public Builder addAllCoprocessors(
           java.lang.Iterable<? extends org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Coprocessor> values) {
         if (coprocessorsBuilder_ == null) {
@@ -3978,6 +6179,16 @@ public final class ClusterStatusProtos {
         }
         return this;
       }
+      /**
+       * <code>repeated .Coprocessor coprocessors = 6;</code>
+       *
+       * <pre>
+       **
+       * Regionserver-level coprocessors, e.g., WALObserver implementations.
+       * Region-level coprocessors, on the other hand, are stored inside RegionLoad
+       * objects.
+       * </pre>
+       */
       public Builder clearCoprocessors() {
         if (coprocessorsBuilder_ == null) {
           coprocessors_ = java.util.Collections.emptyList();
@@ -3988,6 +6199,16 @@ public final class ClusterStatusProtos {
         }
         return this;
       }
+      /**
+       * <code>repeated .Coprocessor coprocessors = 6;</code>
+       *
+       * <pre>
+       **
+       * Regionserver-level coprocessors, e.g., WALObserver implementations.
+       * Region-level coprocessors, on the other hand, are stored inside RegionLoad
+       * objects.
+       * </pre>
+       */
       public Builder removeCoprocessors(int index) {
         if (coprocessorsBuilder_ == null) {
           ensureCoprocessorsIsMutable();
@@ -3998,10 +6219,30 @@ public final class ClusterStatusProtos {
         }
         return this;
       }
+      /**
+       * <code>repeated .Coprocessor coprocessors = 6;</code>
+       *
+       * <pre>
+       **
+       * Regionserver-level coprocessors, e.g., WALObserver implementations.
+       * Region-level coprocessors, on the other hand, are stored inside RegionLoad
+       * objects.
+       * </pre>
+       */
       public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Coprocessor.Builder getCoprocessorsBuilder(
           int index) {
         return getCoprocessorsFieldBuilder().getBuilder(index);
       }
+      /**
+       * <code>repeated .Coprocessor coprocessors = 6;</code>
+       *
+       * <pre>
+       **
+       * Regionserver-level coprocessors, e.g., WALObserver implementations.
+       * Region-level coprocessors, on the other hand, are stored inside RegionLoad
+       * objects.
+       * </pre>
+       */
       public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.CoprocessorOrBuilder getCoprocessorsOrBuilder(
           int index) {
         if (coprocessorsBuilder_ == null) {
@@ -4009,6 +6250,16 @@ public final class ClusterStatusProtos {
           return coprocessorsBuilder_.getMessageOrBuilder(index);
         }
       }
+      /**
+       * <code>repeated .Coprocessor coprocessors = 6;</code>
+       *
+       * <pre>
+       **
+       * Regionserver-level coprocessors, e.g., WALObserver implementations.
+       * Region-level coprocessors, on the other hand, are stored inside RegionLoad
+       * objects.
+       * </pre>
+       */
       public java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.CoprocessorOrBuilder> 
            getCoprocessorsOrBuilderList() {
         if (coprocessorsBuilder_ != null) {
@@ -4017,15 +6268,45 @@ public final class ClusterStatusProtos {
           return java.util.Collections.unmodifiableList(coprocessors_);
         }
       }
+      /**
+       * <code>repeated .Coprocessor coprocessors = 6;</code>
+       *
+       * <pre>
+       **
+       * Regionserver-level coprocessors, e.g., WALObserver implementations.
+       * Region-level coprocessors, on the other hand, are stored inside RegionLoad
+       * objects.
+       * </pre>
+       */
       public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Coprocessor.Builder addCoprocessorsBuilder() {
         return getCoprocessorsFieldBuilder().addBuilder(
             org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Coprocessor.getDefaultInstance());
       }
+      /**
+       * <code>repeated .Coprocessor coprocessors = 6;</code>
+       *
+       * <pre>
+       **
+       * Regionserver-level coprocessors, e.g., WALObserver implementations.
+       * Region-level coprocessors, on the other hand, are stored inside RegionLoad
+       * objects.
+       * </pre>
+       */
       public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Coprocessor.Builder addCoprocessorsBuilder(
           int index) {
         return getCoprocessorsFieldBuilder().addBuilder(
             index, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Coprocessor.getDefaultInstance());
       }
+      /**
+       * <code>repeated .Coprocessor coprocessors = 6;</code>
+       *
+       * <pre>
+       **
+       * Regionserver-level coprocessors, e.g., WALObserver implementations.
+       * Region-level coprocessors, on the other hand, are stored inside RegionLoad
+       * objects.
+       * </pre>
+       */
       public java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Coprocessor.Builder> 
            getCoprocessorsBuilderList() {
         return getCoprocessorsFieldBuilder().getBuilderList();
@@ -4044,149 +6325,385 @@ public final class ClusterStatusProtos {
         }
         return coprocessorsBuilder_;
       }
-      
+
       // optional uint64 report_start_time = 7;
       private long reportStartTime_ ;
+      /**
+       * <code>optional uint64 report_start_time = 7;</code>
+       *
+       * <pre>
+       **
+       * Time when incremental (non-total) counts began being calculated (e.g. number_of_requests)
+       * time is measured as the difference, measured in milliseconds, between the current time
+       * and midnight, January 1, 1970 UTC.
+       * </pre>
+       */
       public boolean hasReportStartTime() {
         return ((bitField0_ & 0x00000040) == 0x00000040);
       }
+      /**
+       * <code>optional uint64 report_start_time = 7;</code>
+       *
+       * <pre>
+       **
+       * Time when incremental (non-total) counts began being calculated (e.g. number_of_requests)
+       * time is measured as the difference, measured in milliseconds, between the current time
+       * and midnight, January 1, 1970 UTC.
+       * </pre>
+       */
       public long getReportStartTime() {
         return reportStartTime_;
       }
+      /**
+       * <code>optional uint64 report_start_time = 7;</code>
+       *
+       * <pre>
+       **
+       * Time when incremental (non-total) counts began being calculated (e.g. number_of_requests)
+       * time is measured as the difference, measured in milliseconds, between the current time
+       * and midnight, January 1, 1970 UTC.
+       * </pre>
+       */
       public Builder setReportStartTime(long value) {
         bitField0_ |= 0x00000040;
         reportStartTime_ = value;
         onChanged();
         return this;
       }
+      /**
+       * <code>optional uint64 report_start_time = 7;</code>
+       *
+       * <pre>
+       **
+       * Time when incremental (non-total) counts began being calculated (e.g. number_of_requests)
+       * time is measured as the difference, measured in milliseconds, between the current time
+       * and midnight, January 1, 1970 UTC.
+       * </pre>
+       */
       public Builder clearReportStartTime() {
         bitField0_ = (bitField0_ & ~0x00000040);
         reportStartTime_ = 0L;
         onChanged();
         return this;
       }
-      
+
       // optional uint64 report_end_time = 8;
       private long reportEndTime_ ;
+      /**
+       * <code>optional uint64 report_end_time = 8;</code>
+       *
+       * <pre>
+       **
+       * Time when report was generated.
+       * time is measured as the difference, measured in milliseconds, between the current time
+       * and midnight, January 1, 1970 UTC.
+       * </pre>
+       */
       public boolean hasReportEndTime() {
         return ((bitField0_ & 0x00000080) == 0x00000080);
       }
+      /**
+       * <code>optional uint64 report_end_time = 8;</code>
+       *
+       * <pre>
+       **
+       * Time when report was generated.
+       * time is measured as the difference, measured in milliseconds, between the current time
+       * and midnight, January 1, 1970 UTC.
+       * </pre>
+       */
       public long getReportEndTime() {
         return reportEndTime_;
       }
+      /**
+       * <code>optional uint64 report_end_time = 8;</code>
+       *
+       * <pre>
+       **
+       * Time when report was generated.
+       * time is measured as the difference, measured in milliseconds, between the current time
+       * and midnight, January 1, 1970 UTC.
+       * </pre>
+       */
       public Builder setReportEndTime(long value) {
         bitField0_ |= 0x00000080;
         reportEndTime_ = value;
         onChanged();
         return this;
       }
+      /**
+       * <code>optional uint64 report_end_time = 8;</code>
+       *
+       * <pre>
+       **
+       * Time when report was generated.
+       * time is measured as the difference, measured in milliseconds, between the current time
+       * and midnight, January 1, 1970 UTC.
+       * </pre>
+       */
       public Builder clearReportEndTime() {
         bitField0_ = (bitField0_ & ~0x00000080);
         reportEndTime_ = 0L;
         onChanged();
         return this;
       }
-      
+
       // optional uint32 info_server_port = 9;
       private int infoServerPort_ ;
+      /**
+       * <code>optional uint32 info_server_port = 9;</code>
+       *
+       * <pre>
+       **
+       * The port number that this region server is hosing an info server on.
+       * </pre>
+       */
       public boolean hasInfoServerPort() {
         return ((bitField0_ & 0x00000100) == 0x00000100);
       }
+      /**
+       * <code>optional uint32 info_server_port = 9;</code>
+       *
+       * <pre>
+       **
+       * The port number that this region server is hosing an info server on.
+       * </pre>
+       */
       public int getInfoServerPort() {
         return infoServerPort_;
       }
+      /**
+       * <code>optional uint32 info_server_port = 9;</code>
+       *
+       * <pre>
+       **
+       * The port number that this region server is hosing an info server on.
+       * </pre>
+       */
       public Builder setInfoServerPort(int value) {
         bitField0_ |= 0x00000100;
         infoServerPort_ = value;
         onChanged();
         return this;
       }
+      /**
+       * <code>optional uint32 info_server_port = 9;</code>
+       *
+       * <pre>
+       **
+       * The port number that this region server is hosing an info server on.
+       * </pre>
+       */
       public Builder clearInfoServerPort() {
         bitField0_ = (bitField0_ & ~0x00000100);
         infoServerPort_ = 0;
         onChanged();
         return this;
       }
-      
+
       // @@protoc_insertion_point(builder_scope:ServerLoad)
     }
-    
+
     static {
       defaultInstance = new ServerLoad(true);
       defaultInstance.initFields();
     }
-    
+
     // @@protoc_insertion_point(class_scope:ServerLoad)
   }
-  
+
   public interface LiveServerInfoOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
-    
+
     // required .ServerName server = 1;
+    /**
+     * <code>required .ServerName server = 1;</code>
+     */
     boolean hasServer();
+    /**
+     * <code>required .ServerName server = 1;</code>
+     */
     org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName getServer();
+    /**
+     * <code>required .ServerName server = 1;</code>
+     */
     org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerNameOrBuilder getServerOrBuilder();
-    
+
     // required .ServerLoad server_load = 2;
+    /**
+     * <code>required .ServerLoad server_load = 2;</code>
+     */
     boolean hasServerLoad();
+    /**
+     * <code>required .ServerLoad server_load = 2;</code>
+     */
     org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ServerLoad getServerLoad();
+    /**
+     * <code>required .ServerLoad server_load = 2;</code>
+     */
     org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ServerLoadOrBuilder getServerLoadOrBuilder();
   }
+  /**
+   * Protobuf type {@code LiveServerInfo}
+   */
   public static final class LiveServerInfo extends
       com.google.protobuf.GeneratedMessage
       implements LiveServerInfoOrBuilder {
     // Use LiveServerInfo.newBuilder() to construct.
-    private LiveServerInfo(Builder builder) {
+    private LiveServerInfo(com.google.protobuf.GeneratedMessage.Builder<?> builder) {
       super(builder);
+      this.unknownFields = builder.getUnknownFields();
     }
-    private LiveServerInfo(boolean noInit) {}
-    
+    private LiveServerInfo(boolean noInit) { this.unknownFields = com.google.protobuf.UnknownFieldSet.getDefaultInstance(); }
+
     private static final LiveServerInfo defaultInstance;
     public static LiveServerInfo getDefaultInstance() {
       return defaultInstance;
     }
-    
+
     public LiveServerInfo getDefaultInstanceForType() {
       return defaultInstance;
     }
-    
+
+    private final com.google.protobuf.UnknownFieldSet unknownFields;
+    @java.lang.Override
+    public final com.google.protobuf.UnknownFieldSet
+        getUnknownFields() {
+      return this.unknownFields;
+    }
+    private LiveServerInfo(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      initFields();
+      int mutable_bitField0_ = 0;
+      com.google.protobuf.UnknownFieldSet.Builder unknownFields =
+          com.google.protobuf.UnknownFieldSet.newBuilder();
+      try {
+        boolean done = false;
+        while (!done) {
+          int tag = input.readTag();
+          switch (tag) {
+            case 0:
+              done = true;
+              break;
+            default: {
+              if (!parseUnknownField(input, unknownFields,
+                                     extensionRegistry, tag)) {
+                done = true;
+              }
+              break;
+            }
+            case 10: {
+              org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.Builder subBuilder = null;
+              if (((bitField0_ & 0x00000001) == 0x00000001)) {
+                subBuilder = server_.toBuilder();
+              }
+              server_ = input.readMessage(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.PARSER, extensionRegistry);
+              if (subBuilder != null) {
+                subBuilder.mergeFrom(server_);
+                server_ = subBuilder.buildPartial();
+              }
+              bitField0_ |= 0x00000001;
+              break;
+            }
+            case 18: {
+              org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ServerLoad.Builder subBuilder = null;
+              if (((bitField0_ & 0x00000002) == 0x00000002)) {
+                subBuilder = serverLoad_.toBuilder();
+              }
+              serverLoad_ = input.readMessage(org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ServerLoad.PARSER, extensionRegistry);
+              if (subBuilder != null) {
+                subBuilder.mergeFrom(serverLoad_);
+                serverLoad_ = subBuilder.buildPartial();
+              }
+              bitField0_ |= 0x00000002;
+              break;
+            }
+          }
+        }
+      } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+        throw e.setUnfinishedMessage(this);
+      } catch (java.io.IOException e) {
+        throw new com.google.protobuf.InvalidProtocolBufferException(
+            e.getMessage()).setUnfinishedMessage(this);
+      } finally {
+        this.unknownFields = unknownFields.build();
+        makeExtensionsImmutable();
+      }
+    }
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
       return org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.internal_static_LiveServerInfo_descriptor;
     }
-    
+
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.internal_static_LiveServerInfo_fieldAccessorTable;
+      return org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.internal_static_LiveServerInfo_fieldAccessorTable
+          .ensureFieldAccessorsInitialized(
+              org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.LiveServerInfo.class, org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.LiveServerInfo.Builder.class);
     }
-    
+
+    public static com.google.protobuf.Parser<LiveServerInfo> PARSER =
+        new com.google.protobuf.AbstractParser<LiveServerInfo>() {
+      public LiveServerInfo parsePartialFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        return new LiveServerInfo(input, extensionRegistry);
+      }
+    };
+
+    @java.lang.Override
+    public com.google.protobuf.Parser<LiveServerInfo> getParserForType() {
+      return PARSER;
+    }
+
     private int bitField0_;
     // required .ServerName server = 1;
     public static final int SERVER_FIELD_NUMBER = 1;
     private org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName server_;
+    /**
+     * <code>required .ServerName server = 1;</code>
+     */
     public boolean hasServer() {
       return ((bitField0_ & 0x00000001) == 0x00000001);
     }
+    /**
+     * <code>required .ServerName server = 1;</code>
+     */
     public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName getServer() {
       return server_;
     }
+    /**
+     * <code>required .ServerName server = 1;</code>
+     */
     public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerNameOrBuilder getServerOrBuilder() {
       return server_;
     }
-    
+
     // required .ServerLoad server_load = 2;
     public static final int SERVER_LOAD_FIELD_NUMBER = 2;
     private org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ServerLoad serverLoad_;
+    /**
+     * <code>required .ServerLoad server_load = 2;</code>
+     */
     public boolean hasServerLoad() {
       return ((bitField0_ & 0x00000002) == 0x00000002);
     }
+    /**
+     * <code>required .ServerLoad server_load = 2;</code>
+     */
     public org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ServerLoad getServerLoad() {
       return serverLoad_;
     }
+    /**
+     * <code>required .ServerLoad server_load = 2;</code>
+     */
     public org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ServerLoadOrBuilder getServerLoadOrBuilder() {
       return serverLoad_;
     }
-    
+
     private void initFields() {
       server_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.getDefaultInstance();
       serverLoad_ = org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ServerLoad.getDefaultInstance();
@@ -4195,7 +6712,7 @@ public final class ClusterStatusProtos {
     public final boolean isInitialized() {
       byte isInitialized = memoizedIsInitialized;
       if (isInitialized != -1) return isInitialized == 1;
-      
+
       if (!hasServer()) {
         memoizedIsInitialized = 0;
         return false;
@@ -4215,7 +6732,7 @@ public final class ClusterStatusProtos {
       memoizedIsInitialized = 1;
       return true;
     }
-    
+
     public void writeTo(com.google.protobuf.CodedOutputStream output)
                         throws java.io.IOException {
       getSerializedSize();
@@ -4227,12 +6744,12 @@ public final class ClusterStatusProtos {
       }
       getUnknownFields().writeTo(output);
     }
-    
+
     private int memoizedSerializedSize = -1;
     public int getSerializedSize() {
       int size = memoizedSerializedSize;
       if (size != -1) return size;
-    
+
       size = 0;
       if (((bitField0_ & 0x00000001) == 0x00000001)) {
         size += com.google.protobuf.CodedOutputStream
@@ -4246,14 +6763,14 @@ public final class ClusterStatusProtos {
       memoizedSerializedSize = size;
       return size;
     }
-    
+
     private static final long serialVersionUID = 0L;
     @java.lang.Override
     protected java.lang.Object writeReplace()
         throws java.io.ObjectStreamException {
       return super.writeReplace();
     }
-    
+
     @java.lang.Override
     public boolean equals(final java.lang.Object obj) {
       if (obj == this) {
@@ -4263,7 +6780,7 @@ public final class ClusterStatusProtos {
         return super.equals(obj);
       }
       org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.LiveServerInfo other = (org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.LiveServerInfo) obj;
-      
+
       boolean result = true;
       result = result && (hasServer() == other.hasServer());
       if (hasServer()) {
@@ -4279,9 +6796,13 @@ public final class ClusterStatusProtos {
           getUnknownFields().equals(other.getUnknownFields());
       return result;
     }
-    
+
+    private int memoizedHashCode = 0;
     @java.lang.Override
     public int hashCode() {
+      if (memoizedHashCode != 0) {
+        return memoizedHashCode;
+      }
       int hash = 41;
       hash = (19 * hash) + getDescriptorForType().hashCode();
       if (hasServer()) {
@@ -4293,89 +6814,79 @@ public final class ClusterStatusProtos {
         hash = (53 * hash) + getServerLoad().hashCode();
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
+      memoizedHashCode = hash;
       return hash;
     }
-    
+
     public static org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.LiveServerInfo parseFrom(
         com.google.protobuf.ByteString data)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return newBuilder().mergeFrom(data).buildParsed();
+      return PARSER.parseFrom(data);
     }
     public static org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.LiveServerInfo parseFrom(
         com.google.protobuf.ByteString data,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return newBuilder().mergeFrom(data, extensionRegistry)
-               .buildParsed();
+      return PARSER.parseFrom(data, extensionRegistry);
     }
     public static org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.LiveServerInfo parseFrom(byte[] data)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return newBuilder().mergeFrom(data).buildParsed();
+      return PARSER.parseFrom(data);
     }
     public static org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.LiveServerInfo parseFrom(
         byte[] data,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return newBuilder().mergeFrom(data, extensionRegistry)
-               .buildParsed();
+      return PARSER.parseFrom(data, extensionRegistry);
     }
     public static org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.LiveServerInfo parseFrom(java.io.InputStream input)
         throws java.io.IOException {
-      return newBuilder().mergeFrom(input).buildParsed();
+      return PARSER.parseFrom(input);
     }
     public static org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.LiveServerInfo parseFrom(
         java.io.InputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
-      return newBuilder().mergeFrom(input, extensionRegistry)
-               .buildParsed();
+      return PARSER.parseFrom(input, extensionRegistry);
     }
     public static org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.LiveServerInfo parseDelimitedFrom(java.io.InputStream input)
         throws java.io.IOException {
-      Builder builder = newBuilder();
-      if (builder.mergeDelimitedFrom(input)) {
-        return builder.buildParsed();
-      } else {
-        return null;
-      }
+      return PARSER.parseDelimitedFrom(input);
     }
     public static org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.LiveServerInfo parseDelimitedFrom(
         java.io.InputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
-      Builder builder = newBuilder();
-      if (builder.mergeDelimitedFrom(input, extensionRegistry)) {
-        return builder.buildParsed();
-      } else {
-        return null;
-      }
+      return PARSER.parseDelimitedFrom(input, extensionRegistry);
     }
     public static org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.LiveServerInfo parseFrom(
         com.google.protobuf.CodedInputStream input)
         throws java.io.IOException {
-      return newBuilder().mergeFrom(input).buildParsed();
+      return PARSER.parseFrom(input);
     }
     public static org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.LiveServerInfo parseFrom(
         com.google.protobuf.CodedInputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
-      return newBuilder().mergeFrom(input, extensionRegistry)
-               .buildParsed();
+      return PARSER.parseFrom(input, extensionRegistry);
     }
-    
+
     public static Builder newBuilder() { return Builder.create(); }
     public Builder newBuilderForType() { return newBuilder(); }
     public static Builder newBuilder(org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.LiveServerInfo prototype) {
       return newBuilder().mergeFrom(prototype);
     }
     public Builder toBuilder() { return newBuilder(this); }
-    
+
     @java.lang.Override
     protected Builder newBuilderForType(
         com.google.protobuf.GeneratedMessage.BuilderParent parent) {
       Builder builder = new Builder(parent);
       return builder;
     }
+    /**
+     * Protobuf type {@code LiveServerInfo}
+     */
     public static final class Builder extends
         com.google.protobuf.GeneratedMessage.Builder<Builder>
        implements org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.LiveServerInfoOrBuilder {
@@ -4383,18 +6894,21 @@ public final class ClusterStatusProtos {
           getDescriptor() {
         return org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.internal_static_LiveServerInfo_descriptor;
       }
-      
+
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.internal_static_LiveServerInfo_fieldAccessorTable;
+        return org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.internal_static_LiveServerInfo_fieldAccessorTable
+            .ensureFieldAccessorsInitialized(
+                org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.LiveServerInfo.class, org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.LiveServerInfo.Builder.class);
       }
-      
+
       // Construct using org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.LiveServerInfo.newBuilder()
       private Builder() {
         maybeForceBuilderInitialization();
       }
-      
-      private Builder(BuilderParent parent) {
+
+      private Builder(
+          com.google.protobuf.GeneratedMessage.BuilderParent parent) {
         super(parent);
         maybeForceBuilderInitialization();
       }
@@ -4407,7 +6921,7 @@ public final class ClusterStatusProtos {
       private static Builder create() {
         return new Builder();
       }
-      
+
       public Builder clear() {
         super.clear();
         if (serverBuilder_ == null) {
@@ -4424,20 +6938,20 @@ public final class ClusterStatusProtos {
         bitField0_ = (bitField0_ & ~0x00000002);
         return this;
       }
-      
+
       public Builder clone() {
         return create().mergeFrom(buildPartial());
       }
-      
+
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.LiveServerInfo.getDescriptor();
+        return org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.internal_static_LiveServerInfo_descriptor;
       }
-      
+
       public org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.LiveServerInfo getDefaultInstanceForType() {
         return org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.LiveServerInfo.getDefaultInstance();
       }
-      
+
       public org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.LiveServerInfo build() {
         org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.LiveServerInfo result = buildPartial();
         if (!result.isInitialized()) {
@@ -4445,17 +6959,7 @@ public final class ClusterStatusProtos {
         }
         return result;
       }
-      
-      private org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.LiveServerInfo buildParsed()
-          throws com.google.protobuf.InvalidProtocolBufferException {
-        org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.LiveServerInfo result = buildPartial();
-        if (!result.isInitialized()) {
-          throw newUninitializedMessageException(
-            result).asInvalidProtocolBufferException();
-        }
-        return result;
-      }
-      
+
       public org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.LiveServerInfo buildPartial() {
         org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.LiveServerInfo result = new org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.LiveServerInfo(this);
         int from_bitField0_ = bitField0_;
@@ -4480,7 +6984,7 @@ public final class ClusterStatusProtos {
         onBuilt();
         return result;
       }
-      
+
       public Builder mergeFrom(com.google.protobuf.Message other) {
         if (other instanceof org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.LiveServerInfo) {
           return mergeFrom((org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.LiveServerInfo)other);
@@ -4489,7 +6993,7 @@ public final class ClusterStatusProtos {
           return this;
         }
       }
-      
+
       public Builder mergeFrom(org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.LiveServerInfo other) {
         if (other == org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.LiveServerInfo.getDefaultInstance()) return this;
         if (other.hasServer()) {
@@ -4501,7 +7005,7 @@ public final class ClusterStatusProtos {
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
       }
-      
+
       public final boolean isInitialized() {
         if (!hasServer()) {
           
@@ -4521,61 +7025,39 @@ public final class ClusterStatusProtos {
         }
         return true;
       }
-      
+
       public Builder mergeFrom(
           com.google.protobuf.CodedInputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws java.io.IOException {
-        com.google.protobuf.UnknownFieldSet.Builder unknownFields =
-          com.google.protobuf.UnknownFieldSet.newBuilder(
-            this.getUnknownFields());
-        while (true) {
-          int tag = input.readTag();
-          switch (tag) {
-            case 0:
-              this.setUnknownFields(unknownFields.build());
-              onChanged();
-              return this;
-            default: {
-              if (!parseUnknownField(input, unknownFields,
-                                     extensionRegistry, tag)) {
-                this.setUnknownFields(unknownFields.build());
-                onChanged();
-                return this;
-              }
-              break;
-            }
-            case 10: {
-              org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.Builder subBuilder = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.newBuilder();
-              if (hasServer()) {
-                subBuilder.mergeFrom(getServer());
-              }
-              input.readMessage(subBuilder, extensionRegistry);
-              setServer(subBuilder.buildPartial());
-              break;
-            }
-            case 18: {
-              org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ServerLoad.Builder subBuilder = org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ServerLoad.newBuilder();
-              if (hasServerLoad()) {
-                subBuilder.mergeFrom(getServerLoad());
-              }
-              input.readMessage(subBuilder, extensionRegistry);
-              setServerLoad(subBuilder.buildPartial());
-              break;
-            }
+        org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.LiveServerInfo parsedMessage = null;
+        try {
+          parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
+        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+          parsedMessage = (org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.LiveServerInfo) e.getUnfinishedMessage();
+          throw e;
+        } finally {
+          if (parsedMessage != null) {
+            mergeFrom(parsedMessage);
           }
         }
+        return this;
       }
-      
       private int bitField0_;
-      
+
       // required .ServerName server = 1;
       private org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName server_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.getDefaultInstance();
       private com.google.protobuf.SingleFieldBuilder<
           org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerNameOrBuilder> serverBuilder_;
+      /**
+       * <code>required .ServerName server = 1;</code>
+       */
       public boolean hasServer() {
         return ((bitField0_ & 0x00000001) == 0x00000001);
       }
+      /**
+       * <code>required .ServerName server = 1;</code>
+       */
       public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName getServer() {
         if (serverBuilder_ == null) {
           return server_;
@@ -4583,6 +7065,9 @@ public final class ClusterStatusProtos {
           return serverBuilder_.getMessage();
         }
       }
+      /**
+       * <code>required .ServerName server = 1;</code>
+       */
       public Builder setServer(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName value) {
         if (serverBuilder_ == null) {
           if (value == null) {
@@ -4596,6 +7081,9 @@ public final class ClusterStatusProtos {
         bitField0_ |= 0x00000001;
         return this;
       }
+      /**
+       * <code>required .ServerName server = 1;</code>
+       */
       public Builder setServer(
           org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.Builder builderForValue) {
         if (serverBuilder_ == null) {
@@ -4607,6 +7095,9 @@ public final class ClusterStatusProtos {
         bitField0_ |= 0x00000001;
         return this;
       }
+      /**
+       * <code>required .ServerName server = 1;</code>
+       */
       public Builder mergeServer(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName value) {
         if (serverBuilder_ == null) {
           if (((bitField0_ & 0x00000001) == 0x00000001) &&
@@ -4623,6 +7114,9 @@ public final class ClusterStatusProtos {
         bitField0_ |= 0x00000001;
         return this;
       }
+      /**
+       * <code>required .ServerName server = 1;</code>
+       */
       public Builder clearServer() {
         if (serverBuilder_ == null) {
           server_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.getDefaultInstance();
@@ -4633,11 +7127,17 @@ public final class ClusterStatusProtos {
         bitField0_ = (bitField0_ & ~0x00000001);
         return this;
       }
+      /**
+       * <code>required .ServerName server = 1;</code>
+       */
       public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.Builder getServerBuilder() {
         bitField0_ |= 0x00000001;
         onChanged();
         return getServerFieldBuilder().getBuilder();
       }
+      /**
+       * <code>required .ServerName server = 1;</code>
+       */
       public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerNameOrBuilder getServerOrBuilder() {
         if (serverBuilder_ != null) {
           return serverBuilder_.getMessageOrBuilder();
@@ -4645,6 +7145,9 @@ public final class ClusterStatusProtos {
           return server_;
         }
       }
+      /**
+       * <code>required .ServerName server = 1;</code>
+       */
       private com.google.protobuf.SingleFieldBuilder<
           org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerNameOrBuilder> 
           getServerFieldBuilder() {
@@ -4658,14 +7161,20 @@ public final class ClusterStatusProtos {
         }
         return serverBuilder_;
       }
-      
+
       // required .ServerLoad server_load = 2;
       private org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ServerLoad serverLoad_ = org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ServerLoad.getDefaultInstance();
       private com.google.protobuf.SingleFieldBuilder<
           org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ServerLoad, org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ServerLoad.Builder, org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ServerLoadOrBuilder> serverLoadBuilder_;
+      /**
+       * <code>required .ServerLoad server_load = 2;</code>
+       */
       public boolean hasServerLoad() {
         return ((bitField0_ & 0x00000002) == 0x00000002);
       }
+      /**
+       * <code>required .ServerLoad server_load = 2;</code>
+       */
       public org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ServerLoad getServerLoad() {
         if (serverLoadBuilder_ == null) {
           return serverLoad_;
@@ -4673,6 +7182,9 @@ public final class ClusterStatusProtos {
           return serverLoadBuilder_.getMessage();
         }
       }
+      /**
+       * <code>required .ServerLoad server_load = 2;</code>
+       */
       public Builder setServerLoad(org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ServerLoad value) {
         if (serverLoadBuilder_ == null) {
           if (value == null) {
@@ -4686,6 +7198,9 @@ public final class ClusterStatusProtos {
         bitField0_ |= 0x00000002;
         return this;
       }
+      /**
+       * <code>required .ServerLoad server_load = 2;</code>
+       */
       public Builder setServerLoad(
           org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ServerLoad.Builder builderForValue) {
         if (serverLoadBuilder_ == null) {
@@ -4697,6 +7212,9 @@ public final class ClusterStatusProtos {
         bitField0_ |= 0x00000002;
         return this;
       }
+      /**
+       * <code>required .ServerLoad server_load = 2;</code>
+       */
       public Builder mergeServerLoad(org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ServerLoad value) {
         if (serverLoadBuilder_ == null) {
           if (((bitField0_ & 0x00000002) == 0x00000002) &&
@@ -4713,6 +7231,9 @@ public final class ClusterStatusProtos {
         bitField0_ |= 0x00000002;
         return this;
       }
+      /**
+       * <code>required .ServerLoad server_load = 2;</code>
+       */
       public Builder clearServerLoad() {
         if (serverLoadBuilder_ == null) {
           serverLoad_ = org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ServerLoad.getDefaultInstance();
@@ -4723,11 +7244,17 @@ public final class ClusterStatusProtos {
         bitField0_ = (bitField0_ & ~0x00000002);
         return this;
       }
+      /**
+       * <code>required .ServerLoad server_load = 2;</code>
+       */
       public org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ServerLoad.Builder getServerLoadBuilder() {
         bitField0_ |= 0x00000002;
         onChanged();
         return getServerLoadFieldBuilder().getBuilder();
       }
+      /**
+       * <code>required .ServerLoad server_load = 2;</code>
+       */
       public org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ServerLoadOrBuilder getServerLoadOrBuilder() {
         if (serverLoadBuilder_ != null) {
           return serverLoadBuilder_.getMessageOrBuilder();
@@ -4735,6 +7262,9 @@ public final class ClusterStatusProtos {
           return serverLoad_;
         }
       }
+      /**
+       * <code>required .ServerLoad server_load = 2;</code>
+       */
       private com.google.protobuf.SingleFieldBuilder<
           org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ServerLoad, org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ServerLoad.Builder, org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ServerLoadOrBuilder> 
           getServerLoadFieldBuilder() {
@@ -4748,273 +7278,650 @@ public final class ClusterStatusProtos {
         }
         return serverLoadBuilder_;
       }
-      
+
       // @@protoc_insertion_point(builder_scope:LiveServerInfo)
     }
-    
+
     static {
       defaultInstance = new LiveServerInfo(true);
       defaultInstance.initFields();
     }
-    
+
     // @@protoc_insertion_point(class_scope:LiveServerInfo)
   }
-  
+
   public interface ClusterStatusOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
-    
+
     // optional .HBaseVersionFileContent hbase_version = 1;
+    /**
+     * <code>optional .HBaseVersionFileContent hbase_version = 1;</code>
+     */
     boolean hasHbaseVersion();
+    /**
+     * <code>optional .HBaseVersionFileContent hbase_version = 1;</code>
+     */
     org.apache.hadoop.hbase.protobuf.generated.FSProtos.HBaseVersionFileContent getHbaseVersion();
+    /**
+     * <code>optional .HBaseVersionFileContent hbase_version = 1;</code>
+     */
     org.apache.hadoop.hbase.protobuf.generated.FSProtos.HBaseVersionFileContentOrBuilder getHbaseVersionOrBuilder();
-    
+
     // repeated .LiveServerInfo live_servers = 2;
+    /**
+     * <code>repeated .LiveServerInfo live_servers = 2;</code>
+     */
     java.util.List<org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.LiveServerInfo> 
         getLiveServersList();
+    /**
+     * <code>repeated .LiveServerInfo live_servers = 2;</code>
+     */
     org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.LiveServerInfo getLiveServers(int index);
+    /**
+     * <code>repeated .LiveServerInfo live_servers = 2;</code>
+     */
     int getLiveServersCount();
+    /**
+     * <code>repeated .LiveServerInfo live_servers = 2;</code>
+     */
     java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.LiveServerInfoOrBuilder> 
         getLiveServersOrBuilderList();
+    /**
+     * <code>repeated .LiveServerInfo live_servers = 2;</code>
+     */
     org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.LiveServerInfoOrBuilder getLiveServersOrBuilder(
         int index);
-    
+
     // repeated .ServerName dead_servers = 3;
+    /**
+     * <code>repeated .ServerName dead_servers = 3;</code>
+     */
     java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName> 
         getDeadServersList();
+    /**
+     * <code>repeated .ServerName dead_servers = 3;</code>
+     */
     org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName getDeadServers(int index);
+    /**
+     * <code>repeated .ServerName dead_servers = 3;</code>
+     */
     int getDeadServersCount();
+    /**
+     * <code>repeated .ServerName dead_servers = 3;</code>
+     */
     java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerNameOrBuilder> 
         getDeadServersOrBuilderList();
+    /**
+     * <code>repeated .ServerName dead_servers = 3;</code>
+     */
     org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerNameOrBuilder getDeadServersOrBuilder(
         int index);
-    
+
     // repeated .RegionInTransition regions_in_transition = 4;
+    /**
+     * <code>repeated .RegionInTransition regions_in_transition = 4;</code>
+     */
     java.util.List<org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionInTransition> 
         getRegionsInTransitionList();
+    /**
+     * <code>repeated .RegionInTransition regions_in_transition = 4;</code>
+     */
     org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionInTransition getRegionsInTransition(int index);
+    /**
+     * <code>repeated .RegionInTransition regions_in_transition = 4;</code>
+     */
     int getRegionsInTransitionCount();
+    /**
+     * <code>repeated .RegionInTransition regions_in_transition = 4;</code>
+     */
     java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionInTransitionOrBuilder> 
         getRegionsInTransitionOrBuilderList();
+    /**
+     * <code>repeated .RegionInTransition regions_in_transition = 4;</code>
+     */
     org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionInTransitionOrBuilder getRegionsInTransitionOrBuilder(
         int index);
-    
+
     // optional .ClusterId cluster_id = 5;
+    /**
+     * <code>optional .ClusterId cluster_id = 5;</code>
+     */
     boolean hasClusterId();
+    /**
+     * <code>optional .ClusterId cluster_id = 5;</code>
+     */
     org.apache.hadoop.hbase.protobuf.generated.ClusterIdProtos.ClusterId getClusterId();
+    /**
+     * <code>optional .ClusterId cluster_id = 5;</code>
+     */
     org.apache.hadoop.hbase.protobuf.generated.ClusterIdProtos.ClusterIdOrBuilder getClusterIdOrBuilder();
-    
+
     // repeated .Coprocessor master_coprocessors = 6;
+    /**
+     * <code>repeated .Coprocessor master_coprocessors = 6;</code>
+     */
     java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Coprocessor> 
         getMasterCoprocessorsList();
+    /**
+     * <code>repeated .Coprocessor master_coprocessors = 6;</code>
+     */
     org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Coprocessor getMasterCoprocessors(int index);
+    /**
+     * <code>repeated .Coprocessor master_coprocessors = 6;</code>
+     */
     int getMasterCoprocessorsCount();
+    /**
+     * <code>repeated .Coprocessor master_coprocessors = 6;</code>
+     */
     java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.CoprocessorOrBuilder> 
         getMasterCoprocessorsOrBuilderList();
+    /**
+     * <code>repeated .Coprocessor master_coprocessors = 6;</code>
+     */
     org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.CoprocessorOrBuilder getMasterCoprocessorsOrBuilder(
         int index);
-    
+
     // optional .ServerName master = 7;
+    /**
+     * <code>optional .ServerName master = 7;</code>
+     */
     boolean hasMaster();
+    /**
+     * <code>optional .ServerName master = 7;</code>
+     */
     org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName getMaster();
+    /**
+     * <code>optional .ServerName master = 7;</code>
+     */
     org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerNameOrBuilder getMasterOrBuilder();
-    
+
     // repeated .ServerName backup_masters = 8;
+    /**
+     * <code>repeated .ServerName backup_masters = 8;</code>
+     */
     java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName> 
         getBackupMastersList();
+    /**
+     * <code>repeated .ServerName backup_masters = 8;</code>
+     */
     org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName getBackupMasters(int index);
+    /**
+     * <code>repeated .ServerName backup_masters = 8;</code>
+     */
     int getBackupMastersCount();
+    /**
+     * <code>repeated .ServerName backup_masters = 8;</code>
+     */
     java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerNameOrBuilder> 
         getBackupMastersOrBuilderList();
+    /**
+     * <code>repeated .ServerName backup_masters = 8;</code>
+     */
     org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerNameOrBuilder getBackupMastersOrBuilder(
         int index);
-    
+
     // optional bool balancer_on = 9;
+    /**
+     * <code>optional bool balancer_on = 9;</code>
+     */
     boolean hasBalancerOn();
+    /**
+     * <code>optional bool balancer_on = 9;</code>
+     */
     boolean getBalancerOn();
   }
+  /**
+   * Protobuf type {@code ClusterStatus}
+   */
   public static final class ClusterStatus extends
       com.google.protobuf.GeneratedMessage
       implements ClusterStatusOrBuilder {
     // Use ClusterStatus.newBuilder() to construct.
-    private ClusterStatus(Builder builder) {
+    private ClusterStatus(com.google.protobuf.GeneratedMessage.Builder<?> builder) {
       super(builder);
+      this.unknownFields = builder.getUnknownFields();
     }
-    private ClusterStatus(boolean noInit) {}
-    
+    private ClusterStatus(boolean noInit) { this.unknownFields = com.google.protobuf.UnknownFieldSet.getDefaultInstance(); }
+
     private static final ClusterStatus defaultInstance;
     public static ClusterStatus getDefaultInstance() {
       return defaultInstance;
     }
-    
+
     public ClusterStatus getDefaultInstanceForType() {
       return defaultInstance;
     }
-    
+
+    private final com.google.protobuf.UnknownFieldSet unknownFields;
+    @java.lang.Override
+    public final com.google.protobuf.UnknownFieldSet
+        getUnknownFields() {
+      return this.unknownFields;
+    }
+    private ClusterStatus(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      initFields();
+      int mutable_bitField0_ = 0;
+      com.google.protobuf.UnknownFieldSet.Builder unknownFields =
+          com.google.protobuf.UnknownFieldSet.newBuilder();
+      try {
+        boolean done = false;
+        while (!done) {
+          int tag = input.readTag();
+          switch (tag) {
+            case 0:
+              done = true;
+              break;
+            default: {
+              if (!parseUnknownField(input, unknownFields,
+                                     extensionRegistry, tag)) {
+                done = true;
+              }
+              break;
+            }
+            case 10: {
+              org.apache.hadoop.hbase.protobuf.generated.FSProtos.HBaseVersionFileContent.Builder subBuilder = null;
+              if (((bitField0_ & 0x00000001) == 0x00000001)) {
+                subBuilder = hbaseVersion_.toBuilder();
+              }
+              hbaseVersion_ = input.readMessage(org.apache.hadoop.hbase.protobuf.generated.FSProtos.HBaseVersionFileContent.PARSER, extensionRegistry);
+              if (subBuilder != null) {
+                subBuilder.mergeFrom(hbaseVersion_);
+                hbaseVersion_ = subBuilder.buildPartial();
+              }
+              bitField0_ |= 0x00000001;
+              break;
+            }
+            case 18: {
+              if (!((mutable_bitField0_ & 0x00000002) == 0x00000002)) {
+                liveServers_ = new java.util.ArrayList<org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.LiveServerInfo>();
+                mutable_bitField0_ |= 0x00000002;
+              }
+              liveServers_.add(input.readMessage(org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.LiveServerInfo.PARSER, extensionRegistry));
+              break;
+            }
+            case 26: {
+              if (!((mutable_bitField0_ & 0x00000004) == 0x00000004)) {
+                deadServers_ = new java.util.ArrayList<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName>();
+                mutable_bitField0_ |= 0x00000004;
+              }
+              deadServers_.add(input.readMessage(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.PARSER, extensionRegistry));
+              break;
+            }
+            case 34: {
+              if (!((mutable_bitField0_ & 0x00000008) == 0x00000008)) {
+                regionsInTransition_ = new java.util.ArrayList<org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionInTransition>();
+                mutable_bitField0_ |= 0x00000008;
+              }
+              regionsInTransition_.add(input.readMessage(org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionInTransition.PARSER, extensionRegistry));
+              break;
+            }
+            case 42: {
+              org.apache.hadoop.hbase.protobuf.generated.ClusterIdProtos.ClusterId.Builder subBuilder = null;
+              if (((bitField0_ & 0x00000002) == 0x00000002)) {
+                subBuilder = clusterId_.toBuilder();
+              }
+              clusterId_ = input.readMessage(org.apache.hadoop.hbase.protobuf.generated.ClusterIdProtos.ClusterId.PARSER, extensionRegistry);
+              if (subBuilder != null) {
+                subBuilder.mergeFrom(clusterId_);
+                clusterId_ = subBuilder.buildPartial();
+              }
+              bitField0_ |= 0x00000002;
+              break;
+            }
+            case 50: {
+              if (!((mutable_bitField0_ & 0x00000020) == 0x00000020)) {
+                masterCoprocessors_ = new java.util.ArrayList<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Coprocessor>();
+                mutable_bitField0_ |= 0x00000020;
+              }
+              masterCoprocessors_.add(input.readMessage(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Coprocessor.PARSER, extensionRegistry));
+              break;
+            }
+            case 58: {
+              org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.Builder subBuilder = null;
+              if (((bitField0_ & 0x00000004) == 0x00000004)) {
+                subBuilder = master_.toBuilder();
+              }
+              master_ = input.readMessage(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.PARSER, extensionRegistry);
+              if (subBuilder != null) {
+                subBuilder.mergeFrom(master_);
+                master_ = subBuilder.buildPartial();
+              }
+              bitField0_ |= 0x00000004;
+              break;
+            }
+            case 66: {
+              if (!((mutable_bitField0_ & 0x00000080) == 0x00000080)) {
+                backupMasters_ = new java.util.ArrayList<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName>();
+                mutable_bitField0_ |= 0x00000080;
+              }
+              backupMasters_.add(input.readMessage(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.PARSER, extensionRegistry));
+              break;
+            }
+            case 72: {
+              bitField0_ |= 0x00000008;
+              balancerOn_ = input.readBool();
+              break;
+            }
+          }
+        }
+      } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+        throw e.setUnfinishedMessage(this);
+      } catch (java.io.IOException e) {
+        throw new com.google.protobuf.InvalidProtocolBufferException(
+            e.getMessage()).setUnfinishedMessage(this);
+      } finally {
+        if (((mutable_bitField0_ & 0x00000002) == 0x00000002)) {
+          liveServers_ = java.util.Collections.unmodifiableList(liveServers_);
+        }
+        if (((mutable_bitField0_ & 0x00000004) == 0x00000004)) {
+          deadServers_ = java.util.Collections.unmodifiableList(deadServers_);
+        }
+        if (((mutable_bitField0_ & 0x00000008) == 0x00000008)) {
+          regionsInTransition_ = java.util.Collections.unmodifiableList(regionsInTransition_);
+        }
+        if (((mutable_bitField0_ & 0x00000020) == 0x00000020)) {
+          masterCoprocessors_ = java.util.Collections.unmodifiableList(masterCoprocessors_);
+        }
+        if (((mutable_bitField0_ & 0x00000080) == 0x00000080)) {
+          backupMasters_ = java.util.Collections.unmodifiableList(backupMasters_);
+        }
+        this.unknownFields = unknownFields.build();
+        makeExtensionsImmutable();
+      }
+    }
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
       return org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.internal_static_ClusterStatus_descriptor;
     }
-    
+
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.internal_static_ClusterStatus_fieldAccessorTable;
+      return org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.internal_static_ClusterStatus_fieldAccessorTable
+          .ensureFieldAccessorsInitialized(
+              org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ClusterStatus.class, org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ClusterStatus.Builder.class);
     }
-    
+
+    public static com.google.protobuf.Parser<ClusterStatus> PARSER =
+        new com.google.protobuf.AbstractParser<ClusterStatus>() {
+      public ClusterStatus parsePartialFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        return new ClusterStatus(input, extensionRegistry);
+      }
+    };
+
+    @java.lang.Override
+    public com.google.protobuf.Parser<ClusterStatus> getParserForType() {
+      return PARSER;
+    }
+
     private int bitField0_;
     // optional .HBaseVersionFileContent hbase_version = 1;
     public static final int HBASE_VERSION_FIELD_NUMBER = 1;
     private org.apache.hadoop.hbase.protobuf.generated.FSProtos.HBaseVersionFileContent hbaseVersion_;
+    /**
+     * <code>optional .HBaseVersionFileContent hbase_version = 1;</code>
+     */
     public boolean hasHbaseVersion() {
       return ((bitField0_ & 0x00000001) == 0x00000001);
     }
+    /**
+     * <code>optional .HBaseVersionFileContent hbase_version = 1;</code>
+     */
     public org.apache.hadoop.hbase.protobuf.generated.FSProtos.HBaseVersionFileContent getHbaseVersion() {
       return hbaseVersion_;
     }
+    /**
+     * <code>optional .HBaseVersionFileContent hbase_version = 1;</code>
+     */
     public org.apache.hadoop.hbase.protobuf.generated.FSProtos.HBaseVersionFileContentOrBuilder getHbaseVersionOrBuilder() {
       return hbaseVersion_;
     }
-    
+
     // repeated .LiveServerInfo live_servers = 2;
     public static final int LIVE_SERVERS_FIELD_NUMBER = 2;
     private java.util.List<org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.LiveServerInfo> liveServers_;
+    /**
+     * <code>repeated .LiveServerInfo live_servers = 2;</code>
+     */
     public java.util.List<org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.LiveServerInfo> getLiveServersList() {
       return liveServers_;
     }
+    /**
+     * <code>repeated .LiveServerInfo live_servers = 2;</code>
+     */
     public java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.LiveServerInfoOrBuilder> 
         getLiveServersOrBuilderList() {
       return liveServers_;
     }
+    /**
+     * <code>repeated .LiveServerInfo live_servers = 2;</code>
+     */
     public int getLiveServersCount() {
       return liveServers_.size();
     }
+    /**
+     * <code>repeated .LiveServerInfo live_servers = 2;</code>
+     */
     public org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.LiveServerInfo getLiveServers(int index) {
       return liveServers_.get(index);
     }
+    /**
+     * <code>repeated .LiveServerInfo live_servers = 2;</code>
+     */
     public org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.LiveServerInfoOrBuilder getLiveServersOrBuilder(
         int index) {
       return liveServers_.get(index);
     }
-    
+
     // repeated .ServerName dead_servers = 3;
     public static final int DEAD_SERVERS_FIELD_NUMBER = 3;
     private java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName> deadServers_;
+    /**
+     * <code>repeated .ServerName dead_servers = 3;</code>
+     */
     public java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName> getDeadServersList() {
       return deadServers_;
     }
+    /**
+     * <code>repeated .ServerName dead_servers = 3;</code>
+     */
     public java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerNameOrBuilder> 
         getDeadServersOrBuilderList() {
       return deadServers_;
     }
+    /**
+     * <code>repeated .ServerName dead_servers = 3;</code>
+     */
     public int getDeadServersCount() {
       return deadServers_.size();
     }
+    /**
+     * <code>repeated .ServerName dead_servers = 3;</code>
+     */
     public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName getDeadServers(int index) {
       return deadServers_.get(index);
     }
+    /**
+     * <code>repeated .ServerName dead_servers = 3;</code>
+     */
     public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerNameOrBuilder getDeadServersOrBuilder(
         int index) {
       return deadServers_.get(index);
     }
-    
+
     // repeated .RegionInTransition regions_in_transition = 4;
     public static final int REGIONS_IN_TRANSITION_FIELD_NUMBER = 4;
     private java.util.List<org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionInTransition> regionsInTransition_;
+    /**
+     * <code>repeated .RegionInTransition regions_in_transition = 4;</code>
+     */
     public java.util.List<org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionInTransition> getRegionsInTransitionList() {
       return regionsInTransition_;
     }
+    /**
+     * <code>repeated .RegionInTransition regions_in_transition = 4;</code>
+     */
     public java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionInTransitionOrBuilder> 
         getRegionsInTransitionOrBuilderList() {
       return regionsInTransition_;
     }
+    /**
+     * <code>repeated .RegionInTransition regions_in_transition = 4;</code>
+     */
     public int getRegionsInTransitionCount() {
       return regionsInTransition_.size();
     }
+    /**
+     * <code>repeated .RegionInTransition regions_in_transition = 4;</code>
+     */
     public org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionInTransition getRegionsInTransition(int index) {
       return regionsInTransition_.get(index);
     }
+    /**
+     * <code>repeated .RegionInTransition regions_in_transition = 4;</code>
+     */
     public org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionInTransitionOrBuilder getRegionsInTransitionOrBuilder(
         int index) {
       return regionsInTransition_.get(index);
     }
-    
+
     // optional .ClusterId cluster_id = 5;
     public static final int CLUSTER_ID_FIELD_NUMBER = 5;
     private org.apache.hadoop.hbase.protobuf.generated.ClusterIdProtos.ClusterId clusterId_;
+    /**
+     * <code>optional .ClusterId cluster_id = 5;</code>
+     */
     public boolean hasClusterId() {
       return ((bitField0_ & 0x00000002) == 0x00000002);
     }
+    /**
+     * <code>optional .ClusterId cluster_id = 5;</code>
+     */
     public org.apache.hadoop.hbase.protobuf.generated.ClusterIdProtos.ClusterId getClusterId() {
       return clusterId_;
     }
+    /**
+     * <code>optional .ClusterId cluster_id = 5;</code>
+     */
     public org.apache.hadoop.hbase.protobuf.generated.ClusterIdProtos.ClusterIdOrBuilder getClusterIdOrBuilder() {
       return clusterId_;
     }
-    
+
     // repeated .Coprocessor master_coprocessors = 6;
     public static final int MASTER_COPROCESSORS_FIELD_NUMBER = 6;
     private java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Coprocessor> masterCoprocessors_;
+    /**
+     * <code>repeated .Coprocessor master_coprocessors = 6;</code>
+     */
     public java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Coprocessor> getMasterCoprocessorsList() {
       return masterCoprocessors_;
     }
+    /**
+     * <code>repeated .Coprocessor master_coprocessors = 6;</code>
+     */
     public java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.CoprocessorOrBuilder> 
         getMasterCoprocessorsOrBuilderList() {
       return masterCoprocessors_;
     }
+    /**
+     * <code>repeated .Coprocessor master_coprocessors = 6;</code>
+     */
     public int getMasterCoprocessorsCount() {
       return masterCoprocessors_.size();
     }
+    /**
+     * <code>repeated .Coprocessor master_coprocessors = 6;</code>
+     */
     public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Coprocessor getMasterCoprocessors(int index) {
       return masterCoprocessors_.get(index);
     }
+    /**
+     * <code>repeated .Coprocessor master_coprocessors = 6;</code>
+     */
     public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.CoprocessorOrBuilder getMasterCoprocessorsOrBuilder(
         int index) {
       return masterCoprocessors_.get(index);
     }
-    
+
     // optional .ServerName master = 7;
     public static final int MASTER_FIELD_NUMBER = 7;
     private org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName master_;
+    /**
+     * <code>optional .ServerName master = 7;</code>
+     */
     public boolean hasMaster() {
       return ((bitField0_ & 0x00000004) == 0x00000004);
     }
+    /**
+     * <code>optional .ServerName master = 7;</code>
+     */
     public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName getMaster() {
       return master_;
     }
+    /**
+     * <code>optional .ServerName master = 7;</code>
+     */
     public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerNameOrBuilder getMasterOrBuilder() {
       return master_;
     }
-    
+
     // repeated .ServerName backup_masters = 8;
     public static final int BACKUP_MASTERS_FIELD_NUMBER = 8;
     private java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName> backupMasters_;
+    /**
+     * <code>repeated .ServerName backup_masters = 8;</code>
+     */
     public java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName> getBackupMastersList() {
       return backupMasters_;
     }
+    /**
+     * <code>repeated .ServerName backup_masters = 8;</code>
+     */
     public java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerNameOrBuilder> 
         getBackupMastersOrBuilderList() {
       return backupMasters_;
     }
+    /**
+     * <code>repeated .ServerName backup_masters = 8;</code>
+     */
     public int getBackupMastersCount() {
       return backupMasters_.size();
     }
+    /**
+     * <code>repeated .ServerName backup_masters = 8;</code>
+     */
     public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName getBackupMasters(int index) {
       return backupMasters_.get(index);
     }
+    /**
+     * <code>repeated .ServerName backup_masters = 8;</code>
+     */
     public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerNameOrBuilder getBackupMastersOrBuilder(
         int index) {
       return backupMasters_.get(index);
     }
-    
+
     // optional bool balancer_on = 9;
     public static final int BALANCER_ON_FIELD_NUMBER = 9;
     private boolean balancerOn_;
+    /**
+     * <code>optional bool balancer_on = 9;</code>
+     */
     public boolean hasBalancerOn() {
       return ((bitField0_ & 0x00000008) == 0x00000008);
     }
+    /**
+     * <code>optional bool balancer_on = 9;</code>
+     */
     public boolean getBalancerOn() {
       return balancerOn_;
     }
-    
+
     private void initFields() {
       hbaseVersion_ = org.apache.hadoop.hbase.protobuf.generated.FSProtos.HBaseVersionFileContent.getDefaultInstance();
       liveServers_ = java.util.Collections.emptyList();
@@ -5030,7 +7937,7 @@ public final class ClusterStatusProtos {
     public final boolean isInitialized() {
       byte isInitialized = memoizedIsInitialized;
       if (isInitialized != -1) return isInitialized == 1;
-      
+
       if (hasHbaseVersion()) {
         if (!getHbaseVersion().isInitialized()) {
           memoizedIsInitialized = 0;
@@ -5082,7 +7989,7 @@ public final class ClusterStatusProtos {
       memoizedIsInitialized = 1;
       return true;
     }
-    
+
     public void writeTo(com.google.protobuf.CodedOutputStream output)
                         throws java.io.IOException {
       getSerializedSize();
@@ -5115,12 +8022,12 @@ public final class ClusterStatusProtos {
       }
       getUnknownFields().writeTo(output);
     }
-    
+
     private int memoizedSerializedSize = -1;
     public int getSerializedSize() {
       int size = memoizedSerializedSize;
       if (size != -1) return size;
-    
+
       size = 0;
       if (((bitField0_ & 0x00000001) == 0x00000001)) {
         size += com.google.protobuf.CodedOutputStream
@@ -5162,14 +8069,14 @@ public final class ClusterStatusProtos {
       memoizedSerializedSize = size;
       return size;
     }
-    
+
     private static final long serialVersionUID = 0L;
     @java.lang.Override
     protected java.lang.Object writeReplace()
         throws java.io.ObjectStreamException {
       return super.writeReplace();
     }
-    
+
     @java.lang.Override
     public boolean equals(final java.lang.Object obj) {
       if (obj == this) {
@@ -5179,7 +8086,7 @@ public final class ClusterStatusProtos {
         return super.equals(obj);
       }
       org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ClusterStatus other = (org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ClusterStatus) obj;
-      
+
       boolean result = true;
       result = result && (hasHbaseVersion() == other.hasHbaseVersion());
       if (hasHbaseVersion()) {
@@ -5215,9 +8122,13 @@ public final class ClusterStatusProtos {
           getUnknownFields().equals(other.getUnknownFields());
       return result;
     }
-    
+
+    private int memoizedHashCode = 0;
     @java.lang.Override
     public int hashCode() {
+      if (memoizedHashCode != 0) {
+        return memoizedHashCode;
+      }
       int hash = 41;
       hash = (19 * hash) + getDescriptorForType().hashCode();
       if (hasHbaseVersion()) {
@@ -5257,89 +8168,79 @@ public final class ClusterStatusProtos {
         hash = (53 * hash) + hashBoolean(getBalancerOn());
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
+      memoizedHashCode = hash;
       return hash;
     }
-    
+
     public static org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ClusterStatus parseFrom(
         com.google.protobuf.ByteString data)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return newBuilder().mergeFrom(data).buildParsed();
+      return PARSER.parseFrom(data);
     }
     public static org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ClusterStatus parseFrom(
         com.google.protobuf.ByteString data,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return newBuilder().mergeFrom(data, extensionRegistry)
-               .buildParsed();
+      return PARSER.parseFrom(data, extensionRegistry);
     }
     public static org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ClusterStatus parseFrom(byte[] data)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return newBuilder().mergeFrom(data).buildParsed();
+      return PARSER.parseFrom(data);
     }
     public static org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ClusterStatus parseFrom(
         byte[] data,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return newBuilder().mergeFrom(data, extensionRegistry)
-               .buildParsed();
+      return PARSER.parseFrom(data, extensionRegistry);
     }
     public static org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ClusterStatus parseFrom(java.io.InputStream input)
         throws java.io.IOException {
-      return newBuilder().mergeFrom(input).buildParsed();
+      return PARSER.parseFrom(input);
     }
     public static org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ClusterStatus parseFrom(
         java.io.InputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
-      return newBuilder().mergeFrom(input, extensionRegistry)
-               .buildParsed();
+      return PARSER.parseFrom(input, extensionRegistry);
     }
     public static org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ClusterStatus parseDelimitedFrom(java.io.InputStream input)
         throws java.io.IOException {
-      Builder builder = newBuilder();
-      if (builder.mergeDelimitedFrom(input)) {
-        return builder.buildParsed();
-      } else {
-        return null;
-      }
+      return PARSER.parseDelimitedFrom(input);
     }
     public static org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ClusterStatus parseDelimitedFrom(
         java.io.InputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
-      Builder builder = newBuilder();
-      if (builder.mergeDelimitedFrom(input, extensionRegistry)) {
-        return builder.buildParsed();
-      } else {
-        return null;
-      }
+      return PARSER.parseDelimitedFrom(input, extensionRegistry);
     }
     public static org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ClusterStatus parseFrom(
         com.google.protobuf.CodedInputStream input)
         throws java.io.IOException {
-      return newBuilder().mergeFrom(input).buildParsed();
+      return PARSER.parseFrom(input);
     }
     public static org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ClusterStatus parseFrom(
         com.google.protobuf.CodedInputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
-      return newBuilder().mergeFrom(input, extensionRegistry)
-               .buildParsed();
+      return PARSER.parseFrom(input, extensionRegistry);
     }
-    
+
     public static Builder newBuilder() { return Builder.create(); }
     public Builder newBuilderForType() { return newBuilder(); }
     public static Builder newBuilder(org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ClusterStatus prototype) {
       return newBuilder().mergeFrom(prototype);
     }
     public Builder toBuilder() { return newBuilder(this); }
-    
+
     @java.lang.Override
     protected Builder newBuilderForType(
         com.google.protobuf.GeneratedMessage.BuilderParent parent) {
       Builder builder = new Builder(parent);
       return builder;
     }
+    /**
+     * Protobuf type {@code ClusterStatus}
+     */
     public static final class Builder extends
         com.google.protobuf.GeneratedMessage.Builder<Builder>
        implements org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ClusterStatusOrBuilder {
@@ -5347,18 +8248,21 @@ public final class ClusterStatusProtos {
           getDescriptor() {
         return org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.internal_static_ClusterStatus_descriptor;
       }
-      
+
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.internal_static_ClusterStatus_fieldAccessorTable;
+        return org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.internal_static_ClusterStatus_fieldAccessorTable
+            .ensureFieldAccessorsInitialized(
+                org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ClusterStatus.class, org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ClusterStatus.Builder.class);
       }
-      
+
       // Construct using org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ClusterStatus.newBuilder()
       private Builder() {
         maybeForceBuilderInitialization();
       }
-      
-      private Builder(BuilderParent parent) {
+
+      private Builder(
+          com.google.protobuf.GeneratedMessage.BuilderParent parent) {
         super(parent);
         maybeForceBuilderInitialization();
       }
@@ -5377,7 +8281,7 @@ public final class ClusterStatusProtos {
       private static Builder create() {
         return new Builder();
       }
-      
+
       public Builder clear() {
         super.clear();
         if (hbaseVersionBuilder_ == null) {
@@ -5432,20 +8336,20 @@ public final class ClusterStatusProtos {
         bitField0_ = (bitField0_ & ~0x00000100);
         return this;
       }
-      
+
       public Builder clone() {
         return create().mergeFrom(buildPartial());
       }
-      
+
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ClusterStatus.getDescriptor();
+        return org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.internal_static_ClusterStatus_descriptor;
       }
-      
+
       public org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ClusterStatus getDefaultInstanceForType() {
         return org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ClusterStatus.getDefaultInstance();
       }
-      
+
       public org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ClusterStatus build() {
         org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ClusterStatus result = buildPartial();
         if (!result.isInitialized()) {
@@ -5453,17 +8357,7 @@ public final class ClusterStatusProtos {
         }
         return result;
       }
-      
-      private org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ClusterStatus buildParsed()
-          throws com.google.protobuf.InvalidProtocolBufferException {
-        org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ClusterStatus result = buildPartial();
-        if (!result.isInitialized()) {
-          throw newUninitializedMessageException(
-            result).asInvalidProtocolBufferException();
-        }
-        return result;
-      }
-      
+
       public org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ClusterStatus buildPartial() {
         org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ClusterStatus result = new org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ClusterStatus(this);
         int from_bitField0_ = bitField0_;
@@ -5545,7 +8439,7 @@ public final class ClusterStatusProtos {
         onBuilt();
         return result;
       }
-      
+
       public Builder mergeFrom(com.google.protobuf.Message other) {
         if (other instanceof org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ClusterStatus) {
           return mergeFrom((org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ClusterStatus)other);
@@ -5554,7 +8448,7 @@ public final class ClusterStatusProtos {
           return this;
         }
       }
-      
+
       public Builder mergeFrom(org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ClusterStatus other) {
         if (other == org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ClusterStatus.getDefaultInstance()) return this;
         if (other.hasHbaseVersion()) {
@@ -5702,7 +8596,7 @@ public final class ClusterStatusProtos {
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
       }
-      
+
       public final boolean isInitialized() {
         if (hasHbaseVersion()) {
           if (!getHbaseVersion().isInitialized()) {
@@ -5754,105 +8648,39 @@ public final class ClusterStatusProtos {
         }
         return true;
       }
-      
+
       public Builder mergeFrom(
           com.google.protobuf.CodedInputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws java.io.IOException {
-        com.google.protobuf.UnknownFieldSet.Builder unknownFields =
-          com.google.protobuf.UnknownFieldSet.newBuilder(
-            this.getUnknownFields());
-        while (true) {
-          int tag = input.readTag();
-          switch (tag) {
-            case 0:
-              this.setUnknownFields(unknownFields.build());
-              onChanged();
-              return this;
-            default: {
-              if (!parseUnknownField(input, unknownFields,
-                                     extensionRegistry, tag)) {
-                this.setUnknownFields(unknownFields.build());
-                onChanged();
-                return this;
-              }
-              break;
-            }
-            case 10: {
-              org.apache.hadoop.hbase.protobuf.generated.FSProtos.HBaseVersionFileContent.Builder subBuilder = org.apache.hadoop.hbase.protobuf.generated.FSProtos.HBaseVersionFileContent.newBuilder();
-              if (hasHbaseVersion()) {
-                subBuilder.mergeFrom(getHbaseVersion());
-              }
-              input.readMessage(subBuilder, extensionRegistry);
-              setHbaseVersion(subBuilder.buildPartial());
-              break;
-            }
-            case 18: {
-              org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.LiveServerInfo.Builder subBuilder = org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.LiveServerInfo.newBuilder();
-              input.readMessage(subBuilder, extensionRegistry);
-              addLiveServers(subBuilder.buildPartial());
-              break;
-            }
-            case 26: {
-              org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.Builder subBuilder = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.newBuilder();
-              input.readMessage(subBuilder, extensionRegistry);
-              addDeadServers(subBuilder.buildPartial());
-              break;
-            }
-            case 34: {
-              org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionInTransition.Builder subBuilder = org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionInTransition.newBuilder();
-              input.readMessage(subBuilder, extensionRegistry);
-              addRegionsInTransition(subBuilder.buildPartial());
-              break;
-            }
-            case 42: {
-              org.apache.hadoop.hbase.protobuf.generated.ClusterIdProtos.ClusterId.Builder subBuilder = org.apache.hadoop.hbase.protobuf.generated.ClusterIdProtos.ClusterId.newBuilder();
-              if (hasClusterId()) {
-                subBuilder.mergeFrom(getClusterId());
-              }
-              input.readMessage(subBuilder, extensionRegistry);
-              setClusterId(subBuilder.buildPartial());
-              break;
-            }
-            case 50: {
-              org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Coprocessor.Builder subBuilder = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Coprocessor.newBuilder();
-              input.readMessage(subBuilder, extensionRegistry);
-              addMasterCoprocessors(subBuilder.buildPartial());
-              break;
-            }
-            case 58: {
-              org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.Builder subBuilder = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.newBuilder();
-              if (hasMaster()) {
-                subBuilder.mergeFrom(getMaster());
-              }
-              input.readMessage(subBuilder, extensionRegistry);
-              setMaster(subBuilder.buildPartial());
-              break;
-            }
-            case 66: {
-              org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.Builder subBuilder = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.newBuilder();
-              input.readMessage(subBuilder, extensionRegistry);
-              addBackupMasters(subBuilder.buildPartial());
-              break;
-            }
-            case 72: {
-              bitField0_ |= 0x00000100;
-              balancerOn_ = input.readBool();
-              break;
-            }
+        org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ClusterStatus parsedMessage = null;
+        try {
+          parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
+        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+          parsedMessage = (org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ClusterStatus) e.getUnfinishedMessage();
+          throw e;
+        } finally {
+          if (parsedMessage != null) {
+            mergeFrom(parsedMessage);
           }
         }
+        return this;
       }
-      
       private int bitField0_;
-      
+
       // optional .HBaseVersionFileContent hbase_version = 1;
       private org.apache.hadoop.hbase.protobuf.generated.FSProtos.HBaseVersionFileContent hbaseVersion_ = org.apache.hadoop.hbase.protobuf.generated.FSProtos.HBaseVersionFileContent.getDefaultInstance();
       private com.google.protobuf.SingleFieldBuilder<
           org.apache.hadoop.hbase.protobuf.generated.FSProtos.HBaseVersionFileContent, org.apache.hadoop.hbase.protobuf.generated.FSProtos.HBaseVersionFileContent.Builder, org.apache.hadoop.hbase.protobuf.generated.FSProtos.HBaseVersionFileContentOrBuilder> hbaseVersionBuilder_;
+      /**
+       * <code>optional .HBaseVersionFileContent hbase_version = 1;</code>
+       */
       public boolean hasHbaseVersion() {
         return ((bitField0_ & 0x00000001) == 0x00000001);
       }
+      /**
+       * <code>optional .HBaseVersionFileContent hbase_version = 1;</code>
+       */
       public org.apache.hadoop.hbase.protobuf.generated.FSProtos.HBaseVersionFileContent getHbaseVersion() {
         if (hbaseVersionBuilder_ == null) {
           return hbaseVersion_;
@@ -5860,6 +8688,9 @@ public final class ClusterStatusProtos {
           return hbaseVersionBuilder_.getMessage();
         }
       }
+      /**
+       * <code>optional .HBaseVersionFileContent hbase_version = 1;</code>
+       */
       public Builder setHbaseVersion(org.apache.hadoop.hbase.protobuf.generated.FSProtos.HBaseVersionFileContent value) {
         if (hbaseVersionBuilder_ == null) {
           if (value == null) {
@@ -5873,6 +8704,9 @@ public final class ClusterStatusProtos {
         bitField0_ |= 0x00000001;
         return this;
       }
+      /**
+       * <code>optional .HBaseVersionFileContent hbase_version = 1;</code>
+       */
       public Builder setHbaseVersion(
           org.apache.hadoop.hbase.protobuf.generated.FSProtos.HBaseVersionFileContent.Builder builderForValue) {
         if (hbaseVersionBuilder_ == null) {
@@ -5884,6 +8718,9 @@ public final class ClusterStatusProtos {
         bitField0_ |= 0x00000001;
         return this;
       }
+      /**
+       * <code>optional .HBaseVersionFileContent hbase_version = 1;</code>
+       */
       public Builder mergeHbaseVersion(org.apache.hadoop.hbase.protobuf.generated.FSProtos.HBaseVersionFileContent value) {
         if (hbaseVersionBuilder_ == null) {
           if (((bitField0_ & 0x00000001) == 0x00000001) &&
@@ -5900,6 +8737,9 @@ public final class ClusterStatusProtos {
         bitField0_ |= 0x00000001;
         return this;
       }
+      /**
+       * <code>optional .HBaseVersionFileContent hbase_version = 1;</code>
+       */
       public Builder clearHbaseVersion() {
         if (hbaseVersionBuilder_ == null) {
           hbaseVersion_ = org.apache.hadoop.hbase.protobuf.generated.FSProtos.HBaseVersionFileContent.getDefaultInstance();
@@ -5910,11 +8750,17 @@ public final class ClusterStatusProtos {
         bitField0_ = (bitField0_ & ~0x00000001);
         return this;
       }
+      /**
+       * <code>optional .HBaseVersionFileContent hbase_version = 1;</code>
+       */
       public org.apache.hadoop.hbase.protobuf.generated.FSProtos.HBaseVersionFileContent.Builder getHbaseVersionBuilder() {
         bitField0_ |= 0x00000001;
         onChanged();
         return getHbaseVersionFieldBuilder().getBuilder();
       }
+      /**
+       * <code>optional .HBaseVersionFileContent hbase_version = 1;</code>
+       */
       public org.apache.hadoop.hbase.protobuf.generated.FSProtos.HBaseVersionFileContentOrBuilder getHbaseVersionOrBuilder() {
         if (hbaseVersionBuilder_ != null) {
           return hbaseVersionBuilder_.getMessageOrBuilder();
@@ -5922,6 +8768,9 @@ public final class ClusterStatusProtos {
           return hbaseVersion_;
         }
       }
+      /**
+       * <code>optional .HBaseVersionFileContent hbase_version = 1;</code>
+       */
       private com.google.protobuf.SingleFieldBuilder<
           org.apache.hadoop.hbase.protobuf.generated.FSProtos.HBaseVersionFileContent, org.apache.hadoop.hbase.protobuf.generated.FSProtos.HBaseVersionFileContent.Builder, org.apache.hadoop.hbase.protobuf.generated.FSProtos.HBaseVersionFileContentOrBuilder> 
           getHbaseVersionFieldBuilder() {
@@ -5935,7 +8784,7 @@ public final class ClusterStatusProtos {
         }
         return hbaseVersionBuilder_;
       }
-      
+
       // repeated .LiveServerInfo live_servers = 2;
       private java.util.List<org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.LiveServerInfo> liveServers_ =
         java.util.Collections.emptyList();
@@ -5945,10 +8794,13 @@ public final class ClusterStatusProtos {
           bitField0_ |= 0x00000002;
          }
       }
-      
+
       private com.google.protobuf.RepeatedFieldBuilder<
           org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.LiveServerInfo, org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.LiveServerInfo.Builder, org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.LiveServerInfoOrBuilder> liveServersBuilder_;
-      
+
+      /**
+       * <code>repeated .LiveServerInfo live_servers = 2;</code>
+       */
       public java.util.List<org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.LiveServerInfo> getLiveServersList() {
         if (liveServersBuilder_ == null) {
           return java.util.Collections.unmodifiableList(liveServers_);
@@ -5956,6 +8808,9 @@ public final class ClusterStatusProtos {
           return liveServersBuilder_.getMessageList();
         }
       }
+      /**
+       * <code>repeated .LiveServerInfo live_servers = 2;</code>
+       */
       public int getLiveServersCount() {
         if (liveServersBuilder_ == null) {
           return liveServers_.size();
@@ -5963,6 +8818,9 @@ public final class ClusterStatusProtos {
           return liveServersBuilder_.getCount();
         }
       }
+      /**
+       * <code>repeated .LiveServerInfo live_servers = 2;</code>
+       */
       public org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.LiveServerInfo getLiveServers(int index) {
         if (liveServersBuilder_ == null) {
           return liveServers_.get(index);
@@ -5970,6 +8828,9 @@ public final class ClusterStatusProtos {
           return liveServersBuilder_.getMessage(index);
         }
       }
+      /**
+       * <code>repeated .LiveServerInfo live_servers = 2;</code>
+       */
       public Builder setLiveServers(
           int index, org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.LiveServerInfo value) {
         if (liveServersBuilder_ == null) {
@@ -5984,6 +8845,9 @@ public final class ClusterStatusProtos {
         }
         return this;
       }
+      /**
+       * <code>repeated .LiveServerInfo live_servers = 2;</code>
+       */
       public Builder setLiveServers(
           int index, org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.LiveServerInfo.Builder builderForValue) {
         if (liveServersBuilder_ == null) {
@@ -5995,6 +8859,9 @@ public final class ClusterStatusProtos {
         }
         return this;
       }
+      /**
+       * <code>repeated .LiveServerInfo live_servers = 2;</code>
+       */
       public Builder addLiveServers(org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.LiveServerInfo value) {
         if (liveServersBuilder_ == null) {
           if (value == null) {
@@ -6008,6 +8875,9 @@ public final class ClusterStatusProtos {
         }
         return this;
       }
+      /**
+       * <code>repeated .LiveServerInfo live_servers = 2;</code>
+       */
       public Builder addLiveServers(
           int index, org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.LiveServerInfo value) {
         if (liveServersBuilder_ == null) {
@@ -6022,6 +8892,9 @@ public final class ClusterStatusProtos {
         }
         return this;
       }
+      /**
+       * <code>repeated .LiveServerInfo live_servers = 2;</code>
+       */
       public Builder addLiveServers(
           org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.LiveServerInfo.Builder builderForValue) {
         if (liveServersBuilder_ == null) {
@@ -6033,6 +8906,9 @@ public final class ClusterStatusProtos {
         }
         return this;
       }
+      /**
+       * <code>repeated .LiveServerInfo live_servers = 2;</code>
+       */
       public Builder addLiveServers(
           int index, org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.LiveServerInfo.Builder builderForValue) {
         if (liveServersBuilder_ == null) {
@@ -6044,6 +8920,9 @@ public final class ClusterStatusProtos {
         }
         return this;
       }
+      /**
+       * <code>repeated .LiveServerInfo live_servers = 2;</code>
+       */
       public Builder addAllLiveServers(
           java.lang.Iterable<? extends org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.LiveServerInfo> values) {
         if (liveServersBuilder_ == null) {
@@ -6055,6 +8934,9 @@ public final class ClusterStatusProtos {
         }
         return this;
       }
+      /**
+       * <code>repeated .LiveServerInfo live_servers = 2;</code>
+       */
       public Builder clearLiveServers() {
         if (liveServersBuilder_ == null) {
           liveServers_ = java.util.Collections.emptyList();
@@ -6065,6 +8947,9 @@ public final class ClusterStatusProtos {
         }
         return this;
       }
+      /**
+       * <code>repeated .LiveServerInfo live_servers = 2;</code>
+       */
       public Builder removeLiveServers(int index) {
         if (liveServersBuilder_ == null) {
           ensureLiveServersIsMutable();
@@ -6075,10 +8960,16 @@ public final class ClusterStatusProtos {
         }
         return this;
       }
+      /**
+       * <code>repeated .LiveServerInfo live_servers = 2;</code>
+       */
       public org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.LiveServerInfo.Builder getLiveServersBuilder(
           int index) {
         return getLiveServersFieldBuilder().getBuilder(index);
       }
+      /**
+       * <code>repeated .LiveServerInfo live_servers = 2;</code>
+       */
       public org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.LiveServerInfoOrBuilder getLiveServersOrBuilder(
           int index) {
         if (liveServersBuilder_ == null) {
@@ -6086,6 +8977,9 @@ public final class ClusterStatusProtos {
           return liveServersBuilder_.getMessageOrBuilder(index);
         }
       }
+      /**
+       * <code>repeated .LiveServerInfo live_servers = 2;</code>
+       */
       public java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.LiveServerInfoOrBuilder> 
            getLiveServersOrBuilderList() {
         if (liveServersBuilder_ != null) {
@@ -6094,15 +8988,24 @@ public final class ClusterStatusProtos {
           return java.util.Collections.unmodifiableList(liveServers_);
         }
       }
+      /**
+       * <code>repeated .LiveServerInfo live_servers = 2;</code>
+       */
       public org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.LiveServerInfo.Builder addLiveServersBuilder() {
         return getLiveServersFieldBuilder().addBuilder(
             org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.LiveServerInfo.getDefaultInstance());
       }
+      /**
+       * <code>repeated .LiveServerInfo live_servers = 2;</code>
+       */
       public org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.LiveServerInfo.Builder addLiveServersBuilder(
           int index) {
         return getLiveServersFieldBuilder().addBuilder(
             index, org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.LiveServerInfo.getDefaultInstance());
       }
+      /**
+       * <code>repeated .LiveServerInfo live_servers = 2;</code>
+       */
       public java.util.List<org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.LiveServerInfo.Builder> 
            getLiveServersBuilderList() {
         return getLiveServersFieldBuilder().getBuilderList();
@@ -6121,7 +9024,7 @@ public final class ClusterStatusProtos {
         }
         return liveServersBuilder_;
       }
-      
+
       // repeated .ServerName dead_servers = 3;
       private java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName> deadServers_ =
         java.util.Collections.emptyList();
@@ -6131,10 +9034,13 @@ public final class ClusterStatusProtos {
           bitField0_ |= 0x00000004;
          }
       }
-      
+
       private com.google.protobuf.RepeatedFieldBuilder<
           org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerNameOrBuilder> deadServersBuilder_;
-      
+
+      /**
+       * <code>repeated .ServerName dead_servers = 3;</code>
+       */
       public java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName> getDeadServersList() {
         if (deadServersBuilder_ == null) {
           return java.util.Collections.unmodifiableList(deadServers_);
@@ -6142,6 +9048,9 @@ public final class ClusterStatusProtos {
           return deadServersBuilder_.getMessageList();
         }
       }
+      /**
+       * <code>repeated .ServerName dead_servers = 3;</code>
+       */
       public int getDeadServersCount() {
         if (deadServersBuilder_ == null) {
           return deadServers_.size();
@@ -6149,6 +9058,9 @@ public final class ClusterStatusProtos {
           return deadServersBuilder_.getCount();
         }
       }
+      /**
+       * <code>repeated .ServerName dead_servers = 3;</code>
+       */
       public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName getDeadServers(int index) {
         if (deadServersBuilder_ == null) {
           return deadServers_.get(index);
@@ -6156,6 +9068,9 @@ public final class ClusterStatusProtos {
           return deadServersBuilder_.getMessage(index);
         }
       }
+      /**
+       * <code>repeated .ServerName dead_servers = 3;</code>
+       */
       public Builder setDeadServers(
           int index, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName value) {
         if (deadServersBuilder_ == null) {
@@ -6170,6 +9085,9 @@ public final class ClusterStatusProtos {
         }
         return this;
       }
+      /**
+       * <code>repeated .ServerName dead_servers = 3;</code>
+       */
       public Builder setDeadServers(
           int index, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.Builder builderForValue) {
         if (deadServersBuilder_ == null) {
@@ -6181,6 +9099,9 @@ public final class ClusterStatusProtos {
         }
         return this;
       }
+      /**
+       * <code>repeated .ServerName dead_servers = 3;</code>
+       */
       public Builder addDeadServers(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName value) {
         if (deadServersBuilder_ == null) {
           if (value == null) {
@@ -6194,6 +9115,9 @@ public final class ClusterStatusProtos {
         }
         return this;
       }
+      /**
+       * <code>repeated .ServerName dead_servers = 3;</code>
+       */
       public Builder addDeadServers(
           int index, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName value) {
         if (deadServersBuilder_ == null) {
@@ -6208,6 +9132,9 @@ public final class ClusterStatusProtos {
         }
         return this;
       }
+      /**
+       * <code>repeated .ServerName dead_servers = 3;</code>
+       */
       public Builder addDeadServers(
           org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.Builder builderForValue) {
         if (deadServersBuilder_ == null) {
@@ -6219,6 +9146,9 @@ public final class ClusterStatusProtos {
         }
         return this;
       }
+      /**
+       * <code>repeated .ServerName dead_servers = 3;</code>
+       */
       public Builder addDeadServers(
           int index, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.Builder builderForValue) {
         if (deadServersBuilder_ == null) {
@@ -6230,6 +9160,9 @@ public final class ClusterStatusProtos {
         }
         return this;
       }
+      /**
+       * <code>repeated .ServerName dead_servers = 3;</code>
+       */
       public Builder addAllDeadServers(
           java.lang.Iterable<? extends org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName> values) {
         if (deadServersBuilder_ == null) {
@@ -6241,6 +9174,9 @@ public final class ClusterStatusProtos {
         }
         return this;
       }
+      /**
+       * <code>repeated .ServerName dead_servers = 3;</code>
+       */
       public Builder clearDeadServers() {
         if (deadServersBuilder_ == null) {
           deadServers_ = java.util.Collections.emptyList();
@@ -6251,6 +9187,9 @@ public final class ClusterStatusProtos {
         }
         return this;
       }
+      /**
+       * <code>repeated .ServerName dead_servers = 3;</code>
+       */
       public Builder removeDeadServers(int index) {
         if (deadServersBuilder_ == null) {
           ensureDeadServersIsMutable();
@@ -6261,10 +9200,16 @@ public final class ClusterStatusProtos {
         }
         return this;
       }
+      /**
+       * <code>repeated .ServerName dead_servers = 3;</code>
+       */
       public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.Builder getDeadServersBuilder(
           int index) {
         return getDeadServersFieldBuilder().getBuilder(index);
       }
+      /**
+       * <code>repeated .ServerName dead_servers = 3;</code>
+       */
       public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerNameOrBuilder getDeadServersOrBuilder(
           int index) {
         if (deadServersBuilder_ == null) {
@@ -6272,6 +9217,9 @@ public final class ClusterStatusProtos {
           return deadServersBuilder_.getMessageOrBuilder(index);
         }
       }
+      /**
+       * <code>repeated .ServerName dead_servers = 3;</code>
+       */
       public java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerNameOrBuilder> 
            getDeadServersOrBuilderList() {
         if (deadServersBuilder_ != null) {
@@ -6280,15 +9228,24 @@ public final class ClusterStatusProtos {
           return java.util.Collections.unmodifiableList(deadServers_);
         }
       }
+      /**
+       * <code>repeated .ServerName dead_servers = 3;</code>
+       */
       public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.Builder addDeadServersBuilder() {
         return getDeadServersFieldBuilder().addBuilder(
             org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.getDefaultInstance());
       }
+      /**
+       * <code>repeated .ServerName dead_servers = 3;</code>
+       */
       public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.Builder addDeadServersBuilder(
           int index) {
         return getDeadServersFieldBuilder().addBuilder(
             index, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.getDefaultInstance());
       }
+      /**
+       * <code>repeated .ServerName dead_servers = 3;</code>
+       */
       public java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.Builder> 
            getDeadServersBuilderList() {
         return getDeadServersFieldBuilder().getBuilderList();
@@ -6307,7 +9264,7 @@ public final class ClusterStatusProtos {
         }
         return deadServersBuilder_;
       }
-      
+
       // repeated .RegionInTransition regions_in_transition = 4;
       private java.util.List<org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionInTransition> regionsInTransition_ =
         java.util.Collections.emptyList();
@@ -6317,10 +9274,13 @@ public final class ClusterStatusProtos {
           bitField0_ |= 0x00000008;
          }
       }
-      
+
       private com.google.protobuf.RepeatedFieldBuilder<
           org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionInTransition, org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionInTransition.Builder, org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionInTransitionOrBuilder> regionsInTransitionBuilder_;
-      
+
+      /**
+       * <code>repeated .RegionInTransition regions_in_transition = 4;</code>
+       */
       public java.util.List<org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionInTransition> getRegionsInTransitionList() {
         if (regionsInTransitionBuilder_ == null) {
           return java.util.Collections.unmodifiableList(regionsInTransition_);
@@ -6328,6 +9288,9 @@ public final class ClusterStatusProtos {
           return regionsInTransitionBuilder_.getMessageList();
         }
       }
+      /**
+       * <code>repeated .RegionInTransition regions_in_transition = 4;</code>
+       */
       public int getRegionsInTransitionCount() {
         if (regionsInTransitionBuilder_ == null) {
           return regionsInTransition_.size();
@@ -6335,6 +9298,9 @@ public final class ClusterStatusProtos {
           return regionsInTransitionBuilder_.getCount();
         }
       }
+      /**
+       * <code>repeated .RegionInTransition regions_in_transition = 4;</code>
+       */
       public org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionInTransition getRegionsInTransition(int index) {
         if (regionsInTransitionBuilder_ == null) {
           return regionsInTransition_.get(index);
@@ -6342,6 +9308,9 @@ public final class ClusterStatusProtos {
           return regionsInTransitionBuilder_.getMessage(index);
         }
       }
+      /**
+       * <code>repeated .RegionInTransition regions_in_transition = 4;</code>
+       */
       public Builder setRegionsInTransition(
           int index, org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionInTransition value) {
         if (regionsInTransitionBuilder_ == null) {
@@ -6356,6 +9325,9 @@ public final class ClusterStatusProtos {
         }
         return this;
       }
+      /**
+       * <code>repeated .RegionInTransition regions_in_transition = 4;</code>
+       */
       public Builder setRegionsInTransition(
           int index, org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionInTransition.Builder builderForValue) {
         if (regionsInTransitionBuilder_ == null) {
@@ -6367,6 +9339,9 @@ public final class ClusterStatusProtos {
         }
         return this;
       }
+      /**
+       * <code>repeated .RegionInTransition regions_in_transition = 4;</code>
+       */
       public Builder addRegionsInTransition(org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionInTransition value) {
         if (regionsInTransitionBuilder_ == null) {
           if (value == null) {
@@ -6380,6 +9355,9 @@ public final class ClusterStatusProtos {
         }
         return this;
       }
+      /**
+       * <code>repeated .RegionInTransition regions_in_transition = 4;</code>
+       */
       public Builder addRegionsInTransition(
           int index, org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionInTransition value) {
         if (regionsInTransitionBuilder_ == null) {
@@ -6394,6 +9372,9 @@ public final class ClusterStatusProtos {
         }
         return this;
       }
+      /**
+       * <code>repeated .RegionInTransition regions_in_transition = 4;</code>
+       */
       public Builder addRegionsInTransition(
           org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionInTransition.Builder builderForValue) {
         if (regionsInTransitionBuilder_ == null) {
@@ -6405,6 +9386,9 @@ public final class ClusterStatusProtos {
         }
         return this;
       }
+      /**
+       * <code>repeated .RegionInTransition regions_in_transition = 4;</code>
+       */
       public Builder addRegionsInTransition(
           int index, org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionInTransition.Builder builderForValue) {
         if (regionsInTransitionBuilder_ == null) {
@@ -6416,6 +9400,9 @@ public final class ClusterStatusProtos {
         }
         return this;
       }
+      /**
+       * <code>repeated .RegionInTransition regions_in_transition = 4;</code>
+       */
       public Builder addAllRegionsInTransition(
           java.lang.Iterable<? extends org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionInTransition> values) {
         if (regionsInTransitionBuilder_ == null) {
@@ -6427,6 +9414,9 @@ public final class ClusterStatusProtos {
         }
         return this;
       }
+      /**
+       * <code>repeated .RegionInTransition regions_in_transition = 4;</code>
+       */
       public Builder clearRegionsInTransition() {
         if (regionsInTransitionBuilder_ == null) {
           regionsInTransition_ = java.util.Collections.emptyList();
@@ -6437,6 +9427,9 @@ public final class ClusterStatusProtos {
         }
         return this;
       }
+      /**
+       * <code>repeated .RegionInTransition regions_in_transition = 4;</code>
+       */
       public Builder removeRegionsInTransition(int index) {
         if (regionsInTransitionBuilder_ == null) {
           ensureRegionsInTransitionIsMutable();
@@ -6447,10 +9440,16 @@ public final class ClusterStatusProtos {
         }
         return this;
       }
+      /**
+       * <code>repeated .RegionInTransition regions_in_transition = 4;</code>
+       */
       public org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionInTransition.Builder getRegionsInTransitionBuilder(
           int index) {
         return getRegionsInTransitionFieldBuilder().getBuilder(index);
       }
+      /**
+       * <code>repeated .RegionInTransition regions_in_transition = 4;</code>
+       */
       public org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionInTransitionOrBuilder getRegionsInTransitionOrBuilder(
           int index) {
         if (regionsInTransitionBuilder_ == null) {
@@ -6458,6 +9457,9 @@ public final class ClusterStatusProtos {
           return regionsInTransitionBuilder_.getMessageOrBuilder(index);
         }
       }
+      /**
+       * <code>repeated .RegionInTransition regions_in_transition = 4;</code>
+       */
       public java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionInTransitionOrBuilder> 
            getRegionsInTransitionOrBuilderList() {
         if (regionsInTransitionBuilder_ != null) {
@@ -6466,15 +9468,24 @@ public final class ClusterStatusProtos {
           return java.util.Collections.unmodifiableList(regionsInTransition_);
         }
       }
+      /**
+       * <code>repeated .RegionInTransition regions_in_transition = 4;</code>
+       */
       public org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionInTransition.Builder addRegionsInTransitionBuilder() {
         return getRegionsInTransitionFieldBuilder().addBuilder(
             org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionInTransition.getDefaultInstance());
       }
+      /**
+       * <code>repeated .RegionInTransition regions_in_transition = 4;</code>
+       */
       public org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionInTransition.Builder addRegionsInTransitionBuilder(
           int index) {
         return getRegionsInTransitionFieldBuilder().addBuilder(
             index, org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionInTransition.getDefaultInstance());
       }
+      /**
+       * <code>repeated .RegionInTransition regions_in_transition = 4;</code>
+       */
       public java.util.List<org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionInTransition.Builder> 
            getRegionsInTransitionBuilderList() {
         return getRegionsInTransitionFieldBuilder().getBuilderList();
@@ -6493,14 +9504,20 @@ public final class ClusterStatusProtos {
         }
         return regionsInTransitionBuilder_;
       }
-      
+
       // optional .ClusterId cluster_id = 5;
       private org.apache.hadoop.hbase.protobuf.generated.ClusterIdProtos.ClusterId clusterId_ = org.apache.hadoop.hbase.protobuf.generated.ClusterIdProtos.ClusterId.getDefaultInstance();
       private com.google.protobuf.SingleFieldBuilder<
           org.apache.hadoop.hbase.protobuf.generated.ClusterIdProtos.ClusterId, org.apache.hadoop.hbase.protobuf.generated.ClusterIdProtos.ClusterId.Builder, org.apache.hadoop.hbase.protobuf.generated.ClusterIdProtos.ClusterIdOrBuilder> clusterIdBuilder_;
+      /**
+       * <code>optional .ClusterId cluster_id = 5;</code>
+       */
       public boolean hasClusterId() {
         return ((bitField0_ & 0x00000010) == 0x00000010);
       }
+      /**
+       * <code>optional .ClusterId cluster_id = 5;</code>
+       */
       public org.apache.hadoop.hbase.protobuf.generated.ClusterIdProtos.ClusterId getClusterId() {
         if (clusterIdBuilder_ == null) {
           return clusterId_;
@@ -6508,6 +9525,9 @@ public final class ClusterStatusProtos {
           return clusterIdBuilder_.getMessage();
         }
       }
+      /**
+       * <code>optional .ClusterId cluster_id = 5;</code>
+       */
       public Builder setClusterId(org.apache.hadoop.hbase.protobuf.generated.ClusterIdProtos.ClusterId value) {
         if (clusterIdBuilder_ == null) {
           if (value == null) {
@@ -6521,6 +9541,9 @@ public final class ClusterStatusProtos {
         bitField0_ |= 0x00000010;
         return this;
       }
+      /**
+       * <code>optional .ClusterId cluster_id = 5;</code>
+       */
       public Builder setClusterId(
           org.apache.hadoop.hbase.protobuf.generated.ClusterIdProtos.ClusterId.Builder builderForValue) {
         if (clusterIdBuilder_ == null) {
@@ -6532,6 +9555,9 @@ public final class ClusterStatusProtos {
         bitField0_ |= 0x00000010;
         return this;
       }
+      /**
+       * <code>optional .ClusterId cluster_id = 5;</code>
+       */
       public Builder mergeClusterId(org.apache.hadoop.hbase.protobuf.generated.ClusterIdProtos.ClusterId value) {
         if (clusterIdBuilder_ == null) {
           if (((bitField0_ & 0x00000010) == 0x00000010) &&
@@ -6548,6 +9574,9 @@ public final class ClusterStatusProtos {
         bitField0_ |= 0x00000010;
         return this;
       }
+      /**
+       * <code>optional .ClusterId cluster_id = 5;</code>
+       */
       public Builder clearClusterId() {
         if (clusterIdBuilder_ == null) {
           clusterId_ = org.apache.hadoop.hbase.protobuf.generated.ClusterIdProtos.ClusterId.getDefaultInstance();
@@ -6558,11 +9587,17 @@ public final class ClusterStatusProtos {
         bitField0_ = (bitField0_ & ~0x00000010);
         return this;
       }
+      /**
+       * <code>optional .ClusterId cluster_id = 5;</code>
+       */
       public org.apache.hadoop.hbase.protobuf.generated.ClusterIdProtos.ClusterId.Builder getClusterIdBuilder() {
         bitField0_ |= 0x00000010;
         onChanged();
         return getClusterIdFieldBuilder().getBuilder();
       }
+      /**
+       * <code>optional .ClusterId cluster_id = 5;</code>
+       */
       public org.apache.hadoop.hbase.protobuf.generated.ClusterIdProtos.ClusterIdOrBuilder getClusterIdOrBuilder() {
         if (clusterIdBuilder_ != null) {
           return clusterIdBuilder_.getMessageOrBuilder();
@@ -6570,6 +9605,9 @@ public final class ClusterStatusProtos {
           return clusterId_;
         }
       }
+      /**
+       * <code>optional .ClusterId cluster_id = 5;</code>
+       */
       private com.google.protobuf.SingleFieldBuilder<
           org.apache.hadoop.hbase.protobuf.generated.ClusterIdProtos.ClusterId, org.apache.hadoop.hbase.protobuf.generated.ClusterIdProtos.ClusterId.Builder, org.apache.hadoop.hbase.protobuf.generated.ClusterIdProtos.ClusterIdOrBuilder> 
           getClusterIdFieldBuilder() {
@@ -6583,7 +9621,7 @@ public final class ClusterStatusProtos {
         }
         return clusterIdBuilder_;
       }
-      
+
       // repeated .Coprocessor master_coprocessors = 6;
       private java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Coprocessor> masterCoprocessors_ =
         java.util.Collections.emptyList();
@@ -6593,10 +9631,13 @@ public final class ClusterStatusProtos {
           bitField0_ |= 0x00000020;
          }
       }
-      
+
       private com.google.protobuf.RepeatedFieldBuilder<
           org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Coprocessor, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Coprocessor.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.CoprocessorOrBuilder> masterCoprocessorsBuilder_;
-      
+
+      /**
+       * <code>repeated .Coprocessor master_coprocessors = 6;</code>
+       */
       public java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Coprocessor> getMasterCoprocessorsList() {
         if (masterCoprocessorsBuilder_ == null) {
           return java.util.Collections.unmodifiableList(masterCoprocessors_);
@@ -6604,6 +9645,9 @@ public final class ClusterStatusProtos {
           return masterCoprocessorsBuilder_.getMessageList();
         }
       }
+      /**
+       * <code>repeated .Coprocessor master_coprocessors = 6;</code>
+       */
       public int getMasterCoprocessorsCount() {
         if (masterCoprocessorsBuilder_ == null) {
           return masterCoprocessors_.size();
@@ -6611,6 +9655,9 @@ public final class ClusterStatusProtos {
           return masterCoprocessorsBuilder_.getCount();
         }
       }
+      /**
+       * <code>repeated .Coprocessor master_coprocessors = 6;</code>
+       */
       public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Coprocessor getMasterCoprocessors(int index) {
         if (masterCoprocessorsBuilder_ == null) {
           return masterCoprocessors_.get(index);
@@ -6618,6 +9665,9 @@ public final class ClusterStatusProtos {
           return masterCoprocessorsBuilder_.getMessage(index);
         }
       }
+      /**
+       * <code>repeated .Coprocessor master_coprocessors = 6;</code>
+       */
       public Builder setMasterCoprocessors(
           int index, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Coprocessor value) {
         if (masterCoprocessorsBuilder_ == null) {
@@ -6632,6 +9682,9 @@ public final class ClusterStatusProtos {
         }
         return this;
       }
+      /**
+       * <code>repeated .Coprocessor master_coprocessors = 6;</code>
+       */
       public Builder setMasterCoprocessors(
           int index, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Coprocessor.Builder builderForValue) {
         if (masterCoprocessorsBuilder_ == null) {
@@ -6643,6 +9696,9 @@ public final class ClusterStatusProtos {
         }
         return this;
       }
+      /**
+       * <code>repeated .Coprocessor master_coprocessors = 6;</code>
+       */
       public Builder addMasterCoprocessors(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Coprocessor value) {
         if (masterCoprocessorsBuilder_ == null) {
           if (value == null) {
@@ -6656,6 +9712,9 @@ public final class ClusterStatusProtos {
         }
         return this;
       }
+      /**
+       * <code>repeated .Coprocessor master_coprocessors = 6;</code>
+       */
       public Builder addMasterCoprocessors(
           int index, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Coprocessor value) {
         if (masterCoprocessorsBuilder_ == null) {
@@ -6670,6 +9729,9 @@ public final class ClusterStatusProtos {
         }
         return this;
       }
+      /**
+       * <code>repeated .Coprocessor master_coprocessors = 6;</code>
+       */
       public Builder addMasterCoprocessors(
           org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Coprocessor.Builder builderForValue) {
         if (masterCoprocessorsBuilder_ == null) {
@@ -6681,6 +9743,9 @@ public final class ClusterStatusProtos {
         }
         return this;
       }
+      /**
+       * <code>repeated .Coprocessor master_coprocessors = 6;</code>
+       */
       public Builder addMasterCoprocessors(
           int index, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Coprocessor.Builder builderForValue) {
         if (masterCoprocessorsBuilder_ == null) {
@@ -6692,6 +9757,9 @@ public final class ClusterStatusProtos {
         }
         return this;
       }
+      /**
+       * <code>repeated .Coprocessor master_coprocessors = 6;</code>
+       */
       public Builder addAllMasterCoprocessors(
           java.lang.Iterable<? extends org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Coprocessor> values) {
         if (masterCoprocessorsBuilder_ == null) {
@@ -6703,6 +9771,9 @@ public final class ClusterStatusProtos {
         }
         return this;
       }
+      /**
+       * <code>repeated .Coprocessor master_coprocessors = 6;</code>
+       */
       public Builder clearMasterCoprocessors() {
         if (masterCoprocessorsBuilder_ == null) {
           masterCoprocessors_ = java.util.Collections.emptyList();
@@ -6713,6 +9784,9 @@ public final class ClusterStatusProtos {
         }
         return this;
       }
+      /**
+       * <code>repeated .Coprocessor master_coprocessors = 6;</code>
+       */
       public Builder removeMasterCoprocessors(int index) {
         if (masterCoprocessorsBuilder_ == null) {
           ensureMasterCoprocessorsIsMutable();
@@ -6723,10 +9797,16 @@ public final class ClusterStatusProtos {
         }
         return this;
       }
+      /**
+       * <code>repeated .Coprocessor master_coprocessors = 6;</code>
+       */
       public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Coprocessor.Builder getMasterCoprocessorsBuilder(
           int index) {
         return getMasterCoprocessorsFieldBuilder().getBuilder(index);
       }
+      /**
+       * <code>repeated .Coprocessor master_coprocessors = 6;</code>
+       */
       public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.CoprocessorOrBuilder getMasterCoprocessorsOrBuilder(
           int index) {
         if (masterCoprocessorsBuilder_ == null) {
@@ -6734,6 +9814,9 @@ public final class ClusterStatusProtos {
           return masterCoprocessorsBuilder_.getMessageOrBuilder(index);
         }
       }
+      /**
+       * <code>repeated .Coprocessor master_coprocessors = 6;</code>
+       */
       public java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.CoprocessorOrBuilder> 
            getMasterCoprocessorsOrBuilderList() {
         if (masterCoprocessorsBuilder_ != null) {
@@ -6742,15 +9825,24 @@ public final class ClusterStatusProtos {
           return java.util.Collections.unmodifiableList(masterCoprocessors_);
         }
       }
+      /**
+       * <code>repeated .Coprocessor master_coprocessors = 6;</code>
+       */
       public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Coprocessor.Builder addMasterCoprocessorsBuilder() {
         return getMasterCoprocessorsFieldBuilder().addBuilder(
             org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Coprocessor.getDefaultInstance());
       }
+      /**
+       * <code>repeated .Coprocessor master_coprocessors = 6;</code>
+       */
       public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Coprocessor.Builder addMasterCoprocessorsBuilder(
           int index) {
         return getMasterCoprocessorsFieldBuilder().addBuilder(
             index, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Coprocessor.getDefaultInstance());
       }
+      /**
+       * <code>repeated .Coprocessor master_coprocessors = 6;</code>
+       */
       public java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Coprocessor.Builder> 
            getMasterCoprocessorsBuilderList() {
         return getMasterCoprocessorsFieldBuilder().getBuilderList();
@@ -6769,14 +9861,20 @@ public final class ClusterStatusProtos {
         }
         return masterCoprocessorsBuilder_;
       }
-      
+
       // optional .ServerName master = 7;
       private org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName master_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.getDefaultInstance();
       private com.google.protobuf.SingleFieldBuilder<
           org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerNameOrBuilder> masterBuilder_;
+      /**
+       * <code>optional .ServerName master = 7;</code>
+       */
       public boolean hasMaster() {
         return ((bitField0_ & 0x00000040) == 0x00000040);
       }
+      /**
+       * <code>optional .ServerName master = 7;</code>
+       */
       public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName getMaster() {
         if (masterBuilder_ == null) {
           return master_;
@@ -6784,6 +9882,9 @@ public final class ClusterStatusProtos {
           return masterBuilder_.getMessage();
         }
       }
+      /**
+       * <code>optional .ServerName master = 7;</code>
+       */
       public Builder setMaster(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName value) {
         if (masterBuilder_ == null) {
           if (value == null) {
@@ -6797,6 +9898,9 @@ public final class ClusterStatusProtos {
         bitField0_ |= 0x00000040;
         return this;
       }
+      /**
+       * <code>optional .ServerName master = 7;</code>
+       */
       public Builder setMaster(
           org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.Builder builderForValue) {
         if (masterBuilder_ == null) {
@@ -6808,6 +9912,9 @@ public final class ClusterStatusProtos {
         bitField0_ |= 0x00000040;
         return this;
       }
+      /**
+       * <code>optional .ServerName master = 7;</code>
+       */
       public Builder mergeMaster(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName value) {
         if (masterBuilder_ == null) {
           if (((bitField0_ & 0x00000040) == 0x00000040) &&
@@ -6824,6 +9931,9 @@ public final class ClusterStatusProtos {
         bitField0_ |= 0x00000040;
         return this;
       }
+      /**
+       * <code>optional .ServerName master = 7;</code>
+       */
       public Builder clearMaster() {
         if (masterBuilder_ == null) {
           master_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.getDefaultInstance();
@@ -6834,11 +9944,17 @@ public final class ClusterStatusProtos {
         bitField0_ = (bitField0_ & ~0x00000040);
         return this;
       }
+      /**
+       * <code>optional .ServerName master = 7;</code>
+       */
       public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.Builder getMasterBuilder() {
         bitField0_ |= 0x00000040;
         onChanged();
         return getMasterFieldBuilder().getBuilder();
       }
+      /**
+       * <code>optional .ServerName master = 7;</code>
+       */
       public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerNameOrBuilder getMasterOrBuilder() {
         if (masterBuilder_ != null) {
           return masterBuilder_.getMessageOrBuilder();
@@ -6846,6 +9962,9 @@ public final class ClusterStatusProtos {
           return master_;
         }
       }
+      /**
+       * <code>optional .ServerName master = 7;</code>
+       */
       private com.google.protobuf.SingleFieldBuilder<
           org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerNameOrBuilder> 
           getMasterFieldBuilder() {
@@ -6859,7 +9978,7 @@ public final class ClusterStatusProtos {
         }
         return masterBuilder_;
       }
-      
+
       // repeated .ServerName backup_masters = 8;
       private java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName> backupMasters_ =
         java.util.Collections.emptyList();
@@ -6869,10 +9988,13 @@ public final class ClusterStatusProtos {
           bitField0_ |= 0x00000080;
          }
       }
-      
+
       private com.google.protobuf.RepeatedFieldBuilder<
           org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerNameOrBuilder> backupMastersBuilder_;
-      
+
+      /**
+       * <code>repeated .ServerName backup_masters = 8;</code>
+       */
       public java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName> getBackupMastersList() {
         if (backupMastersBuilder_ == null) {
           return java.util.Collections.unmodifiableList(backupMasters_);
@@ -6880,6 +10002,9 @@ public final class ClusterStatusProtos {
           return backupMastersBuilder_.getMessageList();
         }
       }
+      /**
+       * <code>repeated .ServerName backup_masters = 8;</code>
+       */
       public int getBackupMastersCount() {
         if (backupMastersBuilder_ == null) {
           return backupMasters_.size();
@@ -6887,6 +10012,9 @@ public final class ClusterStatusProtos {
           return backupMastersBuilder_.getCount();
         }
       }
+      /**
+       * <code>repeated .ServerName backup_masters = 8;</code>
+       */
       public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName getBackupMasters(int index) {
         if (backupMastersBuilder_ == null) {
           return backupMasters_.get(index);
@@ -6894,6 +10022,9 @@ public final class ClusterStatusProtos {
           return backupMastersBuilder_.getMessage(index);
         }
       }
+      /**
+       * <code>repeated .ServerName backup_masters = 8;</code>
+       */
       public Builder setBackupMasters(
           int index, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName value) {
         if (backupMastersBuilder_ == null) {
@@ -6908,6 +10039,9 @@ public final class ClusterStatusProtos {
         }
         return this;
       }
+      /**
+       * <code>repeated .ServerName backup_masters = 8;</code>
+       */
       public Builder setBackupMasters(
           int index, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.Builder builderForValue) {
         if (backupMastersBuilder_ == null) {
@@ -6919,6 +10053,9 @@ public final class ClusterStatusProtos {
         }
         return this;
       }
+      /**
+       * <code>repeated .ServerName backup_masters = 8;</code>
+       */
       public Builder addBackupMasters(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName value) {
         if (backupMastersBuilder_ == null) {
           if (value == null) {
@@ -6932,6 +10069,9 @@ public final class ClusterStatusProtos {
         }
         return this;
       }
+      /**
+       * <code>repeated .ServerName backup_masters = 8;</code>
+       */
       public Builder addBackupMasters(
           int index, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName value) {
         if (backupMastersBuilder_ == null) {
@@ -6946,6 +10086,9 @@ public final class ClusterStatusProtos {
         }
         return this;
       }
+      /**
+       * <code>repeated .ServerName backup_masters = 8;</code>
+       */
       public Builder addBackupMasters(
           org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.Builder builderForValue) {
         if (backupMastersBuilder_ == null) {
@@ -6957,6 +10100,9 @@ public final class ClusterStatusProtos {
         }
         return this;
       }
+      /**
+       * <code>repeated .ServerName backup_masters = 8;</code>
+       */
       public Builder addBackupMasters(
           int index, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.Builder builderForValue) {
         if (backupMastersBuilder_ == null) {
@@ -6968,6 +10114,9 @@ public final class ClusterStatusProtos {
         }
         return this;
       }
+      /**
+       * <code>repeated .ServerName backup_masters = 8;</code>
+       */
       public Builder addAllBackupMasters(
           java.lang.Iterable<? extends org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName> values) {
         if (backupMastersBuilder_ == null) {
@@ -6979,6 +10128,9 @@ public final class ClusterStatusProtos {
         }
         return this;
       }
+      /**
+       * <code>repeated .ServerName backup_masters = 8;</code>
+       */
       public Builder clearBackupMasters() {
         if (backupMastersBuilder_ == null) {
           backupMasters_ = java.util.Collections.emptyList();
@@ -6989,6 +10141,9 @@ public final class ClusterStatusProtos {
         }
         return this;
       }
+      /**
+       * <code>repeated .ServerName backup_masters = 8;</code>
+       */
       public Builder removeBackupMasters(int index) {
         if (backupMastersBuilder_ == null) {
           ensureBackupMastersIsMutable();
@@ -6999,10 +10154,16 @@ public final class ClusterStatusProtos {
         }
         return this;
       }
+      /**
+       * <code>repeated .ServerName backup_masters = 8;</code>
+       */
       public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.Builder getBackupMastersBuilder(
           int index) {
         return getBackupMastersFieldBuilder().getBuilder(index);
       }
+      /**
+       * <code>repeated .ServerName backup_masters = 8;</code>
+       */
       public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerNameOrBuilder getBackupMastersOrBuilder(
           int index) {
         if (backupMastersBuilder_ == null) {
@@ -7010,6 +10171,9 @@ public final class ClusterStatusProtos {
           return backupMastersBuilder_.getMessageOrBuilder(index);
         }
       }
+      /**
+       * <code>repeated .ServerName backup_masters = 8;</code>
+       */
       public java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerNameOrBuilder> 
            getBackupMastersOrBuilderList() {
         if (backupMastersBuilder_ != null) {
@@ -7018,15 +10182,24 @@ public final class ClusterStatusProtos {
           return java.util.Collections.unmodifiableList(backupMasters_);
         }
       }
+      /**
+       * <code>repeated .ServerName backup_masters = 8;</code>
+       */
       public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.Builder addBackupMastersBuilder() {
         return getBackupMastersFieldBuilder().addBuilder(
             org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.getDefaultInstance());
       }
+      /**
+       * <code>repeated .ServerName backup_masters = 8;</code>
+       */
       public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.Builder addBackupMastersBuilder(
           int index) {
         return getBackupMastersFieldBuilder().addBuilder(
             index, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.getDefaultInstance());
       }
+      /**
+       * <code>repeated .ServerName backup_masters = 8;</code>
+       */
       public java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.Builder> 
            getBackupMastersBuilderList() {
         return getBackupMastersFieldBuilder().getBuilderList();
@@ -7045,39 +10218,51 @@ public final class ClusterStatusProtos {
         }
         return backupMastersBuilder_;
       }
-      
+
       // optional bool balancer_on = 9;
       private boolean balancerOn_ ;
+      /**
+       * <code>optional bool balancer_on = 9;</code>
+       */
       public boolean hasBalancerOn() {
         return ((bitField0_ & 0x00000100) == 0x00000100);
       }
+      /**
+       * <code>optional bool balancer_on = 9;</code>
+       */
       public boolean getBalancerOn() {
         return balancerOn_;
       }
+      /**
+       * <code>optional bool balancer_on = 9;</code>
+       */
       public Builder setBalancerOn(boolean value) {
         bitField0_ |= 0x00000100;
         balancerOn_ = value;
         onChanged();
         return this;
       }
+      /**
+       * <code>optional bool balancer_on = 9;</code>
+       */
       public Builder clearBalancerOn() {
         bitField0_ = (bitField0_ & ~0x00000100);
         balancerOn_ = false;
         onChanged();
         return this;
       }
-      
+
       // @@protoc_insertion_point(builder_scope:ClusterStatus)
     }
-    
+
     static {
       defaultInstance = new ClusterStatus(true);
       defaultInstance.initFields();
     }
-    
+
     // @@protoc_insertion_point(class_scope:ClusterStatus)
   }
-  
+
   private static com.google.protobuf.Descriptors.Descriptor
     internal_static_RegionState_descriptor;
   private static
@@ -7108,7 +10293,7 @@ public final class ClusterStatusProtos {
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_ClusterStatus_fieldAccessorTable;
-  
+
   public static com.google.protobuf.Descriptors.FileDescriptor
       getDescriptor() {
     return descriptor;
@@ -7171,49 +10356,37 @@ public final class ClusterStatusProtos {
           internal_static_RegionState_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_RegionState_descriptor,
-              new java.lang.String[] { "RegionInfo", "State", "Stamp", },
-              org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionState.class,
-              org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionState.Builder.class);
+              new java.lang.String[] { "RegionInfo", "State", "Stamp", });
           internal_static_RegionInTransition_descriptor =
             getDescriptor().getMessageTypes().get(1);
           internal_static_RegionInTransition_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_RegionInTransition_descriptor,
-              new java.lang.String[] { "Spec", "RegionState", },
-              org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionInTransition.class,
-              org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionInTransition.Builder.class);
+              new java.lang.String[] { "Spec", "RegionState", });
           internal_static_RegionLoad_descriptor =
             getDescriptor().getMessageTypes().get(2);
           internal_static_RegionLoad_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_RegionLoad_descriptor,
-              new java.lang.String[] { "RegionSpecifier", "Stores", "Storefiles", "StoreUncompressedSizeMB", "StorefileSizeMB", "MemstoreSizeMB", "StorefileIndexSizeMB", "ReadRequestsCount", "WriteRequestsCount", "TotalCompactingKVs", "CurrentCompactedKVs", "RootIndexSizeKB", "TotalStaticIndexSizeKB", "TotalStaticBloomSizeKB", "CompleteSequenceId", },
-              org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionLoad.class,
-              org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionLoad.Builder.class);
+              new java.lang.String[] { "RegionSpecifier", "Stores", "Storefiles", "StoreUncompressedSizeMB", "StorefileSizeMB", "MemstoreSizeMB", "StorefileIndexSizeMB", "ReadRequestsCount", "WriteRequestsCount", "TotalCompactingKVs", "CurrentCompactedKVs", "RootIndexSizeKB", "TotalStaticIndexSizeKB", "TotalStaticBloomSizeKB", "CompleteSequenceId", });
           internal_static_ServerLoad_descriptor =
             getDescriptor().getMessageTypes().get(3);
           internal_static_ServerLoad_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_ServerLoad_descriptor,
-              new java.lang.String[] { "NumberOfRequests", "TotalNumberOfRequests", "UsedHeapMB", "MaxHeapMB", "RegionLoads", "Coprocessors", "ReportStartTime", "ReportEndTime", "InfoServerPort", },
-              org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ServerLoad.class,
-              org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ServerLoad.Builder.class);
+              new java.lang.String[] { "NumberOfRequests", "TotalNumberOfRequests", "UsedHeapMB", "MaxHeapMB", "RegionLoads", "Coprocessors", "ReportStartTime", "ReportEndTime", "InfoServerPort", });
           internal_static_LiveServerInfo_descriptor =
             getDescriptor().getMessageTypes().get(4);
           internal_static_LiveServerInfo_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_LiveServerInfo_descriptor,
-              new java.lang.String[] { "Server", "ServerLoad", },
-              org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.LiveServerInfo.class,
-              org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.LiveServerInfo.Builder.class);
+              new java.lang.String[] { "Server", "ServerLoad", });
           internal_static_ClusterStatus_descriptor =
             getDescriptor().getMessageTypes().get(5);
           internal_static_ClusterStatus_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_ClusterStatus_descriptor,
-              new java.lang.String[] { "HbaseVersion", "LiveServers", "DeadServers", "RegionsInTransition", "ClusterId", "MasterCoprocessors", "Master", "BackupMasters", "BalancerOn", },
-              org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ClusterStatus.class,
-              org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ClusterStatus.Builder.class);
+              new java.lang.String[] { "HbaseVersion", "LiveServers", "DeadServers", "RegionsInTransition", "ClusterId", "MasterCoprocessors", "Master", "BackupMasters", "BalancerOn", });
           return null;
         }
       };
@@ -7225,6 +10398,6 @@ public final class ClusterStatusProtos {
           org.apache.hadoop.hbase.protobuf.generated.FSProtos.getDescriptor(),
         }, assigner);
   }
-  
+
   // @@protoc_insertion_point(outer_class_scope)
 }

@@ -10,54 +10,158 @@ public final class TableListMessage {
   }
   public interface TableListOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
-    
+
     // repeated string name = 1;
-    java.util.List<String> getNameList();
+    /**
+     * <code>repeated string name = 1;</code>
+     */
+    java.util.List<java.lang.String>
+    getNameList();
+    /**
+     * <code>repeated string name = 1;</code>
+     */
     int getNameCount();
-    String getName(int index);
+    /**
+     * <code>repeated string name = 1;</code>
+     */
+    java.lang.String getName(int index);
+    /**
+     * <code>repeated string name = 1;</code>
+     */
+    com.google.protobuf.ByteString
+        getNameBytes(int index);
   }
+  /**
+   * Protobuf type {@code org.apache.hadoop.hbase.rest.protobuf.generated.TableList}
+   */
   public static final class TableList extends
       com.google.protobuf.GeneratedMessage
       implements TableListOrBuilder {
     // Use TableList.newBuilder() to construct.
-    private TableList(Builder builder) {
+    private TableList(com.google.protobuf.GeneratedMessage.Builder<?> builder) {
       super(builder);
+      this.unknownFields = builder.getUnknownFields();
     }
-    private TableList(boolean noInit) {}
-    
+    private TableList(boolean noInit) { this.unknownFields = com.google.protobuf.UnknownFieldSet.getDefaultInstance(); }
+
     private static final TableList defaultInstance;
     public static TableList getDefaultInstance() {
       return defaultInstance;
     }
-    
+
     public TableList getDefaultInstanceForType() {
       return defaultInstance;
     }
-    
+
+    private final com.google.protobuf.UnknownFieldSet unknownFields;
+    @java.lang.Override
+    public final com.google.protobuf.UnknownFieldSet
+        getUnknownFields() {
+      return this.unknownFields;
+    }
+    private TableList(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      initFields();
+      int mutable_bitField0_ = 0;
+      com.google.protobuf.UnknownFieldSet.Builder unknownFields =
+          com.google.protobuf.UnknownFieldSet.newBuilder();
+      try {
+        boolean done = false;
+        while (!done) {
+          int tag = input.readTag();
+          switch (tag) {
+            case 0:
+              done = true;
+              break;
+            default: {
+              if (!parseUnknownField(input, unknownFields,
+                                     extensionRegistry, tag)) {
+                done = true;
+              }
+              break;
+            }
+            case 10: {
+              if (!((mutable_bitField0_ & 0x00000001) == 0x00000001)) {
+                name_ = new com.google.protobuf.LazyStringArrayList();
+                mutable_bitField0_ |= 0x00000001;
+              }
+              name_.add(input.readBytes());
+              break;
+            }
+          }
+        }
+      } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+        throw e.setUnfinishedMessage(this);
+      } catch (java.io.IOException e) {
+        throw new com.google.protobuf.InvalidProtocolBufferException(
+            e.getMessage()).setUnfinishedMessage(this);
+      } finally {
+        if (((mutable_bitField0_ & 0x00000001) == 0x00000001)) {
+          name_ = new com.google.protobuf.UnmodifiableLazyStringList(name_);
+        }
+        this.unknownFields = unknownFields.build();
+        makeExtensionsImmutable();
+      }
+    }
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
       return org.apache.hadoop.hbase.rest.protobuf.generated.TableListMessage.internal_static_org_apache_hadoop_hbase_rest_protobuf_generated_TableList_descriptor;
     }
-    
+
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return org.apache.hadoop.hbase.rest.protobuf.generated.TableListMessage.internal_static_org_apache_hadoop_hbase_rest_protobuf_generated_TableList_fieldAccessorTable;
+      return org.apache.hadoop.hbase.rest.protobuf.generated.TableListMessage.internal_static_org_apache_hadoop_hbase_rest_protobuf_generated_TableList_fieldAccessorTable
+          .ensureFieldAccessorsInitialized(
+              org.apache.hadoop.hbase.rest.protobuf.generated.TableListMessage.TableList.class, org.apache.hadoop.hbase.rest.protobuf.generated.TableListMessage.TableList.Builder.class);
     }
-    
+
+    public static com.google.protobuf.Parser<TableList> PARSER =
+        new com.google.protobuf.AbstractParser<TableList>() {
+      public TableList parsePartialFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        return new TableList(input, extensionRegistry);
+      }
+    };
+
+    @java.lang.Override
+    public com.google.protobuf.Parser<TableList> getParserForType() {
+      return PARSER;
+    }
+
     // repeated string name = 1;
     public static final int NAME_FIELD_NUMBER = 1;
     private com.google.protobuf.LazyStringList name_;
-    public java.util.List<String>
+    /**
+     * <code>repeated string name = 1;</code>
+     */
+    public java.util.List<java.lang.String>
         getNameList() {
       return name_;
     }
+    /**
+     * <code>repeated string name = 1;</code>
+     */
     public int getNameCount() {
       return name_.size();
     }
-    public String getName(int index) {
+    /**
+     * <code>repeated string name = 1;</code>
+     */
+    public java.lang.String getName(int index) {
       return name_.get(index);
     }
-    
+    /**
+     * <code>repeated string name = 1;</code>
+     */
+    public com.google.protobuf.ByteString
+        getNameBytes(int index) {
+      return name_.getByteString(index);
+    }
+
     private void initFields() {
       name_ = com.google.protobuf.LazyStringArrayList.EMPTY;
     }
@@ -65,11 +169,11 @@ public final class TableListMessage {
     public final boolean isInitialized() {
       byte isInitialized = memoizedIsInitialized;
       if (isInitialized != -1) return isInitialized == 1;
-      
+
       memoizedIsInitialized = 1;
       return true;
     }
-    
+
     public void writeTo(com.google.protobuf.CodedOutputStream output)
                         throws java.io.IOException {
       getSerializedSize();
@@ -78,12 +182,12 @@ public final class TableListMessage {
       }
       getUnknownFields().writeTo(output);
     }
-    
+
     private int memoizedSerializedSize = -1;
     public int getSerializedSize() {
       int size = memoizedSerializedSize;
       if (size != -1) return size;
-    
+
       size = 0;
       {
         int dataSize = 0;
@@ -98,94 +202,83 @@ public final class TableListMessage {
       memoizedSerializedSize = size;
       return size;
     }
-    
+
     private static final long serialVersionUID = 0L;
     @java.lang.Override
     protected java.lang.Object writeReplace()
         throws java.io.ObjectStreamException {
       return super.writeReplace();
     }
-    
+
     public static org.apache.hadoop.hbase.rest.protobuf.generated.TableListMessage.TableList parseFrom(
         com.google.protobuf.ByteString data)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return newBuilder().mergeFrom(data).buildParsed();
+      return PARSER.parseFrom(data);
     }
     public static org.apache.hadoop.hbase.rest.protobuf.generated.TableListMessage.TableList parseFrom(
         com.google.protobuf.ByteString data,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return newBuilder().mergeFrom(data, extensionRegistry)
-               .buildParsed();
+      return PARSER.parseFrom(data, extensionRegistry);
     }
     public static org.apache.hadoop.hbase.rest.protobuf.generated.TableListMessage.TableList parseFrom(byte[] data)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return newBuilder().mergeFrom(data).buildParsed();
+      return PARSER.parseFrom(data);
     }
     public static org.apache.hadoop.hbase.rest.protobuf.generated.TableListMessage.TableList parseFrom(
         byte[] data,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return newBuilder().mergeFrom(data, extensionRegistry)
-               .buildParsed();
+      return PARSER.parseFrom(data, extensionRegistry);
     }
     public static org.apache.hadoop.hbase.rest.protobuf.generated.TableListMessage.TableList parseFrom(java.io.InputStream input)
         throws java.io.IOException {
-      return newBuilder().mergeFrom(input).buildParsed();
+      return PARSER.parseFrom(input);
     }
     public static org.apache.hadoop.hbase.rest.protobuf.generated.TableListMessage.TableList parseFrom(
         java.io.InputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
-      return newBuilder().mergeFrom(input, extensionRegistry)
-               .buildParsed();
+      return PARSER.parseFrom(input, extensionRegistry);
     }
     public static org.apache.hadoop.hbase.rest.protobuf.generated.TableListMessage.TableList parseDelimitedFrom(java.io.InputStream input)
         throws java.io.IOException {
-      Builder builder = newBuilder();
-      if (builder.mergeDelimitedFrom(input)) {
-        return builder.buildParsed();
-      } else {
-        return null;
-      }
+      return PARSER.parseDelimitedFrom(input);
     }
     public static org.apache.hadoop.hbase.rest.protobuf.generated.TableListMessage.TableList parseDelimitedFrom(
         java.io.InputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
-      Builder builder = newBuilder();
-      if (builder.mergeDelimitedFrom(input, extensionRegistry)) {
-        return builder.buildParsed();
-      } else {
-        return null;
-      }
+      return PARSER.parseDelimitedFrom(input, extensionRegistry);
     }
     public static org.apache.hadoop.hbase.rest.protobuf.generated.TableListMessage.TableList parseFrom(
         com.google.protobuf.CodedInputStream input)
         throws java.io.IOException {
-      return newBuilder().mergeFrom(input).buildParsed();
+      return PARSER.parseFrom(input);
     }
     public static org.apache.hadoop.hbase.rest.protobuf.generated.TableListMessage.TableList parseFrom(
         com.google.protobuf.CodedInputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
-      return newBuilder().mergeFrom(input, extensionRegistry)
-               .buildParsed();
+      return PARSER.parseFrom(input, extensionRegistry);
     }
-    
+
     public static Builder newBuilder() { return Builder.create(); }
     public Builder newBuilderForType() { return newBuilder(); }
     public static Builder newBuilder(org.apache.hadoop.hbase.rest.protobuf.generated.TableListMessage.TableList prototype) {
       return newBuilder().mergeFrom(prototype);
     }
     public Builder toBuilder() { return newBuilder(this); }
-    
+
     @java.lang.Override
     protected Builder newBuilderForType(
         com.google.protobuf.GeneratedMessage.BuilderParent parent) {
       Builder builder = new Builder(parent);
       return builder;
     }
+    /**
+     * Protobuf type {@code org.apache.hadoop.hbase.rest.protobuf.generated.TableList}
+     */
     public static final class Builder extends
         com.google.protobuf.GeneratedMessage.Builder<Builder>
        implements org.apache.hadoop.hbase.rest.protobuf.generated.TableListMessage.TableListOrBuilder {
@@ -193,18 +286,21 @@ public final class TableListMessage {
           getDescriptor() {
         return org.apache.hadoop.hbase.rest.protobuf.generated.TableListMessage.internal_static_org_apache_hadoop_hbase_rest_protobuf_generated_TableList_descriptor;
       }
-      
+
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return org.apache.hadoop.hbase.rest.protobuf.generated.TableListMessage.internal_static_org_apache_hadoop_hbase_rest_protobuf_generated_TableList_fieldAccessorTable;
+        return org.apache.hadoop.hbase.rest.protobuf.generated.TableListMessage.internal_static_org_apache_hadoop_hbase_rest_protobuf_generated_TableList_fieldAccessorTable
+            .ensureFieldAccessorsInitialized(
+                org.apache.hadoop.hbase.rest.protobuf.generated.TableListMessage.TableList.class, org.apache.hadoop.hbase.rest.protobuf.generated.TableListMessage.TableList.Builder.class);
       }
-      
+
       // Construct using org.apache.hadoop.hbase.rest.protobuf.generated.TableListMessage.TableList.newBuilder()
       private Builder() {
         maybeForceBuilderInitialization();
       }
-      
-      private Builder(BuilderParent parent) {
+
+      private Builder(
+          com.google.protobuf.GeneratedMessage.BuilderParent parent) {
         super(parent);
         maybeForceBuilderInitialization();
       }
@@ -215,27 +311,27 @@ public final class TableListMessage {
       private static Builder create() {
         return new Builder();
       }
-      
+
       public Builder clear() {
         super.clear();
         name_ = com.google.protobuf.LazyStringArrayList.EMPTY;
         bitField0_ = (bitField0_ & ~0x00000001);
         return this;
       }
-      
+
       public Builder clone() {
         return create().mergeFrom(buildPartial());
       }
-      
+
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return org.apache.hadoop.hbase.rest.protobuf.generated.TableListMessage.TableList.getDescriptor();
+        return org.apache.hadoop.hbase.rest.protobuf.generated.TableListMessage.internal_static_org_apache_hadoop_hbase_rest_protobuf_generated_TableList_descriptor;
       }
-      
+
       public org.apache.hadoop.hbase.rest.protobuf.generated.TableListMessage.TableList getDefaultInstanceForType() {
         return org.apache.hadoop.hbase.rest.protobuf.generated.TableListMessage.TableList.getDefaultInstance();
       }
-      
+
       public org.apache.hadoop.hbase.rest.protobuf.generated.TableListMessage.TableList build() {
         org.apache.hadoop.hbase.rest.protobuf.generated.TableListMessage.TableList result = buildPartial();
         if (!result.isInitialized()) {
@@ -243,17 +339,7 @@ public final class TableListMessage {
         }
         return result;
       }
-      
-      private org.apache.hadoop.hbase.rest.protobuf.generated.TableListMessage.TableList buildParsed()
-          throws com.google.protobuf.InvalidProtocolBufferException {
-        org.apache.hadoop.hbase.rest.protobuf.generated.TableListMessage.TableList result = buildPartial();
-        if (!result.isInitialized()) {
-          throw newUninitializedMessageException(
-            result).asInvalidProtocolBufferException();
-        }
-        return result;
-      }
-      
+
       public org.apache.hadoop.hbase.rest.protobuf.generated.TableListMessage.TableList buildPartial() {
         org.apache.hadoop.hbase.rest.protobuf.generated.TableListMessage.TableList result = new org.apache.hadoop.hbase.rest.protobuf.generated.TableListMessage.TableList(this);
         int from_bitField0_ = bitField0_;
@@ -266,7 +352,7 @@ public final class TableListMessage {
         onBuilt();
         return result;
       }
-      
+
       public Builder mergeFrom(com.google.protobuf.Message other) {
         if (other instanceof org.apache.hadoop.hbase.rest.protobuf.generated.TableListMessage.TableList) {
           return mergeFrom((org.apache.hadoop.hbase.rest.protobuf.generated.TableListMessage.TableList)other);
@@ -275,7 +361,7 @@ public final class TableListMessage {
           return this;
         }
       }
-      
+
       public Builder mergeFrom(org.apache.hadoop.hbase.rest.protobuf.generated.TableListMessage.TableList other) {
         if (other == org.apache.hadoop.hbase.rest.protobuf.generated.TableListMessage.TableList.getDefaultInstance()) return this;
         if (!other.name_.isEmpty()) {
@@ -291,45 +377,30 @@ public final class TableListMessage {
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
       }
-      
+
       public final boolean isInitialized() {
         return true;
       }
-      
+
       public Builder mergeFrom(
           com.google.protobuf.CodedInputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws java.io.IOException {
-        com.google.protobuf.UnknownFieldSet.Builder unknownFields =
-          com.google.protobuf.UnknownFieldSet.newBuilder(
-            this.getUnknownFields());
-        while (true) {
-          int tag = input.readTag();
-          switch (tag) {
-            case 0:
-              this.setUnknownFields(unknownFields.build());
-              onChanged();
-              return this;
-            default: {
-              if (!parseUnknownField(input, unknownFields,
-                                     extensionRegistry, tag)) {
-                this.setUnknownFields(unknownFields.build());
-                onChanged();
-                return this;
-              }
-              break;
-            }
-            case 10: {
-              ensureNameIsMutable();
-              name_.add(input.readBytes());
-              break;
-            }
+        org.apache.hadoop.hbase.rest.protobuf.generated.TableListMessage.TableList parsedMessage = null;
+        try {
+          parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
+        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+          parsedMessage = (org.apache.hadoop.hbase.rest.protobuf.generated.TableListMessage.TableList) e.getUnfinishedMessage();
+          throw e;
+        } finally {
+          if (parsedMessage != null) {
+            mergeFrom(parsedMessage);
           }
         }
+        return this;
       }
-      
       private int bitField0_;
-      
+
       // repeated string name = 1;
       private com.google.protobuf.LazyStringList name_ = com.google.protobuf.LazyStringArrayList.EMPTY;
       private void ensureNameIsMutable() {
@@ -338,18 +409,37 @@ public final class TableListMessage {
           bitField0_ |= 0x00000001;
          }
       }
-      public java.util.List<String>
+      /**
+       * <code>repeated string name = 1;</code>
+       */
+      public java.util.List<java.lang.String>
           getNameList() {
         return java.util.Collections.unmodifiableList(name_);
       }
+      /**
+       * <code>repeated string name = 1;</code>
+       */
       public int getNameCount() {
         return name_.size();
       }
-      public String getName(int index) {
+      /**
+       * <code>repeated string name = 1;</code>
+       */
+      public java.lang.String getName(int index) {
         return name_.get(index);
       }
+      /**
+       * <code>repeated string name = 1;</code>
+       */
+      public com.google.protobuf.ByteString
+          getNameBytes(int index) {
+        return name_.getByteString(index);
+      }
+      /**
+       * <code>repeated string name = 1;</code>
+       */
       public Builder setName(
-          int index, String value) {
+          int index, java.lang.String value) {
         if (value == null) {
     throw new NullPointerException();
   }
@@ -358,7 +448,11 @@ public final class TableListMessage {
         onChanged();
         return this;
       }
-      public Builder addName(String value) {
+      /**
+       * <code>repeated string name = 1;</code>
+       */
+      public Builder addName(
+          java.lang.String value) {
         if (value == null) {
     throw new NullPointerException();
   }
@@ -367,42 +461,56 @@ public final class TableListMessage {
         onChanged();
         return this;
       }
+      /**
+       * <code>repeated string name = 1;</code>
+       */
       public Builder addAllName(
-          java.lang.Iterable<String> values) {
+          java.lang.Iterable<java.lang.String> values) {
         ensureNameIsMutable();
         super.addAll(values, name_);
         onChanged();
         return this;
       }
+      /**
+       * <code>repeated string name = 1;</code>
+       */
       public Builder clearName() {
         name_ = com.google.protobuf.LazyStringArrayList.EMPTY;
         bitField0_ = (bitField0_ & ~0x00000001);
         onChanged();
         return this;
       }
-      void addName(com.google.protobuf.ByteString value) {
-        ensureNameIsMutable();
+      /**
+       * <code>repeated string name = 1;</code>
+       */
+      public Builder addNameBytes(
+          com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  ensureNameIsMutable();
         name_.add(value);
         onChanged();
+        return this;
       }
-      
+
       // @@protoc_insertion_point(builder_scope:org.apache.hadoop.hbase.rest.protobuf.generated.TableList)
     }
-    
+
     static {
       defaultInstance = new TableList(true);
       defaultInstance.initFields();
     }
-    
+
     // @@protoc_insertion_point(class_scope:org.apache.hadoop.hbase.rest.protobuf.generated.TableList)
   }
-  
+
   private static com.google.protobuf.Descriptors.Descriptor
     internal_static_org_apache_hadoop_hbase_rest_protobuf_generated_TableList_descriptor;
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_org_apache_hadoop_hbase_rest_protobuf_generated_TableList_fieldAccessorTable;
-  
+
   public static com.google.protobuf.Descriptors.FileDescriptor
       getDescriptor() {
     return descriptor;
@@ -425,9 +533,7 @@ public final class TableListMessage {
           internal_static_org_apache_hadoop_hbase_rest_protobuf_generated_TableList_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_org_apache_hadoop_hbase_rest_protobuf_generated_TableList_descriptor,
-              new java.lang.String[] { "Name", },
-              org.apache.hadoop.hbase.rest.protobuf.generated.TableListMessage.TableList.class,
-              org.apache.hadoop.hbase.rest.protobuf.generated.TableListMessage.TableList.Builder.class);
+              new java.lang.String[] { "Name", });
           return null;
         }
       };
@@ -436,6 +542,6 @@ public final class TableListMessage {
         new com.google.protobuf.Descriptors.FileDescriptor[] {
         }, assigner);
   }
-  
+
   // @@protoc_insertion_point(outer_class_scope)
 }

@@ -1,7 +1,4 @@
-
-
 /**
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -119,6 +116,8 @@ import org.apache.zookeeper.ZooKeeper.States;
  * Depends on log4j being on classpath and
  * hbase-site.xml for logging and test-run configuration.  It does not set
  * logging levels nor make changes to configuration parameters.
+ * <p>To preserve test data directories, pass the system property "hbase.testing.preserve.testdir"
+ * setting it to true.
  */
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
@@ -283,7 +282,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
   private void createSubDir(String propertyName, Path parent, String subDirName){
     Path newPath= new Path(parent, subDirName);
     File newDir = new File(newPath.toString()).getAbsoluteFile();
-    newDir.deleteOnExit();
+    if (deleteOnExit()) newDir.deleteOnExit();
     conf.set(propertyName, newDir.getAbsolutePath());
   }
 
@@ -349,9 +348,10 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
     Path testDir = getDataTestDir("dfscluster_" + UUID.randomUUID().toString());
     clusterTestDir = new File(testDir.toString()).getAbsoluteFile();
     // Have it cleaned up on exit
-    clusterTestDir.deleteOnExit();
+    boolean b = deleteOnExit();
+    if (b) clusterTestDir.deleteOnExit();
     conf.set(TEST_DIRECTORY_KEY, clusterTestDir.getPath());
-    LOG.info("Created new mini-cluster data directory: " + clusterTestDir);
+    LOG.info("Created new mini-cluster data directory: " + clusterTestDir + ", deleteOnExit=" + b);
   }
 
   /**
@@ -396,13 +396,13 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
     FileSystem fs = getTestFileSystem();
     if (fs.getUri().getScheme().equals(FileSystem.getLocal(conf).getUri().getScheme())) {
       File dataTestDir = new File(getDataTestDir().toString());
-      dataTestDir.deleteOnExit();
+      if (deleteOnExit()) dataTestDir.deleteOnExit();
       dataTestDirOnTestFS = new Path(dataTestDir.getAbsolutePath());
     } else {
       Path base = getBaseTestDirOnTestFS();
       String randomStr = UUID.randomUUID().toString();
       dataTestDirOnTestFS = new Path(base, randomStr);
-      fs.deleteOnExit(dataTestDirOnTestFS);
+      if (deleteOnExit()) fs.deleteOnExit(dataTestDirOnTestFS);
     }
   }
 
