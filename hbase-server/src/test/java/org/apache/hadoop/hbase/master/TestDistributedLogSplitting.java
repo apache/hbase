@@ -775,7 +775,6 @@ public class TestDistributedLogSplitting {
     curConf.setBoolean(HConstants.DISALLOW_WRITES_IN_RECOVERING, true);
     startCluster(NUM_RS, curConf);
     final int NUM_REGIONS_TO_CREATE = 40;
-    final int NUM_LOG_LINES = 30000;
     // turn off load balancing to prevent regions from moving around otherwise
     // they will consume recovered.edits
     master.balanceSwitch(false);
@@ -783,33 +782,40 @@ public class TestDistributedLogSplitting {
     List<RegionServerThread> rsts = cluster.getLiveRegionServerThreads();
     final ZooKeeperWatcher zkw = new ZooKeeperWatcher(conf, "table-creation", null);
     HTable ht = installTable(zkw, "table", "family", NUM_REGIONS_TO_CREATE);
+    final SplitLogManager slm = master.getMasterFileSystem().splitLogManager;
 
-    HRegionServer hrs = findRSToKill(false, "table");
-    List<HRegionInfo> regions = ProtobufUtil.getOnlineRegions(hrs);
-    makeHLog(hrs.getWAL(), regions, "table", "family", NUM_LOG_LINES, 100);
+    Set<HRegionInfo> regionSet = new HashSet<HRegionInfo>();
+    HRegionInfo region = null;
+    HRegionServer hrs = null;
+    HRegionServer dstRS = null;
+    for (int i = 0; i < NUM_RS; i++) {
+      hrs = rsts.get(i).getRegionServer();
+      List<HRegionInfo> regions = ProtobufUtil.getOnlineRegions(hrs);
+      if (regions.isEmpty()) continue;
+      region = regions.get(0);
+      regionSet.add(region);
+      dstRS = rsts.get((i+1) % NUM_RS).getRegionServer();
+      break;
+    }
     
-    // abort RS
-    LOG.info("Aborting region server: " + hrs.getServerName());
-    hrs.abort("testing");
-    
-    // wait for abort completes
-    TEST_UTIL.waitFor(120000, 200, new Waiter.Predicate<Exception>() {
+    slm.markRegionsRecoveringInZK(hrs.getServerName(), regionSet);
+    // move region in order for the region opened in recovering state
+    final HRegionInfo hri = region;
+    final HRegionServer tmpRS = dstRS;
+    TEST_UTIL.getHBaseAdmin().move(region.getEncodedNameAsBytes(),
+      Bytes.toBytes(dstRS.getServerName().getServerName()));
+    // wait for region move completes
+    final RegionStates regionStates =
+        TEST_UTIL.getHBaseCluster().getMaster().getAssignmentManager().getRegionStates();
+    TEST_UTIL.waitFor(45000, 200, new Waiter.Predicate<Exception>() {
       @Override
       public boolean evaluate() throws Exception {
-        return (cluster.getLiveRegionServerThreads().size() <= (NUM_RS - 1));
+        ServerName sn = regionStates.getRegionServerOfRegion(hri);
+        return (sn != null && sn.equals(tmpRS.getServerName()));
       }
     });
     
-    // wait for regions come online
-    TEST_UTIL.waitFor(180000, 100, new Waiter.Predicate<Exception>() {
-      @Override
-      public boolean evaluate() throws Exception {
-        return (getAllOnlineRegions(cluster).size() >= (NUM_REGIONS_TO_CREATE + 1));
-      }
-    });
-
     try {
-      HRegionInfo region = regions.get(0);
       byte[] key = region.getStartKey();
       if (key == null || key.length == 0) {
         key = new byte[] { 0, 0, 0, 0, 1 };
