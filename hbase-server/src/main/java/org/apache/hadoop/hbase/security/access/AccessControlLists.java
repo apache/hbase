@@ -482,7 +482,7 @@ public class AccessControlLists {
    */
   static List<UserPermission> getUserTablePermissions(
       Configuration conf, TableName tableName) throws IOException {
-    return getUserPermissions(conf, tableName.getName());
+    return getUserPermissions(conf, tableName == null ? null : tableName.getName());
   }
 
   static List<UserPermission> getUserNamespacePermissions(
