@@ -202,7 +202,7 @@ public class HTable implements HTableInterface {
     // we only create as many Runnables as there are region servers. It means
     // it also scales when new region servers are added.
     this.pool = new ThreadPoolExecutor(1, maxThreads, keepAliveTime, TimeUnit.SECONDS,
-        new SynchronousQueue<Runnable>(), Threads.newDaemonThreadFactory("hbase-table"));
+        new SynchronousQueue<Runnable>(), Threads.newDaemonThreadFactory("htable"));
     ((ThreadPoolExecutor) this.pool).allowCoreThreadTimeOut(true);
 
     this.finishSetup();

@@ -147,7 +147,7 @@ public class ZKAssign {
   public static void createNodeOffline(ZooKeeperWatcher zkw, HRegionInfo region,
       ServerName serverName, final EventType event)
   throws KeeperException, KeeperException.NodeExistsException {
-    LOG.debug(zkw.prefix("Creating unassigned node for " +
+    LOG.debug(zkw.prefix("Creating unassigned node " +
       region.getEncodedName() + " in OFFLINE state"));
     RegionTransition rt =
       RegionTransition.createRegionTransition(event, region.getRegionName(), serverName);
@@ -174,7 +174,7 @@ public class ZKAssign {
       HRegionInfo region, ServerName serverName,
       final AsyncCallback.StringCallback cb, final Object ctx)
   throws KeeperException {
-    LOG.debug(zkw.prefix("Async create of unassigned node for " +
+    LOG.debug(zkw.prefix("Async create of unassigned node " +
       region.getEncodedName() + " with OFFLINE state"));
     RegionTransition rt =
       RegionTransition.createRegionTransition(
@@ -205,7 +205,7 @@ public class ZKAssign {
    */
   public static int createOrForceNodeOffline(ZooKeeperWatcher zkw,
       HRegionInfo region, ServerName serverName) throws KeeperException {
-    LOG.debug(zkw.prefix("Creating (or updating) unassigned node for " +
+    LOG.debug(zkw.prefix("Creating (or updating) unassigned node " +
       region.getEncodedName() + " with OFFLINE state"));
     RegionTransition rt = RegionTransition.createRegionTransition(EventType.M_ZK_REGION_OFFLINE,
       region.getRegionName(), serverName, HConstants.EMPTY_BYTE_ARRAY);
@@ -403,7 +403,7 @@ public class ZKAssign {
       EventType expectedState, int expectedVersion)
   throws KeeperException, KeeperException.NoNodeException {
     LOG.debug(zkw.prefix("Deleting existing unassigned " +
-      "node for " + encodedRegionName + " that is in expected state " + expectedState));
+      "node " + encodedRegionName + " in expected state " + expectedState));
     String node = getNodeName(zkw, encodedRegionName);
     zkw.sync(node);
     Stat stat = new Stat();
@@ -431,7 +431,7 @@ public class ZKAssign {
           " state but after verifying state, we got a version mismatch"));
       return false;
     }
-    LOG.debug(zkw.prefix("Successfully deleted unassigned node for region " +
+    LOG.debug(zkw.prefix("Deleted unassigned node " +
         encodedRegionName + " in expected state " + expectedState));
     return true;
   }
@@ -478,7 +478,7 @@ public class ZKAssign {
   public static int createNodeClosing(ZooKeeperWatcher zkw, HRegionInfo region,
       ServerName serverName)
   throws KeeperException, KeeperException.NodeExistsException {
-    LOG.debug(zkw.prefix("Creating unassigned node for " +
+    LOG.debug(zkw.prefix("Creating unassigned node " +
       region.getEncodedName() + " in a CLOSING state"));
     RegionTransition rt = RegionTransition.createRegionTransition(EventType.M_ZK_REGION_CLOSING,
       region.getRegionName(), serverName, HConstants.EMPTY_BYTE_ARRAY);
@@ -595,7 +595,7 @@ public class ZKAssign {
 
     String encoded = region.getEncodedName();
     if(LOG.isDebugEnabled()) {
-      LOG.debug(zkw.prefix("Attempting to retransition the opening state of node " +
+      LOG.debug(zkw.prefix("Attempting to retransition opening state of node " +
           HRegionInfo.prettyPrint(encoded)));
     }
 
@@ -648,7 +648,7 @@ public class ZKAssign {
         return -1;
       }
       if(LOG.isDebugEnabled()) {
-        LOG.debug(zkw.prefix("Successfully retransition the opening state of node " + encoded));
+        LOG.debug(zkw.prefix("Retransition opening state of node " + encoded));
       }
       return stat.getVersion() + 1;
     } catch (KeeperException.NoNodeException nne) {
@@ -858,7 +858,7 @@ public class ZKAssign {
         return -1;
       }
       if(LOG.isDebugEnabled()) {
-        LOG.debug(zkw.prefix("Successfully transitioned node " + encoded +
+        LOG.debug(zkw.prefix("Transitioned node " + encoded +
           " from " + beginState + " to " + endState));
       }
       return stat.getVersion() + 1;

@@ -165,16 +165,15 @@ public class CloseRegionHandler extends EventHandler {
 
       if (this.zk) {
         if (setClosedState(this.expectedVersion, region)) {
-          LOG.debug("set region closed state in zk successfully for region " +
-            name + " sn name: " + this.server.getServerName());
+          LOG.debug("Set closed state in zk for " + name + " on " + this.server.getServerName());
         } else {
-          LOG.debug("set region closed state in zk unsuccessfully for region " +
-            name + " sn name: " + this.server.getServerName());
+          LOG.debug("Set closed state in zk UNSUCCESSFUL for " + name + " on " +
+            this.server.getServerName());
         }
       }
 
       // Done!  Region is closed on this RS
-      LOG.debug("Closed region " + region.getRegionNameAsString());
+      LOG.debug("Closed " + region.getRegionNameAsString());
     } finally {
       this.rsServices.getRegionsInTransitionInRS().
           remove(this.regionInfo.getEncodedNameAsBytes());
