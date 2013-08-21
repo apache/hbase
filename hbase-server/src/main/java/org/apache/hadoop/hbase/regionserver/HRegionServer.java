@@ -1702,8 +1702,7 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
       MetaEditor.updateRegionLocation(ct, r.getRegionInfo(),
         this.serverNameFromMasterPOV, openSeqNum);
     }
-    LOG.info("Done with post open deploy task for region=" +
-      r.getRegionNameAsString());
+    LOG.info("Finished post open deploy task for " + r.getRegionNameAsString());
 
   }
 
@@ -3618,10 +3617,8 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
       }
 
       requestCount.increment();
-      LOG.info("Received close region: " + encodedRegionName +
-          "Transitioning in ZK: " + (zk ? "yes" : "no") +
-          ". Version of ZK closing node:" + versionOfClosingNode +
-        ". Destination server:" + sn);
+      LOG.info("Close " + encodedRegionName + ", via zk=" + (zk ? "yes" : "no") +
+        ", znode version=" + versionOfClosingNode + ", on " + sn);
 
       boolean closed = closeRegion(encodedRegionName, false, zk, versionOfClosingNode, sn);
       CloseRegionResponse.Builder builder = CloseRegionResponse.newBuilder().setClosed(closed);

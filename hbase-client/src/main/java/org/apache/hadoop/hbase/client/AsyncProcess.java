@@ -174,7 +174,7 @@ class AsyncProcess<CResult> {
   }
 
   public AsyncProcess(HConnection hc, TableName tableName, ExecutorService pool,
-      AsyncProcessCallback<CResult> callback, Configuration conf, 
+      AsyncProcessCallback<CResult> callback, Configuration conf,
       RpcRetryingCallerFactory rpcCaller) {
     this.hConnection = hc;
     this.tableName = tableName;
@@ -534,9 +534,9 @@ class AsyncProcess<CResult> {
     }
 
     if (toReplay.isEmpty()) {
-      LOG.warn("Attempt #" + numAttempt + "/" + numTries + " failed for all (" +
-          initialActions.size() + ") operations on server " + location.getServerName() +
-          " NOT resubmitting, tableName=" + tableName + ", location=" + location);
+      LOG.warn("Attempt #" + numAttempt + "/" + numTries + " failed for all " +
+        initialActions.size() + "ops, NOT resubmitting,
+        tableName=" + tableName + ", location=" + location);
     } else {
       submit(initialActions, toReplay, numAttempt, true, errorsByServer);
     }
@@ -557,9 +557,8 @@ class AsyncProcess<CResult> {
                                   HConnectionManager.ServerErrorTracker errorsByServer) {
 
     if (responses == null) {
-      LOG.info("Attempt #" + numAttempt + "/" + numTries + " failed for all operations" +
-          " on server " + location.getServerName() + " , trying to resubmit," +
-          " tableName=" + tableName + ", location=" + location);
+      LOG.info("Attempt #" + numAttempt + "/" + numTries + " failed all ops, trying resubmit," +
+        " tableName=" + tableName + ", location=" + location);
       resubmitAll(initialActions, rsActions, location, numAttempt + 1, null, errorsByServer);
       return;
     }
@@ -618,11 +617,10 @@ class AsyncProcess<CResult> {
       if (numAttempt > 3 && LOG.isDebugEnabled()) {
         // We use this value to have some logs when we have multiple failures, but not too many
         //  logs as errors are to be expected wehn region moves, split and so on
-        LOG.debug("Attempt #" + numAttempt + "/" + numTries + " failed for " + failureCount +
-            " operations on server " + location.getServerName() + ", resubmitting " +
-            toReplay.size() + ", tableName=" + tableName + ", location=" +
-            location + ", last exception was: " + throwable +
-            " - sleeping " + backOffTime + " ms.");
+        LOG.debug("Attempt #" + numAttempt + "/" + numTries + " failed " + failureCount +
+          " ops , resubmitting " + toReplay.size() + ", tableName=" + tableName + ", location=" +
+          location + ", last exception was: " + throwable.getMessage() +
+          " - sleeping " + backOffTime + " ms.");
       }
       try {
         Thread.sleep(backOffTime);
@@ -636,7 +634,7 @@ class AsyncProcess<CResult> {
       submit(initialActions, toReplay, numAttempt + 1, true, errorsByServer);
     } else if (failureCount != 0) {
       LOG.warn("Attempt #" + numAttempt + "/" + numTries + " failed for " + failureCount +
-          " operations on server " + location.getServerName() + " NOT resubmitting." +
+          " ops on " + location.getServerName() + " NOT resubmitting." +
           ", tableName=" + tableName + ", location=" + location);
     }
   }

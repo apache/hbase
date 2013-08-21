@@ -203,8 +203,7 @@ public class Threads {
 
       @Override
       public Thread newThread(Runnable r) {
-        final String name = prefix + "-pool-" + poolNumber + "-thread-"
-            + threadNumber.getAndIncrement();
+        final String name = prefix + "-pool" + poolNumber + "-t" + threadNumber.getAndIncrement();
         return new Thread(group, r, name);
       }
     };

@@ -136,7 +136,7 @@ public class LruBlockCache implements BlockCache, HeapSize {
   private final ScheduledExecutorService scheduleThreadPool =
     Executors.newScheduledThreadPool(1,
       new ThreadFactoryBuilder()
-        .setNameFormat("LRU Statistics #%d")
+        .setNameFormat("LruStats #%d")
         .setDaemon(true)
         .build());
 
@@ -725,8 +725,7 @@ public class LruBlockCache implements BlockCache, HeapSize {
     // Log size
     long totalSize = heapSize();
     long freeSize = maxSize - totalSize;
-    LruBlockCache.LOG.debug("Stats: " +
-        "total=" + StringUtils.byteDesc(totalSize) + ", " +
+    LruBlockCache.LOG.debug("Total=" + StringUtils.byteDesc(totalSize) + ", " +
         "free=" + StringUtils.byteDesc(freeSize) + ", " +
         "max=" + StringUtils.byteDesc(this.maxSize) + ", " +
         "blocks=" + size() +", " +

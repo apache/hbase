@@ -183,7 +183,7 @@ public class OpenRegionHandler extends EventHandler {
       openSuccessful = true;
 
       // Done!  Successful region open
-      LOG.debug("Opened " + regionName + " on server:" +
+      LOG.debug("Opened " + regionName + " on " +
         this.server.getServerName());
 
 
@@ -212,7 +212,7 @@ public class OpenRegionHandler extends EventHandler {
               + " on region=" + regionName + ". It can be a critical error, as a region that"
               + " should be closed is now opened.");
         }
-      } 
+      }
     }
   }
 
@@ -370,8 +370,7 @@ public class OpenRegionHandler extends EventHandler {
           "so now unassigning -- closing region on server: " +
           this.server.getServerName());
       } else {
-        LOG.debug("region transitioned to opened in zookeeper: " +
-          r.getRegionInfo() + ", server: " + this.server.getServerName());
+        LOG.debug("Transitioned " + r.getEncodedName() + " to OPENED in zk on " + this.server.getServerName());
         result = true;
       }
     } catch (KeeperException e) {
