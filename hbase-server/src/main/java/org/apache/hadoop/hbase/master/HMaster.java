@@ -2642,7 +2642,7 @@ MasterServices, Server {
       Collection<HTableDescriptor> descriptors = this.tableDescriptors.getAll().values();
       GetTableNamesResponse.Builder builder = GetTableNamesResponse.newBuilder();
       for (HTableDescriptor descriptor: descriptors) {
-        if (descriptor.isMetaTable()) {
+        if (descriptor.getTableName().isSystemTable()) {
           continue;
         }
         builder.addTableNames(ProtobufUtil.toProtoTableName(descriptor.getTableName()));
