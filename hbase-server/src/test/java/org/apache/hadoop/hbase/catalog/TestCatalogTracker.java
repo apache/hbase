@@ -103,6 +103,17 @@ public class TestCatalogTracker {
   }
 
   @After public void after() {
+    try {
+      // Clean out meta location or later tests will be confused... they presume
+      // start fresh in zk.
+      MetaRegionTracker.deleteMetaLocation(this.watcher);
+    } catch (KeeperException e) {
+      LOG.warn("Unable to delete META location", e);
+    }
+
+    // Clear out our doctored connection or could mess up subsequent tests.
+    HConnectionManager.deleteConnection(UTIL.getConfiguration());
+
     this.watcher.close();
   }
 
@@ -124,14 +135,9 @@ public class TestCatalogTracker {
   throws IOException, InterruptedException, KeeperException {
     HConnection connection = Mockito.mock(HConnection.class);
     constructAndStartCatalogTracker(connection);
-    try {
-      MetaRegionTracker.setMetaLocation(this.watcher,
-          new ServerName("example.com", 1234, System.currentTimeMillis()));
-    } finally {
-      // Clean out meta location or later tests will be confused... they presume
-      // start fresh in zk.
-      MetaRegionTracker.deleteMetaLocation(this.watcher);
-    }
+
+    MetaRegionTracker.setMetaLocation(this.watcher,
+        new ServerName("example.com", 1234, System.currentTimeMillis()));
   }
 
   /**
@@ -145,33 +151,30 @@ public class TestCatalogTracker {
     final ClientProtos.ClientService.BlockingInterface client =
       Mockito.mock(ClientProtos.ClientService.BlockingInterface.class);
     HConnection connection = mockConnection(null, client);
-    try {
-      Mockito.when(client.get((RpcController)Mockito.any(), (GetRequest)Mockito.any())).
-      thenReturn(GetResponse.newBuilder().build());
-      final CatalogTracker ct = constructAndStartCatalogTracker(connection);
-      ServerName meta = ct.getMetaLocation();
-      Assert.assertNull(meta);
-      Thread t = new Thread() {
-        @Override
-        public void run() {
-          try {
-            ct.waitForMeta();
-          } catch (InterruptedException e) {
-            throw new RuntimeException("Interrupted", e);
-          }
+
+    Mockito.when(client.get((RpcController)Mockito.any(), (GetRequest)Mockito.any())).
+    thenReturn(GetResponse.newBuilder().build());
+    final CatalogTracker ct = constructAndStartCatalogTracker(connection);
+    ServerName meta = ct.getMetaLocation();
+    Assert.assertNull(meta);
+    Thread t = new Thread() {
+      @Override
+      public void run() {
+        try {
+          ct.waitForMeta();
+        } catch (InterruptedException e) {
+          throw new RuntimeException("Interrupted", e);
         }
-      };
-      t.start();
-      while (!t.isAlive())
-        Threads.sleep(1);
+      }
+    };
+    t.start();
+    while (!t.isAlive())
       Threads.sleep(1);
-      assertTrue(t.isAlive());
-      ct.stop();
-      // Join the thread... should exit shortly.
-      t.join();
-    } finally {
-      HConnectionManager.deleteConnection(UTIL.getConfiguration());
-    }
+    Threads.sleep(1);
+    assertTrue(t.isAlive());
+    ct.stop();
+    // Join the thread... should exit shortly.
+    t.join();
   }
 
   private void testVerifyMetaRegionLocationWithException(Exception ex)
@@ -180,26 +183,17 @@ public class TestCatalogTracker {
     final ClientProtos.ClientService.BlockingInterface implementation =
       Mockito.mock(ClientProtos.ClientService.BlockingInterface.class);
     HConnection connection = mockConnection(null, implementation);
-    try {
-      // If a 'get' is called on mocked interface, throw connection refused.
-      Mockito.when(implementation.get((RpcController) Mockito.any(), (GetRequest) Mockito.any())).
-        thenThrow(new ServiceException(ex));
-      // Now start up the catalogtracker with our doctored Connection.
-      final CatalogTracker ct = constructAndStartCatalogTracker(connection);
-      try {
-        MetaRegionTracker.setMetaLocation(this.watcher, SN);
-        long timeout = UTIL.getConfiguration().
-          getLong("hbase.catalog.verification.timeout", 1000);
-        Assert.assertFalse(ct.verifyMetaRegionLocation(timeout));
-      } finally {
-        // Clean out meta location or later tests will be confused... they
-        // presume start fresh in zk.
-        MetaRegionTracker.deleteMetaLocation(this.watcher);
-      }
-    } finally {
-      // Clear out our doctored connection or could mess up subsequent tests.
-      HConnectionManager.deleteConnection(UTIL.getConfiguration());
-    }
+
+    // If a 'get' is called on mocked interface, throw connection refused.
+    Mockito.when(implementation.get((RpcController) Mockito.any(), (GetRequest) Mockito.any())).
+      thenThrow(new ServiceException(ex));
+    // Now start up the catalogtracker with our doctored Connection.
+    final CatalogTracker ct = constructAndStartCatalogTracker(connection);
+
+    MetaRegionTracker.setMetaLocation(this.watcher, SN);
+    long timeout = UTIL.getConfiguration().
+      getLong("hbase.catalog.verification.timeout", 1000);
+    Assert.assertFalse(ct.verifyMetaRegionLocation(timeout));
   }
 
   /**
@@ -255,15 +249,10 @@ public class TestCatalogTracker {
     Mockito.when(connection.getAdmin(Mockito.any(ServerName.class), Mockito.anyBoolean())).
       thenReturn(implementation);
     final CatalogTracker ct = constructAndStartCatalogTracker(connection);
-    try {
-      MetaRegionTracker.setMetaLocation(this.watcher,
-          new ServerName("example.com", 1234, System.currentTimeMillis()));
-      Assert.assertFalse(ct.verifyMetaRegionLocation(100));
-    } finally {
-      // Clean out meta location or later tests will be confused... they presume
-      // start fresh in zk.
-      MetaRegionTracker.deleteMetaLocation(this.watcher);
-    }
+
+    MetaRegionTracker.setMetaLocation(this.watcher,
+        new ServerName("example.com", 1234, System.currentTimeMillis()));
+    Assert.assertFalse(ct.verifyMetaRegionLocation(100));
   }
 
   @Test (expected = NotAllMetaRegionsOnlineException.class)
