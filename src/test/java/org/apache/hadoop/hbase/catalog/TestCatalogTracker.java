@@ -98,6 +98,17 @@ public class TestCatalogTracker {
   }
 
   @After public void after() {
+    try {
+      // Clean out root location or later tests will be confused... they presume
+      // start fresh in zk.
+      RootLocationEditor.deleteRootLocation(this.watcher);
+    } catch (KeeperException e) {
+      LOG.warn("Unable to delete root location", e);
+    }
+
+    // Clear out our doctored connection or could mess up subsequent tests.
+    HConnectionManager.deleteConnection(UTIL.getConfiguration());
+
     this.watcher.close();
   }
 
@@ -119,14 +130,9 @@ public class TestCatalogTracker {
   throws IOException, InterruptedException, KeeperException {
     HConnection connection = Mockito.mock(HConnection.class);
     constructAndStartCatalogTracker(connection);
-    try {
-      RootLocationEditor.setRootLocation(this.watcher,
-        new ServerName("example.com", 1234, System.currentTimeMillis()));
-    } finally {
-      // Clean out root location or later tests will be confused... they presume
-      // start fresh in zk.
-      RootLocationEditor.deleteRootLocation(this.watcher);
-    }
+
+    RootLocationEditor.setRootLocation(this.watcher,
+      new ServerName("example.com", 1234, System.currentTimeMillis()));
   }
 
   /**
@@ -138,33 +144,30 @@ public class TestCatalogTracker {
   throws IOException, InterruptedException {
     HRegionInterface implementation = Mockito.mock(HRegionInterface.class);
     HConnection connection = mockConnection(implementation);
-    try {
-      final CatalogTracker ct = constructAndStartCatalogTracker(connection);
-      ServerName hsa = ct.getRootLocation();
-      Assert.assertNull(hsa);
-      ServerName meta = ct.getMetaLocation();
-      Assert.assertNull(meta);
-      Thread t = new Thread() {
-        @Override
-        public void run() {
-          try {
-            ct.waitForMeta();
-          } catch (InterruptedException e) {
-            throw new RuntimeException("Interrupted", e);
-          }
+
+    final CatalogTracker ct = constructAndStartCatalogTracker(connection);
+    ServerName hsa = ct.getRootLocation();
+    Assert.assertNull(hsa);
+    ServerName meta = ct.getMetaLocation();
+    Assert.assertNull(meta);
+    Thread t = new Thread() {
+      @Override
+      public void run() {
+        try {
+          ct.waitForMeta();
+        } catch (InterruptedException e) {
+          throw new RuntimeException("Interrupted", e);
         }
-      };
-      t.start();
-      while (!t.isAlive())
-        Threads.sleep(1);
+      }
+    };
+    t.start();
+    while (!t.isAlive())
       Threads.sleep(1);
-      assertTrue(t.isAlive());
-      ct.stop();
-      // Join the thread... should exit shortly.
-      t.join();
-    } finally {
-      HConnectionManager.deleteConnection(UTIL.getConfiguration());
-    }
+    Threads.sleep(1);
+    assertTrue(t.isAlive());
+    ct.stop();
+    // Join the thread... should exit shortly.
+    t.join();
   }
 
   /**
@@ -181,63 +184,58 @@ public class TestCatalogTracker {
     // Mock an HRegionInterface.
     final HRegionInterface implementation = Mockito.mock(HRegionInterface.class);
     HConnection connection = mockConnection(implementation);
+
+    // If a 'getRegionInfo' is called on mocked HRegionInterface, throw IOE
+    // the first time.  'Succeed' the second time we are called.
+    Mockito.when(implementation.getRegionInfo((byte[]) Mockito.any())).
+      thenThrow(new IOException("Server not running, aborting")).
+      thenReturn(new HRegionInfo());
+
+    // After we encounter the above 'Server not running', we should catch the
+    // IOE and go into retrying for the meta mode.  We'll do gets on -ROOT- to
+    // get new meta location.  Return something so this 'get' succeeds
+    // (here we mock up getRegionServerWithRetries, the wrapper around
+    // the actual get).
+
+    // TODO: Refactor.  This method has been moved out of HConnection.
+    // It works for now but has been deprecated.
+    Mockito.when(connection.getRegionServerWithRetries((ServerCallable<Result>)Mockito.any())).
+      thenReturn(getMetaTableRowResult());
+
+    // Now start up the catalogtracker with our doctored Connection.
+    final CatalogTracker ct = constructAndStartCatalogTracker(connection);
     try {
-      // If a 'getRegionInfo' is called on mocked HRegionInterface, throw IOE
-      // the first time.  'Succeed' the second time we are called.
-      Mockito.when(implementation.getRegionInfo((byte[]) Mockito.any())).
-        thenThrow(new IOException("Server not running, aborting")).
-        thenReturn(new HRegionInfo());
-
-      // After we encounter the above 'Server not running', we should catch the
-      // IOE and go into retrying for the meta mode.  We'll do gets on -ROOT- to
-      // get new meta location.  Return something so this 'get' succeeds
-      // (here we mock up getRegionServerWithRetries, the wrapper around
-      // the actual get).
-
-      // TODO: Refactor.  This method has been moved out of HConnection.
-      // It works for now but has been deprecated.
-      Mockito.when(connection.getRegionServerWithRetries((ServerCallable<Result>)Mockito.any())).
-        thenReturn(getMetaTableRowResult());
-
-      // Now start up the catalogtracker with our doctored Connection.
-      final CatalogTracker ct = constructAndStartCatalogTracker(connection);
-      try {
-        // Set a location for root and meta.
-        RootLocationEditor.setRootLocation(this.watcher, SN);
-        ct.setMetaLocation(SN);
-        // Call the method that HBASE-4288 calls.  It will try and verify the
-        // meta location and will fail on first attempt then go into a long wait.
-        // So, do this in a thread and then reset meta location to break it out
-        // of its wait after a bit of time.
-        final AtomicBoolean metaSet = new AtomicBoolean(false);
-        final CountDownLatch latch = new CountDownLatch(1);
-        Thread t = new Thread() {
-          @Override
-          public void run() {
-            try {
-              latch.countDown();
-              metaSet.set(ct.waitForMeta(100000) !=  null);
-            } catch (Exception e) {
-              throw new RuntimeException(e);
-            }
+      // Set a location for root and meta.
+      RootLocationEditor.setRootLocation(this.watcher, SN);
+      ct.setMetaLocation(SN);
+      // Call the method that HBASE-4288 calls.  It will try and verify the
+      // meta location and will fail on first attempt then go into a long wait.
+      // So, do this in a thread and then reset meta location to break it out
+      // of its wait after a bit of time.
+      final AtomicBoolean metaSet = new AtomicBoolean(false);
+      final CountDownLatch latch = new CountDownLatch(1);
+      Thread t = new Thread() {
+        @Override
+        public void run() {
+          try {
+            latch.countDown();
+            metaSet.set(ct.waitForMeta(100000) !=  null);
+          } catch (Exception e) {
+            throw new RuntimeException(e);
           }
-        };
-        t.start();
-        latch.await();
-        Threads.sleep(1);
-        // Now reset the meta as though it were redeployed.
-        ct.setMetaLocation(SN);
-        t.join();
-        Assert.assertTrue(metaSet.get());
-      } finally {
-        // Clean out root and meta locations or later tests will be confused...
-        // they presume start fresh in zk.
-        ct.resetMetaLocation();
-        RootLocationEditor.deleteRootLocation(this.watcher);
-      }
+        }
+      };
+      t.start();
+      latch.await();
+      Threads.sleep(1);
+      // Now reset the meta as though it were redeployed.
+      ct.setMetaLocation(SN);
+      t.join();
+      Assert.assertTrue(metaSet.get());
     } finally {
-      // Clear out our doctored connection or could mess up subsequent tests.
-      HConnectionManager.deleteConnection(UTIL.getConfiguration());
+      // Clean out root and meta locations or later tests will be confused...
+      // they presume start fresh in zk.
+      ct.resetMetaLocation();
     }
   }
 
@@ -246,26 +244,16 @@ public class TestCatalogTracker {
     // Mock an HRegionInterface.
     final HRegionInterface implementation = Mockito.mock(HRegionInterface.class);
     HConnection connection = mockConnection(implementation);
-    try {
-      // If a 'get' is called on mocked interface, throw connection refused.
-      Mockito.when(implementation.get((byte[]) Mockito.any(), (Get) Mockito.any())).
-        thenThrow(ex);
-      // Now start up the catalogtracker with our doctored Connection.
-      final CatalogTracker ct = constructAndStartCatalogTracker(connection);
-      try {
-        RootLocationEditor.setRootLocation(this.watcher, SN);
-        long timeout = UTIL.getConfiguration().
-          getLong("hbase.catalog.verification.timeout", 1000);
-        Assert.assertFalse(ct.verifyMetaRegionLocation(timeout));
-      } finally {
-        // Clean out root location or later tests will be confused... they
-        // presume start fresh in zk.
-        RootLocationEditor.deleteRootLocation(this.watcher);
-      }
-    } finally {
-      // Clear out our doctored connection or could mess up subsequent tests.
-      HConnectionManager.deleteConnection(UTIL.getConfiguration());
-    }
+
+    // If a 'get' is called on mocked interface, throw connection refused.
+    Mockito.when(implementation.get((byte[]) Mockito.any(), (Get) Mockito.any())).
+      thenThrow(ex);
+    // Now start up the catalogtracker with our doctored Connection.
+    final CatalogTracker ct = constructAndStartCatalogTracker(connection);
+    RootLocationEditor.setRootLocation(this.watcher, SN);
+    long timeout = UTIL.getConfiguration().
+      getLong("hbase.catalog.verification.timeout", 1000);
+    Assert.assertFalse(ct.verifyMetaRegionLocation(timeout));
   }
 
   /**
@@ -319,15 +307,9 @@ public class TestCatalogTracker {
       Mockito.anyInt(), Mockito.anyBoolean())).
       thenReturn(implementation);
     final CatalogTracker ct = constructAndStartCatalogTracker(connection);
-    try {
-      RootLocationEditor.setRootLocation(this.watcher,
-        new ServerName("example.com", 1234, System.currentTimeMillis()));
-      Assert.assertFalse(ct.verifyRootRegionLocation(100));
-    } finally {
-      // Clean out root location or later tests will be confused... they presume
-      // start fresh in zk.
-      RootLocationEditor.deleteRootLocation(this.watcher);
-    }
+    RootLocationEditor.setRootLocation(this.watcher,
+      new ServerName("example.com", 1234, System.currentTimeMillis()));
+    Assert.assertFalse(ct.verifyRootRegionLocation(100));
   }
 
   @Test (expected = NotAllMetaRegionsOnlineException.class)
@@ -343,12 +325,8 @@ public class TestCatalogTracker {
   throws IOException, InterruptedException {
     HConnection connection =
       HConnectionTestingUtility.getMockedConnection(UTIL.getConfiguration());
-    try {
-      final CatalogTracker ct = constructAndStartCatalogTracker(connection);
-      ct.waitForMeta(100);
-    } finally {
-      HConnectionManager.deleteConnection(UTIL.getConfiguration());
-    }
+    final CatalogTracker ct = constructAndStartCatalogTracker(connection);
+    ct.waitForMeta(100);
   }
 
   /**
@@ -397,48 +375,45 @@ public class TestCatalogTracker {
     // Mock an HRegionInterface.
     final HRegionInterface implementation = Mockito.mock(HRegionInterface.class);
     HConnection connection = mockConnection(implementation);
-    try {
-      // Now the ct is up... set into the mocks some answers that make it look
-      // like things have been getting assigned. Make it so we'll return a
-      // location (no matter what the Get is). Same for getHRegionInfo -- always
-      // just return the meta region.
-      final Result result = getMetaTableRowResult();
 
-      // TODO: Refactor.  This method has been moved out of HConnection.
-      // It works for now but has been deprecated.
-      Mockito.when(connection.getRegionServerWithRetries((ServerCallable<Result>)Mockito.any())).
-        thenReturn(result);
-      Mockito.when(implementation.getRegionInfo((byte[]) Mockito.any())).
-        thenReturn(HRegionInfo.FIRST_META_REGIONINFO);
-      final CatalogTracker ct = constructAndStartCatalogTracker(connection);
-      ServerName hsa = ct.getMetaLocation();
-      Assert.assertNull(hsa);
+    // Now the ct is up... set into the mocks some answers that make it look
+    // like things have been getting assigned. Make it so we'll return a
+    // location (no matter what the Get is). Same for getHRegionInfo -- always
+    // just return the meta region.
+    final Result result = getMetaTableRowResult();
 
-      // Now test waiting on meta location getting set.
-      Thread t = new WaitOnMetaThread(ct) {
-        @Override
-        void doWaiting() throws InterruptedException {
-          this.ct.waitForMeta();
-        }
-      };
-      startWaitAliveThenWaitItLives(t, 1000);
+    // TODO: Refactor.  This method has been moved out of HConnection.
+    // It works for now but has been deprecated.
+    Mockito.when(connection.getRegionServerWithRetries((ServerCallable<Result>)Mockito.any())).
+      thenReturn(result);
+    Mockito.when(implementation.getRegionInfo((byte[]) Mockito.any())).
+      thenReturn(HRegionInfo.FIRST_META_REGIONINFO);
+    final CatalogTracker ct = constructAndStartCatalogTracker(connection);
+    ServerName hsa = ct.getMetaLocation();
+    Assert.assertNull(hsa);
 
-      // This should trigger wake up of meta wait (Its the removal of the meta
-      // region unassigned node that triggers catalogtrackers that a meta has
-      // been assigned).
-      String node = ct.getMetaNodeTracker().getNode();
-      ZKUtil.createAndFailSilent(this.watcher, node);
-      MetaEditor.updateMetaLocation(ct, HRegionInfo.FIRST_META_REGIONINFO, SN);
-      ZKUtil.deleteNode(this.watcher, node);
-      // Go get the new meta location. waitForMeta gets and verifies meta.
-      Assert.assertTrue(ct.waitForMeta(10000).equals(SN));
-      // Join the thread... should exit shortly.
-      t.join();
-      // Now meta is available.
-      Assert.assertTrue(ct.waitForMeta(10000).equals(SN));
-    } finally {
-      HConnectionManager.deleteConnection(UTIL.getConfiguration());
-    }
+    // Now test waiting on meta location getting set.
+    Thread t = new WaitOnMetaThread(ct) {
+      @Override
+      void doWaiting() throws InterruptedException {
+        this.ct.waitForMeta();
+      }
+    };
+    startWaitAliveThenWaitItLives(t, 1000);
+
+    // This should trigger wake up of meta wait (Its the removal of the meta
+    // region unassigned node that triggers catalogtrackers that a meta has
+    // been assigned).
+    String node = ct.getMetaNodeTracker().getNode();
+    ZKUtil.createAndFailSilent(this.watcher, node);
+    MetaEditor.updateMetaLocation(ct, HRegionInfo.FIRST_META_REGIONINFO, SN);
+    ZKUtil.deleteNode(this.watcher, node);
+    // Go get the new meta location. waitForMeta gets and verifies meta.
+    Assert.assertTrue(ct.waitForMeta(10000).equals(SN));
+    // Join the thread... should exit shortly.
+    t.join();
+    // Now meta is available.
+    Assert.assertTrue(ct.waitForMeta(10000).equals(SN));
   }
 
   /**
