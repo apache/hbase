@@ -17,32 +17,39 @@
  */
 package org.apache.hadoop.hbase.master.balancer;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
+import java.util.Queue;
+import java.util.TreeMap;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.commons.math.stat.descriptive.DescriptiveStatistics;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.ClusterStatus;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.MediumTests;
+import org.apache.hadoop.hbase.RegionLoad;
+import org.apache.hadoop.hbase.ServerLoad;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.master.RegionPlan;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+
 @Category(MediumTests.class)
 public class TestStochasticLoadBalancer extends BalancerTestBase {
+  public static final String REGION_KEY = "testRegion";
   private static StochasticLoadBalancer loadBalancer;
   private static final Log LOG = LogFactory.getLog(TestStochasticLoadBalancer.class);
 
@@ -110,6 +117,40 @@ public class TestStochasticLoadBalancer extends BalancerTestBase {
       new int[]{130, 14, 60, 10, 100, 10, 80, 10},
       new int[]{130, 140, 60, 100, 100, 100, 80, 100}
   };
+
+  @Test
+  public void testKeepRegionLoad() throws Exception {
+
+    ServerName sn = new ServerName("test:8080", 100);
+    int numClusterStatusToAdd = 20000;
+    for (int i = 0; i < numClusterStatusToAdd; i++) {
+      ServerLoad sl = mock(ServerLoad.class);
+
+      RegionLoad rl = mock(RegionLoad.class);
+      when(rl.getStores()).thenReturn(i);
+
+      Map<byte[], RegionLoad> regionLoadMap =
+          new TreeMap<byte[], RegionLoad>(Bytes.BYTES_COMPARATOR);
+      regionLoadMap.put(Bytes.toBytes(REGION_KEY), rl);
+      when(sl.getRegionsLoad()).thenReturn(regionLoadMap);
+
+      ClusterStatus clusterStatus = mock(ClusterStatus.class);
+      when(clusterStatus.getServers()).thenReturn(Arrays.asList(sn));
+      when(clusterStatus.getLoad(sn)).thenReturn(sl);
+
+      loadBalancer.setClusterStatus(clusterStatus);
+    }
+    assertTrue(loadBalancer.loads.get(REGION_KEY) != null);
+    assertTrue(loadBalancer.loads.get(REGION_KEY).size() == 15);
+
+    Queue<RegionLoad> loads = loadBalancer.loads.get(REGION_KEY);
+    int i = 0;
+    while(loads.size() > 0) {
+      RegionLoad rl = loads.remove();
+      assertEquals(i + (numClusterStatusToAdd - 15), rl.getStores());
+      i ++;
+    }
+  }
 
   /**
    * Test the load balancing algorithm.
