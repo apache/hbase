@@ -46,7 +46,7 @@ public class PrefixTreeBlockMeta {
 
   public static final int
 	  NUM_LONGS = 2,
-    NUM_INTS = 22,
+    NUM_INTS = 28,
     NUM_SHORTS = 0,//keyValueTypeWidth not persisted
     NUM_SINGLE_BYTES = 2,
     MAX_BYTES = Bytes.SIZEOF_LONG * NUM_LONGS
@@ -76,6 +76,7 @@ public class PrefixTreeBlockMeta {
   protected int numTimestampBytes;
   protected int numMvccVersionBytes;
   protected int numValueBytes;
+  protected int numTagsBytes;
 
   // number of bytes in each section of fixed width FInts
   protected int nextNodeOffsetWidth;
@@ -85,11 +86,13 @@ public class PrefixTreeBlockMeta {
   protected int mvccVersionIndexWidth;
   protected int valueOffsetWidth;
   protected int valueLengthWidth;
+  protected int tagsOffsetWidth;
 
   // used to pre-allocate structures for reading
   protected int rowTreeDepth;
   protected int maxRowLength;
   protected int maxQualifierLength;
+  protected int maxTagsLength;
 
   // the timestamp from which the deltas are calculated
   protected long minTimestamp;
@@ -103,6 +106,7 @@ public class PrefixTreeBlockMeta {
   protected int numUniqueRows;
   protected int numUniqueFamilies;
   protected int numUniqueQualifiers;
+  protected int numUniqueTags;
 
 
   /***************** constructors ********************/
@@ -143,6 +147,7 @@ public class PrefixTreeBlockMeta {
     numBytes += UVIntTool.numBytes(numRowBytes);
     numBytes += UVIntTool.numBytes(numFamilyBytes);
     numBytes += UVIntTool.numBytes(numQualifierBytes);
+    numBytes += UVIntTool.numBytes(numTagsBytes);
     numBytes += UVIntTool.numBytes(numTimestampBytes);
     numBytes += UVIntTool.numBytes(numMvccVersionBytes);
     numBytes += UVIntTool.numBytes(numValueBytes);
@@ -150,6 +155,7 @@ public class PrefixTreeBlockMeta {
     numBytes += UVIntTool.numBytes(nextNodeOffsetWidth);
     numBytes += UVIntTool.numBytes(familyOffsetWidth);
     numBytes += UVIntTool.numBytes(qualifierOffsetWidth);
+    numBytes += UVIntTool.numBytes(tagsOffsetWidth);
     numBytes += UVIntTool.numBytes(timestampIndexWidth);
     numBytes += UVIntTool.numBytes(mvccVersionIndexWidth);
     numBytes += UVIntTool.numBytes(valueOffsetWidth);
@@ -158,6 +164,7 @@ public class PrefixTreeBlockMeta {
     numBytes += UVIntTool.numBytes(rowTreeDepth);
     numBytes += UVIntTool.numBytes(maxRowLength);
     numBytes += UVIntTool.numBytes(maxQualifierLength);
+    numBytes += UVIntTool.numBytes(maxTagsLength);
 
     numBytes += UVLongTool.numBytes(minTimestamp);
     numBytes += UVIntTool.numBytes(timestampDeltaWidth);
@@ -169,6 +176,7 @@ public class PrefixTreeBlockMeta {
     numBytes += UVIntTool.numBytes(numUniqueRows);
     numBytes += UVIntTool.numBytes(numUniqueFamilies);
     numBytes += UVIntTool.numBytes(numUniqueQualifiers);
+    numBytes += UVIntTool.numBytes(numUniqueTags);
     return numBytes;
   }
 
@@ -181,6 +189,7 @@ public class PrefixTreeBlockMeta {
       UVIntTool.writeBytes(numRowBytes, os);
       UVIntTool.writeBytes(numFamilyBytes, os);
       UVIntTool.writeBytes(numQualifierBytes, os);
+      UVIntTool.writeBytes(numTagsBytes, os);
       UVIntTool.writeBytes(numTimestampBytes, os);
       UVIntTool.writeBytes(numMvccVersionBytes, os);
       UVIntTool.writeBytes(numValueBytes, os);
@@ -188,6 +197,7 @@ public class PrefixTreeBlockMeta {
       UVIntTool.writeBytes(nextNodeOffsetWidth, os);
       UVIntTool.writeBytes(familyOffsetWidth, os);
       UVIntTool.writeBytes(qualifierOffsetWidth, os);
+      UVIntTool.writeBytes(tagsOffsetWidth, os);
       UVIntTool.writeBytes(timestampIndexWidth, os);
       UVIntTool.writeBytes(mvccVersionIndexWidth, os);
       UVIntTool.writeBytes(valueOffsetWidth, os);
@@ -196,6 +206,7 @@ public class PrefixTreeBlockMeta {
       UVIntTool.writeBytes(rowTreeDepth, os);
       UVIntTool.writeBytes(maxRowLength, os);
       UVIntTool.writeBytes(maxQualifierLength, os);
+      UVIntTool.writeBytes(maxTagsLength, os);
 
       UVLongTool.writeBytes(minTimestamp, os);
       UVIntTool.writeBytes(timestampDeltaWidth, os);
@@ -207,6 +218,7 @@ public class PrefixTreeBlockMeta {
       UVIntTool.writeBytes(numUniqueRows, os);
       UVIntTool.writeBytes(numUniqueFamilies, os);
       UVIntTool.writeBytes(numUniqueQualifiers, os);
+      UVIntTool.writeBytes(numUniqueTags, os);
   }
 
   public void readVariableBytesFromInputStream(InputStream is) throws IOException{
@@ -218,6 +230,7 @@ public class PrefixTreeBlockMeta {
       numRowBytes = UVIntTool.getInt(is);
       numFamilyBytes = UVIntTool.getInt(is);
       numQualifierBytes = UVIntTool.getInt(is);
+      numTagsBytes = UVIntTool.getInt(is);
       numTimestampBytes = UVIntTool.getInt(is);
       numMvccVersionBytes = UVIntTool.getInt(is);
       numValueBytes = UVIntTool.getInt(is);
@@ -225,6 +238,7 @@ public class PrefixTreeBlockMeta {
       nextNodeOffsetWidth = UVIntTool.getInt(is);
       familyOffsetWidth = UVIntTool.getInt(is);
       qualifierOffsetWidth = UVIntTool.getInt(is);
+      tagsOffsetWidth = UVIntTool.getInt(is);
       timestampIndexWidth = UVIntTool.getInt(is);
       mvccVersionIndexWidth = UVIntTool.getInt(is);
       valueOffsetWidth = UVIntTool.getInt(is);
@@ -233,6 +247,7 @@ public class PrefixTreeBlockMeta {
       rowTreeDepth = UVIntTool.getInt(is);
       maxRowLength = UVIntTool.getInt(is);
       maxQualifierLength = UVIntTool.getInt(is);
+      maxTagsLength = UVIntTool.getInt(is);
 
       minTimestamp = UVLongTool.getLong(is);
       timestampDeltaWidth = UVIntTool.getInt(is);
@@ -245,6 +260,7 @@ public class PrefixTreeBlockMeta {
       numUniqueRows = UVIntTool.getInt(is);
       numUniqueFamilies = UVIntTool.getInt(is);
       numUniqueQualifiers = UVIntTool.getInt(is);
+      numUniqueTags = UVIntTool.getInt(is);
   }
 
   public void readVariableBytesFromArray(byte[] bytes, int offset) {
@@ -265,6 +281,8 @@ public class PrefixTreeBlockMeta {
     position += UVIntTool.numBytes(numFamilyBytes);
     numQualifierBytes = UVIntTool.getInt(bytes, position);
     position += UVIntTool.numBytes(numQualifierBytes);
+    numTagsBytes = UVIntTool.getInt(bytes, position);
+    position += UVIntTool.numBytes(numTagsBytes);
     numTimestampBytes = UVIntTool.getInt(bytes, position);
     position += UVIntTool.numBytes(numTimestampBytes);
     numMvccVersionBytes = UVIntTool.getInt(bytes, position);
@@ -278,6 +296,8 @@ public class PrefixTreeBlockMeta {
     position += UVIntTool.numBytes(familyOffsetWidth);
     qualifierOffsetWidth = UVIntTool.getInt(bytes, position);
     position += UVIntTool.numBytes(qualifierOffsetWidth);
+    tagsOffsetWidth = UVIntTool.getInt(bytes, position);
+    position += UVIntTool.numBytes(tagsOffsetWidth);
     timestampIndexWidth = UVIntTool.getInt(bytes, position);
     position += UVIntTool.numBytes(timestampIndexWidth);
     mvccVersionIndexWidth = UVIntTool.getInt(bytes, position);
@@ -293,7 +313,8 @@ public class PrefixTreeBlockMeta {
     position += UVIntTool.numBytes(maxRowLength);
     maxQualifierLength = UVIntTool.getInt(bytes, position);
     position += UVIntTool.numBytes(maxQualifierLength);
-
+    maxTagsLength = UVIntTool.getInt(bytes, position);
+    position += UVIntTool.numBytes(maxTagsLength);
     minTimestamp = UVLongTool.getLong(bytes, position);
     position += UVLongTool.numBytes(minTimestamp);
     timestampDeltaWidth = UVIntTool.getInt(bytes, position);
@@ -314,6 +335,8 @@ public class PrefixTreeBlockMeta {
     position += UVIntTool.numBytes(numUniqueFamilies);
     numUniqueQualifiers = UVIntTool.getInt(bytes, position);
     position += UVIntTool.numBytes(numUniqueQualifiers);
+    numUniqueTags = UVIntTool.getInt(bytes, position);
+    position += UVIntTool.numBytes(numUniqueTags);
   }
 
 	//TODO method that can read directly from ByteBuffer instead of InputStream
@@ -396,6 +419,8 @@ public class PrefixTreeBlockMeta {
       return false;
     if (maxQualifierLength != other.maxQualifierLength)
       return false;
+    if (maxTagsLength != other.maxTagsLength)
+      return false;
     if (maxRowLength != other.maxRowLength)
       return false;
     if (mvccVersionDeltaWidth != other.mvccVersionDeltaWidth)
@@ -418,6 +443,8 @@ public class PrefixTreeBlockMeta {
       return false;
     if (numQualifierBytes != other.numQualifierBytes)
       return false;
+    if (numTagsBytes != other.numTagsBytes)
+      return false;
     if (numRowBytes != other.numRowBytes)
       return false;
     if (numTimestampBytes != other.numTimestampBytes)
@@ -426,11 +453,15 @@ public class PrefixTreeBlockMeta {
       return false;
     if (numUniqueQualifiers != other.numUniqueQualifiers)
       return false;
+    if (numUniqueTags != other.numUniqueTags)
+      return false;
     if (numUniqueRows != other.numUniqueRows)
       return false;
     if (numKeyValueBytes != other.numKeyValueBytes)
       return false;
     if (qualifierOffsetWidth != other.qualifierOffsetWidth)
+      return false;
+    if(tagsOffsetWidth !=  other.tagsOffsetWidth) 
       return false;
     if (rowTreeDepth != other.rowTreeDepth)
       return false;
@@ -459,6 +490,7 @@ public class PrefixTreeBlockMeta {
     result = prime * result + familyOffsetWidth;
     result = prime * result + (includesMvccVersion ? 1231 : 1237);
     result = prime * result + maxQualifierLength;
+    result = prime * result + maxTagsLength;
     result = prime * result + maxRowLength;
     result = prime * result + mvccVersionDeltaWidth;
     result = prime * result + mvccVersionIndexWidth;
@@ -470,13 +502,16 @@ public class PrefixTreeBlockMeta {
     result = prime * result + numMvccVersionBytes;
     result = prime * result + numMetaBytes;
     result = prime * result + numQualifierBytes;
+    result = prime * result + numTagsBytes;
     result = prime * result + numRowBytes;
     result = prime * result + numTimestampBytes;
     result = prime * result + numUniqueFamilies;
     result = prime * result + numUniqueQualifiers;
+    result = prime * result + numUniqueTags;
     result = prime * result + numUniqueRows;
     result = prime * result + numKeyValueBytes;
     result = prime * result + qualifierOffsetWidth;
+    result = prime * result + tagsOffsetWidth;
     result = prime * result + rowTreeDepth;
     result = prime * result + timestampDeltaWidth;
     result = prime * result + timestampIndexWidth;
@@ -514,12 +549,16 @@ public class PrefixTreeBlockMeta {
     builder.append(numMvccVersionBytes);
     builder.append(", numValueBytes=");
     builder.append(numValueBytes);
+    builder.append(", numTagBytes=");
+    builder.append(numTagsBytes);
     builder.append(", nextNodeOffsetWidth=");
     builder.append(nextNodeOffsetWidth);
     builder.append(", familyOffsetWidth=");
     builder.append(familyOffsetWidth);
     builder.append(", qualifierOffsetWidth=");
     builder.append(qualifierOffsetWidth);
+    builder.append(", tagOffsetWidth=");
+    builder.append(tagsOffsetWidth);
     builder.append(", timestampIndexWidth=");
     builder.append(timestampIndexWidth);
     builder.append(", mvccVersionIndexWidth=");
@@ -534,6 +573,8 @@ public class PrefixTreeBlockMeta {
     builder.append(maxRowLength);
     builder.append(", maxQualifierLength=");
     builder.append(maxQualifierLength);
+    builder.append(", maxTagLength=");
+    builder.append(maxTagsLength);
     builder.append(", minTimestamp=");
     builder.append(minTimestamp);
     builder.append(", timestampDeltaWidth=");
@@ -552,6 +593,8 @@ public class PrefixTreeBlockMeta {
     builder.append(numUniqueFamilies);
     builder.append(", numUniqueQualifiers=");
     builder.append(numUniqueQualifiers);
+    builder.append(", numUniqueTags=");
+    builder.append(numUniqueTags);
     builder.append("]");
     return builder.toString();
   }
@@ -575,8 +618,12 @@ public class PrefixTreeBlockMeta {
     return getAbsoluteFamilyOffset() + numFamilyBytes;
   }
 
-  public int getAbsoluteTimestampOffset() {
+  public int getAbsoluteTagsOffset() {
     return getAbsoluteQualifierOffset() + numQualifierBytes;
+  }
+
+  public int getAbsoluteTimestampOffset() {
+    return getAbsoluteTagsOffset() + numTagsBytes;
   }
 
   public int getAbsoluteMvccVersionOffset() {
@@ -602,8 +649,16 @@ public class PrefixTreeBlockMeta {
     return valueOffsetWidth;
   }
 
+  public int getTagsOffsetWidth() {
+    return tagsOffsetWidth;
+  }
+
   public void setValueOffsetWidth(int dataOffsetWidth) {
     this.valueOffsetWidth = dataOffsetWidth;
+  }
+
+  public void setTagsOffsetWidth(int dataOffsetWidth) {
+    this.tagsOffsetWidth = dataOffsetWidth;
   }
 
   public int getValueLengthWidth() {
@@ -672,6 +727,14 @@ public class PrefixTreeBlockMeta {
 
   public int getNumValueBytes() {
     return numValueBytes;
+  }
+
+  public int getNumTagsBytes() {
+    return numTagsBytes;
+  }
+
+  public void setNumTagsBytes(int numTagBytes){
+    this.numTagsBytes = numTagBytes;
   }
 
   public void setNumValueBytes(int numValueBytes) {
@@ -782,6 +845,13 @@ public class PrefixTreeBlockMeta {
     this.numUniqueQualifiers = numUniqueQualifiers;
   }
 
+  public void setNumUniqueTags(int numUniqueTags) {
+    this.numUniqueTags = numUniqueTags;
+  }
+
+  public int getNumUniqueTags() {
+    return numUniqueTags;
+  }
   public int getNumQualifierBytes() {
     return numQualifierBytes;
   }
@@ -802,8 +872,17 @@ public class PrefixTreeBlockMeta {
     return maxQualifierLength;
   }
 
+  // TODO : decide on some max value for this ? INTEGER_MAX?
   public void setMaxQualifierLength(int maxQualifierLength) {
     this.maxQualifierLength = maxQualifierLength;
+  }
+
+  public int getMaxTagsLength() {
+    return this.maxTagsLength;
+  }
+
+  public void setMaxTagsLength(int maxTagLength) {
+    this.maxTagsLength = maxTagLength;
   }
 
   public int getTimestampIndexWidth() {

@@ -39,6 +39,7 @@ public class TestBlockMeta {
     m.setNumRowBytes(0);
     m.setNumFamilyBytes(3);
     m.setNumQualifierBytes(12345);
+    m.setNumTagsBytes(50);
     m.setNumTimestampBytes(23456);
     m.setNumMvccVersionBytes(5);
     m.setNumValueBytes(34567);
@@ -46,6 +47,7 @@ public class TestBlockMeta {
     m.setNextNodeOffsetWidth(3);
     m.setFamilyOffsetWidth(1);
     m.setQualifierOffsetWidth(2);
+    m.setTagsOffsetWidth(2);
     m.setTimestampIndexWidth(1);
     m.setMvccVersionIndexWidth(2);
     m.setValueOffsetWidth(8);
@@ -54,6 +56,7 @@ public class TestBlockMeta {
     m.setRowTreeDepth(11);
     m.setMaxRowLength(200);
     m.setMaxQualifierLength(50);
+    m.setMaxTagsLength(40);
 
     m.setMinTimestamp(1318966363481L);
     m.setTimestampDeltaWidth(3);
@@ -66,6 +69,7 @@ public class TestBlockMeta {
     m.setNumUniqueRows(88);
     m.setNumUniqueFamilies(1);
     m.setNumUniqueQualifiers(56);
+    m.setNumUniqueTags(5);
     return m;
   }
 
