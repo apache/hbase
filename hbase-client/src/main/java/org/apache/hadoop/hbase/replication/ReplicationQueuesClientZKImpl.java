@@ -35,8 +35,12 @@ public class ReplicationQueuesClientZKImpl extends ReplicationStateZKBase implem
   }
 
   @Override
-  public void init() throws KeeperException {
-    ZKUtil.createWithParents(this.zookeeper, this.queuesZNode);
+  public void init() throws ReplicationException {
+    try {
+      ZKUtil.createWithParents(this.zookeeper, this.queuesZNode);
+    } catch (KeeperException e) {
+      throw new ReplicationException("Internal error while initializing a queues client", e);
+    }
   }
 
   @Override

@@ -44,20 +44,20 @@ import org.apache.zookeeper.KeeperException;
  * base znode that this class works at is the myQueuesZnode. The myQueuesZnode contains a list of
  * all outstanding HLog files on this region server that need to be replicated. The myQueuesZnode is
  * the regionserver name (a concatenation of the region server’s hostname, client port and start
- * code). For example: 
- * 
- * /hbase/replication/rs/hostname.example.org,6020,1234 
- * 
+ * code). For example:
+ *
+ * /hbase/replication/rs/hostname.example.org,6020,1234
+ *
  * Within this znode, the region server maintains a set of HLog replication queues. These queues are
  * represented by child znodes named using there give queue id. For example:
- * 
+ *
  * /hbase/replication/rs/hostname.example.org,6020,1234/1
  * /hbase/replication/rs/hostname.example.org,6020,1234/2
  *
  * Each queue has one child znode for every HLog that still needs to be replicated. The value of
  * these HLog child znodes is the latest position that has been replicated. This position is updated
  * every time a HLog entry is replicated. For example:
- * 
+ *
  * /hbase/replication/rs/hostname.example.org,6020,1234/1/23522342.23422 [VALUE: 254]
  */
 public class ReplicationQueuesZKImpl extends ReplicationStateZKBase implements ReplicationQueues {
@@ -75,9 +75,13 @@ public class ReplicationQueuesZKImpl extends ReplicationStateZKBase implements R
   }
 
   @Override
-  public void init(String serverName) throws KeeperException {
+  public void init(String serverName) throws ReplicationException {
     this.myQueuesZnode = ZKUtil.joinZNode(this.queuesZNode, serverName);
-    ZKUtil.createWithParents(this.zookeeper, this.myQueuesZnode);
+    try {
+      ZKUtil.createWithParents(this.zookeeper, this.myQueuesZnode);
+    } catch (KeeperException e) {
+      throw new ReplicationException("Could not initialize replication queues.", e);
+    }
   }
 
   @Override
@@ -90,10 +94,16 @@ public class ReplicationQueuesZKImpl extends ReplicationStateZKBase implements R
   }
 
   @Override
-  public void addLog(String queueId, String filename) throws KeeperException {
+  public void addLog(String queueId, String filename) throws ReplicationException {
     String znode = ZKUtil.joinZNode(this.myQueuesZnode, queueId);
     znode = ZKUtil.joinZNode(znode, filename);
-    ZKUtil.createWithParents(this.zookeeper, znode);
+    try {
+      ZKUtil.createWithParents(this.zookeeper, znode);
+    } catch (KeeperException e) {
+      throw new ReplicationException(
+          "Could not add log because znode could not be created. queueId=" + queueId
+              + ", filename=" + filename);
+    }
   }
 
   @Override
@@ -122,10 +132,16 @@ public class ReplicationQueuesZKImpl extends ReplicationStateZKBase implements R
   }
 
   @Override
-  public long getLogPosition(String queueId, String filename) throws KeeperException {
+  public long getLogPosition(String queueId, String filename) throws ReplicationException {
     String clusterZnode = ZKUtil.joinZNode(this.myQueuesZnode, queueId);
     String znode = ZKUtil.joinZNode(clusterZnode, filename);
-    byte[] bytes = ZKUtil.getData(this.zookeeper, znode);
+    byte[] bytes = null;
+    try {
+      bytes = ZKUtil.getData(this.zookeeper, znode);
+    } catch (KeeperException e) {
+      throw new ReplicationException("Internal Error: could not get position in log for queueId="
+          + queueId + ", filename=" + filename, e);
+    }
     try {
       return ZKUtil.parseHLogPositionFrom(bytes);
     } catch (DeserializationException de) {

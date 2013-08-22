@@ -18,7 +18,6 @@
  */
 package org.apache.hadoop.hbase.replication;
 
-import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -27,7 +26,6 @@ import java.util.UUID;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.zookeeper.KeeperException;
 
 /**
  * This provides an interface for maintaining a set of peer clusters. These peers are remote slave
@@ -44,9 +42,8 @@ public interface ReplicationPeers {
 
   /**
    * Initialize the ReplicationPeers interface.
-   * @throws KeeperException
    */
-  void init() throws IOException, KeeperException;
+  void init() throws ReplicationException;
 
   /**
    * Add a new remote slave cluster for replication.
@@ -54,25 +51,25 @@ public interface ReplicationPeers {
    * @param clusterKey the concatenation of the slave cluster's:
    *          hbase.zookeeper.quorum:hbase.zookeeper.property.clientPort:zookeeper.znode.parent
    */
-  void addPeer(String peerId, String clusterKey) throws IOException;
+  void addPeer(String peerId, String clusterKey) throws ReplicationException;
 
   /**
    * Removes a remote slave cluster and stops the replication to it.
    * @param peerId a short that identifies the cluster
    */
-  void removePeer(String peerId) throws IOException;
+  void removePeer(String peerId) throws ReplicationException;
 
   /**
    * Restart the replication to the specified remote slave cluster.
    * @param peerId a short that identifies the cluster
    */
-  void enablePeer(String peerId) throws IOException;
+  void enablePeer(String peerId) throws ReplicationException;
 
   /**
    * Stop the replication to the specified remote slave cluster.
    * @param peerId a short that identifies the cluster
    */
-  void disablePeer(String peerId) throws IOException;
+  void disablePeer(String peerId) throws ReplicationException;
 
   /**
    * Get the replication status for the specified connected remote slave cluster.
@@ -91,7 +88,7 @@ public interface ReplicationPeers {
    * @return true if replication is enabled, false otherwise.
    * @throws IOException Throws if there's an error contacting the store
    */
-  boolean getStatusOfPeerFromBackingStore(String peerId) throws IOException;
+  boolean getStatusOfPeerFromBackingStore(String peerId) throws ReplicationException;
 
   /**
    * Get a set of all connected remote slave clusters.
@@ -118,7 +115,7 @@ public interface ReplicationPeers {
    * @param peerId a short that identifies the cluster
    * @return true if a new connection was made, false if no new connection was made.
    */
-  boolean connectToPeer(String peerId) throws IOException, KeeperException;
+  boolean connectToPeer(String peerId) throws ReplicationException;
 
   /**
    * Disconnect from a remote slave cluster.
@@ -154,5 +151,5 @@ public interface ReplicationPeers {
    * @param peerId a short that identifies the cluster
    * @return the configuration for the peer cluster, null if it was unable to get the configuration
    */
-  Configuration getPeerConf(String peerId) throws KeeperException;
+  Configuration getPeerConf(String peerId) throws ReplicationException;
 }

@@ -25,6 +25,7 @@ import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HConnectionManager;
+import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.replication.ReplicationFactory;
 import org.apache.hadoop.hbase.replication.ReplicationPeers;
 import org.apache.hadoop.hbase.replication.ReplicationQueuesClient;
@@ -83,7 +84,7 @@ public class ReplicationAdmin implements Closeable {
   /**
    * Constructor that creates a connection to the local ZooKeeper ensemble.
    * @param conf Configuration to use
-   * @throws IOException if the connection to ZK cannot be made
+   * @throws IOException if an internal replication error occurs
    * @throws RuntimeException if replication isn't enabled.
    */
   public ReplicationAdmin(Configuration conf) throws IOException {
@@ -100,8 +101,8 @@ public class ReplicationAdmin implements Closeable {
           ReplicationFactory.getReplicationQueuesClient(zkw, conf, this.connection);
       this.replicationQueuesClient.init();
 
-    } catch (KeeperException e) {
-      throw new IOException("Unable setup the ZooKeeper connection", e);
+    } catch (ReplicationException e) {
+      throw new IOException("Error initializing the replication admin client.", e);
     }
   }
 
@@ -131,7 +132,7 @@ public class ReplicationAdmin implements Closeable {
    * @throws IllegalStateException if there's already one slave since
    * multi-slave isn't supported yet.
    */
-  public void addPeer(String id, String clusterKey) throws IOException {
+  public void addPeer(String id, String clusterKey) throws ReplicationException {
     this.replicationPeers.addPeer(id, clusterKey);
   }
 
@@ -139,7 +140,7 @@ public class ReplicationAdmin implements Closeable {
    * Removes a peer cluster and stops the replication to it.
    * @param id a short that identifies the cluster
    */
-  public void removePeer(String id) throws IOException {
+  public void removePeer(String id) throws ReplicationException {
     this.replicationPeers.removePeer(id);
   }
 
@@ -147,7 +148,7 @@ public class ReplicationAdmin implements Closeable {
    * Restart the replication stream to the specified peer.
    * @param id a short that identifies the cluster
    */
-  public void enablePeer(String id) throws IOException {
+  public void enablePeer(String id) throws ReplicationException {
     this.replicationPeers.enablePeer(id);
   }
 
@@ -155,7 +156,7 @@ public class ReplicationAdmin implements Closeable {
    * Stop the replication stream to the specified peer.
    * @param id a short that identifies the cluster
    */
-  public void disablePeer(String id) throws IOException {
+  public void disablePeer(String id) throws ReplicationException {
     this.replicationPeers.disablePeer(id);
   }
 
@@ -181,7 +182,7 @@ public class ReplicationAdmin implements Closeable {
    *           is thrown if it doesn't exist
    * @return true if replication is enabled to that peer, false if it isn't
    */
-  public boolean getPeerState(String id) throws IOException {
+  public boolean getPeerState(String id) throws ReplicationException {
     return this.replicationPeers.getStatusOfPeerFromBackingStore(id);
   }
 

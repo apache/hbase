@@ -45,6 +45,7 @@ import org.apache.hadoop.hbase.regionserver.ReplicationSinkService;
 import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
+import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.replication.ReplicationFactory;
 import org.apache.hadoop.hbase.replication.ReplicationPeers;
 import org.apache.hadoop.hbase.replication.ReplicationQueues;
@@ -119,8 +120,8 @@ public class Replication implements WALActionsListener,
         this.replicationTracker =
             ReplicationFactory.getReplicationTracker(server.getZooKeeper(), this.replicationPeers,
               this.conf, this.server, this.server);
-      } catch (KeeperException ke) {
-        throw new IOException("Failed replication handler create", ke);
+      } catch (ReplicationException e) {
+        throw new IOException("Failed replication handler create", e);
       }
       UUID clusterId = null;
       try {
@@ -197,7 +198,11 @@ public class Replication implements WALActionsListener,
    */
   public void startReplicationService() throws IOException {
     if (this.replication) {
-      this.replicationManager.init();
+      try {
+        this.replicationManager.init();
+      } catch (ReplicationException e) {
+        throw new IOException(e);
+      }
       this.replicationSink = new ReplicationSink(this.conf, this.server);
       this.scheduleThreadPool.scheduleAtFixedRate(
         new ReplicationStatisticsThread(this.replicationSink, this.replicationManager),

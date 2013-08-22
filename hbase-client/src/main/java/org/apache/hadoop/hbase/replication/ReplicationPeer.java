@@ -21,7 +21,6 @@ package org.apache.hadoop.hbase.replication;
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -70,12 +69,15 @@ public class ReplicationPeer implements Abortable, Closeable {
    * @param key cluster key used to locate the peer
    * @param id string representation of this peer's identifier
    */
-  public ReplicationPeer(Configuration conf, String key,
-      String id) throws IOException {
+  public ReplicationPeer(Configuration conf, String key, String id) throws ReplicationException {
     this.conf = conf;
     this.clusterKey = key;
     this.id = id;
-    this.reloadZkWatcher();
+    try {
+      this.reloadZkWatcher();
+    } catch (IOException e) {
+      throw new ReplicationException("Error connecting to peer cluster with peerId=" + id, e);
+    }
   }
 
   /**

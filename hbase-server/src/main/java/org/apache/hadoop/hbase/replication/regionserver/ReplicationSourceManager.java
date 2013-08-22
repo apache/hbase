@@ -42,6 +42,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Stoppable;
+import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.replication.ReplicationListener;
 import org.apache.hadoop.hbase.replication.ReplicationPeers;
 import org.apache.hadoop.hbase.replication.ReplicationQueues;
@@ -190,7 +191,7 @@ public class ReplicationSourceManager implements ReplicationListener {
    * Adds a normal source per registered peer cluster and tries to process all
    * old region server hlog queues
    */
-  public void init() throws IOException {
+  protected void init() throws IOException, ReplicationException {
     for (String id : this.replicationPeers.getConnectedPeers()) {
       addSource(id);
     }
@@ -216,7 +217,8 @@ public class ReplicationSourceManager implements ReplicationListener {
    * @return the source that was created
    * @throws IOException
    */
-  public ReplicationSourceInterface addSource(String id) throws IOException {
+  protected ReplicationSourceInterface addSource(String id) throws IOException,
+      ReplicationException {
     ReplicationSourceInterface src =
         getReplicationSource(this.conf, this.fs, this, this.replicationQueues,
           this.replicationPeers, stopper, id, this.clusterId);
@@ -229,11 +231,12 @@ public class ReplicationSourceManager implements ReplicationListener {
         this.hlogsById.get(id).add(name);
         try {
           this.replicationQueues.addLog(src.getPeerClusterZnode(), name);
-        } catch (KeeperException ke) {
-          String message = "Cannot add log to zk for" +
-            " replication when creating a new source";
+        } catch (ReplicationException e) {
+          String message =
+              "Cannot add log to queue when creating a new source, queueId="
+                  + src.getPeerClusterZnode() + ", filename=" + name;
           stopper.stop(message);
-          throw new IOException(message, ke);
+          throw e;
         }
         src.enqueueLog(this.latestPath);
       }
@@ -289,8 +292,9 @@ public class ReplicationSourceManager implements ReplicationListener {
       for (ReplicationSourceInterface source : this.sources) {
         try {
           this.replicationQueues.addLog(source.getPeerClusterZnode(), name);
-        } catch (KeeperException ke) {
-          throw new IOException("Cannot add log to zk for replication", ke);
+        } catch (ReplicationException e) {
+          throw new IOException("Cannot add log to replication queue with id="
+              + source.getPeerClusterZnode() + ", filename=" + name, e);
         }
       }
       for (SortedSet<String> hlogs : this.hlogsById.values()) {
@@ -323,7 +327,7 @@ public class ReplicationSourceManager implements ReplicationListener {
    * @return the created source
    * @throws IOException
    */
-  public ReplicationSourceInterface getReplicationSource(final Configuration conf,
+  protected ReplicationSourceInterface getReplicationSource(final Configuration conf,
       final FileSystem fs, final ReplicationSourceManager manager,
       final ReplicationQueues replicationQueues, final ReplicationPeers replicationPeers,
       final Stoppable stopper, final String peerId, final UUID clusterId) throws IOException {
@@ -431,10 +435,7 @@ public class ReplicationSourceManager implements ReplicationListener {
         if (added) {
           addSource(id);
         }
-      } catch (IOException e) {
-        // TODO manage better than that ?
-        LOG.error("Error while adding a new peer", e);
-      } catch (KeeperException e) {
+      } catch (Exception e) {
         LOG.error("Error while adding a new peer", e);
       }
     }

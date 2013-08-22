@@ -23,7 +23,6 @@ import java.util.SortedMap;
 import java.util.SortedSet;
 
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.zookeeper.KeeperException;
 
 /**
  * This provides an interface for maintaining a region server's replication queues. These queues
@@ -37,7 +36,7 @@ public interface ReplicationQueues {
    * @param serverName The server name of the region server that owns the replication queues this
    *          interface manages.
    */
-  void init(String serverName) throws KeeperException;
+  void init(String serverName) throws ReplicationException;
 
   /**
    * Remove a replication queue.
@@ -49,9 +48,8 @@ public interface ReplicationQueues {
    * Add a new HLog file to the given queue. If the queue does not exist it is created.
    * @param queueId a String that identifies the queue.
    * @param filename name of the HLog
-   * @throws KeeperException
    */
-  void addLog(String queueId, String filename) throws KeeperException;
+  void addLog(String queueId, String filename) throws ReplicationException;
 
   /**
    * Remove an HLog file from the given queue.
@@ -74,7 +72,7 @@ public interface ReplicationQueues {
    * @param filename name of the HLog
    * @return the current position in the file
    */
-  long getLogPosition(String queueId, String filename) throws KeeperException;
+  long getLogPosition(String queueId, String filename) throws ReplicationException;
 
   /**
    * Remove all replication queues for this region server.
