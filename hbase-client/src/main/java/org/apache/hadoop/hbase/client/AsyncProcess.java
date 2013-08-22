@@ -20,22 +20,6 @@
 package org.apache.hadoop.hbase.client;
 
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionLocation;
-import org.apache.hadoop.hbase.DoNotRetryIOException;
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionLocation;
-import org.apache.hadoop.hbase.protobuf.generated.Tracing;
-import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.apache.hadoop.hbase.util.Pair;
-import org.cloudera.htrace.Span;
-import org.cloudera.htrace.Trace;
-
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.util.ArrayList;
@@ -51,6 +35,17 @@ import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
+
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.DoNotRetryIOException;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HRegionLocation;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hbase.util.Pair;
+import org.cloudera.htrace.Trace;
 
 /**
  * This class  allows a continuous flow of requests. It's written to be compatible with a
@@ -419,8 +414,7 @@ class AsyncProcess<CResult> {
             try {
               res = createCaller(callable).callWithoutRetries(callable);
             } catch (IOException e) {
-              LOG.warn("The call to the RS failed, we don't know where we stand. location="
-                  + loc, e);
+              LOG.warn("The call to the RS failed, we don't know where we stand, " + loc, e);
               resubmitAll(initialActions, multi, loc, numAttempt + 1, e, errorsByServer);
               return;
             }
@@ -438,8 +432,7 @@ class AsyncProcess<CResult> {
         // This should never happen. But as the pool is provided by the end user, let's secure
         //  this a little.
         decTaskCounters(regionName);
-        LOG.warn("The task was rejected by the pool. This is unexpected. " +
-            "location=" + loc, ree);
+        LOG.warn("The task was rejected by the pool. This is unexpected. " + loc, ree);
         // We're likely to fail again, but this will increment the attempt counter, so it will
         //  finish.
         resubmitAll(initialActions, multi, loc, numAttempt + 1, ree, errorsByServer);
@@ -535,8 +528,7 @@ class AsyncProcess<CResult> {
 
     if (toReplay.isEmpty()) {
       LOG.warn("Attempt #" + numAttempt + "/" + numTries + " failed for all " +
-        initialActions.size() + "ops, NOT resubmitting, tableName=" + tableName +
-        ", location=" + location);
+        initialActions.size() + "ops, NOT resubmitting, " + location);
     } else {
       submit(initialActions, toReplay, numAttempt, true, errorsByServer);
     }
@@ -558,7 +550,7 @@ class AsyncProcess<CResult> {
 
     if (responses == null) {
       LOG.info("Attempt #" + numAttempt + "/" + numTries + " failed all ops, trying resubmit," +
-        " tableName=" + tableName + ", location=" + location);
+        location);
       resubmitAll(initialActions, rsActions, location, numAttempt + 1, null, errorsByServer);
       return;
     }
@@ -618,15 +610,14 @@ class AsyncProcess<CResult> {
         // We use this value to have some logs when we have multiple failures, but not too many
         //  logs as errors are to be expected wehn region moves, split and so on
         LOG.debug("Attempt #" + numAttempt + "/" + numTries + " failed " + failureCount +
-          " ops , resubmitting " + toReplay.size() + ", tableName=" + tableName + ", location=" +
-          location + ", last exception was: " + throwable.getMessage() +
-          " - sleeping " + backOffTime + " ms.");
+          " ops , resubmitting " + toReplay.size() + ", " + location + ", last exception was: " +
+          throwable.getMessage() + ", sleeping " + backOffTime + "ms");
       }
       try {
         Thread.sleep(backOffTime);
       } catch (InterruptedException e) {
         LOG.warn("Not sent: " + toReplay.size() +
-            " operations,  tableName=" + tableName + ", location=" + location, e);
+            " operations, " + location, e);
         Thread.interrupted();
         return;
       }
@@ -634,8 +625,7 @@ class AsyncProcess<CResult> {
       submit(initialActions, toReplay, numAttempt + 1, true, errorsByServer);
     } else if (failureCount != 0) {
       LOG.warn("Attempt #" + numAttempt + "/" + numTries + " failed for " + failureCount +
-          " ops on " + location.getServerName() + " NOT resubmitting." +
-          ", tableName=" + tableName + ", location=" + location);
+          " ops on " + location.getServerName() + " NOT resubmitting." + location);
     }
   }
 
