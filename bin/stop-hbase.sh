@@ -63,10 +63,5 @@ rm -f $pid
 distMode=`$bin/hbase --config "$HBASE_CONF_DIR" org.apache.hadoop.hbase.util.HBaseConfTool hbase.cluster.distributed | head -n 1`
 if [ "$distMode" == 'true' ] 
 then
-  # TODO: store backup masters in ZooKeeper and have the primary send them a shutdown message
-  # stop any backup masters
-  "$bin"/hbase-daemons.sh --config "${HBASE_CONF_DIR}" \
-    --hosts "${HBASE_BACKUP_MASTERS}" stop master-backup
-
   "$bin"/hbase-daemons.sh --config "${HBASE_CONF_DIR}" stop zookeeper
 fi
