@@ -18,10 +18,18 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import static org.apache.hadoop.hbase.HBaseTestingUtility.COLUMNS;
+import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.hadoop.hbase.*;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
@@ -29,13 +37,17 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.filter.TimestampsFilter;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.junit.Rule;
+import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
 
 /**
  * Test Minimum Versions feature (HBASE-4071).
  */
 @Category(SmallTests.class)
-public class TestMinVersions extends HBaseTestCase {
+public class TestMinVersions {
+  HBaseTestingUtility hbu = HBaseTestingUtility.createLocalHTU();
   private final byte[] T0 = Bytes.toBytes("0");
   private final byte[] T1 = Bytes.toBytes("1");
   private final byte[] T2 = Bytes.toBytes("2");
@@ -45,12 +57,15 @@ public class TestMinVersions extends HBaseTestCase {
 
   private final byte[] c0 = COLUMNS[0];
 
+  @Rule public TestName name = new TestName();
+
   /**
    * Verify behavior of getClosestBefore(...)
    */
+  @Test
   public void testGetClosestBefore() throws Exception {
-    HTableDescriptor htd = createTableDescriptor(getName(), 1, 1000, 1, false);
-    HRegion region = createNewHRegion(htd, null, null);
+    HTableDescriptor htd = hbu.createTableDescriptor(name.getMethodName(), 1, 1000, 1, false);
+    HRegion region = hbu.createLocalHRegion(htd, null, null);
     try {
 
       // 2s in the past
@@ -95,10 +110,11 @@ public class TestMinVersions extends HBaseTestCase {
    * Test mixed memstore and storefile scanning
    * with minimum versions.
    */
+  @Test
   public void testStoreMemStore() throws Exception {
     // keep 3 versions minimum
-    HTableDescriptor htd = createTableDescriptor(getName(), 3, 1000, 1, false);
-    HRegion region = createNewHRegion(htd, null, null);
+    HTableDescriptor htd = hbu.createTableDescriptor(name.getMethodName(), 3, 1000, 1, false);
+    HRegion region = hbu.createLocalHRegion(htd, null, null);
     // 2s in the past
     long ts = EnvironmentEdgeManager.currentTimeMillis() - 2000;
 
@@ -149,9 +165,10 @@ public class TestMinVersions extends HBaseTestCase {
   /**
    * Make sure the Deletes behave as expected with minimum versions
    */
+  @Test
   public void testDelete() throws Exception {
-    HTableDescriptor htd = createTableDescriptor(getName(), 3, 1000, 1, false);
-    HRegion region = createNewHRegion(htd, null, null);
+    HTableDescriptor htd = hbu.createTableDescriptor(name.getMethodName(), 3, 1000, 1, false);
+    HRegion region = hbu.createLocalHRegion(htd, null, null);
 
     // 2s in the past
     long ts = EnvironmentEdgeManager.currentTimeMillis() - 2000;
@@ -206,9 +223,10 @@ public class TestMinVersions extends HBaseTestCase {
   /**
    * Make sure the memstor behaves correctly with minimum versions
    */
+  @Test
   public void testMemStore() throws Exception {
-    HTableDescriptor htd = createTableDescriptor(getName(), 2, 1000, 1, false);
-    HRegion region = createNewHRegion(htd, null, null);
+    HTableDescriptor htd = hbu.createTableDescriptor(name.getMethodName(), 2, 1000, 1, false);
+    HRegion region = hbu.createLocalHRegion(htd, null, null);
 
     // 2s in the past
     long ts = EnvironmentEdgeManager.currentTimeMillis() - 2000;
@@ -279,10 +297,11 @@ public class TestMinVersions extends HBaseTestCase {
   /**
    * Verify basic minimum versions functionality
    */
+  @Test
   public void testBaseCase() throws Exception {
     // 1 version minimum, 1000 versions maximum, ttl = 1s
-    HTableDescriptor htd = createTableDescriptor(getName(), 2, 1000, 1, false);
-    HRegion region = createNewHRegion(htd, null, null);
+    HTableDescriptor htd = hbu.createTableDescriptor(name.getMethodName(), 2, 1000, 1, false);
+    HRegion region = hbu.createLocalHRegion(htd, null, null);
     try {
 
       // 2s in the past
@@ -370,9 +389,10 @@ public class TestMinVersions extends HBaseTestCase {
    * Verify that basic filters still behave correctly with
    * minimum versions enabled.
    */
+  @Test
   public void testFilters() throws Exception {
-    HTableDescriptor htd = createTableDescriptor(getName(), 2, 1000, 1, false);
-    HRegion region = createNewHRegion(htd, null, null);
+    HTableDescriptor htd = hbu.createTableDescriptor(name.getMethodName(), 2, 1000, 1, false);
+    HRegion region = hbu.createLocalHRegion(htd, null, null);
     final byte [] c1 = COLUMNS[1];
 
     // 2s in the past
@@ -444,7 +464,7 @@ public class TestMinVersions extends HBaseTestCase {
     List<KeyValue> kvs = r.getColumn(col, col);
     assertEquals(kvs.size(), vals.length);
     for (int i=0;i<vals.length;i++) {
-      assertEquals(kvs.get(i).getValue(), vals[i]);
+      assertArrayEquals(kvs.get(i).getValue(), vals[i]);
     }
   }
 

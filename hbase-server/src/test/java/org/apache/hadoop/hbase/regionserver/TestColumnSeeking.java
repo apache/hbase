@@ -36,14 +36,16 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
 
 @Category(SmallTests.class)
 public class TestColumnSeeking {
+  @Rule public TestName name = new TestName();
 
-  private final static HBaseTestingUtility TEST_UTIL =
-      new HBaseTestingUtility();
+  private final static HBaseTestingUtility TEST_UTIL = HBaseTestingUtility.createLocalHTU();
 
   static final Log LOG = LogFactory.getLog(TestColumnSeeking.class);
 
@@ -52,7 +54,7 @@ public class TestColumnSeeking {
   public void testDuplicateVersions() throws IOException {
     String family = "Family";
     byte[] familyBytes = Bytes.toBytes("Family");
-    TableName table = TableName.valueOf("TestDuplicateVersions");
+    TableName table = TableName.valueOf(name.getMethodName());
 
     HColumnDescriptor hcd =
         new HColumnDescriptor(familyBytes).setMaxVersions(1000);
@@ -60,9 +62,8 @@ public class TestColumnSeeking {
     HTableDescriptor htd = new HTableDescriptor(table);
     htd.addFamily(hcd);
     HRegionInfo info = new HRegionInfo(table, null, null, false);
-    HRegion region =
-        HRegion.createHRegion(info, TEST_UTIL.getDataTestDir(), TEST_UTIL
-            .getConfiguration(), htd);
+    // Set this so that the archiver writes to the temp dir as well.
+    HRegion region = TEST_UTIL.createLocalHRegion(info, htd);
     try {
       List<String> rows = generateRandomWords(10, "row");
       List<String> allColumns = generateRandomWords(10, "column");
@@ -166,8 +167,7 @@ public class TestColumnSeeking {
   public void testReseeking() throws IOException {
     String family = "Family";
     byte[] familyBytes = Bytes.toBytes("Family");
-    TableName table =
-        TableName.valueOf("TestSingleVersions");
+    TableName table = TableName.valueOf(name.getMethodName());
 
     HTableDescriptor htd = new HTableDescriptor(table);
     HColumnDescriptor hcd = new HColumnDescriptor(family);
@@ -175,9 +175,7 @@ public class TestColumnSeeking {
     htd.addFamily(hcd);
 
     HRegionInfo info = new HRegionInfo(table, null, null, false);
-    HRegion region =
-        HRegion.createHRegion(info, TEST_UTIL.getDataTestDir(), TEST_UTIL
-            .getConfiguration(), htd);
+    HRegion region = TEST_UTIL.createLocalHRegion(info, htd);
 
     List<String> rows = generateRandomWords(10, "row");
     List<String> allColumns = generateRandomWords(100, "column");

@@ -16,7 +16,11 @@
  * limitations under the License.
  */
 package org.apache.hadoop.hbase.regionserver;
-
+import static org.apache.hadoop.hbase.HBaseTestingUtility.fam1;
+import static org.apache.hadoop.hbase.HBaseTestingUtility.fam2;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.fail;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -33,7 +37,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HBaseTestCase;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
@@ -59,8 +62,10 @@ import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.EnvironmentEdgeManagerTestHelper;
+import org.junit.Rule;
+import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
 
 
 /**
@@ -68,8 +73,9 @@ import org.junit.experimental.categories.Category;
  * and HRegion.append
  */
 @Category(MediumTests.class) // Starts 100 threads
-public class TestAtomicOperation extends HBaseTestCase {
+public class TestAtomicOperation {
   static final Log LOG = LogFactory.getLog(TestAtomicOperation.class);
+  @Rule public TestName name = new TestName();
 
   HRegion region = null;
   private HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
@@ -86,20 +92,6 @@ public class TestAtomicOperation extends HBaseTestCase {
   static final byte [] row = Bytes.toBytes("rowA");
   static final byte [] row2 = Bytes.toBytes("rowB");
 
-  /**
-   * @see org.apache.hadoop.hbase.HBaseTestCase#setUp()
-   */
-  @Override
-  protected void setUp() throws Exception {
-    super.setUp();
-  }
-
-  @Override
-  protected void tearDown() throws Exception {
-    super.tearDown();
-    EnvironmentEdgeManagerTestHelper.reset();
-  }
-
   //////////////////////////////////////////////////////////////////////////////
   // New tests that doesn't spin up a mini cluster but rather just test the
   // individual code pieces in the HRegion. 
@@ -110,8 +102,9 @@ public class TestAtomicOperation extends HBaseTestCase {
    * More tests in
    * @see org.apache.hadoop.hbase.client.TestFromClientSide#testAppend()
    */
+  @Test
   public void testAppend() throws IOException {
-    initHRegion(tableName, getName(), fam1);
+    initHRegion(tableName, name.getMethodName(), fam1);
     String v1 = "Ultimate Answer to the Ultimate Question of Life,"+
     " The Universe, and Everything";
     String v2 = " is... 42.";
@@ -131,11 +124,12 @@ public class TestAtomicOperation extends HBaseTestCase {
   /**
    * Test multi-threaded increments.
    */
+  @Test
   public void testIncrementMultiThreads() throws IOException {
 
     LOG.info("Starting test testIncrementMultiThreads");
     // run a with mixed column families (1 and 3 versions)
-    initHRegion(tableName, getName(), new int[] {1,3}, fam1, fam2);
+    initHRegion(tableName, name.getMethodName(), new int[] {1,3}, fam1, fam2);
 
     // create 100 threads, each will increment by its own quantity
     int numThreads = 100;
@@ -202,6 +196,7 @@ public class TestAtomicOperation extends HBaseTestCase {
     }
     HRegionInfo info = new HRegionInfo(htd.getTableName(), null, null, false);
     Path path = new Path(DIR + callingMethod);
+    FileSystem fs = TEST_UTIL.getTestFileSystem();
     if (fs.exists(path)) {
       if (!fs.delete(path, true)) {
         throw new IOException("Failed delete of " + path);
@@ -250,10 +245,11 @@ public class TestAtomicOperation extends HBaseTestCase {
     }
   }
 
+  @Test
   public void testAppendMultiThreads() throws IOException {
     LOG.info("Starting test testAppendMultiThreads");
     // run a with mixed column families (1 and 3 versions)
-    initHRegion(tableName, getName(), new int[] {1,3}, fam1, fam2);
+    initHRegion(tableName, name.getMethodName(), new int[] {1,3}, fam1, fam2);
 
     int numThreads = 100;
     int opsPerThread = 100;
@@ -310,10 +306,11 @@ public class TestAtomicOperation extends HBaseTestCase {
   /**
    * Test multi-threaded row mutations.
    */
+  @Test
   public void testRowMutationMultiThreads() throws IOException {
 
     LOG.info("Starting test testRowMutationMultiThreads");
-    initHRegion(tableName, getName(), fam1);
+    initHRegion(tableName, name.getMethodName(), fam1);
 
     // create 10 threads, each will alternate between adding and
     // removing a column
@@ -397,10 +394,11 @@ public class TestAtomicOperation extends HBaseTestCase {
   /**
    * Test multi-threaded region mutations.
    */
+  @Test
   public void testMultiRowMutationMultiThreads() throws IOException {
 
     LOG.info("Starting test testMultiRowMutationMultiThreads");
-    initHRegion(tableName, getName(), fam1);
+    initHRegion(tableName, name.getMethodName(), fam1);
 
     // create 10 threads, each will alternate between adding and
     // removing a column
@@ -518,6 +516,7 @@ public class TestAtomicOperation extends HBaseTestCase {
    * 
    * Moved into TestAtomicOperation from its original location, TestHBase7051
    */
+  @Test
   public void testPutAndCheckAndPutInParallel() throws Exception {
 
     final String tableName = "testPutAndCheckAndPut";

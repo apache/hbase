@@ -25,8 +25,6 @@ import java.io.IOException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -34,11 +32,12 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.RegionTransition;
 import org.apache.hadoop.hbase.Server;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.executor.EventType;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.MockRegionServerServices;
 import org.apache.hadoop.hbase.util.MockServer;
 import org.apache.hadoop.hbase.zookeeper.ZKAssign;
 import org.apache.zookeeper.KeeperException;
@@ -56,7 +55,7 @@ import org.mockito.Mockito;
 @Category(MediumTests.class)
 public class TestCloseRegionHandler {
   static final Log LOG = LogFactory.getLog(TestCloseRegionHandler.class);
-  private final static HBaseTestingUtility HTU = new HBaseTestingUtility();
+  private final static HBaseTestingUtility HTU = HBaseTestingUtility.createLocalHTU();
   private static final HTableDescriptor TEST_HTD =
     new HTableDescriptor(TableName.valueOf("TestCloseRegionHandler"));
   private HRegionInfo TEST_HRI;
@@ -93,14 +92,12 @@ public class TestCloseRegionHandler {
   @Test public void testFailedFlushAborts()
   throws IOException, NodeExistsException, KeeperException {
     final Server server = new MockServer(HTU, false);
-    final RegionServerServices rss = new MockRegionServerServices();
+    final RegionServerServices rss = HTU.createMockRegionServerService();
     HTableDescriptor htd = TEST_HTD;
     final HRegionInfo hri =
       new HRegionInfo(htd.getTableName(), HConstants.EMPTY_END_ROW,
         HConstants.EMPTY_END_ROW);
-    HRegion region =
-      HRegion.createHRegion(hri, HTU.getDataTestDir(),
-        HTU.getConfiguration(), htd);
+    HRegion region = HTU.createLocalHRegion(hri,  htd);
     try {
       assertNotNull(region);
       // Spy on the region so can throw exception when close is called.
@@ -140,9 +137,8 @@ public class TestCloseRegionHandler {
      @Test public void testZKClosingNodeVersionMismatch()
      throws IOException, NodeExistsException, KeeperException, DeserializationException {
        final Server server = new MockServer(HTU);
-       final MockRegionServerServices rss = new MockRegionServerServices();
-       rss.setFileSystem(HTU.getTestFileSystem());
-   
+       final RegionServerServices rss = HTU.createMockRegionServerService();
+
        HTableDescriptor htd = TEST_HTD;
        final HRegionInfo hri = TEST_HRI;
    
@@ -178,8 +174,7 @@ public class TestCloseRegionHandler {
      @Test public void testCloseRegion()
      throws IOException, NodeExistsException, KeeperException, DeserializationException {
        final Server server = new MockServer(HTU);
-       final MockRegionServerServices rss = new MockRegionServerServices();
-       rss.setFileSystem(HTU.getTestFileSystem());
+       final RegionServerServices rss = HTU.createMockRegionServerService();
    
        HTableDescriptor htd = TEST_HTD;
        HRegionInfo hri = TEST_HRI;

@@ -66,7 +66,7 @@ import org.mockito.stubbing.Answer;
 public class TestZooKeeperTableArchiveClient {
 
   private static final Log LOG = LogFactory.getLog(TestZooKeeperTableArchiveClient.class);
-  private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtility UTIL = HBaseTestingUtility.createLocalHTU();
   private static final String STRING_TABLE_NAME = "test";
   private static final byte[] TEST_FAM = Bytes.toBytes("fam");
   private static final byte[] TABLE_NAME = Bytes.toBytes(STRING_TABLE_NAME);

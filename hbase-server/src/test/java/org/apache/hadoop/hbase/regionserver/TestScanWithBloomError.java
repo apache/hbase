@@ -76,8 +76,7 @@ public class TestScanWithBloomError {
   private FileSystem fs;
   private Configuration conf;
 
-  private final static HBaseTestingUtility TEST_UTIL =
-      new HBaseTestingUtility();
+  private final static HBaseTestingUtility TEST_UTIL = HBaseTestingUtility.createLocalHTU();
 
   @Parameters
   public static final Collection<Object[]> parameters() {

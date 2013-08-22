@@ -19,6 +19,14 @@
 
 package org.apache.hadoop.hbase.coprocessor;
 
+import static org.apache.hadoop.hbase.HBaseTestingUtility.fam1;
+import static org.apache.hadoop.hbase.HBaseTestingUtility.fam2;
+import static org.apache.hadoop.hbase.HBaseTestingUtility.fam3;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 import static org.mockito.Mockito.when;
 
 import java.io.IOException;
@@ -33,7 +41,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
-import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HBaseTestCase;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
@@ -43,6 +50,7 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.SmallTests;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.regionserver.HRegion;
@@ -54,14 +62,17 @@ import org.apache.hadoop.hbase.regionserver.SplitTransaction;
 import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.util.PairOfSameType;
+import org.junit.Rule;
+import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
 import org.mockito.Mockito;
 
 @Category(SmallTests.class)
-public class TestCoprocessorInterface extends HBaseTestCase {
+public class TestCoprocessorInterface {
+  @Rule public TestName name = new TestName();
   static final Log LOG = LogFactory.getLog(TestCoprocessorInterface.class);
-  private static final HBaseTestingUtility TEST_UTIL =
-    new HBaseTestingUtility();
+  private static final HBaseTestingUtility TEST_UTIL = HBaseTestingUtility.createLocalHTU();
   static final Path DIR = TEST_UTIL.getDataTestDir();
 
   private static class CustomScanner implements RegionScanner {
@@ -262,17 +273,17 @@ public class TestCoprocessorInterface extends HBaseTestCase {
     }
   }
 
+  @Test
   public void testSharedData() throws IOException {
-    TableName tableName =
-        TableName.valueOf("testtable");
+    TableName tableName = TableName.valueOf(name.getMethodName());
     byte [][] families = { fam1, fam2, fam3 };
 
     Configuration hc = initSplit();
-    HRegion region = initHRegion(tableName, getName(), hc,
+    HRegion region = initHRegion(tableName, name.getMethodName(), hc,
       new Class<?>[]{}, families);
 
     for (int i = 0; i < 3; i++) {
-      addContent(region, fam3);
+      HBaseTestCase.addContent(region, fam3);
       region.flushcache();
     }
 
@@ -340,16 +351,16 @@ public class TestCoprocessorInterface extends HBaseTestCase {
     assertFalse(o3 == o2);
   }
 
+  @Test
   public void testCoprocessorInterface() throws IOException {
-    TableName tableName =
-        TableName.valueOf("testtable");
+    TableName tableName = TableName.valueOf(name.getMethodName());
     byte [][] families = { fam1, fam2, fam3 };
 
     Configuration hc = initSplit();
-    HRegion region = initHRegion(tableName, getName(), hc,
+    HRegion region = initHRegion(tableName, name.getMethodName(), hc,
       new Class<?>[]{CoprocessorImpl.class}, families);
     for (int i = 0; i < 3; i++) {
-      addContent(region, fam3);
+      HBaseTestCase.addContent(region, fam3);
       region.flushcache();
     }
 
@@ -402,6 +413,7 @@ public class TestCoprocessorInterface extends HBaseTestCase {
     // is secretly loaded at OpenRegionHandler. we don't really
     // start a region server here, so just manually create cphost
     // and set it to region.
+    Configuration conf = TEST_UTIL.getConfiguration();
     RegionCoprocessorHost host = new RegionCoprocessorHost(r, null, conf);
     r.setCoprocessorHost(host);
 
@@ -500,6 +512,3 @@ public class TestCoprocessorInterface extends HBaseTestCase {
   }
 
 }
-
-
-
