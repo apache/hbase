@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.util;
+package org.apache.hadoop.hbase;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -26,9 +26,6 @@ import java.util.concurrent.ConcurrentSkipListMap;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.catalog.CatalogTracker;
 import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.fs.HFileSystem;
@@ -42,13 +39,14 @@ import org.apache.hadoop.hbase.regionserver.Leases;
 import org.apache.hadoop.hbase.regionserver.RegionServerAccounting;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.zookeeper.KeeperException;
 
 /**
- * Basic mock region server services.
+ * Basic mock region server services.  Should only be instantiated by HBaseTestingUtility.b
  */
-public class MockRegionServerServices implements RegionServerServices {
+class MockRegionServerServices implements RegionServerServices {
   private final Map<String, HRegion> regions = new HashMap<String, HRegion>();
   private boolean stopping = false;
   private final ConcurrentSkipListMap<byte[], Boolean> rit =
@@ -56,17 +54,18 @@ public class MockRegionServerServices implements RegionServerServices {
   private HFileSystem hfs = null;
   private ZooKeeperWatcher zkw = null;
   private ServerName serverName = null;
+  private RpcServerInterface rpcServer = null;
 
-  public MockRegionServerServices(ZooKeeperWatcher zkw) {
+  MockRegionServerServices(ZooKeeperWatcher zkw) {
     this.zkw = zkw;
   }
   
-  public MockRegionServerServices(ZooKeeperWatcher zkw, ServerName serverName) {
+  MockRegionServerServices(ZooKeeperWatcher zkw, ServerName serverName) {
     this.zkw = zkw;
     this.serverName = serverName;
   }
 
-  public MockRegionServerServices(){
+  MockRegionServerServices(){
     this(null);
   }
 
@@ -102,9 +101,13 @@ public class MockRegionServerServices implements RegionServerServices {
 
   @Override
   public RpcServerInterface getRpcServer() {
-    return null;
+    return rpcServer;
   }
 
+  public void setRpcServer(RpcServerInterface rpc) {
+    this.rpcServer = rpc;
+  }
+  
   @Override
   public ConcurrentSkipListMap<byte[], Boolean> getRegionsInTransitionInRS() {
     return rit;
