@@ -32375,7 +32375,7 @@ public final class MasterAdminProtos {
        * <pre>
        **
        * List completed snapshots.
-       * @return a list of snapshot descriptors for completed snapshots
+       * Returns a list of snapshot descriptors for completed snapshots
        * </pre>
        */
       public abstract void getCompletedSnapshots(
@@ -33371,7 +33371,7 @@ public final class MasterAdminProtos {
      * <pre>
      **
      * List completed snapshots.
-     * @return a list of snapshot descriptors for completed snapshots
+     * Returns a list of snapshot descriptors for completed snapshots
      * </pre>
      */
     public abstract void getCompletedSnapshots(
