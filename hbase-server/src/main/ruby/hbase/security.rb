@@ -53,6 +53,7 @@ module Hbase
         end
 
         if (table_name != nil)
+          tablebytes=table_name.to_java_bytes
           #check if the tablename passed is actually a namespace
           if (isNamespace?(table_name))
             # Namespace should exist first.
@@ -60,7 +61,6 @@ module Hbase
             raise(ArgumentError, "Can't find a namespace: #{namespace_name}") unless namespace_exists?(namespace_name)
 
             #We pass the namespace name along with "@" so that we can differentiate a namespace from a table.
-            tablebytes=table_name.to_java_bytes
             # invoke cp endpoint to perform access controlse
             org.apache.hadoop.hbase.protobuf.ProtobufUtil.grant(
               protocol, user, tablebytes, perm.getActions())
