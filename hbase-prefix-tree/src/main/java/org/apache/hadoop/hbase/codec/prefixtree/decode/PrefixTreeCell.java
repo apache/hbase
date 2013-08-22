@@ -200,7 +200,7 @@ public class PrefixTreeCell implements Cell, Comparable<Cell> {
   }
 
   @Override
-  public int getTagsLength() {
+  public short getTagsLength() {
     throw new UnsupportedOperationException("Not implemented");
   }
 

@@ -165,7 +165,7 @@ public class TestPayloadCarryingRpcController {
               }
 
               @Override
-              public int getTagsLength() {
+              public short getTagsLength() {
                 // TODO Auto-generated method stub
                 return 0;
               }

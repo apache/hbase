@@ -181,6 +181,6 @@ public interface Cell {
   /**
    * @return the total length of the tags in the Cell.
    */
-  int getTagsLength();
+  short getTagsLength();
 
 }

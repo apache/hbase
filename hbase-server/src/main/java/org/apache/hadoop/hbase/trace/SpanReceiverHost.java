@@ -27,7 +27,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.cloudera.htrace.SpanReceiver;
 import org.cloudera.htrace.Trace;
-import org.cloudera.htrace.impl.ZipkinSpanReceiver;
 
 /**
  * This class provides functions for reading the names of SpanReceivers from

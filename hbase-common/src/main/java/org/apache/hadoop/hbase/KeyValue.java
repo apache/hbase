@@ -2744,7 +2744,7 @@ public class KeyValue implements Cell, HeapSize, Cloneable {
   }
 
   @Override
-  public int getTagsLength() {
+  public short getTagsLength() {
     throw new UnsupportedOperationException("Not implememnted");
   }
 
