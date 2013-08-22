@@ -355,7 +355,7 @@ public class AccessControlLists {
     }
 
     Map<byte[], ListMultimap<String, TablePermission>> allPerms =
-        new TreeMap<byte[], ListMultimap<String, TablePermission>>();
+        new TreeMap<byte[], ListMultimap<String, TablePermission>>(Bytes.BYTES_RAWCOMPARATOR);
 
     // do a full scan of _acl_ table
 
