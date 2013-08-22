@@ -77,6 +77,7 @@ if [ $# = 0 ]; then
   echo "  hlog             write-ahead-log analyzer"
   echo "  hfile            store file analyzer"
   echo "  zkcli            run the ZooKeeper shell"
+  echo "  upgrade          upgrade hbase"
   echo ""
   echo "PROCESS MANAGEMENT"
   echo "  master           run an HBase HMaster node" 
@@ -271,6 +272,8 @@ elif [ "$COMMAND" = "hfile" ] ; then
   CLASS='org.apache.hadoop.hbase.io.hfile.HFile'
 elif [ "$COMMAND" = "zkcli" ] ; then
   CLASS="org.apache.hadoop.hbase.zookeeper.ZooKeeperMainServer"
+elif [ "$COMMAND" = "upgrade" ] ; then
+  CLASS="org.apache.hadoop.hbase.migration.UpgradeTo96"
 elif [ "$COMMAND" = "master" ] ; then
   CLASS='org.apache.hadoop.hbase.master.HMaster'
   if [ "$1" != "stop" ] ; then

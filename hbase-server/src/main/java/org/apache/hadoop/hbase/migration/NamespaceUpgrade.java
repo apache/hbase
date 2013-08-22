@@ -105,6 +105,7 @@ public class NamespaceUpgrade implements Tool {
 
   public void init() throws IOException {
     this.rootDir = FSUtils.getRootDir(conf);
+    FSUtils.setFsDefault(getConf(), rootDir);
     this.fs = FileSystem.get(conf);
     Path tmpDataDir = new Path(rootDir, TMP_DATA_DIR);
     sysNsDir = new Path(tmpDataDir, NamespaceDescriptor.SYSTEM_NAMESPACE_NAME_STR);
