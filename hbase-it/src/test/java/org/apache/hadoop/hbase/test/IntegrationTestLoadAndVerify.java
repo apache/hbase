@@ -26,6 +26,8 @@ import java.util.regex.Pattern;
 
 import com.google.common.collect.Sets;
 import org.apache.commons.cli.CommandLine;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -239,6 +241,7 @@ public class IntegrationTestLoadAndVerify  extends IntegrationTestBase  {
   public static class VerifyMapper extends TableMapper<BytesWritable, BytesWritable> {
     static final BytesWritable EMPTY = new BytesWritable(HConstants.EMPTY_BYTE_ARRAY);
 
+
     @Override
     protected void map(ImmutableBytesWritable key, Result value, Context context)
         throws IOException, InterruptedException {
@@ -257,6 +260,7 @@ public class IntegrationTestLoadAndVerify  extends IntegrationTestBase  {
   }
 
   public static class VerifyReducer extends Reducer<BytesWritable, BytesWritable, Text, Text> {
+    private static final Log LOG = LogFactory.getLog(VerifyReducer.class);
     private Counter refsChecked;
     private Counter rowsWritten;
 
@@ -285,6 +289,7 @@ public class IntegrationTestLoadAndVerify  extends IntegrationTestBase  {
       if (!gotOriginalRow) {
         String parsedRow = makeRowReadable(referredRow.getBytes(), referredRow.getLength());
         String binRow = Bytes.toStringBinary(referredRow.getBytes(), 0, referredRow.getLength());
+        LOG.error("Reference error row " + parsedRow);
         ctx.write(new Text(binRow), new Text(parsedRow));
         rowsWritten.increment(1);
       }

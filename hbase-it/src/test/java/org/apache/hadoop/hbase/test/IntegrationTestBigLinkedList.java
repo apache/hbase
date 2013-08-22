@@ -576,6 +576,8 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
             refsSb.append(Bytes.toStringBinary(ref));
           }
           keyString = Bytes.toStringBinary(key.getBytes(), 0, key.getLength());
+
+          LOG.error("Linked List error: Key = " + keyString + " References = " + refsSb.toString());
         }
 
         if (defCount == 0 && refs.size() > 0) {
