@@ -86,6 +86,7 @@ import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.executor.ExecutorType;
 import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.ipc.RpcServer.BlockingServiceAndInterface;
+import org.apache.hadoop.hbase.ipc.RequestContext;
 import org.apache.hadoop.hbase.ipc.RpcServerInterface;
 import org.apache.hadoop.hbase.ipc.ServerRpcController;
 import org.apache.hadoop.hbase.ipc.SimpleRpcScheduler;
@@ -1606,7 +1607,7 @@ MasterServices, Server {
       } catch (KeeperException ke) {
         throw new IOException(ke);
       }
-      LOG.info("BalanceSwitch=" + newValue);
+      LOG.info(getClientIdAuditPrefix() + " set balanceSwitch=" + newValue);
       if (this.cpHost != null) {
         this.cpHost.postBalanceSwitch(oldValue, newValue);
       }
@@ -1614,6 +1615,14 @@ MasterServices, Server {
       LOG.warn("Error flipping balance switch", ioe);
     }
     return oldValue;
+  }
+
+  /**
+   * @return Client info for use as prefix on an audit log string; who did an action
+   */
+  String getClientIdAuditPrefix() {
+    return "Client=" + RequestContext.getRequestUserName() + "/" +
+      RequestContext.get().getRemoteAddress();
   }
 
   public boolean synchronousBalanceSwitch(final boolean b) throws IOException {
@@ -1766,7 +1775,7 @@ MasterServices, Server {
           return;
         }
       }
-      LOG.info("Added move plan " + rp + ", running balancer");
+      LOG.info(getClientIdAuditPrefix() + " move " + rp + ", running balancer");
       this.assignmentManager.balance(rp);
       if (this.cpHost != null) {
         this.cpHost.postMove(hri, rp.getSource(), rp.getDestination());
@@ -1798,7 +1807,7 @@ MasterServices, Server {
     if (cpHost != null) {
       cpHost.preCreateTable(hTableDescriptor, newRegions);
     }
-
+    LOG.info(getClientIdAuditPrefix() + " create " + hTableDescriptor);
     this.executorService.submit(new CreateTableHandler(this,
       this.fileSystemManager, hTableDescriptor, conf,
       newRegions, this).prepare());
@@ -1867,6 +1876,7 @@ MasterServices, Server {
     if (cpHost != null) {
       cpHost.preDeleteTable(tableName);
     }
+    LOG.info(getClientIdAuditPrefix() + " delete " + tableName);
     this.executorService.submit(new DeleteTableHandler(tableName, this, this).prepare());
     if (cpHost != null) {
       cpHost.postDeleteTable(tableName);
@@ -1922,8 +1932,7 @@ MasterServices, Server {
       }
     }
     //TODO: we should process this (and some others) in an executor
-    new TableAddFamilyHandler(tableName, column, this, this)
-      .prepare().process();
+    new TableAddFamilyHandler(tableName, column, this, this).prepare().process();
     if (cpHost != null) {
       cpHost.postAddColumn(tableName, column);
     }
@@ -1951,6 +1960,7 @@ MasterServices, Server {
         return;
       }
     }
+    LOG.info(getClientIdAuditPrefix() + " modify " + descriptor);
     new TableModifyFamilyHandler(tableName, descriptor, this, this)
       .prepare().process();
     if (cpHost != null) {
@@ -1979,6 +1989,7 @@ MasterServices, Server {
         return;
       }
     }
+    LOG.info(getClientIdAuditPrefix() + " delete " + Bytes.toString(columnName));
     new TableDeleteFamilyHandler(tableName, columnName, this, this).prepare().process();
     if (cpHost != null) {
       cpHost.postDeleteColumn(tableName, columnName);
@@ -2003,6 +2014,7 @@ MasterServices, Server {
     if (cpHost != null) {
       cpHost.preEnableTable(tableName);
     }
+    LOG.info(getClientIdAuditPrefix() + " enable " + tableName);
     this.executorService.submit(new EnableTableHandler(this, tableName,
       catalogTracker, assignmentManager, tableLockManager, false).prepare());
     if (cpHost != null) {
@@ -2027,6 +2039,7 @@ MasterServices, Server {
     if (cpHost != null) {
       cpHost.preDisableTable(tableName);
     }
+    LOG.info(getClientIdAuditPrefix() + " disable " + tableName);
     this.executorService.submit(new DisableTableHandler(this, tableName,
       catalogTracker, assignmentManager, tableLockManager, false).prepare());
     if (cpHost != null) {
@@ -2088,6 +2101,7 @@ MasterServices, Server {
     if (cpHost != null) {
       cpHost.preModifyTable(tableName, descriptor);
     }
+    LOG.info(getClientIdAuditPrefix() + " modify " + tableName);
     new ModifyTableHandler(tableName, descriptor, this, this).prepare().process();
     if (cpHost != null) {
       cpHost.postModifyTable(tableName, descriptor);
@@ -2397,6 +2411,7 @@ MasterServices, Server {
   @Override
   public ShutdownResponse shutdown(RpcController controller, ShutdownRequest request)
   throws ServiceException {
+    LOG.info(getClientIdAuditPrefix() + " shutdown");
     shutdown();
     return ShutdownResponse.newBuilder().build();
   }
@@ -2415,6 +2430,7 @@ MasterServices, Server {
   @Override
   public StopMasterResponse stopMaster(RpcController controller, StopMasterRequest request)
   throws ServiceException {
+    LOG.info(getClientIdAuditPrefix() + " stop");
     stopMaster();
     return StopMasterResponse.newBuilder().build();
   }
@@ -2515,6 +2531,7 @@ MasterServices, Server {
           return arr;
         }
       }
+      LOG.info(getClientIdAuditPrefix() + " assign " + regionInfo.getRegionNameAsString());
       assignmentManager.assign(regionInfo, true, true);
       if (cpHost != null) {
         cpHost.postAssign(regionInfo);
@@ -2553,8 +2570,8 @@ MasterServices, Server {
           return urr;
         }
       }
-      LOG.debug("Close region " + hri.getRegionNameAsString()
-          + " on current location if it is online and reassign.force=" + force);
+      LOG.debug(getClientIdAuditPrefix() + " unassign " + hri.getRegionNameAsString()
+          + " in current location if it is online and reassign.force=" + force);
       this.assignmentManager.unassign(hri, force);
       if (!this.assignmentManager.getRegionStates().isRegionInTransition(hri)
           && !this.assignmentManager.getRegionStates().isRegionAssigned(hri)) {
@@ -2708,6 +2725,7 @@ MasterServices, Server {
       if (cpHost != null) {
         cpHost.preRegionOffline(hri);
       }
+      LOG.info(getClientIdAuditPrefix() + " offline " + hri.getRegionNameAsString());
       this.assignmentManager.regionOffline(hri);
       if (cpHost != null) {
         cpHost.postRegionOffline(hri);
@@ -2849,7 +2867,7 @@ MasterServices, Server {
       throw new ServiceException(e);
     }
 
-    LOG.debug("Submitting snapshot request for:" +
+    LOG.info(getClientIdAuditPrefix() + " snapshot request for:" +
         ClientSnapshotDescriptionUtils.toString(request.getSnapshot()));
     // get the snapshot information
     SnapshotDescription snapshot = SnapshotDescriptionUtils.validate(request.getSnapshot(),
@@ -2903,6 +2921,7 @@ MasterServices, Server {
     }
 
     try {
+      LOG.info(getClientIdAuditPrefix() + " delete " + request.getSnapshot());
       snapshotManager.deleteSnapshot(request.getSnapshot());
       return DeleteSnapshotResponse.newBuilder().build();
     } catch (IOException e) {
@@ -3010,7 +3029,8 @@ MasterServices, Server {
   }
 
   @Override
-  public MasterAdminProtos.DeleteNamespaceResponse deleteNamespace(RpcController controller, MasterAdminProtos.DeleteNamespaceRequest request) throws ServiceException {
+  public MasterAdminProtos.DeleteNamespaceResponse deleteNamespace(RpcController controller,
+      MasterAdminProtos.DeleteNamespaceRequest request) throws ServiceException {
     try {
       deleteNamespace(request.getNamespaceName());
       return MasterAdminProtos.DeleteNamespaceResponse.getDefaultInstance();
@@ -3093,6 +3113,7 @@ MasterServices, Server {
         return;
       }
     }
+    LOG.info(getClientIdAuditPrefix() + " creating " + descriptor);
     tableNamespaceManager.create(descriptor);
     if (cpHost != null) {
       cpHost.postCreateNamespace(descriptor);
@@ -3106,6 +3127,7 @@ MasterServices, Server {
         return;
       }
     }
+    LOG.info(getClientIdAuditPrefix() + " modify " + descriptor);
     tableNamespaceManager.update(descriptor);
     if (cpHost != null) {
       cpHost.postModifyNamespace(descriptor);
@@ -3118,6 +3140,7 @@ MasterServices, Server {
         return;
       }
     }
+    LOG.info(getClientIdAuditPrefix() + " delete " + name);
     tableNamespaceManager.remove(name);
     if (cpHost != null) {
       cpHost.postDeleteNamespace(name);
