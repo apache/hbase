@@ -117,8 +117,7 @@ public class TestSeekOptimizations {
 
   private long totalSeekDiligent, totalSeekLazy;
   
-  private final static HBaseTestingUtility TEST_UTIL =
-      new HBaseTestingUtility();
+  private final static HBaseTestingUtility TEST_UTIL = HBaseTestingUtility.createLocalHTU();
 
   @Parameters
   public static final Collection<Object[]> parameters() {

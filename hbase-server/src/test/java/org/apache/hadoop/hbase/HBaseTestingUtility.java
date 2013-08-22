@@ -69,6 +69,8 @@ import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.compress.Compression.Algorithm;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.ChecksumUtil;
+import org.apache.hadoop.hbase.io.hfile.HFile;
+import org.apache.hadoop.hbase.ipc.RpcServerInterface;
 import org.apache.hadoop.hbase.mapreduce.MapreduceTestingShim;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.RegionStates;
@@ -79,7 +81,9 @@ import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.regionserver.MultiVersionConsistencyControl;
+import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.hadoop.hbase.security.User;
+import org.apache.hadoop.hbase.tool.Canary;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
@@ -92,7 +96,6 @@ import org.apache.hadoop.hbase.zookeeper.MiniZooKeeperCluster;
 import org.apache.hadoop.hbase.zookeeper.ZKAssign;
 import org.apache.hadoop.hbase.zookeeper.ZKConfig;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
-import org.apache.hadoop.hbase.tool.Canary;
 import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
@@ -214,6 +217,32 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
 
     // a hbase checksum verification failure will cause unit tests to fail
     ChecksumUtil.generateExceptionForChecksumFailureForTest(true);
+  }
+
+  /**
+   * Create an HBaseTestingUtility where all tmp files are written to the local test data dir.
+   * It is needed to properly base FSUtil.getRootDirs so that they drop temp files in the proper
+   * test dir.  Use this when you aren't using an Mini HDFS cluster.
+   * @return HBaseTestingUtility that use local fs for temp files.
+   */
+  public static HBaseTestingUtility createLocalHTU() {
+    Configuration c = HBaseConfiguration.create();
+    return createLocalHTU(c);
+  }
+
+  /**
+   * Create an HBaseTestingUtility where all tmp files are written to the local test data dir.
+   * It is needed to properly base FSUtil.getRootDirs so that they drop temp files in the proper
+   * test dir.  Use this when you aren't using an Mini HDFS cluster.
+   * @param c Configuration (will be modified)
+   * @return HBaseTestingUtility that use local fs for temp files.
+   */
+  public static HBaseTestingUtility createLocalHTU(Configuration c) {
+    HBaseTestingUtility htu = new HBaseTestingUtility(c);
+    String dataTestDir = htu.getDataTestDir().toString();
+    htu.getConfiguration().set(HConstants.HBASE_DIR, dataTestDir);
+    LOG.debug("Setting " + HConstants.HBASE_DIR + " to " + dataTestDir);
+    return htu;
   }
 
   /**
@@ -1438,6 +1467,81 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
     getHBaseAdmin().deleteTable(tableName);
   }
 
+  // ==========================================================================
+  // Canned table and table descriptor creation
+  // TODO replace HBaseTestCase
+  
+  public final static byte [] fam1 = Bytes.toBytes("colfamily11");
+  public final static byte [] fam2 = Bytes.toBytes("colfamily21");
+  public final static byte [] fam3 = Bytes.toBytes("colfamily31");
+  public static final byte[][] COLUMNS = {fam1, fam2, fam3};
+  private static final int MAXVERSIONS = 3;
+  
+  private static final char FIRST_CHAR = 'a';
+  public static final byte [] START_KEY_BYTES = {FIRST_CHAR, FIRST_CHAR, FIRST_CHAR};
+
+
+  /**
+   * Create a table of name <code>name</code> with {@link COLUMNS} for
+   * families.
+   * @param name Name to give table.
+   * @param versions How many versions to allow per column.
+   * @return Column descriptor.
+   */
+  public HTableDescriptor createTableDescriptor(final String name,
+      final int minVersions, final int versions, final int ttl, boolean keepDeleted) {
+    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(name));
+    for (byte[] cfName : new byte[][]{ fam1, fam2, fam3 }) {
+      htd.addFamily(new HColumnDescriptor(cfName)
+          .setMinVersions(minVersions)
+          .setMaxVersions(versions)
+          .setKeepDeletedCells(keepDeleted)
+          .setBlockCacheEnabled(false)
+          .setTimeToLive(ttl)
+      );
+    }
+    return htd;
+  }
+
+  /**
+   * Create a table of name <code>name</code> with {@link COLUMNS} for
+   * families.
+   * @param name Name to give table.
+   * @return Column descriptor.
+   */
+  public HTableDescriptor createTableDescriptor(final String name) {
+    return createTableDescriptor(name,  HColumnDescriptor.DEFAULT_MIN_VERSIONS,
+        MAXVERSIONS, HConstants.FOREVER, HColumnDescriptor.DEFAULT_KEEP_DELETED);
+  }
+
+  /**
+   * Create an HRegion that writes to the local tmp dirs
+   * @param desc
+   * @param startKey
+   * @param endKey
+   * @return
+   * @throws IOException
+   */
+  public HRegion createLocalHRegion(HTableDescriptor desc, byte [] startKey,
+      byte [] endKey)
+  throws IOException {
+    HRegionInfo hri = new HRegionInfo(desc.getTableName(), startKey, endKey);
+    return createLocalHRegion(hri, desc);
+  }
+
+  /**
+   * Create an HRegion that writes to the local tmp dirs
+   * @param info
+   * @param desc
+   * @return
+   * @throws IOException
+   */
+  public HRegion createLocalHRegion(HRegionInfo info, HTableDescriptor desc) throws IOException {
+    return HRegion.createHRegion(info, getDataTestDir(), getConfiguration(), desc);
+  }
+  
+  //
+  // ==========================================================================
 
   /**
    * Provide an existing table name to truncate
@@ -1981,6 +2085,34 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
     // Restore configuration to point to local jobtracker
     conf.set("mapred.job.tracker", "local");
     LOG.info("Mini mapreduce cluster stopped");
+  }
+
+  /**
+   * Create a stubbed out RegionServerService, mainly for getting FS.
+   */
+  public RegionServerServices createMockRegionServerService() throws IOException { 
+    return createMockRegionServerService((ServerName)null);
+  }
+
+  /**
+   * Create a stubbed out RegionServerService, mainly for getting FS. 
+   * This version is used by TestTokenAuthentication
+   */
+  public RegionServerServices createMockRegionServerService(RpcServerInterface rpc) throws IOException {
+    final MockRegionServerServices rss = new MockRegionServerServices(getZooKeeperWatcher());
+    rss.setFileSystem(getTestFileSystem());
+    rss.setRpcServer(rpc);
+    return rss;
+  }
+
+  /**
+   * Create a stubbed out RegionServerService, mainly for getting FS. 
+   * This version is used by TestOpenRegionHandler
+   */
+  public RegionServerServices createMockRegionServerService(ServerName name) throws IOException {
+    final MockRegionServerServices rss = new MockRegionServerServices(getZooKeeperWatcher(), name);
+    rss.setFileSystem(getTestFileSystem());
+    return rss;
   }
 
   /**

@@ -17,11 +17,17 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import static org.apache.hadoop.hbase.HBaseTestingUtility.COLUMNS;
+import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.hadoop.hbase.HBaseTestCase;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
@@ -35,10 +41,16 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManagerTestHelper;
 import org.apache.hadoop.hbase.util.IncrementingEnvironmentEdge;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Rule;
+import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
 
 @Category(SmallTests.class)
-public class TestKeepDeletes extends HBaseTestCase {
+public class TestKeepDeletes {
+  HBaseTestingUtility hbu = HBaseTestingUtility.createLocalHTU();
   private final byte[] T0 = Bytes.toBytes("0");
   private final byte[] T1 = Bytes.toBytes("1");
   private final byte[] T2 = Bytes.toBytes("2");
@@ -50,9 +62,10 @@ public class TestKeepDeletes extends HBaseTestCase {
   private final byte[] c0 = COLUMNS[0];
   private final byte[] c1 = COLUMNS[1];
 
-  @Override
-  protected void setUp() throws Exception {
-    super.setUp();
+  @Rule public TestName name = new TestName();
+  
+  @Before
+  public void setUp() throws Exception {
     /* HBASE-6832: [WINDOWS] Tests should use explicit timestamp for Puts, and not rely on
      * implicit RS timing.
      * Use an explicit timer (IncrementingEnvironmentEdge) so that the put, delete
@@ -66,9 +79,8 @@ public class TestKeepDeletes extends HBaseTestCase {
     EnvironmentEdgeManagerTestHelper.injectEdge(new IncrementingEnvironmentEdge());
   }
 
-  @Override
-  protected void tearDown() throws Exception {
-    super.tearDown();
+  @After
+  public void tearDown() throws Exception {
     EnvironmentEdgeManager.reset();
   }
 
@@ -78,11 +90,12 @@ public class TestKeepDeletes extends HBaseTestCase {
    * Column Delete markers are versioned
    * Time range scan of deleted rows are possible
    */
+  @Test
   public void testBasicScenario() throws Exception {
     // keep 3 versions, rows do not expire
-    HTableDescriptor htd = createTableDescriptor(getName(), 0, 3,
+    HTableDescriptor htd = hbu.createTableDescriptor(name.getMethodName(), 0, 3,
         HConstants.FOREVER, true);
-    HRegion region = createNewHRegion(htd, null, null);
+    HRegion region = hbu.createLocalHRegion(htd, null, null);
 
     long ts = EnvironmentEdgeManager.currentTimeMillis();
     Put p = new Put(T1, ts);
@@ -174,11 +187,12 @@ public class TestKeepDeletes extends HBaseTestCase {
    * if the store does not have KEEP_DELETED_CELLS enabled.
    * (can be changed easily)
    */
+  @Test
   public void testRawScanWithoutKeepingDeletes() throws Exception {
     // KEEP_DELETED_CELLS is NOT enabled
-    HTableDescriptor htd = createTableDescriptor(getName(), 0, 3,
+    HTableDescriptor htd = hbu.createTableDescriptor(name.getMethodName(), 0, 3,
         HConstants.FOREVER, false);
-    HRegion region = createNewHRegion(htd, null, null);
+    HRegion region = hbu.createLocalHRegion(htd, null, null);
 
     long ts = EnvironmentEdgeManager.currentTimeMillis();
     Put p = new Put(T1, ts);
@@ -218,11 +232,12 @@ public class TestKeepDeletes extends HBaseTestCase {
   /**
    * basic verification of existing behavior
    */
+  @Test
   public void testWithoutKeepingDeletes() throws Exception {
     // KEEP_DELETED_CELLS is NOT enabled
-    HTableDescriptor htd = createTableDescriptor(getName(), 0, 3,
+    HTableDescriptor htd = hbu.createTableDescriptor(name.getMethodName(), 0, 3,
         HConstants.FOREVER, false);
-    HRegion region = createNewHRegion(htd, null, null);
+    HRegion region = hbu.createLocalHRegion(htd, null, null);
 
     long ts = EnvironmentEdgeManager.currentTimeMillis();
     Put p = new Put(T1, ts);
@@ -262,10 +277,11 @@ public class TestKeepDeletes extends HBaseTestCase {
   /**
    * The ExplicitColumnTracker does not support "raw" scanning.
    */
+  @Test
   public void testRawScanWithColumns() throws Exception {
-    HTableDescriptor htd = createTableDescriptor(getName(), 0, 3,
+    HTableDescriptor htd = hbu.createTableDescriptor(name.getMethodName(), 0, 3,
         HConstants.FOREVER, true);
-    HRegion region = createNewHRegion(htd, null, null);
+    HRegion region = hbu.createLocalHRegion(htd, null, null);
 
     Scan s = new Scan();
     s.setRaw(true);
@@ -273,7 +289,7 @@ public class TestKeepDeletes extends HBaseTestCase {
     s.addColumn(c0, c0);
 
     try {
-      InternalScanner scan = region.getScanner(s);
+      region.getScanner(s);
       fail("raw scanner with columns should have failed");
     } catch (org.apache.hadoop.hbase.DoNotRetryIOException dnre) {
       // ok!
@@ -285,10 +301,11 @@ public class TestKeepDeletes extends HBaseTestCase {
   /**
    * Verify that "raw" scanning mode return delete markers and deletes rows.
    */
+  @Test
   public void testRawScan() throws Exception {
-    HTableDescriptor htd = createTableDescriptor(getName(), 0, 3,
+    HTableDescriptor htd = hbu.createTableDescriptor(name.getMethodName(), 0, 3,
         HConstants.FOREVER, true);
-    HRegion region = createNewHRegion(htd, null, null);
+    HRegion region = hbu.createLocalHRegion(htd, null, null);
 
     long ts = EnvironmentEdgeManager.currentTimeMillis();
     Put p = new Put(T1, ts);
@@ -320,11 +337,11 @@ public class TestKeepDeletes extends HBaseTestCase {
     scan.next(kvs);
     assertEquals(8, kvs.size());
     assertTrue(kvs.get(0).isDeleteFamily());
-    assertEquals(kvs.get(1).getValue(), T3);
+    assertArrayEquals(kvs.get(1).getValue(), T3);
     assertTrue(kvs.get(2).isDelete());
     assertTrue(kvs.get(3).isDeleteType());
-    assertEquals(kvs.get(4).getValue(), T2);
-    assertEquals(kvs.get(5).getValue(), T1);
+    assertArrayEquals(kvs.get(4).getValue(), T2);
+    assertArrayEquals(kvs.get(5).getValue(), T1);
     // we have 3 CFs, so there are two more delete markers
     assertTrue(kvs.get(6).isDeleteFamily());
     assertTrue(kvs.get(7).isDeleteFamily());
@@ -350,7 +367,7 @@ public class TestKeepDeletes extends HBaseTestCase {
     scan.next(kvs);
     assertEquals(4, kvs.size());
     assertTrue(kvs.get(0).isDeleteFamily());
-    assertEquals(kvs.get(1).getValue(), T1);
+    assertArrayEquals(kvs.get(1).getValue(), T1);
     // we have 3 CFs
     assertTrue(kvs.get(2).isDeleteFamily());
     assertTrue(kvs.get(3).isDeleteFamily());
@@ -364,7 +381,7 @@ public class TestKeepDeletes extends HBaseTestCase {
     kvs = new ArrayList<KeyValue>();
     scan.next(kvs);
     assertEquals(2, kvs.size());
-    assertEquals(kvs.get(0).getValue(), T3);
+    assertArrayEquals(kvs.get(0).getValue(), T3);
     assertTrue(kvs.get(1).isDelete());
 
 
@@ -374,10 +391,11 @@ public class TestKeepDeletes extends HBaseTestCase {
   /**
    * Verify that delete markers are removed from an otherwise empty store.
    */
+  @Test
   public void testDeleteMarkerExpirationEmptyStore() throws Exception {
-    HTableDescriptor htd = createTableDescriptor(getName(), 0, 1,
+    HTableDescriptor htd = hbu.createTableDescriptor(name.getMethodName(), 0, 1,
         HConstants.FOREVER, true);
-    HRegion region = createNewHRegion(htd, null, null);
+    HRegion region = hbu.createLocalHRegion(htd, null, null);
 
     long ts = EnvironmentEdgeManager.currentTimeMillis();
 
@@ -416,10 +434,11 @@ public class TestKeepDeletes extends HBaseTestCase {
   /**
    * Test delete marker removal from store files.
    */
+  @Test
   public void testDeleteMarkerExpiration() throws Exception {
-    HTableDescriptor htd = createTableDescriptor(getName(), 0, 1,
+    HTableDescriptor htd = hbu.createTableDescriptor(name.getMethodName(), 0, 1,
         HConstants.FOREVER, true);
-    HRegion region = createNewHRegion(htd, null, null);
+    HRegion region = hbu.createLocalHRegion(htd, null, null);
 
     long ts = EnvironmentEdgeManager.currentTimeMillis();
 
@@ -478,10 +497,11 @@ public class TestKeepDeletes extends HBaseTestCase {
   /**
    * Verify correct range demarcation
    */
+  @Test
   public void testRanges() throws Exception {
-    HTableDescriptor htd = createTableDescriptor(getName(), 0, 3,
+    HTableDescriptor htd = hbu.createTableDescriptor(name.getMethodName(), 0, 3,
         HConstants.FOREVER, true);
-    HRegion region = createNewHRegion(htd, null, null);
+    HRegion region = hbu.createLocalHRegion(htd, null, null);
 
     long ts = EnvironmentEdgeManager.currentTimeMillis();
     Put p = new Put(T1, ts);
@@ -559,10 +579,11 @@ public class TestKeepDeletes extends HBaseTestCase {
    * with their respective puts and removed correctly by
    * versioning (i.e. not relying on the store earliestPutTS).
    */
+  @Test
   public void testDeleteMarkerVersioning() throws Exception {
-    HTableDescriptor htd = createTableDescriptor(getName(), 0, 1,
+    HTableDescriptor htd = hbu.createTableDescriptor(name.getMethodName(), 0, 1,
         HConstants.FOREVER, true);
-    HRegion region = createNewHRegion(htd, null, null);
+    HRegion region = hbu.createLocalHRegion(htd, null, null);
 
     long ts = EnvironmentEdgeManager.currentTimeMillis();
     Put p = new Put(T1, ts);
@@ -652,9 +673,9 @@ public class TestKeepDeletes extends HBaseTestCase {
    * Verify scenarios with multiple CFs and columns
    */
   public void testWithMixedCFs() throws Exception {
-    HTableDescriptor htd = createTableDescriptor(getName(), 0, 1,
+    HTableDescriptor htd = hbu.createTableDescriptor(name.getMethodName(), 0, 1,
         HConstants.FOREVER, true);
-    HRegion region = createNewHRegion(htd, null, null);
+    HRegion region = hbu.createLocalHRegion(htd, null, null);
 
     long ts = EnvironmentEdgeManager.currentTimeMillis();
 
@@ -702,9 +723,10 @@ public class TestKeepDeletes extends HBaseTestCase {
    * Test keeping deleted rows together with min versions set
    * @throws Exception
    */
+  @Test
   public void testWithMinVersions() throws Exception {
-    HTableDescriptor htd = createTableDescriptor(getName(), 3, 1000, 1, true);
-    HRegion region = createNewHRegion(htd, null, null);
+    HTableDescriptor htd = hbu.createTableDescriptor(name.getMethodName(), 3, 1000, 1, true);
+    HRegion region = hbu.createLocalHRegion(htd, null, null);
 
     long ts = EnvironmentEdgeManager.currentTimeMillis() - 2000; // 2s in the past
 
@@ -811,7 +833,7 @@ public class TestKeepDeletes extends HBaseTestCase {
     List<KeyValue> kvs = r.getColumn(fam, col);
     assertEquals(kvs.size(), vals.length);
     for (int i=0;i<vals.length;i++) {
-      assertEquals(kvs.get(i).getValue(), vals[i]);
+      assertArrayEquals(kvs.get(i).getValue(), vals[i]);
     }
   }
 

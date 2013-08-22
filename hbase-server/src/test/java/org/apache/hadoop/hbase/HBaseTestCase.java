@@ -65,17 +65,16 @@ public abstract class HBaseTestCase extends TestCase {
   protected static final char LAST_CHAR = 'z';
   protected static final String PUNCTUATION = "~`@#$%^&*()-_+=:;',.<>/?[]{}|";
   protected static final byte [] START_KEY_BYTES = {FIRST_CHAR, FIRST_CHAR, FIRST_CHAR};
-  protected String START_KEY;
+  protected String START_KEY = new String(START_KEY_BYTES, HConstants.UTF8_CHARSET);
   protected static final int MAXVERSIONS = 3;
 
   protected final HBaseTestingUtility testUtil = new HBaseTestingUtility();
 
-  public volatile Configuration conf;
+  public volatile Configuration conf = HBaseConfiguration.create();
 
   /** constructor */
   public HBaseTestCase() {
     super();
-    init();
   }
 
   /**
@@ -83,12 +82,6 @@ public abstract class HBaseTestCase extends TestCase {
    */
   public HBaseTestCase(String name) {
     super(name);
-    init();
-  }
-
-  private void init() {
-    conf = HBaseConfiguration.create();
-    START_KEY = new String(START_KEY_BYTES, HConstants.UTF8_CHARSET);
   }
 
   /**
@@ -246,7 +239,7 @@ public abstract class HBaseTestCase extends TestCase {
    * @throws IOException
    * @return count of what we added.
    */
-  protected static long addContent(final HRegion r, final byte [] columnFamily)
+  public static long addContent(final HRegion r, final byte [] columnFamily)
   throws IOException {
     return addContent(r, columnFamily, null);
   }
@@ -265,7 +258,7 @@ public abstract class HBaseTestCase extends TestCase {
     return addContent(updater, columnFamily, START_KEY_BYTES, null);
   }
 
-  protected static long addContent(final Incommon updater, final String family,
+  public static long addContent(final Incommon updater, final String family,
       final String column) throws IOException {
     return addContent(updater, family, column, START_KEY_BYTES, null);
   }
@@ -287,7 +280,7 @@ public abstract class HBaseTestCase extends TestCase {
     return addContent(updater, columnFamily, null, startKeyBytes, endKey, -1);
   }
 
-  protected static long addContent(final Incommon updater, final String family,
+  public static long addContent(final Incommon updater, final String family,
                                    final String column, final byte [] startKeyBytes,
                                    final byte [] endKey) throws IOException {
     return addContent(updater, family, column, startKeyBytes, endKey, -1);

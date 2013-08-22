@@ -27,7 +27,6 @@ import java.util.Map;
 
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.client.Get;
@@ -66,7 +65,7 @@ public class TestEncodedSeekers {
   private static final int NUM_HFILES = 4;
   private static final int NUM_ROWS_PER_FLUSH = NUM_ROWS / NUM_HFILES;
 
-  private final HBaseTestingUtility testUtil = new HBaseTestingUtility();
+  private final HBaseTestingUtility testUtil = HBaseTestingUtility.createLocalHTU();
   private final DataBlockEncoding encoding;
   private final boolean encodeOnDisk;
 

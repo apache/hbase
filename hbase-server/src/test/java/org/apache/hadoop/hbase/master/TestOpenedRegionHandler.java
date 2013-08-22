@@ -65,9 +65,9 @@ public class TestOpenedRegionHandler {
   @Before
   public void setUp() throws Exception {
     conf = HBaseConfiguration.create();
-    TEST_UTIL = new HBaseTestingUtility(conf);
+    TEST_UTIL = HBaseTestingUtility.createLocalHTU(conf);
   }
-  
+
   @After
   public void tearDown() throws Exception {
     // Stop the cluster

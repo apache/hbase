@@ -29,7 +29,6 @@ import org.apache.hadoop.hbase.executor.EventType;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.MockRegionServerServices;
 import org.apache.hadoop.hbase.util.MockServer;
 import org.apache.hadoop.hbase.zookeeper.ZKAssign;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
@@ -48,7 +47,7 @@ import org.junit.experimental.categories.Category;
 @Category(MediumTests.class)
 public class TestOpenRegionHandler {
   static final Log LOG = LogFactory.getLog(TestOpenRegionHandler.class);
-  private final static HBaseTestingUtility HTU = new HBaseTestingUtility();
+  private final static HBaseTestingUtility HTU = HBaseTestingUtility.createLocalHTU();
   private static HTableDescriptor TEST_HTD;
   private HRegionInfo TEST_HRI;
 
@@ -88,7 +87,7 @@ public class TestOpenRegionHandler {
   @Test public void testYankingRegionFromUnderIt()
   throws IOException, NodeExistsException, KeeperException {
     final Server server = new MockServer(HTU);
-    final RegionServerServices rss = new MockRegionServerServices(HTU.getZooKeeperWatcher());
+    final RegionServerServices rss = HTU.createMockRegionServerService();
 
     HTableDescriptor htd = TEST_HTD;
     final HRegionInfo hri = TEST_HRI;
@@ -133,7 +132,7 @@ public class TestOpenRegionHandler {
   @Test
   public void testFailedOpenRegion() throws Exception {
     Server server = new MockServer(HTU);
-    RegionServerServices rsServices = new MockRegionServerServices();
+    RegionServerServices rsServices = HTU.createMockRegionServerService();
 
     // Create it OFFLINE, which is what it expects
     ZKAssign.createNodeOffline(server.getZooKeeper(), TEST_HRI, server.getServerName());
@@ -160,7 +159,7 @@ public class TestOpenRegionHandler {
   @Test
   public void testFailedUpdateMeta() throws Exception {
     Server server = new MockServer(HTU);
-    RegionServerServices rsServices = new MockRegionServerServices();
+    RegionServerServices rsServices = HTU.createMockRegionServerService();
 
     // Create it OFFLINE, which is what it expects
     ZKAssign.createNodeOffline(server.getZooKeeper(), TEST_HRI, server.getServerName());
@@ -187,7 +186,7 @@ public class TestOpenRegionHandler {
   @Test
   public void testTransitionToFailedOpenEvenIfCleanupFails() throws Exception {
     Server server = new MockServer(HTU);
-    RegionServerServices rsServices = new MockRegionServerServices();
+    RegionServerServices rsServices = HTU.createMockRegionServerService();
     // Create it OFFLINE, which is what it expects
     ZKAssign.createNodeOffline(server.getZooKeeper(), TEST_HRI, server.getServerName());
     // Create the handler
@@ -216,8 +215,7 @@ public class TestOpenRegionHandler {
   @Test
   public void testTransitionToFailedOpenFromOffline() throws Exception {
     Server server = new MockServer(HTU);
-    RegionServerServices rsServices = new MockRegionServerServices(server.getZooKeeper(),
-        server.getServerName());
+    RegionServerServices rsServices = HTU.createMockRegionServerService(server.getServerName());
     // Create it OFFLINE, which is what it expects
     ZKAssign.createNodeOffline(server.getZooKeeper(), TEST_HRI, server.getServerName());
     // Create the handler

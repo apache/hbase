@@ -104,7 +104,7 @@ public class TestMultiColumnScanner {
   /** The probability to delete a row/column pair */
   private static final double DELETE_PROBABILITY = 0.02;
 
-  private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private final static HBaseTestingUtility TEST_UTIL = HBaseTestingUtility.createLocalHTU();
 
   private final Compression.Algorithm comprAlgo;
   private final BloomType bloomType;
