@@ -709,17 +709,17 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
     return setBloomFilterType(BloomType.valueOf(bloomTypeStr.toUpperCase()));
   }
 
-   public void setBloomFilterErrorRate(float bloomErrorRate) {
-	   setValue(BLOOMFILTER_ERRORRATE, Float.toString(bloomErrorRate));
-   }
-   public float getBloomFilterErrorRate() {
-	    String value = getValue(BLOOMFILTER_ERRORRATE);
-	    return (value != null)? Float.valueOf(value).floatValue() : DEFAULT_BLOOMFILTER_ERROR_RATE;
-	  }
+  public void setBloomFilterErrorRate(float bloomErrorRate) {
+    setValue(BLOOMFILTER_ERRORRATE, Float.toString(bloomErrorRate));
+  }
+  public float getBloomFilterErrorRate() {
+    String value = getValue(BLOOMFILTER_ERRORRATE);
+    return (value != null)? Float.valueOf(value).floatValue() : DEFAULT_BLOOMFILTER_ERROR_RATE;
+  }
 
-   /**
-    * @return the scope tag
-    */
+  /**
+   * @return the scope tag
+   */
   public int getScope() {
     String value = getValue(REPLICATION_SCOPE);
     if (value != null) {
@@ -790,7 +790,7 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
     // print all other keys as advanced options
     if (hasAdvancedKeys) {
       s.append(", ");
-      s.append("{").append(HConstants.CONFIG).append(" => ");
+      s.append(HConstants.CONFIG).append(" => ");
       s.append('{');
       boolean printComma = false;
       for (ImmutableBytesWritable k : values.keySet()) {
