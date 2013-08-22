@@ -50,6 +50,7 @@ import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.AdminService.Block
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
+import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.replication.ReplicationPeers;
 import org.apache.hadoop.hbase.replication.ReplicationQueueInfo;
 import org.apache.hadoop.hbase.replication.ReplicationQueues;
@@ -234,7 +235,7 @@ public class ReplicationSource extends Thread
           LOG.trace("Recovered queue started with log " + this.queue.peek() +
               " at position " + this.repLogReader.getPosition());
         }
-      } catch (KeeperException e) {
+      } catch (ReplicationException e) {
         this.terminate("Couldn't get the position of this recovered queue " +
             this.peerClusterZnode, e);
       }

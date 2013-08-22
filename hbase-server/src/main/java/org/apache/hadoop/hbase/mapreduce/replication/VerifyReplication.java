@@ -36,15 +36,14 @@ import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.mapreduce.TableInputFormat;
 import org.apache.hadoop.hbase.mapreduce.TableMapReduceUtil;
 import org.apache.hadoop.hbase.mapreduce.TableMapper;
+import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.replication.ReplicationFactory;
 import org.apache.hadoop.hbase.replication.ReplicationPeer;
 import org.apache.hadoop.hbase.replication.ReplicationPeers;
-import org.apache.hadoop.hbase.replication.ReplicationPeersZKImpl;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.lib.output.NullOutputFormat;
-import org.apache.zookeeper.KeeperException;
 
 /**
  * This map-only job compares the data from a local table with a remote one.
@@ -128,8 +127,9 @@ public class VerifyReplication {
               HTable replicatedTable = new HTable(peerConf, conf.get(NAME + ".tableName"));
               scan.setStartRow(value.getRow());
               replicatedScanner = replicatedTable.getScanner(scan);
-            } catch (KeeperException e) {
-              throw new IOException("Got a ZK exception", e);
+            } catch (ReplicationException e) {
+              throw new IOException(
+                  "An error occured while trying to connect to the remove peer cluster", e);
             } finally {
               if (peer != null) {
                 peer.close();

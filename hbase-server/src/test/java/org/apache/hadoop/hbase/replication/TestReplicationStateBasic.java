@@ -68,7 +68,7 @@ public abstract class TestReplicationStateBasic {
   }
 
   @Test
-  public void testReplicationQueuesClient() throws KeeperException {
+  public void testReplicationQueuesClient() throws ReplicationException {
     rqc.init();
     // Test methods with empty state
     assertEquals(0, rqc.getListOfReplicators().size());
@@ -109,7 +109,7 @@ public abstract class TestReplicationStateBasic {
   }
 
   @Test
-  public void testReplicationQueues() throws KeeperException, IOException {
+  public void testReplicationQueues() throws ReplicationException {
     rq1.init(server1);
     rq2.init(server2);
     rq3.init(server3);
@@ -259,7 +259,7 @@ public abstract class TestReplicationStateBasic {
    * three replicators: rq1 has 0 queues, rq2 has 1 queue with no logs, rq3 has 5 queues with 1, 2,
    * 3, 4, 5 log files respectively
    */
-  protected void populateQueues() throws KeeperException, IOException {
+  protected void populateQueues() throws ReplicationException {
     rq1.addLog("trash", "trash");
     rq1.removeQueue("trash");
 

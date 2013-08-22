@@ -27,6 +27,7 @@ import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.master.cleaner.BaseLogCleanerDelegate;
+import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.replication.ReplicationFactory;
 import org.apache.hadoop.hbase.replication.ReplicationQueuesClient;
 import org.apache.hadoop.hbase.replication.ReplicationQueuesClientZKImpl;
@@ -125,7 +126,7 @@ public class ReplicationLogCleaner extends BaseLogCleanerDelegate implements Abo
       this.zkw = new ZooKeeperWatcher(conf, "replicationLogCleaner", null);
       this.replicationQueues = ReplicationFactory.getReplicationQueuesClient(zkw, conf, this);
       this.replicationQueues.init();
-    } catch (KeeperException e) {
+    } catch (ReplicationException e) {
       LOG.error("Error while configuring " + this.getClass().getName(), e);
     } catch (IOException e) {
       LOG.error("Error while configuring " + this.getClass().getName(), e);

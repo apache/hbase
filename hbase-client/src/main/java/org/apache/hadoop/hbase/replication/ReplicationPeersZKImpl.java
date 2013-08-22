@@ -80,16 +80,21 @@ public class ReplicationPeersZKImpl extends ReplicationStateZKBase implements Re
   }
 
   @Override
-  public void init() throws IOException, KeeperException {
-    ZKUtil.createWithParents(this.zookeeper, this.peersZNode);
+  public void init() throws ReplicationException {
+    try {
+      ZKUtil.createWithParents(this.zookeeper, this.peersZNode);
+    } catch (KeeperException e) {
+      throw new ReplicationException("Could not initialize replication peers", e);
+    }
     connectExistingPeers();
   }
 
   @Override
-  public void addPeer(String id, String clusterKey) throws IOException {
+  public void addPeer(String id, String clusterKey) throws ReplicationException {
     try {
       if (peerExists(id)) {
-        throw new IllegalArgumentException("Cannot add existing peer");
+        throw new IllegalArgumentException("Cannot add a peer with id=" + id
+            + " because that id already exists.");
       }
       ZKUtil.createWithParents(this.zookeeper, this.peersZNode);
       ZKUtil.createAndWatch(this.zookeeper, ZKUtil.joinZNode(this.peersZNode, id),
@@ -101,30 +106,32 @@ public class ReplicationPeersZKImpl extends ReplicationStateZKBase implements Re
         ENABLED_ZNODE_BYTES);
       // A peer is enabled by default
     } catch (KeeperException e) {
-      throw new IOException("Unable to add peer", e);
+      throw new ReplicationException("Could not add peer with id=" + id
+          + ", clusterKey=" + clusterKey, e);
     }
   }
 
   @Override
-  public void removePeer(String id) throws IOException {
+  public void removePeer(String id) throws ReplicationException {
     try {
       if (!peerExists(id)) {
-        throw new IllegalArgumentException("Cannot remove inexisting peer");
+        throw new IllegalArgumentException("Cannot remove peer with id=" + id
+            + " because that id does not exist.");
       }
       ZKUtil.deleteNodeRecursively(this.zookeeper, ZKUtil.joinZNode(this.peersZNode, id));
     } catch (KeeperException e) {
-      throw new IOException("Unable to remove a peer", e);
+      throw new ReplicationException("Could not remove peer with id=" + id, e);
     }
   }
 
   @Override
-  public void enablePeer(String id) throws IOException {
+  public void enablePeer(String id) throws ReplicationException {
     changePeerState(id, ZooKeeperProtos.ReplicationState.State.ENABLED);
     LOG.info("peer " + id + " is enabled");
   }
 
   @Override
-  public void disablePeer(String id) throws IOException {
+  public void disablePeer(String id) throws ReplicationException {
     changePeerState(id, ZooKeeperProtos.ReplicationState.State.DISABLED);
     LOG.info("peer " + id + " is disabled");
   }
@@ -132,13 +139,13 @@ public class ReplicationPeersZKImpl extends ReplicationStateZKBase implements Re
   @Override
   public boolean getStatusOfConnectedPeer(String id) {
     if (!this.peerClusters.containsKey(id)) {
-      throw new IllegalArgumentException("peer " + id + " is not connected");
+      throw new IllegalArgumentException("Peer with id= " + id + " is not connected");
     }
     return this.peerClusters.get(id).getPeerEnabled().get();
   }
 
   @Override
-  public boolean getStatusOfPeerFromBackingStore(String id) throws IOException {
+  public boolean getStatusOfPeerFromBackingStore(String id) throws ReplicationException {
     if (!this.getAllPeerIds().contains(id)) {
       throw new IllegalArgumentException("peer " + id + " doesn't exist");
     }
@@ -146,21 +153,26 @@ public class ReplicationPeersZKImpl extends ReplicationStateZKBase implements Re
     try {
       return ReplicationPeer.isStateEnabled(ZKUtil.getData(this.zookeeper, peerStateZNode));
     } catch (KeeperException e) {
-      throw new IOException(e);
+      throw new ReplicationException(e);
     } catch (DeserializationException e) {
-      throw new IOException(e);
+      throw new ReplicationException(e);
     }
   }
 
   @Override
-  public boolean connectToPeer(String peerId) throws IOException, KeeperException {
+  public boolean connectToPeer(String peerId) throws ReplicationException {
     if (peerClusters == null) {
       return false;
     }
     if (this.peerClusters.containsKey(peerId)) {
       return false;
     }
-    ReplicationPeer peer = getPeer(peerId);
+    ReplicationPeer peer = null;
+    try {
+      peer = getPeer(peerId);
+    } catch (Exception e) {
+      throw new ReplicationException("Error connecting to peer with id=" + peerId, e);
+    }
     if (peer == null) {
       return false;
     }
@@ -242,9 +254,15 @@ public class ReplicationPeersZKImpl extends ReplicationStateZKBase implements Re
   }
 
   @Override
-  public Configuration getPeerConf(String peerId) throws KeeperException {
+  public Configuration getPeerConf(String peerId) throws ReplicationException {
     String znode = ZKUtil.joinZNode(this.peersZNode, peerId);
-    byte[] data = ZKUtil.getData(this.zookeeper, znode);
+    byte[] data = null;
+    try {
+      data = ZKUtil.getData(this.zookeeper, znode);
+    } catch (KeeperException e) {
+      throw new ReplicationException("Error getting configuration for peer with id="
+          + peerId, e);
+    }
     if (data == null) {
       LOG.error("Could not get configuration for peer because it doesn't exist. peerId=" + peerId);
       return null;
@@ -293,11 +311,14 @@ public class ReplicationPeersZKImpl extends ReplicationStateZKBase implements Re
   /**
    * A private method used during initialization. This method attempts to connect to all registered
    * peer clusters. This method does not set a watch on the peer cluster znodes.
-   * @throws IOException
-   * @throws KeeperException
    */
-  private void connectExistingPeers() throws IOException, KeeperException {
-    List<String> znodes = ZKUtil.listChildrenNoWatch(this.zookeeper, this.peersZNode);
+  private void connectExistingPeers() throws ReplicationException {
+    List<String> znodes = null;
+    try {
+      znodes = ZKUtil.listChildrenNoWatch(this.zookeeper, this.peersZNode);
+    } catch (KeeperException e) {
+      throw new ReplicationException("Error getting the list of peer clusters.", e);
+    }
     if (znodes != null) {
       for (String z : znodes) {
         connectToPeer(z);
@@ -349,13 +370,13 @@ public class ReplicationPeersZKImpl extends ReplicationStateZKBase implements Re
    * Update the state znode of a peer cluster.
    * @param id
    * @param state
-   * @throws IOException
    */
   private void changePeerState(String id, ZooKeeperProtos.ReplicationState.State state)
-      throws IOException {
+      throws ReplicationException {
     try {
       if (!peerExists(id)) {
-        throw new IllegalArgumentException("peer " + id + " is not registered");
+        throw new IllegalArgumentException("Cannot enable/disable peer because id=" + id
+            + " does not exist.");
       }
       String peerStateZNode = getPeerStateNode(id);
       byte[] stateBytes =
@@ -366,9 +387,9 @@ public class ReplicationPeersZKImpl extends ReplicationStateZKBase implements Re
       } else {
         ZKUtil.createAndWatch(this.zookeeper, peerStateZNode, stateBytes);
       }
-      LOG.info("state of the peer " + id + " changed to " + state.name());
+      LOG.info("Peer with id= " + id + " is now " + state.name());
     } catch (KeeperException e) {
-      throw new IOException("Unable to change state of the peer " + id, e);
+      throw new ReplicationException("Unable to change state of the peer with id=" + id, e);
     }
   }
 
@@ -376,10 +397,9 @@ public class ReplicationPeersZKImpl extends ReplicationStateZKBase implements Re
    * Helper method to connect to a peer
    * @param peerId peer's identifier
    * @return object representing the peer
-   * @throws IOException
-   * @throws KeeperException
+   * @throws ReplicationException
    */
-  private ReplicationPeer getPeer(String peerId) throws IOException, KeeperException {
+  private ReplicationPeer getPeer(String peerId) throws ReplicationException {
     Configuration peerConf = getPeerConf(peerId);
     if (peerConf == null) {
       return null;
@@ -391,7 +411,12 @@ public class ReplicationPeersZKImpl extends ReplicationStateZKBase implements Re
 
     ReplicationPeer peer =
         new ReplicationPeer(peerConf, peerId, ZKUtil.getZooKeeperClusterKey(peerConf));
-    peer.startStateTracker(this.zookeeper, this.getPeerStateNode(peerId));
+    try {
+      peer.startStateTracker(this.zookeeper, this.getPeerStateNode(peerId));
+    } catch (KeeperException e) {
+      throw new ReplicationException("Error starting the peer state tracker for peerId=" + peerId,
+          e);
+    }
     peer.getZkw().registerListener(new PeerRegionServerListener(peer));
     return peer;
   }
