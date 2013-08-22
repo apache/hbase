@@ -215,13 +215,13 @@ public class ClientScanner extends AbstractClientScanner {
             done) {
           close();
           if (LOG.isDebugEnabled()) {
-            LOG.debug("Finished region=" + this.currentRegion);
+            LOG.debug("Finished " + this.currentRegion);
           }
           return false;
         }
         localStartKey = endKey;
         if (LOG.isDebugEnabled()) {
-          LOG.debug("Finished with region " + this.currentRegion);
+          LOG.debug("Finished " + this.currentRegion);
         }
       } else {
         localStartKey = this.scan.getStartRow();

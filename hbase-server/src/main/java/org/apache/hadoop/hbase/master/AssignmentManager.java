@@ -1270,13 +1270,10 @@ public class AssignmentManager extends ZooKeeperListener {
 
             HRegionInfo regionInfo = rs.getRegion();
             String regionNameStr = regionInfo.getRegionNameAsString();
-            LOG.debug("The znode of " + regionNameStr
-              + " has been deleted, region state: " + rs);
+            LOG.debug("Znode " + regionNameStr + " deleted, state: " + rs);
             if (rs.isOpened()) {
               ServerName serverName = rs.getServerName();
               regionOnline(regionInfo, serverName);
-              LOG.info("The master has opened "
-                + regionNameStr + " that was online on " + serverName);
               boolean disabled = getZKTable().isDisablingOrDisabledTable(
                 regionInfo.getTableName());
               if (!serverManager.isServerOnline(serverName) && !disabled) {

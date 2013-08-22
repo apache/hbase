@@ -201,7 +201,7 @@ public class MetaEditor {
       HRegionInfo regionInfo)
   throws IOException {
     putToMetaTable(catalogTracker, makePutFromRegionInfo(regionInfo));
-    LOG.info("Added region " + regionInfo.getRegionNameAsString() + " to META");
+    LOG.info("Added " + regionInfo.getRegionNameAsString());
   }
 
   /**
@@ -233,7 +233,7 @@ public class MetaEditor {
     addDaughtersToPut(put, splitA, splitB);
     meta.put(put);
     if (LOG.isDebugEnabled()) {
-      LOG.debug("Added region " + regionInfo.getRegionNameAsString() + " to META");
+      LOG.debug("Added " + regionInfo.getRegionNameAsString());
     }
   }
 
@@ -268,7 +268,7 @@ public class MetaEditor {
       puts.add(makePutFromRegionInfo(regionInfo));
     }
     putsToMetaTable(catalogTracker, puts);
-    LOG.info("Added " + puts.size() + " regions in META");
+    LOG.info("Added " + puts.size());
   }
 
   /**
@@ -286,7 +286,7 @@ public class MetaEditor {
       addLocation(put, sn, openSeqNum);
     }
     putToMetaTable(catalogTracker, put);
-    LOG.info("Added daughter " + regionInfo.getRegionNameAsString() +
+    LOG.info("Added daughter " + regionInfo.getEncodedName() +
       (sn == null? ", serverName=null": ", serverName=" + sn.toString()));
   }
 
@@ -461,7 +461,7 @@ public class MetaEditor {
   throws IOException {
     Delete delete = new Delete(regionInfo.getRegionName());
     deleteFromMetaTable(catalogTracker, delete);
-    LOG.info("Deleted region " + regionInfo.getRegionNameAsString() + " from META");
+    LOG.info("Deleted " + regionInfo.getRegionNameAsString());
   }
 
   /**
@@ -477,7 +477,7 @@ public class MetaEditor {
       deletes.add(new Delete(hri.getRegionName()));
     }
     deleteFromMetaTable(catalogTracker, deletes);
-    LOG.info("Deleted from META, regions: " + regionsInfo);
+    LOG.info("Deleted " + regionsInfo);
   }
 
   /**
@@ -503,10 +503,10 @@ public class MetaEditor {
     }
     mutateMetaTable(catalogTracker, mutation);
     if (regionsToRemove != null && regionsToRemove.size() > 0) {
-      LOG.debug("Deleted from META, regions: " + regionsToRemove);
+      LOG.debug("Deleted " + regionsToRemove);
     }
     if (regionsToAdd != null && regionsToAdd.size() > 0) {
-      LOG.debug("Add to META, regions: " + regionsToAdd);
+      LOG.debug("Added " + regionsToAdd);
     }
   }
 

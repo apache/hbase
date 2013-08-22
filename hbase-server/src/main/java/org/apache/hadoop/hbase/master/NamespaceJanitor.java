@@ -46,11 +46,10 @@ public class NamespaceJanitor extends Chore {
   private static final Log LOG = LogFactory.getLog(NamespaceJanitor.class.getName());
   private final MasterServices services;
   private AtomicBoolean enabled = new AtomicBoolean(true);
-  private AtomicBoolean alreadyRunning = new AtomicBoolean(false);
 
   public NamespaceJanitor(final MasterServices services) {
     super("NamespaceJanitor-" + services.getServerName().toShortString(),
-      services.getConfiguration().getInt("hbase.namespacejanitor.interval", 30000),
+      services.getConfiguration().getInt("hbase.namespacejanitor.interval", 300000),
       services);
     this.services = services;
   }

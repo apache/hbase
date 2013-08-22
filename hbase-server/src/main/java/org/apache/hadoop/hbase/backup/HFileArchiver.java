@@ -31,7 +31,6 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
-import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
@@ -91,7 +90,7 @@ public class HFileArchiver {
   public static boolean archiveRegion(FileSystem fs, Path rootdir, Path tableDir, Path regionDir)
       throws IOException {
     if (LOG.isDebugEnabled()) {
-      LOG.debug("ARCHIVING region " + regionDir.toString());
+      LOG.debug("ARCHIVING " + regionDir.toString());
     }
 
     // otherwise, we archive the files
@@ -132,12 +131,12 @@ public class HFileArchiver {
 
     // convert the files in the region to a File
     toArchive.addAll(Lists.transform(Arrays.asList(storeDirs), getAsFile));
-    LOG.debug("Archiving:" + toArchive);
+    LOG.debug("Archiving " + toArchive);
     boolean success = false;
     try {
       success = resolveAndArchive(fs, regionArchiveDir, toArchive);
     } catch (IOException e) {
-      LOG.error("Failed to archive: " + toArchive, e);
+      LOG.error("Failed to archive " + toArchive, e);
       success = false;
     }
 
@@ -280,7 +279,7 @@ public class HFileArchiver {
    */
   private static boolean resolveAndArchive(FileSystem fs, Path baseArchiveDir,
       Collection<File> toArchive) throws IOException {
-    if (LOG.isTraceEnabled()) LOG.trace("Starting to archive files:" + toArchive);
+    if (LOG.isTraceEnabled()) LOG.trace("Starting to archive " + toArchive);
     long start = EnvironmentEdgeManager.currentTimeMillis();
     List<File> failures = resolveAndArchive(fs, baseArchiveDir, toArchive, start);
 
@@ -348,7 +347,7 @@ public class HFileArchiver {
           failures.addAll(resolveAndArchive(fs, parentArchiveDir, children, start));
         }
       } catch (IOException e) {
-        LOG.warn("Failed to archive file: " + file, e);
+        LOG.warn("Failed to archive " + file, e);
         failures.add(file);
       }
     }
@@ -395,7 +394,7 @@ public class HFileArchiver {
               + ") to make room for similarly named file.");
         }
       }
-      LOG.debug("Backed up archive file from: " + archiveFile);
+      LOG.debug("Backed up archive file from " + archiveFile);
     }
 
     if (LOG.isTraceEnabled()) {
@@ -418,25 +417,25 @@ public class HFileArchiver {
             }
           }
         } catch (IOException e) {
-          LOG.warn("Failed to create the archive directory: " + archiveDir, e);
+          LOG.warn("Failed to create directory: " + archiveDir, e);
         }
       }
 
       try {
         success = currentFile.moveAndClose(archiveFile);
       } catch (IOException e) {
-        LOG.warn("Failed to archive file: " + currentFile + " on try #" + i, e);
+        LOG.warn("Failed to archive " + currentFile + " on try #" + i, e);
         success = false;
       }
     }
 
     if (!success) {
-      LOG.error("Failed to archive file:" + currentFile);
+      LOG.error("Failed to archive " + currentFile);
       return false;
     }
 
     if (LOG.isDebugEnabled()) {
-      LOG.debug("Finished archiving file from: " + currentFile + ", to: " + archiveFile);
+      LOG.debug("Finished archiving from " + currentFile + ", to " + archiveFile);
     }
     return true;
   }

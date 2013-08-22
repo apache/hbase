@@ -245,7 +245,7 @@ public class RegionStates {
     ServerName newServerName = serverName;
     if (serverName != null &&
         (state == State.CLOSED || state == State.OFFLINE)) {
-      LOG.warn("Closed region " + hri.getShortNameToLog() + " still on "
+      LOG.warn("Closed " + hri.getShortNameToLog() + " still on "
         + serverName + "? Ignored, reset it to null");
       newServerName = null;
     }
@@ -282,12 +282,12 @@ public class RegionStates {
     String regionName = hri.getEncodedName();
     RegionState oldState = regionStates.get(regionName);
     if (oldState == null) {
-      LOG.warn("Online a region not in RegionStates: " + hri.getShortNameToLog());
+      LOG.warn("Online region not in RegionStates: " + hri.getShortNameToLog());
     } else {
       State state = oldState.getState();
       ServerName sn = oldState.getServerName();
       if (state != State.OPEN || sn == null || !sn.equals(serverName)) {
-        LOG.debug("Online a region " + hri.getShortNameToLog() + " with current state=" + state +
+        LOG.debug("Online " + hri.getShortNameToLog() + " with current state=" + state +
           ", expected state=OPEN" + ", assigned to server: " + sn + " expected " + serverName);
       }
     }
@@ -331,17 +331,17 @@ public class RegionStates {
     String regionName = hri.getEncodedName();
     RegionState oldState = regionStates.get(regionName);
     if (oldState == null) {
-      LOG.warn("Offline a region not in RegionStates: " + hri.getShortNameToLog());
+      LOG.warn("Offline region not in RegionStates: " + hri.getShortNameToLog());
     } else if (LOG.isDebugEnabled()) {
       State state = oldState.getState();
       ServerName sn = oldState.getServerName();
       if (state != State.OFFLINE
           && state != State.SPLITTING && state != State.MERGING) {
-        LOG.debug("Offline a region " + hri.getShortNameToLog() + " with current state="
+        LOG.debug("Offline " + hri.getShortNameToLog() + " with current state="
           + state + ", expected state=OFFLINE/SPLITTING/MERGING");
       }
       if (sn != null && state == State.OFFLINE) {
-        LOG.debug("Offline a region " + hri.getShortNameToLog()
+        LOG.debug("Offline " + hri.getShortNameToLog()
           + " with current state=OFFLINE, assigned to server: "
           + sn + ", expected null");
       }
