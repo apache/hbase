@@ -54,7 +54,7 @@ public abstract class ReplicationStateZKBase {
   // Public for testing
   public static final byte[] ENABLED_ZNODE_BYTES =
       toByteArray(ZooKeeperProtos.ReplicationState.State.ENABLED);
-  protected static final byte[] DISABLED_ZNODE_BYTES =
+  public static final byte[] DISABLED_ZNODE_BYTES =
       toByteArray(ZooKeeperProtos.ReplicationState.State.DISABLED);
 
   public ReplicationStateZKBase(ZooKeeperWatcher zookeeper, Configuration conf,

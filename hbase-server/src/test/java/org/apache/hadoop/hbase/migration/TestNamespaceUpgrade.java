@@ -150,7 +150,7 @@ public class TestNamespaceUpgrade {
     }
   }
 
-  private static File untar(final File testdir) throws IOException {
+   static File untar(final File testdir) throws IOException {
     // Find the src data under src/test/data
     final String datafile = "TestNamespaceUpgrade";
     File srcTarFile = new File(
