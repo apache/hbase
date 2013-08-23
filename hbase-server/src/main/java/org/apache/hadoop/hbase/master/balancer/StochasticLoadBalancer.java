@@ -122,6 +122,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
   @Override
   public void setConf(Configuration conf) {
     super.setConf(conf);
+
     regionFinder.setConf(conf);
 
     maxSteps = conf.getInt(MAX_STEPS_KEY, maxSteps);
@@ -157,6 +158,11 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
       regionLoadFunctions[2],
       regionLoadFunctions[3],
     };
+  }
+
+  @Override
+  protected void setSlop(Configuration conf) {
+    this.slop = conf.getFloat("hbase.regions.slop", 0.001F);
   }
 
   @Override
