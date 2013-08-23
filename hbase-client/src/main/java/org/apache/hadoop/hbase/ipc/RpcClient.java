@@ -951,9 +951,7 @@ public class RpcClient {
       // release the resources
       // first thing to do;take the connection out of the connection list
       synchronized (connections) {
-        if (connections.get(remoteId) == this) {
-          connections.remove(remoteId);
-        }
+        connections.remove(remoteId, this);
       }
 
       // close the streams and therefore the socket
@@ -1218,7 +1216,7 @@ public class RpcClient {
       super(msg);
     }
   }
-  
+
   /**
    * Construct an IPC cluster client whose values are of the {@link Message} class.
    * @param conf configuration
@@ -1274,7 +1272,7 @@ public class RpcClient {
   public RpcClient(Configuration conf, String clusterId) {
     this(conf, clusterId, NetUtils.getDefaultSocketFactory(conf), null);
   }
-  
+
   /**
    * Construct an IPC client for the cluster <code>clusterId</code> with the default SocketFactory
    * @param conf configuration
