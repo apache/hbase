@@ -46,26 +46,24 @@
     <meta name="author" content="">
 
 
-    <link href="/static/css/bootstrap.css" rel="stylesheet">
+    <link href="/static/css/bootstrap.min.css" rel="stylesheet">
+    <link href="/static/css/bootstrap-theme.min.css" rel="stylesheet">
     <link href="/static/css/hbase.css" rel="stylesheet">
-    <link href="/static/css/bootstrap-responsive.css" rel="stylesheet">
-    <!--[if lt IE 9]>
-      <script src="/static/js/html5shiv.js"></script>
-    <![endif]-->
 </head>
     <body>
 
-        <div class="navbar navbar-fixed-top">
-          <div class="navbar-inner">
-            <div class="container-fluid">
-              <a class="btn btn-navbar" data-toggle="collapse" data-target=".nav-collapse">
-                <span class="icon-bar"></span>
-                <span class="icon-bar"></span>
-                <span class="icon-bar"></span>
-              </a>
-              <a class="brand" href="/master-status"><img src="/static/hbase_logo_small.png" alt="HBase Logo"/></a>
-              <div class="nav-collapse">
-                <ul class="nav">
+    <div class="navbar  navbar-fixed-top navbar-default">
+        <div class="container">
+            <div class="navbar-header">
+                <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+                    <span class="icon-bar"></span>
+                    <span class="icon-bar"></span>
+                    <span class="icon-bar"></span>
+                </button>
+                <a class="navbar-brand" href="/master-status"><img src="/static/hbase_logo_small.png" alt="HBase Logo"/></a>
+            </div>
+            <div class="collapse navbar-collapse">
+                <ul class="nav navbar-nav">
                     <li><a href="/">Home</a></li>
                     <li><a href="/logs/">Local logs</a></li>
                     <li><a href="/logLevel">Log Level</a></li>
@@ -77,13 +75,13 @@
           </div>
         </div>
 
-        <div class="container-fluid">
-            <div class="row-fluid inner_header">
+        <div class="container">
+            <div class="row inner_header">
                 <div class="page-header">
                     <h1>Zookeeper Dump</h1>
                 </div>
             </div>
-            <div class="row-fluid">
+            <div class="row">
                 <div class="span12">
                     <pre><%= ZKUtil.dump(watcher).trim() %></pre>
                 </div>
