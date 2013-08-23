@@ -20,6 +20,7 @@
 package org.apache.hadoop.hbase.master.snapshot;
 
 import java.io.IOException;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.CancellationException;
 
@@ -34,6 +35,7 @@ import org.apache.hadoop.hbase.catalog.CatalogTracker;
 import org.apache.hadoop.hbase.catalog.MetaEditor;
 import org.apache.hadoop.hbase.errorhandling.ForeignException;
 import org.apache.hadoop.hbase.errorhandling.ForeignExceptionDispatcher;
+import org.apache.hadoop.hbase.master.AssignmentManager;
 import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.SnapshotSentinel;
@@ -118,13 +120,40 @@ public class RestoreSnapshotHandler extends TableEventHandler implements Snapsho
           snapshot, snapshotDir, hTableDescriptor, tableDir, monitor, status);
       RestoreSnapshotHelper.RestoreMetaChanges metaChanges = restoreHelper.restoreHdfsRegions();
 
-      // 3. Applies changes to .META.
+      // 3. Forces all the RegionStates to be offline
+      //
+      // The AssignmentManager keeps all the region states around
+      // with no possibility to remove them, until the master is restarted.
+      // This means that a region marked as SPLIT before the restore will never be assigned again.
+      // To avoid having all states around all the regions are switched to the OFFLINE state,
+      // which is the same state that the regions will be after a delete table.
+      forceRegionsOffline(metaChanges);
+      forceRegionsOffline(metaChanges);
+
+      // 4. Applies changes to .META.
+
+      // 4.1 Removes the current set of regions from META
+      //
+      // By removing also the regions to restore (the ones present both in the snapshot
+      // and in the current state) we ensure that no extra fields are present in META
+      // e.g. with a simple add addRegionToMeta() the splitA and splitB attributes
+      // not overwritten/removed, so you end up with old informations
+      // that are not correct after the restore.
+      List<HRegionInfo> hrisToRemove = new LinkedList<HRegionInfo>();
+      if (metaChanges.hasRegionsToRemove()) hrisToRemove.addAll(metaChanges.getRegionsToRemove());
+      if (metaChanges.hasRegionsToRestore()) hrisToRemove.addAll(metaChanges.getRegionsToRestore());
+      MetaEditor.deleteRegions(catalogTracker, hrisToRemove);
+
+      // 4.2 Add the new set of regions to META
+      //
+      // At this point the old regions are no longer present in META.
+      // and the set of regions present in the snapshot will be written to META.
+      // All the information in META are coming from the .regioninfo of each region present
+      // in the snapshot folder.
       hris.clear();
-      status.setStatus("Preparing to restore each region");
       if (metaChanges.hasRegionsToAdd()) hris.addAll(metaChanges.getRegionsToAdd());
       if (metaChanges.hasRegionsToRestore()) hris.addAll(metaChanges.getRegionsToRestore());
-      List<HRegionInfo> hrisToRemove = metaChanges.getRegionsToRemove();
-      MetaEditor.mutateRegions(catalogTracker, hrisToRemove, hris);
+      MetaEditor.addRegionsToMeta(catalogTracker, hris);
       metaChanges.updateMetaParentRegions(catalogTracker, hris);
 
       // At this point the restore is complete. Next step is enabling the table.
@@ -138,6 +167,21 @@ public class RestoreSnapshotHandler extends TableEventHandler implements Snapsho
       throw new RestoreSnapshotException(msg, e);
     } finally {
       this.stopped = true;
+    }
+  }
+
+  private void forceRegionsOffline(final RestoreSnapshotHelper.RestoreMetaChanges metaChanges) {
+    forceRegionsOffline(metaChanges.getRegionsToAdd());
+    forceRegionsOffline(metaChanges.getRegionsToRestore());
+    forceRegionsOffline(metaChanges.getRegionsToRemove());
+  }
+
+  private void forceRegionsOffline(final List<HRegionInfo> hris) {
+    AssignmentManager am = this.masterServices.getAssignmentManager();
+    if (hris != null) {
+      for (HRegionInfo hri: hris) {
+        am.regionOffline(hri);
+      }
     }
   }
 
