@@ -59,7 +59,6 @@ public class RpcRetryingCaller<T> {
   /**
    * Start and end times for a single call.
    */
-  private long startTime, endTime;
   private final static int MIN_RPC_TIMEOUT = 2000;
 
   private final long pause;
@@ -77,8 +76,8 @@ public class RpcRetryingCaller<T> {
   }
 
   private void beforeCall() {
-    this.startTime = EnvironmentEdgeManager.currentTimeMillis();
-    int remaining = (int)(callTimeout - (this.startTime - this.globalStartTime));
+    int remaining = (int)(callTimeout -
+      (EnvironmentEdgeManager.currentTimeMillis() - this.globalStartTime));
     if (remaining < MIN_RPC_TIMEOUT) {
       // If there is no time left, we're trying anyway. It's too late.
       // 0 means no timeout, and it's not the intent here. So we secure both cases by
@@ -90,7 +89,6 @@ public class RpcRetryingCaller<T> {
 
   private void afterCall() {
     RpcClient.resetRpcTimeout();
-    this.endTime = EnvironmentEdgeManager.currentTimeMillis();
   }
 
   public synchronized T callWithRetries(RetryingCallable<T> callable) throws IOException,
@@ -120,7 +118,7 @@ public class RpcRetryingCaller<T> {
         return callable.call();
       } catch (Throwable t) {
         LOG.warn("Call exception, tries=" + tries + ", retries=" + retries + ", retryTime=" +
-            (this.globalStartTime - System.currentTimeMillis()) + "ms", t);
+            (EnvironmentEdgeManager.currentTimeMillis() - this.globalStartTime) + "ms", t);
         // translateException throws exception when should not retry: i.e. when request is bad.
         t = translateException(t);
         callable.throwable(t, retries != 1);
