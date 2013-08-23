@@ -77,6 +77,7 @@ public class TestHRegionOnCluster {
       HTable table = new HTable(TEST_UTIL.getConfiguration(), TABLENAME);
       putDataAndVerify(table, "r1", FAMILY, "v1", 1);
 
+      TEST_UTIL.waitUntilAllRegionsAssigned(table.getName());
       // Move region to target server
       HRegionInfo regionInfo = table.getRegionLocation("r1").getRegionInfo();
       int originServerNum = cluster.getServerWith(regionInfo.getRegionName());
@@ -84,6 +85,8 @@ public class TestHRegionOnCluster {
       int targetServerNum = (originServerNum + 1) % NUM_RS;
       HRegionServer targetServer = cluster.getRegionServer(targetServerNum);
       assertFalse(originServer.equals(targetServer));
+
+      TEST_UTIL.waitUntilAllRegionsAssigned(table.getName());
       Log.info("Moving " + regionInfo.getEncodedName() + " to " + targetServer.getServerName());
       hbaseAdmin.move(regionInfo.getEncodedNameAsBytes(),
           Bytes.toBytes(targetServer.getServerName().getServerName()));
@@ -95,6 +98,7 @@ public class TestHRegionOnCluster {
       Log.info("Loading r2 to v2 into " + Bytes.toString(TABLENAME));
       putDataAndVerify(table, "r2", FAMILY, "v2", 2);
 
+      TEST_UTIL.waitUntilAllRegionsAssigned(table.getName());
       // Move region to origin server
       Log.info("Moving " + regionInfo.getEncodedName() + " to " + originServer.getServerName());
       hbaseAdmin.move(regionInfo.getEncodedNameAsBytes(),
