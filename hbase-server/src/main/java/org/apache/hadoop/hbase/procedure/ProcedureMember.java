@@ -159,12 +159,15 @@ public class ProcedureMember implements Closeable {
     // kick off the subprocedure
     Future<Void> future = null;
     try {
-      future = this.pool.submit(subproc);
       synchronized (subprocs) {
         subprocs.put(procName, subproc);
       }
+      future = this.pool.submit(subproc);
       return true;
     } catch (RejectedExecutionException e) {
+      synchronized (subprocs) {
+        subprocs.remove(procName);
+      }
       // the thread pool is full and we can't run the subprocedure
       String msg = "Subprocedure pool is full!";
       subproc.cancel(msg, e.getCause());
