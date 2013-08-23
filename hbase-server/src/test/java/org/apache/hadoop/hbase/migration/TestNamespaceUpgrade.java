@@ -184,7 +184,7 @@ public class TestNamespaceUpgrade {
     TEST_UTIL.shutdownMiniCluster();
   }
 
-  @Test
+  @Test (timeout=300000)
   public void testSnapshots() throws IOException, InterruptedException {
     String snapshots[][] = {snapshot1Keys, snapshot2Keys};
     for(int i = 1; i <= snapshots.length; i++) {
@@ -203,7 +203,7 @@ public class TestNamespaceUpgrade {
     }
   }
 
-  @Test
+  @Test (timeout=300000)
   public void testRenameUsingSnapshots() throws Exception {
     String newNS = "newNS";
     TEST_UTIL.getHBaseAdmin().createNamespace(NamespaceDescriptor.create(newNS).build());
@@ -227,7 +227,7 @@ public class TestNamespaceUpgrade {
       Assert.assertEquals(newTableName, currentKeys.length, count);
       TEST_UTIL.getHBaseAdmin().flush(newTableName);
       TEST_UTIL.getHBaseAdmin().majorCompact(newTableName);
-      TEST_UTIL.waitFor(2000, new Waiter.Predicate<IOException>() {
+      TEST_UTIL.waitFor(30000, new Waiter.Predicate<IOException>() {
         @Override
         public boolean evaluate() throws IOException {
           try {
@@ -258,7 +258,7 @@ public class TestNamespaceUpgrade {
     }
   }
 
-  @Test
+  @Test (timeout=300000)
   public void testOldDirsAreGonePostMigration() throws IOException {
     FileSystem fs = FileSystem.get(TEST_UTIL.getConfiguration());
     Path hbaseRootDir = TEST_UTIL.getDefaultRootDirPath();
@@ -272,7 +272,7 @@ public class TestNamespaceUpgrade {
     }
   }
 
-  @Test
+  @Test (timeout=300000)
   public void testNewDirsArePresentPostMigration() throws IOException {
     FileSystem fs = FileSystem.get(TEST_UTIL.getConfiguration());
     // Below list does not include 'corrupt' because there is no 'corrupt' in the tgz
