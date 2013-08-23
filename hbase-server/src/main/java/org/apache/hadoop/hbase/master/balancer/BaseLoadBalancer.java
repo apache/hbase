@@ -342,7 +342,7 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
   }
 
   // slop for regions
-  private float slop;
+  protected float slop;
   private Configuration config;
   private static final Random RANDOM = new Random(System.currentTimeMillis());
   private static final Log LOG = LogFactory.getLog(BaseLoadBalancer.class);
@@ -352,10 +352,15 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
 
   @Override
   public void setConf(Configuration conf) {
-    this.slop = conf.getFloat("hbase.regions.slop", (float) 0.2);
+    setSlop(conf);
     if (slop < 0) slop = 0;
     else if (slop > 1) slop = 1;
+
     this.config = conf;
+  }
+
+  protected void setSlop(Configuration conf) {
+    this.slop = conf.getFloat("hbase.regions.slop", (float) 0.2);
   }
 
   @Override
