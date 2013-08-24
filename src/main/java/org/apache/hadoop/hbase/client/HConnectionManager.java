@@ -1033,7 +1033,7 @@ public class HConnectionManager {
 
             if (retryDespiteFastFailMode == false) { // we don't have to retry
               throw new PreemptiveFastFailException(fInfo.numConsecutiveFailures.get(),
-                  fInfo.timeOfFirstFailureMilliSec, fInfo.timeOfLatestAttemptMilliSec);
+                  fInfo.timeOfFirstFailureMilliSec, fInfo.timeOfLatestAttemptMilliSec, server.getHostname());
             }
           }
           didTry = true;
@@ -1653,7 +1653,7 @@ public class HConnectionManager {
           retryDespiteFastFailMode = shouldRetryInspiteOfFastFail(fInfo);
           if (retryDespiteFastFailMode == false) { // we don't have to retry
             throw new PreemptiveFastFailException(fInfo.numConsecutiveFailures.get(),
-                fInfo.timeOfFirstFailureMilliSec, fInfo.timeOfLatestAttemptMilliSec);
+                fInfo.timeOfFirstFailureMilliSec, fInfo.timeOfLatestAttemptMilliSec, server.getHostname());
           }
         }
         didTry = true;

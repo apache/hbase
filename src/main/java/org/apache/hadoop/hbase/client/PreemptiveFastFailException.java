@@ -20,10 +20,11 @@ public class PreemptiveFastFailException extends ConnectException {
    * @param count
    * @param timeOfFirstFailureMilliSec
    * @param timeOfLatestAttemptMilliSec
+   * @param serverName
    */
   public PreemptiveFastFailException(long count, long timeOfFirstFailureMilliSec,
-      long timeOfLatestAttemptMilliSec) {
-    super("Exception happened " + count + " times.");
+      long timeOfLatestAttemptMilliSec, String serverName) {
+    super("Exception happened " + count + " times. to" + serverName);
     this.failureCount = count;
     this.timeOfFirstFailureMilliSec = timeOfFirstFailureMilliSec;
     this.timeOfLatestAttemptMilliSec = timeOfLatestAttemptMilliSec;
