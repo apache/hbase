@@ -144,7 +144,10 @@ public class RpcClient {
   public static final boolean IPC_CLIENT_FALLBACK_TO_SIMPLE_AUTH_ALLOWED_DEFAULT = false;
 
   // thread-specific RPC timeout, which may override that of what was passed in.
-  // TODO: Verify still being used.
+  // This is used to change dynamically the timeout (for read only) when retrying: if
+  //  the time allowed for the operation is less than the usual socket timeout, then
+  //  we lower the timeout. This is subject to race conditions, and should be used with
+  //  extreme caution.
   private static ThreadLocal<Integer> rpcTimeout = new ThreadLocal<Integer>() {
     @Override
     protected Integer initialValue() {
@@ -846,7 +849,10 @@ public class RpcClient {
         while (true) {
           setupConnection();
           InputStream inStream = NetUtils.getInputStream(socket);
-          OutputStream outStream = NetUtils.getOutputStream(socket);
+          // This creates a socket with a write timeout. This timeout cannot be changed,
+          //  RpcClient allows to change the timeout dynamically, but we can only
+          //  change the read timeout today.
+          OutputStream outStream = NetUtils.getOutputStream(socket, pingInterval);
           // Write out the preamble -- MAGIC, version, and auth to use.
           writeConnectionHeaderPreamble(outStream);
           if (useSasl) {
