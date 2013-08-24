@@ -829,6 +829,41 @@ public final class HConstants {
   public static final String USE_MSLAB_KEY = "hbase.hregion.memstore.mslab.enabled";
   public static final boolean USE_MSLAB_DEFAULT = false;
 
+  /**
+   * This wait time is used to periodically probe until
+   * we exhaust the timeout in the window
+   */
+  public static final String WAIT_TIME_FOR_FLUSH_MS =
+      "hbase.hregion.flush.waittime";
+  public static final long DEFAULT_WAIT_TIME_FOR_FLUSH_MS = 100; //ms
+
+  /**
+   * The knob to turn on the ClientLocalScanner to flush and wait for the
+   * region flush to finish before it opens the store files.
+   * Set the socket timeout for the RPC appropriately for this.
+   */
+  public static final String CLIENT_LOCAL_SCANNER_FLUSH_AND_WAIT =
+      "hbase.clientlocalscanner.flush.and.wait";
+  public static final boolean DEFAULT_CLIENT_LOCAL_SCANNER_FLUSH_AND_WAIT =
+      false;
+
+  /**
+   * The acceptable staleness of a flush. Say if this value is set to 10s,
+   * if there was a flush in the last 10s, we would not flush again.
+   */
+  public static final String CLIENT_LOCAL_SCANNER_FLUSH_ACCEPTABLE_STALENESS_MS =
+      "hbase.clientlocalscanner.flush.acceptable.staleness";
+  public static final long DEFAULT_CLIENT_LOCAL_SCANNER_FLUSH_ACCEPTABLE_STALENESS_MS =
+      30000; // ms
+
+  /**
+   * The extra wait time that we wait for the flush to take place.
+   */
+  public static final String CLIENT_LOCAL_SCANNER_MAX_WAITTIME_FOR_FLUSH_MS =
+      "hbase.clientlocal.scanner.flush.maxwaittime";
+  public static final int DEFAULT_CLIENT_LOCAL_SCANNER_MAX_WAITTIME_FOR_FLUSH_MS
+    = 10000; // ms
+
   private HConstants() {
     // Can't be instantiated with this constructor.
   }

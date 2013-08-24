@@ -391,4 +391,25 @@ public interface HConnection extends Closeable {
    */
   public void resetOperationContext();
 
+  /**
+   * Returns if the most recent flush on this region happens in the window
+   * [current server time - acceptableWindowForLastFlush,
+   *                              current server time + maximumWaitTime).
+   * Else it will force flush
+   * i.e. the call will return immediately if the last flush happened
+   * in the last acceptableWindowForLastFlush ms or
+   * it will wait until maximumWaitTime ms for a flush to happen.
+   * If there was no flush of that sort, it will force a flush.
+   * @param regionInfo : The HRegionInfo that needs to be flushed.
+   * @param addr : The HServerAddress of the region server holding the region
+   * @param acceptableWindowForLastFlush : The acceptable window for the
+   * last flush. i.e. if there was a flush between current time and
+   * current time - acceptableWindowForLastFlush,
+   * we consider that flush to be good enough.
+   * @param maximumWaitTime : The maximum amount of time we wait for the
+   * @throws IOException
+   */
+  public void flushRegionAndWait(final HRegionInfo regionInfo,
+      final HServerAddress addr, long acceptableWindowForLastFlush,
+      long maximumWaitTime) throws IOException;
 }

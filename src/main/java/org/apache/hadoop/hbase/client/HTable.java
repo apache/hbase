@@ -602,7 +602,7 @@ public class HTable implements HTableInterface {
    * Otherwise, we assume that the table hierarchy under the root directory
    * is not going to change and hence we read directly from it; use with caution
    * @return
-   * @throws IOException
+   * @throws IOException : retry on IOException
    */
   public ResultScanner getLocalScanner(final Scan scan,
       boolean createNewHardlinks) throws IOException {
@@ -988,6 +988,36 @@ public class HTable implements HTableInterface {
    */
   public ArrayList<Put> getWriteBuffer() {
     return writeBuffer;
+  }
+
+
+  /**
+   * Flushes a region for the give row.
+   * @param row
+   * @param acceptableLastFlushTimeMs : The acceptable last flush time in ms
+   * @throws IOException : The client can safely retry on IOException
+   */
+  public void flushRegionForRow(byte[] row, long acceptableLastFlushTimeMs)
+      throws IOException {
+    flushRegionLazyForRow(row, acceptableLastFlushTimeMs, 0);
+  }
+
+  /**
+   * Flushes a region for the given row.
+   * @param row
+   * @param acceptableLastFlushTimeMs : This is how old the last flush can be
+   * for it to be considered as a successful
+   * @param maxWaitTime : The maximum amount of time we should wait
+   * hoping for a flush to happen
+   * @throws IOException : The client can safely retry on exception.
+   */
+  public void flushRegionLazyForRow(byte[] row, long acceptableLastFlushTimeMs,
+      long maxWaitTime) throws IOException {
+    HRegionLocation loc = this.getRegionLocation(row);
+    HRegionInfo info = loc.getRegionInfo();
+    HServerAddress addr = loc.getServerAddress();
+    this.getConnectionAndResetOperationContext()
+      .flushRegionAndWait(info, addr, acceptableLastFlushTimeMs, maxWaitTime);
   }
 
   /**

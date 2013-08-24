@@ -33,7 +33,9 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionUtilities;
@@ -90,15 +92,36 @@ public class ClientLocalScanner extends ResultScannerImpl {
     this.areHardlinksCreated = areHardlinksCreated;
   }
 
+  private void flushRegionAndWaitForFlush(HRegionInfo info, HServerAddress addr)
+      throws IOException
+  {
+    HTable table = this.htable;
+    try {
+      long window = table.getConfiguration().getLong(
+          HConstants.CLIENT_LOCAL_SCANNER_FLUSH_ACCEPTABLE_STALENESS_MS,
+          HConstants.DEFAULT_CLIENT_LOCAL_SCANNER_FLUSH_ACCEPTABLE_STALENESS_MS);
+      table.flushRegionForRow(info.getStartKey(), window);
+    } catch (Exception e) {
+      throw new IOException(e);
+    }
+  }
+
   /**
    * Creates and initializes the stores in the table.
    * @throws IOException
    */
-  public void openStoresOnClient() throws IOException{
+  public void openStoresOnClient() throws IOException {
     final HRegionInfo info = this.currentRegion;
     this.currentRegion.getTableDesc().setReadOnly(true);
     HTable table = this.htable;
     final Configuration conf = table.getConfiguration();
+    boolean flushAndWait = conf.getBoolean(
+        HConstants.CLIENT_LOCAL_SCANNER_FLUSH_AND_WAIT,
+        HConstants.DEFAULT_CLIENT_LOCAL_SCANNER_FLUSH_AND_WAIT);
+    if (flushAndWait) {
+      flushRegionAndWaitForFlush(this.currentRegion,
+        table.getRegionsInfo().get(info));
+    }
     Path rootDir = FSUtils.getRootDir(conf);
     final Path tableDir =
       HTableDescriptor.getTableDir(rootDir, info.getTableDesc().getName());
@@ -139,8 +162,10 @@ public class ClientLocalScanner extends ResultScannerImpl {
    * @return true is the scanners were opened properly on the new HRegion.
    * false otherwise
    * @throws IOException
+   * @throws Exception
    */
-  protected boolean doRealOpenScanners(byte[] localStartKey) throws IOException {
+  protected boolean doRealOpenScanners(byte[] localStartKey)
+      throws IOException {
     try {
       this.currentRegion =
           htable.getRegionLocation(localStartKey).getRegionInfo();
@@ -194,6 +219,7 @@ public class ClientLocalScanner extends ResultScannerImpl {
    * Reads the current region server for the next caching number of rows.
    * It might progress the region server in case there were no values found
    * in the current region server.
+   * @throws IOException
    */
   public void cacheNextResults() throws IOException {
     Result [] values = null;

@@ -2991,6 +2991,49 @@ public class HConnectionManager {
       }
     }
 
+    public void flushRegionAndWait(final HRegionInfo regionInfo,
+        final HServerAddress addr, long acceptableWindowForLastFlush,
+        long maximumWaitTime) throws IOException {
+      HBaseRPCOptions options = new HBaseRPCOptions();
+      try {
+        long serverTime =
+            (long)this.createCurrentTimeCallable(addr, options).call();
+        long startTime = EnvironmentEdgeManager.currentTimeMillis();
+        long leastAcceptableFlushTime =
+            serverTime - acceptableWindowForLastFlush;
+        boolean forceFlush = false;
+        boolean waitForFlushToHappen = true;
+        do {
+          long lastFlushTime = this.getRegionServerWithoutRetries(
+            new ServerCallableForBatchOps<Long>(this, addr, options) {
+              public Long call() {
+                return server.getLastFlushTime(regionInfo.getRegionName());
+              }
+          }, true);
+          if (lastFlushTime >= leastAcceptableFlushTime) break; // flush happened
+          long elapsedTime =
+              EnvironmentEdgeManager.currentTimeMillis() - startTime;
+          if (elapsedTime >= maximumWaitTime) {
+            forceFlush = true;
+            break;
+          }
+          // Sleep and hope for flush to happen
+          Threads.sleep(
+            this.conf.getLong(HConstants.WAIT_TIME_FOR_FLUSH_MS,
+            HConstants.DEFAULT_WAIT_TIME_FOR_FLUSH_MS));
+        } while (waitForFlushToHappen);
+        if (forceFlush) {
+          Callable<Void> flushCallable =
+              this.createFlushCallable(addr, regionInfo, serverTime, options);
+          flushCallable.call();
+        }
+      } catch (Exception e) {
+        // Throwing IOException since the error is recoverable
+        // and the function can be safely retried.
+        throw new IOException(e);
+      }
+    }
+
     private void trackMutationsToTable(byte[] tableNameBytes,
         HRegionLocation location) throws IOException {
       String tableName = Bytes.toString(tableNameBytes);
