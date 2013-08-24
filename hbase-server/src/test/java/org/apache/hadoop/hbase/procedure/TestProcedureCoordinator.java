@@ -39,6 +39,7 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.errorhandling.ForeignException;
@@ -136,7 +137,7 @@ public class TestProcedureCoordinator {
     // run the operation
     proc = coordinator.startProcedure(proc.getErrorMonitor(), procName, procData, expected);
     // and wait for it to finish
-    proc.waitForCompleted();
+    while(!proc.completedLatch.await(WAKE_FREQUENCY, TimeUnit.MILLISECONDS));
     verify(procSpy, atLeastOnce()).receive(any(ForeignException.class));
     verify(coordinator, times(1)).rpcConnectionFailure(anyString(), eq(cause));
     verify(controller, times(1)).sendGlobalBarrierAcquire(procSpy, procData, expected);
@@ -168,7 +169,7 @@ public class TestProcedureCoordinator {
     // run the operation
     Procedure task = coordinator.startProcedure(spy.getErrorMonitor(), procName, procData, expected);
     // and wait for it to finish
-    task.waitForCompleted();
+    while(!task.completedLatch.await(WAKE_FREQUENCY, TimeUnit.MILLISECONDS));
     verify(spy, atLeastOnce()).receive(any(ForeignException.class));
     verify(coordinator, times(1)).rpcConnectionFailure(anyString(), eq(cause));
     verify(controller, times(1)).sendGlobalBarrierAcquire(eq(spy),

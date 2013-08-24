@@ -375,5 +375,9 @@ public class Procedure implements Callable<Void>, ForeignExceptionListener {
           + wakeFrequency + " ms)"); */
       released = latch.await(wakeFrequency, TimeUnit.MILLISECONDS);
     }
+    // check error again in case an error raised during last wait
+    if (monitor != null) {
+      monitor.rethrowException();
+    }
   }
 }
