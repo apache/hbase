@@ -57,7 +57,6 @@ import org.apache.hadoop.hbase.procedure.Procedure;
 import org.apache.hadoop.hbase.procedure.ProcedureCoordinator;
 import org.apache.hadoop.hbase.procedure.ProcedureCoordinatorRpcs;
 import org.apache.hadoop.hbase.procedure.ZKProcedureCoordinatorRpcs;
-import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription.Type;
 import org.apache.hadoop.hbase.snapshot.ClientSnapshotDescriptionUtils;
@@ -268,8 +267,10 @@ public class SnapshotManager implements Stoppable {
   void resetTempDir() throws IOException {
     // cleanup any existing snapshots.
     Path tmpdir = SnapshotDescriptionUtils.getWorkingSnapshotDir(rootDir);
-    if (!master.getMasterFileSystem().getFileSystem().delete(tmpdir, true)) {
-      LOG.warn("Couldn't delete working snapshot directory: " + tmpdir);
+    if (master.getMasterFileSystem().getFileSystem().exists(tmpdir)) {
+      if (!master.getMasterFileSystem().getFileSystem().delete(tmpdir, true)) {
+        LOG.warn("Couldn't delete working snapshot directory: " + tmpdir);
+      }
     }
   }
 
