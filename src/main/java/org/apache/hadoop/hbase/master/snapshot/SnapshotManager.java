@@ -263,8 +263,10 @@ public class SnapshotManager implements Stoppable {
   void resetTempDir() throws IOException {
     // cleanup any existing snapshots.
     Path tmpdir = SnapshotDescriptionUtils.getWorkingSnapshotDir(rootDir);
-    if (!master.getMasterFileSystem().getFileSystem().delete(tmpdir, true)) {
-      LOG.warn("Couldn't delete working snapshot directory: " + tmpdir);
+    if (master.getMasterFileSystem().getFileSystem().exists(tmpdir)) {
+      if (!master.getMasterFileSystem().getFileSystem().delete(tmpdir, true)) {
+        LOG.warn("Couldn't delete working snapshot directory: " + tmpdir);
+      }
     }
   }
 
