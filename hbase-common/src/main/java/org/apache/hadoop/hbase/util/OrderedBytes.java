@@ -973,18 +973,18 @@ public class OrderedBytes {
     byte[] a = src.getBytes();
     final int offset = src.getOffset(), start = src.getPosition();
     final byte terminator = ord.apply(TERM);
-    int i = offset + start;
-    for (; a[i] != terminator; i++)
+    int rawStartPos = offset + start, rawTermPos = rawStartPos;
+    for (; a[rawTermPos] != terminator; rawTermPos++)
       ;
-    src.setPosition(i - offset + 1); // advance position to TERM + 1
+    src.setPosition(rawTermPos - offset + 1); // advance position to TERM + 1
     if (DESCENDING == ord) {
       // make a copy so that we don't disturb encoded value with ord.
-      byte[] copy = new byte[i - offset - 1];
-      System.arraycopy(a, offset + start, copy, 0, copy.length);
+      byte[] copy = new byte[rawTermPos - rawStartPos];
+      System.arraycopy(a, rawStartPos, copy, 0, copy.length);
       ord.apply(copy);
       return new String(copy, UTF8);
     } else {
-      return new String(a, offset + start, i - offset - 1, UTF8);
+      return new String(a, rawStartPos, rawTermPos - rawStartPos, UTF8);
     }
   }
 

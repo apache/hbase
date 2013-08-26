@@ -28,11 +28,13 @@ import com.google.common.annotations.VisibleForTesting;
 /**
  * Extends the basic {@link SimpleByteRange} implementation with position
  * support. {@code position} is considered transient, not fundamental to the
- * definition of the range, and does not participate in comparison or copy
- * operations.
+ * definition of the range, and does not participate in
+ * {@link #compareTo(ByteRange)}, {@link #hashCode()}, or
+ * {@link #equals(Object)}. {@code Position} is retained by copy operations.
  */
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
+@edu.umd.cs.findbugs.annotations.SuppressWarnings("EQ_DOESNT_OVERRIDE_EQUALS")
 public class SimplePositionedByteRange extends SimpleByteRange implements PositionedByteRange {
 
   /**
