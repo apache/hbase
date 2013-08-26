@@ -108,7 +108,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
   // values are defaults
   private int maxSteps = 1000000;
   private int stepsPerRegion = 800;
-  private long maxRunningTime = 60 * 1000 * 1; // 1 min
+  private long maxRunningTime = 30 * 1000 * 1; // 30 seconds.
   private int numRegionLoadsToRemember = 15;
 
   private RegionPicker[] pickers;
