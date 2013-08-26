@@ -21,9 +21,7 @@
   import="org.apache.hadoop.conf.Configuration"
   import="org.apache.hadoop.hbase.HBaseConfiguration"
   import="org.apache.hadoop.hbase.util.VersionInfo"
-  import="java.util.Date"
-%>
-
+  import="java.util.Date"%>
 <%
 Configuration conf = (Configuration)getServletContext().getAttribute("hbase.conf");
 long startcode = conf.getLong("startcode", System.currentTimeMillis());
@@ -46,7 +44,6 @@ String listenPort = conf.get("hbase.rest.port", "8080");
   </head>
 
   <body>
-
   <div class="navbar  navbar-fixed-top navbar-default">
       <div class="container">
           <div class="navbar-header">
@@ -59,18 +56,19 @@ String listenPort = conf.get("hbase.rest.port", "8080");
           </div>
           <div class="collapse navbar-collapse">
               <ul class="nav navbar-nav">
-                <li class="active"><a href="/">Home</a></li>
-                <li><a href="/logs/">Local logs</a></li>
-                <li><a href="/logLevel">Log Level</a></li>
-                <li><a href="/jmx">Metrics Dump</a></li>
-                <% if (HBaseConfiguration.isShowConfInServlet()) { %>
-                <li><a href="/conf">HBase Configuration</a></li>
-                <% } %>
-            </ul>
+                  <li class="active"><a href="/rest.jps">Home</a></li>
+                  <li><a href="/tablesDetailed.jsp">Table Details</a></li>
+                  <li><a href="/logs/">Local logs</a></li>
+                  <li><a href="/logLevel">Log Level</a></li>
+                  <li><a href="/dump">Debug dump</a></li>
+                  <li><a href="/jmx">Metrics Dump</a></li>
+                  <% if (HBaseConfiguration.isShowConfInServlet()) { %>
+                  <li><a href="/conf">HBase Configuration</a></li>
+                  <% } %>
+              </ul>
           </div><!--/.nav-collapse -->
-        </div>
       </div>
-    </div>
+  </div>
 
 <div class="container">
     <div class="row inner_header">

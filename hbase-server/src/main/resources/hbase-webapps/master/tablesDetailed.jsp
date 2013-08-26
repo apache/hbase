@@ -19,12 +19,12 @@
 --%>
 <%@ page contentType="text/html;charset=UTF-8"
   import="static org.apache.commons.lang.StringEscapeUtils.escapeXml"
-  import="java.util.*"
-  import="org.apache.hadoop.util.StringUtils"
   import="org.apache.hadoop.conf.Configuration"
   import="org.apache.hadoop.hbase.master.HMaster"
   import="org.apache.hadoop.hbase.client.HBaseAdmin"
-  import="org.apache.hadoop.hbase.HTableDescriptor" %><%
+  import="org.apache.hadoop.hbase.HTableDescriptor"
+  import="org.apache.hadoop.hbase.HBaseConfiguration" %>
+<%
   HMaster master = (HMaster)getServletContext().getAttribute(HMaster.MASTER);
   Configuration conf = master.getConfiguration();
 %>
@@ -41,9 +41,9 @@
     <meta name="author" content="">
 
 
-    <link href="/static/css/bootstrap.min.css" rel="stylesheet">
-    <link href="/static/css/bootstrap-theme.min.css" rel="stylesheet">
-    <link href="/static/css/hbase.css" rel="stylesheet">
+      <link href="/static/css/bootstrap.min.css" rel="stylesheet">
+      <link href="/static/css/bootstrap-theme.min.css" rel="stylesheet">
+      <link href="/static/css/hbase.css" rel="stylesheet">
   </head>
 
   <body>
@@ -60,19 +60,21 @@
           </div>
           <div class="collapse navbar-collapse">
               <ul class="nav navbar-nav">
-                <li><a href="/master-status">Home</a></li>
-                <li class="active"><a href="/tablesDetailed.jsp">Table Details</a></li>
-                <li><a href="/logs/">Local logs</a></li>
-                <li><a href="/logLevel">Log Level</a></li>
-                <li><a href="/dump">Debug dump</a></li>
-                <li><a href="/jmx">Metrics Dump</a></li>
-            </ul>
+                  <li class="active"><a href="/master-status">Home</a></li>
+                  <li><a href="/tablesDetailed.jsp">Table Details</a></li>
+                  <li><a href="/logs/">Local logs</a></li>
+                  <li><a href="/logLevel">Log Level</a></li>
+                  <li><a href="/dump">Debug dump</a></li>
+                  <li><a href="/jmx">Metrics Dump</a></li>
+                  <% if (HBaseConfiguration.isShowConfInServlet()) { %>
+                  <li><a href="/conf">HBase Configuration</a></li>
+                  <% } %>
+              </ul>
           </div><!--/.nav-collapse -->
-        </div>
       </div>
-    </div>
+  </div>
 
-    <div class="container">
+  <div class="container">
     <div class="row inner_header">
         <div class="page-header">
             <h1>User Tables</h1>

@@ -19,25 +19,16 @@
 --%>
 <%@ page contentType="text/html;charset=UTF-8"
   import="java.util.Date"
-  import="java.util.HashMap"
   import="org.apache.hadoop.conf.Configuration"
   import="org.apache.hadoop.hbase.client.HBaseAdmin"
   import="org.apache.hadoop.hbase.client.HConnectionManager"
-  import="org.apache.hadoop.hbase.HRegionInfo"
-  import="org.apache.hadoop.hbase.ServerName"
-  import="org.apache.hadoop.hbase.ServerLoad"
-  import="org.apache.hadoop.hbase.RegionLoad"
   import="org.apache.hadoop.hbase.master.HMaster"
   import="org.apache.hadoop.hbase.snapshot.SnapshotInfo"
-  import="org.apache.hadoop.hbase.util.Bytes"
-  import="org.apache.hadoop.hbase.util.FSUtils"
-  import="org.apache.hadoop.hbase.protobuf.ProtobufUtil"
   import="org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription"
   import="org.apache.hadoop.util.StringUtils"
-  import="java.util.List"
-  import="java.util.Map"
-  import="org.apache.hadoop.hbase.HConstants"%>
-<%@ page import="org.apache.hadoop.hbase.TableName" %><%
+  import="org.apache.hadoop.hbase.TableName"
+  import="org.apache.hadoop.hbase.HBaseConfiguration" %>
+<%
   HMaster master = (HMaster)getServletContext().getAttribute(HMaster.MASTER);
   Configuration conf = master.getConfiguration();
   HBaseAdmin hbadmin = new HBaseAdmin(conf);
@@ -95,25 +86,24 @@
         </div>
         <div class="collapse navbar-collapse">
             <ul class="nav navbar-nav">
-              <li><a href="/">Home</a></li>
-              <li><a href="/tablesDetailed.jsp">Table Details</a></li>
-              <li><a href="/logs/">Local logs</a></li>
-              <li><a href="/logLevel">Log Level</a></li>
-              <li><a href="/dump">Debug dump</a></li>
-              <li><a href="/jmx">Metrics Dump</a></li>
-          </ul>
+                <li><a href="/master-status">Home</a></li>
+                <li><a href="/tablesDetailed.jsp">Table Details</a></li>
+                <li><a href="/logs/">Local logs</a></li>
+                <li><a href="/logLevel">Log Level</a></li>
+                <li><a href="/dump">Debug dump</a></li>
+                <li><a href="/jmx">Metrics Dump</a></li>
+                <% if (HBaseConfiguration.isShowConfInServlet()) { %>
+                <li><a href="/conf">HBase Configuration</a></li>
+                <% } %>
+            </ul>
         </div><!--/.nav-collapse -->
-      </div>
     </div>
-  </div>
+</div>
 <% if (isActionResultPage) { %>
   <div class="container">
     <div class="row inner_header">
-        <div class="span8">
+        <div class="page-header">
           <h1>Snapshot action request...</h1>
-        </div>
-        <div class="span4 logo">
-            <img src="/static/hbase_logo.png" height="66" width="266" alt="HBase logo"/>
         </div>
     </div>
     <p><hr><p>
@@ -135,22 +125,16 @@
 <% } else if (snapshot == null) { %>
   <div class="container">
   <div class="row inner_header">
-    <div class="span8">
+    <div class="page-header">
       <h1>Snapshot "<%= snapshotName %>" does not exists</h1>
-    </div>
-    <div class="span4 logo">
-        <img src="/static/hbase_logo.png" height="66" width="266" alt="HBase logo"/>
     </div>
   </div>
   <p>Go <a href="javascript:history.back()">Back</a>, or wait for the redirect.
 <% } else { %>
   <div class="container">
   <div class="row">
-      <div class="span8">
+      <div class="page-header">
           <h1>Snapshot: <%= snapshotName %></h1>
-      </div>
-      <div class="span4">
-          <img src="/static/hbase_logo.png" height="66" width="266" alt="HBase logo"/>
       </div>
   </div>
   <h2>Snapshot Attributes</h2>

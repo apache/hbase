@@ -658,8 +658,9 @@
               <exclude>**/*.avpr</exclude>
               <exclude>**/*.svg</exclude>
               <exclude>**/META-INF/services/**</exclude>
-              <!-- MIT: http://code.google.com/p/html5shiv/ -->
-              <exclude>**/html5shiv.js</exclude>
+              <!-- MIT: https://github.com/twbs/bootstrap/blob/master/LICENSE -->
+              <exclude>**/bootstrap-theme.css</exclude>
+              <exclude>**/bootstrap-theme.min.css</exclude>
               <!-- MIT http://jquery.org/license -->
               <exclude>**/jquery.min.js</exclude>
               <!-- vector graphics -->
