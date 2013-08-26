@@ -22,6 +22,10 @@ unset LANG
 unset LC_CTYPE
 version=$1
 outputDirectory=$2
+
+pushd
+cd ..
+
 user=`whoami`
 date=`date`
 cwd=`pwd`
@@ -36,6 +40,8 @@ else
   revision="Unknown"
   url="file://$cwd"
 fi
+popd
+
 mkdir -p "$outputDirectory/org/apache/hadoop/hbase"
 cat >"$outputDirectory/org/apache/hadoop/hbase/package-info.java" <<EOF
 /*
@@ -45,3 +51,4 @@ cat >"$outputDirectory/org/apache/hadoop/hbase/package-info.java" <<EOF
                          user="$user", date="$date", url="$url")
 package org.apache.hadoop.hbase;
 EOF
+
