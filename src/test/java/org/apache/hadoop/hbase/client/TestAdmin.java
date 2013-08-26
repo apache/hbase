@@ -954,6 +954,9 @@ public class TestAdmin {
       msg.startsWith(IllegalArgumentException.class.getName()) &&
       msg.contains(HTableDescriptor.META_TABLEDESC.getNameAsString()));
 
+  /*
+   * See HBASE-9306 
+
     // Now try and do concurrent creation with a bunch of threads.
     final HTableDescriptor threadDesc =
       new HTableDescriptor("threaded_testCreateBadTables");
@@ -994,6 +997,8 @@ public class TestAdmin {
     // how many failed w/ appropriate exception.
     assertEquals(1, successes.get());
     assertEquals(count - 1, failures.get());
+
+  */
   }
 
   /**
