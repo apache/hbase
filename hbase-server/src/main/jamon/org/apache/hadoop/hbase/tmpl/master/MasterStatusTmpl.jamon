@@ -126,10 +126,9 @@ AssignmentManager assignmentManager = master.getAssignmentManager();
                 <%if HBaseConfiguration.isShowConfInServlet()%>
                 <li><a href="/conf">HBase Configuration</a></li>
                 </%if>
-            </ul>
-          </div><!--/.nav-collapse -->
+               </ul>
+            </div><!--/.nav-collapse -->
         </div>
-      </div>
     </div>
 
     <div class="container">

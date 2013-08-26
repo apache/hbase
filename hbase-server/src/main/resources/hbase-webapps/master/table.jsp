@@ -20,13 +20,11 @@
 <%@ page contentType="text/html;charset=UTF-8"
   import="static org.apache.commons.lang.StringEscapeUtils.escapeXml"
   import="java.util.HashMap"
-  import="java.util.List"
   import="java.util.Map"
   import="org.apache.hadoop.conf.Configuration"
   import="org.apache.hadoop.hbase.client.HTable"
   import="org.apache.hadoop.hbase.client.HBaseAdmin"
   import="org.apache.hadoop.hbase.client.HConnectionManager"
-  import="org.apache.hadoop.hbase.HConstants"
   import="org.apache.hadoop.hbase.HRegionInfo"
   import="org.apache.hadoop.hbase.ServerName"
   import="org.apache.hadoop.hbase.ServerLoad"
@@ -34,8 +32,8 @@
   import="org.apache.hadoop.hbase.master.HMaster" 
   import="org.apache.hadoop.hbase.util.Bytes"
   import="org.apache.hadoop.hbase.util.FSUtils"
-  import="org.apache.hadoop.hbase.protobuf.ProtobufUtil"%>
-<%@ page import="org.apache.hadoop.hbase.TableName" %>
+  import="org.apache.hadoop.hbase.TableName"
+  import="org.apache.hadoop.hbase.HBaseConfiguration" %>
 <%
   HMaster master = (HMaster)getServletContext().getAttribute(HMaster.MASTER);
   Configuration conf = master.getConfiguration();
@@ -73,9 +71,9 @@
     <meta name="author" content="">
 
 
-    <link href="/static/css/bootstrap.min.css" rel="stylesheet">
-    <link href="/static/css/bootstrap-theme.min.css" rel="stylesheet">
-    <link href="/static/css/hbase.css" rel="stylesheet">
+      <link href="/static/css/bootstrap.min.css" rel="stylesheet">
+      <link href="/static/css/bootstrap-theme.min.css" rel="stylesheet">
+      <link href="/static/css/hbase.css" rel="stylesheet">
 <meta http-equiv="refresh" content="5,javascript:history.back()" />
 </head>
 <body>
@@ -91,17 +89,19 @@
         </div>
         <div class="collapse navbar-collapse">
             <ul class="nav navbar-nav">
-                <li><a href="/">Home</a></li>
+                <li><a href="/master-status">Home</a></li>
                 <li><a href="/tablesDetailed.jsp">Table Details</a></li>
                 <li><a href="/logs/">Local logs</a></li>
                 <li><a href="/logLevel">Log Level</a></li>
                 <li><a href="/dump">Debug dump</a></li>
                 <li><a href="/jmx">Metrics Dump</a></li>
+                <% if (HBaseConfiguration.isShowConfInServlet()) { %>
+                <li><a href="/conf">HBase Configuration</a></li>
+                <% } %>
             </ul>
-          </div><!--/.nav-collapse -->
-        </div>
-      </div>
+        </div><!--/.nav-collapse -->
     </div>
+</div>
 <div class="container">
 
 
@@ -145,35 +145,36 @@
     <meta name="author" content="">
 
 
-    <link href="/static/css/bootstrap.css" rel="stylesheet">
-    <link href="/static/css/hbase.css" rel="stylesheet">
-    <link href="/static/css/bootstrap-responsive.css" rel="stylesheet">
+      <link href="/static/css/bootstrap.min.css" rel="stylesheet">
+      <link href="/static/css/bootstrap-theme.min.css" rel="stylesheet">
+      <link href="/static/css/hbase.css" rel="stylesheet">
     <!--[if lt IE 9]>
       <script src="/static/js/html5shiv.js"></script>
     <![endif]-->
   </head>
 <body>
-    <div class="navbar navbar-fixed-top">
-      <div class="navbar-inner">
-        <div class="container">
-          <a class="btn btn-navbar" data-toggle="collapse" data-target=".nav-collapse">
-            <span class="icon-bar"></span>
-            <span class="icon-bar"></span>
-            <span class="icon-bar"></span>
-          </a>
-          <a class="brand" href="/master-status"><img src="/static/hbase_logo_small.png" alt="HBase Logo"/></a>
-          <div class="nav-collapse">
-            <ul class="nav">
-                <li><a href="/">Home</a></li>
+<div class="navbar  navbar-fixed-top navbar-default">
+    <div class="container">
+        <div class="navbar-header">
+            <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+            </button>
+            <a class="navbar-brand" href="/master-status"><img src="/static/hbase_logo_small.png" alt="HBase Logo"/></a>
+        </div>
+        <div class="collapse navbar-collapse">
+            <ul class="nav navbar-nav">
+                <li><a href="/master-status">Home</a></li>
                 <li><a href="/tablesDetailed.jsp">Table Details</a></li>
                 <li><a href="/logs/">Local logs</a></li>
                 <li><a href="/logLevel">Log Level</a></li>
                 <li><a href="/dump">Debug dump</a></li>
+                <li><a href="/jmx">Metrics Dump</a></li>
             </ul>
-          </div><!--/.nav-collapse -->
-        </div>
-      </div>
+        </div><!--/.nav-collapse -->
     </div>
+</div>
 <div class="container">
 
 

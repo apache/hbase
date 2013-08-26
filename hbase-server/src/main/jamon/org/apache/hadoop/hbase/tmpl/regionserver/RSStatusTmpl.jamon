@@ -56,10 +56,6 @@ org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionLoad;
     <link href="/static/css/bootstrap.min.css" rel="stylesheet">
     <link href="/static/css/bootstrap-theme.min.css" rel="stylesheet">
     <link href="/static/css/hbase.css" rel="stylesheet">
-    <link href="/static/css/bootstrap-responsive.css" rel="stylesheet">
-    <!--[if lt IE 9]>
-      <script src="/static/js/html5shiv.js"></script>
-    <![endif]-->
   </head>
 
   <body>
@@ -72,7 +68,7 @@ org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionLoad;
                     <span class="icon-bar"></span>
                     <span class="icon-bar"></span>
                 </button>
-                <a class="navbar-brand" href="/master-status"><img src="/static/hbase_logo_small.png" alt="HBase Logo"/></a>
+                <a class="navbar-brand" href="/rs-status"><img src="/static/hbase_logo_small.png" alt="HBase Logo"/></a>
             </div>
             <div class="collapse navbar-collapse">
                 <ul class="nav navbar-nav">
