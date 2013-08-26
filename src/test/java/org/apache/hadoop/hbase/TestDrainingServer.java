@@ -33,6 +33,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
 import org.apache.hadoop.hbase.util.Threads;
+import org.apache.hadoop.hbase.zookeeper.ZKAssign;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.zookeeper.KeeperException;
@@ -51,14 +52,16 @@ public class TestDrainingServer {
   private static final byte [] TABLENAME = Bytes.toBytes("t");
   private static final byte [] FAMILY = Bytes.toBytes("f");
   private static final int COUNT_OF_REGIONS = HBaseTestingUtility.KEYS.length;
+  private static final int NB_SLAVES = 5;
 
   /**
    * Spin up a cluster with a bunch of regions on it.
    */
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
-    TEST_UTIL.startMiniCluster(5);
+    TEST_UTIL.startMiniCluster(NB_SLAVES);
     TEST_UTIL.getConfiguration().setBoolean("hbase.master.enabletable.roundrobin", true);
+    ZooKeeperWatcher zkw = HBaseTestingUtility.getZooKeeperWatcher(TEST_UTIL);
     HTableDescriptor htd = new HTableDescriptor(TABLENAME);
     htd.addFamily(new HColumnDescriptor(FAMILY));
     TEST_UTIL.createMultiRegionsInMeta(TEST_UTIL.getConfiguration(), htd,
@@ -71,11 +74,22 @@ public class TestDrainingServer {
     HBaseAdmin admin = new HBaseAdmin(TEST_UTIL.getConfiguration());
     admin.disableTable(TABLENAME);
     admin.enableTable(TABLENAME);
-    // Assert that every regionserver has some regions on it.
-    MiniHBaseCluster cluster = TEST_UTIL.getMiniHBaseCluster();
-    for (int i = 0; i < cluster.getRegionServerThreads().size(); i++) {
-      HRegionServer hrs = cluster.getRegionServer(i);
-      Assert.assertFalse(hrs.getOnlineRegions().isEmpty());
+    boolean ready = false;
+    while (!ready) {
+      ZKAssign.blockUntilNoRIT(zkw);
+      // Assert that every regionserver has some regions on it, else invoke the balancer.
+      ready = true;
+      for (int i = 0; i < NB_SLAVES; i++) {
+        HRegionServer hrs = TEST_UTIL.getMiniHBaseCluster().getRegionServer(i);
+        if (hrs.getOnlineRegions().isEmpty()) {
+          ready = false;
+          break;
+        }
+      }
+      if (!ready) {
+        admin.balancer();
+        Thread.sleep(100);
+      }
     }
   }
 
