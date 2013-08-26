@@ -160,27 +160,31 @@ public class TestOrderedBytes {
      */
     for (Order ord : new Order[] { Order.ASCENDING, Order.DESCENDING }) {
       for (int i = 0; i < I_VALS.length; i++) {
-        // allocate a buffer 2-bytes larger than necessary and place our range over the center.
-        byte[] a = new byte[I_LENGTHS[i] + 2];
-        PositionedByteRange buf1 = new SimplePositionedByteRange(a, 1, I_LENGTHS[i]);
+        // allocate a buffer 3-bytes larger than necessary to detect over/underflow
+        byte[] a = new byte[I_LENGTHS[i] + 3];
+        PositionedByteRange buf1 = new SimplePositionedByteRange(a, 1, I_LENGTHS[i] + 1);
+        buf1.setPosition(1);
 
         // verify encode
         assertEquals("Surprising return value.",
           I_LENGTHS[i], OrderedBytes.encodeNumeric(buf1, I_VALS[i], ord));
-        assertEquals("Surprising serialized length.", I_LENGTHS[i], buf1.getPosition());
+        assertEquals("Broken test: serialization did not consume entire buffer.",
+          buf1.getLength(), buf1.getPosition());
+        assertEquals("Surprising serialized length.", I_LENGTHS[i], buf1.getPosition() - 1);
         assertEquals("Buffer underflow.", 0, a[0]);
+        assertEquals("Buffer underflow.", 0, a[1]);
         assertEquals("Buffer overflow.", 0, a[a.length - 1]);
 
         // verify skip
-        buf1.setPosition(0);
+        buf1.setPosition(1);
         assertEquals("Surprising return value.", I_LENGTHS[i], OrderedBytes.skip(buf1));
-        assertEquals("Did not skip enough bytes.", I_LENGTHS[i], buf1.getPosition());
+        assertEquals("Did not skip enough bytes.", I_LENGTHS[i], buf1.getPosition() - 1);
 
         // verify decode
-        buf1.setPosition(0);
+        buf1.setPosition(1);
         assertEquals("Deserialization failed.",
           I_VALS[i].longValue(), OrderedBytes.decodeNumericAsLong(buf1));
-        assertEquals("Did not consume enough bytes.", I_LENGTHS[i], buf1.getPosition());
+        assertEquals("Did not consume enough bytes.", I_LENGTHS[i], buf1.getPosition() - 1);
       }
     }
 
@@ -223,27 +227,31 @@ public class TestOrderedBytes {
      */
     for (Order ord : new Order[] { Order.ASCENDING, Order.DESCENDING }) {
       for (int i = 0; i < D_VALS.length; i++) {
-        // allocate a buffer 2-bytes larger than necessary and place our range over the center.
-        byte[] a = new byte[D_LENGTHS[i] + 2];
-        PositionedByteRange buf1 = new SimplePositionedByteRange(a, 1, D_LENGTHS[i]);
+        // allocate a buffer 3-bytes larger than necessary to detect over/underflow
+        byte[] a = new byte[D_LENGTHS[i] + 3];
+        PositionedByteRange buf1 = new SimplePositionedByteRange(a, 1, D_LENGTHS[i] + 1);
+        buf1.setPosition(1);
 
         // verify encode
         assertEquals("Surprising return value.",
           D_LENGTHS[i], OrderedBytes.encodeNumeric(buf1, D_VALS[i], ord));
-        assertEquals("Surprising serialized length.", D_LENGTHS[i], buf1.getPosition());
+        assertEquals("Broken test: serialization did not consume entire buffer.",
+          buf1.getLength(), buf1.getPosition());
+        assertEquals("Surprising serialized length.", D_LENGTHS[i], buf1.getPosition() - 1);
         assertEquals("Buffer underflow.", 0, a[0]);
+        assertEquals("Buffer underflow.", 0, a[1]);
         assertEquals("Buffer overflow.", 0, a[a.length - 1]);
 
         // verify skip
-        buf1.setPosition(0);
+        buf1.setPosition(1);
         assertEquals("Surprising return value.", D_LENGTHS[i], OrderedBytes.skip(buf1));
-        assertEquals("Did not skip enough bytes.", D_LENGTHS[i], buf1.getPosition());
+        assertEquals("Did not skip enough bytes.", D_LENGTHS[i], buf1.getPosition() - 1);
 
         // verify decode
-        buf1.setPosition(0);
+        buf1.setPosition(1);
         assertEquals("Deserialization failed.",
           D_VALS[i].doubleValue(), OrderedBytes.decodeNumericAsDouble(buf1), MIN_EPSILON);
-        assertEquals("Did not consume enough bytes.", D_LENGTHS[i], buf1.getPosition());
+        assertEquals("Did not consume enough bytes.", D_LENGTHS[i], buf1.getPosition() - 1);
       }
     }
 
@@ -286,31 +294,35 @@ public class TestOrderedBytes {
      */
     for (Order ord : new Order[] { Order.ASCENDING, Order.DESCENDING }) {
       for (int i = 0; i < BD_VALS.length; i++) {
-        // allocate a buffer 2-bytes larger than necessary and place our range over the center.
-        byte[] a = new byte[BD_LENGTHS[i] + 2];
-        PositionedByteRange buf1 = new SimplePositionedByteRange(a, 1, BD_LENGTHS[i]);
+        // allocate a buffer 3-bytes larger than necessary to detect over/underflow
+        byte[] a = new byte[BD_LENGTHS[i] + 3];
+        PositionedByteRange buf1 = new SimplePositionedByteRange(a, 1, BD_LENGTHS[i] + 1);
+        buf1.setPosition(1);
 
         // verify encode
         assertEquals("Surprising return value.",
           BD_LENGTHS[i], OrderedBytes.encodeNumeric(buf1, BD_VALS[i], ord));
-        assertEquals("Surprising serialized length.", BD_LENGTHS[i], buf1.getPosition());
+        assertEquals("Broken test: serialization did not consume entire buffer.",
+          buf1.getLength(), buf1.getPosition());
+        assertEquals("Surprising serialized length.", BD_LENGTHS[i], buf1.getPosition() - 1);
         assertEquals("Buffer underflow.", 0, a[0]);
+        assertEquals("Buffer underflow.", 0, a[1]);
         assertEquals("Buffer overflow.", 0, a[a.length - 1]);
 
         // verify skip
-        buf1.setPosition(0);
+        buf1.setPosition(1);
         assertEquals("Surprising return value.", BD_LENGTHS[i], OrderedBytes.skip(buf1));
-        assertEquals("Did not skip enough bytes.", BD_LENGTHS[i], buf1.getPosition());
+        assertEquals("Did not skip enough bytes.", BD_LENGTHS[i], buf1.getPosition() - 1);
 
         // verify decode
-        buf1.setPosition(0);
+        buf1.setPosition(1);
         BigDecimal decoded = OrderedBytes.decodeNumericAsBigDecimal(buf1);
         if (null == BD_VALS[i]) {
           assertEquals(BD_VALS[i], decoded);
         } else {
           assertEquals("Deserialization failed.", 0, BD_VALS[i].compareTo(decoded));
         }
-        assertEquals("Did not consume enough bytes.", BD_LENGTHS[i], buf1.getPosition());
+        assertEquals("Did not consume enough bytes.", BD_LENGTHS[i], buf1.getPosition() - 1);
       }
     }
   }
@@ -360,27 +372,31 @@ public class TestOrderedBytes {
      */
     for (Order ord : new Order[] { Order.ASCENDING, Order.DESCENDING }) {
       for (int i = 0; i < vals.length; i++) {
-        // allocate a buffer 2-bytes larger than necessary and place our range over the center.
-        byte[] a = new byte[5 + 2];
-        PositionedByteRange buf1 = new SimplePositionedByteRange(a, 1, 5);
+        // allocate a buffer 3-bytes larger than necessary to detect over/underflow
+        byte[] a = new byte[5 + 3];
+        PositionedByteRange buf1 = new SimplePositionedByteRange(a, 1, 5 + 1);
+        buf1.setPosition(1);
 
         // verify encode
         assertEquals("Surprising return value.",
           5, OrderedBytes.encodeInt32(buf1, vals[i], ord));
-        assertEquals("Surprising serialized length.", 5, buf1.getPosition());
+        assertEquals("Broken test: serialization did not consume entire buffer.",
+          buf1.getLength(), buf1.getPosition());
+        assertEquals("Surprising serialized length.", 5, buf1.getPosition() - 1);
         assertEquals("Buffer underflow.", 0, a[0]);
+        assertEquals("Buffer underflow.", 0, a[1]);
         assertEquals("Buffer overflow.", 0, a[a.length - 1]);
 
         // verify skip
-        buf1.setPosition(0);
+        buf1.setPosition(1);
         assertEquals("Surprising return value.", 5, OrderedBytes.skip(buf1));
-        assertEquals("Did not skip enough bytes.", 5, buf1.getPosition());
+        assertEquals("Did not skip enough bytes.", 5, buf1.getPosition() - 1);
 
         // verify decode
-        buf1.setPosition(0);
+        buf1.setPosition(1);
         assertEquals("Deserialization failed.",
           vals[i].intValue(), OrderedBytes.decodeInt32(buf1));
-        assertEquals("Did not consume enough bytes.", 5, buf1.getPosition());
+        assertEquals("Did not consume enough bytes.", 5, buf1.getPosition() - 1);
       }
     }
 
@@ -423,27 +439,31 @@ public class TestOrderedBytes {
      */
     for (Order ord : new Order[] { Order.ASCENDING, Order.DESCENDING }) {
       for (int i = 0; i < vals.length; i++) {
-        // allocate a buffer 2-bytes larger than necessary and place our range over the center.
-        byte[] a = new byte[9 + 2];
-        PositionedByteRange buf1 = new SimplePositionedByteRange(a, 1, 9);
+        // allocate a buffer 3-bytes larger than necessary to detect over/underflow
+        byte[] a = new byte[9 + 3];
+        PositionedByteRange buf1 = new SimplePositionedByteRange(a, 1, 9 + 1);
+        buf1.setPosition(1);
 
         // verify encode
         assertEquals("Surprising return value.",
           9, OrderedBytes.encodeInt64(buf1, vals[i], ord));
-        assertEquals("Surprising serialized length.", 9, buf1.getPosition());
+        assertEquals("Broken test: serialization did not consume entire buffer.",
+          buf1.getLength(), buf1.getPosition());
+        assertEquals("Surprising serialized length.", 9, buf1.getPosition() - 1);
         assertEquals("Buffer underflow.", 0, a[0]);
+        assertEquals("Buffer underflow.", 0, a[1]);
         assertEquals("Buffer overflow.", 0, a[a.length - 1]);
 
         // verify skip
-        buf1.setPosition(0);
+        buf1.setPosition(1);
         assertEquals("Surprising return value.", 9, OrderedBytes.skip(buf1));
-        assertEquals("Did not skip enough bytes.", 9, buf1.getPosition());
+        assertEquals("Did not skip enough bytes.", 9, buf1.getPosition() - 1);
 
         // verify decode
-        buf1.setPosition(0);
+        buf1.setPosition(1);
         assertEquals("Deserialization failed.",
           vals[i].longValue(), OrderedBytes.decodeInt64(buf1));
-        assertEquals("Did not consume enough bytes.", 9, buf1.getPosition());
+        assertEquals("Did not consume enough bytes.", 9, buf1.getPosition() - 1);
       }
     }
 
@@ -487,28 +507,32 @@ public class TestOrderedBytes {
      */
     for (Order ord : new Order[] { Order.ASCENDING, Order.DESCENDING }) {
       for (int i = 0; i < vals.length; i++) {
-        // allocate a buffer 2-bytes larger than necessary and place our range over the center.
-        byte[] a = new byte[5 + 2];
-        PositionedByteRange buf1 = new SimplePositionedByteRange(a, 1, 5);
+        // allocate a buffer 3-bytes larger than necessary to detect over/underflow
+        byte[] a = new byte[5 + 3];
+        PositionedByteRange buf1 = new SimplePositionedByteRange(a, 1, 5 + 1);
+        buf1.setPosition(1);
 
         // verify encode
         assertEquals("Surprising return value.",
           5, OrderedBytes.encodeFloat32(buf1, vals[i], ord));
-        assertEquals("Surprising serialized length.", 5, buf1.getPosition());
+        assertEquals("Broken test: serialization did not consume entire buffer.",
+          buf1.getLength(), buf1.getPosition());
+        assertEquals("Surprising serialized length.", 5, buf1.getPosition() - 1);
         assertEquals("Buffer underflow.", 0, a[0]);
+        assertEquals("Buffer underflow.", 0, a[1]);
         assertEquals("Buffer overflow.", 0, a[a.length - 1]);
 
         // verify skip
-        buf1.setPosition(0);
+        buf1.setPosition(1);
         assertEquals("Surprising return value.", 5, OrderedBytes.skip(buf1));
-        assertEquals("Did not skip enough bytes.", 5, buf1.getPosition());
+        assertEquals("Did not skip enough bytes.", 5, buf1.getPosition() - 1);
 
         // verify decode
-        buf1.setPosition(0);
+        buf1.setPosition(1);
         assertEquals("Deserialization failed.",
           Float.floatToIntBits(vals[i].floatValue()),
           Float.floatToIntBits(OrderedBytes.decodeFloat32(buf1)));
-        assertEquals("Did not consume enough bytes.", 5, buf1.getPosition());
+        assertEquals("Did not consume enough bytes.", 5, buf1.getPosition() - 1);
       }
     }
 
@@ -553,28 +577,32 @@ public class TestOrderedBytes {
      */
     for (Order ord : new Order[] { Order.ASCENDING, Order.DESCENDING }) {
       for (int i = 0; i < vals.length; i++) {
-        // allocate a buffer 2-bytes larger than necessary and place our range over the center.
-        byte[] a = new byte[9 + 2];
-        PositionedByteRange buf1 = new SimplePositionedByteRange(a, 1, 9);
+        // allocate a buffer 3-bytes larger than necessary to detect over/underflow
+        byte[] a = new byte[9 + 3];
+        PositionedByteRange buf1 = new SimplePositionedByteRange(a, 1, 9 + 1);
+        buf1.setPosition(1);
 
         // verify encode
         assertEquals("Surprising return value.",
           9, OrderedBytes.encodeFloat64(buf1, vals[i], ord));
-        assertEquals("Surprising serialized length.", 9, buf1.getPosition());
+        assertEquals("Broken test: serialization did not consume entire buffer.",
+          buf1.getLength(), buf1.getPosition());
+        assertEquals("Surprising serialized length.", 9, buf1.getPosition() - 1);
         assertEquals("Buffer underflow.", 0, a[0]);
+        assertEquals("Buffer underflow.", 0, a[1]);
         assertEquals("Buffer overflow.", 0, a[a.length - 1]);
 
         // verify skip
-        buf1.setPosition(0);
+        buf1.setPosition(1);
         assertEquals("Surprising return value.", 9, OrderedBytes.skip(buf1));
-        assertEquals("Did not skip enough bytes.", 9, buf1.getPosition());
+        assertEquals("Did not skip enough bytes.", 9, buf1.getPosition() - 1);
 
         // verify decode
-        buf1.setPosition(0);
+        buf1.setPosition(1);
         assertEquals("Deserialization failed.",
           Double.doubleToLongBits(vals[i].doubleValue()),
           Double.doubleToLongBits(OrderedBytes.decodeFloat64(buf1)));
-        assertEquals("Did not consume enough bytes.", 9, buf1.getPosition());
+        assertEquals("Did not consume enough bytes.", 9, buf1.getPosition() - 1);
       }
     }
 
@@ -619,26 +647,30 @@ public class TestOrderedBytes {
      */
     for (Order ord : new Order[] { Order.ASCENDING, Order.DESCENDING }) {
       for (int i = 0; i < vals.length; i++) {
-        // allocate a buffer 2-bytes larger than necessary and place our range over the center.
-        byte[] a = new byte[expectedLengths[i] + 2];
-        PositionedByteRange buf1 = new SimplePositionedByteRange(a, 1, expectedLengths[i]);
+        // allocate a buffer 3-bytes larger than necessary to detect over/underflow
+        byte[] a = new byte[expectedLengths[i] + 3];
+        PositionedByteRange buf1 = new SimplePositionedByteRange(a, 1, expectedLengths[i] + 1);
+        buf1.setPosition(1);
 
         // verify encode
         assertEquals("Surprising return value.",
           expectedLengths[i], OrderedBytes.encodeString(buf1, vals[i], ord));
-        assertEquals("Surprising serialized length.", expectedLengths[i], buf1.getPosition());
+        assertEquals("Broken test: serialization did not consume entire buffer.",
+          buf1.getLength(), buf1.getPosition());
+        assertEquals("Surprising serialized length.", expectedLengths[i], buf1.getPosition() - 1);
         assertEquals("Buffer underflow.", 0, a[0]);
+        assertEquals("Buffer underflow.", 0, a[1]);
         assertEquals("Buffer overflow.", 0, a[a.length - 1]);
 
         // verify skip
-        buf1.setPosition(0);
+        buf1.setPosition(1);
         assertEquals("Surprising return value.", expectedLengths[i], OrderedBytes.skip(buf1));
-        assertEquals("Did not skip enough bytes.", expectedLengths[i], buf1.getPosition());
+        assertEquals("Did not skip enough bytes.", expectedLengths[i], buf1.getPosition() - 1);
 
         // verify decode
-        buf1.setPosition(0);
+        buf1.setPosition(1);
         assertEquals("Deserialization failed.", vals[i], OrderedBytes.decodeString(buf1));
-        assertEquals("Did not consume enough bytes.", expectedLengths[i], buf1.getPosition());
+        assertEquals("Did not consume enough bytes.", expectedLengths[i], buf1.getPosition() - 1);
       }
     }
 
@@ -717,28 +749,31 @@ public class TestOrderedBytes {
      */
     for (Order ord : new Order[] { Order.ASCENDING, Order.DESCENDING }) {
       for (byte[] val : vals) {
-        // allocate a buffer 2-bytes larger than necessary and place our range over the center.
+        // allocate a buffer 3-bytes larger than necessary to detect over/underflow
         int expectedLen = OrderedBytes.blobVarEncodedLength(val.length);
-        byte[] a = new byte[expectedLen + 2];
-        PositionedByteRange buf1 =
-            new SimplePositionedByteRange(a, 1, expectedLen);
+        byte[] a = new byte[expectedLen + 3];
+        PositionedByteRange buf1 = new SimplePositionedByteRange(a, 1, expectedLen + 1);
+        buf1.setPosition(1);
 
         // verify encode
         assertEquals("Surprising return value.",
           expectedLen, OrderedBytes.encodeBlobVar(buf1, val, ord));
-        assertEquals("Surprising serialized length.", expectedLen, buf1.getPosition());
+        assertEquals("Broken test: serialization did not consume entire buffer.",
+          buf1.getLength(), buf1.getPosition());
+        assertEquals("Surprising serialized length.", expectedLen, buf1.getPosition() - 1);
         assertEquals("Buffer underflow.", 0, a[0]);
+        assertEquals("Buffer underflow.", 0, a[1]);
         assertEquals("Buffer overflow.", 0, a[a.length - 1]);
 
         // verify skip
-        buf1.setPosition(0);
+        buf1.setPosition(1);
         assertEquals("Surprising return value.", expectedLen, OrderedBytes.skip(buf1));
-        assertEquals("Did not skip enough bytes.", expectedLen, buf1.getPosition());
+        assertEquals("Did not skip enough bytes.", expectedLen, buf1.getPosition() - 1);
 
         // verify decode
-        buf1.setPosition(0);
+        buf1.setPosition(1);
         assertArrayEquals("Deserialization failed.", val, OrderedBytes.decodeBlobVar(buf1));
-        assertEquals("Did not consume enough bytes.", expectedLen, buf1.getPosition());
+        assertEquals("Did not consume enough bytes.", expectedLen, buf1.getPosition() - 1);
       }
     }
 
@@ -789,28 +824,31 @@ public class TestOrderedBytes {
      */
     for (Order ord : new Order[] { Order.ASCENDING, Order.DESCENDING }) {
       for (byte[] val : vals) {
-        // allocate a buffer 2-bytes larger than necessary and place our range over the center.
+        // allocate a buffer 3-bytes larger than necessary to detect over/underflow
         int expectedLen = val.length + (Order.ASCENDING == ord ? 1 : 2);
-        byte[] a = new byte[expectedLen + 2];
-        PositionedByteRange buf1 =
-            new SimplePositionedByteRange(a, 1, expectedLen);
+        byte[] a = new byte[expectedLen + 3];
+        PositionedByteRange buf1 = new SimplePositionedByteRange(a, 1, expectedLen + 1);
+        buf1.setPosition(1);
 
         // verify encode
         assertEquals("Surprising return value.",
           expectedLen, OrderedBytes.encodeBlobCopy(buf1, val, ord));
-        assertEquals("Surprising serialized length.", expectedLen, buf1.getPosition());
+        assertEquals("Broken test: serialization did not consume entire buffer.",
+          buf1.getLength(), buf1.getPosition());
+        assertEquals("Surprising serialized length.", expectedLen, buf1.getPosition() - 1);
         assertEquals("Buffer underflow.", 0, a[0]);
+        assertEquals("Buffer underflow.", 0, a[1]);
         assertEquals("Buffer overflow.", 0, a[a.length - 1]);
 
         // verify skip
-        buf1.setPosition(0);
+        buf1.setPosition(1);
         assertEquals("Surprising return value.", expectedLen, OrderedBytes.skip(buf1));
-        assertEquals("Did not skip enough bytes.", expectedLen, buf1.getPosition());
+        assertEquals("Did not skip enough bytes.", expectedLen, buf1.getPosition() - 1);
 
         // verify decode
-        buf1.setPosition(0);
+        buf1.setPosition(1);
         assertArrayEquals("Deserialization failed.", val, OrderedBytes.decodeBlobCopy(buf1));
-        assertEquals("Did not consume enough bytes.", expectedLen, buf1.getPosition());
+        assertEquals("Did not consume enough bytes.", expectedLen, buf1.getPosition() - 1);
       }
     }
 
