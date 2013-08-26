@@ -141,8 +141,8 @@ module Hbase
           end
         else
           # invoke cp endpoint to perform access controlse
-          org.apache.hadoop.hbase.protobuf.ProtobufUtil.revoke(
-              protocol, user)
+          perm = org.apache.hadoop.hbase.security.access.Permission.new(''.to_java_bytes)
+          org.apache.hadoop.hbase.protobuf.ProtobufUtil.revoke(protocol, user, perm.getActions())
         end
       ensure
         meta_table.close()
