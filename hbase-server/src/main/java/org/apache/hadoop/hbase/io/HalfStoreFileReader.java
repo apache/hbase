@@ -27,6 +27,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
@@ -194,6 +195,9 @@ public class HalfStoreFileReader extends StoreFile.Reader {
       public boolean seekTo() throws IOException {
         if (top) {
           int r = this.delegate.seekTo(splitkey);
+          if (r == HConstants.INDEX_KEY_MAGIC) {
+            return true;
+          }
           if (r < 0) {
             // midkey is < first key in file
             return this.delegate.seekTo();
