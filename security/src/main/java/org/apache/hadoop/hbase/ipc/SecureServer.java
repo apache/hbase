@@ -86,7 +86,7 @@ public abstract class SecureServer extends HBaseServer {
   // 3 : Introduce the protocol into the RPC connection header
   // 4 : Introduced SASL security layer
   public static final byte CURRENT_VERSION = 4;
-  public static final Set<Byte> INSECURE_VERSIONS = ImmutableSet.of((byte) 3);
+  public static final Set<Integer> INSECURE_VERSIONS = ImmutableSet.of(3);
 
   public static final Log LOG = LogFactory.getLog(SecureServer.class);
   private static final Log AUDITLOG = LogFactory.getLog("SecurityLogger." +
