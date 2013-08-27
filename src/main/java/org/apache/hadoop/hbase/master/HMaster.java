@@ -1507,10 +1507,12 @@ Server {
       MBeanUtil.unregisterMBean(mxBean);
       mxBean = null;
     }
-    this.assignmentManager.shutdown();
-    this.serverManager.shutdownCluster();
+    if (this.assignmentManager != null) this.assignmentManager.shutdown();
+    if (this.serverManager != null) this.serverManager.shutdownCluster();
     try {
-      this.clusterStatusTracker.setClusterDown();
+      if (this.clusterStatusTracker != null){
+        this.clusterStatusTracker.setClusterDown();
+      }
     } catch (KeeperException e) {
       LOG.error("ZooKeeper exception trying to set cluster as down in ZK", e);
     }
