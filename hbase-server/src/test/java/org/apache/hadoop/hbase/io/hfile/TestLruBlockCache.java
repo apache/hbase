@@ -22,22 +22,14 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 import java.nio.ByteBuffer;
-import java.util.Collection;
-import java.util.Map;
 import java.util.Random;
 
-import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.io.hfile.LruBlockCache.EvictionThread;
 import org.apache.hadoop.hbase.util.ClassSize;
-import org.junit.After;
-import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameters;
 
 /**
  * Tests the concurrent LruBlockCache.<p>
@@ -53,36 +45,51 @@ public class TestLruBlockCache {
   @Test
   public void testBackgroundEvictionThread() throws Exception {
     long maxSize = 100000;
-    long blockSize = calculateBlockSizeDefault(maxSize, 9); // room for 9, will evict
+    int numBlocks = 9;
+    long blockSize = calculateBlockSizeDefault(maxSize, numBlocks);
+    assertTrue("calculateBlockSize appears broken.", blockSize * numBlocks <= maxSize);
 
     LruBlockCache cache = new LruBlockCache(maxSize,blockSize);
-
-    CachedItem [] blocks = generateFixedBlocks(10, blockSize, "block");
-
     EvictionThread evictionThread = cache.getEvictionThread();
     assertTrue(evictionThread != null);
+
+    CachedItem[] blocks = generateFixedBlocks(numBlocks + 1, blockSize, "block");
 
     // Make sure eviction thread has entered run method
     while (!evictionThread.isEnteringRun()) {
       Thread.sleep(1);
     }
-    
 
     // Add all the blocks
     for (CachedItem block : blocks) {
       cache.cacheBlock(block.cacheKey, block);
     }
 
-    // Let the eviction run
+    // wait until at least one eviction has run
     int n = 0;
     while(cache.getEvictionCount() == 0) {
       Thread.sleep(200);
-      assertTrue(n++ < 20);
+      assertTrue("Eviction never happened.", n++ < 20);
     }
-    System.out.println("Background Evictions run: " + cache.getEvictionCount());
 
-    // A single eviction run should have occurred
-    assertEquals(cache.getEvictionCount(), 1);
+    // let cache stabilize
+    // On some systems, the cache will run multiple evictions before it attains
+    // steady-state. For instance, after populating the cache with 10 blocks,
+    // the first eviction evicts a single block and then a second eviction
+    // evicts another. I think this is due to the delta between minSize and
+    // acceptableSize, combined with variance between object overhead on
+    // different environments.
+    n = 0;
+    for (long prevCnt = 0 /* < number of blocks added */,
+              curCnt = cache.getBlockCount();
+        prevCnt != curCnt; prevCnt = curCnt, curCnt = cache.getBlockCount()) {
+      Thread.sleep(200);
+      assertTrue("Cache never stabilized.", n++ < 20);
+    }
+
+    long evictionCount = cache.getEvictionCount();
+    assertTrue(evictionCount >= 1);
+    System.out.println("Background Evictions run: " + evictionCount);
   }
 
   @Test
