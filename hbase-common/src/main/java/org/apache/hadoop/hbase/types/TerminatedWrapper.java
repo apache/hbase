@@ -107,7 +107,9 @@ public class TerminatedWrapper<T> implements DataType<T> {
   @Override
   public int skip(PositionedByteRange src) {
     if (wrapped.isSkippable()) {
-      return wrapped.skip(src);
+      int ret = wrapped.skip(src);
+      src.setPosition(src.getPosition() + term.length);
+      return ret + term.length;
     } else {
       // find the terminator position
       final int start = src.getPosition();
@@ -122,7 +124,9 @@ public class TerminatedWrapper<T> implements DataType<T> {
   @Override
   public T decode(PositionedByteRange src) {
     if (wrapped.isSkippable()) {
-      return wrapped.decode(src);
+      T ret = wrapped.decode(src);
+      src.setPosition(src.getPosition() + term.length);
+      return ret;
     } else {
       // find the terminator position
       int term = terminatorPosition(src);
