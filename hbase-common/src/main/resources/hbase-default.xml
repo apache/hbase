@@ -466,6 +466,10 @@ possible configurations would overwhelm and obscure the important.
     <value>60000</value>
     <description>Client scanner lease period in milliseconds.</description>
   </property>
+  <property>
+    <name>hbase.client.localityCheck.threadPoolSize</name>
+    <value>2</value>
+  </property>
 
   <!--Miscellaneous configuration-->
   <property>

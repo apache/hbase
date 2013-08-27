@@ -27,7 +27,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
-import java.util.TreeMap;
+import java.util.Map.Entry;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -39,17 +39,14 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.catalog.CatalogTracker;
 import org.apache.hadoop.hbase.catalog.MetaEditor;
-import org.apache.hadoop.hbase.catalog.MetaReader;
-import org.apache.hadoop.hbase.catalog.MetaReader.Visitor;
+import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
-import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.master.RackManager;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.FavoredNodes;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.apache.hadoop.hbase.util.Pair;
 
 import com.google.protobuf.InvalidProtocolBufferException;
 
@@ -87,55 +84,11 @@ public class FavoredNodeAssignmentHelper {
   }
 
   /**
-   * Perform full scan of the meta table similar to
-   * {@link MetaReader#fullScan(CatalogTracker, Set, boolean)} except that this is
-   * aware of the favored nodes
+   * Update meta table with favored nodes info
+   * @param regionToFavoredNodes
    * @param catalogTracker
-   * @param disabledTables
-   * @param excludeOfflinedSplitParents
-   * @param balancer required because we need to let the balancer know about the
-   * current favored nodes from meta scan
-   * @return Returns a map of every region to it's currently assigned server,
-   * according to META.  If the region does not have an assignment it will have
-   * a null value in the map.
    * @throws IOException
    */
-  public static Map<HRegionInfo, ServerName> fullScan(
-      CatalogTracker catalogTracker, final Set<TableName> disabledTables,
-      final boolean excludeOfflinedSplitParents,
-      FavoredNodeLoadBalancer balancer) throws IOException {
-    final Map<HRegionInfo, ServerName> regions =
-        new TreeMap<HRegionInfo, ServerName>();
-    final Map<HRegionInfo, ServerName[]> favoredNodesMap =
-        new HashMap<HRegionInfo, ServerName[]>();
-    Visitor v = new Visitor() {
-      @Override
-      public boolean visit(Result r) throws IOException {
-        if (r ==  null || r.isEmpty()) return true;
-        Pair<HRegionInfo, ServerName> region = HRegionInfo.getHRegionInfoAndServerName(r);
-        HRegionInfo hri = region.getFirst();
-        if (hri  == null) return true;
-        if (hri.getTableName() == null) return true;
-        if (disabledTables.contains(
-            hri.getTableName())) return true;
-        // Are we to include split parents in the list?
-        if (excludeOfflinedSplitParents && hri.isSplitParent()) return true;
-        regions.put(hri, region.getSecond());
-        byte[] favoredNodes = r.getValue(HConstants.CATALOG_FAMILY,
-               FavoredNodeAssignmentHelper.FAVOREDNODES_QUALIFIER);
-        if (favoredNodes != null) {
-          ServerName[] favoredServerList =
-            FavoredNodeAssignmentHelper.getFavoredNodesList(favoredNodes);
-          favoredNodesMap.put(hri, favoredServerList);
-        }
-        return true;
-      }
-    };
-    MetaReader.fullScan(catalogTracker, v);
-    balancer.noteFavoredNodes(favoredNodesMap);
-    return regions;
-  }
-
   public static void updateMetaWithFavoredNodesInfo(
       Map<HRegionInfo, List<ServerName>> regionToFavoredNodes,
       CatalogTracker catalogTracker) throws IOException {
@@ -147,6 +100,33 @@ public class FavoredNodeAssignmentHelper {
       }
     }
     MetaEditor.putsToMetaTable(catalogTracker, puts);
+    LOG.info("Added " + puts.size() + " regions in META");
+  }
+
+  /**
+   * Update meta table with favored nodes info
+   * @param regionToFavoredNodes
+   * @param conf
+   * @throws IOException
+   */
+  public static void updateMetaWithFavoredNodesInfo(
+      Map<HRegionInfo, List<ServerName>> regionToFavoredNodes,
+      Configuration conf) throws IOException {
+    List<Put> puts = new ArrayList<Put>();
+    for (Map.Entry<HRegionInfo, List<ServerName>> entry : regionToFavoredNodes.entrySet()) {
+      Put put = makePutFromRegionInfo(entry.getKey(), entry.getValue());
+      if (put != null) {
+        puts.add(put);
+      }
+    }
+    // Write the region assignments to the meta table.
+    HTable metaTable = null;
+    try {
+      metaTable = new HTable(conf, TableName.META_TABLE_NAME);
+      metaTable.put(puts);
+    } finally {
+      if (metaTable != null) metaTable.close();
+    }
     LOG.info("Added " + puts.size() + " regions in META");
   }
 
@@ -189,10 +169,10 @@ public class FavoredNodeAssignmentHelper {
   }
 
   /**
-   * @param serverList
+   * @param serverAddrList
    * @return PB'ed bytes of {@link FavoredNodes} generated by the server list.
    */
-  static byte[] getFavoredNodes(List<ServerName> serverAddrList) {
+  public static byte[] getFavoredNodes(List<ServerName> serverAddrList) {
     FavoredNodes.Builder f = FavoredNodes.newBuilder();
     for (ServerName s : serverAddrList) {
       HBaseProtos.ServerName.Builder b = HBaseProtos.ServerName.newBuilder();
@@ -295,11 +275,162 @@ public class FavoredNodeAssignmentHelper {
         }
       } catch (Exception e) {
         LOG.warn("Cannot place the favored nodes for region " +
-            regionInfo.getRegionNameAsString() + " because " + e);
+            regionInfo.getRegionNameAsString() + " because " + e, e);
         continue;
       }
     }
     return secondaryAndTertiaryMap;
+  }
+
+  private Map<ServerName, Set<HRegionInfo>> mapRSToPrimaries(
+      Map<HRegionInfo, ServerName> primaryRSMap) {
+    Map<ServerName, Set<HRegionInfo>> primaryServerMap =
+        new HashMap<ServerName, Set<HRegionInfo>>();
+    for (Entry<HRegionInfo, ServerName> e : primaryRSMap.entrySet()) {
+      Set<HRegionInfo> currentSet = primaryServerMap.get(e.getValue());
+      if (currentSet == null) {
+        currentSet = new HashSet<HRegionInfo>();
+      }
+      currentSet.add(e.getKey());
+      primaryServerMap.put(e.getValue(), currentSet);
+    }
+    return primaryServerMap;
+  }
+
+  /**
+   * For regions that share the primary, avoid placing the secondary and tertiary
+   * on a same RS. Used for generating new assignments for the 
+   * primary/secondary/tertiary RegionServers 
+   * @param primaryRSMap
+   * @return the map of regions to the servers the region-files should be hosted on
+   * @throws IOException
+   */
+  public Map<HRegionInfo, ServerName[]> placeSecondaryAndTertiaryWithRestrictions(
+      Map<HRegionInfo, ServerName> primaryRSMap) {
+    Map<ServerName, Set<HRegionInfo>> serverToPrimaries =
+        mapRSToPrimaries(primaryRSMap);
+    Map<HRegionInfo, ServerName[]> secondaryAndTertiaryMap =
+        new HashMap<HRegionInfo, ServerName[]>();
+
+    for (Entry<HRegionInfo, ServerName> entry : primaryRSMap.entrySet()) {
+      // Get the target region and its primary region server rack
+      HRegionInfo regionInfo = entry.getKey();
+      ServerName primaryRS = entry.getValue();
+      try {
+        // Get the rack for the primary region server
+        String primaryRack = rackManager.getRack(primaryRS);
+        ServerName[] favoredNodes = null;
+        if (getTotalNumberOfRacks() == 1) {
+          // Single rack case: have to pick the secondary and tertiary
+          // from the same rack
+          favoredNodes = singleRackCase(regionInfo, primaryRS, primaryRack);
+        } else {
+          favoredNodes = multiRackCaseWithRestrictions(serverToPrimaries, 
+              secondaryAndTertiaryMap, primaryRack, primaryRS, regionInfo);
+        }
+        if (favoredNodes != null) {
+          secondaryAndTertiaryMap.put(regionInfo, favoredNodes);
+          LOG.debug("Place the secondary and tertiary region server for region "
+              + regionInfo.getRegionNameAsString());
+        }
+      } catch (Exception e) {
+        LOG.warn("Cannot place the favored nodes for region "
+            + regionInfo.getRegionNameAsString() + " because " + e, e);
+        continue;
+      }
+    }
+    return secondaryAndTertiaryMap;
+  }
+
+  private ServerName[] multiRackCaseWithRestrictions(
+      Map<ServerName, Set<HRegionInfo>> serverToPrimaries,
+      Map<HRegionInfo, ServerName[]> secondaryAndTertiaryMap,
+      String primaryRack, ServerName primaryRS, HRegionInfo regionInfo) throws IOException {
+    // Random to choose the secondary and tertiary region server
+    // from another rack to place the secondary and tertiary
+    // Random to choose one rack except for the current rack
+    Set<String> rackSkipSet = new HashSet<String>();
+    rackSkipSet.add(primaryRack);
+    String secondaryRack = getOneRandomRack(rackSkipSet);
+    List<ServerName> serverList = getServersFromRack(secondaryRack);
+    Set<ServerName> serverSet = new HashSet<ServerName>();
+    serverSet.addAll(serverList);
+    ServerName[] favoredNodes;
+    if (serverList.size() >= 2) {
+      // Randomly pick up two servers from this secondary rack
+      // Skip the secondary for the tertiary placement
+      // skip the servers which share the primary already
+      Set<HRegionInfo> primaries = serverToPrimaries.get(primaryRS);
+      Set<ServerName> skipServerSet = new HashSet<ServerName>();
+      while (true) {
+        ServerName[] secondaryAndTertiary = null;
+        if (primaries.size() > 1) {
+          // check where his tertiary and secondary are
+          for (HRegionInfo primary : primaries) {
+            secondaryAndTertiary = secondaryAndTertiaryMap.get(primary);
+            if (secondaryAndTertiary != null) {
+              if (regionServerToRackMap.get(secondaryAndTertiary[0]).equals(secondaryRack)) {
+                skipServerSet.add(secondaryAndTertiary[0]);
+              }
+              if (regionServerToRackMap.get(secondaryAndTertiary[1]).equals(secondaryRack)) {
+                skipServerSet.add(secondaryAndTertiary[1]);
+              }
+            }
+          }
+        }
+        if (skipServerSet.size() + 2 <= serverSet.size())
+          break;
+        skipServerSet.clear();
+        rackSkipSet.add(secondaryRack);
+        // we used all racks
+        if (rackSkipSet.size() == getTotalNumberOfRacks()) {
+          // remove the last two added and break
+          skipServerSet.remove(secondaryAndTertiary[0]);
+          skipServerSet.remove(secondaryAndTertiary[1]);
+          break;
+        }
+        secondaryRack = getOneRandomRack(rackSkipSet);
+        serverList = getServersFromRack(secondaryRack);
+        serverSet = new HashSet<ServerName>();
+        serverSet.addAll(serverList);
+      }
+
+      // Place the secondary RS
+      ServerName secondaryRS = getOneRandomServer(secondaryRack, skipServerSet);
+      skipServerSet.add(secondaryRS);
+      // Place the tertiary RS
+      ServerName tertiaryRS = getOneRandomServer(secondaryRack, skipServerSet);
+
+      if (secondaryRS == null || tertiaryRS == null) {
+        LOG.error("Cannot place the secondary and tertiary"
+            + " region server for region "
+            + regionInfo.getRegionNameAsString());
+      }
+      // Create the secondary and tertiary pair
+      favoredNodes = new ServerName[2];
+      favoredNodes[0] = secondaryRS;
+      favoredNodes[1] = tertiaryRS;
+    } else {
+      // Pick the secondary rs from this secondary rack
+      // and pick the tertiary from another random rack
+      favoredNodes = new ServerName[2];
+      ServerName secondary = getOneRandomServer(secondaryRack);
+      favoredNodes[0] = secondary;
+
+      // Pick the tertiary
+      if (getTotalNumberOfRacks() == 2) {
+        // Pick the tertiary from the same rack of the primary RS
+        Set<ServerName> serverSkipSet = new HashSet<ServerName>();
+        serverSkipSet.add(primaryRS);
+        favoredNodes[1] = getOneRandomServer(primaryRack, serverSkipSet);
+      } else {
+        // Pick the tertiary from another rack
+        rackSkipSet.add(secondaryRack);
+        String tertiaryRandomRack = getOneRandomRack(rackSkipSet);
+        favoredNodes[1] = getOneRandomServer(tertiaryRandomRack);
+      }
+    }
+    return favoredNodes;
   }
 
   private ServerName[] singleRackCase(HRegionInfo regionInfo,
@@ -310,7 +441,7 @@ public class FavoredNodeAssignmentHelper {
     List<ServerName> serverList = getServersFromRack(primaryRack);
     if (serverList.size() <= 2) {
       // Single region server case: cannot not place the favored nodes
-      // on any server; !domain.canPlaceFavoredNodes()
+      // on any server;
       return null;
     } else {
       // Randomly select two region servers from the server list and make sure
@@ -399,7 +530,7 @@ public class FavoredNodeAssignmentHelper {
     return (serverSize >= FAVORED_NODES_NUM);
   }
 
-  void initialize() {
+  public void initialize() {
     for (ServerName sn : this.servers) {
       String rackName = this.rackManager.getRack(sn);
       List<ServerName> serverList = this.rackToRegionServerMap.get(rackName);
@@ -460,5 +591,15 @@ public class FavoredNodeAssignmentHelper {
     } while (skipRackSet.contains(randomRack));
 
     return randomRack;
+  }
+
+  public static String getFavoredNodesAsString(List<ServerName> nodes) {
+    StringBuffer strBuf = new StringBuffer();
+    int i = 0;
+    for (ServerName node : nodes) {
+      strBuf.append(node.getHostAndPort());
+      if (++i != nodes.size()) strBuf.append(";");
+    }
+    return strBuf.toString();
   }
 }

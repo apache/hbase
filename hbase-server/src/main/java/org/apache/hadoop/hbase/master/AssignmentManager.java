@@ -68,6 +68,7 @@ import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.master.RegionState.State;
 import org.apache.hadoop.hbase.master.balancer.FavoredNodeAssignmentHelper;
 import org.apache.hadoop.hbase.master.balancer.FavoredNodeLoadBalancer;
+import org.apache.hadoop.hbase.master.balancer.FavoredNodesPlan;
 import org.apache.hadoop.hbase.master.handler.ClosedRegionHandler;
 import org.apache.hadoop.hbase.master.handler.DisableTableHandler;
 import org.apache.hadoop.hbase.master.handler.EnableTableHandler;
@@ -125,6 +126,8 @@ public class AssignmentManager extends ZooKeeperListener {
   private final MetricsAssignmentManager metricsAssignmentManager;
 
   private final TableLockManager tableLockManager;
+
+  private AtomicInteger numRegionsOpened = new AtomicInteger(0);
 
   final private KeyLocker<String> locker = new KeyLocker<String>();
 
@@ -1366,7 +1369,7 @@ public class AssignmentManager extends ZooKeeperListener {
       LOG.warn("A region was opened on a dead server, ServerName=" +
         sn + ", region=" + regionInfo.getEncodedName());
     }
-
+    numRegionsOpened.incrementAndGet();
     regionStates.regionOnline(regionInfo, sn);
 
     // Remove plan if one.
@@ -2412,6 +2415,15 @@ public class AssignmentManager extends ZooKeeperListener {
   }
 
   /**
+   * Used by unit tests. Return the number of regions opened so far in the life
+   * of the master. Increases by one every time the master opens a region
+   * @return the counter value of the number of regions opened so far
+   */
+  public int getNumRegionsOpened() {
+    return numRegionsOpened.get();
+  }
+
+  /**
    * Waits until the specified region has completed assignment.
    * <p>
    * If the region is already assigned, returns immediately.  Otherwise, method
@@ -2558,14 +2570,10 @@ public class AssignmentManager extends ZooKeeperListener {
     disabledOrDisablingOrEnabling.addAll(ZKTable.getEnablingTables(watcher));
     // Scan META for all user regions, skipping any disabled tables
     Map<HRegionInfo, ServerName> allRegions;
-    if (this.shouldAssignRegionsWithFavoredNodes) {
-      allRegions = FavoredNodeAssignmentHelper.fullScan(
-        catalogTracker, disabledOrDisablingOrEnabling, true, (FavoredNodeLoadBalancer)balancer);
-    } else {
-      allRegions = MetaReader.fullScan(
-        catalogTracker, disabledOrDisablingOrEnabling, true);
-    }
-
+    SnapshotOfRegionAssignmentFromMeta snapshotOfRegionAssignment =
+       new SnapshotOfRegionAssignmentFromMeta(catalogTracker, disabledOrDisablingOrEnabling, true);
+    snapshotOfRegionAssignment.initialize();
+    allRegions = snapshotOfRegionAssignment.getRegionToRegionServerMap();
     if (allRegions == null) return;
 
     //remove system tables because they would have been assigned earlier

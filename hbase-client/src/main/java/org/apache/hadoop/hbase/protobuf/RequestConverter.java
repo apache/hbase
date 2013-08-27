@@ -55,6 +55,8 @@ import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.OpenRegionRequest.
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.RollWALWriterRequest;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.SplitRegionRequest;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.StopServerRequest;
+import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.UpdateFavoredNodesRequest;
+import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.UpdateFavoredNodesRequest.RegionUpdateInfo;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.BulkLoadHFileRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.BulkLoadHFileRequest.FamilyPath;
@@ -712,6 +714,25 @@ public final class RequestConverter {
    OpenRegionRequest.Builder builder = OpenRegionRequest.newBuilder();
    builder.addOpenInfo(buildRegionOpenInfo(region, versionOfOfflineNode, favoredNodes));
    return builder.build();
+ }
+
+ /**
+  * Create a protocol buffer UpdateFavoredNodesRequest to update a list of favorednode mappings
+  * @param updateRegionInfos
+  * @return a protocol buffer UpdateFavoredNodesRequest
+  */
+ public static UpdateFavoredNodesRequest buildUpdateFavoredNodesRequest(
+     final List<Pair<HRegionInfo, List<ServerName>>> updateRegionInfos) {
+   UpdateFavoredNodesRequest.Builder ubuilder = UpdateFavoredNodesRequest.newBuilder();
+   for (Pair<HRegionInfo, List<ServerName>> pair : updateRegionInfos) {
+     RegionUpdateInfo.Builder builder = RegionUpdateInfo.newBuilder();
+     builder.setRegion(HRegionInfo.convert(pair.getFirst()));
+     for (ServerName server : pair.getSecond()) {
+       builder.addFavoredNodes(ProtobufUtil.toServerName(server));
+     }
+     ubuilder.addUpdateInfo(builder.build());
+   }
+   return ubuilder.build();
  }
 
  /**

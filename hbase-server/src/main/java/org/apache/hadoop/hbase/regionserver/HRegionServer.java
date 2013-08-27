@@ -144,6 +144,8 @@ import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.SplitRegionRequest
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.SplitRegionResponse;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.StopServerRequest;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.StopServerResponse;
+import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.UpdateFavoredNodesRequest;
+import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.UpdateFavoredNodesResponse;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ActionResult;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.BulkLoadHFileRequest;
@@ -4331,5 +4333,19 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
       }
     }
     return result;
+  }
+
+  @Override
+  public UpdateFavoredNodesResponse updateFavoredNodes(RpcController controller,
+      UpdateFavoredNodesRequest request) throws ServiceException {
+    List<UpdateFavoredNodesRequest.RegionUpdateInfo> openInfoList = request.getUpdateInfoList();
+    UpdateFavoredNodesResponse.Builder respBuilder = UpdateFavoredNodesResponse.newBuilder();
+    for (UpdateFavoredNodesRequest.RegionUpdateInfo regionUpdateInfo : openInfoList) {
+      HRegionInfo hri = HRegionInfo.convert(regionUpdateInfo.getRegion());
+      updateRegionFavoredNodesMapping(hri.getEncodedName(),
+          regionUpdateInfo.getFavoredNodesList());
+    }
+    respBuilder.setResponse(openInfoList.size());
+    return respBuilder.build();
   }
 }
