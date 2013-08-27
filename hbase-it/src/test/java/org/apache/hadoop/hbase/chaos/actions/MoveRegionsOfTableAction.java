@@ -59,7 +59,7 @@ public class MoveRegionsOfTableAction extends Action {
         String destServerName =
           servers[RandomUtils.nextInt(servers.length)].getServerName();
         LOG.debug("Moving " + regionInfo.getRegionNameAsString() + " to " + destServerName);
-        admin.move(regionInfo.getRegionName(), Bytes.toBytes(destServerName));
+        admin.move(regionInfo.getEncodedNameAsBytes(), Bytes.toBytes(destServerName));
       } catch (Exception e) {
         LOG.debug("Error moving region", e);
       }
