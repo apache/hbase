@@ -145,6 +145,19 @@ message CompactRegionRequest {
 message CompactRegionResponse {
 }
 
+message UpdateFavoredNodesRequest {
+  repeated RegionUpdateInfo update_info = 1;
+
+  message RegionUpdateInfo {
+    required RegionInfo region = 1;
+    repeated ServerName favored_nodes = 2;
+  }
+}
+
+message UpdateFavoredNodesResponse {
+  optional uint32 response = 1;
+}
+
 /**
  * Merges the specified regions.
  * <p>
@@ -251,4 +264,7 @@ service AdminService {
 
   rpc StopServer(StopServerRequest)
     returns(StopServerResponse);
+
+  rpc UpdateFavoredNodes(UpdateFavoredNodesRequest)
+    returns(UpdateFavoredNodesResponse);
 }

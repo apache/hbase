@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.master.balancer;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -30,12 +29,15 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.ServerLoad;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.master.LoadBalancer;
 import org.apache.hadoop.hbase.master.RackManager;
 import org.apache.hadoop.hbase.master.RegionPlan;
-import org.apache.hadoop.hbase.master.balancer.FavoredNodes.Position;
+import org.apache.hadoop.hbase.master.ServerManager;
+import org.apache.hadoop.hbase.master.SnapshotOfRegionAssignmentFromMeta;
+import org.apache.hadoop.hbase.master.balancer.FavoredNodesPlan.Position;
 import org.apache.hadoop.hbase.util.Pair;
 
 /**
@@ -55,23 +57,91 @@ import org.apache.hadoop.hbase.util.Pair;
 public class FavoredNodeLoadBalancer extends BaseLoadBalancer {
   private static final Log LOG = LogFactory.getLog(FavoredNodeLoadBalancer.class);
 
-  private FavoredNodes globalFavoredNodesAssignmentPlan;
+  private FavoredNodesPlan globalFavoredNodesAssignmentPlan;
   private RackManager rackManager;
+  Configuration conf;
 
   @Override
   public void setConf(Configuration conf) {
-    globalFavoredNodesAssignmentPlan = new FavoredNodes();
+    globalFavoredNodesAssignmentPlan = new FavoredNodesPlan();
     this.rackManager = new RackManager(conf);
+    this.conf = conf;
   }
 
   @Override
-  public List<RegionPlan> balanceCluster(Map<ServerName, List<HRegionInfo>> clusterState) {
-    //TODO. At a high level, this should look at the block locality per region, and
-    //then reassign regions based on which nodes have the most blocks of the region
-    //file(s). There could be different ways like minimize region movement, or, maximum
-    //locality, etc. The other dimension to look at is whether Stochastic loadbalancer
-    //can be integrated with this
-    throw new UnsupportedOperationException("Not implemented yet");
+  public List<RegionPlan> balanceCluster(Map<ServerName, List<HRegionInfo>> clusterState)  {
+    //TODO. Look at is whether Stochastic loadbalancer can be integrated with this
+    List<RegionPlan> plans = new ArrayList<RegionPlan>();
+    //perform a scan of the meta to get the latest updates (if any)
+    SnapshotOfRegionAssignmentFromMeta snaphotOfRegionAssignment =
+        new SnapshotOfRegionAssignmentFromMeta(super.services.getCatalogTracker());
+    try {
+      snaphotOfRegionAssignment.initialize();
+    } catch (IOException ie) {
+      LOG.warn("Not running balancer since exception was thrown " + ie);
+      return plans;
+    }
+    globalFavoredNodesAssignmentPlan = snaphotOfRegionAssignment.getExistingAssignmentPlan(); 
+    Map<ServerName, ServerName> serverNameToServerNameWithoutCode =
+        new HashMap<ServerName, ServerName>();
+    Map<ServerName, ServerName> serverNameWithoutCodeToServerName =
+        new HashMap<ServerName, ServerName>();
+    ServerManager serverMgr = super.services.getServerManager();
+    for (ServerName sn: serverMgr.getOnlineServersList()) {
+      ServerName s = new ServerName(sn.getHostname(), sn.getPort(), ServerName.NON_STARTCODE);
+      serverNameToServerNameWithoutCode.put(sn, s);
+      serverNameWithoutCodeToServerName.put(s, sn);
+    }
+    for (Map.Entry<ServerName, List<HRegionInfo>> entry : clusterState.entrySet()) {
+      ServerName currentServer = entry.getKey();
+      //get a server without the startcode for the currentServer
+      ServerName currentServerWithoutStartCode = new ServerName(currentServer.getHostname(),
+          currentServer.getPort(), ServerName.NON_STARTCODE);
+      List<HRegionInfo> list = entry.getValue();
+      for (HRegionInfo region : list) {
+        if(region.getTableName().getNamespaceAsString()
+            .equals(NamespaceDescriptor.SYSTEM_NAMESPACE_NAME_STR)) {
+          continue;
+        }
+        List<ServerName> favoredNodes = globalFavoredNodesAssignmentPlan.getFavoredNodes(region);
+        if (favoredNodes == null || favoredNodes.get(0).equals(currentServerWithoutStartCode)) {
+          continue; //either favorednodes does not exist or we are already on the primary node
+        }
+        ServerName destination = null;
+        //check whether the primary is available
+        destination = serverNameWithoutCodeToServerName.get(favoredNodes.get(0));
+        if (destination == null) {
+          //check whether the region is on secondary/tertiary
+          if (currentServerWithoutStartCode.equals(favoredNodes.get(1)) ||
+              currentServerWithoutStartCode.equals(favoredNodes.get(2))) {
+            continue;
+          }
+          //the region is currently on none of the favored nodes
+          //get it on one of them if possible
+          ServerLoad l1 = super.services.getServerManager().getLoad(
+              serverNameWithoutCodeToServerName.get(favoredNodes.get(1)));
+          ServerLoad l2 = super.services.getServerManager().getLoad(
+              serverNameWithoutCodeToServerName.get(favoredNodes.get(2)));
+          if (l1 != null && l2 != null) {
+            if (l1.getLoad() > l2.getLoad()) {
+              destination = serverNameWithoutCodeToServerName.get(favoredNodes.get(2));
+            } else {
+              destination = serverNameWithoutCodeToServerName.get(favoredNodes.get(1));
+            }
+          } else if (l1 != null) {
+            destination = serverNameWithoutCodeToServerName.get(favoredNodes.get(1));
+          } else if (l2 != null) {
+            destination = serverNameWithoutCodeToServerName.get(favoredNodes.get(2));
+          }
+        }
+        
+        if (destination != null) {
+          RegionPlan plan = new RegionPlan(region, currentServer, destination);
+          plans.add(plan);
+        }
+      }
+    }
+    return plans;
   }
 
   @Override
@@ -168,8 +238,8 @@ public class FavoredNodeLoadBalancer extends BaseLoadBalancer {
         for (ServerName s : favoredNodes) {
           ServerName serverWithLegitStartCode = availableServersContains(availableServers, s);
           if (serverWithLegitStartCode != null) {
-            FavoredNodes.Position position =
-                FavoredNodes.getFavoredServerPosition(favoredNodes, s);
+            FavoredNodesPlan.Position position =
+                FavoredNodesPlan.getFavoredServerPosition(favoredNodes, s);
             if (Position.PRIMARY.equals(position)) {
               primaryHost = serverWithLegitStartCode;
             } else if (Position.SECONDARY.equals(position)) {
@@ -243,7 +313,7 @@ public class FavoredNodeLoadBalancer extends BaseLoadBalancer {
 
   private void roundRobinAssignmentImpl(FavoredNodeAssignmentHelper assignmentHelper,
       Map<ServerName, List<HRegionInfo>> assignmentMap,
-      List<HRegionInfo> regions, List<ServerName> servers) throws IOException {
+      List<HRegionInfo> regions, List<ServerName> servers) {
     Map<HRegionInfo, ServerName> primaryRSMap = new HashMap<HRegionInfo, ServerName>();
     // figure the primary RSs
     assignmentHelper.placePrimaryRSAsRoundRobin(assignmentMap, primaryRSMap, regions);
@@ -272,14 +342,6 @@ public class FavoredNodeLoadBalancer extends BaseLoadBalancer {
             secondaryAndTertiaryNodes[1].getPort(), ServerName.NON_STARTCODE));
       }
       globalFavoredNodesAssignmentPlan.updateFavoredNodesMap(region, favoredNodesForRegion);
-    }
-  }
-
-  void noteFavoredNodes(final Map<HRegionInfo, ServerName[]> favoredNodesMap) {
-    for (Map.Entry<HRegionInfo, ServerName[]> entry : favoredNodesMap.entrySet()) {
-      // the META should already have favorednode ServerName objects without startcode
-      globalFavoredNodesAssignmentPlan.updateFavoredNodesMap(entry.getKey(),
-          Arrays.asList(entry.getValue()));
     }
   }
 }

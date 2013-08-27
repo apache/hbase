@@ -35,6 +35,10 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 
 import org.apache.commons.logging.Log;
@@ -61,6 +65,7 @@ import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.master.HMaster;
+import org.apache.hadoop.hbase.master.RegionPlacementMaintainer;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.FSProtos;
 import org.apache.hadoop.hbase.regionserver.HRegion;
@@ -87,6 +92,8 @@ public abstract class FSUtils {
 
   /** Full access permissions (starting point for a umask) */
   private static final String FULL_RWX_PERMISSIONS = "777";
+  private static final String THREAD_POOLSIZE = "hbase.client.localityCheck.threadPoolSize";
+  private static final int DEFAULT_THREAD_POOLSIZE = 2;
 
   /** Set to true on Windows platforms */
   public static final boolean WINDOWS = System.getProperty("os.name").startsWith("Windows");
@@ -1697,5 +1704,182 @@ public abstract class FSUtils {
     // set the modify time for TimeToLive Cleaner
     fs.setTimes(src, EnvironmentEdgeManager.currentTimeMillis(), -1);
     return fs.rename(src, dest);
+  }
+
+  /**
+   * This function is to scan the root path of the file system to get the
+   * degree of locality for each region on each of the servers having at least
+   * one block of that region.
+   * This is used by the tool {@link RegionPlacementMaintainer}
+   *
+   * @param conf
+   *          the configuration to use
+   * @return the mapping from region encoded name to a map of server names to
+   *           locality fraction
+   * @throws IOException
+   *           in case of file system errors or interrupts
+   */
+  public static Map<String, Map<String, Float>> getRegionDegreeLocalityMappingFromFS(
+      final Configuration conf) throws IOException {
+    return getRegionDegreeLocalityMappingFromFS(
+        conf, null,
+        conf.getInt(THREAD_POOLSIZE, DEFAULT_THREAD_POOLSIZE));
+
+  }
+
+  /**
+   * This function is to scan the root path of the file system to get the
+   * degree of locality for each region on each of the servers having at least
+   * one block of that region.
+   *
+   * @param conf
+   *          the configuration to use
+   * @param desiredTable
+   *          the table you wish to scan locality for
+   * @param threadPoolSize
+   *          the thread pool size to use
+   * @return the mapping from region encoded name to a map of server names to
+   *           locality fraction
+   * @throws IOException
+   *           in case of file system errors or interrupts
+   */
+  public static Map<String, Map<String, Float>> getRegionDegreeLocalityMappingFromFS(
+      final Configuration conf, final String desiredTable, int threadPoolSize)
+      throws IOException {
+    Map<String, Map<String, Float>> regionDegreeLocalityMapping =
+        new ConcurrentHashMap<String, Map<String, Float>>();
+    getRegionLocalityMappingFromFS(conf, desiredTable, threadPoolSize, null,
+        regionDegreeLocalityMapping);
+    return regionDegreeLocalityMapping;
+  }
+
+  /**
+   * This function is to scan the root path of the file system to get either the
+   * mapping between the region name and its best locality region server or the
+   * degree of locality of each region on each of the servers having at least
+   * one block of that region. The output map parameters are both optional.
+   *
+   * @param conf
+   *          the configuration to use
+   * @param desiredTable
+   *          the table you wish to scan locality for
+   * @param threadPoolSize
+   *          the thread pool size to use
+   * @param regionToBestLocalityRSMapping
+   *          the map into which to put the best locality mapping or null
+   * @param regionDegreeLocalityMapping
+   *          the map into which to put the locality degree mapping or null,
+   *          must be a thread-safe implementation
+   * @throws IOException
+   *           in case of file system errors or interrupts
+   */
+  private static void getRegionLocalityMappingFromFS(
+      final Configuration conf, final String desiredTable,
+      int threadPoolSize,
+      Map<String, String> regionToBestLocalityRSMapping,
+      Map<String, Map<String, Float>> regionDegreeLocalityMapping)
+      throws IOException {
+    FileSystem fs =  FileSystem.get(conf);
+    Path rootPath = FSUtils.getRootDir(conf);
+    long startTime = EnvironmentEdgeManager.currentTimeMillis();
+    Path queryPath;
+    // The table files are in ${hbase.rootdir}/data/<namespace>/<table>/*
+    if (null == desiredTable) {
+      queryPath = new Path(new Path(rootPath, HConstants.BASE_NAMESPACE_DIR), "/*/*/");
+    } else {
+      queryPath = new Path(FSUtils.getTableDir(rootPath, TableName.valueOf(desiredTable)), "/*/");
+    }
+
+    // reject all paths that are not appropriate
+    PathFilter pathFilter = new PathFilter() {
+      @Override
+      public boolean accept(Path path) {
+        // this is the region name; it may get some noise data
+        if (null == path) {
+          return false;
+        }
+
+        // no parent?
+        Path parent = path.getParent();
+        if (null == parent) {
+          return false;
+        }
+
+        // not part of a table?
+        if (!parent.getName().equals(TableName.META_TABLE_NAME.getQualifierAsString())) {
+          return false;
+        }
+
+        String regionName = path.getName();
+        if (null == regionName) {
+          return false;
+        }
+
+        if (!regionName.toLowerCase().matches("[0-9a-f]+")) {
+          return false;
+        }
+        return true;
+      }
+    };
+
+    FileStatus[] statusList = fs.globStatus(queryPath, pathFilter);
+
+    if (null == statusList) {
+      return;
+    } else {
+      LOG.debug("Query Path: " + queryPath + " ; # list of files: " +
+          statusList.length);
+    }
+
+    // lower the number of threads in case we have very few expected regions
+    threadPoolSize = Math.min(threadPoolSize, statusList.length);
+
+    // run in multiple threads
+    ThreadPoolExecutor tpe = new ThreadPoolExecutor(threadPoolSize,
+        threadPoolSize, 60, TimeUnit.SECONDS,
+        new ArrayBlockingQueue<Runnable>(statusList.length));
+    try {
+      // ignore all file status items that are not of interest
+      for (FileStatus regionStatus : statusList) {
+        if (null == regionStatus) {
+          continue;
+        }
+
+        if (!regionStatus.isDir()) {
+          continue;
+        }
+
+        Path regionPath = regionStatus.getPath();
+        if (null == regionPath) {
+          continue;
+        }
+
+        tpe.execute(new FSRegionScanner(fs, regionPath,
+            regionToBestLocalityRSMapping, regionDegreeLocalityMapping));
+      }
+    } finally {
+      tpe.shutdown();
+      int threadWakeFrequency = conf.getInt(HConstants.THREAD_WAKE_FREQUENCY,
+          60 * 1000);
+      try {
+        // here we wait until TPE terminates, which is either naturally or by
+        // exceptions in the execution of the threads
+        while (!tpe.awaitTermination(threadWakeFrequency,
+            TimeUnit.MILLISECONDS)) {
+          // printing out rough estimate, so as to not introduce
+          // AtomicInteger
+          LOG.info("Locality checking is underway: { Scanned Regions : "
+              + tpe.getCompletedTaskCount() + "/"
+              + tpe.getTaskCount() + " }");
+        }
+      } catch (InterruptedException e) {
+        throw new IOException(e);
+      }
+    }
+
+    long overhead = EnvironmentEdgeManager.currentTimeMillis() - startTime;
+    String overheadMsg = "Scan DFS for locality info takes " + overhead + " ms";
+
+    LOG.info(overheadMsg);
   }
 }
