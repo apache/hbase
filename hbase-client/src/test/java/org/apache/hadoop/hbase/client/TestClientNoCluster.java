@@ -26,6 +26,7 @@ import java.util.concurrent.ExecutorService;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
@@ -40,6 +41,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.Ignore;
+import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
 
 import com.google.protobuf.RpcController;
@@ -49,6 +51,7 @@ import com.google.protobuf.ServiceException;
  * Test client behavior w/o setting up a cluster.
  * Mock up cluster emissions.
  */
+@Category(SmallTests.class)
 public class TestClientNoCluster {
   private static final Log LOG = LogFactory.getLog(TestClientNoCluster.class);
   private Configuration conf;

@@ -84,7 +84,6 @@ import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiResponse;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutateRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutateResponse;
-import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ResultCellMeta;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ScanRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ScanResponse;
 import org.apache.hadoop.hbase.regionserver.CompactionRequestor;
@@ -382,9 +381,7 @@ ClientProtos.ClientService.BlockingInterface, RegionServerServices {
         long scannerId = request.getScannerId();
         Result result = next(scannerId);
         if (result != null) {
-          ResultCellMeta.Builder metaBuilder = ResultCellMeta.newBuilder();
-          metaBuilder.addCellsLength(result.size());
-          builder.setResultCellMeta(metaBuilder.build());
+          builder.addCellsPerResult(result.size());
           List<CellScannable> results = new ArrayList<CellScannable>(1);
           results.add(result);
           ((PayloadCarryingRpcController) controller).setCellScanner(CellUtil

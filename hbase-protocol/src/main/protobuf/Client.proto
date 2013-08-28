@@ -263,14 +263,21 @@ message ScanRequest {
  * be false.  If it is not specified, it means there are more.
  */
 message ScanResponse {
-  optional ResultCellMeta result_cell_meta = 1;
+  // This field is filled in if we are doing cellblocks.  A cellblock is made up
+  // of all Cells serialized out as one cellblock BUT responses from a server
+  // have their Cells grouped by Result.  So we can reconstitute the
+  // Results on the client-side, this field is a list of counts of Cells
+  // in each Result that makes up the response.  For example, if this field
+  // has 3, 3, 3 in it, then we know that on the client, we are to make
+  // three Results each of three Cells each.
+  repeated uint32 cells_per_result = 1;
   optional uint64 scanner_id = 2;
   optional bool more_results = 3;
   optional uint32 ttl = 4;
-}
-
-message ResultCellMeta {
-  repeated uint32 cells_length = 1;
+  // If cells are not carried in an accompanying cellblock, then they are pb'd here.
+  // This field is mutually exclusive with cells_per_result (since the Cells will
+  // be inside the pb'd Result)
+  repeated Result results = 5;
 }
 
 /**

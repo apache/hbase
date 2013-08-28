@@ -212,9 +212,18 @@
   <section><title>CellBlock Codecs</title>
       <para>To enable a codec other than the default <classname>KeyValueCodec</classname>,
           set <varname>hbase.client.rpc.codec</varname>
-          to the name of the Codec to use.  Codec must implement hbase's <classname>Codec</classname> Interface.  After connection setup,
+          to the name of the Codec class to use.  Codec must implement hbase's <classname>Codec</classname> Interface.  After connection setup,
           all passed cellblocks will be sent with this codec.  The server will return cellblocks using this same codec as long
           as the codec is on the servers' CLASSPATH (else you will get <classname>UnsupportedCellCodecException</classname>).</para>
+      <para>To change the default codec, set <varname>hbase.client.default.rpc.codec</varname>.
+      </para>
+      <para>To disable cellblocks completely and to go pure protobuf, set the default to the
+          empty String and do not specify a codec in your Configuration.  So, set <varname>hbase.client.default.rpc.codec</varname>
+          to the empty string and do not set <varname>hbase.client.rpc.codec</varname>.
+          This will cause the client to connect to the server with no codec specified.
+          If a server sees no codec, it will return all responses in pure protobuf.
+          Running pure protobuf all the time will be slower than running with cellblocks.
+      </para>
   </section>
   <section><title>Compression</title>
       <para>Uses hadoops compression codecs.  To enable compressing of passed CellBlocks, set <varname>hbase.client.rpc.compressor</varname>

@@ -21,7 +21,6 @@ package org.apache.hadoop.hbase.coprocessor;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.util.Collection;
@@ -41,7 +40,6 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.MediumTests;
-import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
@@ -64,7 +62,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category(SmallTests.class)
+@Category(MediumTests.class)
 public class TestRegionObserverScannerOpenHook {
   private static HBaseTestingUtility UTIL = new HBaseTestingUtility();
   static final Path DIR = UTIL.getDataTestDir();
@@ -212,7 +210,6 @@ public class TestRegionObserverScannerOpenHook {
    * region
    */
   @Test
-  @Category(MediumTests.class)
   public void testRegionObserverCompactionTimeStacking() throws Exception {
     // setup a mini cluster so we can do a real compaction on a region
     Configuration conf = UTIL.getConfiguration();

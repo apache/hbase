@@ -59,18 +59,16 @@ import javax.security.sasl.Sasl;
 import javax.security.sasl.SaslException;
 import javax.security.sasl.SaslServer;
 
-import com.google.common.collect.Lists;
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CellScanner;
-import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.Server;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Operation;
 import org.apache.hadoop.hbase.codec.Codec;
 import org.apache.hadoop.hbase.exceptions.RegionMovedException;
@@ -113,12 +111,12 @@ import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.util.StringUtils;
 import org.cliffc.high_scale_lib.Counter;
-import org.cloudera.htrace.Sampler;
 import org.cloudera.htrace.Trace;
 import org.cloudera.htrace.TraceInfo;
 import org.cloudera.htrace.TraceScope;
 import org.codehaus.jackson.map.ObjectMapper;
 
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.protobuf.BlockingService;
 import com.google.protobuf.CodedInputStream;
 import com.google.protobuf.Descriptors.MethodDescriptor;
@@ -203,7 +201,6 @@ public class RpcServer implements RpcServerInterface {
 
   protected final Configuration conf;
 
-  private int maxQueueLength;
   private int maxQueueSize;
   protected int socketSendBufferSize;
   protected final boolean tcpNoDelay;   // if T then disable Nagle's Algorithm
@@ -441,6 +438,11 @@ public class RpcServer implements RpcServerInterface {
     @Override
     public synchronized boolean isReturnValueDelayed() {
       return this.delayReturnValue;
+    }
+
+    @Override
+    public boolean isClientCellBlockSupport() {
+      return this.connection != null && this.connection.codec != null;
     }
 
     @Override
@@ -1542,7 +1544,9 @@ public class RpcServer implements RpcServerInterface {
     private void setupCellBlockCodecs(final ConnectionHeader header)
     throws FatalConnectionException {
       // TODO: Plug in other supported decoders.
+      if (!header.hasCellBlockCodecClass()) return;
       String className = header.getCellBlockCodecClass();
+      if (className == null || className.length() == 0) return;
       try {
         this.codec = (Codec)Class.forName(className).newInstance();
       } catch (Exception e) {
@@ -2335,9 +2339,10 @@ public class RpcServer implements RpcServerInterface {
   }
 
   /**
-   * Needed for delayed calls.  We need to be able to store the current call
-   * so that we can complete it later.
-   * @return Call the server is currently handling.
+   * Needed for features such as delayed calls.  We need to be able to store the current call
+   * so that we can complete it later or ask questions of what is supported by the current ongoing
+   * call.
+   * @return An RpcCallConext backed by the currently ongoing call (gotten from a thread local)
    */
   public static RpcCallContext getCurrentCall() {
     return CurCall.get();

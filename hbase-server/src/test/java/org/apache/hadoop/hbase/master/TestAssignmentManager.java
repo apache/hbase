@@ -64,7 +64,6 @@ import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.GetRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.GetResponse;
-import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ResultCellMeta;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ScanRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ScanResponse;
 import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.Table;
@@ -606,9 +605,7 @@ public class TestAssignmentManager {
 
     final ScanResponse.Builder builder = ScanResponse.newBuilder();
     builder.setMoreResults(true);
-    ResultCellMeta.Builder metaBuilder = ResultCellMeta.newBuilder();
-    metaBuilder.addCellsLength(r.size());
-    builder.setResultCellMeta(metaBuilder.build());
+    builder.addCellsPerResult(r.size());
     final List<CellScannable> cellScannables = new ArrayList<CellScannable>(1);
     cellScannables.add(r);
     Mockito.when(implementation.scan(
@@ -1077,9 +1074,7 @@ public class TestAssignmentManager {
     Result r = MetaMockingUtil.getMetaTableRowResult(REGIONINFO, SERVERNAME_A);
     final ScanResponse.Builder builder = ScanResponse.newBuilder();
     builder.setMoreResults(true);
-    ResultCellMeta.Builder metaBuilder = ResultCellMeta.newBuilder();
-    metaBuilder.addCellsLength(r.size());
-    builder.setResultCellMeta(metaBuilder.build());
+    builder.addCellsPerResult(r.size());
     final List<CellScannable> rows = new ArrayList<CellScannable>(1);
     rows.add(r);
     Answer<ScanResponse> ans = new Answer<ClientProtos.ScanResponse>() {

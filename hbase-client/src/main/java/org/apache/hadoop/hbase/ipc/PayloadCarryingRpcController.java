@@ -55,7 +55,7 @@ public class PayloadCarryingRpcController implements RpcController, CellScannabl
   }
 
   public PayloadCarryingRpcController(final List<CellScannable> cellIterables) {
-    this.cellScanner = CellUtil.createCellScanner(cellIterables);
+    this.cellScanner = cellIterables == null? null: CellUtil.createCellScanner(cellIterables);
   }
 
   /**

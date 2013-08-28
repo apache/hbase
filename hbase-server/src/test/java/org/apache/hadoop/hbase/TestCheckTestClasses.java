@@ -18,23 +18,12 @@
 
 package org.apache.hadoop.hbase;
 
-import static junit.framework.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
-import java.io.File;
-import java.io.FileFilter;
-import java.io.IOException;
-import java.lang.reflect.Method;
-import java.lang.reflect.Modifier;
-import java.net.URL;
-import java.util.ArrayList;
-import java.util.Enumeration;
 import java.util.List;
-import java.util.regex.Pattern;
 
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-import org.junit.runners.Suite;
 
 
 /**

@@ -40,7 +40,6 @@ import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.RollWALWriterRespo
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ServerInfo;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ActionResult;
-import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ResultCellMeta;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ScanResponse;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameBytesPair;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.CatalogScanResponse;
@@ -277,36 +276,44 @@ public final class ResponseConverter {
    */
   public static Result[] getResults(CellScanner cellScanner, ScanResponse response)
       throws IOException {
-    if (response == null || cellScanner == null) return null;
-    ResultCellMeta resultCellMeta = response.getResultCellMeta();
-    if (resultCellMeta == null) return null;
-    int noOfResults = resultCellMeta.getCellsLengthCount();
+    if (response == null) return null;
+    // If cellscanner, then the number of Results to return is the count of elements in the
+    // cellsPerResult list.  Otherwise, it is how many results are embedded inside the response.
+    int noOfResults = cellScanner != null?
+      response.getCellsPerResultCount(): response.getResultsCount();
     Result[] results = new Result[noOfResults];
     for (int i = 0; i < noOfResults; i++) {
-      int noOfCells = resultCellMeta.getCellsLength(i);
-      List<Cell> cells = new ArrayList<Cell>(noOfCells);
-      for (int j = 0; j < noOfCells; j++) {
-        try {
-          if (cellScanner.advance() == false) {
-            // We are not able to retrieve the exact number of cells which ResultCellMeta says us.
+      if (cellScanner != null) {
+        // Cells are out in cellblocks.  Group them up again as Results.  How many to read at a
+        // time will be found in getCellsLength -- length here is how many Cells in the i'th Result
+        int noOfCells = response.getCellsPerResult(i);
+        List<Cell> cells = new ArrayList<Cell>(noOfCells);
+        for (int j = 0; j < noOfCells; j++) {
+          try {
+            if (cellScanner.advance() == false) {
+              // We are not able to retrieve the exact number of cells which ResultCellMeta says us.
+              // We have to scan for the same results again. Throwing DNRIOE as a client retry on the
+              // same scanner will result in OutOfOrderScannerNextException
+              String msg = "Results sent from server=" + noOfResults + ". But only got " + i
+                + " results completely at client. Resetting the scanner to scan again.";
+              LOG.error(msg);
+              throw new DoNotRetryIOException(msg);
+            }
+          } catch (IOException ioe) {
+            // We are getting IOE while retrieving the cells for Results.
             // We have to scan for the same results again. Throwing DNRIOE as a client retry on the
             // same scanner will result in OutOfOrderScannerNextException
-            String msg = "Results sent from server=" + noOfResults + ". But only got " + i
-                + " results completely at client. Resetting the scanner to scan again.";
-            LOG.error(msg);
-            throw new DoNotRetryIOException(msg);
-          }
-        } catch (IOException ioe) {
-          // We are getting IOE while retrieving the cells for Results.
-          // We have to scan for the same results again. Throwing DNRIOE as a client retry on the
-          // same scanner will result in OutOfOrderScannerNextException
-          LOG.error("Exception while reading cells from result."
+            LOG.error("Exception while reading cells from result."
               + "Resetting the scanner to scan again.", ioe);
-          throw new DoNotRetryIOException("Resetting the scanner.", ioe);
+            throw new DoNotRetryIOException("Resetting the scanner.", ioe);
+          }
+          cells.add(cellScanner.current());
         }
-        cells.add(cellScanner.current());
+        results[i] = new Result(cells);
+      } else {
+        // Result is pure pb.
+        results[i] = ProtobufUtil.toResult(response.getResults(i));
       }
-      results[i] = new Result(cells);
     }
     return results;
   }

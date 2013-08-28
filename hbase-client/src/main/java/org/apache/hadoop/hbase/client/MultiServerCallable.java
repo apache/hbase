@@ -22,6 +22,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CellScannable;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HRegionLocation;
@@ -42,12 +43,14 @@ import com.google.protobuf.ServiceException;
  */
 class MultiServerCallable<R> extends RegionServerCallable<MultiResponse> {
   private final MultiAction<R> multi;
+  private final boolean cellBlock;
 
   MultiServerCallable(final HConnection connection, final TableName tableName,
       final HRegionLocation location, final MultiAction<R> multi) {
     super(connection, tableName, null);
     this.multi = multi;
     setLocation(location);
+    this.cellBlock = isCellBlock();
   }
 
   MultiAction<R> getMulti() {
@@ -67,16 +70,21 @@ class MultiServerCallable<R> extends RegionServerCallable<MultiResponse> {
         // Row Mutations are a set of Puts and/or Deletes all to be applied atomically
         // on the one row.  We do these a row at a time.
         if (row instanceof RowMutations) {
+          RowMutations rms = (RowMutations)row;
+          List<CellScannable> cells = null;
+          MultiRequest multiRequest;
           try {
-            RowMutations rms = (RowMutations)row;
-            // Stick all Cells for all RowMutations in here into 'cells'.  Populated when we call
-            // buildNoDataMultiRequest in the below.
-            List<CellScannable> cells = new ArrayList<CellScannable>(rms.getMutations().size());
-            // Build a multi request absent its Cell payload (this is the 'nodata' in the below).
-            MultiRequest multiRequest =
-                RequestConverter.buildNoDataMultiRequest(regionName, rms, cells);
-            // Carry the cells over the proxy/pb Service interface using the payload carrying
-            // rpc controller.
+            if (this.cellBlock) {
+              // Stick all Cells for all RowMutations in here into 'cells'.  Populated when we call
+              // buildNoDataMultiRequest in the below.
+              cells = new ArrayList<CellScannable>(rms.getMutations().size());
+              // Build a multi request absent its Cell payload (this is the 'nodata' in the below).
+              multiRequest = RequestConverter.buildNoDataMultiRequest(regionName, rms, cells);
+            } else {
+              multiRequest = RequestConverter.buildMultiRequest(regionName, rms);
+            }
+            // Carry the cells if any over the proxy/pb Service interface using the payload
+            // carrying rpc controller.
             getStub().multi(new PayloadCarryingRpcController(cells), multiRequest);
             // This multi call does not return results.
             response.add(regionName, action.getOriginalIndex(), Result.EMPTY_RESULT);
@@ -91,14 +99,17 @@ class MultiServerCallable<R> extends RegionServerCallable<MultiResponse> {
       if (actions.size() > rowMutations) {
         Exception ex = null;
         List<Object> results = null;
-        // Stick all Cells for the multiRequest in here into 'cells'.  Gets filled in when we
-        // call buildNoDataMultiRequest
-        List<CellScannable> cells = new ArrayList<CellScannable>(actions.size() - rowMutations);
+        List<CellScannable> cells = null;
+        MultiRequest multiRequest;
         try {
-          // The call to buildNoDataMultiRequest will skip RowMutations.  They have
-          // already been handled above.
-          MultiRequest multiRequest =
-              RequestConverter.buildNoDataMultiRequest(regionName, actions, cells);
+          if (isCellBlock()) {
+            // Send data in cellblocks. The call to buildNoDataMultiRequest will skip RowMutations.
+            // They have already been handled above.
+            cells = new ArrayList<CellScannable>(actions.size() - rowMutations);
+            multiRequest = RequestConverter.buildNoDataMultiRequest(regionName, actions, cells);
+          } else {
+            multiRequest = RequestConverter.buildMultiRequest(regionName, actions);
+          }
           // Controller optionally carries cell data over the proxy/service boundary and also
           // optionally ferries cell response data back out again.
           PayloadCarryingRpcController controller = new PayloadCarryingRpcController(cells);
@@ -114,6 +125,22 @@ class MultiServerCallable<R> extends RegionServerCallable<MultiResponse> {
       }
     }
     return response;
+  }
+
+
+  /**
+   * @return True if we should send data in cellblocks.  This is an expensive call.  Cache the
+   * result if you can rather than call each time.
+   */
+  private boolean isCellBlock() {
+    // This is not exact -- the configuration could have changed on us after connection was set up
+    // but it will do for now.
+    HConnection connection = getConnection();
+    if (connection == null) return true; // Default is to do cellblocks.
+    Configuration configuration = connection.getConfiguration();
+    if (configuration == null) return true;
+    String codec = configuration.get("hbase.client.rpc.codec", "");
+    return codec != null && codec.length() > 0;
   }
 
   @Override
