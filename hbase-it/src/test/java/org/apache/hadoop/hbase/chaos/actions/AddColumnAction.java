@@ -32,9 +32,11 @@ import org.apache.hadoop.hbase.util.Bytes;
  */
 public class AddColumnAction extends Action {
   private final byte[] tableName;
+  private final String tableNameString;
   private HBaseAdmin admin;
 
   public AddColumnAction(String tableName) {
+    tableNameString = tableName;
     this.tableName = Bytes.toBytes(tableName);
   }
 
@@ -53,6 +55,8 @@ public class AddColumnAction extends Action {
         tableDescriptor.getFamily(columnDescriptor.getName()) != null) {
       columnDescriptor = new HColumnDescriptor(RandomStringUtils.randomAlphabetic(5));
     }
+
+    LOG.debug("Performing action: Adding " + columnDescriptor + " to " + tableNameString);
 
     tableDescriptor.addFamily(columnDescriptor);
     admin.modifyTable(tableName, tableDescriptor);

@@ -33,11 +33,13 @@ import org.apache.hadoop.hbase.util.Bytes;
  */
 public class ChangeVersionsAction extends Action {
   private final byte[] tableName;
+  private final String tableNameString;
 
   private HBaseAdmin admin;
   private Random random;
 
   public ChangeVersionsAction(String tableName) {
+    tableNameString = tableName;
     this.tableName = Bytes.toBytes(tableName);
     this.random = new Random();
   }
@@ -62,7 +64,7 @@ public class ChangeVersionsAction extends Action {
       descriptor.setMaxVersions(versions);
       descriptor.setMinVersions(versions);
     }
-
+    LOG.debug("Performing action: Changing versions on " + tableNameString);
     admin.modifyTable(tableName, tableDescriptor);
   }
 }
