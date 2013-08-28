@@ -33,10 +33,12 @@ import org.apache.hadoop.hbase.util.Bytes;
 public class RemoveColumnAction extends Action {
   private final byte[] tableName;
   private final Set<String> protectedColumns;
+  private final String tableNameString;
   private HBaseAdmin admin;
   private Random random;
 
   public RemoveColumnAction(String tableName, Set<String> protectedColumns) {
+    tableNameString = tableName;
     this.tableName = Bytes.toBytes(tableName);
     this.protectedColumns = protectedColumns;
     random = new Random();
@@ -62,7 +64,8 @@ public class RemoveColumnAction extends Action {
           protectedColumns.contains(columnDescriptors[index].getNameAsString())) {
       index = random.nextInt(columnDescriptors.length);
     }
-
+    LOG.debug("Performing action: Removing " + columnDescriptors[index].getName() + " from "
+        + tableNameString);
     tableDescriptor.removeFamily(columnDescriptors[index].getName());
 
     admin.modifyTable(tableName, tableDescriptor);

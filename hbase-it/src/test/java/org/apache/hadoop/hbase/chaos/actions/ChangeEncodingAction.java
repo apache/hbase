@@ -32,11 +32,13 @@ import org.apache.hadoop.hbase.util.Bytes;
  */
 public class ChangeEncodingAction extends Action {
   private final byte[] tableName;
+  private final String tableNameString;
 
   private HBaseAdmin admin;
   private Random random;
 
   public ChangeEncodingAction(String tableName) {
+    tableNameString = tableName;
     this.tableName = Bytes.toBytes(tableName);
     this.random = new Random();
   }
@@ -56,6 +58,7 @@ public class ChangeEncodingAction extends Action {
       return;
     }
 
+    LOG.debug("Performing action: Changing encodings on " + tableNameString);
     // possible DataBlockEncoding id's
     int[] possibleIds = {0, 2, 3, 4, 6};
     for (HColumnDescriptor descriptor : columnDescriptors) {
