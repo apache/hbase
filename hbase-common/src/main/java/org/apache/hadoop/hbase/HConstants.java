@@ -254,6 +254,7 @@ public final class HConstants {
 
   /** Parameter name for the maximum batch of KVs to be used in flushes and compactions */
   public static final String COMPACTION_KV_MAX = "hbase.hstore.compaction.kv.max";
+  public static final int COMPACTION_KV_MAX_DEFAULT = 10;
 
   /** Parameter name for HBase instance root directory */
   public static final String HBASE_DIR = "hbase.rootdir";

@@ -607,6 +607,13 @@ possible configurations would overwhelm and obscure the important.
     <description>Max number of HStoreFiles to compact per 'minor' compaction.</description>
   </property>
   <property>
+    <name>hbase.hstore.compaction.kv.max</name>
+    <value>10</value>
+    <description>How many KeyValues to read and then write in a batch when flushing
+        or compacting.  Do less if big KeyValues and problems with OOME.
+        Do more if wide, small rows.</description>
+  </property>
+  <property>
     <name>hbase.storescanner.parallel.seek.enable</name>
     <value>false</value>
     <description>
@@ -950,7 +957,7 @@ possible configurations would overwhelm and obscure the important.
     <description>
         If set to true, HBase will read data and then verify checksums for
         hfile blocks. Checksum verification inside HDFS will be switched off.
-        If the hbase-checksum verification fails, then it will switch back to 
+        If the hbase-checksum verification fails, then it will switch back to
         using HDFS checksums.
     </description>
   </property>

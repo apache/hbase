@@ -115,7 +115,8 @@ abstract class StoreFlusher {
 s   */
   protected long performFlush(InternalScanner scanner,
       Compactor.CellSink sink, long smallestReadPoint) throws IOException {
-    int compactionKVMax = conf.getInt(HConstants.COMPACTION_KV_MAX, 10);
+    int compactionKVMax =
+      conf.getInt(HConstants.COMPACTION_KV_MAX, HConstants.COMPACTION_KV_MAX_DEFAULT);
     List<KeyValue> kvs = new ArrayList<KeyValue>();
     boolean hasMore;
     long flushed = 0;
