@@ -21,16 +21,20 @@ package org.apache.hadoop.hbase.regionserver.wal;
 
 import java.io.IOException;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos.WALTrailer;
 import org.apache.hadoop.hbase.util.FSUtils;
 
 @InterfaceAudience.Private
 public abstract class ReaderBase implements HLog.Reader {
+  private static final Log LOG = LogFactory.getLog(ReaderBase.class);
   protected Configuration conf;
   protected FileSystem fs;
   protected Path path;
@@ -95,14 +99,24 @@ public abstract class ReaderBase implements HLog.Reader {
       e.setCompressionContext(compressionContext);
     }
 
-    boolean hasEntry = readNext(e);
+    boolean hasEntry = false;
+    try {
+      hasEntry = readNext(e);
+    } catch (IllegalArgumentException iae) {
+      TableName tableName = e.getKey().getTablename();
+      if (tableName != null && tableName.equals(TableName.OLD_ROOT_TABLE_NAME)) {
+        // It is old ROOT table edit, ignore it
+        LOG.info("Got an old ROOT edit, ignoring ");
+        return next(e);
+      }
+      else throw iae;
+    }
     edit++;
     if (compressionContext != null && emptyCompressionContext) {
       emptyCompressionContext = false;
     }
     return hasEntry ? e : null;
   }
-
 
   @Override
   public void seek(long pos) throws IOException {
