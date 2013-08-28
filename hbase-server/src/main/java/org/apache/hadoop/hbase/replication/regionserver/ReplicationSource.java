@@ -38,7 +38,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.TableName;
@@ -55,10 +54,8 @@ import org.apache.hadoop.hbase.replication.ReplicationPeers;
 import org.apache.hadoop.hbase.replication.ReplicationQueueInfo;
 import org.apache.hadoop.hbase.replication.ReplicationQueues;
 import org.apache.hadoop.hbase.replication.regionserver.ReplicationSinkManager.SinkPeer;
-import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.ipc.RemoteException;
-import org.apache.zookeeper.KeeperException;
 
 /**
  * Class that handles the source of a replication stream.
@@ -395,20 +392,15 @@ public class ReplicationSource extends Thread
       seenEntries++;
       // Remove all KVs that should not be replicated
       HLogKey logKey = entry.getKey();
-      // don't replicate if the log entries originated in the peer
-      if (!logKey.getClusterId().equals(peerClusterId)) {
+      // don't replicate if the log entries have already been consumed by the cluster
+      if (!logKey.getClusterIds().contains(peerClusterId)) {
         removeNonReplicableEdits(entry);
         // Don't replicate catalog entries, if the WALEdit wasn't
         // containing anything to replicate and if we're currently not set to replicate
         if (!logKey.getTablename().equals(TableName.META_TABLE_NAME) &&
             edit.size() != 0) {
-          // Only set the clusterId if is a local key.
-          // This ensures that the originator sets the cluster id
-          // and all replicas retain the initial cluster id.
-          // This is *only* place where a cluster id other than the default is set.
-          if (HConstants.DEFAULT_CLUSTER_ID == logKey.getClusterId()) {
-            logKey.setClusterId(this.clusterId);
-          }
+          //Mark that the current cluster has the change
+          logKey.addClusterId(clusterId);
           currentNbOperations += countDistinctRowKeys(edit);
           currentNbEntries++;
           currentSize += entry.getEdit().size();

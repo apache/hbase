@@ -18,9 +18,10 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 
@@ -41,8 +42,8 @@ implements RowProcessor<S,T> {
   }
 
   @Override
-  public UUID getClusterId() {
-    return HConstants.DEFAULT_CLUSTER_ID;
+  public List<UUID> getClusterIds() {
+    return new ArrayList<UUID>();
   }
 
   @Override

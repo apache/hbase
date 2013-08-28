@@ -33,13 +33,24 @@ message WALKey {
   required bytes table_name = 2;
   required uint64 log_sequence_number = 3;
   required uint64 write_time = 4;
-  optional UUID cluster_id = 5;
+  /*
+  This parameter is deprecated in favor of clusters which 
+  contains the list of clusters that have consumed the change.
+  It is retained so that the log created by earlier releases (0.94) 
+  can be read by the newer releases.
+  */
+  optional UUID cluster_id = 5 [deprecated=true];
 
   repeated FamilyScope scopes = 6;
   optional uint32 following_kv_count = 7;
+  /*
+  This field contains the list of clusters that have
+  consumed the change
+  */
+  repeated UUID cluster_ids = 8;
 /*
-  optional CustomEntryType custom_entry_type = 8;
-
+  optional CustomEntryType custom_entry_type = 9;
+  
   enum CustomEntryType {
     COMPACTION = 0;
   }

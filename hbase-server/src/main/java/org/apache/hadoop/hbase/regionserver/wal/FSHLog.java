@@ -27,6 +27,7 @@ import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.LinkedHashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -821,12 +822,12 @@ class FSHLog implements HLog, Syncable {
    * @param encodedRegionName Encoded name of the region as returned by
    * <code>HRegionInfo#getEncodedNameAsBytes()</code>.
    * @param tableName
-   * @param clusterId
+   * @param clusterIds that have consumed the change
    * @return New log key.
    */
   protected HLogKey makeKey(byte[] encodedRegionName, TableName tableName, long seqnum,
-      long now, UUID clusterId) {
-    return new HLogKey(encodedRegionName, tableName, seqnum, now, clusterId);
+      long now, List<UUID> clusterIds) {
+    return new HLogKey(encodedRegionName, tableName, seqnum, now, clusterIds);
   }
 
   @Override
@@ -839,7 +840,7 @@ class FSHLog implements HLog, Syncable {
   @Override
   public void append(HRegionInfo info, TableName tableName, WALEdit edits,
     final long now, HTableDescriptor htd, boolean isInMemstore) throws IOException {
-    append(info, tableName, edits, HConstants.DEFAULT_CLUSTER_ID, now, htd, true, isInMemstore);
+    append(info, tableName, edits, new ArrayList<UUID>(), now, htd, true, isInMemstore);
   }
 
   /**
@@ -862,15 +863,16 @@ class FSHLog implements HLog, Syncable {
    * @param info
    * @param tableName
    * @param edits
-   * @param clusterId The originating clusterId for this edit (for replication)
+   * @param clusterIds that have consumed the change (for replication)
    * @param now
    * @param doSync shall we sync?
    * @return txid of this transaction
    * @throws IOException
    */
   @SuppressWarnings("deprecation")
-  private long append(HRegionInfo info, TableName tableName, WALEdit edits, UUID clusterId,
-      final long now, HTableDescriptor htd, boolean doSync, boolean isInMemstore)
+  private long append(HRegionInfo info, TableName tableName, WALEdit edits,
+      List<UUID> clusterIds, final long now, HTableDescriptor htd, boolean doSync,
+      boolean isInMemstore)
     throws IOException {
       if (edits.isEmpty()) return this.unflushedEntries.get();
       if (this.closed) {
@@ -890,7 +892,7 @@ class FSHLog implements HLog, Syncable {
           // actual  name.
           byte [] encodedRegionName = info.getEncodedNameAsBytes();
           if (isInMemstore) this.oldestUnflushedSeqNums.putIfAbsent(encodedRegionName, seqNum);
-          HLogKey logKey = makeKey(encodedRegionName, tableName, seqNum, now, clusterId);
+          HLogKey logKey = makeKey(encodedRegionName, tableName, seqNum, now, clusterIds);
           doWrite(info, logKey, edits, htd);
           this.numEntries.incrementAndGet();
           txid = this.unflushedEntries.incrementAndGet();
@@ -914,9 +916,9 @@ class FSHLog implements HLog, Syncable {
 
   @Override
   public long appendNoSync(HRegionInfo info, TableName tableName, WALEdit edits,
-    UUID clusterId, final long now, HTableDescriptor htd)
+      List<UUID> clusterIds, final long now, HTableDescriptor htd)
     throws IOException {
-    return append(info, tableName, edits, clusterId, now, htd, false, true);
+    return append(info, tableName, edits, clusterIds, now, htd, false, true);
   }
 
   /**

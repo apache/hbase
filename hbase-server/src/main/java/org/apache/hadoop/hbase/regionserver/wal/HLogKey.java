@@ -22,7 +22,11 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.EOFException;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Iterator;
+import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.NavigableMap;
 import java.util.TreeMap;
@@ -93,6 +97,13 @@ public class HLogKey implements WritableComparable<HLogKey> {
     }
   }
 
+  /*
+   * This is used for reading the log entries created by the previous releases
+   * (0.94.11) which write the clusters information to the scopes of WALEdit.
+   */
+  private static final String PREFIX_CLUSTER_KEY = ".";
+
+
   private static final Version VERSION = Version.COMPRESSED;
 
   //  The encoded region name.
@@ -102,15 +113,23 @@ public class HLogKey implements WritableComparable<HLogKey> {
   // Time at which this edit was written.
   private long writeTime;
 
-  private UUID clusterId;
-
+  // The first element in the list is the cluster id on which the change has originated
+  private List<UUID> clusterIds;
+  
   private NavigableMap<byte[], Integer> scopes;
 
   private CompressionContext compressionContext;
 
   public HLogKey() {
-    this(null, null, 0L, HConstants.LATEST_TIMESTAMP,
-        HConstants.DEFAULT_CLUSTER_ID);
+    init(null, null, 0L, HConstants.LATEST_TIMESTAMP,
+        new ArrayList<UUID>());
+  }
+
+  public HLogKey(final byte[] encodedRegionName, final TableName tablename, long logSeqNum,
+      final long now, UUID clusterId) {
+    List<UUID> clusterIds = new ArrayList<UUID>();
+    clusterIds.add(clusterId);
+    init(encodedRegionName, tablename, logSeqNum, now, clusterIds);
   }
 
   /**
@@ -123,13 +142,18 @@ public class HLogKey implements WritableComparable<HLogKey> {
    * @param tablename   - name of table
    * @param logSeqNum   - log sequence number
    * @param now Time at which this edit was written.
-   * @param clusterId of the cluster (used in Replication)
+   * @param clusterIds the clusters that have consumed the change(used in Replication)
    */
   public HLogKey(final byte [] encodedRegionName, final TableName tablename,
-      long logSeqNum, final long now, UUID clusterId) {
+      long logSeqNum, final long now, List<UUID> clusterIds){
+    init(encodedRegionName, tablename, logSeqNum, now, clusterIds);
+  }
+  
+  protected void init(final byte [] encodedRegionName, final TableName tablename,
+      long logSeqNum, final long now, List<UUID> clusterIds) {
     this.logSeqNum = logSeqNum;
     this.writeTime = now;
-    this.clusterId = clusterId;
+    this.clusterIds = clusterIds;
     this.encodedRegionName = encodedRegionName;
     this.tablename = tablename;
   }
@@ -171,14 +195,6 @@ public class HLogKey implements WritableComparable<HLogKey> {
     return this.writeTime;
   }
 
-  /**
-   * Get the id of the original cluster
-   * @return Cluster id.
-   */
-  public UUID getClusterId() {
-    return clusterId;
-  }
-
   public NavigableMap<byte[], Integer> getScopes() {
     return scopes;
   }
@@ -187,12 +203,47 @@ public class HLogKey implements WritableComparable<HLogKey> {
     this.scopes = scopes;
   }
 
+  public void readOlderScopes(NavigableMap<byte[], Integer> scopes) {
+    if (scopes != null) {
+      Iterator<Map.Entry<byte[], Integer>> iterator = scopes.entrySet()
+          .iterator();
+      while (iterator.hasNext()) {
+        Map.Entry<byte[], Integer> scope = iterator.next();
+        String key = Bytes.toString(scope.getKey());
+        if (key.startsWith(PREFIX_CLUSTER_KEY)) {
+          addClusterId(UUID.fromString(key.substring(PREFIX_CLUSTER_KEY
+              .length())));
+          iterator.remove();
+        }
+      }
+      if (scopes.size() > 0) {
+        this.scopes = scopes;
+      }
+    }
+  }
+
   /**
-   * Set the cluster id of this key.
-   * @param clusterId
+   * Marks that the cluster with the given clusterId has consumed the change
    */
-  public void setClusterId(UUID clusterId) {
-    this.clusterId = clusterId;
+  public void addClusterId(UUID clusterId) {
+    if (!clusterIds.contains(clusterId)) {
+      clusterIds.add(clusterId);
+    }
+  }
+
+  /**
+   * @return the set of cluster Ids that have consumed the change
+   */
+  public List<UUID> getClusterIds() {
+    return clusterIds;
+  }
+
+  /**
+   * @return the cluster id on which the change has originated. It there is no such cluster, it
+   *         returns DEFAULT_CLUSTER_ID (cases where replication is not enabled)
+   */
+  public UUID getOriginatingClusterId(){
+    return clusterIds.isEmpty() ? HConstants.DEFAULT_CLUSTER_ID : clusterIds.get(0);
   }
 
   @Override
@@ -232,7 +283,6 @@ public class HLogKey implements WritableComparable<HLogKey> {
     int result = Bytes.hashCode(this.encodedRegionName);
     result ^= this.logSeqNum;
     result ^= this.writeTime;
-    result ^= this.clusterId.hashCode();
     return result;
   }
 
@@ -299,13 +349,16 @@ public class HLogKey implements WritableComparable<HLogKey> {
     }
     out.writeLong(this.logSeqNum);
     out.writeLong(this.writeTime);
-    // avoid storing 16 bytes when replication is not enabled
-    if (this.clusterId == HConstants.DEFAULT_CLUSTER_ID) {
-      out.writeBoolean(false);
-    } else {
+    // Don't need to write the clusters information as we are using protobufs from 0.95
+    // Writing only the first clusterId for testing the legacy read
+    Iterator<UUID> iterator = clusterIds.iterator();
+    if(iterator.hasNext()){
       out.writeBoolean(true);
-      out.writeLong(this.clusterId.getMostSignificantBits());
-      out.writeLong(this.clusterId.getLeastSignificantBits());
+      UUID clusterId = iterator.next();
+      out.writeLong(clusterId.getMostSignificantBits());
+      out.writeLong(clusterId.getLeastSignificantBits());
+    } else {
+      out.writeBoolean(false);
     }
   }
 
@@ -344,10 +397,13 @@ public class HLogKey implements WritableComparable<HLogKey> {
 
     this.logSeqNum = in.readLong();
     this.writeTime = in.readLong();
-    this.clusterId = HConstants.DEFAULT_CLUSTER_ID;
+
+    this.clusterIds.clear();
     if (version.atLeast(Version.INITIAL)) {
       if (in.readBoolean()) {
-        this.clusterId = new UUID(in.readLong(), in.readLong());
+        // read the older log
+        // Definitely is the originating cluster
+        clusterIds.add(new UUID(in.readLong(), in.readLong()));
       }
     } else {
       try {
@@ -357,6 +413,7 @@ public class HLogKey implements WritableComparable<HLogKey> {
         // Means it's a very old key, just continue
       }
     }
+    // Do not need to read the clusters information as we are using protobufs from 0.95
   }
 
   public WALKey.Builder getBuilder(
@@ -373,10 +430,11 @@ public class HLogKey implements WritableComparable<HLogKey> {
     }
     builder.setLogSequenceNumber(this.logSeqNum);
     builder.setWriteTime(writeTime);
-    if (this.clusterId != HConstants.DEFAULT_CLUSTER_ID) {
-      builder.setClusterId(HBaseProtos.UUID.newBuilder()
-          .setLeastSigBits(this.clusterId.getLeastSignificantBits())
-          .setMostSigBits(this.clusterId.getMostSignificantBits()));
+    HBaseProtos.UUID.Builder uuidBuilder = HBaseProtos.UUID.newBuilder();
+    for (UUID clusterId : clusterIds) {
+      uuidBuilder.setLeastSigBits(clusterId.getLeastSignificantBits());
+      uuidBuilder.setMostSigBits(clusterId.getMostSignificantBits());
+      builder.addClusterIds(uuidBuilder.build());
     }
     if (scopes != null) {
       for (Map.Entry<byte[], Integer> e : scopes.entrySet()) {
@@ -401,10 +459,15 @@ public class HLogKey implements WritableComparable<HLogKey> {
       this.encodedRegionName = walKey.getEncodedRegionName().toByteArray();
       this.tablename = TableName.valueOf(walKey.getTableName().toByteArray());
     }
-    this.clusterId = HConstants.DEFAULT_CLUSTER_ID;
+    clusterIds.clear();
     if (walKey.hasClusterId()) {
-      this.clusterId = new UUID(
-          walKey.getClusterId().getMostSigBits(), walKey.getClusterId().getLeastSigBits());
+      //When we are reading the older log (0.95.1 release)
+      //This is definitely the originating cluster
+      clusterIds.add(new UUID(walKey.getClusterId().getMostSigBits(), walKey.getClusterId()
+          .getLeastSigBits()));
+    }
+    for (HBaseProtos.UUID clusterId : walKey.getClusterIdsList()) {
+      clusterIds.add(new UUID(clusterId.getMostSigBits(), clusterId.getLeastSigBits()));
     }
     this.scopes = null;
     if (walKey.getScopesCount() > 0) {

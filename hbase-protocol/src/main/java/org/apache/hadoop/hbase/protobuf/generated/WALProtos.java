@@ -567,19 +567,43 @@ public final class WALProtos {
      */
     long getWriteTime();
 
-    // optional .UUID cluster_id = 5;
+    // optional .UUID cluster_id = 5 [deprecated = true];
     /**
-     * <code>optional .UUID cluster_id = 5;</code>
+     * <code>optional .UUID cluster_id = 5 [deprecated = true];</code>
+     *
+     * <pre>
+     *
+     *This parameter is deprecated in favor of clusters which 
+     *contains the list of clusters that have consumed the change.
+     *It is retained so that the log created by earlier releases (0.94) 
+     *can be read by the newer releases.
+     * </pre>
      */
-    boolean hasClusterId();
+    @java.lang.Deprecated boolean hasClusterId();
     /**
-     * <code>optional .UUID cluster_id = 5;</code>
+     * <code>optional .UUID cluster_id = 5 [deprecated = true];</code>
+     *
+     * <pre>
+     *
+     *This parameter is deprecated in favor of clusters which 
+     *contains the list of clusters that have consumed the change.
+     *It is retained so that the log created by earlier releases (0.94) 
+     *can be read by the newer releases.
+     * </pre>
      */
-    org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.UUID getClusterId();
+    @java.lang.Deprecated org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.UUID getClusterId();
     /**
-     * <code>optional .UUID cluster_id = 5;</code>
+     * <code>optional .UUID cluster_id = 5 [deprecated = true];</code>
+     *
+     * <pre>
+     *
+     *This parameter is deprecated in favor of clusters which 
+     *contains the list of clusters that have consumed the change.
+     *It is retained so that the log created by earlier releases (0.94) 
+     *can be read by the newer releases.
+     * </pre>
      */
-    org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.UUIDOrBuilder getClusterIdOrBuilder();
+    @java.lang.Deprecated org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.UUIDOrBuilder getClusterIdOrBuilder();
 
     // repeated .FamilyScope scopes = 6;
     /**
@@ -609,30 +633,67 @@ public final class WALProtos {
     // optional uint32 following_kv_count = 7;
     /**
      * <code>optional uint32 following_kv_count = 7;</code>
-     *
-     * <pre>
-     *
-     *optional CustomEntryType custom_entry_type = 8;
-     *
-     *enum CustomEntryType {
-     *COMPACTION = 0;
-     *}
-     * </pre>
      */
     boolean hasFollowingKvCount();
     /**
      * <code>optional uint32 following_kv_count = 7;</code>
+     */
+    int getFollowingKvCount();
+
+    // repeated .UUID cluster_ids = 8;
+    /**
+     * <code>repeated .UUID cluster_ids = 8;</code>
      *
      * <pre>
      *
-     *optional CustomEntryType custom_entry_type = 8;
-     *
-     *enum CustomEntryType {
-     *COMPACTION = 0;
-     *}
+     *cluster_ids field contains the list of clusters that have
+     *consumed the change
      * </pre>
      */
-    int getFollowingKvCount();
+    java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.UUID> 
+        getClusterIdsList();
+    /**
+     * <code>repeated .UUID cluster_ids = 8;</code>
+     *
+     * <pre>
+     *
+     *cluster_ids field contains the list of clusters that have
+     *consumed the change
+     * </pre>
+     */
+    org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.UUID getClusterIds(int index);
+    /**
+     * <code>repeated .UUID cluster_ids = 8;</code>
+     *
+     * <pre>
+     *
+     *cluster_ids field contains the list of clusters that have
+     *consumed the change
+     * </pre>
+     */
+    int getClusterIdsCount();
+    /**
+     * <code>repeated .UUID cluster_ids = 8;</code>
+     *
+     * <pre>
+     *
+     *cluster_ids field contains the list of clusters that have
+     *consumed the change
+     * </pre>
+     */
+    java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.UUIDOrBuilder> 
+        getClusterIdsOrBuilderList();
+    /**
+     * <code>repeated .UUID cluster_ids = 8;</code>
+     *
+     * <pre>
+     *
+     *cluster_ids field contains the list of clusters that have
+     *consumed the change
+     * </pre>
+     */
+    org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.UUIDOrBuilder getClusterIdsOrBuilder(
+        int index);
   }
   /**
    * Protobuf type {@code WALKey}
@@ -735,6 +796,14 @@ public final class WALProtos {
               followingKvCount_ = input.readUInt32();
               break;
             }
+            case 66: {
+              if (!((mutable_bitField0_ & 0x00000080) == 0x00000080)) {
+                clusterIds_ = new java.util.ArrayList<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.UUID>();
+                mutable_bitField0_ |= 0x00000080;
+              }
+              clusterIds_.add(input.readMessage(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.UUID.PARSER, extensionRegistry));
+              break;
+            }
           }
         }
       } catch (com.google.protobuf.InvalidProtocolBufferException e) {
@@ -745,6 +814,9 @@ public final class WALProtos {
       } finally {
         if (((mutable_bitField0_ & 0x00000020) == 0x00000020)) {
           scopes_ = java.util.Collections.unmodifiableList(scopes_);
+        }
+        if (((mutable_bitField0_ & 0x00000080) == 0x00000080)) {
+          clusterIds_ = java.util.Collections.unmodifiableList(clusterIds_);
         }
         this.unknownFields = unknownFields.build();
         makeExtensionsImmutable();
@@ -842,25 +914,49 @@ public final class WALProtos {
       return writeTime_;
     }
 
-    // optional .UUID cluster_id = 5;
+    // optional .UUID cluster_id = 5 [deprecated = true];
     public static final int CLUSTER_ID_FIELD_NUMBER = 5;
     private org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.UUID clusterId_;
     /**
-     * <code>optional .UUID cluster_id = 5;</code>
+     * <code>optional .UUID cluster_id = 5 [deprecated = true];</code>
+     *
+     * <pre>
+     *
+     *This parameter is deprecated in favor of clusters which 
+     *contains the list of clusters that have consumed the change.
+     *It is retained so that the log created by earlier releases (0.94) 
+     *can be read by the newer releases.
+     * </pre>
      */
-    public boolean hasClusterId() {
+    @java.lang.Deprecated public boolean hasClusterId() {
       return ((bitField0_ & 0x00000010) == 0x00000010);
     }
     /**
-     * <code>optional .UUID cluster_id = 5;</code>
+     * <code>optional .UUID cluster_id = 5 [deprecated = true];</code>
+     *
+     * <pre>
+     *
+     *This parameter is deprecated in favor of clusters which 
+     *contains the list of clusters that have consumed the change.
+     *It is retained so that the log created by earlier releases (0.94) 
+     *can be read by the newer releases.
+     * </pre>
      */
-    public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.UUID getClusterId() {
+    @java.lang.Deprecated public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.UUID getClusterId() {
       return clusterId_;
     }
     /**
-     * <code>optional .UUID cluster_id = 5;</code>
+     * <code>optional .UUID cluster_id = 5 [deprecated = true];</code>
+     *
+     * <pre>
+     *
+     *This parameter is deprecated in favor of clusters which 
+     *contains the list of clusters that have consumed the change.
+     *It is retained so that the log created by earlier releases (0.94) 
+     *can be read by the newer releases.
+     * </pre>
      */
-    public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.UUIDOrBuilder getClusterIdOrBuilder() {
+    @java.lang.Deprecated public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.UUIDOrBuilder getClusterIdOrBuilder() {
       return clusterId_;
     }
 
@@ -905,33 +1001,81 @@ public final class WALProtos {
     private int followingKvCount_;
     /**
      * <code>optional uint32 following_kv_count = 7;</code>
-     *
-     * <pre>
-     *
-     *optional CustomEntryType custom_entry_type = 8;
-     *
-     *enum CustomEntryType {
-     *COMPACTION = 0;
-     *}
-     * </pre>
      */
     public boolean hasFollowingKvCount() {
       return ((bitField0_ & 0x00000020) == 0x00000020);
     }
     /**
      * <code>optional uint32 following_kv_count = 7;</code>
-     *
-     * <pre>
-     *
-     *optional CustomEntryType custom_entry_type = 8;
-     *
-     *enum CustomEntryType {
-     *COMPACTION = 0;
-     *}
-     * </pre>
      */
     public int getFollowingKvCount() {
       return followingKvCount_;
+    }
+
+    // repeated .UUID cluster_ids = 8;
+    public static final int CLUSTER_IDS_FIELD_NUMBER = 8;
+    private java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.UUID> clusterIds_;
+    /**
+     * <code>repeated .UUID cluster_ids = 8;</code>
+     *
+     * <pre>
+     *
+     *cluster_ids field contains the list of clusters that have
+     *consumed the change
+     * </pre>
+     */
+    public java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.UUID> getClusterIdsList() {
+      return clusterIds_;
+    }
+    /**
+     * <code>repeated .UUID cluster_ids = 8;</code>
+     *
+     * <pre>
+     *
+     *cluster_ids field contains the list of clusters that have
+     *consumed the change
+     * </pre>
+     */
+    public java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.UUIDOrBuilder> 
+        getClusterIdsOrBuilderList() {
+      return clusterIds_;
+    }
+    /**
+     * <code>repeated .UUID cluster_ids = 8;</code>
+     *
+     * <pre>
+     *
+     *cluster_ids field contains the list of clusters that have
+     *consumed the change
+     * </pre>
+     */
+    public int getClusterIdsCount() {
+      return clusterIds_.size();
+    }
+    /**
+     * <code>repeated .UUID cluster_ids = 8;</code>
+     *
+     * <pre>
+     *
+     *cluster_ids field contains the list of clusters that have
+     *consumed the change
+     * </pre>
+     */
+    public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.UUID getClusterIds(int index) {
+      return clusterIds_.get(index);
+    }
+    /**
+     * <code>repeated .UUID cluster_ids = 8;</code>
+     *
+     * <pre>
+     *
+     *cluster_ids field contains the list of clusters that have
+     *consumed the change
+     * </pre>
+     */
+    public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.UUIDOrBuilder getClusterIdsOrBuilder(
+        int index) {
+      return clusterIds_.get(index);
     }
 
     private void initFields() {
@@ -942,6 +1086,7 @@ public final class WALProtos {
       clusterId_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.UUID.getDefaultInstance();
       scopes_ = java.util.Collections.emptyList();
       followingKvCount_ = 0;
+      clusterIds_ = java.util.Collections.emptyList();
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
@@ -976,6 +1121,12 @@ public final class WALProtos {
           return false;
         }
       }
+      for (int i = 0; i < getClusterIdsCount(); i++) {
+        if (!getClusterIds(i).isInitialized()) {
+          memoizedIsInitialized = 0;
+          return false;
+        }
+      }
       memoizedIsInitialized = 1;
       return true;
     }
@@ -1003,6 +1154,9 @@ public final class WALProtos {
       }
       if (((bitField0_ & 0x00000020) == 0x00000020)) {
         output.writeUInt32(7, followingKvCount_);
+      }
+      for (int i = 0; i < clusterIds_.size(); i++) {
+        output.writeMessage(8, clusterIds_.get(i));
       }
       getUnknownFields().writeTo(output);
     }
@@ -1040,6 +1194,10 @@ public final class WALProtos {
       if (((bitField0_ & 0x00000020) == 0x00000020)) {
         size += com.google.protobuf.CodedOutputStream
           .computeUInt32Size(7, followingKvCount_);
+      }
+      for (int i = 0; i < clusterIds_.size(); i++) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeMessageSize(8, clusterIds_.get(i));
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
@@ -1096,6 +1254,8 @@ public final class WALProtos {
         result = result && (getFollowingKvCount()
             == other.getFollowingKvCount());
       }
+      result = result && getClusterIdsList()
+          .equals(other.getClusterIdsList());
       result = result &&
           getUnknownFields().equals(other.getUnknownFields());
       return result;
@@ -1136,6 +1296,10 @@ public final class WALProtos {
       if (hasFollowingKvCount()) {
         hash = (37 * hash) + FOLLOWING_KV_COUNT_FIELD_NUMBER;
         hash = (53 * hash) + getFollowingKvCount();
+      }
+      if (getClusterIdsCount() > 0) {
+        hash = (37 * hash) + CLUSTER_IDS_FIELD_NUMBER;
+        hash = (53 * hash) + getClusterIdsList().hashCode();
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
       memoizedHashCode = hash;
@@ -1244,6 +1408,7 @@ public final class WALProtos {
         if (com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders) {
           getClusterIdFieldBuilder();
           getScopesFieldBuilder();
+          getClusterIdsFieldBuilder();
         }
       }
       private static Builder create() {
@@ -1274,6 +1439,12 @@ public final class WALProtos {
         }
         followingKvCount_ = 0;
         bitField0_ = (bitField0_ & ~0x00000040);
+        if (clusterIdsBuilder_ == null) {
+          clusterIds_ = java.util.Collections.emptyList();
+          bitField0_ = (bitField0_ & ~0x00000080);
+        } else {
+          clusterIdsBuilder_.clear();
+        }
         return this;
       }
 
@@ -1339,6 +1510,15 @@ public final class WALProtos {
           to_bitField0_ |= 0x00000020;
         }
         result.followingKvCount_ = followingKvCount_;
+        if (clusterIdsBuilder_ == null) {
+          if (((bitField0_ & 0x00000080) == 0x00000080)) {
+            clusterIds_ = java.util.Collections.unmodifiableList(clusterIds_);
+            bitField0_ = (bitField0_ & ~0x00000080);
+          }
+          result.clusterIds_ = clusterIds_;
+        } else {
+          result.clusterIds_ = clusterIdsBuilder_.build();
+        }
         result.bitField0_ = to_bitField0_;
         onBuilt();
         return result;
@@ -1399,6 +1579,32 @@ public final class WALProtos {
         if (other.hasFollowingKvCount()) {
           setFollowingKvCount(other.getFollowingKvCount());
         }
+        if (clusterIdsBuilder_ == null) {
+          if (!other.clusterIds_.isEmpty()) {
+            if (clusterIds_.isEmpty()) {
+              clusterIds_ = other.clusterIds_;
+              bitField0_ = (bitField0_ & ~0x00000080);
+            } else {
+              ensureClusterIdsIsMutable();
+              clusterIds_.addAll(other.clusterIds_);
+            }
+            onChanged();
+          }
+        } else {
+          if (!other.clusterIds_.isEmpty()) {
+            if (clusterIdsBuilder_.isEmpty()) {
+              clusterIdsBuilder_.dispose();
+              clusterIdsBuilder_ = null;
+              clusterIds_ = other.clusterIds_;
+              bitField0_ = (bitField0_ & ~0x00000080);
+              clusterIdsBuilder_ = 
+                com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders ?
+                   getClusterIdsFieldBuilder() : null;
+            } else {
+              clusterIdsBuilder_.addAllMessages(other.clusterIds_);
+            }
+          }
+        }
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
       }
@@ -1428,6 +1634,12 @@ public final class WALProtos {
         }
         for (int i = 0; i < getScopesCount(); i++) {
           if (!getScopes(i).isInitialized()) {
+            
+            return false;
+          }
+        }
+        for (int i = 0; i < getClusterIdsCount(); i++) {
+          if (!getClusterIds(i).isInitialized()) {
             
             return false;
           }
@@ -1592,20 +1804,36 @@ public final class WALProtos {
         return this;
       }
 
-      // optional .UUID cluster_id = 5;
+      // optional .UUID cluster_id = 5 [deprecated = true];
       private org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.UUID clusterId_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.UUID.getDefaultInstance();
       private com.google.protobuf.SingleFieldBuilder<
           org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.UUID, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.UUID.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.UUIDOrBuilder> clusterIdBuilder_;
       /**
-       * <code>optional .UUID cluster_id = 5;</code>
+       * <code>optional .UUID cluster_id = 5 [deprecated = true];</code>
+       *
+       * <pre>
+       *
+       *This parameter is deprecated in favor of clusters which 
+       *contains the list of clusters that have consumed the change.
+       *It is retained so that the log created by earlier releases (0.94) 
+       *can be read by the newer releases.
+       * </pre>
        */
-      public boolean hasClusterId() {
+      @java.lang.Deprecated public boolean hasClusterId() {
         return ((bitField0_ & 0x00000010) == 0x00000010);
       }
       /**
-       * <code>optional .UUID cluster_id = 5;</code>
+       * <code>optional .UUID cluster_id = 5 [deprecated = true];</code>
+       *
+       * <pre>
+       *
+       *This parameter is deprecated in favor of clusters which 
+       *contains the list of clusters that have consumed the change.
+       *It is retained so that the log created by earlier releases (0.94) 
+       *can be read by the newer releases.
+       * </pre>
        */
-      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.UUID getClusterId() {
+      @java.lang.Deprecated public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.UUID getClusterId() {
         if (clusterIdBuilder_ == null) {
           return clusterId_;
         } else {
@@ -1613,9 +1841,17 @@ public final class WALProtos {
         }
       }
       /**
-       * <code>optional .UUID cluster_id = 5;</code>
+       * <code>optional .UUID cluster_id = 5 [deprecated = true];</code>
+       *
+       * <pre>
+       *
+       *This parameter is deprecated in favor of clusters which 
+       *contains the list of clusters that have consumed the change.
+       *It is retained so that the log created by earlier releases (0.94) 
+       *can be read by the newer releases.
+       * </pre>
        */
-      public Builder setClusterId(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.UUID value) {
+      @java.lang.Deprecated public Builder setClusterId(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.UUID value) {
         if (clusterIdBuilder_ == null) {
           if (value == null) {
             throw new NullPointerException();
@@ -1629,9 +1865,17 @@ public final class WALProtos {
         return this;
       }
       /**
-       * <code>optional .UUID cluster_id = 5;</code>
+       * <code>optional .UUID cluster_id = 5 [deprecated = true];</code>
+       *
+       * <pre>
+       *
+       *This parameter is deprecated in favor of clusters which 
+       *contains the list of clusters that have consumed the change.
+       *It is retained so that the log created by earlier releases (0.94) 
+       *can be read by the newer releases.
+       * </pre>
        */
-      public Builder setClusterId(
+      @java.lang.Deprecated public Builder setClusterId(
           org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.UUID.Builder builderForValue) {
         if (clusterIdBuilder_ == null) {
           clusterId_ = builderForValue.build();
@@ -1643,9 +1887,17 @@ public final class WALProtos {
         return this;
       }
       /**
-       * <code>optional .UUID cluster_id = 5;</code>
+       * <code>optional .UUID cluster_id = 5 [deprecated = true];</code>
+       *
+       * <pre>
+       *
+       *This parameter is deprecated in favor of clusters which 
+       *contains the list of clusters that have consumed the change.
+       *It is retained so that the log created by earlier releases (0.94) 
+       *can be read by the newer releases.
+       * </pre>
        */
-      public Builder mergeClusterId(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.UUID value) {
+      @java.lang.Deprecated public Builder mergeClusterId(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.UUID value) {
         if (clusterIdBuilder_ == null) {
           if (((bitField0_ & 0x00000010) == 0x00000010) &&
               clusterId_ != org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.UUID.getDefaultInstance()) {
@@ -1662,9 +1914,17 @@ public final class WALProtos {
         return this;
       }
       /**
-       * <code>optional .UUID cluster_id = 5;</code>
+       * <code>optional .UUID cluster_id = 5 [deprecated = true];</code>
+       *
+       * <pre>
+       *
+       *This parameter is deprecated in favor of clusters which 
+       *contains the list of clusters that have consumed the change.
+       *It is retained so that the log created by earlier releases (0.94) 
+       *can be read by the newer releases.
+       * </pre>
        */
-      public Builder clearClusterId() {
+      @java.lang.Deprecated public Builder clearClusterId() {
         if (clusterIdBuilder_ == null) {
           clusterId_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.UUID.getDefaultInstance();
           onChanged();
@@ -1675,17 +1935,33 @@ public final class WALProtos {
         return this;
       }
       /**
-       * <code>optional .UUID cluster_id = 5;</code>
+       * <code>optional .UUID cluster_id = 5 [deprecated = true];</code>
+       *
+       * <pre>
+       *
+       *This parameter is deprecated in favor of clusters which 
+       *contains the list of clusters that have consumed the change.
+       *It is retained so that the log created by earlier releases (0.94) 
+       *can be read by the newer releases.
+       * </pre>
        */
-      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.UUID.Builder getClusterIdBuilder() {
+      @java.lang.Deprecated public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.UUID.Builder getClusterIdBuilder() {
         bitField0_ |= 0x00000010;
         onChanged();
         return getClusterIdFieldBuilder().getBuilder();
       }
       /**
-       * <code>optional .UUID cluster_id = 5;</code>
+       * <code>optional .UUID cluster_id = 5 [deprecated = true];</code>
+       *
+       * <pre>
+       *
+       *This parameter is deprecated in favor of clusters which 
+       *contains the list of clusters that have consumed the change.
+       *It is retained so that the log created by earlier releases (0.94) 
+       *can be read by the newer releases.
+       * </pre>
        */
-      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.UUIDOrBuilder getClusterIdOrBuilder() {
+      @java.lang.Deprecated public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.UUIDOrBuilder getClusterIdOrBuilder() {
         if (clusterIdBuilder_ != null) {
           return clusterIdBuilder_.getMessageOrBuilder();
         } else {
@@ -1693,7 +1969,15 @@ public final class WALProtos {
         }
       }
       /**
-       * <code>optional .UUID cluster_id = 5;</code>
+       * <code>optional .UUID cluster_id = 5 [deprecated = true];</code>
+       *
+       * <pre>
+       *
+       *This parameter is deprecated in favor of clusters which 
+       *contains the list of clusters that have consumed the change.
+       *It is retained so that the log created by earlier releases (0.94) 
+       *can be read by the newer releases.
+       * </pre>
        */
       private com.google.protobuf.SingleFieldBuilder<
           org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.UUID, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.UUID.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.UUIDOrBuilder> 
@@ -1953,45 +2237,18 @@ public final class WALProtos {
       private int followingKvCount_ ;
       /**
        * <code>optional uint32 following_kv_count = 7;</code>
-       *
-       * <pre>
-       *
-       *optional CustomEntryType custom_entry_type = 8;
-       *
-       *enum CustomEntryType {
-       *COMPACTION = 0;
-       *}
-       * </pre>
        */
       public boolean hasFollowingKvCount() {
         return ((bitField0_ & 0x00000040) == 0x00000040);
       }
       /**
        * <code>optional uint32 following_kv_count = 7;</code>
-       *
-       * <pre>
-       *
-       *optional CustomEntryType custom_entry_type = 8;
-       *
-       *enum CustomEntryType {
-       *COMPACTION = 0;
-       *}
-       * </pre>
        */
       public int getFollowingKvCount() {
         return followingKvCount_;
       }
       /**
        * <code>optional uint32 following_kv_count = 7;</code>
-       *
-       * <pre>
-       *
-       *optional CustomEntryType custom_entry_type = 8;
-       *
-       *enum CustomEntryType {
-       *COMPACTION = 0;
-       *}
-       * </pre>
        */
       public Builder setFollowingKvCount(int value) {
         bitField0_ |= 0x00000040;
@@ -2001,21 +2258,360 @@ public final class WALProtos {
       }
       /**
        * <code>optional uint32 following_kv_count = 7;</code>
-       *
-       * <pre>
-       *
-       *optional CustomEntryType custom_entry_type = 8;
-       *
-       *enum CustomEntryType {
-       *COMPACTION = 0;
-       *}
-       * </pre>
        */
       public Builder clearFollowingKvCount() {
         bitField0_ = (bitField0_ & ~0x00000040);
         followingKvCount_ = 0;
         onChanged();
         return this;
+      }
+
+      // repeated .UUID cluster_ids = 8;
+      private java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.UUID> clusterIds_ =
+        java.util.Collections.emptyList();
+      private void ensureClusterIdsIsMutable() {
+        if (!((bitField0_ & 0x00000080) == 0x00000080)) {
+          clusterIds_ = new java.util.ArrayList<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.UUID>(clusterIds_);
+          bitField0_ |= 0x00000080;
+         }
+      }
+
+      private com.google.protobuf.RepeatedFieldBuilder<
+          org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.UUID, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.UUID.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.UUIDOrBuilder> clusterIdsBuilder_;
+
+      /**
+       * <code>repeated .UUID cluster_ids = 8;</code>
+       *
+       * <pre>
+       *
+       *cluster_ids field contains the list of clusters that have
+       *consumed the change
+       * </pre>
+       */
+      public java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.UUID> getClusterIdsList() {
+        if (clusterIdsBuilder_ == null) {
+          return java.util.Collections.unmodifiableList(clusterIds_);
+        } else {
+          return clusterIdsBuilder_.getMessageList();
+        }
+      }
+      /**
+       * <code>repeated .UUID cluster_ids = 8;</code>
+       *
+       * <pre>
+       *
+       *cluster_ids field contains the list of clusters that have
+       *consumed the change
+       * </pre>
+       */
+      public int getClusterIdsCount() {
+        if (clusterIdsBuilder_ == null) {
+          return clusterIds_.size();
+        } else {
+          return clusterIdsBuilder_.getCount();
+        }
+      }
+      /**
+       * <code>repeated .UUID cluster_ids = 8;</code>
+       *
+       * <pre>
+       *
+       *cluster_ids field contains the list of clusters that have
+       *consumed the change
+       * </pre>
+       */
+      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.UUID getClusterIds(int index) {
+        if (clusterIdsBuilder_ == null) {
+          return clusterIds_.get(index);
+        } else {
+          return clusterIdsBuilder_.getMessage(index);
+        }
+      }
+      /**
+       * <code>repeated .UUID cluster_ids = 8;</code>
+       *
+       * <pre>
+       *
+       *cluster_ids field contains the list of clusters that have
+       *consumed the change
+       * </pre>
+       */
+      public Builder setClusterIds(
+          int index, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.UUID value) {
+        if (clusterIdsBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          ensureClusterIdsIsMutable();
+          clusterIds_.set(index, value);
+          onChanged();
+        } else {
+          clusterIdsBuilder_.setMessage(index, value);
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .UUID cluster_ids = 8;</code>
+       *
+       * <pre>
+       *
+       *cluster_ids field contains the list of clusters that have
+       *consumed the change
+       * </pre>
+       */
+      public Builder setClusterIds(
+          int index, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.UUID.Builder builderForValue) {
+        if (clusterIdsBuilder_ == null) {
+          ensureClusterIdsIsMutable();
+          clusterIds_.set(index, builderForValue.build());
+          onChanged();
+        } else {
+          clusterIdsBuilder_.setMessage(index, builderForValue.build());
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .UUID cluster_ids = 8;</code>
+       *
+       * <pre>
+       *
+       *cluster_ids field contains the list of clusters that have
+       *consumed the change
+       * </pre>
+       */
+      public Builder addClusterIds(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.UUID value) {
+        if (clusterIdsBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          ensureClusterIdsIsMutable();
+          clusterIds_.add(value);
+          onChanged();
+        } else {
+          clusterIdsBuilder_.addMessage(value);
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .UUID cluster_ids = 8;</code>
+       *
+       * <pre>
+       *
+       *cluster_ids field contains the list of clusters that have
+       *consumed the change
+       * </pre>
+       */
+      public Builder addClusterIds(
+          int index, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.UUID value) {
+        if (clusterIdsBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          ensureClusterIdsIsMutable();
+          clusterIds_.add(index, value);
+          onChanged();
+        } else {
+          clusterIdsBuilder_.addMessage(index, value);
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .UUID cluster_ids = 8;</code>
+       *
+       * <pre>
+       *
+       *cluster_ids field contains the list of clusters that have
+       *consumed the change
+       * </pre>
+       */
+      public Builder addClusterIds(
+          org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.UUID.Builder builderForValue) {
+        if (clusterIdsBuilder_ == null) {
+          ensureClusterIdsIsMutable();
+          clusterIds_.add(builderForValue.build());
+          onChanged();
+        } else {
+          clusterIdsBuilder_.addMessage(builderForValue.build());
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .UUID cluster_ids = 8;</code>
+       *
+       * <pre>
+       *
+       *cluster_ids field contains the list of clusters that have
+       *consumed the change
+       * </pre>
+       */
+      public Builder addClusterIds(
+          int index, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.UUID.Builder builderForValue) {
+        if (clusterIdsBuilder_ == null) {
+          ensureClusterIdsIsMutable();
+          clusterIds_.add(index, builderForValue.build());
+          onChanged();
+        } else {
+          clusterIdsBuilder_.addMessage(index, builderForValue.build());
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .UUID cluster_ids = 8;</code>
+       *
+       * <pre>
+       *
+       *cluster_ids field contains the list of clusters that have
+       *consumed the change
+       * </pre>
+       */
+      public Builder addAllClusterIds(
+          java.lang.Iterable<? extends org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.UUID> values) {
+        if (clusterIdsBuilder_ == null) {
+          ensureClusterIdsIsMutable();
+          super.addAll(values, clusterIds_);
+          onChanged();
+        } else {
+          clusterIdsBuilder_.addAllMessages(values);
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .UUID cluster_ids = 8;</code>
+       *
+       * <pre>
+       *
+       *cluster_ids field contains the list of clusters that have
+       *consumed the change
+       * </pre>
+       */
+      public Builder clearClusterIds() {
+        if (clusterIdsBuilder_ == null) {
+          clusterIds_ = java.util.Collections.emptyList();
+          bitField0_ = (bitField0_ & ~0x00000080);
+          onChanged();
+        } else {
+          clusterIdsBuilder_.clear();
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .UUID cluster_ids = 8;</code>
+       *
+       * <pre>
+       *
+       *cluster_ids field contains the list of clusters that have
+       *consumed the change
+       * </pre>
+       */
+      public Builder removeClusterIds(int index) {
+        if (clusterIdsBuilder_ == null) {
+          ensureClusterIdsIsMutable();
+          clusterIds_.remove(index);
+          onChanged();
+        } else {
+          clusterIdsBuilder_.remove(index);
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .UUID cluster_ids = 8;</code>
+       *
+       * <pre>
+       *
+       *cluster_ids field contains the list of clusters that have
+       *consumed the change
+       * </pre>
+       */
+      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.UUID.Builder getClusterIdsBuilder(
+          int index) {
+        return getClusterIdsFieldBuilder().getBuilder(index);
+      }
+      /**
+       * <code>repeated .UUID cluster_ids = 8;</code>
+       *
+       * <pre>
+       *
+       *cluster_ids field contains the list of clusters that have
+       *consumed the change
+       * </pre>
+       */
+      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.UUIDOrBuilder getClusterIdsOrBuilder(
+          int index) {
+        if (clusterIdsBuilder_ == null) {
+          return clusterIds_.get(index);  } else {
+          return clusterIdsBuilder_.getMessageOrBuilder(index);
+        }
+      }
+      /**
+       * <code>repeated .UUID cluster_ids = 8;</code>
+       *
+       * <pre>
+       *
+       *cluster_ids field contains the list of clusters that have
+       *consumed the change
+       * </pre>
+       */
+      public java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.UUIDOrBuilder> 
+           getClusterIdsOrBuilderList() {
+        if (clusterIdsBuilder_ != null) {
+          return clusterIdsBuilder_.getMessageOrBuilderList();
+        } else {
+          return java.util.Collections.unmodifiableList(clusterIds_);
+        }
+      }
+      /**
+       * <code>repeated .UUID cluster_ids = 8;</code>
+       *
+       * <pre>
+       *
+       *cluster_ids field contains the list of clusters that have
+       *consumed the change
+       * </pre>
+       */
+      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.UUID.Builder addClusterIdsBuilder() {
+        return getClusterIdsFieldBuilder().addBuilder(
+            org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.UUID.getDefaultInstance());
+      }
+      /**
+       * <code>repeated .UUID cluster_ids = 8;</code>
+       *
+       * <pre>
+       *
+       *cluster_ids field contains the list of clusters that have
+       *consumed the change
+       * </pre>
+       */
+      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.UUID.Builder addClusterIdsBuilder(
+          int index) {
+        return getClusterIdsFieldBuilder().addBuilder(
+            index, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.UUID.getDefaultInstance());
+      }
+      /**
+       * <code>repeated .UUID cluster_ids = 8;</code>
+       *
+       * <pre>
+       *
+       *cluster_ids field contains the list of clusters that have
+       *consumed the change
+       * </pre>
+       */
+      public java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.UUID.Builder> 
+           getClusterIdsBuilderList() {
+        return getClusterIdsFieldBuilder().getBuilderList();
+      }
+      private com.google.protobuf.RepeatedFieldBuilder<
+          org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.UUID, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.UUID.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.UUIDOrBuilder> 
+          getClusterIdsFieldBuilder() {
+        if (clusterIdsBuilder_ == null) {
+          clusterIdsBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
+              org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.UUID, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.UUID.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.UUIDOrBuilder>(
+                  clusterIds_,
+                  ((bitField0_ & 0x00000080) == 0x00000080),
+                  getParentForChildren(),
+                  isClean());
+          clusterIds_ = null;
+        }
+        return clusterIdsBuilder_;
       }
 
       // @@protoc_insertion_point(builder_scope:WALKey)
@@ -4216,22 +4812,22 @@ public final class WALProtos {
   static {
     java.lang.String[] descriptorData = {
       "\n\tWAL.proto\032\013hbase.proto\"$\n\tWALHeader\022\027\n" +
-      "\017has_compression\030\001 \001(\010\"\277\001\n\006WALKey\022\033\n\023enc" +
+      "\017has_compression\030\001 \001(\010\"\337\001\n\006WALKey\022\033\n\023enc" +
       "oded_region_name\030\001 \002(\014\022\022\n\ntable_name\030\002 \002" +
       "(\014\022\033\n\023log_sequence_number\030\003 \002(\004\022\022\n\nwrite" +
-      "_time\030\004 \002(\004\022\031\n\ncluster_id\030\005 \001(\0132\005.UUID\022\034" +
-      "\n\006scopes\030\006 \003(\0132\014.FamilyScope\022\032\n\022followin" +
-      "g_kv_count\030\007 \001(\r\"=\n\013FamilyScope\022\016\n\006famil" +
-      "y\030\001 \002(\014\022\036\n\nscope_type\030\002 \002(\0162\n.ScopeType\"" +
-      "\251\001\n\024CompactionDescriptor\022\022\n\ntable_name\030\001" +
-      " \002(\014\022\033\n\023encoded_region_name\030\002 \002(\014\022\023\n\013fam",
-      "ily_name\030\003 \002(\014\022\030\n\020compaction_input\030\004 \003(\t" +
-      "\022\031\n\021compaction_output\030\005 \003(\t\022\026\n\016store_hom" +
-      "e_dir\030\006 \002(\t\"\014\n\nWALTrailer*F\n\tScopeType\022\033" +
-      "\n\027REPLICATION_SCOPE_LOCAL\020\000\022\034\n\030REPLICATI" +
-      "ON_SCOPE_GLOBAL\020\001B?\n*org.apache.hadoop.h" +
-      "base.protobuf.generatedB\tWALProtosH\001\210\001\000\240" +
-      "\001\001"
+      "_time\030\004 \002(\004\022\035\n\ncluster_id\030\005 \001(\0132\005.UUIDB\002" +
+      "\030\001\022\034\n\006scopes\030\006 \003(\0132\014.FamilyScope\022\032\n\022foll" +
+      "owing_kv_count\030\007 \001(\r\022\032\n\013cluster_ids\030\010 \003(" +
+      "\0132\005.UUID\"=\n\013FamilyScope\022\016\n\006family\030\001 \002(\014\022" +
+      "\036\n\nscope_type\030\002 \002(\0162\n.ScopeType\"\251\001\n\024Comp" +
+      "actionDescriptor\022\022\n\ntable_name\030\001 \002(\014\022\033\n\023",
+      "encoded_region_name\030\002 \002(\014\022\023\n\013family_name" +
+      "\030\003 \002(\014\022\030\n\020compaction_input\030\004 \003(\t\022\031\n\021comp" +
+      "action_output\030\005 \003(\t\022\026\n\016store_home_dir\030\006 " +
+      "\002(\t\"\014\n\nWALTrailer*F\n\tScopeType\022\033\n\027REPLIC" +
+      "ATION_SCOPE_LOCAL\020\000\022\034\n\030REPLICATION_SCOPE" +
+      "_GLOBAL\020\001B?\n*org.apache.hadoop.hbase.pro" +
+      "tobuf.generatedB\tWALProtosH\001\210\001\000\240\001\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -4249,7 +4845,7 @@ public final class WALProtos {
           internal_static_WALKey_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_WALKey_descriptor,
-              new java.lang.String[] { "EncodedRegionName", "TableName", "LogSequenceNumber", "WriteTime", "ClusterId", "Scopes", "FollowingKvCount", });
+              new java.lang.String[] { "EncodedRegionName", "TableName", "LogSequenceNumber", "WriteTime", "ClusterId", "Scopes", "FollowingKvCount", "ClusterIds", });
           internal_static_FamilyScope_descriptor =
             getDescriptor().getMessageTypes().get(2);
           internal_static_FamilyScope_fieldAccessorTable = new

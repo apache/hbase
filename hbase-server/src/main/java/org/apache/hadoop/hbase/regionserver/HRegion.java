@@ -1779,15 +1779,13 @@ public class HRegion implements HeapSize { // , Writable{
   /**
    * This is used only by unit tests. Not required to be a public API.
    * @param familyMap map of family to edits for the given family.
-   * @param clusterId
    * @param durability
    * @throws IOException
    */
-  void delete(NavigableMap<byte[], List<Cell>> familyMap, UUID clusterId,
+  void delete(NavigableMap<byte[], List<Cell>> familyMap,
       Durability durability) throws IOException {
     Delete delete = new Delete(FOR_UNIT_TESTS_ONLY);
     delete.setFamilyMap(familyMap);
-    delete.setClusterId(clusterId);
     delete.setDurability(durability);
     doBatchMutate(delete);
   }
@@ -2206,7 +2204,7 @@ public class HRegion implements HeapSize { // , Writable{
       Mutation mutation = batchOp.operations[firstIndex];
       if (walEdit.size() > 0) {
         txid = this.log.appendNoSync(this.getRegionInfo(), this.htableDescriptor.getTableName(),
-               walEdit, mutation.getClusterId(), now, this.htableDescriptor);
+               walEdit, mutation.getClusterIds(), now, this.htableDescriptor);
       }
 
       // -------------------------------
@@ -2598,7 +2596,6 @@ public class HRegion implements HeapSize { // , Writable{
     familyMap.put(family, edits);
     Put p = new Put(row);
     p.setFamilyMap(familyMap);
-    p.setClusterId(HConstants.DEFAULT_CLUSTER_ID);
     doBatchMutate(p);
   }
 
@@ -4534,7 +4531,7 @@ public class HRegion implements HeapSize { // , Writable{
           if (!walEdit.isEmpty()) {
             txid = this.log.appendNoSync(this.getRegionInfo(),
                 this.htableDescriptor.getTableName(), walEdit,
-                processor.getClusterId(), now, this.htableDescriptor);
+                processor.getClusterIds(), now, this.htableDescriptor);
           }
           // 8. Release region lock
           if (locked) {
@@ -4761,7 +4758,7 @@ public class HRegion implements HeapSize { // , Writable{
             // cluster. A slave cluster receives the final value (not the delta)
             // as a Put.
             txid = this.log.appendNoSync(this.getRegionInfo(), this.htableDescriptor.getTableName(),
-              walEdits, HConstants.DEFAULT_CLUSTER_ID, EnvironmentEdgeManager.currentTimeMillis(),
+              walEdits, new ArrayList<UUID>(), EnvironmentEdgeManager.currentTimeMillis(),
               this.htableDescriptor);
           } else {
             recordMutationWithoutWal(append.getFamilyCellMap());
@@ -4911,7 +4908,7 @@ public class HRegion implements HeapSize { // , Writable{
             // cluster. A slave cluster receives the final value (not the delta)
             // as a Put.
             txid = this.log.appendNoSync(this.getRegionInfo(), this.htableDescriptor.getTableName(),
-                walEdits, HConstants.DEFAULT_CLUSTER_ID, EnvironmentEdgeManager.currentTimeMillis(),
+                walEdits, new ArrayList<UUID>(), EnvironmentEdgeManager.currentTimeMillis(),
                 this.htableDescriptor);
           } else {
             recordMutationWithoutWal(increment.getFamilyCellMap());

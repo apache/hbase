@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
@@ -114,7 +115,7 @@ public class Import {
   static class Importer
   extends TableMapper<ImmutableBytesWritable, Mutation> {
     private Map<byte[], byte[]> cfRenameMap;
-    private UUID clusterId;
+    private List<UUID> clusterIds;
 
     /**
      * @param row  The current table row key.
@@ -159,11 +160,11 @@ public class Import {
         }
       }
       if (put != null) {
-        put.setClusterId(clusterId);
+        put.setClusterIds(clusterIds);
         context.write(key, put);
       }
       if (delete != null) {
-        delete.setClusterId(clusterId);
+        delete.setClusterIds(clusterIds);
         context.write(key, delete);
       }
     }
@@ -177,7 +178,7 @@ public class Import {
       ZooKeeperWatcher zkw = null;
       try {
         zkw = new ZooKeeperWatcher(conf, context.getTaskAttemptID().toString(), null);
-        clusterId = ZKClusterId.getUUIDForCluster(zkw);
+        clusterIds = Collections.singletonList(ZKClusterId.getUUIDForCluster(zkw));
       } catch (ZooKeeperConnectionException e) {
         LOG.error("Problem connecting to ZooKeper during task setup", e);
       } catch (KeeperException e) {

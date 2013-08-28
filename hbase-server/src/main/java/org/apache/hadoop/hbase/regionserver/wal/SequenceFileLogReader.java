@@ -217,7 +217,7 @@ public class SequenceFileLogReader extends ReaderBase {
       // Scopes are probably in WAL edit, move to key
       NavigableMap<byte[], Integer> scopes = e.getEdit().getAndRemoveScopes();
       if (scopes != null) {
-        e.getKey().setScopes(scopes);
+        e.getKey().readOlderScopes(scopes);
       }
       return true;
     } catch (IOException ioe) {

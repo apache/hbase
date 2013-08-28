@@ -1231,7 +1231,7 @@ public class TestHRegion extends HBaseTestCase {
         NavigableMap<byte[], List<Cell>> deleteMap =
           new TreeMap<byte[], List<Cell>>(Bytes.BYTES_COMPARATOR);
         deleteMap.put(family, kvs);
-        region.delete(deleteMap, HConstants.DEFAULT_CLUSTER_ID, Durability.SYNC_WAL);
+        region.delete(deleteMap, Durability.SYNC_WAL);
       } catch (Exception e) {
         assertTrue("Family " +new String(family)+ " does not exist", false);
       }
@@ -1243,7 +1243,7 @@ public class TestHRegion extends HBaseTestCase {
         NavigableMap<byte[], List<Cell>> deleteMap =
           new TreeMap<byte[], List<Cell>>(Bytes.BYTES_COMPARATOR);
         deleteMap.put(family, kvs);
-        region.delete(deleteMap, HConstants.DEFAULT_CLUSTER_ID, Durability.SYNC_WAL);
+        region.delete(deleteMap, Durability.SYNC_WAL);
       } catch (Exception e) {
         ok = true;
       }
@@ -1571,7 +1571,7 @@ public class TestHRegion extends HBaseTestCase {
       NavigableMap<byte[], List<Cell>> deleteMap =
         new TreeMap<byte[], List<Cell>>(Bytes.BYTES_COMPARATOR);
       deleteMap.put(fam1, kvs);
-      region.delete(deleteMap, HConstants.DEFAULT_CLUSTER_ID, Durability.SYNC_WAL);
+      region.delete(deleteMap, Durability.SYNC_WAL);
 
       // extract the key values out the memstore:
       // This is kinda hacky, but better than nothing...
@@ -3853,7 +3853,7 @@ public class TestHRegion extends HBaseTestCase {
     //verify append called or not
     verify(log, expectAppend ? times(1) : never())
       .appendNoSync((HRegionInfo)any(), eq(tableName),
-        (WALEdit)any(), (UUID)any(), anyLong(), (HTableDescriptor)any());
+        (WALEdit)any(), (List<UUID>)any(), anyLong(), (HTableDescriptor)any());
 
     //verify sync called or not
     if (expectSync || expectSyncFromLogSyncer) {
