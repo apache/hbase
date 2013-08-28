@@ -124,7 +124,7 @@ public interface Cell {
 
   /**
    * @return Long value representing time at which this cell was "Put" into the row.  Typically
-   * represents the time of insertion, but can be any value from Long.MIN_VALUE to Long.MAX_VALUE.
+   * represents the time of insertion, but can be any value from 0 to Long.MAX_VALUE.
    */
   long getTimestamp();
 

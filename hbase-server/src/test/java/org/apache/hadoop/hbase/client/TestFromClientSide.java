@@ -5104,6 +5104,65 @@ public class TestFromClientSide {
   }
 
   @Test
+  public void testNegativeTimestamp() throws IOException {
+    HTable table = TEST_UTIL.createTable(Bytes.toBytes("testNegativeTimestamp"), FAMILY);
+
+    try {
+      Put put = new Put(ROW, -1);
+      put.add(FAMILY, QUALIFIER, VALUE);
+      table.put(put);
+      fail("Negative timestamps should not have been allowed");
+    } catch (IllegalArgumentException ex) {
+      assertTrue(ex.getMessage().contains("negative"));
+    }
+
+    try {
+      Put put = new Put(ROW);
+      put.add(FAMILY, QUALIFIER, -1, VALUE);
+      table.put(put);
+      fail("Negative timestamps should not have been allowed");
+    } catch (IllegalArgumentException ex) {
+      assertTrue(ex.getMessage().contains("negative"));
+    }
+
+    try {
+      Delete delete = new Delete(ROW, -1);
+      table.delete(delete);
+      fail("Negative timestamps should not have been allowed");
+    } catch (IllegalArgumentException ex) {
+      assertTrue(ex.getMessage().contains("negative"));
+    }
+
+    try {
+      Delete delete = new Delete(ROW);
+      delete.deleteFamily(FAMILY, -1);
+      table.delete(delete);
+      fail("Negative timestamps should not have been allowed");
+    } catch (IllegalArgumentException ex) {
+      assertTrue(ex.getMessage().contains("negative"));
+    }
+
+    try {
+      Scan scan = new Scan();
+      scan.setTimeRange(-1, 1);
+      table.getScanner(scan);
+      fail("Negative timestamps should not have been allowed");
+    } catch (IllegalArgumentException ex) {
+      assertTrue(ex.getMessage().contains("negative"));
+    }
+
+    // KeyValue should allow negative timestamps for backwards compat. Otherwise, if the user
+    // already has negative timestamps in cluster data, HBase won't be able to handle that
+    try {
+      new KeyValue(Bytes.toBytes(42), Bytes.toBytes(42), Bytes.toBytes(42), -1, Bytes.toBytes(42));
+    } catch (IllegalArgumentException ex) {
+      fail("KeyValue SHOULD allow negative timestamps");
+    }
+
+    table.close();
+  }
+
+  @Test
   public void testRawScanRespectsVersions() throws Exception {
     byte[] TABLE = Bytes.toBytes("testRawScan");
     HTable table = TEST_UTIL.createTable(TABLE, new byte[][] { FAMILY });

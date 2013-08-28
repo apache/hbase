@@ -86,7 +86,7 @@ public class TestHLogFiltering {
         Delete del = new Delete(row);
         for (int iCol = 0; iCol < 10; ++iCol) {
           final byte[] cf = rand.nextBoolean() ? CF1 : CF2;
-          final long ts = rand.nextInt();
+          final long ts = Math.abs(rand.nextInt());
           final byte[] qual = Bytes.toBytes("col" + iCol);
           if (rand.nextBoolean()) {
             final byte[] value = Bytes.toBytes("value_for_row_" + iRow +

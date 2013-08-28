@@ -84,6 +84,9 @@ public class Put extends Mutation implements HeapSize, Comparable<Row> {
     checkRow(rowArray, rowOffset, rowLength);
     this.row = Bytes.copy(rowArray, rowOffset, rowLength);
     this.ts = ts;
+    if (ts < 0) {
+      throw new IllegalArgumentException("Timestamp cannot be negative. ts=" + ts);
+    }
   }
 
   /**
@@ -121,6 +124,9 @@ public class Put extends Mutation implements HeapSize, Comparable<Row> {
    */
   @SuppressWarnings("unchecked")
   public Put add(byte [] family, byte [] qualifier, long ts, byte [] value) {
+    if (ts < 0) {
+      throw new IllegalArgumentException("Timestamp cannot be negative. ts=" + ts);
+    }
     List<Cell> list = getCellList(family);
     KeyValue kv = createPutKeyValue(family, qualifier, ts, value);
     list.add(kv);
