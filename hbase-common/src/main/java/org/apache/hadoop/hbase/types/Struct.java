@@ -36,6 +36,32 @@ import org.apache.hadoop.hbase.util.PositionedByteRange;
  * another {@code Struct}. {@code Struct}s are not {@code nullable} but their
  * component fields may be.
  * </p>
+ * <h3>Trailing Nulls</h3>
+ * <p>
+ * {@code Struct} treats the right-most nullable field members as special.
+ * Rather than writing null values to the output buffer, {@code Struct} omits
+ * those records all together. When reading back a value, it will look for the
+ * scenario where the end of the buffer has been reached but there are still
+ * nullable fields remaining in the {@code Struct} definition. When this
+ * happens, it will produce null entries for the remaining values. For example:
+ * <pre>
+ * StructBuilder builder = new StructBuilder()
+ *     .add(OrderedNumeric.ASCENDING) // nullable
+ *     .add(OrderedString.ASCENDING)  // nullable
+ * Struct shorter = builder.toStruct();
+ * Struct longer = builder.add(OrderedNumeric.ASCENDING) // nullable
+ *     .toStruct();
+ *
+ * PositionedByteRange buf1 = new SimplePositionedByteRange(7);
+ * PositionedByteRange buf2 = new SimplePositionedByteRange(7);
+ * Object[] val = new Object[] { BigDecimal.ONE, "foo" };
+ * shorter.encode(buf1, val); // write short value with short Struct
+ * buf1.setPosition(0); // reset position marker, prepare for read
+ * longer.decode(buf1); // => { BigDecimal.ONE, "foo", null } ; long Struct reads implied null
+ * longer.encode(buf2, val); // write short value with long struct
+ * Bytes.equals(buf1.getBytes(), buf2.getBytes()); // => true; long Struct skips writing null
+ * </pre>
+ * </p>
  * <h3>Sort Order</h3>
  * <p>
  * {@code Struct} instances sort according to the composite order of their
@@ -104,9 +130,9 @@ public class Struct implements DataType<Object[]> {
   @SuppressWarnings("unchecked")
   @Override
   public int encodedLength(Object[] val) {
-    assert fields.length == val.length;
+    assert fields.length >= val.length;
     int sum = 0;
-    for (int i = 0; i < fields.length; i++)
+    for (int i = 0; i < val.length; i++)
       sum += fields[i].encodedLength(val[i]);
     return sum;
   }
@@ -155,9 +181,14 @@ public class Struct implements DataType<Object[]> {
   @SuppressWarnings("unchecked")
   @Override
   public int encode(PositionedByteRange dst, Object[] val) {
-    assert fields.length == val.length;
-    int written = 0;
-    for (int i = 0; i < fields.length; i++) {
+    if (val.length == 0) return 0;
+    assert fields.length >= val.length;
+    int end, written = 0;
+    // find the last occurrence of a non-null or null and non-nullable value
+    for (end = val.length - 1; end > -1; end--) {
+      if (null != val[end] || (null == val[end] && !fields[end].isNullable())) break;
+    }
+    for (int i = 0; i <= end; i++) {
       written += fields[i].encode(dst, val[i]);
     }
     return written;

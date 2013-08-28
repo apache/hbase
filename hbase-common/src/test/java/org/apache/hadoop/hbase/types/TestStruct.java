@@ -154,11 +154,10 @@ public class TestStruct {
     final transient String str;
 
     public Pojo2(Object... vals) {
-      byte[] empty = new byte[0];
-      byteField1Asc = vals.length > 0 ? (byte[]) vals[0] : empty;
-      byteField2Dsc = vals.length > 1 ? (byte[]) vals[1] : empty;
-      stringFieldDsc = vals.length > 2 ? (String) vals[2] : "";
-      byteField3Dsc = vals.length > 3 ? (byte[]) vals[3] : empty;
+      byteField1Asc  = vals.length > 0 ? (byte[]) vals[0] : null;
+      byteField2Dsc  = vals.length > 1 ? (byte[]) vals[1] : null;
+      stringFieldDsc = vals.length > 2 ? (String) vals[2] : null;
+      byteField3Dsc  = vals.length > 3 ? (byte[]) vals[3] : null;
       str = new StringBuilder()
             .append("{ ")
             .append(Bytes.toStringBinary(byteField1Asc)).append(", ")
