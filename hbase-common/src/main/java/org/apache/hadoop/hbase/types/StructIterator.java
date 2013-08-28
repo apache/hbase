@@ -69,7 +69,9 @@ public class StructIterator implements Iterator<Object> {
 
   @Override
   public boolean hasNext() {
-    return idx < types.length;
+    // hasNext can return true when position == length in the case of a
+    // nullable field trailing a struct.
+    return idx < types.length && src.getPosition() <= src.getLength();
   }
 
   @Override
@@ -78,7 +80,9 @@ public class StructIterator implements Iterator<Object> {
   @Override
   public Object next() {
     if (!hasNext()) throw new NoSuchElementException();
-    return types[idx++].decode(src);
+    DataType<?> t = types[idx++];
+    if (src.getPosition() == src.getLength() && t.isNullable()) return null;
+    return t.decode(src);
   }
 
   /**
@@ -87,6 +91,8 @@ public class StructIterator implements Iterator<Object> {
    */
   public int skip() {
     if (!hasNext()) throw new NoSuchElementException();
-    return types[idx++].skip(src);
+    DataType<?> t = types[idx++];
+    if (src.getPosition() == src.getLength() && t.isNullable()) return 0;
+    return t.skip(src);
   }
 }
