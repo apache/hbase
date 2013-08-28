@@ -32,7 +32,7 @@
     <description>Protobuf protocol classes used by HBase to communicate.</description>
 
     <build>
-        <plugins>
+      <plugins>
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-site-plugin</artifactId>
@@ -53,24 +53,109 @@
           <skipAssembly>true</skipAssembly>
         </configuration>
       </plugin>
-            <plugin>
-                <artifactId>maven-surefire-plugin</artifactId>
-                <!-- Always skip the second part executions, since we only run
-          simple unit tests in this module -->
-                <executions>
-                    <execution>
-                        <id>secondPartTestsExecution</id>
-                        <phase>test</phase>
-                        <goals>
-                            <goal>test</goal>
-                        </goals>
-                        <configuration>
-                            <skip>true</skip>
-                        </configuration>
-                    </execution>
-                </executions>
-            </plugin>
-        </plugins>
+        <plugin>
+            <artifactId>maven-surefire-plugin</artifactId>
+            <!-- Always skip the second part executions, since we only run simple unit tests in this module -->
+            <executions>
+                <execution>
+                    <id>secondPartTestsExecution</id>
+                    <phase>test</phase>
+                    <goals>
+                        <goal>test</goal>
+                    </goals>
+                    <configuration>
+                        <skip>true</skip>
+                    </configuration>
+                </execution>
+            </executions>
+        </plugin>
+<!-- 
+        <plugin>
+          <groupId>org.apache.hadoop</groupId>
+          <artifactId>hadoop-maven-plugins</artifactId>
+          <version>2.0.5-alpha</version>
+          <executions>
+            <execution>
+              <id>compile-protoc</id>
+              <phase>generate-sources</phase>
+              <goals>
+                <goal>protoc</goal>
+              </goals>
+              <configuration>
+                <protocVersion>${protobuf.version}</protocVersion>
+                <protocCommand>${protoc.path}</protocCommand>
+                <imports>
+                  <param>${basedir}/src/main/protobuf</param>
+                </imports>
+                <source>
+                  <directory>${basedir}/src/main/protobuf</directory>
+                  <includes>
+                    <include>AccessControl.proto</include>
+                    <include>Admin.proto</include>
+                    <include>Aggregate.proto</include>
+                    <include>Authentication.proto</include>
+                    <include>Cell.proto</include>
+                    <include>Client.proto</include>
+                    <include>ClusterId.proto</include>
+                    <include>ClusterStatus.proto</include>
+                    <include>Comparator.proto</include>
+                    <include>ErrorHandling.proto</include>
+                    <include>Filter.proto</include>
+                    <include>FS.proto</include>
+                    <include>hbase.proto</include>
+                    <include>HFile.proto</include>
+                    <include>LoadBalancer.proto</include>
+                    <include>MapReduce.proto</include>
+                    <include>MasterAdmin.proto</include>
+                    <include>MasterMonitor.proto</include>
+                    <include>Master.proto</include>
+                    <include>MultiRowMutationProcessorMessages.proto</include>
+                    <include>MultiRowMutation.proto</include>
+                    <include>RegionServerStatus.proto</include>
+                    <include>RowProcessor.proto</include>
+                    <include>RPC.proto</include>
+                    <include>SecureBulkLoad.proto</include>
+                    <include>Tracing.proto</include>
+                    <include>WAL.proto</include>
+                    <include>ZooKeeper.proto</include>
+                  </includes>
+                </source>
+                <output>${project.build.directory}/generated-sources/java</output>
+              </configuration>
+            </execution>
+          </executions>
+        </plugin>
+-->
+       </plugins>
+      <pluginManagement>
+        <plugins>
+          <!--This plugin's configuration is used to store Eclipse m2e settings only. It has no influence on the Maven build itself.-->
+          <plugin>
+            <groupId>org.eclipse.m2e</groupId>
+            <artifactId>lifecycle-mapping</artifactId>
+            <version>1.0.0</version>
+            <configuration>
+              <lifecycleMappingMetadata>
+                <pluginExecutions>
+                  <pluginExecution>
+                    <pluginExecutionFilter>
+                      <groupId>org.apache.hadoop</groupId>
+                      <artifactId>hadoop-maven-plugins</artifactId>
+                      <versionRange>[2.0.5-alpha,)</versionRange>
+                      <goals>
+                        <goal>protoc</goal>
+                      </goals>
+                    </pluginExecutionFilter>
+                    <action>
+                      <ignore></ignore>
+                    </action>
+                  </pluginExecution>
+                </pluginExecutions>
+              </lifecycleMappingMetadata>
+            </configuration>
+          </plugin>
+         </plugins>
+      </pluginManagement>
     </build>
 
     <dependencies>
@@ -100,4 +185,5 @@
             </properties>
         </profile>
     </profiles>
+    
 </project>
