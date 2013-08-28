@@ -116,13 +116,13 @@ public class ReplicationSink {
       long totalReplicated = 0;
       // Map of table => list of Rows, grouped by cluster id, we only want to flushCommits once per
       // invocation of this method per table and cluster id.
-      Map<TableName, Map<UUID,List<Row>>> rowMap = new TreeMap<TableName, Map<UUID,List<Row>>>();
+      Map<TableName, Map<List<UUID>, List<Row>>> rowMap =
+          new TreeMap<TableName, Map<List<UUID>, List<Row>>>();
       for (WALEntry entry : entries) {
         TableName table =
             TableName.valueOf(entry.getKey().getTableName().toByteArray());
         Cell previousCell = null;
         Mutation m = null;
-        java.util.UUID uuid = toUUID(entry.getKey().getClusterId());
         int count = entry.getAssociatedCellCount();
         for (int i = 0; i < count; i++) {
           // Throw index out of bounds if our cell count is off
@@ -135,8 +135,12 @@ public class ReplicationSink {
             m = CellUtil.isDelete(cell)?
               new Delete(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength()):
               new Put(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength());
-            m.setClusterId(uuid);
-            addToHashMultiMap(rowMap, table, uuid, m);
+            List<UUID> clusterIds = new ArrayList<UUID>();
+            for(HBaseProtos.UUID clusterId : entry.getKey().getClusterIdsList()){
+              clusterIds.add(toUUID(clusterId));
+            }
+            m.setClusterIds(clusterIds);
+            addToHashMultiMap(rowMap, table, clusterIds, m);
           }
           if (CellUtil.isDelete(cell)) {
             ((Delete)m).addDeleteMarker(KeyValueUtil.ensureKeyValue(cell));
@@ -147,7 +151,7 @@ public class ReplicationSink {
         }
         totalReplicated++;
       }
-      for (Entry<TableName, Map<UUID,List<Row>>> entry : rowMap.entrySet()) {
+      for (Entry<TableName, Map<List<UUID>,List<Row>>> entry : rowMap.entrySet()) {
         batch(entry.getKey(), entry.getValue().values());
       }
       int size = entries.size();
@@ -181,7 +185,7 @@ public class ReplicationSink {
    * @param key1
    * @param key2
    * @param value
-   * @return
+   * @return the list of values corresponding to key1 and key2
    */
   private <K1, K2, V> List<V> addToHashMultiMap(Map<K1, Map<K2,List<V>>> map, K1 key1, K2 key2, V value) {
     Map<K2,List<V>> innerMap = map.get(key1);

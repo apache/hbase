@@ -115,6 +115,7 @@ public class ReplicationProtbufUtil {
     AdminProtos.WALEntry.Builder entryBuilder = AdminProtos.WALEntry.newBuilder();
     AdminProtos.ReplicateWALEntryRequest.Builder builder =
       AdminProtos.ReplicateWALEntryRequest.newBuilder();
+    HBaseProtos.UUID.Builder uuidBuilder = HBaseProtos.UUID.newBuilder();
     for (HLog.Entry entry: entries) {
       entryBuilder.clear();
       WALProtos.WALKey.Builder keyBuilder = entryBuilder.getKeyBuilder();
@@ -124,11 +125,10 @@ public class ReplicationProtbufUtil {
       keyBuilder.setTableName(ByteString.copyFrom(key.getTablename().getName()));
       keyBuilder.setLogSequenceNumber(key.getLogSeqNum());
       keyBuilder.setWriteTime(key.getWriteTime());
-      UUID clusterId = key.getClusterId();
-      if (clusterId != null) {
-        HBaseProtos.UUID.Builder uuidBuilder = keyBuilder.getClusterIdBuilder();
+      for(UUID clusterId : key.getClusterIds()) {
         uuidBuilder.setLeastSigBits(clusterId.getLeastSignificantBits());
         uuidBuilder.setMostSigBits(clusterId.getMostSignificantBits());
+        keyBuilder.addClusterIds(uuidBuilder.build());
       }
       WALEdit edit = entry.getEdit();
       NavigableMap<byte[], Integer> scopes = key.getScopes();

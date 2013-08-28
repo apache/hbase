@@ -19,9 +19,11 @@
 package org.apache.hadoop.hbase.regionserver.wal;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.UUID;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -34,7 +36,6 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
@@ -103,7 +104,7 @@ public final class HLogPerformanceEvaluation extends Configured implements Tool 
           HRegionInfo hri = region.getRegionInfo();
           if (this.noSync) {
             hlog.appendNoSync(hri, hri.getTableName(), walEdit,
-                              HConstants.DEFAULT_CLUSTER_ID, now, htd);
+                              new ArrayList<UUID>(), now, htd);
           } else {
             hlog.append(hri, hri.getTableName(), walEdit, now, htd);
           }

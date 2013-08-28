@@ -28,7 +28,6 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 
-import com.google.protobuf.ByteString;
 import com.google.protobuf.Message;
 
 @InterfaceAudience.Public
@@ -107,9 +106,9 @@ public interface RowProcessor<S extends Message, T extends Message> {
 
 
   /**
-   * @return The replication cluster id.
+   * @return The cluster ids that have the change.
    */
-  UUID getClusterId();
+  List<UUID> getClusterIds();
 
   /**
    * Human readable name of the processor

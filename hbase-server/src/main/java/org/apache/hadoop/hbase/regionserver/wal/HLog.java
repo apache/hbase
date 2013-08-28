@@ -22,6 +22,8 @@ package org.apache.hadoop.hbase.regionserver.wal;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
+import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 import java.util.regex.Pattern;
 
@@ -264,7 +266,7 @@ public interface HLog {
   void closeAndDelete() throws IOException;
 
   /**
-   * Same as {@link #appendNoSync(HRegionInfo, TableName, WALEdit, UUID, long, HTableDescriptor)},
+   * Same as {@link #appendNoSync(HRegionInfo, TableName, WALEdit, List, long, HTableDescriptor)},
    * except it causes a sync on the log
    */
   public void append(HRegionInfo info, TableName tableName, WALEdit edits,
@@ -285,23 +287,20 @@ public interface HLog {
       final long now, HTableDescriptor htd, boolean isInMemstore) throws IOException;
 
   /**
-   * Append a set of edits to the log. Log edits are keyed by (encoded)
-   * regionName, rowname, and log-sequence-id. The HLog is not flushed after
-   * this transaction is written to the log.
-   *
+   * Append a set of edits to the log. Log edits are keyed by (encoded) regionName, rowname, and
+   * log-sequence-id. The HLog is not flushed after this transaction is written to the log.
    * @param info
    * @param tableName
    * @param edits
-   * @param clusterId
-   *          The originating clusterId for this edit (for replication)
+   * @param clusterIds The clusters that have consumed the change (for replication)
    * @param now
    * @param htd
    * @return txid of this transaction
    * @throws IOException
    */
-  public long appendNoSync(HRegionInfo info, TableName tableName, WALEdit edits,
-      UUID clusterId, final long now, HTableDescriptor htd) throws IOException;
-
+  public long appendNoSync(HRegionInfo info, TableName tableName, WALEdit edits, 
+      List<UUID> clusterIds, final long now, HTableDescriptor htd) throws IOException;
+  
   void hsync() throws IOException;
 
   void hflush() throws IOException;

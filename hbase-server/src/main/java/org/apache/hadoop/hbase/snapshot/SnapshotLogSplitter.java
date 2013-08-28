@@ -172,7 +172,7 @@ class SnapshotLogSplitter implements Closeable {
 
         // Append Entry
         key = new HLogKey(newRegionName, tableName,
-                          key.getLogSeqNum(), key.getWriteTime(), key.getClusterId());
+                          key.getLogSeqNum(), key.getWriteTime(), key.getClusterIds());
         writer.append(new HLog.Entry(key, entry.getEdit()));
       }
     } catch (IOException e) {

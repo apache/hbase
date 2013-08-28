@@ -39,6 +39,10 @@ import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
 
+import com.google.common.io.ByteArrayDataInput;
+import com.google.common.io.ByteArrayDataOutput;
+import com.google.common.io.ByteStreams;
+
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
 public abstract class Mutation extends OperationWithAttributes implements Row, CellScannable,
@@ -57,8 +61,10 @@ public abstract class Mutation extends OperationWithAttributes implements Row, C
       // familyMap
       ClassSize.TREEMAP);
 
-  // Attribute used in Mutations to indicate the originating cluster.
-  private static final String CLUSTER_ID_ATTR = "_c.id_";
+  /**
+   * The attribute for storing the list of clusters that have consumed the change.
+   */
+  private static final String CONSUMED_CLUSTER_IDS = "_cs.id";
 
   protected byte [] row = null;
   protected long ts = HConstants.LATEST_TIMESTAMP;
@@ -275,26 +281,33 @@ public abstract class Mutation extends OperationWithAttributes implements Row, C
   }
 
   /**
-   * Set the replication custer id.
-   * @param clusterId
+   * Marks that the clusters with the given clusterIds have consumed the mutation
+   * @param clusterIds of the clusters that have consumed the mutation
    */
-  public void setClusterId(UUID clusterId) {
-    if (clusterId == null) return;
-    byte[] val = new byte[2*Bytes.SIZEOF_LONG];
-    Bytes.putLong(val, 0, clusterId.getMostSignificantBits());
-    Bytes.putLong(val, Bytes.SIZEOF_LONG, clusterId.getLeastSignificantBits());
-    setAttribute(CLUSTER_ID_ATTR, val);
+  public void setClusterIds(List<UUID> clusterIds) {
+    ByteArrayDataOutput out = ByteStreams.newDataOutput();
+    out.writeInt(clusterIds.size());
+    for (UUID clusterId : clusterIds) {
+      out.writeLong(clusterId.getMostSignificantBits());
+      out.writeLong(clusterId.getLeastSignificantBits());
+    }
+    setAttribute(CONSUMED_CLUSTER_IDS, out.toByteArray());
   }
 
   /**
-   * @return The replication cluster id.
+   * @return the set of clusterIds that have consumed the mutation
    */
-  public UUID getClusterId() {
-    byte[] attr = getAttribute(CLUSTER_ID_ATTR);
-    if (attr == null) {
-      return HConstants.DEFAULT_CLUSTER_ID;
+  public List<UUID> getClusterIds() {
+    List<UUID> clusterIds = new ArrayList<UUID>();
+    byte[] bytes = getAttribute(CONSUMED_CLUSTER_IDS);
+    if(bytes != null) {
+      ByteArrayDataInput in = ByteStreams.newDataInput(bytes);
+      int numClusters = in.readInt();
+      for(int i=0; i<numClusters; i++){
+        clusterIds.add(new UUID(in.readLong(), in.readLong()));
+      }
     }
-    return new UUID(Bytes.toLong(attr,0), Bytes.toLong(attr, Bytes.SIZEOF_LONG));
+    return clusterIds;
   }
 
   /**

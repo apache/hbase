@@ -22,8 +22,6 @@ import java.io.EOFException;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InterruptedIOException;
-import java.lang.reflect.Constructor;
-import java.lang.reflect.InvocationTargetException;
 import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -37,7 +35,6 @@ import java.util.TreeSet;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletionService;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorCompletionService;
 import java.util.concurrent.Future;
@@ -1484,11 +1481,11 @@ public class HLogSplitter {
 
             if (kv.isDelete()) {
               del = new Delete(kv.getRow());
-              del.setClusterId(entry.getKey().getClusterId());
+              del.setClusterIds(entry.getKey().getClusterIds());
               preRow = del;
             } else {
               put = new Put(kv.getRow());
-              put.setClusterId(entry.getKey().getClusterId());
+              put.setClusterIds(entry.getKey().getClusterIds());
               preRow = put;
             }
             preKey = loc.getHostnamePort() + KEY_DELIMITER + table;
