@@ -355,6 +355,11 @@ public final class HConstants {
   // be the first to be reassigned if the server(s) they are being served by
   // should go down.
 
+
+  /** The META table's name. */
+  @Deprecated  // for compat from 0.94 -> 0.96.
+  public static final byte[] META_TABLE_NAME = TableName.META_TABLE_NAME.getName();
+
   public static final String BASE_NAMESPACE_DIR = "data";
 
   /** delimiter used between portions of a region name */
