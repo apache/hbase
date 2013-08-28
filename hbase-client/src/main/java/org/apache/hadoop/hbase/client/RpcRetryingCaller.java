@@ -117,8 +117,10 @@ public class RpcRetryingCaller<T> {
         callable.prepare(tries != 0); // if called with false, check table status on ZK
         return callable.call();
       } catch (Throwable t) {
-        LOG.warn("Call exception, tries=" + tries + ", retries=" + retries + ", retryTime=" +
-            (EnvironmentEdgeManager.currentTimeMillis() - this.globalStartTime) + "ms", t);
+        if (LOG.isTraceEnabled()) {
+          LOG.trace("Call exception, tries=" + tries + ", retries=" + retries + ", retryTime=" +
+              (EnvironmentEdgeManager.currentTimeMillis() - this.globalStartTime) + "ms", t);
+        }
         // translateException throws exception when should not retry: i.e. when request is bad.
         t = translateException(t);
         callable.throwable(t, retries != 1);
