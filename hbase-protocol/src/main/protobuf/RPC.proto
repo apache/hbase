@@ -81,10 +81,10 @@ message ConnectionHeader {
   optional UserInformation user_info = 1;
   optional string service_name = 2;
   // Cell block codec we will use sending over optional cell blocks.  Server throws exception
-  // if cannot deal.
-  optional string cell_block_codec_class = 3 [default = "org.apache.hadoop.hbase.codec.KeyValueCodec"];
+  // if cannot deal.  Null means no codec'ing going on so we are pb all the time (SLOW!!!)
+  optional string cell_block_codec_class = 3;
   // Compressor we will use if cell block is compressed.  Server will throw exception if not supported.
-  // Class must implement hadoop's CompressionCodec Interface
+  // Class must implement hadoop's CompressionCodec Interface.  Can't compress if no codec.
   optional string cell_block_compressor_class = 4;
 }
 

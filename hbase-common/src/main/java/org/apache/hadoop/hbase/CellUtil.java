@@ -161,14 +161,17 @@ public final class CellUtil {
    * @return CellScanner interface over <code>cellIterable</code>
    */
   public static CellScanner createCellScanner(final Iterable<Cell> cellIterable) {
+    if (cellIterable == null) return null;
     return createCellScanner(cellIterable.iterator());
   }
 
   /**
    * @param cells
-   * @return CellScanner interface over <code>cellIterable</code>
+   * @return CellScanner interface over <code>cellIterable</code> or null if <code>cells</code> is
+   * null
    */
   public static CellScanner createCellScanner(final Iterator<Cell> cells) {
+    if (cells == null) return null;
     return new CellScanner() {
       private final Iterator<Cell> iterator = cells;
       private Cell current = null;

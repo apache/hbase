@@ -89,6 +89,7 @@ import org.apache.hadoop.security.token.TokenSelector;
 import org.cloudera.htrace.Span;
 import org.cloudera.htrace.Trace;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.protobuf.BlockingRpcChannel;
 import com.google.protobuf.Descriptors.MethodDescriptor;
 import com.google.protobuf.Message;
@@ -426,7 +427,9 @@ public class RpcClient {
       if ((userInfoPB = getUserInfo(ticket)) != null) {
         builder.setUserInfo(userInfoPB);
       }
-      builder.setCellBlockCodecClass(this.codec.getClass().getCanonicalName());
+      if (this.codec != null) {
+        builder.setCellBlockCodecClass(this.codec.getClass().getCanonicalName());
+      }
       if (this.compressor != null) {
         builder.setCellBlockCompressorClass(this.compressor.getClass().getCanonicalName());
       }
@@ -1249,7 +1252,7 @@ public class RpcClient {
     this.pingInterval = getPingInterval(conf);
     this.ipcUtil = new IPCUtil(conf);
     this.conf = conf;
-    this.codec = getCodec(conf);
+    this.codec = getCodec();
     this.compressor = getCompressor(conf);
     this.socketFactory = factory;
     this.clusterId = clusterId != null ? clusterId : HConstants.CLUSTER_ID_DEFAULT;
@@ -1291,16 +1294,26 @@ public class RpcClient {
 
   /**
    * Encapsulate the ugly casting and RuntimeException conversion in private method.
-   * @param conf
    * @return Codec to use on this client.
    */
-  private static Codec getCodec(final Configuration conf) {
-    String className = conf.get("hbase.client.rpc.codec", KeyValueCodec.class.getCanonicalName());
+  Codec getCodec() {
+    // For NO CODEC, "hbase.client.rpc.codec" must be the empty string AND
+    // "hbase.client.default.rpc.codec" -- because default is to do cell block encoding.
+    String className = conf.get("hbase.client.rpc.codec", getDefaultCodec(this.conf));
+    if (className == null || className.length() == 0) return null;
     try {
-        return (Codec)Class.forName(className).newInstance();
+      return (Codec)Class.forName(className).newInstance();
     } catch (Exception e) {
       throw new RuntimeException("Failed getting codec " + className, e);
     }
+  }
+
+  @VisibleForTesting
+  public static String getDefaultCodec(final Configuration c) {
+    // If "hbase.client.default.rpc.codec" is empty string -- you can't set it to null because
+    // Configuration will complain -- then no default codec (and we'll pb everything).  Else
+    // default is KeyValueCodec
+    return c.get("hbase.client.default.rpc.codec", KeyValueCodec.class.getCanonicalName());
   }
 
   /**

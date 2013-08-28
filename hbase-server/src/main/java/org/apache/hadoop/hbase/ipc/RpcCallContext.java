@@ -25,4 +25,14 @@ public interface RpcCallContext extends Delayable {
    * @throws CallerDisconnectedException
    */
   void throwExceptionIfCallerDisconnected(String regionName) throws CallerDisconnectedException;
+
+  /**
+   * If the client connected and specified a codec to use, then we will use this codec making
+   * cellblocks to return.  If the client did not specify a codec, we assume it does not support
+   * cellblocks and will return all content protobuf'd (though it makes our serving slower).
+   * We need to ask this question per call because a server could be hosting both clients that
+   * support cellblocks while fielding requests from clients that do not.
+   * @return True if the client supports cellblocks, else return all content in pb
+   */
+  boolean isClientCellBlockSupport();
 }

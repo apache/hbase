@@ -730,31 +730,31 @@ public final class RPCProtos {
     com.google.protobuf.ByteString
         getServiceNameBytes();
 
-    // optional string cell_block_codec_class = 3 [default = "org.apache.hadoop.hbase.codec.KeyValueCodec"];
+    // optional string cell_block_codec_class = 3;
     /**
-     * <code>optional string cell_block_codec_class = 3 [default = "org.apache.hadoop.hbase.codec.KeyValueCodec"];</code>
+     * <code>optional string cell_block_codec_class = 3;</code>
      *
      * <pre>
      * Cell block codec we will use sending over optional cell blocks.  Server throws exception
-     * if cannot deal.
+     * if cannot deal.  Null means no codec'ing going on so we are pb all the time (SLOW!!!)
      * </pre>
      */
     boolean hasCellBlockCodecClass();
     /**
-     * <code>optional string cell_block_codec_class = 3 [default = "org.apache.hadoop.hbase.codec.KeyValueCodec"];</code>
+     * <code>optional string cell_block_codec_class = 3;</code>
      *
      * <pre>
      * Cell block codec we will use sending over optional cell blocks.  Server throws exception
-     * if cannot deal.
+     * if cannot deal.  Null means no codec'ing going on so we are pb all the time (SLOW!!!)
      * </pre>
      */
     java.lang.String getCellBlockCodecClass();
     /**
-     * <code>optional string cell_block_codec_class = 3 [default = "org.apache.hadoop.hbase.codec.KeyValueCodec"];</code>
+     * <code>optional string cell_block_codec_class = 3;</code>
      *
      * <pre>
      * Cell block codec we will use sending over optional cell blocks.  Server throws exception
-     * if cannot deal.
+     * if cannot deal.  Null means no codec'ing going on so we are pb all the time (SLOW!!!)
      * </pre>
      */
     com.google.protobuf.ByteString
@@ -766,7 +766,7 @@ public final class RPCProtos {
      *
      * <pre>
      * Compressor we will use if cell block is compressed.  Server will throw exception if not supported.
-     * Class must implement hadoop's CompressionCodec Interface
+     * Class must implement hadoop's CompressionCodec Interface.  Can't compress if no codec.
      * </pre>
      */
     boolean hasCellBlockCompressorClass();
@@ -775,7 +775,7 @@ public final class RPCProtos {
      *
      * <pre>
      * Compressor we will use if cell block is compressed.  Server will throw exception if not supported.
-     * Class must implement hadoop's CompressionCodec Interface
+     * Class must implement hadoop's CompressionCodec Interface.  Can't compress if no codec.
      * </pre>
      */
     java.lang.String getCellBlockCompressorClass();
@@ -784,7 +784,7 @@ public final class RPCProtos {
      *
      * <pre>
      * Compressor we will use if cell block is compressed.  Server will throw exception if not supported.
-     * Class must implement hadoop's CompressionCodec Interface
+     * Class must implement hadoop's CompressionCodec Interface.  Can't compress if no codec.
      * </pre>
      */
     com.google.protobuf.ByteString
@@ -978,26 +978,26 @@ public final class RPCProtos {
       }
     }
 
-    // optional string cell_block_codec_class = 3 [default = "org.apache.hadoop.hbase.codec.KeyValueCodec"];
+    // optional string cell_block_codec_class = 3;
     public static final int CELL_BLOCK_CODEC_CLASS_FIELD_NUMBER = 3;
     private java.lang.Object cellBlockCodecClass_;
     /**
-     * <code>optional string cell_block_codec_class = 3 [default = "org.apache.hadoop.hbase.codec.KeyValueCodec"];</code>
+     * <code>optional string cell_block_codec_class = 3;</code>
      *
      * <pre>
      * Cell block codec we will use sending over optional cell blocks.  Server throws exception
-     * if cannot deal.
+     * if cannot deal.  Null means no codec'ing going on so we are pb all the time (SLOW!!!)
      * </pre>
      */
     public boolean hasCellBlockCodecClass() {
       return ((bitField0_ & 0x00000004) == 0x00000004);
     }
     /**
-     * <code>optional string cell_block_codec_class = 3 [default = "org.apache.hadoop.hbase.codec.KeyValueCodec"];</code>
+     * <code>optional string cell_block_codec_class = 3;</code>
      *
      * <pre>
      * Cell block codec we will use sending over optional cell blocks.  Server throws exception
-     * if cannot deal.
+     * if cannot deal.  Null means no codec'ing going on so we are pb all the time (SLOW!!!)
      * </pre>
      */
     public java.lang.String getCellBlockCodecClass() {
@@ -1015,11 +1015,11 @@ public final class RPCProtos {
       }
     }
     /**
-     * <code>optional string cell_block_codec_class = 3 [default = "org.apache.hadoop.hbase.codec.KeyValueCodec"];</code>
+     * <code>optional string cell_block_codec_class = 3;</code>
      *
      * <pre>
      * Cell block codec we will use sending over optional cell blocks.  Server throws exception
-     * if cannot deal.
+     * if cannot deal.  Null means no codec'ing going on so we are pb all the time (SLOW!!!)
      * </pre>
      */
     public com.google.protobuf.ByteString
@@ -1044,7 +1044,7 @@ public final class RPCProtos {
      *
      * <pre>
      * Compressor we will use if cell block is compressed.  Server will throw exception if not supported.
-     * Class must implement hadoop's CompressionCodec Interface
+     * Class must implement hadoop's CompressionCodec Interface.  Can't compress if no codec.
      * </pre>
      */
     public boolean hasCellBlockCompressorClass() {
@@ -1055,7 +1055,7 @@ public final class RPCProtos {
      *
      * <pre>
      * Compressor we will use if cell block is compressed.  Server will throw exception if not supported.
-     * Class must implement hadoop's CompressionCodec Interface
+     * Class must implement hadoop's CompressionCodec Interface.  Can't compress if no codec.
      * </pre>
      */
     public java.lang.String getCellBlockCompressorClass() {
@@ -1077,7 +1077,7 @@ public final class RPCProtos {
      *
      * <pre>
      * Compressor we will use if cell block is compressed.  Server will throw exception if not supported.
-     * Class must implement hadoop's CompressionCodec Interface
+     * Class must implement hadoop's CompressionCodec Interface.  Can't compress if no codec.
      * </pre>
      */
     public com.google.protobuf.ByteString
@@ -1097,7 +1097,7 @@ public final class RPCProtos {
     private void initFields() {
       userInfo_ = org.apache.hadoop.hbase.protobuf.generated.RPCProtos.UserInformation.getDefaultInstance();
       serviceName_ = "";
-      cellBlockCodecClass_ = "org.apache.hadoop.hbase.codec.KeyValueCodec";
+      cellBlockCodecClass_ = "";
       cellBlockCompressorClass_ = "";
     }
     private byte memoizedIsInitialized = -1;
@@ -1349,7 +1349,7 @@ public final class RPCProtos {
         bitField0_ = (bitField0_ & ~0x00000001);
         serviceName_ = "";
         bitField0_ = (bitField0_ & ~0x00000002);
-        cellBlockCodecClass_ = "org.apache.hadoop.hbase.codec.KeyValueCodec";
+        cellBlockCodecClass_ = "";
         bitField0_ = (bitField0_ & ~0x00000004);
         cellBlockCompressorClass_ = "";
         bitField0_ = (bitField0_ & ~0x00000008);
@@ -1659,25 +1659,25 @@ public final class RPCProtos {
         return this;
       }
 
-      // optional string cell_block_codec_class = 3 [default = "org.apache.hadoop.hbase.codec.KeyValueCodec"];
-      private java.lang.Object cellBlockCodecClass_ = "org.apache.hadoop.hbase.codec.KeyValueCodec";
+      // optional string cell_block_codec_class = 3;
+      private java.lang.Object cellBlockCodecClass_ = "";
       /**
-       * <code>optional string cell_block_codec_class = 3 [default = "org.apache.hadoop.hbase.codec.KeyValueCodec"];</code>
+       * <code>optional string cell_block_codec_class = 3;</code>
        *
        * <pre>
        * Cell block codec we will use sending over optional cell blocks.  Server throws exception
-       * if cannot deal.
+       * if cannot deal.  Null means no codec'ing going on so we are pb all the time (SLOW!!!)
        * </pre>
        */
       public boolean hasCellBlockCodecClass() {
         return ((bitField0_ & 0x00000004) == 0x00000004);
       }
       /**
-       * <code>optional string cell_block_codec_class = 3 [default = "org.apache.hadoop.hbase.codec.KeyValueCodec"];</code>
+       * <code>optional string cell_block_codec_class = 3;</code>
        *
        * <pre>
        * Cell block codec we will use sending over optional cell blocks.  Server throws exception
-       * if cannot deal.
+       * if cannot deal.  Null means no codec'ing going on so we are pb all the time (SLOW!!!)
        * </pre>
        */
       public java.lang.String getCellBlockCodecClass() {
@@ -1692,11 +1692,11 @@ public final class RPCProtos {
         }
       }
       /**
-       * <code>optional string cell_block_codec_class = 3 [default = "org.apache.hadoop.hbase.codec.KeyValueCodec"];</code>
+       * <code>optional string cell_block_codec_class = 3;</code>
        *
        * <pre>
        * Cell block codec we will use sending over optional cell blocks.  Server throws exception
-       * if cannot deal.
+       * if cannot deal.  Null means no codec'ing going on so we are pb all the time (SLOW!!!)
        * </pre>
        */
       public com.google.protobuf.ByteString
@@ -1713,11 +1713,11 @@ public final class RPCProtos {
         }
       }
       /**
-       * <code>optional string cell_block_codec_class = 3 [default = "org.apache.hadoop.hbase.codec.KeyValueCodec"];</code>
+       * <code>optional string cell_block_codec_class = 3;</code>
        *
        * <pre>
        * Cell block codec we will use sending over optional cell blocks.  Server throws exception
-       * if cannot deal.
+       * if cannot deal.  Null means no codec'ing going on so we are pb all the time (SLOW!!!)
        * </pre>
        */
       public Builder setCellBlockCodecClass(
@@ -1731,11 +1731,11 @@ public final class RPCProtos {
         return this;
       }
       /**
-       * <code>optional string cell_block_codec_class = 3 [default = "org.apache.hadoop.hbase.codec.KeyValueCodec"];</code>
+       * <code>optional string cell_block_codec_class = 3;</code>
        *
        * <pre>
        * Cell block codec we will use sending over optional cell blocks.  Server throws exception
-       * if cannot deal.
+       * if cannot deal.  Null means no codec'ing going on so we are pb all the time (SLOW!!!)
        * </pre>
        */
       public Builder clearCellBlockCodecClass() {
@@ -1745,11 +1745,11 @@ public final class RPCProtos {
         return this;
       }
       /**
-       * <code>optional string cell_block_codec_class = 3 [default = "org.apache.hadoop.hbase.codec.KeyValueCodec"];</code>
+       * <code>optional string cell_block_codec_class = 3;</code>
        *
        * <pre>
        * Cell block codec we will use sending over optional cell blocks.  Server throws exception
-       * if cannot deal.
+       * if cannot deal.  Null means no codec'ing going on so we are pb all the time (SLOW!!!)
        * </pre>
        */
       public Builder setCellBlockCodecClassBytes(
@@ -1770,7 +1770,7 @@ public final class RPCProtos {
        *
        * <pre>
        * Compressor we will use if cell block is compressed.  Server will throw exception if not supported.
-       * Class must implement hadoop's CompressionCodec Interface
+       * Class must implement hadoop's CompressionCodec Interface.  Can't compress if no codec.
        * </pre>
        */
       public boolean hasCellBlockCompressorClass() {
@@ -1781,7 +1781,7 @@ public final class RPCProtos {
        *
        * <pre>
        * Compressor we will use if cell block is compressed.  Server will throw exception if not supported.
-       * Class must implement hadoop's CompressionCodec Interface
+       * Class must implement hadoop's CompressionCodec Interface.  Can't compress if no codec.
        * </pre>
        */
       public java.lang.String getCellBlockCompressorClass() {
@@ -1800,7 +1800,7 @@ public final class RPCProtos {
        *
        * <pre>
        * Compressor we will use if cell block is compressed.  Server will throw exception if not supported.
-       * Class must implement hadoop's CompressionCodec Interface
+       * Class must implement hadoop's CompressionCodec Interface.  Can't compress if no codec.
        * </pre>
        */
       public com.google.protobuf.ByteString
@@ -1821,7 +1821,7 @@ public final class RPCProtos {
        *
        * <pre>
        * Compressor we will use if cell block is compressed.  Server will throw exception if not supported.
-       * Class must implement hadoop's CompressionCodec Interface
+       * Class must implement hadoop's CompressionCodec Interface.  Can't compress if no codec.
        * </pre>
        */
       public Builder setCellBlockCompressorClass(
@@ -1839,7 +1839,7 @@ public final class RPCProtos {
        *
        * <pre>
        * Compressor we will use if cell block is compressed.  Server will throw exception if not supported.
-       * Class must implement hadoop's CompressionCodec Interface
+       * Class must implement hadoop's CompressionCodec Interface.  Can't compress if no codec.
        * </pre>
        */
       public Builder clearCellBlockCompressorClass() {
@@ -1853,7 +1853,7 @@ public final class RPCProtos {
        *
        * <pre>
        * Compressor we will use if cell block is compressed.  Server will throw exception if not supported.
-       * Class must implement hadoop's CompressionCodec Interface
+       * Class must implement hadoop's CompressionCodec Interface.  Can't compress if no codec.
        * </pre>
        */
       public Builder setCellBlockCompressorClassBytes(
@@ -6002,25 +6002,24 @@ public final class RPCProtos {
     java.lang.String[] descriptorData = {
       "\n\tRPC.proto\032\rTracing.proto\032\013hbase.proto\"" +
       "<\n\017UserInformation\022\026\n\016effective_user\030\001 \002" +
-      "(\t\022\021\n\treal_user\030\002 \001(\t\"\277\001\n\020ConnectionHead" +
+      "(\t\022\021\n\treal_user\030\002 \001(\t\"\222\001\n\020ConnectionHead" +
       "er\022#\n\tuser_info\030\001 \001(\0132\020.UserInformation\022" +
-      "\024\n\014service_name\030\002 \001(\t\022K\n\026cell_block_code" +
-      "c_class\030\003 \001(\t:+org.apache.hadoop.hbase.c" +
-      "odec.KeyValueCodec\022#\n\033cell_block_compres" +
-      "sor_class\030\004 \001(\t\"\037\n\rCellBlockMeta\022\016\n\006leng" +
-      "th\030\001 \001(\r\"|\n\021ExceptionResponse\022\034\n\024excepti" +
-      "on_class_name\030\001 \001(\t\022\023\n\013stack_trace\030\002 \001(\t",
-      "\022\020\n\010hostname\030\003 \001(\t\022\014\n\004port\030\004 \001(\005\022\024\n\014do_n" +
-      "ot_retry\030\005 \001(\010\"\254\001\n\rRequestHeader\022\017\n\007call" +
-      "_id\030\001 \001(\r\022\035\n\ntrace_info\030\002 \001(\0132\t.RPCTInfo" +
-      "\022\023\n\013method_name\030\003 \001(\t\022\025\n\rrequest_param\030\004" +
-      " \001(\010\022\'\n\017cell_block_meta\030\005 \001(\0132\016.CellBloc" +
-      "kMeta\022\026\n\016effective_user\030\006 \001(\t\"q\n\016Respons" +
-      "eHeader\022\017\n\007call_id\030\001 \001(\r\022%\n\texception\030\002 " +
-      "\001(\0132\022.ExceptionResponse\022\'\n\017cell_block_me" +
-      "ta\030\003 \001(\0132\016.CellBlockMetaB<\n*org.apache.h" +
-      "adoop.hbase.protobuf.generatedB\tRPCProto",
-      "sH\001\240\001\001"
+      "\024\n\014service_name\030\002 \001(\t\022\036\n\026cell_block_code" +
+      "c_class\030\003 \001(\t\022#\n\033cell_block_compressor_c" +
+      "lass\030\004 \001(\t\"\037\n\rCellBlockMeta\022\016\n\006length\030\001 " +
+      "\001(\r\"|\n\021ExceptionResponse\022\034\n\024exception_cl" +
+      "ass_name\030\001 \001(\t\022\023\n\013stack_trace\030\002 \001(\t\022\020\n\010h" +
+      "ostname\030\003 \001(\t\022\014\n\004port\030\004 \001(\005\022\024\n\014do_not_re",
+      "try\030\005 \001(\010\"\254\001\n\rRequestHeader\022\017\n\007call_id\030\001" +
+      " \001(\r\022\035\n\ntrace_info\030\002 \001(\0132\t.RPCTInfo\022\023\n\013m" +
+      "ethod_name\030\003 \001(\t\022\025\n\rrequest_param\030\004 \001(\010\022" +
+      "\'\n\017cell_block_meta\030\005 \001(\0132\016.CellBlockMeta" +
+      "\022\026\n\016effective_user\030\006 \001(\t\"q\n\016ResponseHead" +
+      "er\022\017\n\007call_id\030\001 \001(\r\022%\n\texception\030\002 \001(\0132\022" +
+      ".ExceptionResponse\022\'\n\017cell_block_meta\030\003 " +
+      "\001(\0132\016.CellBlockMetaB<\n*org.apache.hadoop" +
+      ".hbase.protobuf.generatedB\tRPCProtosH\001\240\001" +
+      "\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {

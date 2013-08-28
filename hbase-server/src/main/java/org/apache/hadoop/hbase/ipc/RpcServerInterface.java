@@ -25,12 +25,12 @@ import java.net.InetSocketAddress;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.monitoring.MonitoredRPCHandler;
-import org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RequestHeader;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.security.authorize.PolicyProvider;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RequestHeader;
 import com.google.common.base.Function;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.protobuf.BlockingService;
 import com.google.protobuf.Descriptors.MethodDescriptor;
 import com.google.protobuf.Message;

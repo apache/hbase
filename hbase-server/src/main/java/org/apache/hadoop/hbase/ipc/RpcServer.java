@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.ipc;
 
 import static org.apache.hadoop.fs.CommonConfigurationKeys.HADOOP_SECURITY_AUTHORIZATION;
 
+import com.google.common.collect.Lists;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
@@ -61,7 +62,6 @@ import javax.security.sasl.Sasl;
 import javax.security.sasl.SaslException;
 import javax.security.sasl.SaslServer;
 
-import com.google.common.collect.Lists;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -203,8 +203,8 @@ public class RpcServer implements RpcServerInterface {
 
   protected final Configuration conf;
 
+  private final int maxQueueSize;
   private int maxQueueLength;
-  private int maxQueueSize;
   protected int socketSendBufferSize;
   protected final boolean tcpNoDelay;   // if T then disable Nagle's Algorithm
   protected final boolean tcpKeepAlive; // if T then use keepalives
@@ -447,6 +447,11 @@ public class RpcServer implements RpcServerInterface {
     @Override
     public synchronized boolean isReturnValueDelayed() {
       return this.delayReturnValue;
+    }
+
+    @Override
+    public boolean isClientCellBlockSupport() {
+      return this.connection != null && this.connection.codec != null;
     }
 
     @Override
@@ -1568,7 +1573,9 @@ public class RpcServer implements RpcServerInterface {
     private void setupCellBlockCodecs(final ConnectionHeader header)
     throws FatalConnectionException {
       // TODO: Plug in other supported decoders.
+      if (!header.hasCellBlockCodecClass()) return;
       String className = header.getCellBlockCodecClass();
+      if (className == null || className.length() == 0) return;
       try {
         this.codec = (Codec)Class.forName(className).newInstance();
       } catch (Exception e) {
@@ -2425,9 +2432,10 @@ public class RpcServer implements RpcServerInterface {
   }
 
   /**
-   * Needed for delayed calls.  We need to be able to store the current call
-   * so that we can complete it later.
-   * @return Call the server is currently handling.
+   * Needed for features such as delayed calls.  We need to be able to store the current call
+   * so that we can complete it later or ask questions of what is supported by the current ongoing
+   * call.
+   * @return An RpcCallConext backed by the currently ongoing call (gotten from a thread local)
    */
   public static RpcCallContext getCurrentCall() {
     return CurCall.get();

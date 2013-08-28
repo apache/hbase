@@ -59,7 +59,6 @@ import org.apache.hadoop.hbase.CellScannable;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.Chore;
-import org.apache.hadoop.hbase.DaemonThreadFactory;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
@@ -104,6 +103,7 @@ import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.ipc.HBaseRPCErrorHandler;
 import org.apache.hadoop.hbase.ipc.PayloadCarryingRpcController;
+import org.apache.hadoop.hbase.ipc.RpcCallContext;
 import org.apache.hadoop.hbase.ipc.RpcClient;
 import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.ipc.ServerNotRunningYetException;
@@ -163,7 +163,6 @@ import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiResponse;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutateRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutateResponse;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto;
-import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ResultCellMeta;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.MutationType;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ScanRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ScanResponse;
@@ -2947,8 +2946,8 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
    * @throws ServiceException
    */
   @Override
-  public ScanResponse scan(final RpcController controller,
-      final ScanRequest request) throws ServiceException {
+  public ScanResponse scan(final RpcController controller, final ScanRequest request)
+  throws ServiceException {
     Leases.Lease lease = null;
     String scannerName = null;
     try {
@@ -3011,7 +3010,7 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
           if (!isLoadingCfsOnDemandSet) {
             scan.setLoadColumnFamiliesOnDemand(region.isLoadingCfsOnDemandDefault());
           }
-          byte[] hasMetrics = scan.getAttribute(Scan.SCAN_ATTRIBUTES_METRICS_ENABLE);
+          scan.getAttribute(Scan.SCAN_ATTRIBUTES_METRICS_ENABLE);
           region.prepareScanner(scan);
           if (region.getCoprocessorHost() != null) {
             scanner = region.getCoprocessorHost().preScannerOpen(scan);
@@ -3118,16 +3117,7 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
               moreResults = false;
               results = null;
             } else {
-              ResultCellMeta.Builder rcmBuilder = ResultCellMeta.newBuilder();
-              List<CellScannable> cellScannables = new ArrayList<CellScannable>(results.size());
-              for (Result res : results) {
-                cellScannables.add(res);
-                rcmBuilder.addCellsLength(res.size());
-              }
-              builder.setResultCellMeta(rcmBuilder.build());
-              // TODO is this okey to assume the type and cast
-              ((PayloadCarryingRpcController) controller).setCellScanner(CellUtil
-                  .createCellScanner(cellScannables));
+              formatResults(builder, results, controller);
             }
           } finally {
             // We're done. On way out re-add the above removed lease.
@@ -3172,6 +3162,26 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
       }
     } catch (IOException ie) {
       throw new ServiceException(ie);
+    }
+  }
+
+  private void formatResults(final ScanResponse.Builder builder, final List<Result> results,
+      final RpcController controller) {
+    if (results == null || results.isEmpty()) return;
+    RpcCallContext context = RpcServer.getCurrentCall();
+    if (context != null && context.isClientCellBlockSupport()) {
+      List<CellScannable> cellScannables = new ArrayList<CellScannable>(results.size());
+      for (Result res : results) {
+        cellScannables.add(res);
+        builder.addCellsPerResult(res.size());
+      }
+      ((PayloadCarryingRpcController)controller).
+        setCellScanner(CellUtil.createCellScanner(cellScannables));
+    } else {
+      for (Result res: results) {
+        ClientProtos.Result pbr = ProtobufUtil.toResult(res);
+        builder.addResults(pbr);
+      }
     }
   }
 

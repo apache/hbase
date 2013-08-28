@@ -31,6 +31,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CellScanner;
+import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.codec.Codec;
 import org.apache.hadoop.hbase.io.ByteBufferOutputStream;
 import org.apache.hadoop.hbase.io.HeapSize;
@@ -71,6 +72,11 @@ class IPCUtil {
   }
 
   /**
+   * Thrown if a cellscanner but no codec to encode it with.
+   */
+  public static class CellScannerButNoCodecException extends HBaseIOException {};
+
+  /**
    * Puts CellScanner Cells into a cell block using passed in <code>codec</code> and/or
    * <code>compressor</code>.
    * @param codec
@@ -86,6 +92,7 @@ class IPCUtil {
     final CellScanner cellScanner)
   throws IOException {
     if (cellScanner == null) return null;
+    if (codec == null) throw new CellScannerButNoCodecException();
     int bufferSize = this.cellBlockBuildingInitialBufferSize;
     if (cellScanner instanceof HeapSize) {
       long longSize = ((HeapSize)cellScanner).heapSize();

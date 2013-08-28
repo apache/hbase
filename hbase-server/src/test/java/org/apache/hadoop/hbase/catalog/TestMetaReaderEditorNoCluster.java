@@ -46,7 +46,6 @@ import org.apache.hadoop.hbase.client.HConnectionTestingUtility;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.ipc.PayloadCarryingRpcController;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
-import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ResultCellMeta;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ScanRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ScanResponse;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -167,11 +166,9 @@ public class TestMetaReaderEditorNoCluster {
       final List<CellScannable> cellScannables = new ArrayList<CellScannable>(1);
       cellScannables.add(new Result(kvs));
       final ScanResponse.Builder builder = ScanResponse.newBuilder();
-      ResultCellMeta.Builder metaBuilder = ResultCellMeta.newBuilder();
       for (CellScannable result : cellScannables) {
-        metaBuilder.addCellsLength(((Result)result).size());
+        builder.addCellsPerResult(((Result)result).size());
       }
-      builder.setResultCellMeta(metaBuilder.build());
       Mockito.when(implementation.scan((RpcController) Mockito.any(), (ScanRequest) Mockito.any()))
           .thenThrow(new ServiceException("Server not running (1 of 3)"))
           .thenThrow(new ServiceException("Server not running (2 of 3)"))

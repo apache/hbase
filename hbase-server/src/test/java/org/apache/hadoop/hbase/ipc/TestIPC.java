@@ -48,6 +48,7 @@ import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RowMutations;
+import org.apache.hadoop.hbase.codec.Codec;
 import org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EchoRequestProto;
 import org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EchoResponseProto;
 import org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EmptyRequestProto;
@@ -112,13 +113,16 @@ public class TestIPC {
         // an echo, just put them back on the controller creating a new block.  Tests our block
         // building.
         CellScanner cellScanner = pcrc.cellScanner();
-        List<Cell> list = new ArrayList<Cell>();
-        try {
-          while(cellScanner.advance()) {
-            list.add(cellScanner.current());
+        List<Cell> list = null;
+        if (cellScanner != null) {
+          list = new ArrayList<Cell>();
+          try {
+            while(cellScanner.advance()) {
+              list.add(cellScanner.current());
+            }
+          } catch (IOException e) {
+            throw new ServiceException(e);
           }
-        } catch (IOException e) {
-          throw new ServiceException(e);
         }
         cellScanner = CellUtil.createCellScanner(list);
         ((PayloadCarryingRpcController)controller).setCellScanner(cellScanner);
@@ -148,6 +152,38 @@ public class TestIPC {
   }
 
   /**
+   * Ensure we do not HAVE TO HAVE a codec.
+   * @throws InterruptedException
+   * @throws IOException
+   */
+  @Test
+  public void testNoCodec() throws InterruptedException, IOException {
+    Configuration conf = HBaseConfiguration.create();
+    RpcClient client = new RpcClient(conf, HConstants.CLUSTER_ID_DEFAULT) {
+      @Override
+      Codec getCodec() {
+        return null;
+      }
+    };
+    TestRpcServer rpcServer = new TestRpcServer();
+    try {
+      rpcServer.start();
+      InetSocketAddress address = rpcServer.getListenerAddress();
+      MethodDescriptor md = SERVICE.getDescriptorForType().findMethodByName("echo");
+      final String message = "hello";
+      EchoRequestProto param = EchoRequestProto.newBuilder().setMessage(message).build();
+      Pair<Message, CellScanner> r = client.call(md, param, null,
+        md.getOutputType().toProto(), User.getCurrent(), address, 0);
+      assertTrue(r.getSecond() == null);
+      // Silly assertion that the message is in the returned pb.
+      assertTrue(r.getFirst().toString().contains(message));
+    } finally {
+      client.stop();
+      rpcServer.stop();
+    }
+  }
+
+  /**
    * It is hard to verify the compression is actually happening under the wraps.  Hope that if
    * unsupported, we'll get an exception out of some time (meantime, have to trace it manually
    * to confirm that compression is happening down in the client and server).
@@ -159,11 +195,14 @@ public class TestIPC {
   @Test
   public void testCompressCellBlock()
   throws IOException, InterruptedException, SecurityException, NoSuchMethodException {
-    // Currently, you set
-    Configuration conf = HBaseConfiguration.create();
+    Configuration conf = new Configuration(HBaseConfiguration.create());
     conf.set("hbase.client.rpc.compressor", GzipCodec.class.getCanonicalName());
+    doSimpleTest(conf, new RpcClient(conf, HConstants.CLUSTER_ID_DEFAULT));
+  }
+
+  private void doSimpleTest(final Configuration conf, final RpcClient client)
+  throws InterruptedException, IOException {
     TestRpcServer rpcServer = new TestRpcServer();
-    RpcClient client = new RpcClient(conf, HConstants.CLUSTER_ID_DEFAULT);
     List<Cell> cells = new ArrayList<Cell>();
     int count = 3;
     for (int i = 0; i < count; i++) cells.add(CELL);

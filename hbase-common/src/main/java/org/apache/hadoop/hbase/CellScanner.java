@@ -40,8 +40,8 @@ import org.apache.hadoop.hbase.Cell;
  * Typical usage:
  *
  * <pre>
- * while (scanner.next()) {
- *   Cell cell = scanner.get();
+ * while (scanner.advance()) {
+ *   Cell cell = scanner.current();
  *   // do something
  * }
  * </pre>

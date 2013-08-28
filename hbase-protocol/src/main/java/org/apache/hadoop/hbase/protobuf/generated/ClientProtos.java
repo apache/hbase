@@ -17481,19 +17481,49 @@ public final class ClientProtos {
   public interface ScanResponseOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
 
-    // optional .ResultCellMeta result_cell_meta = 1;
+    // repeated uint32 cells_per_result = 1;
     /**
-     * <code>optional .ResultCellMeta result_cell_meta = 1;</code>
+     * <code>repeated uint32 cells_per_result = 1;</code>
+     *
+     * <pre>
+     * This field is filled in if we are doing cellblocks.  A cellblock is made up
+     * of all Cells serialized out as one cellblock BUT responses from a server
+     * have their Cells grouped by Result.  So we can reconstitute the
+     * Results on the client-side, this field is a list of counts of Cells
+     * in each Result that makes up the response.  For example, if this field
+     * has 3, 3, 3 in it, then we know that on the client, we are to make
+     * three Results each of three Cells each.
+     * </pre>
      */
-    boolean hasResultCellMeta();
+    java.util.List<java.lang.Integer> getCellsPerResultList();
     /**
-     * <code>optional .ResultCellMeta result_cell_meta = 1;</code>
+     * <code>repeated uint32 cells_per_result = 1;</code>
+     *
+     * <pre>
+     * This field is filled in if we are doing cellblocks.  A cellblock is made up
+     * of all Cells serialized out as one cellblock BUT responses from a server
+     * have their Cells grouped by Result.  So we can reconstitute the
+     * Results on the client-side, this field is a list of counts of Cells
+     * in each Result that makes up the response.  For example, if this field
+     * has 3, 3, 3 in it, then we know that on the client, we are to make
+     * three Results each of three Cells each.
+     * </pre>
      */
-    org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ResultCellMeta getResultCellMeta();
+    int getCellsPerResultCount();
     /**
-     * <code>optional .ResultCellMeta result_cell_meta = 1;</code>
+     * <code>repeated uint32 cells_per_result = 1;</code>
+     *
+     * <pre>
+     * This field is filled in if we are doing cellblocks.  A cellblock is made up
+     * of all Cells serialized out as one cellblock BUT responses from a server
+     * have their Cells grouped by Result.  So we can reconstitute the
+     * Results on the client-side, this field is a list of counts of Cells
+     * in each Result that makes up the response.  For example, if this field
+     * has 3, 3, 3 in it, then we know that on the client, we are to make
+     * three Results each of three Cells each.
+     * </pre>
      */
-    org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ResultCellMetaOrBuilder getResultCellMetaOrBuilder();
+    int getCellsPerResult(int index);
 
     // optional uint64 scanner_id = 2;
     /**
@@ -17524,6 +17554,61 @@ public final class ClientProtos {
      * <code>optional uint32 ttl = 4;</code>
      */
     int getTtl();
+
+    // repeated .Result results = 5;
+    /**
+     * <code>repeated .Result results = 5;</code>
+     *
+     * <pre>
+     * If cells are not carried in an accompanying cellblock, then they are pb'd here.
+     * This field is mutually exclusive with cells_per_result (since the Cells will
+     * be inside the pb'd Result)
+     * </pre>
+     */
+    java.util.List<org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Result> 
+        getResultsList();
+    /**
+     * <code>repeated .Result results = 5;</code>
+     *
+     * <pre>
+     * If cells are not carried in an accompanying cellblock, then they are pb'd here.
+     * This field is mutually exclusive with cells_per_result (since the Cells will
+     * be inside the pb'd Result)
+     * </pre>
+     */
+    org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Result getResults(int index);
+    /**
+     * <code>repeated .Result results = 5;</code>
+     *
+     * <pre>
+     * If cells are not carried in an accompanying cellblock, then they are pb'd here.
+     * This field is mutually exclusive with cells_per_result (since the Cells will
+     * be inside the pb'd Result)
+     * </pre>
+     */
+    int getResultsCount();
+    /**
+     * <code>repeated .Result results = 5;</code>
+     *
+     * <pre>
+     * If cells are not carried in an accompanying cellblock, then they are pb'd here.
+     * This field is mutually exclusive with cells_per_result (since the Cells will
+     * be inside the pb'd Result)
+     * </pre>
+     */
+    java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ResultOrBuilder> 
+        getResultsOrBuilderList();
+    /**
+     * <code>repeated .Result results = 5;</code>
+     *
+     * <pre>
+     * If cells are not carried in an accompanying cellblock, then they are pb'd here.
+     * This field is mutually exclusive with cells_per_result (since the Cells will
+     * be inside the pb'd Result)
+     * </pre>
+     */
+    org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ResultOrBuilder getResultsOrBuilder(
+        int index);
   }
   /**
    * Protobuf type {@code ScanResponse}
@@ -17582,32 +17667,48 @@ public final class ClientProtos {
               }
               break;
             }
+            case 8: {
+              if (!((mutable_bitField0_ & 0x00000001) == 0x00000001)) {
+                cellsPerResult_ = new java.util.ArrayList<java.lang.Integer>();
+                mutable_bitField0_ |= 0x00000001;
+              }
+              cellsPerResult_.add(input.readUInt32());
+              break;
+            }
             case 10: {
-              org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ResultCellMeta.Builder subBuilder = null;
-              if (((bitField0_ & 0x00000001) == 0x00000001)) {
-                subBuilder = resultCellMeta_.toBuilder();
+              int length = input.readRawVarint32();
+              int limit = input.pushLimit(length);
+              if (!((mutable_bitField0_ & 0x00000001) == 0x00000001) && input.getBytesUntilLimit() > 0) {
+                cellsPerResult_ = new java.util.ArrayList<java.lang.Integer>();
+                mutable_bitField0_ |= 0x00000001;
               }
-              resultCellMeta_ = input.readMessage(org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ResultCellMeta.PARSER, extensionRegistry);
-              if (subBuilder != null) {
-                subBuilder.mergeFrom(resultCellMeta_);
-                resultCellMeta_ = subBuilder.buildPartial();
+              while (input.getBytesUntilLimit() > 0) {
+                cellsPerResult_.add(input.readUInt32());
               }
-              bitField0_ |= 0x00000001;
+              input.popLimit(limit);
               break;
             }
             case 16: {
-              bitField0_ |= 0x00000002;
+              bitField0_ |= 0x00000001;
               scannerId_ = input.readUInt64();
               break;
             }
             case 24: {
-              bitField0_ |= 0x00000004;
+              bitField0_ |= 0x00000002;
               moreResults_ = input.readBool();
               break;
             }
             case 32: {
-              bitField0_ |= 0x00000008;
+              bitField0_ |= 0x00000004;
               ttl_ = input.readUInt32();
+              break;
+            }
+            case 42: {
+              if (!((mutable_bitField0_ & 0x00000010) == 0x00000010)) {
+                results_ = new java.util.ArrayList<org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Result>();
+                mutable_bitField0_ |= 0x00000010;
+              }
+              results_.add(input.readMessage(org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Result.PARSER, extensionRegistry));
               break;
             }
           }
@@ -17618,6 +17719,12 @@ public final class ClientProtos {
         throw new com.google.protobuf.InvalidProtocolBufferException(
             e.getMessage()).setUnfinishedMessage(this);
       } finally {
+        if (((mutable_bitField0_ & 0x00000001) == 0x00000001)) {
+          cellsPerResult_ = java.util.Collections.unmodifiableList(cellsPerResult_);
+        }
+        if (((mutable_bitField0_ & 0x00000010) == 0x00000010)) {
+          results_ = java.util.Collections.unmodifiableList(results_);
+        }
         this.unknownFields = unknownFields.build();
         makeExtensionsImmutable();
       }
@@ -17650,26 +17757,57 @@ public final class ClientProtos {
     }
 
     private int bitField0_;
-    // optional .ResultCellMeta result_cell_meta = 1;
-    public static final int RESULT_CELL_META_FIELD_NUMBER = 1;
-    private org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ResultCellMeta resultCellMeta_;
+    // repeated uint32 cells_per_result = 1;
+    public static final int CELLS_PER_RESULT_FIELD_NUMBER = 1;
+    private java.util.List<java.lang.Integer> cellsPerResult_;
     /**
-     * <code>optional .ResultCellMeta result_cell_meta = 1;</code>
+     * <code>repeated uint32 cells_per_result = 1;</code>
+     *
+     * <pre>
+     * This field is filled in if we are doing cellblocks.  A cellblock is made up
+     * of all Cells serialized out as one cellblock BUT responses from a server
+     * have their Cells grouped by Result.  So we can reconstitute the
+     * Results on the client-side, this field is a list of counts of Cells
+     * in each Result that makes up the response.  For example, if this field
+     * has 3, 3, 3 in it, then we know that on the client, we are to make
+     * three Results each of three Cells each.
+     * </pre>
      */
-    public boolean hasResultCellMeta() {
-      return ((bitField0_ & 0x00000001) == 0x00000001);
+    public java.util.List<java.lang.Integer>
+        getCellsPerResultList() {
+      return cellsPerResult_;
     }
     /**
-     * <code>optional .ResultCellMeta result_cell_meta = 1;</code>
+     * <code>repeated uint32 cells_per_result = 1;</code>
+     *
+     * <pre>
+     * This field is filled in if we are doing cellblocks.  A cellblock is made up
+     * of all Cells serialized out as one cellblock BUT responses from a server
+     * have their Cells grouped by Result.  So we can reconstitute the
+     * Results on the client-side, this field is a list of counts of Cells
+     * in each Result that makes up the response.  For example, if this field
+     * has 3, 3, 3 in it, then we know that on the client, we are to make
+     * three Results each of three Cells each.
+     * </pre>
      */
-    public org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ResultCellMeta getResultCellMeta() {
-      return resultCellMeta_;
+    public int getCellsPerResultCount() {
+      return cellsPerResult_.size();
     }
     /**
-     * <code>optional .ResultCellMeta result_cell_meta = 1;</code>
+     * <code>repeated uint32 cells_per_result = 1;</code>
+     *
+     * <pre>
+     * This field is filled in if we are doing cellblocks.  A cellblock is made up
+     * of all Cells serialized out as one cellblock BUT responses from a server
+     * have their Cells grouped by Result.  So we can reconstitute the
+     * Results on the client-side, this field is a list of counts of Cells
+     * in each Result that makes up the response.  For example, if this field
+     * has 3, 3, 3 in it, then we know that on the client, we are to make
+     * three Results each of three Cells each.
+     * </pre>
      */
-    public org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ResultCellMetaOrBuilder getResultCellMetaOrBuilder() {
-      return resultCellMeta_;
+    public int getCellsPerResult(int index) {
+      return cellsPerResult_.get(index);
     }
 
     // optional uint64 scanner_id = 2;
@@ -17679,7 +17817,7 @@ public final class ClientProtos {
      * <code>optional uint64 scanner_id = 2;</code>
      */
     public boolean hasScannerId() {
-      return ((bitField0_ & 0x00000002) == 0x00000002);
+      return ((bitField0_ & 0x00000001) == 0x00000001);
     }
     /**
      * <code>optional uint64 scanner_id = 2;</code>
@@ -17695,7 +17833,7 @@ public final class ClientProtos {
      * <code>optional bool more_results = 3;</code>
      */
     public boolean hasMoreResults() {
-      return ((bitField0_ & 0x00000004) == 0x00000004);
+      return ((bitField0_ & 0x00000002) == 0x00000002);
     }
     /**
      * <code>optional bool more_results = 3;</code>
@@ -17711,7 +17849,7 @@ public final class ClientProtos {
      * <code>optional uint32 ttl = 4;</code>
      */
     public boolean hasTtl() {
-      return ((bitField0_ & 0x00000008) == 0x00000008);
+      return ((bitField0_ & 0x00000004) == 0x00000004);
     }
     /**
      * <code>optional uint32 ttl = 4;</code>
@@ -17720,11 +17858,78 @@ public final class ClientProtos {
       return ttl_;
     }
 
+    // repeated .Result results = 5;
+    public static final int RESULTS_FIELD_NUMBER = 5;
+    private java.util.List<org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Result> results_;
+    /**
+     * <code>repeated .Result results = 5;</code>
+     *
+     * <pre>
+     * If cells are not carried in an accompanying cellblock, then they are pb'd here.
+     * This field is mutually exclusive with cells_per_result (since the Cells will
+     * be inside the pb'd Result)
+     * </pre>
+     */
+    public java.util.List<org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Result> getResultsList() {
+      return results_;
+    }
+    /**
+     * <code>repeated .Result results = 5;</code>
+     *
+     * <pre>
+     * If cells are not carried in an accompanying cellblock, then they are pb'd here.
+     * This field is mutually exclusive with cells_per_result (since the Cells will
+     * be inside the pb'd Result)
+     * </pre>
+     */
+    public java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ResultOrBuilder> 
+        getResultsOrBuilderList() {
+      return results_;
+    }
+    /**
+     * <code>repeated .Result results = 5;</code>
+     *
+     * <pre>
+     * If cells are not carried in an accompanying cellblock, then they are pb'd here.
+     * This field is mutually exclusive with cells_per_result (since the Cells will
+     * be inside the pb'd Result)
+     * </pre>
+     */
+    public int getResultsCount() {
+      return results_.size();
+    }
+    /**
+     * <code>repeated .Result results = 5;</code>
+     *
+     * <pre>
+     * If cells are not carried in an accompanying cellblock, then they are pb'd here.
+     * This field is mutually exclusive with cells_per_result (since the Cells will
+     * be inside the pb'd Result)
+     * </pre>
+     */
+    public org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Result getResults(int index) {
+      return results_.get(index);
+    }
+    /**
+     * <code>repeated .Result results = 5;</code>
+     *
+     * <pre>
+     * If cells are not carried in an accompanying cellblock, then they are pb'd here.
+     * This field is mutually exclusive with cells_per_result (since the Cells will
+     * be inside the pb'd Result)
+     * </pre>
+     */
+    public org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ResultOrBuilder getResultsOrBuilder(
+        int index) {
+      return results_.get(index);
+    }
+
     private void initFields() {
-      resultCellMeta_ = org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ResultCellMeta.getDefaultInstance();
+      cellsPerResult_ = java.util.Collections.emptyList();
       scannerId_ = 0L;
       moreResults_ = false;
       ttl_ = 0;
+      results_ = java.util.Collections.emptyList();
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
@@ -17738,17 +17943,20 @@ public final class ClientProtos {
     public void writeTo(com.google.protobuf.CodedOutputStream output)
                         throws java.io.IOException {
       getSerializedSize();
-      if (((bitField0_ & 0x00000001) == 0x00000001)) {
-        output.writeMessage(1, resultCellMeta_);
+      for (int i = 0; i < cellsPerResult_.size(); i++) {
+        output.writeUInt32(1, cellsPerResult_.get(i));
       }
-      if (((bitField0_ & 0x00000002) == 0x00000002)) {
+      if (((bitField0_ & 0x00000001) == 0x00000001)) {
         output.writeUInt64(2, scannerId_);
       }
-      if (((bitField0_ & 0x00000004) == 0x00000004)) {
+      if (((bitField0_ & 0x00000002) == 0x00000002)) {
         output.writeBool(3, moreResults_);
       }
-      if (((bitField0_ & 0x00000008) == 0x00000008)) {
+      if (((bitField0_ & 0x00000004) == 0x00000004)) {
         output.writeUInt32(4, ttl_);
+      }
+      for (int i = 0; i < results_.size(); i++) {
+        output.writeMessage(5, results_.get(i));
       }
       getUnknownFields().writeTo(output);
     }
@@ -17759,21 +17967,30 @@ public final class ClientProtos {
       if (size != -1) return size;
 
       size = 0;
-      if (((bitField0_ & 0x00000001) == 0x00000001)) {
-        size += com.google.protobuf.CodedOutputStream
-          .computeMessageSize(1, resultCellMeta_);
+      {
+        int dataSize = 0;
+        for (int i = 0; i < cellsPerResult_.size(); i++) {
+          dataSize += com.google.protobuf.CodedOutputStream
+            .computeUInt32SizeNoTag(cellsPerResult_.get(i));
+        }
+        size += dataSize;
+        size += 1 * getCellsPerResultList().size();
       }
-      if (((bitField0_ & 0x00000002) == 0x00000002)) {
+      if (((bitField0_ & 0x00000001) == 0x00000001)) {
         size += com.google.protobuf.CodedOutputStream
           .computeUInt64Size(2, scannerId_);
       }
-      if (((bitField0_ & 0x00000004) == 0x00000004)) {
+      if (((bitField0_ & 0x00000002) == 0x00000002)) {
         size += com.google.protobuf.CodedOutputStream
           .computeBoolSize(3, moreResults_);
       }
-      if (((bitField0_ & 0x00000008) == 0x00000008)) {
+      if (((bitField0_ & 0x00000004) == 0x00000004)) {
         size += com.google.protobuf.CodedOutputStream
           .computeUInt32Size(4, ttl_);
+      }
+      for (int i = 0; i < results_.size(); i++) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeMessageSize(5, results_.get(i));
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
@@ -17798,11 +18015,8 @@ public final class ClientProtos {
       org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ScanResponse other = (org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ScanResponse) obj;
 
       boolean result = true;
-      result = result && (hasResultCellMeta() == other.hasResultCellMeta());
-      if (hasResultCellMeta()) {
-        result = result && getResultCellMeta()
-            .equals(other.getResultCellMeta());
-      }
+      result = result && getCellsPerResultList()
+          .equals(other.getCellsPerResultList());
       result = result && (hasScannerId() == other.hasScannerId());
       if (hasScannerId()) {
         result = result && (getScannerId()
@@ -17818,6 +18032,8 @@ public final class ClientProtos {
         result = result && (getTtl()
             == other.getTtl());
       }
+      result = result && getResultsList()
+          .equals(other.getResultsList());
       result = result &&
           getUnknownFields().equals(other.getUnknownFields());
       return result;
@@ -17831,9 +18047,9 @@ public final class ClientProtos {
       }
       int hash = 41;
       hash = (19 * hash) + getDescriptorForType().hashCode();
-      if (hasResultCellMeta()) {
-        hash = (37 * hash) + RESULT_CELL_META_FIELD_NUMBER;
-        hash = (53 * hash) + getResultCellMeta().hashCode();
+      if (getCellsPerResultCount() > 0) {
+        hash = (37 * hash) + CELLS_PER_RESULT_FIELD_NUMBER;
+        hash = (53 * hash) + getCellsPerResultList().hashCode();
       }
       if (hasScannerId()) {
         hash = (37 * hash) + SCANNER_ID_FIELD_NUMBER;
@@ -17846,6 +18062,10 @@ public final class ClientProtos {
       if (hasTtl()) {
         hash = (37 * hash) + TTL_FIELD_NUMBER;
         hash = (53 * hash) + getTtl();
+      }
+      if (getResultsCount() > 0) {
+        hash = (37 * hash) + RESULTS_FIELD_NUMBER;
+        hash = (53 * hash) + getResultsList().hashCode();
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
       memoizedHashCode = hash;
@@ -17954,7 +18174,7 @@ public final class ClientProtos {
       }
       private void maybeForceBuilderInitialization() {
         if (com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders) {
-          getResultCellMetaFieldBuilder();
+          getResultsFieldBuilder();
         }
       }
       private static Builder create() {
@@ -17963,11 +18183,7 @@ public final class ClientProtos {
 
       public Builder clear() {
         super.clear();
-        if (resultCellMetaBuilder_ == null) {
-          resultCellMeta_ = org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ResultCellMeta.getDefaultInstance();
-        } else {
-          resultCellMetaBuilder_.clear();
-        }
+        cellsPerResult_ = java.util.Collections.emptyList();
         bitField0_ = (bitField0_ & ~0x00000001);
         scannerId_ = 0L;
         bitField0_ = (bitField0_ & ~0x00000002);
@@ -17975,6 +18191,12 @@ public final class ClientProtos {
         bitField0_ = (bitField0_ & ~0x00000004);
         ttl_ = 0;
         bitField0_ = (bitField0_ & ~0x00000008);
+        if (resultsBuilder_ == null) {
+          results_ = java.util.Collections.emptyList();
+          bitField0_ = (bitField0_ & ~0x00000010);
+        } else {
+          resultsBuilder_.clear();
+        }
         return this;
       }
 
@@ -18003,26 +18225,32 @@ public final class ClientProtos {
         org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ScanResponse result = new org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ScanResponse(this);
         int from_bitField0_ = bitField0_;
         int to_bitField0_ = 0;
-        if (((from_bitField0_ & 0x00000001) == 0x00000001)) {
-          to_bitField0_ |= 0x00000001;
+        if (((bitField0_ & 0x00000001) == 0x00000001)) {
+          cellsPerResult_ = java.util.Collections.unmodifiableList(cellsPerResult_);
+          bitField0_ = (bitField0_ & ~0x00000001);
         }
-        if (resultCellMetaBuilder_ == null) {
-          result.resultCellMeta_ = resultCellMeta_;
-        } else {
-          result.resultCellMeta_ = resultCellMetaBuilder_.build();
-        }
+        result.cellsPerResult_ = cellsPerResult_;
         if (((from_bitField0_ & 0x00000002) == 0x00000002)) {
-          to_bitField0_ |= 0x00000002;
+          to_bitField0_ |= 0x00000001;
         }
         result.scannerId_ = scannerId_;
         if (((from_bitField0_ & 0x00000004) == 0x00000004)) {
-          to_bitField0_ |= 0x00000004;
+          to_bitField0_ |= 0x00000002;
         }
         result.moreResults_ = moreResults_;
         if (((from_bitField0_ & 0x00000008) == 0x00000008)) {
-          to_bitField0_ |= 0x00000008;
+          to_bitField0_ |= 0x00000004;
         }
         result.ttl_ = ttl_;
+        if (resultsBuilder_ == null) {
+          if (((bitField0_ & 0x00000010) == 0x00000010)) {
+            results_ = java.util.Collections.unmodifiableList(results_);
+            bitField0_ = (bitField0_ & ~0x00000010);
+          }
+          result.results_ = results_;
+        } else {
+          result.results_ = resultsBuilder_.build();
+        }
         result.bitField0_ = to_bitField0_;
         onBuilt();
         return result;
@@ -18039,8 +18267,15 @@ public final class ClientProtos {
 
       public Builder mergeFrom(org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ScanResponse other) {
         if (other == org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ScanResponse.getDefaultInstance()) return this;
-        if (other.hasResultCellMeta()) {
-          mergeResultCellMeta(other.getResultCellMeta());
+        if (!other.cellsPerResult_.isEmpty()) {
+          if (cellsPerResult_.isEmpty()) {
+            cellsPerResult_ = other.cellsPerResult_;
+            bitField0_ = (bitField0_ & ~0x00000001);
+          } else {
+            ensureCellsPerResultIsMutable();
+            cellsPerResult_.addAll(other.cellsPerResult_);
+          }
+          onChanged();
         }
         if (other.hasScannerId()) {
           setScannerId(other.getScannerId());
@@ -18050,6 +18285,32 @@ public final class ClientProtos {
         }
         if (other.hasTtl()) {
           setTtl(other.getTtl());
+        }
+        if (resultsBuilder_ == null) {
+          if (!other.results_.isEmpty()) {
+            if (results_.isEmpty()) {
+              results_ = other.results_;
+              bitField0_ = (bitField0_ & ~0x00000010);
+            } else {
+              ensureResultsIsMutable();
+              results_.addAll(other.results_);
+            }
+            onChanged();
+          }
+        } else {
+          if (!other.results_.isEmpty()) {
+            if (resultsBuilder_.isEmpty()) {
+              resultsBuilder_.dispose();
+              resultsBuilder_ = null;
+              results_ = other.results_;
+              bitField0_ = (bitField0_ & ~0x00000010);
+              resultsBuilder_ = 
+                com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders ?
+                   getResultsFieldBuilder() : null;
+            } else {
+              resultsBuilder_.addAllMessages(other.results_);
+            }
+          }
         }
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
@@ -18078,121 +18339,140 @@ public final class ClientProtos {
       }
       private int bitField0_;
 
-      // optional .ResultCellMeta result_cell_meta = 1;
-      private org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ResultCellMeta resultCellMeta_ = org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ResultCellMeta.getDefaultInstance();
-      private com.google.protobuf.SingleFieldBuilder<
-          org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ResultCellMeta, org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ResultCellMeta.Builder, org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ResultCellMetaOrBuilder> resultCellMetaBuilder_;
-      /**
-       * <code>optional .ResultCellMeta result_cell_meta = 1;</code>
-       */
-      public boolean hasResultCellMeta() {
-        return ((bitField0_ & 0x00000001) == 0x00000001);
+      // repeated uint32 cells_per_result = 1;
+      private java.util.List<java.lang.Integer> cellsPerResult_ = java.util.Collections.emptyList();
+      private void ensureCellsPerResultIsMutable() {
+        if (!((bitField0_ & 0x00000001) == 0x00000001)) {
+          cellsPerResult_ = new java.util.ArrayList<java.lang.Integer>(cellsPerResult_);
+          bitField0_ |= 0x00000001;
+         }
       }
       /**
-       * <code>optional .ResultCellMeta result_cell_meta = 1;</code>
+       * <code>repeated uint32 cells_per_result = 1;</code>
+       *
+       * <pre>
+       * This field is filled in if we are doing cellblocks.  A cellblock is made up
+       * of all Cells serialized out as one cellblock BUT responses from a server
+       * have their Cells grouped by Result.  So we can reconstitute the
+       * Results on the client-side, this field is a list of counts of Cells
+       * in each Result that makes up the response.  For example, if this field
+       * has 3, 3, 3 in it, then we know that on the client, we are to make
+       * three Results each of three Cells each.
+       * </pre>
        */
-      public org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ResultCellMeta getResultCellMeta() {
-        if (resultCellMetaBuilder_ == null) {
-          return resultCellMeta_;
-        } else {
-          return resultCellMetaBuilder_.getMessage();
-        }
+      public java.util.List<java.lang.Integer>
+          getCellsPerResultList() {
+        return java.util.Collections.unmodifiableList(cellsPerResult_);
       }
       /**
-       * <code>optional .ResultCellMeta result_cell_meta = 1;</code>
+       * <code>repeated uint32 cells_per_result = 1;</code>
+       *
+       * <pre>
+       * This field is filled in if we are doing cellblocks.  A cellblock is made up
+       * of all Cells serialized out as one cellblock BUT responses from a server
+       * have their Cells grouped by Result.  So we can reconstitute the
+       * Results on the client-side, this field is a list of counts of Cells
+       * in each Result that makes up the response.  For example, if this field
+       * has 3, 3, 3 in it, then we know that on the client, we are to make
+       * three Results each of three Cells each.
+       * </pre>
        */
-      public Builder setResultCellMeta(org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ResultCellMeta value) {
-        if (resultCellMetaBuilder_ == null) {
-          if (value == null) {
-            throw new NullPointerException();
-          }
-          resultCellMeta_ = value;
-          onChanged();
-        } else {
-          resultCellMetaBuilder_.setMessage(value);
-        }
-        bitField0_ |= 0x00000001;
-        return this;
+      public int getCellsPerResultCount() {
+        return cellsPerResult_.size();
       }
       /**
-       * <code>optional .ResultCellMeta result_cell_meta = 1;</code>
+       * <code>repeated uint32 cells_per_result = 1;</code>
+       *
+       * <pre>
+       * This field is filled in if we are doing cellblocks.  A cellblock is made up
+       * of all Cells serialized out as one cellblock BUT responses from a server
+       * have their Cells grouped by Result.  So we can reconstitute the
+       * Results on the client-side, this field is a list of counts of Cells
+       * in each Result that makes up the response.  For example, if this field
+       * has 3, 3, 3 in it, then we know that on the client, we are to make
+       * three Results each of three Cells each.
+       * </pre>
        */
-      public Builder setResultCellMeta(
-          org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ResultCellMeta.Builder builderForValue) {
-        if (resultCellMetaBuilder_ == null) {
-          resultCellMeta_ = builderForValue.build();
-          onChanged();
-        } else {
-          resultCellMetaBuilder_.setMessage(builderForValue.build());
-        }
-        bitField0_ |= 0x00000001;
-        return this;
+      public int getCellsPerResult(int index) {
+        return cellsPerResult_.get(index);
       }
       /**
-       * <code>optional .ResultCellMeta result_cell_meta = 1;</code>
+       * <code>repeated uint32 cells_per_result = 1;</code>
+       *
+       * <pre>
+       * This field is filled in if we are doing cellblocks.  A cellblock is made up
+       * of all Cells serialized out as one cellblock BUT responses from a server
+       * have their Cells grouped by Result.  So we can reconstitute the
+       * Results on the client-side, this field is a list of counts of Cells
+       * in each Result that makes up the response.  For example, if this field
+       * has 3, 3, 3 in it, then we know that on the client, we are to make
+       * three Results each of three Cells each.
+       * </pre>
        */
-      public Builder mergeResultCellMeta(org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ResultCellMeta value) {
-        if (resultCellMetaBuilder_ == null) {
-          if (((bitField0_ & 0x00000001) == 0x00000001) &&
-              resultCellMeta_ != org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ResultCellMeta.getDefaultInstance()) {
-            resultCellMeta_ =
-              org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ResultCellMeta.newBuilder(resultCellMeta_).mergeFrom(value).buildPartial();
-          } else {
-            resultCellMeta_ = value;
-          }
-          onChanged();
-        } else {
-          resultCellMetaBuilder_.mergeFrom(value);
-        }
-        bitField0_ |= 0x00000001;
-        return this;
-      }
-      /**
-       * <code>optional .ResultCellMeta result_cell_meta = 1;</code>
-       */
-      public Builder clearResultCellMeta() {
-        if (resultCellMetaBuilder_ == null) {
-          resultCellMeta_ = org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ResultCellMeta.getDefaultInstance();
-          onChanged();
-        } else {
-          resultCellMetaBuilder_.clear();
-        }
-        bitField0_ = (bitField0_ & ~0x00000001);
-        return this;
-      }
-      /**
-       * <code>optional .ResultCellMeta result_cell_meta = 1;</code>
-       */
-      public org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ResultCellMeta.Builder getResultCellMetaBuilder() {
-        bitField0_ |= 0x00000001;
+      public Builder setCellsPerResult(
+          int index, int value) {
+        ensureCellsPerResultIsMutable();
+        cellsPerResult_.set(index, value);
         onChanged();
-        return getResultCellMetaFieldBuilder().getBuilder();
+        return this;
       }
       /**
-       * <code>optional .ResultCellMeta result_cell_meta = 1;</code>
+       * <code>repeated uint32 cells_per_result = 1;</code>
+       *
+       * <pre>
+       * This field is filled in if we are doing cellblocks.  A cellblock is made up
+       * of all Cells serialized out as one cellblock BUT responses from a server
+       * have their Cells grouped by Result.  So we can reconstitute the
+       * Results on the client-side, this field is a list of counts of Cells
+       * in each Result that makes up the response.  For example, if this field
+       * has 3, 3, 3 in it, then we know that on the client, we are to make
+       * three Results each of three Cells each.
+       * </pre>
        */
-      public org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ResultCellMetaOrBuilder getResultCellMetaOrBuilder() {
-        if (resultCellMetaBuilder_ != null) {
-          return resultCellMetaBuilder_.getMessageOrBuilder();
-        } else {
-          return resultCellMeta_;
-        }
+      public Builder addCellsPerResult(int value) {
+        ensureCellsPerResultIsMutable();
+        cellsPerResult_.add(value);
+        onChanged();
+        return this;
       }
       /**
-       * <code>optional .ResultCellMeta result_cell_meta = 1;</code>
+       * <code>repeated uint32 cells_per_result = 1;</code>
+       *
+       * <pre>
+       * This field is filled in if we are doing cellblocks.  A cellblock is made up
+       * of all Cells serialized out as one cellblock BUT responses from a server
+       * have their Cells grouped by Result.  So we can reconstitute the
+       * Results on the client-side, this field is a list of counts of Cells
+       * in each Result that makes up the response.  For example, if this field
+       * has 3, 3, 3 in it, then we know that on the client, we are to make
+       * three Results each of three Cells each.
+       * </pre>
        */
-      private com.google.protobuf.SingleFieldBuilder<
-          org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ResultCellMeta, org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ResultCellMeta.Builder, org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ResultCellMetaOrBuilder> 
-          getResultCellMetaFieldBuilder() {
-        if (resultCellMetaBuilder_ == null) {
-          resultCellMetaBuilder_ = new com.google.protobuf.SingleFieldBuilder<
-              org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ResultCellMeta, org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ResultCellMeta.Builder, org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ResultCellMetaOrBuilder>(
-                  resultCellMeta_,
-                  getParentForChildren(),
-                  isClean());
-          resultCellMeta_ = null;
-        }
-        return resultCellMetaBuilder_;
+      public Builder addAllCellsPerResult(
+          java.lang.Iterable<? extends java.lang.Integer> values) {
+        ensureCellsPerResultIsMutable();
+        super.addAll(values, cellsPerResult_);
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>repeated uint32 cells_per_result = 1;</code>
+       *
+       * <pre>
+       * This field is filled in if we are doing cellblocks.  A cellblock is made up
+       * of all Cells serialized out as one cellblock BUT responses from a server
+       * have their Cells grouped by Result.  So we can reconstitute the
+       * Results on the client-side, this field is a list of counts of Cells
+       * in each Result that makes up the response.  For example, if this field
+       * has 3, 3, 3 in it, then we know that on the client, we are to make
+       * three Results each of three Cells each.
+       * </pre>
+       */
+      public Builder clearCellsPerResult() {
+        cellsPerResult_ = java.util.Collections.emptyList();
+        bitField0_ = (bitField0_ & ~0x00000001);
+        onChanged();
+        return this;
       }
 
       // optional uint64 scanner_id = 2;
@@ -18294,6 +18574,354 @@ public final class ClientProtos {
         return this;
       }
 
+      // repeated .Result results = 5;
+      private java.util.List<org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Result> results_ =
+        java.util.Collections.emptyList();
+      private void ensureResultsIsMutable() {
+        if (!((bitField0_ & 0x00000010) == 0x00000010)) {
+          results_ = new java.util.ArrayList<org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Result>(results_);
+          bitField0_ |= 0x00000010;
+         }
+      }
+
+      private com.google.protobuf.RepeatedFieldBuilder<
+          org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Result, org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Result.Builder, org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ResultOrBuilder> resultsBuilder_;
+
+      /**
+       * <code>repeated .Result results = 5;</code>
+       *
+       * <pre>
+       * If cells are not carried in an accompanying cellblock, then they are pb'd here.
+       * This field is mutually exclusive with cells_per_result (since the Cells will
+       * be inside the pb'd Result)
+       * </pre>
+       */
+      public java.util.List<org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Result> getResultsList() {
+        if (resultsBuilder_ == null) {
+          return java.util.Collections.unmodifiableList(results_);
+        } else {
+          return resultsBuilder_.getMessageList();
+        }
+      }
+      /**
+       * <code>repeated .Result results = 5;</code>
+       *
+       * <pre>
+       * If cells are not carried in an accompanying cellblock, then they are pb'd here.
+       * This field is mutually exclusive with cells_per_result (since the Cells will
+       * be inside the pb'd Result)
+       * </pre>
+       */
+      public int getResultsCount() {
+        if (resultsBuilder_ == null) {
+          return results_.size();
+        } else {
+          return resultsBuilder_.getCount();
+        }
+      }
+      /**
+       * <code>repeated .Result results = 5;</code>
+       *
+       * <pre>
+       * If cells are not carried in an accompanying cellblock, then they are pb'd here.
+       * This field is mutually exclusive with cells_per_result (since the Cells will
+       * be inside the pb'd Result)
+       * </pre>
+       */
+      public org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Result getResults(int index) {
+        if (resultsBuilder_ == null) {
+          return results_.get(index);
+        } else {
+          return resultsBuilder_.getMessage(index);
+        }
+      }
+      /**
+       * <code>repeated .Result results = 5;</code>
+       *
+       * <pre>
+       * If cells are not carried in an accompanying cellblock, then they are pb'd here.
+       * This field is mutually exclusive with cells_per_result (since the Cells will
+       * be inside the pb'd Result)
+       * </pre>
+       */
+      public Builder setResults(
+          int index, org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Result value) {
+        if (resultsBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          ensureResultsIsMutable();
+          results_.set(index, value);
+          onChanged();
+        } else {
+          resultsBuilder_.setMessage(index, value);
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .Result results = 5;</code>
+       *
+       * <pre>
+       * If cells are not carried in an accompanying cellblock, then they are pb'd here.
+       * This field is mutually exclusive with cells_per_result (since the Cells will
+       * be inside the pb'd Result)
+       * </pre>
+       */
+      public Builder setResults(
+          int index, org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Result.Builder builderForValue) {
+        if (resultsBuilder_ == null) {
+          ensureResultsIsMutable();
+          results_.set(index, builderForValue.build());
+          onChanged();
+        } else {
+          resultsBuilder_.setMessage(index, builderForValue.build());
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .Result results = 5;</code>
+       *
+       * <pre>
+       * If cells are not carried in an accompanying cellblock, then they are pb'd here.
+       * This field is mutually exclusive with cells_per_result (since the Cells will
+       * be inside the pb'd Result)
+       * </pre>
+       */
+      public Builder addResults(org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Result value) {
+        if (resultsBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          ensureResultsIsMutable();
+          results_.add(value);
+          onChanged();
+        } else {
+          resultsBuilder_.addMessage(value);
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .Result results = 5;</code>
+       *
+       * <pre>
+       * If cells are not carried in an accompanying cellblock, then they are pb'd here.
+       * This field is mutually exclusive with cells_per_result (since the Cells will
+       * be inside the pb'd Result)
+       * </pre>
+       */
+      public Builder addResults(
+          int index, org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Result value) {
+        if (resultsBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          ensureResultsIsMutable();
+          results_.add(index, value);
+          onChanged();
+        } else {
+          resultsBuilder_.addMessage(index, value);
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .Result results = 5;</code>
+       *
+       * <pre>
+       * If cells are not carried in an accompanying cellblock, then they are pb'd here.
+       * This field is mutually exclusive with cells_per_result (since the Cells will
+       * be inside the pb'd Result)
+       * </pre>
+       */
+      public Builder addResults(
+          org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Result.Builder builderForValue) {
+        if (resultsBuilder_ == null) {
+          ensureResultsIsMutable();
+          results_.add(builderForValue.build());
+          onChanged();
+        } else {
+          resultsBuilder_.addMessage(builderForValue.build());
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .Result results = 5;</code>
+       *
+       * <pre>
+       * If cells are not carried in an accompanying cellblock, then they are pb'd here.
+       * This field is mutually exclusive with cells_per_result (since the Cells will
+       * be inside the pb'd Result)
+       * </pre>
+       */
+      public Builder addResults(
+          int index, org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Result.Builder builderForValue) {
+        if (resultsBuilder_ == null) {
+          ensureResultsIsMutable();
+          results_.add(index, builderForValue.build());
+          onChanged();
+        } else {
+          resultsBuilder_.addMessage(index, builderForValue.build());
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .Result results = 5;</code>
+       *
+       * <pre>
+       * If cells are not carried in an accompanying cellblock, then they are pb'd here.
+       * This field is mutually exclusive with cells_per_result (since the Cells will
+       * be inside the pb'd Result)
+       * </pre>
+       */
+      public Builder addAllResults(
+          java.lang.Iterable<? extends org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Result> values) {
+        if (resultsBuilder_ == null) {
+          ensureResultsIsMutable();
+          super.addAll(values, results_);
+          onChanged();
+        } else {
+          resultsBuilder_.addAllMessages(values);
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .Result results = 5;</code>
+       *
+       * <pre>
+       * If cells are not carried in an accompanying cellblock, then they are pb'd here.
+       * This field is mutually exclusive with cells_per_result (since the Cells will
+       * be inside the pb'd Result)
+       * </pre>
+       */
+      public Builder clearResults() {
+        if (resultsBuilder_ == null) {
+          results_ = java.util.Collections.emptyList();
+          bitField0_ = (bitField0_ & ~0x00000010);
+          onChanged();
+        } else {
+          resultsBuilder_.clear();
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .Result results = 5;</code>
+       *
+       * <pre>
+       * If cells are not carried in an accompanying cellblock, then they are pb'd here.
+       * This field is mutually exclusive with cells_per_result (since the Cells will
+       * be inside the pb'd Result)
+       * </pre>
+       */
+      public Builder removeResults(int index) {
+        if (resultsBuilder_ == null) {
+          ensureResultsIsMutable();
+          results_.remove(index);
+          onChanged();
+        } else {
+          resultsBuilder_.remove(index);
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .Result results = 5;</code>
+       *
+       * <pre>
+       * If cells are not carried in an accompanying cellblock, then they are pb'd here.
+       * This field is mutually exclusive with cells_per_result (since the Cells will
+       * be inside the pb'd Result)
+       * </pre>
+       */
+      public org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Result.Builder getResultsBuilder(
+          int index) {
+        return getResultsFieldBuilder().getBuilder(index);
+      }
+      /**
+       * <code>repeated .Result results = 5;</code>
+       *
+       * <pre>
+       * If cells are not carried in an accompanying cellblock, then they are pb'd here.
+       * This field is mutually exclusive with cells_per_result (since the Cells will
+       * be inside the pb'd Result)
+       * </pre>
+       */
+      public org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ResultOrBuilder getResultsOrBuilder(
+          int index) {
+        if (resultsBuilder_ == null) {
+          return results_.get(index);  } else {
+          return resultsBuilder_.getMessageOrBuilder(index);
+        }
+      }
+      /**
+       * <code>repeated .Result results = 5;</code>
+       *
+       * <pre>
+       * If cells are not carried in an accompanying cellblock, then they are pb'd here.
+       * This field is mutually exclusive with cells_per_result (since the Cells will
+       * be inside the pb'd Result)
+       * </pre>
+       */
+      public java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ResultOrBuilder> 
+           getResultsOrBuilderList() {
+        if (resultsBuilder_ != null) {
+          return resultsBuilder_.getMessageOrBuilderList();
+        } else {
+          return java.util.Collections.unmodifiableList(results_);
+        }
+      }
+      /**
+       * <code>repeated .Result results = 5;</code>
+       *
+       * <pre>
+       * If cells are not carried in an accompanying cellblock, then they are pb'd here.
+       * This field is mutually exclusive with cells_per_result (since the Cells will
+       * be inside the pb'd Result)
+       * </pre>
+       */
+      public org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Result.Builder addResultsBuilder() {
+        return getResultsFieldBuilder().addBuilder(
+            org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Result.getDefaultInstance());
+      }
+      /**
+       * <code>repeated .Result results = 5;</code>
+       *
+       * <pre>
+       * If cells are not carried in an accompanying cellblock, then they are pb'd here.
+       * This field is mutually exclusive with cells_per_result (since the Cells will
+       * be inside the pb'd Result)
+       * </pre>
+       */
+      public org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Result.Builder addResultsBuilder(
+          int index) {
+        return getResultsFieldBuilder().addBuilder(
+            index, org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Result.getDefaultInstance());
+      }
+      /**
+       * <code>repeated .Result results = 5;</code>
+       *
+       * <pre>
+       * If cells are not carried in an accompanying cellblock, then they are pb'd here.
+       * This field is mutually exclusive with cells_per_result (since the Cells will
+       * be inside the pb'd Result)
+       * </pre>
+       */
+      public java.util.List<org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Result.Builder> 
+           getResultsBuilderList() {
+        return getResultsFieldBuilder().getBuilderList();
+      }
+      private com.google.protobuf.RepeatedFieldBuilder<
+          org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Result, org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Result.Builder, org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ResultOrBuilder> 
+          getResultsFieldBuilder() {
+        if (resultsBuilder_ == null) {
+          resultsBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
+              org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Result, org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Result.Builder, org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ResultOrBuilder>(
+                  results_,
+                  ((bitField0_ & 0x00000010) == 0x00000010),
+                  getParentForChildren(),
+                  isClean());
+          results_ = null;
+        }
+        return resultsBuilder_;
+      }
+
       // @@protoc_insertion_point(builder_scope:ScanResponse)
     }
 
@@ -18303,510 +18931,6 @@ public final class ClientProtos {
     }
 
     // @@protoc_insertion_point(class_scope:ScanResponse)
-  }
-
-  public interface ResultCellMetaOrBuilder
-      extends com.google.protobuf.MessageOrBuilder {
-
-    // repeated uint32 cells_length = 1;
-    /**
-     * <code>repeated uint32 cells_length = 1;</code>
-     */
-    java.util.List<java.lang.Integer> getCellsLengthList();
-    /**
-     * <code>repeated uint32 cells_length = 1;</code>
-     */
-    int getCellsLengthCount();
-    /**
-     * <code>repeated uint32 cells_length = 1;</code>
-     */
-    int getCellsLength(int index);
-  }
-  /**
-   * Protobuf type {@code ResultCellMeta}
-   */
-  public static final class ResultCellMeta extends
-      com.google.protobuf.GeneratedMessage
-      implements ResultCellMetaOrBuilder {
-    // Use ResultCellMeta.newBuilder() to construct.
-    private ResultCellMeta(com.google.protobuf.GeneratedMessage.Builder<?> builder) {
-      super(builder);
-      this.unknownFields = builder.getUnknownFields();
-    }
-    private ResultCellMeta(boolean noInit) { this.unknownFields = com.google.protobuf.UnknownFieldSet.getDefaultInstance(); }
-
-    private static final ResultCellMeta defaultInstance;
-    public static ResultCellMeta getDefaultInstance() {
-      return defaultInstance;
-    }
-
-    public ResultCellMeta getDefaultInstanceForType() {
-      return defaultInstance;
-    }
-
-    private final com.google.protobuf.UnknownFieldSet unknownFields;
-    @java.lang.Override
-    public final com.google.protobuf.UnknownFieldSet
-        getUnknownFields() {
-      return this.unknownFields;
-    }
-    private ResultCellMeta(
-        com.google.protobuf.CodedInputStream input,
-        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-        throws com.google.protobuf.InvalidProtocolBufferException {
-      initFields();
-      int mutable_bitField0_ = 0;
-      com.google.protobuf.UnknownFieldSet.Builder unknownFields =
-          com.google.protobuf.UnknownFieldSet.newBuilder();
-      try {
-        boolean done = false;
-        while (!done) {
-          int tag = input.readTag();
-          switch (tag) {
-            case 0:
-              done = true;
-              break;
-            default: {
-              if (!parseUnknownField(input, unknownFields,
-                                     extensionRegistry, tag)) {
-                done = true;
-              }
-              break;
-            }
-            case 8: {
-              if (!((mutable_bitField0_ & 0x00000001) == 0x00000001)) {
-                cellsLength_ = new java.util.ArrayList<java.lang.Integer>();
-                mutable_bitField0_ |= 0x00000001;
-              }
-              cellsLength_.add(input.readUInt32());
-              break;
-            }
-            case 10: {
-              int length = input.readRawVarint32();
-              int limit = input.pushLimit(length);
-              if (!((mutable_bitField0_ & 0x00000001) == 0x00000001) && input.getBytesUntilLimit() > 0) {
-                cellsLength_ = new java.util.ArrayList<java.lang.Integer>();
-                mutable_bitField0_ |= 0x00000001;
-              }
-              while (input.getBytesUntilLimit() > 0) {
-                cellsLength_.add(input.readUInt32());
-              }
-              input.popLimit(limit);
-              break;
-            }
-          }
-        }
-      } catch (com.google.protobuf.InvalidProtocolBufferException e) {
-        throw e.setUnfinishedMessage(this);
-      } catch (java.io.IOException e) {
-        throw new com.google.protobuf.InvalidProtocolBufferException(
-            e.getMessage()).setUnfinishedMessage(this);
-      } finally {
-        if (((mutable_bitField0_ & 0x00000001) == 0x00000001)) {
-          cellsLength_ = java.util.Collections.unmodifiableList(cellsLength_);
-        }
-        this.unknownFields = unknownFields.build();
-        makeExtensionsImmutable();
-      }
-    }
-    public static final com.google.protobuf.Descriptors.Descriptor
-        getDescriptor() {
-      return org.apache.hadoop.hbase.protobuf.generated.ClientProtos.internal_static_ResultCellMeta_descriptor;
-    }
-
-    protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
-        internalGetFieldAccessorTable() {
-      return org.apache.hadoop.hbase.protobuf.generated.ClientProtos.internal_static_ResultCellMeta_fieldAccessorTable
-          .ensureFieldAccessorsInitialized(
-              org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ResultCellMeta.class, org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ResultCellMeta.Builder.class);
-    }
-
-    public static com.google.protobuf.Parser<ResultCellMeta> PARSER =
-        new com.google.protobuf.AbstractParser<ResultCellMeta>() {
-      public ResultCellMeta parsePartialFrom(
-          com.google.protobuf.CodedInputStream input,
-          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-          throws com.google.protobuf.InvalidProtocolBufferException {
-        return new ResultCellMeta(input, extensionRegistry);
-      }
-    };
-
-    @java.lang.Override
-    public com.google.protobuf.Parser<ResultCellMeta> getParserForType() {
-      return PARSER;
-    }
-
-    // repeated uint32 cells_length = 1;
-    public static final int CELLS_LENGTH_FIELD_NUMBER = 1;
-    private java.util.List<java.lang.Integer> cellsLength_;
-    /**
-     * <code>repeated uint32 cells_length = 1;</code>
-     */
-    public java.util.List<java.lang.Integer>
-        getCellsLengthList() {
-      return cellsLength_;
-    }
-    /**
-     * <code>repeated uint32 cells_length = 1;</code>
-     */
-    public int getCellsLengthCount() {
-      return cellsLength_.size();
-    }
-    /**
-     * <code>repeated uint32 cells_length = 1;</code>
-     */
-    public int getCellsLength(int index) {
-      return cellsLength_.get(index);
-    }
-
-    private void initFields() {
-      cellsLength_ = java.util.Collections.emptyList();
-    }
-    private byte memoizedIsInitialized = -1;
-    public final boolean isInitialized() {
-      byte isInitialized = memoizedIsInitialized;
-      if (isInitialized != -1) return isInitialized == 1;
-
-      memoizedIsInitialized = 1;
-      return true;
-    }
-
-    public void writeTo(com.google.protobuf.CodedOutputStream output)
-                        throws java.io.IOException {
-      getSerializedSize();
-      for (int i = 0; i < cellsLength_.size(); i++) {
-        output.writeUInt32(1, cellsLength_.get(i));
-      }
-      getUnknownFields().writeTo(output);
-    }
-
-    private int memoizedSerializedSize = -1;
-    public int getSerializedSize() {
-      int size = memoizedSerializedSize;
-      if (size != -1) return size;
-
-      size = 0;
-      {
-        int dataSize = 0;
-        for (int i = 0; i < cellsLength_.size(); i++) {
-          dataSize += com.google.protobuf.CodedOutputStream
-            .computeUInt32SizeNoTag(cellsLength_.get(i));
-        }
-        size += dataSize;
-        size += 1 * getCellsLengthList().size();
-      }
-      size += getUnknownFields().getSerializedSize();
-      memoizedSerializedSize = size;
-      return size;
-    }
-
-    private static final long serialVersionUID = 0L;
-    @java.lang.Override
-    protected java.lang.Object writeReplace()
-        throws java.io.ObjectStreamException {
-      return super.writeReplace();
-    }
-
-    @java.lang.Override
-    public boolean equals(final java.lang.Object obj) {
-      if (obj == this) {
-       return true;
-      }
-      if (!(obj instanceof org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ResultCellMeta)) {
-        return super.equals(obj);
-      }
-      org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ResultCellMeta other = (org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ResultCellMeta) obj;
-
-      boolean result = true;
-      result = result && getCellsLengthList()
-          .equals(other.getCellsLengthList());
-      result = result &&
-          getUnknownFields().equals(other.getUnknownFields());
-      return result;
-    }
-
-    private int memoizedHashCode = 0;
-    @java.lang.Override
-    public int hashCode() {
-      if (memoizedHashCode != 0) {
-        return memoizedHashCode;
-      }
-      int hash = 41;
-      hash = (19 * hash) + getDescriptorForType().hashCode();
-      if (getCellsLengthCount() > 0) {
-        hash = (37 * hash) + CELLS_LENGTH_FIELD_NUMBER;
-        hash = (53 * hash) + getCellsLengthList().hashCode();
-      }
-      hash = (29 * hash) + getUnknownFields().hashCode();
-      memoizedHashCode = hash;
-      return hash;
-    }
-
-    public static org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ResultCellMeta parseFrom(
-        com.google.protobuf.ByteString data)
-        throws com.google.protobuf.InvalidProtocolBufferException {
-      return PARSER.parseFrom(data);
-    }
-    public static org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ResultCellMeta parseFrom(
-        com.google.protobuf.ByteString data,
-        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-        throws com.google.protobuf.InvalidProtocolBufferException {
-      return PARSER.parseFrom(data, extensionRegistry);
-    }
-    public static org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ResultCellMeta parseFrom(byte[] data)
-        throws com.google.protobuf.InvalidProtocolBufferException {
-      return PARSER.parseFrom(data);
-    }
-    public static org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ResultCellMeta parseFrom(
-        byte[] data,
-        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-        throws com.google.protobuf.InvalidProtocolBufferException {
-      return PARSER.parseFrom(data, extensionRegistry);
-    }
-    public static org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ResultCellMeta parseFrom(java.io.InputStream input)
-        throws java.io.IOException {
-      return PARSER.parseFrom(input);
-    }
-    public static org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ResultCellMeta parseFrom(
-        java.io.InputStream input,
-        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-        throws java.io.IOException {
-      return PARSER.parseFrom(input, extensionRegistry);
-    }
-    public static org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ResultCellMeta parseDelimitedFrom(java.io.InputStream input)
-        throws java.io.IOException {
-      return PARSER.parseDelimitedFrom(input);
-    }
-    public static org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ResultCellMeta parseDelimitedFrom(
-        java.io.InputStream input,
-        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-        throws java.io.IOException {
-      return PARSER.parseDelimitedFrom(input, extensionRegistry);
-    }
-    public static org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ResultCellMeta parseFrom(
-        com.google.protobuf.CodedInputStream input)
-        throws java.io.IOException {
-      return PARSER.parseFrom(input);
-    }
-    public static org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ResultCellMeta parseFrom(
-        com.google.protobuf.CodedInputStream input,
-        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-        throws java.io.IOException {
-      return PARSER.parseFrom(input, extensionRegistry);
-    }
-
-    public static Builder newBuilder() { return Builder.create(); }
-    public Builder newBuilderForType() { return newBuilder(); }
-    public static Builder newBuilder(org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ResultCellMeta prototype) {
-      return newBuilder().mergeFrom(prototype);
-    }
-    public Builder toBuilder() { return newBuilder(this); }
-
-    @java.lang.Override
-    protected Builder newBuilderForType(
-        com.google.protobuf.GeneratedMessage.BuilderParent parent) {
-      Builder builder = new Builder(parent);
-      return builder;
-    }
-    /**
-     * Protobuf type {@code ResultCellMeta}
-     */
-    public static final class Builder extends
-        com.google.protobuf.GeneratedMessage.Builder<Builder>
-       implements org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ResultCellMetaOrBuilder {
-      public static final com.google.protobuf.Descriptors.Descriptor
-          getDescriptor() {
-        return org.apache.hadoop.hbase.protobuf.generated.ClientProtos.internal_static_ResultCellMeta_descriptor;
-      }
-
-      protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
-          internalGetFieldAccessorTable() {
-        return org.apache.hadoop.hbase.protobuf.generated.ClientProtos.internal_static_ResultCellMeta_fieldAccessorTable
-            .ensureFieldAccessorsInitialized(
-                org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ResultCellMeta.class, org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ResultCellMeta.Builder.class);
-      }
-
-      // Construct using org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ResultCellMeta.newBuilder()
-      private Builder() {
-        maybeForceBuilderInitialization();
-      }
-
-      private Builder(
-          com.google.protobuf.GeneratedMessage.BuilderParent parent) {
-        super(parent);
-        maybeForceBuilderInitialization();
-      }
-      private void maybeForceBuilderInitialization() {
-        if (com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders) {
-        }
-      }
-      private static Builder create() {
-        return new Builder();
-      }
-
-      public Builder clear() {
-        super.clear();
-        cellsLength_ = java.util.Collections.emptyList();
-        bitField0_ = (bitField0_ & ~0x00000001);
-        return this;
-      }
-
-      public Builder clone() {
-        return create().mergeFrom(buildPartial());
-      }
-
-      public com.google.protobuf.Descriptors.Descriptor
-          getDescriptorForType() {
-        return org.apache.hadoop.hbase.protobuf.generated.ClientProtos.internal_static_ResultCellMeta_descriptor;
-      }
-
-      public org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ResultCellMeta getDefaultInstanceForType() {
-        return org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ResultCellMeta.getDefaultInstance();
-      }
-
-      public org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ResultCellMeta build() {
-        org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ResultCellMeta result = buildPartial();
-        if (!result.isInitialized()) {
-          throw newUninitializedMessageException(result);
-        }
-        return result;
-      }
-
-      public org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ResultCellMeta buildPartial() {
-        org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ResultCellMeta result = new org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ResultCellMeta(this);
-        int from_bitField0_ = bitField0_;
-        if (((bitField0_ & 0x00000001) == 0x00000001)) {
-          cellsLength_ = java.util.Collections.unmodifiableList(cellsLength_);
-          bitField0_ = (bitField0_ & ~0x00000001);
-        }
-        result.cellsLength_ = cellsLength_;
-        onBuilt();
-        return result;
-      }
-
-      public Builder mergeFrom(com.google.protobuf.Message other) {
-        if (other instanceof org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ResultCellMeta) {
-          return mergeFrom((org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ResultCellMeta)other);
-        } else {
-          super.mergeFrom(other);
-          return this;
-        }
-      }
-
-      public Builder mergeFrom(org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ResultCellMeta other) {
-        if (other == org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ResultCellMeta.getDefaultInstance()) return this;
-        if (!other.cellsLength_.isEmpty()) {
-          if (cellsLength_.isEmpty()) {
-            cellsLength_ = other.cellsLength_;
-            bitField0_ = (bitField0_ & ~0x00000001);
-          } else {
-            ensureCellsLengthIsMutable();
-            cellsLength_.addAll(other.cellsLength_);
-          }
-          onChanged();
-        }
-        this.mergeUnknownFields(other.getUnknownFields());
-        return this;
-      }
-
-      public final boolean isInitialized() {
-        return true;
-      }
-
-      public Builder mergeFrom(
-          com.google.protobuf.CodedInputStream input,
-          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-          throws java.io.IOException {
-        org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ResultCellMeta parsedMessage = null;
-        try {
-          parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
-        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
-          parsedMessage = (org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ResultCellMeta) e.getUnfinishedMessage();
-          throw e;
-        } finally {
-          if (parsedMessage != null) {
-            mergeFrom(parsedMessage);
-          }
-        }
-        return this;
-      }
-      private int bitField0_;
-
-      // repeated uint32 cells_length = 1;
-      private java.util.List<java.lang.Integer> cellsLength_ = java.util.Collections.emptyList();
-      private void ensureCellsLengthIsMutable() {
-        if (!((bitField0_ & 0x00000001) == 0x00000001)) {
-          cellsLength_ = new java.util.ArrayList<java.lang.Integer>(cellsLength_);
-          bitField0_ |= 0x00000001;
-         }
-      }
-      /**
-       * <code>repeated uint32 cells_length = 1;</code>
-       */
-      public java.util.List<java.lang.Integer>
-          getCellsLengthList() {
-        return java.util.Collections.unmodifiableList(cellsLength_);
-      }
-      /**
-       * <code>repeated uint32 cells_length = 1;</code>
-       */
-      public int getCellsLengthCount() {
-        return cellsLength_.size();
-      }
-      /**
-       * <code>repeated uint32 cells_length = 1;</code>
-       */
-      public int getCellsLength(int index) {
-        return cellsLength_.get(index);
-      }
-      /**
-       * <code>repeated uint32 cells_length = 1;</code>
-       */
-      public Builder setCellsLength(
-          int index, int value) {
-        ensureCellsLengthIsMutable();
-        cellsLength_.set(index, value);
-        onChanged();
-        return this;
-      }
-      /**
-       * <code>repeated uint32 cells_length = 1;</code>
-       */
-      public Builder addCellsLength(int value) {
-        ensureCellsLengthIsMutable();
-        cellsLength_.add(value);
-        onChanged();
-        return this;
-      }
-      /**
-       * <code>repeated uint32 cells_length = 1;</code>
-       */
-      public Builder addAllCellsLength(
-          java.lang.Iterable<? extends java.lang.Integer> values) {
-        ensureCellsLengthIsMutable();
-        super.addAll(values, cellsLength_);
-        onChanged();
-        return this;
-      }
-      /**
-       * <code>repeated uint32 cells_length = 1;</code>
-       */
-      public Builder clearCellsLength() {
-        cellsLength_ = java.util.Collections.emptyList();
-        bitField0_ = (bitField0_ & ~0x00000001);
-        onChanged();
-        return this;
-      }
-
-      // @@protoc_insertion_point(builder_scope:ResultCellMeta)
-    }
-
-    static {
-      defaultInstance = new ResultCellMeta(true);
-      defaultInstance.initFields();
-    }
-
-    // @@protoc_insertion_point(class_scope:ResultCellMeta)
   }
 
   public interface BulkLoadHFileRequestOrBuilder
@@ -27429,11 +27553,6 @@ public final class ClientProtos {
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_ScanResponse_fieldAccessorTable;
   private static com.google.protobuf.Descriptors.Descriptor
-    internal_static_ResultCellMeta_descriptor;
-  private static
-    com.google.protobuf.GeneratedMessage.FieldAccessorTable
-      internal_static_ResultCellMeta_fieldAccessorTable;
-  private static com.google.protobuf.Descriptors.Descriptor
     internal_static_BulkLoadHFileRequest_descriptor;
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
@@ -27551,42 +27670,41 @@ public final class ClientProtos {
       "egion\030\001 \001(\0132\020.RegionSpecifier\022\023\n\004scan\030\002 " +
       "\001(\0132\005.Scan\022\022\n\nscanner_id\030\003 \001(\004\022\026\n\016number" +
       "_of_rows\030\004 \001(\r\022\025\n\rclose_scanner\030\005 \001(\010\022\025\n" +
-      "\rnext_call_seq\030\006 \001(\004\"p\n\014ScanResponse\022)\n\020",
-      "result_cell_meta\030\001 \001(\0132\017.ResultCellMeta\022" +
-      "\022\n\nscanner_id\030\002 \001(\004\022\024\n\014more_results\030\003 \001(" +
-      "\010\022\013\n\003ttl\030\004 \001(\r\"&\n\016ResultCellMeta\022\024\n\014cell" +
-      "s_length\030\001 \003(\r\"\263\001\n\024BulkLoadHFileRequest\022" +
-      " \n\006region\030\001 \002(\0132\020.RegionSpecifier\0225\n\013fam" +
-      "ily_path\030\002 \003(\0132 .BulkLoadHFileRequest.Fa" +
-      "milyPath\022\026\n\016assign_seq_num\030\003 \001(\010\032*\n\nFami" +
-      "lyPath\022\016\n\006family\030\001 \002(\014\022\014\n\004path\030\002 \002(\t\"\'\n\025" +
-      "BulkLoadHFileResponse\022\016\n\006loaded\030\001 \002(\010\"a\n" +
-      "\026CoprocessorServiceCall\022\013\n\003row\030\001 \002(\014\022\024\n\014",
-      "service_name\030\002 \002(\t\022\023\n\013method_name\030\003 \002(\t\022" +
-      "\017\n\007request\030\004 \002(\014\"d\n\031CoprocessorServiceRe" +
-      "quest\022 \n\006region\030\001 \002(\0132\020.RegionSpecifier\022" +
-      "%\n\004call\030\002 \002(\0132\027.CoprocessorServiceCall\"]" +
-      "\n\032CoprocessorServiceResponse\022 \n\006region\030\001" +
-      " \002(\0132\020.RegionSpecifier\022\035\n\005value\030\002 \002(\0132\016." +
-      "NameBytesPair\"B\n\013MultiAction\022 \n\010mutation" +
-      "\030\001 \001(\0132\016.MutationProto\022\021\n\003get\030\002 \001(\0132\004.Ge" +
-      "t\"I\n\014ActionResult\022\026\n\005value\030\001 \001(\0132\007.Resul" +
-      "t\022!\n\texception\030\002 \001(\0132\016.NameBytesPair\"^\n\014",
-      "MultiRequest\022 \n\006region\030\001 \002(\0132\020.RegionSpe" +
-      "cifier\022\034\n\006action\030\002 \003(\0132\014.MultiAction\022\016\n\006" +
-      "atomic\030\003 \001(\010\".\n\rMultiResponse\022\035\n\006result\030" +
-      "\001 \003(\0132\r.ActionResult2\342\002\n\rClientService\022 " +
-      "\n\003Get\022\013.GetRequest\032\014.GetResponse\022/\n\010Mult" +
-      "iGet\022\020.MultiGetRequest\032\021.MultiGetRespons" +
-      "e\022)\n\006Mutate\022\016.MutateRequest\032\017.MutateResp" +
-      "onse\022#\n\004Scan\022\014.ScanRequest\032\r.ScanRespons" +
-      "e\022>\n\rBulkLoadHFile\022\025.BulkLoadHFileReques" +
-      "t\032\026.BulkLoadHFileResponse\022F\n\013ExecService",
-      "\022\032.CoprocessorServiceRequest\032\033.Coprocess" +
-      "orServiceResponse\022&\n\005Multi\022\r.MultiReques" +
-      "t\032\016.MultiResponseBB\n*org.apache.hadoop.h" +
-      "base.protobuf.generatedB\014ClientProtosH\001\210" +
-      "\001\001\240\001\001"
+      "\rnext_call_seq\030\006 \001(\004\"y\n\014ScanResponse\022\030\n\020",
+      "cells_per_result\030\001 \003(\r\022\022\n\nscanner_id\030\002 \001" +
+      "(\004\022\024\n\014more_results\030\003 \001(\010\022\013\n\003ttl\030\004 \001(\r\022\030\n" +
+      "\007results\030\005 \003(\0132\007.Result\"\263\001\n\024BulkLoadHFil" +
+      "eRequest\022 \n\006region\030\001 \002(\0132\020.RegionSpecifi" +
+      "er\0225\n\013family_path\030\002 \003(\0132 .BulkLoadHFileR" +
+      "equest.FamilyPath\022\026\n\016assign_seq_num\030\003 \001(" +
+      "\010\032*\n\nFamilyPath\022\016\n\006family\030\001 \002(\014\022\014\n\004path\030" +
+      "\002 \002(\t\"\'\n\025BulkLoadHFileResponse\022\016\n\006loaded" +
+      "\030\001 \002(\010\"a\n\026CoprocessorServiceCall\022\013\n\003row\030" +
+      "\001 \002(\014\022\024\n\014service_name\030\002 \002(\t\022\023\n\013method_na",
+      "me\030\003 \002(\t\022\017\n\007request\030\004 \002(\014\"d\n\031Coprocessor" +
+      "ServiceRequest\022 \n\006region\030\001 \002(\0132\020.RegionS" +
+      "pecifier\022%\n\004call\030\002 \002(\0132\027.CoprocessorServ" +
+      "iceCall\"]\n\032CoprocessorServiceResponse\022 \n" +
+      "\006region\030\001 \002(\0132\020.RegionSpecifier\022\035\n\005value" +
+      "\030\002 \002(\0132\016.NameBytesPair\"B\n\013MultiAction\022 \n" +
+      "\010mutation\030\001 \001(\0132\016.MutationProto\022\021\n\003get\030\002" +
+      " \001(\0132\004.Get\"I\n\014ActionResult\022\026\n\005value\030\001 \001(" +
+      "\0132\007.Result\022!\n\texception\030\002 \001(\0132\016.NameByte" +
+      "sPair\"^\n\014MultiRequest\022 \n\006region\030\001 \002(\0132\020.",
+      "RegionSpecifier\022\034\n\006action\030\002 \003(\0132\014.MultiA" +
+      "ction\022\016\n\006atomic\030\003 \001(\010\".\n\rMultiResponse\022\035" +
+      "\n\006result\030\001 \003(\0132\r.ActionResult2\342\002\n\rClient" +
+      "Service\022 \n\003Get\022\013.GetRequest\032\014.GetRespons" +
+      "e\022/\n\010MultiGet\022\020.MultiGetRequest\032\021.MultiG" +
+      "etResponse\022)\n\006Mutate\022\016.MutateRequest\032\017.M" +
+      "utateResponse\022#\n\004Scan\022\014.ScanRequest\032\r.Sc" +
+      "anResponse\022>\n\rBulkLoadHFile\022\025.BulkLoadHF" +
+      "ileRequest\032\026.BulkLoadHFileResponse\022F\n\013Ex" +
+      "ecService\022\032.CoprocessorServiceRequest\032\033.",
+      "CoprocessorServiceResponse\022&\n\005Multi\022\r.Mu" +
+      "ltiRequest\032\016.MultiResponseBB\n*org.apache" +
+      ".hadoop.hbase.protobuf.generatedB\014Client" +
+      "ProtosH\001\210\001\001\240\001\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -27688,15 +27806,9 @@ public final class ClientProtos {
           internal_static_ScanResponse_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_ScanResponse_descriptor,
-              new java.lang.String[] { "ResultCellMeta", "ScannerId", "MoreResults", "Ttl", });
-          internal_static_ResultCellMeta_descriptor =
-            getDescriptor().getMessageTypes().get(14);
-          internal_static_ResultCellMeta_fieldAccessorTable = new
-            com.google.protobuf.GeneratedMessage.FieldAccessorTable(
-              internal_static_ResultCellMeta_descriptor,
-              new java.lang.String[] { "CellsLength", });
+              new java.lang.String[] { "CellsPerResult", "ScannerId", "MoreResults", "Ttl", "Results", });
           internal_static_BulkLoadHFileRequest_descriptor =
-            getDescriptor().getMessageTypes().get(15);
+            getDescriptor().getMessageTypes().get(14);
           internal_static_BulkLoadHFileRequest_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_BulkLoadHFileRequest_descriptor,
@@ -27708,49 +27820,49 @@ public final class ClientProtos {
               internal_static_BulkLoadHFileRequest_FamilyPath_descriptor,
               new java.lang.String[] { "Family", "Path", });
           internal_static_BulkLoadHFileResponse_descriptor =
-            getDescriptor().getMessageTypes().get(16);
+            getDescriptor().getMessageTypes().get(15);
           internal_static_BulkLoadHFileResponse_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_BulkLoadHFileResponse_descriptor,
               new java.lang.String[] { "Loaded", });
           internal_static_CoprocessorServiceCall_descriptor =
-            getDescriptor().getMessageTypes().get(17);
+            getDescriptor().getMessageTypes().get(16);
           internal_static_CoprocessorServiceCall_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_CoprocessorServiceCall_descriptor,
               new java.lang.String[] { "Row", "ServiceName", "MethodName", "Request", });
           internal_static_CoprocessorServiceRequest_descriptor =
-            getDescriptor().getMessageTypes().get(18);
+            getDescriptor().getMessageTypes().get(17);
           internal_static_CoprocessorServiceRequest_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_CoprocessorServiceRequest_descriptor,
               new java.lang.String[] { "Region", "Call", });
           internal_static_CoprocessorServiceResponse_descriptor =
-            getDescriptor().getMessageTypes().get(19);
+            getDescriptor().getMessageTypes().get(18);
           internal_static_CoprocessorServiceResponse_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_CoprocessorServiceResponse_descriptor,
               new java.lang.String[] { "Region", "Value", });
           internal_static_MultiAction_descriptor =
-            getDescriptor().getMessageTypes().get(20);
+            getDescriptor().getMessageTypes().get(19);
           internal_static_MultiAction_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_MultiAction_descriptor,
               new java.lang.String[] { "Mutation", "Get", });
           internal_static_ActionResult_descriptor =
-            getDescriptor().getMessageTypes().get(21);
+            getDescriptor().getMessageTypes().get(20);
           internal_static_ActionResult_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_ActionResult_descriptor,
               new java.lang.String[] { "Value", "Exception", });
           internal_static_MultiRequest_descriptor =
-            getDescriptor().getMessageTypes().get(22);
+            getDescriptor().getMessageTypes().get(21);
           internal_static_MultiRequest_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_MultiRequest_descriptor,
               new java.lang.String[] { "Region", "Action", "Atomic", });
           internal_static_MultiResponse_descriptor =
-            getDescriptor().getMessageTypes().get(23);
+            getDescriptor().getMessageTypes().get(22);
           internal_static_MultiResponse_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_MultiResponse_descriptor,
