@@ -105,7 +105,7 @@ extends InputFormat<ImmutableBytesWritable, Result> {
     sc.setStopRow(tSplit.getEndRow());
     trr.setScan(sc);
     trr.setHTable(table);
-    trr.init();
+    trr.init(context.getConfiguration());
     return trr;
   }
 

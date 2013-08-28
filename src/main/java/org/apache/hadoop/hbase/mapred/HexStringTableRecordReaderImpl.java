@@ -24,6 +24,7 @@ import java.math.BigInteger;
 
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.mapred.JobConf;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -35,14 +36,15 @@ public class HexStringTableRecordReaderImpl extends TableRecordReaderImpl {
   long stopRowInLong = 0;
   int stringLength = 8;
   boolean showProgress = true;
+  private JobConf conf;
 
   public HexStringTableRecordReaderImpl(int stringLength) {
     this.stringLength = stringLength;
   }
 
   @Override
-  public void init() throws IOException {
-    super.init();
+  public void init(JobConf conf) throws IOException {
+    super.init(conf);
 
     String start, end;
     if (startRow != null) {

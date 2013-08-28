@@ -38,11 +38,13 @@ public class TableRecordReader
 implements RecordReader<ImmutableBytesWritable, Result> {
 
   private TableRecordReaderImpl recordReaderImpl = null;
+  private JobConf conf;
 
   TableRecordReader(final JobConf conf) {
     String splitAlgo = conf.get("hbase.mapreduce.tableinputformat.split.algo");
     boolean showProgress = conf.getBoolean("hbase.mapreduce.show.mapper.progress", false);
     int stringLength = conf.getInt("hbase.mapreduce.hex.row.length", 8);
+    this.conf = conf;
     if (splitAlgo != null && splitAlgo.equals("HexStringSplit") && showProgress) {
       recordReaderImpl = new HexStringTableRecordReaderImpl(stringLength);
     } else {
@@ -66,7 +68,7 @@ implements RecordReader<ImmutableBytesWritable, Result> {
    * @throws IOException
    */
   public void init() throws IOException {
-    this.recordReaderImpl.init();
+    this.recordReaderImpl.init(this.conf);
   }
 
   /**

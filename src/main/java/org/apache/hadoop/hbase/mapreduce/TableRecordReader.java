@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.mapreduce;
 
 import java.io.IOException;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
@@ -53,8 +54,8 @@ extends RecordReader<ImmutableBytesWritable, Result> {
    *
    * @throws IOException When restarting the scan fails.
    */
-  public void init() throws IOException {
-    this.recordReaderImpl.init();
+  public void init(Configuration conf) throws IOException {
+    this.recordReaderImpl.init(conf);
   }
 
   /**

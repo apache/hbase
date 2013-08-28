@@ -96,6 +96,10 @@ implements Configurable {
   /** The Algorithm used to split each region's keyspace. */
   public static final String SPLIT_ALGO = "hbase.mapreduce.tableinputformat.split.algo";
 
+  public static final String USE_CLIENT_LOCAL_SCANNER = "hbase.mapreduce.use.client.side.scan";
+
+  public static final boolean DEFAULT_USE_CLIENT_LOCAL_SCANNER = false;
+
   /** The configuration. */
   private Configuration conf = null;
 

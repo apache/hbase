@@ -23,12 +23,14 @@ import java.io.IOException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.util.StringUtils;
 
 /**
@@ -46,6 +48,7 @@ public class TableRecordReaderImpl {
   private byte[] lastRow = null;
   private ImmutableBytesWritable key = null;
   private Result value = null;
+  private Configuration conf;
 
   /**
    * Restart from survivable exceptions by creating a new scanner.
@@ -56,7 +59,14 @@ public class TableRecordReaderImpl {
   public void restart(byte[] firstRow) throws IOException {
     Scan newScan = new Scan(scan);
     newScan.setStartRow(firstRow);
-    this.scanner = this.htable.getScanner(newScan);
+    boolean useClientLocalScan = conf.getBoolean(
+        TableInputFormat.USE_CLIENT_LOCAL_SCANNER,
+        TableInputFormat.DEFAULT_USE_CLIENT_LOCAL_SCANNER);
+    if (useClientLocalScan) {
+      this.scanner = this.htable.getLocalScanner(newScan);
+    } else {
+      this.scanner = this.htable.getScanner(newScan);
+    }
   }
 
   /**
@@ -64,10 +74,11 @@ public class TableRecordReaderImpl {
    *
    * @throws IOException When restarting the scan fails.
    */
-  public void init() throws IOException {
+  public void init(Configuration conf) throws IOException {
     LOG.info("Scanner init ; " +
              " start row = " + Bytes.toStringBinary(scan.getStartRow()) +
              " stop row = " + Bytes.toStringBinary(scan.getStopRow()));
+    this.conf = conf;
     restart(scan.getStartRow());
   }
 

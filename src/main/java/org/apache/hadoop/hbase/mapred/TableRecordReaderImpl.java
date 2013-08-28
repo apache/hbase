@@ -23,6 +23,7 @@ import java.io.IOException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.UnknownScannerException;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Result;
@@ -33,6 +34,7 @@ import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Writables;
+import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.util.StringUtils;
 
 
@@ -51,6 +53,7 @@ public class TableRecordReaderImpl {
   private ResultScanner scanner;
   private HTable htable;
   private byte [][] trrInputColumns;
+  private JobConf conf;
 
   private int timeoutRetryNum = 3;
   private int timeoutRetrySleepBaseMs = 5000;
@@ -65,19 +68,30 @@ public class TableRecordReaderImpl {
   public void restart(byte[] firstRow) throws IOException {
     Scan scan = new Scan(this.scan);
     scan.setStartRow(firstRow);
+    boolean useClientLocalScan = conf.getBoolean(
+        org.apache.hadoop.hbase.mapreduce.TableInputFormat.USE_CLIENT_LOCAL_SCANNER,
+        org.apache.hadoop.hbase.mapreduce.TableInputFormat.DEFAULT_USE_CLIENT_LOCAL_SCANNER);
     if ((endRow != null) && (endRow.length > 0)) {
       scan.setStopRow(endRow);
       if (trrRowFilter != null) {
         scan.addColumns(trrInputColumns);
         scan.setFilter(trrRowFilter);
         scan.setCacheBlocks(false);
-        this.scanner = this.htable.getScanner(scan);
+        if (useClientLocalScan) {
+          this.scanner = this.htable.getLocalScanner(scan);
+        } else {
+          this.scanner = this.htable.getScanner(scan);
+        }
       } else {
         LOG.debug("TIFB.restart, firstRow: " +
             Bytes.toStringBinary(firstRow) + ", endRow: " +
             Bytes.toStringBinary(endRow));
         scan.addColumns(trrInputColumns);
-        this.scanner = this.htable.getScanner(scan);
+        if (useClientLocalScan) {
+          this.scanner = this.htable.getLocalScanner(scan);
+        } else {
+          this.scanner = this.htable.getScanner(scan);
+        }
       }
     } else {
       LOG.debug("TIFB.restart, firstRow: " +
@@ -85,7 +99,11 @@ public class TableRecordReaderImpl {
 
       scan.addColumns(trrInputColumns);
 //      scan.setFilter(trrRowFilter);
-      this.scanner = this.htable.getScanner(scan);
+      if (useClientLocalScan) {
+        this.scanner = this.htable.getLocalScanner(scan);
+      } else {
+        this.scanner = this.htable.getScanner(scan);
+      }
     }
   }
 
@@ -94,7 +112,8 @@ public class TableRecordReaderImpl {
    *
    * @throws IOException
    */
-  public void init() throws IOException {
+  public void init(JobConf conf) throws IOException {
+    this.conf = conf;
     restart(startRow);
   }
 
