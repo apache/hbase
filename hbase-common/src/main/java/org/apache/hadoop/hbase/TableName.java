@@ -72,8 +72,18 @@ public final class TableName implements Comparable<TableName> {
   public static final TableName NAMESPACE_TABLE_NAME =
       valueOf(NamespaceDescriptor.SYSTEM_NAMESPACE_NAME_STR, "namespace");
 
-  private static final String OLD_META_STR = ".META.";
-  private static final String OLD_ROOT_STR = "-ROOT-";
+  public static final String OLD_META_STR = ".META.";
+  public static final String OLD_ROOT_STR = "-ROOT-";
+
+  /**
+   * TableName for old -ROOT- table. It is used to read/process old WALs which have
+   * ROOT edits.
+   */
+  public static final TableName OLD_ROOT_TABLE_NAME = getADummyTableName(OLD_ROOT_STR);
+  /**
+   * TableName for old .META. table. Used in testing.
+   */
+  public static final TableName OLD_META_TABLE_NAME = getADummyTableName(OLD_META_STR);
 
   private byte[] name;
   private String nameAsString;
@@ -231,6 +241,18 @@ public final class TableName implements Comparable<TableName> {
     return ret;
   }
 
+  /**
+   * It is used to create table names for old META, and ROOT table.
+   * @return a dummy TableName instance (with no validation) for the passed qualifier
+   */
+  private static TableName getADummyTableName(String qualifier) {
+    TableName ret = new TableName();
+    ret.namespaceAsString = NamespaceDescriptor.SYSTEM_NAMESPACE_NAME_STR;
+    ret.qualifierAsString = qualifier;
+    ret.nameAsString = createFullyQualified(ret.namespaceAsString, ret.qualifierAsString);
+    ret.name = Bytes.toBytes(qualifier);
+    return ret;
+  }
   public static TableName valueOf(String namespaceAsString, String qualifierAsString) {
     TableName ret = new TableName();
     if(namespaceAsString == null || namespaceAsString.length() < 1) {

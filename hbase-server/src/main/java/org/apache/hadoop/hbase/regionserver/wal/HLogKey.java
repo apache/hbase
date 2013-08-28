@@ -35,6 +35,7 @@ import java.util.UUID;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
@@ -115,7 +116,7 @@ public class HLogKey implements WritableComparable<HLogKey> {
 
   // The first element in the list is the cluster id on which the change has originated
   private List<UUID> clusterIds;
-  
+
   private NavigableMap<byte[], Integer> scopes;
 
   private CompressionContext compressionContext;
@@ -148,7 +149,7 @@ public class HLogKey implements WritableComparable<HLogKey> {
       long logSeqNum, final long now, List<UUID> clusterIds){
     init(encodedRegionName, tablename, logSeqNum, now, clusterIds);
   }
-  
+
   protected void init(final byte [] encodedRegionName, final TableName tablename,
       long logSeqNum, final long now, List<UUID> clusterIds) {
     this.logSeqNum = logSeqNum;
@@ -254,9 +255,9 @@ public class HLogKey implements WritableComparable<HLogKey> {
 
   /**
    * Produces a string map for this key. Useful for programmatic use and
-   * manipulation of the data stored in an HLogKey, for example, printing 
+   * manipulation of the data stored in an HLogKey, for example, printing
    * as JSON.
-   * 
+   *
    * @return a Map containing data from this key
    */
   public Map<String, Object> toStringMap() {
@@ -375,6 +376,7 @@ public class HLogKey implements WritableComparable<HLogKey> {
     // @see Bytes#readByteArray(DataInput)
     this.scopes = null; // writable HLogKey does not contain scopes
     int len = WritableUtils.readVInt(in);
+    byte[] tablenameBytes = null;
     if (len < 0) {
       // what we just read was the version
       version = Version.fromCode(len);
@@ -387,12 +389,10 @@ public class HLogKey implements WritableComparable<HLogKey> {
     if (compressionContext == null || !version.atLeast(Version.COMPRESSED)) {
       this.encodedRegionName = new byte[len];
       in.readFully(this.encodedRegionName);
-      byte[] tablenameBytes = Bytes.readByteArray(in);
-      this.tablename = TableName.valueOf(tablenameBytes);
+      tablenameBytes = Bytes.readByteArray(in);
     } else {
       this.encodedRegionName = Compressor.readCompressed(in, compressionContext.regionDict);
-      byte[] tablenameBytes = Compressor.readCompressed(in, compressionContext.tableDict);
-      this.tablename =  TableName.valueOf(tablenameBytes);
+      tablenameBytes = Compressor.readCompressed(in, compressionContext.tableDict);
     }
 
     this.logSeqNum = in.readLong();
@@ -412,6 +412,19 @@ public class HLogKey implements WritableComparable<HLogKey> {
       } catch(EOFException e) {
         // Means it's a very old key, just continue
       }
+    }
+    try {
+      this.tablename = TableName.valueOf(tablenameBytes);
+    } catch (IllegalArgumentException iae) {
+      if (Bytes.toString(tablenameBytes).equals(TableName.OLD_META_STR)) {
+        // It is a pre-namespace meta table edit, continue with new format.
+        LOG.info("Got an old META edit, continuing with new format ");
+        this.tablename = TableName.META_TABLE_NAME;
+        this.encodedRegionName = HRegionInfo.FIRST_META_REGIONINFO.getEncodedNameAsBytes();
+      } else if (Bytes.toString(tablenameBytes).equals(TableName.OLD_ROOT_STR)) {
+        this.tablename = TableName.OLD_ROOT_TABLE_NAME;
+         throw iae;
+      } else throw iae;
     }
     // Do not need to read the clusters information as we are using protobufs from 0.95
   }
