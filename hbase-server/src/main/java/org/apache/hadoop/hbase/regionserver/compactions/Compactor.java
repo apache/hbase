@@ -63,7 +63,8 @@ public abstract class Compactor {
   Compactor(final Configuration conf, final Store store) {
     this.conf = conf;
     this.store = store;
-    this.compactionKVMax = this.conf.getInt(HConstants.COMPACTION_KV_MAX, 10);
+    this.compactionKVMax =
+      this.conf.getInt(HConstants.COMPACTION_KV_MAX, HConstants.COMPACTION_KV_MAX_DEFAULT);
     this.compactionCompression = (this.store.getFamily() == null) ?
         Compression.Algorithm.NONE : this.store.getFamily().getCompactionCompression();
   }
