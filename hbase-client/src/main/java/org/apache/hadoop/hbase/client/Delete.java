@@ -128,7 +128,7 @@ public class Delete extends Mutation implements Comparable<Row> {
   public Delete(final byte [] rowArray, final int rowOffset, final int rowLength, long ts) {
     checkRow(rowArray, rowOffset, rowLength);
     this.row = Bytes.copy(rowArray, rowOffset, rowLength);
-    this.ts = ts;
+    setTimestamp(ts);
   }
 
   /**
@@ -195,6 +195,9 @@ public class Delete extends Mutation implements Comparable<Row> {
    */
   @SuppressWarnings("unchecked")
   public Delete deleteFamily(byte [] family, long timestamp) {
+    if (timestamp < 0) {
+      throw new IllegalArgumentException("Timestamp cannot be negative. ts=" + timestamp);
+    }
     List<Cell> list = familyMap.get(family);
     if(list == null) {
       list = new ArrayList<Cell>();
@@ -247,6 +250,9 @@ public class Delete extends Mutation implements Comparable<Row> {
    */
   @SuppressWarnings("unchecked")
   public Delete deleteColumns(byte [] family, byte [] qualifier, long timestamp) {
+    if (timestamp < 0) {
+      throw new IllegalArgumentException("Timestamp cannot be negative. ts=" + timestamp);
+    }
     List<Cell> list = familyMap.get(family);
     if (list == null) {
       list = new ArrayList<Cell>();
@@ -280,6 +286,9 @@ public class Delete extends Mutation implements Comparable<Row> {
    */
   @SuppressWarnings("unchecked")
   public Delete deleteColumn(byte [] family, byte [] qualifier, long timestamp) {
+    if (timestamp < 0) {
+      throw new IllegalArgumentException("Timestamp cannot be negative. ts=" + timestamp);
+    }
     List<Cell> list = familyMap.get(family);
     if(list == null) {
       list = new ArrayList<Cell>();
@@ -292,10 +301,13 @@ public class Delete extends Mutation implements Comparable<Row> {
 
   /**
    * Set the timestamp of the delete.
-   * 
+   *
    * @param timestamp
    */
   public void setTimestamp(long timestamp) {
+    if (timestamp < 0) {
+      throw new IllegalArgumentException("Timestamp cannot be negative. ts=" + timestamp);
+    }
     this.ts = timestamp;
   }
 

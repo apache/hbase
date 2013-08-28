@@ -72,6 +72,10 @@ public class TimeRange {
    */
   public TimeRange(long minStamp, long maxStamp)
   throws IOException {
+    if (minStamp < 0 || maxStamp < 0) {
+      throw new IllegalArgumentException("Timestamp cannot be negative. minStamp:" + minStamp
+        + ", maxStamp" + maxStamp);
+    }
     if(maxStamp < minStamp) {
       throw new IOException("maxStamp is smaller than minStamp");
     }

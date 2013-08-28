@@ -55,6 +55,7 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.client.Delete;
+import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
@@ -64,7 +65,6 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.ParseFilter;
 import org.apache.hadoop.hbase.filter.PrefixFilter;
@@ -299,7 +299,7 @@ public class ThriftServerRunner implements Runnable {
     if (implType == ImplType.HS_HA || implType == ImplType.NONBLOCKING ||
         implType == ImplType.THREADED_SELECTOR) {
 
-      InetAddress listenAddress = getBindAddress(conf); 
+      InetAddress listenAddress = getBindAddress(conf);
       TNonblockingServerTransport serverTransport = new TNonblockingServerSocket(
           new InetSocketAddress(listenAddress, listenPort));
 
@@ -366,7 +366,7 @@ public class ThriftServerRunner implements Runnable {
           tserver.getClass().getName());
     }
 
-   
+
 
     registerFilters(conf);
   }
@@ -737,7 +737,7 @@ public class ThriftServerRunner implements Runnable {
         Get get = new Get(getBytes(row));
         addAttributes(get, attributes);
         get.addColumn(family, qualifier);
-        get.setTimeRange(Long.MIN_VALUE, timestamp);
+        get.setTimeRange(0, timestamp);
         get.setMaxVersions(numVersions);
         Result result = table.get(get);
         return ThriftUtilities.cellFromHBase(result.raw());
@@ -781,7 +781,7 @@ public class ThriftServerRunner implements Runnable {
         if (columns == null) {
           Get get = new Get(getBytes(row));
           addAttributes(get, attributes);
-          get.setTimeRange(Long.MIN_VALUE, timestamp);
+          get.setTimeRange(0, timestamp);
           Result result = table.get(get);
           return ThriftUtilities.rowResultFromHBase(result);
         }
@@ -795,7 +795,7 @@ public class ThriftServerRunner implements Runnable {
               get.addColumn(famAndQf[0], famAndQf[1]);
           }
         }
-        get.setTimeRange(Long.MIN_VALUE, timestamp);
+        get.setTimeRange(0, timestamp);
         Result result = table.get(get);
         return ThriftUtilities.rowResultFromHBase(result);
       } catch (IOException e) {
@@ -858,7 +858,7 @@ public class ThriftServerRunner implements Runnable {
               }
             }
           }
-          get.setTimeRange(Long.MIN_VALUE, timestamp);
+          get.setTimeRange(0, timestamp);
           gets.add(get);
         }
         Result[] result = table.get(gets);
@@ -1085,7 +1085,7 @@ public class ThriftServerRunner implements Runnable {
           table.put(puts);
         if (!deletes.isEmpty())
           table.delete(deletes);
-        
+
       } catch (IOException e) {
         LOG.warn(e.getMessage(), e);
         throw new IOError(e.getMessage());
@@ -1122,6 +1122,7 @@ public class ThriftServerRunner implements Runnable {
       }
     }
 
+    @Override
     public void scannerClose(int id) throws IOError, IllegalArgument {
       LOG.debug("scannerClose: id=" + id);
       ResultScannerWrapper resultScannerWrapper = getScanner(id);
@@ -1163,6 +1164,7 @@ public class ThriftServerRunner implements Runnable {
       return scannerGetList(id,1);
     }
 
+    @Override
     public int scannerOpenWithScan(ByteBuffer tableName, TScan tScan,
         Map<ByteBuffer, ByteBuffer> attributes)
         throws IOError {
@@ -1177,7 +1179,7 @@ public class ThriftServerRunner implements Runnable {
           scan.setStopRow(tScan.getStopRow());
         }
         if (tScan.isSetTimestamp()) {
-          scan.setTimeRange(Long.MIN_VALUE, tScan.getTimestamp());
+          scan.setTimeRange(0, tScan.getTimestamp());
         }
         if (tScan.isSetCaching()) {
           scan.setCaching(tScan.getCaching());
@@ -1296,7 +1298,7 @@ public class ThriftServerRunner implements Runnable {
         HTable table = getTable(tableName);
         Scan scan = new Scan(getBytes(startRow));
         addAttributes(scan, attributes);
-        scan.setTimeRange(Long.MIN_VALUE, timestamp);
+        scan.setTimeRange(0, timestamp);
         if (columns != null && columns.size() != 0) {
           for (ByteBuffer column : columns) {
             byte [][] famQf = KeyValue.parseColumn(getBytes(column));
@@ -1323,7 +1325,7 @@ public class ThriftServerRunner implements Runnable {
         HTable table = getTable(tableName);
         Scan scan = new Scan(getBytes(startRow), getBytes(stopRow));
         addAttributes(scan, attributes);
-        scan.setTimeRange(Long.MIN_VALUE, timestamp);
+        scan.setTimeRange(0, timestamp);
         if (columns != null && columns.size() != 0) {
           for (ByteBuffer column : columns) {
             byte [][] famQf = KeyValue.parseColumn(getBytes(column));
@@ -1334,7 +1336,7 @@ public class ThriftServerRunner implements Runnable {
             }
           }
         }
-        scan.setTimeRange(Long.MIN_VALUE, timestamp);
+        scan.setTimeRange(0, timestamp);
         return addScanner(table.getScanner(scan), false);
       } catch (IOException e) {
         LOG.warn(e.getMessage(), e);
