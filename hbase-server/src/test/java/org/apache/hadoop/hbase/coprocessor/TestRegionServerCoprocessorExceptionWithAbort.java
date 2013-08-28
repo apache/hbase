@@ -21,7 +21,6 @@ package org.apache.hadoop.hbase.coprocessor;
 
 import java.io.IOException;
 
-import junit.framework.Assert;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -33,6 +32,7 @@ import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.junit.AfterClass;
+import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -49,6 +49,7 @@ import static org.junit.Assert.*;
 public class TestRegionServerCoprocessorExceptionWithAbort {
   static final Log LOG = LogFactory.getLog(TestRegionServerCoprocessorExceptionWithAbort.class);
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private static final byte[] ROW = Bytes.toBytes("aaa");
   private static final TableName TABLE_NAME =
       TableName.valueOf("observed_table");
 
@@ -82,13 +83,12 @@ public class TestRegionServerCoprocessorExceptionWithAbort {
 
     // Note which regionServer will abort (after put is attempted).
     final HRegionServer regionServer = TEST_UTIL.getRSForFirstRegionInTable(TEST_TABLE);
-
-    final byte[] ROW = Bytes.toBytes("aaa");
     Put put = new Put(ROW);
     put.add(TEST_FAMILY, ROW, ROW);
 
     Assert.assertFalse("The region server should be available", regionServer.isAborted());
     try {
+      LOG.info("Running put " + put);
       table.put(put);
       fail("The put should have failed, as the coprocessor is buggy");
     } catch (IOException ignored) {
@@ -105,10 +105,9 @@ public class TestRegionServerCoprocessorExceptionWithAbort {
                        final Durability durability) {
       TableName tableName =
           c.getEnvironment().getRegion().getRegionInfo().getTableName();
-      if (TABLE_NAME.equals(tableName)) {
-        throw new NullPointerException("Buggy coprocessor");
+      if (TABLE_NAME.equals(tableName) && Bytes.equals(put.getRow(), ROW)) {
+        throw new NullPointerException("Buggy coprocessor: " + put);
       }
     }
   }
-
 }
