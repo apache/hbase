@@ -175,11 +175,20 @@ mvn clean package -DskipTests
       </section>
 
 
+      <section xml:id="build.protobuf"><title>Build Protobuf</title>
+            <para>You may need to change the protobuf definitions that reside in the hbase-protocol module.</para>
+            <para>
+              The protobuf files are located in It is <link xlink:href="https://svn.apache.org/repos/asf/hbase/trunk/hbase-protocol/src/main/protobuf">hbase-protocol/src/main/protobuf</link>.
+              For the change to be effective, you will need to regenerate the classes (read the <link xlink:href="https://svn.apache.org/repos/asf/hbase/trunk/hbase-protocol/README.txt">hbase-protocol/README.txt</link> for more details).
+           </para>
+      </section>
+
       <section xml:id="build.gotchas"><title>Build Gotchas</title>
 			<para>If you see <code>Unable to find resource 'VM_global_library.vm'</code>, ignore it.
 			Its not an error.  It is <link xlink:href="http://jira.codehaus.org/browse/MSITE-286">officially ugly</link> though.
            </para>
       </section>
+
     </section> <!--  build -->
     <section xml:id="mvn_repo">
         <title>Adding an Apache HBase release to Apache's Maven Repository</title>
