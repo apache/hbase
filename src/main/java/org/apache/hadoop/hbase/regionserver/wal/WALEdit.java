@@ -28,6 +28,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.NavigableMap;
 import java.util.TreeMap;
+import java.util.UUID;
 
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.codec.Decoder;
@@ -73,10 +74,29 @@ import org.apache.hadoop.io.Writable;
  */
 public class WALEdit implements Writable, HeapSize {
 
+  /*
+   * The cluster id of the cluster which has consumed the change represented by this class is
+   * prefixed with the value of this variable while storing in the scopes variable. This is to
+   * ensure that the cluster ids don't interfere with the column family replication settings stored
+   * in the scopes. The value is chosen to start with period as the column families can't start with
+   * it.
+   */
+  private static final String PREFIX_CLUSTER_KEY = ".";
   private final int VERSION_2 = -1;
 
   private final ArrayList<KeyValue> kvs = new ArrayList<KeyValue>();
-  private NavigableMap<byte[], Integer> scopes;
+
+  /**
+   * This variable contains the information of the column family replication settings and contains
+   * the clusters that have already consumed the change represented by the object. This overloading
+   * of scopes with the consumed clusterids was introduced while porting the fix for HBASE-7709 back
+   * to 0.94 release. However, this overloading has been removed in the newer releases(0.95.2+). To
+   * check/change the column family settings, please use the getFromScope and putIntoScope methods
+   * and for marking/checking if a cluster has consumed the change, please use addCluster,
+   * addClusters and getClusters methods.
+   */
+  private final NavigableMap<byte[], Integer> scopes = new TreeMap<byte[], Integer>(
+      Bytes.BYTES_COMPARATOR);
 
   // default to decoding uncompressed data - needed for replication, which enforces that
   // uncompressed edits are sent across the wire. In the regular case (reading/writing WAL), the
@@ -116,22 +136,58 @@ public class WALEdit implements Writable, HeapSize {
     return kvs;
   }
 
-  public NavigableMap<byte[], Integer> getScopes() {
-    return scopes;
+  public Integer getFromScope(byte[] key) {
+    return scopes.get(key);
   }
 
+  public void putIntoScope(byte[] key, Integer value) {
+    scopes.put(key, value);
+  }
 
-  public void setScopes (NavigableMap<byte[], Integer> scopes) {
-    // We currently process the map outside of WALEdit,
-    // TODO revisit when replication is part of core
-    this.scopes = scopes;
+  public boolean hasKeyInScope(byte[] key) {
+    return scopes.containsKey(key);
+  }
+
+  /**
+   * @return true if the cluster with the given clusterId has consumed the change.
+   */
+  public boolean hasClusterId(UUID clusterId) {
+    return hasKeyInScope(Bytes.toBytes(PREFIX_CLUSTER_KEY + clusterId.toString()));
+  }
+
+  /**
+   * Marks that the cluster with the given clusterId has consumed the change.
+   */
+  public void addClusterId(UUID clusterId) {
+    scopes.put(Bytes.toBytes(PREFIX_CLUSTER_KEY + clusterId.toString()), 1);
+  }
+
+  /**
+   * Marks that the clusters with the given clusterIds have consumed the change.
+   */
+  public void addClusterIds(List<UUID> clusterIds) {
+    for (UUID clusterId : clusterIds) {
+      addClusterId(clusterId);
+    }
+  }
+
+  /**
+   * @return the set of cluster Ids that have consumed the change.
+   */
+  public List<UUID> getClusterIds() {
+    List<UUID> clusterIds = new ArrayList<UUID>();
+    for (byte[] keyBytes : scopes.keySet()) {
+      String key = Bytes.toString(keyBytes);
+      if (key.startsWith(PREFIX_CLUSTER_KEY)) {
+        clusterIds.add(UUID.fromString(key.substring(PREFIX_CLUSTER_KEY.length())));
+      }
+    }
+    return clusterIds;
   }
 
   public void readFields(DataInput in) throws IOException {
     kvs.clear();
-    if (scopes != null) {
-      scopes.clear();
-    }
+    scopes.clear();
     Decoder decoder = this.codec.getDecoder((DataInputStream) in);
     int versionOrLength = in.readInt();
     int length = versionOrLength;
@@ -148,15 +204,12 @@ public class WALEdit implements Writable, HeapSize {
 
     //its a new style WAL, so we need replication scopes too
     if (versionOrLength == VERSION_2) {
-      int numFamilies = in.readInt();
-      if (numFamilies > 0) {
-        if (scopes == null) {
-          scopes = new TreeMap<byte[], Integer>(Bytes.BYTES_COMPARATOR);
-        }
-        for (int i = 0; i < numFamilies; i++) {
-          byte[] fam = Bytes.readByteArray(in);
+      int numEntries = in.readInt();
+      if (numEntries > 0) {
+        for (int i = 0; i < numEntries; i++) {
+          byte[] key = Bytes.readByteArray(in);
           int scope = in.readInt();
-          scopes.put(fam, scope);
+          scopes.put(key, scope);
         }
       }
     }
@@ -173,14 +226,10 @@ public class WALEdit implements Writable, HeapSize {
     }
     kvEncoder.flush();
 
-    if (scopes == null) {
-      out.writeInt(0);
-    } else {
-      out.writeInt(scopes.size());
-      for (byte[] key : scopes.keySet()) {
-        Bytes.writeByteArray(out, key);
-        out.writeInt(scopes.get(key));
-      }
+    out.writeInt(scopes.size());
+    for (byte[] key : scopes.keySet()) {
+      Bytes.writeByteArray(out, key);
+      out.writeInt(scopes.get(key));
     }
   }
 
@@ -189,11 +238,9 @@ public class WALEdit implements Writable, HeapSize {
     for (KeyValue kv : kvs) {
       ret += kv.heapSize();
     }
-    if (scopes != null) {
-      ret += ClassSize.TREEMAP;
-      ret += ClassSize.align(scopes.size() * ClassSize.MAP_ENTRY);
-      // TODO this isn't quite right, need help here
-    }
+    ret += ClassSize.TREEMAP;
+    ret += ClassSize.align(scopes.size() * ClassSize.MAP_ENTRY);
+    // TODO this isn't quite right, need help here
     return ret;
   }
 
@@ -205,9 +252,7 @@ public class WALEdit implements Writable, HeapSize {
       sb.append(kv.toString());
       sb.append("; ");
     }
-    if (scopes != null) {
-      sb.append(" scopes: " + scopes.toString());
-    }
+    sb.append(" scopes: " + scopes.toString());
     sb.append(">]");
     return sb.toString();
   }

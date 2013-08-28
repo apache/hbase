@@ -172,19 +172,14 @@ public class Replication implements WALActionsListener,
   @Override
   public void visitLogEntryBeforeWrite(HTableDescriptor htd, HLogKey logKey,
                                        WALEdit logEdit) {
-    NavigableMap<byte[], Integer> scopes =
-        new TreeMap<byte[], Integer>(Bytes.BYTES_COMPARATOR);
     byte[] family;
     for (KeyValue kv : logEdit.getKeyValues()) {
       family = kv.getFamily();
       int scope = htd.getFamily(family).getScope();
       if (scope != REPLICATION_SCOPE_LOCAL &&
-          !scopes.containsKey(family)) {
-        scopes.put(family, scope);
+          !logEdit.hasKeyInScope(family)) {
+        logEdit.putIntoScope(family, scope);
       }
-    }
-    if (!scopes.isEmpty()) {
-      logEdit.setScopes(scopes);
     }
   }
 

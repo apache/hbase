@@ -30,7 +30,6 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
-import java.util.NavigableMap;
 import java.util.Random;
 import java.util.Set;
 import java.util.UUID;
@@ -59,7 +58,6 @@ import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.replication.ReplicationZookeeper;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Threads;
-import org.apache.hadoop.hbase.zookeeper.ClusterId;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.zookeeper.KeeperException;
 
@@ -477,8 +475,14 @@ public class ReplicationSource extends Thread
       seenEntries++;
       // Remove all KVs that should not be replicated
       HLogKey logKey = entry.getKey();
-      // don't replicate if the log entries originated in the peer
-      if (!logKey.getClusterId().equals(peerClusterId)) {
+      List<UUID> consumedClusterIds = edit.getClusterIds();
+      // This cluster id has been added to resolve the scenario of A -> B -> A where A has old
+      // point release and B has the new point release which has the fix HBASE-7709. A change on
+      // cluster A would infinitely replicate to
+      // cluster B if we don't add the original cluster id to the set.
+      consumedClusterIds.add(logKey.getClusterId());
+      // don't replicate if the log entries if it has not already been replicated
+      if (!consumedClusterIds.contains(peerClusterId)) {
         removeNonReplicableEdits(edit);
         // Don't replicate catalog entries, if the WALEdit wasn't
         // containing anything to replicate and if we're currently not set to replicate
@@ -491,6 +495,8 @@ public class ReplicationSource extends Thread
           // This is *only* place where a cluster id other than the default is set.
           if (HConstants.DEFAULT_CLUSTER_ID == logKey.getClusterId()) {
             logKey.setClusterId(this.clusterId);
+          } else if (logKey.getClusterId() != this.clusterId) {
+            edit.addClusterId(clusterId);
           }
           currentNbOperations += countDistinctRowKeys(edit);
           currentNbEntries++;
@@ -664,13 +670,12 @@ public class ReplicationSource extends Thread
    * @param edit The KV to check for replication
    */
   protected void removeNonReplicableEdits(WALEdit edit) {
-    NavigableMap<byte[], Integer> scopes = edit.getScopes();
     List<KeyValue> kvs = edit.getKeyValues();
     for (int i = edit.size()-1; i >= 0; i--) {
       KeyValue kv = kvs.get(i);
       // The scope will be null or empty if
       // there's nothing to replicate in that WALEdit
-      if (scopes == null || !scopes.containsKey(kv.getFamily())) {
+      if (!edit.hasKeyInScope(kv.getFamily())) {
         kvs.remove(i);
       }
     }

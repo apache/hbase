@@ -33,12 +33,20 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.util.Bytes;
 
+import com.google.common.io.ByteArrayDataInput;
+import com.google.common.io.ByteArrayDataOutput;
+import com.google.common.io.ByteStreams;
+
 public abstract class Mutation extends OperationWithAttributes implements Row {
   private static final Log LOG = LogFactory.getLog(Mutation.class);
   // Attribute used in Mutations to indicate the originating cluster.
   private static final String CLUSTER_ID_ATTR = "_c.id_";
   private static final String DURABILITY_ID_ATTR = "_dur_";
 
+  /**
+   * The attribute for storing the list of clusters that have consumed the change.
+   */
+  private static final String CONSUMED_CLUSTER_IDS = "_cs.id";
   protected byte [] row = null;
   protected long ts = HConstants.LATEST_TIMESTAMP;
   protected long lockId = -1L;
@@ -240,6 +248,36 @@ public abstract class Mutation extends OperationWithAttributes implements Row {
       return HConstants.DEFAULT_CLUSTER_ID;
     }
     return new UUID(Bytes.toLong(attr,0), Bytes.toLong(attr, Bytes.SIZEOF_LONG));
+  }
+
+  /**
+   * Marks that the clusters with the given clusterIds have consumed the mutation
+   * @param clusterIds of the clusters that have consumed the mutation
+   */
+  public void setClusterIds(List<UUID> clusterIds) {
+    ByteArrayDataOutput out = ByteStreams.newDataOutput();
+    out.writeInt(clusterIds.size());
+    for (UUID clusterId : clusterIds) {
+      out.writeLong(clusterId.getMostSignificantBits());
+      out.writeLong(clusterId.getLeastSignificantBits());
+    }
+    setAttribute(CONSUMED_CLUSTER_IDS, out.toByteArray());
+  }
+
+  /**
+   * @return the set of cluster Ids that have consumed the mutation
+   */
+  public List<UUID> getClusterIds() {
+    List<UUID> clusterIds = new ArrayList<UUID>();
+    byte[] bytes = getAttribute(CONSUMED_CLUSTER_IDS);
+    if(bytes != null) {
+      ByteArrayDataInput in = ByteStreams.newDataInput(bytes);
+      int numClusters = in.readInt();
+      for(int i=0; i<numClusters; i++){
+        clusterIds.add(new UUID(in.readLong(), in.readLong()));
+      }
+    }
+    return clusterIds;
   }
 
   /**

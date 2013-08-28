@@ -1995,6 +1995,7 @@ public class HRegion implements HeapSize { // , Writable{
         // bunch up all edits across all column families into a
         // single WALEdit.
         addFamilyMapToWALEdit(familyMap, walEdit);
+        walEdit.addClusterIds(delete.getClusterIds());
         this.log.append(regionInfo, this.htableDescriptor.getName(),
             walEdit, clusterId, now, this.htableDescriptor);
       }
@@ -2448,6 +2449,7 @@ public class HRegion implements HeapSize { // , Writable{
       // STEP 5. Append the edit to WAL. Do not sync wal.
       // -------------------------
       Mutation first = batchOp.operations[firstIndex].getFirst();
+      walEdit.addClusterIds(first.getClusterIds());
       txid = this.log.appendNoSync(regionInfo, this.htableDescriptor.getName(),
                walEdit, first.getClusterId(), now, this.htableDescriptor);
 
@@ -2904,6 +2906,7 @@ public class HRegion implements HeapSize { // , Writable{
       // will contain uncommitted transactions.
       if (writeToWAL) {
         addFamilyMapToWALEdit(familyMap, walEdit);
+        walEdit.addClusterIds(put.getClusterIds());
         this.log.append(regionInfo, this.htableDescriptor.getName(),
             walEdit, clusterId, now, this.htableDescriptor);
       } else {

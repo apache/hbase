@@ -110,9 +110,11 @@ public class ReplicationSink {
     // to the same table.
     try {
       long totalReplicated = 0;
-      // Map of table => list of Rows, grouped by cluster id, we only want to flushCommits once per
-      // invocation of this method per table and cluster id.
-      Map<byte[], Map<UUID,List<Row>>> rowMap = new TreeMap<byte[], Map<UUID,List<Row>>>(Bytes.BYTES_COMPARATOR);
+      // Map of table => list of Rows, grouped by clusters that consumed the change, we only want to
+      // flushCommits once per
+      // invocation of this method per table and clusters that have consumed the change.
+      Map<byte[], Map<List<UUID>, List<Row>>> rowMap =
+          new TreeMap<byte[], Map<List<UUID>, List<Row>>>(Bytes.BYTES_COMPARATOR);
       for (HLog.Entry entry : entries) {
         WALEdit edit = entry.getEdit();
         byte[] table = entry.getKey().getTablename();
@@ -123,14 +125,19 @@ public class ReplicationSink {
         for (KeyValue kv : kvs) {
           if (lastKV == null || lastKV.getType() != kv.getType() || !lastKV.matchingRow(kv)) {
             UUID clusterId = entry.getKey().getClusterId();
+            List<UUID> clusterIds = edit.getClusterIds();
             if (kv.isDelete()) {
               del = new Delete(kv.getRow());
               del.setClusterId(clusterId);
-              addToHashMultiMap(rowMap, table, clusterId, del);
+              del.setClusterIds(clusterIds);
+              clusterIds.add(clusterId);
+              addToHashMultiMap(rowMap, table, clusterIds, del);
             } else {
               put = new Put(kv.getRow());
               put.setClusterId(clusterId);
-              addToHashMultiMap(rowMap, table, clusterId, put);
+              put.setClusterIds(clusterIds);
+              clusterIds.add(clusterId);
+              addToHashMultiMap(rowMap, table, clusterIds, put);
             }
           }
           if (kv.isDelete()) {
@@ -142,7 +149,7 @@ public class ReplicationSink {
         }
         totalReplicated++;
       }
-      for(Map.Entry<byte[], Map<UUID, List<Row>>> entry : rowMap.entrySet()) {
+      for(Map.Entry<byte[], Map<List<UUID>, List<Row>>> entry : rowMap.entrySet()) {
         batch(entry.getKey(), entry.getValue().values());
       }
       this.metrics.setAgeOfLastAppliedOp(
@@ -162,7 +169,7 @@ public class ReplicationSink {
    * @param key1
    * @param key2
    * @param value
-   * @return
+   * @return the list of values for the combination of key1 and key2
    */
   private <K1, K2, V> List<V> addToHashMultiMap(Map<K1, Map<K2,List<V>>> map, K1 key1, K2 key2, V value) {
     Map<K2,List<V>> innerMap = map.get(key1);
