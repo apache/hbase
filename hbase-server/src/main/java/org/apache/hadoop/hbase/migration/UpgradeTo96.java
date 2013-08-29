@@ -30,15 +30,10 @@ import org.apache.commons.cli.ParseException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configured;
-import org.apache.hadoop.fs.FileStatus;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.regionserver.wal.HLogSplitter;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.HFileV1Detector;
 import org.apache.hadoop.hbase.util.ZKDataMigrator;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
@@ -131,7 +126,7 @@ public class UpgradeTo96 extends Configured implements Tool {
             + "Please stop them before upgrade or try after some time.");
         throw new IOException("Some HBase processes are still alive, or znodes not expired yet");
       }
-      return executeUpgrade();
+      return upgradeNamespaceAndZnodes();
     }
     return -1;
   }
@@ -199,59 +194,35 @@ public class UpgradeTo96 extends Configured implements Tool {
     return ToolRunner.run(getConf(), new HFileV1Detector(), args);
   }
 
-  /**
-   * Executes the upgrade process. It involves:
-   * <ul>
-   * <li> Upgrading Namespace
-   * <li> Upgrading Znodes
-   * <li> Log splitting
-   * </ul>
-   * @return
-   * @throws Exception
-   */
-  private int executeUpgrade() throws Exception {
-    executeTool("Namespace upgrade", new NamespaceUpgrade(),
-      new String[] { "--upgrade" }, 0);
-    executeTool("Znode upgrade", new ZKDataMigrator(), null, 0);
-    doOfflineLogSplitting();
-    return 0;
+  private int upgradeNamespaceAndZnodes() throws Exception {
+    int res = upgradeNamespace();
+    if (res == 0) return upgradeZnodes();//upgrade znodes only if we succeed in first step.
+    else {
+      LOG.warn("Namespace upgrade returned: "+res +", expected 0. Aborting the upgrade");
+      throw new Exception("Unexpected return code from Namespace upgrade");
+    }
   }
 
-  private void executeTool(String toolMessage, Tool tool, String[] args, int expectedResult)
-      throws Exception {
-    LOG.info("Starting " + toolMessage);
-    int res = ToolRunner.run(getConf(), tool, new String[] { "--upgrade" });
-    if (res != expectedResult) {
-      LOG.error(toolMessage + "returned " + res + ", expected " + expectedResult);
-      throw new Exception("Unexpected return code from " + toolMessage);
-    }
-    LOG.info("Successfully completed " + toolMessage);
-  }
-
-  /**
-   * Performs log splitting for all regionserver directories.
-   * @return
-   * @throws Exception
-   */
-  private void doOfflineLogSplitting() throws Exception {
-    LOG.info("Starting Log splitting");
-    final Path rootDir = FSUtils.getRootDir(getConf());
-    final Path oldLogDir = new Path(rootDir, HConstants.HREGION_OLDLOGDIR_NAME);
-    FileSystem fs = FSUtils.getCurrentFileSystem(getConf());
-    Path logDir = new Path(rootDir, HConstants.HREGION_LOGDIR_NAME);
-    FileStatus[] regionServerLogDirs = FSUtils.listStatus(fs, logDir);
-    if (regionServerLogDirs == null || regionServerLogDirs.length == 0) {
-      LOG.info("No log directories to split, returning");
-      return;
-    }
+  private int upgradeNamespace() throws Exception {
+    LOG.info("Upgrading Namespace");
     try {
-      for (FileStatus regionServerLogDir : regionServerLogDirs) {
-        // split its log dir, if exists
-        HLogSplitter.split(rootDir, regionServerLogDir.getPath(), oldLogDir, fs, getConf());
-      }
-      LOG.info("Successfully completed Log splitting");
+      int res = ToolRunner.run(getConf(), new NamespaceUpgrade(), new String[] { "--upgrade" });
+      LOG.info("Successfully Upgraded NameSpace.");
+      return res;
     } catch (Exception e) {
-      LOG.error("Got exception while doing Log splitting ", e);
+      LOG.error("Got exception while upgrading Namespace", e);
+      throw e;
+    }
+  }
+
+  private int upgradeZnodes() throws Exception {
+    LOG.info("Upgrading Znodes");
+    try {
+      int res = ToolRunner.run(getConf(), new ZKDataMigrator(), null);
+      LOG.info("Succesfully upgraded znodes.");
+      return res;
+    } catch (Exception e) {
+      LOG.error("Got exception while upgrading Znodes", e);
       throw e;
     }
   }
