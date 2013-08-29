@@ -1575,7 +1575,7 @@ public class Bytes {
    *         ranging from -(N + 1) to N - 1.
    */
   public static int binarySearch(byte [][]arr, byte []key, int offset,
-      int length, RawComparator<byte []> comparator) {
+      int length, RawComparator<?> comparator) {
     int low = 0;
     int high = arr.length - 1;
 

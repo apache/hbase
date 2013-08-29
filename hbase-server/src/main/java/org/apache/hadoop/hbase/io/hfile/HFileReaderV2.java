@@ -120,7 +120,7 @@ public class HFileReaderV2 extends AbstractHFileReader {
     dataBlockIndexReader = new HFileBlockIndex.BlockIndexReader(comparator,
         trailer.getNumDataIndexLevels(), this);
     metaBlockIndexReader = new HFileBlockIndex.BlockIndexReader(
-        Bytes.BYTES_RAWCOMPARATOR, 1);
+        KeyValue.RAW_COMPARATOR, 1);
 
     // Parse load-on-open data.
 
@@ -500,7 +500,7 @@ public class HFileReaderV2 extends AbstractHFileReader {
       int compared;
       if (isSeeked()) {
         ByteBuffer bb = getKey();
-        compared = reader.getComparator().compare(key, offset,
+        compared = reader.getComparator().compareFlatKey(key, offset,
             length, bb.array(), bb.arrayOffset(), bb.limit());
         if (compared < 1) {
           // If the required key is less than or equal to current key, then
@@ -509,7 +509,7 @@ public class HFileReaderV2 extends AbstractHFileReader {
         } else {
           if (this.nextIndexedKey != null &&
               (this.nextIndexedKey == HConstants.NO_NEXT_INDEXED_KEY ||
-               reader.getComparator().compare(key, offset, length,
+               reader.getComparator().compareFlatKey(key, offset, length,
                    nextIndexedKey, 0, nextIndexedKey.length) < 0)) {
             // The reader shall continue to scan the current data block instead of querying the
             // block index as long as it knows the target key is strictly smaller than
@@ -535,7 +535,7 @@ public class HFileReaderV2 extends AbstractHFileReader {
       }
       ByteBuffer firstKey = getFirstKeyInBlock(seekToBlock);
 
-      if (reader.getComparator().compare(firstKey.array(),
+      if (reader.getComparator().compareFlatKey(firstKey.array(),
           firstKey.arrayOffset(), firstKey.limit(), key, offset, length) == 0)
       {
         long previousBlockOffset = seekToBlock.getPrevBlockOffset();
@@ -851,7 +851,7 @@ public class HFileReaderV2 extends AbstractHFileReader {
 
         int keyOffset = blockBuffer.arrayOffset() + blockBuffer.position()
             + KEY_VALUE_LEN_SIZE;
-        int comp = reader.getComparator().compare(key, offset, length,
+        int comp = reader.getComparator().compareFlatKey(key, offset, length,
             blockBuffer.array(), keyOffset, klen);
 
         if (comp == 0) {

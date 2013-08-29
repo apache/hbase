@@ -33,7 +33,7 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.KeyValue.KeyComparator;
+import org.apache.hadoop.hbase.KeyValue.KVComparator;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.hfile.HFile.Writer;
 import org.apache.hadoop.hbase.io.hfile.HFileBlock.BlockWritable;
@@ -100,7 +100,7 @@ public class HFileWriterV2 extends AbstractHFileWriter {
     public Writer createWriter(FileSystem fs, Path path,
         FSDataOutputStream ostream, int blockSize,
         Compression.Algorithm compress, HFileDataBlockEncoder blockEncoder,
-        final KeyComparator comparator, final ChecksumType checksumType,
+        final KVComparator comparator, final ChecksumType checksumType,
         final int bytesPerChecksum, boolean includeMVCCReadpoint) throws IOException {
       return new HFileWriterV2(conf, cacheConf, fs, path, ostream, blockSize, compress,
           blockEncoder, comparator, checksumType, bytesPerChecksum, includeMVCCReadpoint);
@@ -111,7 +111,7 @@ public class HFileWriterV2 extends AbstractHFileWriter {
   public HFileWriterV2(Configuration conf, CacheConfig cacheConf,
       FileSystem fs, Path path, FSDataOutputStream ostream, int blockSize,
       Compression.Algorithm compressAlgo, HFileDataBlockEncoder blockEncoder,
-      final KeyComparator comparator, final ChecksumType checksumType,
+      final KVComparator comparator, final ChecksumType checksumType,
       final int bytesPerChecksum, final boolean includeMVCCReadpoint) throws IOException {
     super(cacheConf,
         ostream == null ? createOutputStream(conf, fs, path, null) : ostream,

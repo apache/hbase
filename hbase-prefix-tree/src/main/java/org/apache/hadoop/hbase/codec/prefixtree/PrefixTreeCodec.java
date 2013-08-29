@@ -25,8 +25,9 @@ import java.nio.ByteBuffer;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.KeyValue.KeyComparator;
-import org.apache.hadoop.hbase.KeyValue.MetaKeyComparator;
+import org.apache.hadoop.hbase.KeyValue.KVComparator;
+import org.apache.hadoop.hbase.KeyValue.MetaComparator;
+import org.apache.hadoop.hbase.KeyValue.RawBytesComparator;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.codec.prefixtree.decode.DecoderFactory;
 import org.apache.hadoop.hbase.codec.prefixtree.decode.PrefixTreeArraySearcher;
@@ -189,11 +190,10 @@ public class PrefixTreeCodec implements DataBlockEncoder{
    * the way to this point.
    */
   @Override
-  public EncodedSeeker createSeeker(RawComparator<byte[]> comparator, boolean includesMvccVersion) {
-    if(! (comparator instanceof KeyComparator)){
+  public EncodedSeeker createSeeker(KVComparator comparator, boolean includesMvccVersion) {
+    if (comparator instanceof RawBytesComparator){
       throw new IllegalArgumentException("comparator must be KeyValue.KeyComparator");
-    }
-    if(comparator instanceof MetaKeyComparator){
+    } else if (comparator instanceof MetaComparator){
       throw new IllegalArgumentException("DataBlockEncoding.PREFIX_TREE not compatible with META "
           +"table");
     }

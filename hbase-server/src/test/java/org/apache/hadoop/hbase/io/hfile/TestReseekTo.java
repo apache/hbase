@@ -51,7 +51,7 @@ public class TestReseekTo {
             .withOutputStream(fout)
             .withBlockSize(4000)
             // NOTE: This test is dependent on this deprecated nonstandard comparator
-            .withComparator(new KeyValue.RawKeyComparator())
+            .withComparator(new KeyValue.RawBytesComparator())
             .create();
     int numberOfKeys = 1000;
 

@@ -20,6 +20,8 @@
 package org.apache.hadoop.hbase.util;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.KeyValue.KVComparator;
 import org.apache.hadoop.io.RawComparator;
 import org.apache.hadoop.io.Writable;
 
@@ -625,8 +627,9 @@ public class ByteBloomFilter implements BloomFilter, BloomFilterWriter {
   }
 
   @Override
-  public RawComparator<byte[]> getComparator() {
-    return Bytes.BYTES_RAWCOMPARATOR;
+  public KVComparator getComparator() {
+//    return Bytes.BYTES_RAWCOMPARATOR;
+    return KeyValue.RAW_COMPARATOR;
   }
 
   /**

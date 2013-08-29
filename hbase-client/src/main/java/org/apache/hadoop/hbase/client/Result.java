@@ -19,16 +19,6 @@
 
 package org.apache.hadoop.hbase.client;
 
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellScannable;
-import org.apache.hadoop.hbase.CellScanner;
-import org.apache.hadoop.hbase.CellUtil;
-import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.KeyValue.SplitKeyValue;
-import org.apache.hadoop.hbase.util.Bytes;
-
 import java.nio.BufferOverflowException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -38,6 +28,15 @@ import java.util.List;
 import java.util.Map;
 import java.util.NavigableMap;
 import java.util.TreeMap;
+
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellScannable;
+import org.apache.hadoop.hbase.CellScanner;
+import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.util.Bytes;
 
 /**
  * Single row result of a {@link Get} or {@link Scan} query.<p>
@@ -537,8 +536,7 @@ public class Result implements CellScannable {
     }
     this.familyMap = new TreeMap<byte[], NavigableMap<byte[], NavigableMap<Long, byte[]>>>(Bytes.BYTES_COMPARATOR);
     for(KeyValue kv : this.kvs) {
-      SplitKeyValue splitKV = kv.split();
-      byte [] family = splitKV.getFamily();
+      byte [] family = kv.getFamily();
       NavigableMap<byte[], NavigableMap<Long, byte[]>> columnMap =
         familyMap.get(family);
       if(columnMap == null) {
@@ -546,7 +544,7 @@ public class Result implements CellScannable {
           (Bytes.BYTES_COMPARATOR);
         familyMap.put(family, columnMap);
       }
-      byte [] qualifier = splitKV.getQualifier();
+      byte [] qualifier = kv.getQualifier();
       NavigableMap<Long, byte[]> versionMap = columnMap.get(qualifier);
       if(versionMap == null) {
         versionMap = new TreeMap<Long, byte[]>(new Comparator<Long>() {
@@ -556,8 +554,9 @@ public class Result implements CellScannable {
         });
         columnMap.put(qualifier, versionMap);
       }
-      Long timestamp = Bytes.toLong(splitKV.getTimestamp());
-      byte [] value = splitKV.getValue();
+      Long timestamp = kv.getTimestamp();
+      byte [] value = kv.getValue();
+
       versionMap.put(timestamp, value);
     }
     return this.familyMap;

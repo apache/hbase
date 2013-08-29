@@ -22,6 +22,7 @@ import java.nio.ByteBuffer;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.KeyValue.KVComparator;
 import org.apache.hadoop.hbase.io.compress.Compression.Algorithm;
 import org.apache.hadoop.io.RawComparator;
 
@@ -106,7 +107,7 @@ public interface DataBlockEncoder {
    * @return A newly created seeker.
    */
   EncodedSeeker createSeeker(
-    RawComparator<byte[]> comparator, boolean includesMemstoreTS
+    KVComparator comparator, boolean includesMemstoreTS
   );
 
   /**

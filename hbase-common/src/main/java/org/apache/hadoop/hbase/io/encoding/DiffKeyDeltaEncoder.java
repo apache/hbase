@@ -23,6 +23,7 @@ import java.nio.ByteBuffer;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.KeyValue.KVComparator;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.RawComparator;
@@ -422,7 +423,7 @@ public class DiffKeyDeltaEncoder extends BufferedDataBlockEncoder {
   }
 
   @Override
-  public EncodedSeeker createSeeker(RawComparator<byte[]> comparator,
+  public EncodedSeeker createSeeker(KVComparator comparator,
       final boolean includesMemstoreTS) {
     return new BufferedEncodedSeeker<DiffSeekerState>(comparator) {
       private byte[] familyNameWithSize;

@@ -25,6 +25,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.KeyValue.KVComparator;
 import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
@@ -71,7 +72,7 @@ public abstract class AbstractHFileReader implements HFile.Reader {
   protected int avgValueLen = -1;
 
   /** Key comparator */
-  protected RawComparator<byte []> comparator;
+  protected KVComparator comparator;
 
   /** Size of this file. */
   protected final long fileSize;
@@ -206,7 +207,7 @@ public abstract class AbstractHFileReader implements HFile.Reader {
 
   /** @return comparator */
   @Override
-  public RawComparator<byte []> getComparator() {
+  public KVComparator getComparator() {
     return comparator;
   }
 

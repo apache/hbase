@@ -42,11 +42,13 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.*;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.io.compress.Compression;
-import org.apache.hadoop.hbase.io.hfile.HFileBlockIndex.BlockIndexReader;
 import org.apache.hadoop.hbase.io.hfile.HFileBlockIndex.BlockIndexChunk;
+import org.apache.hadoop.hbase.io.hfile.HFileBlockIndex.BlockIndexReader;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
 import org.junit.Before;
@@ -173,7 +175,7 @@ public class TestHFileBlockIndex {
     BlockReaderWrapper brw = new BlockReaderWrapper(blockReader);
     HFileBlockIndex.BlockIndexReader indexReader =
         new HFileBlockIndex.BlockIndexReader(
-            Bytes.BYTES_RAWCOMPARATOR, numLevels, brw);
+            KeyValue.RAW_COMPARATOR, numLevels, brw);
 
     indexReader.readRootIndex(blockReader.blockRange(rootIndexOffset,
         fileSize).nextBlockWithBlockType(BlockType.ROOT_INDEX), numRootEntries);
@@ -355,7 +357,7 @@ public class TestHFileBlockIndex {
 
       int searchResult = BlockIndexReader.binarySearchNonRootIndex(
           arrayHoldingKey, searchKey.length / 2, searchKey.length, nonRootIndex,
-          Bytes.BYTES_RAWCOMPARATOR);
+          KeyValue.RAW_COMPARATOR);
       String lookupFailureMsg = "Failed to look up key #" + i + " ("
           + Bytes.toStringBinary(searchKey) + ")";
 
@@ -381,7 +383,7 @@ public class TestHFileBlockIndex {
       // higher-level API function.s
       boolean locateBlockResult =
         (BlockIndexReader.locateNonRootIndexEntry(nonRootIndex, arrayHoldingKey,
-            searchKey.length / 2, searchKey.length, Bytes.BYTES_RAWCOMPARATOR) != -1);
+            searchKey.length / 2, searchKey.length, KeyValue.RAW_COMPARATOR) != -1);
 
       if (i == 0) {
         assertFalse(locateBlockResult);
@@ -441,7 +443,7 @@ public class TestHFileBlockIndex {
     long expected = ClassSize.estimateBase(cl, false);
 
     HFileBlockIndex.BlockIndexReader bi =
-        new HFileBlockIndex.BlockIndexReader(Bytes.BYTES_RAWCOMPARATOR, 1);
+        new HFileBlockIndex.BlockIndexReader(KeyValue.RAW_COMPARATOR, 1);
     long actual = bi.heapSize();
 
     // Since the arrays in BlockIndex(byte [][] blockKeys, long [] blockOffsets,
@@ -506,7 +508,7 @@ public class TestHFileBlockIndex {
           keyStrSet.add(Bytes.toStringBinary(k));
 
           if (i > 0) {
-            assertTrue(KeyValue.KEY_COMPARATOR.compare(keys[i - 1],
+            assertTrue(KeyValue.COMPARATOR.compareFlatKey(keys[i - 1],
                 keys[i]) < 0);
           }
         }

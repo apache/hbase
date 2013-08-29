@@ -81,7 +81,7 @@ public class ScanQueryMatcher {
   private final KeyValue startKey;
 
   /** Row comparator for the region this query is for */
-  private final KeyValue.KeyComparator rowComparator;
+  private final KeyValue.KVComparator rowComparator;
 
   /* row is not private for tests */
   /** Row the query is on */
@@ -145,7 +145,7 @@ public class ScanQueryMatcher {
       NavigableSet<byte[]> columns, ScanType scanType,
       long readPointToUse, long earliestPutTs, long oldestUnexpiredTS) {
     this.tr = scan.getTimeRange();
-    this.rowComparator = scanInfo.getComparator().getRawComparator();
+    this.rowComparator = scanInfo.getComparator();
     this.deletes =  new ScanDeleteTracker();
     this.stopRow = scan.getStopRow();
     this.startKey = KeyValue.createFirstDeleteFamilyOnRow(scan.getStartRow(),

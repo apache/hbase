@@ -131,7 +131,7 @@ public class TestHFileSeek extends TestCase {
           .withOutputStream(fout)
           .withBlockSize(options.minBlockSize)
           .withCompression(options.compress)
-          .withComparator(new KeyValue.RawKeyComparator())
+          .withComparator(new KeyValue.RawBytesComparator())
           .create();
       try {
         BytesWritable key = new BytesWritable();

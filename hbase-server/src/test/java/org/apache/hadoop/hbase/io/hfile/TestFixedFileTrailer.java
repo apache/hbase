@@ -92,7 +92,7 @@ public class TestFixedFileTrailer {
 
     t.setLastDataBlockOffset(291);
     t.setNumDataIndexLevels(3);
-    t.setComparatorClass(KeyValue.KEY_COMPARATOR.getClass());
+    t.setComparatorClass(KeyValue.COMPARATOR.getClass());
     t.setFirstDataBlockOffset(9081723123L); // Completely unrealistic.
     t.setUncompressedDataIndexSize(827398717L); // Something random.
 
@@ -209,7 +209,7 @@ public class TestFixedFileTrailer {
       assertEquals(expected.getFirstDataBlockOffset(),
           loaded.getFirstDataBlockOffset());
       assertTrue(
-          expected.createComparator() instanceof KeyValue.KeyComparator);
+          expected.createComparator() instanceof KeyValue.KVComparator);
       assertEquals(expected.getUncompressedDataIndexSize(),
           loaded.getUncompressedDataIndexSize());
     }

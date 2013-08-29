@@ -200,7 +200,7 @@ public final class BloomFilterFactory {
     // In case of compound Bloom filters we ignore the maxKeys hint.
     CompoundBloomFilterWriter bloomWriter = new CompoundBloomFilterWriter(getBloomBlockSize(conf),
         err, Hash.getHashType(conf), maxFold, cacheConf.shouldCacheBloomsOnWrite(),
-        bloomType == BloomType.ROWCOL ? KeyValue.KEY_COMPARATOR : Bytes.BYTES_RAWCOMPARATOR);
+        bloomType == BloomType.ROWCOL ? KeyValue.COMPARATOR : KeyValue.RAW_COMPARATOR);
     writer.addInlineBlockWriter(bloomWriter);
     return bloomWriter;
   }
@@ -231,7 +231,7 @@ public final class BloomFilterFactory {
     // In case of compound Bloom filters we ignore the maxKeys hint.
     CompoundBloomFilterWriter bloomWriter = new CompoundBloomFilterWriter(getBloomBlockSize(conf),
         err, Hash.getHashType(conf), maxFold, cacheConf.shouldCacheBloomsOnWrite(),
-        Bytes.BYTES_RAWCOMPARATOR);
+        KeyValue.RAW_COMPARATOR);
     writer.addInlineBlockWriter(bloomWriter);
     return bloomWriter;
   }

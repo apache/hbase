@@ -23,7 +23,6 @@ import java.io.IOException;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.*;
-import org.apache.hadoop.hbase.KeyValue.KeyComparator;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.RawComparator;
 import org.junit.experimental.categories.Category;
@@ -51,7 +50,7 @@ public class TestSeekTo extends HBaseTestCase {
         .withOutputStream(fout)
         .withBlockSize(blocksize)
         // NOTE: This test is dependent on this deprecated nonstandard comparator
-        .withComparator(new KeyValue.RawKeyComparator())
+        .withComparator(KeyValue.RAW_COMPARATOR)
         .create();
     // 4 bytes * 3 * 2 for each key/value +
     // 3 for keys, 15 for values = 42 (woot)
