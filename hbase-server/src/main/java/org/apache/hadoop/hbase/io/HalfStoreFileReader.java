@@ -159,7 +159,7 @@ public class HalfStoreFileReader extends StoreFile.Reader {
         // constrain the bottom.
         if (!top) {
           ByteBuffer bb = getKey();
-          if (getComparator().compare(bb.array(), bb.arrayOffset(), bb.limit(),
+          if (getComparator().compareFlatKey(bb.array(), bb.arrayOffset(), bb.limit(),
               splitkey, 0, splitkey.length) >= 0) {
             atEnd = true;
             return false;
@@ -178,13 +178,13 @@ public class HalfStoreFileReader extends StoreFile.Reader {
           byte[] fk = getFirstKey();
           // This will be null when the file is empty in which we can not seekBefore to any key
           if (fk == null) return false;
-          if (getComparator().compare(key, offset, length, fk, 0,
+          if (getComparator().compareFlatKey(key, offset, length, fk, 0,
               fk.length) <= 0) {
             return false;
           }
         } else {
           // The equals sign isn't strictly necessary just here to be consistent with seekTo
-          if (getComparator().compare(key, offset, length, splitkey, 0,
+          if (getComparator().compareFlatKey(key, offset, length, splitkey, 0,
               splitkey.length) >= 0) {
             return this.delegate.seekBefore(splitkey, 0, splitkey.length);
           }
@@ -215,7 +215,7 @@ public class HalfStoreFileReader extends StoreFile.Reader {
         // Check key.
         ByteBuffer k = this.delegate.getKey();
         return this.delegate.getReader().getComparator().
-          compare(k.array(), k.arrayOffset(), k.limit(),
+          compareFlatKey(k.array(), k.arrayOffset(), k.limit(),
             splitkey, 0, splitkey.length) < 0;
       }
 
@@ -225,12 +225,12 @@ public class HalfStoreFileReader extends StoreFile.Reader {
 
       public int seekTo(byte[] key, int offset, int length) throws IOException {
         if (top) {
-          if (getComparator().compare(key, offset, length, splitkey, 0,
+          if (getComparator().compareFlatKey(key, offset, length, splitkey, 0,
               splitkey.length) < 0) {
             return -1;
           }
         } else {
-          if (getComparator().compare(key, offset, length, splitkey, 0,
+          if (getComparator().compareFlatKey(key, offset, length, splitkey, 0,
               splitkey.length) >= 0) {
             // we would place the scanner in the second half.
             // it might be an error to return false here ever...
@@ -255,12 +255,12 @@ public class HalfStoreFileReader extends StoreFile.Reader {
         //This function is identical to the corresponding seekTo function except
         //that we call reseekTo (and not seekTo) on the delegate.
         if (top) {
-          if (getComparator().compare(key, offset, length, splitkey, 0,
+          if (getComparator().compareFlatKey(key, offset, length, splitkey, 0,
               splitkey.length) < 0) {
             return -1;
           }
         } else {
-          if (getComparator().compare(key, offset, length, splitkey, 0,
+          if (getComparator().compareFlatKey(key, offset, length, splitkey, 0,
               splitkey.length) >= 0) {
             // we would place the scanner in the second half.
             // it might be an error to return false here ever...

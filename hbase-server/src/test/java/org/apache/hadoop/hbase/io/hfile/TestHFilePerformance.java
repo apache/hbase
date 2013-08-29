@@ -166,7 +166,7 @@ public class TestHFilePerformance extends TestCase {
             .withOutputStream(fout)
             .withBlockSize(minBlockSize)
             .withCompression(codecName)
-            .withComparator(new KeyValue.RawKeyComparator())
+            .withComparator(new KeyValue.RawBytesComparator())
             .create();
 
         // Writing value in one shot.

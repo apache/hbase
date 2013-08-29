@@ -53,7 +53,7 @@ import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.KeyValue.KeyComparator;
+import org.apache.hadoop.hbase.KeyValue.KVComparator;
 import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
@@ -336,7 +336,7 @@ public class HFile {
     protected Compression.Algorithm compression =
         HFile.DEFAULT_COMPRESSION_ALGORITHM;
     protected HFileDataBlockEncoder encoder = NoOpDataBlockEncoder.INSTANCE;
-    protected KeyComparator comparator = KeyValue.KEY_COMPARATOR;
+    protected KVComparator comparator = KeyValue.COMPARATOR;
     protected InetSocketAddress[] favoredNodes;
     protected ChecksumType checksumType = HFile.DEFAULT_CHECKSUM_TYPE;
     protected int bytesPerChecksum = DEFAULT_BYTES_PER_CHECKSUM;
@@ -384,7 +384,7 @@ public class HFile {
       return this;
     }
 
-    public WriterFactory withComparator(KeyComparator comparator) {
+    public WriterFactory withComparator(KVComparator comparator) {
       Preconditions.checkNotNull(comparator);
       this.comparator = comparator;
       return this;
@@ -432,7 +432,7 @@ public class HFile {
         FSDataOutputStream ostream, int blockSize,
         Compression.Algorithm compress,
         HFileDataBlockEncoder dataBlockEncoder,
-        KeyComparator comparator, ChecksumType checksumType,
+        KVComparator comparator, ChecksumType checksumType,
         int bytesPerChecksum, boolean includeMVCCReadpoint) throws IOException;
   }
 
@@ -489,7 +489,7 @@ public class HFile {
      */
     String getName();
 
-    RawComparator<byte []> getComparator();
+    KVComparator getComparator();
 
     HFileScanner getScanner(boolean cacheBlocks,
        final boolean pread, final boolean isCompaction);

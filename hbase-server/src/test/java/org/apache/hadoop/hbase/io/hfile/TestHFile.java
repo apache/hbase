@@ -35,7 +35,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestCase;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.KeyValue.KeyComparator;
 import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.hfile.HFile.Reader;
@@ -216,7 +215,7 @@ public class TestHFile extends HBaseTestCase {
         .withBlockSize(minBlockSize)
         .withCompression(codec)
         // NOTE: This test is dependent on this deprecated nonstandard comparator
-        .withComparator(new KeyValue.RawKeyComparator())
+        .withComparator(new KeyValue.RawBytesComparator())
         .create();
     LOG.info(writer);
     writeRecords(writer);
@@ -349,37 +348,6 @@ public class TestHFile extends HBaseTestCase {
     assertTrue(Compression.Algorithm.SNAPPY.ordinal() == 3);
     assertTrue(Compression.Algorithm.LZ4.ordinal() == 4);
   }
-
-  // This can't be an anonymous class because the compiler will not generate
-  // a nullary constructor for it.
-  static class CustomKeyComparator extends KeyComparator {
-    @Override
-    public int compare(byte[] b1, int s1, int l1, byte[] b2, int s2,
-        int l2) {
-      return -Bytes.compareTo(b1, s1, l1, b2, s2, l2);
-    }
-    @Override
-    public int compare(byte[] o1, byte[] o2) {
-      return compare(o1, 0, o1.length, o2, 0, o2.length);
-    }
-  }
-
-  public void testComparator() throws IOException {
-    if (cacheConf == null) cacheConf = new CacheConfig(conf);
-    Path mFile = new Path(ROOT_DIR, "meta.tfile");
-    FSDataOutputStream fout = createFSOutput(mFile);
-    KeyComparator comparator = new CustomKeyComparator();
-    Writer writer = HFile.getWriterFactory(conf, cacheConf)
-        .withOutputStream(fout)
-        .withBlockSize(minBlockSize)
-        .withComparator(comparator)
-        .create();
-    writer.append("3".getBytes(), "0".getBytes());
-    writer.append("2".getBytes(), "0".getBytes());
-    writer.append("1".getBytes(), "0".getBytes());
-    writer.close();
-  }
-
 
 }
 

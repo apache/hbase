@@ -536,9 +536,10 @@ public class TestMemStore extends TestCase {
       List<KeyValue> results = new ArrayList<KeyValue>();
       for (int i = 0; scanner.next(results); i++) {
         int rowId = startRowId + i;
+        KeyValue left = results.get(0);
+        byte[] row1 = Bytes.toBytes(rowId);
         assertTrue("Row name",
-          KeyValue.COMPARATOR.compareRows(results.get(0),
-          Bytes.toBytes(rowId)) == 0);
+          KeyValue.COMPARATOR.compareRows(left.getBuffer(), left.getRowOffset(), (int) left.getRowLength(), row1, 0, row1.length) == 0);
         assertEquals("Count of columns", QUALIFIER_COUNT, results.size());
         List<KeyValue> row = new ArrayList<KeyValue>();
         for (KeyValue kv : results) {

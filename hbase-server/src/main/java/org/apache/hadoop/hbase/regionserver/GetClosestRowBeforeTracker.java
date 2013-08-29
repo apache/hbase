@@ -74,7 +74,7 @@ class GetClosestRowBeforeTracker {
     this.tablenamePlusDelimiterLength = metaregion? l + 1: -1;
     this.oldestts = System.currentTimeMillis() - ttl;
     this.kvcomparator = c;
-    KeyValue.RowComparator rc = new KeyValue.RowComparator(this.kvcomparator);
+    KeyValue.RowOnlyComparator rc = new KeyValue.RowOnlyComparator(this.kvcomparator);
     this.deletes = new TreeMap<KeyValue, NavigableSet<KeyValue>>(rc);
   }
 

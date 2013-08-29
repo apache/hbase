@@ -19,7 +19,7 @@
 package org.apache.hadoop.hbase.util;
 
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.io.RawComparator;
+import org.apache.hadoop.hbase.KeyValue.KVComparator;
 
 /**
  * Common methods Bloom filter methods required at read and write time.
@@ -52,6 +52,6 @@ public interface BloomFilterBase {
   /**
    * @return Bloom key comparator
    */
-  RawComparator<byte[]> getComparator();
+  KVComparator getComparator();
 
 }

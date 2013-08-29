@@ -185,7 +185,7 @@ public class TestDataBlockEncoders {
           ByteBuffer.wrap(encodeBytes(encoding, originalBuffer));
       DataBlockEncoder encoder = encoding.getEncoder();
       DataBlockEncoder.EncodedSeeker seeker =
-          encoder.createSeeker(KeyValue.KEY_COMPARATOR, includesMemstoreTS);
+          encoder.createSeeker(KeyValue.COMPARATOR, includesMemstoreTS);
       seeker.setCurrentBuffer(encodedBuffer);
       encodedSeekers.add(seeker);
     }
@@ -240,7 +240,7 @@ public class TestDataBlockEncoders {
             "Bug while encoding using '%s'", encoder.toString()), e);
       }
       DataBlockEncoder.EncodedSeeker seeker =
-          encoder.createSeeker(KeyValue.KEY_COMPARATOR, includesMemstoreTS);
+          encoder.createSeeker(KeyValue.COMPARATOR, includesMemstoreTS);
       seeker.setCurrentBuffer(encodedBuffer);
       int i = 0;
       do {

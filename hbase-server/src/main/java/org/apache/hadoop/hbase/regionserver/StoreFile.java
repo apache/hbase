@@ -798,7 +798,7 @@ public class StoreFile {
           .withBlockSize(blocksize)
           .withCompression(compress)
           .withDataBlockEncoder(this.dataBlockEncoder)
-          .withComparator(comparator.getRawComparator())
+          .withComparator(comparator)
           .withChecksumType(checksumType)
           .withBytesPerChecksum(bytesPerChecksum)
           .withFavoredNodes(favoredNodes)
@@ -877,7 +877,7 @@ public class StoreFile {
      * @param kv
      */
     public void trackTimestamps(final KeyValue kv) {
-      if (KeyValue.Type.Put.getCode() == kv.getType()) {
+      if (KeyValue.Type.Put.getCode() == kv.getTypeByte()) {
         earliestPutTs = Math.min(earliestPutTs, kv.getTimestamp());
       }
       if (!isTimeRangeTrackerSet) {
@@ -939,7 +939,7 @@ public class StoreFile {
           }
           generalBloomFilterWriter.add(bloomKey, bloomKeyOffset, bloomKeyLen);
           if (lastBloomKey != null
-              && generalBloomFilterWriter.getComparator().compare(bloomKey,
+              && generalBloomFilterWriter.getComparator().compareFlatKey(bloomKey,
                   bloomKeyOffset, bloomKeyLen, lastBloomKey,
                   lastBloomKeyOffset, lastBloomKeyLen) <= 0) {
             throw new IOException("Non-increasing Bloom keys: "
@@ -1105,7 +1105,7 @@ public class StoreFile {
       this.reader = null;
     }
 
-    public RawComparator<byte []> getComparator() {
+    public KVComparator getComparator() {
       return reader.getComparator();
     }
 
@@ -1333,7 +1333,7 @@ public class StoreFile {
           // from the file info. For row-column Bloom filters this is not yet
           // a sufficient condition to return false.
           boolean keyIsAfterLast = lastBloomKey != null
-              && bloomFilter.getComparator().compare(key, lastBloomKey) > 0;
+              && bloomFilter.getComparator().compareFlatKey(key, lastBloomKey) > 0;
 
           if (bloomFilterType == BloomType.ROWCOL) {
             // Since a Row Delete is essentially a DeleteFamily applied to all
@@ -1344,7 +1344,7 @@ public class StoreFile {
                 null, 0, 0);
 
             if (keyIsAfterLast
-                && bloomFilter.getComparator().compare(rowBloomKey,
+                && bloomFilter.getComparator().compareFlatKey(rowBloomKey,
                     lastBloomKey) > 0) {
               exists = false;
             } else {

@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.util;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.KeyValue.KVComparator;
 import org.apache.hadoop.io.RawComparator;
 
 @InterfaceAudience.Private
@@ -51,7 +52,7 @@ public class CompoundBloomFilterBase implements BloomFilterBase {
   protected int hashType;
   
   /** Comparator used to compare Bloom filter keys */
-  protected RawComparator<byte[]> comparator;
+  protected KVComparator comparator;
 
   @Override
   public long getMaxKeys() {
@@ -89,7 +90,7 @@ public class CompoundBloomFilterBase implements BloomFilterBase {
   }
 
   @Override
-  public RawComparator<byte[]> getComparator() {
+  public KVComparator getComparator() {
     return comparator;
   }
 

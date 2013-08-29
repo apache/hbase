@@ -24,12 +24,12 @@ import java.nio.ByteBuffer;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.KeyValue.KVComparator;
 import org.apache.hadoop.hbase.KeyValue.SamePrefixComparator;
 import org.apache.hadoop.hbase.io.compress.Compression.Algorithm;
 import org.apache.hadoop.hbase.io.hfile.BlockType;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.io.RawComparator;
 import org.apache.hadoop.io.WritableUtils;
 
 /**
@@ -113,14 +113,14 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
       BufferedEncodedSeeker<STATE extends SeekerState>
       implements EncodedSeeker {
 
-    protected final RawComparator<byte[]> comparator;
+    protected final KVComparator comparator;
     protected final SamePrefixComparator<byte[]> samePrefixComparator;
     protected ByteBuffer currentBuffer;
     protected STATE current = createSeekerState(); // always valid
     protected STATE previous = createSeekerState(); // may not be valid
 
     @SuppressWarnings("unchecked")
-    public BufferedEncodedSeeker(RawComparator<byte[]> comparator) {
+    public BufferedEncodedSeeker(KVComparator comparator) {
       this.comparator = comparator;
       if (comparator instanceof SamePrefixComparator) {
         this.samePrefixComparator = (SamePrefixComparator<byte[]>) comparator;
@@ -207,7 +207,7 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
           comp = samePrefixComparator.compareIgnoringPrefix(commonPrefix, key,
               offset, length, current.keyBuffer, 0, current.keyLength);
         } else {
-          comp = comparator.compare(key, offset, length,
+          comp = comparator.compareFlatKey(key, offset, length,
               current.keyBuffer, 0, current.keyLength);
         }
 

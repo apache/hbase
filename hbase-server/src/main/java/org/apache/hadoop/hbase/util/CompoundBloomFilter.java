@@ -24,12 +24,12 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.KeyValue.KVComparator;
 import org.apache.hadoop.hbase.io.hfile.BlockType;
 import org.apache.hadoop.hbase.io.hfile.FixedFileTrailer;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileBlock;
 import org.apache.hadoop.hbase.io.hfile.HFileBlockIndex;
-import org.apache.hadoop.io.RawComparator;
 
 /**
  * A Bloom filter implementation built on top of {@link ByteBloomFilter},
@@ -131,7 +131,7 @@ public class CompoundBloomFilter extends CompoundBloomFilterBase
   }
 
   @Override
-  public RawComparator<byte[]> getComparator() {
+  public KVComparator getComparator() {
     return comparator;
   }
 

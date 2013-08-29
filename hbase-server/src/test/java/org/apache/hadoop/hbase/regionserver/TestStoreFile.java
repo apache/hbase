@@ -327,7 +327,7 @@ public class TestStoreFile extends HBaseTestCase {
              (topScanner.isSeeked() && topScanner.next())) {
         key = topScanner.getKey();
 
-        if (topScanner.getReader().getComparator().compare(key.array(),
+        if (topScanner.getReader().getComparator().compareFlatKey(key.array(),
           key.arrayOffset(), key.limit(), midkey, 0, midkey.length) < 0) {
           fail("key=" + Bytes.toStringBinary(key) + " < midkey=" +
               Bytes.toStringBinary(midkey));
@@ -377,7 +377,7 @@ public class TestStoreFile extends HBaseTestCase {
       while ((!topScanner.isSeeked() && topScanner.seekTo()) ||
           topScanner.next()) {
         key = topScanner.getKey();
-        assertTrue(topScanner.getReader().getComparator().compare(key.array(),
+        assertTrue(topScanner.getReader().getComparator().compareFlatKey(key.array(),
           key.arrayOffset(), key.limit(), badmidkey, 0, badmidkey.length) >= 0);
         if (first) {
           first = false;

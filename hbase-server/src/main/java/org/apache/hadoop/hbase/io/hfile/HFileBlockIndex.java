@@ -38,13 +38,13 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.KeyValue.KVComparator;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.HFile.CachingBlockReader;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.hadoop.hbase.util.CompoundBloomFilterWriter;
-import org.apache.hadoop.io.RawComparator;
 import org.apache.hadoop.io.WritableUtils;
 import org.apache.hadoop.util.StringUtils;
 
@@ -106,7 +106,7 @@ public class HFileBlockIndex {
    */
   public static class BlockIndexReader implements HeapSize {
     /** Needed doing lookup on blocks. */
-    private final RawComparator<byte[]> comparator;
+    private final KVComparator comparator;
 
     // Root-level data.
     private byte[][] blockKeys;
@@ -132,13 +132,13 @@ public class HFileBlockIndex {
     /** A way to read {@link HFile} blocks at a given offset */
     private CachingBlockReader cachingBlockReader;
 
-    public BlockIndexReader(final RawComparator<byte[]> c, final int treeLevel,
+    public BlockIndexReader(final KVComparator c, final int treeLevel,
         final CachingBlockReader cachingBlockReader) {
       this(c, treeLevel);
       this.cachingBlockReader = cachingBlockReader;
     }
 
-    public BlockIndexReader(final RawComparator<byte[]> c, final int treeLevel)
+    public BlockIndexReader(final KVComparator c, final int treeLevel)
     {
       comparator = c;
       searchTreeLevel = treeLevel;
@@ -481,7 +481,7 @@ public class HFileBlockIndex {
      */
     static int binarySearchNonRootIndex(byte[] key, int keyOffset,
         int keyLength, ByteBuffer nonRootIndex,
-        RawComparator<byte[]> comparator) {
+        KVComparator comparator) {
 
       int numEntries = nonRootIndex.getInt(0);
       int low = 0;
@@ -516,7 +516,7 @@ public class HFileBlockIndex {
 
         // we have to compare in this order, because the comparator order
         // has special logic when the 'left side' is a special key.
-        int cmp = comparator.compare(key, keyOffset, keyLength,
+        int cmp = comparator.compareFlatKey(key, keyOffset, keyLength,
             nonRootIndex.array(), nonRootIndex.arrayOffset() + midKeyOffset,
             midLength);
 
@@ -568,7 +568,7 @@ public class HFileBlockIndex {
      *
      */
     static int locateNonRootIndexEntry(ByteBuffer nonRootBlock, byte[] key,
-        int keyOffset, int keyLength, RawComparator<byte[]> comparator) {
+        int keyOffset, int keyLength, KVComparator comparator) {
       int entryIndex = binarySearchNonRootIndex(key, keyOffset, keyLength,
           nonRootBlock, comparator);
 

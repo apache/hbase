@@ -31,10 +31,10 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.KeyValue.KVComparator;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.protobuf.generated.HFileProtos;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.io.RawComparator;
 
 import com.google.common.io.NullOutputStream;
 
@@ -114,8 +114,8 @@ public class FixedFileTrailer {
    */
   private long lastDataBlockOffset;
 
-  /** Raw key comparator class name in version 2 */
-  private String comparatorClassName = KeyValue.KEY_COMPARATOR.getClass().getName();
+  /** Raw key comparator class name in version 3 */
+  private String comparatorClassName = KeyValue.COMPARATOR.getLegacyKeyComparatorName();
 
   /** The {@link HFile} format major version. */
   private final int majorVersion;
@@ -214,6 +214,8 @@ public class FixedFileTrailer {
       .setNumDataIndexLevels(numDataIndexLevels)
       .setFirstDataBlockOffset(firstDataBlockOffset)
       .setLastDataBlockOffset(lastDataBlockOffset)
+      // TODO this is a classname encoded into an  HFile's trailer. We are going to need to have 
+      // some compat code here.
       .setComparatorClassName(comparatorClassName)
       .setCompressionCodec(compressionCodec.ordinal())
       .build().writeDelimitedTo(baos);
@@ -324,6 +326,8 @@ public class FixedFileTrailer {
       lastDataBlockOffset = builder.getLastDataBlockOffset();
     }
     if (builder.hasComparatorClassName()) {
+      // TODO this is a classname encoded into an  HFile's trailer. We are going to need to have 
+      // some compat code here.
       setComparatorClass(getComparatorClass(builder.getComparatorClassName()));
     }
     if (builder.hasCompressionCodec()) {
@@ -351,6 +355,8 @@ public class FixedFileTrailer {
     numDataIndexLevels = input.readInt();
     firstDataBlockOffset = input.readLong();
     lastDataBlockOffset = input.readLong();
+    // TODO this is a classname encoded into an  HFile's trailer. We are going to need to have 
+    // some compat code here.
     setComparatorClass(getComparatorClass(Bytes.readStringFixedSize(input,
         MAX_COMPARATOR_NAME_LENGTH)));
   }
@@ -555,30 +561,53 @@ public class FixedFileTrailer {
     return minorVersion;
   }
 
-  @SuppressWarnings("rawtypes")
-  public void setComparatorClass(Class<? extends RawComparator> klass) {
-    // Is the comparator instantiable
+  public void setComparatorClass(Class<? extends KVComparator> klass) {
+    // Is the comparator instantiable?
     try {
-      klass.newInstance();
+      KVComparator comp = klass.newInstance();
+
+      // HFile V2 legacy comparator class names.
+      if (KeyValue.COMPARATOR.getClass().equals(klass)) {
+        comparatorClassName = KeyValue.COMPARATOR.getLegacyKeyComparatorName();
+      } else if (KeyValue.META_COMPARATOR.getClass().equals(klass)) {
+        comparatorClassName = KeyValue.META_COMPARATOR.getLegacyKeyComparatorName();
+      } else if (KeyValue.RAW_COMPARATOR.getClass().equals(klass)) {
+        comparatorClassName = KeyValue.RAW_COMPARATOR.getLegacyKeyComparatorName();
+      } else {
+        // if the name wasn't one of the legacy names, maybe its a legit new kind of comparator.
+        comparatorClassName = klass.getName();
+      }
+
     } catch (Exception e) {
       throw new RuntimeException("Comparator class " + klass.getName() +
         " is not instantiable", e);
     }
-    comparatorClassName = klass.getName();
+
   }
 
   @SuppressWarnings("unchecked")
-  private static Class<? extends RawComparator<byte[]>> getComparatorClass(
+  private static Class<? extends KVComparator> getComparatorClass(
       String comparatorClassName) throws IOException {
     try {
-      return (Class<? extends RawComparator<byte[]>>)
+      // HFile V2 legacy comparator class names.
+      if (comparatorClassName.equals(KeyValue.COMPARATOR.getLegacyKeyComparatorName())) {
+        comparatorClassName = KeyValue.COMPARATOR.getClass().getName();
+      } else if (comparatorClassName.equals(KeyValue.META_COMPARATOR.getLegacyKeyComparatorName())) {
+        comparatorClassName = KeyValue.META_COMPARATOR.getClass().getName();
+      } else if (comparatorClassName.equals(KeyValue.RAW_COMPARATOR.getLegacyKeyComparatorName())) {
+        comparatorClassName = KeyValue.RAW_COMPARATOR.getClass().getName();
+      }
+
+      // if the name wasn't one of the legacy names, maybe its a legit new kind of comparator.
+
+      return (Class<? extends KVComparator>)
           Class.forName(comparatorClassName);
     } catch (ClassNotFoundException ex) {
       throw new IOException(ex);
     }
   }
 
-  public static RawComparator<byte[]> createComparator(
+  public static KVComparator createComparator(
       String comparatorClassName) throws IOException {
     try {
       return getComparatorClass(comparatorClassName).newInstance();
@@ -591,7 +620,7 @@ public class FixedFileTrailer {
     }
   }
 
-  RawComparator<byte[]> createComparator() throws IOException {
+  KVComparator createComparator() throws IOException {
     expectAtLeastMajorVersion(2);
     return createComparator(comparatorClassName);
   }

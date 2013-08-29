@@ -77,7 +77,7 @@ public class TestPrefixTreeEncoding {
     HFileBlockEncodingContext blkEncodingCtx = new HFileBlockDefaultEncodingContext(
         Algorithm.NONE, DataBlockEncoding.PREFIX_TREE, new byte[0]);
     encoder.encodeKeyValues(dataBuffer, false, blkEncodingCtx);
-    EncodedSeeker seeker = encoder.createSeeker(KeyValue.KEY_COMPARATOR, false);
+    EncodedSeeker seeker = encoder.createSeeker(KeyValue.COMPARATOR, false);
     byte[] onDiskBytes = blkEncodingCtx.getOnDiskBytesWithHeader();
     ByteBuffer readBuffer = ByteBuffer.wrap(onDiskBytes,
         DataBlockEncoding.ID_SIZE, onDiskBytes.length
@@ -117,7 +117,7 @@ public class TestPrefixTreeEncoding {
     HFileBlockEncodingContext blkEncodingCtx = new HFileBlockDefaultEncodingContext(
         Algorithm.NONE, DataBlockEncoding.PREFIX_TREE, new byte[0]);
     encoder.encodeKeyValues(dataBuffer, false, blkEncodingCtx);
-    EncodedSeeker seeker = encoder.createSeeker(KeyValue.KEY_COMPARATOR, false);
+    EncodedSeeker seeker = encoder.createSeeker(KeyValue.COMPARATOR, false);
     byte[] onDiskBytes=blkEncodingCtx.getOnDiskBytesWithHeader();
     ByteBuffer readBuffer = ByteBuffer.wrap(onDiskBytes,
         DataBlockEncoding.ID_SIZE, onDiskBytes.length
@@ -143,7 +143,7 @@ public class TestPrefixTreeEncoding {
     HFileBlockEncodingContext blkEncodingCtx = new HFileBlockDefaultEncodingContext(
         Algorithm.NONE, DataBlockEncoding.PREFIX_TREE, new byte[0]);
     encoder.encodeKeyValues(dataBuffer, false, blkEncodingCtx);
-    EncodedSeeker seeker = encoder.createSeeker(KeyValue.KEY_COMPARATOR, false);
+    EncodedSeeker seeker = encoder.createSeeker(KeyValue.COMPARATOR, false);
     byte[] onDiskBytes = blkEncodingCtx.getOnDiskBytesWithHeader();
     ByteBuffer readBuffer = ByteBuffer.wrap(onDiskBytes,
         DataBlockEncoding.ID_SIZE, onDiskBytes.length
@@ -159,7 +159,7 @@ public class TestPrefixTreeEncoding {
     HFileBlockEncodingContext blkEncodingCtx = new HFileBlockDefaultEncodingContext(
         Algorithm.NONE, DataBlockEncoding.PREFIX_TREE, new byte[0]);
     encoder.encodeKeyValues(dataBuffer, false, blkEncodingCtx);
-    EncodedSeeker seeker = encoder.createSeeker(KeyValue.KEY_COMPARATOR,
+    EncodedSeeker seeker = encoder.createSeeker(KeyValue.COMPARATOR,
         false);
     byte[] onDiskBytes = blkEncodingCtx.getOnDiskBytesWithHeader();
     ByteBuffer readBuffer = ByteBuffer.wrap(onDiskBytes,

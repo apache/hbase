@@ -33,7 +33,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.KeyValue.KeyComparator;
+import org.apache.hadoop.hbase.KeyValue.KVComparator;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.hfile.HFile.FileInfo;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -77,7 +77,7 @@ public abstract class AbstractHFileWriter implements HFile.Writer {
   protected long totalUncompressedBytes = 0;
 
   /** Key comparator. Used to ensure we write in order. */
-  protected final KeyComparator comparator;
+  protected final KVComparator comparator;
 
   /** Meta block names. */
   protected List<byte[]> metaNames = new ArrayList<byte[]>();
@@ -114,7 +114,7 @@ public abstract class AbstractHFileWriter implements HFile.Writer {
       FSDataOutputStream outputStream, Path path, int blockSize,
       Compression.Algorithm compressAlgo,
       HFileDataBlockEncoder dataBlockEncoder,
-      KeyComparator comparator) {
+      KVComparator comparator) {
     this.outputStream = outputStream;
     this.path = path;
     this.name = path != null ? path.getName() : outputStream.toString();
@@ -124,7 +124,7 @@ public abstract class AbstractHFileWriter implements HFile.Writer {
     this.blockEncoder = dataBlockEncoder != null
         ? dataBlockEncoder : NoOpDataBlockEncoder.INSTANCE;
     this.comparator = comparator != null ? comparator
-        : KeyValue.KEY_COMPARATOR;
+        : KeyValue.COMPARATOR;
 
     closeOutputStream = path != null;
     this.cacheConf = cacheConf;
@@ -198,8 +198,9 @@ public abstract class AbstractHFileWriter implements HFile.Writer {
       throw new IOException("Key cannot be null or empty");
     }
     if (lastKeyBuffer != null) {
-      int keyComp = comparator.compare(lastKeyBuffer, lastKeyOffset,
+      int keyComp = comparator.compareFlatKey(lastKeyBuffer, lastKeyOffset,
           lastKeyLength, key, offset, length);
+
       if (keyComp > 0) {
         throw new IOException("Added a key not lexically larger than"
             + " previous key="
