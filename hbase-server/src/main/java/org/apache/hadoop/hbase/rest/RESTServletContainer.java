@@ -19,14 +19,12 @@
 package org.apache.hadoop.hbase.rest;
 
 import java.io.IOException;
-import java.security.PrivilegedExceptionAction;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.security.UserGroupInformation;
 
 import com.sun.jersey.spi.container.servlet.ServletContainer;
 
@@ -46,28 +44,7 @@ public class RESTServletContainer extends ServletContainer {
   @Override
   public void service(final HttpServletRequest request,
       final HttpServletResponse response) throws ServletException, IOException {
-    UserGroupInformation effectiveUser = UserGroupInformation.createProxyUser(
-      request.getRemoteUser(), RESTServlet.getInstance().getUser());
-    try {
-      effectiveUser.doAs(new PrivilegedExceptionAction<Void>() {
-        @Override
-         public Void run() throws ServletException, IOException {
-            callService(request, response);
-            return null;
-          }
-        });
-    } catch (InterruptedException e) {
-      Thread.currentThread().interrupt();
-      throw new IOException(e);
-    }
-  }
-
-  /**
-   * A helper method used to invoke super.service()
-   * on behalf of an effective user with doAs.
-   */
-  void callService(HttpServletRequest request,
-      HttpServletResponse response) throws ServletException, IOException {
+    RESTServlet.getInstance().setEffectiveUser(request.getRemoteUser());
     super.service(request, response);
   }
 }

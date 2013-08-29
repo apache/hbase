@@ -101,18 +101,17 @@ public class ScannerResource extends ResourceBase {
       URI uri = builder.path(id).build();
       servlet.getMetrics().incrementSucessfulPutRequests(1);
       return Response.created(uri).build();
-    } catch (RuntimeException e) {
+    } catch (Exception e) {
       servlet.getMetrics().incrementFailedPutRequests(1);
-      if (e.getCause() instanceof TableNotFoundException) {
+      if (e instanceof TableNotFoundException) {
         return Response.status(Response.Status.NOT_FOUND)
           .type(MIMETYPE_TEXT).entity("Not found" + CRLF)
           .build();
+      } else if (e instanceof RuntimeException) {
+        return Response.status(Response.Status.BAD_REQUEST)
+          .type(MIMETYPE_TEXT).entity("Bad request" + CRLF)
+          .build();
       }
-      return Response.status(Response.Status.BAD_REQUEST)
-        .type(MIMETYPE_TEXT).entity("Bad request" + CRLF)
-        .build();
-    } catch (Exception e) {
-      servlet.getMetrics().incrementFailedPutRequests(1);
       return Response.status(Response.Status.SERVICE_UNAVAILABLE)
         .type(MIMETYPE_TEXT).entity("Unavailable" + CRLF)
         .build();

@@ -32,8 +32,8 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.Response;
-import javax.ws.rs.core.UriInfo;
 import javax.ws.rs.core.Response.ResponseBuilder;
+import javax.ws.rs.core.UriInfo;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -43,7 +43,6 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.HTableInterface;
-import org.apache.hadoop.hbase.client.HTablePool;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.rest.model.CellModel;
 import org.apache.hadoop.hbase.rest.model.CellSetModel;
@@ -187,7 +186,6 @@ public class RowResource extends ResourceBase {
         .build();
     }
 
-    HTablePool pool = servlet.getTablePool();
     HTableInterface table = null;
     try {
       List<RowModel> rows = model.getRows();
@@ -228,7 +226,7 @@ public class RowResource extends ResourceBase {
           LOG.debug("PUT " + put.toString());
         }
       }
-      table = pool.getTable(tableResource.getName());
+      table = servlet.getTable(tableResource.getName());
       table.put(puts);
       table.flushCommits();
       ResponseBuilder response = Response.ok();
@@ -257,7 +255,6 @@ public class RowResource extends ResourceBase {
         .type(MIMETYPE_TEXT).entity("Forbidden" + CRLF)
         .build();
     }
-    HTablePool pool = servlet.getTablePool();
     HTableInterface table = null;
     try {
       byte[] row = rowspec.getRow();
@@ -291,7 +288,7 @@ public class RowResource extends ResourceBase {
       } else {
         put.add(parts[0], null, timestamp, message);
       }
-      table = pool.getTable(tableResource.getName());
+      table = servlet.getTable(tableResource.getName());
       table.put(put);
       if (LOG.isDebugEnabled()) {
         LOG.debug("PUT " + put.toString());
@@ -387,10 +384,9 @@ public class RowResource extends ResourceBase {
         }
       }
     }
-    HTablePool pool = servlet.getTablePool();
     HTableInterface table = null;
     try {
-      table = pool.getTable(tableResource.getName());
+      table = servlet.getTable(tableResource.getName());
       table.delete(delete);
       servlet.getMetrics().incrementSucessfulDeleteRequests(1);
       if (LOG.isDebugEnabled()) {
@@ -417,7 +413,6 @@ public class RowResource extends ResourceBase {
    * @return Response 200 OK, 304 Not modified, 400 Bad request
    */
   Response checkAndPut(final CellSetModel model) {
-    HTablePool pool = servlet.getTablePool();
     HTableInterface table = null;
     try {
       if (model.getRows().size() != 1) {
@@ -467,7 +462,7 @@ public class RowResource extends ResourceBase {
           .build();
       }
 
-      table = pool.getTable(this.tableResource.getName());
+      table = servlet.getTable(this.tableResource.getName());
       boolean retValue = table.checkAndPut(key, valueToPutParts[0],
         valueToPutParts[1], valueToCheckCell.getValue(), put);
       if (LOG.isDebugEnabled()) {
@@ -498,7 +493,6 @@ public class RowResource extends ResourceBase {
    * @return Response 200 OK, 304 Not modified, 400 Bad request
    */
   Response checkAndDelete(final CellSetModel model) {
-    HTablePool pool = servlet.getTablePool();
     HTableInterface table = null;
     Delete delete = null;
     try {
@@ -539,7 +533,7 @@ public class RowResource extends ResourceBase {
           .build();
       }
 
-      table = pool.getTable(tableResource.getName());
+      table = servlet.getTable(tableResource.getName());
       boolean retValue = table.checkAndDelete(key, parts[0], parts[1],
         valueToDeleteCell.getValue(), delete);
       if (LOG.isDebugEnabled()) {

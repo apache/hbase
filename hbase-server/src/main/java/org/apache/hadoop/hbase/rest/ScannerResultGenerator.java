@@ -28,7 +28,6 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.UnknownScannerException;
 import org.apache.hadoop.hbase.client.HTableInterface;
-import org.apache.hadoop.hbase.client.HTablePool;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
@@ -64,8 +63,7 @@ public class ScannerResultGenerator extends ResultGenerator {
 
   public ScannerResultGenerator(final String tableName, final RowSpec rowspec,
       final Filter filter, final int caching) throws IllegalArgumentException, IOException {
-    HTablePool pool = RESTServlet.getInstance().getTablePool();
-    HTableInterface table = pool.getTable(tableName);
+    HTableInterface table = RESTServlet.getInstance().getTable(tableName);
     try {
       Scan scan;
       if (rowspec.hasEndRow()) {

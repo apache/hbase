@@ -317,7 +317,7 @@ public class HConnectionManager {
    */
   public static HConnection createConnection(Configuration conf)
   throws IOException {
-    return createConnection(conf, false, null);
+    return createConnection(conf, false, null, User.getCurrent());
   }
 
   /**
@@ -342,17 +342,69 @@ public class HConnectionManager {
    */
   public static HConnection createConnection(Configuration conf, ExecutorService pool)
   throws IOException {
-    return createConnection(conf, false, pool);
+    return createConnection(conf, false, pool, User.getCurrent());
+  }
+
+  /**
+   * Create a new HConnection instance using the passed <code>conf</code> instance.
+   * <p>Note: This bypasses the usual HConnection life cycle management done by
+   * {@link #getConnection(Configuration)}. The caller is responsible for
+   * calling {@link HConnection#close()} on the returned connection instance.
+   * This is the recommended way to create HConnections.
+   * {@code
+   * ExecutorService pool = ...;
+   * HConnection connection = HConnectionManager.createConnection(conf, pool);
+   * HTableInterface table = connection.getTable("mytable");
+   * table.get(...);
+   * ...
+   * table.close();
+   * connection.close();
+   * }
+   * @param conf configuration
+   * @param user the user the connection is for
+   * @return HConnection object for <code>conf</code>
+   * @throws ZooKeeperConnectionException
+   */
+  public static HConnection createConnection(Configuration conf, User user)
+  throws IOException {
+    return createConnection(conf, false, null, user);
+  }
+
+  /**
+   * Create a new HConnection instance using the passed <code>conf</code> instance.
+   * <p>Note: This bypasses the usual HConnection life cycle management done by
+   * {@link #getConnection(Configuration)}. The caller is responsible for
+   * calling {@link HConnection#close()} on the returned connection instance.
+   * This is the recommended way to create HConnections.
+   * {@code
+   * ExecutorService pool = ...;
+   * HConnection connection = HConnectionManager.createConnection(conf, pool);
+   * HTableInterface table = connection.getTable("mytable");
+   * table.get(...);
+   * ...
+   * table.close();
+   * connection.close();
+   * }
+   * @param conf configuration
+   * @param pool the thread pool to use for batch operation in HTables used via this HConnection
+   * @param user the user the connection is for
+   * @return HConnection object for <code>conf</code>
+   * @throws ZooKeeperConnectionException
+   */
+  public static HConnection createConnection(Configuration conf, ExecutorService pool, User user)
+  throws IOException {
+    return createConnection(conf, false, pool, user);
   }
 
   @Deprecated
   static HConnection createConnection(final Configuration conf, final boolean managed)
       throws IOException {
-    return createConnection(conf, managed, null);
+    return createConnection(conf, managed, null, User.getCurrent());
   }
 
   @Deprecated
-  static HConnection createConnection(final Configuration conf, final boolean managed, final ExecutorService pool)
+  static HConnection createConnection(final Configuration conf, final boolean managed,
+      final ExecutorService pool, final User user)
   throws IOException {
     String className = conf.get("hbase.client.connection.impl",
       HConnectionManager.HConnectionImplementation.class.getName());
@@ -365,9 +417,10 @@ public class HConnectionManager {
     try {
       // Default HCM#HCI is not accessible; make it so before invoking.
       Constructor<?> constructor =
-        clazz.getDeclaredConstructor(Configuration.class, boolean.class, ExecutorService.class);
+        clazz.getDeclaredConstructor(Configuration.class,
+          boolean.class, ExecutorService.class, User.class);
       constructor.setAccessible(true);
-      return (HConnection) constructor.newInstance(conf, managed, pool);
+      return (HConnection) constructor.newInstance(conf, managed, pool, user);
     } catch (Exception e) {
       throw new IOException(e);
     }
@@ -583,13 +636,15 @@ public class HConnectionManager {
     // indicates whether this connection's life cycle is managed (by us)
     private boolean managed;
 
+    private User user;
+
     /**
      * Cluster registry of basic info such as clusterid and meta region location.
      */
      Registry registry;
 
      HConnectionImplementation(Configuration conf, boolean managed) throws IOException {
-       this(conf, managed, null);
+       this(conf, managed, null, null);
      }
      
     /**
@@ -603,8 +658,10 @@ public class HConnectionManager {
      * are shared, we have reference counting going on and will only do full cleanup when no more
      * users of an HConnectionImplementation instance.
      */
-    HConnectionImplementation(Configuration conf, boolean managed, ExecutorService pool) throws IOException {
+    HConnectionImplementation(Configuration conf, boolean managed,
+        ExecutorService pool, User user) throws IOException {
       this(conf);
+      this.user = user;
       this.batchPool = pool;
       this.managed = managed;
       this.registry = setupRegistry();
@@ -1574,7 +1631,7 @@ public class HConnectionManager {
             stub = stubs.get(key);
             if (stub == null) {
               BlockingRpcChannel channel = rpcClient.createBlockingRpcChannel(sn,
-                  User.getCurrent(), rpcTimeout);
+                user, rpcTimeout);
               stub = makeStub(channel);
               isMasterRunning();
               stubs.put(key, stub);
@@ -1723,7 +1780,7 @@ public class HConnectionManager {
         stub = (AdminService.BlockingInterface)this.stubs.get(key);
         if (stub == null) {
           BlockingRpcChannel channel = this.rpcClient.createBlockingRpcChannel(serverName,
-            User.getCurrent(), this.rpcTimeout);
+            user, this.rpcTimeout);
           stub = AdminService.newBlockingStub(channel);
           this.stubs.put(key, stub);
         }
@@ -1744,7 +1801,7 @@ public class HConnectionManager {
         stub = (ClientService.BlockingInterface)this.stubs.get(key);
         if (stub == null) {
           BlockingRpcChannel channel = this.rpcClient.createBlockingRpcChannel(sn,
-            User.getCurrent(), this.rpcTimeout);
+            user, this.rpcTimeout);
           stub = ClientService.newBlockingStub(channel);
           // In old days, after getting stub/proxy, we'd make a call.  We are not doing that here.
           // Just fail on first actual call rather than in here on setup.

@@ -17,7 +17,8 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.io.IOException;
 import java.net.SocketTimeoutException;
@@ -26,21 +27,22 @@ import java.util.concurrent.ExecutorService;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.SmallTests;
-import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.SmallTests;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ClientService;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ClientService.BlockingInterface;
 import org.apache.hadoop.hbase.regionserver.RegionServerStoppedException;
+import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Before;
-import org.junit.Test;
 import org.junit.Ignore;
+import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
 
@@ -249,7 +251,7 @@ public class TestClientNoCluster {
     final ClientService.BlockingInterface stub;
 
     RegionServerStoppedOnScannerOpenConnection(Configuration conf, boolean managed,
-        ExecutorService pool) throws IOException {
+        ExecutorService pool, User user) throws IOException {
       super(conf, managed);
       // Mock up my stub so open scanner returns a scanner id and then on next, we throw
       // exceptions for three times and then after that, we return no more to scan.
@@ -280,7 +282,7 @@ public class TestClientNoCluster {
   extends HConnectionManager.HConnectionImplementation {
     final ClientService.BlockingInterface stub;
 
-    RpcTimeoutConnection(Configuration conf, boolean managed, ExecutorService pool)
+    RpcTimeoutConnection(Configuration conf, boolean managed, ExecutorService pool, User user)
     throws IOException {
       super(conf, managed);
       // Mock up my stub so an exists call -- which turns into a get -- throws an exception

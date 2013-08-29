@@ -19,6 +19,9 @@
 
 package org.apache.hadoop.hbase.rest;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.StringWriter;
@@ -31,7 +34,13 @@ import javax.xml.bind.Unmarshaller;
 
 import org.apache.commons.httpclient.Header;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.*;
+import org.apache.hadoop.hbase.CompatibilityFactory;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.MediumTests;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.rest.client.Client;
 import org.apache.hadoop.hbase.rest.client.Cluster;
@@ -39,11 +48,10 @@ import org.apache.hadoop.hbase.rest.client.Response;
 import org.apache.hadoop.hbase.rest.model.CellModel;
 import org.apache.hadoop.hbase.rest.model.CellSetModel;
 import org.apache.hadoop.hbase.rest.model.RowModel;
+import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.test.MetricsAssertHelper;
 import org.apache.hadoop.hbase.util.Bytes;
-
-import static org.junit.Assert.*;
-
+import org.apache.hadoop.security.UserGroupInformation;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -546,21 +554,18 @@ public class TestRowResource {
     response = deleteRow(TABLE, ROW_4);
     assertEquals(response.getCode(), 200);
 
-    METRICS_ASSERT.assertCounterGt("requests",
-                                    2l,
-                                    RESTServlet.getInstance(conf).getMetrics().getSource());
+    UserGroupInformation ugi = User.getCurrent().getUGI();
+    METRICS_ASSERT.assertCounterGt("requests", 2l,
+      RESTServlet.getInstance(conf, ugi).getMetrics().getSource());
 
-    METRICS_ASSERT.assertCounterGt("successfulGet",
-                                   0l,
-                                   RESTServlet.getInstance(conf).getMetrics().getSource());
+    METRICS_ASSERT.assertCounterGt("successfulGet", 0l,
+      RESTServlet.getInstance(conf, ugi).getMetrics().getSource());
 
-    METRICS_ASSERT.assertCounterGt("successfulPut",
-                                    0l,
-                                    RESTServlet.getInstance(conf).getMetrics().getSource());
+    METRICS_ASSERT.assertCounterGt("successfulPut", 0l,
+      RESTServlet.getInstance(conf, ugi).getMetrics().getSource());
 
-    METRICS_ASSERT.assertCounterGt("successfulDelete",
-                                    0l,
-                                    RESTServlet.getInstance(conf).getMetrics().getSource());
+    METRICS_ASSERT.assertCounterGt("successfulDelete", 0l,
+      RESTServlet.getInstance(conf, ugi).getMetrics().getSource());
   }
 
   @Test

@@ -259,11 +259,10 @@ public class RpcServer implements RpcServerInterface {
     protected long size;                          // size of current call
     protected boolean isError;
     protected TraceInfo tinfo;
-    protected String effectiveUser;
 
     Call(int id, final BlockingService service, final MethodDescriptor md, RequestHeader header,
          Message param, CellScanner cellScanner, Connection connection, Responder responder,
-         long size, TraceInfo tinfo, String effectiveUser) {
+         long size, TraceInfo tinfo) {
       this.id = id;
       this.service = service;
       this.md = md;
@@ -278,7 +277,6 @@ public class RpcServer implements RpcServerInterface {
       this.isError = false;
       this.size = size;
       this.tinfo = tinfo;
-      this.effectiveUser = effectiveUser;
     }
 
     @Override
@@ -1127,13 +1125,13 @@ public class RpcServer implements RpcServerInterface {
     private static final int AUTHROIZATION_FAILED_CALLID = -1;
     private final Call authFailedCall =
       new Call(AUTHROIZATION_FAILED_CALLID, this.service, null,
-        null, null, null, this, null, 0, null, null);
+        null, null, null, this, null, 0, null);
     private ByteArrayOutputStream authFailedResponse =
         new ByteArrayOutputStream();
     // Fake 'call' for SASL context setup
     private static final int SASL_CALLID = -33;
     private final Call saslCall =
-      new Call(SASL_CALLID, this.service, null, null, null, null, this, null, 0, null, null);
+      new Call(SASL_CALLID, this.service, null, null, null, null, this, null, 0, null);
 
     public UserGroupInformation attemptingUser = null; // user name before auth
 
@@ -1488,7 +1486,7 @@ public class RpcServer implements RpcServerInterface {
 
     private int doBadPreambleHandling(final String msg, final Exception e) throws IOException {
       LOG.warn(msg);
-      Call fakeCall = new Call(-1, null, null, null, null, null, this, responder, -1, null, null);
+      Call fakeCall = new Call(-1, null, null, null, null, null, this, responder, -1, null);
       setupResponse(null, fakeCall, e, msg);
       responder.doRespond(fakeCall);
       // Returning -1 closes out the connection.
@@ -1640,7 +1638,7 @@ public class RpcServer implements RpcServerInterface {
       if ((totalRequestSize + callQueueSize.get()) > maxQueueSize) {
         final Call callTooBig =
           new Call(id, this.service, null, null, null, null, this,
-            responder, totalRequestSize, null, null);
+            responder, totalRequestSize, null);
         ByteArrayOutputStream responseBuffer = new ByteArrayOutputStream();
         setupResponse(responseBuffer, callTooBig, new CallQueueTooBigException(),
           "Call queue is full, is ipc.server.max.callqueue.size too small?");
@@ -1650,7 +1648,6 @@ public class RpcServer implements RpcServerInterface {
       MethodDescriptor md = null;
       Message param = null;
       CellScanner cellScanner = null;
-      String effectiveUser = null;
       try {
         if (header.hasRequestParam() && header.getRequestParam()) {
           md = this.service.getDescriptorForType().findMethodByName(header.getMethodName());
@@ -1669,15 +1666,12 @@ public class RpcServer implements RpcServerInterface {
           cellScanner = ipcUtil.createCellScanner(this.codec, this.compressionCodec,
             buf, offset, buf.length);
         }
-        if (header.hasEffectiveUser()) {
-          effectiveUser = header.getEffectiveUser();
-        }
       } catch (Throwable t) {
         String msg = "Unable to read call parameter from client " + getHostAddress();
         LOG.warn(msg, t);
         final Call readParamsFailedCall =
           new Call(id, this.service, null, null, null, null, this,
-            responder, totalRequestSize, null, null);
+            responder, totalRequestSize, null);
         ByteArrayOutputStream responseBuffer = new ByteArrayOutputStream();
         setupResponse(responseBuffer, readParamsFailedCall, t,
           msg + "; " + t.getMessage());
@@ -1690,8 +1684,7 @@ public class RpcServer implements RpcServerInterface {
           : null;
       Call call = new Call(id, this.service, md, header, param, cellScanner, this, responder,
               totalRequestSize,
-              traceInfo,
-              effectiveUser);
+              traceInfo);
       callQueueSize.add(totalRequestSize);
       scheduler.dispatch(new CallRunner(call));
     }
@@ -1801,21 +1794,8 @@ public class RpcServer implements RpcServerInterface {
           if (call.tinfo != null) {
             traceScope = Trace.startSpan(call.toTraceString(), call.tinfo);
           }
-          User user;
-          if (call.effectiveUser == null) {
-            user = User.create(call.connection.user);
-          } else {
-            UserGroupInformation ugi = UserGroupInformation.createProxyUser(
-              call.effectiveUser, call.connection.user);
-            ProxyUsers.authorize(ugi, call.connection.getHostAddress(), conf);
-            if (LOG.isDebugEnabled()) {
-              LOG.debug("Authorized " + call.connection.user
-                + " to impersonate " + call.effectiveUser);
-            }
-            user = User.create(ugi);
-          }
-          RequestContext.set(user, getRemoteIp(), call.connection.service);
-
+          RequestContext.set(User.create(call.connection.user), getRemoteIp(),
+            call.connection.service);
           // make the call
           resultPair = call(call.service, call.md, call.param, call.cellScanner, call.timestamp,
               status);
