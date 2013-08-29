@@ -111,8 +111,7 @@ public class MetaEditor {
    */
   static void putToCatalogTable(final CatalogTracker ct, final Put p)
   throws IOException {
-    HTable t = MetaReader.getCatalogHTable(ct);
-    put(t, p);
+    put(MetaReader.getCatalogHTable(ct), p);
   }
 
   /**
@@ -252,7 +251,12 @@ public class MetaEditor {
    */
   public static void addRegionToMeta(CatalogTracker catalogTracker, HRegionInfo regionInfo,
       HRegionInfo splitA, HRegionInfo splitB) throws IOException {
-    addRegionToMeta(MetaReader.getMetaHTable(catalogTracker), regionInfo, splitA, splitB);
+    HTable meta = MetaReader.getMetaHTable(catalogTracker);
+    try {
+      addRegionToMeta(meta, regionInfo, splitA, splitB);
+    } finally {
+      meta.close();
+    }
   }
 
   /**
@@ -306,25 +310,29 @@ public class MetaEditor {
       HRegionInfo mergedRegion, HRegionInfo regionA, HRegionInfo regionB,
       ServerName sn) throws IOException {
     HTable meta = MetaReader.getMetaHTable(catalogTracker);
-    HRegionInfo copyOfMerged = new HRegionInfo(mergedRegion);
+    try {
+      HRegionInfo copyOfMerged = new HRegionInfo(mergedRegion);
 
-    // Put for parent
-    Put putOfMerged = makePutFromRegionInfo(copyOfMerged);
-    putOfMerged.add(HConstants.CATALOG_FAMILY, HConstants.MERGEA_QUALIFIER,
-        regionA.toByteArray());
-    putOfMerged.add(HConstants.CATALOG_FAMILY, HConstants.MERGEB_QUALIFIER,
-        regionB.toByteArray());
+      // Put for parent
+      Put putOfMerged = makePutFromRegionInfo(copyOfMerged);
+      putOfMerged.add(HConstants.CATALOG_FAMILY, HConstants.MERGEA_QUALIFIER,
+          regionA.toByteArray());
+      putOfMerged.add(HConstants.CATALOG_FAMILY, HConstants.MERGEB_QUALIFIER,
+          regionB.toByteArray());
 
-    // Deletes for merging regions
-    Delete deleteA = makeDeleteFromRegionInfo(regionA);
-    Delete deleteB = makeDeleteFromRegionInfo(regionB);
+      // Deletes for merging regions
+      Delete deleteA = makeDeleteFromRegionInfo(regionA);
+      Delete deleteB = makeDeleteFromRegionInfo(regionB);
 
-    // The merged is a new region, openSeqNum = 1 is fine.
-    addLocation(putOfMerged, sn, 1);
+      // The merged is a new region, openSeqNum = 1 is fine.
+      addLocation(putOfMerged, sn, 1);
 
-    byte[] tableRow = Bytes.toBytes(mergedRegion.getRegionNameAsString()
-        + HConstants.DELIMITER);
-    multiMutate(meta, tableRow, putOfMerged, deleteA, deleteB);
+      byte[] tableRow = Bytes.toBytes(mergedRegion.getRegionNameAsString()
+          + HConstants.DELIMITER);
+      multiMutate(meta, tableRow, putOfMerged, deleteA, deleteB);
+    } finally {
+      meta.close();
+    }
   }
 
   /**
@@ -342,23 +350,27 @@ public class MetaEditor {
       HRegionInfo parent, HRegionInfo splitA, HRegionInfo splitB,
       ServerName sn) throws IOException {
     HTable meta = MetaReader.getMetaHTable(catalogTracker);
-    HRegionInfo copyOfParent = new HRegionInfo(parent);
-    copyOfParent.setOffline(true);
-    copyOfParent.setSplit(true);
+    try {
+      HRegionInfo copyOfParent = new HRegionInfo(parent);
+      copyOfParent.setOffline(true);
+      copyOfParent.setSplit(true);
 
-    //Put for parent
-    Put putParent = makePutFromRegionInfo(copyOfParent);
-    addDaughtersToPut(putParent, splitA, splitB);
+      //Put for parent
+      Put putParent = makePutFromRegionInfo(copyOfParent);
+      addDaughtersToPut(putParent, splitA, splitB);
 
-    //Puts for daughters
-    Put putA = makePutFromRegionInfo(splitA);
-    Put putB = makePutFromRegionInfo(splitB);
+      //Puts for daughters
+      Put putA = makePutFromRegionInfo(splitA);
+      Put putB = makePutFromRegionInfo(splitB);
 
-    addLocation(putA, sn, 1); //these are new regions, openSeqNum = 1 is fine.
-    addLocation(putB, sn, 1);
+      addLocation(putA, sn, 1); //these are new regions, openSeqNum = 1 is fine.
+      addLocation(putB, sn, 1);
 
-    byte[] tableRow = Bytes.toBytes(parent.getRegionNameAsString() + HConstants.DELIMITER);
-    multiMutate(meta, tableRow, putParent, putA, putB);
+      byte[] tableRow = Bytes.toBytes(parent.getRegionNameAsString() + HConstants.DELIMITER);
+      multiMutate(meta, tableRow, putParent, putA, putB);
+    } finally {
+      meta.close();
+    }
   }
 
   /**
