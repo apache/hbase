@@ -329,19 +329,20 @@ public class TestZooKeeperTableArchiveClient {
     BaseHFileCleanerDelegate delegateSpy = Mockito.spy(cleaner);
     final int[] counter = new int[] { 0 };
     final CountDownLatch finished = new CountDownLatch(1);
-    Mockito.doAnswer(new Answer<Boolean>() {
+    Mockito.doAnswer(new Answer<Iterable<FileStatus>>() {
 
       @Override
-      public Boolean answer(InvocationOnMock invocation) throws Throwable {
+      public Iterable<FileStatus> answer(InvocationOnMock invocation) throws Throwable {
         counter[0]++;
-        LOG.debug(counter[0] + "/ " + expected + ") Wrapping call to isFileDeletable for file: "
+        LOG.debug(counter[0] + "/ " + expected + ") Wrapping call to getDeletableFiles for files: "
             + invocation.getArguments()[0]);
 
-        Boolean ret = (Boolean) invocation.callRealMethod();
+        @SuppressWarnings("unchecked")
+        Iterable<FileStatus> ret = (Iterable<FileStatus>) invocation.callRealMethod();
         if (counter[0] >= expected) finished.countDown();
         return ret;
       }
-    }).when(delegateSpy).isFileDeletable(Mockito.any(FileStatus.class));
+    }).when(delegateSpy).getDeletableFiles(Mockito.anyListOf(FileStatus.class));
     cleaners.set(0, delegateSpy);
 
     return finished;

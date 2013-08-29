@@ -1575,7 +1575,7 @@ public abstract class FSUtils {
    * @param fs file system
    * @param dir directory
    * @param filter path filter
-   * @return null if tabledir doesn't exist, otherwise FileStatus array
+   * @return null if dir is empty or doesn't exist, otherwise FileStatus array
    */
   public static FileStatus [] listStatus(final FileSystem fs,
       final Path dir, final PathFilter filter) throws IOException {
@@ -1598,7 +1598,7 @@ public abstract class FSUtils {
    *
    * @param fs file system
    * @param dir directory
-   * @return null if tabledir doesn't exist, otherwise FileStatus array
+   * @return null if dir is empty or doesn't exist, otherwise FileStatus array
    */
   public static FileStatus[] listStatus(final FileSystem fs, final Path dir) throws IOException {
     return listStatus(fs, dir, null);

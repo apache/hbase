@@ -32,6 +32,11 @@ import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.util.FSUtils;
 
+import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
+
 /**
  * Abstract Cleaner that uses a chain of delegates to clean a directory of files
  * @param <T> Cleaner delegate class that is dynamically loaded from configuration
@@ -97,7 +102,7 @@ public abstract class CleanerChore<T extends FileCleanerDelegate> extends Chore 
    * @param conf
    * @return the new instance
    */
-  public T newFileCleaner(String className, Configuration conf) {
+  private T newFileCleaner(String className, Configuration conf) {
     try {
       Class<? extends FileCleanerDelegate> c = Class.forName(className).asSubclass(
         FileCleanerDelegate.class);
@@ -115,25 +120,46 @@ public abstract class CleanerChore<T extends FileCleanerDelegate> extends Chore 
   @Override
   protected void chore() {
     try {
-      FileStatus[] files = FSUtils.listStatus(this.fs, this.oldFileDir, null);
-      // if the path (file or directory) doesn't exist, then we can just return
-      if (files == null) return;
-      // loop over the found files and see if they should be deleted
-      for (FileStatus file : files) {
-        try {
-          if (file.isDir()) checkAndDeleteDirectory(file.getPath());
-          else checkAndDelete(file);
-        } catch (IOException e) {
-          e = RemoteExceptionHandler.checkIOException(e);
-          LOG.warn("Error while cleaning the logs", e);
-        }
-      }
+      FileStatus[] files = FSUtils.listStatus(this.fs, this.oldFileDir);
+      checkAndDeleteEntries(files);
     } catch (IOException e) {
-      LOG.warn("Failed to get status of: " + oldFileDir);
+      e = RemoteExceptionHandler.checkIOException(e);
+      LOG.warn("Error while cleaning the logs", e);
     }
-
   }
 
+  /**
+   * Loop over the given directory entries, and check whether they can be deleted.
+   * If an entry is itself a directory it will be recursively checked and deleted itself iff
+   * all subentries are deleted (and no new subentries are added in the mean time)
+   *
+   * @param entries directory entries to check
+   * @return true if all entries were successfully deleted
+   */
+  private boolean checkAndDeleteEntries(FileStatus[] entries) {
+    if (entries == null) {
+      return true;
+    }
+    boolean allEntriesDeleted = true;
+    List<FileStatus> files = Lists.newArrayListWithCapacity(entries.length);
+    for (FileStatus child : entries) {
+      Path path = child.getPath();
+      if (child.isDir()) {
+        // for each subdirectory delete it and all entries if possible
+        if (!checkAndDeleteDirectory(path)) {
+          allEntriesDeleted = false;
+        }
+      } else {
+        // collect all files to attempt to delete in one batch
+        files.add(child);
+      }
+    }
+    if (!checkAndDeleteFiles(files)) {
+      allEntriesDeleted = false;
+    }
+    return allEntriesDeleted;
+  }
+  
   /**
    * Attempt to delete a directory and all files under that directory. Each child file is passed
    * through the delegates to see if it can be deleted. If the directory has no children when the
@@ -141,109 +167,107 @@ public abstract class CleanerChore<T extends FileCleanerDelegate> extends Chore 
    * <p>
    * If new children files are added between checks of the directory, the directory will <b>not</b>
    * be deleted.
-   * @param toCheck directory to check
+   * @param dir directory to check
    * @return <tt>true</tt> if the directory was deleted, <tt>false</tt> otherwise.
-   * @throws IOException if there is an unexpected filesystem error
    */
-  public boolean checkAndDeleteDirectory(Path toCheck) throws IOException {
+  @VisibleForTesting boolean checkAndDeleteDirectory(Path dir) {
     if (LOG.isTraceEnabled()) {
-      LOG.trace("Checking directory: " + toCheck);
+      LOG.trace("Checking directory: " + dir);
     }
-    FileStatus[] children = FSUtils.listStatus(fs, toCheck);
-    // if the directory doesn't exist, then we are done
-    if (children == null) {
-      try {
-        return fs.delete(toCheck, false);
-      } catch (IOException e) {
-        if (LOG.isTraceEnabled()) {
-          LOG.trace("Couldn't delete directory: " + toCheck, e);
-        }
-      }
-      // couldn't delete w/o exception, so we can't return success.
+
+    try {
+      FileStatus[] children = FSUtils.listStatus(fs, dir);
+      boolean allChildrenDeleted = checkAndDeleteEntries(children);
+  
+      // if the directory still has children, we can't delete it, so we are done
+      if (!allChildrenDeleted) return false;
+    } catch (IOException e) {
+      e = RemoteExceptionHandler.checkIOException(e);
+      LOG.warn("Error while listing directory: " + dir, e);
+      // couldn't list directory, so don't try to delete, and don't return success
       return false;
     }
-
-    boolean canDeleteThis = true;
-    for (FileStatus child : children) {
-      Path path = child.getPath();
-      // attempt to delete all the files under the directory
-      if (child.isDir()) {
-        if (!checkAndDeleteDirectory(path)) {
-          canDeleteThis = false;
-        }
-      }
-      // otherwise we can just check the file
-      else if (!checkAndDelete(child)) {
-        canDeleteThis = false;
-      }
-    }
-
-    // if the directory has children, we can't delete it, so we are done
-    if (!canDeleteThis) return false;
 
     // otherwise, all the children (that we know about) have been deleted, so we should try to
     // delete this directory. However, don't do so recursively so we don't delete files that have
     // been added since we last checked.
     try {
-      return fs.delete(toCheck, false);
+      return fs.delete(dir, false);
     } catch (IOException e) {
       if (LOG.isTraceEnabled()) {
-        LOG.trace("Couldn't delete directory: " + toCheck, e);
+        LOG.trace("Couldn't delete directory: " + dir, e);
       }
+      // couldn't delete w/o exception, so we can't return success.
+      return false;
     }
-
-    // couldn't delete w/o exception, so we can't return success.
-    return false;
   }
 
   /**
-   * Run the given file through each of the cleaners to see if it should be deleted, deleting it if
+   * Run the given files through each of the cleaners to see if it should be deleted, deleting it if
    * necessary.
-   * @param fStat path of the file to check (and possibly delete)
-   * @throws IOException if cann't delete a file because of a filesystem issue
-   * @throws IllegalArgumentException if the file is a directory and has children
+   * @param files List of FileStatus for the files to check (and possibly delete)
+   * @return true iff successfully deleted all files
    */
-  private boolean checkAndDelete(FileStatus fStat) throws IOException, IllegalArgumentException {
-    Path filePath = fStat.getPath();
+  private boolean checkAndDeleteFiles(List<FileStatus> files) {
     // first check to see if the path is valid
-    if (!validate(filePath)) {
-      LOG.warn("Found a wrongly formatted file: " + filePath.getName() + " deleting it.");
-      boolean success = this.fs.delete(filePath, true);
-      if(!success)
-        LOG.warn("Attempted to delete: " + filePath
-            + ", but couldn't. Run cleaner chain and attempt to delete on next pass.");
-
-      return success;
+    List<FileStatus> validFiles = Lists.newArrayListWithCapacity(files.size());
+    List<FileStatus> invalidFiles = Lists.newArrayList();
+    for (FileStatus file : files) {
+      if (validate(file.getPath())) {
+        validFiles.add(file);
+      } else {
+        LOG.warn("Found a wrongly formatted file: " + file.getPath() + " - will delete it.");
+        invalidFiles.add(file);
+      }
     }
 
-    // check each of the cleaners for the file
+    Iterable<FileStatus> deletableValidFiles = validFiles;
+    // check each of the cleaners for the valid files
     for (T cleaner : cleanersChain) {
       if (cleaner.isStopped() || this.stopper.isStopped()) {
-        LOG.warn("A file cleaner" + this.getName() + " is stopped, won't delete any file in:"
+        LOG.warn("A file cleaner" + this.getName() + " is stopped, won't delete any more files in:"
             + this.oldFileDir);
         return false;
       }
 
-      if (!cleaner.isFileDeletable(fStat)) {
-        // this file is not deletable, then we are done
-        if (LOG.isTraceEnabled()) {
-          LOG.trace(filePath + " is not deletable according to:" + cleaner);
+      Iterable<FileStatus> filteredFiles = cleaner.getDeletableFiles(deletableValidFiles);
+      
+      // trace which cleaner is holding on to each file
+      if (LOG.isTraceEnabled()) {
+        ImmutableSet<FileStatus> filteredFileSet = ImmutableSet.copyOf(filteredFiles);
+        for (FileStatus file : deletableValidFiles) {
+          if (!filteredFileSet.contains(file)) {
+            LOG.trace(file.getPath() + " is not deletable according to:" + cleaner);
+          }
         }
-        return false;
+      }
+      
+      deletableValidFiles = filteredFiles;
+    }
+    
+    Iterable<FileStatus> filesToDelete = Iterables.concat(invalidFiles, deletableValidFiles);
+    int deletedFileCount = 0;
+    for (FileStatus file : filesToDelete) {
+      Path filePath = file.getPath();
+      if (LOG.isTraceEnabled()) {
+        LOG.trace("Removing: " + filePath + " from archive");
+      }
+      try {
+        boolean success = this.fs.delete(filePath, false);
+        if (success) {
+          deletedFileCount++;
+        } else {
+          LOG.warn("Attempted to delete:" + filePath
+              + ", but couldn't. Run cleaner chain and attempt to delete on next pass.");
+        }
+      } catch (IOException e) {
+        e = RemoteExceptionHandler.checkIOException(e);
+        LOG.warn("Error while deleting: " + filePath, e);
       }
     }
-    // delete this file if it passes all the cleaners
-    if (LOG.isTraceEnabled()) {
-      LOG.trace("Removing: " + filePath + " from archive");
-    }
-    boolean success = this.fs.delete(filePath, false);
-    if (!success) {
-      LOG.warn("Attempted to delete:" + filePath
-          + ", but couldn't. Run cleaner chain and attempt to delete on next pass.");
-    }
-    return success;
-  }
 
+    return deletedFileCount == files.size();
+  }
 
   @Override
   public void cleanup() {
