@@ -1,5 +1,4 @@
-/*
- *
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -41,7 +40,6 @@ import org.apache.hadoop.hbase.util.InfoServer;
 import org.apache.hadoop.hbase.util.Strings;
 import org.apache.hadoop.hbase.util.VersionInfo;
 import org.apache.hadoop.net.DNS;
-import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.mortbay.jetty.Connector;
 import org.mortbay.jetty.Server;
@@ -86,7 +84,6 @@ public class RESTServer implements Constants {
 
     VersionInfo.logVersion();
     FilterHolder authFilter = null;
-    UserGroupInformation realUser = null;
     Configuration conf = HBaseConfiguration.create();
     Class<? extends ServletContainer> containerClass = ServletContainer.class;
 
@@ -102,7 +99,6 @@ public class RESTServer implements Constants {
       Preconditions.checkArgument(principalConfig != null && !principalConfig.isEmpty(),
         REST_KERBEROS_PRINCIPAL + " should be set if security is enabled");
       User.login(conf, REST_KEYTAB_FILE, REST_KERBEROS_PRINCIPAL, machineName);
-      realUser = User.getCurrent().getUGI();
       if (conf.get(REST_AUTHENTICATION_TYPE) != null) {
         containerClass = RESTServletContainer.class;
         authFilter = new FilterHolder();
@@ -111,6 +107,7 @@ public class RESTServer implements Constants {
       }
     }
 
+    UserGroupInformation realUser = User.getCurrent().getUGI();
     RESTServlet servlet = RESTServlet.getInstance(conf, realUser);
 
     Options options = new Options();

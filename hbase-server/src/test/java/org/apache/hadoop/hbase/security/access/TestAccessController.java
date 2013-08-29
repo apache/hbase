@@ -1933,7 +1933,7 @@ public class TestAccessController extends SecureTestUtil {
     } finally {
       acl.close();
     }
-    HBaseAdmin admin = TEST_UTIL.getHBaseAdmin();
+    final HBaseAdmin admin = TEST_UTIL.getHBaseAdmin();
     HTableDescriptor htd = new HTableDescriptor(TEST_TABLE2);
     htd.addFamily(new HColumnDescriptor(TEST_FAMILY));
     admin.createTable(htd);
@@ -1944,7 +1944,7 @@ public class TestAccessController extends SecureTestUtil {
     final HRegionServer newRs = newRsThread.getRegionServer();
 
     // Move region to the new RegionServer.
-    HTable table = new HTable(TEST_UTIL.getConfiguration(), TEST_TABLE2);
+    final HTable table = new HTable(TEST_UTIL.getConfiguration(), TEST_TABLE2);
     try {
       NavigableMap<HRegionInfo, ServerName> regions = table
           .getRegionLocations();
@@ -1953,7 +1953,6 @@ public class TestAccessController extends SecureTestUtil {
 
       PrivilegedExceptionAction moveAction = new PrivilegedExceptionAction() {
         public Object run() throws Exception {
-          HBaseAdmin admin = new HBaseAdmin(TEST_UTIL.getConfiguration());
           admin.move(firstRegion.getKey().getEncodedNameAsBytes(),
               Bytes.toBytes(newRs.getServerName().getServerName()));
           return null;
@@ -1979,7 +1978,6 @@ public class TestAccessController extends SecureTestUtil {
       // permissions.
       PrivilegedExceptionAction putAction = new PrivilegedExceptionAction() {
         public Object run() throws Exception {
-          HTable table = new HTable(TEST_UTIL.getConfiguration(), TEST_TABLE2);
           Put put = new Put(Bytes.toBytes("test"));
           put.add(TEST_FAMILY, Bytes.toBytes("qual"), Bytes.toBytes("value"));
           table.put(put);

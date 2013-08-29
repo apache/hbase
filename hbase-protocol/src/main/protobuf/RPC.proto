@@ -119,8 +119,6 @@ message RequestHeader {
   optional bool request_param = 4;
   // If present, then an encoded data block follows.
   optional CellBlockMeta cell_block_meta = 5;
-  // If present, the request is made on behalf of this user
-  optional string effective_user = 6;
   // TODO: Have client specify priority
 }
 

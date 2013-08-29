@@ -22,6 +22,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.rest.filter.GzipFilter;
+import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.util.StringUtils;
 import org.mortbay.jetty.Server;
 import org.mortbay.jetty.servlet.Context;
@@ -47,7 +48,7 @@ public class HBaseRESTTestingUtility {
     }
 
     // Inject the conf for the test by being first to make singleton
-    RESTServlet.getInstance(conf);
+    RESTServlet.getInstance(conf, User.getCurrent().getUGI());
 
     // set up the Jersey servlet container for Jetty
     ServletHolder sh = new ServletHolder(ServletContainer.class);

@@ -1011,24 +1011,6 @@ public class RpcClient {
           builder.setTraceInfo(RPCTInfo.newBuilder().
             setParentId(s.getSpanId()).setTraceId(s.getTraceId()));
         }
-        UserGroupInformation ticket = remoteId.getTicket().getUGI();
-        if (ticket != null) {
-          UserGroupInformation currentUser = UserGroupInformation.getCurrentUser();
-          String effectiveUser = currentUser == null ? null : currentUser.getShortUserName();
-          if (effectiveUser != null && !effectiveUser.equals(ticket.getShortUserName())) {
-            if (ticket.getRealUser() != null) {
-              LOG.warn("Current user " + effectiveUser
-                + " is different from the ticket user " + ticket.getShortUserName()
-                + ". But the ticket is already a proxy user with real user "
-                + ticket.getRealUser().getShortUserName());
-            } else {
-              // If the ticket is not a proxy user, and the current user
-              // is not the same as the ticket user, pass the current user
-              // over to the server as the actual effective user.
-              builder.setEffectiveUser(effectiveUser);
-            }
-          }
-        }
         builder.setMethodName(call.md.getName());
         builder.setRequestParam(call.param != null);
         ByteBuffer cellBlock = ipcUtil.buildCellBlock(this.codec, this.compressor, call.cells);

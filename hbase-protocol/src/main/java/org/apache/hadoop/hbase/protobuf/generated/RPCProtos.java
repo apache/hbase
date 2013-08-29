@@ -3662,33 +3662,6 @@ public final class RPCProtos {
      * </pre>
      */
     org.apache.hadoop.hbase.protobuf.generated.RPCProtos.CellBlockMetaOrBuilder getCellBlockMetaOrBuilder();
-
-    // optional string effective_user = 6;
-    /**
-     * <code>optional string effective_user = 6;</code>
-     *
-     * <pre>
-     * If present, the request is made on behalf of this user
-     * </pre>
-     */
-    boolean hasEffectiveUser();
-    /**
-     * <code>optional string effective_user = 6;</code>
-     *
-     * <pre>
-     * If present, the request is made on behalf of this user
-     * </pre>
-     */
-    java.lang.String getEffectiveUser();
-    /**
-     * <code>optional string effective_user = 6;</code>
-     *
-     * <pre>
-     * If present, the request is made on behalf of this user
-     * </pre>
-     */
-    com.google.protobuf.ByteString
-        getEffectiveUserBytes();
   }
   /**
    * Protobuf type {@code RequestHeader}
@@ -3784,11 +3757,6 @@ public final class RPCProtos {
                 cellBlockMeta_ = subBuilder.buildPartial();
               }
               bitField0_ |= 0x00000010;
-              break;
-            }
-            case 50: {
-              bitField0_ |= 0x00000020;
-              effectiveUser_ = input.readBytes();
               break;
             }
           }
@@ -3978,68 +3946,12 @@ public final class RPCProtos {
       return cellBlockMeta_;
     }
 
-    // optional string effective_user = 6;
-    public static final int EFFECTIVE_USER_FIELD_NUMBER = 6;
-    private java.lang.Object effectiveUser_;
-    /**
-     * <code>optional string effective_user = 6;</code>
-     *
-     * <pre>
-     * If present, the request is made on behalf of this user
-     * </pre>
-     */
-    public boolean hasEffectiveUser() {
-      return ((bitField0_ & 0x00000020) == 0x00000020);
-    }
-    /**
-     * <code>optional string effective_user = 6;</code>
-     *
-     * <pre>
-     * If present, the request is made on behalf of this user
-     * </pre>
-     */
-    public java.lang.String getEffectiveUser() {
-      java.lang.Object ref = effectiveUser_;
-      if (ref instanceof java.lang.String) {
-        return (java.lang.String) ref;
-      } else {
-        com.google.protobuf.ByteString bs = 
-            (com.google.protobuf.ByteString) ref;
-        java.lang.String s = bs.toStringUtf8();
-        if (bs.isValidUtf8()) {
-          effectiveUser_ = s;
-        }
-        return s;
-      }
-    }
-    /**
-     * <code>optional string effective_user = 6;</code>
-     *
-     * <pre>
-     * If present, the request is made on behalf of this user
-     * </pre>
-     */
-    public com.google.protobuf.ByteString
-        getEffectiveUserBytes() {
-      java.lang.Object ref = effectiveUser_;
-      if (ref instanceof java.lang.String) {
-        com.google.protobuf.ByteString b = 
-            com.google.protobuf.ByteString.copyFromUtf8(
-                (java.lang.String) ref);
-        effectiveUser_ = b;
-        return b;
-      } else {
-        return (com.google.protobuf.ByteString) ref;
-      }
-    }
-
     private void initFields() {
       callId_ = 0;
       traceInfo_ = org.apache.hadoop.hbase.protobuf.generated.Tracing.RPCTInfo.getDefaultInstance();
       methodName_ = "";
       requestParam_ = false;
       cellBlockMeta_ = org.apache.hadoop.hbase.protobuf.generated.RPCProtos.CellBlockMeta.getDefaultInstance();
-      effectiveUser_ = "";
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
@@ -4067,9 +3979,6 @@ public final class RPCProtos {
       }
       if (((bitField0_ & 0x00000010) == 0x00000010)) {
         output.writeMessage(5, cellBlockMeta_);
-      }
-      if (((bitField0_ & 0x00000020) == 0x00000020)) {
-        output.writeBytes(6, getEffectiveUserBytes());
       }
       getUnknownFields().writeTo(output);
     }
@@ -4099,10 +4008,6 @@ public final class RPCProtos {
       if (((bitField0_ & 0x00000010) == 0x00000010)) {
         size += com.google.protobuf.CodedOutputStream
           .computeMessageSize(5, cellBlockMeta_);
-      }
-      if (((bitField0_ & 0x00000020) == 0x00000020)) {
-        size += com.google.protobuf.CodedOutputStream
-          .computeBytesSize(6, getEffectiveUserBytes());
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
@@ -4152,11 +4057,6 @@ public final class RPCProtos {
         result = result && getCellBlockMeta()
             .equals(other.getCellBlockMeta());
       }
-      result = result && (hasEffectiveUser() == other.hasEffectiveUser());
-      if (hasEffectiveUser()) {
-        result = result && getEffectiveUser()
-            .equals(other.getEffectiveUser());
-      }
       result = result &&
           getUnknownFields().equals(other.getUnknownFields());
       return result;
@@ -4189,10 +4089,6 @@ public final class RPCProtos {
       if (hasCellBlockMeta()) {
         hash = (37 * hash) + CELL_BLOCK_META_FIELD_NUMBER;
         hash = (53 * hash) + getCellBlockMeta().hashCode();
-      }
-      if (hasEffectiveUser()) {
-        hash = (37 * hash) + EFFECTIVE_USER_FIELD_NUMBER;
-        hash = (53 * hash) + getEffectiveUser().hashCode();
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
       memoizedHashCode = hash;
@@ -4327,8 +4223,6 @@ public final class RPCProtos {
           cellBlockMetaBuilder_.clear();
         }
         bitField0_ = (bitField0_ & ~0x00000010);
-        effectiveUser_ = "";
-        bitField0_ = (bitField0_ & ~0x00000020);
         return this;
       }
 
@@ -4385,10 +4279,6 @@ public final class RPCProtos {
         } else {
           result.cellBlockMeta_ = cellBlockMetaBuilder_.build();
         }
-        if (((from_bitField0_ & 0x00000020) == 0x00000020)) {
-          to_bitField0_ |= 0x00000020;
-        }
-        result.effectiveUser_ = effectiveUser_;
         result.bitField0_ = to_bitField0_;
         onBuilt();
         return result;
@@ -4421,11 +4311,6 @@ public final class RPCProtos {
         }
         if (other.hasCellBlockMeta()) {
           mergeCellBlockMeta(other.getCellBlockMeta());
-        }
-        if (other.hasEffectiveUser()) {
-          bitField0_ |= 0x00000020;
-          effectiveUser_ = other.effectiveUser_;
-          onChanged();
         }
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
@@ -4894,104 +4779,6 @@ public final class RPCProtos {
           cellBlockMeta_ = null;
         }
         return cellBlockMetaBuilder_;
-      }
-
-      // optional string effective_user = 6;
-      private java.lang.Object effectiveUser_ = "";
-      /**
-       * <code>optional string effective_user = 6;</code>
-       *
-       * <pre>
-       * If present, the request is made on behalf of this user
-       * </pre>
-       */
-      public boolean hasEffectiveUser() {
-        return ((bitField0_ & 0x00000020) == 0x00000020);
-      }
-      /**
-       * <code>optional string effective_user = 6;</code>
-       *
-       * <pre>
-       * If present, the request is made on behalf of this user
-       * </pre>
-       */
-      public java.lang.String getEffectiveUser() {
-        java.lang.Object ref = effectiveUser_;
-        if (!(ref instanceof java.lang.String)) {
-          java.lang.String s = ((com.google.protobuf.ByteString) ref)
-              .toStringUtf8();
-          effectiveUser_ = s;
-          return s;
-        } else {
-          return (java.lang.String) ref;
-        }
-      }
-      /**
-       * <code>optional string effective_user = 6;</code>
-       *
-       * <pre>
-       * If present, the request is made on behalf of this user
-       * </pre>
-       */
-      public com.google.protobuf.ByteString
-          getEffectiveUserBytes() {
-        java.lang.Object ref = effectiveUser_;
-        if (ref instanceof String) {
-          com.google.protobuf.ByteString b = 
-              com.google.protobuf.ByteString.copyFromUtf8(
-                  (java.lang.String) ref);
-          effectiveUser_ = b;
-          return b;
-        } else {
-          return (com.google.protobuf.ByteString) ref;
-        }
-      }
-      /**
-       * <code>optional string effective_user = 6;</code>
-       *
-       * <pre>
-       * If present, the request is made on behalf of this user
-       * </pre>
-       */
-      public Builder setEffectiveUser(
-          java.lang.String value) {
-        if (value == null) {
-    throw new NullPointerException();
-  }
-  bitField0_ |= 0x00000020;
-        effectiveUser_ = value;
-        onChanged();
-        return this;
-      }
-      /**
-       * <code>optional string effective_user = 6;</code>
-       *
-       * <pre>
-       * If present, the request is made on behalf of this user
-       * </pre>
-       */
-      public Builder clearEffectiveUser() {
-        bitField0_ = (bitField0_ & ~0x00000020);
-        effectiveUser_ = getDefaultInstance().getEffectiveUser();
-        onChanged();
-        return this;
-      }
-      /**
-       * <code>optional string effective_user = 6;</code>
-       *
-       * <pre>
-       * If present, the request is made on behalf of this user
-       * </pre>
-       */
-      public Builder setEffectiveUserBytes(
-          com.google.protobuf.ByteString value) {
-        if (value == null) {
-    throw new NullPointerException();
-  }
-  bitField0_ |= 0x00000020;
-        effectiveUser_ = value;
-        onChanged();
-        return this;
       }
 
       // @@protoc_insertion_point(builder_scope:RequestHeader)
@@ -6010,16 +5797,15 @@ public final class RPCProtos {
       "\001(\r\"|\n\021ExceptionResponse\022\034\n\024exception_cl" +
       "ass_name\030\001 \001(\t\022\023\n\013stack_trace\030\002 \001(\t\022\020\n\010h" +
       "ostname\030\003 \001(\t\022\014\n\004port\030\004 \001(\005\022\024\n\014do_not_re",
-      "try\030\005 \001(\010\"\254\001\n\rRequestHeader\022\017\n\007call_id\030\001" +
+      "try\030\005 \001(\010\"\224\001\n\rRequestHeader\022\017\n\007call_id\030\001" +
       " \001(\r\022\035\n\ntrace_info\030\002 \001(\0132\t.RPCTInfo\022\023\n\013m" +
       "ethod_name\030\003 \001(\t\022\025\n\rrequest_param\030\004 \001(\010\022" +
       "\'\n\017cell_block_meta\030\005 \001(\0132\016.CellBlockMeta" +
-      "\022\026\n\016effective_user\030\006 \001(\t\"q\n\016ResponseHead" +
-      "er\022\017\n\007call_id\030\001 \001(\r\022%\n\texception\030\002 \001(\0132\022" +
-      ".ExceptionResponse\022\'\n\017cell_block_meta\030\003 " +
-      "\001(\0132\016.CellBlockMetaB<\n*org.apache.hadoop" +
-      ".hbase.protobuf.generatedB\tRPCProtosH\001\240\001" +
-      "\001"
+      "\"q\n\016ResponseHeader\022\017\n\007call_id\030\001 \001(\r\022%\n\te" +
+      "xception\030\002 \001(\0132\022.ExceptionResponse\022\'\n\017ce" +
+      "ll_block_meta\030\003 \001(\0132\016.CellBlockMetaB<\n*o" +
+      "rg.apache.hadoop.hbase.protobuf.generate" +
+      "dB\tRPCProtosH\001\240\001\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -6055,7 +5841,7 @@ public final class RPCProtos {
           internal_static_RequestHeader_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_RequestHeader_descriptor,
-              new java.lang.String[] { "CallId", "TraceInfo", "MethodName", "RequestParam", "CellBlockMeta", "EffectiveUser", });
+              new java.lang.String[] { "CallId", "TraceInfo", "MethodName", "RequestParam", "CellBlockMeta", });
           internal_static_ResponseHeader_descriptor =
             getDescriptor().getMessageTypes().get(5);
           internal_static_ResponseHeader_fieldAccessorTable = new
