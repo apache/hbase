@@ -19,8 +19,6 @@ package org.apache.hadoop.hbase.master.cleaner;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.FileStatus;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.BaseConfigurable;
 
 /**
  * Base class for the log cleaning function inside the master. By default, two
@@ -38,7 +36,7 @@ import org.apache.hadoop.hbase.BaseConfigurable;
  * provide a default constructor.
  */
 @InterfaceAudience.Private
-public abstract class BaseLogCleanerDelegate extends BaseConfigurable implements FileCleanerDelegate {
+public abstract class BaseLogCleanerDelegate extends BaseFileCleanerDelegate {
 
   @Override
   public boolean isFileDeletable(FileStatus fStat) {

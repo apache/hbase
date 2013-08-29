@@ -17,22 +17,33 @@
  */
 package org.apache.hadoop.hbase.master.cleaner;
 
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.fs.FileStatus;
-import org.apache.hadoop.hbase.Stoppable;
+import org.apache.hadoop.hbase.BaseConfigurable;
+
+import com.google.common.base.Predicate;
+import com.google.common.collect.Iterables;
 
 /**
- * General interface for cleaning files from a folder (generally an archive or
- * backup folder). These are chained via the {@link CleanerChore} to determine
- * if a given file should be deleted.
+ * Base class for file cleaners which allows subclasses to implement a simple
+ * isFileDeletable method (which used to be the FileCleanerDelegate contract).
  */
-@InterfaceAudience.Private
-public interface FileCleanerDelegate extends Configurable, Stoppable {
+public abstract class BaseFileCleanerDelegate extends BaseConfigurable
+implements FileCleanerDelegate {
+
+  @Override
+  public Iterable<FileStatus> getDeletableFiles(Iterable<FileStatus> files) {
+    return Iterables.filter(files, new Predicate<FileStatus>() {
+      @Override
+      public boolean apply(FileStatus file) {
+        return isFileDeletable(file);
+      }});
+  }
+
   /**
-   * Determines which of the given files are safe to delete
-   * @param files files to check for deletion
-   * @return files that are ok to delete according to this cleaner
+   * Should the master delete the file or keep it?
+   * @param fStat file status of the file to check
+   * @return <tt>true</tt> if the file is deletable, <tt>false</tt> if not
    */
-  Iterable<FileStatus> getDeletableFiles(Iterable<FileStatus> files);
+  protected abstract boolean isFileDeletable(FileStatus fStat);
+
 }
