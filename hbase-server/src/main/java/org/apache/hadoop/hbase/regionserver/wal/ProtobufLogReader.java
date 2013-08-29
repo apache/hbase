@@ -114,8 +114,8 @@ public class ProtobufLogReader extends ReaderBase {
     long currentPosition = stream.getPos();
     trailerPresent = setTrailerIfPresent();
     this.seekOnFs(currentPosition);
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("After reading the trailer: walEditsStopOffset: " + this.walEditsStopOffset
+    if (LOG.isTraceEnabled()) {
+      LOG.trace("After reading the trailer: walEditsStopOffset: " + this.walEditsStopOffset
           + ", fileLength: " + this.fileLength + ", " + "trailerPresent: " + trailerPresent);
     }
   }

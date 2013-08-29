@@ -400,15 +400,22 @@ MasterServices, Server {
     // Disable the block cache on the master
     this.conf.setFloat(HConstants.HFILE_BLOCK_CACHE_SIZE_KEY, 0.0f);
     // Server to handle client requests.
-    String hostname = conf.get("hbase.master.ipc.address",
-      Strings.domainNamePointerToHostName(DNS.getDefaultHost(
-        conf.get("hbase.master.dns.interface", "default"),
-        conf.get("hbase.master.dns.nameserver", "default"))));
+    String hostname = Strings.domainNamePointerToHostName(DNS.getDefaultHost(
+      conf.get("hbase.master.dns.interface", "default"),
+      conf.get("hbase.master.dns.nameserver", "default")));
     int port = conf.getInt(HConstants.MASTER_PORT, HConstants.DEFAULT_MASTER_PORT);
     // Test that the hostname is reachable
     InetSocketAddress initialIsa = new InetSocketAddress(hostname, port);
     if (initialIsa.getAddress() == null) {
       throw new IllegalArgumentException("Failed resolve of hostname " + initialIsa);
+    }
+    // Verify that the bind address is reachable if set
+    String bindAddress = conf.get("hbase.master.ipc.address");
+    if (bindAddress != null) {
+      initialIsa = new InetSocketAddress(bindAddress, port);
+      if (initialIsa.getAddress() == null) {
+        throw new IllegalArgumentException("Failed resolve of bind address " + initialIsa);
+      }
     }
     String name = "master/" + initialIsa.toString();
     // Set how many times to retry talking to another server over HConnection.
@@ -428,8 +435,8 @@ MasterServices, Server {
       scheduler);
     // Set our address.
     this.isa = this.rpcServer.getListenerAddress();
-    this.serverName =
-        new ServerName(this.isa.getHostName(), this.isa.getPort(), System.currentTimeMillis());
+    // We don't want to pass isa's hostname here since it could be 0.0.0.0
+    this.serverName = new ServerName(hostname, this.isa.getPort(), System.currentTimeMillis());
     this.rsFatals = new MemoryBoundedLogMessageBuffer(
       conf.getLong("hbase.master.buffer.for.rs.fatals", 1*1024*1024));
 

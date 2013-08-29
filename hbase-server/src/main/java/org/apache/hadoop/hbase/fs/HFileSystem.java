@@ -324,7 +324,10 @@ public class HFileSystem extends FilterFileSystem {
 
       // Ok, so it's an HLog
       String hostName = sn.getHostname();
-      LOG.debug(src + " is an HLog file, so reordering blocks, last hostname will be:" + hostName);
+      if (LOG.isTraceEnabled()) {
+        LOG.trace(src +
+            " is an HLog file, so reordering blocks, last hostname will be:" + hostName);
+      }
 
       // Just check for all blocks
       for (LocatedBlock lb : lbs.getLocatedBlocks()) {
