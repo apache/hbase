@@ -727,7 +727,7 @@ public class HStore implements Store {
         LOG.warn("Failed flushing store file, retring num=" + i, e);
         lastException = e;
       }
-      if (lastException != null) {
+      if (lastException != null && i < (flushRetriesNumber - 1)) {
         try {
           Thread.sleep(pauseTime);
         } catch (InterruptedException e) {
