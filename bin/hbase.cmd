@@ -37,6 +37,12 @@
 @rem
 @rem   HBASE_ROOT_LOGGER The root appender. Default is INFO,console
 @rem
+@rem   JRUBY_HOME       JRuby path: $JRUBY_HOME\lib\jruby.jar should exist.
+@rem                    Defaults to the jar packaged with HBase.
+@rem
+@rem   JRUBY_OPTS       Extra options (eg '--1.9') passed to the hbase shell.
+@rem                    Empty by default.
+
 
 setlocal enabledelayedexpansion
 
@@ -52,14 +58,18 @@ if "%HBASE_BIN_PATH:~-1%" == "\" (
 
 rem This will set HBASE_HOME, etc.
 set hbase-config-script=%HBASE_BIN_PATH%\hbase-config.cmd
-call %hbase-config-script%
+call %hbase-config-script% %*
+if "%1" == "--config" (
+  shift
+  shift
+)
 
 rem Detect if we are in hbase sources dir
 set in_dev_env=false
 
 if EXIST %HBASE_HOME%\target set in_dev_env=true
 
-rem --service is an internal option. used by msi setup only.
+rem --service is an internal option. used by MSI setup to install HBase as a windows service
 if "%1" == "--service" (
    set service_entry=true
    shift
@@ -126,9 +136,7 @@ for /F %%f in ('dir /b %HBASE_HOME%\hbase*.jar 2^>nul') do (
 
 @rem Add libs to CLASSPATH
 if exist %HBASE_HOME%\lib (
-  for /F %%f in ('dir /b %HBASE_HOME%\lib\*.jar') do (
-    set CLASSPATH=!CLASSPATH!;%HBASE_HOME%\lib\%%f
-  )
+  set CLASSPATH=!CLASSPATH!;%HBASE_HOME%\lib\*
 )
 
 @rem Add user-specified CLASSPATH last
@@ -155,7 +163,7 @@ if exist "%HADOOP_HOME%\bin\%HADOOP_IN_PATH%" (
   if "%in_dev_env%"=="true" (
     set HADOOP_CLASSPATH=%HBASE_HOME%\target\classes
   ) else (
-    for /f %%i in ('dir /b %HBASE_HOME%\hbase-*.jar ^| findstr /vi tests') do set HADOOP_CLASSPATH=%HBASE_HOME%\%%i
+    for /f %%i in ('dir /b %HBASE_HOME%\hbase-*.jar 2^>nul ^| findstr /vi tests') do set HADOOP_CLASSPATH=%HBASE_HOME%\%%i
   )
 
   set hadoopJLPCommand=call %HADOOP_IN_PATH% org.apache.hadoop.hbase.util.GetJavaProperty java.library.path 2^>nul
@@ -214,6 +222,37 @@ if defined corecommand (
   set CLASSPATH=%CLASSPATH%;%CD%
 )
 
+if not defined HBASE_IDENT_STRING (
+  set HBASE_IDENT_STRING=%USERNAME%
+)
+
+@rem Set the right GC options based on the what we are running
+set servercommands=master regionserver thrift thrift2 rest avro zookeeper
+for %%i in ( %servercommands% ) do (
+  if "%hbase-command%"=="%%i" set servercommand=true
+)
+
+if "%servercommand%" == "true" (
+  set HBASE_OPTS=%HBASE_OPTS% %SERVER_GC_OPTS%
+) else (
+  set HBASE_OPTS=%HBASE_OPTS% %CLIENT_GC_OPTS%
+)
+
+@rem If HBase is run as a windows service, configure logging
+if defined service_entry (
+  set HBASE_LOG_PREFIX=hbase-%hbase-command%-%COMPUTERNAME%
+  set HBASE_LOGFILE=!HBASE_LOG_PREFIX!.log
+  set HBASE_ROOT_LOGGER=INFO,DRFA
+  set HBASE_SECURITY_LOGGER=INFO,DRFAS
+  set loggc=!HBASE_LOG_DIR!\!HBASE_LOG_PREFIX!.gc
+  set loglog=!HBASE_LOG_DIR!\!HBASE_LOGFILE!
+
+  if "%HBASE_USE_GC_LOGFILE%" == "true" (
+    set HBASE_OPTS=%HBASE_OPTS% -Xloggc:!loggc!
+  )
+)
+
+
 @rem Have JVM dump heap if we run out of memory.  Files will be 'launch directory'
 @rem and are named like the following: java_pid21612.hprof. Apparently it does not
 @rem 'cost' to have this flag enabled. Its a 1.6 flag only. See:
@@ -224,17 +263,17 @@ set HBASE_OPTS=%HBASE_OPTS% -Dhbase.home.dir=%HBASE_HOME%
 set HBASE_OPTS=%HBASE_OPTS% -Dhbase.id.str=%HBASE_IDENT_STRING%
 set HBASE_OPTS=%HBASE_OPTS% -XX:OnOutOfMemoryError="taskkill /F /PID %p"
 
-if "%BASE_ROOT_LOGGER%"=="" (
-  set BASE_ROOT_LOGGER=INFO,console
+if not defined HBASE_ROOT_LOGGER (
+  set HBASE_ROOT_LOGGER=INFO,console
 )
-set HBASE_OPTS=%HBASE_OPTS% -Dhbase.root.logger="%BASE_ROOT_LOGGER%"
+set HBASE_OPTS=%HBASE_OPTS% -Dhbase.root.logger="%HBASE_ROOT_LOGGER%"
 
 if NOT "x%JAVA_LIBRARY_PATH%" == "x" (
-  set HBASE_OPTS=%HBASE_OPTS% -Djava.library.path=%JAVA_LIBRARY_PATH%
+  set HBASE_OPTS=%HBASE_OPTS% -Djava.library.path="%JAVA_LIBRARY_PATH%"
 )
 
 rem Enable security logging on the master and regionserver only
-if "%HBASE_SECURITY_LOGGER%"=="" (
+if not defined HBASE_SECURITY_LOGGER (
   set HBASE_SECURITY_LOGGER=INFO,NullAppender
   if "%hbase-command%"=="master" (
     set HBASE_SECURITY_LOGGER=INFO,DRFAS
@@ -269,7 +308,7 @@ goto :eof
     set HBASE_OPTS=%HBASE_OPTS% -Dhbase.ruby.sources=%HBASE_HOME%\hbase-server\src\main\ruby
   )
 
-  set CLASS=org.jruby.Main -X+O %HBASE_HOME%\bin\hirb.rb
+  set CLASS=org.jruby.Main -X+O %JRUBY_OPTS% %HBASE_HOME%\bin\hirb.rb
   goto :eof
 
 :master
@@ -340,9 +379,9 @@ goto :eof
 :makeServiceXml
   set arguments=%*
   @echo ^<service^>
-  @echo   ^<id^>hbase-%hbase-command%^</id^>
-  @echo   ^<name^>hbase-%hbase-command%^</name^>
-  @echo   ^<description^>This service runs Isotope hbase-%hbase-command%^</description^>
+  @echo   ^<id^>%hbase-command%^</id^>
+  @echo   ^<name^>%hbase-command%^</name^>
+  @echo   ^<description^>This service runs Isotope %hbase-command%^</description^>
   @echo   ^<executable^>%JAVA%^</executable^>
   @echo   ^<arguments^>%arguments%^</arguments^>
   @echo ^</service^>

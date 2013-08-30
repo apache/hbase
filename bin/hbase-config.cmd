@@ -46,6 +46,12 @@ if "%HBASE_BIN_PATH:~-1%" == "\" (
   set HBASE_BIN_PATH=%HBASE_BIN_PATH:~0,-1%
 )
 
+if "%1" == "--config" (
+  set HBASE_CONF_DIR=%2
+  shift
+  shift
+)
+
 @rem the root of the hbase installation
 if not defined HBASE_HOME (
    set HBASE_HOME=%HBASE_BIN_PATH%\..
