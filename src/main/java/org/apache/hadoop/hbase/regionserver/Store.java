@@ -805,7 +805,7 @@ public class Store extends SchemaConfigured implements HeapSize {
         LOG.warn("Failed flushing store file, retring num=" + i, e);
         lastException = e;
       }
-      if (lastException != null) {
+      if (lastException != null && i < (flush_retries_number - 1)) {
         try {
           Thread.sleep(pauseTime);
         } catch (InterruptedException e) {
