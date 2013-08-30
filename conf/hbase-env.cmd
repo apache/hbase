@@ -35,8 +35,15 @@
 @rem @rem See TestIPv6NIOServerSocketChannel.
 set HBASE_OPTS="-XX:+UseConcMarkSweepGC" "-Djava.net.preferIPv4Stack=true"
 
-@rem Uncomment below to enable java garbage collection logging in the .out file.
-@rem set HBASE_OPTS=%HBASE_OPTS% "-verbose:gc" "-XX:+PrintGCDetails" "-XX:+PrintGCDateStamps" 
+@rem Uncomment below to enable java garbage collection logging for the server-side processes
+@rem this enables basic gc logging for the server processes to the .out file
+@rem set SERVER_GC_OPTS="-verbose:gc" "-XX:+PrintGCDetails" "-XX:+PrintGCDateStamps" %HBASE_GC_OPTS%
+
+@rem this enables gc logging using automatic GC log rolling. Only applies to jdk 1.6.0_34+ and 1.7.0_2+. Either use this set of options or the one above
+@rem set SERVER_GC_OPTS="-verbose:gc" "-XX:+PrintGCDetails" "-XX:+PrintGCDateStamps" "-XX:+UseGCLogFileRotation" "-XX:NumberOfGCLogFiles=1" "-XX:GCLogFileSize=512M" %HBASE_GC_OPTS%
+
+@rem Uncomment below to enable java garbage collection logging for the client processes in the .out file.
+@rem set CLIENT_GC_OPTS="-verbose:gc" "-XX:+PrintGCDetails" "-XX:+PrintGCDateStamps" %HBASE_GC_OPTS%
 
 @rem Uncomment below (along with above GC logging) to put GC information in its own logfile (will set HBASE_GC_OPTS)
 @rem set HBASE_USE_GC_LOGFILE=true
