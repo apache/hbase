@@ -91,6 +91,14 @@ until the justification for the -1 is addressed.
           </itemizedlist>
           </para>
       </section>
+      <section xml:id="hbase.when.to.close.JIRA">
+          <title>Policy on when to set a RESOLVED JIRA as CLOSED</title>
+          <para>We <link xlink:href="http://search-hadoop.com/m/4cIKs1iwXMS1">agreed</link>
+              that for issues that list multiple releases in their <emphasis>Fix Version/s</emphasis> field,
+              CLOSE the issue on the release of any of the versions listed; subsequent change
+              to the issue must happen in a new JIRA.
+          </para>
+      </section>
     </section>
     <section xml:id="community.roles">
       <title>Community Roles</title>

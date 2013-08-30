@@ -94,7 +94,7 @@
   <section>
   <title>&lt;preamble&gt;</title>
   <para><programlisting>&lt;MAGIC 4 byte integer&gt; &lt;1 byte RPC Format Version&gt; &lt;1 byte auth type&gt;<footnote><para> We need the auth method spec. here so the connection header is encoded if auth enabled.</para></footnote></programlisting></para>
-  <para>E.g.: HBas0x000x80 -- 4 bytes of MAGIC -- ‘HBas’ -- plus one-byte of version, 0 in this case, and one byte, 0x80 (SIMPLE). of an auth type.</para>
+  <para>E.g.: HBas0x000x50 -- 4 bytes of MAGIC -- ‘HBas’ -- plus one-byte of version, 0 in this case, and one byte, 0x50 (SIMPLE). of an auth type.</para>
   </section>
 
   <section>

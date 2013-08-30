@@ -11,7 +11,7 @@
 /**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
+ * distributed with this work forf additional information
  * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
@@ -315,6 +315,12 @@ row10	c1	c2
             for how to build the optional library and have it run on startup.
         </para>
     </section>
+    <section xml:id="compaction.tool">
+        <title>Offline Compaction Tool</title>
+        <para>See the usage for the <link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/regionserver/CompactionTool.html">Compaction Tool</link>.
+            Run it like this <command>./bin/hbase org.apache.hadoop.hbase.regionserver.CompactionTool</command>
+        </para>
+    </section>
 
     </section>  <!--  tools -->
 
@@ -417,29 +423,35 @@ This turns the balancer OFF.  To reenable, do:
 false
 0 row(s) in 0.3590 seconds</programlisting>
             </para>
+            <para>The <command>graceful_stop</command> will check the balancer
+                and if enabled, will turn it off before it goes to work.  If it
+                exits prematurely because of error, it will not have reset the
+                balancer.  Hence, it is better to manage the balancer apart from
+                <command>graceful_stop</command> reenabling it after you are done
+                w/ graceful_stop.
+            </para>
         </note>
         </para>
         <section xml:id="draining.servers">
             <title>Decommissioning several Regions Servers concurrently</title>
             <para>If you have a large cluster, you may want to
-            decomission more than one machines at a time by gracefully
+            decommission more than one machine at a time by gracefully
             stopping mutiple RegionServers concurrently.
-	    </para>
-	    <para>To gracefully drain multiple regionservers at the
+            To gracefully drain multiple regionservers at the
 	    same time, RegionServers can be put into a "draining"
 	    state.  This is done by marking a RegionServer as a
 	    draining node by creating an entry in ZooKeeper under the
-	    hbase_root/draining znode.  This znode has format
-	    "name,port,startcode" just like the regionserver entries
-	    under hbase_root/rs znode.
+        <filename>hbase_root/draining</filename> znode.  This znode has format
+        <programlisting>name,port,startcode</programlisting> just like the regionserver entries
+        under <filename>hbase_root/rs</filename> znode.
 	    </para>
-	    <para>Without this, when decommissioning mulitple nodes
+	    <para>Without this facility, decommissioning mulitple nodes
 	    may be non-optimal because regions that are being drained
-	    from one region server may be moved to other regions that
+	    from one region server may be moved to other regionservers that
 	    are also draining.  Marking RegionServers to be in the
-	    draining state prevents this from happening.  <note>See
+        draining state prevents this from happening<footnote><para>See
 	    this <link xlink:href="http://inchoate-clatter.blogspot.com/2012/03/hbase-ops-automation.html">blog
-	    post</link> for more details. </note>
+            post</link> for more details.</para></footnote>.
 	    </para>
         </section>
 
@@ -456,6 +468,7 @@ false
             throw some errors in its logs as it recalibrates where to get its data from -- it will likely
             roll its WAL log too -- but in general but for some latency spikes, it should keep on chugging.
             <note>
+                <title>Short Circuit Reads</title>
                 <para>If you are doing short-circuit reads, you will have to move the regions off the regionserver
                     before you stop the datanode; when short-circuiting reading, though chmod'd so regionserver cannot
                     have access, because it already has the files open, it will be able to keep reading the file blocks
@@ -549,77 +562,115 @@ false
   <section xml:id="metric_setup">
   <title>Metric Setup</title>
   <para>See <link xlink:href="http://hbase.apache.org/metrics.html">Metrics</link> for
-  an introduction and how to enable Metrics emission.
+  an introduction and how to enable Metrics emission.  Still valid for HBase 0.94.x.
+  </para>
+  <para>For HBase 0.95.x and up, see <link xlink:href="http://hadoop.apache.org/docs/current/api/org/apache/hadoop/metrics2/package-summary.html"/>
   </para>
   </section>
+   <section xml:id="rs_metrics_ganglia">
+     <title>Warning To Ganglia Users</title>
+     <para>Warning to Ganglia Users:  by default, HBase will emit a LOT of metrics per RegionServer which may swamp your installation.
+     Options include either increasing Ganglia server capacity, or configuring HBase to emit fewer metrics.
+     </para>
+   </section>
    <section xml:id="rs_metrics">
-   <title>RegionServer Metrics</title>
-          <section xml:id="hbase.regionserver.blockCacheCount"><title><varname>hbase.regionserver.blockCacheCount</varname></title>
-          <para>Block cache item count in memory.  This is the number of blocks of StoreFiles (HFiles) in the cache.</para>
-		  </section>
-         <section xml:id="hbase.regionserver.blockCacheEvictedCount"><title><varname>hbase.regionserver.blockCacheEvictedCount</varname></title>
-          <para>Number of blocks that had to be evicted from the block cache due to heap size constraints.</para>
-		  </section>
-         <section xml:id="hbase.regionserver.blockCacheFree"><title><varname>hbase.regionserver.blockCacheFree</varname></title>
-          <para>Block cache memory available (bytes).</para>
-		  </section>
-          <section xml:id="hbase.regionserver.blockCacheHitCachingRatio"><title><varname>hbase.regionserver.blockCacheHitCachingRatio</varname></title>
+   <title>Most Important RegionServer Metrics</title>
+          <section xml:id="hbase.regionserver.blockCacheHitCachingRatio"><title><varname>blockCacheExpressCachingRatio (formerly blockCacheHitCachingRatio)</varname></title>
           <para>Block cache hit caching ratio (0 to 100).  The cache-hit ratio for reads configured to look in the cache (i.e., cacheBlocks=true). </para>
 		  </section>
-          <section xml:id="hbase.regionserver.blockCacheHitCount"><title><varname>hbase.regionserver.blockCacheHitCount</varname></title>
-          <para>Number of blocks of StoreFiles (HFiles) read from the cache.</para>
+          <section xml:id="hbase.regionserver.callQueueLength"><title><varname>callQueueLength</varname></title>
+          <para>Point in time length of the RegionServer call queue.  If requests arrive faster than the RegionServer handlers can process
+          them they will back up in the callQueue.</para>
 		  </section>
-          <section xml:id="hbase.regionserver.blockCacheHitRatio"><title><varname>hbase.regionserver.blockCacheHitRatio</varname></title>
-          <para>Block cache hit ratio (0 to 100).  Includes all read requests, although those with cacheBlocks=false
-           will always read from disk and be counted as a "cache miss".</para>
+          <section xml:id="hbase.regionserver.compactionQueueSize"><title><varname>compactionQueueLength (formerly compactionQueueSize)</varname></title>
+          <para>Point in time length of the compaction queue.  This is the number of Stores in the RegionServer that have been targeted for compaction.</para>
 		  </section>
-          <section xml:id="hbase.regionserver.blockCacheMissCount"><title><varname>hbase.regionserver.blockCacheMissCount</varname></title>
-          <para>Number of blocks of StoreFiles (HFiles) requested but not read from the cache.</para>
+          <section xml:id="hbase.regionserver.flushQueueSize"><title><varname>flushQueueSize</varname></title>
+          <para>Point in time number of enqueued regions in the MemStore awaiting flush.</para>
 		  </section>
-          <section xml:id="hbase.regionserver.blockCacheSize"><title><varname>hbase.regionserver.blockCacheSize</varname></title>
-          <para>Block cache size in memory (bytes).  i.e., memory in use by the BlockCache</para>
+          <section xml:id="hbase.regionserver.hdfsBlocksLocalityIndex"><title><varname>hdfsBlocksLocalityIndex</varname></title>
+          <para>Point in time percentage of HDFS blocks that are local to this RegionServer.  The higher the better.  </para>
 		  </section>
-          <section xml:id="hbase.regionserver.compactionQueueSize"><title><varname>hbase.regionserver.compactionQueueSize</varname></title>
-          <para>Size of the compaction queue.  This is the number of Stores in the RegionServer that have been targeted for compaction.</para>
+          <section xml:id="hbase.regionserver.memstoreSizeMB"><title><varname>memstoreSizeMB</varname></title>
+          <para>Point in time sum of all the memstore sizes in this RegionServer (MB).  Watch for this nearing or exceeding
+          the configured high-watermark for MemStore memory in the RegionServer. </para>
 		  </section>
-          <section xml:id="hbase.regionserver.flushQueueSize"><title><varname>hbase.regionserver.flushQueueSize</varname></title>
-          <para>Number of enqueued regions in the MemStore awaiting flush.</para>
+          <section xml:id="hbase.regionserver.regions"><title><varname>numberOfOnlineRegions</varname></title>
+          <para>Point in time number of regions served by the RegionServer.  This is an important metric to track for RegionServer-Region density.
+          </para>
 		  </section>
-          <section xml:id="hbase.regionserver.fsReadLatency_avg_time"><title><varname>hbase.regionserver.fsReadLatency_avg_time</varname></title>
-          <para>Filesystem read latency (ms).  This is the average time to read from HDFS.</para>
+          <section xml:id="hbase.regionserver.readRequestsCount"><title><varname>readRequestsCount</varname></title>
+          <para>Number of read requests for this RegionServer since startup.  Note:  this is a 32-bit integer and can roll. </para>
 		  </section>
-          <section xml:id="hbase.regionserver.fsReadLatency_num_ops"><title><varname>hbase.regionserver.fsReadLatency_num_ops</varname></title>
-          <para>Filesystem read operations.</para>
+          <section xml:id="hbase.regionserver.slowHLogAppendCount"><title><varname>slowHLogAppendCount</varname></title>
+          <para>Number of slow HLog append writes for this RegionServer since startup, where "slow" is > 1 second.  This is
+          a good "canary" metric for HDFS. </para>
 		  </section>
-          <section xml:id="hbase.regionserver.fsSyncLatency_avg_time"><title><varname>hbase.regionserver.fsSyncLatency_avg_time</varname></title>
-          <para>Filesystem sync latency (ms).  Latency to sync the write-ahead log records to the filesystem.</para>
+         <section xml:id="hbase.regionserver.usedHeapMB"><title><varname>usedHeapMB</varname></title>
+          <para>Point in time amount of memory used by the RegionServer (MB).</para>
 		  </section>
-          <section xml:id="hbase.regionserver.fsSyncLatency_num_ops"><title><varname>hbase.regionserver.fsSyncLatency_num_ops</varname></title>
-          <para>Number of operations to sync the write-ahead log records to the filesystem.</para>
+          <section xml:id="hbase.regionserver.writeRequestsCount"><title><varname>writeRequestsCount</varname></title>
+          <para>Number of write requests for this RegionServer since startup.  Note:  this is a 32-bit integer and can roll. </para>
 		  </section>
-          <section xml:id="hbase.regionserver.fsWriteLatency_avg_time"><title><varname>hbase.regionserver.fsWriteLatency_avg_time</varname></title>
-          <para>Filesystem write latency (ms).  Total latency for all writers, including StoreFiles and write-head log.</para>
+
+   </section>
+   <section xml:id="rs_metrics_other">
+   <title>Other RegionServer Metrics</title>
+          <section xml:id="hbase.regionserver.blockCacheCount"><title><varname>blockCacheCount</varname></title>
+          <para>Point in time block cache item count in memory.  This is the number of blocks of StoreFiles (HFiles) in the cache.</para>
 		  </section>
-          <section xml:id="hbase.regionserver.fsWriteLatency_num_ops"><title><varname>hbase.regionserver.fsWriteLatency_num_ops</varname></title>
-          <para>Number of filesystem write operations, including StoreFiles and write-ahead log.</para>
+         <section xml:id="hbase.regionserver.blockCacheEvictedCount"><title><varname>blockCacheEvictedCount</varname></title>
+          <para>Number of blocks that had to be evicted from the block cache due to heap size constraints by RegionServer since startup.</para>
 		  </section>
-          <section xml:id="hbase.regionserver.memstoreSizeMB"><title><varname>hbase.regionserver.memstoreSizeMB</varname></title>
-          <para>Sum of all the memstore sizes in this RegionServer (MB)</para>
+         <section xml:id="hbase.regionserver.blockCacheFree"><title><varname>blockCacheFreeMB</varname></title>
+          <para>Point in time block cache memory available (MB).</para>
 		  </section>
-          <section xml:id="hbase.regionserver.regions"><title><varname>hbase.regionserver.regions</varname></title>
-          <para>Number of regions served by the RegionServer</para>
+          <section xml:id="hbase.regionserver.blockCacheHitCount"><title><varname>blockCacheHitCount</varname></title>
+          <para>Number of blocks of StoreFiles (HFiles) read from the cache by RegionServer since startup.</para>
 		  </section>
-          <section xml:id="hbase.regionserver.requests"><title><varname>hbase.regionserver.requests</varname></title>
-          <para>Total number of read and write requests.  Requests correspond to RegionServer RPC calls, thus a single Get will result in 1 request, but a Scan with caching set to 1000 will result in 1 request for each 'next' call (i.e., not each row).  A bulk-load request will constitute 1 request per HFile.</para>
+          <section xml:id="hbase.regionserver.blockCacheHitRatio"><title><varname>blockCacheHitRatio</varname></title>
+          <para>Block cache hit ratio (0 to 100) from RegionServer startup.  Includes all read requests, although those with cacheBlocks=false
+           will always read from disk and be counted as a "cache miss", which means that full-scan MapReduce jobs can affect
+           this metric significantly.</para>
 		  </section>
-          <section xml:id="hbase.regionserver.storeFileIndexSizeMB"><title><varname>hbase.regionserver.storeFileIndexSizeMB</varname></title>
-          <para>Sum of all the StoreFile index sizes in this RegionServer (MB)</para>
+          <section xml:id="hbase.regionserver.blockCacheMissCount"><title><varname>blockCacheMissCount</varname></title>
+          <para>Number of blocks of StoreFiles (HFiles) requested but not read from the cache from RegionServer startup.</para>
 		  </section>
-          <section xml:id="hbase.regionserver.stores"><title><varname>hbase.regionserver.stores</varname></title>
-          <para>Number of Stores open on the RegionServer.  A Store corresponds to a ColumnFamily.  For example, if a table (which contains the column family) has 3 regions on a RegionServer, there will be 3 stores open for that column family. </para>
+          <section xml:id="hbase.regionserver.blockCacheSize"><title><varname>blockCacheSizeMB</varname></title>
+          <para>Point in time block cache size in memory (MB).  i.e., memory in use by the BlockCache</para>
 		  </section>
-          <section xml:id="hbase.regionserver.storeFiles"><title><varname>hbase.regionserver.storeFiles</varname></title>
-          <para>Number of StoreFiles open on the RegionServer.  A store may have more than one StoreFile (HFile).</para>
+          <section xml:id="hbase.regionserver.fsPreadLatency"><title><varname>fsPreadLatency*</varname></title>
+          <para>There are several filesystem positional read latency (ms) metrics, all measured from RegionServer startup.</para>
+		  </section>
+          <section xml:id="hbase.regionserver.fsReadLatency"><title><varname>fsReadLatency*</varname></title>
+          <para>There are several filesystem read latency (ms) metrics, all measured from RegionServer startup.  The issue with
+          interpretation is that ALL reads go into this metric (e.g., single-record Gets, full table Scans), including
+          reads required for compactions.  This metric is only interesting "over time" when comparing
+          major releases of HBase or your own code.</para>
+		  </section>
+          <section xml:id="hbase.regionserver.fsWriteLatency"><title><varname>fsWriteLatency*</varname></title>
+          <para>There are several filesystem write latency (ms) metrics, all measured from RegionServer startup.  The issue with
+          interpretation is that ALL writes go into this metric (e.g., single-record Puts, full table re-writes due to compaction).
+          This metric is only interesting "over time" when comparing
+          major releases of HBase or your own code.</para>
+		  </section>
+          <section xml:id="hbase.regionserver.stores"><title><varname>NumberOfStores</varname></title>
+          <para>Point in time number of Stores open on the RegionServer.  A Store corresponds to a ColumnFamily.  For example,
+          if a table (which contains the column family) has 3 regions on a RegionServer, there will be 3 stores open for that
+          column family. </para>
+		  </section>
+          <section xml:id="hbase.regionserver.storeFiles"><title><varname>NumberOfStorefiles</varname></title>
+          <para>Point in time number of StoreFiles open on the RegionServer.  A store may have more than one StoreFile (HFile).</para>
+		  </section>
+          <section xml:id="hbase.regionserver.requests"><title><varname>requestsPerSecond</varname></title>
+          <para>Point in time number of read and write requests.  Requests correspond to RegionServer RPC calls,
+           thus a single Get will result in 1 request, but a Scan with caching set to 1000 will result in 1 request for each 'next' call
+            (i.e., not each row).  A bulk-load request will constitute 1 request per HFile.
+            This metric is less interesting than readRequestsCount and writeRequestsCount in terms of measuring activity
+            due to this metric being periodic. </para>
+		  </section>
+          <section xml:id="hbase.regionserver.storeFileIndexSizeMB"><title><varname>storeFileIndexSizeMB</varname></title>
+          <para>Point in time sum of all the StoreFile index sizes in this RegionServer (MB)</para>
 		  </section>
    </section>
   </section>
@@ -635,8 +686,7 @@ false
       </para>
       <para>HBase:
       <itemizedlist>
-      <listitem>Requests</listitem>
-      <listitem>Compactions queue</listitem>
+      <listitem>See <xref linkend="rs_metrics"/></listitem>
       </itemizedlist>
       </para>
       <para>OS:

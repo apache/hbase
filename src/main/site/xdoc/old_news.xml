@@ -27,6 +27,14 @@
   </properties>
   <body>
   <section name="Old News">
+         <p>April 11th, 2013 <a href="http://www.meetup.com/hbaseusergroup/events/103587852/">HBase Meetup at AdRoll</a> in San Francisco</p>
+         <p>February 28th, 2013 <a href="http://www.meetup.com/hbaseusergroup/events/96584102/">HBase Meetup at Intel Mission Campus</a></p>
+         <p>February 19th, 2013 <a href="http://www.meetup.com/hackathon/events/103633042/">Developers PowWow</a> at HortonWorks' new digs</p>
+         <p>January 23rd, 2013 <a href="http://www.meetup.com/hbaseusergroup/events/91381312/">HBase Meetup at WibiData World HQ!</a></p>
+            <p>December 4th, 2012 <a href="http://www.meetup.com/hackathon/events/90536432/">0.96 Bug Squashing and Testing Hackathon</a> at Cloudera, SF.</p>
+            <p>October 29th, 2012 <a href="http://www.meetup.com/hbaseusergroup/events/82791572/">HBase User Group Meetup</a> at Wize Commerce in San Mateo.</p>
+            <p>October 25th, 2012 <a href="http://www.meetup.com/HBase-NYC/events/81728932/">Strata/Hadoop World HBase Meetup.</a> in NYC</p>
+            <p>September 11th, 2012 <a href="http://www.meetup.com/hbaseusergroup/events/80621872/">Contributor's Pow-Wow at HortonWorks HQ.</a></p>
             <p>August 8th, 2012 <a href="http://www.apache.org/dyn/closer.cgi/hbase/">Apache HBase 0.94.1 is available for download</a></p>
             <p>June 15th, 2012 <a href="http://www.meetup.com/hbaseusergroup/events/59829652/">Birds-of-a-feather</a> in San Jose, day after <a href="http://hadoopsummit.org">Hadoop Summit</a></p>
             <p>May 23rd, 2012 <a href="http://www.meetup.com/hackathon/events/58953522/">HackConAthon</a> in Palo Alto</p>

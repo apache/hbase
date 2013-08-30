@@ -160,12 +160,6 @@ mvn clean package -DskipTests
        With Eclipse set up as explained above in <xref linkend="eclipse"/>, you can also simply use the build command in Eclipse. To create the full installable HBase package takes a little bit more work, so read on.
        </para>
       </section>
-      <section xml:id="build.snappy">
-        <title>Building in snappy compression support</title>
-        <para>Pass <code>-Dsnappy</code> to trigger the snappy maven profile for building
-            snappy native libs into hbase.  See also <xref linkend="snappy.compression" /></para>
-      </section>
-
       <section xml:id="build.tgz">
         <title>Building the HBase tarball</title>
         <para>Do the following to build the HBase tarball.
@@ -173,8 +167,6 @@ mvn clean package -DskipTests
         <programlisting>% MAVEN_OPTS="-Xmx2g" mvn clean install javadoc:aggregate site assembly:single -DskipTests -Prelease</programlisting>
 </para>
       </section>
-
-
       <section xml:id="build.protobuf"><title>Build Protobuf</title>
             <para>You may need to change the protobuf definitions that reside in the hbase-protocol module.</para>
             <para>
@@ -188,8 +180,47 @@ mvn clean package -DskipTests
 			Its not an error.  It is <link xlink:href="http://jira.codehaus.org/browse/MSITE-286">officially ugly</link> though.
            </para>
       </section>
+      <section xml:id="build.snappy">
+        <title>Building in snappy compression support</title>
+        <para>Pass <code>-Dsnappy</code> to trigger the snappy maven profile for building
+            snappy native libs into hbase.  See also <xref linkend="snappy.compression" /></para>
+      </section>
+    </section>
 
-    </section> <!--  build -->
+    <section xml:id="releasing">
+       <title>Releasing Apache HBase</title>
+
+     <section xml:id="release">
+         <title>Making Release Tarballs</title>
+         <para>Making release tarballs -- src, hadoop1, and hadoop2 -- do as follows making use of the mvn
+             versions plugin to rewrite the hbase version string between builds to add the hadoop1 or haddop2
+             suffix to the version as appropriate (Only the src tgz is built without modification from the tag
+             checkout; the binary builds will have unchecked-in modifications to their pom adding the
+             hadoop1/hadoop2 suffix to the version string).
+             <programlisting>$ MAVEN_OPTS="-Xmx2g" mvn clean install javadoc:aggregate site assembly:single -DskipTests -Dassembly.file=hbase-assembly/src/main/assembly/src.xml -Prelease
+# Copy away the src tgz found in hbase-assembly/target after verifying the content of the tgz is good.
+# Now set the version in all poms to include -hadoop1
+$ mvn clean org.codehaus.mojo:versions-maven-plugin:1.3.1:set -DnewVersion=0.95.1-hadoop1
+# Create a tgz w/ this -hadoop1 appended to version.
+$ MAVEN_OPTS="-Xmx2g" mvn clean install javadoc:aggregate site assembly:single -DskipTests -Dassembly.file=hbase-assembly/src/main/assembly/hadoop-one-compat.xml -Dhadoop.profile=1.0 -Prelease
+# Copy away the hadoop1 bing tgz found in hbase-assembly/target after verifying the content of the tgz is good.
+# Here is how to do a publish of a 'snapshot' up to mvn repo of this -hadoop1 version.
+$ MAVEN_OPTS="-Xmx2g" mvn clean install deploy  -DskipTests -Dhadoop.profile=1.0 -Prelease
+# Now set the version to -hadoop2
+$ mvn clean org.codehaus.mojo:versions-maven-plugin:1.3.1:set -DnewVersion=0.95.1-hadoop2
+$ MAVEN_OPTS="-Xmx2g" mvn clean install javadoc:aggregate site assembly:single -DskipTests -Dassembly.file=hbase-assembly/src/main/assembly/hadoop-two-compat.xml -Dhadoop.profile=2.0 -Prelease
+# Copy away the hadoop2 bing tgz found in hbase-assembly/target after verifying the content of the tgz is good.
+# Here is how to do a publish of a 'snapshot' up to mvn repo of this -hadoop1 version.
+$ MAVEN_OPTS="-Xmx2g" mvn clean install deploy  -DskipTests -Dhadoop.profile=2.0 -Prelease
+             </programlisting>
+         </para>
+         <para>Next sign the tgzs and deploy (see the hadoop how to release instructions for how).</para>
+     </section>
+
+      </section>
+
+
+
     <section xml:id="mvn_repo">
         <title>Adding an Apache HBase release to Apache's Maven Repository</title>
         <para>Follow the instructions at

@@ -269,8 +269,8 @@ HTable htable = ...      // instantiate HTable
 
 Scan scan = new Scan();
 scan.addColumn(CF, ATTR);
-scan.setStartRow( Bytes.toBytes("row"));                   // start key is inclusive
-scan.setStopRow( Bytes.toBytes("row" +  (char)0));  // stop key is exclusive
+scan.setStartRow(Bytes.toBytes("row")); // start key is inclusive
+scan.setStopRow(Bytes.toBytes("rox"));  // stop key is exclusive
 ResultScanner rs = htable.getScanner(scan);
 try {
   for (Result r = rs.next(); r != null; r = rs.next()) {
@@ -279,6 +279,8 @@ try {
   rs.close();  // always close the ResultScanner!
 }
 </programlisting>
+         </para>
+         <para>Note that generally the easiest way to specify a specific stop point for a scan is by using the <link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/filter/InclusiveStopFilter.html">InclusiveStopFilter</link> class.
          </para>
         </section>
       <section xml:id="delete">
@@ -592,7 +594,7 @@ htable.put(put);
   <para>For more information about MapReduce (i.e., the framework in general), see the
    <link xlink:href="http://hadoop.apache.org/common/docs/current/mapred_tutorial.html">Hadoop MapReduce Tutorial</link>.</para>
   <section xml:id="splitter">
-    <title>Map-Task Spitting</title>
+    <title>Map-Task Splitting</title>
     <section xml:id="splitter.default">
     <title>The Default HBase MapReduce Splitter</title>
     <para>When <link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/mapreduce/TableInputFormat.html">TableInputFormat</link>

@@ -90,7 +90,48 @@
  </para>
  <para>The API has changed in a few areas; in particular how you use coprocessors (TODO: MapReduce too?)
  </para>
- <para>TODO: Write about 3.4 zk ensemble and multi support</para>
+ <para>TODO: Need to recompile your code against 0.96, choose the right hbase jar to suit your h1 or h2
+     setup, etc.  WHAT ELSE
+ </para>
+ <section xml:id="096.zk.cleaning">
+     <title>Cleaning zookeeper of old data</title>
+     <para>Clean zookeeper of all its content before you start 0.96.x (or 0.95.x).  Here is how:
+         <programlisting>$ ./bin/hbase clean</programlisting>
+         This will printout usage.</para>
+     <para>To 'clean' ZooKeeper, it needs to be running.  But you don't want the cluster running
+         because the cluster will then register its entities in ZooKeeper and as a precaution,
+         our clean script will not run if there are registered masters and regionservers with
+         registered znodes present.  So, make sure all servers are down but for zookeeper.  If
+         zookeeper is managed by HBase, a commmon-configuration, then you will need to start
+         zookeeper only:
+         <programlisting>$ ./hbase/bin/hbase-daemons.sh  --config /home/stack/conf-hbase start zookeeper</programlisting>
+         If zookeeper is managed independently of HBase, make sure it is up.
+       Now run the following to clean zookeeper in particular
+         <programlisting>$ ./bin/hbase clean --cleanZk</programlisting>
+         It may complain that there are still registered regionserver znodes present in zookeeper.
+         If so, ensure they are indeed down.  Then wait a few tens of seconds and they should
+         disappear.
+     </para>
+     <para>This is what you will see if zookeeper has old data in it: the Master won't start with
+         an exception like the following
+         <programlisting>2013-05-30 09:46:29,767 FATAL [master-sss-1,60000,1369932387523] org.apache.hadoop.hbase.master.HMaster: Unhandled exception. Starting shutdown.
+org.apache.zookeeper.KeeperException$DataInconsistencyException: KeeperErrorCode = DataInconsistency
+        at org.apache.hadoop.hbase.zookeeper.ZKUtil.convert(ZKUtil.java:1789)
+        at org.apache.hadoop.hbase.zookeeper.ZKTableReadOnly.getTableState(ZKTableReadOnly.java:156)
+        at org.apache.hadoop.hbase.zookeeper.ZKTable.populateTableStates(ZKTable.java:81)
+        at org.apache.hadoop.hbase.zookeeper.ZKTable.&lt;init>(ZKTable.java:68)
+        at org.apache.hadoop.hbase.master.AssignmentManager.&lt;init>(AssignmentManager.java:246)
+        at org.apache.hadoop.hbase.master.HMaster.initializeZKBasedSystemTrackers(HMaster.java:626)
+        at org.apache.hadoop.hbase.master.HMaster.finishInitialization(HMaster.java:757)
+        at org.apache.hadoop.hbase.master.HMaster.run(HMaster.java:552)
+        at java.lang.Thread.run(Thread.java:662)
+Caused by: org.apache.hadoop.hbase.exceptions.DeserializationException: Missing pb magic PBUF prefix
+        at org.apache.hadoop.hbase.protobuf.ProtobufUtil.expectPBMagicPrefix(ProtobufUtil.java:205)
+        at org.apache.hadoop.hbase.zookeeper.ZKTableReadOnly.getTableState(ZKTableReadOnly.java:146)
+        ... 7 more</programlisting>
+     </para>
+
+ </section>
     </section>
     <section xml:id="upgrade0.94">
       <title>Upgrading from 0.92.x to 0.94.x</title>

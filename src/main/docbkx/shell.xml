@@ -44,7 +44,10 @@
             HBase shell; in particular note how table names, rows, and
             columns, etc., must be quoted.</para>
         <para>See <xref linkend="shell_exercises" />
-            for example basic shell operation.</para>
+            for example basic shell operation.
+        </para>
+        <para>Here is a nicely formatted listing of <link xlink:href="http://learnhbase.wordpress.com/2013/03/02/hbase-shell-commands/">all shell commands</link> by Rajeshbabu Chintaguntla.
+        </para>
 
     <section xml:id="scripting"><title>Scripting</title>
         <para>For examples scripting Apache HBase, look in the

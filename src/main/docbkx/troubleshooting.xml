@@ -694,6 +694,15 @@ Caused by: java.io.FileNotFoundException: File _partition.lst does not exist.
 </programlisting>
        LocalJobRunner means the job is running locally, not on the cluster.
       </para>
+
+      <para>To solve this problem, you should run your MR job with your
+      <code>HADOOP_CLASSPATH</code> set to include the HBase dependencies.
+      The "hbase classpath" utility can be used to do this easily.
+      For example (substitute VERSION with your HBase version):
+      <programlisting>
+          HADOOP_CLASSPATH=`hbase classpath` hadoop jar $HBASE_HOME/hbase-VERSION.jar rowcounter usertable
+      </programlisting>
+      </para>
       <para>See
       <link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/mapreduce/package-summary.html#classpath">
       http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/mapreduce/package-summary.html#classpath</link> for more
@@ -1107,6 +1116,36 @@ attribute to Maven (See <xref linkend="maven.build.hadoop" /> for more).
 </para>
 
 </section>
+
+</section>
+
+    <section xml:id="trouble.tests">
+       <title>Running unit or integration tests</title>
+          <section xml:id="trouble.HDFS-2556">
+             <title>Runtime exceptions from MiniDFSCluster when running tests</title>
+<para>If you see something like the following
+<programlisting>...
+java.lang.NullPointerException: null
+at org.apache.hadoop.hdfs.MiniDFSCluster.startDataNodes
+at org.apache.hadoop.hdfs.MiniDFSCluster.&lt;init&gt;
+at org.apache.hadoop.hbase.MiniHBaseCluster.&lt;init&gt;
+at org.apache.hadoop.hbase.HBaseTestingUtility.startMiniDFSCluster
+at org.apache.hadoop.hbase.HBaseTestingUtility.startMiniCluster
+...</programlisting>
+or
+<programlisting>...
+java.io.IOException: Shutting down
+at org.apache.hadoop.hbase.MiniHBaseCluster.init
+at org.apache.hadoop.hbase.MiniHBaseCluster.&lt;init&gt;
+at org.apache.hadoop.hbase.MiniHBaseCluster.&lt;init&gt;
+at org.apache.hadoop.hbase.HBaseTestingUtility.startMiniHBaseCluster
+at org.apache.hadoop.hbase.HBaseTestingUtility.startMiniCluster
+...</programlisting>
+... then try issuing the command <command>umask 022</command> before launching tests. This is a workaround for
+<link xlink:href="https://issues.apache.org/jira/browse/HDFS-2556">HDFS-2556</link>
+</para>
+</section>
+
 </section>
 
     <section xml:id="trouble.casestudy">

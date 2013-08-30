@@ -43,13 +43,15 @@
     the local filesystem. It leads you through creating a table, inserting
     rows via the HBase <command>shell</command>, and then cleaning
     up and shutting down your standalone HBase instance. The below exercise
-    should take no more than ten minutes (not including download time).</para>
+    should take no more than ten minutes (not including download time).
+        <footnote><para>Using HBase with a LocalFileSystem does not currently guarantee durability. See <link xlink:href="https://issues.apache.org/jira/browse/HBASE-3696"/> and its associated issues for more details.</para></footnote>
+    </para>
     <para>Before we proceed, make sure you are good on the below loopback prerequisite.</para>
     <note xml:id="loopback.ip.getting.started">
         <title>Loopback IP</title>
         <para>HBase expects the loopback IP address to be 127.0.0.1.  Ubuntu and some other distributions,
             for example, will default to 127.0.1.1 and this will cause problems for you
-            <footnote>See <link xlink:href="http://blog.devving.com/why-does-hbase-care-about-etchosts/">Why does HBase care about /etc/hosts?</link> for detail</footnote>.
+            <footnote><para>See <link xlink:href="http://blog.devving.com/why-does-hbase-care-about-etchosts/">Why does HBase care about /etc/hosts?</link> for detail.</para></footnote>.
         </para>
         <para><filename>/etc/hosts</filename> should look something like this:
 <programlisting>
