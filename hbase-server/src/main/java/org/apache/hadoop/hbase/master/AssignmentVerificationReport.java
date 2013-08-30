@@ -582,6 +582,48 @@ public class AssignmentVerificationReport {
     System.out.println("==============================");
   }
 
+  /**
+   * Return the unassigned regions
+   * @return unassigned regions
+   */
+  List<HRegionInfo> getUnassignedRegions() {
+    return unAssignedRegionsList;
+  }
+
+  /**
+   * Return the regions without favored nodes
+   * @return regions without favored nodes
+   */
+  List<HRegionInfo> getRegionsWithoutValidFavoredNodes() {
+    return regionsWithoutValidFavoredNodes;
+  }
+
+  /**
+   * Return the regions not assigned to its favored nodes
+   * @return regions not assigned to its favored nodes
+   */
+  List<HRegionInfo> getNonFavoredAssignedRegions() {
+    return nonFavoredAssignedRegionList;
+  }
+  
+  /**
+   * Return the number of regions assigned to their favored nodes
+   * @return number of regions assigned to their favored nodes
+   */
+  int getTotalFavoredAssignments() {
+    return totalFavoredAssignments;
+  }
+
+  /**
+   * Return the number of regions based on the position (primary/secondary/
+   * tertiary) assigned to their favored nodes
+   * @param position
+   * @return the number of regions
+   */
+  int getNumRegionsOnFavoredNodeByPosition(FavoredNodesPlan.Position position) {
+    return favoredNodes[position.ordinal()];
+  }
+
   private void printHServerAddressSet(Set<ServerName> serverSet) {
     if (serverSet == null) {
       return ;
