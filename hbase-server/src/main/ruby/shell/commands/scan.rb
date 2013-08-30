@@ -38,8 +38,8 @@ Filter Language document attached to the HBASE-4176 JIRA
 
 Some examples:
 
-  hbase> scan '.META.'
-  hbase> scan '.META.', {COLUMNS => 'info:regioninfo'}
+  hbase> scan 'hbase:meta'
+  hbase> scan 'hbase:meta', {COLUMNS => 'info:regioninfo'}
   hbase> scan 't1', {COLUMNS => ['c1', 'c2'], LIMIT => 10, STARTROW => 'xyz'}
   hbase> scan 't1', {COLUMNS => 'c1', TIMERANGE => [1303668804, 1303668904]}
   hbase> scan 't1', {FILTER => "(PrefixFilter ('row2') AND

@@ -478,7 +478,7 @@ EOF
     end
 
     # Make a String of the passed kv
-    # Intercept cells whose format we know such as the info:regioninfo in .META.
+    # Intercept cells whose format we know such as the info:regioninfo in hbase:meta
     def to_string(column, kv, maxlength = -1)
       if is_meta_table?
         if column == 'info:regioninfo' or column == 'info:splitA' or column == 'info:splitB'
