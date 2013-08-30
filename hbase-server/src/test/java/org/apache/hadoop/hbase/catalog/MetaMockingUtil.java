@@ -23,6 +23,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.KeyValue;
@@ -72,7 +73,7 @@ public class MetaMockingUtil {
    */
   public static Result getMetaTableRowResult(HRegionInfo region, final ServerName sn,
       HRegionInfo splita, HRegionInfo splitb) throws IOException {
-    List<KeyValue> kvs = new ArrayList<KeyValue>();
+    List<Cell> kvs = new ArrayList<Cell>();
     if (region != null) {
       kvs.add(new KeyValue(
         region.getRegionName(),

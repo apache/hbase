@@ -18,14 +18,7 @@
  */
 package org.apache.hadoop.hbase.rest;
 
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.rest.ResourceBase;
-import org.apache.hadoop.hbase.rest.RowSpec;
-import org.apache.hadoop.hbase.rest.TableResource;
-import org.apache.hadoop.hbase.rest.model.CellModel;
-import org.apache.hadoop.hbase.rest.model.CellSetModel;
-import org.apache.hadoop.hbase.rest.model.RowModel;
+import java.io.IOException;
 
 import javax.ws.rs.GET;
 import javax.ws.rs.Produces;
@@ -33,7 +26,13 @@ import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MultivaluedMap;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriInfo;
-import java.io.IOException;
+
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.rest.model.CellModel;
+import org.apache.hadoop.hbase.rest.model.CellSetModel;
+import org.apache.hadoop.hbase.rest.model.RowModel;
 
 @InterfaceAudience.Private
 public class MultiRowResource extends ResourceBase {
@@ -83,12 +82,13 @@ public class MultiRowResource extends ResourceBase {
             .build();
         }
 
-        KeyValue value = null;
+        Cell value = null;
         RowModel rowModel = new RowModel(rk);
 
         while ((value = generator.next()) != null) {
-          rowModel.addCell(new CellModel(value.getFamily(), value.getQualifier(),
-            value.getTimestamp(), value.getValue()));
+          rowModel.addCell(new CellModel(CellUtil.getFamilyArray(value),
+              CellUtil.getQualifierArray(value),
+            value.getTimestamp(), CellUtil.getValueArray(value)));
         }
 
         model.addRow(rowModel);

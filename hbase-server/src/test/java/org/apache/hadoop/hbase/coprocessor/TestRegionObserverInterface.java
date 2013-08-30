@@ -34,6 +34,8 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -333,19 +335,19 @@ public class TestRegionObserverInterface {
         Store store, final InternalScanner scanner, final ScanType scanType) {
       return new InternalScanner() {
         @Override
-        public boolean next(List<KeyValue> results) throws IOException {
+        public boolean next(List<Cell> results) throws IOException {
           return next(results, -1);
         }
 
         @Override
-        public boolean next(List<KeyValue> results, int limit)
+        public boolean next(List<Cell> results, int limit)
             throws IOException{
-          List<KeyValue> internalResults = new ArrayList<KeyValue>();
+          List<Cell> internalResults = new ArrayList<Cell>();
           boolean hasMore;
           do {
             hasMore = scanner.next(internalResults, limit);
             if (!internalResults.isEmpty()) {
-              long row = Bytes.toLong(internalResults.get(0).getRow());
+              long row = Bytes.toLong(CellUtil.getValueArray(internalResults.get(0)));
               if (row % 2 == 0) {
                 // return this row
                 break;

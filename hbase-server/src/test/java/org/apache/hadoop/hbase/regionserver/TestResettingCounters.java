@@ -91,11 +91,11 @@ public class TestResettingCounters {
       // increment all qualifiers, should have value=6 for all
       Result result = region.increment(all);
       assertEquals(numQualifiers, result.size());
-      KeyValue [] kvs = result.raw();
+      Cell [] kvs = result.raw();
       for (int i=0;i<kvs.length;i++) {
         System.out.println(kvs[i].toString());
-        assertTrue(Bytes.equals(kvs[i].getQualifier(), qualifiers[i]));
-        assertEquals(6, Bytes.toLong(kvs[i].getValue()));
+        assertTrue(CellUtil.matchingQualifier(kvs[i], qualifiers[i]));
+        assertEquals(6, Bytes.toLong(CellUtil.getValueArray(kvs[i])));
       }
     } finally {
       HRegion.closeHRegion(region);

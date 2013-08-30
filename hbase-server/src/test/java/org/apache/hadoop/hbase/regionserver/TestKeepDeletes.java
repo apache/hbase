@@ -27,6 +27,8 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
@@ -208,7 +210,7 @@ public class TestKeepDeletes {
     s.setRaw(true);
     s.setMaxVersions();
     InternalScanner scan = region.getScanner(s);
-    List<KeyValue> kvs = new ArrayList<KeyValue>();
+    List<Cell> kvs = new ArrayList<Cell>();
     scan.next(kvs);
     assertEquals(2, kvs.size());
 
@@ -222,7 +224,7 @@ public class TestKeepDeletes {
     s.setRaw(true);
     s.setMaxVersions();
     scan = region.getScanner(s);
-    kvs = new ArrayList<KeyValue>();
+    kvs = new ArrayList<Cell>();
     scan.next(kvs);
     assertTrue(kvs.isEmpty());
 
@@ -259,7 +261,7 @@ public class TestKeepDeletes {
     s.setMaxVersions();
     s.setTimeRange(0L, ts+1);
     InternalScanner scanner = region.getScanner(s);
-    List<KeyValue> kvs = new ArrayList<KeyValue>();
+    List<Cell> kvs = new ArrayList<Cell>();
     while(scanner.next(kvs));
     assertTrue(kvs.isEmpty());
 
@@ -333,18 +335,18 @@ public class TestKeepDeletes {
     s.setRaw(true);
     s.setMaxVersions();
     InternalScanner scan = region.getScanner(s);
-    List<KeyValue> kvs = new ArrayList<KeyValue>();
+    List<Cell> kvs = new ArrayList<Cell>();
     scan.next(kvs);
     assertEquals(8, kvs.size());
-    assertTrue(kvs.get(0).isDeleteFamily());
-    assertArrayEquals(kvs.get(1).getValue(), T3);
-    assertTrue(kvs.get(2).isDelete());
-    assertTrue(kvs.get(3).isDeleteType());
-    assertArrayEquals(kvs.get(4).getValue(), T2);
-    assertArrayEquals(kvs.get(5).getValue(), T1);
+    assertTrue(CellUtil.isDeleteFamily(kvs.get(0)));
+    assertArrayEquals(CellUtil.getValueArray(kvs.get(1)), T3);
+    assertTrue(CellUtil.isDelete(kvs.get(2)));
+    assertTrue(CellUtil.isDelete(kvs.get(3))); // .isDeleteType());
+    assertArrayEquals(CellUtil.getValueArray(kvs.get(4)), T2);
+    assertArrayEquals(CellUtil.getValueArray(kvs.get(5)), T1);
     // we have 3 CFs, so there are two more delete markers
-    assertTrue(kvs.get(6).isDeleteFamily());
-    assertTrue(kvs.get(7).isDeleteFamily());
+    assertTrue(CellUtil.isDeleteFamily(kvs.get(6)));
+    assertTrue(CellUtil.isDeleteFamily(kvs.get(7)));
 
     // verify that raw scans honor the passed timerange
     s = new Scan();
@@ -352,7 +354,7 @@ public class TestKeepDeletes {
     s.setMaxVersions();
     s.setTimeRange(0, 1);
     scan = region.getScanner(s);
-    kvs = new ArrayList<KeyValue>();
+    kvs = new ArrayList<Cell>();
     scan.next(kvs);
     // nothing in this interval, not even delete markers
     assertTrue(kvs.isEmpty());
@@ -363,14 +365,14 @@ public class TestKeepDeletes {
     s.setMaxVersions();
     s.setTimeRange(0, ts+2);
     scan = region.getScanner(s);
-    kvs = new ArrayList<KeyValue>();
+    kvs = new ArrayList<Cell>();
     scan.next(kvs);
     assertEquals(4, kvs.size());
-    assertTrue(kvs.get(0).isDeleteFamily());
-    assertArrayEquals(kvs.get(1).getValue(), T1);
+    assertTrue(CellUtil.isDeleteFamily(kvs.get(0)));
+    assertArrayEquals(CellUtil.getValueArray(kvs.get(1)), T1);
     // we have 3 CFs
-    assertTrue(kvs.get(2).isDeleteFamily());
-    assertTrue(kvs.get(3).isDeleteFamily());
+    assertTrue(CellUtil.isDeleteFamily(kvs.get(2)));
+    assertTrue(CellUtil.isDeleteFamily(kvs.get(3)));
 
     // filter old delete markers
     s = new Scan();
@@ -378,11 +380,11 @@ public class TestKeepDeletes {
     s.setMaxVersions();
     s.setTimeRange(ts+3, ts+5);
     scan = region.getScanner(s);
-    kvs = new ArrayList<KeyValue>();
+    kvs = new ArrayList<Cell>();
     scan.next(kvs);
     assertEquals(2, kvs.size());
-    assertArrayEquals(kvs.get(0).getValue(), T3);
-    assertTrue(kvs.get(1).isDelete());
+    assertArrayEquals(CellUtil.getValueArray(kvs.get(0)), T3);
+    assertTrue(CellUtil.isDelete(kvs.get(1)));
 
 
     HRegion.closeHRegion(region);
@@ -703,7 +705,7 @@ public class TestKeepDeletes {
     Scan s = new Scan(T1);
     s.setTimeRange(0, ts+1);
     InternalScanner scanner = region.getScanner(s);
-    List<KeyValue> kvs = new ArrayList<KeyValue>();
+    List<Cell> kvs = new ArrayList<Cell>();
     scanner.next(kvs);
     assertEquals(4, kvs.size());
     scanner.close();
@@ -711,7 +713,7 @@ public class TestKeepDeletes {
     s = new Scan(T2);
     s.setTimeRange(0, ts+2);
     scanner = region.getScanner(s);
-    kvs = new ArrayList<KeyValue>();
+    kvs = new ArrayList<Cell>();
     scanner.next(kvs);
     assertEquals(4, kvs.size());
     scanner.close();
@@ -814,13 +816,13 @@ public class TestKeepDeletes {
     // use max versions from the store(s)
     s.setMaxVersions(region.getStores().values().iterator().next().getScanInfo().getMaxVersions());
     InternalScanner scan = region.getScanner(s);
-    List<KeyValue> kvs = new ArrayList<KeyValue>();
+    List<Cell> kvs = new ArrayList<Cell>();
     int res = 0;
     boolean hasMore;
     do {
       hasMore = scan.next(kvs);
-      for (KeyValue kv : kvs) {
-        if(kv.isDelete()) res++;
+      for (Cell kv : kvs) {
+        if(CellUtil.isDelete(kv)) res++;
       }
       kvs.clear();
     } while (hasMore);
@@ -830,10 +832,10 @@ public class TestKeepDeletes {
 
   private void checkResult(Result r, byte[] fam, byte[] col, byte[] ... vals) {
     assertEquals(r.size(), vals.length);
-    List<KeyValue> kvs = r.getColumn(fam, col);
+    List<Cell> kvs = r.getColumn(fam, col);
     assertEquals(kvs.size(), vals.length);
     for (int i=0;i<vals.length;i++) {
-      assertArrayEquals(kvs.get(i).getValue(), vals[i]);
+      assertArrayEquals(CellUtil.getValueArray(kvs.get(i)), vals[i]);
     }
   }
 

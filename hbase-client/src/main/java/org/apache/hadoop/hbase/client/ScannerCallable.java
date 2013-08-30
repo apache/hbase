@@ -18,22 +18,23 @@
 
 package org.apache.hadoop.hbase.client;
 
-import com.google.protobuf.ServiceException;
-import com.google.protobuf.TextFormat;
+import java.io.IOException;
+import java.net.UnknownHostException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellScanner;
-import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
-import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.UnknownScannerException;
 import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
 import org.apache.hadoop.hbase.ipc.PayloadCarryingRpcController;
@@ -46,8 +47,8 @@ import org.apache.hadoop.hbase.regionserver.RegionServerStoppedException;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.net.DNS;
 
-import java.io.IOException;
-import java.net.UnknownHostException;
+import com.google.protobuf.ServiceException;
+import com.google.protobuf.TextFormat;
 
 /**
  * Scanner operations such as create, next, etc.
@@ -252,8 +253,9 @@ public class ScannerCallable extends RegionServerCallable<Result[]> {
     }
     long resultSize = 0;
     for (Result rr : rrs) {
-      for (KeyValue kv : rr.raw()) {
-        resultSize += kv.getLength();
+      for (Cell kv : rr.raw()) {
+        // TODO add getLength to Cell/use CellUtil#estimatedSizeOf
+        resultSize += KeyValueUtil.ensureKeyValue(kv).getLength();
       }
     }
     this.scanMetrics.countOfBytesInResults.addAndGet(resultSize);

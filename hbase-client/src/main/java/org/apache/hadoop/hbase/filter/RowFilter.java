@@ -19,17 +19,18 @@
 
 package org.apache.hadoop.hbase.filter;
 
-import com.google.protobuf.InvalidProtocolBufferException;
+import java.io.IOException;
+import java.util.ArrayList;
+
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.FilterProtos;
 
-import java.io.IOException;
-import java.util.ArrayList;
+import com.google.protobuf.InvalidProtocolBufferException;
 
 /**
  * This filter is used to filter based on the key. It takes an operator
@@ -65,7 +66,7 @@ public class RowFilter extends CompareFilter {
   }
 
   @Override
-  public ReturnCode filterKeyValue(KeyValue v) {
+  public ReturnCode filterKeyValue(Cell v) {
     if(this.filterOutRow) {
       return ReturnCode.NEXT_ROW;
     }
@@ -86,6 +87,7 @@ public class RowFilter extends CompareFilter {
   }
 
   public static Filter createFilterFromArguments(ArrayList<byte []> filterArguments) {
+    @SuppressWarnings("rawtypes") // for arguments
     ArrayList arguments = CompareFilter.extractArguments(filterArguments);
     CompareOp compareOp = (CompareOp)arguments.get(0);
     ByteArrayComparable comparator = (ByteArrayComparable)arguments.get(1);

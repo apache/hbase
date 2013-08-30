@@ -26,6 +26,7 @@ import java.util.Iterator;
 
 import org.apache.commons.lang.NotImplementedException;
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.io.compress.Compression;
@@ -73,7 +74,7 @@ public class EncodedDataBlock {
    * @param headerSize header size of the block.
    * @return Forwards sequential iterator.
    */
-  public Iterator<KeyValue> getIterator(int headerSize) {
+  public Iterator<Cell> getIterator(int headerSize) {
     final int rawSize = rawKVs.length;
     byte[] encodedDataWithHeader = getEncodedData();
     int bytesToSkip = headerSize + Bytes.SIZEOF_SHORT;
@@ -81,7 +82,7 @@ public class EncodedDataBlock {
         bytesToSkip, encodedDataWithHeader.length - bytesToSkip);
     final DataInputStream dis = new DataInputStream(bais);
 
-    return new Iterator<KeyValue>() {
+    return new Iterator<Cell>() {
       private ByteBuffer decompressedData = null;
 
       @Override
@@ -93,7 +94,7 @@ public class EncodedDataBlock {
       }
 
       @Override
-      public KeyValue next() {
+      public Cell next() {
         if (decompressedData == null) {
           try {
             decompressedData = dataBlockEncoder.decodeKeyValues(

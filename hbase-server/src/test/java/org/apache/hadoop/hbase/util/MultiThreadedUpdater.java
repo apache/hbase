@@ -33,8 +33,9 @@ import org.apache.commons.lang.math.RandomUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Append;
 import org.apache.hadoop.hbase.client.Delete;
@@ -179,8 +180,8 @@ public class MultiThreadedUpdater extends MultiThreadedWriterBase {
                 byte[] hashCodeBytes = Bytes.toBytes(hashCode);
                 byte[] checkedValue = HConstants.EMPTY_BYTE_ARRAY;
                 if (hashCode % 2 == 0) {
-                  KeyValue kv = result.getColumnLatest(cf, column);
-                  checkedValue = kv != null ? kv.getValue() : null;
+                  Cell kv = result.getColumnLatest(cf, column);
+                  checkedValue = kv != null ? CellUtil.getValueArray(kv) : null;
                   Preconditions.checkNotNull(checkedValue,
                     "Column value to be checked should not be null");
                 }

@@ -19,13 +19,16 @@
 
 package org.apache.hadoop.hbase.coprocessor;
 
-import com.google.protobuf.Message;
+import java.io.IOException;
+
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.client.coprocessor.LongColumnInterpreter;
 
-import java.io.IOException;
+import com.google.protobuf.Message;
 
 /**
  * Defines how value for specific column is interpreted and provides utility
@@ -59,14 +62,32 @@ public abstract class ColumnInterpreter<T, S, P extends Message,
 Q extends Message, R extends Message> {
 
   /**
+   * TODO: when removing {@link #getValue(byte[], byte[], KeyValue)}, this method should be made abstract
+   * 
    * @param colFamily
    * @param colQualifier
-   * @param kv
+   * @param c
    * @return value of type T
    * @throws IOException
    */
-  public abstract T getValue(byte[] colFamily, byte[] colQualifier, KeyValue kv)
-      throws IOException;
+  public T getValue(byte[] colFamily, byte[] colQualifier, Cell c)
+      throws IOException {
+    // call the deprecated method for compatiblity.
+    KeyValue kv = KeyValueUtil.ensureKeyValue(c);
+    return getValue(colFamily, colQualifier, kv);
+  }
+
+  /**
+   * This method used to be abstract, and is preserved for compatibility and easy of conversion
+   * from 0.94->0.96.
+   *
+   * Please override {@link #getValue(byte[], byte[], Cell)} instead.
+   */
+  @Deprecated
+  public T getValue(byte[] colFamily, byte[] colQualifier, KeyValue kv)
+      throws IOException {
+    return null;
+  }
 
   /**
    * @param l1

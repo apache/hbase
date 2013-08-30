@@ -105,7 +105,7 @@ public class TestMultipleTimestamps {
     ResultScanner scanner = scan(ht, FAMILY, scanRows, scanColumns,
         scanTimestamps, scanMaxVersions);
 
-    KeyValue[] kvs;
+    Cell [] kvs;
 
     kvs = scanner.next().raw();
     assertEquals(2, kvs.length);
@@ -147,7 +147,7 @@ public class TestMultipleTimestamps {
     ResultScanner scanner = scan(ht, FAMILY, scanRows, scanColumns,
         scanTimestamps, scanMaxVersions);
 
-    KeyValue[] kvs;
+    Cell[] kvs;
 
     kvs = scanner.next().raw();
     assertEquals(1, kvs.length);
@@ -194,7 +194,7 @@ public class TestMultipleTimestamps {
     }
     scanner = scan(ht, FAMILY, scanRows, scanColumns, scanTimestamps, scanMaxVersions);
 
-    KeyValue[] kvs;
+    Cell[] kvs;
 
     // This looks like wrong answer.  Should be 2.  Even then we are returning wrong result,
     // timestamps that are 3 whereas should be 2 since min is inclusive.
@@ -252,7 +252,7 @@ public class TestMultipleTimestamps {
     ResultScanner scanner = scan(ht, FAMILY, scanRows, scanColumns,
         scanTimestamps, scanMaxVersions);
 
-    KeyValue[] kvs;
+    Cell[] kvs;
 
     kvs = scanner.next().raw();
     assertEquals(2, kvs.length);
@@ -307,7 +307,7 @@ public class TestMultipleTimestamps {
 
     // request a bunch of versions including the deleted version. We should
     // only get back entries for the versions that exist.
-    KeyValue kvs[] = getNVersions(ht, FAMILY, 0, 0,
+    Cell kvs[] = getNVersions(ht, FAMILY, 0, 0,
         Arrays.asList(2L, 3L, 4L, 5L));
     assertEquals(3, kvs.length);
     checkOneCell(kvs[0], FAMILY, 0, 0, 5);
@@ -339,7 +339,7 @@ public class TestMultipleTimestamps {
 
     // request a bunch of versions including the deleted version. We should
     // only get back entries for the versions that exist.
-    KeyValue kvs[] = getNVersions(ht, FAMILY, 0, 0, Arrays.asList(2L, 3L));
+    Cell kvs[] = getNVersions(ht, FAMILY, 0, 0, Arrays.asList(2L, 3L));
     assertEquals(0, kvs.length);
 
     ht.close();
@@ -365,7 +365,7 @@ public class TestMultipleTimestamps {
 
     // request a bunch of versions including the deleted version. We should
     // only get back entries for the versions that exist.
-    KeyValue kvs[] = getNVersions(ht, FAMILY, 0, 0, Arrays.asList(2L, 3L));
+    Cell kvs[] = getNVersions(ht, FAMILY, 0, 0, Arrays.asList(2L, 3L));
     assertEquals(0, kvs.length);
 
     ht.close();
@@ -391,7 +391,7 @@ public class TestMultipleTimestamps {
 
     // request a bunch of versions including the deleted version. We should
     // only get back entries for the versions that exist.
-    KeyValue kvs[] = getNVersions(ht, FAMILY, 0, 0, Arrays.asList(2L, 3L));
+    Cell kvs[] = getNVersions(ht, FAMILY, 0, 0, Arrays.asList(2L, 3L));
     assertEquals(0, kvs.length);
 
     ht.close();
@@ -401,26 +401,26 @@ public class TestMultipleTimestamps {
    * Assert that the passed in KeyValue has expected contents for the
    * specified row, column & timestamp.
    */
-  private void checkOneCell(KeyValue kv, byte[] cf,
+  private void checkOneCell(Cell kv, byte[] cf,
       int rowIdx, int colIdx, long ts) {
 
     String ctx = "rowIdx=" + rowIdx + "; colIdx=" + colIdx + "; ts=" + ts;
 
     assertEquals("Row mismatch which checking: " + ctx,
-        "row:"+ rowIdx, Bytes.toString(kv.getRow()));
+        "row:"+ rowIdx, Bytes.toString(CellUtil.getRowArray(kv)));
 
     assertEquals("ColumnFamily mismatch while checking: " + ctx,
-        Bytes.toString(cf), Bytes.toString(kv.getFamily()));
+        Bytes.toString(cf), Bytes.toString(CellUtil.getFamilyArray(kv)));
 
     assertEquals("Column qualifier mismatch while checking: " + ctx,
         "column:" + colIdx,
-        Bytes.toString(kv.getQualifier()));
+        Bytes.toString(CellUtil.getQualifierArray(kv)));
 
     assertEquals("Timestamp mismatch while checking: " + ctx,
         ts, kv.getTimestamp());
 
     assertEquals("Value mismatch while checking: " + ctx,
-        "value-version-" + ts, Bytes.toString(kv.getValue()));
+        "value-version-" + ts, Bytes.toString(CellUtil.getValueArray(kv)));
   }
 
   /**
@@ -428,7 +428,7 @@ public class TestMultipleTimestamps {
    * versions for the row/column specified by rowIdx & colIdx.
    *
    */
-  private  KeyValue[] getNVersions(HTable ht, byte[] cf, int rowIdx,
+  private  Cell[] getNVersions(HTable ht, byte[] cf, int rowIdx,
       int colIdx, List<Long> versions)
   throws IOException {
     byte row[] = Bytes.toBytes("row:" + rowIdx);

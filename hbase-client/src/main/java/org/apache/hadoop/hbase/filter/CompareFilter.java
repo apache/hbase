@@ -120,7 +120,8 @@ public abstract class CompareFilter extends FilterBase {
     }
   }
 
-  public static ArrayList extractArguments(ArrayList<byte []> filterArguments) {
+  // returns an array of heterogeneous objects
+  public static ArrayList<Object> extractArguments(ArrayList<byte []> filterArguments) {
     Preconditions.checkArgument(filterArguments.size() == 2,
                                 "Expected 2 but got: %s", filterArguments.size());
     CompareOp compareOp = ParseFilter.createCompareOp(filterArguments.get(0));
@@ -135,7 +136,7 @@ public abstract class CompareFilter extends FilterBase {
                                             " can only be used with EQUAL and NOT_EQUAL");
       }
     }
-    ArrayList arguments = new ArrayList();
+    ArrayList<Object> arguments = new ArrayList<Object>();
     arguments.add(compareOp);
     arguments.add(comparator);
     return arguments;

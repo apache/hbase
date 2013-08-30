@@ -24,7 +24,8 @@ import java.math.RoundingMode;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.coprocessor.ColumnInterpreter;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BigDecimalMsg;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.EmptyMsg;
@@ -43,12 +44,12 @@ public class BigDecimalColumnInterpreter extends ColumnInterpreter<BigDecimal, B
   EmptyMsg, BigDecimalMsg, BigDecimalMsg> {
 
   @Override
-  public BigDecimal getValue(byte[] colFamily, byte[] colQualifier, KeyValue kv)
+  public BigDecimal getValue(byte[] colFamily, byte[] colQualifier, Cell kv)
       throws IOException {
-    if (kv == null || kv.getValue() == null) {
+    if (kv == null || CellUtil.getValueArray(kv) == null) {
       return null;
     }
-    return Bytes.toBigDecimal(kv.getValue()).setScale(2, RoundingMode.HALF_EVEN);
+    return Bytes.toBigDecimal(CellUtil.getValueArray(kv)).setScale(2, RoundingMode.HALF_EVEN);
   }
 
   @Override

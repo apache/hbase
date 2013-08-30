@@ -22,7 +22,9 @@ import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.protobuf.generated.FilterProtos;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -57,7 +59,8 @@ public class FirstKeyValueMatchingQualifiersFilter extends FirstKeyOnlyFilter {
     this.qualifiers = qualifiers;
   }
 
-  public ReturnCode filterKeyValue(KeyValue v) {
+  @Override
+  public ReturnCode filterKeyValue(Cell v) {
     if (hasFoundKV()) {
       return ReturnCode.NEXT_ROW;
     } else if (hasOneMatchingQualifier(v)) {
@@ -66,9 +69,11 @@ public class FirstKeyValueMatchingQualifiersFilter extends FirstKeyOnlyFilter {
     return ReturnCode.INCLUDE;
   }
 
-  private boolean hasOneMatchingQualifier(KeyValue v) {
+  private boolean hasOneMatchingQualifier(Cell v) {
     for (byte[] q : qualifiers) {
-      if (v.matchingQualifier(q)) {
+      // TODO get rid of this by adding matching qualifier to interface.
+      KeyValue kv = KeyValueUtil.ensureKeyValue(v);
+      if (kv.matchingQualifier(q)) {
         return true;
       }
     }

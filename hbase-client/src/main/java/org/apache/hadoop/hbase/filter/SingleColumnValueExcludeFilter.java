@@ -22,7 +22,9 @@ package org.apache.hadoop.hbase.filter;
 import com.google.protobuf.InvalidProtocolBufferException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
@@ -100,10 +102,11 @@ public class SingleColumnValueExcludeFilter extends SingleColumnValueFilter {
   }
 
   // Here we remove from row all key values from testing column
-  public void filterRow(List<KeyValue> kvs) {
-    Iterator it = kvs.iterator();
+  @Override
+  public void filterRowCells(List<Cell> kvs) {
+    Iterator<? extends Cell> it = kvs.iterator();
     while (it.hasNext()) {
-      KeyValue kv = (KeyValue)it.next();
+      KeyValue kv = KeyValueUtil.ensureKeyValue(it.next());
       // If the current column is actually the tested column,
       // we will skip it instead.
       if (kv.matchingColumn(this.columnFamily, this.columnQualifier)) {

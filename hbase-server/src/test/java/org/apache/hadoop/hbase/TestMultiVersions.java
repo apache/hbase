@@ -236,7 +236,7 @@ public class TestMultiVersions {
         get.setTimeStamp(timestamp[j]);
         Result result = table.get(get);
         int cellCount = 0;
-        for(@SuppressWarnings("unused")KeyValue kv : result.list()) {
+        for(@SuppressWarnings("unused")Cell kv : result.list()) {
           cellCount++;
         }
         assertTrue(cellCount == 1);

@@ -33,6 +33,8 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
@@ -156,10 +158,10 @@ public class TestScanWithBloomError {
         + lastStoreFileReader.getHFileReader().getName());
     lastStoreFileReader.disableBloomFilterForTesting();
 
-    List<KeyValue> allResults = new ArrayList<KeyValue>();
+    List<Cell> allResults = new ArrayList<Cell>();
 
     { // Limit the scope of results.
-      List<KeyValue> results = new ArrayList<KeyValue>();
+      List<Cell> results = new ArrayList<Cell>();
       while (scanner.next(results) || results.size() > 0) {
         allResults.addAll(results);
         results.clear();
@@ -167,8 +169,8 @@ public class TestScanWithBloomError {
     }
 
     List<Integer> actualIds = new ArrayList<Integer>();
-    for (KeyValue kv : allResults) {
-      String qual = Bytes.toString(kv.getQualifier());
+    for (Cell kv : allResults) {
+      String qual = Bytes.toString(CellUtil.getQualifierArray(kv));
       assertTrue(qual.startsWith(QUALIFIER_PREFIX));
       actualIds.add(Integer.valueOf(qual.substring(
           QUALIFIER_PREFIX.length())));

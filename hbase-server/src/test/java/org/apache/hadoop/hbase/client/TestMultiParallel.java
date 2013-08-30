@@ -32,8 +32,9 @@ import java.util.concurrent.ThreadPoolExecutor;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.commons.logging.impl.Log4JLogger;
+import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.ipc.RpcClient;
@@ -183,12 +184,12 @@ public class TestMultiParallel {
     Assert.assertEquals(singleRes.size(), multiRes.length);
     for (int i = 0; i < singleRes.size(); i++) {
       Assert.assertTrue(singleRes.get(i).containsColumn(BYTES_FAMILY, QUALIFIER));
-      KeyValue[] singleKvs = singleRes.get(i).raw();
-      KeyValue[] multiKvs = multiRes[i].raw();
+      Cell[] singleKvs = singleRes.get(i).raw();
+      Cell[] multiKvs = multiRes[i].raw();
       for (int j = 0; j < singleKvs.length; j++) {
         Assert.assertEquals(singleKvs[j], multiKvs[j]);
-        Assert.assertEquals(0, Bytes.compareTo(singleKvs[j].getValue(), multiKvs[j]
-            .getValue()));
+        Assert.assertEquals(0, Bytes.compareTo(CellUtil.getValueArray(singleKvs[j]), 
+            CellUtil.getValueArray(multiKvs[j])));
       }
     }
     table.close();

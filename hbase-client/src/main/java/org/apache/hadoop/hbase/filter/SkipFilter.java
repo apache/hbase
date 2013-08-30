@@ -23,7 +23,7 @@ import java.io.IOException;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.FilterProtos;
@@ -31,7 +31,7 @@ import org.apache.hadoop.hbase.protobuf.generated.FilterProtos;
 import com.google.protobuf.InvalidProtocolBufferException;
 
 /**
- * A wrapper filter that filters an entire row if any of the KeyValue checks do
+ * A wrapper filter that filters an entire row if any of the Cell checks do
  * not pass.
  * <p>
  * For example, if all columns in a row represent weights of different things,
@@ -45,7 +45,7 @@ import com.google.protobuf.InvalidProtocolBufferException;
  *     new BinaryComparator(Bytes.toBytes(0))));
  * </code>
  * Any row which contained a column whose value was 0 will be filtered out
- * (since ValueFilter will not pass that KeyValue).
+ * (since ValueFilter will not pass that Cell).
  * Without this filter, the other non-zero valued columns in the row would still
  * be emitted.
  */
@@ -74,15 +74,15 @@ public class SkipFilter extends FilterBase {
   }
 
   @Override
-  public ReturnCode filterKeyValue(KeyValue v) throws IOException {
+  public ReturnCode filterKeyValue(Cell v) throws IOException {
     ReturnCode c = filter.filterKeyValue(v);
     changeFR(c != ReturnCode.INCLUDE);
     return c;
   }
 
   @Override
-  public KeyValue transform(KeyValue v) throws IOException {
-    return filter.transform(v);
+  public Cell transformCell(Cell v) throws IOException {
+    return filter.transformCell(v);
   }
 
   public boolean filterRow() {

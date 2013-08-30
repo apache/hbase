@@ -30,8 +30,10 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.regionserver.compactions.Compactor;
@@ -117,16 +119,17 @@ s   */
       Compactor.CellSink sink, long smallestReadPoint) throws IOException {
     int compactionKVMax =
       conf.getInt(HConstants.COMPACTION_KV_MAX, HConstants.COMPACTION_KV_MAX_DEFAULT);
-    List<KeyValue> kvs = new ArrayList<KeyValue>();
+    List<Cell> kvs = new ArrayList<Cell>();
     boolean hasMore;
     long flushed = 0;
     do {
       hasMore = scanner.next(kvs, compactionKVMax);
       if (!kvs.isEmpty()) {
-        for (KeyValue kv : kvs) {
+        for (Cell c : kvs) {
           // If we know that this KV is going to be included always, then let us
           // set its memstoreTS to 0. This will help us save space when writing to
           // disk.
+          KeyValue kv = KeyValueUtil.ensureKeyValue(c);
           if (kv.getMvccVersion() <= smallestReadPoint) {
             // let us not change the original KV. It could be in the memstore
             // changing its memstoreTS could affect other threads/scanners.

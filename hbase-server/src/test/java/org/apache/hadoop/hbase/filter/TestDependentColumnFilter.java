@@ -139,7 +139,7 @@ public class TestDependentColumnFilter {
   private void verifyScan(Scan s, long expectedRows, long expectedCells)
   throws IOException {
     InternalScanner scanner = this.region.getScanner(s);
-    List<KeyValue> results = new ArrayList<KeyValue>();
+    List<Cell> results = new ArrayList<Cell>();
     int i = 0;
     int cells = 0;
     for (boolean done = true; done; i++) {
@@ -223,15 +223,15 @@ public class TestDependentColumnFilter {
   @Test
   public void testFilterDropping() throws Exception {
     Filter filter = new DependentColumnFilter(FAMILIES[0], QUALIFIER);
-    List<KeyValue> accepted = new ArrayList<KeyValue>();
-    for(KeyValue val : testVals) {
+    List<Cell> accepted = new ArrayList<Cell>();
+    for(Cell val : testVals) {
       if(filter.filterKeyValue(val) == ReturnCode.INCLUDE) {
         accepted.add(val);
       }
     }
     assertEquals("check all values accepted from filterKeyValue", 5, accepted.size());
 
-    filter.filterRow(accepted);
+    filter.filterRowCells(accepted);
     assertEquals("check filterRow(List<KeyValue>) dropped cell without corresponding column entry", 4, accepted.size());
 
     // start do it again with dependent column dropping on
@@ -244,7 +244,7 @@ public class TestDependentColumnFilter {
       }
       assertEquals("check the filtering column cells got dropped", 2, accepted.size());
 
-      filter.filterRow(accepted);
+      filter.filterRowCells(accepted);
       assertEquals("check cell retention", 2, accepted.size());
   }
 

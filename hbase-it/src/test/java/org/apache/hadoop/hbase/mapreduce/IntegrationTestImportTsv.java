@@ -17,6 +17,11 @@
  */
 package org.apache.hadoop.hbase.mapreduce;
 
+import static java.lang.String.format;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Iterator;
@@ -31,6 +36,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -61,11 +67,6 @@ import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-
-import static java.lang.String.format;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
 
 /**
  * Validate ImportTsv + LoadIncrementalHFiles on a distributed cluster.
@@ -153,7 +154,7 @@ public class IntegrationTestImportTsv implements Configurable, Tool {
       Iterator<KeyValue> expectedIt = simple_expected.iterator();
       while (resultsIt.hasNext() && expectedIt.hasNext()) {
         Result r = resultsIt.next();
-        for (KeyValue actual : r.raw()) {
+        for (Cell actual : r.raw()) {
           assertTrue(
             "Ran out of expected values prematurely!",
             expectedIt.hasNext());

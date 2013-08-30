@@ -21,6 +21,7 @@ import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.protobuf.generated.FilterProtos;
@@ -62,11 +63,11 @@ public class MultipleColumnPrefixFilter extends FilterBase {
   }
 
   @Override
-  public ReturnCode filterKeyValue(KeyValue kv) {
-    if (sortedPrefixes.size() == 0 || kv.getBuffer() == null) {
+  public ReturnCode filterKeyValue(Cell kv) {
+    if (sortedPrefixes.size() == 0 || kv.getQualifierArray() == null) {
       return ReturnCode.INCLUDE;
     } else {
-      return filterColumn(kv.getBuffer(), kv.getQualifierOffset(), kv.getQualifierLength());
+      return filterColumn(kv.getQualifierArray(), kv.getQualifierOffset(), kv.getQualifierLength());
     }
   }
 
@@ -152,9 +153,10 @@ public class MultipleColumnPrefixFilter extends FilterBase {
     return this.sortedPrefixes.equals(other.sortedPrefixes);
   }
 
-  public KeyValue getNextKeyHint(KeyValue kv) {
+  @Override
+  public Cell getNextCellHint(Cell kv) {
     return KeyValue.createFirstOnRow(
-      kv.getBuffer(), kv.getRowOffset(), kv.getRowLength(), kv.getBuffer(),
+      kv.getRowArray(), kv.getRowOffset(), kv.getRowLength(), kv.getFamilyArray(),
       kv.getFamilyOffset(), kv.getFamilyLength(), hint, 0, hint.length);
   }
 

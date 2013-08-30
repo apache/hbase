@@ -17,6 +17,18 @@
  */
 package org.apache.hadoop.hbase.mapreduce;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.PrintStream;
+
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.LargeTests;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
@@ -32,12 +44,6 @@ import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-import org.apache.hadoop.conf.Configuration;
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.io.PrintStream;
-
-import static org.junit.Assert.*;
 
 /**
  * Basic test for the CopyTable M/R tool
@@ -100,7 +106,7 @@ public class TestCopyTable {
       Get g = new Get(Bytes.toBytes("row" + i));
       Result r = t2.get(g);
       assertEquals(1, r.size());
-      assertTrue(Bytes.equals(COLUMN1, r.raw()[0].getQualifier()));
+      assertTrue(CellUtil.matchingQualifier(r.raw()[0], COLUMN1));
     }
     
     t1.close();
@@ -144,8 +150,8 @@ public class TestCopyTable {
     Get g = new Get(ROW1);
     Result r = t2.get(g);
     assertEquals(1, r.size());
-    assertTrue(Bytes.equals(COLUMN1, r.raw()[0].getQualifier()));
-    
+    assertTrue(CellUtil.matchingQualifier(r.raw()[0], COLUMN1));
+
     g = new Get(ROW0);
     r = t2.get(g);
     assertEquals(0, r.size());

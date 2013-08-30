@@ -34,6 +34,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
@@ -80,8 +81,7 @@ public class TestMemStore extends TestCase {
     this.memstore.add(samekey);
     KeyValue found = this.memstore.kvset.first();
     assertEquals(1, this.memstore.kvset.size());
-    assertTrue(Bytes.toString(found.getValue()), Bytes.equals(samekey.getValue(),
-      found.getValue()));
+    assertTrue(Bytes.toString(found.getValue()), CellUtil.matchingValue(samekey, found));
   }
 
   /**
@@ -92,7 +92,7 @@ public class TestMemStore extends TestCase {
     int rowCount = addRows(this.memstore);
     List<KeyValueScanner> memstorescanners = this.memstore.getScanners();
     Scan scan = new Scan();
-    List<KeyValue> result = new ArrayList<KeyValue>();
+    List<Cell> result = new ArrayList<Cell>();
     MultiVersionConsistencyControl.resetThreadReadPoint(mvcc);
     ScanInfo scanInfo = new ScanInfo(null, 0, 1, HConstants.LATEST_TIMESTAMP, false,
         0, this.memstore.comparator);
@@ -124,7 +124,7 @@ public class TestMemStore extends TestCase {
       while (s.next(result)) {
         LOG.info(result);
         // Assert the stuff is coming out in right order.
-        assertTrue(Bytes.compareTo(Bytes.toBytes(count), result.get(0).getRow()) == 0);
+        assertTrue(CellUtil.matchingRow(result.get(0), Bytes.toBytes(count)));
         count++;
         // Row count is same as column count.
         assertEquals(rowCount, result.size());
@@ -151,7 +151,7 @@ public class TestMemStore extends TestCase {
       while (s.next(result)) {
         LOG.info(result);
         // Assert the stuff is coming out in right order.
-        assertTrue(Bytes.compareTo(Bytes.toBytes(count), result.get(0).getRow()) == 0);
+        assertTrue(CellUtil.matchingRow(result.get(0), Bytes.toBytes(count)));
         // Row count is same as column count.
         assertEquals("count=" + count + ", result=" + result, rowCount, result.size());
         count++;
@@ -219,7 +219,7 @@ public class TestMemStore extends TestCase {
   private void assertScannerResults(KeyValueScanner scanner, KeyValue[] expected)
       throws IOException {
     scanner.seek(KeyValue.createFirstOnRow(new byte[]{}));
-    List<KeyValue> returned = Lists.newArrayList();
+    List<Cell> returned = Lists.newArrayList();
 
     while (true) {
       KeyValue next = scanner.next();
@@ -533,16 +533,16 @@ public class TestMemStore extends TestCase {
       InternalScanner scanner = new StoreScanner(new Scan(
           Bytes.toBytes(startRowId)), scanInfo, scanType, null,
           memstore.getScanners());
-      List<KeyValue> results = new ArrayList<KeyValue>();
+      List<Cell> results = new ArrayList<Cell>();
       for (int i = 0; scanner.next(results); i++) {
         int rowId = startRowId + i;
-        KeyValue left = results.get(0);
+        Cell left = results.get(0);
         byte[] row1 = Bytes.toBytes(rowId);
         assertTrue("Row name",
-          KeyValue.COMPARATOR.compareRows(left.getBuffer(), left.getRowOffset(), (int) left.getRowLength(), row1, 0, row1.length) == 0);
+          KeyValue.COMPARATOR.compareRows(left.getRowArray(), left.getRowOffset(), (int) left.getRowLength(), row1, 0, row1.length) == 0);
         assertEquals("Count of columns", QUALIFIER_COUNT, results.size());
-        List<KeyValue> row = new ArrayList<KeyValue>();
-        for (KeyValue kv : results) {
+        List<Cell> row = new ArrayList<Cell>();
+        for (Cell kv : results) {
           row.add(kv);
         }
         isExpectedRowWithoutTimestamps(rowId, row);
@@ -600,7 +600,7 @@ public class TestMemStore extends TestCase {
     KeyValue del2 = new KeyValue(row, fam, qf1, ts2, KeyValue.Type.Delete, val);
     memstore.delete(del2);
 
-    List<KeyValue> expected = new ArrayList<KeyValue>();
+    List<Cell> expected = new ArrayList<Cell>();
     expected.add(put3);
     expected.add(del2);
     expected.add(put2);
@@ -635,7 +635,7 @@ public class TestMemStore extends TestCase {
       new KeyValue(row, fam, qf1, ts2, KeyValue.Type.DeleteColumn, val);
     memstore.delete(del2);
 
-    List<KeyValue> expected = new ArrayList<KeyValue>();
+    List<Cell> expected = new ArrayList<Cell>();
     expected.add(put3);
     expected.add(del2);
     expected.add(put2);
@@ -673,7 +673,7 @@ public class TestMemStore extends TestCase {
       new KeyValue(row, fam, null, ts, KeyValue.Type.DeleteFamily, val);
     memstore.delete(del);
 
-    List<KeyValue> expected = new ArrayList<KeyValue>();
+    List<Cell> expected = new ArrayList<Cell>();
     expected.add(del);
     expected.add(put1);
     expected.add(put2);
@@ -992,19 +992,16 @@ public class TestMemStore extends TestCase {
   }
 
   private void isExpectedRowWithoutTimestamps(final int rowIndex,
-      List<KeyValue> kvs) {
+      List<Cell> kvs) {
     int i = 0;
-    for (KeyValue kv: kvs) {
-      String expectedColname = Bytes.toString(makeQualifier(rowIndex, i++));
-      String colnameStr = Bytes.toString(kv.getQualifier());
-      assertEquals("Column name", colnameStr, expectedColname);
+    for (Cell kv: kvs) {
+      byte[] expectedColname = makeQualifier(rowIndex, i++);
+      assertTrue("Column name", CellUtil.matchingQualifier(kv, expectedColname));
       // Value is column name as bytes.  Usually result is
       // 100 bytes in size at least. This is the default size
       // for BytesWriteable.  For comparison, convert bytes to
       // String and trim to remove trailing null bytes.
-      String colvalueStr = Bytes.toString(kv.getBuffer(), kv.getValueOffset(),
-        kv.getValueLength());
-      assertEquals("Content", colnameStr, colvalueStr);
+      assertTrue("Content", CellUtil.matchingValue(kv, expectedColname));
     }
   }
 

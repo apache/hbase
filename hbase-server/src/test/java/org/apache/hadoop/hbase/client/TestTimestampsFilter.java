@@ -93,7 +93,7 @@ public class TestTimestampsFilter {
     byte [] TABLE = Bytes.toBytes("testTimestampsFilter");
     byte [] FAMILY = Bytes.toBytes("event_log");
     byte [][] FAMILIES = new byte[][] { FAMILY };
-    KeyValue kvs[];
+    Cell kvs[];
 
     // create table; set versions to max...
     HTable ht = TEST_UTIL.createTable(TABLE, FAMILIES, Integer.MAX_VALUE);
@@ -169,7 +169,6 @@ public class TestTimestampsFilter {
     byte [] TABLE = Bytes.toBytes("testTimestampsFilterMultiColumns");
     byte [] FAMILY = Bytes.toBytes("event_log");
     byte [][] FAMILIES = new byte[][] { FAMILY };
-    KeyValue kvs[];
 
     // create table; set versions to max...
     HTable ht = TEST_UTIL.createTable(TABLE, FAMILIES, Integer.MAX_VALUE);
@@ -186,7 +185,7 @@ public class TestTimestampsFilter {
     p.add(FAMILY, Bytes.toBytes("column4"), 3, Bytes.toBytes("value4-3"));
     ht.put(p);
 
-    ArrayList timestamps = new ArrayList();
+    ArrayList<Long> timestamps = new ArrayList<Long>();
     timestamps.add(new Long(3));
     TimestampsFilter filter = new TimestampsFilter(timestamps);
 
@@ -197,17 +196,15 @@ public class TestTimestampsFilter {
     g.addColumn(FAMILY, Bytes.toBytes("column4"));
 
     Result result = ht.get(g);
-    for (KeyValue kv : result.list()) {
-      System.out.println("found row " + Bytes.toString(kv.getRow()) +
-          ", column " + Bytes.toString(kv.getQualifier()) + ", value "
-          + Bytes.toString(kv.getValue()));
+    for (Cell kv : result.list()) {
+      System.out.println("found row " + Bytes.toString(CellUtil.getRowArray(kv)) +
+          ", column " + Bytes.toString(CellUtil.getQualifierArray(kv)) + ", value "
+          + Bytes.toString(CellUtil.getValueArray(kv)));
     }
 
     assertEquals(result.list().size(), 2);
-    assertEquals(Bytes.toString(result.list().get(0).getValue()),
-        "value2-3");
-    assertEquals(Bytes.toString(result.list().get(1).getValue()),
-        "value4-3");
+    assertTrue(CellUtil.matchingValue(result.list().get(0), Bytes.toBytes("value2-3")));
+    assertTrue(CellUtil.matchingValue(result.list().get(1), Bytes.toBytes("value4-3")));
 
     ht.close();
   }
@@ -248,7 +245,7 @@ public class TestTimestampsFilter {
 
     // request a bunch of versions including the deleted version. We should
     // only get back entries for the versions that exist.
-    KeyValue kvs[] = getNVersions(ht, FAMILY, 0, 0, Arrays.asList(2L, 3L, 4L, 5L));
+    Cell kvs[] = getNVersions(ht, FAMILY, 0, 0, Arrays.asList(2L, 3L, 4L, 5L));
     assertEquals(3, kvs.length);
     checkOneCell(kvs[0], FAMILY, 0, 0, 5);
     checkOneCell(kvs[1], FAMILY, 0, 0, 3);
@@ -261,7 +258,7 @@ public class TestTimestampsFilter {
     for (int rowIdx = 0; rowIdx < 5; rowIdx++) {
       for (int colIdx = 0; colIdx < 5; colIdx++) {
         // ask for versions that exist.
-        KeyValue[] kvs = getNVersions(ht, cf, rowIdx, colIdx,
+        Cell[] kvs = getNVersions(ht, cf, rowIdx, colIdx,
                                       Arrays.asList(5L, 300L, 6L, 80L));
         assertEquals(4, kvs.length);
         checkOneCell(kvs[0], cf, rowIdx, colIdx, 300);
@@ -289,26 +286,26 @@ public class TestTimestampsFilter {
    * Assert that the passed in KeyValue has expected contents for the
    * specified row, column & timestamp.
    */
-  private void checkOneCell(KeyValue kv, byte[] cf,
+  private void checkOneCell(Cell kv, byte[] cf,
                              int rowIdx, int colIdx, long ts) {
 
     String ctx = "rowIdx=" + rowIdx + "; colIdx=" + colIdx + "; ts=" + ts;
 
     assertEquals("Row mismatch which checking: " + ctx,
-                 "row:"+ rowIdx, Bytes.toString(kv.getRow()));
+                 "row:"+ rowIdx, Bytes.toString(CellUtil.getRowArray(kv)));
 
     assertEquals("ColumnFamily mismatch while checking: " + ctx,
-                 Bytes.toString(cf), Bytes.toString(kv.getFamily()));
+                 Bytes.toString(cf), Bytes.toString(CellUtil.getFamilyArray(kv)));
 
     assertEquals("Column qualifier mismatch while checking: " + ctx,
                  "column:" + colIdx,
-                  Bytes.toString(kv.getQualifier()));
+                  Bytes.toString(CellUtil.getQualifierArray(kv)));
 
     assertEquals("Timestamp mismatch while checking: " + ctx,
                  ts, kv.getTimestamp());
 
     assertEquals("Value mismatch while checking: " + ctx,
-                 "value-version-" + ts, Bytes.toString(kv.getValue()));
+                 "value-version-" + ts, Bytes.toString(CellUtil.getValueArray(kv)));
   }
 
   /**
@@ -316,7 +313,7 @@ public class TestTimestampsFilter {
    * versions for the row/column specified by rowIdx & colIdx.
    *
    */
-  private  KeyValue[] getNVersions(HTable ht, byte[] cf, int rowIdx,
+  private  Cell[] getNVersions(HTable ht, byte[] cf, int rowIdx,
                                    int colIdx, List<Long> versions)
     throws IOException {
     byte row[] = Bytes.toBytes("row:" + rowIdx);

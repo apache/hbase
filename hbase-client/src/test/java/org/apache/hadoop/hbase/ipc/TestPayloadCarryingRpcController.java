@@ -73,73 +73,73 @@ public class TestPayloadCarryingRpcController {
 
               @Override
               public byte[] getRowArray() {
-                // TODO Auto-generated method stub
+                // unused
                 return null;
               }
 
               @Override
               public int getRowOffset() {
-                // TODO Auto-generated method stub
+                // unused
                 return 0;
               }
 
               @Override
               public short getRowLength() {
-                // TODO Auto-generated method stub
+                // unused
                 return 0;
               }
 
               @Override
               public byte[] getFamilyArray() {
-                // TODO Auto-generated method stub
+                // unused
                 return null;
               }
 
               @Override
               public int getFamilyOffset() {
-                // TODO Auto-generated method stub
+                // unused
                 return 0;
               }
 
               @Override
               public byte getFamilyLength() {
-                // TODO Auto-generated method stub
+                // unused
                 return 0;
               }
 
               @Override
               public byte[] getQualifierArray() {
-                // TODO Auto-generated method stub
+                // unused
                 return null;
               }
 
               @Override
               public int getQualifierOffset() {
-                // TODO Auto-generated method stub
+                // unused
                 return 0;
               }
 
               @Override
               public int getQualifierLength() {
-                // TODO Auto-generated method stub
+                // unused
                 return 0;
               }
 
               @Override
               public long getTimestamp() {
-                // TODO Auto-generated method stub
+                // unused
                 return 0;
               }
 
               @Override
               public byte getTypeByte() {
-                // TODO Auto-generated method stub
+                // unused
                 return 0;
               }
 
               @Override
               public long getMvccVersion() {
-                // TODO Auto-generated method stub
+                // unused
                 return 0;
               }
 
@@ -160,19 +160,43 @@ public class TestPayloadCarryingRpcController {
 
               @Override
               public int getTagsOffset() {
-                // TODO Auto-generated method stub
+                // unused
                 return 0;
               }
 
               @Override
               public short getTagsLength() {
-                // TODO Auto-generated method stub
+                // unused
                 return 0;
               }
 
               @Override
               public byte[] getTagsArray() {
-                // TODO Auto-generated method stub
+                // unused
+                return null;
+              }
+
+              @Override
+              public byte[] getValue() {
+                // unused
+                return null;
+              }
+
+              @Override
+              public byte[] getFamily() {
+                // unused
+                return null;
+              }
+
+              @Override
+              public byte[] getQualifier() {
+                // unused
+                return null;
+              }
+
+              @Override
+              public byte[] getRow() {
+                // unused
                 return null;
               }
             };

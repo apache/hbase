@@ -25,11 +25,12 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.HTable;
@@ -39,22 +40,18 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.coprocessor.Batch;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.coprocessor.example.generated.BulkDeleteProtos.BulkDeleteRequest;
-import org.apache.hadoop.hbase.coprocessor.example.generated.BulkDeleteProtos.BulkDeleteResponse;
-import org.apache.hadoop.hbase.coprocessor.example.generated.BulkDeleteProtos.BulkDeleteService;
 import org.apache.hadoop.hbase.coprocessor.example.generated.BulkDeleteProtos.BulkDeleteRequest.Builder;
 import org.apache.hadoop.hbase.coprocessor.example.generated.BulkDeleteProtos.BulkDeleteRequest.DeleteType;
-import org.apache.hadoop.hbase.filter.FilterList;
-import org.apache.hadoop.hbase.filter.SingleColumnValueFilter;
+import org.apache.hadoop.hbase.coprocessor.example.generated.BulkDeleteProtos.BulkDeleteResponse;
+import org.apache.hadoop.hbase.coprocessor.example.generated.BulkDeleteProtos.BulkDeleteService;
 import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
+import org.apache.hadoop.hbase.filter.FilterList;
 import org.apache.hadoop.hbase.filter.FilterList.Operator;
+import org.apache.hadoop.hbase.filter.SingleColumnValueFilter;
 import org.apache.hadoop.hbase.ipc.BlockingRpcCallback;
 import org.apache.hadoop.hbase.ipc.ServerRpcController;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
-import org.junit.Ignore;
 import org.junit.experimental.categories.Category;
 
 @Category(MediumTests.class)
@@ -276,17 +273,17 @@ public class TestBulkDeleteProtocol {
     scan.setMaxVersions();
     for (Result result : ht.getScanner(scan)) {
       assertEquals(3, result.getFamilyMap(FAMILY1).size());
-      List<KeyValue> column = result.getColumn(FAMILY1, QUALIFIER1);
+      List<Cell> column = result.getColumn(FAMILY1, QUALIFIER1);
       assertEquals(1, column.size());
-      assertTrue(Bytes.equals("v1".getBytes(), column.get(0).getValue()));
+      assertTrue(CellUtil.matchingValue(column.get(0), "v1".getBytes()));
 
       column = result.getColumn(FAMILY1, QUALIFIER2);
       assertEquals(1, column.size());
-      assertTrue(Bytes.equals("v1".getBytes(), column.get(0).getValue()));
+      assertTrue(CellUtil.matchingValue(column.get(0), "v1".getBytes()));
 
       column = result.getColumn(FAMILY1, QUALIFIER3);
       assertEquals(1, column.size());
-      assertTrue(Bytes.equals("v1".getBytes(), column.get(0).getValue()));
+      assertTrue(CellUtil.matchingValue(column.get(0), "v1".getBytes()));
       rows++;
     }
     assertEquals(100, rows);
@@ -330,10 +327,10 @@ public class TestBulkDeleteProtocol {
       assertEquals(3, result.getFamilyMap(FAMILY1).size());
       assertEquals(3, result.getColumn(FAMILY1, QUALIFIER1).size());
       assertEquals(3, result.getColumn(FAMILY1, QUALIFIER2).size());
-      List<KeyValue> column = result.getColumn(FAMILY1, QUALIFIER3);
+      List<Cell> column = result.getColumn(FAMILY1, QUALIFIER3);
       assertEquals(2, column.size());
-      assertTrue(Bytes.equals("v3".getBytes(), column.get(0).getValue()));
-      assertTrue(Bytes.equals("v1".getBytes(), column.get(1).getValue()));
+      assertTrue(CellUtil.matchingValue(column.get(0), "v3".getBytes()));
+      assertTrue(CellUtil.matchingValue(column.get(1), "v1".getBytes()));
       rows++;
     }
     assertEquals(100, rows);
@@ -410,14 +407,14 @@ public class TestBulkDeleteProtocol {
     scan1.setMaxVersions();
     for (Result res : ht.getScanner(scan1)) {
       assertEquals(3, res.getFamilyMap(FAMILY1).size());
-      List<KeyValue> column = res.getColumn(FAMILY1, QUALIFIER1);
+      List<Cell> column = res.getColumn(FAMILY1, QUALIFIER1);
       assertEquals(2, column.size());
-      assertTrue(Bytes.equals("v4".getBytes(), column.get(0).getValue()));
-      assertTrue(Bytes.equals("v3".getBytes(), column.get(1).getValue()));
+      assertTrue(CellUtil.matchingValue(column.get(0), "v4".getBytes()));
+      assertTrue(CellUtil.matchingValue(column.get(1), "v3".getBytes()));
       column = res.getColumn(FAMILY1, QUALIFIER2);
       assertEquals(2, column.size());
-      assertTrue(Bytes.equals("v4".getBytes(), column.get(0).getValue()));
-      assertTrue(Bytes.equals("v3".getBytes(), column.get(1).getValue()));
+      assertTrue(CellUtil.matchingValue(column.get(0), "v4".getBytes()));
+      assertTrue(CellUtil.matchingValue(column.get(1), "v3".getBytes()));
       assertEquals(4, res.getColumn(FAMILY1, QUALIFIER3).size());
       rows++;
     }

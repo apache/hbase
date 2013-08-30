@@ -19,6 +19,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.client.Result;
@@ -49,7 +50,7 @@ public class TestGroupingTableMapper {
     Mapper<ImmutableBytesWritable, Result, ImmutableBytesWritable, Result>.Context context =
         mock(Mapper.Context.class);
     context.write(any(ImmutableBytesWritable.class), any(Result.class));
-    List<KeyValue> keyValue = new ArrayList<KeyValue>();
+    List<Cell> keyValue = new ArrayList<Cell>();
     byte[] row = {};
     keyValue.add(new KeyValue(row, Bytes.toBytes("family2"), Bytes.toBytes("clm"), Bytes
         .toBytes("value1")));

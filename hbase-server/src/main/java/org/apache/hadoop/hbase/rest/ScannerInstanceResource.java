@@ -35,6 +35,8 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.rest.model.CellModel;
 import org.apache.hadoop.hbase.rest.model.CellSetModel;
@@ -91,7 +93,7 @@ public class ScannerInstanceResource extends ResourceBase {
     }
     int count = limit;
     do {
-      KeyValue value = null;
+      Cell value = null;
       try {
         value = generator.next();
       } catch (IllegalStateException e) {
@@ -115,10 +117,10 @@ public class ScannerInstanceResource extends ResourceBase {
         break;
       }
       if (rowKey == null) {
-        rowKey = value.getRow();
+        rowKey = CellUtil.getRowArray(value);
         rowModel = new RowModel(rowKey);
       }
-      if (!Bytes.equals(value.getRow(), rowKey)) {
+      if (!Bytes.equals(CellUtil.getRowArray(value), rowKey)) {
         // if maxRows was given as a query param, stop if we would exceed the
         // specified number of rows
         if (maxRows > 0) { 
@@ -128,12 +130,12 @@ public class ScannerInstanceResource extends ResourceBase {
           }
         }
         model.addRow(rowModel);
-        rowKey = value.getRow();
+        rowKey = CellUtil.getRowArray(value);
         rowModel = new RowModel(rowKey);
       }
       rowModel.addCell(
-        new CellModel(value.getFamily(), value.getQualifier(), 
-          value.getTimestamp(), value.getValue()));
+        new CellModel(CellUtil.getFamilyArray(value), CellUtil.getQualifierArray(value), 
+          value.getTimestamp(), CellUtil.getValueArray(value)));
     } while (--count > 0);
     model.addRow(rowModel);
     ResponseBuilder response = Response.ok(model);
@@ -151,17 +153,17 @@ public class ScannerInstanceResource extends ResourceBase {
     }
     servlet.getMetrics().incrementRequests(1);
     try {
-      KeyValue value = generator.next();
+      Cell value = generator.next();
       if (value == null) {
         LOG.info("generator exhausted");
         return Response.noContent().build();
       }
-      ResponseBuilder response = Response.ok(value.getValue());
+      ResponseBuilder response = Response.ok(CellUtil.getValueArray(value));
       response.cacheControl(cacheControl);
-      response.header("X-Row", Base64.encodeBytes(value.getRow()));      
+      response.header("X-Row", Base64.encodeBytes(CellUtil.getRowArray(value)));      
       response.header("X-Column", 
         Base64.encodeBytes(
-          KeyValue.makeColumn(value.getFamily(), value.getQualifier())));
+          KeyValue.makeColumn(CellUtil.getFamilyArray(value), CellUtil.getQualifierArray(value))));
       response.header("X-Timestamp", value.getTimestamp());
       servlet.getMetrics().incrementSucessfulGetRequests(1);
       return response.build();

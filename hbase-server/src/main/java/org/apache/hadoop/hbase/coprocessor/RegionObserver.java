@@ -21,6 +21,7 @@ import java.util.NavigableSet;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.KeyValue;
@@ -429,6 +430,15 @@ public interface RegionObserver extends Coprocessor {
    * is not bypassed.
    * @throws IOException if an error occurred on the coprocessor
    */
+  void preGetOp(final ObserverContext<RegionCoprocessorEnvironment> c, final Get get,
+      final List<Cell> result)
+    throws IOException;
+
+  /**
+   * WARNING: please override preGetOp instead of this method.  This is to maintain some
+   * compatibility and to ease the transition from 0.94 -> 0.96.
+   */
+  @Deprecated
   void preGet(final ObserverContext<RegionCoprocessorEnvironment> c, final Get get,
       final List<KeyValue> result)
     throws IOException;
@@ -443,6 +453,15 @@ public interface RegionObserver extends Coprocessor {
    * @param result the result to return to the client, modify as necessary
    * @throws IOException if an error occurred on the coprocessor
    */
+  void postGetOp(final ObserverContext<RegionCoprocessorEnvironment> c, final Get get,
+      final List<Cell> result)
+    throws IOException;
+
+  /**
+   * WARNING: please override postGetOp instead of this method.  This is to maintain some
+   * compatibility and to ease the transition from 0.94 -> 0.96.
+   */
+  @Deprecated
   void postGet(final ObserverContext<RegionCoprocessorEnvironment> c, final Get get,
       final List<KeyValue> result)
     throws IOException;

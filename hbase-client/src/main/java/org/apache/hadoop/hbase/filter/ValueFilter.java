@@ -22,7 +22,7 @@ package org.apache.hadoop.hbase.filter;
 import com.google.protobuf.InvalidProtocolBufferException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.FilterProtos;
@@ -58,8 +58,8 @@ public class ValueFilter extends CompareFilter {
   }
 
   @Override
-  public ReturnCode filterKeyValue(KeyValue v) {
-    if (doCompare(this.compareOp, this.comparator, v.getBuffer(),
+  public ReturnCode filterKeyValue(Cell v) {
+    if (doCompare(this.compareOp, this.comparator, v.getValueArray(),
         v.getValueOffset(), v.getValueLength())) {
       return ReturnCode.SKIP;
     }
@@ -67,6 +67,7 @@ public class ValueFilter extends CompareFilter {
   }
 
   public static Filter createFilterFromArguments(ArrayList<byte []> filterArguments) {
+    @SuppressWarnings("rawtypes")  // for arguments
     ArrayList arguments = CompareFilter.extractArguments(filterArguments);
     CompareOp compareOp = (CompareOp)arguments.get(0);
     ByteArrayComparable comparator = (ByteArrayComparable)arguments.get(1);

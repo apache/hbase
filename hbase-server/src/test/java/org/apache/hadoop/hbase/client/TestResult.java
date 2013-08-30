@@ -19,21 +19,22 @@
 
 package org.apache.hadoop.hbase.client;
 
-import junit.framework.TestCase;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.SmallTests;
-import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.experimental.categories.Category;
-
 import static org.apache.hadoop.hbase.HBaseTestCase.assertByteEquals;
 
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Map;
-import java.util.NavigableMap;
+
+import junit.framework.TestCase;
+
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.SmallTests;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.junit.experimental.categories.Category;
 
 @Category(SmallTests.class)
 public class TestResult extends TestCase {
@@ -69,9 +70,9 @@ public class TestResult extends TestCase {
     for (int i = 0; i < 100; ++i) {
       final byte[] qf = Bytes.toBytes(i);
 
-      List<KeyValue> ks = r.getColumn(family, qf);
+      List<Cell> ks = r.getColumn(family, qf);
       assertEquals(1, ks.size());
-      assertByteEquals(qf, ks.get(0).getQualifier());
+      assertTrue(CellUtil.matchingQualifier(ks.get(0), qf));
       assertEquals(ks.get(0), r.getColumnLatest(family, qf));
     }
   }
@@ -90,9 +91,9 @@ public class TestResult extends TestCase {
     for (int i = 0; i < 100; ++i) {
       final byte[] qf = Bytes.toBytes(i);
 
-      List<KeyValue> ks = r.getColumn(family, qf);
+      List<Cell> ks = r.getColumn(family, qf);
       assertEquals(2, ks.size());
-      assertByteEquals(qf, ks.get(0).getQualifier());
+      assertTrue(CellUtil.matchingQualifier(ks.get(0), qf));
       assertEquals(200, ks.get(0).getTimestamp());
       assertEquals(ks.get(0), r.getColumnLatest(family, qf));
     }

@@ -213,13 +213,13 @@ public class TestColumnRangeFilter {
           s.isEndInclusive());
       scan.setFilter(filter);
       ResultScanner scanner = ht.getScanner(scan);
-      List<KeyValue> results = new ArrayList<KeyValue>();
+      List<Cell> results = new ArrayList<Cell>();
       LOG.info("scan column range: " + s.toString());
       long timeBeforeScan = System.currentTimeMillis();
 
       Result result;
       while ((result = scanner.next()) != null) {
-        for (KeyValue kv : result.list()) {
+        for (Cell kv : result.list()) {
           results.add(kv);
         }
       }

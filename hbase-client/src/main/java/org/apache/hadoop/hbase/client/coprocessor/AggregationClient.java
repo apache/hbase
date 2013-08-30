@@ -26,6 +26,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
@@ -792,7 +793,7 @@ public class AggregationClient {
           for (int i = 0; i < results.length; i++) {
             Result r = results[i];
             // retrieve weight
-            KeyValue kv = r.getColumnLatest(colFamily, weightQualifier);
+            Cell kv = r.getColumnLatest(colFamily, weightQualifier);
             R newValue = ci.getValue(colFamily, weightQualifier, kv);
             S s = ci.castToReturnType(newValue);
             double newSumVal = movingSumVal + ci.divideForAvg(s, 1L);

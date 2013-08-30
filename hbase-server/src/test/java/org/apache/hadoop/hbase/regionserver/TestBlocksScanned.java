@@ -20,11 +20,13 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseTestCase;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Scan;
@@ -76,14 +78,15 @@ public class TestBlocksScanned extends HBaseTestCase {
     scan.setMaxVersions(1);
 
     InternalScanner s = r.getScanner(scan);
-    List<KeyValue> results = new ArrayList<KeyValue>();
+    List<Cell> results = new ArrayList<Cell>();
     while (s.next(results));
     s.close();
 
     int expectResultSize = 'z' - 'a';
     Assert.assertEquals(expectResultSize, results.size());
 
-    int kvPerBlock = (int) Math.ceil(BLOCK_SIZE / (double) results.get(0).getLength());
+    int kvPerBlock = (int) Math.ceil(BLOCK_SIZE / 
+        (double) KeyValueUtil.ensureKeyValue(results.get(0)).getLength());
     Assert.assertEquals(2, kvPerBlock);
   }
 

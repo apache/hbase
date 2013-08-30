@@ -168,7 +168,7 @@ public class RemoteHTable implements HTableInterface {
   protected Result[] buildResultFromModel(final CellSetModel model) {
     List<Result> results = new ArrayList<Result>();
     for (RowModel row: model.getRows()) {
-      List<KeyValue> kvs = new ArrayList<KeyValue>();
+      List<Cell> kvs = new ArrayList<Cell>();
       for (CellModel cell: row.getCells()) {
         byte[][] split = KeyValue.parseColumn(cell.getColumn());
         byte[] column = split[0];

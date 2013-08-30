@@ -24,6 +24,8 @@ import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.KeyValue;
@@ -83,14 +85,14 @@ implements Coprocessor, CoprocessorService {
     InternalScanner scanner = null;
     try {
       scanner = this.env.getRegion().getScanner(scan);
-      List<KeyValue> curVals = new ArrayList<KeyValue>();
+      List<Cell> curVals = new ArrayList<Cell>();
       boolean hasMore = false;
       do {
         curVals.clear();
         hasMore = scanner.next(curVals);
-        for (KeyValue kv : curVals) {
-          if (Bytes.equals(qualifier, kv.getQualifier())) {
-            sumResult += Bytes.toInt(kv.getBuffer(), kv.getValueOffset());
+        for (Cell kv : curVals) {
+          if (CellUtil.matchingQualifier(kv, qualifier)) {
+            sumResult += Bytes.toInt(kv.getValueArray(), kv.getValueOffset());
           }
         }
       } while (hasMore);

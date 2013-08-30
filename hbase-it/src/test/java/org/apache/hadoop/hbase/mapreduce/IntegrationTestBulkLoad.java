@@ -18,6 +18,8 @@
  */
 package org.apache.hadoop.hbase.mapreduce;
 
+import static org.junit.Assert.assertEquals;
+
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
@@ -30,6 +32,8 @@ import java.util.Set;
 import org.apache.commons.lang.RandomStringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.IntegrationTestBase;
 import org.apache.hadoop.hbase.IntegrationTestingUtility;
@@ -64,8 +68,6 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-
-import static org.junit.Assert.assertEquals;
 
 /**
  * Test Bulk Load and MR on a distributed cluster.
@@ -468,7 +470,8 @@ public class IntegrationTestBulkLoad extends IntegrationTestBase {
       for (Map.Entry<byte[], byte[]> entry : value.getFamilyMap(CHAIN_FAM).entrySet()) {
         long chainId = Bytes.toLong(entry.getKey());
         long next = Bytes.toLong(entry.getValue());
-        long order = Bytes.toLong(value.getColumn(SORT_FAM, entry.getKey()).get(0).getValue());
+        Cell c = value.getColumn(SORT_FAM, entry.getKey()).get(0);
+        long order = Bytes.toLong(CellUtil.getValueArray(c));
         context.write(new LinkKey(chainId, order), new LinkChain(longRk, next));
       }
     }

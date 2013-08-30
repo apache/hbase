@@ -19,15 +19,18 @@
 package org.apache.hadoop.hbase.filter;
 
 
-import com.google.common.base.Preconditions;
-import com.google.protobuf.InvalidProtocolBufferException;
+import java.util.ArrayList;
+
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.protobuf.generated.FilterProtos;
 
-import java.util.ArrayList;
+import com.google.common.base.Preconditions;
+import com.google.protobuf.InvalidProtocolBufferException;
 
 /**
  * A filter that will only return the key component of each KV (the value will
@@ -45,8 +48,13 @@ public class KeyOnlyFilter extends FilterBase {
   public KeyOnlyFilter(boolean lenAsVal) { this.lenAsVal = lenAsVal; }
 
   @Override
-  public KeyValue transform(KeyValue kv) {
-    return kv.createKeyOnly(this.lenAsVal);
+  public Cell transformCell(Cell kv) {
+    // TODO Move to KeyValueUtil
+
+    // TODO make matching Column a cell method or CellUtil method.
+    KeyValue v = KeyValueUtil.ensureKeyValue(kv);
+
+    return v.createKeyOnly(this.lenAsVal);
   }
 
   public static Filter createFilterFromArguments(ArrayList<byte []> filterArguments) {

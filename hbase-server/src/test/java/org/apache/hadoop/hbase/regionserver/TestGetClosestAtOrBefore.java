@@ -26,19 +26,21 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseTestCase;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.MediumTests;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.catalog.MetaEditor;
 import org.apache.hadoop.hbase.client.Delete;
+import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.experimental.categories.Category;
 
@@ -88,7 +90,7 @@ public class TestGetClosestAtOrBefore extends HBaseTestCase {
     }
     InternalScanner s = mr.getScanner(new Scan());
     try {
-      List<KeyValue> keys = new ArrayList<KeyValue>();
+      List<Cell> keys = new ArrayList<Cell>();
       while(s.next(keys)) {
         LOG.info(keys);
         keys.clear();
@@ -112,9 +114,9 @@ public class TestGetClosestAtOrBefore extends HBaseTestCase {
     Scan scan = new Scan(firstRowInC);
     s = mr.getScanner(scan);
     try {
-      List<KeyValue> keys = new ArrayList<KeyValue>();
+      List<Cell> keys = new ArrayList<Cell>();
       while (s.next(keys)) {
-        mr.delete(new Delete(keys.get(0).getRow()));
+        mr.delete(new Delete(CellUtil.getRowArray(keys.get(0))));
         keys.clear();
       }
     } finally {

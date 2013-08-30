@@ -28,6 +28,7 @@ import java.util.Random;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
@@ -428,8 +429,8 @@ public class TestMasterReplication {
     }
 
     @Override
-    public void preGet(final ObserverContext<RegionCoprocessorEnvironment> c, final Get get,
-        final List<KeyValue> result) throws IOException {
+    public void preGetOp(final ObserverContext<RegionCoprocessorEnvironment> c,
+        final Get get, final List<Cell> result) throws IOException {
       if (get.getAttribute("count") != null) {
         result.clear();
         // order is important!

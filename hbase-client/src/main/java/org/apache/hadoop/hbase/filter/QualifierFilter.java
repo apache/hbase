@@ -19,17 +19,18 @@
 
 package org.apache.hadoop.hbase.filter;
 
-import com.google.protobuf.InvalidProtocolBufferException;
+import java.io.IOException;
+import java.util.ArrayList;
+
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.FilterProtos;
 
-import java.io.IOException;
-import java.util.ArrayList;
+import com.google.protobuf.InvalidProtocolBufferException;
 
 /**
  * This filter is used to filter based on the column qualifier. It takes an
@@ -59,10 +60,10 @@ public class QualifierFilter extends CompareFilter {
   }
 
   @Override
-  public ReturnCode filterKeyValue(KeyValue v) {
+  public ReturnCode filterKeyValue(Cell v) {
     int qualifierLength = v.getQualifierLength();
     if (qualifierLength > 0) {
-      if (doCompare(this.compareOp, this.comparator, v.getBuffer(),
+      if (doCompare(this.compareOp, this.comparator, v.getQualifierArray(),
           v.getQualifierOffset(), qualifierLength)) {
         return ReturnCode.SKIP;
       }
@@ -71,7 +72,7 @@ public class QualifierFilter extends CompareFilter {
   }
 
   public static Filter createFilterFromArguments(ArrayList<byte []> filterArguments) {
-    ArrayList arguments = CompareFilter.extractArguments(filterArguments);
+    ArrayList<?> arguments = CompareFilter.extractArguments(filterArguments);
     CompareOp compareOp = (CompareOp)arguments.get(0);
     ByteArrayComparable comparator = (ByteArrayComparable)arguments.get(1);
     return new QualifierFilter(compareOp, comparator);

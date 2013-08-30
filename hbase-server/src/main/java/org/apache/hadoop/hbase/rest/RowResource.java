@@ -38,6 +38,8 @@ import javax.ws.rs.core.UriInfo;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.TableNotFoundException;
@@ -96,17 +98,17 @@ public class RowResource extends ResourceBase {
       }
       int count = 0;
       CellSetModel model = new CellSetModel();
-      KeyValue value = generator.next();
-      byte[] rowKey = value.getRow();
+      Cell value = generator.next();
+      byte[] rowKey = CellUtil.getRowArray(value);
       RowModel rowModel = new RowModel(rowKey);
       do {
-        if (!Bytes.equals(value.getRow(), rowKey)) {
+        if (!Bytes.equals(CellUtil.getRowArray(value), rowKey)) {
           model.addRow(rowModel);
-          rowKey = value.getRow();
+          rowKey = CellUtil.getRowArray(value);
           rowModel = new RowModel(rowKey);
         }
-        rowModel.addCell(new CellModel(value.getFamily(), value.getQualifier(),
-          value.getTimestamp(), value.getValue()));
+        rowModel.addCell(new CellModel(CellUtil.getFamilyArray(value), CellUtil.getQualifierArray(value),
+          value.getTimestamp(), CellUtil.getValueArray(value)));
         if (++count > rowspec.getMaxValues()) {
           break;
         }
@@ -155,8 +157,8 @@ public class RowResource extends ResourceBase {
           .type(MIMETYPE_TEXT).entity("Not found" + CRLF)
           .build();
       }
-      KeyValue value = generator.next();
-      ResponseBuilder response = Response.ok(value.getValue());
+      Cell value = generator.next();
+      ResponseBuilder response = Response.ok(CellUtil.getValueArray(value));
       response.header("X-Timestamp", value.getTimestamp());
       servlet.getMetrics().incrementSucessfulGetRequests(1);
       return response.build();

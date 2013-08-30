@@ -23,6 +23,7 @@ import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.protobuf.generated.FilterProtos;
@@ -103,13 +104,13 @@ public class ColumnPaginationFilter extends FilterBase
   }
 
   @Override
-  public ReturnCode filterKeyValue(KeyValue v)
+  public ReturnCode filterKeyValue(Cell v)
   {
     if (columnOffset != null) {
       if (count >= limit) {
         return ReturnCode.NEXT_ROW;
       }
-      byte[] buffer = v.getBuffer();
+      byte[] buffer = v.getQualifierArray();
       if (buffer == null) {
         return ReturnCode.SEEK_NEXT_USING_HINT;
       }
@@ -141,9 +142,10 @@ public class ColumnPaginationFilter extends FilterBase
     }
   }
 
-  public KeyValue getNextKeyHint(KeyValue kv) {
+  @Override
+  public Cell getNextCellHint(Cell kv) {
     return KeyValue.createFirstOnRow(
-        kv.getBuffer(), kv.getRowOffset(), kv.getRowLength(), kv.getBuffer(),
+        kv.getRowArray(), kv.getRowOffset(), kv.getRowLength(), kv.getFamilyArray(),
         kv.getFamilyOffset(), kv.getFamilyLength(), columnOffset, 0, columnOffset.length);
   }
 

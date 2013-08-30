@@ -39,6 +39,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.HBaseTestCase;
@@ -47,7 +48,6 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.TableName;
@@ -84,23 +84,23 @@ public class TestCoprocessorInterface {
     }
 
     @Override
-    public boolean next(List<KeyValue> results) throws IOException {
+    public boolean next(List<Cell> results) throws IOException {
       return delegate.next(results);
     }
 
     @Override
-    public boolean next(List<KeyValue> result, int limit) throws IOException {
+    public boolean next(List<Cell> result, int limit) throws IOException {
       return delegate.next(result, limit);
     }
 
     @Override
-    public boolean nextRaw(List<KeyValue> result) 
+    public boolean nextRaw(List<Cell> result) 
         throws IOException {
       return delegate.nextRaw(result);
     }
 
     @Override
-    public boolean nextRaw(List<KeyValue> result, int limit)
+    public boolean nextRaw(List<Cell> result, int limit)
         throws IOException {
       return delegate.nextRaw(result, limit);
     }
@@ -261,8 +261,8 @@ public class TestCoprocessorInterface {
       sharedData = null;
     }
     @Override
-    public void preGet(final ObserverContext<RegionCoprocessorEnvironment> e,
-        final Get get, final List<KeyValue> results) throws IOException {
+    public void preGetOp(final ObserverContext<RegionCoprocessorEnvironment> e,
+        final Get get, final List<Cell> results) throws IOException {
       if (1/0 == 1) {
         e.complete();
       }
@@ -382,7 +382,7 @@ public class TestCoprocessorInterface {
     RegionScanner scanner = regions[0].getCoprocessorHost().postScannerOpen(s, regions[0].getScanner(s));
     assertTrue(scanner instanceof CustomScanner);
     // this would throw an exception before HBASE-4197
-    scanner.next(new ArrayList<KeyValue>());
+    scanner.next(new ArrayList<Cell>());
 
     assertTrue("Coprocessor not started", ((CoprocessorImpl)c).wasStarted());
     assertTrue("Coprocessor not stopped", ((CoprocessorImpl)c).wasStopped());

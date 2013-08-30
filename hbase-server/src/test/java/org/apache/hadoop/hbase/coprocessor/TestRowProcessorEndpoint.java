@@ -34,6 +34,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
@@ -329,12 +331,12 @@ public class TestRowProcessorEndpoint {
       public void process(long now, HRegion region,
           List<KeyValue> mutations, WALEdit walEdit) throws IOException {
         // Scan current counter
-        List<KeyValue> kvs = new ArrayList<KeyValue>();
+        List<Cell> kvs = new ArrayList<Cell>();
         Scan scan = new Scan(row, row);
         scan.addColumn(FAM, COUNTER);
         doScan(region, scan, kvs);
         counter = kvs.size() == 0 ? 0 :
-          Bytes.toInt(kvs.iterator().next().getValue());
+          Bytes.toInt(CellUtil.getValueArray(kvs.iterator().next()));
 
         // Assert counter value
         assertEquals(expectedCounter, counter);
@@ -410,7 +412,7 @@ public class TestRowProcessorEndpoint {
       @Override
       public void process(long now, HRegion region,
           List<KeyValue> mutations, WALEdit walEdit) throws IOException {
-        List<KeyValue> kvs = new ArrayList<KeyValue>();
+        List<Cell> kvs = new ArrayList<Cell>();
         { // First scan to get friends of the person
           Scan scan = new Scan(row, row);
           scan.addColumn(FAM, person);
@@ -419,8 +421,8 @@ public class TestRowProcessorEndpoint {
 
         // Second scan to get friends of friends
         Scan scan = new Scan(row, row);
-        for (KeyValue kv : kvs) {
-          byte[] friends = kv.getValue();
+        for (Cell kv : kvs) {
+          byte[] friends = CellUtil.getValueArray(kv);
           for (byte f : friends) {
             scan.addColumn(FAM, new byte[]{f});
           }
@@ -429,8 +431,8 @@ public class TestRowProcessorEndpoint {
 
         // Collect result
         result.clear();
-        for (KeyValue kv : kvs) {
-          for (byte b : kv.getValue()) {
+        for (Cell kv : kvs) {
+          for (byte b : CellUtil.getValueArray(kv)) {
             result.add((char)b + "");
           }
         }
@@ -500,8 +502,8 @@ public class TestRowProcessorEndpoint {
         now = myTimer.getAndIncrement();
 
         // Scan both rows
-        List<KeyValue> kvs1 = new ArrayList<KeyValue>();
-        List<KeyValue> kvs2 = new ArrayList<KeyValue>();
+        List<Cell> kvs1 = new ArrayList<Cell>();
+        List<Cell> kvs2 = new ArrayList<Cell>();
         doScan(region, new Scan(row1, row1), kvs1);
         doScan(region, new Scan(row2, row2), kvs2);
 
@@ -516,19 +518,19 @@ public class TestRowProcessorEndpoint {
         swapped = !swapped;
 
         // Add and delete keyvalues
-        List<List<KeyValue>> kvs = new ArrayList<List<KeyValue>>();
+        List<List<Cell>> kvs = new ArrayList<List<Cell>>();
         kvs.add(kvs1);
         kvs.add(kvs2);
         byte[][] rows = new byte[][]{row1, row2};
         for (int i = 0; i < kvs.size(); ++i) {
-          for (KeyValue kv : kvs.get(i)) {
+          for (Cell kv : kvs.get(i)) {
             // Delete from the current row and add to the other row
             KeyValue kvDelete =
-                new KeyValue(rows[i], kv.getFamily(), kv.getQualifier(),
+                new KeyValue(rows[i], CellUtil.getFamilyArray(kv), CellUtil.getQualifierArray(kv), 
                     kv.getTimestamp(), KeyValue.Type.Delete);
             KeyValue kvAdd =
-                new KeyValue(rows[1 - i], kv.getFamily(), kv.getQualifier(),
-                    now, kv.getValue());
+                new KeyValue(rows[1 - i], CellUtil.getFamilyArray(kv), CellUtil.getQualifierArray(kv),
+                    now, CellUtil.getValueArray(kv));
             mutations.add(kvDelete);
             walEdit.add(kvDelete);
             mutations.add(kvAdd);
@@ -616,7 +618,7 @@ public class TestRowProcessorEndpoint {
     }
 
     public static void doScan(
-        HRegion region, Scan scan, List<KeyValue> result) throws IOException {
+        HRegion region, Scan scan, List<Cell> result) throws IOException {
       InternalScanner scanner = null;
       try {
         scan.setIsolationLevel(IsolationLevel.READ_UNCOMMITTED);
@@ -629,13 +631,13 @@ public class TestRowProcessorEndpoint {
     }
   }
 
-  static String stringifyKvs(Collection<KeyValue> kvs) {
+  static String stringifyKvs(Collection<Cell> kvs) {
     StringBuilder out = new StringBuilder();
     out.append("[");
     if (kvs != null) {
-      for (KeyValue kv : kvs) {
-        byte[] col = kv.getQualifier();
-        byte[] val = kv.getValue();
+      for (Cell kv : kvs) {
+        byte[] col = CellUtil.getQualifierArray(kv);
+        byte[] val = CellUtil.getValueArray(kv);
         if (Bytes.equals(col, COUNTER)) {
           out.append(Bytes.toStringBinary(col) + ":" +
                      Bytes.toInt(val) + " ");

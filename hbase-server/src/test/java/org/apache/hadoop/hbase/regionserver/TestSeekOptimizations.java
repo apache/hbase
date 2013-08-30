@@ -35,6 +35,8 @@ import java.util.Set;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
@@ -110,7 +112,7 @@ public class TestSeekOptimizations {
   private Random rand;
   private Set<Long> putTimestamps = new HashSet<Long>();
   private Set<Long> delTimestamps = new HashSet<Long>();
-  private List<KeyValue> expectedKVs = new ArrayList<KeyValue>();
+  private List<Cell> expectedKVs = new ArrayList<Cell>();
 
   private Compression.Algorithm comprAlgo;
   private BloomType bloomType;
@@ -211,8 +213,8 @@ public class TestSeekOptimizations {
 
     final long initialSeekCount = StoreFileScanner.getSeekCount();
     final InternalScanner scanner = region.getScanner(scan);
-    final List<KeyValue> results = new ArrayList<KeyValue>();
-    final List<KeyValue> actualKVs = new ArrayList<KeyValue>();
+    final List<Cell> results = new ArrayList<Cell>();
+    final List<Cell> actualKVs = new ArrayList<Cell>();
 
     // Such a clumsy do-while loop appears to be the official way to use an
     // internalScanner. scanner.next() return value refers to the _next_
@@ -224,7 +226,7 @@ public class TestSeekOptimizations {
       results.clear();
     } while (hasNext);
 
-    List<KeyValue> filteredKVs = filterExpectedResults(qualSet,
+    List<Cell> filteredKVs = filterExpectedResults(qualSet,
         rowBytes(startRow), rowBytes(endRow), maxVersions);
     final String rowRestrictionStr =
         (startRow == -1 && endRow == -1) ? "all rows" : (
@@ -252,36 +254,33 @@ public class TestSeekOptimizations {
     assertKVListsEqual(testDesc, filteredKVs, actualKVs);
   }
 
-  private List<KeyValue> filterExpectedResults(Set<String> qualSet,
+  private List<Cell> filterExpectedResults(Set<String> qualSet,
       byte[] startRow, byte[] endRow, int maxVersions) {
-    final List<KeyValue> filteredKVs = new ArrayList<KeyValue>();
+    final List<Cell> filteredKVs = new ArrayList<Cell>();
     final Map<String, Integer> verCount = new HashMap<String, Integer>();
-    for (KeyValue kv : expectedKVs) {
+    for (Cell kv : expectedKVs) {
       if (startRow.length > 0 &&
-          Bytes.compareTo(kv.getBuffer(), kv.getRowOffset(), kv.getRowLength(),
+          Bytes.compareTo(kv.getRowArray(), kv.getRowOffset(), kv.getRowLength(),
               startRow, 0, startRow.length) < 0) {
         continue;
       }
 
       // In this unit test the end row is always inclusive.
       if (endRow.length > 0 &&
-          Bytes.compareTo(kv.getBuffer(), kv.getRowOffset(), kv.getRowLength(),
+          Bytes.compareTo(kv.getRowArray(), kv.getRowOffset(), kv.getRowLength(),
               endRow, 0, endRow.length) > 0) {
         continue;
       }
 
-      if (!qualSet.isEmpty() && (Bytes.compareTo(
-            kv.getBuffer(), kv.getFamilyOffset(), kv.getFamilyLength(),
-            FAMILY_BYTES, 0, FAMILY_BYTES.length
-          ) != 0 ||
-          !qualSet.contains(Bytes.toString(kv.getQualifier())))) {
+      if (!qualSet.isEmpty() && (!CellUtil.matchingFamily(kv, FAMILY_BYTES)
+          || !qualSet.contains(Bytes.toString(CellUtil.getQualifierArray(kv))))) {
         continue;
       }
 
       final String rowColStr =
-        Bytes.toStringBinary(kv.getRow()) + "/"
-            + Bytes.toStringBinary(kv.getFamily()) + ":"
-            + Bytes.toStringBinary(kv.getQualifier());
+        Bytes.toStringBinary(CellUtil.getRowArray(kv)) + "/"
+            + Bytes.toStringBinary(CellUtil.getFamilyArray(kv)) + ":"
+            + Bytes.toStringBinary(CellUtil.getQualifierArray(kv));
       final Integer curNumVer = verCount.get(rowColStr);
       final int newNumVer = curNumVer != null ? (curNumVer + 1) : 1;
       if (newNumVer <= maxVersions) {
@@ -294,8 +293,8 @@ public class TestSeekOptimizations {
   }
 
   private void prepareExpectedKVs(long latestDelTS) {
-    final List<KeyValue> filteredKVs = new ArrayList<KeyValue>();
-    for (KeyValue kv : expectedKVs) {
+    final List<Cell> filteredKVs = new ArrayList<Cell>();
+    for (Cell kv : expectedKVs) {
       if (kv.getTimestamp() > latestDelTS || latestDelTS == -1) {
         filteredKVs.add(kv);
       }

@@ -59,14 +59,14 @@ public class TestMultipleColumnPrefixFilter {
     List<String> columns = generateRandomWords(10000, "column");
     long maxTimestamp = 2;
 
-    List<KeyValue> kvList = new ArrayList<KeyValue>();
+    List<Cell> kvList = new ArrayList<Cell>();
 
-    Map<String, List<KeyValue>> prefixMap = new HashMap<String,
-        List<KeyValue>>();
+    Map<String, List<Cell>> prefixMap = new HashMap<String,
+        List<Cell>>();
 
-    prefixMap.put("p", new ArrayList<KeyValue>());
-    prefixMap.put("q", new ArrayList<KeyValue>());
-    prefixMap.put("s", new ArrayList<KeyValue>());
+    prefixMap.put("p", new ArrayList<Cell>());
+    prefixMap.put("q", new ArrayList<Cell>());
+    prefixMap.put("s", new ArrayList<Cell>());
 
     String valueString = "ValueString";
 
@@ -98,7 +98,7 @@ public class TestMultipleColumnPrefixFilter {
     
     filter = new MultipleColumnPrefixFilter(filter_prefix);
     scan.setFilter(filter);
-    List<KeyValue> results = new ArrayList<KeyValue>();  
+    List<Cell> results = new ArrayList<Cell>();  
     InternalScanner scanner = region.getScanner(scan);
     while(scanner.next(results));
     assertEquals(prefixMap.get("p").size() + prefixMap.get("q").size(), results.size());
@@ -125,14 +125,14 @@ public class TestMultipleColumnPrefixFilter {
     List<String> columns = generateRandomWords(10000, "column");
     long maxTimestamp = 3;
 
-    List<KeyValue> kvList = new ArrayList<KeyValue>();
+    List<Cell> kvList = new ArrayList<Cell>();
 
-    Map<String, List<KeyValue>> prefixMap = new HashMap<String,
-        List<KeyValue>>();
+    Map<String, List<Cell>> prefixMap = new HashMap<String,
+        List<Cell>>();
 
-    prefixMap.put("p", new ArrayList<KeyValue>());
-    prefixMap.put("q", new ArrayList<KeyValue>());
-    prefixMap.put("s", new ArrayList<KeyValue>());
+    prefixMap.put("p", new ArrayList<Cell>());
+    prefixMap.put("q", new ArrayList<Cell>());
+    prefixMap.put("s", new ArrayList<Cell>());
 
     String valueString = "ValueString";
 
@@ -142,7 +142,7 @@ public class TestMultipleColumnPrefixFilter {
       for (String column: columns) {
         for (long timestamp = 1; timestamp <= maxTimestamp; timestamp++) {
           double rand = Math.random();
-          KeyValue kv;
+          Cell kv;
           if (rand < 0.5) 
             kv = KeyValueTestUtil.create(row, family1, column, timestamp,
                 valueString);
@@ -170,7 +170,7 @@ public class TestMultipleColumnPrefixFilter {
     
     filter = new MultipleColumnPrefixFilter(filter_prefix);
     scan.setFilter(filter);
-    List<KeyValue> results = new ArrayList<KeyValue>();  
+    List<Cell> results = new ArrayList<Cell>();  
     InternalScanner scanner = region.getScanner(scan);
     while(scanner.next(results));
     assertEquals(prefixMap.get("p").size() + prefixMap.get("q").size(), results.size());
@@ -214,7 +214,7 @@ public class TestMultipleColumnPrefixFilter {
  
     multiplePrefixFilter = new MultipleColumnPrefixFilter(filter_prefix);
     scan1.setFilter(multiplePrefixFilter);
-    List<KeyValue> results1 = new ArrayList<KeyValue>();  
+    List<Cell> results1 = new ArrayList<Cell>();  
     InternalScanner scanner1 = region.getScanner(scan1);
     while(scanner1.next(results1));
     
@@ -224,7 +224,7 @@ public class TestMultipleColumnPrefixFilter {
     singlePrefixFilter = new ColumnPrefixFilter(Bytes.toBytes("p"));
  
     scan2.setFilter(singlePrefixFilter);
-    List<KeyValue> results2 = new ArrayList<KeyValue>();  
+    List<Cell> results2 = new ArrayList<Cell>();  
     InternalScanner scanner2 = region.getScanner(scan1);
     while(scanner2.next(results2));
     

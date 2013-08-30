@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.hbase.security.access;
 
+import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.KeyValue;
@@ -59,7 +61,9 @@ class AccessControlFilter extends FilterBase {
   }
 
   @Override
-  public ReturnCode filterKeyValue(KeyValue kv) {
+  public ReturnCode filterKeyValue(Cell c) {
+    // TODO go and redo auth manager to use Cell instead of KV.
+    KeyValue kv = KeyValueUtil.ensureKeyValue(c);
     if (authManager.authorize(user, table, kv, TablePermission.Action.READ)) {
       return ReturnCode.INCLUDE;
     }

@@ -40,7 +40,8 @@ import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
-import org.apache.hadoop.hbase.util.*;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 
 /**
@@ -514,7 +515,7 @@ public abstract class HBaseTestCase extends TestCase {
 
   public interface ScannerIncommon
   extends Iterable<Result> {
-    boolean next(List<KeyValue> values)
+    boolean next(List<Cell> values)
     throws IOException;
 
     void close() throws IOException;
@@ -526,7 +527,8 @@ public abstract class HBaseTestCase extends TestCase {
       this.scanner = scanner;
     }
 
-    public boolean next(List<KeyValue> values)
+    @Override
+    public boolean next(List<Cell> values)
     throws IOException {
       Result results = scanner.next();
       if (results == null) {
@@ -542,7 +544,7 @@ public abstract class HBaseTestCase extends TestCase {
     }
 
     @SuppressWarnings("unchecked")
-    public Iterator iterator() {
+    public Iterator<Result> iterator() {
       return scanner.iterator();
     }
   }
@@ -554,15 +556,18 @@ public abstract class HBaseTestCase extends TestCase {
       this.scanner = scanner;
     }
 
-    public boolean next(List<KeyValue> results)
+    @Override
+    public boolean next(List<Cell> results)
     throws IOException {
       return scanner.next(results);
     }
 
+    @Override
     public void close() throws IOException {
       scanner.close();
     }
 
+    @Override
     public Iterator<Result> iterator() {
       throw new UnsupportedOperationException();
     }

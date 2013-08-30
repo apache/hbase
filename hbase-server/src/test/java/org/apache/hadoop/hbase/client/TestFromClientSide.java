@@ -48,6 +48,8 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
+import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
@@ -205,9 +207,9 @@ public class TestFromClientSide {
      s.setTimeRange(0, ts+3);
      s.setMaxVersions();
      ResultScanner scanner = h.getScanner(s);
-     KeyValue[] kvs = scanner.next().raw();
-     assertArrayEquals(T2, kvs[0].getValue());
-     assertArrayEquals(T1, kvs[1].getValue());
+     Cell[] kvs = scanner.next().raw();
+     assertArrayEquals(T2, CellUtil.getValueArray(kvs[0]));
+     assertArrayEquals(T1, CellUtil.getValueArray(kvs[1]));
      scanner.close();
 
      s = new Scan(T1);
@@ -215,11 +217,11 @@ public class TestFromClientSide {
      s.setMaxVersions();
      scanner = h.getScanner(s);
      kvs = scanner.next().raw();
-     assertTrue(kvs[0].isDeleteFamily());
-     assertArrayEquals(T3, kvs[1].getValue());
-     assertTrue(kvs[2].isDelete());
-     assertArrayEquals(T2, kvs[3].getValue());
-     assertArrayEquals(T1, kvs[4].getValue());
+     assertTrue(CellUtil.isDeleteFamily(kvs[0]));
+     assertArrayEquals(T3, CellUtil.getValueArray(kvs[1]));
+     assertTrue(CellUtil.isDelete(kvs[2]));
+     assertArrayEquals(T2, CellUtil.getValueArray(kvs[3]));
+     assertArrayEquals(T1, CellUtil.getValueArray(kvs[4]));
      scanner.close();
      h.close();
    }
@@ -475,9 +477,9 @@ public class TestFromClientSide {
     while (scanner.hasNext()) {
       Result result = scanner.next();
       System.out.println("Got back key: " + Bytes.toString(result.getRow()));
-      for (KeyValue kv : result.raw()) {
+      for (Cell kv : result.raw()) {
         System.out.println("kv=" + kv.toString() + ", "
-            + Bytes.toString(kv.getValue()));
+            + Bytes.toString(CellUtil.getValueArray(kv)));
       }
       numberOfResults++;
     }
@@ -746,8 +748,8 @@ public class TestFromClientSide {
     int expectedIndex = 1;
     for(Result result : ht.getScanner(scan)) {
       assertEquals(result.size(), 1);
-      assertTrue(Bytes.equals(result.raw()[0].getRow(), ROWS[expectedIndex]));
-      assertTrue(Bytes.equals(result.raw()[0].getQualifier(),
+      assertTrue(Bytes.equals(CellUtil.getRowArray(result.raw()[0]), ROWS[expectedIndex]));
+      assertTrue(Bytes.equals(CellUtil.getQualifierArray(result.raw()[0]),
           QUALIFIERS[expectedIndex]));
       expectedIndex++;
     }
@@ -782,7 +784,7 @@ public class TestFromClientSide {
     for(Result result : ht.getScanner(scan)) {
       assertEquals(result.size(), 1);
       assertEquals(result.raw()[0].getValueLength(), Bytes.SIZEOF_INT);
-      assertEquals(Bytes.toInt(result.raw()[0].getValue()), VALUE.length);
+      assertEquals(Bytes.toInt(CellUtil.getValueArray(result.raw()[0])), VALUE.length);
       count++;
     }
     assertEquals(count, 10);
@@ -2133,15 +2135,15 @@ public class TestFromClientSide {
     result = scanner.next();
     assertTrue("Expected 1 key but received " + result.size(),
         result.size() == 1);
-    assertTrue(Bytes.equals(result.raw()[0].getRow(), ROWS[3]));
-    assertTrue(Bytes.equals(result.raw()[0].getValue(), VALUES[0]));
+    assertTrue(Bytes.equals(CellUtil.getRowArray(result.raw()[0]), ROWS[3]));
+    assertTrue(Bytes.equals(CellUtil.getValueArray(result.raw()[0]), VALUES[0]));
     result = scanner.next();
     assertTrue("Expected 2 keys but received " + result.size(),
         result.size() == 2);
-    assertTrue(Bytes.equals(result.raw()[0].getRow(), ROWS[4]));
-    assertTrue(Bytes.equals(result.raw()[1].getRow(), ROWS[4]));
-    assertTrue(Bytes.equals(result.raw()[0].getValue(), VALUES[1]));
-    assertTrue(Bytes.equals(result.raw()[1].getValue(), VALUES[2]));
+    assertTrue(Bytes.equals(CellUtil.getRowArray(result.raw()[0]), ROWS[4]));
+    assertTrue(Bytes.equals(CellUtil.getRowArray(result.raw()[1]), ROWS[4]));
+    assertTrue(Bytes.equals(CellUtil.getValueArray(result.raw()[0]), VALUES[1]));
+    assertTrue(Bytes.equals(CellUtil.getValueArray(result.raw()[1]), VALUES[2]));
     scanner.close();
 
     // Add test of bulk deleting.
@@ -2269,7 +2271,7 @@ public class TestFromClientSide {
     Get get = new Get(ROWS[numRows-1]);
     Result result = ht.get(get);
     assertNumKeys(result, numColsPerRow);
-    KeyValue [] keys = result.raw();
+    Cell [] keys = result.raw();
     for(int i=0;i<result.size();i++) {
       assertKey(keys[i], ROWS[numRows-1], FAMILY, QUALIFIERS[i], QUALIFIERS[i]);
     }
@@ -2280,7 +2282,7 @@ public class TestFromClientSide {
     int rowCount = 0;
     while((result = scanner.next()) != null) {
       assertNumKeys(result, numColsPerRow);
-      KeyValue [] kvs = result.raw();
+      Cell [] kvs = result.raw();
       for(int i=0;i<numColsPerRow;i++) {
         assertKey(kvs[i], ROWS[rowCount], FAMILY, QUALIFIERS[i], QUALIFIERS[i]);
       }
@@ -2309,7 +2311,7 @@ public class TestFromClientSide {
     rowCount = 0;
     while((result = scanner.next()) != null) {
       assertNumKeys(result, numColsPerRow);
-      KeyValue [] kvs = result.raw();
+      Cell [] kvs = result.raw();
       for(int i=0;i<numColsPerRow;i++) {
         assertKey(kvs[i], ROWS[rowCount], FAMILY, QUALIFIERS[i], QUALIFIERS[i]);
       }
@@ -3082,38 +3084,38 @@ public class TestFromClientSide {
   // Verifiers
   //
 
-  private void assertKey(KeyValue key, byte [] row, byte [] family,
+  private void assertKey(Cell key, byte [] row, byte [] family,
       byte [] qualifier, byte [] value)
   throws Exception {
     assertTrue("Expected row [" + Bytes.toString(row) + "] " +
-        "Got row [" + Bytes.toString(key.getRow()) +"]",
-        equals(row, key.getRow()));
+        "Got row [" + Bytes.toString(CellUtil.getRowArray(key)) +"]",
+        equals(row, CellUtil.getRowArray(key)));
     assertTrue("Expected family [" + Bytes.toString(family) + "] " +
-        "Got family [" + Bytes.toString(key.getFamily()) + "]",
-        equals(family, key.getFamily()));
+        "Got family [" + Bytes.toString(CellUtil.getFamilyArray(key)) + "]",
+        equals(family, CellUtil.getFamilyArray(key)));
     assertTrue("Expected qualifier [" + Bytes.toString(qualifier) + "] " +
-        "Got qualifier [" + Bytes.toString(key.getQualifier()) + "]",
-        equals(qualifier, key.getQualifier()));
+        "Got qualifier [" + Bytes.toString(CellUtil.getQualifierArray(key)) + "]",
+        equals(qualifier, CellUtil.getQualifierArray(key)));
     assertTrue("Expected value [" + Bytes.toString(value) + "] " +
-        "Got value [" + Bytes.toString(key.getValue()) + "]",
-        equals(value, key.getValue()));
+        "Got value [" + Bytes.toString(CellUtil.getValueArray(key)) + "]",
+        equals(value, CellUtil.getValueArray(key)));
   }
 
-  private void assertIncrementKey(KeyValue key, byte [] row, byte [] family,
+  private void assertIncrementKey(Cell key, byte [] row, byte [] family,
       byte [] qualifier, long value)
   throws Exception {
     assertTrue("Expected row [" + Bytes.toString(row) + "] " +
-        "Got row [" + Bytes.toString(key.getRow()) +"]",
-        equals(row, key.getRow()));
+        "Got row [" + Bytes.toString(CellUtil.getRowArray(key)) +"]",
+        equals(row, CellUtil.getRowArray(key)));
     assertTrue("Expected family [" + Bytes.toString(family) + "] " +
-        "Got family [" + Bytes.toString(key.getFamily()) + "]",
-        equals(family, key.getFamily()));
+        "Got family [" + Bytes.toString(CellUtil.getFamilyArray(key)) + "]",
+        equals(family, CellUtil.getFamilyArray(key)));
     assertTrue("Expected qualifier [" + Bytes.toString(qualifier) + "] " +
-        "Got qualifier [" + Bytes.toString(key.getQualifier()) + "]",
-        equals(qualifier, key.getQualifier()));
+        "Got qualifier [" + Bytes.toString(CellUtil.getQualifierArray(key)) + "]",
+        equals(qualifier, CellUtil.getQualifierArray(key)));
     assertTrue("Expected value [" + value + "] " +
-        "Got value [" + Bytes.toLong(key.getValue()) + "]",
-        Bytes.toLong(key.getValue()) == value);
+        "Got value [" + Bytes.toLong(CellUtil.getValueArray(key)) + "]",
+        Bytes.toLong(CellUtil.getValueArray(key)) == value);
   }
 
   private void assertNumKeys(Result result, int n) throws Exception {
@@ -3131,23 +3133,26 @@ public class TestFromClientSide {
     assertTrue("Expected " + idxs.length + " keys but result contains "
         + result.size(), result.size() == idxs.length);
 
-    KeyValue [] keys = result.raw();
+    Cell [] keys = result.raw();
 
     for(int i=0;i<keys.length;i++) {
       byte [] family = families[idxs[i][0]];
       byte [] qualifier = qualifiers[idxs[i][1]];
       byte [] value = values[idxs[i][2]];
-      KeyValue key = keys[i];
+      Cell key = keys[i];
 
+      byte[] famb = CellUtil.getFamilyArray(key);
+      byte[] qualb = CellUtil.getQualifierArray(key);
+      byte[] valb = CellUtil.getValueArray(key);
       assertTrue("(" + i + ") Expected family [" + Bytes.toString(family)
-          + "] " + "Got family [" + Bytes.toString(key.getFamily()) + "]",
-          equals(family, key.getFamily()));
+          + "] " + "Got family [" + Bytes.toString(famb) + "]",
+          equals(family, famb));
       assertTrue("(" + i + ") Expected qualifier [" + Bytes.toString(qualifier)
-          + "] " + "Got qualifier [" + Bytes.toString(key.getQualifier()) + "]",
-          equals(qualifier, key.getQualifier()));
+          + "] " + "Got qualifier [" + Bytes.toString(qualb) + "]",
+          equals(qualifier, qualb));
       assertTrue("(" + i + ") Expected value [" + Bytes.toString(value) + "] "
-          + "Got value [" + Bytes.toString(key.getValue()) + "]",
-          equals(value, key.getValue()));
+          + "Got value [" + Bytes.toString(valb) + "]",
+          equals(value, valb));
     }
   }
 
@@ -3161,24 +3166,24 @@ public class TestFromClientSide {
     int expectedResults = end - start + 1;
     assertEquals(expectedResults, result.size());
 
-    KeyValue [] keys = result.raw();
+    Cell[] keys = result.raw();
 
     for (int i=0; i<keys.length; i++) {
       byte [] value = values[end-i];
       long ts = stamps[end-i];
-      KeyValue key = keys[i];
+      Cell key = keys[i];
 
       assertTrue("(" + i + ") Expected family [" + Bytes.toString(family)
-          + "] " + "Got family [" + Bytes.toString(key.getFamily()) + "]",
-          equals(family, key.getFamily()));
+          + "] " + "Got family [" + Bytes.toString(CellUtil.getFamilyArray(key)) + "]",
+          CellUtil.matchingFamily(key, family));
       assertTrue("(" + i + ") Expected qualifier [" + Bytes.toString(qualifier)
-          + "] " + "Got qualifier [" + Bytes.toString(key.getQualifier()) + "]",
-          equals(qualifier, key.getQualifier()));
+          + "] " + "Got qualifier [" + Bytes.toString(CellUtil.getQualifierArray(key))+ "]",
+          CellUtil.matchingQualifier(key, qualifier));
       assertTrue("Expected ts [" + ts + "] " +
           "Got ts [" + key.getTimestamp() + "]", ts == key.getTimestamp());
       assertTrue("(" + i + ") Expected value [" + Bytes.toString(value) + "] "
-          + "Got value [" + Bytes.toString(key.getValue()) + "]",
-          equals(value, key.getValue()));
+          + "Got value [" + Bytes.toString(CellUtil.getValueArray(key)) + "]",
+          CellUtil.matchingValue(key,  value));
     }
   }
 
@@ -3195,27 +3200,27 @@ public class TestFromClientSide {
         equals(row, result.getRow()));
     assertTrue("Expected two keys but result contains " + result.size(),
         result.size() == 2);
-    KeyValue [] kv = result.raw();
-    KeyValue kvA = kv[0];
+    Cell [] kv = result.raw();
+    Cell kvA = kv[0];
     assertTrue("(A) Expected family [" + Bytes.toString(familyA) + "] " +
-        "Got family [" + Bytes.toString(kvA.getFamily()) + "]",
-        equals(familyA, kvA.getFamily()));
+        "Got family [" + Bytes.toString(CellUtil.getFamilyArray(kvA)) + "]",
+        equals(familyA, CellUtil.getFamilyArray(kvA)));
     assertTrue("(A) Expected qualifier [" + Bytes.toString(qualifierA) + "] " +
-        "Got qualifier [" + Bytes.toString(kvA.getQualifier()) + "]",
-        equals(qualifierA, kvA.getQualifier()));
+        "Got qualifier [" + Bytes.toString(CellUtil.getQualifierArray(kvA)) + "]",
+        equals(qualifierA, CellUtil.getQualifierArray(kvA)));
     assertTrue("(A) Expected value [" + Bytes.toString(valueA) + "] " +
-        "Got value [" + Bytes.toString(kvA.getValue()) + "]",
-        equals(valueA, kvA.getValue()));
-    KeyValue kvB = kv[1];
+        "Got value [" + Bytes.toString(CellUtil.getValueArray(kvA)) + "]",
+        equals(valueA, CellUtil.getValueArray(kvA)));
+    Cell kvB = kv[1];
     assertTrue("(B) Expected family [" + Bytes.toString(familyB) + "] " +
-        "Got family [" + Bytes.toString(kvB.getFamily()) + "]",
-        equals(familyB, kvB.getFamily()));
+        "Got family [" + Bytes.toString(CellUtil.getFamilyArray(kvB)) + "]",
+        equals(familyB, CellUtil.getFamilyArray(kvB)));
     assertTrue("(B) Expected qualifier [" + Bytes.toString(qualifierB) + "] " +
-        "Got qualifier [" + Bytes.toString(kvB.getQualifier()) + "]",
-        equals(qualifierB, kvB.getQualifier()));
+        "Got qualifier [" + Bytes.toString(CellUtil.getQualifierArray(kvB)) + "]",
+        equals(qualifierB, CellUtil.getQualifierArray(kvB)));
     assertTrue("(B) Expected value [" + Bytes.toString(valueB) + "] " +
-        "Got value [" + Bytes.toString(kvB.getValue()) + "]",
-        equals(valueB, kvB.getValue()));
+        "Got value [" + Bytes.toString(CellUtil.getValueArray(kvB)) + "]",
+        equals(valueB, CellUtil.getValueArray(kvB)));
   }
 
   private void assertSingleResult(Result result, byte [] row, byte [] family,
@@ -3226,16 +3231,16 @@ public class TestFromClientSide {
         equals(row, result.getRow()));
     assertTrue("Expected a single key but result contains " + result.size(),
         result.size() == 1);
-    KeyValue kv = result.raw()[0];
+    Cell kv = result.raw()[0];
     assertTrue("Expected family [" + Bytes.toString(family) + "] " +
-        "Got family [" + Bytes.toString(kv.getFamily()) + "]",
-        equals(family, kv.getFamily()));
+        "Got family [" + Bytes.toString(CellUtil.getFamilyArray(kv)) + "]",
+        equals(family, CellUtil.getFamilyArray(kv)));
     assertTrue("Expected qualifier [" + Bytes.toString(qualifier) + "] " +
-        "Got qualifier [" + Bytes.toString(kv.getQualifier()) + "]",
-        equals(qualifier, kv.getQualifier()));
+        "Got qualifier [" + Bytes.toString(CellUtil.getQualifierArray(kv)) + "]",
+        equals(qualifier, CellUtil.getQualifierArray(kv)));
     assertTrue("Expected value [" + Bytes.toString(value) + "] " +
-        "Got value [" + Bytes.toString(kv.getValue()) + "]",
-        equals(value, kv.getValue()));
+        "Got value [" + Bytes.toString(CellUtil.getValueArray(kv)) + "]",
+        equals(value, CellUtil.getValueArray(kv)));
   }
 
   private void assertSingleResult(Result result, byte [] row, byte [] family,
@@ -3246,18 +3251,18 @@ public class TestFromClientSide {
         equals(row, result.getRow()));
     assertTrue("Expected a single key but result contains " + result.size(),
         result.size() == 1);
-    KeyValue kv = result.raw()[0];
+    Cell kv = result.raw()[0];
     assertTrue("Expected family [" + Bytes.toString(family) + "] " +
-        "Got family [" + Bytes.toString(kv.getFamily()) + "]",
-        equals(family, kv.getFamily()));
+        "Got family [" + Bytes.toString(CellUtil.getFamilyArray(kv)) + "]",
+        equals(family, CellUtil.getFamilyArray(kv)));
     assertTrue("Expected qualifier [" + Bytes.toString(qualifier) + "] " +
-        "Got qualifier [" + Bytes.toString(kv.getQualifier()) + "]",
-        equals(qualifier, kv.getQualifier()));
+        "Got qualifier [" + Bytes.toString(CellUtil.getQualifierArray(kv)) + "]",
+        equals(qualifier, CellUtil.getQualifierArray(kv)));
     assertTrue("Expected ts [" + ts + "] " +
         "Got ts [" + kv.getTimestamp() + "]", ts == kv.getTimestamp());
     assertTrue("Expected value [" + Bytes.toString(value) + "] " +
-        "Got value [" + Bytes.toString(kv.getValue()) + "]",
-        equals(value, kv.getValue()));
+        "Got value [" + Bytes.toString(CellUtil.getValueArray(kv)) + "]",
+        equals(value, CellUtil.getValueArray(kv)));
   }
 
   private void assertEmptyResult(Result result) throws Exception {
@@ -3809,7 +3814,7 @@ public class TestFromClientSide {
     scan.addColumn(CONTENTS_FAMILY, null);
     ResultScanner scanner = table.getScanner(scan);
     for (Result r : scanner) {
-      for(KeyValue key : r.raw()) {
+      for(Cell key : r.raw()) {
         System.out.println(Bytes.toString(r.getRow()) + ": " + key.toString());
       }
     }
@@ -4011,7 +4016,7 @@ public class TestFromClientSide {
       int index = 0;
       Result r = null;
       while ((r = s.next()) != null) {
-        for(KeyValue key : r.raw()) {
+        for(Cell key : r.raw()) {
           times[index++] = key.getTimestamp();
         }
       }
@@ -4045,7 +4050,7 @@ public class TestFromClientSide {
       int index = 0;
       Result r = null;
       while ((r = s.next()) != null) {
-        for(KeyValue key : r.raw()) {
+        for(Cell key : r.raw()) {
           times[index++] = key.getTimestamp();
         }
       }
@@ -4172,7 +4177,7 @@ public class TestFromClientSide {
       for (Result r : s) {
         put = new Put(r.getRow());
         put.setDurability(Durability.SKIP_WAL);
-        for (KeyValue kv : r.raw()) {
+        for (Cell kv : r.raw()) {
           put.add(kv);
         }
         b.put(put);
@@ -4521,7 +4526,7 @@ public class TestFromClientSide {
 
     // Verify expected results
     Result r = ht.get(new Get(ROW));
-    KeyValue [] kvs = r.raw();
+    Cell [] kvs = r.raw();
     assertEquals(5, kvs.length);
     assertIncrementKey(kvs[0], ROW, FAMILY, QUALIFIERS[0], 1);
     assertIncrementKey(kvs[1], ROW, FAMILY, QUALIFIERS[1], 3);

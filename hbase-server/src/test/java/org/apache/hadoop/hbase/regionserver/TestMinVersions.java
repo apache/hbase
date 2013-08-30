@@ -19,16 +19,16 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import static org.apache.hadoop.hbase.HBaseTestingUtility.COLUMNS;
-import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 import java.util.ArrayList;
 import java.util.List;
 
+import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
@@ -461,10 +461,10 @@ public class TestMinVersions {
 
   private void checkResult(Result r, byte[] col, byte[] ... vals) {
     assertEquals(r.size(), vals.length);
-    List<KeyValue> kvs = r.getColumn(col, col);
+    List<Cell> kvs = r.getColumn(col, col);
     assertEquals(kvs.size(), vals.length);
     for (int i=0;i<vals.length;i++) {
-      assertArrayEquals(kvs.get(i).getValue(), vals[i]);
+      assertTrue(CellUtil.matchingValue(kvs.get(i), vals[i]));
     }
   }
 

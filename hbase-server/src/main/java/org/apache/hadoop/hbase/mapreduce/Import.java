@@ -34,8 +34,11 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.HTable;
@@ -90,12 +93,12 @@ public class Import {
       Context context)
     throws IOException {
       try {
-        for (KeyValue kv : value.raw()) {
+        for (Cell kv : value.raw()) {
           kv = filterKv(kv);
           // skip if we filtered it out
           if (kv == null) continue;
-
-          context.write(row, convertKv(kv, cfRenameMap));
+          // TODO get rid of ensureKeyValue
+          context.write(row, KeyValueUtil.ensureKeyValue(convertKv(kv, cfRenameMap)));
         }
       } catch (InterruptedException e) {
         e.printStackTrace();
@@ -140,14 +143,14 @@ public class Import {
     throws IOException, InterruptedException {
       Put put = null;
       Delete delete = null;
-      for (KeyValue kv : result.raw()) {
+      for (Cell kv : result.raw()) {
         kv = filterKv(kv);
         // skip if we filter it out
         if (kv == null) continue;
 
         kv = convertKv(kv, cfRenameMap);
         // Deletes and Puts are gathered and written when finished
-        if (kv.isDelete()) {
+        if (CellUtil.isDelete(kv)) {
           if (delete == null) {
             delete = new Delete(key.get());
           }
@@ -245,7 +248,7 @@ public class Import {
    * @return <tt>null</tt> if the key should not be written, otherwise returns the original
    *         {@link KeyValue}
    */
-  private static KeyValue filterKv(KeyValue kv) throws IOException {
+  private static Cell filterKv(Cell kv) throws IOException {
     // apply the filter and skip this kv if the filter doesn't apply
     if (filter != null) {
       Filter.ReturnCode code = filter.filterKeyValue(kv);
@@ -261,23 +264,23 @@ public class Import {
   }
 
   // helper: create a new KeyValue based on CF rename map
-  private static KeyValue convertKv(KeyValue kv, Map<byte[], byte[]> cfRenameMap) {
+  private static Cell convertKv(Cell kv, Map<byte[], byte[]> cfRenameMap) {
     if(cfRenameMap != null) {
       // If there's a rename mapping for this CF, create a new KeyValue
-      byte[] newCfName = cfRenameMap.get(kv.getFamily());
+      byte[] newCfName = cfRenameMap.get(CellUtil.getFamilyArray(kv));
       if(newCfName != null) {
-          kv = new KeyValue(kv.getBuffer(), // row buffer 
+          kv = new KeyValue(kv.getRowArray(), // row buffer 
                   kv.getRowOffset(),        // row offset
                   kv.getRowLength(),        // row length
                   newCfName,                // CF buffer
                   0,                        // CF offset 
                   newCfName.length,         // CF length 
-                  kv.getBuffer(),           // qualifier buffer
+                  kv.getQualifierArray(),   // qualifier buffer
                   kv.getQualifierOffset(),  // qualifier offset
                   kv.getQualifierLength(),  // qualifier length
                   kv.getTimestamp(),        // timestamp
-                  KeyValue.Type.codeToType(kv.getType()), // KV Type
-                  kv.getBuffer(),           // value buffer 
+                  KeyValue.Type.codeToType(kv.getTypeByte()), // KV Type
+                  kv.getValueArray(),       // value buffer 
                   kv.getValueOffset(),      // value offset
                   kv.getValueLength());     // value length
       }

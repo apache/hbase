@@ -27,6 +27,7 @@ import java.util.Map;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -149,18 +150,18 @@ public class Delete extends Mutation implements Comparable<Row> {
    * @throws IOException
    */
   @SuppressWarnings("unchecked")
-  public Delete addDeleteMarker(KeyValue kv) throws IOException {
+  public Delete addDeleteMarker(Cell kv) throws IOException {
     // TODO: Deprecate and rename 'add' so it matches how we add KVs to Puts.
-    if (!kv.isDelete()) {
+    if (!CellUtil.isDelete(kv)) {
       throw new IOException("The recently added KeyValue is not of type "
           + "delete. Rowkey: " + Bytes.toStringBinary(this.row));
     }
-    if (Bytes.compareTo(this.row, 0, row.length, kv.getBuffer(),
+    if (Bytes.compareTo(this.row, 0, row.length, kv.getRowArray(),
         kv.getRowOffset(), kv.getRowLength()) != 0) {
       throw new WrongRowIOException("The row in " + kv.toString() +
         " doesn't match the original one " +  Bytes.toStringBinary(this.row));
     }
-    byte [] family = kv.getFamily();
+    byte [] family = CellUtil.getFamilyArray(kv);
     List<Cell> list = familyMap.get(family);
     if (list == null) {
       list = new ArrayList<Cell>();

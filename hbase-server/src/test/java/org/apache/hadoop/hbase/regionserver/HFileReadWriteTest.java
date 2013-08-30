@@ -46,11 +46,13 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.compress.Compression;
@@ -401,11 +403,12 @@ public class HFileReadWriteTest {
       scanner = new StoreScanner(store, store.getScanInfo(), scan, scanners,
           ScanType.COMPACT_DROP_DELETES, Long.MIN_VALUE, Long.MIN_VALUE);
 
-      ArrayList<KeyValue> kvs = new ArrayList<KeyValue>();
+      ArrayList<Cell> kvs = new ArrayList<Cell>();
 
       while (scanner.next(kvs) || kvs.size() != 0) {
         numKV.addAndGet(kvs.size());
-        for (KeyValue kv : kvs) {
+        for (Cell c : kvs) {
+          KeyValue kv = KeyValueUtil.ensureKeyValue(c);
           totalBytes.addAndGet(kv.getLength());
           writer.append(kv);
         }

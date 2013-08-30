@@ -28,11 +28,10 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
-import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.client.coprocessor.AggregationClient;
 import org.apache.hadoop.hbase.filter.FirstKeyOnlyFilter;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.ResponseConverter;
@@ -84,7 +83,7 @@ extends AggregateService implements CoprocessorService, Coprocessor {
       T temp;
       Scan scan = ProtobufUtil.toScan(request.getScan());
       scanner = env.getRegion().getScanner(scan);
-      List<KeyValue> results = new ArrayList<KeyValue>();
+      List<Cell> results = new ArrayList<Cell>();
       byte[] colFamily = scan.getFamilies()[0];
       NavigableSet<byte[]> qualifiers = scan.getFamilyMap().get(colFamily);
       byte[] qualifier = null;
@@ -95,7 +94,7 @@ extends AggregateService implements CoprocessorService, Coprocessor {
       boolean hasMoreRows = false;
       do {
         hasMoreRows = scanner.next(results);
-        for (KeyValue kv : results) {
+        for (Cell kv : results) {
           temp = ci.getValue(colFamily, qualifier, kv);
           max = (max == null || (temp != null && ci.compare(temp, max) > 0)) ? temp : max;
         }
@@ -138,7 +137,7 @@ extends AggregateService implements CoprocessorService, Coprocessor {
       T temp;
       Scan scan = ProtobufUtil.toScan(request.getScan());
       scanner = env.getRegion().getScanner(scan);
-      List<KeyValue> results = new ArrayList<KeyValue>();
+      List<Cell> results = new ArrayList<Cell>();
       byte[] colFamily = scan.getFamilies()[0];
       NavigableSet<byte[]> qualifiers = scan.getFamilyMap().get(colFamily);
       byte[] qualifier = null;
@@ -148,7 +147,7 @@ extends AggregateService implements CoprocessorService, Coprocessor {
       boolean hasMoreRows = false;
       do {
         hasMoreRows = scanner.next(results);
-        for (KeyValue kv : results) {
+        for (Cell kv : results) {
           temp = ci.getValue(colFamily, qualifier, kv);
           min = (min == null || (temp != null && ci.compare(temp, min) < 0)) ? temp : min;
         }
@@ -197,11 +196,11 @@ extends AggregateService implements CoprocessorService, Coprocessor {
       if (qualifiers != null && !qualifiers.isEmpty()) {
         qualifier = qualifiers.pollFirst();
       }
-      List<KeyValue> results = new ArrayList<KeyValue>();
+      List<Cell> results = new ArrayList<Cell>();
       boolean hasMoreRows = false;
       do {
         hasMoreRows = scanner.next(results);
-        for (KeyValue kv : results) {
+        for (Cell kv : results) {
           temp = ci.getValue(colFamily, qualifier, kv);
           if (temp != null)
             sumVal = ci.add(sumVal, ci.castToReturnType(temp));
@@ -236,7 +235,7 @@ extends AggregateService implements CoprocessorService, Coprocessor {
       RpcCallback<AggregateResponse> done) {
     AggregateResponse response = null;
     long counter = 0l;
-    List<KeyValue> results = new ArrayList<KeyValue>();
+    List<Cell> results = new ArrayList<Cell>();
     InternalScanner scanner = null;
     try {
       Scan scan = ProtobufUtil.toScan(request.getScan());
@@ -305,13 +304,13 @@ extends AggregateService implements CoprocessorService, Coprocessor {
       if (qualifiers != null && !qualifiers.isEmpty()) {
         qualifier = qualifiers.pollFirst();
       }
-      List<KeyValue> results = new ArrayList<KeyValue>();
+      List<Cell> results = new ArrayList<Cell>();
       boolean hasMoreRows = false;
     
       do {
         results.clear();
         hasMoreRows = scanner.next(results);
-        for (KeyValue kv : results) {
+        for (Cell kv : results) {
           sumVal = ci.add(sumVal, ci.castToReturnType(ci.getValue(colFamily,
               qualifier, kv)));
         }
@@ -364,14 +363,14 @@ extends AggregateService implements CoprocessorService, Coprocessor {
       if (qualifiers != null && !qualifiers.isEmpty()) {
         qualifier = qualifiers.pollFirst();
       }
-      List<KeyValue> results = new ArrayList<KeyValue>();
+      List<Cell> results = new ArrayList<Cell>();
 
       boolean hasMoreRows = false;
     
       do {
         tempVal = null;
         hasMoreRows = scanner.next(results);
-        for (KeyValue kv : results) {
+        for (Cell kv : results) {
           tempVal = ci.add(tempVal, ci.castToReturnType(ci.getValue(colFamily,
               qualifier, kv)));
         }
@@ -429,7 +428,7 @@ extends AggregateService implements CoprocessorService, Coprocessor {
         // if weighted median is requested, get qualifier for the weight column
         weightQualifier = qualifiers.pollLast();
       }
-      List<KeyValue> results = new ArrayList<KeyValue>();
+      List<Cell> results = new ArrayList<Cell>();
 
       boolean hasMoreRows = false;
     
@@ -437,7 +436,7 @@ extends AggregateService implements CoprocessorService, Coprocessor {
         tempVal = null;
         tempWeight = null;
         hasMoreRows = scanner.next(results);
-        for (KeyValue kv : results) {
+        for (Cell kv : results) {
           tempVal = ci.add(tempVal, ci.castToReturnType(ci.getValue(colFamily,
               valQualifier, kv)));
           if (weightQualifier != null) {

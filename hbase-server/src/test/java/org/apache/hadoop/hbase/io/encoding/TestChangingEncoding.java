@@ -16,7 +16,7 @@
  */
 package org.apache.hadoop.hbase.io.encoding;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -28,32 +28,29 @@ import java.util.Random;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.LargeTests;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
-import org.apache.hadoop.hbase.client.Durability;
-import org.apache.hadoop.hbase.ipc.RpcClient;
-import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Threads;
-import org.apache.log4j.Level;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-import org.apache.commons.logging.impl.Log4JLogger;
 
 /**
  * Tests changing data block encoding settings of a column family.
@@ -159,9 +156,8 @@ public class TestChangingEncoding {
       Get get = new Get(getRowKey(batchId, i));
       Result result = table.get(get);
       for (int j = 0; j < NUM_COLS_PER_ROW; ++j) {
-        KeyValue kv = result.getColumnLatest(CF_BYTES, getQualifier(j));
-        assertEquals(Bytes.toStringBinary(getValue(batchId, i, j)),
-            Bytes.toStringBinary(kv.getValue()));
+        Cell kv = result.getColumnLatest(CF_BYTES, getQualifier(j));
+        assertTrue(CellUtil.matchingValue(kv, getValue(batchId, i, j)));
       }
     }
     table.close();

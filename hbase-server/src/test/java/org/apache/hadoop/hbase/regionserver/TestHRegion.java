@@ -49,14 +49,13 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
-import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestCase;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.HConstants.OperationStatusCode;
 import org.apache.hadoop.hbase.HDFSBlocksDistribution;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -67,6 +66,8 @@ import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.MultithreadedTestUtil;
 import org.apache.hadoop.hbase.MultithreadedTestUtil.RepeatingTestThread;
 import org.apache.hadoop.hbase.MultithreadedTestUtil.TestThread;
+import org.apache.hadoop.hbase.NotServingRegionException;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.client.Append;
 import org.apache.hadoop.hbase.client.Delete;
@@ -193,7 +194,7 @@ public class TestHRegion extends HBaseTestCase {
     // open the second scanner
     RegionScanner scanner2 = region.getScanner(scan);
 
-    List<KeyValue> results = new ArrayList<KeyValue>();
+    List<Cell> results = new ArrayList<Cell>();
 
     System.out.println("Smallest read point:" + region.getSmallestReadPoint());
 
@@ -245,10 +246,10 @@ public class TestHRegion extends HBaseTestCase {
     region.compactStores(true);
 
     scanner1.reseek(Bytes.toBytes("r2"));
-    List<KeyValue> results = new ArrayList<KeyValue>();
+    List<Cell> results = new ArrayList<Cell>();
     scanner1.next(results);
-    KeyValue keyValue = results.get(0);
-    Assert.assertTrue(Bytes.compareTo(keyValue.getRow(), Bytes.toBytes("r2")) == 0);
+    Cell keyValue = results.get(0);
+    Assert.assertTrue(Bytes.compareTo(CellUtil.getRowArray(keyValue), Bytes.toBytes("r2")) == 0);
     scanner1.close();
   }
 
@@ -293,9 +294,9 @@ public class TestHRegion extends HBaseTestCase {
       Get get = new Get(row);
       Result result = region.get(get);
       for (long i = minSeqId; i <= maxSeqId; i += 10) {
-        List<KeyValue> kvs = result.getColumn(family, Bytes.toBytes(i));
+        List<Cell> kvs = result.getColumn(family, Bytes.toBytes(i));
         assertEquals(1, kvs.size());
-        assertEquals(Bytes.toBytes(i), kvs.get(0).getValue());
+        assertEquals(Bytes.toBytes(i), CellUtil.getValueArray(kvs.get(0)));
       }
     } finally {
       HRegion.closeHRegion(this.region);
@@ -346,12 +347,12 @@ public class TestHRegion extends HBaseTestCase {
       Get get = new Get(row);
       Result result = region.get(get);
       for (long i = minSeqId; i <= maxSeqId; i += 10) {
-        List<KeyValue> kvs = result.getColumn(family, Bytes.toBytes(i));
+        List<Cell> kvs = result.getColumn(family, Bytes.toBytes(i));
         if (i < recoverSeqId) {
           assertEquals(0, kvs.size());
         } else {
           assertEquals(1, kvs.size());
-          assertEquals(Bytes.toBytes(i), kvs.get(0).getValue());
+          assertEquals(Bytes.toBytes(i), CellUtil.getValueArray(kvs.get(0)));
         }
       }
     } finally {
@@ -670,14 +671,14 @@ public class TestHRegion extends HBaseTestCase {
     InternalScanner scanner = buildScanner(keyPrefix, value, r);
     int count = 0;
     boolean more = false;
-    List<KeyValue> results = new ArrayList<KeyValue>();
+    List<Cell> results = new ArrayList<Cell>();
     do {
       more = scanner.next(results);
       if (results != null && !results.isEmpty())
         count++;
       else
         break;
-      Delete delete = new Delete(results.get(0).getRow());
+      Delete delete = new Delete(CellUtil.getRowArray(results.get(0)));
       delete.deleteColumn(Bytes.toBytes("trans-tags"), Bytes.toBytes("qual2"));
       r.delete(delete);
       results.clear();
@@ -688,14 +689,14 @@ public class TestHRegion extends HBaseTestCase {
   private int getNumberOfRows(String keyPrefix, String value, HRegion r) throws Exception {
     InternalScanner resultScanner = buildScanner(keyPrefix, value, r);
     int numberOfResults = 0;
-    List<KeyValue> results = new ArrayList<KeyValue>();
+    List<Cell> results = new ArrayList<Cell>();
     boolean more = false;
     do {
       more = resultScanner.next(results);
       if (results != null && !results.isEmpty()) numberOfResults++;
       else break;
-      for (KeyValue kv: results) {
-        System.out.println("kv=" + kv.toString() + ", " + Bytes.toString(kv.getValue()));
+      for (Cell kv: results) {
+        System.out.println("kv=" + kv.toString() + ", " + Bytes.toString(CellUtil.getValueArray(kv)));
       }
       results.clear();
     } while(more);
@@ -1065,9 +1066,9 @@ public class TestHRegion extends HBaseTestCase {
 
       Get get = new Get(row1);
       get.addColumn(fam2, qf1);
-      KeyValue [] actual = region.get(get).raw();
+      Cell [] actual = region.get(get).raw();
 
-      KeyValue [] expected = {kv};
+      Cell [] expected = {kv};
 
       assertEquals(expected.length, actual.length);
       for(int i=0; i<actual.length; i++) {
@@ -1385,7 +1386,7 @@ public class TestHRegion extends HBaseTestCase {
       Get get = new Get(row).addColumn(fam, qual);
       Result result = region.get(get);
       assertEquals(1, result.size());
-      KeyValue kv = result.raw()[0];
+      Cell kv = result.raw()[0];
       LOG.info("Got: " + kv);
       assertTrue("LATEST_TIMESTAMP was not replaced with real timestamp",
           kv.getTimestamp() != HConstants.LATEST_TIMESTAMP);
@@ -1479,13 +1480,13 @@ public class TestHRegion extends HBaseTestCase {
       Scan scan = new Scan();
       scan.addFamily(fam1).addFamily(fam2);
       InternalScanner s = region.getScanner(scan);
-      List<KeyValue> results = new ArrayList<KeyValue>();
+      List<Cell> results = new ArrayList<Cell>();
       s.next(results);
-      assertTrue(Bytes.equals(rowA, results.get(0).getRow()));
+      assertTrue(CellUtil.matchingRow(results.get(0), rowA));
 
       results.clear();
       s.next(results);
-      assertTrue(Bytes.equals(rowB, results.get(0).getRow()));
+      assertTrue(CellUtil.matchingRow(results.get(0), rowB));
     } finally {
       HRegion.closeHRegion(this.region);
       this.region = null;
@@ -1536,15 +1537,15 @@ public class TestHRegion extends HBaseTestCase {
       scan.addColumn(fam1, qual1);
       InternalScanner s = region.getScanner(scan);
 
-      List<KeyValue> results = new ArrayList<KeyValue>();
+      List<Cell> results = new ArrayList<Cell>();
       assertEquals(false, s.next(results));
       assertEquals(1, results.size());
-      KeyValue kv = results.get(0);
+      Cell kv = results.get(0);
 
-      assertByteEquals(value2, kv.getValue());
-      assertByteEquals(fam1, kv.getFamily());
-      assertByteEquals(qual1, kv.getQualifier());
-      assertByteEquals(row, kv.getRow());
+      assertByteEquals(value2, CellUtil.getValueArray(kv));
+      assertByteEquals(fam1, CellUtil.getFamilyArray(kv));
+      assertByteEquals(qual1, CellUtil.getQualifierArray(kv));
+      assertByteEquals(row, CellUtil.getRowArray(kv));
     } finally {
       HRegion.closeHRegion(this.region);
       this.region = null;
@@ -1655,13 +1656,9 @@ public class TestHRegion extends HBaseTestCase {
       Result res = region.get(get);
       assertEquals(expected.length, res.size());
       for(int i=0; i<res.size(); i++){
-        assertEquals(0,
-            Bytes.compareTo(expected[i].getRow(), res.raw()[i].getRow()));
-        assertEquals(0,
-            Bytes.compareTo(expected[i].getFamily(), res.raw()[i].getFamily()));
-        assertEquals(0,
-            Bytes.compareTo(
-                expected[i].getQualifier(), res.raw()[i].getQualifier()));
+        assertTrue(CellUtil.matchingRow(expected[i], res.raw()[i]));
+        assertTrue(CellUtil.matchingFamily(expected[i], res.raw()[i]));
+        assertTrue(CellUtil.matchingQualifier(expected[i], res.raw()[i]));
       }
 
       // Test using a filter on a Get
@@ -1950,25 +1947,25 @@ public class TestHRegion extends HBaseTestCase {
       scan.addFamily(fam4);
       InternalScanner is = region.getScanner(scan);
 
-      List<KeyValue> res = null;
+      List<Cell> res = null;
 
       //Result 1
-      List<KeyValue> expected1 = new ArrayList<KeyValue>();
+      List<Cell> expected1 = new ArrayList<Cell>();
       expected1.add(new KeyValue(row1, fam2, null, ts, KeyValue.Type.Put, null));
       expected1.add(new KeyValue(row1, fam4, null, ts, KeyValue.Type.Put, null));
 
-      res = new ArrayList<KeyValue>();
+      res = new ArrayList<Cell>();
       is.next(res);
       for (int i = 0; i < res.size(); i++) {
         assertTrue(CellComparator.equalsIgnoreMvccVersion(expected1.get(i), res.get(i)));
       }
 
       //Result 2
-      List<KeyValue> expected2 = new ArrayList<KeyValue>();
+      List<Cell> expected2 = new ArrayList<Cell>();
       expected2.add(new KeyValue(row2, fam2, null, ts, KeyValue.Type.Put, null));
       expected2.add(new KeyValue(row2, fam4, null, ts, KeyValue.Type.Put, null));
 
-      res = new ArrayList<KeyValue>();
+      res = new ArrayList<Cell>();
       is.next(res);
       for(int i=0; i<res.size(); i++) {
         assertTrue(CellComparator.equalsIgnoreMvccVersion(expected2.get(i), res.get(i)));
@@ -2016,14 +2013,14 @@ public class TestHRegion extends HBaseTestCase {
       region.put(put);
 
       //Expected
-      List<KeyValue> expected = new ArrayList<KeyValue>();
+      List<Cell> expected = new ArrayList<Cell>();
       expected.add(kv13);
       expected.add(kv12);
 
       Scan scan = new Scan(row1);
       scan.addColumn(fam1, qf1);
       scan.setMaxVersions(MAX_VERSIONS);
-      List<KeyValue> actual = new ArrayList<KeyValue>();
+      List<Cell> actual = new ArrayList<Cell>();
       InternalScanner scanner = region.getScanner(scan);
 
       boolean hasNext = scanner.next(actual);
@@ -2077,7 +2074,7 @@ public class TestHRegion extends HBaseTestCase {
       region.flushcache();
 
       //Expected
-      List<KeyValue> expected = new ArrayList<KeyValue>();
+      List<Cell> expected = new ArrayList<Cell>();
       expected.add(kv13);
       expected.add(kv12);
       expected.add(kv23);
@@ -2087,7 +2084,7 @@ public class TestHRegion extends HBaseTestCase {
       scan.addColumn(fam1, qf1);
       scan.addColumn(fam1, qf2);
       scan.setMaxVersions(MAX_VERSIONS);
-      List<KeyValue> actual = new ArrayList<KeyValue>();
+      List<Cell> actual = new ArrayList<Cell>();
       InternalScanner scanner = region.getScanner(scan);
 
       boolean hasNext = scanner.next(actual);
@@ -2157,7 +2154,7 @@ public class TestHRegion extends HBaseTestCase {
       region.put(put);
 
       //Expected
-      List<KeyValue> expected = new ArrayList<KeyValue>();
+      List<Cell> expected = new ArrayList<Cell>();
       expected.add(kv14);
       expected.add(kv13);
       expected.add(kv12);
@@ -2170,7 +2167,7 @@ public class TestHRegion extends HBaseTestCase {
       scan.addColumn(fam1, qf2);
       int versions = 3;
       scan.setMaxVersions(versions);
-      List<KeyValue> actual = new ArrayList<KeyValue>();
+      List<Cell> actual = new ArrayList<Cell>();
       InternalScanner scanner = region.getScanner(scan);
 
       boolean hasNext = scanner.next(actual);
@@ -2223,7 +2220,7 @@ public class TestHRegion extends HBaseTestCase {
       region.put(put);
 
       //Expected
-      List<KeyValue> expected = new ArrayList<KeyValue>();
+      List<Cell> expected = new ArrayList<Cell>();
       expected.add(kv13);
       expected.add(kv12);
       expected.add(kv23);
@@ -2232,7 +2229,7 @@ public class TestHRegion extends HBaseTestCase {
       Scan scan = new Scan(row1);
       scan.addFamily(fam1);
       scan.setMaxVersions(MAX_VERSIONS);
-      List<KeyValue> actual = new ArrayList<KeyValue>();
+      List<Cell> actual = new ArrayList<Cell>();
       InternalScanner scanner = region.getScanner(scan);
 
       boolean hasNext = scanner.next(actual);
@@ -2285,7 +2282,7 @@ public class TestHRegion extends HBaseTestCase {
       region.flushcache();
 
       //Expected
-      List<KeyValue> expected = new ArrayList<KeyValue>();
+      List<Cell> expected = new ArrayList<Cell>();
       expected.add(kv13);
       expected.add(kv12);
       expected.add(kv23);
@@ -2294,7 +2291,7 @@ public class TestHRegion extends HBaseTestCase {
       Scan scan = new Scan(row1);
       scan.addFamily(fam1);
       scan.setMaxVersions(MAX_VERSIONS);
-      List<KeyValue> actual = new ArrayList<KeyValue>();
+      List<Cell> actual = new ArrayList<Cell>();
       InternalScanner scanner = region.getScanner(scan);
 
       boolean hasNext = scanner.next(actual);
@@ -2350,7 +2347,7 @@ public class TestHRegion extends HBaseTestCase {
       scan.addColumn(family, col1);
       InternalScanner s = region.getScanner(scan);
 
-      List<KeyValue> results = new ArrayList<KeyValue>();
+      List<Cell> results = new ArrayList<Cell>();
       assertEquals(false, s.next(results));
       assertEquals(0, results.size());
     } finally {
@@ -2369,8 +2366,8 @@ public class TestHRegion extends HBaseTestCase {
     Result result = region.get(get);
     assertEquals(1, result.size());
 
-    KeyValue kv = result.raw()[0];
-    long r = Bytes.toLong(kv.getValue());
+    Cell kv = result.raw()[0];
+    long r = Bytes.toLong(CellUtil.getValueArray(kv));
     assertEquals(amount, r);
   }
 
@@ -2384,8 +2381,8 @@ public class TestHRegion extends HBaseTestCase {
     Result result = region.get(get);
     assertEquals(1, result.size());
 
-    KeyValue kv = result.raw()[0];
-    int r = Bytes.toInt(kv.getValue());
+    Cell kv = result.raw()[0];
+    int r = Bytes.toInt(CellUtil.getValueArray(kv));
     assertEquals(amount, r);
   }
 
@@ -2453,7 +2450,7 @@ public class TestHRegion extends HBaseTestCase {
       Scan scan = new Scan(row1);
       int versions = 3;
       scan.setMaxVersions(versions);
-      List<KeyValue> actual = new ArrayList<KeyValue>();
+      List<Cell> actual = new ArrayList<Cell>();
       InternalScanner scanner = region.getScanner(scan);
 
       boolean hasNext = scanner.next(actual);
@@ -2518,16 +2515,16 @@ public class TestHRegion extends HBaseTestCase {
       scan.setLoadColumnFamiliesOnDemand(true);
       InternalScanner s = region.getScanner(scan);
 
-      List<KeyValue> results = new ArrayList<KeyValue>();
+      List<Cell> results = new ArrayList<Cell>();
       assertTrue(s.next(results));
       assertEquals(results.size(), 1);
       results.clear();
 
       assertTrue(s.next(results));
       assertEquals(results.size(), 3);
-      assertTrue("orderCheck", results.get(0).matchingFamily(cf_alpha));
-      assertTrue("orderCheck", results.get(1).matchingFamily(cf_essential));
-      assertTrue("orderCheck", results.get(2).matchingFamily(cf_joined));
+      assertTrue("orderCheck", CellUtil.matchingFamily(results.get(0), cf_alpha));
+      assertTrue("orderCheck", CellUtil.matchingFamily(results.get(1), cf_essential));
+      assertTrue("orderCheck", CellUtil.matchingFamily(results.get(2), cf_joined));
       results.clear();
 
       assertFalse(s.next(results));
@@ -2607,7 +2604,7 @@ public class TestHRegion extends HBaseTestCase {
       // r8: first:a
       // r9: first:a
 
-      List<KeyValue> results = new ArrayList<KeyValue>();
+      List<Cell> results = new ArrayList<Cell>();
       int index = 0;
       while (true) {
         boolean more = s.next(results, 3);
@@ -2790,7 +2787,7 @@ public class TestHRegion extends HBaseTestCase {
           CompareOp.EQUAL, new BinaryComparator(Bytes.toBytes(5L))));
 
       int expectedCount = 0;
-      List<KeyValue> res = new ArrayList<KeyValue>();
+      List<Cell> res = new ArrayList<Cell>();
 
       boolean toggle=true;
       for (long i = 0; i < numRows; i++) {
@@ -2924,7 +2921,7 @@ public class TestHRegion extends HBaseTestCase {
       //      new BinaryComparator(Bytes.toBytes("row0"))));
 
       int expectedCount = numFamilies * numQualifiers;
-      List<KeyValue> res = new ArrayList<KeyValue>();
+      List<Cell> res = new ArrayList<Cell>();
 
       long prevTimestamp = 0L;
       for (int i = 0; i < testCount; i++) {
@@ -3120,27 +3117,27 @@ public class TestHRegion extends HBaseTestCase {
           // TODO this was removed, now what dangit?!
           // search looking for the qualifier in question?
           long timestamp = 0;
-          for (KeyValue kv : result.raw()) {
-            if (Bytes.equals(kv.getFamily(), families[0])
-                && Bytes.equals(kv.getQualifier(), qualifiers[0])) {
+          for (Cell kv : result.raw()) {
+            if (CellUtil.matchingFamily(kv, families[0])
+                && CellUtil.matchingQualifier(kv, qualifiers[0])) {
               timestamp = kv.getTimestamp();
             }
           }
           assertTrue(timestamp >= prevTimestamp);
           prevTimestamp = timestamp;
-          KeyValue previousKV = null;
+          Cell previousKV = null;
 
-          for (KeyValue kv : result.raw()) {
-            byte[] thisValue = kv.getValue();
+          for (Cell kv : result.raw()) {
+            byte[] thisValue = CellUtil.getValueArray(kv);
             if (previousKV != null) {
-              if (Bytes.compareTo(previousKV.getValue(), thisValue) != 0) {
+              if (Bytes.compareTo(CellUtil.getValueArray(previousKV), thisValue) != 0) {
                 LOG.warn("These two KV should have the same value." +
                     " Previous KV:" +
                     previousKV + "(memStoreTS:" + previousKV.getMvccVersion() + ")" +
                     ", New KV: " +
                     kv + "(memStoreTS:" + kv.getMvccVersion() + ")"
                     );
-                assertEquals(0, Bytes.compareTo(previousKV.getValue(), thisValue));
+                assertEquals(0, Bytes.compareTo(CellUtil.getValueArray(previousKV), thisValue));
               }
             }
             previousKV = kv;
@@ -3219,7 +3216,7 @@ public class TestHRegion extends HBaseTestCase {
                   new BinaryComparator(Bytes.toBytes(3L)))
               )));
       InternalScanner scanner = region.getScanner(idxScan);
-      List<KeyValue> res = new ArrayList<KeyValue>();
+      List<Cell> res = new ArrayList<Cell>();
 
       //long start = System.nanoTime();
       while (scanner.next(res)) ;
@@ -3327,7 +3324,7 @@ public class TestHRegion extends HBaseTestCase {
       //Get rows
       Get get = new Get(row);
       get.setMaxVersions();
-      KeyValue[] kvs = region.get(get).raw();
+      Cell[] kvs = region.get(get).raw();
 
       //Check if rows are correct
       assertEquals(4, kvs.length);
@@ -3378,7 +3375,7 @@ public class TestHRegion extends HBaseTestCase {
       Get get = new Get(row);
       get.addColumn(familyName, col);
 
-      KeyValue[] keyValues = region.get(get).raw();
+      Cell[] keyValues = region.get(get).raw();
       assertTrue(keyValues.length == 0);
     } finally {
       HRegion.closeHRegion(this.region);
@@ -3612,13 +3609,13 @@ public class TestHRegion extends HBaseTestCase {
     get.addColumn(Incrementer.family, Incrementer.qualifier);
     get.setMaxVersions(1);
     Result res = this.region.get(get);
-    List<KeyValue> kvs = res.getColumn(Incrementer.family,
+    List<Cell> kvs = res.getColumn(Incrementer.family,
         Incrementer.qualifier);
 
     //we just got the latest version
     assertEquals(kvs.size(), 1);
-    KeyValue kv = kvs.get(0);
-    assertEquals(expected, Bytes.toLong(kv.getBuffer(), kv.getValueOffset()));
+    Cell kv = kvs.get(0);
+    assertEquals(expected, Bytes.toLong(kv.getValueArray(), kv.getValueOffset()));
     this.region = null;
   }
 
@@ -3706,14 +3703,14 @@ public class TestHRegion extends HBaseTestCase {
     get.addColumn(Appender.family, Appender.qualifier);
     get.setMaxVersions(1);
     Result res = this.region.get(get);
-    List<KeyValue> kvs = res.getColumn(Appender.family,
+    List<Cell> kvs = res.getColumn(Appender.family,
         Appender.qualifier);
 
     //we just got the latest version
     assertEquals(kvs.size(), 1);
-    KeyValue kv = kvs.get(0);
+    Cell kv = kvs.get(0);
     byte[] appendResult = new byte[kv.getValueLength()];
-    System.arraycopy(kv.getBuffer(), kv.getValueOffset(), appendResult, 0, kv.getValueLength());
+    System.arraycopy(kv.getValueArray(), kv.getValueOffset(), appendResult, 0, kv.getValueLength());
     assertEquals(expected, appendResult);
     this.region = null;
   }
@@ -3732,7 +3729,7 @@ public class TestHRegion extends HBaseTestCase {
     this.region = initHRegion(tableName, method, conf, family);
     Put put = null;
     Get get = null;
-    List<KeyValue> kvs = null;
+    List<Cell> kvs = null;
     Result res = null;
 
     put = new Put(row);
@@ -3745,7 +3742,7 @@ public class TestHRegion extends HBaseTestCase {
     res = this.region.get(get);
     kvs = res.getColumn(family, qualifier);
     assertEquals(1, kvs.size());
-    assertEquals(Bytes.toBytes("value0"), kvs.get(0).getValue());
+    assertEquals(Bytes.toBytes("value0"), CellUtil.getValueArray(kvs.get(0)));
 
     region.flushcache();
     get = new Get(row);
@@ -3754,7 +3751,7 @@ public class TestHRegion extends HBaseTestCase {
     res = this.region.get(get);
     kvs = res.getColumn(family, qualifier);
     assertEquals(1, kvs.size());
-    assertEquals(Bytes.toBytes("value0"), kvs.get(0).getValue());
+    assertEquals(Bytes.toBytes("value0"), CellUtil.getValueArray(kvs.get(0)));
 
     put = new Put(row);
     value = Bytes.toBytes("value1");
@@ -3766,7 +3763,7 @@ public class TestHRegion extends HBaseTestCase {
     res = this.region.get(get);
     kvs = res.getColumn(family, qualifier);
     assertEquals(1, kvs.size());
-    assertEquals(Bytes.toBytes("value1"), kvs.get(0).getValue());
+    assertEquals(Bytes.toBytes("value1"), CellUtil.getValueArray(kvs.get(0)));
 
     region.flushcache();
     get = new Get(row);
@@ -3775,7 +3772,7 @@ public class TestHRegion extends HBaseTestCase {
     res = this.region.get(get);
     kvs = res.getColumn(family, qualifier);
     assertEquals(1, kvs.size());
-    assertEquals(Bytes.toBytes("value1"), kvs.get(0).getValue());
+    assertEquals(Bytes.toBytes("value1"), CellUtil.getValueArray(kvs.get(0)));
   }
 
   @Test
@@ -3902,12 +3899,12 @@ public class TestHRegion extends HBaseTestCase {
         get.addColumn(family, qf);
       }
       Result result = newReg.get(get);
-      KeyValue [] raw = result.raw();
+      Cell [] raw = result.raw();
       assertEquals(families.length, result.size());
       for(int j=0; j<families.length; j++) {
-        assertEquals(0, Bytes.compareTo(row, raw[j].getRow()));
-        assertEquals(0, Bytes.compareTo(families[j], raw[j].getFamily()));
-        assertEquals(0, Bytes.compareTo(qf, raw[j].getQualifier()));
+        assertTrue(CellUtil.matchingRow(raw[j], row));
+        assertTrue(CellUtil.matchingFamily(raw[j], families[j]));
+        assertTrue(CellUtil.matchingQualifier(raw[j], qf));
       }
     }
   }
@@ -3916,9 +3913,9 @@ public class TestHRegion extends HBaseTestCase {
   throws IOException {
     // Now I have k, get values out and assert they are as expected.
     Get get = new Get(k).addFamily(family).setMaxVersions();
-    KeyValue [] results = r.get(get).raw();
+    Cell [] results = r.get(get).raw();
     for (int j = 0; j < results.length; j++) {
-      byte [] tmp = results[j].getValue();
+      byte [] tmp = CellUtil.getValueArray(results[j]);
       // Row should be equal to value every time.
       assertTrue(Bytes.equals(k, tmp));
     }
@@ -3939,11 +3936,11 @@ public class TestHRegion extends HBaseTestCase {
     for (int i = 0; i < families.length; i++) scan.addFamily(families[i]);
     InternalScanner s = r.getScanner(scan);
     try {
-      List<KeyValue> curVals = new ArrayList<KeyValue>();
+      List<Cell> curVals = new ArrayList<Cell>();
       boolean first = true;
       OUTER_LOOP: while(s.next(curVals)) {
-        for (KeyValue kv: curVals) {
-          byte [] val = kv.getValue();
+        for (Cell kv: curVals) {
+          byte [] val = CellUtil.getValueArray(kv);
           byte [] curval = val;
           if (first) {
             first = false;
@@ -4065,22 +4062,22 @@ public class TestHRegion extends HBaseTestCase {
   }
 
   /**
-   * Assert that the passed in KeyValue has expected contents for the
+   * Assert that the passed in Cell has expected contents for the
    * specified row, column & timestamp.
    */
-  private void checkOneCell(KeyValue kv, byte[] cf,
+  private void checkOneCell(Cell kv, byte[] cf,
                              int rowIdx, int colIdx, long ts) {
     String ctx = "rowIdx=" + rowIdx + "; colIdx=" + colIdx + "; ts=" + ts;
     assertEquals("Row mismatch which checking: " + ctx,
-                 "row:"+ rowIdx, Bytes.toString(kv.getRow()));
+                 "row:"+ rowIdx, Bytes.toString(CellUtil.getRowArray(kv)));
     assertEquals("ColumnFamily mismatch while checking: " + ctx,
-                 Bytes.toString(cf), Bytes.toString(kv.getFamily()));
+                 Bytes.toString(cf), Bytes.toString(CellUtil.getFamilyArray(kv)));
     assertEquals("Column qualifier mismatch while checking: " + ctx,
-                 "column:" + colIdx, Bytes.toString(kv.getQualifier()));
+                 "column:" + colIdx, Bytes.toString(CellUtil.getQualifierArray(kv)));
     assertEquals("Timestamp mismatch while checking: " + ctx,
                  ts, kv.getTimestamp());
     assertEquals("Value mismatch while checking: " + ctx,
-                 "value-version-" + ts, Bytes.toString(kv.getValue()));
+                 "value-version-" + ts, Bytes.toString(CellUtil.getValueArray(kv)));
   }
 }
 

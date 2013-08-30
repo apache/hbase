@@ -18,6 +18,10 @@
  */
 package org.apache.hadoop.hbase.mapreduce;
 
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+
 import java.io.File;
 import java.io.IOException;
 import java.util.Iterator;
@@ -29,9 +33,10 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.LargeTests;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
@@ -46,10 +51,6 @@ import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-
-import static org.junit.Assert.fail;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.assertFalse;
 
 /**
  * Test Map/Reduce job over HBase tables. The map/reduce process we're testing
@@ -225,12 +226,12 @@ public class TestTableMapReduce {
         byte[] firstValue = null;
         byte[] secondValue = null;
         int count = 0;
-        for(KeyValue kv : r.list()) {
+        for(Cell kv : r.list()) {
           if (count == 0) {
-            firstValue = kv.getValue();
+            firstValue = CellUtil.getValueArray(kv);
           }
           if (count == 1) {
-            secondValue = kv.getValue();
+            secondValue = CellUtil.getValueArray(kv);
           }
           count++;
           if (count == 2) {

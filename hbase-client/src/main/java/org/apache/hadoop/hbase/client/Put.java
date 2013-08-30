@@ -21,7 +21,6 @@ package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
@@ -29,9 +28,9 @@ import java.util.TreeMap;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.util.Bytes;
 
@@ -122,7 +121,6 @@ public class Put extends Mutation implements HeapSize, Comparable<Row> {
    * @param value column value
    * @return this
    */
-  @SuppressWarnings("unchecked")
   public Put add(byte [] family, byte [] qualifier, long ts, byte [] value) {
     if (ts < 0) {
       throw new IllegalArgumentException("Timestamp cannot be negative. ts=" + ts);
@@ -130,7 +128,7 @@ public class Put extends Mutation implements HeapSize, Comparable<Row> {
     List<Cell> list = getCellList(family);
     KeyValue kv = createPutKeyValue(family, qualifier, ts, value);
     list.add(kv);
-    familyMap.put(kv.getFamily(), list);
+    familyMap.put(CellUtil.getFamilyArray(kv), list);
     return this;
   }
 
@@ -142,13 +140,12 @@ public class Put extends Mutation implements HeapSize, Comparable<Row> {
    * @return this
    * @throws java.io.IOException e
    */
-  @SuppressWarnings("unchecked")
-  public Put add(KeyValue kv) throws IOException{
-    byte [] family = kv.getFamily();
+  public Put add(Cell kv) throws IOException{
+    byte [] family = CellUtil.getFamilyArray(kv);
     List<Cell> list = getCellList(family);
     //Checking that the row of the kv is the same as the put
     int res = Bytes.compareTo(this.row, 0, row.length,
-        kv.getBuffer(), kv.getRowOffset(), kv.getRowLength());
+        kv.getRowArray(), kv.getRowOffset(), kv.getRowLength());
     if (res != 0) {
       throw new WrongRowIOException("The row in " + kv.toString() +
         " doesn't match the original one " +  Bytes.toStringBinary(this.row));
@@ -245,35 +242,31 @@ public class Put extends Mutation implements HeapSize, Comparable<Row> {
     // F F => 1
     if (!ignoreTS && !ignoreValue) {
       for (Cell cell : list) {
-        KeyValue kv = KeyValueUtil.ensureKeyValue(cell);
-        if (Arrays.equals(kv.getFamily(), family) &&
-            Arrays.equals(kv.getQualifier(), qualifier) &&
-            Arrays.equals(kv.getValue(), value) &&
-            kv.getTimestamp() == ts) {
+        if (CellUtil.matchingFamily(cell, family) &&
+            CellUtil.matchingQualifier(cell, qualifier)  &&
+            CellUtil.matchingValue(cell, value) &&
+            cell.getTimestamp() == ts) {
           return true;
         }
       }
     } else if (ignoreValue && !ignoreTS) {
       for (Cell cell : list) {
-        KeyValue kv = KeyValueUtil.ensureKeyValue(cell);
-        if (Arrays.equals(kv.getFamily(), family) && Arrays.equals(kv.getQualifier(), qualifier)
-            && kv.getTimestamp() == ts) {
+        if (CellUtil.matchingFamily(cell, family) && CellUtil.matchingQualifier(cell, qualifier)
+            && cell.getTimestamp() == ts) {
           return true;
         }
       }
     } else if (!ignoreValue && ignoreTS) {
       for (Cell cell : list) {
-        KeyValue kv = KeyValueUtil.ensureKeyValue(cell);
-        if (Arrays.equals(kv.getFamily(), family) && Arrays.equals(kv.getQualifier(), qualifier)
-            && Arrays.equals(kv.getValue(), value)) {
+        if (CellUtil.matchingFamily(cell, family) && CellUtil.matchingQualifier(cell, qualifier)
+            && CellUtil.matchingValue(cell, value)) {
           return true;
         }
       }
     } else {
       for (Cell cell : list) {
-        KeyValue kv = KeyValueUtil.ensureKeyValue(cell);
-        if (Arrays.equals(kv.getFamily(), family) &&
-            Arrays.equals(kv.getQualifier(), qualifier)) {
+        if (CellUtil.matchingFamily(cell, family) &&
+            CellUtil.matchingQualifier(cell, qualifier)) {
           return true;
         }
       }
@@ -287,14 +280,13 @@ public class Put extends Mutation implements HeapSize, Comparable<Row> {
    * @param family column family
    * @param qualifier column qualifier
    * @return a list of KeyValue objects with the matching family and qualifier,
-   * returns an empty list if one doesnt exist for the given family.
+   * returns an empty list if one doesn't exist for the given family.
    */
-  public List<KeyValue> get(byte[] family, byte[] qualifier) {
-    List<KeyValue> filteredList = new ArrayList<KeyValue>();
+  public List<Cell> get(byte[] family, byte[] qualifier) {
+    List<Cell> filteredList = new ArrayList<Cell>();
     for (Cell cell: getCellList(family)) {
-      KeyValue kv = KeyValueUtil.ensureKeyValue(cell);
-      if (Arrays.equals(kv.getQualifier(), qualifier)) {
-        filteredList.add(kv);
+      if (CellUtil.matchingQualifier(cell, qualifier)) {
+        filteredList.add(cell);
       }
     }
     return filteredList;

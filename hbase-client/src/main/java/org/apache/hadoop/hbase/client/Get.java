@@ -195,7 +195,7 @@ public class Get extends OperationWithAttributes
 
   /**
    * Apply the specified server-side filter when performing the Get.
-   * Only {@link Filter#filterKeyValue(KeyValue)} is called AFTER all tests
+   * Only {@link Filter#filterKeyValue(Cell)} is called AFTER all tests
    * for ttl, column match, deletes and max versions have been run.
    * @param filter filter to run on the server
    * @return this for invocation chaining

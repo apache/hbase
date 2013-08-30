@@ -33,13 +33,14 @@ import java.util.TreeSet;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.exceptions.DeserializationException;
+import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.catalog.MetaReader;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
@@ -48,6 +49,7 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.filter.QualifierFilter;
 import org.apache.hadoop.hbase.filter.RegexStringComparator;
@@ -367,14 +369,14 @@ public class AccessControlLists {
       iScanner = aclRegion.getScanner(scan);
 
       while (true) {
-        List<KeyValue> row = new ArrayList<KeyValue>();
+        List<Cell> row = new ArrayList<Cell>();
 
         boolean hasNext = iScanner.next(row);
         ListMultimap<String,TablePermission> perms = ArrayListMultimap.create();
         byte[] entry = null;
-        for (KeyValue kv : row) {
+        for (Cell kv : row) {
           if (entry == null) {
-            entry = kv.getRow();
+            entry = CellUtil.getRowArray(kv);
           }
           Pair<String,TablePermission> permissionsOfUserOnTable =
               parsePermissionRecord(entry, kv);
@@ -511,7 +513,7 @@ public class AccessControlLists {
       byte[] entryName, Result result) {
     ListMultimap<String, TablePermission> perms = ArrayListMultimap.create();
     if (result != null && result.size() > 0) {
-      for (KeyValue kv : result.raw()) {
+      for (Cell kv : result.raw()) {
 
         Pair<String,TablePermission> permissionsOfUserOnTable =
             parsePermissionRecord(entryName, kv);
@@ -527,16 +529,16 @@ public class AccessControlLists {
   }
 
   private static Pair<String, TablePermission> parsePermissionRecord(
-      byte[] entryName, KeyValue kv) {
+      byte[] entryName, Cell kv) {
     // return X given a set of permissions encoded in the permissionRecord kv.
-    byte[] family = kv.getFamily();
+    byte[] family = CellUtil.getFamilyArray(kv);
 
     if (!Bytes.equals(family, ACL_LIST_FAMILY)) {
       return null;
     }
 
-    byte[] key = kv.getQualifier();
-    byte[] value = kv.getValue();
+    byte[] key = CellUtil.getQualifierArray(kv);
+    byte[] value = CellUtil.getValueArray(kv);
     if (LOG.isDebugEnabled()) {
       LOG.debug("Read acl: kv ["+
                 Bytes.toStringBinary(key)+": "+

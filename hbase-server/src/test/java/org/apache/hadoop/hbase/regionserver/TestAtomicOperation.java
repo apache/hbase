@@ -36,13 +36,14 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.MultithreadedTestUtil;
 import org.apache.hadoop.hbase.MultithreadedTestUtil.TestContext;
@@ -173,8 +174,8 @@ public class TestAtomicOperation {
     Result result = region.get(get);
     assertEquals(1, result.size());
 
-    KeyValue kv = result.raw()[0];
-    long r = Bytes.toLong(kv.getValue());
+    Cell kv = result.raw()[0];
+    long r = Bytes.toLong(CellUtil.getValueArray(kv));
     assertEquals(amount, r);
   }
 
@@ -449,7 +450,7 @@ public class TestAtomicOperation {
               // check: should always see exactly one column
               Scan s = new Scan(row);
               RegionScanner rs = region.getScanner(s);
-              List<KeyValue> r = new ArrayList<KeyValue>();
+              List<Cell> r = new ArrayList<Cell>();
               while(rs.next(r));
               rs.close();
               if (r.size() != 1) {
@@ -542,10 +543,10 @@ public class TestAtomicOperation {
     ctx.stop();
     Scan s = new Scan();
     RegionScanner scanner = region.getScanner(s);
-    List<KeyValue> results = new ArrayList<KeyValue>();
+    List<Cell> results = new ArrayList<Cell>();
     scanner.next(results, 2);
-    for (KeyValue keyValue : results) {
-      assertEquals("50",Bytes.toString(keyValue.getValue()));
+    for (Cell keyValue : results) {
+      assertEquals("50",Bytes.toString(CellUtil.getValueArray(keyValue)));
     }
 
   }

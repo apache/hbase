@@ -27,6 +27,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
@@ -94,11 +95,11 @@ public class TableNamespaceManager {
     ResultScanner scanner = table.getScanner(HTableDescriptor.NAMESPACE_FAMILY_INFO_BYTES);
     try {
       for(Result result : scanner) {
+        byte[] val =  CellUtil.getValueArray(result.getColumnLatest(HTableDescriptor.NAMESPACE_FAMILY_INFO_BYTES,
+            HTableDescriptor.NAMESPACE_COL_DESC_BYTES));
         NamespaceDescriptor ns =
             ProtobufUtil.toNamespaceDescriptor(
-                HBaseProtos.NamespaceDescriptor.parseFrom(
-                    result.getColumnLatest(HTableDescriptor.NAMESPACE_FAMILY_INFO_BYTES,
-                        HTableDescriptor.NAMESPACE_COL_DESC_BYTES).getValue()));
+                HBaseProtos.NamespaceDescriptor.parseFrom(val));
         zkNamespaceManager.update(ns);
       }
     } finally {
@@ -112,11 +113,11 @@ public class TableNamespaceManager {
     if (res.isEmpty()) {
       return null;
     }
+    byte[] val = CellUtil.getValueArray(res.getColumnLatest(HTableDescriptor.NAMESPACE_FAMILY_INFO_BYTES,
+        HTableDescriptor.NAMESPACE_COL_DESC_BYTES));
     return
         ProtobufUtil.toNamespaceDescriptor(
-            HBaseProtos.NamespaceDescriptor.parseFrom(
-                res.getColumnLatest(HTableDescriptor.NAMESPACE_FAMILY_INFO_BYTES,
-                    HTableDescriptor.NAMESPACE_COL_DESC_BYTES).getValue()));
+            HBaseProtos.NamespaceDescriptor.parseFrom(val));
   }
 
   public synchronized void create(NamespaceDescriptor ns) throws IOException {
@@ -185,10 +186,10 @@ public class TableNamespaceManager {
     ResultScanner scanner = table.getScanner(HTableDescriptor.NAMESPACE_FAMILY_INFO_BYTES);
     try {
       for(Result r : scanner) {
-          ret.add(ProtobufUtil.toNamespaceDescriptor(
-              HBaseProtos.NamespaceDescriptor.parseFrom(
-                r.getColumnLatest(HTableDescriptor.NAMESPACE_FAMILY_INFO_BYTES,
-                    HTableDescriptor.NAMESPACE_COL_DESC_BYTES).getValue())));
+        byte[] val = CellUtil.getValueArray(r.getColumnLatest(HTableDescriptor.NAMESPACE_FAMILY_INFO_BYTES,
+          HTableDescriptor.NAMESPACE_COL_DESC_BYTES));
+        ret.add(ProtobufUtil.toNamespaceDescriptor(
+            HBaseProtos.NamespaceDescriptor.parseFrom(val)));
       }
     } finally {
       scanner.close();
