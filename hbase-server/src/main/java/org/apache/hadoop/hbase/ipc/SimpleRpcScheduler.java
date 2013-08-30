@@ -133,10 +133,10 @@ public class SimpleRpcScheduler implements RpcScheduler {
     RpcServer.Call call = callTask.getCall();
     Pair<RPCProtos.RequestHeader, Message> headerAndParam =
         new Pair<RPCProtos.RequestHeader, Message>(call.header, call.param);
-    if (priorityCallQueue != null && getQosLevel(headerAndParam) > highPriorityLevel) {
+    int level = getQosLevel(headerAndParam);
+    if (priorityCallQueue != null && level > highPriorityLevel) {
       priorityCallQueue.put(callTask);
-    } else if (replicationQueue != null &&
-        getQosLevel(headerAndParam) == HConstants.REPLICATION_QOS) {
+    } else if (replicationQueue != null && level == HConstants.REPLICATION_QOS) {
       replicationQueue.put(callTask);
     } else {
       callQueue.put(callTask); // queue the call; maybe blocked here

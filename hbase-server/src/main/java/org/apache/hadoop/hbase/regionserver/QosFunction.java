@@ -99,7 +99,13 @@ class QosFunction implements Function<Pair<RequestHeader, Message>, Integer> {
     for (Method m : HRegionServer.class.getMethods()) {
       QosPriority p = m.getAnnotation(QosPriority.class);
       if (p != null) {
-        qosMap.put(m.getName(), p.priority());
+        // Since we protobuf'd, and then subsequently, when we went with pb style, method names
+        // are capitalized.  This meant that this brittle compare of method names gotten by
+        // reflection no longer matched the method names comeing in over pb.  TODO: Get rid of this
+        // check.  For now, workaround is to capitalize the names we got from reflection so they
+        // have chance of matching the pb ones.
+        String capitalizedMethodName = capitalize(m.getName());
+        qosMap.put(capitalizedMethodName, p.priority());
       }
     }
     this.annotatedQos = qosMap;
@@ -119,6 +125,12 @@ class QosFunction implements Function<Pair<RequestHeader, Message>, Integer> {
     }
   }
 
+  private String capitalize(final String s) {
+    StringBuilder strBuilder = new StringBuilder(s);
+    strBuilder.setCharAt(0, Character.toUpperCase(strBuilder.charAt(0)));
+    return strBuilder.toString();
+  }
+
   public boolean isMetaRegion(byte[] regionName) {
     HRegion region;
     try {
@@ -133,7 +145,7 @@ class QosFunction implements Function<Pair<RequestHeader, Message>, Integer> {
   public Integer apply(Pair<RequestHeader, Message> headerAndParam) {
     RequestHeader header = headerAndParam.getFirst();
     String methodName = header.getMethodName();
-    Integer priorityByAnnotation = annotatedQos.get(header.getMethodName());
+    Integer priorityByAnnotation = annotatedQos.get(methodName);
     if (priorityByAnnotation != null) {
       return priorityByAnnotation;
     }
