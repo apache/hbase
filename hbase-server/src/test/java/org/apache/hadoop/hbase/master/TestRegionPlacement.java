@@ -210,7 +210,8 @@ public class TestRegionPlacement {
 
   @Test
   public void testRegionPlacement() throws Exception {
-    byte[] table = Bytes.toBytes("testRegionAssignment");
+    String tableStr = "testRegionAssignment";
+    byte[] table = Bytes.toBytes(tableStr);
     // Create a table with REGION_NUM regions.
     createTable(table, REGION_NUM);
 
@@ -249,8 +250,36 @@ public class TestRegionPlacement {
     rp.updateAssignmentPlan(shuffledPlan);
 
     verifyRegionAssignment(shuffledPlan, REGION_NUM, REGION_NUM);
+
+    // also verify that the AssignmentVerificationReport has the correct information
+    RegionPlacementMaintainer rp = new RegionPlacementMaintainer(TEST_UTIL.getConfiguration());
+    // we are interested in only one table (and hence one report)
+    rp.setTargetTableName(new String[]{tableStr});
+    List<AssignmentVerificationReport> reports = rp.verifyRegionPlacement(false);
+    AssignmentVerificationReport report = reports.get(0);
+    assertTrue(report.getRegionsWithoutValidFavoredNodes().size() == 0);
+    assertTrue(report.getNonFavoredAssignedRegions().size() == 0);
+    assertTrue(report.getTotalFavoredAssignments() >= REGION_NUM);
+    assertTrue(report.getNumRegionsOnFavoredNodeByPosition(FavoredNodesPlan.Position.PRIMARY) != 0);
+    assertTrue(report.getNumRegionsOnFavoredNodeByPosition(FavoredNodesPlan.Position.SECONDARY) == 0);
+    assertTrue(report.getNumRegionsOnFavoredNodeByPosition(FavoredNodesPlan.Position.TERTIARY) == 0);
+    assertTrue(report.getUnassignedRegions().size() == 0);
+
     // Check when a RS stops, the regions get assigned to their secondary/tertiary
     killRandomServerAndVerifyAssignment();
+
+    // also verify that the AssignmentVerificationReport has the correct information
+    reports = rp.verifyRegionPlacement(false);
+    report = reports.get(0);
+    assertTrue(report.getRegionsWithoutValidFavoredNodes().size() == 0);
+    assertTrue(report.getNonFavoredAssignedRegions().size() == 0);
+    assertTrue(report.getTotalFavoredAssignments() >= REGION_NUM);
+    assertTrue(report.getNumRegionsOnFavoredNodeByPosition(FavoredNodesPlan.Position.PRIMARY) > 0 && 
+        (report.getNumRegionsOnFavoredNodeByPosition(FavoredNodesPlan.Position.SECONDARY) > 0
+        || report.getNumRegionsOnFavoredNodeByPosition(FavoredNodesPlan.Position.TERTIARY) > 0));
+    assertTrue((report.getNumRegionsOnFavoredNodeByPosition(FavoredNodesPlan.Position.PRIMARY) +
+        report.getNumRegionsOnFavoredNodeByPosition(FavoredNodesPlan.Position.SECONDARY) +
+        report.getNumRegionsOnFavoredNodeByPosition(FavoredNodesPlan.Position.TERTIARY)) == REGION_NUM);
     RegionPlacementMaintainer.printAssignmentPlan(currentPlan);
   }
 

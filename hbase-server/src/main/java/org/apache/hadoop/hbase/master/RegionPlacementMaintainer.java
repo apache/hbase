@@ -148,10 +148,13 @@ public class RegionPlacementMaintainer {
   }
 
   /**
-   * Verify the region placement is consistent with the assignment plan;
+   * Verify the region placement is consistent with the assignment plan
+   * @param isDetailMode
+   * @return reports
    * @throws IOException
    */
-  public void verifyRegionPlacement(boolean isDetailMode) throws IOException {
+  public List<AssignmentVerificationReport> verifyRegionPlacement(boolean isDetailMode)
+      throws IOException {
     System.out.println("Start to verify the region assignment and " +
         "generate the verification report");
     // Get the region assignment snapshot
@@ -165,6 +168,7 @@ public class RegionPlacementMaintainer {
     if (this.enforceLocality == true) {
       regionLocalityMap = FSUtils.getRegionDegreeLocalityMappingFromFS(conf);
     }
+    List<AssignmentVerificationReport> reports = new ArrayList<AssignmentVerificationReport>();
     // Iterate all the tables to fill up the verification report
     for (TableName table : tables) {
       if (!this.targetTableSet.isEmpty() &&
@@ -174,7 +178,9 @@ public class RegionPlacementMaintainer {
       AssignmentVerificationReport report = new AssignmentVerificationReport();
       report.fillUp(table, snapshot, regionLocalityMap);
       report.print(isDetailMode);
+      reports.add(report);
     }
+    return reports;
   }
 
   /**

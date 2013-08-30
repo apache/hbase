@@ -1785,9 +1785,9 @@ public abstract class FSUtils {
     Path queryPath;
     // The table files are in ${hbase.rootdir}/data/<namespace>/<table>/*
     if (null == desiredTable) {
-      queryPath = new Path(new Path(rootPath, HConstants.BASE_NAMESPACE_DIR), "/*/*/");
+      queryPath = new Path(new Path(rootPath, HConstants.BASE_NAMESPACE_DIR).toString() + "/*/*/*/");
     } else {
-      queryPath = new Path(FSUtils.getTableDir(rootPath, TableName.valueOf(desiredTable)), "/*/");
+      queryPath = new Path(FSUtils.getTableDir(rootPath, TableName.valueOf(desiredTable)).toString() + "/*/");
     }
 
     // reject all paths that are not appropriate
@@ -1802,11 +1802,6 @@ public abstract class FSUtils {
         // no parent?
         Path parent = path.getParent();
         if (null == parent) {
-          return false;
-        }
-
-        // not part of a table?
-        if (!parent.getName().equals(TableName.META_TABLE_NAME.getQualifierAsString())) {
           return false;
         }
 
