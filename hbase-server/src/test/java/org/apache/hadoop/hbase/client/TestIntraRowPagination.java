@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.client;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -66,7 +67,7 @@ public class TestIntraRowPagination {
       Result result;
       boolean toLog = true;
 
-      List<KeyValue> kvListExp = new ArrayList<KeyValue>();
+      List<Cell> kvListExp = new ArrayList<Cell>();
 
       int storeOffset = 1;
       int storeLimit = 3;
@@ -89,8 +90,8 @@ public class TestIntraRowPagination {
       scan.setRowOffsetPerColumnFamily(storeOffset);
       scan.setMaxResultsPerColumnFamily(storeLimit);
       RegionScanner scanner = region.getScanner(scan);
-      List<KeyValue> kvListScan = new ArrayList<KeyValue>();
-      List<KeyValue> results = new ArrayList<KeyValue>();
+      List<Cell> kvListScan = new ArrayList<Cell>();
+      List<Cell> results = new ArrayList<Cell>();
       while (scanner.next(results) || !results.isEmpty()) {
         kvListScan.addAll(results);
         results.clear();

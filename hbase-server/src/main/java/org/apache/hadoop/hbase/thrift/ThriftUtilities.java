@@ -24,6 +24,8 @@ import java.util.List;
 import java.util.TreeMap;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Increment;
@@ -33,8 +35,8 @@ import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.thrift.generated.ColumnDescriptor;
 import org.apache.hadoop.hbase.thrift.generated.IllegalArgument;
 import org.apache.hadoop.hbase.thrift.generated.TCell;
-import org.apache.hadoop.hbase.thrift.generated.TIncrement;
 import org.apache.hadoop.hbase.thrift.generated.TColumn;
+import org.apache.hadoop.hbase.thrift.generated.TIncrement;
 import org.apache.hadoop.hbase.thrift.generated.TRowResult;
 import org.apache.hadoop.hbase.util.Bytes;
 
@@ -98,10 +100,10 @@ public class ThriftUtilities {
    *          Hbase Cell object
    * @return Thrift TCell array
    */
-  static public List<TCell> cellFromHBase(KeyValue in) {
+  static public List<TCell> cellFromHBase(Cell in) {
     List<TCell> list = new ArrayList<TCell>(1);
     if (in != null) {
-      list.add(new TCell(ByteBuffer.wrap(in.getValue()), in.getTimestamp()));
+      list.add(new TCell(ByteBuffer.wrap(CellUtil.getValueArray(in)), in.getTimestamp()));
     }
     return list;
   }
@@ -112,12 +114,12 @@ public class ThriftUtilities {
    * @param in Hbase Cell array
    * @return Thrift TCell array
    */
-  static public List<TCell> cellFromHBase(KeyValue[] in) {
+  static public List<TCell> cellFromHBase(Cell[] in) {
     List<TCell> list = null;
     if (in != null) {
       list = new ArrayList<TCell>(in.length);
       for (int i = 0; i < in.length; i++) {
-        list.add(new TCell(ByteBuffer.wrap(in[i].getValue()), in[i].getTimestamp()));
+        list.add(new TCell(ByteBuffer.wrap(CellUtil.getValueArray(in[i])), in[i].getTimestamp()));
       }
     } else {
       list = new ArrayList<TCell>(0);
@@ -150,19 +152,19 @@ public class ThriftUtilities {
         result.row = ByteBuffer.wrap(result_.getRow());
         if (sortColumns) {
           result.sortedColumns = new ArrayList<TColumn>();
-          for (KeyValue kv : result_.raw()) {
+          for (Cell kv : result_.raw()) {
             result.sortedColumns.add(new TColumn(
-                ByteBuffer.wrap(KeyValue.makeColumn(kv.getFamily(),
-                    kv.getQualifier())),
-                new TCell(ByteBuffer.wrap(kv.getValue()), kv.getTimestamp())));
+                ByteBuffer.wrap(KeyValue.makeColumn(CellUtil.getFamilyArray(kv),
+                    CellUtil.getQualifierArray(kv))),
+                new TCell(ByteBuffer.wrap(CellUtil.getValueArray(kv)), kv.getTimestamp())));
           }
         } else {
           result.columns = new TreeMap<ByteBuffer, TCell>();
-          for (KeyValue kv : result_.raw()) {
+          for (Cell kv : result_.raw()) {
             result.columns.put(
-                ByteBuffer.wrap(KeyValue.makeColumn(kv.getFamily(),
-                    kv.getQualifier())),
-                new TCell(ByteBuffer.wrap(kv.getValue()), kv.getTimestamp()));
+                ByteBuffer.wrap(KeyValue.makeColumn(CellUtil.getFamilyArray(kv),
+                    CellUtil.getQualifierArray(kv))),
+                new TCell(ByteBuffer.wrap(CellUtil.getValueArray(kv)), kv.getTimestamp()));
           }
         }
       results.add(result);

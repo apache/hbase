@@ -19,8 +19,7 @@
 
 package org.apache.hadoop.hbase.regionserver;
 
-import static org.apache.hadoop.hbase.regionserver.KeyValueScanFixture.
-    scanFixture;
+import static org.apache.hadoop.hbase.regionserver.KeyValueScanFixture.scanFixture;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -31,12 +30,12 @@ import java.util.TreeSet;
 
 import junit.framework.TestCase;
 
+import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueTestUtil;
 import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.regionserver.ScanInfo;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdge;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManagerTestHelper;
@@ -88,7 +87,7 @@ public class TestStoreScanner extends TestCase {
     scanSpec.setMaxVersions();
     StoreScanner scan = new StoreScanner(scanSpec, scanInfo, scanType,
         getCols("a"), scanners);
-    List<KeyValue> results = new ArrayList<KeyValue>();
+    List<Cell> results = new ArrayList<Cell>();
     assertEquals(true, scan.next(results));
     assertEquals(5, results.size());
     assertEquals(kvs[kvs.length - 1], results.get(0));
@@ -98,7 +97,7 @@ public class TestStoreScanner extends TestCase {
     scanSpec.setMaxVersions();
     scan = new StoreScanner(scanSpec, scanInfo, scanType, getCols("a"),
         scanners);
-    results = new ArrayList<KeyValue>();
+    results = new ArrayList<Cell>();
     assertEquals(true, scan.next(results));
     assertEquals(2, results.size());
     // Another range.
@@ -107,7 +106,7 @@ public class TestStoreScanner extends TestCase {
     scanSpec.setMaxVersions();
     scan = new StoreScanner(scanSpec, scanInfo, scanType, getCols("a"),
         scanners);
-    results = new ArrayList<KeyValue>();
+    results = new ArrayList<Cell>();
     assertEquals(true, scan.next(results));
     assertEquals(1, results.size());
     // See how TimeRange and Versions interact.
@@ -117,7 +116,7 @@ public class TestStoreScanner extends TestCase {
     scanSpec.setMaxVersions(3);
     scan = new StoreScanner(scanSpec, scanInfo, scanType, getCols("a"),
         scanners);
-    results = new ArrayList<KeyValue>();
+    results = new ArrayList<Cell>();
     assertEquals(true, scan.next(results));
     assertEquals(3, results.size());
   }
@@ -138,7 +137,7 @@ public class TestStoreScanner extends TestCase {
     StoreScanner scan = new StoreScanner(scanSpec, scanInfo, scanType,
         getCols("a"), scanners);
 
-    List<KeyValue> results = new ArrayList<KeyValue>();
+    List<Cell> results = new ArrayList<Cell>();
     assertEquals(true, scan.next(results));
     assertEquals(1, results.size());
     assertEquals(kvs[0], results.get(0));
@@ -165,7 +164,7 @@ public class TestStoreScanner extends TestCase {
     StoreScanner scan = new StoreScanner(scanSpec, scanInfo, scanType,
         getCols("a"), scanners);
 
-    List<KeyValue> results = new ArrayList<KeyValue>();
+    List<Cell> results = new ArrayList<Cell>();
     scan.next(results);
     assertEquals(1, results.size());
     assertEquals(kvs[0], results.get(0));
@@ -193,7 +192,7 @@ public class TestStoreScanner extends TestCase {
     StoreScanner scan = new StoreScanner(scanSpec, scanInfo, scanType,
         getCols("a"), scanners);
 
-    List<KeyValue> results = new ArrayList<KeyValue>();
+    List<Cell> results = new ArrayList<Cell>();
     assertFalse(scan.next(results));
     assertEquals(0, results.size());
   }
@@ -213,7 +212,7 @@ public class TestStoreScanner extends TestCase {
     StoreScanner scan = new StoreScanner(scanSpec, scanInfo, scanType,
         getCols("a"), scanners);
 
-    List<KeyValue> results = new ArrayList<KeyValue>();
+    List<Cell> results = new ArrayList<Cell>();
     assertEquals(true, scan.next(results));
     assertEquals(0, results.size());
 
@@ -239,7 +238,7 @@ public class TestStoreScanner extends TestCase {
 
     StoreScanner scan = new StoreScanner(new Scan(Bytes.toBytes("R1")),
         scanInfo, scanType, getCols("a"), scanners);
-    List<KeyValue> results = new ArrayList<KeyValue>();
+    List<Cell> results = new ArrayList<Cell>();
     // the two put at ts=now will be masked by the 1 delete, and
     // since the scan default returns 1 version we'll return the newest
     // key, which is kvs[2], now-100.
@@ -264,7 +263,7 @@ public class TestStoreScanner extends TestCase {
     Scan scanSpec = new Scan(Bytes.toBytes("R1")).setMaxVersions(2);
     StoreScanner scan = new StoreScanner(scanSpec, scanInfo, scanType,
         getCols("a"), scanners);
-    List<KeyValue> results = new ArrayList<KeyValue>();
+    List<Cell> results = new ArrayList<Cell>();
     assertEquals(true, scan.next(results));
     assertEquals(2, results.size());
     assertEquals(kvs2[1], results.get(0));
@@ -280,7 +279,7 @@ public class TestStoreScanner extends TestCase {
     List<KeyValueScanner> scanners = scanFixture(kvs);
     StoreScanner scan = new StoreScanner(new Scan(Bytes.toBytes("R1")),
         scanInfo, scanType, null, scanners);
-    List<KeyValue> results = new ArrayList<KeyValue>();
+    List<Cell> results = new ArrayList<Cell>();
     assertEquals(true, scan.next(results));
     assertEquals(2, results.size());
     assertEquals(kvs[0], results.get(0));
@@ -309,7 +308,7 @@ public class TestStoreScanner extends TestCase {
     List<KeyValueScanner> scanners = scanFixture(kvs);
     StoreScanner scan = new StoreScanner(new Scan().setMaxVersions(2),
         scanInfo, scanType, null, scanners);
-    List<KeyValue> results = new ArrayList<KeyValue>();
+    List<Cell> results = new ArrayList<Cell>();
     assertEquals(true, scan.next(results));
     assertEquals(5, results.size());
     assertEquals(kvs[0], results.get(0));
@@ -338,7 +337,7 @@ public class TestStoreScanner extends TestCase {
     StoreScanner scan = new StoreScanner(
         new Scan().setMaxVersions(Integer.MAX_VALUE), scanInfo, scanType, null,
         scanners);
-    List<KeyValue> results = new ArrayList<KeyValue>();
+    List<Cell> results = new ArrayList<Cell>();
     assertEquals(true, scan.next(results));
     assertEquals(0, results.size());
     assertEquals(true, scan.next(results));
@@ -358,7 +357,7 @@ public class TestStoreScanner extends TestCase {
     List<KeyValueScanner> scanners = scanFixture(kvs);
     StoreScanner scan = new StoreScanner(new Scan(), scanInfo, scanType, null,
         scanners);
-    List<KeyValue> results = new ArrayList<KeyValue>();
+    List<Cell> results = new ArrayList<Cell>();
     assertEquals(true, scan.next(results));
     assertEquals(1, results.size());
     assertEquals(kvs[3], results.get(0));
@@ -382,7 +381,7 @@ public class TestStoreScanner extends TestCase {
     StoreScanner scan = new StoreScanner(new Scan(), scanInfo, scanType,
         getCols("a", "d"), scanners);
 
-    List<KeyValue> results = new ArrayList<KeyValue>();
+    List<Cell> results = new ArrayList<Cell>();
     assertEquals(true, scan.next(results));
     assertEquals(2, results.size());
     assertEquals(kvs[0], results.get(0));
@@ -423,7 +422,7 @@ public class TestStoreScanner extends TestCase {
       new StoreScanner(scan, scanInfo, scanType,
           null, scanners);
 
-    List<KeyValue> results = new ArrayList<KeyValue>();
+    List<Cell> results = new ArrayList<Cell>();
     assertEquals(true, scanner.next(results));
     assertEquals(2, results.size());
     assertEquals(kvs[1], results.get(0));
@@ -493,7 +492,7 @@ public class TestStoreScanner extends TestCase {
     StoreScanner scanner =
         new StoreScanner(scan, scanInfo, scanType, null, scanners);
 
-    List<KeyValue> results = new ArrayList<KeyValue>();
+    List<Cell> results = new ArrayList<Cell>();
     assertEquals(true, scanner.next(results));
     assertEquals(1, results.size());
     assertEquals(kvs[1], results.get(0));
@@ -557,8 +556,8 @@ public class TestStoreScanner extends TestCase {
         new StoreScanner(scan, scanInfo,
           ScanType.COMPACT_DROP_DELETES, null, scanners,
           HConstants.OLDEST_TIMESTAMP);
-      List<KeyValue> results = new ArrayList<KeyValue>();
-      results = new ArrayList<KeyValue>();
+      List<Cell> results = new ArrayList<Cell>();
+      results = new ArrayList<Cell>();
       assertEquals(true, scanner.next(results));
       assertEquals(kvs[0], results.get(0));
       assertEquals(kvs[2], results.get(1));

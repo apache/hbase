@@ -22,8 +22,8 @@ import java.io.IOException;
 import java.util.List;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Scan;
 
 /**
@@ -74,7 +74,7 @@ public interface RegionScanner extends InternalScanner {
    * @return true if more rows exist after this one, false if scanner is done
    * @throws IOException e
    */
-  boolean nextRaw(List<KeyValue> result) throws IOException;
+  boolean nextRaw(List<Cell> result) throws IOException;
 
   /**
    * Grab the next row's worth of values with a limit on the number of values
@@ -102,5 +102,5 @@ public interface RegionScanner extends InternalScanner {
    * @return true if more rows exist after this one, false if scanner is done
    * @throws IOException e
    */
-  boolean nextRaw(List<KeyValue> result, int limit) throws IOException;
+  boolean nextRaw(List<Cell> result, int limit) throws IOException;
 }

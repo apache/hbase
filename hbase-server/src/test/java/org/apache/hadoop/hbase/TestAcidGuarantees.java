@@ -173,10 +173,10 @@ public class TestAcidGuarantees implements Tool {
       msg.append("Failed after ").append(numVerified).append("!");
       msg.append("Expected=").append(Bytes.toStringBinary(expected));
       msg.append("Got:\n");
-      for (KeyValue kv : res.list()) {
+      for (Cell kv : res.list()) {
         msg.append(kv.toString());
         msg.append(" val= ");
-        msg.append(Bytes.toStringBinary(kv.getValue()));
+        msg.append(Bytes.toStringBinary(CellUtil.getValueArray(kv)));
         msg.append("\n");
       }
       throw new RuntimeException(msg.toString());
@@ -230,10 +230,10 @@ public class TestAcidGuarantees implements Tool {
       msg.append("Failed after ").append(numRowsScanned).append("!");
       msg.append("Expected=").append(Bytes.toStringBinary(expected));
       msg.append("Got:\n");
-      for (KeyValue kv : res.list()) {
+      for (Cell kv : res.list()) {
         msg.append(kv.toString());
         msg.append(" val= ");
-        msg.append(Bytes.toStringBinary(kv.getValue()));
+        msg.append(Bytes.toStringBinary(CellUtil.getValueArray(kv)));
         msg.append("\n");
       }
       throw new RuntimeException(msg.toString());

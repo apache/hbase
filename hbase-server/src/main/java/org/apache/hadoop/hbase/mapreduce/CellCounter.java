@@ -26,8 +26,9 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.filter.CompareFilter;
@@ -115,9 +116,9 @@ public class CellCounter {
         context.getCounter(Counters.ROWS).increment(1);
         context.write(new Text("Total ROWS"), new IntWritable(1));
 
-        for (KeyValue value : values.list()) {
-          currentRowKey = Bytes.toStringBinary(value.getRow());
-          String thisRowFamilyName = Bytes.toStringBinary(value.getFamily());
+        for (Cell value : values.list()) {
+          currentRowKey = Bytes.toStringBinary(CellUtil.getRowArray(value));
+          String thisRowFamilyName = Bytes.toStringBinary(CellUtil.getFamilyArray(value));
           if (thisRowFamilyName != null &&
               !thisRowFamilyName.equals(currentFamilyName)) {
             currentFamilyName = thisRowFamilyName;
@@ -127,7 +128,7 @@ public class CellCounter {
             context.write(new Text(thisRowFamilyName), new IntWritable(1));
           }
           String thisRowQualifierName = thisRowFamilyName + separator
-              + Bytes.toStringBinary(value.getQualifier());
+              + Bytes.toStringBinary(CellUtil.getQualifierArray(value));
           if (thisRowQualifierName != null &&
               !thisRowQualifierName.equals(currentQualifierName)) {
             currentQualifierName = thisRowQualifierName;

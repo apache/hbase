@@ -945,8 +945,8 @@ public class AccessController extends BaseRegionObserver
   }
 
   @Override
-  public void preGet(final ObserverContext<RegionCoprocessorEnvironment> c,
-      final Get get, final List<KeyValue> result) throws IOException {
+  public void preGetOp(final ObserverContext<RegionCoprocessorEnvironment> c,
+      final Get get, final List<Cell> result) throws IOException {
     /*
      if column family level checks fail, check for a qualifier level permission
      in one of the families.  If it is present, then continue with the AccessControlFilter.

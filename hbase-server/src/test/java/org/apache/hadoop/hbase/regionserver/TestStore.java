@@ -42,6 +42,8 @@ import org.apache.hadoop.fs.FilterFileSystem;
 import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
@@ -49,6 +51,7 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.KVComparator;
+import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Get;
@@ -96,8 +99,8 @@ public class TestStore extends TestCase {
   NavigableSet<byte[]> qualifiers =
     new ConcurrentSkipListSet<byte[]>(Bytes.BYTES_COMPARATOR);
 
-  List<KeyValue> expected = new ArrayList<KeyValue>();
-  List<KeyValue> result = new ArrayList<KeyValue>();
+  List<Cell> expected = new ArrayList<Cell>();
+  List<Cell> result = new ArrayList<Cell>();
 
   long id = System.currentTimeMillis();
   Get get = new Get(row);
@@ -483,7 +486,7 @@ public class TestStore extends TestCase {
     Get get = new Get(row);
     get.addColumn(family, qf1);
     get.setMaxVersions(); // all versions.
-    List<KeyValue> results = new ArrayList<KeyValue>();
+    List<Cell> results = new ArrayList<Cell>();
 
     results = HBaseTestingUtility.getFromStoreFile(store, get);
     assertEquals(2, results.size());
@@ -493,8 +496,8 @@ public class TestStore extends TestCase {
 
     assertTrue(ts1 > ts2);
 
-    assertEquals(newValue, Bytes.toLong(results.get(0).getValue()));
-    assertEquals(oldValue, Bytes.toLong(results.get(1).getValue()));
+    assertEquals(newValue, Bytes.toLong(CellUtil.getValueArray(results.get(0))));
+    assertEquals(oldValue, Bytes.toLong(CellUtil.getValueArray(results.get(1))));
   }
 
   @Override
@@ -599,7 +602,7 @@ public class TestStore extends TestCase {
     Get get = new Get(row);
     get.addColumn(family, qf1);
     get.setMaxVersions(); // all versions.
-    List<KeyValue> results = new ArrayList<KeyValue>();
+    List<Cell> results = new ArrayList<Cell>();
 
     results = HBaseTestingUtility.getFromStoreFile(store, get);
     assertEquals(2, results.size());
@@ -608,8 +611,8 @@ public class TestStore extends TestCase {
     long ts2 = results.get(1).getTimestamp();
 
     assertTrue(ts1 > ts2);
-    assertEquals(newValue, Bytes.toLong(results.get(0).getValue()));
-    assertEquals(oldValue, Bytes.toLong(results.get(1).getValue()));
+    assertEquals(newValue, Bytes.toLong(CellUtil.getValueArray(results.get(0))));
+    assertEquals(oldValue, Bytes.toLong(CellUtil.getValueArray(results.get(1))));
 
     mee.setValue(2); // time goes up slightly
     newValue += 1;
@@ -622,8 +625,8 @@ public class TestStore extends TestCase {
     ts2 = results.get(1).getTimestamp();
 
     assertTrue(ts1 > ts2);
-    assertEquals(newValue, Bytes.toLong(results.get(0).getValue()));
-    assertEquals(oldValue, Bytes.toLong(results.get(1).getValue()));
+    assertEquals(newValue, Bytes.toLong(CellUtil.getValueArray(results.get(0))));
+    assertEquals(oldValue, Bytes.toLong(CellUtil.getValueArray(results.get(1))));
   }
 
   public void testHandleErrorsInFlush() throws Exception {
@@ -747,9 +750,9 @@ public class TestStore extends TestCase {
    * @param family
    * @return
    */
-  List<KeyValue> getKeyValueSet(long[] timestamps, int numRows,
+  List<Cell> getKeyValueSet(long[] timestamps, int numRows,
       byte[] qualifier, byte[] family) {
-    List<KeyValue> kvList = new ArrayList<KeyValue>();
+    List<Cell> kvList = new ArrayList<Cell>();
     for (int i=1;i<=numRows;i++) {
       byte[] b = Bytes.toBytes(i);
       for (long timestamp: timestamps) {
@@ -770,20 +773,20 @@ public class TestStore extends TestCase {
 
     init(this.getName());
 
-    List<KeyValue> kvList1 = getKeyValueSet(timestamps1,numRows, qf1, family);
-    for (KeyValue kv : kvList1) {
-      this.store.add(kv);
+    List<Cell> kvList1 = getKeyValueSet(timestamps1,numRows, qf1, family);
+    for (Cell kv : kvList1) {
+      this.store.add(KeyValueUtil.ensureKeyValue(kv));
     }
 
     this.store.snapshot();
     flushStore(store, id++);
 
-    List<KeyValue> kvList2 = getKeyValueSet(timestamps2,numRows, qf1, family);
-    for(KeyValue kv : kvList2) {
-      this.store.add(kv);
+    List<Cell> kvList2 = getKeyValueSet(timestamps2,numRows, qf1, family);
+    for(Cell kv : kvList2) {
+      this.store.add(KeyValueUtil.ensureKeyValue(kv));
     }
 
-    List<KeyValue> result;
+    List<Cell> result;
     Get get = new Get(Bytes.toBytes(1));
     get.addColumn(family,qf1);
 

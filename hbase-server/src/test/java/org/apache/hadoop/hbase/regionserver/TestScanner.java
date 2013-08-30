@@ -33,6 +33,8 @@ import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseTestCase;
 import org.apache.hadoop.hbase.HBaseTestCase.HRegionIncommon;
 import org.apache.hadoop.hbase.HBaseTestCase.ScannerIncommon;
@@ -128,7 +130,7 @@ public class TestScanner {
     try {
       this.r = TEST_UTIL.createLocalHRegion(TESTTABLEDESC, null, null);
       HBaseTestCase.addContent(this.r, HConstants.CATALOG_FAMILY);
-      List<KeyValue> results = new ArrayList<KeyValue>();
+      List<Cell> results = new ArrayList<Cell>();
       // Do simple test of getting one row only first.
       Scan scan = new Scan(Bytes.toBytes("abc"), Bytes.toBytes("abd"));
       scan.addFamily(HConstants.CATALOG_FAMILY);
@@ -146,17 +148,17 @@ public class TestScanner {
 
       s = r.getScanner(scan);
       count = 0;
-      KeyValue kv = null;
-      results = new ArrayList<KeyValue>();
+      Cell kv = null;
+      results = new ArrayList<Cell>();
       for (boolean first = true; s.next(results);) {
         kv = results.get(0);
         if (first) {
-          assertTrue(Bytes.BYTES_COMPARATOR.compare(startrow, kv.getRow()) == 0);
+          assertTrue(CellUtil.matchingRow(kv,  startrow));
           first = false;
         }
         count++;
       }
-      assertTrue(Bytes.BYTES_COMPARATOR.compare(stoprow, kv.getRow()) > 0);
+      assertTrue(Bytes.BYTES_COMPARATOR.compare(stoprow, CellUtil.getRowArray(kv)) > 0);
       // We got something back.
       assertTrue(count > 10);
       s.close();
@@ -166,15 +168,15 @@ public class TestScanner {
   }
 
   void rowPrefixFilter(Scan scan) throws IOException {
-    List<KeyValue> results = new ArrayList<KeyValue>();
+    List<Cell> results = new ArrayList<Cell>();
     scan.addFamily(HConstants.CATALOG_FAMILY);
     InternalScanner s = r.getScanner(scan);
     boolean hasMore = true;
     while (hasMore) {
       hasMore = s.next(results);
-      for (KeyValue kv : results) {
-        assertEquals((byte)'a', kv.getRow()[0]);
-        assertEquals((byte)'b', kv.getRow()[1]);
+      for (Cell kv : results) {
+        assertEquals((byte)'a', CellUtil.getRowArray(kv)[0]);
+        assertEquals((byte)'b', CellUtil.getRowArray(kv)[1]);
       }
       results.clear();
     }
@@ -182,14 +184,14 @@ public class TestScanner {
   }
 
   void rowInclusiveStopFilter(Scan scan, byte[] stopRow) throws IOException {
-    List<KeyValue> results = new ArrayList<KeyValue>();
+    List<Cell> results = new ArrayList<Cell>();
     scan.addFamily(HConstants.CATALOG_FAMILY);
     InternalScanner s = r.getScanner(scan);
     boolean hasMore = true;
     while (hasMore) {
       hasMore = s.next(results);
-      for (KeyValue kv : results) {
-        assertTrue(Bytes.compareTo(kv.getRow(), stopRow) <= 0);
+      for (Cell kv : results) {
+        assertTrue(Bytes.compareTo(CellUtil.getRowArray(kv), stopRow) <= 0);
       }
       results.clear();
     }
@@ -230,7 +232,7 @@ public class TestScanner {
       HBaseTestCase.addContent(this.r, HConstants.CATALOG_FAMILY);
       Scan scan = new Scan();
       InternalScanner s = r.getScanner(scan);
-      List<KeyValue> results = new ArrayList<KeyValue>();
+      List<Cell> results = new ArrayList<Cell>();
       try {
         s.next(results);
         s.close();
@@ -374,7 +376,7 @@ public class TestScanner {
   throws IOException {
     InternalScanner scanner = null;
     Scan scan = null;
-    List<KeyValue> results = new ArrayList<KeyValue>();
+    List<Cell> results = new ArrayList<Cell>();
     byte [][][] scanColumns = {
         COLS,
         EXPLICIT_COLS
@@ -390,8 +392,8 @@ public class TestScanner {
         while (scanner.next(results)) {
           assertTrue(hasColumn(results, HConstants.CATALOG_FAMILY,
               HConstants.REGIONINFO_QUALIFIER));
-          byte [] val = getColumn(results, HConstants.CATALOG_FAMILY,
-              HConstants.REGIONINFO_QUALIFIER).getValue();
+          byte [] val = CellUtil.getValueArray(getColumn(results, HConstants.CATALOG_FAMILY,
+              HConstants.REGIONINFO_QUALIFIER));
           validateRegionInfo(val);
           if(validateStartcode) {
 //            assertTrue(hasColumn(results, HConstants.CATALOG_FAMILY,
@@ -407,8 +409,8 @@ public class TestScanner {
           if(serverName != null) {
             assertTrue(hasColumn(results, HConstants.CATALOG_FAMILY,
                 HConstants.SERVER_QUALIFIER));
-            val = getColumn(results, HConstants.CATALOG_FAMILY,
-                HConstants.SERVER_QUALIFIER).getValue();
+            val = CellUtil.getValueArray(getColumn(results, HConstants.CATALOG_FAMILY,
+                HConstants.SERVER_QUALIFIER));
             assertNotNull(val);
             assertFalse(val.length == 0);
             String server = Bytes.toString(val);
@@ -425,20 +427,20 @@ public class TestScanner {
     }
   }
 
-  private boolean hasColumn(final List<KeyValue> kvs, final byte [] family,
+  private boolean hasColumn(final List<Cell> kvs, final byte [] family,
       final byte [] qualifier) {
-    for (KeyValue kv: kvs) {
-      if (kv.matchingFamily(family) && kv.matchingQualifier(qualifier)) {
+    for (Cell kv: kvs) {
+      if (CellUtil.matchingFamily(kv, family) && CellUtil.matchingQualifier(kv, qualifier)) {
         return true;
       }
     }
     return false;
   }
 
-  private KeyValue getColumn(final List<KeyValue> kvs, final byte [] family,
+  private Cell getColumn(final List<Cell> kvs, final byte [] family,
       final byte [] qualifier) {
-    for (KeyValue kv: kvs) {
-      if (kv.matchingFamily(family) && kv.matchingQualifier(qualifier)) {
+    for (Cell kv: kvs) {
+      if (CellUtil.matchingFamily(kv, family) && CellUtil.matchingQualifier(kv, qualifier)) {
         return kv;
       }
     }
@@ -536,28 +538,23 @@ public class TestScanner {
       // run a major compact, column1 of firstRow will be cleaned.
       r.compactStores(true);
 
-      List<KeyValue> results = new ArrayList<KeyValue>();
+      List<Cell> results = new ArrayList<Cell>();
       s.next(results);
 
       // make sure returns column2 of firstRow
       assertTrue("result is not correct, keyValues : " + results,
           results.size() == 1);
-      assertTrue(Bytes.BYTES_COMPARATOR.compare(firstRowBytes, results.get(0)
-          .getRow()) == 0);
-      assertTrue(Bytes.BYTES_COMPARATOR.compare(fam2, results.get(0)
-          .getFamily()) == 0);
+      assertTrue(CellUtil.matchingRow(results.get(0), firstRowBytes)); 
+      assertTrue(CellUtil.matchingFamily(results.get(0), fam2));
 
-      results = new ArrayList<KeyValue>();
+      results = new ArrayList<Cell>();
       s.next(results);
 
       // get secondRow
       assertTrue(results.size() == 2);
-      assertTrue(Bytes.BYTES_COMPARATOR.compare(secondRowBytes, results.get(0)
-          .getRow()) == 0);
-      assertTrue(Bytes.BYTES_COMPARATOR.compare(fam1, results.get(0)
-          .getFamily()) == 0);
-      assertTrue(Bytes.BYTES_COMPARATOR.compare(fam2, results.get(1)
-          .getFamily()) == 0);
+      assertTrue(CellUtil.matchingRow(results.get(0), secondRowBytes));
+      assertTrue(CellUtil.matchingFamily(results.get(0), fam1));
+      assertTrue(CellUtil.matchingFamily(results.get(1), fam2));
     } finally {
       HRegion.closeHRegion(this.r);
     }
@@ -577,7 +574,7 @@ public class TestScanner {
     LOG.info("Taking out counting scan");
     ScannerIncommon s = hri.getScanner(HConstants.CATALOG_FAMILY, EXPLICIT_COLS,
         HConstants.EMPTY_START_ROW, HConstants.LATEST_TIMESTAMP);
-    List<KeyValue> values = new ArrayList<KeyValue>();
+    List<Cell> values = new ArrayList<Cell>();
     int count = 0;
     boolean justFlushed = false;
     while (s.next(values)) {

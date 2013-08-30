@@ -30,6 +30,7 @@ import java.util.List;
 
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
@@ -314,7 +315,7 @@ public class TestSplitTransaction {
     int rowcount = 0;
     InternalScanner scanner = r.getScanner(new Scan());
     try {
-      List<KeyValue> kvs = new ArrayList<KeyValue>();
+      List<Cell> kvs = new ArrayList<Cell>();
       boolean hasNext = true;
       while (hasNext) {
         hasNext = scanner.next(kvs);

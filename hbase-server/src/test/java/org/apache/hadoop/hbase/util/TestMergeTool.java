@@ -26,15 +26,24 @@ import java.util.List;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.*;
+import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.HBaseTestCase;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.LargeTests;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.regionserver.wal.HLog;
-import org.apache.hadoop.hbase.regionserver.wal.HLogFactory;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
+import org.apache.hadoop.hbase.regionserver.wal.HLog;
+import org.apache.hadoop.hbase.regionserver.wal.HLogFactory;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.util.ToolRunner;
 import org.junit.experimental.categories.Category;
@@ -215,9 +224,9 @@ public class TestMergeTool extends HBaseTestCase {
     scan.addFamily(FAMILY);
     InternalScanner scanner = merged.getScanner(scan);
     try {
-    List<KeyValue> testRes = null;
+    List<Cell> testRes = null;
       while (true) {
-        testRes = new ArrayList<KeyValue>();
+        testRes = new ArrayList<Cell>();
         boolean hasNext = scanner.next(testRes);
         if (!hasNext) {
           break;
@@ -235,7 +244,7 @@ public class TestMergeTool extends HBaseTestCase {
         get.addFamily(FAMILY);
         Result result = merged.get(get);
         assertEquals(1, result.size());
-        byte [] bytes = result.raw()[0].getValue();
+        byte [] bytes = CellUtil.getValueArray(result.raw()[0]);
         assertNotNull(Bytes.toStringBinary(rows[i][j]), bytes);
         assertTrue(Bytes.equals(bytes, rows[i][j]));
       }
@@ -254,7 +263,7 @@ public class TestMergeTool extends HBaseTestCase {
         Get get = new Get(rows[i][j]);
         get.addFamily(FAMILY);
         Result result = regions[i].get(get);
-        byte [] bytes = result.raw()[0].getValue();
+        byte [] bytes =  CellUtil.getValueArray(result.raw()[0]);
         assertNotNull(bytes);
         assertTrue(Bytes.equals(bytes, rows[i][j]));
       }

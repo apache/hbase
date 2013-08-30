@@ -20,11 +20,12 @@ package org.apache.hadoop.hbase.mapred;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Map;
 
+import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.MapReduceBase;
@@ -115,12 +116,12 @@ implements TableMap<ImmutableBytesWritable,Result> {
     ArrayList<byte[]> foundList = new ArrayList<byte[]>();
     int numCols = columns.length;
     if (numCols > 0) {
-      for (KeyValue value: r.list()) {
-        byte [] column = KeyValue.makeColumn(value.getFamily(),
-            value.getQualifier());
+      for (Cell value: r.list()) {
+        byte [] column = KeyValue.makeColumn(CellUtil.getFamilyArray(value),
+            CellUtil.getQualifierArray(value));
         for (int i = 0; i < numCols; i++) {
           if (Bytes.equals(column, columns[i])) {
-            foundList.add(value.getValue());
+            foundList.add(CellUtil.getValueArray(value));
             break;
           }
         }

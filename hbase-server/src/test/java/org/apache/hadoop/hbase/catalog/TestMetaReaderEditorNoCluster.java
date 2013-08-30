@@ -30,6 +30,7 @@ import java.util.NavigableMap;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.Abortable;
+import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellScannable;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.TableName;
@@ -97,7 +98,7 @@ public class TestMetaReaderEditorNoCluster {
   public void testGetHRegionInfo() throws IOException {
     assertNull(HRegionInfo.getHRegionInfo(new Result()));
 
-    List<KeyValue> kvs = new ArrayList<KeyValue>();
+    List<Cell> kvs = new ArrayList<Cell>();
     Result r = new Result(kvs);
     assertNull(HRegionInfo.getHRegionInfo(r));
 
@@ -152,7 +153,7 @@ public class TestMetaReaderEditorNoCluster {
       // show.  We will know if they happened or not because we will ask
       // mockito at the end of this test to verify that scan was indeed
       // called the wanted number of times.
-      List<KeyValue> kvs = new ArrayList<KeyValue>();
+      List<Cell> kvs = new ArrayList<Cell>();
       final byte [] rowToVerify = Bytes.toBytes("rowToVerify");
       kvs.add(new KeyValue(rowToVerify,
         HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER,

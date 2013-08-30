@@ -18,18 +18,31 @@
 
 package org.apache.hadoop.hbase.replication;
 
+import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+
 import java.util.HashMap;
 import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.LargeTests;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.client.*;
+import org.apache.hadoop.hbase.client.Delete;
+import org.apache.hadoop.hbase.client.Get;
+import org.apache.hadoop.hbase.client.HBaseAdmin;
+import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.ResultScanner;
+import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.replication.ReplicationAdmin;
 import org.apache.hadoop.hbase.mapreduce.replication.VerifyReplication;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos;
@@ -43,11 +56,6 @@ import org.apache.hadoop.mapreduce.Job;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
-import static org.junit.Assert.assertTrue;
 
 @Category(LargeTests.class)
 public class TestReplicationSmallTests extends TestReplicationBase {
@@ -132,9 +140,9 @@ public class TestReplicationSmallTests extends TestReplicationBase {
         LOG.info("Rows not available");
         Thread.sleep(SLEEP_TIME);
       } else {
-        assertArrayEquals(res.raw()[0].getValue(), v3);
-        assertArrayEquals(res.raw()[1].getValue(), v2);
-        assertArrayEquals(res.raw()[2].getValue(), v1);
+        assertArrayEquals(CellUtil.getValueArray(res.raw()[0]), v3);
+        assertArrayEquals(CellUtil.getValueArray(res.raw()[1]), v2);
+        assertArrayEquals(CellUtil.getValueArray(res.raw()[2]), v1);
         break;
       }
     }
@@ -154,8 +162,8 @@ public class TestReplicationSmallTests extends TestReplicationBase {
         LOG.info("Version not deleted");
         Thread.sleep(SLEEP_TIME);
       } else {
-        assertArrayEquals(res.raw()[0].getValue(), v3);
-        assertArrayEquals(res.raw()[1].getValue(), v2);
+        assertArrayEquals(CellUtil.getValueArray(res.raw()[0]), v3);
+        assertArrayEquals(CellUtil.getValueArray(res.raw()[1]), v2);
         break;
       }
     }
@@ -454,9 +462,9 @@ public class TestReplicationSmallTests extends TestReplicationBase {
     Put put = null;
     for (Result result : rs) {
       put = new Put(result.getRow());
-      KeyValue firstVal = result.raw()[0];
-      put.add(firstVal.getFamily(),
-          firstVal.getQualifier(), Bytes.toBytes("diff data"));
+      Cell firstVal = result.raw()[0];
+      put.add(CellUtil.getFamilyArray(firstVal),
+          CellUtil.getQualifierArray(firstVal), Bytes.toBytes("diff data"));
       htable2.put(put);
     }
     Delete delete = new Delete(put.getRow());

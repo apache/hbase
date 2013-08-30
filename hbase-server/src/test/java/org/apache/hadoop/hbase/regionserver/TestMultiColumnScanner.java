@@ -37,7 +37,9 @@ import java.util.TreeSet;
 import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
@@ -239,7 +241,7 @@ public class TestMultiColumnScanner {
         }
 
         InternalScanner scanner = region.getScanner(scan);
-        List<KeyValue> results = new ArrayList<KeyValue>();
+        List<Cell> results = new ArrayList<Cell>();
 
         int kvPos = 0;
         int numResults = 0;
@@ -247,7 +249,7 @@ public class TestMultiColumnScanner {
             + columnBitMask + "), maxVersions=" + maxVersions;
 
         while (scanner.next(results) || results.size() > 0) {
-          for (KeyValue kv : results) {
+          for (Cell kv : results) {
             while (kvPos < kvs.size()
                 && !matchesQuery(kvs.get(kvPos), qualSet, maxVersions,
                     lastDelTimeMap)) {
@@ -285,11 +287,9 @@ public class TestMultiColumnScanner {
     HRegion.closeHRegion(region);
   }
 
-  private static String getRowQualStr(KeyValue kv) {
-    String rowStr = Bytes.toString(kv.getBuffer(), kv.getRowOffset(),
-        kv.getRowLength());
-    String qualStr = Bytes.toString(kv.getBuffer(), kv.getQualifierOffset(),
-        kv.getQualifierLength());
+  private static String getRowQualStr(Cell kv) {
+    String rowStr = Bytes.toString(CellUtil.getRowArray(kv));
+    String qualStr = Bytes.toString(CellUtil.getQualifierArray(kv));
     return rowStr + "_" + qualStr;
   }
 

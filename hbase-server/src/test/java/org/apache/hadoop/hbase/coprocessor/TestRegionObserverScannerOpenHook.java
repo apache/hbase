@@ -31,6 +31,7 @@ import java.util.concurrent.CountDownLatch;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -38,7 +39,6 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Get;
@@ -70,7 +70,7 @@ public class TestRegionObserverScannerOpenHook {
   public static class NoDataFilter extends FilterBase {
 
     @Override
-    public ReturnCode filterKeyValue(KeyValue ignored) throws IOException {
+    public ReturnCode filterKeyValue(Cell ignored) throws IOException {
       return ReturnCode.SKIP;
     }
 

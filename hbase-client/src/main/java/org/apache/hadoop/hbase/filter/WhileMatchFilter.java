@@ -23,7 +23,7 @@ import java.io.IOException;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.FilterProtos;
@@ -33,7 +33,7 @@ import com.google.protobuf.InvalidProtocolBufferException;
 /**
  * A wrapper filter that returns true from {@link #filterAllRemaining()} as soon
  * as the wrapped filters {@link Filter#filterRowKey(byte[], int, int)},
- * {@link Filter#filterKeyValue(org.apache.hadoop.hbase.KeyValue)},
+ * {@link Filter#filterKeyValue(org.apache.hadoop.hbase.Cell)},
  * {@link org.apache.hadoop.hbase.filter.Filter#filterRow()} or
  * {@link org.apache.hadoop.hbase.filter.Filter#filterAllRemaining()} methods
  * returns true.
@@ -73,15 +73,15 @@ public class WhileMatchFilter extends FilterBase {
   }
 
   @Override
-  public ReturnCode filterKeyValue(KeyValue v) throws IOException {
+  public ReturnCode filterKeyValue(Cell v) throws IOException {
     ReturnCode c = filter.filterKeyValue(v);
     changeFAR(c != ReturnCode.INCLUDE);
     return c;
   }
 
   @Override
-  public KeyValue transform(KeyValue v) throws IOException {
-    return filter.transform(v);
+  public Cell transformCell(Cell v) throws IOException {
+    return filter.transformCell(v);
   }
 
   @Override

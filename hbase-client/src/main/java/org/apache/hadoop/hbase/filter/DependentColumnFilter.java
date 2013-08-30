@@ -18,23 +18,26 @@
  */
 package org.apache.hadoop.hbase.filter;
 
-import com.google.common.base.Preconditions;
-import com.google.protobuf.ByteString;
-import com.google.protobuf.InvalidProtocolBufferException;
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.exceptions.DeserializationException;
-import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.protobuf.generated.FilterProtos;
-import org.apache.hadoop.hbase.util.Bytes;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
+
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.KeyValueUtil;
+import org.apache.hadoop.hbase.exceptions.DeserializationException;
+import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.protobuf.generated.FilterProtos;
+import org.apache.hadoop.hbase.util.Bytes;
+
+import com.google.common.base.Preconditions;
+import com.google.protobuf.ByteString;
+import com.google.protobuf.InvalidProtocolBufferException;
 
 /**
  * A filter for adding inter-column timestamp matching
@@ -77,9 +80,9 @@ public class DependentColumnFilter extends CompareFilter {
   
   /**
    * Constructor for DependentColumn filter.
-   * Keyvalues where a keyvalue from target column 
-   * with the same timestamp do not exist will be dropped. 
-   * 
+   * Cells where a Cell from target column
+   * with the same timestamp do not exist will be dropped.
+   *
    * @param family name of target column family
    * @param qualifier name of column qualifier
    */
@@ -89,12 +92,12 @@ public class DependentColumnFilter extends CompareFilter {
   
   /**
    * Constructor for DependentColumn filter.
-   * Keyvalues where a keyvalue from target column 
-   * with the same timestamp do not exist will be dropped. 
-   * 
+   * Cells where a Cell from target column
+   * with the same timestamp do not exist will be dropped.
+   *
    * @param family name of dependent column family
    * @param qualifier name of dependent qualifier
-   * @param dropDependentColumn whether the dependent columns keyvalues should be discarded
+   * @param dropDependentColumn whether the dependent columns Cells should be discarded
    */
   public DependentColumnFilter(final byte [] family, final byte [] qualifier,
       final boolean dropDependentColumn) {
@@ -132,7 +135,9 @@ public class DependentColumnFilter extends CompareFilter {
   }
 
   @Override
-  public ReturnCode filterKeyValue(KeyValue v) {
+  public ReturnCode filterKeyValue(Cell c) {
+    // TODO make matching Column a cell method or CellUtil method.
+    KeyValue v = KeyValueUtil.ensureKeyValue(c);
     // Check if the column and qualifier match
   	if (!v.matchingColumn(this.columnFamily, this.columnQualifier)) {
         // include non-matches for the time being, they'll be discarded afterwards
@@ -140,7 +145,7 @@ public class DependentColumnFilter extends CompareFilter {
   	}
     // If it doesn't pass the op, skip it
     if (comparator != null
-        && doCompare(compareOp, comparator, v.getBuffer(), v.getValueOffset(),
+        && doCompare(compareOp, comparator, v.getValueArray(), v.getValueOffset(),
             v.getValueLength()))
       return ReturnCode.SKIP;
 	
@@ -152,9 +157,9 @@ public class DependentColumnFilter extends CompareFilter {
   }
 
   @Override
-  public void filterRow(List<KeyValue> kvs) {
-    Iterator<KeyValue> it = kvs.iterator();
-    KeyValue kv;
+  public void filterRowCells(List<Cell> kvs) {
+    Iterator<? extends Cell> it = kvs.iterator();
+    Cell kv;
     while(it.hasNext()) {
       kv = it.next();
       if(!stampSet.contains(kv.getTimestamp())) {

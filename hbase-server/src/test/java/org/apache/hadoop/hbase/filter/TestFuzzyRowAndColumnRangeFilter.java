@@ -15,26 +15,36 @@
  */
 package org.apache.hadoop.hbase.filter;
 
-import com.google.common.collect.Lists;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.KeyValueTestUtil;
-import org.apache.hadoop.hbase.MediumTests;
-import org.apache.hadoop.hbase.client.*;
-import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.Pair;
-import org.jboss.netty.buffer.ChannelBuffer;
-import org.jboss.netty.buffer.ChannelBuffers;
-import org.junit.*;
-import org.junit.experimental.categories.Category;
+import static org.junit.Assert.assertEquals;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-import static org.junit.Assert.assertEquals;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.MediumTests;
+import org.apache.hadoop.hbase.client.Durability;
+import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.ResultScanner;
+import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.Pair;
+import org.jboss.netty.buffer.ChannelBuffer;
+import org.jboss.netty.buffer.ChannelBuffers;
+import org.junit.After;
+import org.junit.AfterClass;
+import org.junit.Before;
+import org.junit.BeforeClass;
+import org.junit.Test;
+import org.junit.experimental.categories.Category;
+
+import com.google.common.collect.Lists;
 
 /**
  */
@@ -149,13 +159,13 @@ public class TestFuzzyRowAndColumnRangeFilter {
     scan.setFilter(filterList);
 
     ResultScanner scanner = hTable.getScanner(scan);
-    List<KeyValue> results = new ArrayList<KeyValue>();
+    List<Cell> results = new ArrayList<Cell>();
     Result result;
     long timeBeforeScan = System.currentTimeMillis();
     while ((result = scanner.next()) != null) {
-      for (KeyValue kv : result.list()) {
-        LOG.info("Got rk: " + Bytes.toStringBinary(kv.getRow()) + " cq: "
-                + Bytes.toStringBinary(kv.getQualifier()));
+      for (Cell kv : result.list()) {
+        LOG.info("Got rk: " + Bytes.toStringBinary(CellUtil.getRowArray(kv)) + " cq: "
+                + Bytes.toStringBinary(CellUtil.getQualifierArray(kv)));
         results.add(kv);
       }
     }

@@ -18,12 +18,12 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.KeyValue;
-
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.List;
+
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.Cell;
 
 /**
  * Internal scanners differ from client-side scanners in that they operate on
@@ -47,7 +47,7 @@ public interface InternalScanner extends Closeable {
    * @return true if more rows exist after this one, false if scanner is done
    * @throws IOException e
    */
-  boolean next(List<KeyValue> results) throws IOException;
+  boolean next(List<Cell> results) throws IOException;
 
   /**
    * Grab the next row's worth of values with a limit on the number of values
@@ -57,7 +57,7 @@ public interface InternalScanner extends Closeable {
    * @return true if more rows exist after this one, false if scanner is done
    * @throws IOException e
    */
-  boolean next(List<KeyValue> result, int limit) throws IOException;
+  boolean next(List<Cell> result, int limit) throws IOException;
 
   /**
    * Closes the scanner and releases any resources it has allocated

@@ -23,6 +23,7 @@ import static org.junit.Assert.assertNull;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
@@ -99,6 +100,6 @@ public class TestWALPlayer {
     Get g = new Get(ROW);
     Result r = t2.get(g);
     assertEquals(1, r.size());
-    assertTrue(Bytes.equals(COLUMN2, r.raw()[0].getQualifier()));
+    assertTrue(CellUtil.matchingQualifier(r.raw()[0], COLUMN2));
   }
 }

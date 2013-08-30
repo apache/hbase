@@ -19,14 +19,15 @@
 
 package org.apache.hadoop.hbase.filter;
 
-import com.google.protobuf.InvalidProtocolBufferException;
+import java.util.Random;
+
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.protobuf.generated.FilterProtos;
 
-import java.util.Random;
+import com.google.protobuf.InvalidProtocolBufferException;
 
 /**
  * A filter that includes rows based on a chance.
@@ -71,7 +72,7 @@ public class RandomRowFilter extends FilterBase {
   }
 
   @Override
-  public ReturnCode filterKeyValue(KeyValue v) {
+  public ReturnCode filterKeyValue(Cell v) {
     if (filterOutRow) {
       return ReturnCode.NEXT_ROW;
     }

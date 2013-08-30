@@ -44,7 +44,7 @@ import java.util.Stack;
  * a filter object is constructed. This filter object is then wrapped
  * in a scanner object which is then returned
  * <p>
- * This class addresses the HBASE-4168 JIRA. More documentaton on this
+ * This class addresses the HBASE-4168 JIRA. More documentation on this
  * Filter Language can be found at: https://issues.apache.org/jira/browse/HBASE-4176
  */
 @InterfaceAudience.Public
@@ -242,8 +242,8 @@ public class ParseFilter {
     }
     try {
       filterName = filterHashMap.get(filterName);
-      Class c = Class.forName(filterName);
-      Class[] argTypes = new Class [] {ArrayList.class};
+      Class<?> c = Class.forName(filterName);
+      Class<?>[] argTypes = new Class [] {ArrayList.class};
       Method m = c.getDeclaredMethod("createFilterFromArguments", argTypes);
       return (Filter) m.invoke(null,filterArguments);
     } catch (ClassNotFoundException e) {

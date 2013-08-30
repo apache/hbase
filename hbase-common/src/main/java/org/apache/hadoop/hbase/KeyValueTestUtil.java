@@ -80,11 +80,11 @@ public class KeyValueTestUtil {
    * @param kvCollection2
    * @return true if KeyValues from kvCollection2 are contained in kvCollection1
    */
-  public static boolean containsIgnoreMvccVersion(Collection<KeyValue> kvCollection1,
-      Collection<KeyValue> kvCollection2) {
-    for (KeyValue kv1 : kvCollection1) {
+  public static boolean containsIgnoreMvccVersion(Collection<? extends Cell> kvCollection1,
+      Collection<? extends Cell> kvCollection2) {
+    for (Cell kv1 : kvCollection1) {
       boolean found = false;
-      for (KeyValue kv2 : kvCollection2) {
+      for (Cell kv2 : kvCollection2) {
         if (CellComparator.equalsIgnoreMvccVersion(kv1, kv2)) found = true;
       }
       if (!found) return false;

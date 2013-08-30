@@ -25,6 +25,7 @@ import java.util.List;
 import java.util.PriorityQueue;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.KVComparator;
 
@@ -120,7 +121,7 @@ public class KeyValueHeap extends NonLazyKeyValueScanner
    * @param limit
    * @return true if there are more keys, false if all scanners are done
    */
-  public boolean next(List<KeyValue> result, int limit) throws IOException {
+  public boolean next(List<Cell> result, int limit) throws IOException {
     if (this.current == null) {
       return false;
     }
@@ -153,7 +154,7 @@ public class KeyValueHeap extends NonLazyKeyValueScanner
    * @param result
    * @return true if there are more keys, false if all scanners are done
    */
-  public boolean next(List<KeyValue> result) throws IOException {
+  public boolean next(List<Cell> result) throws IOException {
     return next(result, -1);
   }
 

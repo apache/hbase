@@ -19,13 +19,24 @@
 
 package org.apache.hadoop.hbase.rest.client;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.*;
+import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.MediumTests;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
@@ -35,12 +46,7 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.rest.HBaseRESTTestingUtility;
-import org.apache.hadoop.hbase.rest.client.Client;
-import org.apache.hadoop.hbase.rest.client.Cluster;
-import org.apache.hadoop.hbase.rest.client.RemoteHTable;
 import org.apache.hadoop.hbase.util.Bytes;
-
-import static org.junit.Assert.*;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -203,13 +209,13 @@ public class TestRemoteTable {
     get.setMaxVersions(2);
     result = remoteTable.get(get);
     int count = 0;
-    for (KeyValue kv: result.list()) {
-      if (Bytes.equals(COLUMN_1, kv.getFamily()) && TS_1 == kv.getTimestamp()) {
-        assertTrue(Bytes.equals(VALUE_1, kv.getValue())); // @TS_1
+    for (Cell kv: result.list()) {
+      if (CellUtil.matchingFamily(kv, COLUMN_1) && TS_1 == kv.getTimestamp()) {
+        assertTrue(CellUtil.matchingValue(kv, VALUE_1)); // @TS_1
         count++;
       }
-      if (Bytes.equals(COLUMN_1, kv.getFamily()) && TS_2 == kv.getTimestamp()) {
-        assertTrue(Bytes.equals(VALUE_2, kv.getValue())); // @TS_2
+      if (CellUtil.matchingFamily(kv, COLUMN_1) && TS_2 == kv.getTimestamp()) {
+        assertTrue(CellUtil.matchingValue(kv, VALUE_2)); // @TS_2
         count++;
       }
     }

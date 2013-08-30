@@ -21,14 +21,14 @@ package org.apache.hadoop.hbase.rest;
 
 import java.io.IOException;
 import java.util.Iterator;
- 
+
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.rest.model.ScannerModel;
 
 @InterfaceAudience.Private
-public abstract class ResultGenerator implements Iterator<KeyValue> {
+public abstract class ResultGenerator implements Iterator<Cell> {
 
   public static ResultGenerator fromRowSpec(final String table, 
       final RowSpec rowspec, final Filter filter) throws IOException {
@@ -43,7 +43,7 @@ public abstract class ResultGenerator implements Iterator<KeyValue> {
     return ScannerModel.buildFilter(filter);
   }
 
-  public abstract void putBack(KeyValue kv);
+  public abstract void putBack(Cell kv);
 
   public abstract void close();
 }

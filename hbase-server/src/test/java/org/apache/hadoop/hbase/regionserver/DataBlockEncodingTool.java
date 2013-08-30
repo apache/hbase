@@ -36,8 +36,10 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.compress.Compression.Algorithm;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoder;
@@ -227,8 +229,8 @@ public class DataBlockEncodingTool {
     KeyValue currentKv;
 
     scanner.seek(KeyValue.LOWESTKEY);
-    List<Iterator<KeyValue>> codecIterators =
-        new ArrayList<Iterator<KeyValue>>();
+    List<Iterator<Cell>> codecIterators =
+        new ArrayList<Iterator<Cell>>();
     for(EncodedDataBlock codec : codecs) {
       codecIterators.add(codec.getIterator(HFileBlock.headerSize(minorVersion)));
     }
@@ -237,8 +239,9 @@ public class DataBlockEncodingTool {
     while ((currentKv = scanner.next()) != null && j < kvLimit) {
       // Iterates through key/value pairs
       ++j;
-      for (Iterator<KeyValue> it : codecIterators) {
-        KeyValue codecKv = it.next();
+      for (Iterator<Cell> it : codecIterators) {
+        Cell c = it.next();
+        KeyValue codecKv = KeyValueUtil.ensureKeyValue(c);
         if (codecKv == null || 0 != Bytes.compareTo(
             codecKv.getBuffer(), codecKv.getOffset(), codecKv.getLength(),
             currentKv.getBuffer(), currentKv.getOffset(),
@@ -320,7 +323,7 @@ public class DataBlockEncodingTool {
     for (int itTime = 0; itTime < benchmarkNTimes; ++itTime) {
       totalSize = 0;
 
-      Iterator<KeyValue> it;
+      Iterator<Cell> it;
 
       it = codec.getIterator(HFileBlock.headerSize(minorVersion));
 
@@ -328,7 +331,7 @@ public class DataBlockEncodingTool {
       // (expect first time)
       final long startTime = System.nanoTime();
       while (it.hasNext()) {
-        totalSize += it.next().getLength();
+        totalSize += KeyValueUtil.ensureKeyValue(it.next()).getLength();
       }
       final long finishTime = System.nanoTime();
       if (itTime >= benchmarkNOmit) {

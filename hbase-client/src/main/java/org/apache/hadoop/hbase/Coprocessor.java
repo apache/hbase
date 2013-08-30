@@ -15,10 +15,10 @@
 
 package org.apache.hadoop.hbase;
 
+import java.io.IOException;
+
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-
-import java.io.IOException;
 
 /**
  * Coprocess interface.
@@ -53,4 +53,5 @@ public interface Coprocessor {
   void start(CoprocessorEnvironment env) throws IOException;
 
   void stop(CoprocessorEnvironment env) throws IOException;
+
 }

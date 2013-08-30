@@ -27,6 +27,7 @@ import java.util.NavigableMap;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.hbase.KeyValue.Type;
 import org.apache.hadoop.hbase.util.ByteRange;
 import org.apache.hadoop.hbase.util.Bytes;
 
@@ -257,6 +258,41 @@ public final class CellUtil {
       right.getRowArray(), right.getRowOffset(), right.getRowLength());
   }
 
+  public static boolean matchingRow(final Cell left, final byte[] buf) {
+    return Bytes.equals(left.getRowArray(),  left.getRowOffset(), left.getRowLength(),
+      buf, 0, buf.length);
+  }
+
+  public static boolean matchingFamily(final Cell left, final Cell right) {
+    return Bytes.equals(left.getFamilyArray(), left.getFamilyOffset(), left.getFamilyLength(),
+        right.getFamilyArray(), right.getFamilyOffset(), right.getFamilyLength());
+  }
+
+  public static boolean matchingFamily(final Cell left, final byte[] buf) {
+    return Bytes.equals(left.getFamilyArray(), left.getFamilyOffset(), left.getFamilyLength(),
+        buf, 0, buf.length);
+  }
+
+  public static boolean matchingQualifier(final Cell left, final Cell right) {
+    return Bytes.equals(left.getQualifierArray(), left.getQualifierOffset(), left.getQualifierLength(),
+        right.getQualifierArray(), right.getQualifierOffset(), right.getQualifierLength());
+  }
+
+  public static boolean matchingQualifier(final Cell left, final byte[] buf) {
+    return Bytes.equals(left.getQualifierArray(), left.getQualifierOffset(), left.getQualifierLength(),
+        buf, 0, buf.length);
+  }
+
+
+  public static boolean matchingValue(final Cell left, final Cell right) {
+    return Bytes.equals(left.getValueArray(), left.getValueOffset(), left.getValueLength(),
+        right.getValueArray(), right.getValueOffset(), right.getValueLength());
+  }
+
+  public static boolean matchingValue(final Cell left, final byte[] buf) {
+    return Bytes.equals(left.getValueArray(), left.getValueOffset(), left.getValueLength(),
+        buf, 0, buf.length);
+  }
   /**
    * @return True if a delete type, a {@link KeyValue.Type#Delete} or
    * a {KeyValue.Type#DeleteFamily} or a {@link KeyValue.Type#DeleteColumn}
@@ -264,6 +300,10 @@ public final class CellUtil {
    */
   public static boolean isDelete(final Cell cell) {
     return KeyValue.isDelete(cell.getTypeByte());
+  }
+
+  public static boolean isDeleteFamily(final Cell cell) {
+    return cell.getTypeByte() == Type.DeleteFamily.getCode();
   }
 
   /**

@@ -26,7 +26,6 @@ import java.io.DataOutput;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.nio.BufferOverflowException;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Comparator;
@@ -36,7 +35,6 @@ import java.util.Map;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
@@ -46,7 +44,10 @@ import org.apache.hadoop.io.RawComparator;
 import com.google.common.primitives.Longs;
 
 /**
- * An HBase Key/Value. This is the fundamental HBase Type.
+ * An HBase Key/Value. This is the fundamental HBase Type.  
+ * <p>
+ * HBase applications and users should use the Cell interface and avoid directly using KeyValue
+ * and member functions not defined in Cell.
  * <p>
  * If being used client-side, the primary methods to access individual fields are {@link #getRow()},
  * {@link #getFamily()}, {@link #getQualifier()}, {@link #getTimestamp()}, and {@link #getValue()}.
@@ -66,8 +67,7 @@ import com.google.common.primitives.Longs;
  * <code>Integer.MAX_SIZE</code>. The column does not contain the family/qualifier delimiter,
  * {@link #COLUMN_FAMILY_DELIMITER}
  */
-@InterfaceAudience.Public
-@InterfaceStability.Evolving
+@InterfaceAudience.Private
 public class KeyValue implements Cell, HeapSize, Cloneable {
   static final Log LOG = LogFactory.getLog(KeyValue.class);
 
@@ -472,6 +472,14 @@ public class KeyValue implements Cell, HeapSize, Cloneable {
     this.offset = 0;
   }
 
+  public KeyValue(Cell c) {
+    this(c.getRowArray(), c.getRowOffset(), (int)c.getRowLength(),
+        c.getFamilyArray(), c.getFamilyOffset(), (int)c.getFamilyLength(), 
+        c.getQualifierArray(), c.getQualifierOffset(), (int) c.getQualifierLength(),
+        c.getTimestamp(), Type.codeToType(c.getTypeByte()), 
+        c.getValueArray(), c.getValueOffset(), c.getValueLength());
+  }
+  
   /**
    * Create an empty byte[] representing a KeyValue
    * All lengths are preset and can be filled in later.
@@ -1175,34 +1183,9 @@ public class KeyValue implements Cell, HeapSize, Cloneable {
    * save on allocations.
    * @return Value in a new byte array.
    */
+  @Deprecated // use CellUtil.getValueArray()
   public byte [] getValue() {
-    int o = getValueOffset();
-    int l = getValueLength();
-    byte [] result = new byte[l];
-    System.arraycopy(getBuffer(), o, result, 0, l);
-    return result;
-  }
-
-  /**
-   * Returns the value wrapped in a new <code>ByteBuffer</code>.
-   *
-   * @return the value
-   */
-  public ByteBuffer getValueAsByteBuffer() {
-    return ByteBuffer.wrap(getBuffer(), getValueOffset(), getValueLength());
-  }
-
-  /**
-   * Loads this object's value into the provided <code>ByteBuffer</code>.
-   * <p>
-   * Does not clear or flip the buffer.
-   *
-   * @param dst the buffer where to write the value
-   *
-   * @throws BufferOverflowException if there is insufficient space remaining in the buffer
-   */
-  public void loadValue(ByteBuffer dst) throws BufferOverflowException {
-    dst.put(getBuffer(), getValueOffset(), getValueLength());
+    return CellUtil.getValueArray(this);
   }
 
   /**
@@ -1213,12 +1196,9 @@ public class KeyValue implements Cell, HeapSize, Cloneable {
    * lengths instead.
    * @return Row in a new byte array.
    */
+  @Deprecated // use CellUtil.getRowArray()
   public byte [] getRow() {
-    int o = getRowOffset();
-    short l = getRowLength();
-    byte result[] = new byte[l];
-    System.arraycopy(getBuffer(), o, result, 0, l);
-    return result;
+    return CellUtil.getRowArray(this);
   }
 
   /**
@@ -1260,6 +1240,7 @@ public class KeyValue implements Cell, HeapSize, Cloneable {
    * a {KeyValue.Type#DeleteFamily} or a {@link KeyValue.Type#DeleteColumn}
    * KeyValue type.
    */
+  @Deprecated // use CellUtil#isDelete
   public boolean isDelete() {
     return KeyValue.isDelete(getType());
   }
@@ -1303,12 +1284,9 @@ public class KeyValue implements Cell, HeapSize, Cloneable {
    * lengths instead.
    * @return Returns family. Makes a copy.
    */
+  @Deprecated // use CellUtil.getFamilyArray
   public byte [] getFamily() {
-    int o = getFamilyOffset();
-    int l = getFamilyLength(o);
-    byte [] result = new byte[l];
-    System.arraycopy(this.bytes, o, result, 0, l);
-    return result;
+    return CellUtil.getFamilyArray(this);
   }
 
   /**
@@ -1320,12 +1298,9 @@ public class KeyValue implements Cell, HeapSize, Cloneable {
    * Use {@link #getBuffer()} with appropriate offsets and lengths instead.
    * @return Returns qualifier. Makes a copy.
    */
+  @Deprecated // use CellUtil.getQualifierArray
   public byte [] getQualifier() {
-    int o = getQualifierOffset();
-    int l = getQualifierLength();
-    byte [] result = new byte[l];
-    System.arraycopy(this.bytes, o, result, 0, l);
-    return result;
+    return CellUtil.getQualifierArray(this);
   }
 
   //---------------------------------------------------------------------------
@@ -1419,6 +1394,8 @@ public class KeyValue implements Cell, HeapSize, Cloneable {
   /**
    * Creates a new KeyValue that only contains the key portion (the value is
    * set to be null).
+   *
+   * TODO only used by KeyOnlyFilter -- move there.
    * @param lenAsVal replace value with the actual value length (false=empty)
    */
   public KeyValue createKeyOnly(boolean lenAsVal) {
@@ -2586,4 +2563,5 @@ public class KeyValue implements Cell, HeapSize, Cloneable {
   public byte[] getTagsArray() {
     throw new UnsupportedOperationException("Not implememnted");
   }
+
 }

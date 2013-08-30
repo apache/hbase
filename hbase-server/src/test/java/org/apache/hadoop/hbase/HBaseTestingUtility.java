@@ -2677,19 +2677,19 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
    * Do a small get/scan against one store. This is required because store
    * has no actual methods of querying itself, and relies on StoreScanner.
    */
-  public static List<KeyValue> getFromStoreFile(HStore store,
+  public static List<Cell> getFromStoreFile(HStore store,
                                                 Get get) throws IOException {
     MultiVersionConsistencyControl.resetThreadReadPoint();
     Scan scan = new Scan(get);
     InternalScanner scanner = (InternalScanner) store.getScanner(scan,
         scan.getFamilyMap().get(store.getFamily().getName()));
 
-    List<KeyValue> result = new ArrayList<KeyValue>();
+    List<Cell> result = new ArrayList<Cell>();
     scanner.next(result);
     if (!result.isEmpty()) {
       // verify that we are on the row we want:
-      KeyValue kv = result.get(0);
-      if (!Bytes.equals(kv.getRow(), get.getRow())) {
+      Cell kv = result.get(0);
+      if (!CellUtil.matchingRow(kv, get.getRow())) {
         result.clear();
       }
     }
@@ -2720,7 +2720,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
    * Do a small get/scan against one store. This is required because store
    * has no actual methods of querying itself, and relies on StoreScanner.
    */
-  public static List<KeyValue> getFromStoreFile(HStore store,
+  public static List<Cell> getFromStoreFile(HStore store,
                                                 byte [] row,
                                                 NavigableSet<byte[]> columns
                                                 ) throws IOException {
@@ -2781,8 +2781,8 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
   }
 
   public static void assertKVListsEqual(String additionalMsg,
-      final List<KeyValue> expected,
-      final List<KeyValue> actual) {
+      final List<? extends Cell> expected,
+      final List<? extends Cell> actual) {
     final int eLen = expected.size();
     final int aLen = actual.size();
     final int minLen = Math.min(eLen, aLen);

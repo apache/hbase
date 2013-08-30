@@ -26,6 +26,7 @@ import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.protobuf.generated.FilterProtos;
@@ -114,8 +115,9 @@ public class ColumnRangeFilter extends FilterBase {
   }
 
   @Override
-  public ReturnCode filterKeyValue(KeyValue kv) {
-    byte[] buffer = kv.getBuffer();
+  public ReturnCode filterKeyValue(Cell kv) {
+    // TODO have a column compare method in Cell
+    byte[] buffer = kv.getQualifierArray();
     int qualifierOffset = kv.getQualifierOffset();
     int qualifierLength = kv.getQualifierLength();
     int cmpMin = 1;
@@ -213,9 +215,9 @@ public class ColumnRangeFilter extends FilterBase {
   }
 
   @Override
-  public KeyValue getNextKeyHint(KeyValue kv) {
-    return KeyValue.createFirstOnRow(kv.getBuffer(), kv.getRowOffset(), kv
-        .getRowLength(), kv.getBuffer(), kv.getFamilyOffset(), kv
+  public Cell getNextCellHint(Cell kv) {
+    return KeyValue.createFirstOnRow(kv.getRowArray(), kv.getRowOffset(), kv
+        .getRowLength(), kv.getFamilyArray(), kv.getFamilyOffset(), kv
         .getFamilyLength(), this.minColumn, 0, len(this.minColumn));
 
   }

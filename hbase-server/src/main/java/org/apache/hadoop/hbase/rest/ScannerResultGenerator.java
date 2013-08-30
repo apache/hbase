@@ -25,6 +25,7 @@ import java.util.Iterator;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.UnknownScannerException;
 import org.apache.hadoop.hbase.client.HTableInterface;
@@ -51,8 +52,8 @@ public class ScannerResultGenerator extends ResultGenerator {
   }
 
   private String id;
-  private Iterator<KeyValue> rowI;
-  private KeyValue cache;
+  private Iterator<Cell> rowI;
+  private Cell cache;
   private ResultScanner scanner;
   private Result cached;
 
@@ -131,9 +132,9 @@ public class ScannerResultGenerator extends ResultGenerator {
     return cached != null;
   }
 
-  public KeyValue next() {
+  public Cell next() {
     if (cache != null) {
-      KeyValue kv = cache;
+      Cell kv = cache;
       cache = null;
       return kv;
     }
@@ -169,7 +170,7 @@ public class ScannerResultGenerator extends ResultGenerator {
     return null;
   }
 
-  public void putBack(KeyValue kv) {
+  public void putBack(Cell kv) {
     this.cache = kv;
   }
 

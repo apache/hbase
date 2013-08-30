@@ -140,8 +140,8 @@ public class TestParallelPut extends HBaseTestCase {
     Result result = region.get(get);
     assertEquals(1, result.size());
 
-    KeyValue kv = result.raw()[0];
-    byte[] r = kv.getValue();
+    Cell kv = result.raw()[0];
+    byte[] r = CellUtil.getValueArray(kv);
     assertTrue(Bytes.compareTo(r, value) == 0);
   }
 

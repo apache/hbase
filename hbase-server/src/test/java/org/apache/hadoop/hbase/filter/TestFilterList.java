@@ -35,7 +35,9 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.assertNull;
 
+import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.filter.FilterList.Operator;
@@ -289,7 +291,7 @@ public class TestFilterList {
   public void testFilterKeyValue() throws Exception {
     Filter includeFilter = new FilterBase() {
       @Override
-      public Filter.ReturnCode filterKeyValue(KeyValue v) {
+      public Filter.ReturnCode filterKeyValue(Cell v) {
         return Filter.ReturnCode.INCLUDE;
       }
     };
@@ -298,7 +300,7 @@ public class TestFilterList {
       boolean returnInclude = true;
 
       @Override
-      public Filter.ReturnCode filterKeyValue(KeyValue v) {
+      public Filter.ReturnCode filterKeyValue(Cell v) {
         Filter.ReturnCode returnCode = returnInclude ? Filter.ReturnCode.INCLUDE :
                                                        Filter.ReturnCode.SKIP;
         returnInclude = !returnInclude;
@@ -310,7 +312,7 @@ public class TestFilterList {
       boolean returnIncludeOnly = false;
 
       @Override
-      public Filter.ReturnCode filterKeyValue(KeyValue v) {
+      public Filter.ReturnCode filterKeyValue(Cell v) {
         Filter.ReturnCode returnCode = returnIncludeOnly ? Filter.ReturnCode.INCLUDE :
                                                            Filter.ReturnCode.INCLUDE_AND_NEXT_COL;
         returnIncludeOnly = !returnIncludeOnly;
@@ -352,12 +354,12 @@ public class TestFilterList {
 
     Filter filterMinHint = new FilterBase() {
       @Override
-      public ReturnCode filterKeyValue(KeyValue ignored) {
+      public ReturnCode filterKeyValue(Cell ignored) {
         return ReturnCode.SEEK_NEXT_USING_HINT;
       }
 
       @Override
-      public KeyValue getNextKeyHint(KeyValue currentKV) {
+      public Cell getNextCellHint(Cell currentKV) {
         return minKeyValue;
       }
 
@@ -367,12 +369,12 @@ public class TestFilterList {
 
     Filter filterMaxHint = new FilterBase() {
       @Override
-      public ReturnCode filterKeyValue(KeyValue ignored) {
+      public ReturnCode filterKeyValue(Cell ignored) {
         return ReturnCode.SEEK_NEXT_USING_HINT;
       }
 
       @Override
-      public KeyValue getNextKeyHint(KeyValue currentKV) {
+      public Cell getNextCellHint(Cell currentKV) {
         return new KeyValue(Bytes.toBytes(Long.MAX_VALUE), null, null);
       }
 
@@ -466,12 +468,12 @@ public class TestFilterList {
 
     // Value for fam:qual1 should be stripped:
     assertEquals(Filter.ReturnCode.INCLUDE, flist.filterKeyValue(kvQual1));
-    final KeyValue transformedQual1 = flist.transform(kvQual1);
+    final KeyValue transformedQual1 = KeyValueUtil.ensureKeyValue(flist.transform(kvQual1));
     assertEquals(0, transformedQual1.getValue().length);
 
     // Value for fam:qual2 should not be stripped:
     assertEquals(Filter.ReturnCode.INCLUDE, flist.filterKeyValue(kvQual2));
-    final KeyValue transformedQual2 = flist.transform(kvQual2);
+    final KeyValue transformedQual2 = KeyValueUtil.ensureKeyValue(flist.transform(kvQual2));
     assertEquals("value", Bytes.toString(transformedQual2.getValue()));
 
     // Other keys should be skipped:

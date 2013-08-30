@@ -31,7 +31,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.Set;
 import java.util.Random;
 import java.util.concurrent.Callable;
 
@@ -45,8 +44,9 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
-import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
@@ -56,6 +56,7 @@ import org.apache.hadoop.hbase.HadoopShims;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.LargeTests;
 import org.apache.hadoop.hbase.PerformanceEvaluation;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
@@ -427,10 +428,10 @@ public class TestHFileOutputFormat  {
       ResultScanner results = table.getScanner(scan);
       for (Result res : results) {
         assertEquals(FAMILIES.length, res.raw().length);
-        KeyValue first = res.raw()[0];
-        for (KeyValue kv : res.raw()) {
-          assertTrue(KeyValue.COMPARATOR.matchingRows(first, kv));
-          assertTrue(Bytes.equals(first.getValue(), kv.getValue()));
+        Cell first = res.raw()[0];
+        for (Cell kv : res.raw()) {
+          assertTrue(CellUtil.matchingRow(first, kv));
+          assertTrue(Bytes.equals(CellUtil.getValueArray(first), CellUtil.getValueArray(kv)));
         }
       }
       results.close();

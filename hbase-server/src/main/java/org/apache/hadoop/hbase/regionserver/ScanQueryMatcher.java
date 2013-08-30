@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.util.NavigableSet;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Scan;
@@ -303,7 +304,7 @@ public class ScanQueryMatcher {
      * 7. Delete marker need to be version counted together with puts
      *    they affect
      */
-    byte type = kv.getType();
+    byte type = kv.getTypeByte();
     if (kv.isDelete()) {
       if (!keepDeletedCells) {
         // first ignore delete markers if the scanner can do so, and the
@@ -480,11 +481,11 @@ public class ScanQueryMatcher {
     return this.filter;
   }
 
-  public KeyValue getNextKeyHint(KeyValue kv) throws IOException {
+  public Cell getNextKeyHint(Cell kv) throws IOException {
     if (filter == null) {
       return null;
     } else {
-      return filter.getNextKeyHint(kv);
+      return filter.getNextCellHint(kv);
     }
   }
 

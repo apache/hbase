@@ -26,10 +26,11 @@ import java.util.TreeSet;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HConstants.OperationStatusCode;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Mutation;
@@ -132,9 +133,9 @@ public class BulkDeleteEndpoint extends BulkDeleteService implements Coprocessor
       // filter and having necessary column(s).
       scanner = region.getScanner(scan);
       while (hasMore) {
-        List<List<KeyValue>> deleteRows = new ArrayList<List<KeyValue>>(rowBatchSize);
+        List<List<Cell>> deleteRows = new ArrayList<List<Cell>>(rowBatchSize);
         for (int i = 0; i < rowBatchSize; i++) {
-          List<KeyValue> results = new ArrayList<KeyValue>();
+          List<Cell> results = new ArrayList<Cell>();
           hasMore = scanner.next(results);
           if (results.size() > 0) {
             deleteRows.add(results);
@@ -147,7 +148,7 @@ public class BulkDeleteEndpoint extends BulkDeleteService implements Coprocessor
         if (deleteRows.size() > 0) {
           Mutation[] deleteArr = new Mutation[deleteRows.size()];
           int i = 0;
-          for (List<KeyValue> deleteRow : deleteRows) {
+          for (List<Cell> deleteRow : deleteRows) {
             deleteArr[i++] = createDeleteMutation(deleteRow, deleteType, timestamp);
           }
           OperationStatus[] opStatus = region.batchMutate(deleteArr);
@@ -188,7 +189,7 @@ public class BulkDeleteEndpoint extends BulkDeleteService implements Coprocessor
     done.run(result);
   }
 
-  private Delete createDeleteMutation(List<KeyValue> deleteRow, DeleteType deleteType,
+  private Delete createDeleteMutation(List<Cell> deleteRow, DeleteType deleteType,
       Long timestamp) {
     long ts;
     if (timestamp == null) {
@@ -197,19 +198,19 @@ public class BulkDeleteEndpoint extends BulkDeleteService implements Coprocessor
       ts = timestamp;
     }
     // We just need the rowkey. Get it from 1st KV.
-    byte[] row = deleteRow.get(0).getRow();
+    byte[] row = CellUtil.getRowArray(deleteRow.get(0));
     Delete delete = new Delete(row, ts);
     if (deleteType == DeleteType.FAMILY) {
       Set<byte[]> families = new TreeSet<byte[]>(Bytes.BYTES_COMPARATOR);
-      for (KeyValue kv : deleteRow) {
-        if (families.add(kv.getFamily())) {
-          delete.deleteFamily(kv.getFamily(), ts);
+      for (Cell kv : deleteRow) {
+        if (families.add(CellUtil.getFamilyArray(kv))) {
+          delete.deleteFamily(CellUtil.getFamilyArray(kv), ts);
         }
       }
     } else if (deleteType == DeleteType.COLUMN) {
       Set<Column> columns = new HashSet<Column>();
-      for (KeyValue kv : deleteRow) {
-        Column column = new Column(kv.getFamily(), kv.getQualifier());
+      for (Cell kv : deleteRow) {
+        Column column = new Column(CellUtil.getFamilyArray(kv), CellUtil.getQualifierArray(kv));
         if (columns.add(column)) {
           // Making deleteColumns() calls more than once for the same cf:qualifier is not correct
           // Every call to deleteColumns() will add a new KV to the familymap which will finally
@@ -224,14 +225,14 @@ public class BulkDeleteEndpoint extends BulkDeleteService implements Coprocessor
       // the scan fetched will get deleted.
       int noOfVersionsToDelete = 0;
       if (timestamp == null) {
-        for (KeyValue kv : deleteRow) {
-          delete.deleteColumn(kv.getFamily(), kv.getQualifier(), kv.getTimestamp());
+        for (Cell kv : deleteRow) {
+          delete.deleteColumn(CellUtil.getFamilyArray(kv), CellUtil.getQualifierArray(kv), kv.getTimestamp());
           noOfVersionsToDelete++;
         }
       } else {
         Set<Column> columns = new HashSet<Column>();
-        for (KeyValue kv : deleteRow) {
-          Column column = new Column(kv.getFamily(), kv.getQualifier());
+        for (Cell kv : deleteRow) {
+          Column column = new Column(CellUtil.getFamilyArray(kv), CellUtil.getQualifierArray(kv));
           // Only one version of particular column getting deleted.
           if (columns.add(column)) {
             delete.deleteColumn(column.family, column.qualifier, ts);

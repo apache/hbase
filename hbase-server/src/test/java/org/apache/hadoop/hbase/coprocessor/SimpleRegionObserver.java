@@ -34,6 +34,7 @@ import com.google.common.collect.ImmutableList;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Get;
@@ -270,8 +271,8 @@ public class SimpleRegionObserver extends BaseRegionObserver {
   }
 
   @Override
-  public void preGet(final ObserverContext<RegionCoprocessorEnvironment> c, final Get get,
-      final List<KeyValue> results) throws IOException {
+  public void preGetOp(final ObserverContext<RegionCoprocessorEnvironment> c, final Get get,
+      final List<Cell> results) throws IOException {
     RegionCoprocessorEnvironment e = c.getEnvironment();
     assertNotNull(e);
     assertNotNull(e.getRegion());
@@ -281,8 +282,8 @@ public class SimpleRegionObserver extends BaseRegionObserver {
   }
 
   @Override
-  public void postGet(final ObserverContext<RegionCoprocessorEnvironment> c, final Get get,
-      final List<KeyValue> results) {
+  public void postGetOp(final ObserverContext<RegionCoprocessorEnvironment> c, final Get get,
+      final List<Cell> results) {
     RegionCoprocessorEnvironment e = c.getEnvironment();
     assertNotNull(e);
     assertNotNull(e.getRegion());
@@ -293,14 +294,14 @@ public class SimpleRegionObserver extends BaseRegionObserver {
       boolean foundA = false;
       boolean foundB = false;
       boolean foundC = false;
-      for (KeyValue kv: results) {
-        if (Bytes.equals(kv.getFamily(), TestRegionObserverInterface.A)) {
+      for (Cell kv: results) {
+        if (CellUtil.matchingFamily(kv, TestRegionObserverInterface.A)) {
           foundA = true;
         }
-        if (Bytes.equals(kv.getFamily(), TestRegionObserverInterface.B)) {
+        if (CellUtil.matchingFamily(kv, TestRegionObserverInterface.B)) {
           foundB = true;
         }
-        if (Bytes.equals(kv.getFamily(), TestRegionObserverInterface.C)) {
+        if (CellUtil.matchingFamily(kv, TestRegionObserverInterface.C)) {
           foundC = true;
         }
       }

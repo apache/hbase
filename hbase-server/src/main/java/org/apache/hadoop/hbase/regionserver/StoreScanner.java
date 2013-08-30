@@ -29,9 +29,11 @@ import java.util.concurrent.CountDownLatch;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.filter.Filter;
@@ -358,7 +360,7 @@ public class StoreScanner extends NonLazyKeyValueScanner
    * @return true if there are more rows, false if scanner is done
    */
   @Override
-  public synchronized boolean next(List<KeyValue> outResult, int limit) throws IOException {
+  public synchronized boolean next(List<Cell> outResult, int limit) throws IOException {
     if (checkReseek()) {
       return true;
     }
@@ -410,7 +412,8 @@ public class StoreScanner extends NonLazyKeyValueScanner
 
           Filter f = matcher.getFilter();
           if (f != null) {
-            kv = f.transform(kv);
+            // TODO convert Scan Query Matcher to be Cell instead of KV based ?
+            kv = KeyValueUtil.ensureKeyValue(f.transformCell(kv));
           }
 
           this.countPerRow++;
@@ -473,7 +476,8 @@ public class StoreScanner extends NonLazyKeyValueScanner
           break;
 
         case SEEK_NEXT_USING_HINT:
-          KeyValue nextKV = matcher.getNextKeyHint(kv);
+          // TODO convert resee to Cell?
+          KeyValue nextKV = KeyValueUtil.ensureKeyValue(matcher.getNextKeyHint(kv));
           if (nextKV != null) {
             reseek(nextKV);
           } else {
@@ -496,7 +500,7 @@ public class StoreScanner extends NonLazyKeyValueScanner
   }
 
   @Override
-  public synchronized boolean next(List<KeyValue> outResult) throws IOException {
+  public synchronized boolean next(List<Cell> outResult) throws IOException {
     return next(outResult, -1);
   }
 

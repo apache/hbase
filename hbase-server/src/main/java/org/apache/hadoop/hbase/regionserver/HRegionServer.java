@@ -55,25 +55,26 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellScannable;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.Chore;
-import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.ClockOutOfSyncException;
+import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HConstants.OperationStatusCode;
-import org.apache.hadoop.hbase.ClockOutOfSyncException;
-import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.HealthCheckChore;
+import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.NotServingRegionException;
-import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.TableDescriptors;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.UnknownScannerException;
 import org.apache.hadoop.hbase.YouAreDeadException;
 import org.apache.hadoop.hbase.ZNodeClearer;
@@ -106,9 +107,9 @@ import org.apache.hadoop.hbase.ipc.PayloadCarryingRpcController;
 import org.apache.hadoop.hbase.ipc.RpcCallContext;
 import org.apache.hadoop.hbase.ipc.RpcClient;
 import org.apache.hadoop.hbase.ipc.RpcServer;
-import org.apache.hadoop.hbase.ipc.ServerNotRunningYetException;
 import org.apache.hadoop.hbase.ipc.RpcServer.BlockingServiceAndInterface;
 import org.apache.hadoop.hbase.ipc.RpcServerInterface;
+import org.apache.hadoop.hbase.ipc.ServerNotRunningYetException;
 import org.apache.hadoop.hbase.ipc.ServerRpcController;
 import org.apache.hadoop.hbase.master.SplitLogManager;
 import org.apache.hadoop.hbase.master.TableLockManager;
@@ -3059,8 +3060,9 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
               if (!results.isEmpty()) {
                 for (Result r : results) {
                   if (maxScannerResultSize < Long.MAX_VALUE){
-                    for (KeyValue kv : r.raw()) {
-                      currentScanResultSize += kv.heapSize();
+                    for (Cell kv : r.raw()) {
+                      // TODO
+                      currentScanResultSize += KeyValueUtil.ensureKeyValue(kv).heapSize();
                     }
                   }
                 }
@@ -3075,7 +3077,7 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
               if (maxResultSize <= 0) {
                 maxResultSize = maxScannerResultSize;
               }
-              List<KeyValue> values = new ArrayList<KeyValue>();
+              List<Cell> values = new ArrayList<Cell>();
               MultiVersionConsistencyControl.setThreadReadPoint(scanner.getMvccReadPoint());
               region.startRegionOperation(Operation.SCAN);
               try {
@@ -3087,8 +3089,8 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
                     boolean moreRows = scanner.nextRaw(values);
                     if (!values.isEmpty()) {
                       if (maxScannerResultSize < Long.MAX_VALUE){
-                        for (KeyValue kv : values) {
-                          currentScanResultSize += kv.heapSize();
+                        for (Cell kv : values) {
+                          currentScanResultSize += KeyValueUtil.ensureKeyValue(kv).heapSize();
                         }
                       }
                       results.add(new Result(values));

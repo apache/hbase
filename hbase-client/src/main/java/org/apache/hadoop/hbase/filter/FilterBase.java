@@ -5,7 +5,8 @@
  * distributed with this work for additional information
  * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance                                                                       with the License.  You may obtain a copy of the License at
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
  *
  *     http://www.apache.org/licenses/LICENSE-2.0
  *
@@ -24,7 +25,9 @@ import java.util.List;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.KeyValueUtil;
 
 /**
  * Abstract base class to help you implement new Filters.  Common "ignore" or NOOP type
@@ -72,12 +75,12 @@ public abstract class FilterBase extends Filter {
 
   /**
    * Filters that dont filter by key value can inherit this implementation that
-   * includes all KeyValues.
+   * includes all Cells.
    *
    * @inheritDoc
    */
   @Override
-  public ReturnCode filterKeyValue(KeyValue ignored) throws IOException {
+  public ReturnCode filterKeyValue(Cell ignored) throws IOException {
     return ReturnCode.INCLUDE;
   }
 
@@ -87,22 +90,54 @@ public abstract class FilterBase extends Filter {
    * @inheritDoc
    */
   @Override
-  public KeyValue transform(KeyValue v) throws IOException {
-    return v;
+  public Cell transformCell(Cell v) throws IOException {
+    // Old filters based off of this class will override KeyValue transform(KeyValue).
+    // Thus to maintain compatibility we need to call the old version.
+    return transform(KeyValueUtil.ensureKeyValue(v));
   }
 
   /**
-   * Filters that never filter by modifying the returned List of KeyValues can
+   * WARNING: please to not override this method.  Instead override {@link #transformCell(Cell)}.
+   *
+   * This is for transition from 0.94 -> 0.96
+   */
+  @Override
+  @Deprecated
+  public KeyValue transform(KeyValue currentKV) throws IOException {
+    return currentKV;
+  }
+
+  /**
+   * Filters that never filter by modifying the returned List of Cells can
    * inherit this implementation that does nothing.
    *
    * @inheritDoc
    */
   @Override
-  public void filterRow(List<KeyValue> ignored) throws IOException {
+  public void filterRowCells(List<Cell> ignored) throws IOException {
+    // Old filters based off of this class will override KeyValue transform(KeyValue).
+    // Thus to maintain compatibility we need to call the old version.
+    List<KeyValue> kvs = new ArrayList<KeyValue>(ignored.size());
+    for (Cell c : ignored) {
+      kvs.add(KeyValueUtil.ensureKeyValue(c));
+    }
+    filterRow(kvs);
+    ignored.clear();
+    ignored.addAll(kvs);
   }
 
   /**
-   * Fitlers that never filter by modifying the returned List of KeyValues can
+   * WARNING: please to not override this method.  Instead override {@link #transformCell(Cell)}.
+   *
+   * This is for transition from 0.94 -> 0.96
+   */
+  @Override
+  @Deprecated
+  public void filterRow(List<KeyValue> kvs) throws IOException {
+  }
+
+  /**
+   * Fitlers that never filter by modifying the returned List of Cells can
    * inherit this implementation that does nothing.
    *
    * @inheritDoc
@@ -114,7 +149,7 @@ public abstract class FilterBase extends Filter {
 
   /**
    * Filters that never filter by rows based on previously gathered state from
-   * {@link #filterKeyValue(KeyValue)} can inherit this implementation that
+   * {@link #filterKeyValue(Cell)} can inherit this implementation that
    * never filters a row.
    *
    * @inheritDoc
@@ -125,13 +160,24 @@ public abstract class FilterBase extends Filter {
   }
 
   /**
+   * This method is deprecated and you should override Cell getNextKeyHint(Cell) instead.
+   */
+  @Override
+  @Deprecated
+  public KeyValue getNextKeyHint(KeyValue currentKV) throws IOException {
+    return null;
+  }
+  
+  /**
    * Filters that are not sure which key must be next seeked to, can inherit
-   * this implementation that, by default, returns a null KeyValue.
+   * this implementation that, by default, returns a null Cell.
    *
    * @inheritDoc
    */
-  public KeyValue getNextKeyHint(KeyValue currentKV) throws IOException {
-    return null;
+  public Cell getNextCellHint(Cell currentKV) throws IOException {
+    // Old filters based off of this class will override KeyValue getNextKeyHint(KeyValue).
+    // Thus to maintain compatibility we need to call the old version.
+    return getNextKeyHint(KeyValueUtil.ensureKeyValue(currentKV));
   }
 
   /**

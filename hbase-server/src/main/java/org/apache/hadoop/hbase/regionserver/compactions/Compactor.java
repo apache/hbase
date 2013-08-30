@@ -28,8 +28,10 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.CellOutputStream;
 import org.apache.hadoop.hbase.io.compress.Compression;
@@ -198,14 +200,15 @@ public abstract class Compactor {
     int bytesWritten = 0;
     // Since scanner.next() can return 'false' but still be delivering data,
     // we have to use a do/while loop.
-    List<KeyValue> kvs = new ArrayList<KeyValue>();
+    List<Cell> kvs = new ArrayList<Cell>();
     // Limit to "hbase.hstore.compaction.kv.max" (default 10) to avoid OOME
     int closeCheckInterval = HStore.getCloseCheckInterval();
     boolean hasMore;
     do {
       hasMore = scanner.next(kvs, compactionKVMax);
       // output to writer:
-      for (KeyValue kv : kvs) {
+      for (Cell c : kvs) {
+        KeyValue kv = KeyValueUtil.ensureKeyValue(c);
         if (kv.getMvccVersion() <= smallestReadPoint) {
           kv.setMvccVersion(0);
         }

@@ -213,12 +213,12 @@ public class TestTableMapReduce {
         byte[] firstValue = null;
         byte[] secondValue = null;
         int count = 0;
-         for(KeyValue kv : r.list()) {
+         for(Cell kv : r.list()) {
           if (count == 0) {
-            firstValue = kv.getValue();
+            firstValue = CellUtil.getValueArray(kv);
           }
           if (count == 1) {
-            secondValue = kv.getValue();
+            secondValue = CellUtil.getValueArray(kv);;
           }
           count++;
           if (count == 2) {

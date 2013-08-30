@@ -18,15 +18,15 @@
  */
 package org.apache.hadoop.hbase.client.coprocessor;
 
+import java.io.IOException;
+
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.coprocessor.ColumnInterpreter;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.EmptyMsg;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.LongMsg;
 import org.apache.hadoop.hbase.util.Bytes;
-
-import java.io.IOException;
 
 /**
  * a concrete column interpreter implementation. The cell value is a Long value
@@ -41,11 +41,11 @@ import java.io.IOException;
 public class LongColumnInterpreter extends ColumnInterpreter<Long, Long,
                  EmptyMsg, LongMsg, LongMsg> {
 
-  public Long getValue(byte[] colFamily, byte[] colQualifier, KeyValue kv)
+  public Long getValue(byte[] colFamily, byte[] colQualifier, Cell kv)
       throws IOException {
     if (kv == null || kv.getValueLength() != Bytes.SIZEOF_LONG)
       return null;
-    return Bytes.toLong(kv.getBuffer(), kv.getValueOffset());
+    return Bytes.toLong(kv.getValueArray(), kv.getValueOffset());
   }
 
    @Override

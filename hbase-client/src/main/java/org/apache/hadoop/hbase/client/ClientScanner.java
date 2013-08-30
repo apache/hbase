@@ -26,6 +26,8 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseConfiguration;
@@ -375,8 +377,9 @@ public class ClientScanner extends AbstractClientScanner {
           if (values != null && values.length > 0) {
             for (Result rs : values) {
               cache.add(rs);
-              for (KeyValue kv : rs.raw()) {
-                  remainingResultSize -= kv.heapSize();
+              for (Cell kv : rs.raw()) {
+                // TODO make method in Cell or CellUtil
+                remainingResultSize -= KeyValueUtil.ensureKeyValue(kv).heapSize();
               }
               countdown--;
               this.lastResult = rs;

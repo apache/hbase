@@ -30,6 +30,8 @@ import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
@@ -39,9 +41,9 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Delete;
+import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.filter.FilterList.Operator;
 import org.apache.hadoop.hbase.regionserver.HRegion;
@@ -267,22 +269,22 @@ public class TestFilter {
 
     // reseek to row three.
     scanner.reseek(ROWS_THREE[1]);
-    List<KeyValue> results = new ArrayList<KeyValue>();
+    List<Cell> results = new ArrayList<Cell>();
 
     // the results should belong to ROWS_THREE[1]
     scanner.next(results);
-    for (KeyValue keyValue : results) {
-      assertEquals("The rows with ROWS_TWO as row key should be appearing.",
-          Bytes.toString(keyValue.getRow()), Bytes.toString(ROWS_THREE[1]));
+    for (Cell keyValue : results) {
+      assertTrue("The rows with ROWS_TWO as row key should be appearing.",
+          CellUtil.matchingRow(keyValue, ROWS_THREE[1]));
     }
     // again try to reseek to a value before ROWS_THREE[1]
     scanner.reseek(ROWS_ONE[1]);
-    results = new ArrayList<KeyValue>();
+    results = new ArrayList<Cell>();
     // This time no seek would have been done to ROWS_ONE[1]
     scanner.next(results);
-    for (KeyValue keyValue : results) {
+    for (Cell keyValue : results) {
       assertFalse("Cannot rewind back to a value less than previous reseek.",
-          Bytes.toString(keyValue.getRow()).contains("testRowOne"));
+          Bytes.toString(CellUtil.getRowArray(keyValue)).contains("testRowOne"));
     }
   }
 
@@ -419,7 +421,7 @@ public class TestFilter {
     InternalScanner scanner = this.region.getScanner(s);
     int scannerCounter = 0;
     while (true) {
-      boolean isMoreResults = scanner.next(new ArrayList<KeyValue>());
+      boolean isMoreResults = scanner.next(new ArrayList<Cell>());
       scannerCounter++;
 
       if (scannerCounter >= pageSize) {
@@ -450,9 +452,9 @@ public class TestFilter {
 
     InternalScanner scanner = this.region.getScanner(s);
     while (true) {
-      ArrayList<KeyValue> values = new ArrayList<KeyValue>();
+      ArrayList<Cell> values = new ArrayList<Cell>();
       boolean isMoreResults = scanner.next(values);
-      if (!isMoreResults || !Bytes.toString(values.get(0).getRow()).startsWith(prefix)) {
+      if (!isMoreResults || !Bytes.toString(CellUtil.getRowArray(values.get(0))).startsWith(prefix)) {
         assertTrue("The WhileMatchFilter should now filter all remaining", filter.filterAllRemaining());
       }
       if (!isMoreResults) {
@@ -480,7 +482,7 @@ public class TestFilter {
 
     InternalScanner scanner = this.region.getScanner(s);
     while (true) {
-      ArrayList<KeyValue> values = new ArrayList<KeyValue>();
+      ArrayList<Cell> values = new ArrayList<Cell>();
       boolean isMoreResults = scanner.next(values);
       assertTrue("The WhileMatchFilter should now filter all remaining", filter.filterAllRemaining());
       if (!isMoreResults) {
@@ -1375,7 +1377,7 @@ public class TestFilter {
   private void verifyScan(Scan s, long expectedRows, long expectedKeys)
   throws IOException {
     InternalScanner scanner = this.region.getScanner(s);
-    List<KeyValue> results = new ArrayList<KeyValue>();
+    List<Cell> results = new ArrayList<Cell>();
     int i = 0;
     for (boolean done = true; done; i++) {
       done = scanner.next(results);
@@ -1397,7 +1399,7 @@ public class TestFilter {
       long expectedKeys)
   throws IOException {
     InternalScanner scanner = this.region.getScanner(s);
-    List<KeyValue> results = new ArrayList<KeyValue>();
+    List<Cell> results = new ArrayList<Cell>();
     int i = 0;
     for (boolean done = true; done; i++) {
       done = scanner.next(results);
@@ -1418,7 +1420,7 @@ public class TestFilter {
   private void verifyScanFull(Scan s, KeyValue [] kvs)
   throws IOException {
     InternalScanner scanner = this.region.getScanner(s);
-    List<KeyValue> results = new ArrayList<KeyValue>();
+    List<Cell> results = new ArrayList<Cell>();
     int row = 0;
     int idx = 0;
     for (boolean done = true; done; row++) {
@@ -1430,17 +1432,13 @@ public class TestFilter {
           " total but already scanned " + (results.size() + idx) +
           (results.isEmpty() ? "" : "(" + results.get(0).toString() + ")"),
           kvs.length >= idx + results.size());
-      for (KeyValue kv : results) {
+      for (Cell kv : results) {
         LOG.info("row=" + row + ", result=" + kv.toString() +
             ", match=" + kvs[idx].toString());
-        assertTrue("Row mismatch",
-            Bytes.equals(kv.getRow(), kvs[idx].getRow()));
-        assertTrue("Family mismatch",
-            Bytes.equals(kv.getFamily(), kvs[idx].getFamily()));
-        assertTrue("Qualifier mismatch",
-            Bytes.equals(kv.getQualifier(), kvs[idx].getQualifier()));
-        assertTrue("Value mismatch",
-            Bytes.equals(kv.getValue(), kvs[idx].getValue()));
+        assertTrue("Row mismatch", CellUtil.matchingRow(kv, kvs[idx]));
+        assertTrue("Family mismatch", CellUtil.matchingFamily(kv, kvs[idx]));
+        assertTrue("Qualifier mismatch", CellUtil.matchingQualifier(kv, kvs[idx]));
+        assertTrue("Value mismatch", CellUtil.matchingValue(kv, kvs[idx]));
         idx++;
       }
       results.clear();
@@ -1453,7 +1451,7 @@ public class TestFilter {
   private void verifyScanFullNoValues(Scan s, KeyValue [] kvs, boolean useLen)
   throws IOException {
     InternalScanner scanner = this.region.getScanner(s);
-    List<KeyValue> results = new ArrayList<KeyValue>();
+    List<Cell> results = new ArrayList<Cell>();
     int row = 0;
     int idx = 0;
     for (boolean more = true; more; row++) {
@@ -1465,28 +1463,24 @@ public class TestFilter {
           " total but already scanned " + (results.size() + idx) +
           (results.isEmpty() ? "" : "(" + results.get(0).toString() + ")"),
           kvs.length >= idx + results.size());
-      for(KeyValue kv : results) {
+      for(Cell kv : results) {
         LOG.info("row=" + row + ", result=" + kv.toString() +
             ", match=" + kvs[idx].toString());
-        assertTrue("Row mismatch",
-            Bytes.equals(kv.getRow(), kvs[idx].getRow()));
-        assertTrue("Family mismatch",
-            Bytes.equals(kv.getFamily(), kvs[idx].getFamily()));
-        assertTrue("Qualifier mismatch",
-            Bytes.equals(kv.getQualifier(), kvs[idx].getQualifier()));
-        assertFalse("Should not have returned whole value",
-            Bytes.equals(kv.getValue(), kvs[idx].getValue()));
+
+        assertTrue("Row mismatch", CellUtil.matchingRow(kv, kvs[idx]));
+        assertTrue("Family mismatch", CellUtil.matchingFamily(kv, kvs[idx]));
+        assertTrue("Qualifier mismatch", CellUtil.matchingQualifier(kv, kvs[idx]));
+        assertFalse("Should not have returned whole value", CellUtil.matchingValue(kv, kvs[idx]));
         if (useLen) {
           assertEquals("Value in result is not SIZEOF_INT",
-                     kv.getValue().length, Bytes.SIZEOF_INT);
+                     kv.getValueLength(), Bytes.SIZEOF_INT);
           LOG.info("idx = "  + idx + ", len=" + kvs[idx].getValueLength()
-              + ", actual=" +  Bytes.toInt(kv.getValue()));
+              + ", actual=" +  Bytes.toInt(CellUtil.getValueArray(kv)));
           assertEquals("Scan value should be the length of the actual value. ",
-                     kvs[idx].getValueLength(), Bytes.toInt(kv.getValue()) );
+                     kvs[idx].getValueLength(), Bytes.toInt(CellUtil.getValueArray(kv)) );
           LOG.info("good");
         } else {
-          assertEquals("Value in result is not empty",
-                     kv.getValue().length, 0);
+          assertEquals("Value in result is not empty", kv.getValueLength(), 0);
         }
         idx++;
       }
@@ -1788,12 +1782,12 @@ public class TestFilter {
     Scan s1 = new Scan();
     s1.setFilter(rowFilter);
     InternalScanner scanner = testRegion.getScanner(s1);
-    List<KeyValue> results = new ArrayList<KeyValue>();
+    List<Cell> results = new ArrayList<Cell>();
     int i = 5;
     for (boolean done = true; done; i++) {
       done = scanner.next(results);
-      assertTrue(Bytes.equals(results.get(0).getRow(), Bytes.toBytes("row" + i)));
-      assertEquals(Bytes.toInt(results.get(0).getValue()), i%2);
+      assertTrue(CellUtil.matchingRow(results.get(0), Bytes.toBytes("row" + i)));
+      assertEquals(Bytes.toInt(CellUtil.getValueArray(results.get(0))), i%2);
       results.clear();
     }
     // 2. got rows <= "row4" and S=
@@ -1807,11 +1801,11 @@ public class TestFilter {
     s1 = new Scan();
     s1.setFilter(subFilterList);
     scanner = testRegion.getScanner(s1);
-    results = new ArrayList<KeyValue>();
+    results = new ArrayList<Cell>();
     for (i=0; i<=4; i+=2) {
       scanner.next(results);
-      assertTrue(Bytes.equals(results.get(0).getRow(), Bytes.toBytes("row" + i)));
-      assertEquals(Bytes.toInt(results.get(0).getValue()), i%2);
+      assertTrue(CellUtil.matchingRow(results.get(0), Bytes.toBytes("row" + i)));
+      assertEquals(Bytes.toInt(CellUtil.getValueArray(results.get(0))), i%2);
       results.clear();
     }
     assertFalse(scanner.next(results));
@@ -1823,17 +1817,17 @@ public class TestFilter {
     s1 = new Scan();
     s1.setFilter(filterList);
     scanner = testRegion.getScanner(s1);
-    results = new ArrayList<KeyValue>();
+    results = new ArrayList<Cell>();
     for (i=0; i<=4; i+=2) {
       scanner.next(results);
-      assertTrue(Bytes.equals(results.get(0).getRow(), Bytes.toBytes("row" + i)));
-      assertEquals(Bytes.toInt(results.get(0).getValue()), i%2);
+      assertTrue(CellUtil.matchingRow(results.get(0), Bytes.toBytes("row" + i)));
+      assertEquals(Bytes.toInt(CellUtil.getValueArray(results.get(0))), i%2);
       results.clear();
     }
     for (i=5; i<=9; i++) {
       scanner.next(results);
-      assertTrue(Bytes.equals(results.get(0).getRow(), Bytes.toBytes("row" + i)));
-      assertEquals(Bytes.toInt(results.get(0).getValue()), i%2);
+      assertTrue(CellUtil.matchingRow(results.get(0), Bytes.toBytes("row" + i)));
+      assertEquals(Bytes.toInt(CellUtil.getValueArray(results.get(0))), i%2);
       results.clear();
     }
     assertFalse(scanner.next(results));
@@ -1844,17 +1838,17 @@ public class TestFilter {
     s1 = new Scan();
     s1.setFilter(filterList);
     scanner = testRegion.getScanner(s1);
-    results = new ArrayList<KeyValue>();
+    results = new ArrayList<Cell>();
     for (i=0; i<=4; i+=2) {
       scanner.next(results);
-      assertTrue(Bytes.equals(results.get(0).getRow(), Bytes.toBytes("row" + i)));
-      assertEquals(Bytes.toInt(results.get(0).getValue()), i%2);
+      assertTrue(CellUtil.matchingRow(results.get(0), Bytes.toBytes("row" + i)));
+      assertEquals(Bytes.toInt(CellUtil.getValueArray(results.get(0))), i%2);
       results.clear();
     }
     for (i=5; i<=9; i++) {
       scanner.next(results);
-      assertTrue(Bytes.equals(results.get(0).getRow(), Bytes.toBytes("row" + i)));
-      assertEquals(Bytes.toInt(results.get(0).getValue()), i%2);
+      assertTrue(CellUtil.matchingRow(results.get(0), Bytes.toBytes("row" + i)));
+      assertEquals(Bytes.toInt(CellUtil.getValueArray(results.get(0))), i%2);
       results.clear();
     }
     assertFalse(scanner.next(results));

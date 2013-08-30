@@ -26,7 +26,9 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
@@ -166,7 +168,11 @@ public class SingleColumnValueFilter extends FilterBase {
     return columnQualifier;
   }
 
-  public ReturnCode filterKeyValue(KeyValue keyValue) {
+  @Override
+  public ReturnCode filterKeyValue(Cell c) {
+    // TODO get rid of this.
+    KeyValue keyValue = KeyValueUtil.ensureKeyValue(c);
+    
     // System.out.println("REMOVE KEY=" + keyValue.toString() + ", value=" + Bytes.toString(keyValue.getValue()));
     if (this.matchedColumn) {
       // We already found and matched the single column, all keys now pass

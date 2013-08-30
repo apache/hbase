@@ -25,7 +25,9 @@ import java.util.List;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.FilterProtos;
@@ -51,7 +53,7 @@ import com.google.protobuf.InvalidProtocolBufferException;
  */
 @InterfaceAudience.Public
 @InterfaceStability.Stable
-public class FilterList extends Filter {
+final public class FilterList extends Filter {
   /** set operator */
   public static enum Operator {
     /** !AND */
@@ -65,17 +67,17 @@ public class FilterList extends Filter {
   private List<Filter> filters = new ArrayList<Filter>();
   private Filter seekHintFilter = null;
 
-  /** Reference KeyValue used by {@link #transform(KeyValue)} for validation purpose. */
-  private KeyValue referenceKV = null;
+  /** Reference Cell used by {@link #transformCell(Cell)} for validation purpose. */
+  private Cell referenceKV = null;
 
   /**
-   * When filtering a given KeyValue in {@link #filterKeyValue(KeyValue)},
-   * this stores the transformed KeyValue to be returned by {@link #transform(KeyValue)}.
+   * When filtering a given Cell in {@link #filterKeyValue(Cell)},
+   * this stores the transformed Cell to be returned by {@link #transformCell(Cell)}.
    *
-   * Individual filters transformation are applied only when the filter includes the KeyValue.
+   * Individual filters transformation are applied only when the filter includes the Cell.
    * Transformations are composed in the order specified by {@link #filters}.
    */
-  private KeyValue transformedKV = null;
+  private Cell transformedKV = null;
 
   /**
    * Constructor that takes a set of {@link Filter}s. The default operator
@@ -202,21 +204,35 @@ public class FilterList extends Filter {
   }
 
   @Override
+  public Cell transformCell(Cell v) throws IOException {
+    return transform(KeyValueUtil.ensureKeyValue(v));
+  }
+
+  /**
+   * WARNING: please to not override this method.  Instead override {@link #transformCell(Cell)}.
+   *
+   * When removing this, its body should be placed in transformCell.
+   *
+   * This is for transition from 0.94 -> 0.96
+   */
+  @Deprecated
+  @Override
   public KeyValue transform(KeyValue v) throws IOException {
     // transform() is expected to follow an inclusive filterKeyValue() immediately:
     if (!v.equals(this.referenceKV)) {
       throw new IllegalStateException(
-          "Reference KeyValue: " + this.referenceKV + " does not match: " + v);
+          "Reference Cell: " + this.referenceKV + " does not match: " + v);
      }
-    return this.transformedKV;
+    return KeyValueUtil.ensureKeyValue(this.transformedKV);
   }
 
+  
   @Override
-  public ReturnCode filterKeyValue(KeyValue v) throws IOException {
+  public ReturnCode filterKeyValue(Cell v) throws IOException {
     this.referenceKV = v;
 
-    // Accumulates successive transformation of every filter that includes the KeyValue:
-    KeyValue transformed = v;
+    // Accumulates successive transformation of every filter that includes the Cell:
+    Cell transformed = v;
 
     ReturnCode rc = operator == Operator.MUST_PASS_ONE?
         ReturnCode.SKIP: ReturnCode.INCLUDE;
@@ -231,7 +247,7 @@ public class FilterList extends Filter {
         case INCLUDE_AND_NEXT_COL:
           rc = ReturnCode.INCLUDE_AND_NEXT_COL;
         case INCLUDE:
-          transformed = filter.transform(transformed);
+          transformed = filter.transformCell(transformed);
           continue;
         case SEEK_NEXT_USING_HINT:
           seekHintFilter = filter;
@@ -249,11 +265,11 @@ public class FilterList extends Filter {
           if (rc != ReturnCode.INCLUDE_AND_NEXT_COL) {
             rc = ReturnCode.INCLUDE;
           }
-          transformed = filter.transform(transformed);
+          transformed = filter.transformCell(transformed);
           break;
         case INCLUDE_AND_NEXT_COL:
           rc = ReturnCode.INCLUDE_AND_NEXT_COL;
-          transformed = filter.transform(transformed);
+          transformed = filter.transformCell(transformed);
           // must continue here to evaluate all filters
           break;
         case NEXT_ROW:
@@ -270,19 +286,56 @@ public class FilterList extends Filter {
       }
     }
 
-    // Save the transformed KeyValue for transform():
+    // Save the transformed Cell for transform():
     this.transformedKV = transformed;
 
     return rc;
   }
 
+  /**
+   * Filters that never filter by modifying the returned List of Cells can
+   * inherit this implementation that does nothing.
+   *
+   * @inheritDoc
+   */
   @Override
-  public void filterRow(List<KeyValue> kvs) throws IOException {
-    for (Filter filter : filters) {
-      filter.filterRow(kvs);
+  public void filterRowCells(List<Cell> ignored) throws IOException {
+    // Old filters based off of this class will override KeyValue transform(KeyValue).
+    // Thus to maintain compatibility we need to call the old version.
+    List<KeyValue> kvs = new ArrayList<KeyValue>(ignored.size());
+    for (Cell c : ignored) {
+      kvs.add(KeyValueUtil.ensureKeyValue(c));
     }
+    filterRow(kvs);
+    ignored.clear();
+    ignored.addAll(kvs);
   }
 
+  /**
+   * WARNING: please to not override this method.  Instead override {@link #transformCell(Cell)}.
+   *
+   * This is for transition from 0.94 -> 0.96
+   */
+  @Override
+  @Deprecated
+  public void filterRow(List<KeyValue> kvs) throws IOException {
+    // when removing this, this body should be in filterRowCells
+
+    // convert to List<Cell> and call the new interface (this will call 0.96-style
+    // #filterRowCells(List<Cell>) which may delegate to legacy #filterRow(List<KV>) 
+    List<Cell> cells = new ArrayList<Cell>(kvs.size());
+    cells.addAll(kvs);
+    for (Filter filter : filters) {
+      filter.filterRowCells(cells); 
+    }
+
+    // convert results into kvs
+    kvs.clear();
+    for (Cell c : cells) {
+      kvs.add(KeyValueUtil.ensureKeyValue(c));
+    }
+  }
+  
   @Override
   public boolean hasFilterRow() {
     for (Filter filter : filters) {
@@ -364,16 +417,22 @@ public class FilterList extends Filter {
   }
 
   @Override
+  @Deprecated
   public KeyValue getNextKeyHint(KeyValue currentKV) throws IOException {
-    KeyValue keyHint = null;
+    return KeyValueUtil.ensureKeyValue(getNextCellHint((Cell)currentKV));
+  }
+
+  @Override
+  public Cell getNextCellHint(Cell currentKV) throws IOException {
+    Cell keyHint = null;
     if (operator == Operator.MUST_PASS_ALL) {
-      keyHint = seekHintFilter.getNextKeyHint(currentKV);
+      keyHint = seekHintFilter.getNextCellHint(currentKV);
       return keyHint;
     }
 
     // If any condition can pass, we need to keep the min hint
     for (Filter filter : filters) {
-      KeyValue curKeyHint = filter.getNextKeyHint(currentKV);
+      Cell curKeyHint = filter.getNextCellHint(currentKV);
       if (curKeyHint == null) {
         // If we ever don't have a hint and this is must-pass-one, then no hint
         return null;

@@ -38,6 +38,8 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
@@ -314,13 +316,11 @@ public class TestImportTsv implements Configurable {
         ResultScanner resScanner = table.getScanner(scan);
         for (Result res : resScanner) {
           assertTrue(res.size() == 2);
-          List<KeyValue> kvs = res.list();
-          assertArrayEquals(kvs.get(0).getRow(), Bytes.toBytes("KEY"));
-          assertArrayEquals(kvs.get(1).getRow(), Bytes.toBytes("KEY"));
-          assertArrayEquals(kvs.get(0).getValue(),
-            Bytes.toBytes("VALUE" + valueMultiplier));
-          assertArrayEquals(kvs.get(1).getValue(),
-            Bytes.toBytes("VALUE" + 2 * valueMultiplier));
+          List<Cell> kvs = res.list();
+          assertTrue(CellUtil.matchingRow(kvs.get(0), Bytes.toBytes("KEY")));
+          assertTrue(CellUtil.matchingRow(kvs.get(1), Bytes.toBytes("KEY")));
+          assertTrue(CellUtil.matchingValue(kvs.get(0), Bytes.toBytes("VALUE" + valueMultiplier)));
+          assertTrue(CellUtil.matchingValue(kvs.get(1), Bytes.toBytes("VALUE" + 2 * valueMultiplier)));
           // Only one result set is expected, so let it loop.
         }
         verified = true;

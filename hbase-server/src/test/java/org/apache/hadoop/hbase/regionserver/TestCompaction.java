@@ -39,6 +39,8 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestCase;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -140,9 +142,9 @@ public class TestCompaction extends HBaseTestCase {
     // Now delete everything.
     InternalScanner s = r.getScanner(new Scan());
     do {
-      List<KeyValue> results = new ArrayList<KeyValue>();
+      List<Cell> results = new ArrayList<Cell>();
       boolean result = s.next(results);
-      r.delete(new Delete(results.get(0).getRow()));
+      r.delete(new Delete(CellUtil.getRowArray(results.get(0))));
       if (!result) break;
     } while(true);
     s.close();
@@ -153,7 +155,7 @@ public class TestCompaction extends HBaseTestCase {
     s = r.getScanner(new Scan());
     int counter = 0;
     do {
-      List<KeyValue> results = new ArrayList<KeyValue>();
+      List<Cell> results = new ArrayList<Cell>();
       boolean result = s.next(results);
       if (!result) break;
       counter++;

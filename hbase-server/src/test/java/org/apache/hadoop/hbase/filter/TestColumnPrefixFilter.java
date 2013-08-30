@@ -56,13 +56,13 @@ public class TestColumnPrefixFilter {
       List<String> columns = generateRandomWords(10000, "column");
       long maxTimestamp = 2;
 
-      List<KeyValue> kvList = new ArrayList<KeyValue>();
+      List<Cell> kvList = new ArrayList<Cell>();
 
-      Map<String, List<KeyValue>> prefixMap = new HashMap<String,
-          List<KeyValue>>();
+      Map<String, List<Cell>> prefixMap = new HashMap<String,
+          List<Cell>>();
 
-      prefixMap.put("p", new ArrayList<KeyValue>());
-      prefixMap.put("s", new ArrayList<KeyValue>());
+      prefixMap.put("p", new ArrayList<Cell>());
+      prefixMap.put("s", new ArrayList<Cell>());
 
       String valueString = "ValueString";
 
@@ -94,7 +94,7 @@ public class TestColumnPrefixFilter {
         scan.setFilter(filter);
 
         InternalScanner scanner = region.getScanner(scan);
-        List<KeyValue> results = new ArrayList<KeyValue>();
+        List<Cell> results = new ArrayList<Cell>();
         while(scanner.next(results));
         assertEquals(prefixMap.get(s).size(), results.size());
       }
@@ -118,13 +118,13 @@ public class TestColumnPrefixFilter {
       List<String> columns = generateRandomWords(10000, "column");
       long maxTimestamp = 2;
 
-      List<KeyValue> kvList = new ArrayList<KeyValue>();
+      List<Cell> kvList = new ArrayList<Cell>();
 
-      Map<String, List<KeyValue>> prefixMap = new HashMap<String,
-          List<KeyValue>>();
+      Map<String, List<Cell>> prefixMap = new HashMap<String,
+          List<Cell>>();
 
-      prefixMap.put("p", new ArrayList<KeyValue>());
-      prefixMap.put("s", new ArrayList<KeyValue>());
+      prefixMap.put("p", new ArrayList<Cell>());
+      prefixMap.put("s", new ArrayList<Cell>());
 
       String valueString = "ValueString";
 
@@ -159,7 +159,7 @@ public class TestColumnPrefixFilter {
         scan.setFilter(filterList);
 
         InternalScanner scanner = region.getScanner(scan);
-        List<KeyValue> results = new ArrayList<KeyValue>();
+        List<Cell> results = new ArrayList<Cell>();
         while(scanner.next(results));
         assertEquals(prefixMap.get(s).size(), results.size());
       }

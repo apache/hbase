@@ -26,6 +26,7 @@ import java.util.NoSuchElementException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Get;
@@ -38,8 +39,8 @@ import org.apache.hadoop.util.StringUtils;
 public class RowResultGenerator extends ResultGenerator {
   private static final Log LOG = LogFactory.getLog(RowResultGenerator.class);
 
-  private Iterator<KeyValue> valuesI;
-  private KeyValue cache;
+  private Iterator<Cell> valuesI;
+  private Cell cache;
 
   public RowResultGenerator(final String tableName, final RowSpec rowspec,
       final Filter filter) throws IllegalArgumentException, IOException {
@@ -91,9 +92,9 @@ public class RowResultGenerator extends ResultGenerator {
     return valuesI.hasNext();
   }
 
-  public KeyValue next() {
+  public Cell next() {
     if (cache != null) {
-      KeyValue kv = cache;
+      Cell kv = cache;
       cache = null;
       return kv;
     }
@@ -107,7 +108,7 @@ public class RowResultGenerator extends ResultGenerator {
     }
   }
 
-  public void putBack(KeyValue kv) {
+  public void putBack(Cell kv) {
     this.cache = kv;
   }
 

@@ -27,13 +27,17 @@ import java.util.Random;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.*;
+import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.HBaseTestCase;
+import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.SmallTests;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.client.Durability;
-import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.junit.experimental.categories.Category;
 
 @Category(SmallTests.class)
@@ -85,7 +89,7 @@ public class TestWideScanner extends HBaseTestCase {
     try {
       this.r = createNewHRegion(TESTTABLEDESC, null, null);
       int inserted = addWideContent(this.r);
-      List<KeyValue> results = new ArrayList<KeyValue>();
+      List<Cell> results = new ArrayList<Cell>();
       Scan scan = new Scan();
       scan.addFamily(A);
       scan.addFamily(B);
@@ -108,9 +112,9 @@ public class TestWideScanner extends HBaseTestCase {
 
         if (results.size() > 0) {
           // assert that all results are from the same row
-          byte[] row = results.get(0).getRow();
-          for (KeyValue kv: results) {
-            assertTrue(Bytes.equals(row, kv.getRow()));
+          byte[] row = CellUtil.getRowArray(results.get(0));
+          for (Cell kv: results) {
+            assertTrue(Bytes.equals(row, CellUtil.getRowArray(kv)));
           }
         }
 

@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.codec.prefixtree.decode;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
 
@@ -183,6 +184,26 @@ public class PrefixTreeCell implements Cell, Comparable<Cell> {
     return type.getCode();
   }
 
+  /* Deprecated methods pushed into the Cell interface */
+  @Override
+  public byte[] getValue() {
+    return CellUtil.getValueArray(this);
+  }
+
+  @Override
+  public byte[] getFamily() {
+    return CellUtil.getFamilyArray(this);
+  }
+
+  @Override
+  public byte[] getQualifier() {
+    return CellUtil.getQualifierArray(this);
+  }
+
+  @Override
+  public byte[] getRow() {
+    return CellUtil.getRowArray(this);
+  }
 
   /************************* helper methods *************************/
 
@@ -208,4 +229,5 @@ public class PrefixTreeCell implements Cell, Comparable<Cell> {
   public byte[] getTagsArray() {
     throw new UnsupportedOperationException("Not implemented");
   }
+
 }

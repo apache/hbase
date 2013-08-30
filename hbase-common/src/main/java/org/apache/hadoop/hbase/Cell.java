@@ -41,8 +41,10 @@ import org.apache.hadoop.classification.InterfaceStability;
  * qualifier. Less intuitively, it will then treat the greater timestamp as the lesser value with
  * the goal of sorting newer cells first.
  * <p/>
- * This interface does not include methods that allocate new byte[]'s such as those used in client
- * or debugging code. These should be placed in a sub-interface or the {@link CellUtil} class.
+ * This interface should not include methods that allocate new byte[]'s such as those used in client
+ * or debugging code. These users should use the methods found in the {@link CellUtil} class.
+ * Currently for to minimize the impact of existing applications moving between 0.94 and 0.96, we
+ * include the costly helper methods marked as deprecated.   
  * <p/>
  * Cell implements Comparable<Cell> which is only meaningful when comparing to other keys in the
  * same table. It uses CellComparator which does not work on the -ROOT- and .META. tables.
@@ -182,5 +184,44 @@ public interface Cell {
    * @return the total length of the tags in the Cell.
    */
   short getTagsLength();
+  
+  /**
+   * WARNING do not use, expensive.  This gets an arraycopy of the cell's value.
+   *
+   * Added to ease transition from  0.94 -> 0.96.
+   * 
+   * @deprecated as of 0.96, use {@link CellUtil#getValueArray(Cell)}
+   */
+  @Deprecated
+  byte[] getValue();
+  
+  /**
+   * WARNING do not use, expensive.  This gets an arraycopy of the cell's family. 
+   *
+   * Added to ease transition from  0.94 -> 0.96.
+   * 
+   * @deprecated as of 0.96, use {@link CellUtil#getFamilyArray(Cell)}
+   */
+  @Deprecated
+  byte[] getFamily();
 
+  /**
+   * WARNING do not use, expensive.  This gets an arraycopy of the cell's qualifier.
+   *
+   * Added to ease transition from  0.94 -> 0.96.
+   * 
+   * @deprecated as of 0.96, use {@link CellUtil#getQualifierArray(Cell)}
+   */
+  @Deprecated
+  byte[] getQualifier();
+
+  /**
+   * WARNING do not use, expensive.  this gets an arraycopy of the cell's row.
+   *
+   * Added to ease transition from  0.94 -> 0.96.
+   * 
+   * @deprecated as of 0.96, use {@link CellUtil#getRowByte(Cell, int)}
+   */
+  @Deprecated
+  byte[] getRow();
 }

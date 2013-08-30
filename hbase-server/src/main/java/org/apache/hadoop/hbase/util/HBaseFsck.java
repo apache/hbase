@@ -56,8 +56,8 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.hbase.Abortable;
+import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.ClusterStatus;
-import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
@@ -67,6 +67,7 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.catalog.MetaEditor;
 import org.apache.hadoop.hbase.client.Delete;
@@ -2558,8 +2559,8 @@ public class HBaseFsck extends Configured implements Tool {
       int countRecord = 1;
 
       // comparator to sort KeyValues with latest modtime
-      final Comparator<KeyValue> comp = new Comparator<KeyValue>() {
-        public int compare(KeyValue k1, KeyValue k2) {
+      final Comparator<Cell> comp = new Comparator<Cell>() {
+        public int compare(Cell k1, Cell k2) {
           return (int)(k1.getTimestamp() - k2.getTimestamp());
         }
       };

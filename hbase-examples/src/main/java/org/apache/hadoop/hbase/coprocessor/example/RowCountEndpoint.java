@@ -18,12 +18,14 @@
 
 package org.apache.hadoop.hbase.coprocessor.example;
 
-import com.google.protobuf.RpcCallback;
-import com.google.protobuf.RpcController;
-import com.google.protobuf.Service;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+
+import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
-import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorException;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorService;
@@ -34,9 +36,9 @@ import org.apache.hadoop.hbase.protobuf.ResponseConverter;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.util.Bytes;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
+import com.google.protobuf.RpcCallback;
+import com.google.protobuf.RpcController;
+import com.google.protobuf.Service;
 
 /**
  * Sample coprocessor endpoint exposing a Service interface for counting rows and key values.
@@ -73,14 +75,14 @@ public class RowCountEndpoint extends ExampleProtos.RowCountService
     InternalScanner scanner = null;
     try {
       scanner = env.getRegion().getScanner(scan);
-      List<KeyValue> results = new ArrayList<KeyValue>();
+      List<Cell> results = new ArrayList<Cell>();
       boolean hasMore = false;
       byte[] lastRow = null;
       long count = 0;
       do {
         hasMore = scanner.next(results);
-        for (KeyValue kv : results) {
-          byte[] currentRow = kv.getRow();
+        for (Cell kv : results) {
+          byte[] currentRow = CellUtil.getRowArray(kv);
           if (lastRow == null || !Bytes.equals(lastRow, currentRow)) {
             lastRow = currentRow;
             count++;
@@ -113,12 +115,12 @@ public class RowCountEndpoint extends ExampleProtos.RowCountService
     InternalScanner scanner = null;
     try {
       scanner = env.getRegion().getScanner(new Scan());
-      List<KeyValue> results = new ArrayList<KeyValue>();
+      List<Cell> results = new ArrayList<Cell>();
       boolean hasMore = false;
       long count = 0;
       do {
         hasMore = scanner.next(results);
-        for (KeyValue kv : results) {
+        for (Cell kv : results) {
           count++;
         }
         results.clear();

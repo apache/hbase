@@ -66,6 +66,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.CompoundConfiguration;
 import org.apache.hadoop.hbase.DroppedSnapshotException;
 import org.apache.hadoop.hbase.HBaseConfiguration;
@@ -1842,7 +1843,7 @@ public class HRegion implements HeapSize { // , Writable{
           get.setMaxVersions(count);
           get.addColumn(family, qual);
 
-          List<KeyValue> result = get(get, false);
+          List<Cell> result = get(get, false);
 
           if (result.size() < count) {
             // Nothing to delete
@@ -1852,7 +1853,7 @@ public class HRegion implements HeapSize { // , Writable{
           if (result.size() > count) {
             throw new RuntimeException("Unexpected size: " + result.size());
           }
-          KeyValue getkv = result.get(count - 1);
+          KeyValue getkv = KeyValueUtil.ensureKeyValue(result.get(count - 1));
           Bytes.putBytes(kv.getBuffer(), kv.getTimestampOffset(),
               getkv.getBuffer(), getkv.getTimestampOffset(), Bytes.SIZEOF_LONG);
         } else {
@@ -2372,7 +2373,7 @@ public class HRegion implements HeapSize { // , Writable{
       RowLock rowLock = getRowLock(get.getRow());
       // wait for all previous transactions to complete (with lock held)
       mvcc.completeMemstoreInsert(mvcc.beginMemstoreInsert());
-      List<KeyValue> result = null;
+      List<Cell> result;
       try {
         result = get(get, false);
 
@@ -2381,12 +2382,12 @@ public class HRegion implements HeapSize { // , Writable{
         boolean matches = false;
         if (result.size() == 0 && valueIsNull) {
           matches = true;
-        } else if (result.size() > 0 && result.get(0).getValue().length == 0 &&
+        } else if (result.size() > 0 && result.get(0).getValueLength() == 0 &&
             valueIsNull) {
           matches = true;
         } else if (result.size() == 1 && !valueIsNull) {
-          KeyValue kv = result.get(0);
-          int compareResult = comparator.compareTo(kv.getBuffer(),
+          Cell kv = result.get(0);
+          int compareResult = comparator.compareTo(kv.getValueArray(),
               kv.getValueOffset(), kv.getValueLength());
           switch (compareOp) {
           case LESS:
@@ -3511,14 +3512,14 @@ public class HRegion implements HeapSize { // , Writable{
     }
 
     @Override
-    public boolean next(List<KeyValue> outResults)
+    public boolean next(List<Cell> outResults)
         throws IOException {
       // apply the batching limit by default
       return next(outResults, batch);
     }
 
     @Override
-    public synchronized boolean next(List<KeyValue> outResults, int limit) throws IOException {
+    public synchronized boolean next(List<Cell> outResults, int limit) throws IOException {
       if (this.filterClosed) {
         throw new UnknownScannerException("Scanner was closed (timed out?) " +
             "after we renewed it. Could be caused by a very slow scanner " +
@@ -3538,20 +3539,20 @@ public class HRegion implements HeapSize { // , Writable{
     }
 
     @Override
-    public boolean nextRaw(List<KeyValue> outResults)
+    public boolean nextRaw(List<Cell> outResults)
         throws IOException {
       return nextRaw(outResults, batch);
     }
 
     @Override
-    public boolean nextRaw(List<KeyValue> outResults, int limit) throws IOException {
+    public boolean nextRaw(List<Cell> outResults, int limit) throws IOException {
       boolean returnResult;
       if (outResults.isEmpty()) {
         // Usually outResults is empty. This is true when next is called
         // to handle scan or get operation.
         returnResult = nextInternal(outResults, limit);
       } else {
-        List<KeyValue> tmpList = new ArrayList<KeyValue>();
+        List<Cell> tmpList = new ArrayList<Cell>();
         returnResult = nextInternal(tmpList, limit);
         outResults.addAll(tmpList);
       }
@@ -3562,7 +3563,10 @@ public class HRegion implements HeapSize { // , Writable{
       if (region != null && region.metricsRegion != null) {
         long totalSize = 0;
         if (outResults != null) {
-          for(KeyValue kv:outResults) {
+          for(Cell c:outResults) {
+            // TODO clean up
+            KeyValue kv = KeyValueUtil.ensureKeyValue(c);
+
             totalSize += kv.getLength();
           }
         }
@@ -3572,7 +3576,7 @@ public class HRegion implements HeapSize { // , Writable{
     }
 
 
-    private void populateFromJoinedHeap(List<KeyValue> results, int limit)
+    private void populateFromJoinedHeap(List<Cell> results, int limit)
         throws IOException {
       assert joinedContinuationRow != null;
       KeyValue kv = populateResult(results, this.joinedHeap, limit,
@@ -3597,7 +3601,7 @@ public class HRegion implements HeapSize { // , Writable{
      * @param length length for currentRow
      * @return KV_LIMIT if limit reached, next KeyValue otherwise.
      */
-    private KeyValue populateResult(List<KeyValue> results, KeyValueHeap heap, int limit,
+    private KeyValue populateResult(List<Cell> results, KeyValueHeap heap, int limit,
         byte[] currentRow, int offset, short length) throws IOException {
       KeyValue nextKv;
       do {
@@ -3619,7 +3623,7 @@ public class HRegion implements HeapSize { // , Writable{
       return this.filter != null && this.filter.filterAllRemaining();
     }
 
-    private boolean nextInternal(List<KeyValue> results, int limit)
+    private boolean nextInternal(List<Cell> results, int limit)
     throws IOException {
       if (!results.isEmpty()) {
         throw new IllegalArgumentException("First parameter should be an empty list");
@@ -3657,7 +3661,7 @@ public class HRegion implements HeapSize { // , Writable{
           // First, check if we are at a stop row. If so, there are no more results.
           if (stopRow) {
             if (filter != null && filter.hasFilterRow()) {
-              filter.filterRow(results);
+              filter.filterRowCells(results);
             }
             return false;
           }
@@ -3690,7 +3694,7 @@ public class HRegion implements HeapSize { // , Writable{
           // We have the part of the row necessary for filtering (all of it, usually).
           // First filter with the filterRow(List).
           if (filter != null && filter.hasFilterRow()) {
-            filter.filterRow(results);
+            filter.filterRowCells(results);
           }
           if (isEmptyRow) {
             boolean moreRows = nextRow(currentRow, offset, length);
@@ -4392,7 +4396,7 @@ public class HRegion implements HeapSize { // , Writable{
         get.addFamily(family);
       }
     }
-    List<KeyValue> results = get(get, true);
+    List<Cell> results = get(get, true);
     return new Result(results);
   }
 
@@ -4401,10 +4405,10 @@ public class HRegion implements HeapSize { // , Writable{
    * @param withCoprocessor invoke coprocessor or not. We don't want to
    * always invoke cp for this private method.
    */
-  private List<KeyValue> get(Get get, boolean withCoprocessor)
+  private List<Cell> get(Get get, boolean withCoprocessor)
   throws IOException {
 
-    List<KeyValue> results = new ArrayList<KeyValue>();
+    List<Cell> results = new ArrayList<Cell>();
 
     // pre-get CP hook
     if (withCoprocessor && (coprocessorHost != null)) {
@@ -4433,8 +4437,8 @@ public class HRegion implements HeapSize { // , Writable{
     if (this.metricsRegion != null) {
       long totalSize = 0l;
       if (results != null) {
-        for (KeyValue kv:results) {
-          totalSize += kv.getLength();
+        for (Cell kv:results) {
+          totalSize += KeyValueUtil.ensureKeyValue(kv).getLength();
         }
       }
       this.metricsRegion.updateGet(totalSize);
@@ -4711,8 +4715,8 @@ public class HRegion implements HeapSize { // , Writable{
               KeyValue kv = KeyValueUtil.ensureKeyValue(cell);
               get.addColumn(family.getKey(), kv.getQualifier());
             }
-            List<KeyValue> results = get(get, false);
-
+            List<Cell> results = get(get, false);
+  
             // Iterate the input columns and update existing values if they were
             // found, otherwise add new column initialized to the append value
 
@@ -4724,9 +4728,8 @@ public class HRegion implements HeapSize { // , Writable{
               KeyValue kv = KeyValueUtil.ensureKeyValue(cell);
               KeyValue newKV;
               if (idx < results.size()
-                  && results.get(idx).matchingQualifier(kv.getBuffer(),
-                      kv.getQualifierOffset(), kv.getQualifierLength())) {
-                KeyValue oldKv = results.get(idx);
+                  && CellUtil.matchingQualifier(results.get(idx),kv)) {
+                KeyValue oldKv = KeyValueUtil.ensureKeyValue(results.get(idx));
                 // allocate an empty kv once
                 newKV = new KeyValue(row.length, kv.getFamilyLength(),
                     kv.getQualifierLength(), now, KeyValue.Type.Put,
@@ -4886,19 +4889,17 @@ public class HRegion implements HeapSize { // , Writable{
               get.addColumn(family.getKey(), kv.getQualifier());
             }
             get.setTimeRange(tr.getMin(), tr.getMax());
-            List<KeyValue> results = get(get, false);
-
+            List<Cell> results = get(get, false);
+  
             // Iterate the input columns and update existing values if they were
             // found, otherwise add new column initialized to the increment amount
             int idx = 0;
-            for (Cell cell: family.getValue()) {
-              KeyValue kv = KeyValueUtil.ensureKeyValue(cell);
-              long amount = Bytes.toLong(kv.getValue());
-              byte [] qualifier = kv.getQualifier();
-              if (idx < results.size() && results.get(idx).matchingQualifier(qualifier)) {
-                kv = results.get(idx);
-                if(kv.getValueLength() == Bytes.SIZEOF_LONG) {
-                  amount += Bytes.toLong(kv.getBuffer(), kv.getValueOffset(), Bytes.SIZEOF_LONG);
+            for (Cell kv: family.getValue()) {
+              long amount = Bytes.toLong(CellUtil.getValueArray(kv));
+              if (idx < results.size() && CellUtil.matchingQualifier(results.get(idx), kv)) {
+                Cell c = results.get(idx);
+                if(c.getValueLength() == Bytes.SIZEOF_LONG) {
+                  amount += Bytes.toLong(c.getValueArray(), c.getValueOffset(), Bytes.SIZEOF_LONG);
                 } else {
                   // throw DoNotRetryIOException instead of IllegalArgumentException
                   throw new org.apache.hadoop.hbase.DoNotRetryIOException(
@@ -4909,7 +4910,7 @@ public class HRegion implements HeapSize { // , Writable{
 
               // Append new incremented KeyValue to list
               KeyValue newKV =
-                new KeyValue(row, family.getKey(), qualifier, now, Bytes.toBytes(amount));
+                new KeyValue(row, family.getKey(), CellUtil.getQualifierArray(kv), now, Bytes.toBytes(amount));
               newKV.setMvccVersion(w.getWriteNumber());
               kvs.add(newKV);
 
@@ -5167,7 +5168,7 @@ public class HRegion implements HeapSize { // , Writable{
         // scan.addFamily(HConstants.CATALOG_FAMILY);
         RegionScanner scanner = region.getScanner(scan);
         try {
-          List<KeyValue> kvs = new ArrayList<KeyValue>();
+          List<Cell> kvs = new ArrayList<Cell>();
           boolean done = false;
           do {
             kvs.clear();
@@ -5478,15 +5479,15 @@ public class HRegion implements HeapSize { // , Writable{
   /**
    * A mocked list implementaion - discards all updates.
    */
-  private static final List<KeyValue> MOCKED_LIST = new AbstractList<KeyValue>() {
+  private static final List<Cell> MOCKED_LIST = new AbstractList<Cell>() {
 
     @Override
-    public void add(int index, KeyValue element) {
+    public void add(int index, Cell element) {
       // do nothing
     }
 
     @Override
-    public boolean addAll(int index, Collection<? extends KeyValue> c) {
+    public boolean addAll(int index, Collection<? extends Cell> c) {
       return false; // this list is never changed as a result of an update
     }
 

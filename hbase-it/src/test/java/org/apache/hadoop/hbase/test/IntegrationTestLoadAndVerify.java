@@ -17,6 +17,9 @@
  */
 package org.apache.hadoop.hbase.test;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+
 import java.io.IOException;
 import java.util.Random;
 import java.util.Set;
@@ -24,13 +27,13 @@ import java.util.UUID;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import com.google.common.collect.Sets;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
@@ -38,7 +41,6 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.IntegrationTestBase;
 import org.apache.hadoop.hbase.IntegrationTestingUtility;
 import org.apache.hadoop.hbase.IntegrationTests;
-import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
@@ -65,8 +67,7 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import com.google.common.collect.Sets;
 
 /**
  * A large test which loads a lot of data that has internal references, and
@@ -247,12 +248,12 @@ public class IntegrationTestLoadAndVerify  extends IntegrationTestBase  {
         throws IOException, InterruptedException {
       BytesWritable bwKey = new BytesWritable(key.get());
       BytesWritable bwVal = new BytesWritable();
-      for (KeyValue kv : value.list()) {
+      for (Cell kv : value.list()) {
         if (Bytes.compareTo(TEST_QUALIFIER, 0, TEST_QUALIFIER.length,
-                            kv.getBuffer(), kv.getQualifierOffset(), kv.getQualifierLength()) == 0) {
+                            kv.getQualifierArray(), kv.getQualifierOffset(), kv.getQualifierLength()) == 0) {
           context.write(bwKey, EMPTY);
         } else {
-          bwVal.set(kv.getBuffer(), kv.getQualifierOffset(), kv.getQualifierLength());
+          bwVal.set(kv.getQualifierArray(), kv.getQualifierOffset(), kv.getQualifierLength());
           context.write(bwVal, bwKey);
         }
       }

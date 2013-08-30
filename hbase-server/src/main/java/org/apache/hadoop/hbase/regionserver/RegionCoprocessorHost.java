@@ -34,21 +34,21 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Append;
 import org.apache.hadoop.hbase.client.Delete;
+import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Increment;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorService;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
@@ -786,7 +786,7 @@ public class RegionCoprocessorHost
    * @return true if default processing should be bypassed
    * @exception IOException Exception
    */
-  public boolean preGet(final Get get, final List<KeyValue> results)
+  public boolean preGet(final Get get, final List<Cell> results)
       throws IOException {
     boolean bypass = false;
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
@@ -794,7 +794,7 @@ public class RegionCoprocessorHost
       if (env.getInstance() instanceof RegionObserver) {
         ctx = ObserverContext.createAndPrepare(env, ctx);
         try {
-          ((RegionObserver)env.getInstance()).preGet(ctx, get, results);
+          ((RegionObserver)env.getInstance()).preGetOp(ctx, get, results);
         } catch (Throwable e) {
           handleCoprocessorThrowable(env, e);
         }
@@ -809,17 +809,17 @@ public class RegionCoprocessorHost
 
   /**
    * @param get the Get request
-   * @param results the result set
+   * @param results the result sett
    * @exception IOException Exception
    */
-  public void postGet(final Get get, final List<KeyValue> results)
+  public void postGet(final Get get, final List<Cell> results)
   throws IOException {
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
     for (RegionEnvironment env: coprocessors) {
       if (env.getInstance() instanceof RegionObserver) {
         ctx = ObserverContext.createAndPrepare(env, ctx);
         try {
-          ((RegionObserver)env.getInstance()).postGet(ctx, get, results);
+          ((RegionObserver)env.getInstance()).postGetOp(ctx, get, results);
         } catch (Throwable e) {
           handleCoprocessorThrowable(env, e);
         }

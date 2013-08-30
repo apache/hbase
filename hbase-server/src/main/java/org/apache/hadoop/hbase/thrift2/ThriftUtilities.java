@@ -18,20 +18,45 @@
  */
 package org.apache.hadoop.hbase.thrift2;
 
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.KeyValueUtil;
-import org.apache.hadoop.hbase.client.*;
-import org.apache.hadoop.hbase.filter.ParseFilter;
-import org.apache.hadoop.hbase.thrift2.generated.*;
-import org.apache.hadoop.hbase.util.Bytes;
+import static org.apache.hadoop.hbase.util.Bytes.getBytes;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 
-import static org.apache.hadoop.hbase.util.Bytes.getBytes;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.KeyValueUtil;
+import org.apache.hadoop.hbase.client.Delete;
+import org.apache.hadoop.hbase.client.Durability;
+import org.apache.hadoop.hbase.client.Get;
+import org.apache.hadoop.hbase.client.Increment;
+import org.apache.hadoop.hbase.client.OperationWithAttributes;
+import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.RowMutations;
+import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.filter.ParseFilter;
+import org.apache.hadoop.hbase.thrift2.generated.TColumn;
+import org.apache.hadoop.hbase.thrift2.generated.TColumnIncrement;
+import org.apache.hadoop.hbase.thrift2.generated.TColumnValue;
+import org.apache.hadoop.hbase.thrift2.generated.TDelete;
+import org.apache.hadoop.hbase.thrift2.generated.TDeleteType;
+import org.apache.hadoop.hbase.thrift2.generated.TDurability;
+import org.apache.hadoop.hbase.thrift2.generated.TGet;
+import org.apache.hadoop.hbase.thrift2.generated.TIncrement;
+import org.apache.hadoop.hbase.thrift2.generated.TMutation;
+import org.apache.hadoop.hbase.thrift2.generated.TPut;
+import org.apache.hadoop.hbase.thrift2.generated.TResult;
+import org.apache.hadoop.hbase.thrift2.generated.TRowMutations;
+import org.apache.hadoop.hbase.thrift2.generated.TScan;
+import org.apache.hadoop.hbase.thrift2.generated.TTimeRange;
+import org.apache.hadoop.hbase.util.Bytes;
 
 @InterfaceAudience.Private
 public class ThriftUtilities {
@@ -115,19 +140,19 @@ public class ThriftUtilities {
    * @return converted result, returns an empty result if the input is <code>null</code>
    */
   public static TResult resultFromHBase(Result in) {
-    KeyValue[] raw = in.raw();
+    Cell[] raw = in.raw();
     TResult out = new TResult();
     byte[] row = in.getRow();
     if (row != null) {
       out.setRow(in.getRow());
     }
     List<TColumnValue> columnValues = new ArrayList<TColumnValue>();
-    for (KeyValue kv : raw) {
+    for (Cell kv : raw) {
       TColumnValue col = new TColumnValue();
-      col.setFamily(kv.getFamily());
-      col.setQualifier(kv.getQualifier());
+      col.setFamily(CellUtil.getFamilyArray(kv));
+      col.setQualifier(CellUtil.getQualifierArray(kv));
       col.setTimestamp(kv.getTimestamp());
-      col.setValue(kv.getValue());
+      col.setValue(CellUtil.getValueArray(kv));
       columnValues.add(col);
     }
     out.setColumnValues(columnValues);

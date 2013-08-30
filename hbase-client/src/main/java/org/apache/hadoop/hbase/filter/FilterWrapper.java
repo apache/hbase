@@ -20,14 +20,18 @@
 package org.apache.hadoop.hbase.filter;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.FilterProtos;
+import org.apache.zookeeper.KeeperException.UnimplementedException;
 
 import com.google.protobuf.InvalidProtocolBufferException;
 
@@ -40,7 +44,7 @@ import com.google.protobuf.InvalidProtocolBufferException;
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
-public class FilterWrapper extends Filter {
+final public class FilterWrapper extends Filter {
   Filter filter = null;
 
   public FilterWrapper( Filter filter ) {
@@ -97,9 +101,23 @@ public class FilterWrapper extends Filter {
     return this.filter.filterRow();
   }
 
+  /**
+   * This method is deprecated and you should override Cell getNextKeyHint(Cell) instead.
+   */
   @Override
+  @Deprecated
   public KeyValue getNextKeyHint(KeyValue currentKV) throws IOException {
-    return this.filter.getNextKeyHint(currentKV);
+    return KeyValueUtil.ensureKeyValue(this.filter.getNextCellHint((Cell)currentKV));
+  }
+
+  /**
+   * Old filter wrapper descendants will implement KV getNextKeyHint(KV) so we should call it.
+   */
+  @Override
+  public Cell getNextCellHint(Cell currentKV) throws IOException {
+    // Old filters based off of this class will override KeyValue getNextKeyHint(KeyValue).
+    // Thus to maintain compatibility we need to call the old version.
+    return this.getNextKeyHint(KeyValueUtil.ensureKeyValue(currentKV));
   }
 
   @Override
@@ -108,13 +126,26 @@ public class FilterWrapper extends Filter {
   }
 
   @Override
-  public ReturnCode filterKeyValue(KeyValue v) throws IOException {
+  public ReturnCode filterKeyValue(Cell v) throws IOException {
     return this.filter.filterKeyValue(v);
   }
 
   @Override
-  public KeyValue transform(KeyValue v) throws IOException {
-    return this.filter.transform(v);
+  public Cell transformCell(Cell v) throws IOException {
+    // Old filters based off of this class will override KeyValue transform(KeyValue).
+    // Thus to maintain compatibility we need to call the old version.
+    return transform(KeyValueUtil.ensureKeyValue(v));
+  }
+
+  /**
+   * WARNING: please to not override this method.  Instead override {@link #transformCell(Cell)}.
+   *
+   * This is for transition from 0.94 -> 0.96
+   */
+  @Override
+  @Deprecated
+  public KeyValue transform(KeyValue currentKV) throws IOException {
+    return KeyValueUtil.ensureKeyValue(this.filter.transformCell(currentKV));
   }
 
   @Override
@@ -123,16 +154,29 @@ public class FilterWrapper extends Filter {
   }
 
   @Override
-  public void filterRow(List<KeyValue> kvs) throws IOException {
-    //To fix HBASE-6429, 
+  public void filterRowCells(List<Cell> kvs) throws IOException {
+    //To fix HBASE-6429,
     //Filter with filterRow() returning true is incompatible with scan with limit
     //1. hasFilterRow() returns true, if either filterRow() or filterRow(kvs) is implemented.
     //2. filterRow() is merged with filterRow(kvs),
     //so that to make all those row related filtering stuff in the same function.
-    this.filter.filterRow(kvs);
+    this.filter.filterRowCells(kvs);
     if (!kvs.isEmpty() && this.filter.filterRow()) {
       kvs.clear();
     }
+  }
+
+  /**
+   * WARNING: please to not override this method.  Instead override {@link #transformCell(Cell)}.
+   *
+   * This is for transition from 0.94 -> 0.96
+   */
+  @Override
+  @Deprecated
+  public void filterRow(List<KeyValue> kvs) throws IOException {
+    // This is only used internally, marked InterfaceAudience.private, and not used anywhere.
+    // We can get away with not implementing this.
+    throw new UnsupportedOperationException("filterRow(List<KeyValue>) should never be called");
   }
 
   @Override

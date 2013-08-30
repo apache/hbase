@@ -27,20 +27,21 @@ import java.util.List;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestCase;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Delete;
+import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFile;
@@ -138,16 +139,16 @@ public class TestBlocksRead extends HBaseTestCase {
     region.put(put);
   }
 
-  private KeyValue[] getData(String family, String row, List<String> columns,
+  private Cell[] getData(String family, String row, List<String> columns,
       int expBlocks) throws IOException {
     return getData(family, row, columns, expBlocks, expBlocks, expBlocks);
   }
 
-  private KeyValue[] getData(String family, String row, List<String> columns,
+  private Cell[] getData(String family, String row, List<String> columns,
       int expBlocksRowCol, int expBlocksRow, int expBlocksNone)
       throws IOException {
     int[] expBlocks = new int[] { expBlocksRowCol, expBlocksRow, expBlocksNone };
-    KeyValue[] kvs = null;
+    Cell[] kvs = null;
 
     for (int i = 0; i < BLOOM_TYPE.length; i++) {
       BloomType bloomType = BLOOM_TYPE[i];
@@ -171,13 +172,13 @@ public class TestBlocksRead extends HBaseTestCase {
     return kvs;
   }
 
-  private KeyValue[] getData(String family, String row, String column,
+  private Cell[] getData(String family, String row, String column,
       int expBlocks) throws IOException {
     return getData(family, row, Arrays.asList(column), expBlocks, expBlocks,
         expBlocks);
   }
 
-  private KeyValue[] getData(String family, String row, String column,
+  private Cell[] getData(String family, String row, String column,
       int expBlocksRowCol, int expBlocksRow, int expBlocksNone)
       throws IOException {
     return getData(family, row, Arrays.asList(column), expBlocksRowCol,
@@ -193,14 +194,12 @@ public class TestBlocksRead extends HBaseTestCase {
     region.delete(del);
   }
 
-  private static void verifyData(KeyValue kv, String expectedRow,
+  private static void verifyData(Cell kv, String expectedRow,
       String expectedCol, long expectedVersion) {
-    assertEquals("RowCheck", expectedRow, Bytes.toString(kv.getRow()));
-    assertEquals("ColumnCheck", expectedCol, Bytes.toString(kv.getQualifier()));
+    assertTrue("RowCheck", CellUtil.matchingRow(kv,  Bytes.toBytes(expectedRow)));
+    assertTrue("ColumnCheck", CellUtil.matchingQualifier(kv, Bytes.toBytes(expectedCol)));
     assertEquals("TSCheck", expectedVersion, kv.getTimestamp());
-    assertEquals("ValueCheck",
-        Bytes.toString(genValue(expectedRow, expectedCol, expectedVersion)),
-        Bytes.toString(kv.getValue()));
+    assertTrue("ValueCheck", CellUtil.matchingValue(kv, genValue(expectedRow, expectedCol, expectedVersion)));
   }
 
   private static long getBlkAccessCount(byte[] cf) {
@@ -220,7 +219,7 @@ public class TestBlocksRead extends HBaseTestCase {
   public void testBlocksRead() throws Exception {
     byte[] TABLE = Bytes.toBytes("testBlocksRead");
     String FAMILY = "cf1";
-    KeyValue kvs[];
+    Cell kvs[];
     HBaseConfiguration conf = getConf();
     this.region = initHRegion(TABLE, getName(), conf, FAMILY);
 
@@ -277,7 +276,7 @@ public class TestBlocksRead extends HBaseTestCase {
   public void testLazySeekBlocksRead() throws Exception {
     byte[] TABLE = Bytes.toBytes("testLazySeekBlocksRead");
     String FAMILY = "cf1";
-    KeyValue kvs[];
+    Cell kvs[];
     HBaseConfiguration conf = getConf();
     this.region = initHRegion(TABLE, getName(), conf, FAMILY);
 
@@ -400,7 +399,7 @@ public class TestBlocksRead extends HBaseTestCase {
       Scan scan = new Scan();
       scan.setCacheBlocks(false);
       RegionScanner rs = region.getScanner(scan);
-      List<KeyValue> result = new ArrayList<KeyValue>(2);
+      List<Cell> result = new ArrayList<Cell>(2);
       rs.next(result);
       assertEquals(2 * BLOOM_TYPE.length, result.size());
       rs.close();
@@ -413,7 +412,7 @@ public class TestBlocksRead extends HBaseTestCase {
       blocksStart = blocksEnd;
       scan.setCacheBlocks(true);
       rs = region.getScanner(scan);
-      result = new ArrayList<KeyValue>(2);
+      result = new ArrayList<Cell>(2);
       rs.next(result);
       assertEquals(2 * BLOOM_TYPE.length, result.size());
       rs.close();
@@ -430,7 +429,7 @@ public class TestBlocksRead extends HBaseTestCase {
   public void testLazySeekBlocksReadWithDelete() throws Exception {
     byte[] TABLE = Bytes.toBytes("testLazySeekBlocksReadWithDelete");
     String FAMILY = "cf1";
-    KeyValue kvs[];
+    Cell kvs[];
     HBaseConfiguration conf = getConf();
     this.region = initHRegion(TABLE, getName(), conf, FAMILY);
     try {
