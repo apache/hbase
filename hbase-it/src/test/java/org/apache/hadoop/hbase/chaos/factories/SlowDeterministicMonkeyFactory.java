@@ -64,11 +64,7 @@ public class SlowDeterministicMonkeyFactory extends MonkeyFactory {
     Action[] actions2 = new Action[] {
         new SplitRandomRegionOfTableAction(tableName),
         new MergeRandomAdjacentRegionsOfTableAction(tableName),
-        new SnapshotTableAction(tableName),
-        new AddColumnAction(tableName),
-        new RemoveColumnAction(tableName, columnFamilies),
-        new ChangeEncodingAction(tableName),
-        new ChangeVersionsAction(tableName)
+        new SnapshotTableAction(tableName)
     };
 
     // Destructive actions to mess things around.

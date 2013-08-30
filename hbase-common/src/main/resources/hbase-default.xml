@@ -848,7 +848,7 @@ possible configurations would overwhelm and obscure the important.
   </property>
   <property>
     <name>hbase.online.schema.update.enable</name>
-    <value>true</value>
+    <value>false</value>
     <description>Set true to enable online schema changes.</description>
   </property>
   <property>
