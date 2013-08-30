@@ -250,7 +250,7 @@ public class TestLogSplitOnMasterFailover extends MultiMasterTest {
     runTest();
   }
 
-  @Test(timeout=180000)
+  @Test(timeout=280000)
   public void testWithDistributedLogSplittingAndErrors() throws Exception {
     // add a split log worker to handle InjectionEvent.SPLITLOGWORKER_SPLIT_LOG_START.
     ZooKeeperWrapper.setNamespaceForTesting();
