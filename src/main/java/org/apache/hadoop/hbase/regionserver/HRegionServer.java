@@ -2388,13 +2388,14 @@ public class HRegionServer implements HRegionInterface,
           serverInfo.getServerName(), hri.getEncodedName());
       zkUpdater.startRegionCloseEvent(null, false);
     }
-    HRegion region = this.removeFromOnlineRegions(hri);
+    HRegion region = getRegion(hri.getRegionName());
     if (region == null) {
       region = this.removeFromRetryCloseRegions(hri);
     }
     if (region != null) {
       try {
         region.close();
+        this.removeFromOnlineRegions(hri);
       } catch (IOException e) {
         // If region closing fails, add it to retry map.
         this.addToRetryCloseRegions(region);
@@ -2421,7 +2422,6 @@ public class HRegionServer implements HRegionInterface,
     this.lock.writeLock().lock();
     try {
       regionsToClose.addAll(onlineRegions.values());
-      onlineRegions.clear();
     } finally {
       this.lock.writeLock().unlock();
     }
@@ -2436,6 +2436,10 @@ public class HRegionServer implements HRegionInterface,
       }
     }
 
+    return closeRegionsInParallel(regionsToClose);
+  }
+
+  private ArrayList<HRegion> closeRegionsInParallel(List<HRegion> regionsToClose) {
     // Then, we close the regions
     List<Future<Object>> futures =
         new ArrayList<Future<Object>>(regionsToClose.size());
@@ -2479,6 +2483,7 @@ public class HRegionServer implements HRegionInterface,
         }
         try {
           region.close(abortRequested);
+          removeFromOnlineRegions(region.getRegionInfo());
         } catch (IOException e) {
           cleanup(e, "Error closing " + Bytes.toString(region.getRegionName()));
           throw e;
@@ -2486,31 +2491,6 @@ public class HRegionServer implements HRegionInterface,
         return null;
       }
     };
-  }
-
-  /*
-   * Thread to run close of a region.
-   */
-  private static class RegionCloserThread extends HasThread {
-    private final HRegion r;
-
-    protected RegionCloserThread(final HRegion r) {
-      super(Thread.currentThread().getName() + ".regionCloser." + r.toString());
-      this.r = r;
-    }
-
-    @Override
-    public void run() {
-      try {
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Closing region " + r.toString());
-        }
-        r.close();
-      } catch (Throwable e) {
-        LOG.error("Error closing region " + r.toString(),
-          RemoteExceptionHandler.checkThrowable(e));
-      }
-    }
   }
 
   /** Called as the first stage of cluster shutdown. */
@@ -2525,7 +2505,6 @@ public class HRegionServer implements HRegionInterface,
           HRegion r = e.getValue();
           if (!r.getRegionInfo().isMetaRegion()) {
             regionsToClose.add(r);
-            i.remove();
           }
         }
       }
@@ -2533,24 +2512,8 @@ public class HRegionServer implements HRegionInterface,
       this.lock.writeLock().unlock();
     }
     // Run region closes in parallel.
-    List<HasThread> threads = new ArrayList<HasThread>();
-    try {
-      for (final HRegion r : regionsToClose) {
-        RegionCloserThread t = new RegionCloserThread(r);
-        t.start();
-        threads.add(t);
-      }
-    } finally {
-      for (HasThread t : threads) {
-        while (t.isAlive()) {
-          try {
-            t.join();
-          } catch (InterruptedException e) {
-            e.printStackTrace();
-          }
-        }
-      }
-    }
+    closeRegionsInParallel(regionsToClose);
+
     this.quiesced.set(true);
     if (onlineRegions.size() == 0) {
       outboundMsgs.add(REPORT_EXITING);
