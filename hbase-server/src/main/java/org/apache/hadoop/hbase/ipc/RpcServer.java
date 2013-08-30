@@ -1719,10 +1719,10 @@ public class RpcServer implements RpcServerInterface {
       callQueueSize.add(totalRequestSize);
       Pair<RequestHeader, Message> headerAndParam =
         new Pair<RequestHeader, Message>(header, param);
-      if (priorityCallQueue != null && getQosLevel(headerAndParam) > highPriorityLevel) {
+      int level = getQosLevel(headerAndParam);
+      if (priorityCallQueue != null && level > highPriorityLevel) {
         priorityCallQueue.put(call);
-      } else if (replicationQueue != null &&
-          getQosLevel(headerAndParam) == HConstants.REPLICATION_QOS) {
+      } else if (replicationQueue != null && level == HConstants.REPLICATION_QOS) {
         replicationQueue.put(call);
       } else {
         callQueue.put(call);              // queue the call; maybe blocked here
