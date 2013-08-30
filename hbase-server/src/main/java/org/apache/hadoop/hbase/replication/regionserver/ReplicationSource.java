@@ -403,7 +403,7 @@ public class ReplicationSource extends Thread
           logKey.addClusterId(clusterId);
           currentNbOperations += countDistinctRowKeys(edit);
           currentNbEntries++;
-          currentSize += entry.getEdit().size();
+          currentSize += entry.getEdit().heapSize();
         } else {
           this.metrics.incrLogEditsFiltered();
         }
@@ -567,7 +567,9 @@ public class ReplicationSource extends Thread
    */
   protected boolean sleepForRetries(String msg, int sleepMultiplier) {
     try {
-      LOG.debug(msg + ", sleeping " + sleepForRetries + " times " + sleepMultiplier);
+      if (LOG.isTraceEnabled()) {
+        LOG.trace(msg + ", sleeping " + sleepForRetries + " times " + sleepMultiplier);
+      }
       Thread.sleep(this.sleepForRetries * sleepMultiplier);
     } catch (InterruptedException e) {
       LOG.debug("Interrupted while sleeping between retries");
@@ -633,7 +635,8 @@ public class ReplicationSource extends Thread
         sinkPeer = replicationSinkMgr.getReplicationSink();
         BlockingInterface rrs = sinkPeer.getRegionServer();
         if (LOG.isTraceEnabled()) {
-          LOG.trace("Replicating " + this.currentNbEntries + " entries");
+          LOG.trace("Replicating " + this.currentNbEntries +
+              " entries of total size " + currentSize);
         }
         ReplicationProtbufUtil.replicateWALEntry(rrs,
             Arrays.copyOf(this.entriesArray, currentNbEntries));
