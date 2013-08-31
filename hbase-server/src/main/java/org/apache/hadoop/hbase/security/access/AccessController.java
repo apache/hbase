@@ -21,6 +21,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
 import java.util.TreeSet;
 
 import com.google.protobuf.RpcCallback;
@@ -538,7 +539,7 @@ public class AccessController extends BaseRegionObserver
   public void preCreateTable(ObserverContext<MasterCoprocessorEnvironment> c,
       HTableDescriptor desc, HRegionInfo[] regions) throws IOException {
     Set<byte[]> families = desc.getFamiliesKeys();
-    Map<byte[], Set<byte[]>> familyMap = Maps.newTreeMap(Bytes.BYTES_COMPARATOR);
+    Map<byte[], Set<byte[]>> familyMap = new TreeMap<byte[], Set<byte[]>>(Bytes.BYTES_COMPARATOR);
     for (byte[] family: families) {
       familyMap.put(family, null);
     }
@@ -1069,7 +1070,7 @@ public class AccessController extends BaseRegionObserver
       final Increment increment)
       throws IOException {
     // Create a map of family to qualifiers.
-    Map<byte[], Set<byte[]>> familyMap = Maps.newTreeMap(Bytes.BYTES_COMPARATOR);
+    Map<byte[], Set<byte[]>> familyMap = new TreeMap<byte[], Set<byte[]>>(Bytes.BYTES_COMPARATOR);
     for (Map.Entry<byte [], List<Cell>> entry: increment.getFamilyCellMap().entrySet()) {
       Set<byte[]> qualifiers = Sets.newTreeSet(Bytes.BYTES_COMPARATOR);
       for (Cell cell: entry.getValue()) {
@@ -1380,7 +1381,7 @@ public class AccessController extends BaseRegionObserver
                   tperm.getTable()));
             }
 
-            Map<byte[], Set<byte[]>> familyMap = Maps.newTreeMap(Bytes.BYTES_COMPARATOR);
+            Map<byte[], Set<byte[]>> familyMap = new TreeMap<byte[], Set<byte[]>>(Bytes.BYTES_COMPARATOR);
             if (tperm.getFamily() != null) {
               if (tperm.getQualifier() != null) {
                 Set<byte[]> qualifiers = Sets.newTreeSet(Bytes.BYTES_COMPARATOR);
@@ -1470,7 +1471,7 @@ public class AccessController extends BaseRegionObserver
       return null;
     }
 
-    Map<byte[], Collection<byte[]>> familyMap = Maps.newTreeMap(Bytes.BYTES_COMPARATOR);
+    Map<byte[], Collection<byte[]>> familyMap = new TreeMap<byte[], Collection<byte[]>>(Bytes.BYTES_COMPARATOR);
     familyMap.put(family, qualifier != null ? ImmutableSet.of(qualifier) : null);
     return familyMap;
   }
