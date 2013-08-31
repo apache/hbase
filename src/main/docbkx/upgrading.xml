@@ -116,7 +116,7 @@
          </para>
          <para>To run the check step, run <programlisting>$ bin/hbase upgrade -check</programlisting>.
           Here is sample output:
-<computeroutput>
+<programlisting>
              Tables Processed:
              hdfs://localhost:41020/myHBase/.META.
              hdfs://localhost:41020/myHBase/usertable
@@ -137,7 +137,7 @@
              hdfs://localhost:41020/myHBase/usertable/ecdd3eaee2d2fcf8184ac025555bb2af
 
              There are some HFileV1, or corrupt files (files with incorrect major version)
-</computeroutput>
+</programlisting>
              In the above sample output, there are two HFileV1 in two regions, and one corrupt file.
              Corrupt files should probably be removed.  The regions that have HFileV1s need to be major
              compacted.  To major compact, start up the hbase shell and review how to compact an individual
@@ -183,7 +183,7 @@
              Then do as follows:
          <programlisting>$ bin/hbase upgrade -execute</programlisting>
          Here is some sample output
-         <computeroutput>
+         <programlisting>
              Starting Namespace upgrade
              Created version file at hdfs://localhost:41020/myHBase with version=7
              Migrating table testTable to hdfs://localhost:41020/myHBase/.data/default/testTable
@@ -197,7 +197,7 @@
              Starting Log splitting
              …
              Successfully completed Log splitting
-         </computeroutput>
+         </programlisting>
          </para>
          <para>
              If the output from the execute step looks good, start hbase-0.96.0.

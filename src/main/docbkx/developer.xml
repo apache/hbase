@@ -249,6 +249,7 @@ mvn clean package -DskipTests
 &lt;/settings>
         </programlisting>
         </para>
+        <para>The <link xlink:href="http://wiki.apache.org/hadoop/HowToRelease">Hadoop How To Release</link> wiki page informs much of the below and may have more detail on particular sections so it is worth review.</para>
          <para>Update CHANGES.txt with the changes since the last release (query JIRA, export to excel then hack w/ vim to format to suit CHANGES.txt TODO: Needs detail).
              Adjust the version in all the poms appropriately; e.g. you may need to remove <emphasis>-SNAPSHOT</emphasis> from all versions.
              The <link xlink:href="http://mojo.codehaus.org/versions-maven-plugin/">Versions Maven Plugin</link> can be of use here.  To
