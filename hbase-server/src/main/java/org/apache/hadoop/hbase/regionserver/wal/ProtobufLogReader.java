@@ -248,7 +248,7 @@ public class ProtobufLogReader extends ReaderBase {
               + posBefore + " and read up to " + posAfterStr;
           IOException realEofEx = extractHiddenEof(ex);
           throw (EOFException) new EOFException("EOF " + message).
-              initCause(realEofEx != null ? realEofEx : ex);
+              initCause(realEofEx != null ? ex : realEofEx);
         }
         if (trailerPresent && this.inputStream.getPos() > this.walEditsStopOffset) {
           LOG.error("Read WALTrailer while reading WALEdits. hlog: " + this.path
