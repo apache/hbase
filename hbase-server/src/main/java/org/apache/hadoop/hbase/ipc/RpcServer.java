@@ -1982,7 +1982,7 @@ public class RpcServer implements RpcServerInterface {
       2 * HConstants.DEFAULT_HBASE_RPC_TIMEOUT);
     this.numOfReplicationHandlers = conf.getInt("hbase.regionserver.replication.handler.count", 3);
     if (numOfReplicationHandlers > 0) {
-      this.replicationQueue = new LinkedBlockingQueue<Call>(maxQueueSize);
+      this.replicationQueue = new LinkedBlockingQueue<Call>(maxQueueLength);
     }
 
     this.warnResponseTime = conf.getInt(WARN_RESPONSE_TIME, DEFAULT_WARN_RESPONSE_TIME);
