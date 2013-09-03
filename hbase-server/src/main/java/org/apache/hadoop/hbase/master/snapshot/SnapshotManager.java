@@ -377,6 +377,30 @@ public class SnapshotManager implements Stoppable {
   }
 
   /**
+   * Check to see if there is a snapshot in progress with the same name or on the same table.
+   * Currently we have a limitation only allowing a single snapshot per table at a time. Also we
+   * don't allow snapshot with the same name.
+   * @param snapshot description of the snapshot being checked.
+   * @return <tt>true</tt> if there is a snapshot in progress with the same name or on the same
+   *         table.
+   */
+  synchronized boolean isTakingSnapshot(final SnapshotDescription snapshot) {
+    TableName snapshotTable = TableName.valueOf(snapshot.getTable());
+    if (isTakingSnapshot(snapshotTable)) {
+      return true;
+    }
+    Iterator<Map.Entry<TableName, SnapshotSentinel>> it = this.snapshotHandlers.entrySet().iterator();
+    while (it.hasNext()) {
+      Map.Entry<TableName, SnapshotSentinel> entry = it.next();
+      SnapshotSentinel sentinel = entry.getValue();
+      if (snapshot.getName().equals(sentinel.getSnapshot().getName()) && !sentinel.isFinished()) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /**
    * Check to see if the specified table has a snapshot in progress.  Currently we have a
    * limitation only allowing a single snapshot per table at a time.
    * @param tableName name of the table being snapshotted.
@@ -401,12 +425,14 @@ public class SnapshotManager implements Stoppable {
         TableName.valueOf(snapshot.getTable());
 
     // make sure we aren't already running a snapshot
-    if (isTakingSnapshot(snapshotTable)) {
+    if (isTakingSnapshot(snapshot)) {
       SnapshotSentinel handler = this.snapshotHandlers.get(snapshotTable);
       throw new SnapshotCreationException("Rejected taking "
           + ClientSnapshotDescriptionUtils.toString(snapshot)
           + " because we are already running another snapshot "
-          + ClientSnapshotDescriptionUtils.toString(handler.getSnapshot()), snapshot);
+          + (handler != null ? ("on the same table " +
+              ClientSnapshotDescriptionUtils.toString(handler.getSnapshot()))
+              : "with the same name"), snapshot);
     }
 
     // make sure we aren't running a restore on the same table
