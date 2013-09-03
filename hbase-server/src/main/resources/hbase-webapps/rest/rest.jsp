@@ -56,11 +56,9 @@ String listenPort = conf.get("hbase.rest.port", "8080");
           </div>
           <div class="collapse navbar-collapse">
               <ul class="nav navbar-nav">
-                  <li class="active"><a href="/rest.jps">Home</a></li>
-                  <li><a href="/tablesDetailed.jsp">Table Details</a></li>
+                  <li class="active"><a href="/rest.jsp">Home</a></li>
                   <li><a href="/logs/">Local logs</a></li>
                   <li><a href="/logLevel">Log Level</a></li>
-                  <li><a href="/dump">Debug dump</a></li>
                   <li><a href="/jmx">Metrics Dump</a></li>
                   <% if (HBaseConfiguration.isShowConfInServlet()) { %>
                   <li><a href="/conf">HBase Configuration</a></li>
