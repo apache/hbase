@@ -30,6 +30,7 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.executor.EventHandler;
 import org.apache.hadoop.hbase.executor.EventType;
+import org.apache.hadoop.hbase.master.AssignmentManager;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.RegionServerAccounting;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
@@ -37,7 +38,6 @@ import org.apache.hadoop.hbase.util.CancelableProgressable;
 import org.apache.hadoop.hbase.zookeeper.ZKAssign;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.zookeeper.KeeperException;
-
 /**
  * Handles opening of a region on a region server.
  * <p>
@@ -84,9 +84,11 @@ public class OpenRegionHandler extends EventHandler {
     this.htd = htd;
     this.versionOfOfflineNode = versionOfOfflineNode;
     tomActivated = this.server.getConfiguration().
-        getBoolean("hbase.assignment.timeout.management", false);
+      getBoolean(AssignmentManager.ASSIGNMENT_TIMEOUT_MANAGEMENT,
+        AssignmentManager.DEFAULT_ASSIGNMENT_TIMEOUT_MANAGEMENT);
     assignmentTimeout = this.server.getConfiguration().
-        getInt("hbase.master.assignment.timeoutmonitor.period", 10000);
+      getInt(AssignmentManager.ASSIGNMENT_TIMEOUT,
+        AssignmentManager.DEFAULT_ASSIGNMENT_TIMEOUT_DEFAULT);
   }
 
   public HRegionInfo getRegionInfo() {
