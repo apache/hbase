@@ -55,6 +55,7 @@ class MockRegionServerServices implements RegionServerServices {
   private ZooKeeperWatcher zkw = null;
   private ServerName serverName = null;
   private RpcServerInterface rpcServer = null;
+  private volatile boolean abortRequested;
 
   MockRegionServerServices(ZooKeeperWatcher zkw) {
     this.zkw = zkw;
@@ -154,7 +155,8 @@ class MockRegionServerServices implements RegionServerServices {
 
   @Override
   public void abort(String why, Throwable e) {
-     //no-op
+    this.abortRequested = true;
+    stop(why);
   }
 
   @Override
@@ -169,7 +171,7 @@ class MockRegionServerServices implements RegionServerServices {
 
   @Override
   public boolean isAborted() {
-    return false;
+    return this.abortRequested;
   }
 
   @Override

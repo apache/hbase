@@ -129,6 +129,62 @@ public class TestOpenRegionHandler {
     }
   }
   
+  /**
+   * Test the openregionhandler can deal with perceived failure of transitioning to OPENED state
+   * due to intermittent zookeeper malfunctioning.
+   * @see <a href="https://issues.apache.org/jira/browse/HBASE-9387">HBASE-9387</a>
+   * @throws IOException
+   * @throws NodeExistsException
+   * @throws KeeperException
+   */
+  @Test
+  public void testRegionServerAbortionDueToFailureTransitioningToOpened()
+      throws IOException, NodeExistsException, KeeperException {
+    final Server server = new MockServer(HTU);
+    final RegionServerServices rss = HTU.createMockRegionServerService();
+
+    HTableDescriptor htd = TEST_HTD;
+    final HRegionInfo hri = TEST_HRI;
+    HRegion region =
+         HRegion.createHRegion(hri, HTU.getDataTestDir(), HTU
+            .getConfiguration(), htd);
+    assertNotNull(region);
+    try {
+      OpenRegionHandler handler = new OpenRegionHandler(server, rss, hri, htd) {
+        boolean transitionToOpened(final HRegion r) throws IOException {
+          // remove znode simulating intermittent zookeeper connection issue
+          ZooKeeperWatcher zkw = this.server.getZooKeeper();
+          String node = ZKAssign.getNodeName(zkw, hri.getEncodedName());
+          try {
+            ZKUtil.deleteNodeFailSilent(zkw, node);
+          } catch (KeeperException e) {
+            throw new RuntimeException("Ugh failed delete of " + node, e);
+          }
+          // then try to transition to OPENED
+          return super.transitionToOpened(r);
+        }
+      };
+      rss.getRegionsInTransitionInRS().put(
+        hri.getEncodedNameAsBytes(), Boolean.TRUE);
+      // Call process without first creating OFFLINE region in zk, see if
+      // exception or just quiet return (expected).
+      handler.process();
+      rss.getRegionsInTransitionInRS().put(
+        hri.getEncodedNameAsBytes(), Boolean.TRUE);
+      ZKAssign.createNodeOffline(server.getZooKeeper(), hri, server.getServerName());
+      // Call process again but this time yank the zk znode out from under it
+      // post OPENING; again will expect it to come back w/o NPE or exception.
+      handler.process();
+    } catch (IOException ioe) {
+    } finally {
+      HRegion.closeHRegion(region);
+    }
+    // Region server is expected to abort due to OpenRegionHandler perceiving transitioning
+    // to OPENED as failed
+    // This was corresponding to the second handler.process() call above.
+    assertTrue("region server should have aborted", rss.isAborted());
+  }
+  
   @Test
   public void testFailedOpenRegion() throws Exception {
     Server server = new MockServer(HTU);

@@ -35,6 +35,7 @@ import org.apache.hadoop.hbase.regionserver.RegionServerAccounting;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.hadoop.hbase.util.CancelableProgressable;
 import org.apache.hadoop.hbase.zookeeper.ZKAssign;
+import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.zookeeper.KeeperException;
 
 /**
@@ -359,7 +360,7 @@ public class OpenRegionHandler extends EventHandler {
    * @return whether znode is successfully transitioned to OPENED state.
    * @throws IOException
    */
-  private boolean transitionToOpened(final HRegion r) throws IOException {
+  boolean transitionToOpened(final HRegion r) throws IOException {
     boolean result = false;
     HRegionInfo hri = r.getRegionInfo();
     final String name = hri.getRegionNameAsString();
@@ -367,11 +368,20 @@ public class OpenRegionHandler extends EventHandler {
     try {
       if (ZKAssign.transitionNodeOpened(this.server.getZooKeeper(), hri,
           this.server.getServerName(), this.version) == -1) {
-        LOG.warn("Completed the OPEN of region " + name +
-          " but when transitioning from " +
-          " OPENING to OPENED got a version mismatch, someone else clashed " +
-          "so now unassigning -- closing region on server: " +
-          this.server.getServerName());
+        String warnMsg = "Completed the OPEN of region " + name +
+          " but when transitioning from " + " OPENING to OPENED ";
+        try {
+          String node = ZKAssign.getNodeName(this.server.getZooKeeper(), hri.getEncodedName());
+          if (ZKUtil.checkExists(this.server.getZooKeeper(), node) < 0) {
+            // if the znode 
+            rsServices.abort(warnMsg + "the znode disappeared", null);
+          } else {
+            LOG.warn(warnMsg + "got a version mismatch, someone else clashed; " +
+          "so now unassigning -- closing region on server: " + this.server.getServerName());
+          }
+        } catch (KeeperException ke) {
+          rsServices.abort(warnMsg, ke);
+        }
       } else {
         LOG.debug("Transitioned " + r.getRegionInfo().getEncodedName() +
           " to OPENED in zk on " + this.server.getServerName());
