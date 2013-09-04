@@ -62,13 +62,22 @@ public class ScanWildcardColumnTracker implements ColumnTracker {
   /**
    * {@inheritDoc}
    * This receives puts *and* deletes.
-   * Deletes do not count as a version, but rather take the version
-   * of the previous put (so eventually all but the last can be reclaimed).
    */
   @Override
-  public MatchCode checkColumn(byte[] bytes, int offset, int length,
+  public MatchCode checkColumn(byte[] bytes, int offset, int length, byte type)
+      throws IOException {
+    return MatchCode.INCLUDE;
+  }
+
+  /**
+   * {@inheritDoc}
+   * This receives puts *and* deletes. Deletes do not count as a version, but rather
+   * take the version of the previous put (so eventually all but the last can be reclaimed).
+   */
+  @Override
+  public ScanQueryMatcher.MatchCode checkVersions(byte[] bytes, int offset, int length,
       long timestamp, byte type, boolean ignoreCount) throws IOException {
-    
+
     if (columnBuffer == null) {
       // first iteration.
       resetBuffer(bytes, offset, length);
@@ -175,7 +184,6 @@ public class ScanWildcardColumnTracker implements ColumnTracker {
   public ColumnCount getColumnHint() {
     return null;
   }
-
 
   /**
    * We can never know a-priori if we are done, so always return false.
