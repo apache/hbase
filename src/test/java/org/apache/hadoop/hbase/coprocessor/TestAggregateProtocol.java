@@ -24,7 +24,9 @@ import static org.junit.Assert.assertEquals;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.*;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Scan;
@@ -136,6 +138,80 @@ public class TestAggregateProtocol {
     long median = aClient.median(TEST_TABLE, ci,
         scan);
     assertEquals(8L, median);
+  }
+
+  @Test
+  public void testAggregatePerformance() throws Throwable {
+    final byte[] testPerformanceTable = Bytes.toBytes("testAggregatePerformance");
+    HTable table = util.createTable(testPerformanceTable, TEST_FAMILY);
+    int regionNum = 64;
+    int totalRowNum = regionNum * 10;
+    byte[][] ROWS = makeN(ROW, totalRowNum);
+    byte[][] splitPoints = new byte[regionNum][];
+    splitPoints[0] = HConstants.EMPTY_BYTE_ARRAY;
+    for (int i = 0; i < regionNum - 1; i++) {
+      splitPoints[i + 1] = ROWS[i * 10 % totalRowNum];
+    }
+    util.createMultiRegions(util.getConfiguration(), table, TEST_FAMILY,splitPoints);
+
+    // sleep here is an ugly hack to allow region transitions to finish
+    long timeout = System.currentTimeMillis() + (15 * 1000);
+    while ((System.currentTimeMillis() < timeout)
+        && (table.getRegionsInfo().size() != regionNum)) {
+      Thread.sleep(250);
+    }
+
+    for (int i = 0; i < totalRowNum; i++) {
+      Put put = new Put(ROWS[i]);
+      put.setWriteToWAL(false);
+      Long l = new Long(i);
+      put.add(TEST_FAMILY, TEST_QUALIFIER, Bytes.toBytes(l));
+      table.put(put);
+    }
+    table.getRegionsInRange(HConstants.EMPTY_BYTE_ARRAY,
+        HConstants.EMPTY_BYTE_ARRAY);
+    table.close();
+
+    long start = System.currentTimeMillis();
+
+    int concurrentThread = 256;
+    final AggregationClient aClient = new AggregationClient(conf);
+    Thread[] threads = new Thread[concurrentThread];
+    for (int i = 0; i < threads.length; i++) {
+      final Scan scan = new Scan();
+      scan.addColumn(TEST_FAMILY, TEST_QUALIFIER);
+      int startNum = i * 10 % totalRowNum;
+      int endNum = (i + 1) * 10 % totalRowNum;
+      if (startNum > endNum) {
+        int tmp = startNum;
+        startNum = endNum;
+        endNum = tmp;
+      }
+      final int expectedRowCount = endNum - startNum;
+      scan.setStartRow(ROWS[startNum]);
+      scan.setStopRow(ROWS[endNum]);
+      threads[i]=new Thread(){
+        public void run(){
+          final ColumnInterpreter<Long, Long> ci = new LongColumnInterpreter();
+          long rowCount = 0;
+          try {
+            rowCount = aClient.rowCount(testPerformanceTable, ci, scan);
+          } catch (Throwable e) {
+          }
+          assertEquals(expectedRowCount, rowCount);
+        }
+      };
+    }
+
+    for (int i = 0; i < threads.length; i++) {
+      threads[i].start();
+    }
+    for (int i = 0; i < threads.length; i++) {
+      threads[i].join();
+    }
+
+    System.out.println("##Finished testAggregatePerformance, took time:"
+        + (System.currentTimeMillis() - start) + "ms ##");
   }
 
   /**
