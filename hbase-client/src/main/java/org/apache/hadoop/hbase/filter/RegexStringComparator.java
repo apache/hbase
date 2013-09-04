@@ -30,6 +30,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 
 import java.nio.charset.Charset;
 import java.nio.charset.IllegalCharsetNameException;
+import java.util.Arrays;
 import java.util.regex.Pattern;
 
 /**
@@ -108,10 +109,12 @@ public class RegexStringComparator extends ByteArrayComparable {
 
   @Override
   public int compareTo(byte[] value, int offset, int length) {
+    // See HBASE-9428. Make a copy of the relevant part of the byte[],
+    // or the JDK will copy the entire byte[] during String decode
+    byte[] tmp = Arrays.copyOfRange(value, offset, offset+length);
     // Use find() for subsequence match instead of matches() (full sequence
     // match) to adhere to the principle of least surprise.
-    return pattern.matcher(new String(value, offset, length, charset)).find() ? 0
-        : 1;
+    return pattern.matcher(new String(tmp, charset)).find() ? 0 : 1;
   }
 
   /**
