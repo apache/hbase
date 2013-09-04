@@ -66,7 +66,7 @@ implements WritableComparable<ImmutableBytesWritable> {
    * @param ibw the value to set this ImmutableBytesWritable to.
    */
   public ImmutableBytesWritable(final ImmutableBytesWritable ibw) {
-    this(ibw.get(), 0, ibw.getSize());
+    this(ibw.get(), ibw.getOffset(), ibw.getSize());
   }
 
   /**
