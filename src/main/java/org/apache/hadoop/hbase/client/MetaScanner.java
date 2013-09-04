@@ -269,6 +269,22 @@ public class MetaScanner {
    * leave out offlined regions from returned list.
    * @return Map of all user-space regions to servers
    * @throws IOException
+   * @Deprecated Use {@link #allTableRegions(Configuration, HConnection, byte[], boolean)}
+   * instead
+   */
+  @Deprecated
+  public static NavigableMap<HRegionInfo, ServerName> allTableRegions(Configuration conf,
+      final byte[] tablename, final boolean offlined) throws IOException {
+    return allTableRegions(conf, null, tablename, offlined);
+  }
+  /**
+   * Lists all of the table regions currently in META.
+   * @param conf
+   * @param connection connection to be used internally (null to create a new connection)
+   * @param offlined True if we are to include offlined regions, false and we'll
+   * leave out offlined regions from returned list.
+   * @return Map of all user-space regions to servers
+   * @throws IOException
    */
   public static NavigableMap<HRegionInfo, ServerName> allTableRegions(Configuration conf,
       HConnection connection, final byte[] tablename, final boolean offlined) throws IOException {
