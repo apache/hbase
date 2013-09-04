@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.hbase.master;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.NavigableSet;
 
@@ -46,9 +47,9 @@ import org.apache.hadoop.hbase.master.handler.CreateTableHandler;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.FSUtils;
 
 import com.google.common.collect.Sets;
-import org.apache.hadoop.hbase.util.FSUtils;
 
 /**
  * This is a helper class used to manage the namespace
@@ -156,7 +157,12 @@ public class TableNamespaceManager {
     if (NamespaceDescriptor.RESERVED_NAMESPACES.contains(name)) {
       throw new ConstraintException("Reserved namespace "+name+" cannot be removed.");
     }
-    int tableCount = masterServices.listTableDescriptorsByNamespace(name).size();
+    int tableCount;
+    try {
+      tableCount = masterServices.listTableDescriptorsByNamespace(name).size();
+    } catch (FileNotFoundException fnfe) {
+      throw new ConstraintException("namespace " + name + " does not exist");
+    }
     if (tableCount > 0) {
       throw new ConstraintException("Only empty namespaces can be removed. " +
           "Namespace "+name+" has "+tableCount+" tables");
