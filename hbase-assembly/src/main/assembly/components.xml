@@ -48,11 +48,23 @@
       <directoryMode>0755</directoryMode>
     </fileSet>
     <!-- Include top level bin directory -->
+    <!-- First copy all but the *.cmd files-->
     <fileSet>
-        <directory>${project.basedir}/../bin</directory>
+      <directory>${project.basedir}/../bin</directory>
       <outputDirectory>bin</outputDirectory>
+      <excludes>
+          <exclude>**/*.cmd</exclude>
+      </excludes>
       <fileMode>0755</fileMode>
       <directoryMode>0755</directoryMode>
+    </fileSet>
+    <!--Now do the cmd files; we do not want these executable.-->
+    <fileSet>
+      <directory>${project.basedir}/../bin</directory>
+      <outputDirectory>bin</outputDirectory>
+      <includes>
+          <include>**/*.cmd</include>
+      </includes>
     </fileSet>
     <!-- Move the ruby code over -->
     <fileSet>
