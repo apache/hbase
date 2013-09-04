@@ -120,14 +120,15 @@ public class MasterFileSystem {
     FSUtils.setFsDefault(conf, new Path(this.fs.getUri()));
     // make sure the fs has the same conf
     fs.setConf(conf);
-    this.splitLogManager = new SplitLogManager(master.getZooKeeper(), master.getConfiguration(),
-        master, services, master.getServerName(), masterRecovery);
     this.distributedLogReplay = this.conf.getBoolean(HConstants.DISTRIBUTED_LOG_REPLAY_KEY,
       HConstants.DEFAULT_DISTRIBUTED_LOG_REPLAY_CONFIG);
     // setup the filesystem variable
     // set up the archived logs path
     this.oldLogDir = createInitialFileSystemLayout();
     HFileSystem.addLocationsOrderInterceptor(conf);
+    this.splitLogManager = new SplitLogManager(master.getZooKeeper(),
+      master.getConfiguration(), master, services,
+      master.getServerName(), masterRecovery);
   }
 
   /**
