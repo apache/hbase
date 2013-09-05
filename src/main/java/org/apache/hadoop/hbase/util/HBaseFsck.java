@@ -793,7 +793,7 @@ public class HBaseFsck extends Configured implements Tool {
         tablesInfo.put(tableName, modTInfo);
         try {
           HTableDescriptor htd =
-              FSTableDescriptors.getTableDescriptor(hbaseRoot.getFileSystem(getConf()),
+              FSTableDescriptors.getTableDescriptorFromFs(hbaseRoot.getFileSystem(getConf()),
               hbaseRoot, tableName);
           modTInfo.htds.add(htd);
         } catch (IOException ioe) {

@@ -44,7 +44,6 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableDescriptors;
 import org.apache.hadoop.hbase.TableInfoMissingException;
 
-
 /**
  * Implementation of {@link TableDescriptors} that reads descriptors from the
  * passed filesystem.  It expects descriptors to be in a file under the
@@ -190,11 +189,7 @@ public class FSTableDescriptors implements TableDescriptors {
           + tablename, ioe);
     }
     
-    if (tdmt == null) {
-      LOG.warn("The following folder is in HBase's root directory and " +
-        "doesn't contain a table descriptor, " +
-        "do consider deleting it: " + tablename);
-    } else {
+    if (tdmt != null) {
       this.cache.put(tablename, tdmt);
     }
     return tdmt == null ? null : tdmt.getTableDescriptor();
@@ -401,6 +396,44 @@ public class FSTableDescriptors implements TableDescriptors {
   }
 
   /**
+   * Returns the latest table descriptor for the given table directly from the file system
+   * if it exists, bypassing the local cache.
+   * Returns null if it's not found.
+   */
+  public static HTableDescriptor getTableDescriptorFromFs(FileSystem fs,
+      Path hbaseRootDir, String tableName) throws IOException {
+    // ignore both -ROOT- and .META. tables
+    if (Bytes.compareTo(Bytes.toBytes(tableName), HConstants.ROOT_TABLE_NAME) == 0
+        || Bytes.compareTo(Bytes.toBytes(tableName), HConstants.META_TABLE_NAME) == 0) {
+      return null;
+    }
+    Path tableDir = FSUtils.getTablePath(hbaseRootDir, tableName);
+    return getTableDescriptorFromFs(fs, tableDir);
+  }
+
+  /**
+   * Returns the latest table descriptor for the table located at the given directory
+   * directly from the file system if it exists.
+   * @throws TableInfoMissingException if there is no descriptor
+   */
+  public static HTableDescriptor getTableDescriptorFromFs(FileSystem fs, Path tableDir)
+  throws IOException {
+    FileStatus status = getTableInfoPath(fs, tableDir);
+    if (status == null) {
+      throw new TableInfoMissingException("No table descriptor file under " + tableDir);
+    }
+    FSDataInputStream fsDataInputStream = fs.open(status.getPath());
+    HTableDescriptor hTableDescriptor = null;
+    try {
+      hTableDescriptor = new HTableDescriptor();
+      hTableDescriptor.readFields(fsDataInputStream);
+    } finally {
+      fsDataInputStream.close();
+    }
+    return hTableDescriptor;
+  }
+
+  /**
    * Get HTD from HDFS.
    * @param fs
    * @param hbaseRootDir
@@ -440,13 +473,20 @@ public class FSTableDescriptors implements TableDescriptors {
     return getTableDescriptorModtime(fs, FSUtils.getTablePath(hbaseRootDir, tableName), readDirModtime);
   }
 
+  /**
+   * @param fs filesystem
+   * @param tableDir path to table directory
+   * @param readDirModtime true if dirmodtime should be read also
+   * @return TableDescriptorModtime or null if no table descriptor was found
+   * at the specified path
+   * @throws IOException
+   */
   static TableDescriptorModtime getTableDescriptorModtime(FileSystem fs, Path tableDir, boolean readDirModtime)
   throws NullPointerException, IOException {
     if (tableDir == null) throw new NullPointerException();
     FileStatus status = getTableInfoPath(fs, tableDir);
     if (status == null) {
-      throw new TableInfoMissingException("No .tableinfo file under "
-          + tableDir.toUri());
+      return null;
     }
     FSDataInputStream fsDataInputStream = fs.open(status.getPath());
     HTableDescriptor hTableDescriptor = null;
