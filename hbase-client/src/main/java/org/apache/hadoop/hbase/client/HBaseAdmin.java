@@ -2016,6 +2016,12 @@ public class HBaseAdmin implements Abortable, Closeable {
    */
   private byte[] getRegionName(
       final byte[] regionNameOrEncodedRegionName) throws IOException {
+    if (Bytes.equals(regionNameOrEncodedRegionName,
+        HRegionInfo.FIRST_META_REGIONINFO.getRegionName())
+          || Bytes.equals(regionNameOrEncodedRegionName,
+            HRegionInfo.FIRST_META_REGIONINFO.getEncodedNameAsBytes())) {
+      return HRegionInfo.FIRST_META_REGIONINFO.getRegionName();
+    }
     CatalogTracker ct = getCatalogTracker();
     Pair<HRegionInfo, ServerName> regionServerPair
       = getRegion(regionNameOrEncodedRegionName, ct);
