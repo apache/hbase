@@ -27,6 +27,7 @@ flush an individual region.  For example:
 
   hbase> flush 'TABLENAME'
   hbase> flush 'REGIONNAME'
+  hbase> flush 'ENCODED_REGIONNAME'
 EOF
       end
 

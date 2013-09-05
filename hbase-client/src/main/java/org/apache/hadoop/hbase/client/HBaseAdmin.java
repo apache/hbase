@@ -1664,10 +1664,12 @@ public class HBaseAdmin implements Abortable, Closeable {
    */
   public void assign(final byte[] regionName) throws MasterNotRunningException,
       ZooKeeperConnectionException, IOException {
+    final byte[] toBeAssigned = getRegionName(regionName);
     executeCallable(new MasterAdminCallable<Void>(getConnection()) {
       @Override
       public Void call() throws ServiceException {
-        AssignRegionRequest request = RequestConverter.buildAssignRegionRequest(regionName);
+        AssignRegionRequest request =
+          RequestConverter.buildAssignRegionRequest(toBeAssigned);
         masterAdmin.assignRegion(null,request);
         return null;
       }
@@ -1688,13 +1690,14 @@ public class HBaseAdmin implements Abortable, Closeable {
    * @throws ZooKeeperConnectionException
    * @throws IOException
    */
-  public void unassign(final byte [] regionName, final boolean force)
+  public void unassign(final byte [] getRegionName, final boolean force)
   throws MasterNotRunningException, ZooKeeperConnectionException, IOException {
+    final byte[] toBeUnassigned = getRegionName(getRegionName);
     executeCallable(new MasterAdminCallable<Void>(getConnection()) {
       @Override
       public Void call() throws ServiceException {
         UnassignRegionRequest request =
-          RequestConverter.buildUnassignRegionRequest(regionName, force);
+          RequestConverter.buildUnassignRegionRequest(toBeUnassigned, force);
         masterAdmin.unassignRegion(null,request);
         return null;
       }
@@ -2001,6 +2004,26 @@ public class HBaseAdmin implements Abortable, Closeable {
       pair = result.get();
     }
     return pair;
+  }
+
+  /**
+   * If the input is a region name, it is returned as is. If it's an
+   * encoded region name, the corresponding region is found from meta
+   * and its region name is returned. If we can't find any region in
+   * meta matching the input as either region name or encoded region
+   * name, the input is returned as is. We don't throw unknown
+   * region exception.
+   */
+  private byte[] getRegionName(
+      final byte[] regionNameOrEncodedRegionName) throws IOException {
+    CatalogTracker ct = getCatalogTracker();
+    Pair<HRegionInfo, ServerName> regionServerPair
+      = getRegion(regionNameOrEncodedRegionName, ct);
+    byte[] tmp = regionNameOrEncodedRegionName;
+    if (regionServerPair != null && regionServerPair.getFirst() != null) {
+      tmp = regionServerPair.getFirst().getRegionName();
+    }
+    return tmp;
   }
 
   /**

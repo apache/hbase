@@ -24,6 +24,10 @@ module Shell
         return <<-EOF
 Assign a region. Use with caution. If region already assigned,
 this command will do a force reassign. For experts only.
+Examples:
+
+  hbase> assign 'REGIONNAME'
+  hbase> assign 'ENCODED_REGIONNAME'
 EOF
       end
 
