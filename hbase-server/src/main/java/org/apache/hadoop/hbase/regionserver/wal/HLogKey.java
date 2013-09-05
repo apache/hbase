@@ -160,14 +160,6 @@ public class HLogKey implements WritableComparable<HLogKey> {
   }
 
   /**
-   * Create HLogKey wrapper around protobuf WAL key; takes care of compression.
-   * @throws IOException Never, as the compression is not enabled.
-   */
-  public HLogKey(WALKey walKey) throws IOException {
-    readFieldsFromPb(walKey, null);
-  }
-
-  /**
    * @param compressionContext Compression context to use
    */
   public void setCompressionContext(CompressionContext compressionContext) {
