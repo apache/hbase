@@ -51,36 +51,6 @@ import com.google.protobuf.ServiceException;
 @InterfaceAudience.Private
 public class ReplicationProtbufUtil {
   /**
-   * Get the HLog entries from a list of protocol buffer WALEntry
-   *
-   * @param protoList the list of protocol buffer WALEntry
-   * @return an array of HLog entries
-   */
-  public static HLog.Entry[]
-      toHLogEntries(final List<AdminProtos.WALEntry> protoList) throws IOException {
-    List<HLog.Entry> entries = new ArrayList<HLog.Entry>();
-    for (AdminProtos.WALEntry entry: protoList) {
-      WALProtos.WALKey walKey = entry.getKey();
-      HLogKey key = new HLogKey(walKey);
-      WALEdit edit = new WALEdit();
-      for (ByteString keyValue: entry.getKeyValueBytesList()) {
-        edit.add(new KeyValue(keyValue.toByteArray()));
-      }
-      if (walKey.getScopesCount() > 0) {
-        TreeMap<byte[], Integer> scopes =
-          new TreeMap<byte[], Integer>(Bytes.BYTES_COMPARATOR);
-        for (WALProtos.FamilyScope scope: walKey.getScopesList()) {
-          scopes.put(scope.getFamily().toByteArray(),
-            Integer.valueOf(scope.getScopeType().ordinal()));
-        }
-        key.setScopes(scopes);
-      }
-      entries.add(new HLog.Entry(key, edit));
-    }
-    return entries.toArray(new HLog.Entry[entries.size()]);
-  }
-
-  /**
    * A helper to replicate a list of HLog entries using admin protocol.
    *
    * @param admin
