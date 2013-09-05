@@ -223,13 +223,24 @@ to ensure well-formedness of your document after an edit session.
         xlink:href="http://hadoop.apache.org">Hadoop</link><indexterm>
             <primary>Hadoop</primary>
           </indexterm></title>
-         <para>Selecting a Hadoop version is critical for your HBase deployment. Below table shows some information about what versions of Hadoop are supported by various HBase versions. Based on the version of HBase, you should select the most appropriate version of Hadoop. We are not in the Hadoop distro selection business. You can use Hadoop distributions from Apache, or learn about vendor distributions of Hadoop at <link xlink:href="http://wiki.apache.org/hadoop/Distributions%20and%20Commercial%20Support"/></para>
+          <para>Selecting a Hadoop version is critical for your HBase deployment.
+              Below table shows some information about what versions of Hadoop are supported by various HBase versions.
+              Based on the version of HBase, you should select the most appropriate version of Hadoop.
+              We are not in the Hadoop distro selection business.
+              You can use Hadoop distributions from Apache, or learn about vendor distributions of
+              Hadoop at <link xlink:href="http://wiki.apache.org/hadoop/Distributions%20and%20Commercial%20Support"/></para>
          <para>
+             <tip><title>Hadoop 2.x is better than Hadoop 1.x</title>
+                 <para>Hadoop 2.x is faster, with more features such as short-circuit reads which will help improve your
+                     HBase random read profile as well important bug fixes that will improve your overall HBase experience.
+                     You should run Hadoop 2. rather than Hadoop 1. if you can.
+             </para>
+         </tip>
 	     <table>
 		 <title>Hadoop version support matrix</title>
 		 <tgroup cols='4' align='left' colsep='1' rowsep='1'><colspec colname='c1' align='left'/><colspec colname='c2' align='center'/><colspec colname='c3' align='center'/><colspec colname='c4' align='center'/>
          <thead>
-	     <row><entry>               </entry><entry>HBase-0.92.x</entry><entry>HBase-0.94.x</entry><entry>HBase-0.95</entry></row>
+	     <row><entry>               </entry><entry>HBase-0.92.x</entry><entry>HBase-0.94.x</entry><entry>HBase-0.96.0</entry></row>
 	     </thead><tbody>
          <row><entry>Hadoop-0.20.205</entry><entry>S</entry>          <entry>X</entry>           <entry>X</entry></row>
          <row><entry>Hadoop-0.22.x  </entry><entry>S</entry>          <entry>X</entry>           <entry>X</entry></row>
@@ -237,7 +248,9 @@ to ensure well-formedness of your document after an edit session.
          <row><entry>Hadoop-1.0.3+</entry><entry>S</entry>          <entry>S</entry>           <entry>S</entry></row>
          <row><entry>Hadoop-1.1.x   </entry><entry>NT</entry>         <entry>S</entry>           <entry>S</entry></row>
          <row><entry>Hadoop-0.23.x  </entry><entry>X</entry>          <entry>S</entry>           <entry>NT</entry></row>
-         <row><entry>Hadoop-2.x     </entry><entry>X</entry>          <entry>S</entry>           <entry>S</entry></row>
+         <row><entry>Hadoop-2.0.x-alpha     </entry><entry>X</entry>          <entry>NT</entry>           <entry>X</entry></row>
+         <row><entry>Hadoop-2.1.0-beta     </entry><entry>X</entry>          <entry>NT</entry>           <entry>S</entry></row>
+         <row><entry>Hadoop-2.x     </entry><entry>X</entry>          <entry>NT</entry>           <entry>S</entry></row>
 		 </tbody></tgroup></table>
 
         Where
