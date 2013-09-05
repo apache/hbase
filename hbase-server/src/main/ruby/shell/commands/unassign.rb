@@ -30,6 +30,8 @@ Use with caution.  For expert use only.  Examples:
 
   hbase> unassign 'REGIONNAME'
   hbase> unassign 'REGIONNAME', true
+  hbase> unassign 'ENCODED_REGIONNAME'
+  hbase> unassign 'ENCODED_REGIONNAME', true
 EOF
       end
 
