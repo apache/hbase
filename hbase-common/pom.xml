@@ -84,7 +84,7 @@
                         <target>
                             <property name="generated.sources" location="${project.build.directory}/generated-sources"/>
 
-                            <exec executable="sh">
+                            <exec executable="bash">
                                 <arg line="${basedir}/src/saveVersion.sh ${project.version} ${generated.sources}/java"/>
                             </exec>
                         </target>
