@@ -24,12 +24,15 @@ import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 
+import javax.xml.bind.annotation.XmlAccessType;
+import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlAttribute;
 import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.rest.ProtobufMessageHandler;
+import org.codehaus.jackson.annotate.JsonProperty;
 
 /**
  * Representation of a row. A row is a related set of cells, grouped by common
@@ -47,12 +50,19 @@ import org.apache.hadoop.hbase.rest.ProtobufMessageHandler;
  * </pre>
  */
 @XmlRootElement(name="Row")
+@XmlAccessorType(XmlAccessType.FIELD)
 @InterfaceAudience.Private
 public class RowModel implements ProtobufMessageHandler, Serializable {
   private static final long serialVersionUID = 1L;
 
+  @JsonProperty("key")
+  @XmlAttribute
   private byte[] key;
+
+  @JsonProperty("Cell")
+  @XmlElement(name="Cell")
   private List<CellModel> cells = new ArrayList<CellModel>();
+
 
   /**
    * Default constructor
@@ -106,7 +116,6 @@ public class RowModel implements ProtobufMessageHandler, Serializable {
   /**
    * @return the row key
    */
-  @XmlAttribute
   public byte[] getKey() {
     return key;
   }
@@ -121,7 +130,6 @@ public class RowModel implements ProtobufMessageHandler, Serializable {
   /**
    * @return the cells
    */
-  @XmlElement(name="Cell")
   public List<CellModel> getCells() {
     return cells;
   }

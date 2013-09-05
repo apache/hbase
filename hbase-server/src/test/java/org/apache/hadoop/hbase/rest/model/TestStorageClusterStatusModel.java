@@ -19,60 +19,62 @@
 
 package org.apache.hadoop.hbase.rest.model;
 
-import java.io.IOException;
-import java.io.StringReader;
-import java.io.StringWriter;
 import java.util.Iterator;
-
-import javax.xml.bind.JAXBContext;
-import javax.xml.bind.JAXBException;
 
 import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.util.Base64;
 import org.apache.hadoop.hbase.util.Bytes;
 
-import junit.framework.TestCase;
 import org.junit.experimental.categories.Category;
 
 @Category(SmallTests.class)
-public class TestStorageClusterStatusModel extends TestCase {
+public class TestStorageClusterStatusModel extends TestModelBase<StorageClusterStatusModel> {
 
-  private static final String AS_XML =
-    "<ClusterStatus requests=\"0\" regions=\"2\" averageLoad=\"1.0\">" +
-    "<DeadNodes/>" + 
-    "<LiveNodes><Node startCode=\"1245219839331\" requests=\"0\"" + 
-      " name=\"test1\" maxHeapSizeMB=\"1024\" heapSizeMB=\"128\">" + 
-        "<Region stores=\"1\" storefiles=\"1\" storefileSizeMB=\"0\"" +
-        " storefileIndexSizeMB=\"0\" name=\"aGJhc2U6cm9vdCwsMA==\"" +
-        " memstoreSizeMB=\"0\" readRequestsCount=\"1\"" +
-        " writeRequestsCount=\"2\" rootIndexSizeKB=\"1\"" +
-        " totalStaticIndexSizeKB=\"1\" totalStaticBloomSizeKB=\"1\"" +
-        " totalCompactingKVs=\"1\" currentCompactedKVs=\"1\"/></Node>" + 
-      "<Node startCode=\"1245239331198\" requests=\"0\" name=\"test2\"" + 
-        " maxHeapSizeMB=\"1024\" heapSizeMB=\"512\">" + 
-        "<Region stores=\"1\" storefiles=\"1\" storefileSizeMB=\"0\"" +
-        " storefileIndexSizeMB=\"0\" name=\"aGJhc2U6bWV0YSwsMTI0NjAwMDA0MzcyNA==\"" +
-        " memstoreSizeMB=\"0\" readRequestsCount=\"1\"" +
-        " writeRequestsCount=\"2\" rootIndexSizeKB=\"1\"" +
-        " totalStaticIndexSizeKB=\"1\" totalStaticBloomSizeKB=\"1\"" +
-        " totalCompactingKVs=\"1\" currentCompactedKVs=\"1\"/></Node>"+
-    "</LiveNodes></ClusterStatus>";
+  public TestStorageClusterStatusModel() throws Exception {
+    super(StorageClusterStatusModel.class);
 
-  private static final String AS_PB =
-      "Cj8KBXRlc3QxEOO6i+eeJBgAIIABKIAIMicKDWhiYXNlOnJvb3QsLDAQARgBIAAoADAAOAFAAkgB"+
-      "UAFYAWABaAEKSwoFdGVzdDIQ/pKx8J4kGAAggAQogAgyMwoZaGJhc2U6bWV0YSwsMTI0NjAwMDA0"+
+    AS_XML =
+      "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>" +
+      "<ClusterStatus averageLoad=\"1.0\" regions=\"2\" requests=\"0\">" +
+      "<DeadNodes/><LiveNodes>" +
+      "<Node heapSizeMB=\"128\" maxHeapSizeMB=\"1024\" name=\"test1\" requests=\"0\" startCode=\"1245219839331\">" +
+      "<Region currentCompactedKVs=\"1\" memstoreSizeMB=\"0\" name=\"aGJhc2U6cm9vdCwsMA==\" readRequestsCount=\"1\" " +
+      "rootIndexSizeKB=\"1\" storefileIndexSizeMB=\"0\" storefileSizeMB=\"0\" storefiles=\"1\" stores=\"1\" " +
+      "totalCompactingKVs=\"1\" totalStaticBloomSizeKB=\"1\" totalStaticIndexSizeKB=\"1\" writeRequestsCount=\"2\"/>" +
+      "</Node>" +
+      "<Node heapSizeMB=\"512\" maxHeapSizeMB=\"1024\" name=\"test2\" requests=\"0\" startCode=\"1245239331198\">" +
+      "<Region currentCompactedKVs=\"1\" memstoreSizeMB=\"0\" name=\"aGJhc2U6bWV0YSwsMTI0NjAwMDA0MzcyNA==\" " +
+      "readRequestsCount=\"1\" rootIndexSizeKB=\"1\" storefileIndexSizeMB=\"0\" storefileSizeMB=\"0\" " +
+      "storefiles=\"1\" stores=\"1\" totalCompactingKVs=\"1\" totalStaticBloomSizeKB=\"1\" " +
+      "totalStaticIndexSizeKB=\"1\" writeRequestsCount=\"2\"/></Node></LiveNodes></ClusterStatus>";
+
+    AS_PB =
+      "Cj8KBXRlc3QxEOO6i+eeJBgAIIABKIAIMicKDWhiYXNlOnJvb3QsLDAQARgBIAAoADAAOAFAAkgB" +
+      "UAFYAWABaAEKSwoFdGVzdDIQ/pKx8J4kGAAggAQogAgyMwoZaGJhc2U6bWV0YSwsMTI0NjAwMDA0" +
       "MzcyNBABGAEgACgAMAA4AUACSAFQAVgBYAFoARgCIAApAAAAAAAA8D8=";
 
-  
-  private JAXBContext context;
 
-  public TestStorageClusterStatusModel() throws JAXBException {
-    super();
-    context = JAXBContext.newInstance(StorageClusterStatusModel.class);
+    //Using jackson will break json backward compatibilty for this representation
+    //but the original one was broken as it would only print one Node element
+    //so the format itself was broken
+    AS_JSON =
+      "{\"regions\":2,\"requests\":0,\"averageLoad\":1.0,\"LiveNodes\":[{\"name\":\"test1\"," +
+          "\"Region\":[{\"name\":\"aGJhc2U6cm9vdCwsMA==\",\"stores\":1,\"storefiles\":1," +
+          "\"storefileSizeMB\":0,\"memstoreSizeMB\":0,\"storefileIndexSizeMB\":0," +
+          "\"readRequestsCount\":1,\"writeRequestsCount\":2,\"rootIndexSizeKB\":1," +
+          "\"totalStaticIndexSizeKB\":1,\"totalStaticBloomSizeKB\":1,\"totalCompactingKVs\":1," +
+          "\"currentCompactedKVs\":1}],\"requests\":0,\"startCode\":1245219839331," +
+          "\"heapSizeMB\":128,\"maxHeapSizeMB\":1024},{\"name\":\"test2\"," +
+          "\"Region\":[{\"name\":\"aGJhc2U6bWV0YSwsMTI0NjAwMDA0MzcyNA==\",\"stores\":1," +
+          "\"storefiles\":1,\"storefileSizeMB\":0,\"memstoreSizeMB\":0,\"storefileIndexSizeMB\":0," +
+          "\"readRequestsCount\":1,\"writeRequestsCount\":2,\"rootIndexSizeKB\":1," +
+          "\"totalStaticIndexSizeKB\":1,\"totalStaticBloomSizeKB\":1,\"totalCompactingKVs\":1," +
+          "\"currentCompactedKVs\":1}],\"requests\":0,\"startCode\":1245239331198," +
+          "\"heapSizeMB\":512,\"maxHeapSizeMB\":1024}],\"DeadNodes\":[]}";
   }
 
-  private StorageClusterStatusModel buildTestModel() {
+  protected StorageClusterStatusModel buildTestModel() {
     StorageClusterStatusModel model = new StorageClusterStatusModel();
     model.setRegions(2);
     model.setRequests(0);
@@ -85,29 +87,7 @@ public class TestStorageClusterStatusModel extends TestCase {
     return model;
   }
 
-  @SuppressWarnings("unused")
-  private String toXML(StorageClusterStatusModel model) throws JAXBException {
-    StringWriter writer = new StringWriter();
-    context.createMarshaller().marshal(model, writer);
-    return writer.toString();
-  }
-
-  private StorageClusterStatusModel fromXML(String xml) throws JAXBException {
-    return (StorageClusterStatusModel)
-      context.createUnmarshaller().unmarshal(new StringReader(xml));
-  }
-
-  @SuppressWarnings("unused")
-  private byte[] toPB(StorageClusterStatusModel model) {
-    return model.createProtobufOutput();
-  }
-
-  private StorageClusterStatusModel fromPB(String pb) throws IOException {
-    return (StorageClusterStatusModel) 
-      new StorageClusterStatusModel().getObjectFromMessage(Base64.decode(AS_PB));
-  }
-
-  private void checkModel(StorageClusterStatusModel model) {
+  protected void checkModel(StorageClusterStatusModel model) {
     assertEquals(model.getRegions(), 2);
     assertEquals(model.getRequests(), 0);
     assertEquals(model.getAverageLoad(), 1.0);
@@ -161,18 +141,5 @@ public class TestStorageClusterStatusModel extends TestCase {
     assertFalse(regions.hasNext());
     assertFalse(nodes.hasNext());
   }
-
-  public void testBuildModel() throws Exception {
-    checkModel(buildTestModel());
-  }
-
-  public void testFromXML() throws Exception {
-    checkModel(fromXML(AS_XML));
-  }
-
-  public void testFromPB() throws Exception {
-    checkModel(fromPB(AS_PB));
-  }
-
 }
 

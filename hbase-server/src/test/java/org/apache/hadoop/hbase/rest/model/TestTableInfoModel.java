@@ -35,65 +35,41 @@ import junit.framework.TestCase;
 import org.junit.experimental.categories.Category;
 
 @Category(SmallTests.class)
-public class TestTableInfoModel extends TestCase {
+public class TestTableInfoModel extends TestModelBase<TableInfoModel> {
   private static final String TABLE = "testtable";
   private static final byte[] START_KEY = Bytes.toBytes("abracadbra");
   private static final byte[] END_KEY = Bytes.toBytes("zzyzx");
   private static final long ID = 8731042424L;
   private static final String LOCATION = "testhost:9876";
-  
-  private static final String AS_XML =
-    "<TableInfo name=\"testtable\">" +
-      "<Region location=\"testhost:9876\"" +
-        " endKey=\"enp5eng=\"" +
-        " startKey=\"YWJyYWNhZGJyYQ==\"" +
-        " id=\"8731042424\"" +
-        " name=\"testtable,abracadbra,8731042424\"/>" +
-    "</TableInfo>";
 
-  private static final String AS_PB = 
-    "Cgl0ZXN0dGFibGUSSQofdGVzdHRhYmxlLGFicmFjYWRicmEsODczMTA0MjQyNBIKYWJyYWNhZGJy" +
-    "YRoFenp5engg+MSkwyAqDXRlc3Rob3N0Ojk4NzY=";
+  public TestTableInfoModel() throws Exception {
+    super(TableInfoModel.class);
+    AS_XML =
+      "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?><TableInfo " +
+      "name=\"testtable\"><Region endKey=\"enp5eng=\" id=\"8731042424\" " +
+      "location=\"testhost:9876\" " +
+      "name=\"testtable,abracadbra,8731042424.ad9860f031282c46ed431d7af8f94aca.\" " +
+      "startKey=\"YWJyYWNhZGJyYQ==\"/></TableInfo>";
 
-  private JAXBContext context;
+    AS_PB =
+      "Cgl0ZXN0dGFibGUSSQofdGVzdHRhYmxlLGFicmFjYWRicmEsODczMTA0MjQyNBIKYWJyYWNhZGJy" +
+      "YRoFenp5engg+MSkwyAqDXRlc3Rob3N0Ojk4NzY=";
 
-  public TestTableInfoModel() throws JAXBException {
-    super();
-    context = JAXBContext.newInstance(
-        TableInfoModel.class,
-        TableRegionModel.class);
+    AS_JSON =
+      "{\"name\":\"testtable\",\"Region\":[{\"endKey\":\"enp5eng=\",\"id\":8731042424," +
+      "\"location\":\"testhost:9876\",\"" +
+      "name\":\"testtable,abracadbra,8731042424.ad9860f031282c46ed431d7af8f94aca.\",\"" +
+      "startKey\":\"YWJyYWNhZGJyYQ==\"}]}";
   }
 
-  private TableInfoModel buildTestModel() {
+  protected TableInfoModel buildTestModel() {
     TableInfoModel model = new TableInfoModel();
     model.setName(TABLE);
     model.add(new TableRegionModel(TABLE, ID, START_KEY, END_KEY, LOCATION));
     return model;
   }
 
-  @SuppressWarnings("unused")
-  private String toXML(TableInfoModel model) throws JAXBException {
-    StringWriter writer = new StringWriter();
-    context.createMarshaller().marshal(model, writer);
-    return writer.toString();
-  }
-
-  private TableInfoModel fromXML(String xml) throws JAXBException {
-    return (TableInfoModel)
-      context.createUnmarshaller().unmarshal(new StringReader(xml));
-  }
-
-  @SuppressWarnings("unused")
-  private byte[] toPB(TableInfoModel model) {
-    return model.createProtobufOutput();
-  }
-
-  private TableInfoModel fromPB(String pb) throws IOException {
-    return (TableInfoModel) 
-      new TableInfoModel().getObjectFromMessage(Base64.decode(AS_PB));
-  }
-
-  private void checkModel(TableInfoModel model) {
+  protected void checkModel(TableInfoModel model) {
     assertEquals(model.getName(), TABLE);
     Iterator<TableRegionModel> regions = model.getRegions().iterator();
     TableRegionModel region = regions.next();

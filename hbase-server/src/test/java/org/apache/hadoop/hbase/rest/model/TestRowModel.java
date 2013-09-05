@@ -33,48 +33,34 @@ import junit.framework.TestCase;
 import org.junit.experimental.categories.Category;
 
 @Category(SmallTests.class)
-public class TestRowModel extends TestCase {
+public class TestRowModel extends TestModelBase<RowModel> {
 
   private static final byte[] ROW1 = Bytes.toBytes("testrow1");
   private static final byte[] COLUMN1 = Bytes.toBytes("testcolumn1");
   private static final byte[] VALUE1 = Bytes.toBytes("testvalue1");
   private static final long TIMESTAMP1 = 1245219839331L;
 
-  private static final String AS_XML =
-    "<Row key=\"dGVzdHJvdzE=\">" + 
-      "<Cell timestamp=\"1245219839331\" column=\"dGVzdGNvbHVtbjE=\">" + 
-        "dGVzdHZhbHVlMQ==</Cell>" + 
-      "</Row>";
-
   private JAXBContext context;
 
-  public TestRowModel() throws JAXBException {
-    super();
-    context = JAXBContext.newInstance(
-        CellModel.class,
-        RowModel.class);
+  public TestRowModel() throws Exception {
+    super(RowModel.class);
+    AS_XML =
+      "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?><Row key=\"dGVzdHJvdzE=\">" +
+      "<Cell column=\"dGVzdGNvbHVtbjE=\" timestamp=\"1245219839331\">dGVzdHZhbHVlMQ==</Cell></Row>";
+
+    AS_JSON =
+      "{\"key\":\"dGVzdHJvdzE=\",\"Cell\":[{\"column\":\"dGVzdGNvbHVtbjE=\"," +
+      "\"timestamp\":1245219839331,\"$\":\"dGVzdHZhbHVlMQ==\"}]}";
   }
 
-  private RowModel buildTestModel() {
+  protected RowModel buildTestModel() {
     RowModel model = new RowModel();
     model.setKey(ROW1);
     model.addCell(new CellModel(COLUMN1, TIMESTAMP1, VALUE1));
     return model;
   }
 
-  @SuppressWarnings("unused")
-  private String toXML(RowModel model) throws JAXBException {
-    StringWriter writer = new StringWriter();
-    context.createMarshaller().marshal(model, writer);
-    return writer.toString();
-  }
-
-  private RowModel fromXML(String xml) throws JAXBException {
-    return (RowModel)
-      context.createUnmarshaller().unmarshal(new StringReader(xml));
-  }
-
-  private void checkModel(RowModel model) {
+  protected void checkModel(RowModel model) {
     assertTrue(Bytes.equals(ROW1, model.getKey()));
     Iterator<CellModel> cells = model.getCells().iterator();
     CellModel cell = cells.next();
@@ -85,13 +71,9 @@ public class TestRowModel extends TestCase {
     assertFalse(cells.hasNext());
   }
 
-  public void testBuildModel() throws Exception {
-    checkModel(buildTestModel());
+  @Override
+  public void testFromPB() throws Exception {
+    //do nothing row model has no PB
   }
-
-  public void testFromXML() throws Exception {
-    checkModel(fromXML(AS_XML));
-  }
-
 }
 

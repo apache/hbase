@@ -27,10 +27,12 @@ import javax.xml.bind.JAXBException;
 
 import junit.framework.TestCase;
 import org.apache.hadoop.hbase.SmallTests;
+import org.junit.Ignore;
+import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 @Category(SmallTests.class)
-public class TestColumnSchemaModel extends TestCase {
+public class TestColumnSchemaModel extends TestModelBase<ColumnSchemaModel> {
 
   protected static final String COLUMN_NAME = "testcolumn";
   protected static final boolean BLOCKCACHE = true;
@@ -41,24 +43,20 @@ public class TestColumnSchemaModel extends TestCase {
   protected static final int TTL = 86400;
   protected static final int VERSIONS = 1;
 
-  protected static final String AS_XML =
-    "<ColumnSchema name=\"testcolumn\"" +
-      " BLOCKSIZE=\"16384\"" +
-      " BLOOMFILTER=\"NONE\"" +
-      " BLOCKCACHE=\"true\"" +
-      " COMPRESSION=\"GZ\"" +
-      " VERSIONS=\"1\"" +
-      " TTL=\"86400\"" +
-      " IN_MEMORY=\"false\"/>";
+  public TestColumnSchemaModel() throws Exception {
+    super(ColumnSchemaModel.class);
+    AS_XML =
+      "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?><ColumnSchema " +
+          "name=\"testcolumn\" BLOCKSIZE=\"16384\" BLOOMFILTER=\"NONE\" BLOCKCACHE=\"true\" " +
+          "COMPRESSION=\"GZ\" VERSIONS=\"1\" TTL=\"86400\" IN_MEMORY=\"false\"/>";
 
-  private JAXBContext context;
-
-  public TestColumnSchemaModel() throws JAXBException {
-    super();
-    context = JAXBContext.newInstance(ColumnSchemaModel.class);
+    AS_JSON =
+      "{\"name\":\"testcolumn\",\"BLOCKSIZE\":\"16384\",\"BLOOMFILTER\":\"NONE\"," +
+          "\"BLOCKCACHE\":\"true\",\"COMPRESSION\":\"GZ\",\"VERSIONS\":\"1\"," +
+          "\"TTL\":\"86400\",\"IN_MEMORY\":\"false\"}";
   }
 
-  protected static ColumnSchemaModel buildTestModel() {
+  protected ColumnSchemaModel buildTestModel() {
     ColumnSchemaModel model = new ColumnSchemaModel();
     model.setName(COLUMN_NAME);
     model.__setBlockcache(BLOCKCACHE);
@@ -71,19 +69,7 @@ public class TestColumnSchemaModel extends TestCase {
     return model;
   }
 
-  @SuppressWarnings("unused")
-  private String toXML(ColumnSchemaModel model) throws JAXBException {
-    StringWriter writer = new StringWriter();
-    context.createMarshaller().marshal(model, writer);
-    return writer.toString();
-  }
-
-  private ColumnSchemaModel fromXML(String xml) throws JAXBException {
-    return (ColumnSchemaModel)
-      context.createUnmarshaller().unmarshal(new StringReader(xml));
-  }
-
-  protected static void checkModel(ColumnSchemaModel model) {
+  protected void checkModel(ColumnSchemaModel model) {
     assertEquals(model.getName(), COLUMN_NAME);
     assertEquals(model.__getBlockcache(), BLOCKCACHE);
     assertEquals(model.__getBlocksize(), BLOCKSIZE);
@@ -94,13 +80,7 @@ public class TestColumnSchemaModel extends TestCase {
     assertEquals(model.__getVersions(), VERSIONS);
   }
 
-  public void testBuildModel() throws Exception {
-    checkModel(buildTestModel());
+  public void testFromPB() throws Exception {
   }
-
-  public void testFromXML() throws Exception {
-    checkModel(fromXML(AS_XML));
-  }
-
 }
 
