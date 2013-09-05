@@ -176,11 +176,7 @@ public class FSTableDescriptors implements TableDescriptors {
           + tablename, ioe);
     }
     
-    if (tdmt == null) {
-      LOG.warn("The following folder is in HBase's root directory and " +
-        "doesn't contain a table descriptor, " +
-        "do consider deleting it: " + tablename);
-    } else {
+    if (tdmt != null) {
       this.cache.put(tablename, tdmt);
     }
     return tdmt == null ? null : tdmt.getTableDescriptor();
@@ -487,6 +483,11 @@ public class FSTableDescriptors implements TableDescriptors {
     return readTableDescriptor(fs, status, false);
   }
   
+  /**
+   * @param tableName table name
+   * @return TableDescriptorAndModtime or null if no table descriptor was found
+   * @throws IOException
+   */
   private TableDescriptorAndModtime getTableDescriptorAndModtime(TableName tableName)
   throws IOException {
     // ignore both -ROOT- and .META. tables
@@ -496,11 +497,17 @@ public class FSTableDescriptors implements TableDescriptors {
     return getTableDescriptorAndModtime(getTableDir(tableName));
   }
 
+  /**
+   * @param tableDir path to table directory
+   * @return TableDescriptorAndModtime or null if no table descriptor was found
+   * at the specified path
+   * @throws IOException
+   */
   private TableDescriptorAndModtime getTableDescriptorAndModtime(Path tableDir)
   throws IOException {
     FileStatus status = getTableInfoPath(tableDir);
     if (status == null) {
-      throw new TableInfoMissingException("No table descriptor file under " + tableDir);
+      return null;
     }
     HTableDescriptor htd = readTableDescriptor(fs, status, !fsreadonly);
     return new TableDescriptorAndModtime(status.getModificationTime(), htd);
