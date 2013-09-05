@@ -44,9 +44,10 @@
     rows via the HBase <command>shell</command>, and then cleaning
     up and shutting down your standalone HBase instance. The below exercise
     should take no more than ten minutes (not including download time).
-        <footnote><para>Using HBase with a LocalFileSystem does not currently guarantee durability. See <link xlink:href="https://issues.apache.org/jira/browse/HBASE-3696"/> and its associated issues for more details.</para></footnote>
     </para>
-    <para>Before we proceed, make sure you are good on the below loopback prerequisite.</para>
+    <note xml:id="local.fs.durability"><title>Local Filesystem and Durability</title>
+        <para>Using HBase with a LocalFileSystem does not currently guarantee durability.
+            See <link xlink:href="https://issues.apache.org/jira/browse/HBASE-3696"/> and its associated issues for more details.</para></note>
     <note xml:id="loopback.ip.getting.started">
         <title>Loopback IP</title>
         <para>HBase expects the loopback IP address to be 127.0.0.1.  Ubuntu and some other distributions,
@@ -59,6 +60,9 @@
             127.0.0.1 ubuntu.ubuntu-domain ubuntu
 </programlisting>
         </para>
+        <tip><title>Fixed in 0.96.0+</title>
+        <para>As of hbase-0.96.0+, this should no longer be an issue; it should work w/o special modification of <filename>/etc/hosts</filename></para>
+        </tip>
        </note>
 
 

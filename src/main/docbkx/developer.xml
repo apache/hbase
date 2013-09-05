@@ -32,7 +32,9 @@
     </para>
     <section xml:id="repos">
       <title>Apache HBase Repositories</title>
-      <para>There are two different repositories for Apache HBase: Subversion (SVN) and Git. The former is the system of record for committers, but the latter is easier to work with to build and contribute. SVN updates get automatically propagated to the Git repo.</para>
+      <para>There are two different repositories for Apache HBase: Subversion (SVN) and Git. The former
+          is the system of record for committers, but the latter is easier to work with to build and contribute.
+          SVN updates get automatically propagated to the Git repo.</para>
       <section xml:id="svn">
         <title>SVN</title>
         <programlisting>
@@ -149,7 +151,8 @@ Access restriction: The method getLong(Object, long) from the type Unsafe is not
        <title>Building Apache HBase</title>
       <section xml:id="build.basic">
        <title>Basic Compile</title>
-       <para>Thanks to maven, building HBase is pretty easy. You can read about the various maven commands in <xref linkend="maven.build.commands"/>, but the simplest command to compile HBase from its java source code is:
+       <para>Thanks to maven, building HBase is pretty easy. You can read about the various maven commands in <xref linkend="maven.build.commands"/>,
+           but the simplest command to compile HBase from its java source code is:
        <programlisting>
 mvn package -DskipTests
        </programlisting>
@@ -157,21 +160,16 @@ mvn package -DskipTests
        <programlisting>
 mvn clean package -DskipTests
        </programlisting>
-       With Eclipse set up as explained above in <xref linkend="eclipse"/>, you can also simply use the build command in Eclipse. To create the full installable HBase package takes a little bit more work, so read on.
+       With Eclipse set up as explained above in <xref linkend="eclipse"/>, you can also simply use the build command in Eclipse.
+       To create the full installable HBase package takes a little bit more work, so read on.
        </para>
-      </section>
-      <section xml:id="build.tgz">
-        <title>Building the HBase tarball</title>
-        <para>Do the following to build the HBase tarball.
-        Passing the -Prelease will generate javadoc and run the RAT plugin to verify licenses on source.
-        <programlisting>% MAVEN_OPTS="-Xmx2g" mvn clean install javadoc:aggregate site assembly:single -DskipTests -Prelease</programlisting>
-</para>
       </section>
       <section xml:id="build.protobuf"><title>Build Protobuf</title>
             <para>You may need to change the protobuf definitions that reside in the hbase-protocol module.</para>
             <para>
-              The protobuf files are located in It is <link xlink:href="https://svn.apache.org/repos/asf/hbase/trunk/hbase-protocol/src/main/protobuf">hbase-protocol/src/main/protobuf</link>.
-              For the change to be effective, you will need to regenerate the classes (read the <link xlink:href="https://svn.apache.org/repos/asf/hbase/trunk/hbase-protocol/README.txt">hbase-protocol/README.txt</link> for more details).
+              The protobuf files are located in <link xlink:href="https://svn.apache.org/repos/asf/hbase/trunk/hbase-protocol/src/main/protobuf">hbase-protocol/src/main/protobuf</link>.
+              For the change to be effective, you will need to
+              regenerate the classes (read the <link xlink:href="https://svn.apache.org/repos/asf/hbase/trunk/hbase-protocol/README.txt">hbase-protocol/README.txt</link> for more details).
            </para>
       </section>
 
@@ -189,113 +187,31 @@ mvn clean package -DskipTests
 
     <section xml:id="releasing">
        <title>Releasing Apache HBase</title>
+         <para>HBase 0.96.x will run on hadoop 1.x or hadoop 2.x but building, you
+             must choose which to build against; we cannot make a single HBase binary
+             to run against both hadoop1 and hadoop2. Since we include the Hadoop we were built
+             against -- so we can do standalone mode -- the set of modules included
+             in the tarball changes dependent on whether the hadoop1 or hadoop2 target chosen.
+             You can tell which HBase you have -- whether it is for hadoop1 or hadoop2
+             by looking at the version; the HBase for hadoop1 will include 'hadoop1' in its
+             version.  Ditto for hadoop2.
+         </para>
+         <para>Maven, our build system, natively will not let you have a single product
+             built against different dependencies.  Its understandable.  But neither could
+             we convince maven to change the set of included modules and write out
+             the correct poms w/ appropriate dependencies even though we have two
+             build targets; one for hadoop1 and another for hadoop2.  So, there is a prestep
+             required.  This prestep takes as input the current pom.xmls and it generates hadoop1 or
+             hadoop2 versions.  You then reference these generated poms when you build. Read on
+         for examples</para>
 
      <section xml:id="release">
-         <title>Making Release Tarballs</title>
-         <para>Making release tarballs -- src, hadoop1, and hadoop2 -- do as follows making use of the mvn
-             versions plugin to rewrite the hbase version string between builds to add the hadoop1 or haddop2
-             suffix to the version as appropriate (Only the src tgz is built without modification from the tag
-             checkout; the binary builds will have unchecked-in modifications to their pom adding the
-             hadoop1/hadoop2 suffix to the version string).
-             <programlisting>$ MAVEN_OPTS="-Xmx2g" mvn clean install javadoc:aggregate site assembly:single -DskipTests -Dassembly.file=hbase-assembly/src/main/assembly/src.xml -Prelease
-# Copy away the src tgz found in hbase-assembly/target after verifying the content of the tgz is good.
-# Now set the version in all poms to include -hadoop1
-$ mvn clean org.codehaus.mojo:versions-maven-plugin:1.3.1:set -DnewVersion=0.95.1-hadoop1
-# Create a tgz w/ this -hadoop1 appended to version.
-$ MAVEN_OPTS="-Xmx2g" mvn clean install javadoc:aggregate site assembly:single -DskipTests -Dassembly.file=hbase-assembly/src/main/assembly/hadoop-one-compat.xml -Dhadoop.profile=1.0 -Prelease
-# Copy away the hadoop1 bing tgz found in hbase-assembly/target after verifying the content of the tgz is good.
-# Here is how to do a publish of a 'snapshot' up to mvn repo of this -hadoop1 version.
-$ MAVEN_OPTS="-Xmx2g" mvn clean install deploy  -DskipTests -Dhadoop.profile=1.0 -Prelease
-# Now set the version to -hadoop2
-$ mvn clean org.codehaus.mojo:versions-maven-plugin:1.3.1:set -DnewVersion=0.95.1-hadoop2
-$ MAVEN_OPTS="-Xmx2g" mvn clean install javadoc:aggregate site assembly:single -DskipTests -Dassembly.file=hbase-assembly/src/main/assembly/hadoop-two-compat.xml -Dhadoop.profile=2.0 -Prelease
-# Copy away the hadoop2 bing tgz found in hbase-assembly/target after verifying the content of the tgz is good.
-# Here is how to do a publish of a 'snapshot' up to mvn repo of this -hadoop1 version.
-$ MAVEN_OPTS="-Xmx2g" mvn clean install deploy  -DskipTests -Dhadoop.profile=2.0 -Prelease
-             </programlisting>
-         </para>
-         <para>Next sign the tgzs and deploy (see the hadoop how to release instructions for how).</para>
-     </section>
-
-      </section>
-
-
-
-    <section xml:id="mvn_repo">
-        <title>Adding an Apache HBase release to Apache's Maven Repository</title>
-        <para>Follow the instructions at
-        <link xlink:href="http://www.apache.org/dev/publishing-maven-artifacts.html">Publishing Maven Artifacts</link> after
-        reading the below miscellaney.
-        </para>
+         <title>Making Release Candidate</title>
+         <para>I'll explain by running through the process.  See later in this section for more detail on particular steps.</para>
         <para>You must use maven 3.0.x (Check by running <command>mvn -version</command>).
         </para>
-        <para>Let me list out the commands I used first.  The sections that follow dig in more
-        on what is going on.  In this example, we are releasing the 0.92.2 jar to the apache
-        maven repository.
-        <programlisting>
-  # First make a copy of the tag we want to release; presumes the release has been tagged already
-  # We do this because we need to make some commits for the mvn release plugin to work.
-  853  svn copy -m "Publishing 0.92.2 to mvn"  https://svn.apache.org/repos/asf/hbase/tags/0.92.2 https://svn.apache.org/repos/asf/hbase/tags/0.92.2mvn
-  857  svn checkout https://svn.apache.org/repos/asf/hbase/tags/0.92.2mvn
-  858  cd 0.92.2mvn/
-  # Edit the version making it release version with a '-SNAPSHOT' suffix (See below for more on this)
-  860  vi pom.xml
-  861  svn commit -m "Add SNAPSHOT to the version" pom.xml
-  862  ~/bin/mvn/bin/mvn release:clean
-  865  ~/bin/mvn/bin/mvn release:prepare
-  866  # Answer questions and then ^C to kill the build after the last question. See below for more on this.
-  867  vi release.properties
-       # Change the references to trunk svn to be 0.92.2mvn.  The release plugin presumes trunk.
-       # Where it asks for a label for the release specify a label that does not yet exist; e.g.
-       # 0.92.2mvn2 (i.e. add a character, here a '2', to the label you are currently working
-       # against so when maven goes to label the release, it does not clash with an existing one).
-       # Then restart the release:prepare -- it won't ask questions because the properties file exists.
-  868  ~/bin/mvn/bin/mvn release:prepare
-  # The apache-release profile comes from the apache parent pom and does signing of artifacts published
-  869  ~/bin/mvn/bin/mvn release:perform  -Papache-release
-       # When done copying up to apache staging repository,
-       # browse to repository.apache.org, login and finish
-       # the release as according to the above
-       # "Publishing Maven Artifacts.
-        </programlisting>
-        </para>
-        <para>Below is more detail on the commmands listed above.</para>
-        <para>At the <command>mvn release:perform</command> step, before starting, if you are for example
-        releasing hbase 0.92.2, you need to make sure the pom.xml version is 0.92.2-SNAPSHOT.  This needs
-        to be checked in.  Since we do the maven release after actual release, I've been doing this
-        checkin into a copy of the release tag rather than into the actual release tag itself (presumes the release has been properly tagged in svn).
-        So, say we released hbase 0.92.2 and now we want to do the release to the maven repository, in svn, the 0.92.2
-        release will be tagged 0.92.2.  Making the maven release, copy the 0.92.2 tag to 0.92.2mvn.
-        Check out this tag and change the version therein and commit.
-        </para>
-        <para>
-            Currently, the mvn release wants to go against trunk.  I haven't figured how to tell it to do otherwise
-            so I do the below hack.  The hack comprises answering the questions put to you by the mvn release plugin properly,
-            then immediately control-C'ing the build after the last question asked as the build release step starts to run.
-            After control-C'ing it, You'll notice a release.properties in your build dir.  Review it.
-            Make sure it is using the proper branch -- it tends to use trunk rather than the 0.92.2mvn or whatever
-            that you want it to use -- so hand edit the release.properties file that was put under <varname>${HBASE_HOME}</varname>
-            by the <command>release:perform</command> invocation.  When done, resstart the
-            <command>release:perform</command>.
-        </para>
-        <para>Here is how I'd answer the questions at <command>release:prepare</command> time:
-        <programlisting>What is the release version for "HBase"? (org.apache.hbase:hbase) 0.92.2: :
-What is SCM release tag or label for "HBase"? (org.apache.hbase:hbase) hbase-0.92.2: : 0.92.2mvn
-What is the new development version for "HBase"? (org.apache.hbase:hbase) 0.92.3-SNAPSHOT: :
-[INFO] Transforming 'HBase'...</programlisting>
-        </para>
-        <para>When you run <command>release:perform</command>, pass <command>-Papache-release</command>
-        else it will not 'sign' the artifacts it uploads.
-        </para>
-        <para>A strange issue I ran into was the one where the upload into the apache
-        repository was being sprayed across multiple apache machines making it so I could
-        not release.  See <link xlink:href="https://issues.apache.org/jira/browse/INFRA-4482">INFRA-4482 Why is my upload to mvn spread across multiple repositories?</link>.</para>
-
-        <para xml:id="mvn.settings.file">Here is my <filename>~/.m2/settings.xml</filename>.
-        This is read by the release plugin.  The apache-release profile will pick up your
-        gpg key setup from here if you've specified it into the file.  The password
-        can be maven encrypted as suggested in the "Publishing Maven Artifacts" but plain
-        text password works too (just don't let anyone see your local settings.xml).
+            <para xml:id="mvn.settings.file">Make sure your local <filename>settings.xml</filename> is set up properly before you begin.
+            Here is my <filename>~/.m2/settings.xml</filename>.
         <programlisting>&lt;settings xmlns="http://maven.apache.org/SETTINGS/1.0.0"
   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
   xsi:schemaLocation="http://maven.apache.org/SETTINGS/1.0.0
@@ -333,29 +249,85 @@ What is the new development version for "HBase"? (org.apache.hbase:hbase) 0.92.3
 &lt;/settings>
         </programlisting>
         </para>
-
-        <para>If you see run into the below, its because you need to edit version in the pom.xml and add
-        <code>-SNAPSHOT</code> to the version (and commit).
-        <programlisting>[INFO] Scanning for projects...
-[INFO] Searching repository for plugin with prefix: 'release'.
-[INFO] ------------------------------------------------------------------------
-[INFO] Building HBase
-[INFO]    task-segment: [release:prepare] (aggregator-style)
-[INFO] ------------------------------------------------------------------------
-[INFO] [release:prepare {execution: default-cli}]
-[INFO] ------------------------------------------------------------------------
-[ERROR] BUILD FAILURE
-[INFO] ------------------------------------------------------------------------
-[INFO] You don't have a SNAPSHOT project in the reactor projects list.
-[INFO] ------------------------------------------------------------------------
-[INFO] For more information, run Maven with the -e switch
-[INFO] ------------------------------------------------------------------------
-[INFO] Total time: 3 seconds
-[INFO] Finished at: Sat Mar 26 18:11:07 PDT 2011
-[INFO] Final Memory: 35M/423M
-[INFO] -----------------------------------------------------------------------</programlisting>
+        <para>The <link xlink:href="http://wiki.apache.org/hadoop/HowToRelease">Hadoop How To Release</link> wiki page informs much of the below and may have more detail on particular sections so it is worth review.</para>
+         <para>Update CHANGES.txt with the changes since the last release (query JIRA, export to excel then hack w/ vim to format to suit CHANGES.txt TODO: Needs detail).
+             Adjust the version in all the poms appropriately; e.g. you may need to remove <emphasis>-SNAPSHOT</emphasis> from all versions.
+             The <link xlink:href="http://mojo.codehaus.org/versions-maven-plugin/">Versions Maven Plugin</link> can be of use here.  To
+             set a version in all poms, do something like this:
+             <programlisting>$ mvn clean org.codehaus.mojo:versions-maven-plugin:1.3.1:set -DnewVersion=0.96.0</programlisting>
+             Checkin the <filename>CHANGES.txt</filename> and version changes.
         </para>
+        <para>Now, build the src tarball.  This tarball is hadoop version independent.  It is just the pure src code and is without the hadoop1 or  hadoop2 taint.
+            <programlisting>$ MAVEN_OPTS="-Xmx2g" mvn clean install javadoc:aggregate site assembly:single -DskipTests -Dassembly.file=hbase-assembly/src/main/assembly/src.xml -Prelease</programlisting>
+            Undo the tarball and make sure it looks good (A good test is seeing if you can build from the undone tarball).
+            Save it off to a <emphasis>version directory</emphasis>, i.e a directory somewhere where you are collecting
+            all of the tarballs you will publish as part of the release candidate.  For example if we were building a
+            hbase-0.96.0 release candidate, we might call the directory <filename>hbase-0.96.0RC0</filename>.  Later
+            we will publish this directory as our release candidate up on people.apache.org/~you.
+        </para>
+        <para>Now we are into the making of the hadoop1 and hadoop2 specific builds.  Lets do hadoop1 first.
+            <programlisting># First generate the hadoop1 poms.  See the generate-hadoopX-poms.sh script usage for what it expects by way of arguments.
+$ ./dev-support/generate-hadoopX-poms.sh 0.96.0 0.96.0-hadoop1
+# The script will work silently if all goes well.  It will drop a pom.xml.hadoop1 beside all pom.xmls in all modules.
+# Now build the hadoop1 tarball.  Note we ask for the generation of javadoc and site and we reference the new pom.xml.hadoop1 explicitly
+$ MAVEN_OPTS="-Xmx3g" mvn -f pom.xml.hadoop1 clean install -DskipTests  javadoc:aggregate site assembly:single -Prelease
+# Undo the tgz and check it out.  Look at doc. and see if it runs, etc.  Are the set of modules appropriate: e.g. do we have a hbase-hadoop2-compat in the hadoop1 tgz?
+# If good, copy the tarball to your 'version directory'
+# Now deploy hadoop1 hbase to mvn. Do the mvn deploy and tgz for a particular version all together in the one go else if you flip between hadoop1 and hadoop2 builds, you might mal-publish poms and hbase-default.xml's (the version interpolations won't match).
+# Use the apache-release profile instead of just 'release' when doing mvn deploy; it will sign your artifacts published to mvn as long as your settings.xml in your local .m2 repository is configured correctly.
+$ MAVEN_OPTS="-Xmx3g" mvn -f pom.xml.hadoop1 deploy -DskipTests -Papache-release -Pgpg
+# The above copies all artifacts for hadoop1 up to mvn repo.  The -Pgpg reads pgp password from settings.xml if it is set up properly.  If no '-SNAPSHOT' in the version, it puts the artifacts into a staging directory.  This is what you want.
+            </programlisting>
+        </para>
+
+        <para>Lets do the hadoop2 artifacts (read above hadoop1 section closely before coming here because don't want to repeat detail since repeats have tendency to drift).
+            <programlisting># Generate the hadoop2 poms.
+$ ./dev-support/generate-hadoopX-poms.sh 0.96.0 0.96.0-hadoop2
+# Build the hadoop2 tarball.
+$ MAVEN_OPTS="-Xmx3g" mvn -f pom.xml.hadoop2 clean install -DskipTests  javadoc:aggregate site assembly:single -Prelease
+# Undo the tgz and check it out.  If good, copy the tarball to your 'version directory'. Now deploy to mvn.
+$ MAVEN_OPTS="-Xmx3g" mvn -f pom.xml.hadoop2 deploy -DskipTests -Papache-release -Pgpg
+            </programlisting>
+        </para>
+        <para>
+        At this stage we have three tarballs in our 'version directory' and two sets of artifacts up in maven in staging area.
+        First lets put the 'version directory' up on people.apache.org.  You will need to sign and fingerprint them before you
+        push them up. In the 'version directory' do this:
+        <programlisting>$ for i in *.tar.gz; do echo $i; gpg --print-mds $i > $i.mds ; done
+$ for i in *.tar.gz; do echo $i; gpg --armor --output $i.asc --detach-sig $i  ; done
+$ cd ..
+# Presuming our 'version directory' is named 0.96.0RC0, now copy it up to people.apache.org.
+$ rsync -av 0.96.0RC0 people.apache.org:public_html
+        </programlisting>
+        </para>
+        <para>
+            For the maven artifacts, login at repository.apache.org.  Find your artifacts in the staging directory.
+            Close the artifacts.  This will give you an URL for the temporary mvn staging repository.  Do the closing
+            for hadoop1 and hadoop2 repos.
+            See <link xlink:href="http://www.apache.org/dev/publishing-maven-artifacts.html">Publishing Maven Artifacts</link> for
+            some pointers.
+            <note>
+                <para>We no longer publish using the maven release plugin.  Instead we do mvn deploy.  It seems to give
+                    us a backdoor to maven release publishing.  If no <emphasis>-SNAPSHOT</emphasis> on the version
+                    string, then we are 'deployed' to the apache maven repository staging directory from which we
+                    can publish URLs for candidates and later, if they pass, publish as release (if a
+                    <emphasis>-SNAPSHOT</emphasis> on the version string, deploy will put the artifacts up into
+                    apache snapshot repos).
+                </para>
+            </note>
+        </para>
+        <para>Make sure the people.apache.org directory is showing -- it can take a while to show -- and that the
+            mvn repo urls are good.
+            Announce the release candidate on the mailing list and call a vote.
+        </para>
+        <para>A strange issue I ran into was the one where the upload into the apache
+        repository was being sprayed across multiple apache machines making it so I could
+        not release.  See <link xlink:href="https://issues.apache.org/jira/browse/INFRA-4482">INFRA-4482 Why is my upload to mvn spread across multiple repositories?</link>.</para>
+
+     </section>
+
       </section>
+
     <section xml:id="documentation">
           <title>Generating the HBase Reference Guide</title>
           <para>The manual is marked up using <link xlink:href="http://www.docbook.org/">docbook</link>.

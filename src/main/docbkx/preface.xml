@@ -29,7 +29,6 @@
 
   <para>This is the official reference guide for the <link
   xlink:href="http://hbase.apache.org/">HBase</link> version it ships with.
-  This document describes HBase version <emphasis><?eval ${project.version}?></emphasis>.
   Herein you will find either the definitive documentation on an HBase topic
   as of its standing when the referenced HBase version shipped, or it
   will point to the location in <link
@@ -42,7 +41,8 @@
       be found at <filename>src/main/docbkx</filename> in a checkout of the hbase
       project.  This reference guide is marked up using
       <link xlink:href="http://www.docbook.com/">DocBook</link> from which the
-      the finished guide is generated as part of the 'site' build target.
+      the finished guide is generated as part of the 'site' build target:
+      i.e. run <programlisting>$mvn site</programlisting> to generate this documentation.
       Feel free to add content by adding
   a patch to an issue up in the HBase <link
   xlink:href="https://issues.apache.org/jira/browse/HBASE">JIRA</link>.</para>

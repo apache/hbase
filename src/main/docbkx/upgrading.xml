@@ -80,59 +80,134 @@
             </para>
         </section>
 </section>
+
     <section xml:id="upgrade0.96">
       <title>Upgrading from 0.94.x to 0.96.x</title>
       <subtitle>The Singularity</subtitle>
-      <para>You will have to stop your old 0.94 cluster completely to upgrade.  If you are replicating
-     between clusters, both clusters will have to go down to upgrade.  Make sure it is a clean shutdown
-     so there are no WAL files laying around (TODO: Can 0.96 read 0.94 WAL files?).  Make sure
-     zookeeper is cleared of state.  All clients must be upgraded to 0.96 too.
+      <para>You will have to stop your old 0.94.x cluster completely to upgrade.  If you are replicating
+     between clusters, both clusters will have to go down to upgrade.  Make sure it is a clean shutdown.
+     The less WAL files around, the faster the upgrade will run (the upgrade will split any log files it
+     finds in the filesystem as part of the upgrade process).  All clients must be upgraded to 0.96 too.
  </para>
- <para>The API has changed in a few areas; in particular how you use coprocessors (TODO: MapReduce too?)
+ <para>The API has changed.  You will need to recompile your code against 0.96 and you may need to
+     adjust applications to go against new APIs (TODO: List of changes).
  </para>
- <para>TODO: Need to recompile your code against 0.96, choose the right hbase jar to suit your h1 or h2
-     setup, etc.  WHAT ELSE
+ <section>
+     <title>Executing the 0.96 Upgrade</title>
+     <note>
+     <para>HDFS and ZooKeeper should be up and running during the upgrade process.</para>
+ </note>
+ <para>hbase-0.96.0 comes with an upgrade script.  Run
+     <programlisting>$ bin/hbase upgrade</programlisting> to see its usage.
+     The script has two main modes: -check, and -execute.
  </para>
- <section xml:id="096.zk.cleaning">
-     <title>Cleaning zookeeper of old data</title>
-     <para>Clean zookeeper of all its content before you start 0.96.x (or 0.95.x).  Here is how:
-         <programlisting>$ ./bin/hbase clean</programlisting>
-         This will printout usage.</para>
-     <para>To 'clean' ZooKeeper, it needs to be running.  But you don't want the cluster running
-         because the cluster will then register its entities in ZooKeeper and as a precaution,
-         our clean script will not run if there are registered masters and regionservers with
-         registered znodes present.  So, make sure all servers are down but for zookeeper.  If
-         zookeeper is managed by HBase, a commmon-configuration, then you will need to start
-         zookeeper only:
-         <programlisting>$ ./hbase/bin/hbase-daemons.sh  --config /home/stack/conf-hbase start zookeeper</programlisting>
-         If zookeeper is managed independently of HBase, make sure it is up.
-       Now run the following to clean zookeeper in particular
-         <programlisting>$ ./bin/hbase clean --cleanZk</programlisting>
-         It may complain that there are still registered regionserver znodes present in zookeeper.
-         If so, ensure they are indeed down.  Then wait a few tens of seconds and they should
-         disappear.
-     </para>
-     <para>This is what you will see if zookeeper has old data in it: the Master won't start with
-         an exception like the following
-         <programlisting>2013-05-30 09:46:29,767 FATAL [master-sss-1,60000,1369932387523] org.apache.hadoop.hbase.master.HMaster: Unhandled exception. Starting shutdown.
-org.apache.zookeeper.KeeperException$DataInconsistencyException: KeeperErrorCode = DataInconsistency
-        at org.apache.hadoop.hbase.zookeeper.ZKUtil.convert(ZKUtil.java:1789)
-        at org.apache.hadoop.hbase.zookeeper.ZKTableReadOnly.getTableState(ZKTableReadOnly.java:156)
-        at org.apache.hadoop.hbase.zookeeper.ZKTable.populateTableStates(ZKTable.java:81)
-        at org.apache.hadoop.hbase.zookeeper.ZKTable.&lt;init>(ZKTable.java:68)
-        at org.apache.hadoop.hbase.master.AssignmentManager.&lt;init>(AssignmentManager.java:246)
-        at org.apache.hadoop.hbase.master.HMaster.initializeZKBasedSystemTrackers(HMaster.java:626)
-        at org.apache.hadoop.hbase.master.HMaster.finishInitialization(HMaster.java:757)
-        at org.apache.hadoop.hbase.master.HMaster.run(HMaster.java:552)
-        at java.lang.Thread.run(Thread.java:662)
-Caused by: org.apache.hadoop.hbase.exceptions.DeserializationException: Missing pb magic PBUF prefix
-        at org.apache.hadoop.hbase.protobuf.ProtobufUtil.expectPBMagicPrefix(ProtobufUtil.java:205)
-        at org.apache.hadoop.hbase.zookeeper.ZKTableReadOnly.getTableState(ZKTableReadOnly.java:146)
-        ... 7 more</programlisting>
-     </para>
+     <section><title>check</title>
+         <para>The <emphasis>check</emphasis> step is run against a running 0.94 cluster.
+             Run it from a downloaded 0.96.x binary.  The <emphasis>check</emphasis> step
+             is looking for the presence of <filename>HFileV1</filename> files.  These are
+             unsupported in hbase-0.96.0.  To purge them -- have them rewritten as HFileV2 --
+             you must run a compaction.
+         </para>
+         <para>The <emphasis>check</emphasis> step prints stats at the end of its run
+             (grep for “Result:” in the log) printing absolute path of the tables it scanned,
+             any HFileV1 files found, the regions containing said files (the regions we
+             need to  major compact to purge the HFileV1s), and any corrupted files if
+             any found. A corrupt file is unreadable, and so is undefined (neither HFileV1 nor HFileV2).
+         </para>
+         <para>To run the check step, run <programlisting>$ bin/hbase upgrade -check</programlisting>.
+          Here is sample output:
+<programlisting>
+             Tables Processed:
+             hdfs://localhost:41020/myHBase/.META.
+             hdfs://localhost:41020/myHBase/usertable
+             hdfs://localhost:41020/myHBase/TestTable
+             hdfs://localhost:41020/myHBase/t
 
+             Count of HFileV1: 2
+             HFileV1:
+             hdfs://localhost:41020/myHBase/usertable    /fa02dac1f38d03577bd0f7e666f12812/family/249450144068442524
+             hdfs://localhost:41020/myHBase/usertable    /ecdd3eaee2d2fcf8184ac025555bb2af/family/249450144068442512
+
+             Count of corrupted files: 1
+             Corrupted Files:
+             hdfs://localhost:41020/myHBase/usertable/fa02dac1f38d03577bd0f7e666f12812/family/1
+             Count of Regions with HFileV1: 2
+             Regions to Major Compact:
+             hdfs://localhost:41020/myHBase/usertable/fa02dac1f38d03577bd0f7e666f12812
+             hdfs://localhost:41020/myHBase/usertable/ecdd3eaee2d2fcf8184ac025555bb2af
+
+             There are some HFileV1, or corrupt files (files with incorrect major version)
+</programlisting>
+             In the above sample output, there are two HFileV1 in two regions, and one corrupt file.
+             Corrupt files should probably be removed.  The regions that have HFileV1s need to be major
+             compacted.  To major compact, start up the hbase shell and review how to compact an individual
+             region.  After the major compaction is done, rerun the check step and the HFileV1s shoudl be
+             gone, replaced by HFileV2 instances.
+         </para>
+         <para>By default, the check step scans the hbase root directory (defined as hbase.rootdir in the configuration).
+             To scan a specific directory only, pass the <emphasis>-dir</emphasis> option.
+             <programlisting>$ bin/hbase upgrade -check -dir /myHBase/testTable</programlisting>
+             The above command would detect HFileV1s in the /myHBase/testTable directory.
+         </para>
+         <para>
+             Once the check step reports all the HFileV1 files have been rewritten, it is safe to proceed with the
+             upgrade.
+          </para>
+     </section>
+     <section><title>execute</title>
+         <para>After the check step shows the cluster is free of HFileV1, it is safe to proceed with the upgrade.
+             Next is the <emphasis>execute</emphasis> step.  You must <emphasis>SHUTDOWN YOUR 0.94.x CLUSTER</emphasis>
+             before you can run the <emphasis>execute</emphasis> step.  The execute step will not run if it
+             detects running HBase masters or regionservers.
+         <note>
+         <para>HDFS and ZooKeeper should be up and running during the upgrade process.
+             If zookeeper is managed by HBase, then you can start zookeeper so it is available to the upgrade
+             by running <programlisting>$ ./hbase/bin/hbase-daemon.sh  start zookeeper</programlisting>
+         </para></note>
+         </para>
+         <para>
+             The <emphasis>execute</emphasis> upgrade step is made of three substeps.
+
+             <itemizedlist>
+             <listitem> <para>Namespaces: HBase 0.96.0 has support for namespaces.  The upgrade needs to reorder directories in the filesystem for namespaces to work.</para> </listitem>
+             <listitem> <para>ZNodes: All znodes are purged so that new ones can be written in their place using a new protobuf'ed format and a few are migrated in place: e.g. replication and table state znodes</para> </listitem>
+             <listitem> <para>WAL Log Splitting: If the 0.94.x cluster shutdown was not clean, we'll split WAL logs as part of migration before
+                     we startup on 0.96.0.  This WAL splitting runs slower than the native distributed WAL splitting because it is all inside the
+                     single upgrade process (so try and get a clean shutdown of the 0.94.0 cluster  if you can).
+             </para> </listitem>
+         </itemizedlist>
+         </para>
+         <para>
+             To run the <emphasis>execute</emphasis> step, make sure that first you have copied hbase-0.96.0
+             binaries everywhere under servers and under clients.  Make sure the 0.94.0 cluster is down.
+             Then do as follows:
+         <programlisting>$ bin/hbase upgrade -execute</programlisting>
+         Here is some sample output
+         <programlisting>
+             Starting Namespace upgrade
+             Created version file at hdfs://localhost:41020/myHBase with version=7
+             Migrating table testTable to hdfs://localhost:41020/myHBase/.data/default/testTable
+             …..
+             Created version file at hdfs://localhost:41020/myHBase with version=8
+             Successfully completed NameSpace upgrade.
+             Starting Znode upgrade
+             ….
+             Successfully completed Znode upgrade
+
+             Starting Log splitting
+             …
+             Successfully completed Log splitting
+         </programlisting>
+         </para>
+         <para>
+             If the output from the execute step looks good, start hbase-0.96.0.
+         </para>
+     </section>
  </section>
+
+
     </section>
+
     <section xml:id="upgrade0.94">
       <title>Upgrading from 0.92.x to 0.94.x</title>
       <para>We used to think that 0.92 and 0.94 were interface compatible and that you can do a
