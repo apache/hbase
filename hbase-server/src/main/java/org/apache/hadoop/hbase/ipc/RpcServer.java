@@ -1093,7 +1093,7 @@ public class RpcServer implements RpcServerInterface {
     private ByteBuffer data;
     private ByteBuffer dataLengthBuffer;
     protected final LinkedList<Call> responseQueue;
-    private volatile int rpcCount = 0; // number of outstanding rpcs
+    private Counter rpcCount = new Counter(); // number of outstanding rpcs
     private long lastContact;
     private InetAddress addr;
     protected Socket socket;
@@ -1186,17 +1186,17 @@ public class RpcServer implements RpcServerInterface {
 
     /* Return true if the connection has no outstanding rpc */
     private boolean isIdle() {
-      return rpcCount == 0;
+      return rpcCount.get() == 0;
     }
 
     /* Decrement the outstanding RPC count */
     protected void decRpcCount() {
-      rpcCount--;
+      rpcCount.decrement();
     }
 
     /* Increment the outstanding RPC count */
     protected void incRpcCount() {
-      rpcCount++;
+      rpcCount.increment();
     }
 
     protected boolean timedOut(long currentTime) {
