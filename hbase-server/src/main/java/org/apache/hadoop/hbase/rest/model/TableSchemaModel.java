@@ -43,6 +43,9 @@ import org.apache.hadoop.hbase.rest.ProtobufMessageHandler;
 import org.apache.hadoop.hbase.rest.protobuf.generated.ColumnSchemaMessage.ColumnSchema;
 import org.apache.hadoop.hbase.rest.protobuf.generated.TableSchemaMessage.TableSchema;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.codehaus.jackson.annotate.JsonAnyGetter;
+import org.codehaus.jackson.annotate.JsonAnySetter;
+import org.codehaus.jackson.annotate.JsonIgnore;
 
 /**
  * A representation of HBase table descriptors.
@@ -107,6 +110,7 @@ public class TableSchemaModel implements Serializable, ProtobufMessageHandler {
    * @param name attribute name
    * @param value attribute value
    */
+  @JsonAnySetter
   public void addAttribute(String name, Object value) {
     attrs.put(new QName(name), value);
   }
@@ -151,6 +155,7 @@ public class TableSchemaModel implements Serializable, ProtobufMessageHandler {
    * @return the map for holding unspecified (user) attributes
    */
   @XmlAnyAttribute
+  @JsonAnyGetter
   public Map<QName,Object> getAny() {
     return attrs;
   }
@@ -337,6 +342,7 @@ public class TableSchemaModel implements Serializable, ProtobufMessageHandler {
   /**
    * @return a table descriptor
    */
+  @JsonIgnore
   public HTableDescriptor getTableDescriptor() {
     HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(getName()));
     for (Map.Entry<QName, Object> e: getAny().entrySet()) {

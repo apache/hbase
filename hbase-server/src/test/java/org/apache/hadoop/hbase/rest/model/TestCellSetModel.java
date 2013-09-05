@@ -35,7 +35,7 @@ import junit.framework.TestCase;
 import org.junit.experimental.categories.Category;
 
 @Category(SmallTests.class)
-public class TestCellSetModel extends TestCase {
+public class TestCellSetModel extends TestModelBase<CellSetModel> {
 
   private static final byte[] ROW1 = Bytes.toBytes("testrow1");
   private static final byte[] COLUMN1 = Bytes.toBytes("testcolumn1");
@@ -49,36 +49,46 @@ public class TestCellSetModel extends TestCase {
   private static final byte[] VALUE3 = Bytes.toBytes("testvalue3");
   private static final long TIMESTAMP3 = 1245393318192L;
 
-  private static final String AS_XML =
-    "<CellSet>" + 
-      "<Row key=\"dGVzdHJvdzE=\">" + 
-        "<Cell timestamp=\"1245219839331\" column=\"dGVzdGNvbHVtbjE=\">" + 
-          "dGVzdHZhbHVlMQ==</Cell>" + 
-        "</Row>" + 
-      "<Row key=\"dGVzdHJvdzE=\">" + 
-        "<Cell timestamp=\"1245239813319\" column=\"dGVzdGNvbHVtbjI=\">" +
-          "dGVzdHZhbHVlMg==</Cell>" + 
-        "<Cell timestamp=\"1245393318192\" column=\"dGVzdGNvbHVtbjM=\">" + 
-          "dGVzdHZhbHVlMw==</Cell>" + 
-        "</Row>" +
-      "</CellSet>";
+  public TestCellSetModel() throws Exception {
+    super(CellSetModel.class);
+    AS_XML =
+      "<CellSet>" +
+        "<Row key=\"dGVzdHJvdzE=\">" +
+          "<Cell timestamp=\"1245219839331\" column=\"dGVzdGNvbHVtbjE=\">" +
+            "dGVzdHZhbHVlMQ==</Cell>" +
+          "</Row>" +
+        "<Row key=\"dGVzdHJvdzE=\">" +
+          "<Cell timestamp=\"1245239813319\" column=\"dGVzdGNvbHVtbjI=\">" +
+            "dGVzdHZhbHVlMg==</Cell>" +
+          "<Cell timestamp=\"1245393318192\" column=\"dGVzdGNvbHVtbjM=\">" +
+            "dGVzdHZhbHVlMw==</Cell>" +
+          "</Row>" +
+        "</CellSet>";
 
-  private static final String AS_PB = 
-    "CiwKCHRlc3Ryb3cxEiASC3Rlc3Rjb2x1bW4xGOO6i+eeJCIKdGVzdHZhbHVlMQpOCgh0ZXN0cm93" +
-    "MRIgEgt0ZXN0Y29sdW1uMhjHyc7wniQiCnRlc3R2YWx1ZTISIBILdGVzdGNvbHVtbjMYsOLnuZ8k" +
-    "Igp0ZXN0dmFsdWUz";
+    AS_PB =
+      "CiwKCHRlc3Ryb3cxEiASC3Rlc3Rjb2x1bW4xGOO6i+eeJCIKdGVzdHZhbHVlMQpOCgh0ZXN0cm93" +
+      "MRIgEgt0ZXN0Y29sdW1uMhjHyc7wniQiCnRlc3R2YWx1ZTISIBILdGVzdGNvbHVtbjMYsOLnuZ8k" +
+      "Igp0ZXN0dmFsdWUz";
 
-  private JAXBContext context;
+    AS_XML =
+      "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?><CellSet>" +
+      "<Row key=\"dGVzdHJvdzE=\"><Cell column=\"dGVzdGNvbHVtbjE=\" timestamp=\"1245219839331\">" +
+      "dGVzdHZhbHVlMQ==</Cell></Row><Row key=\"dGVzdHJvdzE=\">" +
+      "<Cell column=\"dGVzdGNvbHVtbjI=\" timestamp=\"1245239813319\">" +
+      "dGVzdHZhbHVlMg==</Cell>" +
+      "<Cell column=\"dGVzdGNvbHVtbjM=\" timestamp=\"1245393318192\">dGVzdHZhbHVlMw==</Cell>" +
+      "</Row></CellSet>";
 
-  public TestCellSetModel() throws JAXBException {
-    super();
-    context = JAXBContext.newInstance(
-        CellModel.class,
-        CellSetModel.class,
-        RowModel.class);
+    AS_JSON =
+      "{\"Row\":[{\"key\":\"dGVzdHJvdzE=\"," +
+      "\"Cell\":[{\"column\":\"dGVzdGNvbHVtbjE=\",\"timestamp\":1245219839331," +
+      "\"$\":\"dGVzdHZhbHVlMQ==\"}]},{\"key\":\"dGVzdHJvdzE=\"," +
+      "\"Cell\":[{\"column\":\"dGVzdGNvbHVtbjI=\",\"timestamp\":1245239813319," +
+      "\"$\":\"dGVzdHZhbHVlMg==\"},{\"column\":\"dGVzdGNvbHVtbjM=\"," +
+      "\"timestamp\":1245393318192,\"$\":\"dGVzdHZhbHVlMw==\"}]}]}";
   }
 
-  private CellSetModel buildTestModel() {
+  protected CellSetModel buildTestModel() {
     CellSetModel model = new CellSetModel();
     RowModel row;
     row = new RowModel();
@@ -93,29 +103,7 @@ public class TestCellSetModel extends TestCase {
     return model;
   }
 
-  @SuppressWarnings("unused")
-  private String toXML(CellSetModel model) throws JAXBException {
-    StringWriter writer = new StringWriter();
-    context.createMarshaller().marshal(model, writer);
-    return writer.toString();
-  }
-
-  private CellSetModel fromXML(String xml) throws JAXBException {
-    return (CellSetModel)
-      context.createUnmarshaller().unmarshal(new StringReader(xml));
-  }
-
-  @SuppressWarnings("unused")
-  private byte[] toPB(CellSetModel model) {
-    return model.createProtobufOutput();
-  }
-
-  private CellSetModel fromPB(String pb) throws IOException {
-    return (CellSetModel) 
-      new CellSetModel().getObjectFromMessage(Base64.decode(AS_PB));
-  }
-
-  private void checkModel(CellSetModel model) {
+  protected void checkModel(CellSetModel model) {
     Iterator<RowModel> rows = model.getRows().iterator();
     RowModel row = rows.next();
     assertTrue(Bytes.equals(ROW1, row.getKey()));

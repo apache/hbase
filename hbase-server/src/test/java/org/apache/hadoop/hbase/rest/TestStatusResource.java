@@ -53,7 +53,7 @@ public class TestStatusResource {
   
   private static void validate(StorageClusterStatusModel model) {
     assertNotNull(model);
-    assertTrue(model.getRegions() >= 1);
+    assertTrue(model.getRegions() + ">= 1", model.getRegions() >= 1);
     assertTrue(model.getRequests() >= 0);
     assertTrue(model.getAverageLoad() >= 0.0);
     assertNotNull(model.getLiveNodes());

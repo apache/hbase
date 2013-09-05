@@ -26,6 +26,7 @@ import java.io.StringWriter;
 import javax.xml.bind.JAXBContext;
 import javax.xml.bind.JAXBException;
 
+import com.sun.jersey.api.json.JSONJAXBContext;
 import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.util.Base64;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -34,28 +35,25 @@ import junit.framework.TestCase;
 import org.junit.experimental.categories.Category;
 
 @Category(SmallTests.class)
-public class TestCellModel extends TestCase {
+public class TestCellModel extends TestModelBase<CellModel> {
 
   private static final long TIMESTAMP = 1245219839331L;
   private static final byte[] COLUMN = Bytes.toBytes("testcolumn");
   private static final byte[] VALUE = Bytes.toBytes("testvalue");
 
-  private static final String AS_XML =
-    "<Cell timestamp=\"1245219839331\"" +
-      " column=\"dGVzdGNvbHVtbg==\">" +
-      "dGVzdHZhbHVl</Cell>";
+  public TestCellModel() throws Exception {
+    super(CellModel.class);
+    AS_XML =
+      "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?><Cell " +
+          "column=\"dGVzdGNvbHVtbg==\" timestamp=\"1245219839331\">dGVzdHZhbHVl</Cell>";
+    AS_PB =
+      "Egp0ZXN0Y29sdW1uGOO6i+eeJCIJdGVzdHZhbHVl";
 
-  private static final String AS_PB = 
-    "Egp0ZXN0Y29sdW1uGOO6i+eeJCIJdGVzdHZhbHVl";
-
-  private JAXBContext context;
-
-  public TestCellModel() throws JAXBException {
-    super();
-    context = JAXBContext.newInstance(CellModel.class);
+    AS_JSON =
+      "{\"column\":\"dGVzdGNvbHVtbg==\",\"timestamp\":1245219839331,\"$\":\"dGVzdHZhbHVl\"}";
   }
 
-  private CellModel buildTestModel() {
+  protected CellModel buildTestModel() {
     CellModel model = new CellModel();
     model.setColumn(COLUMN);
     model.setTimestamp(TIMESTAMP);
@@ -63,29 +61,7 @@ public class TestCellModel extends TestCase {
     return model;
   }
 
-  @SuppressWarnings("unused")
-  private String toXML(CellModel model) throws JAXBException {
-    StringWriter writer = new StringWriter();
-    context.createMarshaller().marshal(model, writer);
-    return writer.toString();
-  }
-
-  private CellModel fromXML(String xml) throws JAXBException {
-    return (CellModel)
-      context.createUnmarshaller().unmarshal(new StringReader(xml));
-  }
-
-  @SuppressWarnings("unused")
-  private byte[] toPB(CellModel model) {
-    return model.createProtobufOutput();
-  }
-
-  private CellModel fromPB(String pb) throws IOException {
-    return (CellModel) 
-      new CellModel().getObjectFromMessage(Base64.decode(AS_PB));
-  }
-
-  private void checkModel(CellModel model) {
+  protected void checkModel(CellModel model) {
     assertTrue(Bytes.equals(model.getColumn(), COLUMN));
     assertTrue(Bytes.equals(model.getValue(), VALUE));
     assertTrue(model.hasUserTimestamp());

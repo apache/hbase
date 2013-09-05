@@ -24,6 +24,8 @@ import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 
+import javax.xml.bind.annotation.XmlAccessType;
+import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlRootElement;
 import javax.xml.bind.annotation.XmlElement;
 
@@ -69,11 +71,13 @@ import com.google.protobuf.ByteString;
  * </pre>
  */
 @XmlRootElement(name="CellSet")
+@XmlAccessorType(XmlAccessType.FIELD)
 @InterfaceAudience.Private
 public class CellSetModel implements Serializable, ProtobufMessageHandler {
 
   private static final long serialVersionUID = 1L;
-  
+
+  @XmlElement(name="Row")
   private List<RowModel> rows;
 
   /**  
@@ -102,7 +106,6 @@ public class CellSetModel implements Serializable, ProtobufMessageHandler {
   /**
    * @return the rows
    */
-  @XmlElement(name="Row")
   public List<RowModel> getRows() {
     return rows;
   }

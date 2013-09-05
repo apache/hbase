@@ -34,7 +34,7 @@ import junit.framework.TestCase;
 import org.junit.experimental.categories.Category;
 
 @Category(SmallTests.class)
-public class TestScannerModel extends TestCase {
+public class TestScannerModel extends TestModelBase<ScannerModel> {
   private static final byte[] START_ROW = Bytes.toBytes("abracadabra");
   private static final byte[] END_ROW = Bytes.toBytes("zzyzx");
   private static final byte[] COLUMN1 = Bytes.toBytes("column1");
@@ -44,29 +44,25 @@ public class TestScannerModel extends TestCase {
   private static final int CACHING = 1000;
   private static final int BATCH = 100;
 
-  private static final String AS_XML =
-    "<Scanner startTime=\"1245219839331\"" +
-      " startRow=\"YWJyYWNhZGFicmE=\"" +
-      " endTime=\"1245393318192\"" +
-      " endRow=\"enp5eng=\"" +
-      " batch=\"100\"" +
-      " caching=\"1000\">" +
-        "<column>Y29sdW1uMQ==</column>" +
-        "<column>Y29sdW1uMjpmb28=</column>" +
-      "</Scanner>";
+  public TestScannerModel() throws Exception {
+    super(ScannerModel.class);
+    AS_XML =
+      "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>" +
+      "<Scanner batch=\"100\" caching=\"1000\" endRow=\"enp5eng=\" endTime=\"1245393318192\" " +
+      "maxVersions=\"2147483647\" startRow=\"YWJyYWNhZGFicmE=\" startTime=\"1245219839331\">" +
+      "<column>Y29sdW1uMQ==</column><column>Y29sdW1uMjpmb28=</column></Scanner>";
 
-  private static final String AS_PB =
-    "CgthYnJhY2FkYWJyYRIFenp5engaB2NvbHVtbjEaC2NvbHVtbjI6Zm9" +
-    "vIGQo47qL554kMLDi57mfJDj/////B0joBw==";
+    AS_JSON =
+      "{\"batch\":100,\"caching\":1000,\"endRow\":\"enp5eng=\",\"endTime\":1245393318192,"+
+      "\"maxVersions\":2147483647,\"startRow\":\"YWJyYWNhZGFicmE=\",\"startTime\":1245219839331,"+
+      "\"column\":[\"Y29sdW1uMQ==\",\"Y29sdW1uMjpmb28=\"]}";
 
-  private JAXBContext context;
-
-  public TestScannerModel() throws JAXBException {
-    super();
-    context = JAXBContext.newInstance(ScannerModel.class);
+    AS_PB =
+      "CgthYnJhY2FkYWJyYRIFenp5engaB2NvbHVtbjEaC2NvbHVtbjI6Zm9vIGQo47qL554kMLDi57mf" +
+      "JDj/////B0joBw==";
   }
 
-  private ScannerModel buildTestModel() {
+  protected ScannerModel buildTestModel() {
     ScannerModel model = new ScannerModel();
     model.setStartRow(START_ROW);
     model.setEndRow(END_ROW);
@@ -79,29 +75,7 @@ public class TestScannerModel extends TestCase {
     return model;
   }
 
-  @SuppressWarnings("unused")
-  private String toXML(ScannerModel model) throws JAXBException {
-    StringWriter writer = new StringWriter();
-    context.createMarshaller().marshal(model, writer);
-    return writer.toString();
-  }
-
-  private ScannerModel fromXML(String xml) throws JAXBException {
-    return (ScannerModel)
-      context.createUnmarshaller().unmarshal(new StringReader(xml));
-  }
-
-  @SuppressWarnings("unused")
-  private byte[] toPB(ScannerModel model) {
-    return model.createProtobufOutput();
-  }
-
-  private ScannerModel fromPB(String pb) throws IOException {
-    return (ScannerModel) 
-      new ScannerModel().getObjectFromMessage(Base64.decode(AS_PB));
-  }
-
-  private void checkModel(ScannerModel model) {
+  protected void checkModel(ScannerModel model) {
     assertTrue(Bytes.equals(model.getStartRow(), START_ROW));
     assertTrue(Bytes.equals(model.getEndRow(), END_ROW));
     boolean foundCol1 = false, foundCol2 = false;
@@ -120,16 +94,5 @@ public class TestScannerModel extends TestCase {
     assertEquals(model.getCaching(), CACHING);
   }
 
-  public void testBuildModel() throws Exception {
-    checkModel(buildTestModel());
-  }
-
-  public void testFromXML() throws Exception {
-    checkModel(fromXML(AS_XML));
-  }
-
-  public void testFromPB() throws Exception {
-    checkModel(fromPB(AS_PB));
-  }
 }
 

@@ -33,7 +33,7 @@ import junit.framework.TestCase;
 import org.junit.experimental.categories.Category;
 
 @Category(SmallTests.class)
-public class TestVersionModel extends TestCase {
+public class TestVersionModel extends TestModelBase<VersionModel> {
   private static final String REST_VERSION = "0.0.1";
   private static final String OS_VERSION = 
     "Linux 2.6.18-128.1.6.el5.centos.plusxen amd64";
@@ -42,25 +42,24 @@ public class TestVersionModel extends TestCase {
   private static final String JETTY_VERSION = "6.1.14";
   private static final String JERSEY_VERSION = "1.1.0-ea";
   
-  private static final String AS_XML =
-    "<Version REST=\"" + REST_VERSION + "\"" +
-    " OS=\"" + OS_VERSION + "\"" +
-    " JVM=\"" + JVM_VERSION + "\"" +
-    " Server=\"" + JETTY_VERSION + "\"" +
-    " Jersey=\"" + JERSEY_VERSION + "\"/>";
+  public TestVersionModel() throws Exception {
+    super(VersionModel.class);
+    AS_XML =
+      "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?><Version JVM=\"Sun " +
+          "Microsystems Inc. 1.6.0_13-11.3-b02\" Jersey=\"1.1.0-ea\" " +
+          "OS=\"Linux 2.6.18-128.1.6.el5.centos.plusxen amd64\" REST=\"0.0.1\" Server=\"6.1.14\"/>";
 
-  private static final String AS_PB = 
-    "CgUwLjAuMRInU3VuIE1pY3Jvc3lzdGVtcyBJbmMuIDEuNi4wXzEzLTExLjMtYjAyGi1MaW51eCAy" +
-    "LjYuMTgtMTI4LjEuNi5lbDUuY2VudG9zLnBsdXN4ZW4gYW1kNjQiBjYuMS4xNCoIMS4xLjAtZWE=";
+    AS_PB =
+      "CgUwLjAuMRInU3VuIE1pY3Jvc3lzdGVtcyBJbmMuIDEuNi4wXzEzLTExLjMtYjAyGi1MaW51eCAy" +
+      "LjYuMTgtMTI4LjEuNi5lbDUuY2VudG9zLnBsdXN4ZW4gYW1kNjQiBjYuMS4xNCoIMS4xLjAtZWE=";
 
-  private JAXBContext context;
-
-  public TestVersionModel() throws JAXBException {
-    super();
-    context = JAXBContext.newInstance(VersionModel.class);
+    AS_JSON =
+      "{\"JVM\":\"Sun Microsystems Inc. 1.6.0_13-11.3-b02\",\"Jersey\":\"1.1.0-ea\"," +
+          "\"OS\":\"Linux 2.6.18-128.1.6.el5.centos.plusxen amd64\",\"" +
+          "REST\":\"0.0.1\",\"Server\":\"6.1.14\"}";
   }
 
-  private VersionModel buildTestModel() {
+  protected VersionModel buildTestModel() {
     VersionModel model = new VersionModel();
     model.setRESTVersion(REST_VERSION);
     model.setOSVersion(OS_VERSION);
@@ -70,47 +69,12 @@ public class TestVersionModel extends TestCase {
     return model;
   }
 
-  @SuppressWarnings("unused")
-  private String toXML(VersionModel model) throws JAXBException {
-    StringWriter writer = new StringWriter();
-    context.createMarshaller().marshal(model, writer);
-    return writer.toString();
-  }
-
-  private VersionModel fromXML(String xml) throws JAXBException {
-    return (VersionModel)
-      context.createUnmarshaller().unmarshal(new StringReader(xml));
-  }
-
-  @SuppressWarnings("unused")
-  private byte[] toPB(VersionModel model) {
-    return model.createProtobufOutput();
-  }
-
-  private VersionModel fromPB(String pb) throws IOException {
-    return (VersionModel) 
-      new VersionModel().getObjectFromMessage(Base64.decode(AS_PB));
-  }
-
-  private void checkModel(VersionModel model) {
+  protected void checkModel(VersionModel model) {
     assertEquals(model.getRESTVersion(), REST_VERSION);
     assertEquals(model.getOSVersion(), OS_VERSION);
     assertEquals(model.getJVMVersion(), JVM_VERSION);
     assertEquals(model.getServerVersion(), JETTY_VERSION);
     assertEquals(model.getJerseyVersion(), JERSEY_VERSION);
   }
-
-  public void testBuildModel() throws Exception {
-    checkModel(buildTestModel());
-  }
-
-  public void testFromXML() throws Exception {
-    checkModel(fromXML(AS_XML));
-  }
-
-  public void testFromPB() throws Exception {
-    checkModel(fromPB(AS_PB));
-  }
-
 }
 

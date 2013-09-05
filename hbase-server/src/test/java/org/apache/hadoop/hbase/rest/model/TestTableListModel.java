@@ -34,27 +34,24 @@ import junit.framework.TestCase;
 import org.junit.experimental.categories.Category;
 
 @Category(SmallTests.class)
-public class TestTableListModel extends TestCase {
+public class TestTableListModel extends TestModelBase<TableListModel> {
   private static final String TABLE1 = "table1";
   private static final String TABLE2 = "table2";
   private static final String TABLE3 = "table3";
-  
-  private static final String AS_XML =
-    "<TableList><table name=\"table1\"/><table name=\"table2\"/>" +
-      "<table name=\"table3\"/></TableList>";
 
-  private static final String AS_PB = "CgZ0YWJsZTEKBnRhYmxlMgoGdGFibGUz";
+  public TestTableListModel() throws Exception {
+    super(TableListModel.class);
+    AS_XML =
+      "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?><TableList><table " +
+          "name=\"table1\"/><table name=\"table2\"/><table name=\"table3\"/></TableList>";
 
-  private JAXBContext context;
+    AS_PB = "CgZ0YWJsZTEKBnRhYmxlMgoGdGFibGUz";
 
-  public TestTableListModel() throws JAXBException {
-    super();
-    context = JAXBContext.newInstance(
-        TableListModel.class,
-        TableModel.class);
+    AS_JSON =
+      "{\"table\":[{\"name\":\"table1\"},{\"name\":\"table2\"},{\"name\":\"table3\"}]}";
   }
 
-  private TableListModel buildTestModel() {
+  protected TableListModel buildTestModel() {
     TableListModel model = new TableListModel();
     model.add(new TableModel(TABLE1));
     model.add(new TableModel(TABLE2));
@@ -62,29 +59,7 @@ public class TestTableListModel extends TestCase {
     return model;
   }
 
-  @SuppressWarnings("unused")
-  private String toXML(TableListModel model) throws JAXBException {
-    StringWriter writer = new StringWriter();
-    context.createMarshaller().marshal(model, writer);
-    return writer.toString();
-  }
-
-  private TableListModel fromXML(String xml) throws JAXBException {
-    return (TableListModel)
-      context.createUnmarshaller().unmarshal(new StringReader(xml));
-  }
-
-  @SuppressWarnings("unused")
-  private byte[] toPB(TableListModel model) {
-    return model.createProtobufOutput();
-  }
-
-  private TableListModel fromPB(String pb) throws IOException {
-    return (TableListModel) 
-      new TableListModel().getObjectFromMessage(Base64.decode(AS_PB));
-  }
-
-  private void checkModel(TableListModel model) {
+  protected void checkModel(TableListModel model) {
     Iterator<TableModel> tables = model.getTables().iterator();
     TableModel table = tables.next();
     assertEquals(table.getName(), TABLE1);
@@ -94,18 +69,5 @@ public class TestTableListModel extends TestCase {
     assertEquals(table.getName(), TABLE3);
     assertFalse(tables.hasNext());
   }
-
-  public void testBuildModel() throws Exception {
-    checkModel(buildTestModel());
-  }
-
-  public void testFromXML() throws Exception {
-    checkModel(fromXML(AS_XML));
-  }
-
-  public void testFromPB() throws Exception {
-    checkModel(fromPB(AS_PB));
-  }
-
 }
 

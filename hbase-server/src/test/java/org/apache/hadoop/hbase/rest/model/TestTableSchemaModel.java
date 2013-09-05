@@ -30,81 +30,66 @@ import javax.xml.bind.JAXBException;
 import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.util.Base64;
 
+import org.apache.hadoop.hbase.rest.model.TableSchemaModel;
+
 import junit.framework.TestCase;
 import org.junit.experimental.categories.Category;
 
 @Category(SmallTests.class)
-public class TestTableSchemaModel extends TestCase {
+public class TestTableSchemaModel extends TestModelBase<TableSchemaModel> {
 
   public static final String TABLE_NAME = "testTable";
   private static final boolean IS_META = false;
   private static final boolean IS_ROOT = false;
   private static final boolean READONLY = false;
 
-  private static final String AS_XML =
-    "<TableSchema name=\"testTable\"" +
-      " IS_META=\"false\"" +
-      " IS_ROOT=\"false\"" +
-      " READONLY=\"false\">" +
-      TestColumnSchemaModel.AS_XML + 
-    "</TableSchema>";
-
-  private static final String AS_PB = 
-    "Cgl0ZXN0VGFibGUSEAoHSVNfTUVUQRIFZmFsc2USEAoHSVNfUk9PVBIFZmFsc2USEQoIUkVBRE9O" +
-    "TFkSBWZhbHNlGpcBCgp0ZXN0Y29sdW1uEhIKCUJMT0NLU0laRRIFMTYzODQSEwoLQkxPT01GSUxU" +
-    "RVISBE5PTkUSEgoKQkxPQ0tDQUNIRRIEdHJ1ZRIRCgtDT01QUkVTU0lPThICR1oSDQoIVkVSU0lP" +
-    "TlMSATESDAoDVFRMEgU4NjQwMBISCglJTl9NRU1PUlkSBWZhbHNlGICjBSABKgJHWigA";
+  TestColumnSchemaModel testColumnSchemaModel;
 
   private JAXBContext context;
 
-  public TestTableSchemaModel() throws JAXBException {
-    super();
-    context = JAXBContext.newInstance(
-      ColumnSchemaModel.class,
-      TableSchemaModel.class);
+  public TestTableSchemaModel() throws Exception {
+    super(TableSchemaModel.class);
+    testColumnSchemaModel = new TestColumnSchemaModel();
+
+    AS_XML =
+      "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>" +
+      "<TableSchema name=\"testTable\" IS_META=\"false\" IS_ROOT=\"false\" READONLY=\"false\">" +
+      "<ColumnSchema name=\"testcolumn\" BLOCKSIZE=\"16384\" BLOOMFILTER=\"NONE\" " +
+      "BLOCKCACHE=\"true\" COMPRESSION=\"GZ\" VERSIONS=\"1\" TTL=\"86400\" IN_MEMORY=\"false\"/>" +
+      "</TableSchema>";
+
+    AS_PB =
+      "Cgl0ZXN0VGFibGUSEAoHSVNfTUVUQRIFZmFsc2USEAoHSVNfUk9PVBIFZmFsc2USEQoIUkVBRE9O" +
+      "TFkSBWZhbHNlGpcBCgp0ZXN0Y29sdW1uEhIKCUJMT0NLU0laRRIFMTYzODQSEwoLQkxPT01GSUxU" +
+      "RVISBE5PTkUSEgoKQkxPQ0tDQUNIRRIEdHJ1ZRIRCgtDT01QUkVTU0lPThICR1oSDQoIVkVSU0lP" +
+      "TlMSATESDAoDVFRMEgU4NjQwMBISCglJTl9NRU1PUlkSBWZhbHNlGICjBSABKgJHWigA";
+
+    AS_JSON =
+      "{\"name\":\"testTable\",\"IS_META\":\"false\",\"IS_ROOT\":\"false\"," +
+      "\"READONLY\":\"false\",\"ColumnSchema\":[{\"name\":\"testcolumn\"," +
+      "\"BLOCKSIZE\":\"16384\",\"BLOOMFILTER\":\"NONE\",\"BLOCKCACHE\":\"true\"," +
+      "\"COMPRESSION\":\"GZ\",\"VERSIONS\":\"1\",\"TTL\":\"86400\",\"IN_MEMORY\":\"false\"}]}";
   }
 
-  public static TableSchemaModel buildTestModel() {
+  protected TableSchemaModel buildTestModel() {
     return buildTestModel(TABLE_NAME);
   }
 
-  public static TableSchemaModel buildTestModel(String name) {
+  public TableSchemaModel buildTestModel(String name) {
     TableSchemaModel model = new TableSchemaModel();
     model.setName(name);
     model.__setIsMeta(IS_META);
     model.__setIsRoot(IS_ROOT);
     model.__setReadOnly(READONLY);
-    model.addColumnFamily(TestColumnSchemaModel.buildTestModel());
+    model.addColumnFamily(testColumnSchemaModel.buildTestModel());
     return model;
   }
 
-  @SuppressWarnings("unused")
-  private String toXML(TableSchemaModel model) throws JAXBException {
-    StringWriter writer = new StringWriter();
-    context.createMarshaller().marshal(model, writer);
-    return writer.toString();
-  }
-
-  private TableSchemaModel fromXML(String xml) throws JAXBException {
-    return (TableSchemaModel)
-      context.createUnmarshaller().unmarshal(new StringReader(xml));
-  }
-
-  @SuppressWarnings("unused")
-  private byte[] toPB(TableSchemaModel model) {
-    return model.createProtobufOutput();
-  }
-
-  private TableSchemaModel fromPB(String pb) throws IOException {
-    return (TableSchemaModel) 
-      new TableSchemaModel().getObjectFromMessage(Base64.decode(AS_PB));
-  }
-
-  public static void checkModel(TableSchemaModel model) {
+  protected void checkModel(TableSchemaModel model) {
     checkModel(model, TABLE_NAME);
   }
 
-  public static void checkModel(TableSchemaModel model, String tableName) {
+  public void checkModel(TableSchemaModel model, String tableName) {
     assertEquals(model.getName(), tableName);
     assertEquals(model.__getIsMeta(), IS_META);
     assertEquals(model.__getIsRoot(), IS_ROOT);
@@ -112,7 +97,7 @@ public class TestTableSchemaModel extends TestCase {
     Iterator<ColumnSchemaModel> families = model.getColumns().iterator();
     assertTrue(families.hasNext());
     ColumnSchemaModel family = families.next();
-    TestColumnSchemaModel.checkModel(family);
+    testColumnSchemaModel.checkModel(family);
     assertFalse(families.hasNext());
   }
 

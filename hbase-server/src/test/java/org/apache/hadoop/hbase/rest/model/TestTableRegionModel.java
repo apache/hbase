@@ -32,46 +32,35 @@ import junit.framework.TestCase;
 import org.junit.experimental.categories.Category;
 
 @Category(SmallTests.class)
-public class TestTableRegionModel extends TestCase {
+public class TestTableRegionModel extends TestModelBase<TableRegionModel> {
   private static final String TABLE = "testtable";
   private static final byte[] START_KEY = Bytes.toBytes("abracadbra");
   private static final byte[] END_KEY = Bytes.toBytes("zzyzx");
   private static final long ID = 8731042424L;
   private static final String LOCATION = "testhost:9876";
 
-  private static final String AS_XML =
-    "<Region location=\"testhost:9876\"" +
-      " endKey=\"enp5eng=\"" +
-      " startKey=\"YWJyYWNhZGJyYQ==\"" +
-      " id=\"8731042424\"" +
-      " name=\"testtable,abracadbra,8731042424\"/>";
+  public TestTableRegionModel() throws Exception {
+    super(TableRegionModel.class);
 
-  private JAXBContext context;
+    AS_XML =
+      "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?><Region endKey=\"enp5eng=\" " +
+          "id=\"8731042424\" location=\"testhost:9876\" " +
+          "name=\"testtable,abracadbra,8731042424.ad9860f031282c46ed431d7af8f94aca.\" " +
+          "startKey=\"YWJyYWNhZGJyYQ==\"/>";
 
-  public TestTableRegionModel() throws JAXBException {
-    super();
-    context = JAXBContext.newInstance(TableRegionModel.class);
+    AS_JSON =
+      "{\"endKey\":\"enp5eng=\",\"id\":8731042424,\"location\":\"testhost:9876\"," +
+          "\"name\":\"testtable,abracadbra,8731042424.ad9860f031282c46ed431d7af8f94aca.\",\"" +
+          "startKey\":\"YWJyYWNhZGJyYQ==\"}";
   }
 
-  private TableRegionModel buildTestModel() {
+  protected TableRegionModel buildTestModel() {
     TableRegionModel model =
       new TableRegionModel(TABLE, ID, START_KEY, END_KEY, LOCATION);
     return model;
   }
 
-  @SuppressWarnings("unused")
-  private String toXML(TableRegionModel model) throws JAXBException {
-    StringWriter writer = new StringWriter();
-    context.createMarshaller().marshal(model, writer);
-    return writer.toString();
-  }
-
-  private TableRegionModel fromXML(String xml) throws JAXBException {
-    return (TableRegionModel)
-      context.createUnmarshaller().unmarshal(new StringReader(xml));
-  }
-
-  private void checkModel(TableRegionModel model) {
+  protected void checkModel(TableRegionModel model) {
     assertTrue(Bytes.equals(model.getStartKey(), START_KEY));
     assertTrue(Bytes.equals(model.getEndKey(), END_KEY));
     assertEquals(model.getId(), ID);
@@ -79,10 +68,6 @@ public class TestTableRegionModel extends TestCase {
     assertEquals(model.getName(), 
       TABLE + "," + Bytes.toString(START_KEY) + "," + Long.toString(ID) +
       ".ad9860f031282c46ed431d7af8f94aca.");
-  }
-
-  public void testBuildModel() throws Exception {
-    checkModel(buildTestModel());
   }
 
   public void testGetName() {
@@ -100,9 +85,9 @@ public class TestTableRegionModel extends TestCase {
     assertEquals(name, model.getName());
   }
 
-  public void testFromXML() throws Exception {
-    checkModel(fromXML(AS_XML));
+  @Override
+  public void testFromPB() throws Exception {
+    //no pb ignore
   }
-
 }
 

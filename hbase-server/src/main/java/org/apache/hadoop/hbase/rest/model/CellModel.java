@@ -22,6 +22,8 @@ package org.apache.hadoop.hbase.rest.model;
 import java.io.IOException;
 import java.io.Serializable;
 
+import javax.xml.bind.annotation.XmlAccessType;
+import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlAttribute;
 import javax.xml.bind.annotation.XmlRootElement;
 import javax.xml.bind.annotation.XmlValue;
@@ -33,6 +35,7 @@ import org.apache.hadoop.hbase.rest.ProtobufMessageHandler;
 import org.apache.hadoop.hbase.rest.protobuf.generated.CellMessage.Cell;
 
 import com.google.protobuf.ByteString;
+import org.codehaus.jackson.annotate.JsonProperty;
 
 /**
  * Representation of a cell. A cell is a single value associated a column and
@@ -54,12 +57,21 @@ import com.google.protobuf.ByteString;
  * </pre>
  */
 @XmlRootElement(name="Cell")
+@XmlAccessorType(XmlAccessType.FIELD)
 @InterfaceAudience.Private
 public class CellModel implements ProtobufMessageHandler, Serializable {
   private static final long serialVersionUID = 1L;
   
-  private long timestamp = HConstants.LATEST_TIMESTAMP;
+  @JsonProperty("column")
+  @XmlAttribute
   private byte[] column;
+
+  @JsonProperty("timestamp")
+  @XmlAttribute
+  private long timestamp = HConstants.LATEST_TIMESTAMP;
+
+  @JsonProperty("$")
+  @XmlValue
   private byte[] value;
 
   /**
@@ -123,7 +135,6 @@ public class CellModel implements ProtobufMessageHandler, Serializable {
   /**
    * @return the column
    */
-  @XmlAttribute
   public byte[] getColumn() {
     return column;
   }
@@ -146,7 +157,6 @@ public class CellModel implements ProtobufMessageHandler, Serializable {
   /**
    * @return the timestamp
    */
-  @XmlAttribute
   public long getTimestamp() {
     return timestamp;
   }
@@ -161,7 +171,6 @@ public class CellModel implements ProtobufMessageHandler, Serializable {
   /**
    * @return the value
    */
-  @XmlValue
   public byte[] getValue() {
     return value;
   }

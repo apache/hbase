@@ -19,6 +19,8 @@
 
 package org.apache.hadoop.hbase.rest.model;
 
+import org.codehaus.jackson.annotate.JsonValue;
+
 import java.io.Serializable;
 
 import javax.xml.bind.annotation.XmlRootElement;
@@ -60,8 +62,17 @@ public class StorageClusterVersionModel implements Serializable {
 	/* (non-Javadoc)
 	 * @see java.lang.Object#toString()
 	 */
+  @JsonValue
 	@Override
 	public String toString() {
 	  return version;
 	}
+
+    //needed for jackson deserialization
+    private static StorageClusterVersionModel valueOf(String value) {
+      StorageClusterVersionModel versionModel
+          = new StorageClusterVersionModel();
+      versionModel.setVersion(value);
+      return versionModel;
+    }
 }

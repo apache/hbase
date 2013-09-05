@@ -30,48 +30,31 @@ import org.apache.hadoop.hbase.SmallTests;
 import org.junit.experimental.categories.Category;
 
 @Category(SmallTests.class)
-public class TestStorageClusterVersionModel extends TestCase {
+public class TestStorageClusterVersionModel extends TestModelBase<StorageClusterVersionModel> {
   private static final String VERSION = "0.0.1-testing";
 
-  private static final String AS_XML =
-    "<ClusterVersion>" + VERSION + "</ClusterVersion>";
+  public TestStorageClusterVersionModel() throws Exception {
+    super(StorageClusterVersionModel.class);
+    AS_XML =
+      "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>"+
+      "<ClusterVersion>" + VERSION + "</ClusterVersion>";
 
-  private JAXBContext context;
-
-  public TestStorageClusterVersionModel() throws JAXBException {
-    super();
-    context = JAXBContext.newInstance(StorageClusterVersionModel.class);
+    AS_JSON = "\"0.0.1-testing\"";
   }
 
-  private StorageClusterVersionModel buildTestModel() {
+  protected StorageClusterVersionModel buildTestModel() {
     StorageClusterVersionModel model = new StorageClusterVersionModel();
     model.setVersion(VERSION);
     return model;
   }
 
-  @SuppressWarnings("unused")
-  private String toXML(StorageClusterVersionModel model) throws JAXBException {
-    StringWriter writer = new StringWriter();
-    context.createMarshaller().marshal(model, writer);
-    return writer.toString();
-  }
-
-  private StorageClusterVersionModel fromXML(String xml) throws JAXBException {
-    return (StorageClusterVersionModel)
-      context.createUnmarshaller().unmarshal(new StringReader(xml));
-  }
-
-  private void checkModel(StorageClusterVersionModel model) {
+  protected void checkModel(StorageClusterVersionModel model) {
     assertEquals(model.getVersion(), VERSION);
   }
 
-  public void testBuildModel() throws Exception {
-    checkModel(buildTestModel());
+  @Override
+  public void testFromPB() throws Exception {
+    //ignore test no pb
   }
-
-  public void testFromXML() throws Exception {
-    checkModel(fromXML(AS_XML));
-  }
-
 }
 

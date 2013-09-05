@@ -124,7 +124,7 @@ public class RemoteHTable implements HTableInterface {
         }
       }
     }
-    if (startTime != 0 && endTime != Long.MAX_VALUE) {
+    if (startTime >= 0 && endTime != Long.MAX_VALUE) {
       sb.append('/');
       sb.append(startTime);
       if (startTime != endTime) {

@@ -56,6 +56,7 @@ public class TestSchemaResource {
   private static Client client;
   private static JAXBContext context;
   private static Configuration conf;
+  private static TestTableSchemaModel testTableSchemaModel;
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
@@ -64,6 +65,7 @@ public class TestSchemaResource {
     REST_TEST_UTIL.startServletContainer(conf);
     client = new Client(new Cluster().add("localhost",
       REST_TEST_UTIL.getServletPort()));
+    testTableSchemaModel = new TestTableSchemaModel();
     context = JAXBContext.newInstance(
       ColumnSchemaModel.class,
       TableSchemaModel.class);
@@ -97,8 +99,8 @@ public class TestSchemaResource {
     assertFalse(admin.tableExists(TABLE1));
 
     // create the table
-    model = TestTableSchemaModel.buildTestModel(TABLE1);
-    TestTableSchemaModel.checkModel(model, TABLE1);
+    model = testTableSchemaModel.buildTestModel(TABLE1);
+    testTableSchemaModel.checkModel(model, TABLE1);
     response = client.put(schemaPath, Constants.MIMETYPE_XML, toXML(model));
     assertEquals(response.getCode(), 201);
 
@@ -112,7 +114,14 @@ public class TestSchemaResource {
     assertEquals(response.getCode(), 200);
     assertEquals(Constants.MIMETYPE_XML, response.getHeader("content-type"));
     model = fromXML(response.getBody());
-    TestTableSchemaModel.checkModel(model, TABLE1);
+    testTableSchemaModel.checkModel(model, TABLE1);
+
+    // with json retrieve the schema and validate it
+    response = client.get(schemaPath, Constants.MIMETYPE_JSON);
+    assertEquals(response.getCode(), 200);
+    assertEquals(Constants.MIMETYPE_JSON, response.getHeader("content-type"));
+    model = testTableSchemaModel.fromJSON(Bytes.toString(response.getBody()));
+    testTableSchemaModel.checkModel(model, TABLE1);
 
     // delete the table
     client.delete(schemaPath);
@@ -134,8 +143,8 @@ public class TestSchemaResource {
     assertFalse(admin.tableExists(TABLE2));
 
     // create the table
-    model = TestTableSchemaModel.buildTestModel(TABLE2);
-    TestTableSchemaModel.checkModel(model, TABLE2);
+    model = testTableSchemaModel.buildTestModel(TABLE2);
+    testTableSchemaModel.checkModel(model, TABLE2);
     response = client.put(schemaPath, Constants.MIMETYPE_PROTOBUF,
       model.createProtobufOutput());
     assertEquals(response.getCode(), 201);
@@ -152,7 +161,7 @@ public class TestSchemaResource {
     assertEquals(Constants.MIMETYPE_PROTOBUF, response.getHeader("content-type"));
     model = new TableSchemaModel();
     model.getObjectFromMessage(response.getBody());
-    TestTableSchemaModel.checkModel(model, TABLE2);
+    testTableSchemaModel.checkModel(model, TABLE2);
 
     // retrieve the schema and validate it with alternate pbuf type
     response = client.get(schemaPath, Constants.MIMETYPE_PROTOBUF_IETF);
@@ -160,7 +169,7 @@ public class TestSchemaResource {
     assertEquals(Constants.MIMETYPE_PROTOBUF_IETF, response.getHeader("content-type"));
     model = new TableSchemaModel();
     model.getObjectFromMessage(response.getBody());
-    TestTableSchemaModel.checkModel(model, TABLE2);
+    testTableSchemaModel.checkModel(model, TABLE2);
 
     // delete the table
     client.delete(schemaPath);

@@ -31,6 +31,8 @@ import javax.xml.namespace.QName;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
+import org.codehaus.jackson.annotate.JsonAnyGetter;
+import org.codehaus.jackson.annotate.JsonAnySetter;
 
 /**
  * Representation of a column family schema.
@@ -67,6 +69,7 @@ public class ColumnSchemaModel implements Serializable {
    * @param name the attribute name
    * @param value the attribute value
    */
+  @JsonAnySetter
   public void addAttribute(String name, Object value) {
     attrs.put(new QName(name), value);
   }
@@ -92,6 +95,7 @@ public class ColumnSchemaModel implements Serializable {
    * @return the map for holding unspecified (user) attributes
    */
   @XmlAnyAttribute
+  @JsonAnyGetter
   public Map<QName,Object> getAny() {
     return attrs;
   }
