@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/usr/bin/env bash
 
 # This file is used to generate the annotation of package info that
 # records the user, url, revision and timestamp.
@@ -20,10 +20,11 @@
 
 unset LANG
 unset LC_CTYPE
+
 version=$1
 outputDirectory=$2
 
-pushd
+pushd .
 cd ..
 
 user=`whoami`
