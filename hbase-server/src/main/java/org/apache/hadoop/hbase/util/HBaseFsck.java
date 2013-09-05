@@ -497,6 +497,7 @@ public class HBaseFsck extends Configured implements Tool {
    * likely violate table integrity but will be dealt with by merging
    * overlapping regions.
    */
+  @SuppressWarnings("deprecation")
   private void adoptHdfsOrphan(HbckInfo hi) throws IOException {
     Path p = hi.getHdfsRegionDir();
     FileSystem fs = p.getFileSystem(getConf());
@@ -666,18 +667,18 @@ public class HBaseFsck extends Configured implements Tool {
       String pathStr = path.toString();
 
       // A reference file path should be like
-      // ${hbase.rootdir}/table_name/region_id/family_name/referred_file.region_name
-      // Up 3 directories to get the table folder.
+      // ${hbase.rootdir}/data/namespace/table_name/region_id/family_name/referred_file.region_name
+      // Up 5 directories to get the root folder.
       // So the file will be sidelined to a similar folder structure.
       int index = pathStr.lastIndexOf(Path.SEPARATOR_CHAR);
-      for (int i = 0; index > 0 && i < 3; i++) {
-        index = pathStr.lastIndexOf(Path.SEPARATOR_CHAR, index);
+      for (int i = 0; index > 0 && i < 5; i++) {
+        index = pathStr.lastIndexOf(Path.SEPARATOR_CHAR, index - 1);
       }
       if (index > 0) {
         Path rootDir = getSidelineDir();
-        Path dst = new Path(rootDir, pathStr.substring(index));
+        Path dst = new Path(rootDir, pathStr.substring(index + 1));
         fs.mkdirs(dst.getParent());
-        LOG.info("Trying to sildeline reference file"
+        LOG.info("Trying to sildeline reference file "
           + path + " to " + dst);
         setShouldRerun();
 
