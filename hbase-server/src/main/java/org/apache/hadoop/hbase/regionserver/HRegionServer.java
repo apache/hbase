@@ -496,7 +496,7 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
 
     // do we use checksum verification in the hbase? If hbase checksum verification
     // is enabled, then we automatically switch off hdfs checksum verification.
-    this.useHBaseChecksum = conf.getBoolean(HConstants.HBASE_CHECKSUM_VERIFICATION, false);
+    this.useHBaseChecksum = conf.getBoolean(HConstants.HBASE_CHECKSUM_VERIFICATION, true);
 
     // check that the user has not set the "dfs.client.read.shortcircuit.skip.checksum" property.
     boolean shortCircuitSkipChecksum = conf.getBoolean(
