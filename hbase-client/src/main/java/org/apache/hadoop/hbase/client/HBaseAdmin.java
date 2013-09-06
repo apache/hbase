@@ -1690,9 +1690,9 @@ public class HBaseAdmin implements Abortable, Closeable {
    * @throws ZooKeeperConnectionException
    * @throws IOException
    */
-  public void unassign(final byte [] getRegionName, final boolean force)
+  public void unassign(final byte [] regionName, final boolean force)
   throws MasterNotRunningException, ZooKeeperConnectionException, IOException {
-    final byte[] toBeUnassigned = getRegionName(getRegionName);
+    final byte[] toBeUnassigned = getRegionName(regionName);
     executeCallable(new MasterAdminCallable<Void>(getConnection()) {
       @Override
       public Void call() throws ServiceException {
