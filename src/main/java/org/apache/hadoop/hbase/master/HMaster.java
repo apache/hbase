@@ -660,7 +660,9 @@ public class HMaster extends HasThread implements HMasterInterface,
   protected boolean checkFileSystem(boolean shutdownClusterOnFail) {
     if (this.fsOk) {
       try {
-        FSUtils.checkFileSystemAvailable(this.fs);
+        // Do not close dfs client when check fails. It's OK to reuse the
+        //  same dfs client when namenode comes back.
+        FSUtils.checkFileSystemAvailable(this.fs, false);
       } catch (IOException e) {
         if (shutdownClusterOnFail) {
           LOG.fatal("Shutting down HBase cluster: file system not available", e);
