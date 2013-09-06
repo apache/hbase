@@ -214,7 +214,7 @@ public class TestMasterFailover {
     List<HRegionInfo> disabledRegions = TEST_UTIL.createMultiRegionsInMeta(
         TEST_UTIL.getConfiguration(), htdDisabled, SPLIT_KEYS);
 
-    log("Regions in META and namespace have been created");
+    log("Regions in hbase:meta and namespace have been created");
 
     // at this point we only expect 3 regions to be assigned out (catalogs and namespace)
     assertEquals(2, cluster.countServedRegions());
@@ -519,7 +519,7 @@ public class TestMasterFailover {
     List<HRegionInfo> disabledRegions = TEST_UTIL.createMultiRegionsInMeta(
         TEST_UTIL.getConfiguration(), htdDisabled, SPLIT_KEYS);
 
-    log("Regions in META and Namespace have been created");
+    log("Regions in hbase:meta and Namespace have been created");
 
     // at this point we only expect 2 regions to be assigned out (catalogs and namespace  )
     assertEquals(2, cluster.countServedRegions());
@@ -870,7 +870,7 @@ public class TestMasterFailover {
   }
 
   // TODO: Next test to add is with testing permutations of the RIT or the RS
-  //       killed are hosting ROOT and META regions.
+  //       killed are hosting ROOT and hbase:meta regions.
 
   private void log(String string) {
     LOG.info("\n\n" + string + " \n\n");

@@ -1644,7 +1644,7 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
     //TODO: at some point this should delegate to the HLogFactory
     //currently, we don't care about the region as much as we care about the
     //table.. (hence checking the tablename below)
-    //_ROOT_ and .META. regions have separate WAL.
+    //_ROOT_ and hbase:meta regions have separate WAL.
     if (regionInfo != null && regionInfo.isMetaTable()) {
       return getMetaWAL();
     }
@@ -2312,7 +2312,7 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
 
   /**
    * Gets the online regions of the specified table.
-   * This method looks at the in-memory onlineRegions.  It does not go to <code>.META.</code>.
+   * This method looks at the in-memory onlineRegions.  It does not go to <code>hbase:meta</code>.
    * Only returns <em>online</em> regions.  If a region on this table has been
    * closed during a disable, etc., it will not be included in the returned list.
    * So, the returned list may not necessarily be ALL regions in this table, its
@@ -3486,7 +3486,7 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
           if (onlineRegion.getCoprocessorHost() != null) {
             onlineRegion.getCoprocessorHost().preOpen();
           }
-          // See HBASE-5094. Cross check with META if still this RS is owning
+          // See HBASE-5094. Cross check with hbase:meta if still this RS is owning
           // the region.
           Pair<HRegionInfo, ServerName> p = MetaReader.getRegion(
               this.catalogTracker, region.getRegionName());
@@ -3506,7 +3506,7 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
             }
           } else {
             LOG.warn("The region " + region.getEncodedName() + " is online on this server" +
-                " but META does not have this server - continue opening.");
+                " but hbase:meta does not have this server - continue opening.");
             removeFromOnlineRegions(onlineRegion, null);
           }
         }

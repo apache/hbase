@@ -38,14 +38,14 @@ import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.util.Bytes;
 
 /**
- * Scanner class that contains the <code>.META.</code> table scanning logic.
+ * Scanner class that contains the <code>hbase:meta</code> table scanning logic.
  * Provided visitors will be called for each row.
  *
  * Although public visibility, this is not a public-facing API and may evolve in
  * minor releases.
  *
  * <p> Note that during concurrent region splits, the scanner might not see
- * META changes across rows (for parent and daughter entries) consistently.
+ * hbase:meta changes across rows (for parent and daughter entries) consistently.
  * see HBASE-5986, and {@link DefaultMetaScannerVisitor} for details. </p>
  */
 @InterfaceAudience.Private
@@ -155,10 +155,10 @@ public class MetaScanner {
         byte[] rowBefore = regionInfo.getStartKey();
         startRow = HRegionInfo.createRegionName(tableName, rowBefore, HConstants.ZEROES, false);
       } else if (tableName == null || tableName.getName().length == 0) {
-        // Full META scan
+        // Full hbase:meta scan
         startRow = HConstants.EMPTY_START_ROW;
       } else {
-        // Scan META for an entire table
+        // Scan hbase:meta for an entire table
         startRow = HRegionInfo.createRegionName(tableName, HConstants.EMPTY_START_ROW,
           HConstants.ZEROES, false);
       }
@@ -287,7 +287,7 @@ public class MetaScanner {
   }
 
   /**
-   * Visitor class called to process each row of the .META. table
+   * Visitor class called to process each row of the hbase:meta table
    */
   public interface MetaScannerVisitor extends Closeable {
     /**
@@ -337,9 +337,9 @@ public class MetaScanner {
 
   /**
    * A MetaScannerVisitor for a table. Provides a consistent view of the table's
-   * META entries during concurrent splits (see HBASE-5986 for details). This class
+   * hbase:meta entries during concurrent splits (see HBASE-5986 for details). This class
    * does not guarantee ordered traversal of meta entries, and can block until the
-   * META entries for daughters are available during splits.
+   * hbase:meta entries for daughters are available during splits.
    */
   public static abstract class TableMetaScannerVisitor extends DefaultMetaScannerVisitor {
     private TableName tableName;

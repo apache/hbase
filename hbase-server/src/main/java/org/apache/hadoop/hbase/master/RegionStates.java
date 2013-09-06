@@ -413,7 +413,7 @@ public class RegionStates {
 
   /**
    * Gets the online regions of the specified table.
-   * This method looks at the in-memory state.  It does not go to <code>.META.</code>.
+   * This method looks at the in-memory state.  It does not go to <code>hbase:meta</code>.
    * Only returns <em>online</em> regions.  If a region on this table has been
    * closed during a disable, etc., it will be included in the returned list.
    * So, the returned list may not necessarily be ALL regions in this table, its
@@ -562,7 +562,7 @@ public class RegionStates {
   }
 
   /**
-   * Get the HRegionInfo from cache, if not there, from the META table
+   * Get the HRegionInfo from cache, if not there, from the hbase:meta table
    * @param  regionName
    * @return HRegionInfo for the region
    */
@@ -583,7 +583,7 @@ public class RegionStates {
       return hri;
     } catch (IOException e) {
       server.abort("Aborting because error occoured while reading "
-        + Bytes.toStringBinary(regionName) + " from .META.", e);
+        + Bytes.toStringBinary(regionName) + " from hbase:meta", e);
       return null;
     }
   }

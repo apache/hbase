@@ -190,7 +190,7 @@ public class TestLogRolling  {
   }
 
   private void startAndWriteData() throws IOException, InterruptedException {
-    // When the META table can be opened, the region servers are running
+    // When the hbase:meta table can be opened, the region servers are running
     new HTable(TEST_UTIL.getConfiguration(), TableName.META_TABLE_NAME);
     this.server = cluster.getRegionServerThreads().get(0).getRegionServer();
     this.log = server.getWAL();
@@ -426,7 +426,7 @@ public class TestLogRolling  {
     assertTrue("This test requires HLog file replication.",
       fs.getDefaultReplication() > 1);
     LOG.info("Replication=" + fs.getDefaultReplication());
-    // When the META table can be opened, the region servers are running
+    // When the hbase:meta table can be opened, the region servers are running
     new HTable(TEST_UTIL.getConfiguration(), TableName.META_TABLE_NAME);
 
     this.server = cluster.getRegionServer(0);
@@ -583,7 +583,7 @@ public class TestLogRolling  {
    */
   @Test
   public void testCompactionRecordDoesntBlockRolling() throws Exception {
-    // When the META table can be opened, the region servers are running
+    // When the hbase:meta table can be opened, the region servers are running
     new HTable(TEST_UTIL.getConfiguration(), TableName.META_TABLE_NAME);
 
     String tableName = getName();

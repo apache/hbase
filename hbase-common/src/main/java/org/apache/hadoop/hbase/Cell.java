@@ -47,7 +47,7 @@ import org.apache.hadoop.classification.InterfaceStability;
  * include the costly helper methods marked as deprecated.   
  * <p/>
  * Cell implements Comparable<Cell> which is only meaningful when comparing to other keys in the
- * same table. It uses CellComparator which does not work on the -ROOT- and .META. tables.
+ * same table. It uses CellComparator which does not work on the -ROOT- and hbase:meta tables.
  * <p/>
  * In the future, we may consider adding a boolean isOnHeap() method and a getValueBuffer() method
  * that can be used to pass a value directly from an off-heap ByteBuffer to the network without

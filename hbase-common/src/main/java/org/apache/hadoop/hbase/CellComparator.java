@@ -30,9 +30,9 @@ import com.google.common.primitives.Longs;
 
 /**
  * Compare two HBase cells.  Do not use this method comparing <code>-ROOT-</code> or
- * <code>.META.</code> cells.  Cells from these tables need a specialized comparator, one that
+ * <code>hbase:meta</code> cells.  Cells from these tables need a specialized comparator, one that
  * takes account of the special formatting of the row where we have commas to delimit table from
- * regionname, from row.  See KeyValue for how it has a special comparator to do .META. cells
+ * regionname, from row.  See KeyValue for how it has a special comparator to do hbase:meta cells
  * and yet another for -ROOT-.
  */
 @edu.umd.cs.findbugs.annotations.SuppressWarnings(

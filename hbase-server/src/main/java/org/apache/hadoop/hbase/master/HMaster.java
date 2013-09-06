@@ -820,7 +820,7 @@ MasterServices, Server {
     }
 
     // get a list for previously failed RS which need log splitting work
-    // we recover .META. region servers inside master initialization and
+    // we recover hbase:meta region servers inside master initialization and
     // handle other failed servers in SSH in order to start up master node ASAP
     Set<ServerName> previouslyFailedServers = this.fileSystemManager
         .getFailedServersFromLogFolders();
@@ -828,7 +828,7 @@ MasterServices, Server {
     // remove stale recovering regions from previous run
     this.fileSystemManager.removeStaleRecoveringRegionsFromZK(previouslyFailedServers);
 
-    // log splitting for .META. server
+    // log splitting for hbase:meta server
     ServerName oldMetaServerLocation = this.catalogTracker.getMetaLocation();
     if (oldMetaServerLocation != null && previouslyFailedServers.contains(oldMetaServerLocation)) {
       splitMetaLogBeforeAssignment(oldMetaServerLocation);
@@ -847,20 +847,20 @@ MasterServices, Server {
     // Make sure meta assigned before proceeding.
     status.setStatus("Assigning Meta Region");
     assignMeta(status);
-    // check if master is shutting down because above assignMeta could return even META isn't
+    // check if master is shutting down because above assignMeta could return even hbase:meta isn't
     // assigned when master is shutting down
     if(this.stopped) return;
 
     if (this.distributedLogReplay && (!previouslyFailedMetaRSs.isEmpty())) {
-      // replay WAL edits mode need new .META. RS is assigned firstly
+      // replay WAL edits mode need new hbase:meta RS is assigned firstly
       status.setStatus("replaying log for Meta Region");
       // need to use union of previouslyFailedMetaRSs recorded in ZK and previouslyFailedServers
       // instead of oldMetaServerLocation to address the following two situations:
       // 1) the chained failure situation(recovery failed multiple times in a row).
-      // 2) master get killed right before it could delete the recovering META from ZK while the
+      // 2) master get killed right before it could delete the recovering hbase:meta from ZK while the
       // same server still has non-meta wals to be replayed so that
-      // removeStaleRecoveringRegionsFromZK can't delete the stale META region
-      // Passing more servers into splitMetaLog is all right. If a server doesn't have .META. wal,
+      // removeStaleRecoveringRegionsFromZK can't delete the stale hbase:meta region
+      // Passing more servers into splitMetaLog is all right. If a server doesn't have hbase:meta wal,
       // there is no op for the server.
       previouslyFailedMetaRSs.addAll(previouslyFailedServers);
       this.fileSystemManager.splitMetaLog(previouslyFailedMetaRSs);
@@ -873,7 +873,7 @@ MasterServices, Server {
     enableServerShutdownHandler();
 
     status.setStatus("Submitting log splitting work for previously failed region servers");
-    // Master has recovered META region server and we put
+    // Master has recovered hbase:meta region server and we put
     // other failed region servers in a queue to be handled later by SSH
     for (ServerName tmpServer : previouslyFailedServers) {
       this.serverManager.processDeadServer(tmpServer, true);
@@ -968,7 +968,7 @@ MasterServices, Server {
   }
 
   /**
-   * Check <code>.META.</code> is assigned. If not, assign it.
+   * Check <code>hbase:meta</code> is assigned. If not, assign it.
    * @param status MonitoredTask
    * @throws InterruptedException
    * @throws IOException
@@ -981,7 +981,7 @@ MasterServices, Server {
     long timeout = this.conf.getLong("hbase.catalog.verification.timeout", 1000);
     boolean beingExpired = false;
 
-    status.setStatus("Assigning META region");
+    status.setStatus("Assigning hbase:meta region");
 
     assignmentManager.getRegionStates().createRegionState(HRegionInfo.FIRST_META_REGIONINFO);
     boolean rit = this.assignmentManager
@@ -996,15 +996,15 @@ MasterServices, Server {
         splitMetaLogBeforeAssignment(currentMetaServer);
       }
       assignmentManager.assignMeta();
-      // Make sure a .META. location is set.
+      // Make sure a hbase:meta location is set.
       enableSSHandWaitForMeta();
       assigned++;
       if (beingExpired && this.distributedLogReplay) {
-        // In Replay WAL Mode, we need the new .META. server online
+        // In Replay WAL Mode, we need the new hbase:meta server online
         this.fileSystemManager.splitMetaLog(currentMetaServer);
       }
     } else if (rit && !metaRegionLocation) {
-      // Make sure a .META. location is set.
+      // Make sure a hbase:meta location is set.
       enableSSHandWaitForMeta();
       assigned++;
     } else {
@@ -1014,19 +1014,19 @@ MasterServices, Server {
     }
 
     enableMeta(TableName.META_TABLE_NAME);
-    LOG.info(".META. assigned=" + assigned + ", rit=" + rit +
+    LOG.info("hbase:meta assigned=" + assigned + ", rit=" + rit +
       ", location=" + catalogTracker.getMetaLocation());
     status.setStatus("META assigned.");
   }
 
   private void splitMetaLogBeforeAssignment(ServerName currentMetaServer) throws IOException {
     if (this.distributedLogReplay) {
-      // In log replay mode, we mark META region as recovering in ZK
+      // In log replay mode, we mark hbase:meta region as recovering in ZK
       Set<HRegionInfo> regions = new HashSet<HRegionInfo>();
       regions.add(HRegionInfo.FIRST_META_REGIONINFO);
       this.fileSystemManager.prepareLogReplay(currentMetaServer, regions);
     } else {
-      // In recovered.edits mode: create recovered edits file for .META. server
+      // In recovered.edits mode: create recovered edits file for hbase:meta server
       this.fileSystemManager.splitMetaLog(currentMetaServer);
     }
   }
@@ -1048,7 +1048,7 @@ MasterServices, Server {
     // See HBASE-6281.
     Set<TableName> disabledOrDisablingOrEnabling = ZKTable.getDisabledOrDisablingTables(zooKeeper);
     disabledOrDisablingOrEnabling.addAll(ZKTable.getEnablingTables(zooKeeper));
-    // Scan META for all system regions, skipping any disabled tables
+    // Scan hbase:meta for all system regions, skipping any disabled tables
     Map<HRegionInfo, ServerName> allRegions =
         MetaReader.fullScan(catalogTracker, disabledOrDisablingOrEnabling, true);
     for(Iterator<HRegionInfo> iter = allRegions.keySet().iterator();
@@ -1166,7 +1166,7 @@ MasterServices, Server {
   }
 
   /**
-   * This function returns a set of region server names under .META. recovering region ZK node
+   * This function returns a set of region server names under hbase:meta recovering region ZK node
    * @return Set of meta server names which were recorded in ZK
    * @throws KeeperException
    */
@@ -2448,7 +2448,7 @@ MasterServices, Server {
         this.activeMasterManager.clusterHasActiveMaster.notifyAll();
       }
     }
-    // If no region server is online then master may stuck waiting on .META. to come on line.
+    // If no region server is online then master may stuck waiting on hbase:meta to come on line.
     // See HBASE-8422.
     if (this.catalogTracker != null && this.serverManager.getOnlineServers().isEmpty()) {
       this.catalogTracker.stop();
@@ -2506,7 +2506,7 @@ MasterServices, Server {
 
   /**
    * Report whether this master has started initialization and is about to do meta region assignment
-   * @return true if master is in initialization & about to assign META regions
+   * @return true if master is in initialization & about to assign hbase:meta regions
    */
   public boolean isInitializationStartsMetaRegionAssignment() {
     return this.initializationBeforeMetaAssignment;

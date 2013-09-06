@@ -85,7 +85,7 @@ public class KeyValue implements Cell, HeapSize, Cloneable {
    */
   public static final KVComparator COMPARATOR = new KVComparator();
   /**
-   * A {@link KVComparator} for <code>.META.</code> catalog table
+   * A {@link KVComparator} for <code>hbase:meta</code> catalog table
    * {@link KeyValue}s.
    */
   public static final KVComparator META_COMPARATOR = new MetaComparator();
@@ -1461,7 +1461,7 @@ public class KeyValue implements Cell, HeapSize, Cloneable {
       final int offset, final int length, final int delimiter) {
     int index = getDelimiterInReverse(b, offset, length, delimiter);
     if (index < 0) {
-      throw new IllegalArgumentException(".META. key must have two '" + (char)delimiter + "' "
+      throw new IllegalArgumentException("hbase:meta key must have two '" + (char)delimiter + "' "
         + "delimiters and have the following format: '<table>,<key>,<etc>'");
     }
     return index;
@@ -1510,12 +1510,12 @@ public class KeyValue implements Cell, HeapSize, Cloneable {
   }
 
   /**
-   * A {@link KVComparator} for <code>.META.</code> catalog table
+   * A {@link KVComparator} for <code>hbase:meta</code> catalog table
    * {@link KeyValue}s.
    */
   public static class MetaComparator extends KVComparator {
     /**
-     * Compare key portion of a {@link KeyValue} for keys in <code>.META.</code>
+     * Compare key portion of a {@link KeyValue} for keys in <code>hbase:meta</code>
      * table.
      */
     @Override
@@ -1526,7 +1526,7 @@ public class KeyValue implements Cell, HeapSize, Cloneable {
       int rightDelimiter = getDelimiter(right, roffset, rlength,
           HConstants.DELIMITER);
       if (leftDelimiter < 0 && rightDelimiter >= 0) {
-        // Nothing between .META. and regionid.  Its first key.
+        // Nothing between hbase:meta and regionid.  Its first key.
         return -1;
       } else if (rightDelimiter < 0 && leftDelimiter >= 0) {
         return 1;

@@ -672,9 +672,9 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
         return 1000000;   // return a number much greater than any of the other cost
       }
 
-      // META region is special
+      // hbase:meta region is special
       if (cluster.numMovedMetaRegions > 0) {
-        // assume each META region move costs 10 times
+        // assume each hbase:meta region move costs 10 times
         moveCost += META_MOVE_COST_MULT * cluster.numMovedMetaRegions;
       }
 

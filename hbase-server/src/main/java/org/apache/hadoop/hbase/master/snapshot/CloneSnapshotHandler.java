@@ -95,7 +95,7 @@ public class CloneSnapshotHandler extends CreateTableHandler implements Snapshot
   /**
    * Create the on-disk regions, using the tableRootDir provided by the CreateTableHandler.
    * The cloned table will be created in a temp directory, and then the CreateTableHandler
-   * will be responsible to add the regions returned by this method to META and do the assignment.
+   * will be responsible to add the regions returned by this method to hbase:meta and do the assignment.
    */
   @Override
   protected List<HRegionInfo> handleCreateHdfsRegions(final Path tableRootDir,

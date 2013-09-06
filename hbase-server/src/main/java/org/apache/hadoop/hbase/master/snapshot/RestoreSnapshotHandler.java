@@ -100,8 +100,8 @@ public class RestoreSnapshotHandler extends TableEventHandler implements Snapsho
    * The restore table is executed in place.
    *  - The on-disk data will be restored - reference files are put in place without moving data
    *  -  [if something fail here: you need to delete the table and re-run the restore]
-   *  - META will be updated
-   *  -  [if something fail here: you need to run hbck to fix META entries]
+   *  - hbase:meta will be updated
+   *  -  [if something fail here: you need to run hbck to fix hbase:meta entries]
    * The passed in list gets changed in this method
    */
   @Override
@@ -133,7 +133,7 @@ public class RestoreSnapshotHandler extends TableEventHandler implements Snapsho
       // which is the same state that the regions will be after a delete table.
       forceRegionsOffline(metaChanges);
 
-      // 4. Applies changes to .META.
+      // 4. Applies changes to hbase:meta
       status.setStatus("Preparing to restore each region");
 
       // 4.1 Removes the current set of regions from META
@@ -152,7 +152,7 @@ public class RestoreSnapshotHandler extends TableEventHandler implements Snapsho
       //
       // At this point the old regions are no longer present in META.
       // and the set of regions present in the snapshot will be written to META.
-      // All the information in META are coming from the .regioninfo of each region present
+      // All the information in hbase:meta are coming from the .regioninfo of each region present
       // in the snapshot folder.
       hris.clear();
       if (metaChanges.hasRegionsToAdd()) hris.addAll(metaChanges.getRegionsToAdd());

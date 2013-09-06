@@ -338,7 +338,7 @@ public class HFileV1Detector extends Configured implements Tool {
   }
 
   private static boolean isTableDir(final FileSystem fs, final Path path) throws IOException {
-    // check for old format, of having /table/.tableinfo; .META. doesn't has .tableinfo,
+    // check for old format, of having /table/.tableinfo; hbase:meta doesn't has .tableinfo,
     // include it.
     return (FSTableDescriptors.getTableInfoPath(fs, path) != null || FSTableDescriptors
         .getCurrentTableInfoStatus(fs, path, false) != null) || path.toString().endsWith(".META.");

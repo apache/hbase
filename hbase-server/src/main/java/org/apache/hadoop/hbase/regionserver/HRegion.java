@@ -600,7 +600,7 @@ public class HRegion implements HeapSize { // , Writable{
       coprocessorHost.preOpen();
     }
 
-    // Write HRI to a file in case we need to recover .META.
+    // Write HRI to a file in case we need to recover hbase:meta
     status.setStatus("Writing region info on filesystem");
     fs.checkRegionInfoOnFilesystem();
 
@@ -4196,9 +4196,9 @@ public class HRegion implements HeapSize { // , Writable{
   /**
    * Inserts a new region's meta information into the passed
    * <code>meta</code> region. Used by the HMaster bootstrap code adding
-   * new table to META table.
+   * new table to hbase:meta table.
    *
-   * @param meta META HRegion to be updated
+   * @param meta hbase:meta HRegion to be updated
    * @param r HRegion to add to <code>meta</code>
    *
    * @throws IOException

@@ -99,7 +99,7 @@ public class ServerShutdownHandler extends EventHandler {
   }
 
   /**
-   * @return True if the server we are processing was carrying <code>.META.</code>
+   * @return True if the server we are processing was carrying <code>hbase:meta</code>
    */
   boolean isCarryingMeta() {
     return false;
@@ -121,16 +121,16 @@ public class ServerShutdownHandler extends EventHandler {
     try {
 
       // We don't want worker thread in the MetaServerShutdownHandler
-      // executor pool to block by waiting availability of .META.
+      // executor pool to block by waiting availability of hbase:meta
       // Otherwise, it could run into the following issue:
-      // 1. The current MetaServerShutdownHandler instance For RS1 waits for the .META.
+      // 1. The current MetaServerShutdownHandler instance For RS1 waits for the hbase:meta
       //    to come online.
-      // 2. The newly assigned .META. region server RS2 was shutdown right after
-      //    it opens the .META. region. So the MetaServerShutdownHandler
+      // 2. The newly assigned hbase:meta region server RS2 was shutdown right after
+      //    it opens the hbase:meta region. So the MetaServerShutdownHandler
       //    instance For RS1 will still be blocked.
       // 3. The new instance of MetaServerShutdownHandler for RS2 is queued.
-      // 4. The newly assigned .META. region server RS3 was shutdown right after
-      //    it opens the .META. region. So the MetaServerShutdownHandler
+      // 4. The newly assigned hbase:meta region server RS3 was shutdown right after
+      //    it opens the hbase:meta region. So the MetaServerShutdownHandler
       //    instance For RS1 and RS2 will still be blocked.
       // 5. The new instance of MetaServerShutdownHandler for RS3 is queued.
       // 6. Repeat until we run out of MetaServerShutdownHandler worker threads
@@ -141,7 +141,7 @@ public class ServerShutdownHandler extends EventHandler {
       // If AssignmentManager hasn't finished rebuilding user regions,
       // we are not ready to assign dead regions either. So we re-queue up
       // the dead server for further processing too.
-      if (isCarryingMeta() // .META.
+      if (isCarryingMeta() // hbase:meta
           || !services.getAssignmentManager().isFailoverCleanupDone()) {
         this.services.getServerManager().processDeadServer(serverName, this.shouldSplitHlog);
         return;
@@ -150,18 +150,18 @@ public class ServerShutdownHandler extends EventHandler {
       // Wait on meta to come online; we need it to progress.
       // TODO: Best way to hold strictly here?  We should build this retry logic
       // into the MetaReader operations themselves.
-      // TODO: Is the reading of .META. necessary when the Master has state of
-      // cluster in its head?  It should be possible to do without reading .META.
-      // in all but one case. On split, the RS updates the .META.
+      // TODO: Is the reading of hbase:meta necessary when the Master has state of
+      // cluster in its head?  It should be possible to do without reading hbase:meta
+      // in all but one case. On split, the RS updates the hbase:meta
       // table and THEN informs the master of the split via zk nodes in
       // 'unassigned' dir.  Currently the RS puts ephemeral nodes into zk so if
       // the regionserver dies, these nodes do not stick around and this server
       // shutdown processing does fixup (see the fixupDaughters method below).
-      // If we wanted to skip the .META. scan, we'd have to change at least the
+      // If we wanted to skip the hbase:meta scan, we'd have to change at least the
       // final SPLIT message to be permanent in zk so in here we'd know a SPLIT
-      // completed (zk is updated after edits to .META. have gone in).  See
+      // completed (zk is updated after edits to hbase:meta have gone in).  See
       // {@link SplitTransaction}.  We'd also have to be figure another way for
-      // doing the below .META. daughters fixup.
+      // doing the below hbase:meta daughters fixup.
       NavigableMap<HRegionInfo, Result> hris = null;
       while (!this.server.isStopped()) {
         try {
@@ -173,8 +173,8 @@ public class ServerShutdownHandler extends EventHandler {
           Thread.currentThread().interrupt();
           throw new IOException("Interrupted", e);
         } catch (IOException ioe) {
-          LOG.info("Received exception accessing META during server shutdown of " +
-              serverName + ", retrying META read", ioe);
+          LOG.info("Received exception accessing hbase:meta during server shutdown of " +
+              serverName + ", retrying hbase:meta read", ioe);
         }
       }
       if (this.server.isStopped()) {
@@ -340,7 +340,7 @@ public class ServerShutdownHandler extends EventHandler {
       return false;
     }
     if (hri.isOffline() && hri.isSplit()) {
-      //HBASE-7721: Split parent and daughters are inserted into META as an atomic operation.
+      //HBASE-7721: Split parent and daughters are inserted into hbase:meta as an atomic operation.
       //If the meta scanner saw the parent split, then it should see the daughters as assigned
       //to the dead server. We don't have to do anything.
       return false;

@@ -153,7 +153,7 @@ public class TestHBaseFsck {
     // We created 1 table, should be fine
     assertNoErrors(doFsck(conf, false));
 
-    // Now let's mess it up and change the assignment in .META. to
+    // Now let's mess it up and change the assignment in hbase:meta to
     // point to a different region server
     HTable meta = new HTable(conf, HTableDescriptor.META_TABLEDESC.getTableName(),
         executorService);
@@ -1054,7 +1054,7 @@ public class TestHBaseFsck {
   }
 
   /**
-   * This creates entries in META with no hdfs data.  This should cleanly
+   * This creates entries in hbase:meta with no hdfs data.  This should cleanly
    * remove the table.
    */
   @Test
@@ -1332,7 +1332,7 @@ public class TestHBaseFsck {
       HBaseFsck hbck = doFsck(conf, true, true, false, false, false, true, true, true, false, false, null);
       assertErrors(hbck, new ERROR_CODE[] {}); //no LINGERING_SPLIT_PARENT reported
 
-      // assert that the split META entry is still there.
+      // assert that the split hbase:meta entry is still there.
       Get get = new Get(hri.getRegionName());
       Result result = meta.get(get);
       assertNotNull(result);
@@ -1350,7 +1350,7 @@ public class TestHBaseFsck {
   }
 
   /**
-   * Split crashed after write to META finished for the parent region, but
+   * Split crashed after write to hbase:meta finished for the parent region, but
    * failed to write daughters (pre HBASE-7721 codebase)
    */
   @Test
@@ -1396,7 +1396,7 @@ public class TestHBaseFsck {
       assertErrors(hbck, new ERROR_CODE[] {ERROR_CODE.NOT_IN_META_OR_DEPLOYED,
           ERROR_CODE.NOT_IN_META_OR_DEPLOYED, ERROR_CODE.HOLE_IN_REGION_CHAIN});
 
-      // assert that the split META entry is still there.
+      // assert that the split hbase:meta entry is still there.
       Get get = new Get(hri.getRegionName());
       Result result = meta.get(get);
       assertNotNull(result);
@@ -1852,7 +1852,7 @@ public class TestHBaseFsck {
   }
 
   /**
-   * Test mission REGIONINFO_QUALIFIER in .META.
+   * Test mission REGIONINFO_QUALIFIER in hbase:meta
    */
   @Test
   public void testMissingRegionInfoQualifier() throws Exception {
@@ -1882,7 +1882,7 @@ public class TestHBaseFsck {
       });
       meta.delete(deletes);
 
-      // Mess it up by creating a fake META entry with no associated RegionInfo
+      // Mess it up by creating a fake hbase:meta entry with no associated RegionInfo
       meta.put(new Put(Bytes.toBytes(table + ",,1361911384013.810e28f59a57da91c66")).add(
         HConstants.CATALOG_FAMILY, HConstants.SERVER_QUALIFIER, Bytes.toBytes("node1:60020")));
       meta.put(new Put(Bytes.toBytes(table + ",,1361911384013.810e28f59a57da91c66")).add(
@@ -2063,7 +2063,7 @@ public class TestHBaseFsck {
     assertNoErrors(hbck);
     deleteMetaRegion(conf, true, false, false);
     hbck = doFsck(conf, false);
-    // ERROR_CODE.UNKNOWN is coming because we reportError with a message for the .META.
+    // ERROR_CODE.UNKNOWN is coming because we reportError with a message for the hbase:meta
     // inconsistency and whether we will be fixing it or not.
     assertErrors(hbck, new ERROR_CODE[] { ERROR_CODE.NO_META_REGION, ERROR_CODE.UNKNOWN });
     hbck = doFsck(conf, true);

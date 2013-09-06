@@ -112,7 +112,7 @@ class RegionMergeRequest implements Runnable {
         }
         return;
       }
-      LOG.info("Regions merged, META updated, and report to master. region_a="
+      LOG.info("Regions merged, hbase:meta updated, and report to master. region_a="
           + region_a + ", region_b=" + region_b + ",merged region="
           + mt.getMergedRegionInfo().getRegionNameAsString()
           + ". Region merge took "

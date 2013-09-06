@@ -122,7 +122,7 @@ public class MetaUtils {
     }
     try {
       for (HRegion r: metaRegions.values()) {
-        LOG.info("CLOSING META " + r.toString());
+        LOG.info("CLOSING hbase:meta " + r.toString());
         r.close();
       }
     } catch (IOException e) {

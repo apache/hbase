@@ -37,7 +37,7 @@ import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.zookeeper.KeeperException;
 
 /**
- * Shutdown handler for the server hosting <code>.META.</code>
+ * Shutdown handler for the server hosting <code>hbase:meta</code>
  */
 @InterfaceAudience.Private
 public class MetaServerShutdownHandler extends ServerShutdownHandler {
@@ -56,7 +56,7 @@ public class MetaServerShutdownHandler extends ServerShutdownHandler {
       AssignmentManager am = this.services.getAssignmentManager();
       try {
         if (this.shouldSplitHlog) {
-          LOG.info("Splitting META logs for " + serverName);
+          LOG.info("Splitting hbase:meta logs for " + serverName);
           if (this.distributedLogReplay) {
             Set<HRegionInfo> regions = new HashSet<HRegionInfo>();
             regions.add(HRegionInfo.FIRST_META_REGIONINFO);
@@ -125,12 +125,12 @@ public class MetaServerShutdownHandler extends ServerShutdownHandler {
   }
 
   /**
-   * Before assign the META region, ensure it haven't
+   * Before assign the hbase:meta region, ensure it haven't
    *  been assigned by other place
    * <p>
-   * Under some scenarios, the META region can be opened twice, so it seemed online
+   * Under some scenarios, the hbase:meta region can be opened twice, so it seemed online
    * in two regionserver at the same time.
-   * If the META region has been assigned, so the operation can be canceled.
+   * If the hbase:meta region has been assigned, so the operation can be canceled.
    * @throws InterruptedException
    * @throws IOException
    * @throws KeeperException
@@ -142,10 +142,10 @@ public class MetaServerShutdownHandler extends ServerShutdownHandler {
     if (!this.server.getCatalogTracker().verifyMetaRegionLocation(timeout)) {
       this.services.getAssignmentManager().assignMeta();
     } else if (serverName.equals(server.getCatalogTracker().getMetaLocation())) {
-      throw new IOException(".META. is onlined on the dead server "
+      throw new IOException("hbase:meta is onlined on the dead server "
           + serverName);
     } else {
-      LOG.info("Skip assigning .META., because it is online on the "
+      LOG.info("Skip assigning hbase:meta, because it is online on the "
           + server.getCatalogTracker().getMetaLocation());
     }
   }

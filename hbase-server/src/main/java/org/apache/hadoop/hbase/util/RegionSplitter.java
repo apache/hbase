@@ -660,7 +660,7 @@ public class RegionSplitter {
           continue;
         }
       } catch (NoServerForRegionException nsfre) {
-        // NSFRE will occur if the old META entry has no server assigned
+        // NSFRE will occur if the old hbase:meta entry has no server assigned
         LOG.info(nsfre);
         logicalSplitting.add(region);
         continue;

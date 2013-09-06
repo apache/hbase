@@ -19,7 +19,7 @@
 TestMetaMigrationConvertToPB uses the file TestMetaMigrationConvertToPB.tgz  for testing
 upgrade to 0.96 from 0.92/0.94 cluster data. The files are untarred to the local
 filesystem, and copied over to a minidfscluster. However, since the directory
-name .META. causes problems on Windows, it has been renamed to -META- inside
+name hbase:meta causes problems on Windows, it has been renamed to -META- inside
 the .tgz file. After untarring and copying the contents to minidfs,
-TestMetaMigrationConvertToPB.setUpBeforeClass() renames the file back to .META.
+TestMetaMigrationConvertToPB.setUpBeforeClass() renames the file back to hbase:meta
 See https://issues.apache.org/jira/browse/HBASE-6821.

@@ -148,7 +148,7 @@ public class AssignmentManager extends ZooKeeperListener {
   private final int maximumAttempts;
   
   /**
-   * The sleep time for which the assignment will wait before retrying in case of META assignment
+   * The sleep time for which the assignment will wait before retrying in case of hbase:meta assignment
    * failure due to lack of availability of region plan
    */
   private final long sleepTimeBeforeRetryingMetaAssignment;
@@ -416,7 +416,7 @@ public class AssignmentManager extends ZooKeeperListener {
     // TODO: Regions that have a null location and are not in regionsInTransitions
     // need to be handled.
 
-    // Scan META to build list of existing regions, servers, and assignment
+    // Scan hbase:meta to build list of existing regions, servers, and assignment
     // Returns servers who have not checked in (assumed dead) and their regions
     Map<ServerName, List<HRegionInfo>> deadServers = rebuildUserRegions();
 
@@ -1141,7 +1141,7 @@ public class AssignmentManager extends ZooKeeperListener {
             Pair<HRegionInfo, ServerName> p = MetaReader.getRegion(catalogTracker, name);
             regionInfo = p.getFirst();
           } catch (IOException e) {
-            LOG.info("Exception reading META doing HBCK repair operation", e);
+            LOG.info("Exception reading hbase:meta doing HBCK repair operation", e);
             return;
           }
         }
@@ -1874,9 +1874,9 @@ public class AssignmentManager extends ZooKeeperListener {
                 continue;
               }
               // TODO : Ensure HBCK fixes this
-              LOG.error("Unable to determine a plan to assign META even after repeated attempts. Run HBCK to fix this");
+              LOG.error("Unable to determine a plan to assign hbase:meta even after repeated attempts. Run HBCK to fix this");
             } catch (InterruptedException e) {
-              LOG.error("Got exception while waiting for META assignment");
+              LOG.error("Got exception while waiting for hbase:meta assignment");
               Thread.currentThread().interrupt();
             }
           }
@@ -1895,7 +1895,7 @@ public class AssignmentManager extends ZooKeeperListener {
           // In case of assignment from EnableTableHandler table state is ENABLING. Any how
           // EnableTableHandler will set ENABLED after assigning all the table regions. If we
           // try to set to ENABLED directly then client API may think table is enabled.
-          // When we have a case such as all the regions are added directly into .META. and we call
+          // When we have a case such as all the regions are added directly into hbase:meta and we call
           // assignRegion then we need to make the table ENABLED. Hence in such case the table
           // will not be in ENABLING or ENABLED state.
           TableName tableName = region.getTableName();
@@ -2453,13 +2453,13 @@ public class AssignmentManager extends ZooKeeperListener {
   }
 
   /**
-   * Assigns the META region.
+   * Assigns the hbase:meta region.
    * <p>
-   * Assumes that META is currently closed and is not being actively served by
+   * Assumes that hbase:meta is currently closed and is not being actively served by
    * any RegionServer.
    * <p>
    * Forcibly unsets the current meta region location in ZooKeeper and assigns
-   * META to a random RegionServer.
+   * hbase:meta to a random RegionServer.
    * @throws KeeperException
    */
   public void assignMeta() throws KeeperException {
@@ -2573,7 +2573,7 @@ public class AssignmentManager extends ZooKeeperListener {
     // See HBASE-6281.
     Set<TableName> disabledOrDisablingOrEnabling = ZKTable.getDisabledOrDisablingTables(watcher);
     disabledOrDisablingOrEnabling.addAll(ZKTable.getEnablingTables(watcher));
-    // Scan META for all user regions, skipping any disabled tables
+    // Scan hbase:meta for all user regions, skipping any disabled tables
     Map<HRegionInfo, ServerName> allRegions;
     SnapshotOfRegionAssignmentFromMeta snapshotOfRegionAssignment =
        new SnapshotOfRegionAssignmentFromMeta(catalogTracker, disabledOrDisablingOrEnabling, true);
@@ -2677,7 +2677,7 @@ public class AssignmentManager extends ZooKeeperListener {
       if (regionLocation == null) {
         // regionLocation could be null if createTable didn't finish properly.
         // When createTable is in progress, HMaster restarts.
-        // Some regions have been added to .META., but have not been assigned.
+        // Some regions have been added to hbase:meta, but have not been assigned.
         // When this happens, the region's table must be in ENABLING state.
         // It can't be in ENABLED state as that is set when all regions are
         // assigned.
@@ -2770,7 +2770,7 @@ public class AssignmentManager extends ZooKeeperListener {
   }
 
   /**
-   * Processes list of dead servers from result of META scan and regions in RIT
+   * Processes list of dead servers from result of hbase:meta scan and regions in RIT
    * <p>
    * This is used for failover to recover the lost regions that belonged to
    * RegionServers which failed while there was no active master or regions

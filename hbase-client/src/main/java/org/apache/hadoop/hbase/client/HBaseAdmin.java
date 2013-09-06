@@ -277,11 +277,11 @@ public class HBaseAdmin implements Abortable, Closeable {
   }
 
   /**
-   * List all the userspace tables.  In other words, scan the META table.
+   * List all the userspace tables.  In other words, scan the hbase:meta table.
    *
    * If we wanted this to be really fast, we could implement a special
    * catalog table that just contains table names and their descriptors.
-   * Right now, it only exists as part of the META table's region info.
+   * Right now, it only exists as part of the hbase:meta table's region info.
    *
    * @return - returns an array of HTableDescriptors
    * @throws IOException if a remote or network exception occurs
@@ -641,7 +641,7 @@ public class HBaseAdmin implements Abortable, Closeable {
           throw ProtobufUtil.getRemoteException(se);
         }
 
-        // let us wait until .META. table is updated and
+        // let us wait until hbase:meta table is updated and
         // HMaster removes the table from its HTableDescriptors
         if (values == null || values.length == 0) {
           tableExists = false;
@@ -1270,7 +1270,7 @@ public class HBaseAdmin implements Abortable, Closeable {
    * master will not be informed of the close.
    * @param regionname region name to close
    * @param serverName If supplied, we'll use this location rather than
-   * the one currently in <code>.META.</code>
+   * the one currently in <code>hbase:meta</code>
    * @throws IOException if a remote or network exception occurs
    */
   public void closeRegion(final String regionname, final String serverName)
@@ -1283,7 +1283,7 @@ public class HBaseAdmin implements Abortable, Closeable {
    * master will not be informed of the close.
    * @param regionname region name to close
    * @param serverName The servername of the regionserver.  If passed null we
-   * will use servername found in the .META. table. A server name
+   * will use servername found in the hbase:meta table. A server name
    * is made of host, port and startcode.  Here is an example:
    * <code> host187.example.com,60020,1289493121758</code>
    * @throws IOException if a remote or network exception occurs

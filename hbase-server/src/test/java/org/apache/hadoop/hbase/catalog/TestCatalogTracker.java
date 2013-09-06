@@ -108,7 +108,7 @@ public class TestCatalogTracker {
       // start fresh in zk.
       MetaRegionTracker.deleteMetaLocation(this.watcher);
     } catch (KeeperException e) {
-      LOG.warn("Unable to delete META location", e);
+      LOG.warn("Unable to delete hbase:meta location", e);
     }
 
     // Clear out our doctored connection or could mess up subsequent tests.
@@ -126,7 +126,7 @@ public class TestCatalogTracker {
   }
 
   /**
-   * Test that we get notification if .META. moves.
+   * Test that we get notification if hbase:meta moves.
    * @throws IOException
    * @throws InterruptedException
    * @throws KeeperException
@@ -337,7 +337,7 @@ public class TestCatalogTracker {
 
   /**
    * @return A mocked up Result that fakes a Get on a row in the
-   * <code>.META.</code> table.
+   * <code>hbase:meta</code> table.
    * @throws IOException
    */
   private Result getMetaTableRowResult() throws IOException {

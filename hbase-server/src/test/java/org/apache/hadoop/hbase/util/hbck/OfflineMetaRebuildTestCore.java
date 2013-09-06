@@ -271,7 +271,7 @@ public class OfflineMetaRebuildTestCore {
   }
 
   /**
-   * Dumps .META. table info
+   * Dumps hbase:meta table info
    *
    * @return # of entries in meta.
    */

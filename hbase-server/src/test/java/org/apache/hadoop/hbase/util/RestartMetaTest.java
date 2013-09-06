@@ -34,7 +34,7 @@ import org.apache.hadoop.hbase.util.test.LoadTestDataGenerator;
 
 /**
  * A command-line tool that spins up a local process-based cluster, loads
- * some data, restarts the regionserver holding .META., and verifies that the
+ * some data, restarts the regionserver holding hbase:meta, and verifies that the
  * cluster recovers.
  */
 public class RestartMetaTest extends AbstractHBaseTool {
@@ -110,7 +110,7 @@ public class RestartMetaTest extends AbstractHBaseTool {
 
     int metaRSPort = HBaseTestingUtility.getMetaRSPort(conf);
 
-    LOG.debug("Killing META region server running on port " + metaRSPort);
+    LOG.debug("Killing hbase:meta region server running on port " + metaRSPort);
     hbaseCluster.killRegionServer(metaRSPort);
     Threads.sleep(2000);
 

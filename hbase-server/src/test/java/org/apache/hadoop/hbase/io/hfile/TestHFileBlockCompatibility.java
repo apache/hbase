@@ -174,7 +174,7 @@ public class TestHFileBlockCompatibility {
   public void testReaderV2() throws IOException {
     for (Compression.Algorithm algo : COMPRESSION_ALGORITHMS) {
       for (boolean pread : new boolean[] { false, true }) {
-          LOG.info("testReaderV2: Compression algorithm: " + algo + 
+          LOG.info("testReaderV2: Compression algorithm: " + algo +
                    ", pread=" + pread);
         Path path = new Path(TEST_UTIL.getDataTestDir(), "blocks_v2_"
             + algo);
@@ -199,7 +199,7 @@ public class TestHFileBlockCompatibility {
 
         b.sanityCheck();
         assertEquals(4936, b.getUncompressedSizeWithoutHeader());
-        assertEquals(algo == GZ ? 2173 : 4936, 
+        assertEquals(algo == GZ ? 2173 : 4936,
                      b.getOnDiskSizeWithoutHeader() - b.totalChecksumBytes());
         String blockStr = b.toString();
 
@@ -239,7 +239,7 @@ public class TestHFileBlockCompatibility {
     for (Compression.Algorithm algo : COMPRESSION_ALGORITHMS) {
       for (boolean pread : new boolean[] { false, true }) {
         for (DataBlockEncoding encoding : DataBlockEncoding.values()) {
-          LOG.info("testDataBlockEncoding algo " + algo + 
+          LOG.info("testDataBlockEncoding algo " + algo +
                    " pread = " + pread +
                    " encoding " + encoding);
           Path path = new Path(TEST_UTIL.getDataTestDir(), "blocks_v2_"
@@ -305,12 +305,12 @@ public class TestHFileBlockCompatibility {
 
 
   /**
-   * This is the version of the HFileBlock.Writer that is used to 
-   * create V2 blocks with minor version 0. These blocks do not 
-   * have hbase-level checksums. The code is here to test 
-   * backward compatibility. The reason we do not inherit from 
+   * This is the version of the HFileBlock.Writer that is used to
+   * create V2 blocks with minor version 0. These blocks do not
+   * have hbase-level checksums. The code is here to test
+   * backward compatibility. The reason we do not inherit from
    * HFileBlock.Writer is because we never ever want to change the code
-   * in this class but the code in HFileBlock.Writer will continually 
+   * in this class but the code in HFileBlock.Writer will continually
    * evolve.
    */
   public static final class Writer {
@@ -318,7 +318,7 @@ public class TestHFileBlockCompatibility {
     // These constants are as they were in minorVersion 0.
     private static final int HEADER_SIZE = HConstants.HFILEBLOCK_HEADER_SIZE_NO_CHECKSUM;
     private static final boolean DONT_FILL_HEADER = HFileBlock.DONT_FILL_HEADER;
-    private static final byte[] DUMMY_HEADER = 
+    private static final byte[] DUMMY_HEADER =
       HFileBlock.DUMMY_HEADER_NO_CHECKSUM;
 
     private enum State {
@@ -711,7 +711,7 @@ public class TestHFileBlockCompatibility {
     }
 
     /**
-     * Creates a new HFileBlock. 
+     * Creates a new HFileBlock.
      */
     public HFileBlock getBlockForCaching() {
       return new HFileBlock(blockType, getOnDiskSizeWithoutHeader(),

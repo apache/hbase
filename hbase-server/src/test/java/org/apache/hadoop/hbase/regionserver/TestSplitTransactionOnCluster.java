@@ -973,7 +973,7 @@ public class TestSplitTransactionOnCluster {
   }
 
   /**
-   * Ensure single table region is not on same server as the single .META. table
+   * Ensure single table region is not on same server as the single hbase:meta table
    * region.
    * @param admin
    * @param hri
@@ -988,7 +988,7 @@ public class TestSplitTransactionOnCluster {
   throws HBaseIOException, MasterNotRunningException,
   ZooKeeperConnectionException, InterruptedException {
     // Now make sure that the table region is not on same server as that hosting
-    // .META.  We don't want .META. replay polluting our test when we later crash
+    // hbase:meta  We don't want hbase:meta replay polluting our test when we later crash
     // the table region serving server.
     int metaServerIndex = cluster.getServerWithMeta();
     assertTrue(metaServerIndex != -1);
@@ -1005,17 +1005,17 @@ public class TestSplitTransactionOnCluster {
         hrs.getServerName() + "; metaServerIndex=" + metaServerIndex);
       admin.move(hri.getEncodedNameAsBytes(), Bytes.toBytes(hrs.getServerName().toString()));
     }
-    // Wait till table region is up on the server that is NOT carrying .META..
+    // Wait till table region is up on the server that is NOT carrying hbase:meta.
     for (int i = 0; i < 100; i++) {
       tableRegionIndex = cluster.getServerWith(hri.getRegionName());
       if (tableRegionIndex != -1 && tableRegionIndex != metaServerIndex) break;
-      LOG.debug("Waiting on region move off the .META. server; current index " +
+      LOG.debug("Waiting on region move off the hbase:meta server; current index " +
         tableRegionIndex + " and metaServerIndex=" + metaServerIndex);
       Thread.sleep(100);
     }
-    assertTrue("Region not moved off .META. server", tableRegionIndex != -1
+    assertTrue("Region not moved off hbase:meta server", tableRegionIndex != -1
         && tableRegionIndex != metaServerIndex);
-    // Verify for sure table region is not on same server as .META.
+    // Verify for sure table region is not on same server as hbase:meta
     tableRegionIndex = cluster.getServerWith(hri.getRegionName());
     assertTrue(tableRegionIndex != -1);
     assertNotSame(metaServerIndex, tableRegionIndex);

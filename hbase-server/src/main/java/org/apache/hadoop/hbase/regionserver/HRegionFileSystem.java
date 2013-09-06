@@ -742,7 +742,7 @@ public class HRegionFileSystem {
       LOG.warn(REGION_INFO_FILE + " file not found for region: " + regionInfo.getEncodedName());
     }
 
-    // Write HRI to a file in case we need to recover .META.
+    // Write HRI to a file in case we need to recover hbase:meta
     writeRegionInfoOnFilesystem(content, true);
   }
 
@@ -780,7 +780,7 @@ public class HRegionFileSystem {
         FSUtils.delete(fs, tmpPath, true);
       }
 
-      // Write HRI to a file in case we need to recover .META.
+      // Write HRI to a file in case we need to recover hbase:meta
       writeRegionInfoFileContent(conf, fs, tmpPath, regionInfoContent);
 
       // Move the created file to the original path
@@ -788,7 +788,7 @@ public class HRegionFileSystem {
         throw new IOException("Unable to rename " + tmpPath + " to " + regionInfoFile);
       }
     } else {
-      // Write HRI to a file in case we need to recover .META.
+      // Write HRI to a file in case we need to recover hbase:meta
       writeRegionInfoFileContent(conf, fs, regionInfoFile, regionInfoContent);
     }
   }
@@ -817,7 +817,7 @@ public class HRegionFileSystem {
       throw new IOException("Unable to create region directory: " + regionDir);
     }
 
-    // Write HRI to a file in case we need to recover .META.
+    // Write HRI to a file in case we need to recover hbase:meta
     regionFs.writeRegionInfoOnFilesystem(false);
     return regionFs;
   }
@@ -848,7 +848,7 @@ public class HRegionFileSystem {
       regionFs.cleanupSplitsDir();
       regionFs.cleanupMergesDir();
 
-      // if it doesn't exists, Write HRI to a file, in case we need to recover .META.
+      // if it doesn't exists, Write HRI to a file, in case we need to recover hbase:meta
       regionFs.checkRegionInfoOnFilesystem();
     }
 

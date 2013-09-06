@@ -356,7 +356,7 @@ public final class HConstants {
   // should go down.
 
 
-  /** The META table's name. */
+  /** The hbase:meta table's name. */
   @Deprecated  // for compat from 0.94 -> 0.96.
   public static final byte[] META_TABLE_NAME = TableName.META_TABLE_NAME.getName();
 

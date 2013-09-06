@@ -46,7 +46,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import com.google.protobuf.ServiceException;
 
 /**
- * Writes region and assignment information to <code>.META.</code>.
+ * Writes region and assignment information to <code>hbase:meta</code>.
  * TODO: Put MetaReader and MetaEditor together; doesn't make sense having
  * them distinct. see HBASE-3475.
  */
@@ -93,9 +93,9 @@ public class MetaEditor {
   }
 
   /**
-   * Put the passed <code>p</code> to the <code>.META.</code> table.
+   * Put the passed <code>p</code> to the <code>hbase:meta</code> table.
    * @param ct CatalogTracker on whose back we will ride the edit.
-   * @param p Put to add to .META.
+   * @param p Put to add to hbase:meta
    * @throws IOException
    */
   static void putToMetaTable(final CatalogTracker ct, final Put p)
@@ -128,9 +128,9 @@ public class MetaEditor {
   }
 
   /**
-   * Put the passed <code>ps</code> to the <code>.META.</code> table.
+   * Put the passed <code>ps</code> to the <code>hbase:meta</code> table.
    * @param ct CatalogTracker on whose back we will ride the edit.
-   * @param ps Put to add to .META.
+   * @param ps Put to add to hbase:meta
    * @throws IOException
    */
   public static void putsToMetaTable(final CatalogTracker ct, final List<Put> ps)
@@ -144,9 +144,9 @@ public class MetaEditor {
   }
 
   /**
-   * Delete the passed <code>d</code> from the <code>.META.</code> table.
+   * Delete the passed <code>d</code> from the <code>hbase:meta</code> table.
    * @param ct CatalogTracker on whose back we will ride the edit.
-   * @param d Delete to add to .META.
+   * @param d Delete to add to hbase:meta
    * @throws IOException
    */
   static void deleteFromMetaTable(final CatalogTracker ct, final Delete d)
@@ -157,9 +157,9 @@ public class MetaEditor {
   }
 
   /**
-   * Delete the passed <code>deletes</code> from the <code>.META.</code> table.
+   * Delete the passed <code>deletes</code> from the <code>hbase:meta</code> table.
    * @param ct CatalogTracker on whose back we will ride the edit.
-   * @param deletes Deletes to add to .META.  This list should support #remove.
+   * @param deletes Deletes to add to hbase:meta  This list should support #remove.
    * @throws IOException
    */
   public static void deleteFromMetaTable(final CatalogTracker ct, final List<Delete> deletes)
@@ -173,9 +173,9 @@ public class MetaEditor {
   }
 
   /**
-   * Execute the passed <code>mutations</code> against <code>.META.</code> table.
+   * Execute the passed <code>mutations</code> against <code>hbase:meta</code> table.
    * @param ct CatalogTracker on whose back we will ride the edit.
-   * @param mutations Puts and Deletes to execute on .META.
+   * @param mutations Puts and Deletes to execute on hbase:meta
    * @throws IOException
    */
   static void mutateMetaTable(final CatalogTracker ct, final List<Mutation> mutations)
@@ -193,7 +193,7 @@ public class MetaEditor {
   }
 
   /**
-   * Adds a META row for the specified new region.
+   * Adds a hbase:meta row for the specified new region.
    * @param regionInfo region information
    * @throws IOException if problem connecting or updating meta
    */
@@ -205,7 +205,7 @@ public class MetaEditor {
   }
 
   /**
-   * Adds a META row for the specified new region to the given catalog table. The
+   * Adds a hbase:meta row for the specified new region to the given catalog table. The
    * HTable is not flushed or closed.
    * @param meta the HTable for META
    * @param regionInfo region information
@@ -216,7 +216,7 @@ public class MetaEditor {
   }
 
   /**
-   * Adds a (single) META row for the specified new region and its daughters. Note that this does
+   * Adds a (single) hbase:meta row for the specified new region and its daughters. Note that this does
    * not add its daughter's as different rows, but adds information about the daughters
    * in the same row as the parent. Use
    * {@link #splitRegion(CatalogTracker, HRegionInfo, HRegionInfo, HRegionInfo, ServerName)}
@@ -238,7 +238,7 @@ public class MetaEditor {
   }
 
   /**
-   * Adds a (single) META row for the specified new region and its daughters. Note that this does
+   * Adds a (single) hbase:meta row for the specified new region and its daughters. Note that this does
    * not add its daughter's as different rows, but adds information about the daughters
    * in the same row as the parent. Use
    * {@link #splitRegion(CatalogTracker, HRegionInfo, HRegionInfo, HRegionInfo, ServerName)}
@@ -260,7 +260,7 @@ public class MetaEditor {
   }
 
   /**
-   * Adds a META row for each of the specified new regions.
+   * Adds a hbase:meta row for each of the specified new regions.
    * @param catalogTracker CatalogTracker
    * @param regionInfos region information list
    * @throws IOException if problem connecting or updating meta
@@ -297,7 +297,7 @@ public class MetaEditor {
 
   /**
    * Merge the two regions into one in an atomic operation. Deletes the two
-   * merging regions in META and adds the merged region with the information of
+   * merging regions in hbase:meta and adds the merged region with the information of
    * two merging regions.
    * @param catalogTracker the catalog tracker
    * @param mergedRegion the merged region
@@ -401,7 +401,7 @@ public class MetaEditor {
 
 
   /**
-   * Updates the location of the specified META region in ROOT to be the
+   * Updates the location of the specified hbase:meta region in ROOT to be the
    * specified server hostname and startcode.
    * <p>
    * Uses passed catalog tracker to get a connection to the server hosting
@@ -412,7 +412,7 @@ public class MetaEditor {
    * @param sn Server name
    * @param openSeqNum the latest sequence number obtained when the region was open
    * @throws IOException
-   * @throws ConnectException Usually because the regionserver carrying .META.
+   * @throws ConnectException Usually because the regionserver carrying hbase:meta
    * is down.
    * @throws NullPointerException Because no -ROOT- server connection
    */
@@ -423,11 +423,11 @@ public class MetaEditor {
   }
 
   /**
-   * Updates the location of the specified region in META to be the specified
+   * Updates the location of the specified region in hbase:meta to be the specified
    * server hostname and startcode.
    * <p>
    * Uses passed catalog tracker to get a connection to the server hosting
-   * META and makes edits to that region.
+   * hbase:meta and makes edits to that region.
    *
    * @param catalogTracker catalog tracker
    * @param regionInfo region to update location of
@@ -494,7 +494,7 @@ public class MetaEditor {
   }
 
   /**
-   * Adds and Removes the specified regions from .META.
+   * Adds and Removes the specified regions from hbase:meta
    * @param catalogTracker
    * @param regionsToRemove list of regions to be deleted from META
    * @param regionsToAdd list of regions to be added to META

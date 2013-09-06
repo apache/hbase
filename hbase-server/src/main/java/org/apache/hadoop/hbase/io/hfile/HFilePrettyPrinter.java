@@ -101,11 +101,11 @@ public class HFilePrettyPrinter {
         "Enable row order check; looks for out-of-order keys");
     options.addOption("a", "checkfamily", false, "Enable family check");
     options.addOption("f", "file", true,
-        "File to scan. Pass full-path; e.g. hdfs://a:9000/hbase/.META./12/34");
+        "File to scan. Pass full-path; e.g. hdfs://a:9000/hbase/hbase:meta/12/34");
     options.addOption("w", "seekToRow", true,
       "Seek to this row and print all the kvs for this row only");
     options.addOption("r", "region", true,
-        "Region to scan. Pass region name; e.g. '.META.,,1'");
+        "Region to scan. Pass region name; e.g. 'hbase:meta,,1'");
     options.addOption("s", "stats", false, "Print statistics");
   }
 

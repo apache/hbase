@@ -60,20 +60,20 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
    * There are two versions associated with HRegionInfo: HRegionInfo.VERSION and
    * HConstants.META_VERSION. HRegionInfo.VERSION indicates the data structure's versioning
    * while HConstants.META_VERSION indicates the versioning of the serialized HRIs stored in
-   * the META table.
+   * the hbase:meta table.
    *
    * Pre-0.92:
-   *   HRI.VERSION == 0 and HConstants.META_VERSION does not exist (is not stored at META table)
+   *   HRI.VERSION == 0 and HConstants.META_VERSION does not exist (is not stored at hbase:meta table)
    *   HRegionInfo had an HTableDescriptor reference inside it.
-   *   HRegionInfo is serialized as Writable to META table.
+   *   HRegionInfo is serialized as Writable to hbase:meta table.
    * For 0.92.x and 0.94.x:
    *   HRI.VERSION == 1 and HConstants.META_VERSION == 0
    *   HRI no longer has HTableDescriptor in it.
-   *   HRI is serialized as Writable to META table.
+   *   HRI is serialized as Writable to hbase:meta table.
    * For 0.96.x:
    *   HRI.VERSION == 1 and HConstants.META_VERSION == 1
    *   HRI data structure is the same as 0.92 and 0.94
-   *   HRI is serialized as PB to META table.
+   *   HRI is serialized as PB to hbase:meta table.
    *
    * Versioning of HRegionInfo is deprecated. HRegionInfo does protobuf
    * serialization using RegionInfo class, which has it's own versioning.
@@ -100,7 +100,7 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
    *<p>
    * **NOTE**
    *
-   * The first META region, and regions created by an older
+   * The first hbase:meta region, and regions created by an older
    * version of HBase (0.20 or prior) will continue to use the
    * old region name format.
    */
@@ -143,7 +143,7 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
           regionName.length - MD5_HEX_LENGTH - 1,
           MD5_HEX_LENGTH);
     } else {
-      // old format region name. First META region also
+      // old format region name. First hbase:meta region also
       // use this format.EncodedName is the JenkinsHash value.
       int hashVal = Math.abs(JenkinsHash.getInstance().hash(regionName,
         regionName.length, 0));
@@ -162,12 +162,12 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
   /**
    * Use logging.
    * @param encodedRegionName The encoded regionname.
-   * @return <code>.META.</code> if passed <code>1028785192</code> else returns
+   * @return <code>hbase:meta</code> if passed <code>1028785192</code> else returns
    * <code>encodedRegionName</code>
    */
   public static String prettyPrint(final String encodedRegionName) {
     if (encodedRegionName.equals("1028785192")) {
-      return encodedRegionName + "/.META.";
+      return encodedRegionName + "/hbase:meta";
     }
     return encodedRegionName;
   }
@@ -562,7 +562,7 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
   }
 
   /**
-   * @return true if this region is from .META.
+   * @return true if this region is from hbase:meta
    */
   public boolean isMetaTable() {
     return isMetaRegion();
@@ -927,7 +927,7 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
    * Extract a HRegionInfo and ServerName from catalog table {@link Result}.
    * @param r Result to pull from
    * @return A pair of the {@link HRegionInfo} and the {@link ServerName}
-   * (or null for server address if no address set in .META.).
+   * (or null for server address if no address set in hbase:meta).
    * @throws IOException
    */
   public static Pair<HRegionInfo, ServerName> getHRegionInfoAndServerName(final Result r) {

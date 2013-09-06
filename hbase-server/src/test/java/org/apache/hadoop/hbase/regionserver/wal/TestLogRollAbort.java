@@ -117,7 +117,7 @@ public class TestLogRollAbort {
   public void testRSAbortWithUnflushedEdits() throws Exception {
     LOG.info("Starting testRSAbortWithUnflushedEdits()");
 
-    // When the META table can be opened, the region servers are running
+    // When the hbase:meta table can be opened, the region servers are running
     new HTable(TEST_UTIL.getConfiguration(),
       TableName.META_TABLE_NAME).close();
 

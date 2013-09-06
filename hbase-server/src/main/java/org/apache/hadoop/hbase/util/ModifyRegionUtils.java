@@ -57,7 +57,7 @@ public abstract class ModifyRegionUtils {
 
   /**
    * Create new set of regions on the specified file-system.
-   * NOTE: that you should add the regions to .META. after this operation.
+   * NOTE: that you should add the regions to hbase:meta after this operation.
    *
    * @param conf {@link Configuration}
    * @param rootDir Root directory for HBase instance
@@ -72,7 +72,7 @@ public abstract class ModifyRegionUtils {
 
   /**
    * Create new set of regions on the specified file-system.
-   * NOTE: that you should add the regions to .META. after this operation.
+   * NOTE: that you should add the regions to hbase:meta after this operation.
    *
    * @param conf {@link Configuration}
    * @param rootDir Root directory for HBase instance

@@ -211,7 +211,7 @@ public class Merge extends Configured implements Tool {
    * Removes a region's meta information from the passed <code>meta</code>
    * region.
    *
-   * @param meta META HRegion to be updated
+   * @param meta hbase:meta HRegion to be updated
    * @param regioninfo HRegionInfo of region to remove from <code>meta</code>
    *
    * @throws IOException
@@ -231,7 +231,7 @@ public class Merge extends Configured implements Tool {
    * Adds a region's meta information from the passed <code>meta</code>
    * region.
    *
-   * @param metainfo META HRegionInfo to be updated
+   * @param metainfo hbase:meta HRegionInfo to be updated
    * @param region HRegion to add to <code>meta</code>
    *
    * @throws IOException

@@ -1610,7 +1610,7 @@ public class TestAdmin {
 
   private HRegionServer startAndWriteData(String tableName, byte[] value)
   throws IOException, InterruptedException {
-    // When the META table can be opened, the region servers are running
+    // When the hbase:meta table can be opened, the region servers are running
     new HTable(
       TEST_UTIL.getConfiguration(), TableName.META_TABLE_NAME).close();
 
@@ -1692,7 +1692,7 @@ public class TestAdmin {
       fail("Expected to throw ConstraintException");
     } catch (ConstraintException e) {
     }
-    // Before the fix for HBASE-6146, the below table creation was failing as the META table
+    // Before the fix for HBASE-6146, the below table creation was failing as the hbase:meta table
     // actually getting disabled by the disableTable() call.
     HTableDescriptor htd = new HTableDescriptor(TableName.valueOf("testDisableCatalogTable".getBytes()));
     HColumnDescriptor hcd = new HColumnDescriptor("cf1".getBytes());

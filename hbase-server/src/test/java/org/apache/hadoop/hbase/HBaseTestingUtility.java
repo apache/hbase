@@ -883,7 +883,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
     Configuration c = new Configuration(this.conf);
     this.hbaseCluster =
         new MiniHBaseCluster(c, numMasters, numSlaves, masterClass, regionserverClass);
-    // Don't leave here till we've done a successful scan of the .META.
+    // Don't leave here till we've done a successful scan of the hbase:meta
     HTable t = new HTable(c, TableName.META_TABLE_NAME);
     ResultScanner s = t.getScanner(new Scan());
     while (s.next() != null) {
@@ -905,7 +905,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
    */
   public void restartHBaseCluster(int servers) throws IOException, InterruptedException {
     this.hbaseCluster = new MiniHBaseCluster(this.conf, servers);
-    // Don't leave here till we've done a successful scan of the .META.
+    // Don't leave here till we've done a successful scan of the hbase:meta
     HTable t = new HTable(new Configuration(this.conf), TableName.META_TABLE_NAME);
     ResultScanner s = t.getScanner(new Scan());
     while (s.next() != null) {
@@ -1146,7 +1146,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
       desc.addFamily(hcd);
     }
     getHBaseAdmin().createTable(desc, startKey, endKey, numRegions);
-    // HBaseAdmin only waits for regions to appear in META we should wait until they are assigned
+    // HBaseAdmin only waits for regions to appear in hbase:meta we should wait until they are assigned
     waitUntilAllRegionsAssigned(tableName);
     return new HTable(getConfiguration(), tableName);
   }
@@ -1172,7 +1172,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
       desc.addFamily(hcd);
     }
     getHBaseAdmin().createTable(desc);
-    // HBaseAdmin only waits for regions to appear in META we should wait until they are assigned
+    // HBaseAdmin only waits for regions to appear in hbase:meta we should wait until they are assigned
     waitUntilAllRegionsAssigned(tableName);
     return new HTable(c, tableName);
   }
@@ -1220,7 +1220,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
       desc.addFamily(hcd);
     }
     getHBaseAdmin().createTable(desc);
-    // HBaseAdmin only waits for regions to appear in META we should wait until they are assigned
+    // HBaseAdmin only waits for regions to appear in hbase:meta we should wait until they are assigned
     waitUntilAllRegionsAssigned(tableName);
     return new HTable(c, tableName);
   }
@@ -1304,7 +1304,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
       desc.addFamily(hcd);
     }
     getHBaseAdmin().createTable(desc);
-    // HBaseAdmin only waits for regions to appear in META we should wait until they are assigned
+    // HBaseAdmin only waits for regions to appear in hbase:meta we should wait until they are assigned
     waitUntilAllRegionsAssigned(tableName);
     return new HTable(new Configuration(getConfiguration()), tableName);
   }
@@ -1341,7 +1341,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
       desc.addFamily(hcd);
     }
     getHBaseAdmin().createTable(desc);
-    // HBaseAdmin only waits for regions to appear in META we should wait until they are assigned
+    // HBaseAdmin only waits for regions to appear in hbase:meta we should wait until they are assigned
     waitUntilAllRegionsAssigned(tableName);
     return new HTable(new Configuration(getConfiguration()), tableName);
   }
@@ -1380,7 +1380,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
       i++;
     }
     getHBaseAdmin().createTable(desc);
-    // HBaseAdmin only waits for regions to appear in META we should wait until they are assigned
+    // HBaseAdmin only waits for regions to appear in hbase:meta we should wait until they are assigned
     waitUntilAllRegionsAssigned(tableName);
     return new HTable(new Configuration(getConfiguration()), tableName);
   }
@@ -1412,7 +1412,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
     HColumnDescriptor hcd = new HColumnDescriptor(family);
     desc.addFamily(hcd);
     getHBaseAdmin().createTable(desc, splitRows);
-    // HBaseAdmin only waits for regions to appear in META we should wait until they are assigned
+    // HBaseAdmin only waits for regions to appear in hbase:meta we should wait until they are assigned
     waitUntilAllRegionsAssigned(tableName);
     return new HTable(getConfiguration(), tableName);
   }
@@ -1433,7 +1433,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
       desc.addFamily(hcd);
     }
     getHBaseAdmin().createTable(desc, splitRows);
-    // HBaseAdmin only waits for regions to appear in META we should wait until they are assigned
+    // HBaseAdmin only waits for regions to appear in hbase:meta we should wait until they are assigned
     waitUntilAllRegionsAssigned(TableName.valueOf(tableName));
     return new HTable(getConfiguration(), tableName);
   }
@@ -1849,7 +1849,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
   }
 
   /**
-   * Create rows in META for regions of the specified table with the specified
+   * Create rows in hbase:meta for regions of the specified table with the specified
    * start keys.  The first startKey should be a 0 length byte array if you
    * want to form a proper range of regions.
    * @param conf
@@ -1878,7 +1878,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
   }
 
   /**
-   * Returns all rows from the .META. table.
+   * Returns all rows from the hbase:meta table.
    *
    * @throws IOException When reading the rows fails.
    */
@@ -1898,7 +1898,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
   }
 
   /**
-   * Returns all rows from the .META. table for a given user table
+   * Returns all rows from the hbase:meta table for a given user table
    *
    * @throws IOException When reading the rows fails.
    */
@@ -1932,7 +1932,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
    * It first searches for the meta rows that contain the region of the
    * specified table, then gets the index of that RS, and finally retrieves
    * the RS's reference.
-   * @param tableName user table to lookup in .META.
+   * @param tableName user table to lookup in hbase:meta
    * @return region server that holds it, null if the row doesn't exist
    * @throws IOException
    * @throws InterruptedException
@@ -1947,7 +1947,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
    * It first searches for the meta rows that contain the region of the
    * specified table, then gets the index of that RS, and finally retrieves
    * the RS's reference.
-   * @param tableName user table to lookup in .META.
+   * @param tableName user table to lookup in hbase:meta
    * @return region server that holds it, null if the row doesn't exist
    * @throws IOException
    */
@@ -2450,7 +2450,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
       Thread.sleep(200);
     }
     // Finally make sure all regions are fully open and online out on the cluster. Regions may be
-    // in the .META. table and almost open on all regionservers but there setting the region
+    // in the hbase:meta table and almost open on all regionservers but there setting the region
     // online in the regionserver is the very last thing done and can take a little while to happen.
     // Below we do a get.  The get will retry if a NotServeringRegionException or a
     // RegionOpeningException.  It is crass but when done all will be online.
@@ -2621,9 +2621,9 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
   }
 
   /**
-   * Wait until all regions for a table in .META. have a non-empty
+   * Wait until all regions for a table in hbase:meta have a non-empty
    * info:server, up to 60 seconds. This means all regions have been deployed,
-   * master has been informed and updated .META. with the regions deployed
+   * master has been informed and updated hbase:meta with the regions deployed
    * server.
    * @param tableName the table name
    * @throws IOException
@@ -2633,9 +2633,9 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
   }
 
   /**
-   * Wait until all regions for a table in .META. have a non-empty
+   * Wait until all regions for a table in hbase:meta have a non-empty
    * info:server, or until timeout.  This means all regions have been deployed,
-   * master has been informed and updated .META. with the regions deployed
+   * master has been informed and updated hbase:meta with the regions deployed
    * server.
    * @param tableName the table name
    * @param timeout timeout, in milliseconds

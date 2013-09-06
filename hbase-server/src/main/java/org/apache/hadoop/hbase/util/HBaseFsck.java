@@ -119,7 +119,7 @@ import com.google.protobuf.ServiceException;
  * HBaseFsck (hbck) is a tool for checking and repairing region consistency and
  * table integrity problems in a corrupted HBase.
  * <p>
- * Region consistency checks verify that .META., region deployment on region
+ * Region consistency checks verify that hbase:meta, region deployment on region
  * servers and the state of data in HDFS (.regioninfo files) all are in
  * accordance.
  * <p>
@@ -131,7 +131,7 @@ import com.google.protobuf.ServiceException;
  * The general repair strategy works in two phases:
  * <ol>
  * <li> Repair Table Integrity on HDFS. (merge or fabricate regions)
- * <li> Repair Region Consistency with .META. and assignments
+ * <li> Repair Region Consistency with hbase:meta and assignments
  * </ol>
  * <p>
  * For table integrity repairs, the tables' region directories are scanned
@@ -143,7 +143,7 @@ import com.google.protobuf.ServiceException;
  * <p>
  * Table integrity repairs deal solely with HDFS and could potentially be done
  * offline -- the hbase region servers or master do not need to be running.
- * This phase can eventually be used to completely reconstruct the META table in
+ * This phase can eventually be used to completely reconstruct the hbase:meta table in
  * an offline fashion.
  * <p>
  * Region consistency requires three conditions -- 1) valid .regioninfo file
@@ -203,7 +203,7 @@ public class HBaseFsck extends Configured implements Tool {
   private boolean fixTableLocks = false; // fix table locks which are expired
 
   // limit checking/fixes to listed tables, if empty attempt to check/fix all
-  // .META. are always checked
+  // hbase:meta are always checked
   private Set<TableName> tablesIncluded = new HashSet<TableName>();
   private int maxMerge = DEFAULT_MAX_MERGE; // maximum number of overlapping regions to merge
   private int maxOverlapsToSideline = DEFAULT_OVERLAPS_TO_SIDELINE; // maximum number of overlapping regions to sideline
@@ -229,7 +229,7 @@ public class HBaseFsck extends Configured implements Tool {
   private TreeMap<String, HbckInfo> regionInfoMap = new TreeMap<String, HbckInfo>();
   private TreeSet<TableName> disabledTables =
     new TreeSet<TableName>();
-  // Empty regioninfo qualifiers in .META.
+  // Empty regioninfo qualifiers in hbase:meta
   private Set<Result> emptyRegionInfoQualifiers = new HashSet<Result>();
 
   /**
@@ -385,7 +385,7 @@ public class HBaseFsck extends Configured implements Tool {
   /**
    * This repair method requires the cluster to be online since it contacts
    * region servers and the masters.  It makes each region's state in HDFS, in
-   * .META., and deployments consistent.
+   * hbase:meta, and deployments consistent.
    *
    * @return If > 0 , number of errors detected, if < 0 there was an unrecoverable
    * error.  If 0, we have a clean hbase.
@@ -396,32 +396,32 @@ public class HBaseFsck extends Configured implements Tool {
 
     // get regions according to what is online on each RegionServer
     loadDeployedRegions();
-    // check whether .META. is deployed and online
+    // check whether hbase:meta is deployed and online
     if (!recordMetaRegion()) {
       // Will remove later if we can fix it
-      errors.reportError("Fatal error: unable to get .META. region location. Exiting...");
+      errors.reportError("Fatal error: unable to get hbase:meta region location. Exiting...");
       return -2;
     }
-    // Check if .META. is found only once and in the right place
+    // Check if hbase:meta is found only once and in the right place
     if (!checkMetaRegion()) {
-      String errorMsg = ".META. table is not consistent. ";
+      String errorMsg = "hbase:meta table is not consistent. ";
       if (shouldFixAssignments()) {
-        errorMsg += "HBCK will try fixing it. Rerun once .META. is back to consistent state.";
+        errorMsg += "HBCK will try fixing it. Rerun once hbase:meta is back to consistent state.";
       } else {
-        errorMsg += "Run HBCK with proper fix options to fix .META. inconsistency.";
+        errorMsg += "Run HBCK with proper fix options to fix hbase:meta inconsistency.";
       }
       errors.reportError(errorMsg + " Exiting...");
       return -2;
     }
-    // Not going with further consistency check for tables when META itself is not consistent.
-    LOG.info("Loading regionsinfo from the .META. table");
+    // Not going with further consistency check for tables when hbase:meta itself is not consistent.
+    LOG.info("Loading regionsinfo from the hbase:meta table");
     boolean success = loadMetaEntries();
     if (!success) return -1;
 
-    // Empty cells in .META.?
+    // Empty cells in hbase:meta?
     reportEmptyMetaCells();
 
-    // Check if we have to cleanup empty REGIONINFO_QUALIFIER rows from .META.
+    // Check if we have to cleanup empty REGIONINFO_QUALIFIER rows from hbase:meta
     if (shouldFixEmptyMetaCells()) {
       fixEmptyMetaCells();
     }
@@ -648,7 +648,7 @@ public class HBaseFsck extends Configured implements Tool {
         isReference = StoreFileInfo.isReference(path);
       } catch (Throwable t) {
         // Ignore. Some files may not be store files at all.
-        // For example, files under .oldlogs folder in .META.
+        // For example, files under .oldlogs folder in hbase:meta
         // Warning message is already logged by
         // StoreFile#isReference.
       }
@@ -694,7 +694,7 @@ public class HBaseFsck extends Configured implements Tool {
    * TODO -- need to add tests for this.
    */
   private void reportEmptyMetaCells() {
-    errors.print("Number of empty REGIONINFO_QUALIFIER rows in .META.: " +
+    errors.print("Number of empty REGIONINFO_QUALIFIER rows in hbase:meta: " +
       emptyRegionInfoQualifiers.size());
     if (details) {
       for (Result r: emptyRegionInfoQualifiers) {
@@ -806,7 +806,7 @@ public class HBaseFsck extends Configured implements Tool {
       // get table name from hdfs, populate various HBaseFsck tables.
       TableName tableName = hbi.getTableName();
       if (tableName == null) {
-        // There was an entry in META not in the HDFS?
+        // There was an entry in hbase:meta not in the HDFS?
         LOG.warn("tableName was null for: " + hbi);
         continue;
       }
@@ -878,12 +878,12 @@ public class HBaseFsck extends Configured implements Tool {
   }
 
   /**
-   * To fix the empty REGIONINFO_QUALIFIER rows from .META. <br>
+   * To fix the empty REGIONINFO_QUALIFIER rows from hbase:meta <br>
    * @throws IOException
    */
   public void fixEmptyMetaCells() throws IOException {
     if (shouldFixEmptyMetaCells() && !emptyRegionInfoQualifiers.isEmpty()) {
-      LOG.info("Trying to fix empty REGIONINFO_QUALIFIER .META. rows.");
+      LOG.info("Trying to fix empty REGIONINFO_QUALIFIER hbase:meta rows.");
       for (Result region : emptyRegionInfoQualifiers) {
         deleteMetaRegion(region.getRow());
         errors.getErrorList().remove(ERROR_CODE.EMPTY_META_CELL);
@@ -957,7 +957,7 @@ public class HBaseFsck extends Configured implements Tool {
   /**
    * This borrows code from MasterFileSystem.bootstrap()
    *
-   * @return an open .META. HRegion
+   * @return an open hbase:meta HRegion
    */
   private HRegion createNewMeta() throws IOException {
     Path rootdir = FSUtils.getRootDir(getConf());
@@ -983,7 +983,7 @@ public class HBaseFsck extends Configured implements Tool {
     for (Entry<TableName, TableInfo> e : tablesInfo.entrySet()) {
       TableName name = e.getKey();
 
-      // skip ".META."
+      // skip "hbase:meta"
       if (name.compareTo(TableName.META_TABLE_NAME) == 0) {
         continue;
       }
@@ -1066,23 +1066,23 @@ public class HBaseFsck extends Configured implements Tool {
     }
 
     // we can rebuild, move old meta out of the way and start
-    LOG.info("HDFS regioninfo's seems good.  Sidelining old .META.");
+    LOG.info("HDFS regioninfo's seems good.  Sidelining old hbase:meta");
     Path backupDir = sidelineOldMeta();
 
-    LOG.info("Creating new .META.");
+    LOG.info("Creating new hbase:meta");
     HRegion meta = createNewMeta();
 
     // populate meta
     List<Put> puts = generatePuts(tablesInfo);
     if (puts == null) {
-      LOG.fatal("Problem encountered when creating new .META. entries.  " +
-        "You may need to restore the previously sidelined .META.");
+      LOG.fatal("Problem encountered when creating new hbase:meta entries.  " +
+        "You may need to restore the previously sidelined hbase:meta");
       return false;
     }
     meta.batchMutate(puts.toArray(new Put[0]));
     HRegion.closeHRegion(meta);
-    LOG.info("Success! .META. table rebuilt.");
-    LOG.info("Old .META. is moved into " + backupDir);
+    LOG.info("Success! hbase:meta table rebuilt.");
+    LOG.info("Old hbase:meta is moved into " + backupDir);
     return true;
   }
 
@@ -1223,7 +1223,7 @@ public class HBaseFsck extends Configured implements Tool {
    * @return Path to backup of original directory
    */
   Path sidelineOldMeta() throws IOException {
-    // put current .META. aside.
+    // put current hbase:meta aside.
     Path hbaseDir = FSUtils.getRootDir(getConf());
     FileSystem fs = hbaseDir.getFileSystem(getConf());
     Path backupDir = getSidelineDir();
@@ -1332,7 +1332,7 @@ public class HBaseFsck extends Configured implements Tool {
   }
 
   /**
-   * Record the location of the META region as found in ZooKeeper.
+   * Record the location of the hbase:meta region as found in ZooKeeper.
    */
   private boolean recordMetaRegion() throws IOException {
     HRegionLocation metaLocation = connection.locateRegion(
@@ -1574,7 +1574,7 @@ public class HBaseFsck extends Configured implements Tool {
     HRegionInfo hri = HRegionInfo.getHRegionInfo(r);
     if (hri == null) {
       LOG.warn("Unable to close region " + hi.getRegionNameAsString()
-          + " because META had invalid or missing "
+          + " because hbase:meta had invalid or missing "
           + HConstants.CATALOG_FAMILY_STR + ":"
           + Bytes.toString(HConstants.REGIONINFO_QUALIFIER)
           + " qualifier value.");
@@ -1637,13 +1637,13 @@ public class HBaseFsck extends Configured implements Tool {
       LOG.warn("Region " + descriptiveName + " was recently modified -- skipping");
       return;
     }
-    // ========== Cases where the region is not in META =============
+    // ========== Cases where the region is not in hbase:meta =============
     else if (!inMeta && !inHdfs && !isDeployed) {
       // We shouldn't have record of this region at all then!
       assert false : "Entry for region with no data";
     } else if (!inMeta && !inHdfs && isDeployed) {
       errors.reportError(ERROR_CODE.NOT_IN_META_HDFS, "Region "
-          + descriptiveName + ", key=" + key + ", not on HDFS or in META but " +
+          + descriptiveName + ", key=" + key + ", not on HDFS or in hbase:meta but " +
           "deployed on " + Joiner.on(", ").join(hbi.deployedOn));
       if (shouldFixAssignments()) {
         undeployRegions(hbi);
@@ -1651,7 +1651,7 @@ public class HBaseFsck extends Configured implements Tool {
 
     } else if (!inMeta && inHdfs && !isDeployed) {
       errors.reportError(ERROR_CODE.NOT_IN_META_OR_DEPLOYED, "Region "
-          + descriptiveName + " on HDFS, but not listed in META " +
+          + descriptiveName + " on HDFS, but not listed in hbase:meta " +
           "or deployed on any region server");
       // restore region consistency of an adopted orphan
       if (shouldFixMeta()) {
@@ -1662,7 +1662,7 @@ public class HBaseFsck extends Configured implements Tool {
           return;
         }
 
-        LOG.info("Patching .META. with .regioninfo: " + hbi.getHdfsHRI());
+        LOG.info("Patching hbase:meta with .regioninfo: " + hbi.getHdfsHRI());
         HBaseFsckRepair.fixMetaHoleOnline(getConf(), hbi.getHdfsHRI());
 
         tryAssignmentRepair(hbi, "Trying to reassign region...");
@@ -1678,13 +1678,13 @@ public class HBaseFsck extends Configured implements Tool {
           return;
         }
 
-        LOG.info("Patching .META. with with .regioninfo: " + hbi.getHdfsHRI());
+        LOG.info("Patching hbase:meta with with .regioninfo: " + hbi.getHdfsHRI());
         HBaseFsckRepair.fixMetaHoleOnline(getConf(), hbi.getHdfsHRI());
 
         tryAssignmentRepair(hbi, "Trying to fix unassigned region...");
       }
 
-    // ========== Cases where the region is in META =============
+    // ========== Cases where the region is in hbase:meta =============
     } else if (inMeta && inHdfs && !isDeployed && splitParent) {
       // check whether this is an actual error, or just transient state where parent
       // is not cleaned
@@ -1742,7 +1742,7 @@ public class HBaseFsck extends Configured implements Tool {
       }
     } else if (inMeta && inHdfs && isMultiplyDeployed) {
       errors.reportError(ERROR_CODE.MULTI_DEPLOYED, "Region " + descriptiveName
-          + " is listed in META on region server " + hbi.metaEntry.regionServer
+          + " is listed in hbase:meta on region server " + hbi.metaEntry.regionServer
           + " but is multiply assigned to region servers " +
           Joiner.on(", ").join(hbi.deployedOn));
       // If we are trying to fix the errors
@@ -1753,7 +1753,7 @@ public class HBaseFsck extends Configured implements Tool {
       }
     } else if (inMeta && inHdfs && isDeployed && !deploymentMatchesMeta) {
       errors.reportError(ERROR_CODE.SERVER_DOES_NOT_MATCH_META, "Region "
-          + descriptiveName + " listed in META on region server " +
+          + descriptiveName + " listed in hbase:meta on region server " +
           hbi.metaEntry.regionServer + " but found on region server " +
           hbi.deployedOn.get(0));
       // If we are trying to fix the errors
@@ -2504,10 +2504,10 @@ public class HBaseFsck extends Configured implements Tool {
   }
 
   /**
-    * Check values in regionInfo for .META.
-    * Check if zero or more than one regions with META are found.
+    * Check values in regionInfo for hbase:meta
+    * Check if zero or more than one regions with hbase:meta are found.
     * If there are inconsistencies (i.e. zero or more than one regions
-    * pretend to be holding the .META.) try to fix that and report an error.
+    * pretend to be holding the hbase:meta) try to fix that and report an error.
     * @throws IOException from HBaseFsckRepair functions
    * @throws KeeperException
    * @throws InterruptedException
@@ -2520,15 +2520,15 @@ public class HBaseFsck extends Configured implements Tool {
       }
     }
 
-    // There will be always one entry in regionInfoMap corresponding to .META.
+    // There will be always one entry in regionInfoMap corresponding to hbase:meta
     // Check the deployed servers. It should be exactly one server.
     HbckInfo metaHbckInfo = metaRegions.get(0);
     List<ServerName> servers = metaHbckInfo.deployedOn;
     if (servers.size() != 1) {
       if (servers.size() == 0) {
-        errors.reportError(ERROR_CODE.NO_META_REGION, ".META. is not found on any region.");
+        errors.reportError(ERROR_CODE.NO_META_REGION, "hbase:meta is not found on any region.");
         if (shouldFixAssignments()) {
-          errors.print("Trying to fix a problem with .META...");
+          errors.print("Trying to fix a problem with hbase:meta..");
           setShouldRerun();
           // try to fix it (treat it as unassigned region)
           HBaseFsckRepair.fixUnassigned(admin, metaHbckInfo.metaEntry);
@@ -2536,9 +2536,9 @@ public class HBaseFsck extends Configured implements Tool {
         }
       } else if (servers.size() > 1) {
         errors
-            .reportError(ERROR_CODE.MULTI_META_REGION, ".META. is found on more than one region.");
+            .reportError(ERROR_CODE.MULTI_META_REGION, "hbase:meta is found on more than one region.");
         if (shouldFixAssignments()) {
-          errors.print("Trying to fix a problem with .META...");
+          errors.print("Trying to fix a problem with hbase:meta..");
           setShouldRerun();
           // try fix it (treat is a dupe assignment)
           HBaseFsckRepair.fixMultiAssignment(admin, metaHbckInfo.metaEntry, servers);
@@ -2552,7 +2552,7 @@ public class HBaseFsck extends Configured implements Tool {
   }
 
   /**
-   * Scan .META., adding all regions found to the regionInfo map.
+   * Scan hbase:meta, adding all regions found to the regionInfo map.
    * @throws IOException if an error is encountered
    */
   boolean loadMetaEntries() throws IOException {
@@ -2569,13 +2569,13 @@ public class HBaseFsck extends Configured implements Tool {
       public boolean processRow(Result result) throws IOException {
         try {
 
-          // record the latest modification of this META record
+          // record the latest modification of this hbase:meta record
           long ts =  Collections.max(result.list(), comp).getTimestamp();
           Pair<HRegionInfo, ServerName> pair = HRegionInfo.getHRegionInfoAndServerName(result);
           if (pair == null || pair.getFirst() == null) {
             emptyRegionInfoQualifiers.add(result);
             errors.reportError(ERROR_CODE.EMPTY_META_CELL,
-              "Empty REGIONINFO_QUALIFIER found in .META.");
+              "Empty REGIONINFO_QUALIFIER found in hbase:meta");
             return true;
           }
           ServerName sn = null;
@@ -2595,7 +2595,7 @@ public class HBaseFsck extends Configured implements Tool {
           } else if (previous.metaEntry == null) {
             previous.metaEntry = m;
           } else {
-            throw new IOException("Two entries in META are same " + previous);
+            throw new IOException("Two entries in hbase:meta are same " + previous);
           }
 
           // show proof of progress to the user, once for every 100 records.
@@ -2611,7 +2611,7 @@ public class HBaseFsck extends Configured implements Tool {
       }
     };
     if (!checkMetaOnly) {
-      // Scan .META. to pick up user regions
+      // Scan hbase:meta to pick up user regions
       MetaScanner.metaScan(getConf(), visitor);
     }
 
@@ -3245,8 +3245,8 @@ public class HBaseFsck extends Configured implements Tool {
   }
 
   /**
-   * Set META check mode.
-   * Print only info about META table deployment/state
+   * Set hbase:meta check mode.
+   * Print only info about hbase:meta table deployment/state
    */
   void setCheckMetaOnly() {
     checkMetaOnly = true;
@@ -3419,7 +3419,7 @@ public class HBaseFsck extends Configured implements Tool {
 
   /**
    * We are interested in only those tables that have not changed their state in
-   * META during the last few seconds specified by hbase.admin.fsck.timelag
+   * hbase:meta during the last few seconds specified by hbase.admin.fsck.timelag
    * @param seconds - the time in seconds
    */
   public void setTimeLag(long seconds) {
@@ -3467,7 +3467,7 @@ public class HBaseFsck extends Configured implements Tool {
     out.println("   -sleepBeforeRerun <timeInSeconds> Sleep this many seconds" +
         " before checking if the fix worked if run with -fix");
     out.println("   -summary Print only summary of the tables and status.");
-    out.println("   -metaonly Only check the state of the .META. table.");
+    out.println("   -metaonly Only check the state of the hbase:meta table.");
     out.println("   -sidelineDir <hdfs://> HDFS path to backup existing meta.");
 
     out.println("");
@@ -3476,7 +3476,7 @@ public class HBaseFsck extends Configured implements Tool {
     out.println("   -fixAssignments   Try to fix region assignments.  Replaces the old -fix");
     out.println("   -fixMeta          Try to fix meta problems.  This assumes HDFS region info is good.");
     out.println("   -noHdfsChecking   Don't load/check region info from HDFS."
-        + " Assumes META region info is good. Won't check/fix any HDFS issue, e.g. hole, orphan, or overlap");
+        + " Assumes hbase:meta region info is good. Won't check/fix any HDFS issue, e.g. hole, orphan, or overlap");
     out.println("   -fixHdfsHoles     Try to fix region holes in hdfs.");
     out.println("   -fixHdfsOrphans   Try to fix region dirs with no .regioninfo file in hdfs");
     out.println("   -fixTableOrphans  Try to fix table dirs with no .tableinfo file in hdfs (online mode only)");
@@ -3488,7 +3488,7 @@ public class HBaseFsck extends Configured implements Tool {
     out.println("   -fixSplitParents  Try to force offline split parents to be online.");
     out.println("   -ignorePreCheckPermission  ignore filesystem permission pre-check");
     out.println("   -fixReferenceFiles  Try to offline lingering reference store files");
-    out.println("   -fixEmptyMetaCells  Try to fix .META. entries not referencing any region"
+    out.println("   -fixEmptyMetaCells  Try to fix hbase:meta entries not referencing any region"
         + " (empty REGIONINFO_QUALIFIER rows)");
 
     out.println("");

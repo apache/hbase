@@ -61,7 +61,7 @@ import org.junit.experimental.categories.Category;
 
 /**
  * Test migration that changes HRI serialization into PB. Tests by bringing up a cluster from actual
- * data from a 0.92 cluster, as well as manually downgrading and then upgrading the META info.
+ * data from a 0.92 cluster, as well as manually downgrading and then upgrading the hbase:meta info.
  * @deprecated Remove after 0.96
  */
 @Category(MediumTests.class)
@@ -81,7 +81,7 @@ public class TestMetaMigrationConvertingToPB {
    * This test uses a tgz file named "TestMetaMigrationConvertingToPB.tgz" under
    * hbase-server/src/test/data which contains file data from a 0.92 cluster.
    * The cluster has a table named "TestTable", which has 100 rows. 0.94 has same
-   * META structure, so it should be the same.
+   * hbase:meta structure, so it should be the same.
    *
    * hbase(main):001:0> create 'TestTable', 'f1'
    * hbase(main):002:0> for i in 1..100
@@ -114,7 +114,7 @@ public class TestMetaMigrationConvertingToPB {
     doFsCommand(shell,
       new String [] {"-put", untar.toURI().toString(), hbaseRootDir.toString()});
 
-    //windows fix: tgz file has .META. directory renamed as -META- since the original is an illegal
+    //windows fix: tgz file has hbase:meta directory renamed as -META- since the original is an illegal
     //name under windows. So we rename it back. See src/test/data//TestMetaMigrationConvertingToPB.README and
     //https://issues.apache.org/jira/browse/HBASE-6821
     doFsCommand(shell, new String [] {"-mv", new Path(hbaseRootDir, "-META-").toString(),
@@ -273,7 +273,7 @@ public class TestMetaMigrationConvertingToPB {
   }
 
   /**
-   * Verify that every META row is updated
+   * Verify that every hbase:meta row is updated
    */
   void verifyMetaRowsAreUpdated(CatalogTracker catalogTracker)
       throws IOException {
@@ -300,7 +300,7 @@ public class TestMetaMigrationConvertingToPB {
     }
   }
 
-  /** Changes the version of META to 0 to simulate 0.92 and 0.94 clusters*/
+  /** Changes the version of hbase:meta to 0 to simulate 0.92 and 0.94 clusters*/
   private void undoVersionInRoot(CatalogTracker ct) throws IOException {
     Put p = new Put(HRegionInfo.FIRST_META_REGIONINFO.getRegionName());
 
@@ -312,7 +312,7 @@ public class TestMetaMigrationConvertingToPB {
   }
 
   /**
-   * Inserts multiple regions into META using Writable serialization instead of PB
+   * Inserts multiple regions into hbase:meta using Writable serialization instead of PB
    */
   public int createMultiRegionsWithWritableSerialization(final Configuration c,
       final byte[] tableName, int numRegions) throws IOException {
@@ -336,7 +336,7 @@ public class TestMetaMigrationConvertingToPB {
   }
 
   /**
-   * Inserts multiple regions into META using Writable serialization instead of PB
+   * Inserts multiple regions into hbase:meta using Writable serialization instead of PB
    */
   public int createMultiRegionsWithWritableSerialization(final Configuration c,
       final TableName tableName, byte [][] startKeys)
@@ -386,7 +386,7 @@ public class TestMetaMigrationConvertingToPB {
   }
 
   /**
-   * Inserts multiple regions into META using PB serialization
+   * Inserts multiple regions into hbase:meta using PB serialization
    */
   int createMultiRegionsWithPBSerialization(final Configuration c,
       final byte[] tableName, int numRegions)
@@ -404,7 +404,7 @@ public class TestMetaMigrationConvertingToPB {
   }
 
   /**
-   * Inserts multiple regions into META using PB serialization
+   * Inserts multiple regions into hbase:meta using PB serialization
    */
   int createMultiRegionsWithPBSerialization(final Configuration c, final byte[] tableName,
       byte [][] startKeys) throws IOException {

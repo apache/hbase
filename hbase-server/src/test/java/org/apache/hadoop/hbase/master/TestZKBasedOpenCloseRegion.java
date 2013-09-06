@@ -266,7 +266,7 @@ public class TestZKBasedOpenCloseRegion {
   }
 
   /*
-   * Add to each of the regions in .META. a value.  Key is the startrow of the
+   * Add to each of the regions in hbase:meta a value.  Key is the startrow of the
    * region (except its 'aaa' for first region).  Actual value is the row name.
    * @param expected
    * @return

@@ -268,7 +268,7 @@ public class TestHFileBlock {
   public void testReaderV2() throws IOException {
     for (Compression.Algorithm algo : COMPRESSION_ALGORITHMS) {
       for (boolean pread : new boolean[] { false, true }) {
-          LOG.info("testReaderV2: Compression algorithm: " + algo + 
+          LOG.info("testReaderV2: Compression algorithm: " + algo +
                    ", pread=" + pread);
         Path path = new Path(TEST_UTIL.getDataTestDir(), "blocks_v2_"
             + algo);
@@ -295,7 +295,7 @@ public class TestHFileBlock {
 
         b.sanityCheck();
         assertEquals(4936, b.getUncompressedSizeWithoutHeader());
-        assertEquals(algo == GZ ? 2173 : 4936, 
+        assertEquals(algo == GZ ? 2173 : 4936,
                      b.getOnDiskSizeWithoutHeader() - b.totalChecksumBytes());
         String blockStr = b.toString();
 
@@ -393,7 +393,7 @@ public class TestHFileBlock {
 
   static void writeEncodedBlock(Algorithm algo, DataBlockEncoding encoding,
        DataOutputStream dos, final List<Integer> encodedSizes,
-      final List<ByteBuffer> encodedBlocks, int blockId, 
+      final List<ByteBuffer> encodedBlocks, int blockId,
       boolean includesMemstoreTS, byte[] dummyHeader) throws IOException {
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
     DoubleOutputStream doubleOutputStream =
@@ -478,7 +478,7 @@ public class TestHFileBlock {
       for (boolean pread : BOOLEAN_VALUES) {
         for (boolean cacheOnWrite : BOOLEAN_VALUES) {
           Random rand = defaultRandom();
-          LOG.info("testPreviousOffset:Compression algorithm: " + algo + 
+          LOG.info("testPreviousOffset:Compression algorithm: " + algo +
                    ", pread=" + pread +
                    ", cacheOnWrite=" + cacheOnWrite);
           Path path = new Path(TEST_UTIL.getDataTestDir(), "prev_offset");
@@ -532,7 +532,7 @@ public class TestHFileBlock {
             assertEquals(b.getPrevBlockOffset(), b2.getPrevBlockOffset());
             assertEquals(curOffset, b2.getOffset());
             assertEquals(b.getBytesPerChecksum(), b2.getBytesPerChecksum());
-            assertEquals(b.getOnDiskDataSizeWithHeader(), 
+            assertEquals(b.getOnDiskDataSizeWithHeader(),
                          b2.getOnDiskDataSizeWithHeader());
             assertEquals(0, HFile.getChecksumFailuresCount());
 
@@ -541,12 +541,12 @@ public class TestHFileBlock {
             if (cacheOnWrite) {
               // In the cache-on-write mode we store uncompressed bytes so we
               // can compare them to what was read by the block reader.
-              // b's buffer has header + data + checksum while 
+              // b's buffer has header + data + checksum while
               // expectedContents have header + data only
               ByteBuffer bufRead = b.getBufferWithHeader();
               ByteBuffer bufExpected = expectedContents.get(i);
               boolean bytesAreCorrect = Bytes.compareTo(bufRead.array(),
-                  bufRead.arrayOffset(), 
+                  bufRead.arrayOffset(),
                   bufRead.limit() - b.totalChecksumBytes(),
                   bufExpected.array(), bufExpected.arrayOffset(),
                   bufExpected.limit()) == 0;
@@ -565,9 +565,9 @@ public class TestHFileBlock {
                     + Bytes.toStringBinary(bufRead.array(),
                         bufRead.arrayOffset(), Math.min(32, bufRead.limit()));
                 if (detailedLogging) {
-                  LOG.warn("expected header" + 
+                  LOG.warn("expected header" +
                            HFileBlock.toStringHeader(bufExpected) +
-                           "\nfound    header" + 
+                           "\nfound    header" +
                            HFileBlock.toStringHeader(bufRead));
                   LOG.warn("bufread offset " + bufRead.arrayOffset() +
                            " limit " + bufRead.limit() +
@@ -759,7 +759,7 @@ public class TestHFileBlock {
       byte[] byteArr = new byte[HConstants.HFILEBLOCK_HEADER_SIZE + size];
       ByteBuffer buf = ByteBuffer.wrap(byteArr, 0, size);
       HFileBlock block = new HFileBlock(BlockType.DATA, size, size, -1, buf,
-          HFileBlock.FILL_HEADER, -1, includesMemstoreTS, 
+          HFileBlock.FILL_HEADER, -1, includesMemstoreTS,
           HFileBlock.MINOR_VERSION_NO_CHECKSUM, 0, ChecksumType.NULL.getCode(),
           0);
       long byteBufferExpectedSize =
