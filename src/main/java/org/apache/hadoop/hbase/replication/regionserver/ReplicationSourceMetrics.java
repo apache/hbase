@@ -111,6 +111,7 @@ public class ReplicationSourceMetrics implements Updater {
   @Override
   public void doUpdates(MetricsContext metricsContext) {
     synchronized (this) {
+      refreshAgeOfLastShippedOp();
       this.shippedOpsRate.pushMetric(this.metricsRecord);
       this.shippedBatchesRate.pushMetric(this.metricsRecord);
       this.logEditsReadRate.pushMetric(this.metricsRecord);
