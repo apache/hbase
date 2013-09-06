@@ -111,16 +111,16 @@ public class MetaRegionTracker extends ZooKeeperNodeTracker {
   }
 
   /**
-   * Sets the location of <code>.META.</code> in ZooKeeper to the
+   * Sets the location of <code>hbase:meta</code> in ZooKeeper to the
    * specified server address.
    * @param zookeeper zookeeper reference
-   * @param location The server hosting <code>.META.</code>
+   * @param location The server hosting <code>hbase:meta</code>
    * @throws KeeperException unexpected zookeeper exception
    */
   public static void setMetaLocation(ZooKeeperWatcher zookeeper,
                                      final ServerName location)
   throws KeeperException {
-    LOG.info("Setting META region location in ZooKeeper as " + location);
+    LOG.info("Setting hbase:meta region location in ZooKeeper as " + location);
     // Make the MetaRegionServer pb and then get its bytes and save this as
     // the znode content.
     byte [] data = toByteArray(location);
@@ -155,13 +155,13 @@ public class MetaRegionTracker extends ZooKeeperNodeTracker {
   }
 
   /**
-   * Deletes the location of <code>.META.</code> in ZooKeeper.
+   * Deletes the location of <code>hbase:meta</code> in ZooKeeper.
    * @param zookeeper zookeeper reference
    * @throws KeeperException unexpected zookeeper exception
    */
   public static void deleteMetaLocation(ZooKeeperWatcher zookeeper)
   throws KeeperException {
-    LOG.info("Unsetting META region location in ZooKeeper");
+    LOG.info("Unsetting hbase:meta region location in ZooKeeper");
     try {
       // Just delete the node.  Don't need any watches.
       ZKUtil.deleteNode(zookeeper, zookeeper.metaServerZNode);

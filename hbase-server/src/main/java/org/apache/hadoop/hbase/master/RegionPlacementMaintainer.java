@@ -631,20 +631,20 @@ public class RegionPlacementMaintainer {
   }
 
   /**
-   * Update the assignment plan into .META.
-   * @param plan the assignments plan to be updated into .META.
-   * @throws IOException if cannot update assignment plan in .META.
+   * Update the assignment plan into hbase:meta
+   * @param plan the assignments plan to be updated into hbase:meta
+   * @throws IOException if cannot update assignment plan in hbase:meta
    */
   public void updateAssignmentPlanToMeta(FavoredNodesPlan plan)
   throws IOException {
     try {
-      LOG.info("Start to update the META with the new assignment plan");
+      LOG.info("Start to update the hbase:meta with the new assignment plan");
       Map<HRegionInfo, List<ServerName>> assignmentMap =
         plan.getAssignmentMap();
       FavoredNodeAssignmentHelper.updateMetaWithFavoredNodesInfo(assignmentMap, conf);
-      LOG.info("Updated the META with the new assignment plan");
+      LOG.info("Updated the hbase:meta with the new assignment plan");
     } catch (Exception e) {
-      LOG.error("Failed to update META with the new assignment" +
+      LOG.error("Failed to update hbase:meta with the new assignment" +
           "plan because " + e.getMessage());
     }
   }
@@ -727,13 +727,13 @@ public class RegionPlacementMaintainer {
 
   public void updateAssignmentPlan(FavoredNodesPlan plan)
       throws IOException {
-    LOG.info("Start to update the new assignment plan for the META table and" +
+    LOG.info("Start to update the new assignment plan for the hbase:meta table and" +
         " the region servers");
     // Update the new assignment plan to META
     updateAssignmentPlanToMeta(plan);
     // Update the new assignment plan to Region Servers
     updateAssignmentPlanToRegionServers(plan);
-    LOG.info("Finish to update the new assignment plan for the META table and" +
+    LOG.info("Finish to update the new assignment plan for the hbase:meta table and" +
         " the region servers");
   }
 
@@ -950,9 +950,9 @@ public class RegionPlacementMaintainer {
 
   public static void main(String args[]) throws IOException {
     Options opt = new Options();
-    opt.addOption("w", "write", false, "write the assignments to META only");
+    opt.addOption("w", "write", false, "write the assignments to hbase:meta only");
     opt.addOption("u", "update", false,
-        "update the assignments to META and RegionServers together");
+        "update the assignments to hbase:meta and RegionServers together");
     opt.addOption("n", "dry-run", false, "do not write assignments to META");
     opt.addOption("v", "verify", false, "verify current assignments against META");
     opt.addOption("p", "print", false, "print the current assignment plan in META");
@@ -1047,7 +1047,7 @@ public class RegionPlacementMaintainer {
         // Verify the region placement.
         rp.verifyRegionPlacement(verificationDetails);
       } else if (cmd.hasOption("n") || cmd.hasOption("dry-run")) {
-        // Generate the assignment plan only without updating the META and RS
+        // Generate the assignment plan only without updating the hbase:meta and RS
         FavoredNodesPlan plan = rp.getNewAssignmentPlan();
         printAssignmentPlan(plan);
       } else if (cmd.hasOption("w") || cmd.hasOption("write")) {
@@ -1062,7 +1062,7 @@ public class RegionPlacementMaintainer {
         FavoredNodesPlan plan = rp.getNewAssignmentPlan();
         // Print the new assignment plan
         printAssignmentPlan(plan);
-        // Update the assignment to META and Region Servers
+        // Update the assignment to hbase:meta and Region Servers
         rp.updateAssignmentPlan(plan);
       } else if (cmd.hasOption("diff")) {
         FavoredNodesPlan newPlan = rp.getNewAssignmentPlan();

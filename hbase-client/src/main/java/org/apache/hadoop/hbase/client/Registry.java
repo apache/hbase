@@ -24,7 +24,7 @@ import org.apache.hadoop.hbase.HRegionLocation;
 
 /**
  * Cluster registry.
- * Implemenations hold cluster information such as this cluster's id, location of .META., etc.
+ * Implemenations hold cluster information such as this cluster's id, location of hbase:meta, etc.
  */
 interface Registry {
   /**

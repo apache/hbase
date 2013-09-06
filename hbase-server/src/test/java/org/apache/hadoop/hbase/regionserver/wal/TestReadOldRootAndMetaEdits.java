@@ -73,7 +73,7 @@ public class TestReadOldRootAndMetaEdits {
   /**
    * Inserts three waledits in the wal file, and reads them back. The first edit is of a regular
    * table, second waledit is for the ROOT table (it will be ignored while reading),
-   * and last waledit is for the META table, which will be linked to the new system:meta table.
+   * and last waledit is for the hbase:meta table, which will be linked to the new system:meta table.
    * @throws IOException
    */
   @Test
@@ -106,7 +106,7 @@ public class TestReadOldRootAndMetaEdits {
           TableName.OLD_ROOT_TABLE_NAME, ++logCount, timestamp,
           HConstants.DEFAULT_CLUSTER_ID), kvs);
 
-      // create a old meta edit (.META.).
+      // create a old meta edit (hbase:meta).
       HLog.Entry oldMetaEntry = createAEntry(new HLogKey(Bytes.toBytes(TableName.OLD_META_STR),
           TableName.OLD_META_TABLE_NAME, ++logCount, timestamp,
           HConstants.DEFAULT_CLUSTER_ID), kvs);
@@ -129,7 +129,7 @@ public class TestReadOldRootAndMetaEdits {
       assertEquals(Bytes.toString(entry.getKey().getEncodedRegionName()),
         Bytes.toString(tRegionInfo.getEncodedNameAsBytes()));
 
-      // read the ROOT waledit, but that will be ignored, and META waledit will be read instead.
+      // read the ROOT waledit, but that will be ignored, and hbase:meta waledit will be read instead.
       entry = reader.next();
       assertEquals(entry.getKey().getTablename(), TableName.META_TABLE_NAME);
       // should reach end of log

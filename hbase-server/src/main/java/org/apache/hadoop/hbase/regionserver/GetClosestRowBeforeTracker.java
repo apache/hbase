@@ -56,7 +56,7 @@ class GetClosestRowBeforeTracker {
    * @param kv Presume first on row: i.e. empty column, maximum timestamp and
    * a type of Type.Maximum
    * @param ttl Time to live in ms for this Store
-   * @param metaregion True if this is .META. or -ROOT- region.
+   * @param metaregion True if this is hbase:meta or -ROOT- region.
    */
   GetClosestRowBeforeTracker(final KVComparator c, final KeyValue kv,
       final long ttl, final boolean metaregion) {

@@ -53,7 +53,7 @@ import org.apache.hadoop.hbase.util.PairOfSameType;
 import org.apache.hadoop.hbase.util.Triple;
 
 /**
- * A janitor for the catalog tables.  Scans the <code>.META.</code> catalog
+ * A janitor for the catalog tables.  Scans the <code>hbase:meta</code> catalog
  * table on a period looking for unused regions to garbage collect.
  */
 @InterfaceAudience.Private
@@ -108,7 +108,7 @@ public class CatalogJanitor extends Chore {
   }
 
   /**
-   * Scans META and returns a number of scanned rows, and a map of merged
+   * Scans hbase:meta and returns a number of scanned rows, and a map of merged
    * regions, and an ordered map of split parents.
    * @return triple of scanned rows, map of merged regions and map of split
    *         parent regioninfos
@@ -120,7 +120,7 @@ public class CatalogJanitor extends Chore {
   }
 
   /**
-   * Scans META and returns a number of scanned rows, and a map of merged
+   * Scans hbase:meta and returns a number of scanned rows, and a map of merged
    * regions, and an ordered map of split parents. if the given table name is
    * null, return merged regions and split parents of all tables, else only the
    * specified table
@@ -132,14 +132,14 @@ public class CatalogJanitor extends Chore {
   Triple<Integer, Map<HRegionInfo, Result>, Map<HRegionInfo, Result>> getMergedRegionsAndSplitParents(
       final TableName tableName) throws IOException {
     final boolean isTableSpecified = (tableName != null);
-    // TODO: Only works with single .META. region currently.  Fix.
+    // TODO: Only works with single hbase:meta region currently.  Fix.
     final AtomicInteger count = new AtomicInteger(0);
     // Keep Map of found split parents.  There are candidates for cleanup.
     // Use a comparator that has split parents come before its daughters.
     final Map<HRegionInfo, Result> splitParents =
       new TreeMap<HRegionInfo, Result>(new SplitParentFirstComparator());
     final Map<HRegionInfo, Result> mergedRegions = new TreeMap<HRegionInfo, Result>();
-    // This visitor collects split parents and counts rows in the .META. table
+    // This visitor collects split parents and counts rows in the hbase:meta table
 
     MetaScannerVisitor visitor = new MetaScanner.MetaScannerVisitorBase() {
       @Override
@@ -162,7 +162,7 @@ public class CatalogJanitor extends Chore {
       }
     };
 
-    // Run full scan of .META. catalog table passing in our custom visitor with
+    // Run full scan of hbase:meta catalog table passing in our custom visitor with
     // the start row
     MetaScanner.metaScan(server.getConfiguration(), null, visitor, tableName);
 
@@ -172,11 +172,11 @@ public class CatalogJanitor extends Chore {
 
   /**
    * If merged region no longer holds reference to the merge regions, archive
-   * merge region on hdfs and perform deleting references in .META.
+   * merge region on hdfs and perform deleting references in hbase:meta
    * @param mergedRegion
    * @param regionA
    * @param regionB
-   * @return true if we delete references in merged region on .META. and archive
+   * @return true if we delete references in merged region on hbase:meta and archive
    *         the files on the file system
    * @throws IOException
    */
@@ -207,7 +207,7 @@ public class CatalogJanitor extends Chore {
   }
 
   /**
-   * Run janitorial scan of catalog <code>.META.</code> table looking for
+   * Run janitorial scan of catalog <code>hbase:meta</code> table looking for
    * garbage to collect.
    * @return number of cleaned regions
    * @throws IOException

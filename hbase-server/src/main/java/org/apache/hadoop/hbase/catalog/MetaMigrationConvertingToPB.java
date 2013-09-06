@@ -34,7 +34,7 @@ import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.util.Bytes;
 
 /**
- * A tool to migrate the data stored in META table to pbuf serialization.
+ * A tool to migrate the data stored in hbase:meta table to pbuf serialization.
  * Supports migrating from 0.92.x and 0.94.x to 0.96.x for the catalog table.
  * @deprecated will be removed for the major release after 0.96.
  */
@@ -132,19 +132,19 @@ public class MetaMigrationConvertingToPB {
       LOG.info("META already up-to date with PB serialization");
       return 0;
     }
-    LOG.info("META has Writable serializations, migrating META to PB serialization");
+    LOG.info("META has Writable serializations, migrating hbase:meta to PB serialization");
     try {
       long rows = updateMeta(services);
       LOG.info("META updated with PB serialization. Total rows updated: " + rows);
       return rows;
     } catch (IOException e) {
-      LOG.warn("Update META with PB serialization failed." + "Master startup aborted.");
+      LOG.warn("Update hbase:meta with PB serialization failed." + "Master startup aborted.");
       throw e;
     }
   }
 
   /**
-   * Update META rows, converting writable serialization to PB
+   * Update hbase:meta rows, converting writable serialization to PB
    * @return num migrated rows
    */
   static long updateMeta(final MasterServices masterServices) throws IOException {
@@ -163,7 +163,7 @@ public class MetaMigrationConvertingToPB {
   static boolean isMetaTableUpdated(final CatalogTracker catalogTracker) throws IOException {
     List<Result> results = MetaReader.fullScanOfMeta(catalogTracker);
     if (results == null || results.isEmpty()) {
-      LOG.info(".META. doesn't have any entries to update.");
+      LOG.info("hbase:meta doesn't have any entries to update.");
       return true;
     }
     for (Result r : results) {

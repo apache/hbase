@@ -471,7 +471,7 @@ public class TestAssignmentManager {
 
   /**
    * To test if the split region is removed from RIT if the region was in SPLITTING state but the RS
-   * has actually completed the splitting in META but went down. See HBASE-6070 and also HBASE-5806
+   * has actually completed the splitting in hbase:meta but went down. See HBASE-6070 and also HBASE-5806
    *
    * @throws KeeperException
    * @throws IOException
@@ -1067,7 +1067,7 @@ public class TestAssignmentManager {
     // it and a get to return the single region, REGIONINFO, this test is
     // messing with. Needed when "new master" joins cluster. AM will try and
     // rebuild its list of user regions and it will also get the HRI that goes
-    // with an encoded name by doing a Get on .META.
+    // with an encoded name by doing a Get on hbase:meta
     ClientProtos.ClientService.BlockingInterface ri =
       Mockito.mock(ClientProtos.ClientService.BlockingInterface.class);
     // Get a meta row result that has region up on SERVERNAME_A for REGIONINFO

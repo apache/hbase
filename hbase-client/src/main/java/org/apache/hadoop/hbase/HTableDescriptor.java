@@ -59,7 +59,7 @@ import com.google.protobuf.InvalidProtocolBufferException;
 /**
  * HTableDescriptor contains the details about an HBase table  such as the descriptors of
  * all the column families, is the table a catalog table, <code> -ROOT- </code> or
- * <code> .META. </code>, if the table is read only, the maximum size of the memstore,
+ * <code> hbase:meta </code>, if the table is read only, the maximum size of the memstore,
  * when the region split should occur, coprocessors associated with it etc...
  */
 @InterfaceAudience.Public
@@ -156,7 +156,7 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
   /**
    * <em>INTERNAL</em> Used by rest interface to access this metadata
    * attribute which denotes if it is a catalog table, either
-   * <code> .META. </code> or <code> -ROOT- </code>
+   * <code> hbase:meta </code> or <code> -ROOT- </code>
    *
    * @see #isMetaRegion()
    */
@@ -256,7 +256,7 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
 
   /**
    * <em> INTERNAL </em> Private constructor used internally creating table descriptors for
-   * catalog tables, <code>.META.</code> and <code>-ROOT-</code>.
+   * catalog tables, <code>hbase:meta</code> and <code>-ROOT-</code>.
    */
   protected HTableDescriptor(final TableName name, HColumnDescriptor[] families) {
     setName(name);
@@ -267,7 +267,7 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
 
   /**
    * <em> INTERNAL </em>Private constructor used internally creating table descriptors for
-   * catalog tables, <code>.META.</code> and <code>-ROOT-</code>.
+   * catalog tables, <code>hbase:meta</code> and <code>-ROOT-</code>.
    */
   protected HTableDescriptor(final TableName name, HColumnDescriptor[] families,
       Map<ImmutableBytesWritable,ImmutableBytesWritable> values) {
@@ -347,7 +347,7 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
   /*
    * Set meta flags on this table.
    * IS_ROOT_KEY is set if its a -ROOT- table
-   * IS_META_KEY is set either if its a -ROOT- or a .META. table
+   * IS_META_KEY is set either if its a -ROOT- or a hbase:meta table
    * Called by constructors.
    * @param name
    */
@@ -381,10 +381,10 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
   }
 
   /**
-   * Checks if this table is <code> .META. </code>
+   * Checks if this table is <code> hbase:meta </code>
    * region.
    *
-   * @return true if this table is <code> .META. </code>
+   * @return true if this table is <code> hbase:meta </code>
    * region
    */
   public boolean isMetaRegion() {
@@ -410,20 +410,20 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
 
   /**
    * <em> INTERNAL </em> Used to denote if the current table represents
-   * <code> -ROOT- </code> or <code> .META. </code> region. This is used
+   * <code> -ROOT- </code> or <code> hbase:meta </code> region. This is used
    * internally by the HTableDescriptor constructors
    *
    * @param isMeta true if its either <code> -ROOT- </code> or
-   * <code> .META. </code> region
+   * <code> hbase:meta </code> region
    */
   protected void setMetaRegion(boolean isMeta) {
     setValue(IS_META_KEY, isMeta? TRUE: FALSE);
   }
 
   /**
-   * Checks if the table is a <code>.META.</code> table
+   * Checks if the table is a <code>hbase:meta</code> table
    *
-   * @return true if table is <code> .META. </code> region.
+   * @return true if table is <code> hbase:meta </code> region.
    */
   public boolean isMetaTable() {
     return isMetaRegion() && !isRootRegion();
@@ -1319,7 +1319,7 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
               new Path(name.getNamespaceAsString(), new Path(name.getQualifierAsString()))));
   }
 
-  /** Table descriptor for <code>.META.</code> catalog table */
+  /** Table descriptor for <code>hbase:meta</code> catalog table */
   public static final HTableDescriptor META_TABLEDESC = new HTableDescriptor(
       TableName.META_TABLE_NAME,
       new HColumnDescriptor[] {
@@ -1339,7 +1339,7 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
           "org.apache.hadoop.hbase.coprocessor.MultiRowMutationEndpoint",
           null, Coprocessor.PRIORITY_SYSTEM, null);
     } catch (IOException ex) {
-      //LOG.warn("exception in loading coprocessor for the META table");
+      //LOG.warn("exception in loading coprocessor for the hbase:meta table");
       throw new RuntimeException(ex);
     }
   }
@@ -1381,7 +1381,7 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
       return Bytes.toString(getValue(OWNER_KEY));
     }
     // Note that every table should have an owner (i.e. should have OWNER_KEY set).
-    // .META. and -ROOT- should return system user as owner, not null (see
+    // hbase:meta and -ROOT- should return system user as owner, not null (see
     // MasterFileSystem.java:bootstrap()).
     return null;
   }

@@ -103,7 +103,7 @@ public class TestMergeTable {
     };
 
     // Now create the root and meta regions and insert the data regions
-    // created above into .META.
+    // created above into hbase:meta
     setupMeta(rootdir, regions);
     try {
       LOG.info("Starting mini zk cluster");

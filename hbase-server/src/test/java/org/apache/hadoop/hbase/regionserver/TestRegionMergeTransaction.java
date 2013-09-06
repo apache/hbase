@@ -190,7 +190,7 @@ public class TestRegionMergeTransaction {
   }
 
   /**
-   * Test merging regions which are merged regions and has reference in META all
+   * Test merging regions which are merged regions and has reference in hbase:meta all
    * the same
    */
   @Test

@@ -153,7 +153,7 @@ public class TestKeyValue extends TestCase {
     try {
       c.compare(a, b);
     } catch (IllegalArgumentException iae) {
-      assertEquals(".META. key must have two ',' delimiters and have the following" +
+      assertEquals("hbase:meta key must have two ',' delimiters and have the following" +
       		" format: '<table>,<key>,<etc>'", iae.getMessage());
       return;
     }

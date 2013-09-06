@@ -1314,7 +1314,7 @@ public class TestDistributedLogSplitting {
 
   /**
    * Find a RS that has regions of a table.
-   * @param hasMetaRegion when true, the returned RS has META region as well
+   * @param hasMetaRegion when true, the returned RS has hbase:meta region as well
    * @param tableName
    * @return
    * @throws Exception

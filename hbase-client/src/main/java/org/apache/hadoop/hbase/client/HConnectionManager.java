@@ -1089,14 +1089,14 @@ public class HConnectionManager {
     }
 
     /*
-     * Search .META. for the HRegionLocation info that contains the table and
+     * Search hbase:meta for the HRegionLocation info that contains the table and
      * row we're seeking. It will prefetch certain number of regions info and
      * save them to the global region cache.
      */
     private void prefetchRegionCache(final TableName tableName,
         final byte[] row) {
       // Implement a new visitor for MetaScanner, and use it to walk through
-      // the .META.
+      // the hbase:meta
       MetaScannerVisitor visitor = new MetaScannerVisitorBase() {
         public boolean processRow(Result result) throws IOException {
           try {
@@ -1134,12 +1134,12 @@ public class HConnectionManager {
         MetaScanner.metaScan(conf, this, visitor, tableName, row,
             this.prefetchRegionLimit, TableName.META_TABLE_NAME);
       } catch (IOException e) {
-        LOG.warn("Encountered problems when prefetch META table: ", e);
+        LOG.warn("Encountered problems when prefetch hbase:meta table: ", e);
       }
     }
 
     /*
-      * Search the .META. table for the HRegionLocation
+      * Search the hbase:meta table for the HRegionLocation
       * info that contains the table and row we're seeking.
       */
     private HRegionLocation locateRegionInMeta(final TableName parentTable,
@@ -1245,7 +1245,7 @@ public class HConnectionManager {
           }
 
           if (isDeadServer(serverName)){
-            throw new RegionServerStoppedException(".META. says the region "+
+            throw new RegionServerStoppedException("hbase:meta says the region "+
                 regionInfo.getRegionNameAsString()+" is managed by the server " + serverName +
                 ", but it is dead.");
           }

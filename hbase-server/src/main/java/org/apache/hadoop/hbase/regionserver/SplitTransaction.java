@@ -181,7 +181,7 @@ public class SplitTransaction {
   private static long getDaughterRegionIdTimestamp(final HRegionInfo hri) {
     long rid = EnvironmentEdgeManager.currentTimeMillis();
     // Regionid is timestamp.  Can't be less than that of parent else will insert
-    // at wrong location in .META. (See HBASE-710).
+    // at wrong location in hbase:meta (See HBASE-710).
     if (rid < hri.getRegionId()) {
       LOG.warn("Clock skew; parent regions id is " + hri.getRegionId() +
         " but current time here is " + rid);
@@ -306,8 +306,8 @@ public class SplitTransaction {
     this.journal.add(JournalEntry.STARTED_REGION_B_CREATION);
     HRegion b = this.parent.createDaughterRegionFromSplits(this.hri_b);
 
-    // This is the point of no return.  Adding subsequent edits to .META. as we
-    // do below when we do the daughter opens adding each to .META. can fail in
+    // This is the point of no return.  Adding subsequent edits to hbase:meta as we
+    // do below when we do the daughter opens adding each to hbase:meta can fail in
     // various interesting ways the most interesting of which is a timeout
     // BUT the edits all go through (See HBASE-3872).  IF we reach the PONR
     // then subsequent failures need to crash out this regionserver; the
@@ -315,7 +315,7 @@ public class SplitTransaction {
     // The offlined parent will have the daughters as extra columns.  If
     // we leave the daughter regions in place and do not remove them when we
     // crash out, then they will have their references to the parent in place
-    // still and the server shutdown fixup of .META. will point to these
+    // still and the server shutdown fixup of hbase:meta will point to these
     // regions.
     // We should add PONR JournalEntry before offlineParentInMeta,so even if
     // OfflineParentInMeta timeout,this will cause regionserver exit,and then
@@ -324,7 +324,7 @@ public class SplitTransaction {
     this.journal.add(JournalEntry.PONR);
 
     // Edit parent in meta.  Offlines parent region and adds splita and splitb
-    // as an atomic update. See HBASE-7721. This update to META makes the region
+    // as an atomic update. See HBASE-7721. This update to hbase:meta makes the region
     // will determine whether the region is split or not in case of failures.
     // If it is successful, master will roll-forward, if not, master will rollback
     // and assign the parent region.

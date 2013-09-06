@@ -66,7 +66,7 @@ public class SnapshotOfRegionAssignmentFromMeta {
 
   /** the regionServer to region map */
   private final Map<ServerName, List<HRegionInfo>> regionServerToRegionMap;
-  /** the existing assignment plan in the META region */
+  /** the existing assignment plan in the hbase:meta region */
   private final FavoredNodesPlan existingAssignmentPlan;
   private final Set<TableName> disabledTables;
   private final boolean excludeOfflinedSplitParents;
@@ -88,11 +88,11 @@ public class SnapshotOfRegionAssignmentFromMeta {
   }
 
   /**
-   * Initialize the region assignment snapshot by scanning the META table
+   * Initialize the region assignment snapshot by scanning the hbase:meta table
    * @throws IOException
    */
   public void initialize() throws IOException {
-    LOG.info("Start to scan the META for the current region assignment " +
+    LOG.info("Start to scan the hbase:meta for the current region assignment " +
 		"snappshot");
     // TODO: at some point this code could live in the MetaReader
     Visitor v = new Visitor() {
@@ -132,10 +132,10 @@ public class SnapshotOfRegionAssignmentFromMeta {
         }
       }
     };
-    // Scan .META. to pick up user regions
+    // Scan hbase:meta to pick up user regions
     MetaReader.fullScan(tracker, v);
     //regionToRegionServerMap = regions;
-    LOG.info("Finished to scan the META for the current region assignment" +
+    LOG.info("Finished to scan the hbase:meta for the current region assignment" +
       "snapshot");
   }
 

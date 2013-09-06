@@ -43,7 +43,7 @@ import java.util.Set;
 import java.util.TreeMap;
 
 /**
- * Reads region and assignment information from <code>.META.</code>.
+ * Reads region and assignment information from <code>hbase:meta</code>.
  */
 @InterfaceAudience.Private
 public class MetaReader {
@@ -55,7 +55,7 @@ public class MetaReader {
   static final byte [] META_REGION_PREFIX;
   static {
     // Copy the prefix from FIRST_META_REGIONINFO into META_REGION_PREFIX.
-    // FIRST_META_REGIONINFO == '.META.,,1'.  META_REGION_PREFIX == '.META.,'
+    // FIRST_META_REGIONINFO == 'hbase:meta,,1'.  META_REGION_PREFIX == 'hbase:meta,'
     int len = HRegionInfo.FIRST_META_REGIONINFO.getRegionName().length - 2;
     META_REGION_PREFIX = new byte [len];
     System.arraycopy(HRegionInfo.FIRST_META_REGIONINFO.getRegionName(), 0,
@@ -63,7 +63,7 @@ public class MetaReader {
   }
 
   /**
-   * Performs a full scan of <code>.META.</code>, skipping regions from any
+   * Performs a full scan of <code>hbase:meta</code>, skipping regions from any
    * tables in the specified set of disabled tables.
    * @param catalogTracker
    * @param disabledTables set of disabled tables that will not be returned
@@ -79,7 +79,7 @@ public class MetaReader {
   }
 
   /**
-   * Performs a full scan of <code>.META.</code>, skipping regions from any
+   * Performs a full scan of <code>hbase:meta</code>, skipping regions from any
    * tables in the specified set of disabled tables.
    * @param catalogTracker
    * @param disabledTables set of disabled tables that will not be returned
@@ -117,7 +117,7 @@ public class MetaReader {
   }
 
   /**
-   * Performs a full scan of <code>.META.</code>.
+   * Performs a full scan of <code>hbase:meta</code>.
    * @return List of {@link Result}
    * @throws IOException
    */
@@ -129,7 +129,7 @@ public class MetaReader {
   }
 
   /**
-   * Performs a full scan of a <code>.META.</code> table.
+   * Performs a full scan of a <code>hbase:meta</code> table.
    * @return List of {@link Result}
    * @throws IOException
    */
@@ -141,7 +141,7 @@ public class MetaReader {
   }
 
   /**
-   * Performs a full scan of <code>.META.</code>.
+   * Performs a full scan of <code>hbase:meta</code>.
    * @param catalogTracker
    * @param visitor Visitor invoked against each row.
    * @throws IOException
@@ -183,7 +183,7 @@ public class MetaReader {
   /**
    * Callers should call close on the returned {@link HTable} instance.
    * @param ct
-   * @return An {@link HTable} for <code>.META.</code>
+   * @return An {@link HTable} for <code>hbase:meta</code>
    * @throws IOException
    */
   static HTable getMetaHTable(final CatalogTracker ct)
@@ -235,7 +235,7 @@ public class MetaReader {
   }
 
   /**
-   * Gets the result in META for the specified region.
+   * Gets the result in hbase:meta for the specified region.
    * @param catalogTracker
    * @param regionName
    * @return result of the specified region
@@ -267,7 +267,7 @@ public class MetaReader {
  }
 
   /**
-   * Checks if the specified table exists.  Looks at the META table hosted on
+   * Checks if the specified table exists.  Looks at the hbase:meta table hosted on
    * the specified server.
    * @param catalogTracker
    * @param tableName table to check
@@ -367,7 +367,7 @@ public class MetaReader {
 
   /**
    * @param tableName
-   * @return Place to start Scan in <code>.META.</code> when passed a
+   * @return Place to start Scan in <code>hbase:meta</code> when passed a
    * <code>tableName</code>; returns &lt;tableName&rt; &lt;,&rt; &lt;,&rt;
    */
   static byte [] getTableStartRowForMeta(TableName tableName) {
@@ -475,7 +475,7 @@ public class MetaReader {
   getServerUserRegions(CatalogTracker catalogTracker, final ServerName serverName)
   throws IOException {
     final NavigableMap<HRegionInfo, Result> hris = new TreeMap<HRegionInfo, Result>();
-    // Fill the above hris map with entries from .META. that have the passed
+    // Fill the above hris map with entries from hbase:meta that have the passed
     // servername.
     CollectingVisitor<Result> v = new CollectingVisitor<Result>() {
       @Override
@@ -518,7 +518,7 @@ public class MetaReader {
    * @param visitor Visitor invoked against each row.
    * @param startrow Where to start the scan. Pass null if want to begin scan
    * at first row.
-   * <code>.META.</code>, the default (pass false to scan .META.)
+   * <code>hbase:meta</code>, the default (pass false to scan hbase:meta)
    * @throws IOException
    */
   public static void fullScan(CatalogTracker catalogTracker,
@@ -595,7 +595,7 @@ public class MetaReader {
   }
 
   /**
-   * Count regions in <code>.META.</code> for passed table.
+   * Count regions in <code>hbase:meta</code> for passed table.
    * @param c
    * @param tableName
    * @return Count or regions in table <code>tableName</code>

@@ -184,10 +184,10 @@ public class  TestRollingRestart {
     Thread.sleep(1000);
     assertRegionsAssigned(cluster, regions);
 
-    // Bring the RS hosting META down
+    // Bring the RS hosting hbase:meta down
     RegionServerThread metaServer = getServerHostingMeta(cluster);
-    log("Stopping server hosting META #1");
-    metaServer.getRegionServer().stop("Stopping META server");
+    log("Stopping server hosting hbase:meta #1");
+    metaServer.getRegionServer().stop("Stopping hbase:meta server");
     cluster.hbaseCluster.waitOnRegionServer(metaServer);
     log("Meta server down #1");
     expectedNumRS--;
@@ -204,10 +204,10 @@ public class  TestRollingRestart {
     assertRegionsAssigned(cluster, regions);
     assertEquals(expectedNumRS, cluster.getRegionServerThreads().size());
 
-    // Kill off the server hosting META again
+    // Kill off the server hosting hbase:meta again
     metaServer = getServerHostingMeta(cluster);
-    log("Stopping server hosting META #2");
-    metaServer.getRegionServer().stop("Stopping META server");
+    log("Stopping server hosting hbase:meta #2");
+    metaServer.getRegionServer().stop("Stopping hbase:meta server");
     cluster.hbaseCluster.waitOnRegionServer(metaServer);
     log("Meta server down");
     expectedNumRS--;
@@ -231,8 +231,8 @@ public class  TestRollingRestart {
     assertRegionsAssigned(cluster, regions);
     // Shutdown server hosting META
     metaServer = getServerHostingMeta(cluster);
-    log("Stopping server hosting META (1 of 3)");
-    metaServer.getRegionServer().stop("Stopping META server");
+    log("Stopping server hosting hbase:meta (1 of 3)");
+    metaServer.getRegionServer().stop("Stopping hbase:meta server");
     cluster.hbaseCluster.waitOnRegionServer(metaServer);
     log("Meta server down (1 of 3)");
     log("Waiting for RS shutdown to be handled by master");
@@ -243,10 +243,10 @@ public class  TestRollingRestart {
     log("Verifying there are " + numRegions + " assigned on cluster");
     assertRegionsAssigned(cluster, regions);
 
-    // Shutdown server hosting META again
+    // Shutdown server hosting hbase:meta again
     metaServer = getServerHostingMeta(cluster);
-    log("Stopping server hosting META (2 of 3)");
-    metaServer.getRegionServer().stop("Stopping META server");
+    log("Stopping server hosting hbase:meta (2 of 3)");
+    metaServer.getRegionServer().stop("Stopping hbase:meta server");
     cluster.hbaseCluster.waitOnRegionServer(metaServer);
     log("Meta server down (2 of 3)");
     log("Waiting for RS shutdown to be handled by master");
@@ -257,10 +257,10 @@ public class  TestRollingRestart {
     log("Verifying there are " + numRegions + " assigned on cluster");
     assertRegionsAssigned(cluster, regions);
 
-    // Shutdown server hosting META again
+    // Shutdown server hosting hbase:meta again
     metaServer = getServerHostingMeta(cluster);
-    log("Stopping server hosting META (3 of 3)");
-    metaServer.getRegionServer().stop("Stopping META server");
+    log("Stopping server hosting hbase:meta (3 of 3)");
+    metaServer.getRegionServer().stop("Stopping hbase:meta server");
     cluster.hbaseCluster.waitOnRegionServer(metaServer);
     log("Meta server down (3 of 3)");
     log("Waiting for RS shutdown to be handled by master");

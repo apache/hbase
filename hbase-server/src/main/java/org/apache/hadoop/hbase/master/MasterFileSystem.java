@@ -135,7 +135,7 @@ public class MasterFileSystem {
    * Create initial layout in filesystem.
    * <ol>
    * <li>Check if the meta region exists and is readable, if not create it.
-   * Create hbase.version and the .META. directory if not one.
+   * Create hbase.version and the hbase:meta directory if not one.
    * </li>
    * <li>Create a log archive directory for RS to put archived logs</li>
    * </ol>
@@ -482,7 +482,7 @@ public class MasterFileSystem {
         .migrateFSTableDescriptorsIfNecessary(fs, rd);
     }
       
-    // Create tableinfo-s for META if not already there.
+    // Create tableinfo-s for hbase:meta if not already there.
     new FSTableDescriptors(fs, rd).createTableDescriptor(HTableDescriptor.META_TABLEDESC);
 
     return rd;
@@ -516,7 +516,7 @@ public class MasterFileSystem {
 
   private static void bootstrap(final Path rd, final Configuration c)
   throws IOException {
-    LOG.info("BOOTSTRAP: creating META region");
+    LOG.info("BOOTSTRAP: creating hbase:meta region");
     try {
       // Bootstrapping, make sure blockcache is off.  Else, one will be
       // created here in bootstrap and it'll need to be cleaned up.  Better to
@@ -536,7 +536,7 @@ public class MasterFileSystem {
   }
 
   /**
-   * Enable in memory caching for .META.
+   * Enable in memory caching for hbase:meta
    */
   public static void setInfoFamilyCachingForMeta(final boolean b) {
     for (HColumnDescriptor hcd:

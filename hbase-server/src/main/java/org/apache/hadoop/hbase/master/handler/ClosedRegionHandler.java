@@ -86,7 +86,7 @@ public class ClosedRegionHandler extends EventHandler implements TotesHRegionInf
     }
     return getClass().getSimpleName() + "-" + name + "-" + getSeqid();
   }
-  
+
   @Override
   public void process() {
     LOG.debug("Handling CLOSED event for " + regionInfo.getEncodedName());

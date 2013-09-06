@@ -627,7 +627,7 @@ public class MiniHBaseCluster extends HBaseCluster {
    * Get the location of the specified region
    * @param regionName Name of the region in bytes
    * @return Index into List of {@link MiniHBaseCluster#getRegionServerThreads()}
-   * of HRS carrying .META.. Returns -1 if none found.
+   * of HRS carrying hbase:meta. Returns -1 if none found.
    */
   public int getServerWith(byte[] regionName) {
     int index = -1;
@@ -657,7 +657,7 @@ public class MiniHBaseCluster extends HBaseCluster {
   /**
    * Counts the total numbers of regions being served by the currently online
    * region servers by asking each how many regions they have.  Does not look
-   * at META at all.  Count includes catalog tables.
+   * at hbase:meta at all.  Count includes catalog tables.
    * @return number of regions being served by all region servers
    */
   public long countServedRegions() {

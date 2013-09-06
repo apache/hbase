@@ -81,7 +81,7 @@ public class TestMasterTransitions {
 
   /**
    * Listener for regionserver events testing hbase-2428 (Infinite loop of
-   * region closes if META region is offline).  In particular, listen
+   * region closes if hbase:meta region is offline).  In particular, listen
    * for the close of the 'metaServer' and when it comes in, requeue it with a
    * delay as though there were an issue processing the shutdown.  As part of
    * the requeuing,  send over a close of a region on 'otherServer' so it comes
@@ -196,7 +196,7 @@ public class TestMasterTransitions {
     MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
     final HMaster master = cluster.getMaster();
     int metaIndex = cluster.getServerWithMeta();
-    // Figure the index of the server that is not server the .META.
+    // Figure the index of the server that is not server the hbase:meta
     int otherServerIndex = -1;
     for (int i = 0; i < cluster.getRegionServerThreads().size(); i++) {
       if (i == metaIndex) continue;
@@ -472,7 +472,7 @@ public class TestMasterTransitions {
   }
 */
   /*
-   * Add to each of the regions in .META. a value.  Key is the startrow of the
+   * Add to each of the regions in hbase:meta a value.  Key is the startrow of the
    * region (except its 'aaa' for first region).  Actual value is the row name.
    * @param expected
    * @return

@@ -70,7 +70,7 @@ class HMerge {
    * Scans the table and merges two adjacent regions if they are small. This
    * only happens when a lot of rows are deleted.
    *
-   * When merging the META region, the HBase instance must be offline.
+   * When merging the hbase:meta region, the HBase instance must be offline.
    * When merging a normal table, the HBase instance must be online, but the
    * table must be disabled.
    *
@@ -89,7 +89,7 @@ class HMerge {
    * Scans the table and merges two adjacent regions if they are small. This
    * only happens when a lot of rows are deleted.
    *
-   * When merging the META region, the HBase instance must be offline.
+   * When merging the hbase:meta region, the HBase instance must be offline.
    * When merging a normal table, the HBase instance must be online, but the
    * table must be disabled.
    *
@@ -116,7 +116,7 @@ class HMerge {
     if (tableName.equals(TableName.META_TABLE_NAME)) {
       if (masterIsRunning) {
         throw new IllegalStateException(
-            "Can not compact META table if instance is on-line");
+            "Can not compact hbase:meta table if instance is on-line");
       }
       // TODO reenable new OfflineMerger(conf, fs).process();
     } else {

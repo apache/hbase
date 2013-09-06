@@ -194,7 +194,7 @@ public class PrefixTreeCodec implements DataBlockEncoder{
     if (comparator instanceof RawBytesComparator){
       throw new IllegalArgumentException("comparator must be KeyValue.KeyComparator");
     } else if (comparator instanceof MetaComparator){
-      throw new IllegalArgumentException("DataBlockEncoding.PREFIX_TREE not compatible with META "
+      throw new IllegalArgumentException("DataBlockEncoding.PREFIX_TREE not compatible with hbase:meta "
           +"table");
     }
 

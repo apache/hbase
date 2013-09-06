@@ -1587,7 +1587,7 @@ public class ZKUtil {
                                               zkw.backupMasterAddressesZNode)) {
         sb.append("\n ").append(child);
       }
-      sb.append("\nRegion server holding .META.: " + MetaRegionTracker.getMetaRegionLocation(zkw));
+      sb.append("\nRegion server holding hbase:meta: " + MetaRegionTracker.getMetaRegionLocation(zkw));
       sb.append("\nRegion servers:");
       for (String child : listChildrenNoWatch(zkw, zkw.rsZNode)) {
         sb.append("\n ").append(child);

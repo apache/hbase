@@ -91,7 +91,7 @@ public class TestMetaScanner {
     verify(visitor, times(3)).processRow((Result)anyObject());
 
     // Scanning the table with a specified empty start row should also
-    // give us three META rows
+    // give us three hbase:meta rows
     reset(visitor);
     doReturn(true).when(visitor).processRow((Result)anyObject());
     MetaScanner.metaScan(conf, visitor, TABLENAME, HConstants.EMPTY_BYTE_ARRAY, 1000);

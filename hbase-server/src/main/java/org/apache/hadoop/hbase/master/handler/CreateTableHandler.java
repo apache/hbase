@@ -86,7 +86,7 @@ public class CreateTableHandler extends EventHandler {
   public CreateTableHandler prepare()
       throws NotAllMetaRegionsOnlineException, TableExistsException, IOException {
     int timeout = conf.getInt("hbase.client.catalog.timeout", 10000);
-    // Need META availability to create a table
+    // Need hbase:meta availability to create a table
     try {
       if(catalogTracker.waitForMeta(timeout) == null) {
         throw new NotAllMetaRegionsOnlineException();
@@ -109,7 +109,7 @@ public class CreateTableHandler extends EventHandler {
 
       // If we have multiple client threads trying to create the table at the
       // same time, given the async nature of the operation, the table
-      // could be in a state where .META. table hasn't been updated yet in
+      // could be in a state where hbase:meta table hasn't been updated yet in
       // the process() function.
       // Use enabling state to tell if there is already a request for the same
       // table in progress. This will introduce a new zookeeper call. Given
@@ -267,7 +267,7 @@ public class CreateTableHandler extends EventHandler {
   }
 
   /**
-   * Add the specified set of regions to the META table.
+   * Add the specified set of regions to the hbase:meta table.
    */
   protected void addRegionsToMeta(final CatalogTracker ct, final List<HRegionInfo> regionInfos)
       throws IOException {

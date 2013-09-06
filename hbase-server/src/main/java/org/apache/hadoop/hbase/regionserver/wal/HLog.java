@@ -48,7 +48,7 @@ public interface HLog {
   /** File Extension used while splitting an HLog into regions (HBASE-2312) */
   String SPLITTING_EXT = "-splitting";
   boolean SPLIT_SKIP_ERRORS_DEFAULT = false;
-  /** The META region's HLog filename extension */
+  /** The hbase:meta region's HLog filename extension */
   String META_HLOG_FILE_EXTN = ".meta";
 
   /**

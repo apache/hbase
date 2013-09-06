@@ -47,11 +47,11 @@ import java.net.UnknownHostException;
 
 /**
  * Tracks the availability of the catalog tables
- * <code>.META.</code>.
+ * <code>hbase:meta</code>.
  *
  * This class is "read-only" in that the locations of the catalog tables cannot
  * be explicitly set.  Instead, ZooKeeper is used to learn of the availability
- * and location of <code>.META.</code>.
+ * and location of <code>hbase:meta</code>.
  *
  * <p>Call {@link #start()} to start up operation.  Call {@link #stop()}} to
  * interrupt waits and close up shop.
@@ -67,7 +67,7 @@ public class CatalogTracker {
   // locations on fault, the client would instead get notifications out of zk.
   //
   // But this original intent is frustrated by the fact that this class has to
-  // read an hbase table, the -ROOT- table, to figure out the .META. region
+  // read an hbase table, the -ROOT- table, to figure out the hbase:meta region
   // location which means we depend on an HConnection.  HConnection will do
   // retrying but also, it has its own mechanism for finding root and meta
   // locations (and for 'verifying'; it tries the location and if it fails, does
@@ -224,9 +224,9 @@ public class CatalogTracker {
   }
 
   /**
-   * Gets the current location for <code>.META.</code> or null if location is
+   * Gets the current location for <code>hbase:meta</code> or null if location is
    * not currently available.
-   * @return {@link ServerName} for server hosting <code>.META.</code> or null
+   * @return {@link ServerName} for server hosting <code>hbase:meta</code> or null
    * if none available
    * @throws InterruptedException
    */
@@ -242,11 +242,11 @@ public class CatalogTracker {
     return this.metaRegionTracker.isLocationAvailable();
   }
   /**
-   * Gets the current location for <code>.META.</code> if available and waits
+   * Gets the current location for <code>hbase:meta</code> if available and waits
    * for up to the specified timeout if not immediately available.  Returns null
    * if the timeout elapses before root is available.
    * @param timeout maximum time to wait for root availability, in milliseconds
-   * @return {@link ServerName} for server hosting <code>.META.</code> or null
+   * @return {@link ServerName} for server hosting <code>hbase:meta</code> or null
    * if none available
    * @throws InterruptedException if interrupted while waiting
    * @throws NotAllMetaRegionsOnlineException if meta not available before
@@ -294,7 +294,7 @@ public class CatalogTracker {
   }
 
   /**
-   * Waits indefinitely for availability of <code>.META.</code>.  Used during
+   * Waits indefinitely for availability of <code>hbase:meta</code>.  Used during
    * cluster startup.  Does not verify meta, just that something has been
    * set up in zk.
    * @see #waitForMeta(long)
@@ -306,7 +306,7 @@ public class CatalogTracker {
         if (waitForMeta(100) != null) break;
       } catch (NotAllMetaRegionsOnlineException e) {
         if (LOG.isTraceEnabled()) {
-          LOG.info(".META. still not available, sleeping and retrying." +
+          LOG.info("hbase:meta still not available, sleeping and retrying." +
           " Reason: " + e.getMessage());
         }
       }
@@ -409,10 +409,10 @@ public class CatalogTracker {
   }
 
   /**
-   * Verify <code>.META.</code> is deployed and accessible.
+   * Verify <code>hbase:meta</code> is deployed and accessible.
    * @param timeout How long to wait on zk for meta address (passed through to
    * the internal call to {@link #waitForMetaServerConnection(long)}.
-   * @return True if the <code>.META.</code> location is healthy.
+   * @return True if the <code>hbase:meta</code> location is healthy.
    * @throws IOException
    * @throws InterruptedException
    */

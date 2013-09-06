@@ -147,7 +147,7 @@ public class ClusterStatusPublisher extends Chore {
 
     // We're reusing an existing protobuf message, but we don't send everything.
     // This could be extended in the future, for example if we want to send stuff like the
-    //  META server name.
+    //  hbase:meta server name.
     ClusterStatus cs = new ClusterStatus(VersionInfo.getVersion(),
         master.getMasterFileSystem().getClusterId().toString(),
         null,

@@ -246,7 +246,7 @@ public abstract class HBaseCluster implements Closeable, Configurable {
   }
 
   /**
-   * Get the ServerName of region server serving the first META region
+   * Get the ServerName of region server serving the first hbase:meta region
    */
   public ServerName getServerHoldingMeta() throws IOException {
     return getServerHoldingRegion(HRegionInfo.FIRST_META_REGIONINFO.getRegionName());

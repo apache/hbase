@@ -975,7 +975,7 @@ public abstract class FSUtils {
 
   // TODO move this method OUT of FSUtils. No dependencies to HMaster
   /**
-   * Returns the total overall fragmentation percentage. Includes .META. and
+   * Returns the total overall fragmentation percentage. Includes hbase:meta and
    * -ROOT- as well.
    *
    * @param master  The master defining the HBase root and file system.
@@ -990,7 +990,7 @@ public abstract class FSUtils {
 
   /**
    * Runs through the HBase rootdir and checks how many stores for each table
-   * have more than one file in them. Checks -ROOT- and .META. too. The total
+   * have more than one file in them. Checks -ROOT- and hbase:meta too. The total
    * percentage across all tables is stored under the special key "-TOTAL-".
    *
    * @param master  The master defining the HBase root and file system.
@@ -1009,7 +1009,7 @@ public abstract class FSUtils {
 
   /**
    * Runs through the HBase rootdir and checks how many stores for each table
-   * have more than one file in them. Checks -ROOT- and .META. too. The total
+   * have more than one file in them. Checks -ROOT- and hbase:meta too. The total
    * percentage across all tables is stored under the special key "-TOTAL-".
    *
    * @param fs  The file system to use.

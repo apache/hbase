@@ -202,7 +202,7 @@ public class RegionMergeTransaction {
     }
 
     // WARN: make sure there is no parent region of the two merging regions in
-    // .META. If exists, fixing up daughters would cause daughter regions(we
+    // hbase:meta If exists, fixing up daughters would cause daughter regions(we
     // have merged one) online again when we restart master, so we should clear
     // the parent region to prevent the above case
     // Since HBASE-7721, we don't need fix up daughters any more. so here do
@@ -327,7 +327,7 @@ public class RegionMergeTransaction {
     this.journal.add(JournalEntry.PONR);
 
     // Add merged region and delete region_a and region_b
-    // as an atomic update. See HBASE-7721. This update to META makes the region
+    // as an atomic update. See HBASE-7721. This update to hbase:meta makes the region
     // will determine whether the region is merged or not in case of failures.
     // If it is successful, master will roll-forward, if not, master will
     // rollback
@@ -408,7 +408,7 @@ public class RegionMergeTransaction {
       final HRegionInfo b) {
     long rid = EnvironmentEdgeManager.currentTimeMillis();
     // Regionid is timestamp. Merged region's id can't be less than that of
-    // merging regions else will insert at wrong location in .META.
+    // merging regions else will insert at wrong location in hbase:meta
     if (rid < a.getRegionId() || rid < b.getRegionId()) {
       LOG.warn("Clock skew; merging regions id are " + a.getRegionId()
           + " and " + b.getRegionId() + ", but current time here is " + rid);
@@ -772,7 +772,7 @@ public class RegionMergeTransaction {
   }
 
   /**
-   * Checks if the given region has merge qualifier in .META.
+   * Checks if the given region has merge qualifier in hbase:meta
    * @param services
    * @param regionName name of specified region
    * @return true if the given region has merge qualifier in META.(It will be

@@ -92,7 +92,7 @@ public class TestMetaReaderEditor {
 
   /**
    * Does {@link MetaReader#getRegion(CatalogTracker, byte[])} and a write
-   * against .META. while its hosted server is restarted to prove our retrying
+   * against hbase:meta while its hosted server is restarted to prove our retrying
    * works.
    * @throws IOException
    * @throws InterruptedException

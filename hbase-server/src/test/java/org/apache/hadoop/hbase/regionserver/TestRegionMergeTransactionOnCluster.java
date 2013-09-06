@@ -204,7 +204,7 @@ public class TestRegionMergeTransactionOnCluster {
       }
       assertFalse(hrfs.hasReferences(tableDescritor));
 
-      // run CatalogJanitor to clean merge references in META and archive the
+      // run CatalogJanitor to clean merge references in hbase:meta and archive the
       // files of merging regions
       int cleaned = admin.runCatalogScan();
       assertTrue(cleaned > 0);

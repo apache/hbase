@@ -410,7 +410,7 @@ public class HLogKey implements WritableComparable<HLogKey> {
     } catch (IllegalArgumentException iae) {
       if (Bytes.toString(tablenameBytes).equals(TableName.OLD_META_STR)) {
         // It is a pre-namespace meta table edit, continue with new format.
-        LOG.info("Got an old META edit, continuing with new format ");
+        LOG.info("Got an old .META. edit, continuing with new format ");
         this.tablename = TableName.META_TABLE_NAME;
         this.encodedRegionName = HRegionInfo.FIRST_META_REGIONINFO.getEncodedNameAsBytes();
       } else if (Bytes.toString(tablenameBytes).equals(TableName.OLD_ROOT_STR)) {

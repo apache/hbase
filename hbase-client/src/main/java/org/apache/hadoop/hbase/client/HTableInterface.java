@@ -186,8 +186,8 @@ public interface HTableInterface extends Closeable {
    * 
    * @deprecated As of version 0.92 this method is deprecated without
    * replacement.   
-   * getRowOrBefore is used internally to find entries in .META. and makes
-   * various assumptions about the table (which are true for .META. but not
+   * getRowOrBefore is used internally to find entries in hbase:meta and makes
+   * various assumptions about the table (which are true for hbase:meta but not
    * in general) to be efficient.
    */
   Result getRowOrBefore(byte[] row, byte[] family) throws IOException;

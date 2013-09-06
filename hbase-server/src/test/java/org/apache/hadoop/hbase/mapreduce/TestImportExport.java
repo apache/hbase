@@ -189,7 +189,7 @@ public class TestImportExport {
   }
 
   /**
-   * Test export .META. table
+   * Test export hbase:meta table
    * 
    * @throws Exception
    */

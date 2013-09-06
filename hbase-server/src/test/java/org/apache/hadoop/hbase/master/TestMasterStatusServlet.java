@@ -164,7 +164,7 @@ public class TestMasterStatusServlet {
       regionsInTransition.put(hri.getEncodedName(),
         new RegionState(hri, RegionState.State.CLOSING, 12345L, FAKE_HOST));
     }
-    // Add META in transition as well
+    // Add hbase:meta in transition as well
     regionsInTransition.put(
         HRegionInfo.FIRST_META_REGIONINFO.getEncodedName(),
         new RegionState(HRegionInfo.FIRST_META_REGIONINFO,

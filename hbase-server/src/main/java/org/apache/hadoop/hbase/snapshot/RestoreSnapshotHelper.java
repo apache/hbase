@@ -219,7 +219,7 @@ public class RestoreSnapshotHelper {
   }
 
   /**
-   * Describe the set of operations needed to update META after restore.
+   * Describe the set of operations needed to update hbase:meta after restore.
    */
   public static class RestoreMetaChanges {
     private final Map<String, Pair<String, String> > parentsMap;
@@ -258,7 +258,7 @@ public class RestoreSnapshotHelper {
 
     /**
      * Returns the list of 'restored regions' during the on-disk restore.
-     * The caller is responsible to add the regions to META if not present.
+     * The caller is responsible to add the regions to hbase:meta if not present.
      * @return the list of regions restored
      */
     public List<HRegionInfo> getRegionsToRestore() {

@@ -113,7 +113,7 @@ public class TestSnapshotFromClient {
   }
 
   /**
-   * Test snapshotting not allowed .META. and -ROOT-
+   * Test snapshotting not allowed hbase:meta and -ROOT-
    * @throws Exception
    */
   @Test (timeout=300000)
@@ -123,7 +123,7 @@ public class TestSnapshotFromClient {
 
     try {
       admin.snapshot(snapshotName, TableName.META_TABLE_NAME);
-      fail("taking a snapshot of .META. should not be allowed");
+      fail("taking a snapshot of hbase:meta should not be allowed");
     } catch (IllegalArgumentException e) {
       // expected
     }

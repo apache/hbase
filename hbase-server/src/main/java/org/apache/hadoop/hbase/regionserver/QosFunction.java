@@ -48,7 +48,7 @@ import com.google.protobuf.TextFormat;
 
 /**
  * A guava function that will return a priority for use by QoS facility in regionserver; e.g.
- * rpcs to .META. and -ROOT-, etc., get priority.
+ * rpcs to hbase:meta and -ROOT-, etc., get priority.
  */
 // TODO: Remove.  This is doing way too much work just to figure a priority.  Do as Elliott
 // suggests and just have the client specify a priority.

@@ -88,11 +88,11 @@ public class TestInfoServers {
     new HTable(UTIL.getConfiguration(), TableName.META_TABLE_NAME).close();
     int port = UTIL.getHBaseCluster().getMaster().getInfoServer().getPort();
     assertContainsContent(new URL("http://localhost:" + port +
-        "/master-status"), "META");
+        "/master-status"), "meta");
     port = UTIL.getHBaseCluster().getRegionServerThreads().get(0).getRegionServer().
       getInfoServer().getPort();
     assertContainsContent(new URL("http://localhost:" + port +
-        "/rs-status"), "META");
+        "/rs-status"), "meta");
   }
 
   @Test

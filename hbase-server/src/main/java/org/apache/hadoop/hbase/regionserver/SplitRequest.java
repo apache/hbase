@@ -106,7 +106,7 @@ class SplitRequest implements Runnable {
         }
         return;
       }
-      LOG.info("Region split, META updated, and report to master. Parent="
+      LOG.info("Region split, hbase:meta updated, and report to master. Parent="
           + parent.getRegionNameAsString() + ", new regions: "
           + st.getFirstDaughter().getRegionNameAsString() + ", "
           + st.getSecondDaughter().getRegionNameAsString() + ". Split took "

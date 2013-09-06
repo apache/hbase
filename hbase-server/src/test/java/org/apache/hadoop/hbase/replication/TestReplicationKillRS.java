@@ -45,7 +45,7 @@ public class TestReplicationKillRS extends TestReplicationBase {
    * @throws Exception
    */
   public void loadTableAndKillRS(HBaseTestingUtility util) throws Exception {
-    // killing the RS with .META. can result into failed puts until we solve
+    // killing the RS with hbase:meta can result into failed puts until we solve
     // IO fencing
     int rsToKill1 =
         util.getHBaseCluster().getServerWithMeta() == 0 ? 1 : 0;

@@ -32,7 +32,7 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.util.Bytes;
 
 /**
- * Mocking utility for common META functionality
+ * Mocking utility for common hbase:meta functionality
  */
 public class MetaMockingUtil {
 
@@ -40,7 +40,7 @@ public class MetaMockingUtil {
    * Returns a Result object constructed from the given region information simulating
    * a catalog table result.
    * @param region the HRegionInfo object or null
-   * @return A mocked up Result that fakes a Get on a row in the <code>.META.</code> table.
+   * @return A mocked up Result that fakes a Get on a row in the <code>hbase:meta</code> table.
    * @throws IOException
    */
   public static Result getMetaTableRowResult(final HRegionInfo region)
@@ -53,7 +53,7 @@ public class MetaMockingUtil {
    * a catalog table result.
    * @param region the HRegionInfo object or null
    * @param ServerName to use making startcode and server hostname:port in meta or null
-   * @return A mocked up Result that fakes a Get on a row in the <code>.META.</code> table.
+   * @return A mocked up Result that fakes a Get on a row in the <code>hbase:meta</code> table.
    * @throws IOException
    */
   public static Result getMetaTableRowResult(final HRegionInfo region, final ServerName sn)
@@ -68,7 +68,7 @@ public class MetaMockingUtil {
    * @param ServerName to use making startcode and server hostname:port in meta or null
    * @param splita daughter region or null
    * @param splitb  daughter region or null
-   * @return A mocked up Result that fakes a Get on a row in the <code>.META.</code> table.
+   * @return A mocked up Result that fakes a Get on a row in the <code>hbase:meta</code> table.
    * @throws IOException
    */
   public static Result getMetaTableRowResult(HRegionInfo region, final ServerName sn,
@@ -113,7 +113,7 @@ public class MetaMockingUtil {
   /**
    * @param sn  ServerName to use making startcode and server in meta
    * @param hri Region to serialize into HRegionInfo
-   * @return A mocked up Result that fakes a Get on a row in the <code>.META.</code> table.
+   * @return A mocked up Result that fakes a Get on a row in the <code>hbase:meta</code> table.
    * @throws IOException
    */
   public static Result getMetaTableRowResultAsSplitRegion(final HRegionInfo hri, final ServerName sn)

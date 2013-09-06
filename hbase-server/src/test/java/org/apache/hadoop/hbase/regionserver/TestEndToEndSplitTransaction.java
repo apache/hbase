@@ -360,7 +360,7 @@ public class TestEndToEndSplitTransaction {
       // ensure that we do not have any gaps
       for (int i=0; i<startKeys.length; i++) {
         assertArrayEquals(
-            "Hole in .META. is detected. prevEndKey=" + Bytes.toStringBinary(prevEndKey)
+            "Hole in hbase:meta is detected. prevEndKey=" + Bytes.toStringBinary(prevEndKey)
                 + " ,regionStartKey=" + Bytes.toStringBinary(startKeys[i]), prevEndKey,
             startKeys[i]);
         prevEndKey = endKeys[i];
@@ -408,7 +408,7 @@ public class TestEndToEndSplitTransaction {
     }
   }
 
-  /** Blocks until the region split is complete in META and region server opens the daughters */
+  /** Blocks until the region split is complete in hbase:meta and region server opens the daughters */
   public static void blockUntilRegionSplit(Configuration conf, long timeout,
       final byte[] regionName, boolean waitForDaughters)
       throws IOException, InterruptedException {

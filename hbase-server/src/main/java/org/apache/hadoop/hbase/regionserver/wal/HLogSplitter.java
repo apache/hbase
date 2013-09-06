@@ -1528,7 +1528,7 @@ public class HLogSplitter {
       // fetch location from cache
       HRegionLocation loc = onlineRegions.get(originalEncodedRegionName);
       if(loc != null) return loc;
-      // fetch location from .META. directly without using cache to avoid hit old dead server
+      // fetch location from hbase:meta directly without using cache to avoid hit old dead server
       loc = hconn.getRegionLocation(table, row, true);
       if (loc == null) {
         throw new IOException("Can't locate location for row:" + Bytes.toString(row)

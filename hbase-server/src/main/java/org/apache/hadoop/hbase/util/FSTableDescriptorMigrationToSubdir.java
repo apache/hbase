@@ -50,7 +50,7 @@ public class FSTableDescriptorMigrationToSubdir {
   }
 
   /**
-   * Determines if migration is required by checking to see whether the META table has been
+   * Determines if migration is required by checking to see whether the hbase:meta table has been
    * migrated.
    */
   private static boolean needsMigration(FileSystem fs, Path rootDir) throws IOException {
@@ -66,7 +66,7 @@ public class FSTableDescriptorMigrationToSubdir {
    * First migrates snapshots.
    * Then migrates each user table in order,
    * then attempts ROOT (should be gone)
-   * Migrates META last to indicate migration is complete.
+   * Migrates hbase:meta last to indicate migration is complete.
    */
   private static void migrateFsTableDescriptors(FileSystem fs, Path rootDir) throws IOException {
     // First migrate snapshots - will migrate any snapshot dir that contains a table info file

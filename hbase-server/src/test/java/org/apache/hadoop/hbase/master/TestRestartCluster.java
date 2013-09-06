@@ -70,7 +70,7 @@ public class TestRestartCluster {
 
     ZKAssign.createNodeOffline(zooKeeper, HRegionInfo.FIRST_META_REGIONINFO, sn);
 
-    LOG.debug("Created UNASSIGNED zNode for ROOT and META regions in state " +
+    LOG.debug("Created UNASSIGNED zNode for ROOT and hbase:meta regions in state " +
         EventType.M_ZK_REGION_OFFLINE);
 
     // start the HB cluster

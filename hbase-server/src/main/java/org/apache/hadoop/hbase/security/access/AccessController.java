@@ -210,7 +210,7 @@ public class AccessController extends BaseRegionObserver
     HRegionInfo hri = e.getRegion().getRegionInfo();
     TableName tableName = hri.getTableName();
 
-    // 1. All users need read access to .META. table.
+    // 1. All users need read access to hbase:meta table.
     // this is a very common operation, so deal with it quickly.
     if (hri.isMetaRegion()) {
       if (permRequest == Permission.Action.READ) {
@@ -224,10 +224,10 @@ public class AccessController extends BaseRegionObserver
         permRequest, tableName, families);
     }
 
-    // Users with CREATE/ADMIN rights need to modify .META. and _acl_ table
-    // e.g. When a new table is created a new entry in .META. is added,
+    // Users with CREATE/ADMIN rights need to modify hbase:meta and _acl_ table
+    // e.g. When a new table is created a new entry in hbase:meta is added,
     // so the user need to be allowed to write on it.
-    // e.g. When a table is removed an entry is removed from .META. and _acl_
+    // e.g. When a table is removed an entry is removed from hbase:meta and _acl_
     // and the user need to be allowed to write on both tables.
     if (permRequest == Permission.Action.WRITE &&
        (hri.isMetaRegion() ||

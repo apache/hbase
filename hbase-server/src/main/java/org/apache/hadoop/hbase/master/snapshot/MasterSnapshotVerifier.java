@@ -143,7 +143,7 @@ public final class MasterSnapshotVerifier {
   /**
    * Check that all the regions in the snapshot are valid, and accounted for.
    * @param snapshotDir snapshot directory to check
-   * @throws IOException if we can't reach .META. or read the files from the FS
+   * @throws IOException if we can't reach hbase:meta or read the files from the FS
    */
   private void verifyRegions(Path snapshotDir) throws IOException {
     List<HRegionInfo> regions = MetaReader.getTableRegions(this.services.getCatalogTracker(),

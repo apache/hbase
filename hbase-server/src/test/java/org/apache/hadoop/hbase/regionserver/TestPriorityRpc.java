@@ -61,7 +61,7 @@ public class TestPriorityRpc {
   public void testQosFunctionForMeta() throws IOException {
     qosFunction = regionServer.getQosFunction();
     RequestHeader.Builder headerBuilder = RequestHeader.newBuilder();
-    //create a rpc request that has references to META region and also
+    //create a rpc request that has references to hbase:meta region and also
     //uses one of the known argument classes (known argument classes are
     //listed in HRegionServer.QosFunction.knownArgumentClasses)
     headerBuilder.setMethodName("foo");
