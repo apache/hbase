@@ -96,6 +96,7 @@ import org.apache.zookeeper.KeeperException;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -119,6 +120,7 @@ public class TestDistributedLogSplitting {
   MiniHBaseCluster cluster;
   HMaster master;
   Configuration conf;
+  static Configuration originalConf;
   static HBaseTestingUtility TEST_UTIL;
   static MiniDFSCluster dfsCluster;
   static MiniZooKeeperCluster zkCluster;
@@ -128,6 +130,7 @@ public class TestDistributedLogSplitting {
     TEST_UTIL = new HBaseTestingUtility(HBaseConfiguration.create());
     dfsCluster = TEST_UTIL.startMiniDFSCluster(1);
     zkCluster = TEST_UTIL.startMiniZKCluster();
+    originalConf = TEST_UTIL.getConfiguration();
   }
 
   @AfterClass
@@ -136,15 +139,9 @@ public class TestDistributedLogSplitting {
     TEST_UTIL.shutdownMiniDFSCluster();
   }
 
-  private void startCluster(int num_rs) throws Exception{
-    conf = HBaseConfiguration.create();
-    startCluster(num_rs, conf);
-  }
-
-  private void startCluster(int num_rs, Configuration inConf) throws Exception {
+  private void startCluster(int num_rs) throws Exception {
     SplitLogCounters.resetCounters();
     LOG.info("Starting cluster");
-    this.conf = inConf;
     conf.getLong("hbase.splitlog.max.resubmit", 0);
     // Make the failure test faster
     conf.setInt("zookeeper.recovery.retry", 0);
@@ -163,23 +160,32 @@ public class TestDistributedLogSplitting {
     }
   }
 
+  @Before
+  public void before() throws Exception {
+    // refresh configuration
+    conf = HBaseConfiguration.create(originalConf);
+  }
+  
   @After
   public void after() throws Exception {
-    for (MasterThread mt : TEST_UTIL.getHBaseCluster().getLiveMasterThreads()) {
-      mt.getMaster().abort("closing...", new Exception("Trace info"));
+    try {
+      if (TEST_UTIL.getHBaseCluster() != null) {
+        for (MasterThread mt : TEST_UTIL.getHBaseCluster().getLiveMasterThreads()) {
+          mt.getMaster().abort("closing...", new Exception("Trace info"));
+        }
+      }
+      TEST_UTIL.shutdownMiniHBaseCluster();
+    } finally {
+      TEST_UTIL.getTestFileSystem().delete(FSUtils.getRootDir(TEST_UTIL.getConfiguration()), true);
+      ZKUtil.deleteNodeRecursively(TEST_UTIL.getZooKeeperWatcher(), "/hbase");
     }
-
-    TEST_UTIL.shutdownMiniHBaseCluster();
-    TEST_UTIL.getTestFileSystem().delete(FSUtils.getRootDir(TEST_UTIL.getConfiguration()), true);
-    ZKUtil.deleteNodeRecursively(TEST_UTIL.getZooKeeperWatcher(), "/hbase");
   }
-
+  
   @Test (timeout=300000)
   public void testRecoveredEdits() throws Exception {
     LOG.info("testRecoveredEdits");
-    Configuration curConf = HBaseConfiguration.create();
-    curConf.setBoolean(HConstants.DISTRIBUTED_LOG_REPLAY_KEY, false);
-    startCluster(NUM_RS, curConf);
+    conf.setBoolean(HConstants.DISTRIBUTED_LOG_REPLAY_KEY, false);
+    startCluster(NUM_RS);
 
     final int NUM_LOG_LINES = 1000;
     final SplitLogManager slm = master.getMasterFileSystem().splitLogManager;
@@ -245,10 +251,9 @@ public class TestDistributedLogSplitting {
   @Test(timeout = 300000)
   public void testLogReplayWithNonMetaRSDown() throws Exception {
     LOG.info("testLogReplayWithNonMetaRSDown");
-    Configuration curConf = HBaseConfiguration.create();
-    curConf.setLong("hbase.regionserver.hlog.blocksize", 100*1024);
-    curConf.setBoolean(HConstants.DISTRIBUTED_LOG_REPLAY_KEY, true);
-    startCluster(NUM_RS, curConf);
+    conf.setLong("hbase.regionserver.hlog.blocksize", 100*1024);
+    conf.setBoolean(HConstants.DISTRIBUTED_LOG_REPLAY_KEY, true);
+    startCluster(NUM_RS);
     final int NUM_REGIONS_TO_CREATE = 40;
     final int NUM_LOG_LINES = 1000;
     // turn off load balancing to prevent regions from moving around otherwise
@@ -272,9 +277,8 @@ public class TestDistributedLogSplitting {
   @Test(timeout = 300000)
   public void testLogReplayWithMetaRSDown() throws Exception {
     LOG.info("testRecoveredEditsReplayWithMetaRSDown");
-    Configuration curConf = HBaseConfiguration.create();
-    curConf.setBoolean(HConstants.DISTRIBUTED_LOG_REPLAY_KEY, true);
-    startCluster(NUM_RS, curConf);
+    conf.setBoolean(HConstants.DISTRIBUTED_LOG_REPLAY_KEY, true);
+    startCluster(NUM_RS);
     final int NUM_REGIONS_TO_CREATE = 40;
     final int NUM_LOG_LINES = 1000;
     // turn off load balancing to prevent regions from moving around otherwise
@@ -339,10 +343,9 @@ public class TestDistributedLogSplitting {
   @Test(timeout = 300000)
   public void testMasterStartsUpWithLogSplittingWork() throws Exception {
     LOG.info("testMasterStartsUpWithLogSplittingWork");
-    Configuration curConf = HBaseConfiguration.create();
-    curConf.setBoolean(HConstants.DISTRIBUTED_LOG_REPLAY_KEY, false);
-    curConf.setInt(ServerManager.WAIT_ON_REGIONSERVERS_MINTOSTART, NUM_RS - 1);
-    startCluster(NUM_RS, curConf);
+    conf.setBoolean(HConstants.DISTRIBUTED_LOG_REPLAY_KEY, false);
+    conf.setInt(ServerManager.WAIT_ON_REGIONSERVERS_MINTOSTART, NUM_RS - 1);
+    startCluster(NUM_RS);
 
     final int NUM_REGIONS_TO_CREATE = 40;
     final int NUM_LOG_LINES = 1000;
@@ -398,10 +401,9 @@ public class TestDistributedLogSplitting {
   @Test(timeout = 300000)
   public void testMasterStartsUpWithLogReplayWork() throws Exception {
     LOG.info("testMasterStartsUpWithLogReplayWork");
-    Configuration curConf = HBaseConfiguration.create();
-    curConf.setBoolean(HConstants.DISTRIBUTED_LOG_REPLAY_KEY, true);
-    curConf.setInt(ServerManager.WAIT_ON_REGIONSERVERS_MINTOSTART, NUM_RS - 1);
-    startCluster(NUM_RS, curConf);
+    conf.setBoolean(HConstants.DISTRIBUTED_LOG_REPLAY_KEY, true);
+    conf.setInt(ServerManager.WAIT_ON_REGIONSERVERS_MINTOSTART, NUM_RS - 1);
+    startCluster(NUM_RS);
 
     final int NUM_REGIONS_TO_CREATE = 40;
     final int NUM_LOG_LINES = 1000;
@@ -460,9 +462,8 @@ public class TestDistributedLogSplitting {
   @Test(timeout = 300000)
   public void testLogReplayTwoSequentialRSDown() throws Exception {
     LOG.info("testRecoveredEditsReplayTwoSequentialRSDown");
-    Configuration curConf = HBaseConfiguration.create();
-    curConf.setBoolean(HConstants.DISTRIBUTED_LOG_REPLAY_KEY, true);
-    startCluster(NUM_RS, curConf);
+    conf.setBoolean(HConstants.DISTRIBUTED_LOG_REPLAY_KEY, true);
+    startCluster(NUM_RS);
     final int NUM_REGIONS_TO_CREATE = 40;
     final int NUM_LOG_LINES = 1000;
     // turn off load balancing to prevent regions from moving around otherwise
@@ -541,9 +542,8 @@ public class TestDistributedLogSplitting {
   @Test(timeout = 300000)
   public void testMarkRegionsRecoveringInZK() throws Exception {
     LOG.info("testMarkRegionsRecoveringInZK");
-    Configuration curConf = HBaseConfiguration.create();
-    curConf.setBoolean(HConstants.DISTRIBUTED_LOG_REPLAY_KEY, true);
-    startCluster(NUM_RS, curConf);
+    conf.setBoolean(HConstants.DISTRIBUTED_LOG_REPLAY_KEY, true);
+    startCluster(NUM_RS);
     master.balanceSwitch(false);
     List<RegionServerThread> rsts = cluster.getLiveRegionServerThreads();
     final ZooKeeperWatcher zkw = master.getZooKeeperWatcher();
@@ -589,9 +589,8 @@ public class TestDistributedLogSplitting {
   @Test(timeout = 300000)
   public void testReplayCmd() throws Exception {
     LOG.info("testReplayCmd");
-    Configuration curConf = HBaseConfiguration.create();
-    curConf.setBoolean(HConstants.DISTRIBUTED_LOG_REPLAY_KEY, true);
-    startCluster(NUM_RS, curConf);
+    conf.setBoolean(HConstants.DISTRIBUTED_LOG_REPLAY_KEY, true);
+    startCluster(NUM_RS);
     final int NUM_REGIONS_TO_CREATE = 40;
     // turn off load balancing to prevent regions from moving around otherwise
     // they will consume recovered.edits
@@ -635,9 +634,8 @@ public class TestDistributedLogSplitting {
   @Test(timeout = 300000)
   public void testLogReplayForDisablingTable() throws Exception {
     LOG.info("testLogReplayForDisablingTable");
-    Configuration curConf = HBaseConfiguration.create();
-    curConf.setBoolean(HConstants.DISTRIBUTED_LOG_REPLAY_KEY, true);
-    startCluster(NUM_RS, curConf);
+    conf.setBoolean(HConstants.DISTRIBUTED_LOG_REPLAY_KEY, true);
+    startCluster(NUM_RS);
     final int NUM_REGIONS_TO_CREATE = 40;
     final int NUM_LOG_LINES = 1000;
 
@@ -769,11 +767,10 @@ public class TestDistributedLogSplitting {
   @Test(timeout = 300000)
   public void testDisallowWritesInRecovering() throws Exception {
     LOG.info("testDisallowWritesInRecovering");
-    Configuration curConf = HBaseConfiguration.create();
-    curConf.setBoolean(HConstants.DISTRIBUTED_LOG_REPLAY_KEY, true);
-    curConf.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 1);
-    curConf.setBoolean(HConstants.DISALLOW_WRITES_IN_RECOVERING, true);
-    startCluster(NUM_RS, curConf);
+    conf.setBoolean(HConstants.DISTRIBUTED_LOG_REPLAY_KEY, true);
+    conf.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 1);
+    conf.setBoolean(HConstants.DISALLOW_WRITES_IN_RECOVERING, true);
+    startCluster(NUM_RS);
     final int NUM_REGIONS_TO_CREATE = 40;
     // turn off load balancing to prevent regions from moving around otherwise
     // they will consume recovered.edits
@@ -1031,14 +1028,13 @@ public class TestDistributedLogSplitting {
   @Test(timeout = 300000)
   public void testMetaRecoveryInZK() throws Exception {
     LOG.info("testMetaRecoveryInZK");
-    Configuration curConf = HBaseConfiguration.create();
-    curConf.setBoolean(HConstants.DISTRIBUTED_LOG_REPLAY_KEY, true);
-    startCluster(NUM_RS, curConf);
+    conf.setBoolean(HConstants.DISTRIBUTED_LOG_REPLAY_KEY, true);
+    startCluster(NUM_RS);
 
     // turn off load balancing to prevent regions from moving around otherwise
     // they will consume recovered.edits
     master.balanceSwitch(false);
-    final ZooKeeperWatcher zkw = new ZooKeeperWatcher(curConf, "table-creation", null);
+    final ZooKeeperWatcher zkw = new ZooKeeperWatcher(conf, "table-creation", null);
     List<RegionServerThread> rsts = cluster.getLiveRegionServerThreads();
 
     // only testing meta recovery in ZK operation
