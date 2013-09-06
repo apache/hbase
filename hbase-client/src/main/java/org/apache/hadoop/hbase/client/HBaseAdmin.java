@@ -2023,11 +2023,15 @@ public class HBaseAdmin implements Abortable, Closeable {
       return HRegionInfo.FIRST_META_REGIONINFO.getRegionName();
     }
     CatalogTracker ct = getCatalogTracker();
-    Pair<HRegionInfo, ServerName> regionServerPair
-      = getRegion(regionNameOrEncodedRegionName, ct);
     byte[] tmp = regionNameOrEncodedRegionName;
-    if (regionServerPair != null && regionServerPair.getFirst() != null) {
-      tmp = regionServerPair.getFirst().getRegionName();
+    try {
+      Pair<HRegionInfo, ServerName> regionServerPair
+        = getRegion(regionNameOrEncodedRegionName, ct);
+      if (regionServerPair != null && regionServerPair.getFirst() != null) {
+        tmp = regionServerPair.getFirst().getRegionName();
+      }
+    } finally {
+      cleanupCatalogTracker(ct);
     }
     return tmp;
   }
