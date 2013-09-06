@@ -41,7 +41,19 @@ module Hbase
     #----------------------------------------------------------------------------------------------
     # Returns a list of tables in hbase
     def list(regex = ".*")
-      @admin.getTableNames(regex)
+      begin
+        # Use the old listTables API first for compatibility with older servers
+        @admin.listTables(regex).map { |t| t.getNameAsString }
+      rescue => e
+        # listTables failed, try the new unprivileged getTableNames API if the cause was
+        # an AccessDeniedException
+        if e.cause.kind_of? org.apache.hadoop.ipc.RemoteException and e.cause.unwrapRemoteException().kind_of? org.apache.hadoop.hbase.security.AccessDeniedException
+          @admin.getTableNames(regex)
+        else
+          # Not an access control failure, re-raise
+          raise e
+        end
+      end
     end
 
     #----------------------------------------------------------------------------------------------
