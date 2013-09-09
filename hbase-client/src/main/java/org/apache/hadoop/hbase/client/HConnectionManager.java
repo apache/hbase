@@ -670,21 +670,28 @@ public class HConnectionManager {
       this.rpcClient = new RpcClient(this.conf, this.clusterId);
 
       // Do we publish the status?
+      boolean shouldListen = conf.getBoolean(HConstants.STATUS_PUBLISHED,
+          HConstants.STATUS_PUBLISHED_DEFAULT);
       Class<? extends ClusterStatusListener.Listener> listenerClass =
           conf.getClass(ClusterStatusListener.STATUS_LISTENER_CLASS,
               ClusterStatusListener.DEFAULT_STATUS_LISTENER_CLASS,
               ClusterStatusListener.Listener.class);
-
-      if (listenerClass != null) {
-        clusterStatusListener = new ClusterStatusListener(
-            new ClusterStatusListener.DeadServerHandler() {
-              @Override
-              public void newDead(ServerName sn) {
-                clearCaches(sn);
-                rpcClient.cancelConnections(sn.getHostname(), sn.getPort(),
-                    new SocketException(sn.getServerName() + " is dead: closing its connection."));
-              }
-            }, conf, listenerClass);
+      if (shouldListen) {
+        if (listenerClass == null) {
+          LOG.warn(HConstants.STATUS_PUBLISHED + " is true, but " +
+              ClusterStatusListener.STATUS_LISTENER_CLASS + " is not set - not listening status");
+        } else {
+          clusterStatusListener = new ClusterStatusListener(
+              new ClusterStatusListener.DeadServerHandler() {
+                @Override
+                public void newDead(ServerName sn) {
+                  clearCaches(sn);
+                  rpcClient.cancelConnections(sn.getHostname(), sn.getPort(),
+                      new SocketException(sn.getServerName() +
+                          " is dead: closing its connection."));
+                }
+              }, conf, listenerClass);
+        }
       }
     }
 

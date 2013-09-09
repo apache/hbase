@@ -852,6 +852,13 @@ public final class HConstants {
 
 
   /**
+   * Setting to activate, or not, the publication of the status by the master. Default
+   *  notification is by a multicast message.
+   */
+  public static final String STATUS_PUBLISHED = "hbase.status.published";
+  public static final boolean STATUS_PUBLISHED_DEFAULT = false;
+
+  /**
    * IP to use for the multicast status messages between the master and the clients.
    * The default address is chosen as one among others within the ones suitable for multicast
    * messages.

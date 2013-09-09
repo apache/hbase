@@ -72,7 +72,8 @@ public class ClusterStatusPublisher extends Chore {
    */
   public static final String STATUS_PUBLISHER_CLASS = "hbase.status.publisher.class";
   public static final Class<? extends ClusterStatusPublisher.Publisher>
-      DEFAULT_STATUS_PUBLISHER_CLASS = null;
+      DEFAULT_STATUS_PUBLISHER_CLASS =
+      org.apache.hadoop.hbase.master.ClusterStatusPublisher.MulticastPublisher.class;
 
   /**
    * The minimum time between two status messages, in milliseconds.

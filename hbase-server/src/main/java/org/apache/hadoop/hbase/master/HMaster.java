@@ -475,14 +475,22 @@ MasterServices, Server {
     }
 
     // Do we publish the status?
+    boolean shouldPublish = conf.getBoolean(HConstants.STATUS_PUBLISHED,
+        HConstants.STATUS_PUBLISHED_DEFAULT);
     Class<? extends ClusterStatusPublisher.Publisher> publisherClass =
         conf.getClass(ClusterStatusPublisher.STATUS_PUBLISHER_CLASS,
             ClusterStatusPublisher.DEFAULT_STATUS_PUBLISHER_CLASS,
             ClusterStatusPublisher.Publisher.class);
 
-    if (publisherClass != null) {
-      clusterStatusPublisherChore = new ClusterStatusPublisher(this, conf, publisherClass);
-      Threads.setDaemonThreadRunning(clusterStatusPublisherChore.getThread());
+    if (shouldPublish) {
+      if (publisherClass == null) {
+        LOG.warn(HConstants.STATUS_PUBLISHED + " is true, but " +
+            ClusterStatusPublisher.DEFAULT_STATUS_PUBLISHER_CLASS +
+            " is not set - not publishing status");
+      } else {
+        clusterStatusPublisherChore = new ClusterStatusPublisher(this, conf, publisherClass);
+        Threads.setDaemonThreadRunning(clusterStatusPublisherChore.getThread());
+      }
     }
 
     distributedLogReplay = this.conf.getBoolean(HConstants.DISTRIBUTED_LOG_REPLAY_KEY, 
