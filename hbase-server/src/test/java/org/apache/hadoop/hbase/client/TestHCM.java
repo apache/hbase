@@ -100,11 +100,7 @@ public class TestHCM {
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
-    TEST_UTIL.getConfiguration().setClass(ClusterStatusPublisher.STATUS_PUBLISHER_CLASS,
-        ClusterStatusPublisher.MulticastPublisher.class, ClusterStatusPublisher.Publisher.class);
-    TEST_UTIL.getConfiguration().setClass(ClusterStatusListener.STATUS_LISTENER_CLASS,
-        ClusterStatusListener.MultiCastListener.class, ClusterStatusListener.Listener.class);
-
+    TEST_UTIL.getConfiguration().setBoolean(HConstants.STATUS_PUBLISHED, true);
     TEST_UTIL.startMiniCluster(2);
   }
 

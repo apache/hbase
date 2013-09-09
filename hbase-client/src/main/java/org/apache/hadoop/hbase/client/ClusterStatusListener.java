@@ -66,10 +66,11 @@ class ClusterStatusListener implements Closeable {
   private final Listener listener;
 
   /**
-   * The implementation class to use to read the status. Default is null.
+   * The implementation class to use to read the status.
    */
   public static final String STATUS_LISTENER_CLASS = "hbase.status.listener.class";
-  public static final Class<? extends Listener> DEFAULT_STATUS_LISTENER_CLASS = null;
+  public static final Class<? extends Listener> DEFAULT_STATUS_LISTENER_CLASS =
+      MulticastListener.class;
 
   /**
    * Class to be extended to manage a new dead server.
@@ -87,7 +88,7 @@ class ClusterStatusListener implements Closeable {
 
 
   /**
-   * The interface to be implented by a listener of a cluster status event.
+   * The interface to be implemented by a listener of a cluster status event.
    */
   interface Listener extends Closeable {
     /**
@@ -175,13 +176,13 @@ class ClusterStatusListener implements Closeable {
   /**
    * An implementation using a multicast message between the master & the client.
    */
-  class MultiCastListener implements Listener {
+  class MulticastListener implements Listener {
     private DatagramChannel channel;
     private final ExecutorService service = Executors.newSingleThreadExecutor(
         Threads.newDaemonThreadFactory("hbase-client-clusterStatus-multiCastListener"));
 
 
-    public MultiCastListener() {
+    public MulticastListener() {
     }
 
     public void connect(Configuration conf) throws IOException {
