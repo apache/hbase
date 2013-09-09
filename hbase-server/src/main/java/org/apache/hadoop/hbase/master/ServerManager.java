@@ -470,13 +470,13 @@ public class ServerManager {
       return;
     }
     if (!this.onlineServers.containsKey(serverName)) {
-      LOG.warn("Received expiration of " + serverName +
-        " but server is not currently online");
+      LOG.warn("Expiration of " + serverName +
+        " but server not online");
     }
     if (this.deadservers.isDeadServer(serverName)) {
       // TODO: Can this happen?  It shouldn't be online in this case?
-      LOG.warn("Received expiration of " + serverName +
-          " but server shutdown is already in progress");
+      LOG.warn("Expiration of " + serverName +
+          " but server shutdown already in progress");
       return;
     }
     // Remove the server from the known servers lists and update load info BUT
@@ -552,7 +552,7 @@ public class ServerManager {
     }
 
     if (!services.getAssignmentManager().isFailoverCleanupDone()) {
-      LOG.info("AssignmentManager hasn't finished failover cleanup");
+      LOG.info("AssignmentManager hasn't finished failover cleanup; waiting");
     }
 
     for(ServerName tmpServerName : requeuedDeadServers.keySet()){

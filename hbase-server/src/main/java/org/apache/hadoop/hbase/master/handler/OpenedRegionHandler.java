@@ -124,7 +124,7 @@ public class OpenedRegionHandler extends EventHandler implements TotesHRegionInf
   }
 
   private boolean deleteOpenedNode(int expectedVersion) {
-    debugLog(regionInfo, "Handling OPENED event for " +
+    debugLog(regionInfo, "Handling OPENED of " +
       this.regionInfo.getShortNameToLog() + " from " + this.sn.toString() +
       "; deleting unassigned node");
     try {

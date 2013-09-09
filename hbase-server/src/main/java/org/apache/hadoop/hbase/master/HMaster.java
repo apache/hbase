@@ -1072,12 +1072,11 @@ MasterServices, Server {
       }
     }
 
-    int assigned = 0;
     boolean beingExpired = false;
 
     status.setStatus("Assigning System Regions");
 
-    for(Map.Entry<HRegionInfo, ServerName> entry: allRegions.entrySet()) {
+    for (Map.Entry<HRegionInfo, ServerName> entry: allRegions.entrySet()) {
       HRegionInfo regionInfo = entry.getKey();
       ServerName currServer = entry.getValue();
 
@@ -1097,14 +1096,12 @@ MasterServices, Server {
         assignmentManager.assign(regionInfo, true);
         // Make sure a region location is set.
         this.assignmentManager.waitForAssignment(regionInfo);
-        assigned++;
         if (beingExpired && this.distributedLogReplay) {
           // In Replay WAL Mode, we need the new region server online
           this.fileSystemManager.splitLog(currServer);
         }
       } else if (rit && !regionLocation) {
         if (!waitVerifiedRegionLocation(regionInfo)) return;
-        assigned++;
       } else {
         // Region already assigned. We didn't assign it. Add to in-memory state.
         this.assignmentManager.regionOnline(regionInfo, currServer);
@@ -1113,7 +1110,7 @@ MasterServices, Server {
       if (!this.assignmentManager.getZKTable().isEnabledTable(regionInfo.getTableName())) {
         this.assignmentManager.setEnabledTable(regionInfo.getTableName());
       }
-      LOG.info("System Regions assigned=" + assigned + ", rit=" + rit +
+      LOG.info("System region " + regionInfo.getRegionNameAsString() + " assigned, rit=" + rit +
         ", location=" + catalogTracker.getMetaLocation());
     }
     status.setStatus("System Regions assigned.");
@@ -1146,7 +1143,7 @@ MasterServices, Server {
               .getAdmin(currServer),
               regionInfo.getRegionName()) != null;
     } catch (IOException e) {
-      LOG.info("Failed to contact server: "+currServer, e);
+      LOG.info("Failed verifying location=" + currServer + ", exception=" + e);
     }
     return false;
   }

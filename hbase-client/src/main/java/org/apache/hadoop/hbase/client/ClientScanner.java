@@ -27,14 +27,13 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.KeyValueUtil;
-import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.NotServingRegionException;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.UnknownScannerException;
 import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
 import org.apache.hadoop.hbase.exceptions.OutOfOrderScannerNextException;
@@ -216,14 +215,14 @@ public class ClientScanner extends AbstractClientScanner {
             checkScanStopRow(endKey) ||
             done) {
           close();
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("Finished " + this.currentRegion);
+          if (LOG.isTraceEnabled()) {
+            LOG.trace("Finished " + this.currentRegion);
           }
           return false;
         }
         localStartKey = endKey;
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Finished " + this.currentRegion);
+        if (LOG.isTraceEnabled()) {
+          LOG.trace("Finished " + this.currentRegion);
         }
       } else {
         localStartKey = this.scan.getStartRow();
