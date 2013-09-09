@@ -22,7 +22,8 @@ module Shell
     class Alter < Command
       def help
         return <<-EOF
-Alter a table. Table must be disabled to be altered (see help 'disable').
+Alter a table. Depending on the HBase setting ("hbase.online.schema.update.enable"),
+the table must be disabled or not to be altered (see help 'disable').
 You can add/modify/delete column families, as well as change table 
 configuration. Column families work similarly to create; column family 
 spec can either be a name string, or a dictionary with NAME attribute.
