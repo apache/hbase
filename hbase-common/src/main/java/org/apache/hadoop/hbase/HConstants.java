@@ -753,7 +753,7 @@ public final class HConstants {
   public static final boolean DEFAULT_DISALLOW_WRITES_IN_RECOVERING_CONFIG = false;
 
   public static final String REGION_SERVER_HANDLER_COUNT = "hbase.regionserver.handler.count";
-  public static final int DEFAULT_REGION_SERVER_HANDLER_COUNT = 10;
+  public static final int DEFAULT_REGION_SERVER_HANDLER_COUNT = 30;
 
   public static final String REGION_SERVER_META_HANDLER_COUNT =
       "hbase.regionserver.metahandler.count";

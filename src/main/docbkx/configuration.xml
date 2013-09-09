@@ -972,11 +972,11 @@ index e70ebc6..96f8c27 100644
           <section xml:id="hbase.regionserver.handler.count"><title><varname>hbase.regionserver.handler.count</varname></title>
           <para>
           This setting defines the number of threads that are kept open to answer
-          incoming requests to user tables. The default of 10 is rather low in order to
-          prevent users from killing their region servers when using large write buffers
-          with a high number of concurrent clients. The rule of thumb is to keep this
+          incoming requests to user tables. The rule of thumb is to keep this
           number low when the payload per request approaches the MB (big puts, scans using
           a large cache) and high when the payload is small (gets, small puts, ICVs, deletes).
+          The total size of the queries in progress is limited  by the setting
+          "ipc.server.max.callqueue.size".
           </para>
           <para>
           It is safe to set that number to the
