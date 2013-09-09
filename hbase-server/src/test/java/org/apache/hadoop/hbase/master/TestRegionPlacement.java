@@ -21,6 +21,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -39,7 +40,6 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ClusterStatus;
 import org.apache.hadoop.hbase.HBaseIOException;
-import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
@@ -49,6 +49,7 @@ import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.MetaScanner;
@@ -63,11 +64,13 @@ import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hadoop.hbase.zookeeper.ZKAssign;
+import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
+import org.apache.zookeeper.KeeperException;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-import static org.junit.Assert.fail;
 
 
 @Category(MediumTests.class)
@@ -267,14 +270,17 @@ public class TestRegionPlacement {
 
     // Check when a RS stops, the regions get assigned to their secondary/tertiary
     killRandomServerAndVerifyAssignment();
-
+    
     // also verify that the AssignmentVerificationReport has the correct information
     reports = rp.verifyRegionPlacement(false);
     report = reports.get(0);
     assertTrue(report.getRegionsWithoutValidFavoredNodes().size() == 0);
     assertTrue(report.getNonFavoredAssignedRegions().size() == 0);
     assertTrue(report.getTotalFavoredAssignments() >= REGION_NUM);
-    assertTrue(report.getNumRegionsOnFavoredNodeByPosition(FavoredNodesPlan.Position.PRIMARY) > 0 && 
+    assertTrue(report.getNumRegionsOnFavoredNodeByPosition(FavoredNodesPlan.Position.PRIMARY) > 0);
+    assertTrue("secondary " +
+    report.getNumRegionsOnFavoredNodeByPosition(FavoredNodesPlan.Position.SECONDARY) + " tertiary "
+        + report.getNumRegionsOnFavoredNodeByPosition(FavoredNodesPlan.Position.TERTIARY),
         (report.getNumRegionsOnFavoredNodeByPosition(FavoredNodesPlan.Position.SECONDARY) > 0
         || report.getNumRegionsOnFavoredNodeByPosition(FavoredNodesPlan.Position.TERTIARY) > 0));
     assertTrue((report.getNumRegionsOnFavoredNodeByPosition(FavoredNodesPlan.Position.PRIMARY) +
@@ -284,7 +290,7 @@ public class TestRegionPlacement {
   }
 
   private void killRandomServerAndVerifyAssignment() 
-      throws IOException, InterruptedException {
+      throws IOException, InterruptedException, KeeperException {
     ClusterStatus oldStatus = TEST_UTIL.getHBaseCluster().getClusterStatus();
     ServerName servers[] = oldStatus.getServers().toArray(new ServerName[10]);
     ServerName serverToKill = null;
@@ -292,11 +298,22 @@ public class TestRegionPlacement {
     Random random = new Random(System.currentTimeMillis());
     ServerName metaServer = TEST_UTIL.getHBaseCluster().getServerHoldingMeta();
     LOG.debug("Server holding meta " + metaServer);
+    boolean isNamespaceServer = false;
     do {
       // kill a random non-meta server carrying at least one region
       killIndex = random.nextInt(servers.length);
       serverToKill = TEST_UTIL.getHBaseCluster().getRegionServer(killIndex).getServerName();
-    } while (ServerName.isSameHostnameAndPort(metaServer, serverToKill) ||
+      Collection<HRegion> regs =
+          TEST_UTIL.getHBaseCluster().getRegionServer(killIndex).getOnlineRegionsLocalContext();
+      isNamespaceServer = false;
+      for (HRegion r : regs) {
+        if (r.getRegionInfo().getTableName().getNamespaceAsString()
+            .equals(NamespaceDescriptor.SYSTEM_NAMESPACE_NAME_STR)) {
+          isNamespaceServer = true;
+          break;
+        }
+      }
+    } while (ServerName.isSameHostnameAndPort(metaServer, serverToKill) || isNamespaceServer ||
         TEST_UTIL.getHBaseCluster().getRegionServer(killIndex).getNumberOfOnlineRegions() == 0);
     LOG.debug("Stopping RS " + serverToKill);
     Map<HRegionInfo, Pair<ServerName, ServerName>> regionsToVerify =
@@ -317,7 +334,7 @@ public class TestRegionPlacement {
     int curr = TEST_UTIL.getHBaseCluster().getMaster().assignmentManager.getNumRegionsOpened();
     while (curr - orig < regionsToVerify.size()) {
       LOG.debug("Waiting for " + regionsToVerify.size() + " to come online " +
-        " Current #regions " + curr + " Original #regions " + orig);
+          " Current #regions " + curr + " Original #regions " + orig);
       Thread.sleep(200);
       curr = TEST_UTIL.getHBaseCluster().getMaster().assignmentManager.getNumRegionsOpened();
     }
