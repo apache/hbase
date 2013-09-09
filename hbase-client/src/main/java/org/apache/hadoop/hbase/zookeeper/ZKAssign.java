@@ -402,8 +402,10 @@ public class ZKAssign {
   public static boolean deleteNode(ZooKeeperWatcher zkw, String encodedRegionName,
       EventType expectedState, int expectedVersion)
   throws KeeperException, KeeperException.NoNodeException {
-    LOG.debug(zkw.prefix("Deleting existing unassigned " +
+    if (LOG.isTraceEnabled()) {
+    	LOG.trace(zkw.prefix("Deleting existing unassigned " +
       "node " + encodedRegionName + " in expected state " + expectedState));
+    }
     String node = getNodeName(zkw, encodedRegionName);
     zkw.sync(node);
     Stat stat = new Stat();

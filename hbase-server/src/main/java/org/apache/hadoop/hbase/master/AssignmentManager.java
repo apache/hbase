@@ -477,7 +477,7 @@ public class AssignmentManager extends ZooKeeperListener {
 
     // If we found user regions out on cluster, its a failover.
     if (failover) {
-      LOG.info("Found regions out on cluster or in RIT; failover");
+      LOG.info("Found regions out on cluster or in RIT; presuming failover");
       // Process list of dead servers and regions in RIT.
       // See HBASE-4580 for more information.
       processDeadServersAndRecoverLostRegions(deadServers);
@@ -803,11 +803,11 @@ public class AssignmentManager extends ZooKeeperListener {
     long startTime = System.currentTimeMillis();
     if (LOG.isDebugEnabled()) {
       boolean lateEvent = createTime < (startTime - 15000);
-      LOG.debug("Handling transition=" + rt.getEventType() +
+      LOG.debug("Handling " + rt.getEventType() +
         ", server=" + sn + ", region=" +
         (prettyPrintedRegionName == null ? "null" : prettyPrintedRegionName) +
         (lateEvent ? ", which is more than 15 seconds late" : "") +
-        ", current state from region state map =" + regionState);
+        ", current_state=" + regionState);
     }
     // We don't do anything for this event,
     // so separate it out, no need to lock/unlock anything
@@ -2198,9 +2198,9 @@ public class AssignmentManager extends ZooKeeperListener {
         LOG.warn("Can't find a destination for " + encodedName);
         return null;
       }
-      LOG.debug("No previous transition plan was found (or we are ignoring " +
+      LOG.debug("No previous transition plan found (or ignoring " +
         "an existing plan) for " + region.getRegionNameAsString() +
-        " so generated a random one; " + randomPlan + "; " +
+        "; generated random plan=" + randomPlan + "; " +
         serverManager.countOfRegionServers() +
                " (online=" + serverManager.getOnlineServers().size() +
                ", available=" + destServers.size() + ") available servers" +
@@ -3105,9 +3105,8 @@ public class AssignmentManager extends ZooKeeperListener {
     if (addressFromZK != null) {
       // if we get something from ZK, we will use the data
       boolean matchZK = addressFromZK.equals(serverName);
-      LOG.debug("based on ZK, current region=" + hri.getRegionNameAsString() +
-          " is on server=" + addressFromZK +
-          " server being checked=: " + serverName);
+      LOG.debug("Checking region=" + hri.getRegionNameAsString() + ", zk server=" + addressFromZK +
+        " current=" + serverName + ", matches=" + matchZK);
       return matchZK;
     }
 

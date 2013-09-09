@@ -260,7 +260,7 @@ public class RegionStates {
       hri, state, System.currentTimeMillis(), newServerName);
     RegionState oldState = regionStates.put(regionName, regionState);
     if (oldState == null || oldState.getState() != regionState.getState()) {
-      LOG.info("Transitioned from " + oldState + " to " + regionState);
+      LOG.info("Transitioned " + oldState + " to " + regionState);
     }
     if (newServerName != null || (
         state != State.PENDING_CLOSE && state != State.CLOSING)) {
