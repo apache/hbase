@@ -292,6 +292,13 @@ public final class HConstants {
   /** Any artifacts left from migration can be moved here */
   public static final String MIGRATION_NAME = ".migration";
 
+  /**
+   * The directory from which co-processor/custom filter jars can be loaded
+   * dynamically by the region servers. This value can be overridden by the
+   * hbase.dynamic.jars.dir config.
+   */ 
+  public static final String LIB_DIR = "lib";
+
   /** Used to construct the name of the compaction directory during compaction */
   public static final String HREGION_COMPACTIONDIR_NAME = "compaction.dir";
 
@@ -829,7 +836,7 @@ public final class HConstants {
     Collections.unmodifiableList(Arrays.asList(new String[] { HREGION_LOGDIR_NAME,
       HREGION_OLDLOGDIR_NAME, CORRUPT_DIR_NAME, SPLIT_LOGDIR_NAME,
       HBCK_SIDELINEDIR_NAME, HFILE_ARCHIVE_DIRECTORY, SNAPSHOT_DIR_NAME, HBASE_TEMP_DIRECTORY,
-      OLD_SNAPSHOT_DIR_NAME, BASE_NAMESPACE_DIR, MIGRATION_NAME}));
+      OLD_SNAPSHOT_DIR_NAME, BASE_NAMESPACE_DIR, MIGRATION_NAME, LIB_DIR}));
 
   /** Directories that are not HBase user table directories */
   public static final List<String> HBASE_NON_USER_TABLE_DIRS =
