@@ -85,6 +85,10 @@ public class NamespaceUpgrade implements Tool {
   private static final String DOT_CORRUPT = ".corrupt";
   private static final String DOT_SPLITLOG = "splitlog";
   private static final String DOT_ARCHIVE = ".archive";
+
+  // The old default directory of hbase.dynamic.jars.dir(0.94.12 release).  
+  private static final String DOT_LIB_DIR = ".lib";
+
   private static final String OLD_ACL = "_acl_";
   /** Directories that are not HBase table directories */
   static final List<String> NON_USER_TABLE_DIRS = Arrays.asList(new String[] {
@@ -97,7 +101,8 @@ public class NamespaceUpgrade implements Tool {
       HConstants.SNAPSHOT_DIR_NAME,
       HConstants.HBASE_TEMP_DIRECTORY,
       TMP_DATA_DIR,
-      OLD_ACL});
+      OLD_ACL,
+      DOT_LIB_DIR});
 
   public NamespaceUpgrade() throws IOException {
     super();
@@ -165,7 +170,9 @@ public class NamespaceUpgrade implements Tool {
       new Path [] {new Path(rootDir, DOT_OLD_LOGS),
         new Path(rootDir, HConstants.HREGION_OLDLOGDIR_NAME)},
       new Path [] {new Path(rootDir, TMP_DATA_DIR),
-        new Path(rootDir, HConstants.BASE_NAMESPACE_DIR)}};
+        new Path(rootDir, HConstants.BASE_NAMESPACE_DIR)},
+      new Path[] { new Path(rootDir, DOT_LIB_DIR),
+        new Path(rootDir, HConstants.LIB_DIR)}};
     for (Path [] dir: dirs) {
       Path src = dir[0];
       Path tgt = dir[1];
