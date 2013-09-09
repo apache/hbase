@@ -369,60 +369,42 @@ public class ScanQueryMatcher {
       return columns.getNextRowOrNextColumn(bytes, offset, qualLength);
     }
 
-    // STEP 1: Check if the column is part of the requested columns
-    MatchCode colChecker = columns.checkColumn(bytes, offset, qualLength, type);
-    if (colChecker == MatchCode.INCLUDE) {
-      ReturnCode filterResponse = ReturnCode.SKIP;
-      // STEP 2: Yes, the column is part of the requested columns. Check if filter is present
-      if (filter != null) {
-        // STEP 3: Filter the key value and return if it filters out
-        filterResponse = filter.filterKeyValue(kv);
-        switch (filterResponse) {
-        case SKIP:
-          return MatchCode.SKIP;
-        case NEXT_COL:
-          return columns.getNextRowOrNextColumn(bytes, offset, qualLength);
-        case NEXT_ROW:
-          stickyNextRow = true;
-          return MatchCode.SEEK_NEXT_ROW;
-        case SEEK_NEXT_USING_HINT:
-          return MatchCode.SEEK_NEXT_USING_HINT;
-        default:
-          //It means it is either include or include and seek next
-          break;
-        }
+    /**
+     * Filters should be checked before checking column trackers. If we do
+     * otherwise, as was previously being done, ColumnTracker may increment its
+     * counter for even that KV which may be discarded later on by Filter. This
+     * would lead to incorrect results in certain cases.
+     */
+    ReturnCode filterResponse = ReturnCode.SKIP;
+    if (filter != null) {
+      filterResponse = filter.filterKeyValue(kv);
+      if (filterResponse == ReturnCode.SKIP) {
+        return MatchCode.SKIP;
+      } else if (filterResponse == ReturnCode.NEXT_COL) {
+        return columns.getNextRowOrNextColumn(bytes, offset, qualLength);
+      } else if (filterResponse == ReturnCode.NEXT_ROW) {
+        stickyNextRow = true;
+        return MatchCode.SEEK_NEXT_ROW;
+      } else if (filterResponse == ReturnCode.SEEK_NEXT_USING_HINT) {
+        return MatchCode.SEEK_NEXT_USING_HINT;
       }
-      /*
-       * STEP 4: Reaching this step means the column is part of the requested columns and either
-       * the filter is null or the filter has returned INCLUDE or INCLUDE_AND_NEXT_COL response.
-       * Now check the number of versions needed. This method call returns SKIP, INCLUDE,
-       * INCLUDE_AND_SEEK_NEXT_ROW, INCLUDE_AND_SEEK_NEXT_COL.
-       *
-       * FilterResponse            ColumnChecker               Desired behavior
-       * INCLUDE                   SKIP                        row has already been included, SKIP.
-       * INCLUDE                   INCLUDE                     INCLUDE
-       * INCLUDE                   INCLUDE_AND_SEEK_NEXT_COL   INCLUDE_AND_SEEK_NEXT_COL
-       * INCLUDE                   INCLUDE_AND_SEEK_NEXT_ROW   INCLUDE_AND_SEEK_NEXT_ROW
-       * INCLUDE_AND_SEEK_NEXT_COL SKIP                        row has already been included, SKIP.
-       * INCLUDE_AND_SEEK_NEXT_COL INCLUDE                     INCLUDE_AND_SEEK_NEXT_COL
-       * INCLUDE_AND_SEEK_NEXT_COL INCLUDE_AND_SEEK_NEXT_COL   INCLUDE_AND_SEEK_NEXT_COL
-       * INCLUDE_AND_SEEK_NEXT_COL INCLUDE_AND_SEEK_NEXT_ROW   INCLUDE_AND_SEEK_NEXT_ROW
-       *
-       * In all the above scenarios, we return the column checker return value except for
-       * FilterResponse (INCLUDE_AND_SEEK_NEXT_COL) and ColumnChecker(INCLUDE)
-       */
-      colChecker =
-          columns.checkVersions(bytes, offset, qualLength, timestamp, type,
-            kv.getMvccVersion() > maxReadPointToTrackVersions);
-      //Optimize with stickyNextRow
-      stickyNextRow = colChecker == MatchCode.INCLUDE_AND_SEEK_NEXT_ROW ? true : stickyNextRow;
-      return (filterResponse == ReturnCode.INCLUDE_AND_NEXT_COL &&
-          colChecker == MatchCode.INCLUDE) ? MatchCode.INCLUDE_AND_SEEK_NEXT_COL
-          : colChecker;
     }
-    stickyNextRow = (colChecker == MatchCode.SEEK_NEXT_ROW) ? true
-        : stickyNextRow;
+
+    MatchCode colChecker = columns.checkColumn(bytes, offset, qualLength,
+        timestamp, type, kv.getMvccVersion() > maxReadPointToTrackVersions);
+    /*
+     * According to current implementation, colChecker can only be
+     * SEEK_NEXT_COL, SEEK_NEXT_ROW, SKIP or INCLUDE. Therefore, always return
+     * the MatchCode. If it is SEEK_NEXT_ROW, also set stickyNextRow.
+     */
+    if (colChecker == MatchCode.SEEK_NEXT_ROW) {
+      stickyNextRow = true;
+    } else if (filter != null && colChecker == MatchCode.INCLUDE &&
+               filterResponse == ReturnCode.INCLUDE_AND_NEXT_COL) {
+      return MatchCode.INCLUDE_AND_SEEK_NEXT_COL;
+    }
     return colChecker;
+
   }
 
   /** Handle partial-drop-deletes. As we match keys in order, when we have a range from which
@@ -527,16 +509,6 @@ public class ScanQueryMatcher {
         kv.getBuffer(), kv.getRowOffset(), kv.getRowLength(),
         null, 0, 0,
         null, 0, 0);
-  }
-
-  //Used only for testing purposes
-  static MatchCode checkColumn(ColumnTracker columnTracker, byte[] bytes, int offset,
-      int length, long ttl, byte type, boolean ignoreCount) throws IOException {
-    MatchCode matchCode = columnTracker.checkColumn(bytes, offset, length, type);
-    if (matchCode == MatchCode.INCLUDE) {
-      return columnTracker.checkVersions(bytes, offset, length, ttl, type, ignoreCount);
-    }
-    return matchCode;
   }
 
   /**
