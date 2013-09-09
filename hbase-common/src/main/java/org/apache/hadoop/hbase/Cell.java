@@ -58,7 +58,7 @@ import org.apache.hadoop.classification.InterfaceStability;
  * byte[]'s.
  * <p/>
  */
-@InterfaceAudience.Private
+@InterfaceAudience.Public
 @InterfaceStability.Evolving
 public interface Cell {
 
