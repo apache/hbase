@@ -59,6 +59,121 @@
     </section>
 
     <section xml:id="shell_tricks"><title>Shell Tricks</title>
+      <section xml:id="table_variables"><title>Table variables</title>
+
+	<para>
+	  HBase 0.95 adds shell commands that provide a jruby-style
+	  object-oriented references for tables.  Previously all of
+	  the shell commands that act upon a table have a procedural
+	  style that always took the name of the table as an
+	  argument. HBase 0.95 introduces the ability to assign a
+	  table to a jruby variable.  The table reference can be used
+	  to perform data read write operations such as puts, scans,
+	  and gets well as admin functionality such as disabling,
+	  dropping, describing tables.
+	</para>
+	
+	<para>
+	  For example, previously you would always specify a table name:
+	  <programlisting>
+hbase(main):000:0> create ‘t’, ‘f’
+0 row(s) in 1.0970 seconds
+hbase(main):001:0> put 't', 'rold', 'f', 'v'
+0 row(s) in 0.0080 seconds
+
+hbase(main):002:0> scan 't' 
+ROW                                COLUMN+CELL                                                                                      
+ rold                              column=f:, timestamp=1378473207660, value=v                                                      
+1 row(s) in 0.0130 seconds
+
+hbase(main):003:0> describe 't'
+DESCRIPTION                                                                           ENABLED                                       
+ 't', {NAME => 'f', DATA_BLOCK_ENCODING => 'NONE', BLOOMFILTER => 'ROW', REPLICATION_ true                                          
+ SCOPE => '0', VERSIONS => '1', COMPRESSION => 'NONE', MIN_VERSIONS => '0', TTL => '2                                               
+ 147483647', KEEP_DELETED_CELLS => 'false', BLOCKSIZE => '65536', IN_MEMORY => 'false                                               
+ ', ENCODE_ON_DISK => 'true', BLOCKCACHE => 'true'}                                                                                 
+1 row(s) in 1.4430 seconds
+
+hbase(main):004:0> disable 't'
+0 row(s) in 14.8700 seconds
+
+hbase(main):005:0> drop 't'
+0 row(s) in 23.1670 seconds
+
+hbase(main):006:0> 
+	  </programlisting>
+	</para>
+	
+	<para>
+	  Now you can assign the table to a variable and use the results in jruby shell code.
+	  <programlisting>
+hbase(main):007 > t = create 't', 'f'
+0 row(s) in 1.0970 seconds
+
+=> Hbase::Table - t
+hbase(main):008 > t.put 'r', 'f', 'v'
+0 row(s) in 0.0640 seconds
+hbase(main):009 > t.scan
+ROW                           COLUMN+CELL                                                                        
+ r                            column=f:, timestamp=1331865816290, value=v                                        
+1 row(s) in 0.0110 seconds
+hbase(main):010:0> t.describe
+DESCRIPTION                                                                           ENABLED                                       
+ 't', {NAME => 'f', DATA_BLOCK_ENCODING => 'NONE', BLOOMFILTER => 'ROW', REPLICATION_ true                                          
+ SCOPE => '0', VERSIONS => '1', COMPRESSION => 'NONE', MIN_VERSIONS => '0', TTL => '2                                               
+ 147483647', KEEP_DELETED_CELLS => 'false', BLOCKSIZE => '65536', IN_MEMORY => 'false                                               
+ ', ENCODE_ON_DISK => 'true', BLOCKCACHE => 'true'}                                                                                 
+1 row(s) in 0.0210 seconds
+hbase(main):038:0> t.disable
+0 row(s) in 6.2350 seconds
+hbase(main):039:0> t.drop
+0 row(s) in 0.2340 seconds
+	  </programlisting>
+	</para>
+
+	<para>
+	  If the table has already been created, you can assign a
+	  Table to a variable by using the get_table method:
+	  <programlisting>
+hbase(main):011 > create 't','f'
+0 row(s) in 1.2500 seconds
+
+=> Hbase::Table - t
+hbase(main):012:0> tab = get_table 't'
+0 row(s) in 0.0010 seconds
+
+=> Hbase::Table - t
+hbase(main):013:0> tab.put ‘r1’ ,’f’, ‘v’ 
+0 row(s) in 0.0100 seconds
+hbase(main):014:0> tab.scan
+ROW                                COLUMN+CELL                                                                                      
+ r1                                column=f:, timestamp=1378473876949, value=v                                                      
+1 row(s) in 0.0240 seconds
+hbase(main):015:0> 
+	  </programlisting>
+	</para>
+
+	<para>
+	  The list functionality has also been extended so that it
+	  returns a list of table names as strings.  You can then use
+	  jruby to script table operations based on these names.  The
+	  list_snapshots command also acts similarly.
+	  <programlisting>
+hbase(main):016 > tables = list(‘t.*’)
+TABLE                                                                                                                               
+t                                                                                                                                   
+1 row(s) in 0.1040 seconds
+
+=> #&lt;#&lt;Class:0x7677ce29>:0x21d377a4>
+hbase(main):017:0> tables.map { |t| disable t ; drop  t}
+0 row(s) in 2.2510 seconds
+
+=> [nil]
+hbase(main):018:0> 
+            </programlisting>
+          </para>
+        </section>
+
         <section><title><filename>irbrc</filename></title>
                 <para>Create an <filename>.irbrc</filename> file for yourself in your
                     home directory. Add customizations. A useful one is
