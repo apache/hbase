@@ -248,7 +248,7 @@ public class IntegrationTestLoadAndVerify  extends IntegrationTestBase  {
         throws IOException, InterruptedException {
       BytesWritable bwKey = new BytesWritable(key.get());
       BytesWritable bwVal = new BytesWritable();
-      for (Cell kv : value.list()) {
+      for (Cell kv : value.listCells()) {
         if (Bytes.compareTo(TEST_QUALIFIER, 0, TEST_QUALIFIER.length,
                             kv.getQualifierArray(), kv.getQualifierOffset(), kv.getQualifierLength()) == 0) {
           context.write(bwKey, EMPTY);

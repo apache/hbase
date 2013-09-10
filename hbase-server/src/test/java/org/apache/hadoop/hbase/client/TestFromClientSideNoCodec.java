@@ -86,7 +86,7 @@ public class TestFromClientSideNoCodec {
     ResultScanner scanner = ht.getScanner(new Scan());
     int count = 0;
     while ((r = scanner.next()) != null) {
-      assertTrue(r.list().size() == 3);
+      assertTrue(r.listCells().size() == 3);
       count++;
     }
     assertTrue(count == 1);

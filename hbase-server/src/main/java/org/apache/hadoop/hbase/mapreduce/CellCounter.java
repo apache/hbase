@@ -116,7 +116,7 @@ public class CellCounter {
         context.getCounter(Counters.ROWS).increment(1);
         context.write(new Text("Total ROWS"), new IntWritable(1));
 
-        for (Cell value : values.list()) {
+        for (Cell value : values.listCells()) {
           currentRowKey = Bytes.toStringBinary(CellUtil.getRowArray(value));
           String thisRowFamilyName = Bytes.toStringBinary(CellUtil.getFamilyArray(value));
           if (thisRowFamilyName != null &&

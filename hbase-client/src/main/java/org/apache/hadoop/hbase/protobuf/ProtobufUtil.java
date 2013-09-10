@@ -1026,7 +1026,7 @@ public final class ProtobufUtil {
    */
   public static ClientProtos.Result toResult(final Result result) {
     ClientProtos.Result.Builder builder = ClientProtos.Result.newBuilder();
-    Cell [] cells = result.raw();
+    Cell [] cells = result.rawCells();
     if (cells != null) {
       for (Cell c : cells) {
         builder.addCell(toCell(c));

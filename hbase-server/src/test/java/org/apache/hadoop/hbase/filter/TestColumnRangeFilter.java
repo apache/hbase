@@ -219,7 +219,7 @@ public class TestColumnRangeFilter {
 
       Result result;
       while ((result = scanner.next()) != null) {
-        for (Cell kv : result.list()) {
+        for (Cell kv : result.listCells()) {
           results.add(kv);
         }
       }

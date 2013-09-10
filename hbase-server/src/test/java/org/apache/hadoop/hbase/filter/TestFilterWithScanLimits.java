@@ -93,7 +93,7 @@ public class TestFilterWithScanLimits {
       // row2 => <f1:c5, 2_c5>
 
       for (Result result : scanner) {
-        for (Cell kv : result.list()) {
+        for (Cell kv : result.listCells()) {
           kv_number++;
           LOG.debug(kv_number + ". kv: " + kv);
         }

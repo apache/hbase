@@ -376,7 +376,7 @@ public class ClientScanner extends AbstractClientScanner {
           if (values != null && values.length > 0) {
             for (Result rs : values) {
               cache.add(rs);
-              for (Cell kv : rs.raw()) {
+              for (Cell kv : rs.rawCells()) {
                 // TODO make method in Cell or CellUtil
                 remainingResultSize -= KeyValueUtil.ensureKeyValue(kv).heapSize();
               }

@@ -427,9 +427,9 @@ public class TestHFileOutputFormat  {
       Scan scan = new Scan();
       ResultScanner results = table.getScanner(scan);
       for (Result res : results) {
-        assertEquals(FAMILIES.length, res.raw().length);
-        Cell first = res.raw()[0];
-        for (Cell kv : res.raw()) {
+        assertEquals(FAMILIES.length, res.rawCells().length);
+        Cell first = res.rawCells()[0];
+        for (Cell kv : res.rawCells()) {
           assertTrue(CellUtil.matchingRow(first, kv));
           assertTrue(Bytes.equals(CellUtil.getValueArray(first), CellUtil.getValueArray(kv)));
         }

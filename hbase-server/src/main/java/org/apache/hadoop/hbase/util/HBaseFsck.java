@@ -2569,8 +2569,8 @@ public class HBaseFsck extends Configured implements Tool {
       public boolean processRow(Result result) throws IOException {
         try {
 
-          // record the latest modification of this hbase:meta record
-          long ts =  Collections.max(result.list(), comp).getTimestamp();
+          // record the latest modification of this META record
+          long ts =  Collections.max(result.listCells(), comp).getTimestamp();
           Pair<HRegionInfo, ServerName> pair = HRegionInfo.getHRegionInfoAndServerName(result);
           if (pair == null || pair.getFirst() == null) {
             emptyRegionInfoQualifiers.add(result);

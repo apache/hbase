@@ -87,7 +87,7 @@ public class TestCopyTable {
       Get g = new Get(Bytes.toBytes("row" + i));
       Result r = t2.get(g);
       assertEquals(1, r.size());
-      assertTrue(CellUtil.matchingQualifier(r.raw()[0], COLUMN1));
+      assertTrue(CellUtil.matchingQualifier(r.rawCells()[0], COLUMN1));
     }
     
     t1.close();
@@ -131,7 +131,7 @@ public class TestCopyTable {
     Get g = new Get(ROW1);
     Result r = t2.get(g);
     assertEquals(1, r.size());
-    assertTrue(CellUtil.matchingQualifier(r.raw()[0], COLUMN1));
+    assertTrue(CellUtil.matchingQualifier(r.rawCells()[0], COLUMN1));
 
     g = new Get(ROW0);
     r = t2.get(g);

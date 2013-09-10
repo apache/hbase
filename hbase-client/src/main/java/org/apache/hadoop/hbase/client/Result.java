@@ -61,7 +61,7 @@ import org.apache.hadoop.hbase.util.Bytes;
  * A Result is backed by an array of {@link KeyValue} objects, each representing
  * an HBase cell defined by the row, family, qualifier, timestamp, and value.<p>
  *
- * The underlying {@link KeyValue} objects can be accessed through the method {@link #list()}.
+ * The underlying {@link KeyValue} objects can be accessed through the method {@link #listCells()}.
  * Each KeyValue can then be accessed through
  * {@link KeyValue#getRow()}, {@link KeyValue#getFamily()}, {@link KeyValue#getQualifier()},
  * {@link KeyValue#getTimestamp()}, and {@link KeyValue#getValue()}.<p>
@@ -85,7 +85,7 @@ public class Result implements CellScannable {
   public static final Result EMPTY_RESULT = new Result();
 
   /**
-   * Creates an empty Result w/ no KeyValue payload; returns null if you call {@link #raw()}.
+   * Creates an empty Result w/ no KeyValue payload; returns null if you call {@link #rawCells()}.
    * Use this to represent no results if <code>null</code> won't do or in old 'mapred' as oppposed to 'mapreduce' package
    * MapReduce where you need to overwrite a Result
    * instance with a {@link #copyFrom(Result)} call.
@@ -147,8 +147,27 @@ public class Result implements CellScannable {
    *
    * @return array of Cells; can be null if nothing in the result
    */
-  public Cell[] raw() {
+  public Cell[] rawCells() {
     return cells;
+  }
+
+  /**
+   * Return an cells of a Result as an array of KeyValues 
+   * 
+   * WARNING do not use, expensive.  This does an arraycopy of the cell[]'s value.
+   *
+   * Added to ease transition from  0.94 -> 0.96.
+   * 
+   * @deprecated as of 0.96, use {@link #rawCells()}  
+   * @return array of KeyValues, empty array if nothing in result.
+   */
+  @Deprecated
+  public KeyValue[] raw() {
+    KeyValue[] kvs = new KeyValue[cells.length];
+    for (int i = 0 ; i < kvs.length; i++) {
+      kvs[i] = KeyValueUtil.ensureKeyValue(cells[i]);
+    }
+    return kvs;
   }
 
   /**
@@ -156,11 +175,27 @@ public class Result implements CellScannable {
    *
    * Since HBase 0.20.5 this is equivalent to raw().
    *
-   * @return The sorted list of Cell's.
+   * @return sorted List of Cells; can be null if no cells in the result
    */
-  public List<Cell> list() {
-    return isEmpty()? null: Arrays.asList(raw());
+  public List<Cell> listCells() {
+    return isEmpty()? null: Arrays.asList(rawCells());
   }
+  
+  /**
+   * Return an cells of a Result as an array of KeyValues 
+   * 
+   * WARNING do not use, expensive.  This does  an arraycopy of the cell[]'s value.
+   *
+   * Added to ease transition from  0.94 -> 0.96.
+   * 
+   * @deprecated as of 0.96, use {@link #listCells()}  
+   * @return all sorted List of KeyValues; can be null if no cells in the result
+   */
+  @Deprecated
+  public List<KeyValue> list() {
+    return isEmpty() ? null : Arrays.asList(raw());
+  }
+
 
   /**
    * Return the Cells for the specific column.  The Cells are sorted in
@@ -180,7 +215,7 @@ public class Result implements CellScannable {
   public List<Cell> getColumn(byte [] family, byte [] qualifier) {
     List<Cell> result = new ArrayList<Cell>();
 
-    Cell [] kvs = raw();
+    Cell [] kvs = rawCells();
 
     if (kvs == null || kvs.length == 0) {
       return result;
@@ -275,7 +310,7 @@ public class Result implements CellScannable {
    * selected in the query (Get/Scan)
    */
   public Cell getColumnLatest(byte [] family, byte [] qualifier) {
-    Cell [] kvs = raw(); // side effect possibly.
+    Cell [] kvs = rawCells(); // side effect possibly.
     if (kvs == null || kvs.length == 0) {
       return null;
     }
@@ -306,7 +341,7 @@ public class Result implements CellScannable {
   public Cell getColumnLatest(byte [] family, int foffset, int flength,
       byte [] qualifier, int qoffset, int qlength) {
 
-    Cell [] kvs = raw(); // side effect possibly.
+    Cell [] kvs = rawCells(); // side effect possibly.
     if (kvs == null || kvs.length == 0) {
       return null;
     }
@@ -692,8 +727,8 @@ public class Result implements CellScannable {
       throw new Exception("This row doesn't have the same number of KVs: "
           + res1.toString() + " compared to " + res2.toString());
     }
-    Cell[] ourKVs = res1.raw();
-    Cell[] replicatedKVs = res2.raw();
+    Cell[] ourKVs = res1.rawCells();
+    Cell[] replicatedKVs = res2.rawCells();
     for (int i = 0; i < res1.size(); i++) {
       if (!ourKVs[i].equals(replicatedKVs[i]) ||
           !Bytes.equals(CellUtil.getValueArray(ourKVs[i]), CellUtil.getValueArray(replicatedKVs[i]))) {

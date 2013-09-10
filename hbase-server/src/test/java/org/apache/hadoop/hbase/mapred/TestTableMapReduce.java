@@ -213,7 +213,7 @@ public class TestTableMapReduce {
         byte[] firstValue = null;
         byte[] secondValue = null;
         int count = 0;
-         for(Cell kv : r.list()) {
+         for(Cell kv : r.listCells()) {
           if (count == 0) {
             firstValue = CellUtil.getValueArray(kv);
           }

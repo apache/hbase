@@ -154,7 +154,7 @@ public class IntegrationTestImportTsv implements Configurable, Tool {
       Iterator<KeyValue> expectedIt = simple_expected.iterator();
       while (resultsIt.hasNext() && expectedIt.hasNext()) {
         Result r = resultsIt.next();
-        for (Cell actual : r.raw()) {
+        for (Cell actual : r.rawCells()) {
           assertTrue(
             "Ran out of expected values prematurely!",
             expectedIt.hasNext());

@@ -3060,7 +3060,7 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
               if (!results.isEmpty()) {
                 for (Result r : results) {
                   if (maxScannerResultSize < Long.MAX_VALUE){
-                    for (Cell kv : r.raw()) {
+                    for (Cell kv : r.rawCells()) {
                       // TODO
                       currentScanResultSize += KeyValueUtil.ensureKeyValue(kv).heapSize();
                     }

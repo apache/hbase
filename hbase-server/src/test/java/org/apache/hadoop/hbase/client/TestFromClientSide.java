@@ -207,7 +207,7 @@ public class TestFromClientSide {
      s.setTimeRange(0, ts+3);
      s.setMaxVersions();
      ResultScanner scanner = h.getScanner(s);
-     Cell[] kvs = scanner.next().raw();
+     Cell[] kvs = scanner.next().rawCells();
      assertArrayEquals(T2, CellUtil.getValueArray(kvs[0]));
      assertArrayEquals(T1, CellUtil.getValueArray(kvs[1]));
      scanner.close();
@@ -216,7 +216,7 @@ public class TestFromClientSide {
      s.setRaw(true);
      s.setMaxVersions();
      scanner = h.getScanner(s);
-     kvs = scanner.next().raw();
+     kvs = scanner.next().rawCells();
      assertTrue(CellUtil.isDeleteFamily(kvs[0]));
      assertArrayEquals(T3, CellUtil.getValueArray(kvs[1]));
      assertTrue(CellUtil.isDelete(kvs[2]));
@@ -477,7 +477,7 @@ public class TestFromClientSide {
     while (scanner.hasNext()) {
       Result result = scanner.next();
       System.out.println("Got back key: " + Bytes.toString(result.getRow()));
-      for (Cell kv : result.raw()) {
+      for (Cell kv : result.rawCells()) {
         System.out.println("kv=" + kv.toString() + ", "
             + Bytes.toString(CellUtil.getValueArray(kv)));
       }
@@ -748,8 +748,8 @@ public class TestFromClientSide {
     int expectedIndex = 1;
     for(Result result : ht.getScanner(scan)) {
       assertEquals(result.size(), 1);
-      assertTrue(Bytes.equals(CellUtil.getRowArray(result.raw()[0]), ROWS[expectedIndex]));
-      assertTrue(Bytes.equals(CellUtil.getQualifierArray(result.raw()[0]),
+      assertTrue(Bytes.equals(CellUtil.getRowArray(result.rawCells()[0]), ROWS[expectedIndex]));
+      assertTrue(Bytes.equals(CellUtil.getQualifierArray(result.rawCells()[0]),
           QUALIFIERS[expectedIndex]));
       expectedIndex++;
     }
@@ -783,8 +783,8 @@ public class TestFromClientSide {
     int count = 0;
     for(Result result : ht.getScanner(scan)) {
       assertEquals(result.size(), 1);
-      assertEquals(result.raw()[0].getValueLength(), Bytes.SIZEOF_INT);
-      assertEquals(Bytes.toInt(CellUtil.getValueArray(result.raw()[0])), VALUE.length);
+      assertEquals(result.rawCells()[0].getValueLength(), Bytes.SIZEOF_INT);
+      assertEquals(Bytes.toInt(CellUtil.getValueArray(result.rawCells()[0])), VALUE.length);
       count++;
     }
     assertEquals(count, 10);
@@ -2135,15 +2135,15 @@ public class TestFromClientSide {
     result = scanner.next();
     assertTrue("Expected 1 key but received " + result.size(),
         result.size() == 1);
-    assertTrue(Bytes.equals(CellUtil.getRowArray(result.raw()[0]), ROWS[3]));
-    assertTrue(Bytes.equals(CellUtil.getValueArray(result.raw()[0]), VALUES[0]));
+    assertTrue(Bytes.equals(CellUtil.getRowArray(result.rawCells()[0]), ROWS[3]));
+    assertTrue(Bytes.equals(CellUtil.getValueArray(result.rawCells()[0]), VALUES[0]));
     result = scanner.next();
     assertTrue("Expected 2 keys but received " + result.size(),
         result.size() == 2);
-    assertTrue(Bytes.equals(CellUtil.getRowArray(result.raw()[0]), ROWS[4]));
-    assertTrue(Bytes.equals(CellUtil.getRowArray(result.raw()[1]), ROWS[4]));
-    assertTrue(Bytes.equals(CellUtil.getValueArray(result.raw()[0]), VALUES[1]));
-    assertTrue(Bytes.equals(CellUtil.getValueArray(result.raw()[1]), VALUES[2]));
+    assertTrue(Bytes.equals(CellUtil.getRowArray(result.rawCells()[0]), ROWS[4]));
+    assertTrue(Bytes.equals(CellUtil.getRowArray(result.rawCells()[1]), ROWS[4]));
+    assertTrue(Bytes.equals(CellUtil.getValueArray(result.rawCells()[0]), VALUES[1]));
+    assertTrue(Bytes.equals(CellUtil.getValueArray(result.rawCells()[1]), VALUES[2]));
     scanner.close();
 
     // Add test of bulk deleting.
@@ -2271,7 +2271,7 @@ public class TestFromClientSide {
     Get get = new Get(ROWS[numRows-1]);
     Result result = ht.get(get);
     assertNumKeys(result, numColsPerRow);
-    Cell [] keys = result.raw();
+    Cell [] keys = result.rawCells();
     for(int i=0;i<result.size();i++) {
       assertKey(keys[i], ROWS[numRows-1], FAMILY, QUALIFIERS[i], QUALIFIERS[i]);
     }
@@ -2282,7 +2282,7 @@ public class TestFromClientSide {
     int rowCount = 0;
     while((result = scanner.next()) != null) {
       assertNumKeys(result, numColsPerRow);
-      Cell [] kvs = result.raw();
+      Cell [] kvs = result.rawCells();
       for(int i=0;i<numColsPerRow;i++) {
         assertKey(kvs[i], ROWS[rowCount], FAMILY, QUALIFIERS[i], QUALIFIERS[i]);
       }
@@ -2300,7 +2300,7 @@ public class TestFromClientSide {
     get = new Get(ROWS[numRows-1]);
     result = ht.get(get);
     assertNumKeys(result, numColsPerRow);
-    keys = result.raw();
+    keys = result.rawCells();
     for(int i=0;i<result.size();i++) {
       assertKey(keys[i], ROWS[numRows-1], FAMILY, QUALIFIERS[i], QUALIFIERS[i]);
     }
@@ -2311,7 +2311,7 @@ public class TestFromClientSide {
     rowCount = 0;
     while((result = scanner.next()) != null) {
       assertNumKeys(result, numColsPerRow);
-      Cell [] kvs = result.raw();
+      Cell [] kvs = result.rawCells();
       for(int i=0;i<numColsPerRow;i++) {
         assertKey(kvs[i], ROWS[rowCount], FAMILY, QUALIFIERS[i], QUALIFIERS[i]);
       }
@@ -3133,7 +3133,7 @@ public class TestFromClientSide {
     assertTrue("Expected " + idxs.length + " keys but result contains "
         + result.size(), result.size() == idxs.length);
 
-    Cell [] keys = result.raw();
+    Cell [] keys = result.rawCells();
 
     for(int i=0;i<keys.length;i++) {
       byte [] family = families[idxs[i][0]];
@@ -3166,7 +3166,7 @@ public class TestFromClientSide {
     int expectedResults = end - start + 1;
     assertEquals(expectedResults, result.size());
 
-    Cell[] keys = result.raw();
+    Cell[] keys = result.rawCells();
 
     for (int i=0; i<keys.length; i++) {
       byte [] value = values[end-i];
@@ -3200,7 +3200,7 @@ public class TestFromClientSide {
         equals(row, result.getRow()));
     assertTrue("Expected two keys but result contains " + result.size(),
         result.size() == 2);
-    Cell [] kv = result.raw();
+    Cell [] kv = result.rawCells();
     Cell kvA = kv[0];
     assertTrue("(A) Expected family [" + Bytes.toString(familyA) + "] " +
         "Got family [" + Bytes.toString(CellUtil.getFamilyArray(kvA)) + "]",
@@ -3231,7 +3231,7 @@ public class TestFromClientSide {
         equals(row, result.getRow()));
     assertTrue("Expected a single key but result contains " + result.size(),
         result.size() == 1);
-    Cell kv = result.raw()[0];
+    Cell kv = result.rawCells()[0];
     assertTrue("Expected family [" + Bytes.toString(family) + "] " +
         "Got family [" + Bytes.toString(CellUtil.getFamilyArray(kv)) + "]",
         equals(family, CellUtil.getFamilyArray(kv)));
@@ -3251,7 +3251,7 @@ public class TestFromClientSide {
         equals(row, result.getRow()));
     assertTrue("Expected a single key but result contains " + result.size(),
         result.size() == 1);
-    Cell kv = result.raw()[0];
+    Cell kv = result.rawCells()[0];
     assertTrue("Expected family [" + Bytes.toString(family) + "] " +
         "Got family [" + Bytes.toString(CellUtil.getFamilyArray(kv)) + "]",
         equals(family, CellUtil.getFamilyArray(kv)));
@@ -3814,7 +3814,7 @@ public class TestFromClientSide {
     scan.addColumn(CONTENTS_FAMILY, null);
     ResultScanner scanner = table.getScanner(scan);
     for (Result r : scanner) {
-      for(Cell key : r.raw()) {
+      for(Cell key : r.rawCells()) {
         System.out.println(Bytes.toString(r.getRow()) + ": " + key.toString());
       }
     }
@@ -4016,7 +4016,7 @@ public class TestFromClientSide {
       int index = 0;
       Result r = null;
       while ((r = s.next()) != null) {
-        for(Cell key : r.raw()) {
+        for(Cell key : r.rawCells()) {
           times[index++] = key.getTimestamp();
         }
       }
@@ -4050,7 +4050,7 @@ public class TestFromClientSide {
       int index = 0;
       Result r = null;
       while ((r = s.next()) != null) {
-        for(Cell key : r.raw()) {
+        for(Cell key : r.rawCells()) {
           times[index++] = key.getTimestamp();
         }
       }
@@ -4177,7 +4177,7 @@ public class TestFromClientSide {
       for (Result r : s) {
         put = new Put(r.getRow());
         put.setDurability(Durability.SKIP_WAL);
-        for (Cell kv : r.raw()) {
+        for (Cell kv : r.rawCells()) {
           put.add(kv);
         }
         b.put(put);
@@ -4526,7 +4526,7 @@ public class TestFromClientSide {
 
     // Verify expected results
     Result r = ht.get(new Get(ROW));
-    Cell [] kvs = r.raw();
+    Cell [] kvs = r.rawCells();
     assertEquals(5, kvs.length);
     assertIncrementKey(kvs[0], ROW, FAMILY, QUALIFIERS[0], 1);
     assertIncrementKey(kvs[1], ROW, FAMILY, QUALIFIERS[1], 3);
@@ -4542,7 +4542,7 @@ public class TestFromClientSide {
     ht.increment(inc);
     // Verify
     r = ht.get(new Get(ROWS[0]));
-    kvs = r.raw();
+    kvs = r.rawCells();
     assertEquals(QUALIFIERS.length, kvs.length);
     for (int i=0;i<QUALIFIERS.length;i++) {
       assertIncrementKey(kvs[i], ROWS[0], FAMILY, QUALIFIERS[i], i+1);
@@ -4556,7 +4556,7 @@ public class TestFromClientSide {
     ht.increment(inc);
     // Verify
     r = ht.get(new Get(ROWS[0]));
-    kvs = r.raw();
+    kvs = r.rawCells();
     assertEquals(QUALIFIERS.length, kvs.length);
     for (int i=0;i<QUALIFIERS.length;i++) {
       assertIncrementKey(kvs[i], ROWS[0], FAMILY, QUALIFIERS[i], 2*(i+1));
@@ -5199,7 +5199,7 @@ public class TestFromClientSide {
     ResultScanner scanner = table.getScanner(s);
     int count = 0;
     for (Result r : scanner) {
-      assertEquals("Found an unexpected number of results for the row!", versions, r.list().size());
+      assertEquals("Found an unexpected number of results for the row!", versions, r.listCells().size());
       count++;
     }
     assertEquals("Found more than a single row when raw scanning the table with a single row!", 1,
@@ -5213,7 +5213,7 @@ public class TestFromClientSide {
     scanner = table.getScanner(s);
     count = 0;
     for (Result r : scanner) {
-      assertEquals("Found an unexpected number of results for the row!", versions, r.list().size());
+      assertEquals("Found an unexpected number of results for the row!", versions, r.listCells().size());
       count++;
     }
     assertEquals("Found more than a single row when raw scanning the table with a single row!", 1,
@@ -5227,7 +5227,7 @@ public class TestFromClientSide {
     scanner = table.getScanner(s);
     count = 0;
     for (Result r : scanner) {
-      assertEquals("Found an unexpected number of results for the row!", versions, r.list().size());
+      assertEquals("Found an unexpected number of results for the row!", versions, r.listCells().size());
       count++;
     }
     assertEquals("Found more than a single row when raw scanning the table with a single row!", 1,

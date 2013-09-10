@@ -160,7 +160,7 @@ public class TestBlocksRead extends HBaseTestCase {
         get.addColumn(cf, Bytes.toBytes(column));
       }
 
-      kvs = region.get(get).raw();
+      kvs = region.get(get).rawCells();
       long blocksEnd = getBlkAccessCount(cf);
       if (expBlocks[i] != -1) {
         assertEquals("Blocks Read Check for Bloom: " + bloomType, expBlocks[i],

@@ -100,6 +100,6 @@ public class TestWALPlayer {
     Get g = new Get(ROW);
     Result r = t2.get(g);
     assertEquals(1, r.size());
-    assertTrue(CellUtil.matchingQualifier(r.raw()[0], COLUMN2));
+    assertTrue(CellUtil.matchingQualifier(r.rawCells()[0], COLUMN2));
   }
 }

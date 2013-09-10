@@ -89,7 +89,7 @@ public class TestFilterWrapper {
       // row2 (c1-c4) and row3(c1-c4) are returned
       for (Result result : scanner) {
         row_number++;
-        for (Cell kv : result.list()) {
+        for (Cell kv : result.listCells()) {
           LOG.debug(kv_number + ". kv: " + kv);
           kv_number++;
           assertEquals("Returned row is not correct", new String(CellUtil.getRowArray(kv)),

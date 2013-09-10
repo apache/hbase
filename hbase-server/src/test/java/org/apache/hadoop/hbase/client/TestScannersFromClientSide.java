@@ -320,7 +320,7 @@ public class TestScannersFromClientSide {
     ResultScanner scanner = ht.getScanner(scan);
     kvListScan = new ArrayList<Cell>();
     while ((result = scanner.next()) != null) {
-      for (Cell kv : result.list()) {
+      for (Cell kv : result.listCells()) {
         kvListScan.add(kv);
       }
     }
@@ -434,7 +434,7 @@ public class TestScannersFromClientSide {
       return;
 
     int i = 0;
-    for (Cell kv : result.raw()) {
+    for (Cell kv : result.rawCells()) {
       if (i >= expKvList.size()) {
         break;  // we will check the size later
       }

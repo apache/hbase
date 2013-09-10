@@ -271,7 +271,7 @@ public class TestImportExport {
     s.setRaw(true);
     ResultScanner scanner = t.getScanner(s);
     Result r = scanner.next();
-    Cell[] res = r.raw();
+    Cell[] res = r.rawCells();
     assertTrue(CellUtil.isDeleteFamily(res[0]));
     assertEquals(now+4, res[1].getTimestamp());
     assertEquals(now+3, res[2].getTimestamp());

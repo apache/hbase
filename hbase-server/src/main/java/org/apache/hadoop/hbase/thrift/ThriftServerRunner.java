@@ -672,7 +672,7 @@ public class ThriftServerRunner implements Runnable {
           get.addColumn(family, qualifier);
         }
         Result result = table.get(get);
-        return ThriftUtilities.cellFromHBase(result.raw());
+        return ThriftUtilities.cellFromHBase(result.rawCells());
       } catch (IOException e) {
         LOG.warn(e.getMessage(), e);
         throw new IOError(e.getMessage());
@@ -704,7 +704,7 @@ public class ThriftServerRunner implements Runnable {
         get.addColumn(family, qualifier);
         get.setMaxVersions(numVersions);
         Result result = table.get(get);
-        return ThriftUtilities.cellFromHBase(result.raw());
+        return ThriftUtilities.cellFromHBase(result.rawCells());
       } catch (IOException e) {
         LOG.warn(e.getMessage(), e);
         throw new IOError(e.getMessage());
@@ -740,7 +740,7 @@ public class ThriftServerRunner implements Runnable {
         get.setTimeRange(0, timestamp);
         get.setMaxVersions(numVersions);
         Result result = table.get(get);
-        return ThriftUtilities.cellFromHBase(result.raw());
+        return ThriftUtilities.cellFromHBase(result.rawCells());
       } catch (IOException e) {
         LOG.warn(e.getMessage(), e);
         throw new IOError(e.getMessage());
@@ -1371,7 +1371,7 @@ public class ThriftServerRunner implements Runnable {
       try {
         HTable table = getTable(getBytes(tableName));
         Result result = table.getRowOrBefore(getBytes(row), getBytes(family));
-        return ThriftUtilities.cellFromHBase(result.raw());
+        return ThriftUtilities.cellFromHBase(result.rawCells());
       } catch (IOException e) {
         LOG.warn(e.getMessage(), e);
         throw new IOError(e.getMessage());

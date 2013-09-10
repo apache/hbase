@@ -184,8 +184,8 @@ public class TestMultiParallel {
     Assert.assertEquals(singleRes.size(), multiRes.length);
     for (int i = 0; i < singleRes.size(); i++) {
       Assert.assertTrue(singleRes.get(i).containsColumn(BYTES_FAMILY, QUALIFIER));
-      Cell[] singleKvs = singleRes.get(i).raw();
-      Cell[] multiKvs = multiRes[i].raw();
+      Cell[] singleKvs = singleRes.get(i).rawCells();
+      Cell[] multiKvs = multiRes[i].rawCells();
       for (int j = 0; j < singleKvs.length; j++) {
         Assert.assertEquals(singleKvs[j], multiKvs[j]);
         Assert.assertEquals(0, Bytes.compareTo(CellUtil.getValueArray(singleKvs[j]), 
@@ -587,7 +587,7 @@ public class TestMultiParallel {
     Result result = (Result)r1;
     Assert.assertTrue(result != null);
     Assert.assertTrue(result.getRow() == null);
-    Assert.assertEquals(0, result.raw().length);
+    Assert.assertEquals(0, result.rawCells().length);
   }
 
   private void validateSizeAndEmpty(Object[] results, int expectedSize) {
