@@ -99,16 +99,16 @@ public class RowResource extends ResourceBase {
       int count = 0;
       CellSetModel model = new CellSetModel();
       Cell value = generator.next();
-      byte[] rowKey = CellUtil.getRowArray(value);
+      byte[] rowKey = CellUtil.cloneRow(value);
       RowModel rowModel = new RowModel(rowKey);
       do {
-        if (!Bytes.equals(CellUtil.getRowArray(value), rowKey)) {
+        if (!Bytes.equals(CellUtil.cloneRow(value), rowKey)) {
           model.addRow(rowModel);
-          rowKey = CellUtil.getRowArray(value);
+          rowKey = CellUtil.cloneRow(value);
           rowModel = new RowModel(rowKey);
         }
-        rowModel.addCell(new CellModel(CellUtil.getFamilyArray(value), CellUtil.getQualifierArray(value),
-          value.getTimestamp(), CellUtil.getValueArray(value)));
+        rowModel.addCell(new CellModel(CellUtil.cloneFamily(value), CellUtil.cloneQualifier(value),
+          value.getTimestamp(), CellUtil.cloneValue(value)));
         if (++count > rowspec.getMaxValues()) {
           break;
         }
@@ -158,7 +158,7 @@ public class RowResource extends ResourceBase {
           .build();
       }
       Cell value = generator.next();
-      ResponseBuilder response = Response.ok(CellUtil.getValueArray(value));
+      ResponseBuilder response = Response.ok(CellUtil.cloneValue(value));
       response.header("X-Timestamp", value.getTimestamp());
       servlet.getMetrics().incrementSucessfulGetRequests(1);
       return response.build();

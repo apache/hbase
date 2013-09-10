@@ -407,20 +407,20 @@ public class TestMultipleTimestamps {
     String ctx = "rowIdx=" + rowIdx + "; colIdx=" + colIdx + "; ts=" + ts;
 
     assertEquals("Row mismatch which checking: " + ctx,
-        "row:"+ rowIdx, Bytes.toString(CellUtil.getRowArray(kv)));
+        "row:"+ rowIdx, Bytes.toString(CellUtil.cloneRow(kv)));
 
     assertEquals("ColumnFamily mismatch while checking: " + ctx,
-        Bytes.toString(cf), Bytes.toString(CellUtil.getFamilyArray(kv)));
+        Bytes.toString(cf), Bytes.toString(CellUtil.cloneFamily(kv)));
 
     assertEquals("Column qualifier mismatch while checking: " + ctx,
         "column:" + colIdx,
-        Bytes.toString(CellUtil.getQualifierArray(kv)));
+        Bytes.toString(CellUtil.cloneQualifier(kv)));
 
     assertEquals("Timestamp mismatch while checking: " + ctx,
         ts, kv.getTimestamp());
 
     assertEquals("Value mismatch while checking: " + ctx,
-        "value-version-" + ts, Bytes.toString(CellUtil.getValueArray(kv)));
+        "value-version-" + ts, Bytes.toString(CellUtil.cloneValue(kv)));
   }
 
   /**

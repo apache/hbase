@@ -188,8 +188,8 @@ public class TestMultiParallel {
       Cell[] multiKvs = multiRes[i].rawCells();
       for (int j = 0; j < singleKvs.length; j++) {
         Assert.assertEquals(singleKvs[j], multiKvs[j]);
-        Assert.assertEquals(0, Bytes.compareTo(CellUtil.getValueArray(singleKvs[j]), 
-            CellUtil.getValueArray(multiKvs[j])));
+        Assert.assertEquals(0, Bytes.compareTo(CellUtil.cloneValue(singleKvs[j]), 
+            CellUtil.cloneValue(multiKvs[j])));
       }
     }
     table.close();

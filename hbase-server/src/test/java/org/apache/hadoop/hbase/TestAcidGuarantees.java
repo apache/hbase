@@ -176,7 +176,7 @@ public class TestAcidGuarantees implements Tool {
       for (Cell kv : res.listCells()) {
         msg.append(kv.toString());
         msg.append(" val= ");
-        msg.append(Bytes.toStringBinary(CellUtil.getValueArray(kv)));
+        msg.append(Bytes.toStringBinary(CellUtil.cloneValue(kv)));
         msg.append("\n");
       }
       throw new RuntimeException(msg.toString());
@@ -233,7 +233,7 @@ public class TestAcidGuarantees implements Tool {
       for (Cell kv : res.listCells()) {
         msg.append(kv.toString());
         msg.append(" val= ");
-        msg.append(Bytes.toStringBinary(CellUtil.getValueArray(kv)));
+        msg.append(Bytes.toStringBinary(CellUtil.cloneValue(kv)));
         msg.append("\n");
       }
       throw new RuntimeException(msg.toString());

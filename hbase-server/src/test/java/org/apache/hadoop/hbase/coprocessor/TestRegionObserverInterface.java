@@ -347,7 +347,7 @@ public class TestRegionObserverInterface {
           do {
             hasMore = scanner.next(internalResults, limit);
             if (!internalResults.isEmpty()) {
-              long row = Bytes.toLong(CellUtil.getValueArray(internalResults.get(0)));
+              long row = Bytes.toLong(CellUtil.cloneValue(internalResults.get(0)));
               if (row % 2 == 0) {
                 // return this row
                 break;

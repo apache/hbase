@@ -144,7 +144,7 @@ public class TestCompaction extends HBaseTestCase {
     do {
       List<Cell> results = new ArrayList<Cell>();
       boolean result = s.next(results);
-      r.delete(new Delete(CellUtil.getRowArray(results.get(0))));
+      r.delete(new Delete(CellUtil.cloneRow(results.get(0))));
       if (!result) break;
     } while(true);
     s.close();

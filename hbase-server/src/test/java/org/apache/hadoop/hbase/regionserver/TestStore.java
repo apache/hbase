@@ -496,8 +496,8 @@ public class TestStore extends TestCase {
 
     assertTrue(ts1 > ts2);
 
-    assertEquals(newValue, Bytes.toLong(CellUtil.getValueArray(results.get(0))));
-    assertEquals(oldValue, Bytes.toLong(CellUtil.getValueArray(results.get(1))));
+    assertEquals(newValue, Bytes.toLong(CellUtil.cloneValue(results.get(0))));
+    assertEquals(oldValue, Bytes.toLong(CellUtil.cloneValue(results.get(1))));
   }
 
   @Override
@@ -611,8 +611,8 @@ public class TestStore extends TestCase {
     long ts2 = results.get(1).getTimestamp();
 
     assertTrue(ts1 > ts2);
-    assertEquals(newValue, Bytes.toLong(CellUtil.getValueArray(results.get(0))));
-    assertEquals(oldValue, Bytes.toLong(CellUtil.getValueArray(results.get(1))));
+    assertEquals(newValue, Bytes.toLong(CellUtil.cloneValue(results.get(0))));
+    assertEquals(oldValue, Bytes.toLong(CellUtil.cloneValue(results.get(1))));
 
     mee.setValue(2); // time goes up slightly
     newValue += 1;
@@ -625,8 +625,8 @@ public class TestStore extends TestCase {
     ts2 = results.get(1).getTimestamp();
 
     assertTrue(ts1 > ts2);
-    assertEquals(newValue, Bytes.toLong(CellUtil.getValueArray(results.get(0))));
-    assertEquals(oldValue, Bytes.toLong(CellUtil.getValueArray(results.get(1))));
+    assertEquals(newValue, Bytes.toLong(CellUtil.cloneValue(results.get(0))));
+    assertEquals(oldValue, Bytes.toLong(CellUtil.cloneValue(results.get(1))));
   }
 
   public void testHandleErrorsInFlush() throws Exception {

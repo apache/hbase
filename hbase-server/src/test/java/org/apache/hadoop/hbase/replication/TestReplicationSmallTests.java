@@ -140,9 +140,9 @@ public class TestReplicationSmallTests extends TestReplicationBase {
         LOG.info("Rows not available");
         Thread.sleep(SLEEP_TIME);
       } else {
-        assertArrayEquals(CellUtil.getValueArray(res.rawCells()[0]), v3);
-        assertArrayEquals(CellUtil.getValueArray(res.rawCells()[1]), v2);
-        assertArrayEquals(CellUtil.getValueArray(res.rawCells()[2]), v1);
+        assertArrayEquals(CellUtil.cloneValue(res.rawCells()[0]), v3);
+        assertArrayEquals(CellUtil.cloneValue(res.rawCells()[1]), v2);
+        assertArrayEquals(CellUtil.cloneValue(res.rawCells()[2]), v1);
         break;
       }
     }
@@ -162,8 +162,8 @@ public class TestReplicationSmallTests extends TestReplicationBase {
         LOG.info("Version not deleted");
         Thread.sleep(SLEEP_TIME);
       } else {
-        assertArrayEquals(CellUtil.getValueArray(res.rawCells()[0]), v3);
-        assertArrayEquals(CellUtil.getValueArray(res.rawCells()[1]), v2);
+        assertArrayEquals(CellUtil.cloneValue(res.rawCells()[0]), v3);
+        assertArrayEquals(CellUtil.cloneValue(res.rawCells()[1]), v2);
         break;
       }
     }
@@ -463,8 +463,8 @@ public class TestReplicationSmallTests extends TestReplicationBase {
     for (Result result : rs) {
       put = new Put(result.getRow());
       Cell firstVal = result.rawCells()[0];
-      put.add(CellUtil.getFamilyArray(firstVal),
-          CellUtil.getQualifierArray(firstVal), Bytes.toBytes("diff data"));
+      put.add(CellUtil.cloneFamily(firstVal),
+          CellUtil.cloneQualifier(firstVal), Bytes.toBytes("diff data"));
       htable2.put(put);
     }
     Delete delete = new Delete(put.getRow());

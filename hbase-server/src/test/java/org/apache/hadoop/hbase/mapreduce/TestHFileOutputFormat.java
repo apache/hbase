@@ -431,7 +431,7 @@ public class TestHFileOutputFormat  {
         Cell first = res.rawCells()[0];
         for (Cell kv : res.rawCells()) {
           assertTrue(CellUtil.matchingRow(first, kv));
-          assertTrue(Bytes.equals(CellUtil.getValueArray(first), CellUtil.getValueArray(kv)));
+          assertTrue(Bytes.equals(CellUtil.cloneValue(first), CellUtil.cloneValue(kv)));
         }
       }
       results.close();

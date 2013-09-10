@@ -122,7 +122,7 @@ public class Result implements CellScannable {
    */
   public byte [] getRow() {
     if (this.row == null) {
-      this.row = this.cells == null || this.cells.length == 0? null: CellUtil.getRowArray(this.cells[0]);
+      this.row = this.cells == null || this.cells.length == 0? null: CellUtil.cloneRow(this.cells[0]);
     }
     return this.row;
   }
@@ -241,7 +241,7 @@ public class Result implements CellScannable {
                              final byte [] family,
                              final byte [] qualifier) {
     Cell searchTerm =
-        KeyValue.createFirstOnRow(CellUtil.getRowArray(kvs[0]),
+        KeyValue.createFirstOnRow(CellUtil.cloneRow(kvs[0]),
             family, qualifier);
 
     // pos === ( -(insertion point) - 1)
@@ -367,7 +367,7 @@ public class Result implements CellScannable {
     if (kv == null) {
       return null;
     }
-    return CellUtil.getValueArray(kv);
+    return CellUtil.cloneValue(kv);
   }
 
   /**
@@ -572,7 +572,7 @@ public class Result implements CellScannable {
     }
     this.familyMap = new TreeMap<byte[], NavigableMap<byte[], NavigableMap<Long, byte[]>>>(Bytes.BYTES_COMPARATOR);
     for(Cell kv : this.cells) {
-      byte [] family = CellUtil.getFamilyArray(kv);
+      byte [] family = CellUtil.cloneFamily(kv);
       NavigableMap<byte[], NavigableMap<Long, byte[]>> columnMap =
         familyMap.get(family);
       if(columnMap == null) {
@@ -580,7 +580,7 @@ public class Result implements CellScannable {
           (Bytes.BYTES_COMPARATOR);
         familyMap.put(family, columnMap);
       }
-      byte [] qualifier = CellUtil.getQualifierArray(kv);
+      byte [] qualifier = CellUtil.cloneQualifier(kv);
       NavigableMap<Long, byte[]> versionMap = columnMap.get(qualifier);
       if(versionMap == null) {
         versionMap = new TreeMap<Long, byte[]>(new Comparator<Long>() {
@@ -591,7 +591,7 @@ public class Result implements CellScannable {
         columnMap.put(qualifier, versionMap);
       }
       Long timestamp = kv.getTimestamp();
-      byte [] value = CellUtil.getValueArray(kv);
+      byte [] value = CellUtil.cloneValue(kv);
 
       versionMap.put(timestamp, value);
     }
@@ -668,7 +668,7 @@ public class Result implements CellScannable {
     if (isEmpty()) {
       return null;
     }
-    return CellUtil.getValueArray(cells[0]);
+    return CellUtil.cloneValue(cells[0]);
   }
 
   /**
@@ -731,7 +731,7 @@ public class Result implements CellScannable {
     Cell[] replicatedKVs = res2.rawCells();
     for (int i = 0; i < res1.size(); i++) {
       if (!ourKVs[i].equals(replicatedKVs[i]) ||
-          !Bytes.equals(CellUtil.getValueArray(ourKVs[i]), CellUtil.getValueArray(replicatedKVs[i]))) {
+          !Bytes.equals(CellUtil.cloneValue(ourKVs[i]), CellUtil.cloneValue(replicatedKVs[i]))) {
         throw new Exception("This result was different: "
             + res1.toString() + " compared to " + res2.toString());
       }

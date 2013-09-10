@@ -197,11 +197,11 @@ public class TestTimeRangeMapRed {
     ResultScanner scanner = table.getScanner(scan);
     for (Result r: scanner) {
       for (Cell kv : r.listCells()) {
-        log.debug(Bytes.toString(r.getRow()) + "\t" + Bytes.toString(CellUtil.getFamilyArray(kv))
-            + "\t" + Bytes.toString(CellUtil.getQualifierArray(kv))
-            + "\t" + kv.getTimestamp() + "\t" + Bytes.toBoolean(CellUtil.getValueArray(kv)));
+        log.debug(Bytes.toString(r.getRow()) + "\t" + Bytes.toString(CellUtil.cloneFamily(kv))
+            + "\t" + Bytes.toString(CellUtil.cloneQualifier(kv))
+            + "\t" + kv.getTimestamp() + "\t" + Bytes.toBoolean(CellUtil.cloneValue(kv)));
         org.junit.Assert.assertEquals(TIMESTAMP.get(kv.getTimestamp()),
-          (Boolean)Bytes.toBoolean(CellUtil.getValueArray(kv)));
+          (Boolean)Bytes.toBoolean(CellUtil.cloneValue(kv)));
       }
     }
     scanner.close();

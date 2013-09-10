@@ -198,19 +198,19 @@ public class BulkDeleteEndpoint extends BulkDeleteService implements Coprocessor
       ts = timestamp;
     }
     // We just need the rowkey. Get it from 1st KV.
-    byte[] row = CellUtil.getRowArray(deleteRow.get(0));
+    byte[] row = CellUtil.cloneRow(deleteRow.get(0));
     Delete delete = new Delete(row, ts);
     if (deleteType == DeleteType.FAMILY) {
       Set<byte[]> families = new TreeSet<byte[]>(Bytes.BYTES_COMPARATOR);
       for (Cell kv : deleteRow) {
-        if (families.add(CellUtil.getFamilyArray(kv))) {
-          delete.deleteFamily(CellUtil.getFamilyArray(kv), ts);
+        if (families.add(CellUtil.cloneFamily(kv))) {
+          delete.deleteFamily(CellUtil.cloneFamily(kv), ts);
         }
       }
     } else if (deleteType == DeleteType.COLUMN) {
       Set<Column> columns = new HashSet<Column>();
       for (Cell kv : deleteRow) {
-        Column column = new Column(CellUtil.getFamilyArray(kv), CellUtil.getQualifierArray(kv));
+        Column column = new Column(CellUtil.cloneFamily(kv), CellUtil.cloneQualifier(kv));
         if (columns.add(column)) {
           // Making deleteColumns() calls more than once for the same cf:qualifier is not correct
           // Every call to deleteColumns() will add a new KV to the familymap which will finally
@@ -226,13 +226,13 @@ public class BulkDeleteEndpoint extends BulkDeleteService implements Coprocessor
       int noOfVersionsToDelete = 0;
       if (timestamp == null) {
         for (Cell kv : deleteRow) {
-          delete.deleteColumn(CellUtil.getFamilyArray(kv), CellUtil.getQualifierArray(kv), kv.getTimestamp());
+          delete.deleteColumn(CellUtil.cloneFamily(kv), CellUtil.cloneQualifier(kv), kv.getTimestamp());
           noOfVersionsToDelete++;
         }
       } else {
         Set<Column> columns = new HashSet<Column>();
         for (Cell kv : deleteRow) {
-          Column column = new Column(CellUtil.getFamilyArray(kv), CellUtil.getQualifierArray(kv));
+          Column column = new Column(CellUtil.cloneFamily(kv), CellUtil.cloneQualifier(kv));
           // Only one version of particular column getting deleted.
           if (columns.add(column)) {
             delete.deleteColumn(column.family, column.qualifier, ts);

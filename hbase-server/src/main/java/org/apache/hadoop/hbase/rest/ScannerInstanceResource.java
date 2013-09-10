@@ -117,10 +117,10 @@ public class ScannerInstanceResource extends ResourceBase {
         break;
       }
       if (rowKey == null) {
-        rowKey = CellUtil.getRowArray(value);
+        rowKey = CellUtil.cloneRow(value);
         rowModel = new RowModel(rowKey);
       }
-      if (!Bytes.equals(CellUtil.getRowArray(value), rowKey)) {
+      if (!Bytes.equals(CellUtil.cloneRow(value), rowKey)) {
         // if maxRows was given as a query param, stop if we would exceed the
         // specified number of rows
         if (maxRows > 0) { 
@@ -130,12 +130,12 @@ public class ScannerInstanceResource extends ResourceBase {
           }
         }
         model.addRow(rowModel);
-        rowKey = CellUtil.getRowArray(value);
+        rowKey = CellUtil.cloneRow(value);
         rowModel = new RowModel(rowKey);
       }
       rowModel.addCell(
-        new CellModel(CellUtil.getFamilyArray(value), CellUtil.getQualifierArray(value), 
-          value.getTimestamp(), CellUtil.getValueArray(value)));
+        new CellModel(CellUtil.cloneFamily(value), CellUtil.cloneQualifier(value), 
+          value.getTimestamp(), CellUtil.cloneValue(value)));
     } while (--count > 0);
     model.addRow(rowModel);
     ResponseBuilder response = Response.ok(model);
@@ -158,12 +158,12 @@ public class ScannerInstanceResource extends ResourceBase {
         LOG.info("generator exhausted");
         return Response.noContent().build();
       }
-      ResponseBuilder response = Response.ok(CellUtil.getValueArray(value));
+      ResponseBuilder response = Response.ok(CellUtil.cloneValue(value));
       response.cacheControl(cacheControl);
-      response.header("X-Row", Base64.encodeBytes(CellUtil.getRowArray(value)));      
+      response.header("X-Row", Base64.encodeBytes(CellUtil.cloneRow(value)));      
       response.header("X-Column", 
         Base64.encodeBytes(
-          KeyValue.makeColumn(CellUtil.getFamilyArray(value), CellUtil.getQualifierArray(value))));
+          KeyValue.makeColumn(CellUtil.cloneFamily(value), CellUtil.cloneQualifier(value))));
       response.header("X-Timestamp", value.getTimestamp());
       servlet.getMetrics().incrementSucessfulGetRequests(1);
       return response.build();

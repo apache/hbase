@@ -116,7 +116,7 @@ public class TestGetClosestAtOrBefore extends HBaseTestCase {
     try {
       List<Cell> keys = new ArrayList<Cell>();
       while (s.next(keys)) {
-        mr.delete(new Delete(CellUtil.getRowArray(keys.get(0))));
+        mr.delete(new Delete(CellUtil.cloneRow(keys.get(0))));
         keys.clear();
       }
     } finally {

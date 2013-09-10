@@ -339,11 +339,11 @@ public class TestKeepDeletes {
     scan.next(kvs);
     assertEquals(8, kvs.size());
     assertTrue(CellUtil.isDeleteFamily(kvs.get(0)));
-    assertArrayEquals(CellUtil.getValueArray(kvs.get(1)), T3);
+    assertArrayEquals(CellUtil.cloneValue(kvs.get(1)), T3);
     assertTrue(CellUtil.isDelete(kvs.get(2)));
     assertTrue(CellUtil.isDelete(kvs.get(3))); // .isDeleteType());
-    assertArrayEquals(CellUtil.getValueArray(kvs.get(4)), T2);
-    assertArrayEquals(CellUtil.getValueArray(kvs.get(5)), T1);
+    assertArrayEquals(CellUtil.cloneValue(kvs.get(4)), T2);
+    assertArrayEquals(CellUtil.cloneValue(kvs.get(5)), T1);
     // we have 3 CFs, so there are two more delete markers
     assertTrue(CellUtil.isDeleteFamily(kvs.get(6)));
     assertTrue(CellUtil.isDeleteFamily(kvs.get(7)));
@@ -369,7 +369,7 @@ public class TestKeepDeletes {
     scan.next(kvs);
     assertEquals(4, kvs.size());
     assertTrue(CellUtil.isDeleteFamily(kvs.get(0)));
-    assertArrayEquals(CellUtil.getValueArray(kvs.get(1)), T1);
+    assertArrayEquals(CellUtil.cloneValue(kvs.get(1)), T1);
     // we have 3 CFs
     assertTrue(CellUtil.isDeleteFamily(kvs.get(2)));
     assertTrue(CellUtil.isDeleteFamily(kvs.get(3)));
@@ -383,7 +383,7 @@ public class TestKeepDeletes {
     kvs = new ArrayList<Cell>();
     scan.next(kvs);
     assertEquals(2, kvs.size());
-    assertArrayEquals(CellUtil.getValueArray(kvs.get(0)), T3);
+    assertArrayEquals(CellUtil.cloneValue(kvs.get(0)), T3);
     assertTrue(CellUtil.isDelete(kvs.get(1)));
 
 
@@ -835,7 +835,7 @@ public class TestKeepDeletes {
     List<Cell> kvs = r.getColumn(fam, col);
     assertEquals(kvs.size(), vals.length);
     for (int i=0;i<vals.length;i++) {
-      assertArrayEquals(CellUtil.getValueArray(kvs.get(i)), vals[i]);
+      assertArrayEquals(CellUtil.cloneValue(kvs.get(i)), vals[i]);
     }
   }
 

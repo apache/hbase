@@ -187,22 +187,22 @@ public class PrefixTreeCell implements Cell, Comparable<Cell> {
   /* Deprecated methods pushed into the Cell interface */
   @Override
   public byte[] getValue() {
-    return CellUtil.getValueArray(this);
+    return CellUtil.cloneValue(this);
   }
 
   @Override
   public byte[] getFamily() {
-    return CellUtil.getFamilyArray(this);
+    return CellUtil.cloneFamily(this);
   }
 
   @Override
   public byte[] getQualifier() {
-    return CellUtil.getQualifierArray(this);
+    return CellUtil.cloneQualifier(this);
   }
 
   @Override
   public byte[] getRow() {
-    return CellUtil.getRowArray(this);
+    return CellUtil.cloneRow(this);
   }
 
   /************************* helper methods *************************/

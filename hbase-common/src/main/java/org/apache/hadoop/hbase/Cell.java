@@ -190,7 +190,7 @@ public interface Cell {
    *
    * Added to ease transition from  0.94 -> 0.96.
    * 
-   * @deprecated as of 0.96, use {@link CellUtil#getValueArray(Cell)}
+   * @deprecated as of 0.96, use {@link CellUtil#cloneValue(Cell)}
    */
   @Deprecated
   byte[] getValue();
@@ -200,7 +200,7 @@ public interface Cell {
    *
    * Added to ease transition from  0.94 -> 0.96.
    * 
-   * @deprecated as of 0.96, use {@link CellUtil#getFamilyArray(Cell)}
+   * @deprecated as of 0.96, use {@link CellUtil#cloneFamily(Cell)}
    */
   @Deprecated
   byte[] getFamily();
@@ -210,7 +210,7 @@ public interface Cell {
    *
    * Added to ease transition from  0.94 -> 0.96.
    * 
-   * @deprecated as of 0.96, use {@link CellUtil#getQualifierArray(Cell)}
+   * @deprecated as of 0.96, use {@link CellUtil#cloneQualifier(Cell)}
    */
   @Deprecated
   byte[] getQualifier();

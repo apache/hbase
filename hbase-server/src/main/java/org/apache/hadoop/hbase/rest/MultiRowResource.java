@@ -86,9 +86,9 @@ public class MultiRowResource extends ResourceBase {
         RowModel rowModel = new RowModel(rk);
 
         while ((value = generator.next()) != null) {
-          rowModel.addCell(new CellModel(CellUtil.getFamilyArray(value),
-              CellUtil.getQualifierArray(value),
-            value.getTimestamp(), CellUtil.getValueArray(value)));
+          rowModel.addCell(new CellModel(CellUtil.cloneFamily(value),
+              CellUtil.cloneQualifier(value),
+            value.getTimestamp(), CellUtil.cloneValue(value)));
         }
 
         model.addRow(rowModel);

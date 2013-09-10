@@ -215,10 +215,10 @@ public class TestTableMapReduce {
         int count = 0;
          for(Cell kv : r.listCells()) {
           if (count == 0) {
-            firstValue = CellUtil.getValueArray(kv);
+            firstValue = CellUtil.cloneValue(kv);
           }
           if (count == 1) {
-            secondValue = CellUtil.getValueArray(kv);;
+            secondValue = CellUtil.cloneValue(kv);;
           }
           count++;
           if (count == 2) {
