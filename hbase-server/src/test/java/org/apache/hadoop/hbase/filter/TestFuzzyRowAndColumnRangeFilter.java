@@ -164,8 +164,8 @@ public class TestFuzzyRowAndColumnRangeFilter {
     long timeBeforeScan = System.currentTimeMillis();
     while ((result = scanner.next()) != null) {
       for (Cell kv : result.listCells()) {
-        LOG.info("Got rk: " + Bytes.toStringBinary(CellUtil.getRowArray(kv)) + " cq: "
-                + Bytes.toStringBinary(CellUtil.getQualifierArray(kv)));
+        LOG.info("Got rk: " + Bytes.toStringBinary(CellUtil.cloneRow(kv)) + " cq: "
+                + Bytes.toStringBinary(CellUtil.cloneQualifier(kv)));
         results.add(kv);
       }
     }

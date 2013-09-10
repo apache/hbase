@@ -215,9 +215,9 @@ public class TestMultithreadedTableMapper {
         int count = 0;
         for(Cell kv : r.listCells()) {
           if (count == 0) {
-            firstValue = CellUtil.getValueArray(kv);
+            firstValue = CellUtil.cloneValue(kv);
           }else if (count == 1) {
-            secondValue = CellUtil.getValueArray(kv);
+            secondValue = CellUtil.cloneValue(kv);
           }else if (count == 2) {
             break;
           }

@@ -112,9 +112,9 @@ public class TestWideScanner extends HBaseTestCase {
 
         if (results.size() > 0) {
           // assert that all results are from the same row
-          byte[] row = CellUtil.getRowArray(results.get(0));
+          byte[] row = CellUtil.cloneRow(results.get(0));
           for (Cell kv: results) {
-            assertTrue(Bytes.equals(row, CellUtil.getRowArray(kv)));
+            assertTrue(Bytes.equals(row, CellUtil.cloneRow(kv)));
           }
         }
 

@@ -471,7 +471,7 @@ public class IntegrationTestBulkLoad extends IntegrationTestBase {
         long chainId = Bytes.toLong(entry.getKey());
         long next = Bytes.toLong(entry.getValue());
         Cell c = value.getColumn(SORT_FAM, entry.getKey()).get(0);
-        long order = Bytes.toLong(CellUtil.getValueArray(c));
+        long order = Bytes.toLong(CellUtil.cloneValue(c));
         context.write(new LinkKey(chainId, order), new LinkChain(longRk, next));
       }
     }

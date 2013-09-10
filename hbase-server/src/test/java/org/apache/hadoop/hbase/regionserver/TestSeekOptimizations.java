@@ -273,14 +273,14 @@ public class TestSeekOptimizations {
       }
 
       if (!qualSet.isEmpty() && (!CellUtil.matchingFamily(kv, FAMILY_BYTES)
-          || !qualSet.contains(Bytes.toString(CellUtil.getQualifierArray(kv))))) {
+          || !qualSet.contains(Bytes.toString(CellUtil.cloneQualifier(kv))))) {
         continue;
       }
 
       final String rowColStr =
-        Bytes.toStringBinary(CellUtil.getRowArray(kv)) + "/"
-            + Bytes.toStringBinary(CellUtil.getFamilyArray(kv)) + ":"
-            + Bytes.toStringBinary(CellUtil.getQualifierArray(kv));
+        Bytes.toStringBinary(CellUtil.cloneRow(kv)) + "/"
+            + Bytes.toStringBinary(CellUtil.cloneFamily(kv)) + ":"
+            + Bytes.toStringBinary(CellUtil.cloneQualifier(kv));
       final Integer curNumVer = verCount.get(rowColStr);
       final int newNumVer = curNumVer != null ? (curNumVer + 1) : 1;
       if (newNumVer <= maxVersions) {

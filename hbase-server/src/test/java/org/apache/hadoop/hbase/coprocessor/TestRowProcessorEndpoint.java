@@ -336,7 +336,7 @@ public class TestRowProcessorEndpoint {
         scan.addColumn(FAM, COUNTER);
         doScan(region, scan, kvs);
         counter = kvs.size() == 0 ? 0 :
-          Bytes.toInt(CellUtil.getValueArray(kvs.iterator().next()));
+          Bytes.toInt(CellUtil.cloneValue(kvs.iterator().next()));
 
         // Assert counter value
         assertEquals(expectedCounter, counter);
@@ -422,7 +422,7 @@ public class TestRowProcessorEndpoint {
         // Second scan to get friends of friends
         Scan scan = new Scan(row, row);
         for (Cell kv : kvs) {
-          byte[] friends = CellUtil.getValueArray(kv);
+          byte[] friends = CellUtil.cloneValue(kv);
           for (byte f : friends) {
             scan.addColumn(FAM, new byte[]{f});
           }
@@ -432,7 +432,7 @@ public class TestRowProcessorEndpoint {
         // Collect result
         result.clear();
         for (Cell kv : kvs) {
-          for (byte b : CellUtil.getValueArray(kv)) {
+          for (byte b : CellUtil.cloneValue(kv)) {
             result.add((char)b + "");
           }
         }
@@ -526,11 +526,11 @@ public class TestRowProcessorEndpoint {
           for (Cell kv : kvs.get(i)) {
             // Delete from the current row and add to the other row
             KeyValue kvDelete =
-                new KeyValue(rows[i], CellUtil.getFamilyArray(kv), CellUtil.getQualifierArray(kv), 
+                new KeyValue(rows[i], CellUtil.cloneFamily(kv), CellUtil.cloneQualifier(kv), 
                     kv.getTimestamp(), KeyValue.Type.Delete);
             KeyValue kvAdd =
-                new KeyValue(rows[1 - i], CellUtil.getFamilyArray(kv), CellUtil.getQualifierArray(kv),
-                    now, CellUtil.getValueArray(kv));
+                new KeyValue(rows[1 - i], CellUtil.cloneFamily(kv), CellUtil.cloneQualifier(kv),
+                    now, CellUtil.cloneValue(kv));
             mutations.add(kvDelete);
             walEdit.add(kvDelete);
             mutations.add(kvAdd);
@@ -636,8 +636,8 @@ public class TestRowProcessorEndpoint {
     out.append("[");
     if (kvs != null) {
       for (Cell kv : kvs) {
-        byte[] col = CellUtil.getQualifierArray(kv);
-        byte[] val = CellUtil.getValueArray(kv);
+        byte[] col = CellUtil.cloneQualifier(kv);
+        byte[] val = CellUtil.cloneValue(kv);
         if (Bytes.equals(col, COUNTER)) {
           out.append(Bytes.toStringBinary(col) + ":" +
                      Bytes.toInt(val) + " ");

@@ -161,7 +161,7 @@ public class Delete extends Mutation implements Comparable<Row> {
       throw new WrongRowIOException("The row in " + kv.toString() +
         " doesn't match the original one " +  Bytes.toStringBinary(this.row));
     }
-    byte [] family = CellUtil.getFamilyArray(kv);
+    byte [] family = CellUtil.cloneFamily(kv);
     List<Cell> list = familyMap.get(family);
     if (list == null) {
       list = new ArrayList<Cell>();

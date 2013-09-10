@@ -4896,7 +4896,7 @@ public class HRegion implements HeapSize { // , Writable{
             // found, otherwise add new column initialized to the increment amount
             int idx = 0;
             for (Cell kv: family.getValue()) {
-              long amount = Bytes.toLong(CellUtil.getValueArray(kv));
+              long amount = Bytes.toLong(CellUtil.cloneValue(kv));
               if (idx < results.size() && CellUtil.matchingQualifier(results.get(idx), kv)) {
                 Cell c = results.get(idx);
                 if(c.getValueLength() == Bytes.SIZEOF_LONG) {
@@ -4911,7 +4911,7 @@ public class HRegion implements HeapSize { // , Writable{
 
               // Append new incremented KeyValue to list
               KeyValue newKV =
-                new KeyValue(row, family.getKey(), CellUtil.getQualifierArray(kv), now, Bytes.toBytes(amount));
+                new KeyValue(row, family.getKey(), CellUtil.cloneQualifier(kv), now, Bytes.toBytes(amount));
               newKV.setMvccVersion(w.getWriteNumber());
               kvs.add(newKV);
 

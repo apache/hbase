@@ -376,7 +376,7 @@ public class AccessControlLists {
         byte[] entry = null;
         for (Cell kv : row) {
           if (entry == null) {
-            entry = CellUtil.getRowArray(kv);
+            entry = CellUtil.cloneRow(kv);
           }
           Pair<String,TablePermission> permissionsOfUserOnTable =
               parsePermissionRecord(entry, kv);
@@ -531,14 +531,14 @@ public class AccessControlLists {
   private static Pair<String, TablePermission> parsePermissionRecord(
       byte[] entryName, Cell kv) {
     // return X given a set of permissions encoded in the permissionRecord kv.
-    byte[] family = CellUtil.getFamilyArray(kv);
+    byte[] family = CellUtil.cloneFamily(kv);
 
     if (!Bytes.equals(family, ACL_LIST_FAMILY)) {
       return null;
     }
 
-    byte[] key = CellUtil.getQualifierArray(kv);
-    byte[] value = CellUtil.getValueArray(kv);
+    byte[] key = CellUtil.cloneQualifier(kv);
+    byte[] value = CellUtil.cloneValue(kv);
     if (LOG.isDebugEnabled()) {
       LOG.debug("Read acl: kv ["+
                 Bytes.toStringBinary(key)+": "+

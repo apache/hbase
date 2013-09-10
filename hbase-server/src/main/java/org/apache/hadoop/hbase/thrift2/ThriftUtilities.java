@@ -149,10 +149,10 @@ public class ThriftUtilities {
     List<TColumnValue> columnValues = new ArrayList<TColumnValue>();
     for (Cell kv : raw) {
       TColumnValue col = new TColumnValue();
-      col.setFamily(CellUtil.getFamilyArray(kv));
-      col.setQualifier(CellUtil.getQualifierArray(kv));
+      col.setFamily(CellUtil.cloneFamily(kv));
+      col.setQualifier(CellUtil.cloneQualifier(kv));
       col.setTimestamp(kv.getTimestamp());
-      col.setValue(CellUtil.getValueArray(kv));
+      col.setValue(CellUtil.cloneValue(kv));
       columnValues.add(col);
     }
     out.setColumnValues(columnValues);

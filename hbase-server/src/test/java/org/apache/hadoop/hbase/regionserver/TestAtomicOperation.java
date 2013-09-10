@@ -175,7 +175,7 @@ public class TestAtomicOperation {
     assertEquals(1, result.size());
 
     Cell kv = result.rawCells()[0];
-    long r = Bytes.toLong(CellUtil.getValueArray(kv));
+    long r = Bytes.toLong(CellUtil.cloneValue(kv));
     assertEquals(amount, r);
   }
 
@@ -546,7 +546,7 @@ public class TestAtomicOperation {
     List<Cell> results = new ArrayList<Cell>();
     scanner.next(results, 2);
     for (Cell keyValue : results) {
-      assertEquals("50",Bytes.toString(CellUtil.getValueArray(keyValue)));
+      assertEquals("50",Bytes.toString(CellUtil.cloneValue(keyValue)));
     }
 
   }

@@ -1185,7 +1185,7 @@ public class KeyValue implements Cell, HeapSize, Cloneable {
    */
   @Deprecated // use CellUtil.getValueArray()
   public byte [] getValue() {
-    return CellUtil.getValueArray(this);
+    return CellUtil.cloneValue(this);
   }
 
   /**
@@ -1198,7 +1198,7 @@ public class KeyValue implements Cell, HeapSize, Cloneable {
    */
   @Deprecated // use CellUtil.getRowArray()
   public byte [] getRow() {
-    return CellUtil.getRowArray(this);
+    return CellUtil.cloneRow(this);
   }
 
   /**
@@ -1286,7 +1286,7 @@ public class KeyValue implements Cell, HeapSize, Cloneable {
    */
   @Deprecated // use CellUtil.getFamilyArray
   public byte [] getFamily() {
-    return CellUtil.getFamilyArray(this);
+    return CellUtil.cloneFamily(this);
   }
 
   /**
@@ -1300,7 +1300,7 @@ public class KeyValue implements Cell, HeapSize, Cloneable {
    */
   @Deprecated // use CellUtil.getQualifierArray
   public byte [] getQualifier() {
-    return CellUtil.getQualifierArray(this);
+    return CellUtil.cloneQualifier(this);
   }
 
   //---------------------------------------------------------------------------

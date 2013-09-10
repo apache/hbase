@@ -117,11 +117,11 @@ implements TableMap<ImmutableBytesWritable,Result> {
     int numCols = columns.length;
     if (numCols > 0) {
       for (Cell value: r.listCells()) {
-        byte [] column = KeyValue.makeColumn(CellUtil.getFamilyArray(value),
-            CellUtil.getQualifierArray(value));
+        byte [] column = KeyValue.makeColumn(CellUtil.cloneFamily(value),
+            CellUtil.cloneQualifier(value));
         for (int i = 0; i < numCols; i++) {
           if (Bytes.equals(column, columns[i])) {
-            foundList.add(CellUtil.getValueArray(value));
+            foundList.add(CellUtil.cloneValue(value));
             break;
           }
         }

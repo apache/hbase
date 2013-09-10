@@ -103,7 +103,7 @@ public class ThriftUtilities {
   static public List<TCell> cellFromHBase(Cell in) {
     List<TCell> list = new ArrayList<TCell>(1);
     if (in != null) {
-      list.add(new TCell(ByteBuffer.wrap(CellUtil.getValueArray(in)), in.getTimestamp()));
+      list.add(new TCell(ByteBuffer.wrap(CellUtil.cloneValue(in)), in.getTimestamp()));
     }
     return list;
   }
@@ -119,7 +119,7 @@ public class ThriftUtilities {
     if (in != null) {
       list = new ArrayList<TCell>(in.length);
       for (int i = 0; i < in.length; i++) {
-        list.add(new TCell(ByteBuffer.wrap(CellUtil.getValueArray(in[i])), in[i].getTimestamp()));
+        list.add(new TCell(ByteBuffer.wrap(CellUtil.cloneValue(in[i])), in[i].getTimestamp()));
       }
     } else {
       list = new ArrayList<TCell>(0);
@@ -154,17 +154,17 @@ public class ThriftUtilities {
           result.sortedColumns = new ArrayList<TColumn>();
           for (Cell kv : result_.rawCells()) {
             result.sortedColumns.add(new TColumn(
-                ByteBuffer.wrap(KeyValue.makeColumn(CellUtil.getFamilyArray(kv),
-                    CellUtil.getQualifierArray(kv))),
-                new TCell(ByteBuffer.wrap(CellUtil.getValueArray(kv)), kv.getTimestamp())));
+                ByteBuffer.wrap(KeyValue.makeColumn(CellUtil.cloneFamily(kv),
+                    CellUtil.cloneQualifier(kv))),
+                new TCell(ByteBuffer.wrap(CellUtil.cloneValue(kv)), kv.getTimestamp())));
           }
         } else {
           result.columns = new TreeMap<ByteBuffer, TCell>();
           for (Cell kv : result_.rawCells()) {
             result.columns.put(
-                ByteBuffer.wrap(KeyValue.makeColumn(CellUtil.getFamilyArray(kv),
-                    CellUtil.getQualifierArray(kv))),
-                new TCell(ByteBuffer.wrap(CellUtil.getValueArray(kv)), kv.getTimestamp()));
+                ByteBuffer.wrap(KeyValue.makeColumn(CellUtil.cloneFamily(kv),
+                    CellUtil.cloneQualifier(kv))),
+                new TCell(ByteBuffer.wrap(CellUtil.cloneValue(kv)), kv.getTimestamp()));
           }
         }
       results.add(result);

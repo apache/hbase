@@ -158,7 +158,7 @@ public class TestScanner {
         }
         count++;
       }
-      assertTrue(Bytes.BYTES_COMPARATOR.compare(stoprow, CellUtil.getRowArray(kv)) > 0);
+      assertTrue(Bytes.BYTES_COMPARATOR.compare(stoprow, CellUtil.cloneRow(kv)) > 0);
       // We got something back.
       assertTrue(count > 10);
       s.close();
@@ -175,8 +175,8 @@ public class TestScanner {
     while (hasMore) {
       hasMore = s.next(results);
       for (Cell kv : results) {
-        assertEquals((byte)'a', CellUtil.getRowArray(kv)[0]);
-        assertEquals((byte)'b', CellUtil.getRowArray(kv)[1]);
+        assertEquals((byte)'a', CellUtil.cloneRow(kv)[0]);
+        assertEquals((byte)'b', CellUtil.cloneRow(kv)[1]);
       }
       results.clear();
     }
@@ -191,7 +191,7 @@ public class TestScanner {
     while (hasMore) {
       hasMore = s.next(results);
       for (Cell kv : results) {
-        assertTrue(Bytes.compareTo(CellUtil.getRowArray(kv), stopRow) <= 0);
+        assertTrue(Bytes.compareTo(CellUtil.cloneRow(kv), stopRow) <= 0);
       }
       results.clear();
     }
@@ -392,7 +392,7 @@ public class TestScanner {
         while (scanner.next(results)) {
           assertTrue(hasColumn(results, HConstants.CATALOG_FAMILY,
               HConstants.REGIONINFO_QUALIFIER));
-          byte [] val = CellUtil.getValueArray(getColumn(results, HConstants.CATALOG_FAMILY,
+          byte [] val = CellUtil.cloneValue(getColumn(results, HConstants.CATALOG_FAMILY,
               HConstants.REGIONINFO_QUALIFIER));
           validateRegionInfo(val);
           if(validateStartcode) {
@@ -409,7 +409,7 @@ public class TestScanner {
           if(serverName != null) {
             assertTrue(hasColumn(results, HConstants.CATALOG_FAMILY,
                 HConstants.SERVER_QUALIFIER));
-            val = CellUtil.getValueArray(getColumn(results, HConstants.CATALOG_FAMILY,
+            val = CellUtil.cloneValue(getColumn(results, HConstants.CATALOG_FAMILY,
                 HConstants.SERVER_QUALIFIER));
             assertNotNull(val);
             assertFalse(val.length == 0);

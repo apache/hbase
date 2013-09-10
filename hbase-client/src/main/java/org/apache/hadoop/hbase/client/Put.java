@@ -128,7 +128,7 @@ public class Put extends Mutation implements HeapSize, Comparable<Row> {
     List<Cell> list = getCellList(family);
     KeyValue kv = createPutKeyValue(family, qualifier, ts, value);
     list.add(kv);
-    familyMap.put(CellUtil.getFamilyArray(kv), list);
+    familyMap.put(CellUtil.cloneFamily(kv), list);
     return this;
   }
 
@@ -141,7 +141,7 @@ public class Put extends Mutation implements HeapSize, Comparable<Row> {
    * @throws java.io.IOException e
    */
   public Put add(Cell kv) throws IOException{
-    byte [] family = CellUtil.getFamilyArray(kv);
+    byte [] family = CellUtil.cloneFamily(kv);
     List<Cell> list = getCellList(family);
     //Checking that the row of the kv is the same as the put
     int res = Bytes.compareTo(this.row, 0, row.length,

@@ -34,7 +34,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 /**
  * Utility methods helpful slinging {@link Cell} instances.
  */
-@InterfaceAudience.Private
+@InterfaceAudience.Public
 @InterfaceStability.Evolving
 public final class CellUtil {
 
@@ -56,25 +56,25 @@ public final class CellUtil {
 
   /***************** get individual arrays for tests ************/
 
-  public static byte[] getRowArray(Cell cell){
+  public static byte[] cloneRow(Cell cell){
     byte[] output = new byte[cell.getRowLength()];
     copyRowTo(cell, output, 0);
     return output;
   }
 
-  public static byte[] getFamilyArray(Cell cell){
+  public static byte[] cloneFamily(Cell cell){
     byte[] output = new byte[cell.getFamilyLength()];
     copyFamilyTo(cell, output, 0);
     return output;
   }
 
-  public static byte[] getQualifierArray(Cell cell){
+  public static byte[] cloneQualifier(Cell cell){
     byte[] output = new byte[cell.getQualifierLength()];
     copyQualifierTo(cell, output, 0);
     return output;
   }
 
-  public static byte[] getValueArray(Cell cell){
+  public static byte[] cloneValue(Cell cell){
     byte[] output = new byte[cell.getValueLength()];
     copyValueTo(cell, output, 0);
     return output;

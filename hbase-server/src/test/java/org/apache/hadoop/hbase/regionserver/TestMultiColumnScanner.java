@@ -288,8 +288,8 @@ public class TestMultiColumnScanner {
   }
 
   private static String getRowQualStr(Cell kv) {
-    String rowStr = Bytes.toString(CellUtil.getRowArray(kv));
-    String qualStr = Bytes.toString(CellUtil.getQualifierArray(kv));
+    String rowStr = Bytes.toString(CellUtil.cloneRow(kv));
+    String qualStr = Bytes.toString(CellUtil.cloneQualifier(kv));
     return rowStr + "_" + qualStr;
   }
 

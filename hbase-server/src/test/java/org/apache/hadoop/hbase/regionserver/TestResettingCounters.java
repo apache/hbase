@@ -95,7 +95,7 @@ public class TestResettingCounters {
       for (int i=0;i<kvs.length;i++) {
         System.out.println(kvs[i].toString());
         assertTrue(CellUtil.matchingQualifier(kvs[i], qualifiers[i]));
-        assertEquals(6, Bytes.toLong(CellUtil.getValueArray(kvs[i])));
+        assertEquals(6, Bytes.toLong(CellUtil.cloneValue(kvs[i])));
       }
     } finally {
       HRegion.closeHRegion(region);

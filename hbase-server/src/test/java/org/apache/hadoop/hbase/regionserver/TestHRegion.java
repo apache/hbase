@@ -249,7 +249,7 @@ public class TestHRegion extends HBaseTestCase {
     List<Cell> results = new ArrayList<Cell>();
     scanner1.next(results);
     Cell keyValue = results.get(0);
-    Assert.assertTrue(Bytes.compareTo(CellUtil.getRowArray(keyValue), Bytes.toBytes("r2")) == 0);
+    Assert.assertTrue(Bytes.compareTo(CellUtil.cloneRow(keyValue), Bytes.toBytes("r2")) == 0);
     scanner1.close();
   }
 
@@ -296,7 +296,7 @@ public class TestHRegion extends HBaseTestCase {
       for (long i = minSeqId; i <= maxSeqId; i += 10) {
         List<Cell> kvs = result.getColumn(family, Bytes.toBytes(i));
         assertEquals(1, kvs.size());
-        assertEquals(Bytes.toBytes(i), CellUtil.getValueArray(kvs.get(0)));
+        assertEquals(Bytes.toBytes(i), CellUtil.cloneValue(kvs.get(0)));
       }
     } finally {
       HRegion.closeHRegion(this.region);
@@ -352,7 +352,7 @@ public class TestHRegion extends HBaseTestCase {
           assertEquals(0, kvs.size());
         } else {
           assertEquals(1, kvs.size());
-          assertEquals(Bytes.toBytes(i), CellUtil.getValueArray(kvs.get(0)));
+          assertEquals(Bytes.toBytes(i), CellUtil.cloneValue(kvs.get(0)));
         }
       }
     } finally {
@@ -678,7 +678,7 @@ public class TestHRegion extends HBaseTestCase {
         count++;
       else
         break;
-      Delete delete = new Delete(CellUtil.getRowArray(results.get(0)));
+      Delete delete = new Delete(CellUtil.cloneRow(results.get(0)));
       delete.deleteColumn(Bytes.toBytes("trans-tags"), Bytes.toBytes("qual2"));
       r.delete(delete);
       results.clear();
@@ -696,7 +696,7 @@ public class TestHRegion extends HBaseTestCase {
       if (results != null && !results.isEmpty()) numberOfResults++;
       else break;
       for (Cell kv: results) {
-        System.out.println("kv=" + kv.toString() + ", " + Bytes.toString(CellUtil.getValueArray(kv)));
+        System.out.println("kv=" + kv.toString() + ", " + Bytes.toString(CellUtil.cloneValue(kv)));
       }
       results.clear();
     } while(more);
@@ -1542,10 +1542,10 @@ public class TestHRegion extends HBaseTestCase {
       assertEquals(1, results.size());
       Cell kv = results.get(0);
 
-      assertByteEquals(value2, CellUtil.getValueArray(kv));
-      assertByteEquals(fam1, CellUtil.getFamilyArray(kv));
-      assertByteEquals(qual1, CellUtil.getQualifierArray(kv));
-      assertByteEquals(row, CellUtil.getRowArray(kv));
+      assertByteEquals(value2, CellUtil.cloneValue(kv));
+      assertByteEquals(fam1, CellUtil.cloneFamily(kv));
+      assertByteEquals(qual1, CellUtil.cloneQualifier(kv));
+      assertByteEquals(row, CellUtil.cloneRow(kv));
     } finally {
       HRegion.closeHRegion(this.region);
       this.region = null;
@@ -2367,7 +2367,7 @@ public class TestHRegion extends HBaseTestCase {
     assertEquals(1, result.size());
 
     Cell kv = result.rawCells()[0];
-    long r = Bytes.toLong(CellUtil.getValueArray(kv));
+    long r = Bytes.toLong(CellUtil.cloneValue(kv));
     assertEquals(amount, r);
   }
 
@@ -2382,7 +2382,7 @@ public class TestHRegion extends HBaseTestCase {
     assertEquals(1, result.size());
 
     Cell kv = result.rawCells()[0];
-    int r = Bytes.toInt(CellUtil.getValueArray(kv));
+    int r = Bytes.toInt(CellUtil.cloneValue(kv));
     assertEquals(amount, r);
   }
 
@@ -3128,16 +3128,16 @@ public class TestHRegion extends HBaseTestCase {
           Cell previousKV = null;
 
           for (Cell kv : result.rawCells()) {
-            byte[] thisValue = CellUtil.getValueArray(kv);
+            byte[] thisValue = CellUtil.cloneValue(kv);
             if (previousKV != null) {
-              if (Bytes.compareTo(CellUtil.getValueArray(previousKV), thisValue) != 0) {
+              if (Bytes.compareTo(CellUtil.cloneValue(previousKV), thisValue) != 0) {
                 LOG.warn("These two KV should have the same value." +
                     " Previous KV:" +
                     previousKV + "(memStoreTS:" + previousKV.getMvccVersion() + ")" +
                     ", New KV: " +
                     kv + "(memStoreTS:" + kv.getMvccVersion() + ")"
                     );
-                assertEquals(0, Bytes.compareTo(CellUtil.getValueArray(previousKV), thisValue));
+                assertEquals(0, Bytes.compareTo(CellUtil.cloneValue(previousKV), thisValue));
               }
             }
             previousKV = kv;
@@ -3742,7 +3742,7 @@ public class TestHRegion extends HBaseTestCase {
     res = this.region.get(get);
     kvs = res.getColumn(family, qualifier);
     assertEquals(1, kvs.size());
-    assertEquals(Bytes.toBytes("value0"), CellUtil.getValueArray(kvs.get(0)));
+    assertEquals(Bytes.toBytes("value0"), CellUtil.cloneValue(kvs.get(0)));
 
     region.flushcache();
     get = new Get(row);
@@ -3751,7 +3751,7 @@ public class TestHRegion extends HBaseTestCase {
     res = this.region.get(get);
     kvs = res.getColumn(family, qualifier);
     assertEquals(1, kvs.size());
-    assertEquals(Bytes.toBytes("value0"), CellUtil.getValueArray(kvs.get(0)));
+    assertEquals(Bytes.toBytes("value0"), CellUtil.cloneValue(kvs.get(0)));
 
     put = new Put(row);
     value = Bytes.toBytes("value1");
@@ -3763,7 +3763,7 @@ public class TestHRegion extends HBaseTestCase {
     res = this.region.get(get);
     kvs = res.getColumn(family, qualifier);
     assertEquals(1, kvs.size());
-    assertEquals(Bytes.toBytes("value1"), CellUtil.getValueArray(kvs.get(0)));
+    assertEquals(Bytes.toBytes("value1"), CellUtil.cloneValue(kvs.get(0)));
 
     region.flushcache();
     get = new Get(row);
@@ -3772,7 +3772,7 @@ public class TestHRegion extends HBaseTestCase {
     res = this.region.get(get);
     kvs = res.getColumn(family, qualifier);
     assertEquals(1, kvs.size());
-    assertEquals(Bytes.toBytes("value1"), CellUtil.getValueArray(kvs.get(0)));
+    assertEquals(Bytes.toBytes("value1"), CellUtil.cloneValue(kvs.get(0)));
   }
 
   @Test
@@ -3915,7 +3915,7 @@ public class TestHRegion extends HBaseTestCase {
     Get get = new Get(k).addFamily(family).setMaxVersions();
     Cell [] results = r.get(get).rawCells();
     for (int j = 0; j < results.length; j++) {
-      byte [] tmp = CellUtil.getValueArray(results[j]);
+      byte [] tmp = CellUtil.cloneValue(results[j]);
       // Row should be equal to value every time.
       assertTrue(Bytes.equals(k, tmp));
     }
@@ -3940,7 +3940,7 @@ public class TestHRegion extends HBaseTestCase {
       boolean first = true;
       OUTER_LOOP: while(s.next(curVals)) {
         for (Cell kv: curVals) {
-          byte [] val = CellUtil.getValueArray(kv);
+          byte [] val = CellUtil.cloneValue(kv);
           byte [] curval = val;
           if (first) {
             first = false;
@@ -4069,15 +4069,15 @@ public class TestHRegion extends HBaseTestCase {
                              int rowIdx, int colIdx, long ts) {
     String ctx = "rowIdx=" + rowIdx + "; colIdx=" + colIdx + "; ts=" + ts;
     assertEquals("Row mismatch which checking: " + ctx,
-                 "row:"+ rowIdx, Bytes.toString(CellUtil.getRowArray(kv)));
+                 "row:"+ rowIdx, Bytes.toString(CellUtil.cloneRow(kv)));
     assertEquals("ColumnFamily mismatch while checking: " + ctx,
-                 Bytes.toString(cf), Bytes.toString(CellUtil.getFamilyArray(kv)));
+                 Bytes.toString(cf), Bytes.toString(CellUtil.cloneFamily(kv)));
     assertEquals("Column qualifier mismatch while checking: " + ctx,
-                 "column:" + colIdx, Bytes.toString(CellUtil.getQualifierArray(kv)));
+                 "column:" + colIdx, Bytes.toString(CellUtil.cloneQualifier(kv)));
     assertEquals("Timestamp mismatch while checking: " + ctx,
                  ts, kv.getTimestamp());
     assertEquals("Value mismatch while checking: " + ctx,
-                 "value-version-" + ts, Bytes.toString(CellUtil.getValueArray(kv)));
+                 "value-version-" + ts, Bytes.toString(CellUtil.cloneValue(kv)));
   }
 }
 

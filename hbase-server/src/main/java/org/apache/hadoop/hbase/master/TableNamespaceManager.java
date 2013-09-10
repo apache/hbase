@@ -96,7 +96,7 @@ public class TableNamespaceManager {
     ResultScanner scanner = table.getScanner(HTableDescriptor.NAMESPACE_FAMILY_INFO_BYTES);
     try {
       for(Result result : scanner) {
-        byte[] val =  CellUtil.getValueArray(result.getColumnLatest(HTableDescriptor.NAMESPACE_FAMILY_INFO_BYTES,
+        byte[] val =  CellUtil.cloneValue(result.getColumnLatest(HTableDescriptor.NAMESPACE_FAMILY_INFO_BYTES,
             HTableDescriptor.NAMESPACE_COL_DESC_BYTES));
         NamespaceDescriptor ns =
             ProtobufUtil.toNamespaceDescriptor(
@@ -114,7 +114,7 @@ public class TableNamespaceManager {
     if (res.isEmpty()) {
       return null;
     }
-    byte[] val = CellUtil.getValueArray(res.getColumnLatest(HTableDescriptor.NAMESPACE_FAMILY_INFO_BYTES,
+    byte[] val = CellUtil.cloneValue(res.getColumnLatest(HTableDescriptor.NAMESPACE_FAMILY_INFO_BYTES,
         HTableDescriptor.NAMESPACE_COL_DESC_BYTES));
     return
         ProtobufUtil.toNamespaceDescriptor(
@@ -192,7 +192,7 @@ public class TableNamespaceManager {
     ResultScanner scanner = table.getScanner(HTableDescriptor.NAMESPACE_FAMILY_INFO_BYTES);
     try {
       for(Result r : scanner) {
-        byte[] val = CellUtil.getValueArray(r.getColumnLatest(HTableDescriptor.NAMESPACE_FAMILY_INFO_BYTES,
+        byte[] val = CellUtil.cloneValue(r.getColumnLatest(HTableDescriptor.NAMESPACE_FAMILY_INFO_BYTES,
           HTableDescriptor.NAMESPACE_COL_DESC_BYTES));
         ret.add(ProtobufUtil.toNamespaceDescriptor(
             HBaseProtos.NamespaceDescriptor.parseFrom(val)));

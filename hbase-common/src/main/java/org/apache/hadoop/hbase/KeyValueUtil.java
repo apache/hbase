@@ -189,8 +189,8 @@ public class KeyValueUtil {
    * @return previous key
    */
   public static KeyValue previousKey(final KeyValue in) {
-    return KeyValue.createFirstOnRow(CellUtil.getRowArray(in), CellUtil.getFamilyArray(in),
-      CellUtil.getQualifierArray(in), in.getTimestamp() - 1);
+    return KeyValue.createFirstOnRow(CellUtil.cloneRow(in), CellUtil.cloneFamily(in),
+      CellUtil.cloneQualifier(in), in.getTimestamp() - 1);
   }
 
   /*************** misc **********************************/

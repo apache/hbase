@@ -170,7 +170,7 @@ public class TestScanWithBloomError {
 
     List<Integer> actualIds = new ArrayList<Integer>();
     for (Cell kv : allResults) {
-      String qual = Bytes.toString(CellUtil.getQualifierArray(kv));
+      String qual = Bytes.toString(CellUtil.cloneQualifier(kv));
       assertTrue(qual.startsWith(QUALIFIER_PREFIX));
       actualIds.add(Integer.valueOf(qual.substring(
           QUALIFIER_PREFIX.length())));

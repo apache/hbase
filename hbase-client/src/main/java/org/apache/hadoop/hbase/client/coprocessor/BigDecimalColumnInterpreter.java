@@ -46,10 +46,10 @@ public class BigDecimalColumnInterpreter extends ColumnInterpreter<BigDecimal, B
   @Override
   public BigDecimal getValue(byte[] colFamily, byte[] colQualifier, Cell kv)
       throws IOException {
-    if (kv == null || CellUtil.getValueArray(kv) == null) {
+    if (kv == null || CellUtil.cloneValue(kv) == null) {
       return null;
     }
-    return Bytes.toBigDecimal(CellUtil.getValueArray(kv)).setScale(2, RoundingMode.HALF_EVEN);
+    return Bytes.toBigDecimal(CellUtil.cloneValue(kv)).setScale(2, RoundingMode.HALF_EVEN);
   }
 
   @Override

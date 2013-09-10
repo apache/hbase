@@ -267,7 +267,7 @@ public class Import {
   private static Cell convertKv(Cell kv, Map<byte[], byte[]> cfRenameMap) {
     if(cfRenameMap != null) {
       // If there's a rename mapping for this CF, create a new KeyValue
-      byte[] newCfName = cfRenameMap.get(CellUtil.getFamilyArray(kv));
+      byte[] newCfName = cfRenameMap.get(CellUtil.cloneFamily(kv));
       if(newCfName != null) {
           kv = new KeyValue(kv.getRowArray(), // row buffer 
                   kv.getRowOffset(),        // row offset
