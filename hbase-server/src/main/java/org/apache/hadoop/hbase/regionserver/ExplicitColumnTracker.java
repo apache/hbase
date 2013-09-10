@@ -18,6 +18,7 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.NavigableSet;
@@ -106,7 +107,7 @@ public class ExplicitColumnTracker implements ColumnTracker {
    */
   @Override
   public ScanQueryMatcher.MatchCode checkColumn(byte [] bytes, int offset,
-      int length, long timestamp, byte type, boolean ignoreCount) {
+      int length, byte type) {
     // delete markers should never be passed to an
     // *Explicit*ColumnTracker
     assert !KeyValue.isDelete(type);
@@ -125,34 +126,9 @@ public class ExplicitColumnTracker implements ColumnTracker {
       int ret = Bytes.compareTo(column.getBuffer(), column.getOffset(),
           column.getLength(), bytes, offset, length);
 
-      // Column Matches. If it is not a duplicate key, increment the version count
-      // and include.
+      // Column Matches. Return include code. The caller would call checkVersions
+      // to limit the number of versions.
       if(ret == 0) {
-        if (ignoreCount) return ScanQueryMatcher.MatchCode.INCLUDE;
-
-        //If column matches, check if it is a duplicate timestamp
-        if (sameAsPreviousTS(timestamp)) {
-          //If duplicate, skip this Key
-          return ScanQueryMatcher.MatchCode.SKIP;
-        }
-        int count = this.column.increment();
-        if(count >= maxVersions || (count >= minVersions && isExpired(timestamp))) {
-          // Done with versions for this column
-          ++this.index;
-          resetTS();
-          if (done()) {
-            // We have served all the requested columns.
-            this.column = null;
-            return ScanQueryMatcher.MatchCode.INCLUDE_AND_SEEK_NEXT_ROW;
-          } else {
-            // We are done with current column; advance to next column
-            // of interest.
-            this.column = this.columns.get(this.index);
-            return ScanQueryMatcher.MatchCode.INCLUDE_AND_SEEK_NEXT_COL;
-          }
-        } else {
-          setTS(timestamp);
-        }
         return ScanQueryMatcher.MatchCode.INCLUDE;
       }
 
@@ -178,6 +154,35 @@ public class ExplicitColumnTracker implements ColumnTracker {
         this.column = this.columns.get(this.index);
       }
     } while(true);
+  }
+
+  @Override
+  public ScanQueryMatcher.MatchCode checkVersions(byte[] bytes, int offset, int length,
+      long timestamp, byte type, boolean ignoreCount) throws IOException {
+    assert !KeyValue.isDelete(type);
+    if (ignoreCount) return ScanQueryMatcher.MatchCode.INCLUDE;
+    // Check if it is a duplicate timestamp
+    if (sameAsPreviousTS(timestamp)) {
+      // If duplicate, skip this Key
+      return ScanQueryMatcher.MatchCode.SKIP;
+    }
+    int count = this.column.increment();
+    if (count >= maxVersions || (count >= minVersions && isExpired(timestamp))) {
+      // Done with versions for this column
+      ++this.index;
+      resetTS();
+      if (done()) {
+        // We have served all the requested columns.
+        this.column = null;
+        return ScanQueryMatcher.MatchCode.INCLUDE_AND_SEEK_NEXT_ROW;
+      }
+      // We are done with current column; advance to next column
+      // of interest.
+      this.column = this.columns.get(this.index);
+      return ScanQueryMatcher.MatchCode.INCLUDE_AND_SEEK_NEXT_COL;
+    }
+    setTS(timestamp);
+    return ScanQueryMatcher.MatchCode.INCLUDE;
   }
 
   // Called between every row.

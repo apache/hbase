@@ -48,23 +48,44 @@ import org.apache.hadoop.hbase.regionserver.ScanQueryMatcher.MatchCode;
  */
 @InterfaceAudience.Private
 public interface ColumnTracker {
+
   /**
-   * Keeps track of the number of versions for the columns asked for
+   * Checks if the column is present in the list of requested columns by returning the match code
+   * instance. It does not check against the number of versions for the columns asked for. To do the
+   * version check, one has to call {@link #checkVersions(byte[], int, int, long, byte, boolean)}
+   * method based on the return type (INCLUDE) of this method. The values that can be returned by
+   * this method are {@link MatchCode#INCLUDE}, {@link MatchCode#SEEK_NEXT_COL} and
+   * {@link MatchCode#SEEK_NEXT_ROW}.
    * @param bytes
    * @param offset
    * @param length
-   * @param ttl The timeToLive to enforce.
    * @param type The type of the KeyValue
-   * @param ignoreCount indicates if the KV needs to be excluded while counting
-   *   (used during compactions. We only count KV's that are older than all the
-   *   scanners' read points.)
    * @return The match code instance.
-   * @throws IOException in case there is an internal consistency problem
-   *      caused by a data corruption.
+   * @throws IOException in case there is an internal consistency problem caused by a data
+   *           corruption.
    */
-  ScanQueryMatcher.MatchCode checkColumn(byte[] bytes, int offset,
-      int length, long ttl, byte type, boolean ignoreCount)
+  ScanQueryMatcher.MatchCode checkColumn(byte[] bytes, int offset, int length, byte type)
       throws IOException;
+
+  /**
+   * Keeps track of the number of versions for the columns asked for. It assumes that the user has
+   * already checked if the keyvalue needs to be included by calling the
+   * {@link #checkColumn(byte[], int, int, byte)} method. The enum values returned by this method
+   * are {@link MatchCode#SKIP}, {@link MatchCode#INCLUDE},
+   * {@link MatchCode#INCLUDE_AND_SEEK_NEXT_COL} and {@link MatchCode#INCLUDE_AND_SEEK_NEXT_ROW}.
+   * Implementations which include all the columns could just return {@link MatchCode#INCLUDE} in
+   * the {@link #checkColumn(byte[], int, int, byte)} method and perform all the operations in this
+   * checkVersions method.
+   * @param type the type of the key value (Put/Delete)
+   * @param ttl The timeToLive to enforce.
+   * @param ignoreCount indicates if the KV needs to be excluded while counting (used during
+   *          compactions. We only count KV's that are older than all the scanners' read points.)
+   * @return the scan query matcher match code instance
+   * @throws IOException in case there is an internal consistency problem caused by a data
+   *           corruption.
+   */
+  ScanQueryMatcher.MatchCode checkVersions(byte[] bytes, int offset, int length, long ttl,
+      byte type, boolean ignoreCount) throws IOException;
 
   /**
    * Resets the Matcher
