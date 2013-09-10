@@ -48,7 +48,7 @@
 -->
 <property>
   <name>hbase.rootdir</name>
-  <value>hdfs://localhost:9010/hbase-cluster</value>
+  <value>file:///tmp/hbase-cluster</value>
   <description>The directory shared by region servers.
   Should be fully-qualified to include the filesystem to use.
   E.g: hdfs://NAMENODE_SERVER:PORT/HBASE_ROOTDIR
