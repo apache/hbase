@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase.master.cleaner;
 
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.BaseConfigurable;
 
 /**
  * Base class for the hfile cleaning function inside the master. By default, only the
@@ -36,8 +35,7 @@ import org.apache.hadoop.hbase.BaseConfigurable;
  * provide a default constructor.
  */
 @InterfaceAudience.Private
-public abstract class BaseHFileCleanerDelegate extends BaseConfigurable implements
-    FileCleanerDelegate {
+public abstract class BaseHFileCleanerDelegate extends BaseFileCleanerDelegate {
 
   private boolean stopped = false;
 

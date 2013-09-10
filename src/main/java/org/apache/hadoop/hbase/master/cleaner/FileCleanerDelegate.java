@@ -31,9 +31,9 @@ import org.apache.hadoop.hbase.Stoppable;
 public interface FileCleanerDelegate extends Configurable, Stoppable {
 
   /**
-   * Should the master delete the file or keep it?
-   * @param fStat file status of the file to check
-   * @return <tt>true</tt> if the file is deletable, <tt>false</tt> if not
+   * Determines which of the given files are safe to delete
+   * @param files files to check for deletion
+   * @return files that are ok to delete according to this cleaner
    */
-  public boolean isFileDeletable(FileStatus file);
+  Iterable<FileStatus> getDeletableFiles(Iterable<FileStatus> files);
 }

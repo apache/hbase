@@ -56,22 +56,22 @@ public abstract class HBaseFileSystem {
 
   
   /**
-   * Deletes a file. Assumes the user has already checked for this directory existence.
+   * Deletes a file. Assumes the user has already checked for this file's existence.
    * @param fs
-   * @param dir
-   * @return true if the directory is deleted.
+   * @param file
+   * @return true if the file is deleted.
    * @throws IOException
    */
-  public static boolean deleteFileFromFileSystem(FileSystem fs, Path dir)
+  public static boolean deleteFileFromFileSystem(FileSystem fs, Path file)
       throws IOException {
     IOException lastIOE = null;
     int i = 0;
     do {
       try {
-        return fs.delete(dir, false);
+        return fs.delete(file, false);
       } catch (IOException ioe) {
         lastIOE = ioe;
-        if (!fs.exists(dir)) return true;
+        if (!fs.exists(file)) return true;
         // dir is there, retry deleting after some time.
         sleepBeforeRetry("Delete File", i + 1);
       }
@@ -81,7 +81,7 @@ public abstract class HBaseFileSystem {
   
   
   /**
-   * Deletes a directory. Assumes the user has already checked for this directory existence.
+   * Deletes a directory. Assumes the user has already checked for this directory's existence.
    * @param fs
    * @param dir
    * @return true if the directory is deleted.

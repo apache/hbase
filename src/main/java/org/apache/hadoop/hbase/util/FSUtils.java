@@ -56,7 +56,6 @@ import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.security.AccessControlException;
-import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.StringUtils;
 
@@ -1262,7 +1261,7 @@ public abstract class FSUtils {
    * @param fs file system
    * @param dir directory
    * @param filter path filter
-   * @return null if tabledir doesn't exist, otherwise FileStatus array
+   * @return null if dir is empty or doesn't exist, otherwise FileStatus array
    */
   public static FileStatus [] listStatus(final FileSystem fs,
       final Path dir, final PathFilter filter) throws IOException {
@@ -1285,7 +1284,7 @@ public abstract class FSUtils {
    *
    * @param fs file system
    * @param dir directory
-   * @return null if tabledir doesn't exist, otherwise FileStatus array
+   * @return null if dir is empty or doesn't exist, otherwise FileStatus array
    */
   public static FileStatus[] listStatus(final FileSystem fs, final Path dir) throws IOException {
     return listStatus(fs, dir, null);
