@@ -375,6 +375,7 @@ public class RegionStates {
       regionAssignments.remove(region);
     }
 
+    Set<HRegionInfo> regionsToOffline = new HashSet<HRegionInfo>();
     for (RegionState state : regionsInTransition.values()) {
       HRegionInfo hri = state.getRegion();
       if (assignedRegions.contains(hri)) {
@@ -387,7 +388,8 @@ public class RegionStates {
           try {
             // Delete the ZNode if exists
             ZKAssign.deleteNodeFailSilent(watcher, hri);
-            regionOffline(hri);
+            // Offline regions outside the loop to avoid ConcurrentModificationException
+            regionsToOffline.add(hri);
           } catch (KeeperException ke) {
             server.abort("Unexpected ZK exception deleting node " + hri, ke);
           }
@@ -406,6 +408,10 @@ public class RegionStates {
         }
       }
     }
+    for (HRegionInfo hri : regionsToOffline) {
+      regionOffline(hri);
+    }
+
     assignedRegions.clear();
     this.notifyAll();
     return rits;
