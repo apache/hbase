@@ -1019,6 +1019,7 @@ MasterServices, Server {
       // Region already assigned. We didn't assign it. Add to in-memory state.
       this.assignmentManager.regionOnline(HRegionInfo.FIRST_META_REGIONINFO,
         this.catalogTracker.getMetaLocation());
+      enableSSHandWaitForMeta();
     }
 
     enableMeta(TableName.META_TABLE_NAME);
