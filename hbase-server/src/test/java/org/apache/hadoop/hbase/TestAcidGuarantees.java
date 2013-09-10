@@ -173,7 +173,7 @@ public class TestAcidGuarantees implements Tool {
       msg.append("Failed after ").append(numVerified).append("!");
       msg.append("Expected=").append(Bytes.toStringBinary(expected));
       msg.append("Got:\n");
-      for (Cell kv : res.list()) {
+      for (Cell kv : res.listCells()) {
         msg.append(kv.toString());
         msg.append(" val= ");
         msg.append(Bytes.toStringBinary(CellUtil.getValueArray(kv)));
@@ -230,7 +230,7 @@ public class TestAcidGuarantees implements Tool {
       msg.append("Failed after ").append(numRowsScanned).append("!");
       msg.append("Expected=").append(Bytes.toStringBinary(expected));
       msg.append("Got:\n");
-      for (Cell kv : res.list()) {
+      for (Cell kv : res.listCells()) {
         msg.append(kv.toString());
         msg.append(" val= ");
         msg.append(Bytes.toStringBinary(CellUtil.getValueArray(kv)));

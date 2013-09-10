@@ -56,7 +56,7 @@ public class TestGroupingTableMapper {
         .toBytes("value1")));
     keyValue.add(new KeyValue(row, Bytes.toBytes("family1"), Bytes.toBytes("clm"), Bytes
         .toBytes("value2")));
-    when(result.list()).thenReturn(keyValue);
+    when(result.listCells()).thenReturn(keyValue);
     mapper.map(null, result, context);
     // template data
     byte[][] data = { Bytes.toBytes("value1"), Bytes.toBytes("value2") };

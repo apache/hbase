@@ -176,7 +176,7 @@ public class TestRegionObserverScannerOpenHook {
     Result r = region.get(get);
     assertNull(
       "Got an unexpected number of rows - no data should be returned with the NoDataFromScan coprocessor. Found: "
-          + r, r.list());
+          + r, r.listCells());
   }
 
   @Test
@@ -201,7 +201,7 @@ public class TestRegionObserverScannerOpenHook {
     Result r = region.get(get);
     assertNull(
       "Got an unexpected number of rows - no data should be returned with the NoDataFromScan coprocessor. Found: "
-          + r, r.list());
+          + r, r.listCells());
   }
 
   /**
@@ -262,13 +262,13 @@ public class TestRegionObserverScannerOpenHook {
     Result r = table.get(get);
     assertNull(
       "Got an unexpected number of rows - no data should be returned with the NoDataFromScan coprocessor. Found: "
-          + r, r.list());
+          + r, r.listCells());
 
     get = new Get(Bytes.toBytes("anotherrow"));
     r = table.get(get);
     assertNull(
       "Got an unexpected number of rows - no data should be returned with the NoDataFromScan coprocessor Found: "
-          + r, r.list());
+          + r, r.listCells());
 
     table.close();
     UTIL.shutdownMiniCluster();

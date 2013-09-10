@@ -166,7 +166,7 @@ public class TestRowProcessorEndpoint {
     Set<String> expected =
       new HashSet<String>(Arrays.asList(new String[]{"d", "e", "f", "g"}));
     Get get = new Get(ROW);
-    LOG.debug("row keyvalues:" + stringifyKvs(table.get(get).list()));
+    LOG.debug("row keyvalues:" + stringifyKvs(table.get(get).listCells()));
     assertEquals(expected, result);
   }
 
@@ -177,7 +177,7 @@ public class TestRowProcessorEndpoint {
     int numThreads = 1000;
     concurrentExec(new IncrementRunner(), numThreads);
     Get get = new Get(ROW);
-    LOG.debug("row keyvalues:" + stringifyKvs(table.get(get).list()));
+    LOG.debug("row keyvalues:" + stringifyKvs(table.get(get).listCells()));
     int finalCounter = incrementCounter(table);
     assertEquals(numThreads + 1, finalCounter);
     assertEquals(0, failures.get());
@@ -238,11 +238,11 @@ public class TestRowProcessorEndpoint {
     int numThreads = 1000;
     concurrentExec(new SwapRowsRunner(), numThreads);
     LOG.debug("row keyvalues:" +
-              stringifyKvs(table.get(new Get(ROW)).list()));
+              stringifyKvs(table.get(new Get(ROW)).listCells()));
     LOG.debug("row2 keyvalues:" +
-              stringifyKvs(table.get(new Get(ROW2)).list()));
-    assertEquals(rowSize, table.get(new Get(ROW)).list().size());
-    assertEquals(row2Size, table.get(new Get(ROW2)).list().size());
+              stringifyKvs(table.get(new Get(ROW2)).listCells()));
+    assertEquals(rowSize, table.get(new Get(ROW)).listCells().size());
+    assertEquals(row2Size, table.get(new Get(ROW2)).listCells().size());
     assertEquals(0, failures.get());
   }
 

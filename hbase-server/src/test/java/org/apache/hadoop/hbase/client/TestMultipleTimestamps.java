@@ -107,11 +107,11 @@ public class TestMultipleTimestamps {
 
     Cell [] kvs;
 
-    kvs = scanner.next().raw();
+    kvs = scanner.next().rawCells();
     assertEquals(2, kvs.length);
     checkOneCell(kvs[0], FAMILY, 3, 3, 4);
     checkOneCell(kvs[1], FAMILY, 3, 3, 3);
-    kvs = scanner.next().raw();
+    kvs = scanner.next().rawCells();
     assertEquals(2, kvs.length);
     checkOneCell(kvs[0], FAMILY, 5, 3, 4);
     checkOneCell(kvs[1], FAMILY, 5, 3, 3);
@@ -149,10 +149,10 @@ public class TestMultipleTimestamps {
 
     Cell[] kvs;
 
-    kvs = scanner.next().raw();
+    kvs = scanner.next().rawCells();
     assertEquals(1, kvs.length);
     checkOneCell(kvs[0], FAMILY, 3, 3, 3);
-    kvs = scanner.next().raw();
+    kvs = scanner.next().rawCells();
     assertEquals(1, kvs.length);
     checkOneCell(kvs[0], FAMILY, 5, 3, 3);
 
@@ -198,13 +198,13 @@ public class TestMultipleTimestamps {
 
     // This looks like wrong answer.  Should be 2.  Even then we are returning wrong result,
     // timestamps that are 3 whereas should be 2 since min is inclusive.
-    kvs = scanner.next().raw();
+    kvs = scanner.next().rawCells();
     assertEquals(4, kvs.length);
     checkOneCell(kvs[0], FAMILY, 5, 3, 3);
     checkOneCell(kvs[1], FAMILY, 5, 3, 2);
     checkOneCell(kvs[2], FAMILY, 5, 5, 3);
     checkOneCell(kvs[3], FAMILY, 5, 5, 2);
-    kvs = scanner.next().raw();
+    kvs = scanner.next().rawCells();
     assertEquals(4, kvs.length);
     checkOneCell(kvs[0], FAMILY, 7, 3, 3);
     checkOneCell(kvs[1], FAMILY, 7, 3, 2);
@@ -254,20 +254,20 @@ public class TestMultipleTimestamps {
 
     Cell[] kvs;
 
-    kvs = scanner.next().raw();
+    kvs = scanner.next().rawCells();
     assertEquals(2, kvs.length);
     checkOneCell(kvs[0], FAMILY, 3, 3, 4);
     checkOneCell(kvs[1], FAMILY, 3, 5, 2);
 
-    kvs = scanner.next().raw();
+    kvs = scanner.next().rawCells();
     assertEquals(1, kvs.length);
     checkOneCell(kvs[0], FAMILY, 5, 3, 4);
 
-    kvs = scanner.next().raw();
+    kvs = scanner.next().rawCells();
     assertEquals(1, kvs.length);
     checkOneCell(kvs[0], FAMILY, 6, 3, 4);
 
-    kvs = scanner.next().raw();
+    kvs = scanner.next().rawCells();
     assertEquals(1, kvs.length);
     checkOneCell(kvs[0], FAMILY, 7, 3, 4);
 
@@ -439,7 +439,7 @@ public class TestMultipleTimestamps {
     get.setTimeRange(Collections.min(versions), Collections.max(versions)+1);
     Result result = ht.get(get);
 
-    return result.raw();
+    return result.rawCells();
   }
 
   private  ResultScanner scan(HTable ht, byte[] cf,

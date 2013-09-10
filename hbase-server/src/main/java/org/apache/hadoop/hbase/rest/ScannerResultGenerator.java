@@ -149,7 +149,7 @@ public class ScannerResultGenerator extends ResultGenerator {
         }
       }
       if (cached != null) {
-        rowI = cached.list().iterator();
+        rowI = cached.listCells().iterator();
         loop = true;
         cached = null;
       } else {
@@ -162,7 +162,7 @@ public class ScannerResultGenerator extends ResultGenerator {
           LOG.error(StringUtils.stringifyException(e));
         }
         if (result != null && !result.isEmpty()) {
-          rowI = result.list().iterator();
+          rowI = result.listCells().iterator();
           loop = true;
         }
       }

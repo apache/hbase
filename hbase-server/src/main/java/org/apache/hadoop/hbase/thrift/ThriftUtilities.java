@@ -152,7 +152,7 @@ public class ThriftUtilities {
         result.row = ByteBuffer.wrap(result_.getRow());
         if (sortColumns) {
           result.sortedColumns = new ArrayList<TColumn>();
-          for (Cell kv : result_.raw()) {
+          for (Cell kv : result_.rawCells()) {
             result.sortedColumns.add(new TColumn(
                 ByteBuffer.wrap(KeyValue.makeColumn(CellUtil.getFamilyArray(kv),
                     CellUtil.getQualifierArray(kv))),
@@ -160,7 +160,7 @@ public class ThriftUtilities {
           }
         } else {
           result.columns = new TreeMap<ByteBuffer, TCell>();
-          for (Cell kv : result_.raw()) {
+          for (Cell kv : result_.rawCells()) {
             result.columns.put(
                 ByteBuffer.wrap(KeyValue.makeColumn(CellUtil.getFamilyArray(kv),
                     CellUtil.getQualifierArray(kv))),

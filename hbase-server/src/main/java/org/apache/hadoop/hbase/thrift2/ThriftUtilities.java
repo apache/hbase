@@ -140,7 +140,7 @@ public class ThriftUtilities {
    * @return converted result, returns an empty result if the input is <code>null</code>
    */
   public static TResult resultFromHBase(Result in) {
-    Cell[] raw = in.raw();
+    Cell[] raw = in.rawCells();
     TResult out = new TResult();
     byte[] row = in.getRow();
     if (row != null) {

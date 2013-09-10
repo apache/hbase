@@ -64,7 +64,7 @@ public class RowResultGenerator extends ResultGenerator {
       }
       Result result = table.get(get);
       if (result != null && !result.isEmpty()) {
-        valuesI = result.list().iterator();
+        valuesI = result.listCells().iterator();
       }
     } catch (DoNotRetryIOException e) {
       // Warn here because Stargate will return 404 in the case if multiple

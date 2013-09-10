@@ -149,7 +149,7 @@ public class TestTimestampsFilter {
                                      Arrays.asList(6L, 106L, 306L));
     assertEquals("# of rows returned from scan", 5, results.length);
     for (int rowIdx = 0; rowIdx < 5; rowIdx++) {
-      kvs = results[rowIdx].raw();
+      kvs = results[rowIdx].rawCells();
       // each row should have 5 columns.
       // And we have requested 3 versions for each.
       assertEquals("Number of KeyValues in result for row:" + rowIdx,
@@ -196,15 +196,15 @@ public class TestTimestampsFilter {
     g.addColumn(FAMILY, Bytes.toBytes("column4"));
 
     Result result = ht.get(g);
-    for (Cell kv : result.list()) {
+    for (Cell kv : result.listCells()) {
       System.out.println("found row " + Bytes.toString(CellUtil.getRowArray(kv)) +
           ", column " + Bytes.toString(CellUtil.getQualifierArray(kv)) + ", value "
           + Bytes.toString(CellUtil.getValueArray(kv)));
     }
 
-    assertEquals(result.list().size(), 2);
-    assertTrue(CellUtil.matchingValue(result.list().get(0), Bytes.toBytes("value2-3")));
-    assertTrue(CellUtil.matchingValue(result.list().get(1), Bytes.toBytes("value4-3")));
+    assertEquals(result.listCells().size(), 2);
+    assertTrue(CellUtil.matchingValue(result.listCells().get(0), Bytes.toBytes("value2-3")));
+    assertTrue(CellUtil.matchingValue(result.listCells().get(1), Bytes.toBytes("value4-3")));
 
     ht.close();
   }
@@ -325,7 +325,7 @@ public class TestTimestampsFilter {
     get.setMaxVersions();
     Result result = ht.get(get);
 
-    return result.raw();
+    return result.rawCells();
   }
 
   /**

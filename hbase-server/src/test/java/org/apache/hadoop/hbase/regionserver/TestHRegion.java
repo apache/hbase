@@ -1066,7 +1066,7 @@ public class TestHRegion extends HBaseTestCase {
 
       Get get = new Get(row1);
       get.addColumn(fam2, qf1);
-      Cell [] actual = region.get(get).raw();
+      Cell [] actual = region.get(get).rawCells();
 
       Cell [] expected = {kv};
 
@@ -1386,7 +1386,7 @@ public class TestHRegion extends HBaseTestCase {
       Get get = new Get(row).addColumn(fam, qual);
       Result result = region.get(get);
       assertEquals(1, result.size());
-      Cell kv = result.raw()[0];
+      Cell kv = result.rawCells()[0];
       LOG.info("Got: " + kv);
       assertTrue("LATEST_TIMESTAMP was not replaced with real timestamp",
           kv.getTimestamp() != HConstants.LATEST_TIMESTAMP);
@@ -1402,7 +1402,7 @@ public class TestHRegion extends HBaseTestCase {
       get = new Get(row).addColumn(fam, qual);
       result = region.get(get);
       assertEquals(1, result.size());
-      kv = result.raw()[0];
+      kv = result.rawCells()[0];
       LOG.info("Got: " + kv);
       assertTrue("LATEST_TIMESTAMP was not replaced with real timestamp",
           kv.getTimestamp() != HConstants.LATEST_TIMESTAMP);
@@ -1656,9 +1656,9 @@ public class TestHRegion extends HBaseTestCase {
       Result res = region.get(get);
       assertEquals(expected.length, res.size());
       for(int i=0; i<res.size(); i++){
-        assertTrue(CellUtil.matchingRow(expected[i], res.raw()[i]));
-        assertTrue(CellUtil.matchingFamily(expected[i], res.raw()[i]));
-        assertTrue(CellUtil.matchingQualifier(expected[i], res.raw()[i]));
+        assertTrue(CellUtil.matchingRow(expected[i], res.rawCells()[i]));
+        assertTrue(CellUtil.matchingFamily(expected[i], res.rawCells()[i]));
+        assertTrue(CellUtil.matchingQualifier(expected[i], res.rawCells()[i]));
       }
 
       // Test using a filter on a Get
@@ -2366,7 +2366,7 @@ public class TestHRegion extends HBaseTestCase {
     Result result = region.get(get);
     assertEquals(1, result.size());
 
-    Cell kv = result.raw()[0];
+    Cell kv = result.rawCells()[0];
     long r = Bytes.toLong(CellUtil.getValueArray(kv));
     assertEquals(amount, r);
   }
@@ -2381,7 +2381,7 @@ public class TestHRegion extends HBaseTestCase {
     Result result = region.get(get);
     assertEquals(1, result.size());
 
-    Cell kv = result.raw()[0];
+    Cell kv = result.rawCells()[0];
     int r = Bytes.toInt(CellUtil.getValueArray(kv));
     assertEquals(amount, r);
   }
@@ -3117,7 +3117,7 @@ public class TestHRegion extends HBaseTestCase {
           // TODO this was removed, now what dangit?!
           // search looking for the qualifier in question?
           long timestamp = 0;
-          for (Cell kv : result.raw()) {
+          for (Cell kv : result.rawCells()) {
             if (CellUtil.matchingFamily(kv, families[0])
                 && CellUtil.matchingQualifier(kv, qualifiers[0])) {
               timestamp = kv.getTimestamp();
@@ -3127,7 +3127,7 @@ public class TestHRegion extends HBaseTestCase {
           prevTimestamp = timestamp;
           Cell previousKV = null;
 
-          for (Cell kv : result.raw()) {
+          for (Cell kv : result.rawCells()) {
             byte[] thisValue = CellUtil.getValueArray(kv);
             if (previousKV != null) {
               if (Bytes.compareTo(CellUtil.getValueArray(previousKV), thisValue) != 0) {
@@ -3324,7 +3324,7 @@ public class TestHRegion extends HBaseTestCase {
       //Get rows
       Get get = new Get(row);
       get.setMaxVersions();
-      Cell[] kvs = region.get(get).raw();
+      Cell[] kvs = region.get(get).rawCells();
 
       //Check if rows are correct
       assertEquals(4, kvs.length);
@@ -3375,7 +3375,7 @@ public class TestHRegion extends HBaseTestCase {
       Get get = new Get(row);
       get.addColumn(familyName, col);
 
-      Cell[] keyValues = region.get(get).raw();
+      Cell[] keyValues = region.get(get).rawCells();
       assertTrue(keyValues.length == 0);
     } finally {
       HRegion.closeHRegion(this.region);
@@ -3899,7 +3899,7 @@ public class TestHRegion extends HBaseTestCase {
         get.addColumn(family, qf);
       }
       Result result = newReg.get(get);
-      Cell [] raw = result.raw();
+      Cell [] raw = result.rawCells();
       assertEquals(families.length, result.size());
       for(int j=0; j<families.length; j++) {
         assertTrue(CellUtil.matchingRow(raw[j], row));
@@ -3913,7 +3913,7 @@ public class TestHRegion extends HBaseTestCase {
   throws IOException {
     // Now I have k, get values out and assert they are as expected.
     Get get = new Get(k).addFamily(family).setMaxVersions();
-    Cell [] results = r.get(get).raw();
+    Cell [] results = r.get(get).rawCells();
     for (int j = 0; j < results.length; j++) {
       byte [] tmp = CellUtil.getValueArray(results[j]);
       // Row should be equal to value every time.

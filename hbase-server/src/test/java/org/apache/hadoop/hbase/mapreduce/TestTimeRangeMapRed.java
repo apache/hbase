@@ -110,7 +110,7 @@ public class TestTimeRangeMapRed {
         Context context)
     throws IOException {
       List<Long> tsList = new ArrayList<Long>();
-      for (Cell kv : result.list()) {
+      for (Cell kv : result.listCells()) {
         tsList.add(kv.getTimestamp());
       }
 
@@ -196,7 +196,7 @@ public class TestTimeRangeMapRed {
     scan.setMaxVersions(1);
     ResultScanner scanner = table.getScanner(scan);
     for (Result r: scanner) {
-      for (Cell kv : r.list()) {
+      for (Cell kv : r.listCells()) {
         log.debug(Bytes.toString(r.getRow()) + "\t" + Bytes.toString(CellUtil.getFamilyArray(kv))
             + "\t" + Bytes.toString(CellUtil.getQualifierArray(kv))
             + "\t" + kv.getTimestamp() + "\t" + Bytes.toBoolean(CellUtil.getValueArray(kv)));

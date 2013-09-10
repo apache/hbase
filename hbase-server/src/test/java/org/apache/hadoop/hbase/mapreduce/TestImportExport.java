@@ -286,7 +286,7 @@ public class TestImportExport {
     s.setRaw(true);
     ResultScanner scanner = t.getScanner(s);
     Result r = scanner.next();
-    Cell[] res = r.raw();
+    Cell[] res = r.rawCells();
     assertTrue(CellUtil.isDeleteFamily(res[0]));
     assertEquals(now+4, res[1].getTimestamp());
     assertEquals(now+3, res[2].getTimestamp());
@@ -467,7 +467,7 @@ public class TestImportExport {
             Bytes.toBytes("value")),
         new KeyValue(Bytes.toBytes("row"), Bytes.toBytes("family"), Bytes.toBytes("qualifier"),
             Bytes.toBytes("value1")) };
-    when(value.raw()).thenReturn(keys);
+    when(value.rawCells()).thenReturn(keys);
     importer.map(new ImmutableBytesWritable(Bytes.toBytes("Key")), value, ctx);
 
   }

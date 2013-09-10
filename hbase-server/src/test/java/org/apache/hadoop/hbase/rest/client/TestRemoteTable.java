@@ -209,7 +209,7 @@ public class TestRemoteTable {
     get.setMaxVersions(2);
     result = remoteTable.get(get);
     int count = 0;
-    for (Cell kv: result.list()) {
+    for (Cell kv: result.listCells()) {
       if (CellUtil.matchingFamily(kv, COLUMN_1) && TS_1 == kv.getTimestamp()) {
         assertTrue(CellUtil.matchingValue(kv, VALUE_1)); // @TS_1
         count++;

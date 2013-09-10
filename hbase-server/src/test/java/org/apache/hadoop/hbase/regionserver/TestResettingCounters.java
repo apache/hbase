@@ -91,7 +91,7 @@ public class TestResettingCounters {
       // increment all qualifiers, should have value=6 for all
       Result result = region.increment(all);
       assertEquals(numQualifiers, result.size());
-      Cell [] kvs = result.raw();
+      Cell [] kvs = result.rawCells();
       for (int i=0;i<kvs.length;i++) {
         System.out.println(kvs[i].toString());
         assertTrue(CellUtil.matchingQualifier(kvs[i], qualifiers[i]));

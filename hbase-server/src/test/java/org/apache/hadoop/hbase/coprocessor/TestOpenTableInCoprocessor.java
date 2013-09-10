@@ -123,7 +123,7 @@ public class TestOpenTableInCoprocessor {
     ResultScanner results = table.getScanner(scan);
     int count = 0;
     for (Result res : results) {
-      count += res.list().size();
+      count += res.listCells().size();
       System.out.println(count + ") " + res);
     }
     results.close();

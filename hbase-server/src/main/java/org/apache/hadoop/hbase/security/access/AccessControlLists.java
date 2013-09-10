@@ -513,7 +513,7 @@ public class AccessControlLists {
       byte[] entryName, Result result) {
     ListMultimap<String, TablePermission> perms = ArrayListMultimap.create();
     if (result != null && result.size() > 0) {
-      for (Cell kv : result.raw()) {
+      for (Cell kv : result.rawCells()) {
 
         Pair<String,TablePermission> permissionsOfUserOnTable =
             parsePermissionRecord(entryName, kv);

@@ -535,7 +535,7 @@ public abstract class HBaseTestCase extends TestCase {
         return false;
       }
       values.clear();
-      values.addAll(results.list());
+      values.addAll(results.listCells());
       return true;
     }
 

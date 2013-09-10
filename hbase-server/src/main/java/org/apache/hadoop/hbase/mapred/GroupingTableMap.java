@@ -116,7 +116,7 @@ implements TableMap<ImmutableBytesWritable,Result> {
     ArrayList<byte[]> foundList = new ArrayList<byte[]>();
     int numCols = columns.length;
     if (numCols > 0) {
-      for (Cell value: r.list()) {
+      for (Cell value: r.listCells()) {
         byte [] column = KeyValue.makeColumn(CellUtil.getFamilyArray(value),
             CellUtil.getQualifierArray(value));
         for (int i = 0; i < numCols; i++) {

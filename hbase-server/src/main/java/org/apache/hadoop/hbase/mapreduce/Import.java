@@ -93,7 +93,7 @@ public class Import {
       Context context)
     throws IOException {
       try {
-        for (Cell kv : value.raw()) {
+        for (Cell kv : value.rawCells()) {
           kv = filterKv(kv);
           // skip if we filtered it out
           if (kv == null) continue;
@@ -143,7 +143,7 @@ public class Import {
     throws IOException, InterruptedException {
       Put put = null;
       Delete delete = null;
-      for (Cell kv : result.raw()) {
+      for (Cell kv : result.rawCells()) {
         kv = filterKv(kv);
         // skip if we filter it out
         if (kv == null) continue;

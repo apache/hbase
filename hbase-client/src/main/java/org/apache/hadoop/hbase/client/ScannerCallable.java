@@ -253,7 +253,7 @@ public class ScannerCallable extends RegionServerCallable<Result[]> {
     }
     long resultSize = 0;
     for (Result rr : rrs) {
-      for (Cell kv : rr.raw()) {
+      for (Cell kv : rr.rawCells()) {
         // TODO add getLength to Cell/use CellUtil#estimatedSizeOf
         resultSize += KeyValueUtil.ensureKeyValue(kv).getLength();
       }
