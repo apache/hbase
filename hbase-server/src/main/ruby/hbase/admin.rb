@@ -769,7 +769,7 @@ module Hbase
         end
         for k,v in arg
           v = v.to_s unless v.nil?
-          nsb.addProperty(k, v)
+          nsb.addConfiguration(k, v)
         end
       end
       @admin.createNamespace(nsb.build());
