@@ -202,7 +202,7 @@ goto :MakeCmdArgsLoop
 set hbase-command-arguments=%_hbasearguments%
 
 @rem figure out which class to run
-set corecommands=shell master regionserver thrift thrift2 rest avro hlog hbck hfile zookeeper zkcli
+set corecommands=shell master regionserver thrift thrift2 rest avro hlog hbck hfile zookeeper zkcli upgrade
 for %%i in ( %corecommands% ) do (
   if "%hbase-command%"=="%%i" set corecommand=true
 )
@@ -374,6 +374,10 @@ goto :eof
 
 :zkcli
   set CLASS=org.apache.hadoop.hbase.zookeeper.ZooKeeperMainServer
+  goto :eof
+
+:upgrade
+  set CLASS=org.apache.hadoop.hbase.migration.UpgradeTo96
   goto :eof
 
 :makeServiceXml
