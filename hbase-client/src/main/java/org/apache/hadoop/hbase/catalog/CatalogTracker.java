@@ -32,6 +32,7 @@ import org.apache.hadoop.hbase.client.RetriesExhaustedException;
 import org.apache.hadoop.hbase.ipc.ServerNotRunningYetException;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.AdminService;
+import org.apache.hadoop.hbase.regionserver.RegionServerStoppedException;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.zookeeper.MetaRegionTracker;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
@@ -427,6 +428,8 @@ public class CatalogTracker {
       // Pass -- remote server is not up so can't be carrying root
     } catch (UnknownHostException e) {
       // Pass -- server name doesn't resolve so it can't be assigned anything.
+    } catch (RegionServerStoppedException e) {
+      // Pass -- server name sends us to a server that is dying or already dead.
     }
     return (service == null)? false:
       verifyRegionLocation(service,
