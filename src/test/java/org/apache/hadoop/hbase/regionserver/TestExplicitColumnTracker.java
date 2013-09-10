@@ -56,7 +56,7 @@ public class TestExplicitColumnTracker extends HBaseTestCase {
     long timestamp = 0;
     //"Match"
     for(byte [] col : scannerColumns){
-      result.add(exp.checkColumn(col, 0, col.length, ++timestamp,
+      result.add(ScanQueryMatcher.checkColumn(exp, col, 0, col.length, ++timestamp,
           KeyValue.Type.Put.getCode(), false));
     }
 
@@ -169,14 +169,14 @@ public class TestExplicitColumnTracker extends HBaseTestCase {
         Long.MIN_VALUE);
     for (int i = 0; i < 100000; i+=2) {
       byte [] col = Bytes.toBytes("col"+i);
-      explicit.checkColumn(col, 0, col.length, 1, KeyValue.Type.Put.getCode(),
+      ScanQueryMatcher.checkColumn(explicit, col, 0, col.length, 1, KeyValue.Type.Put.getCode(),
           false);
     }
     explicit.reset();
 
     for (int i = 1; i < 100000; i+=2) {
       byte [] col = Bytes.toBytes("col"+i);
-      explicit.checkColumn(col, 0, col.length, 1, KeyValue.Type.Put.getCode(),
+      ScanQueryMatcher.checkColumn(explicit, col, 0, col.length, 1, KeyValue.Type.Put.getCode(),
           false);
     }
   }
