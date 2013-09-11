@@ -69,7 +69,7 @@ public final class HLogPerformanceEvaluation extends Configured implements Tool 
 
   /**
    * Perform HLog.append() of Put object, for the number of iterations requested.
-   * Keys and Vaues are generated randomly, the number of column familes,
+   * Keys and Vaues are generated randomly, the number of column families,
    * qualifiers and key/value size is tunable by the user.
    */
   class HLogPutBenchmark implements Runnable {
@@ -126,6 +126,7 @@ public final class HLogPerformanceEvaluation extends Configured implements Tool 
     boolean noSync = false;
     boolean verify = false;
     boolean verbose = false;
+    boolean cleanup = true;
     long roll = Long.MAX_VALUE;
     // Process command line args
     for (int i = 0; i < args.length; i++) {
@@ -151,6 +152,8 @@ public final class HLogPerformanceEvaluation extends Configured implements Tool 
           verify = true;
         } else if (cmd.equals("-verbose")) {
           verbose = true;
+        } else if (cmd.equals("-nocleanup")) {
+          cleanup = false;
         } else if (cmd.equals("-roll")) {
           roll = Long.parseLong(args[++i]);
         } else if (cmd.equals("-h")) {
@@ -205,8 +208,12 @@ public final class HLogPerformanceEvaluation extends Configured implements Tool 
         if (verify) {
           Path dir = ((FSHLog) hlog).getDir();
           long editCount = 0;
-          for (FileStatus fss: fs.listStatus(dir)) {
-            editCount += verify(fss.getPath(), verbose);
+          FileStatus [] fsss = fs.listStatus(dir);
+          if (fsss.length == 0) throw new IllegalStateException("No WAL found");
+          for (FileStatus fss: fsss) {
+            Path p = fss.getPath();
+            if (!fs.exists(p)) throw new IllegalStateException(p.toString());
+            editCount += verify(p, verbose);
           }
           long expected = numIterations * numThreads;
           if (editCount != expected) {
@@ -216,7 +223,7 @@ public final class HLogPerformanceEvaluation extends Configured implements Tool 
       } finally {
         if (region != null) closeRegion(region);
         // Remove the root dir for this test region
-        cleanRegionRootDir(fs, rootRegionDir);
+        if (cleanup) cleanRegionRootDir(fs, rootRegionDir);
       }
     } finally {
       fs.close();
@@ -243,14 +250,16 @@ public final class HLogPerformanceEvaluation extends Configured implements Tool 
    * @throws IOException
    */
   private long verify(final Path wal, final boolean verbose) throws IOException {
-    HLog.Reader reader = HLogFactory.createReader(wal.getFileSystem(getConf()), 
-        wal, getConf());
+    HLog.Reader reader = HLogFactory.createReader(wal.getFileSystem(getConf()), wal, getConf());
     long previousSeqid = -1;
     long count = 0;
     try {
       while (true) {
         Entry e = reader.next();
-        if (e == null) break;
+        if (e == null) {
+          LOG.debug("Read count=" + count + " from " + wal);
+          break;
+        }
         count++;
         long seqid = e.getKey().getLogSeqNum();
         if (verbose) LOG.info("seqid=" + seqid);
@@ -282,6 +291,7 @@ public final class HLogPerformanceEvaluation extends Configured implements Tool 
     System.err.println("  -qualifiers <N>  Number of qualifiers to write.");
     System.err.println("  -keySize <N>     Row key size in byte.");
     System.err.println("  -valueSize <N>   Row/Col value size in byte.");
+    System.err.println("  -nocleanup       Do NOT remove test data when done.");
     System.err.println("  -nosync          Append without syncing");
     System.err.println("  -verify          Verify edits written in sequence");
     System.err.println("  -verbose         Output extra info; e.g. all edit seq ids when verifying");
@@ -342,7 +352,7 @@ public final class HLogPerformanceEvaluation extends Configured implements Tool 
     Thread[] threads = new Thread[numThreads];
     long startTime = System.currentTimeMillis();
     for (int i = 0; i < numThreads; ++i) {
-      threads[i] = new Thread(runnable);
+      threads[i] = new Thread(runnable, "t" + i);
       threads[i].start();
     }
     for (Thread t : threads) t.join();
@@ -355,7 +365,7 @@ public final class HLogPerformanceEvaluation extends Configured implements Tool 
    * Call this method to avoid the {@link #main(String[])} System.exit.
    * @param args
    * @return errCode
-   * @throws Exception 
+   * @throws Exception
    */
   static int innerMain(final String [] args) throws Exception {
     return ToolRunner.run(HBaseConfiguration.create(), new HLogPerformanceEvaluation(), args);

@@ -193,19 +193,24 @@ public class ProtobufLogReader extends ReaderBase {
   @Override
   protected boolean readNext(HLog.Entry entry) throws IOException {
     while (true) {
+      // OriginalPosition might be < 0 on local fs; if so, it is useless to us.
       long originalPosition = this.inputStream.getPos();
-      if (trailerPresent && originalPosition == this.walEditsStopOffset) return false;
+      if (trailerPresent && originalPosition > 0 && originalPosition == this.walEditsStopOffset) {
+        return false;
+      }
       WALKey.Builder builder = WALKey.newBuilder();
-      int size = 0;
+      long size = 0;
       try {
-        int originalAvailable = this.inputStream.available();
+        long available = -1;
         try {
           int firstByte = this.inputStream.read();
           if (firstByte == -1) {
             throw new EOFException("First byte is negative");
           }
           size = CodedInputStream.readRawVarint32(firstByte, this.inputStream);
-          if (this.inputStream.available() < size) {
+          // available may be < 0 on local fs for instance.  If so, can't depend on it.
+          available = this.inputStream.available();
+          if (available > 0 && available < size) {
             throw new EOFException("Available stream not enough for edit, " +
                 "inputStream.available()= " + this.inputStream.available() + ", " +
                 "entry size= " + size);
@@ -214,9 +219,8 @@ public class ProtobufLogReader extends ReaderBase {
           builder.mergeFrom(limitedInput);
         } catch (InvalidProtocolBufferException ipbe) {
           throw (EOFException) new EOFException("Invalid PB, EOF? Ignoring; originalPosition=" +
-              originalPosition + ", currentPosition=" + this.inputStream.getPos() +
-              ", messageSize=" + size + ", originalAvailable=" + originalAvailable +
-              ", currentAvailable=" + this.inputStream.available()).initCause(ipbe);
+            originalPosition + ", currentPosition=" + this.inputStream.getPos() +
+            ", messageSize=" + size + ", currentAvailable=" + available).initCause(ipbe);
         }
         if (!builder.isInitialized()) {
           // TODO: not clear if we should try to recover from corrupt PB that looks semi-legit.
@@ -258,6 +262,10 @@ public class ProtobufLogReader extends ReaderBase {
         }
       } catch (EOFException eof) {
         LOG.trace("Encountered a malformed edit, seeking back to last good position in file", eof);
+        // If originalPosition is < 0, it is rubbish and we cannot use it (probably local fs)
+        if (originalPosition < 0) throw eof;
+        // Else restore our position to original location in hope that next time through we will
+        // read successfully.
         seekOnFs(originalPosition);
         return false;
       }
