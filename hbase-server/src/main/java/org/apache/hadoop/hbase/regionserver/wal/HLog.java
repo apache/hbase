@@ -23,7 +23,6 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.util.List;
-import java.util.Set;
 import java.util.UUID;
 import java.util.regex.Pattern;
 
@@ -42,10 +41,12 @@ import org.apache.hadoop.io.Writable;
 
 
 @InterfaceAudience.Private
+// TODO: Rename interface to WAL
 public interface HLog {
   Log LOG = LogFactory.getLog(HLog.class);
 
   /** File Extension used while splitting an HLog into regions (HBASE-2312) */
+  // TODO: this seems like an implementation detail that does not belong here.
   String SPLITTING_EXT = "-splitting";
   boolean SPLIT_SKIP_ERRORS_DEFAULT = false;
   /** The hbase:meta region's HLog filename extension */
@@ -55,10 +56,11 @@ public interface HLog {
    * Configuration name of HLog Trailer's warning size. If a waltrailer's size is greater than the
    * configured size, a warning is logged. This is used with Protobuf reader/writer.
    */
-  String WAL_TRAILER_WARN_SIZE =
-    "hbase.regionserver.waltrailer.warn.size";
-  int DEFAULT_WAL_TRAILER_WARN_SIZE = 1024*1024; // 1MB
+  // TODO: Implementation detail.  Why in here?
+  String WAL_TRAILER_WARN_SIZE = "hbase.regionserver.waltrailer.warn.size";
+  int DEFAULT_WAL_TRAILER_WARN_SIZE = 1024 * 1024; // 1MB
 
+  // TODO: Implemenation detail.  Why in here?
   Pattern EDITFILES_NAME_PATTERN = Pattern.compile("-?[0-9]+");
   String RECOVERED_LOG_TMPFILE_SUFFIX = ".temp";
 
@@ -67,7 +69,7 @@ public interface HLog {
     /**
      * @param fs File system.
      * @param path Path.
-     * @param c Config.
+     * @param c Configuration.
      * @param s Input stream that may have been pre-opened by the caller; may be null.
      */
     void init(FileSystem fs, Path path, Configuration c, FSDataInputStream s) throws IOException;
@@ -87,6 +89,7 @@ public interface HLog {
      * @return the WALTrailer of the current HLog. It may be null in case of legacy or corrupt WAL
      *         files.
      */
+    // TODO: What we need a trailer on WAL for?
     WALTrailer getWALTrailer();
   }
 
@@ -109,9 +112,10 @@ public interface HLog {
   }
 
   /**
-   * Utility class that lets us keep track of the edit with it's key Only used
-   * when splitting logs
+   * Utility class that lets us keep track of the edit with it's key.
+   * Only used when splitting logs.
    */
+  // TODO: Remove this Writable.
   class Entry implements Writable {
     private WALEdit edit;
     private HLogKey key;
@@ -124,10 +128,8 @@ public interface HLog {
     /**
      * Constructor for both params
      *
-     * @param edit
-     *          log's edit
-     * @param key
-     *          log's key
+     * @param edit log's edit
+     * @param key log's key
      */
     public Entry(HLogKey key, WALEdit edit) {
       super();
@@ -199,16 +201,14 @@ public interface HLog {
   /**
    * @return Current state of the monotonically increasing file id.
    */
+  // TODO: Remove.  Implementation detail.
   long getFilenum();
 
   /**
-   * Called by HRegionServer when it opens a new region to ensure that log
-   * sequence numbers are always greater than the latest sequence number of the
-   * region being brought on-line.
+   * Called to ensure that log sequence numbers are always greater
    *
-   * @param newvalue
-   *          We'll set log edit/sequence number to this value if it is greater
-   *          than the current value.
+   * @param newvalue We'll set log edit/sequence number to this value if it is greater
+   * than the current value.
    */
   void setSequenceNumber(final long newvalue);
 
@@ -217,6 +217,7 @@ public interface HLog {
    */
   long getSequenceNumber();
 
+  // TODO: Log rolling should not be in this interface.
   /**
    * Roll the log writer. That is, start writing log messages to a new file.
    *
@@ -274,7 +275,7 @@ public interface HLog {
 
   /**
    * Append a set of edits to the log. Log edits are keyed by (encoded)
-   * regionName, rowname, and log-sequence-id. The HLog is flushed after this
+   * regionName, row name, and log-sequence-id. The HLog is flushed after this
    * transaction is written to the log.
    * @param info
    * @param tableName
@@ -298,9 +299,10 @@ public interface HLog {
    * @return txid of this transaction
    * @throws IOException
    */
-  public long appendNoSync(HRegionInfo info, TableName tableName, WALEdit edits, 
+  public long appendNoSync(HRegionInfo info, TableName tableName, WALEdit edits,
       List<UUID> clusterIds, final long now, HTableDescriptor htd) throws IOException;
-  
+
+  // TODO: Do we need all these versions of sync?
   void hsync() throws IOException;
 
   void hflush() throws IOException;
@@ -312,6 +314,7 @@ public interface HLog {
   /**
    * Obtain a log sequence number.
    */
+  // TODO: Name better to differentiate from getSequenceNumber.
   long obtainSeqNum();
 
   /**
@@ -355,6 +358,7 @@ public interface HLog {
    *
    * @return lowReplicationRollEnabled
    */
+  // TODO: This is implementation detail?
   boolean isLowReplicationRollEnabled();
 
   /** Gets the earliest sequence number in the memstore for this particular region.
