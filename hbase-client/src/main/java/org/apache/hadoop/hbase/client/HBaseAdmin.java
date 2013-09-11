@@ -3062,7 +3062,8 @@ public class HBaseAdmin implements Abortable, Closeable {
 
     @Override
     public void close() throws IOException {
-      this.masterAdmin.close();
+      // The above prepare could fail but this would still be called though masterAdmin is null
+      if (this.masterAdmin != null) this.masterAdmin.close();
     }
   }
 
@@ -3083,7 +3084,8 @@ public class HBaseAdmin implements Abortable, Closeable {
 
     @Override
     public void close() throws IOException {
-      this.masterMonitor.close();
+      // The above prepare could fail but this would still be called though masterMonitor is null
+      if (this.masterMonitor != null) this.masterMonitor.close();
     }
   }
 
