@@ -5496,7 +5496,7 @@ public final class RegionServerStatusProtos {
       descriptor;
   static {
     java.lang.String[] descriptorData = {
-      "\n\030RegionServerStatus.proto\032\013hbase.proto\032" +
+      "\n\030RegionServerStatus.proto\032\013HBase.proto\032" +
       "\023ClusterStatus.proto\"b\n\032RegionServerStar" +
       "tupRequest\022\014\n\004port\030\001 \002(\r\022\031\n\021server_start" +
       "_code\030\002 \002(\004\022\033\n\023server_current_time\030\003 \002(\004" +

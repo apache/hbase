@@ -8,7 +8,7 @@ public final class AggregateProtos {
   public static void registerAllExtensions(
       com.google.protobuf.ExtensionRegistry registry) {
   }
-  public interface AggregateArgumentOrBuilder
+  public interface AggregateRequestOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
 
     // required string interpreter_class_name = 1;
@@ -16,7 +16,7 @@ public final class AggregateProtos {
      * <code>required string interpreter_class_name = 1;</code>
      *
      * <pre>
-     ** The argument passed to the AggregateService consists of three parts
+     ** The request passed to the AggregateService consists of three parts
      *  (1) the (canonical) classname of the ColumnInterpreter implementation
      *  (2) the Scan query
      *  (3) any bytes required to construct the ColumnInterpreter object
@@ -28,7 +28,7 @@ public final class AggregateProtos {
      * <code>required string interpreter_class_name = 1;</code>
      *
      * <pre>
-     ** The argument passed to the AggregateService consists of three parts
+     ** The request passed to the AggregateService consists of three parts
      *  (1) the (canonical) classname of the ColumnInterpreter implementation
      *  (2) the Scan query
      *  (3) any bytes required to construct the ColumnInterpreter object
@@ -40,7 +40,7 @@ public final class AggregateProtos {
      * <code>required string interpreter_class_name = 1;</code>
      *
      * <pre>
-     ** The argument passed to the AggregateService consists of three parts
+     ** The request passed to the AggregateService consists of three parts
      *  (1) the (canonical) classname of the ColumnInterpreter implementation
      *  (2) the Scan query
      *  (3) any bytes required to construct the ColumnInterpreter object
@@ -75,24 +75,24 @@ public final class AggregateProtos {
     com.google.protobuf.ByteString getInterpreterSpecificBytes();
   }
   /**
-   * Protobuf type {@code AggregateArgument}
+   * Protobuf type {@code AggregateRequest}
    */
-  public static final class AggregateArgument extends
+  public static final class AggregateRequest extends
       com.google.protobuf.GeneratedMessage
-      implements AggregateArgumentOrBuilder {
-    // Use AggregateArgument.newBuilder() to construct.
-    private AggregateArgument(com.google.protobuf.GeneratedMessage.Builder<?> builder) {
+      implements AggregateRequestOrBuilder {
+    // Use AggregateRequest.newBuilder() to construct.
+    private AggregateRequest(com.google.protobuf.GeneratedMessage.Builder<?> builder) {
       super(builder);
       this.unknownFields = builder.getUnknownFields();
     }
-    private AggregateArgument(boolean noInit) { this.unknownFields = com.google.protobuf.UnknownFieldSet.getDefaultInstance(); }
+    private AggregateRequest(boolean noInit) { this.unknownFields = com.google.protobuf.UnknownFieldSet.getDefaultInstance(); }
 
-    private static final AggregateArgument defaultInstance;
-    public static AggregateArgument getDefaultInstance() {
+    private static final AggregateRequest defaultInstance;
+    public static AggregateRequest getDefaultInstance() {
       return defaultInstance;
     }
 
-    public AggregateArgument getDefaultInstanceForType() {
+    public AggregateRequest getDefaultInstanceForType() {
       return defaultInstance;
     }
 
@@ -102,7 +102,7 @@ public final class AggregateProtos {
         getUnknownFields() {
       return this.unknownFields;
     }
-    private AggregateArgument(
+    private AggregateRequest(
         com.google.protobuf.CodedInputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
@@ -162,28 +162,28 @@ public final class AggregateProtos {
     }
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.internal_static_AggregateArgument_descriptor;
+      return org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.internal_static_AggregateRequest_descriptor;
     }
 
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.internal_static_AggregateArgument_fieldAccessorTable
+      return org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.internal_static_AggregateRequest_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
-              org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateArgument.class, org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateArgument.Builder.class);
+              org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateRequest.class, org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateRequest.Builder.class);
     }
 
-    public static com.google.protobuf.Parser<AggregateArgument> PARSER =
-        new com.google.protobuf.AbstractParser<AggregateArgument>() {
-      public AggregateArgument parsePartialFrom(
+    public static com.google.protobuf.Parser<AggregateRequest> PARSER =
+        new com.google.protobuf.AbstractParser<AggregateRequest>() {
+      public AggregateRequest parsePartialFrom(
           com.google.protobuf.CodedInputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws com.google.protobuf.InvalidProtocolBufferException {
-        return new AggregateArgument(input, extensionRegistry);
+        return new AggregateRequest(input, extensionRegistry);
       }
     };
 
     @java.lang.Override
-    public com.google.protobuf.Parser<AggregateArgument> getParserForType() {
+    public com.google.protobuf.Parser<AggregateRequest> getParserForType() {
       return PARSER;
     }
 
@@ -195,7 +195,7 @@ public final class AggregateProtos {
      * <code>required string interpreter_class_name = 1;</code>
      *
      * <pre>
-     ** The argument passed to the AggregateService consists of three parts
+     ** The request passed to the AggregateService consists of three parts
      *  (1) the (canonical) classname of the ColumnInterpreter implementation
      *  (2) the Scan query
      *  (3) any bytes required to construct the ColumnInterpreter object
@@ -209,7 +209,7 @@ public final class AggregateProtos {
      * <code>required string interpreter_class_name = 1;</code>
      *
      * <pre>
-     ** The argument passed to the AggregateService consists of three parts
+     ** The request passed to the AggregateService consists of three parts
      *  (1) the (canonical) classname of the ColumnInterpreter implementation
      *  (2) the Scan query
      *  (3) any bytes required to construct the ColumnInterpreter object
@@ -234,7 +234,7 @@ public final class AggregateProtos {
      * <code>required string interpreter_class_name = 1;</code>
      *
      * <pre>
-     ** The argument passed to the AggregateService consists of three parts
+     ** The request passed to the AggregateService consists of three parts
      *  (1) the (canonical) classname of the ColumnInterpreter implementation
      *  (2) the Scan query
      *  (3) any bytes required to construct the ColumnInterpreter object
@@ -369,10 +369,10 @@ public final class AggregateProtos {
       if (obj == this) {
        return true;
       }
-      if (!(obj instanceof org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateArgument)) {
+      if (!(obj instanceof org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateRequest)) {
         return super.equals(obj);
       }
-      org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateArgument other = (org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateArgument) obj;
+      org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateRequest other = (org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateRequest) obj;
 
       boolean result = true;
       result = result && (hasInterpreterClassName() == other.hasInterpreterClassName());
@@ -420,53 +420,53 @@ public final class AggregateProtos {
       return hash;
     }
 
-    public static org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateArgument parseFrom(
+    public static org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateRequest parseFrom(
         com.google.protobuf.ByteString data)
         throws com.google.protobuf.InvalidProtocolBufferException {
       return PARSER.parseFrom(data);
     }
-    public static org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateArgument parseFrom(
+    public static org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateRequest parseFrom(
         com.google.protobuf.ByteString data,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
       return PARSER.parseFrom(data, extensionRegistry);
     }
-    public static org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateArgument parseFrom(byte[] data)
+    public static org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateRequest parseFrom(byte[] data)
         throws com.google.protobuf.InvalidProtocolBufferException {
       return PARSER.parseFrom(data);
     }
-    public static org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateArgument parseFrom(
+    public static org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateRequest parseFrom(
         byte[] data,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
       return PARSER.parseFrom(data, extensionRegistry);
     }
-    public static org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateArgument parseFrom(java.io.InputStream input)
+    public static org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateRequest parseFrom(java.io.InputStream input)
         throws java.io.IOException {
       return PARSER.parseFrom(input);
     }
-    public static org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateArgument parseFrom(
+    public static org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateRequest parseFrom(
         java.io.InputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
       return PARSER.parseFrom(input, extensionRegistry);
     }
-    public static org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateArgument parseDelimitedFrom(java.io.InputStream input)
+    public static org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateRequest parseDelimitedFrom(java.io.InputStream input)
         throws java.io.IOException {
       return PARSER.parseDelimitedFrom(input);
     }
-    public static org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateArgument parseDelimitedFrom(
+    public static org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateRequest parseDelimitedFrom(
         java.io.InputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
       return PARSER.parseDelimitedFrom(input, extensionRegistry);
     }
-    public static org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateArgument parseFrom(
+    public static org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateRequest parseFrom(
         com.google.protobuf.CodedInputStream input)
         throws java.io.IOException {
       return PARSER.parseFrom(input);
     }
-    public static org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateArgument parseFrom(
+    public static org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateRequest parseFrom(
         com.google.protobuf.CodedInputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
@@ -475,7 +475,7 @@ public final class AggregateProtos {
 
     public static Builder newBuilder() { return Builder.create(); }
     public Builder newBuilderForType() { return newBuilder(); }
-    public static Builder newBuilder(org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateArgument prototype) {
+    public static Builder newBuilder(org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateRequest prototype) {
       return newBuilder().mergeFrom(prototype);
     }
     public Builder toBuilder() { return newBuilder(this); }
@@ -487,24 +487,24 @@ public final class AggregateProtos {
       return builder;
     }
     /**
-     * Protobuf type {@code AggregateArgument}
+     * Protobuf type {@code AggregateRequest}
      */
     public static final class Builder extends
         com.google.protobuf.GeneratedMessage.Builder<Builder>
-       implements org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateArgumentOrBuilder {
+       implements org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateRequestOrBuilder {
       public static final com.google.protobuf.Descriptors.Descriptor
           getDescriptor() {
-        return org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.internal_static_AggregateArgument_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.internal_static_AggregateRequest_descriptor;
       }
 
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.internal_static_AggregateArgument_fieldAccessorTable
+        return org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.internal_static_AggregateRequest_fieldAccessorTable
             .ensureFieldAccessorsInitialized(
-                org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateArgument.class, org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateArgument.Builder.class);
+                org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateRequest.class, org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateRequest.Builder.class);
       }
 
-      // Construct using org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateArgument.newBuilder()
+      // Construct using org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateRequest.newBuilder()
       private Builder() {
         maybeForceBuilderInitialization();
       }
@@ -544,23 +544,23 @@ public final class AggregateProtos {
 
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.internal_static_AggregateArgument_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.internal_static_AggregateRequest_descriptor;
       }
 
-      public org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateArgument getDefaultInstanceForType() {
-        return org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateArgument.getDefaultInstance();
+      public org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateRequest getDefaultInstanceForType() {
+        return org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateRequest.getDefaultInstance();
       }
 
-      public org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateArgument build() {
-        org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateArgument result = buildPartial();
+      public org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateRequest build() {
+        org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateRequest result = buildPartial();
         if (!result.isInitialized()) {
           throw newUninitializedMessageException(result);
         }
         return result;
       }
 
-      public org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateArgument buildPartial() {
-        org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateArgument result = new org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateArgument(this);
+      public org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateRequest buildPartial() {
+        org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateRequest result = new org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateRequest(this);
         int from_bitField0_ = bitField0_;
         int to_bitField0_ = 0;
         if (((from_bitField0_ & 0x00000001) == 0x00000001)) {
@@ -585,16 +585,16 @@ public final class AggregateProtos {
       }
 
       public Builder mergeFrom(com.google.protobuf.Message other) {
-        if (other instanceof org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateArgument) {
-          return mergeFrom((org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateArgument)other);
+        if (other instanceof org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateRequest) {
+          return mergeFrom((org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateRequest)other);
         } else {
           super.mergeFrom(other);
           return this;
         }
       }
 
-      public Builder mergeFrom(org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateArgument other) {
-        if (other == org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateArgument.getDefaultInstance()) return this;
+      public Builder mergeFrom(org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateRequest other) {
+        if (other == org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateRequest.getDefaultInstance()) return this;
         if (other.hasInterpreterClassName()) {
           bitField0_ |= 0x00000001;
           interpreterClassName_ = other.interpreterClassName_;
@@ -630,11 +630,11 @@ public final class AggregateProtos {
           com.google.protobuf.CodedInputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws java.io.IOException {
-        org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateArgument parsedMessage = null;
+        org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateRequest parsedMessage = null;
         try {
           parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
         } catch (com.google.protobuf.InvalidProtocolBufferException e) {
-          parsedMessage = (org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateArgument) e.getUnfinishedMessage();
+          parsedMessage = (org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateRequest) e.getUnfinishedMessage();
           throw e;
         } finally {
           if (parsedMessage != null) {
@@ -651,7 +651,7 @@ public final class AggregateProtos {
        * <code>required string interpreter_class_name = 1;</code>
        *
        * <pre>
-       ** The argument passed to the AggregateService consists of three parts
+       ** The request passed to the AggregateService consists of three parts
        *  (1) the (canonical) classname of the ColumnInterpreter implementation
        *  (2) the Scan query
        *  (3) any bytes required to construct the ColumnInterpreter object
@@ -665,7 +665,7 @@ public final class AggregateProtos {
        * <code>required string interpreter_class_name = 1;</code>
        *
        * <pre>
-       ** The argument passed to the AggregateService consists of three parts
+       ** The request passed to the AggregateService consists of three parts
        *  (1) the (canonical) classname of the ColumnInterpreter implementation
        *  (2) the Scan query
        *  (3) any bytes required to construct the ColumnInterpreter object
@@ -687,7 +687,7 @@ public final class AggregateProtos {
        * <code>required string interpreter_class_name = 1;</code>
        *
        * <pre>
-       ** The argument passed to the AggregateService consists of three parts
+       ** The request passed to the AggregateService consists of three parts
        *  (1) the (canonical) classname of the ColumnInterpreter implementation
        *  (2) the Scan query
        *  (3) any bytes required to construct the ColumnInterpreter object
@@ -711,7 +711,7 @@ public final class AggregateProtos {
        * <code>required string interpreter_class_name = 1;</code>
        *
        * <pre>
-       ** The argument passed to the AggregateService consists of three parts
+       ** The request passed to the AggregateService consists of three parts
        *  (1) the (canonical) classname of the ColumnInterpreter implementation
        *  (2) the Scan query
        *  (3) any bytes required to construct the ColumnInterpreter object
@@ -732,7 +732,7 @@ public final class AggregateProtos {
        * <code>required string interpreter_class_name = 1;</code>
        *
        * <pre>
-       ** The argument passed to the AggregateService consists of three parts
+       ** The request passed to the AggregateService consists of three parts
        *  (1) the (canonical) classname of the ColumnInterpreter implementation
        *  (2) the Scan query
        *  (3) any bytes required to construct the ColumnInterpreter object
@@ -749,7 +749,7 @@ public final class AggregateProtos {
        * <code>required string interpreter_class_name = 1;</code>
        *
        * <pre>
-       ** The argument passed to the AggregateService consists of three parts
+       ** The request passed to the AggregateService consists of three parts
        *  (1) the (canonical) classname of the ColumnInterpreter implementation
        *  (2) the Scan query
        *  (3) any bytes required to construct the ColumnInterpreter object
@@ -920,15 +920,15 @@ public final class AggregateProtos {
         return this;
       }
 
-      // @@protoc_insertion_point(builder_scope:AggregateArgument)
+      // @@protoc_insertion_point(builder_scope:AggregateRequest)
     }
 
     static {
-      defaultInstance = new AggregateArgument(true);
+      defaultInstance = new AggregateRequest(true);
       defaultInstance.initFields();
     }
 
-    // @@protoc_insertion_point(class_scope:AggregateArgument)
+    // @@protoc_insertion_point(class_scope:AggregateRequest)
   }
 
   public interface AggregateResponseOrBuilder
@@ -1655,59 +1655,59 @@ public final class AggregateProtos {
 
     public interface Interface {
       /**
-       * <code>rpc GetMax(.AggregateArgument) returns (.AggregateResponse);</code>
+       * <code>rpc GetMax(.AggregateRequest) returns (.AggregateResponse);</code>
        */
       public abstract void getMax(
           com.google.protobuf.RpcController controller,
-          org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateArgument request,
+          org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateRequest request,
           com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateResponse> done);
 
       /**
-       * <code>rpc GetMin(.AggregateArgument) returns (.AggregateResponse);</code>
+       * <code>rpc GetMin(.AggregateRequest) returns (.AggregateResponse);</code>
        */
       public abstract void getMin(
           com.google.protobuf.RpcController controller,
-          org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateArgument request,
+          org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateRequest request,
           com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateResponse> done);
 
       /**
-       * <code>rpc GetSum(.AggregateArgument) returns (.AggregateResponse);</code>
+       * <code>rpc GetSum(.AggregateRequest) returns (.AggregateResponse);</code>
        */
       public abstract void getSum(
           com.google.protobuf.RpcController controller,
-          org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateArgument request,
+          org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateRequest request,
           com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateResponse> done);
 
       /**
-       * <code>rpc GetRowNum(.AggregateArgument) returns (.AggregateResponse);</code>
+       * <code>rpc GetRowNum(.AggregateRequest) returns (.AggregateResponse);</code>
        */
       public abstract void getRowNum(
           com.google.protobuf.RpcController controller,
-          org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateArgument request,
+          org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateRequest request,
           com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateResponse> done);
 
       /**
-       * <code>rpc GetAvg(.AggregateArgument) returns (.AggregateResponse);</code>
+       * <code>rpc GetAvg(.AggregateRequest) returns (.AggregateResponse);</code>
        */
       public abstract void getAvg(
           com.google.protobuf.RpcController controller,
-          org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateArgument request,
+          org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateRequest request,
           com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateResponse> done);
 
       /**
-       * <code>rpc GetStd(.AggregateArgument) returns (.AggregateResponse);</code>
+       * <code>rpc GetStd(.AggregateRequest) returns (.AggregateResponse);</code>
        */
       public abstract void getStd(
           com.google.protobuf.RpcController controller,
-          org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateArgument request,
+          org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateRequest request,
           com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateResponse> done);
 
       /**
-       * <code>rpc GetMedian(.AggregateArgument) returns (.AggregateResponse);</code>
+       * <code>rpc GetMedian(.AggregateRequest) returns (.AggregateResponse);</code>
        */
       public abstract void getMedian(
           com.google.protobuf.RpcController controller,
-          org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateArgument request,
+          org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateRequest request,
           com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateResponse> done);
 
     }
@@ -1718,7 +1718,7 @@ public final class AggregateProtos {
         @java.lang.Override
         public  void getMax(
             com.google.protobuf.RpcController controller,
-            org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateArgument request,
+            org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateRequest request,
             com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateResponse> done) {
           impl.getMax(controller, request, done);
         }
@@ -1726,7 +1726,7 @@ public final class AggregateProtos {
         @java.lang.Override
         public  void getMin(
             com.google.protobuf.RpcController controller,
-            org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateArgument request,
+            org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateRequest request,
             com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateResponse> done) {
           impl.getMin(controller, request, done);
         }
@@ -1734,7 +1734,7 @@ public final class AggregateProtos {
         @java.lang.Override
         public  void getSum(
             com.google.protobuf.RpcController controller,
-            org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateArgument request,
+            org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateRequest request,
             com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateResponse> done) {
           impl.getSum(controller, request, done);
         }
@@ -1742,7 +1742,7 @@ public final class AggregateProtos {
         @java.lang.Override
         public  void getRowNum(
             com.google.protobuf.RpcController controller,
-            org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateArgument request,
+            org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateRequest request,
             com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateResponse> done) {
           impl.getRowNum(controller, request, done);
         }
@@ -1750,7 +1750,7 @@ public final class AggregateProtos {
         @java.lang.Override
         public  void getAvg(
             com.google.protobuf.RpcController controller,
-            org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateArgument request,
+            org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateRequest request,
             com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateResponse> done) {
           impl.getAvg(controller, request, done);
         }
@@ -1758,7 +1758,7 @@ public final class AggregateProtos {
         @java.lang.Override
         public  void getStd(
             com.google.protobuf.RpcController controller,
-            org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateArgument request,
+            org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateRequest request,
             com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateResponse> done) {
           impl.getStd(controller, request, done);
         }
@@ -1766,7 +1766,7 @@ public final class AggregateProtos {
         @java.lang.Override
         public  void getMedian(
             com.google.protobuf.RpcController controller,
-            org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateArgument request,
+            org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateRequest request,
             com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateResponse> done) {
           impl.getMedian(controller, request, done);
         }
@@ -1794,19 +1794,19 @@ public final class AggregateProtos {
           }
           switch(method.getIndex()) {
             case 0:
-              return impl.getMax(controller, (org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateArgument)request);
+              return impl.getMax(controller, (org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateRequest)request);
             case 1:
-              return impl.getMin(controller, (org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateArgument)request);
+              return impl.getMin(controller, (org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateRequest)request);
             case 2:
-              return impl.getSum(controller, (org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateArgument)request);
+              return impl.getSum(controller, (org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateRequest)request);
             case 3:
-              return impl.getRowNum(controller, (org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateArgument)request);
+              return impl.getRowNum(controller, (org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateRequest)request);
             case 4:
-              return impl.getAvg(controller, (org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateArgument)request);
+              return impl.getAvg(controller, (org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateRequest)request);
             case 5:
-              return impl.getStd(controller, (org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateArgument)request);
+              return impl.getStd(controller, (org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateRequest)request);
             case 6:
-              return impl.getMedian(controller, (org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateArgument)request);
+              return impl.getMedian(controller, (org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateRequest)request);
             default:
               throw new java.lang.AssertionError("Can't get here.");
           }
@@ -1822,19 +1822,19 @@ public final class AggregateProtos {
           }
           switch(method.getIndex()) {
             case 0:
-              return org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateArgument.getDefaultInstance();
+              return org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateRequest.getDefaultInstance();
             case 1:
-              return org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateArgument.getDefaultInstance();
+              return org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateRequest.getDefaultInstance();
             case 2:
-              return org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateArgument.getDefaultInstance();
+              return org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateRequest.getDefaultInstance();
             case 3:
-              return org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateArgument.getDefaultInstance();
+              return org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateRequest.getDefaultInstance();
             case 4:
-              return org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateArgument.getDefaultInstance();
+              return org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateRequest.getDefaultInstance();
             case 5:
-              return org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateArgument.getDefaultInstance();
+              return org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateRequest.getDefaultInstance();
             case 6:
-              return org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateArgument.getDefaultInstance();
+              return org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateRequest.getDefaultInstance();
             default:
               throw new java.lang.AssertionError("Can't get here.");
           }
@@ -1872,59 +1872,59 @@ public final class AggregateProtos {
     }
 
     /**
-     * <code>rpc GetMax(.AggregateArgument) returns (.AggregateResponse);</code>
+     * <code>rpc GetMax(.AggregateRequest) returns (.AggregateResponse);</code>
      */
     public abstract void getMax(
         com.google.protobuf.RpcController controller,
-        org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateArgument request,
+        org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateRequest request,
         com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateResponse> done);
 
     /**
-     * <code>rpc GetMin(.AggregateArgument) returns (.AggregateResponse);</code>
+     * <code>rpc GetMin(.AggregateRequest) returns (.AggregateResponse);</code>
      */
     public abstract void getMin(
         com.google.protobuf.RpcController controller,
-        org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateArgument request,
+        org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateRequest request,
         com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateResponse> done);
 
     /**
-     * <code>rpc GetSum(.AggregateArgument) returns (.AggregateResponse);</code>
+     * <code>rpc GetSum(.AggregateRequest) returns (.AggregateResponse);</code>
      */
     public abstract void getSum(
         com.google.protobuf.RpcController controller,
-        org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateArgument request,
+        org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateRequest request,
         com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateResponse> done);
 
     /**
-     * <code>rpc GetRowNum(.AggregateArgument) returns (.AggregateResponse);</code>
+     * <code>rpc GetRowNum(.AggregateRequest) returns (.AggregateResponse);</code>
      */
     public abstract void getRowNum(
         com.google.protobuf.RpcController controller,
-        org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateArgument request,
+        org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateRequest request,
         com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateResponse> done);
 
     /**
-     * <code>rpc GetAvg(.AggregateArgument) returns (.AggregateResponse);</code>
+     * <code>rpc GetAvg(.AggregateRequest) returns (.AggregateResponse);</code>
      */
     public abstract void getAvg(
         com.google.protobuf.RpcController controller,
-        org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateArgument request,
+        org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateRequest request,
         com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateResponse> done);
 
     /**
-     * <code>rpc GetStd(.AggregateArgument) returns (.AggregateResponse);</code>
+     * <code>rpc GetStd(.AggregateRequest) returns (.AggregateResponse);</code>
      */
     public abstract void getStd(
         com.google.protobuf.RpcController controller,
-        org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateArgument request,
+        org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateRequest request,
         com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateResponse> done);
 
     /**
-     * <code>rpc GetMedian(.AggregateArgument) returns (.AggregateResponse);</code>
+     * <code>rpc GetMedian(.AggregateRequest) returns (.AggregateResponse);</code>
      */
     public abstract void getMedian(
         com.google.protobuf.RpcController controller,
-        org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateArgument request,
+        org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateRequest request,
         com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateResponse> done);
 
     public static final
@@ -1950,37 +1950,37 @@ public final class AggregateProtos {
       }
       switch(method.getIndex()) {
         case 0:
-          this.getMax(controller, (org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateArgument)request,
+          this.getMax(controller, (org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateRequest)request,
             com.google.protobuf.RpcUtil.<org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateResponse>specializeCallback(
               done));
           return;
         case 1:
-          this.getMin(controller, (org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateArgument)request,
+          this.getMin(controller, (org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateRequest)request,
             com.google.protobuf.RpcUtil.<org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateResponse>specializeCallback(
               done));
           return;
         case 2:
-          this.getSum(controller, (org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateArgument)request,
+          this.getSum(controller, (org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateRequest)request,
             com.google.protobuf.RpcUtil.<org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateResponse>specializeCallback(
               done));
           return;
         case 3:
-          this.getRowNum(controller, (org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateArgument)request,
+          this.getRowNum(controller, (org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateRequest)request,
             com.google.protobuf.RpcUtil.<org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateResponse>specializeCallback(
               done));
           return;
         case 4:
-          this.getAvg(controller, (org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateArgument)request,
+          this.getAvg(controller, (org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateRequest)request,
             com.google.protobuf.RpcUtil.<org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateResponse>specializeCallback(
               done));
           return;
         case 5:
-          this.getStd(controller, (org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateArgument)request,
+          this.getStd(controller, (org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateRequest)request,
             com.google.protobuf.RpcUtil.<org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateResponse>specializeCallback(
               done));
           return;
         case 6:
-          this.getMedian(controller, (org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateArgument)request,
+          this.getMedian(controller, (org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateRequest)request,
             com.google.protobuf.RpcUtil.<org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateResponse>specializeCallback(
               done));
           return;
@@ -1999,19 +1999,19 @@ public final class AggregateProtos {
       }
       switch(method.getIndex()) {
         case 0:
-          return org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateArgument.getDefaultInstance();
+          return org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateRequest.getDefaultInstance();
         case 1:
-          return org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateArgument.getDefaultInstance();
+          return org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateRequest.getDefaultInstance();
         case 2:
-          return org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateArgument.getDefaultInstance();
+          return org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateRequest.getDefaultInstance();
         case 3:
-          return org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateArgument.getDefaultInstance();
+          return org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateRequest.getDefaultInstance();
         case 4:
-          return org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateArgument.getDefaultInstance();
+          return org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateRequest.getDefaultInstance();
         case 5:
-          return org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateArgument.getDefaultInstance();
+          return org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateRequest.getDefaultInstance();
         case 6:
-          return org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateArgument.getDefaultInstance();
+          return org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateRequest.getDefaultInstance();
         default:
           throw new java.lang.AssertionError("Can't get here.");
       }
@@ -2063,7 +2063,7 @@ public final class AggregateProtos {
 
       public  void getMax(
           com.google.protobuf.RpcController controller,
-          org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateArgument request,
+          org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateRequest request,
           com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateResponse> done) {
         channel.callMethod(
           getDescriptor().getMethods().get(0),
@@ -2078,7 +2078,7 @@ public final class AggregateProtos {
 
       public  void getMin(
           com.google.protobuf.RpcController controller,
-          org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateArgument request,
+          org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateRequest request,
           com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateResponse> done) {
         channel.callMethod(
           getDescriptor().getMethods().get(1),
@@ -2093,7 +2093,7 @@ public final class AggregateProtos {
 
       public  void getSum(
           com.google.protobuf.RpcController controller,
-          org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateArgument request,
+          org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateRequest request,
           com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateResponse> done) {
         channel.callMethod(
           getDescriptor().getMethods().get(2),
@@ -2108,7 +2108,7 @@ public final class AggregateProtos {
 
       public  void getRowNum(
           com.google.protobuf.RpcController controller,
-          org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateArgument request,
+          org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateRequest request,
           com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateResponse> done) {
         channel.callMethod(
           getDescriptor().getMethods().get(3),
@@ -2123,7 +2123,7 @@ public final class AggregateProtos {
 
       public  void getAvg(
           com.google.protobuf.RpcController controller,
-          org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateArgument request,
+          org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateRequest request,
           com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateResponse> done) {
         channel.callMethod(
           getDescriptor().getMethods().get(4),
@@ -2138,7 +2138,7 @@ public final class AggregateProtos {
 
       public  void getStd(
           com.google.protobuf.RpcController controller,
-          org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateArgument request,
+          org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateRequest request,
           com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateResponse> done) {
         channel.callMethod(
           getDescriptor().getMethods().get(5),
@@ -2153,7 +2153,7 @@ public final class AggregateProtos {
 
       public  void getMedian(
           com.google.protobuf.RpcController controller,
-          org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateArgument request,
+          org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateRequest request,
           com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateResponse> done) {
         channel.callMethod(
           getDescriptor().getMethods().get(6),
@@ -2175,37 +2175,37 @@ public final class AggregateProtos {
     public interface BlockingInterface {
       public org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateResponse getMax(
           com.google.protobuf.RpcController controller,
-          org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateArgument request)
+          org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateRequest request)
           throws com.google.protobuf.ServiceException;
 
       public org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateResponse getMin(
           com.google.protobuf.RpcController controller,
-          org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateArgument request)
+          org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateRequest request)
           throws com.google.protobuf.ServiceException;
 
       public org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateResponse getSum(
           com.google.protobuf.RpcController controller,
-          org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateArgument request)
+          org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateRequest request)
           throws com.google.protobuf.ServiceException;
 
       public org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateResponse getRowNum(
           com.google.protobuf.RpcController controller,
-          org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateArgument request)
+          org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateRequest request)
           throws com.google.protobuf.ServiceException;
 
       public org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateResponse getAvg(
           com.google.protobuf.RpcController controller,
-          org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateArgument request)
+          org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateRequest request)
           throws com.google.protobuf.ServiceException;
 
       public org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateResponse getStd(
           com.google.protobuf.RpcController controller,
-          org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateArgument request)
+          org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateRequest request)
           throws com.google.protobuf.ServiceException;
 
       public org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateResponse getMedian(
           com.google.protobuf.RpcController controller,
-          org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateArgument request)
+          org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateRequest request)
           throws com.google.protobuf.ServiceException;
     }
 
@@ -2218,7 +2218,7 @@ public final class AggregateProtos {
 
       public org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateResponse getMax(
           com.google.protobuf.RpcController controller,
-          org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateArgument request)
+          org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateRequest request)
           throws com.google.protobuf.ServiceException {
         return (org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateResponse) channel.callBlockingMethod(
           getDescriptor().getMethods().get(0),
@@ -2230,7 +2230,7 @@ public final class AggregateProtos {
 
       public org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateResponse getMin(
           com.google.protobuf.RpcController controller,
-          org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateArgument request)
+          org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateRequest request)
           throws com.google.protobuf.ServiceException {
         return (org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateResponse) channel.callBlockingMethod(
           getDescriptor().getMethods().get(1),
@@ -2242,7 +2242,7 @@ public final class AggregateProtos {
 
       public org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateResponse getSum(
           com.google.protobuf.RpcController controller,
-          org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateArgument request)
+          org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateRequest request)
           throws com.google.protobuf.ServiceException {
         return (org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateResponse) channel.callBlockingMethod(
           getDescriptor().getMethods().get(2),
@@ -2254,7 +2254,7 @@ public final class AggregateProtos {
 
       public org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateResponse getRowNum(
           com.google.protobuf.RpcController controller,
-          org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateArgument request)
+          org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateRequest request)
           throws com.google.protobuf.ServiceException {
         return (org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateResponse) channel.callBlockingMethod(
           getDescriptor().getMethods().get(3),
@@ -2266,7 +2266,7 @@ public final class AggregateProtos {
 
       public org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateResponse getAvg(
           com.google.protobuf.RpcController controller,
-          org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateArgument request)
+          org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateRequest request)
           throws com.google.protobuf.ServiceException {
         return (org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateResponse) channel.callBlockingMethod(
           getDescriptor().getMethods().get(4),
@@ -2278,7 +2278,7 @@ public final class AggregateProtos {
 
       public org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateResponse getStd(
           com.google.protobuf.RpcController controller,
-          org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateArgument request)
+          org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateRequest request)
           throws com.google.protobuf.ServiceException {
         return (org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateResponse) channel.callBlockingMethod(
           getDescriptor().getMethods().get(5),
@@ -2290,7 +2290,7 @@ public final class AggregateProtos {
 
       public org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateResponse getMedian(
           com.google.protobuf.RpcController controller,
-          org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateArgument request)
+          org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateRequest request)
           throws com.google.protobuf.ServiceException {
         return (org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateResponse) channel.callBlockingMethod(
           getDescriptor().getMethods().get(6),
@@ -2305,10 +2305,10 @@ public final class AggregateProtos {
   }
 
   private static com.google.protobuf.Descriptors.Descriptor
-    internal_static_AggregateArgument_descriptor;
+    internal_static_AggregateRequest_descriptor;
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
-      internal_static_AggregateArgument_fieldAccessorTable;
+      internal_static_AggregateRequest_fieldAccessorTable;
   private static com.google.protobuf.Descriptors.Descriptor
     internal_static_AggregateResponse_descriptor;
   private static
@@ -2323,34 +2323,34 @@ public final class AggregateProtos {
       descriptor;
   static {
     java.lang.String[] descriptorData = {
-      "\n\017Aggregate.proto\032\014Client.proto\"l\n\021Aggre" +
-      "gateArgument\022\036\n\026interpreter_class_name\030\001" +
-      " \002(\t\022\023\n\004scan\030\002 \002(\0132\005.Scan\022\"\n\032interpreter" +
-      "_specific_bytes\030\003 \001(\014\"<\n\021AggregateRespon" +
-      "se\022\022\n\nfirst_part\030\001 \003(\014\022\023\n\013second_part\030\002 " +
-      "\001(\0142\366\002\n\020AggregateService\0220\n\006GetMax\022\022.Agg" +
-      "regateArgument\032\022.AggregateResponse\0220\n\006Ge" +
-      "tMin\022\022.AggregateArgument\032\022.AggregateResp" +
-      "onse\0220\n\006GetSum\022\022.AggregateArgument\032\022.Agg" +
-      "regateResponse\0223\n\tGetRowNum\022\022.AggregateA",
-      "rgument\032\022.AggregateResponse\0220\n\006GetAvg\022\022." +
-      "AggregateArgument\032\022.AggregateResponse\0220\n" +
-      "\006GetStd\022\022.AggregateArgument\032\022.AggregateR" +
-      "esponse\0223\n\tGetMedian\022\022.AggregateArgument" +
-      "\032\022.AggregateResponseBE\n*org.apache.hadoo" +
-      "p.hbase.protobuf.generatedB\017AggregatePro" +
-      "tosH\001\210\001\001\240\001\001"
+      "\n\017Aggregate.proto\032\014Client.proto\"k\n\020Aggre" +
+      "gateRequest\022\036\n\026interpreter_class_name\030\001 " +
+      "\002(\t\022\023\n\004scan\030\002 \002(\0132\005.Scan\022\"\n\032interpreter_" +
+      "specific_bytes\030\003 \001(\014\"<\n\021AggregateRespons" +
+      "e\022\022\n\nfirst_part\030\001 \003(\014\022\023\n\013second_part\030\002 \001" +
+      "(\0142\357\002\n\020AggregateService\022/\n\006GetMax\022\021.Aggr" +
+      "egateRequest\032\022.AggregateResponse\022/\n\006GetM" +
+      "in\022\021.AggregateRequest\032\022.AggregateRespons" +
+      "e\022/\n\006GetSum\022\021.AggregateRequest\032\022.Aggrega" +
+      "teResponse\0222\n\tGetRowNum\022\021.AggregateReque",
+      "st\032\022.AggregateResponse\022/\n\006GetAvg\022\021.Aggre" +
+      "gateRequest\032\022.AggregateResponse\022/\n\006GetSt" +
+      "d\022\021.AggregateRequest\032\022.AggregateResponse" +
+      "\0222\n\tGetMedian\022\021.AggregateRequest\032\022.Aggre" +
+      "gateResponseBE\n*org.apache.hadoop.hbase." +
+      "protobuf.generatedB\017AggregateProtosH\001\210\001\001" +
+      "\240\001\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
         public com.google.protobuf.ExtensionRegistry assignDescriptors(
             com.google.protobuf.Descriptors.FileDescriptor root) {
           descriptor = root;
-          internal_static_AggregateArgument_descriptor =
+          internal_static_AggregateRequest_descriptor =
             getDescriptor().getMessageTypes().get(0);
-          internal_static_AggregateArgument_fieldAccessorTable = new
+          internal_static_AggregateRequest_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
-              internal_static_AggregateArgument_descriptor,
+              internal_static_AggregateRequest_descriptor,
               new java.lang.String[] { "InterpreterClassName", "Scan", "InterpreterSpecificBytes", });
           internal_static_AggregateResponse_descriptor =
             getDescriptor().getMessageTypes().get(1);

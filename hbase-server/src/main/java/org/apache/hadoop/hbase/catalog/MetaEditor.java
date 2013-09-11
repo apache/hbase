@@ -39,8 +39,8 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcChannel;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.MutationType;
-import org.apache.hadoop.hbase.protobuf.generated.MultiRowMutation.MultiMutateRequest;
-import org.apache.hadoop.hbase.protobuf.generated.MultiRowMutation.MultiRowMutationService;
+import org.apache.hadoop.hbase.protobuf.generated.MultiRowMutationProtos.MutateRowsRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MultiRowMutationProtos.MultiRowMutationService;
 import org.apache.hadoop.hbase.util.Bytes;
 
 import com.google.protobuf.ServiceException;
@@ -378,7 +378,7 @@ public class MetaEditor {
    */
   private static void multiMutate(HTable table, byte[] row, Mutation... mutations) throws IOException {
     CoprocessorRpcChannel channel = table.coprocessorService(row);
-    MultiMutateRequest.Builder mmrBuilder = MultiMutateRequest.newBuilder();
+    MutateRowsRequest.Builder mmrBuilder = MutateRowsRequest.newBuilder();
     for (Mutation mutation : mutations) {
       if (mutation instanceof Put) {
         mmrBuilder.addMutationRequest(ProtobufUtil.toMutation(MutationType.PUT, mutation));

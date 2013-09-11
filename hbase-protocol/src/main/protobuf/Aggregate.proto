@@ -24,8 +24,8 @@ option optimize_for = SPEED;
 
 import "Client.proto";
 
-message AggregateArgument {
-  /** The argument passed to the AggregateService consists of three parts
+message AggregateRequest {
+  /** The request passed to the AggregateService consists of three parts
    *  (1) the (canonical) classname of the ColumnInterpreter implementation
    *  (2) the Scan query
    *  (3) any bytes required to construct the ColumnInterpreter object
@@ -52,11 +52,11 @@ message AggregateResponse {
  *  AggregateService method implementations and their functionality.
  */
 service AggregateService {
-  rpc GetMax (AggregateArgument) returns (AggregateResponse);
-  rpc GetMin (AggregateArgument) returns (AggregateResponse);
-  rpc GetSum (AggregateArgument) returns (AggregateResponse);
-  rpc GetRowNum (AggregateArgument) returns (AggregateResponse);
-  rpc GetAvg (AggregateArgument) returns (AggregateResponse);
-  rpc GetStd (AggregateArgument) returns (AggregateResponse);
-  rpc GetMedian (AggregateArgument) returns (AggregateResponse);
+  rpc GetMax (AggregateRequest) returns (AggregateResponse);
+  rpc GetMin (AggregateRequest) returns (AggregateResponse);
+  rpc GetSum (AggregateRequest) returns (AggregateResponse);
+  rpc GetRowNum (AggregateRequest) returns (AggregateResponse);
+  rpc GetAvg (AggregateRequest) returns (AggregateResponse);
+  rpc GetStd (AggregateRequest) returns (AggregateResponse);
+  rpc GetMedian (AggregateRequest) returns (AggregateResponse);
 }

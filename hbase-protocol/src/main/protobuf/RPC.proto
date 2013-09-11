@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 import "Tracing.proto"; 
-import "hbase.proto"; 
+import "HBase.proto";
 
 option java_package = "org.apache.hadoop.hbase.protobuf.generated";
 option java_outer_classname = "RPCProtos";

@@ -1939,11 +1939,11 @@ public final class ProtobufUtil {
    */
   public static List<UserPermission> getUserPermissions(
       AccessControlService.BlockingInterface protocol) throws ServiceException {
-    AccessControlProtos.UserPermissionsRequest.Builder builder =
-      AccessControlProtos.UserPermissionsRequest.newBuilder();
+    AccessControlProtos.GetUserPermissionsRequest.Builder builder =
+      AccessControlProtos.GetUserPermissionsRequest.newBuilder();
     builder.setType(AccessControlProtos.Permission.Type.Global);
-    AccessControlProtos.UserPermissionsRequest request = builder.build();
-    AccessControlProtos.UserPermissionsResponse response =
+    AccessControlProtos.GetUserPermissionsRequest request = builder.build();
+    AccessControlProtos.GetUserPermissionsResponse response =
       protocol.getUserPermissions(null, request);
     List<UserPermission> perms = new ArrayList<UserPermission>();
     for (AccessControlProtos.UserPermission perm: response.getUserPermissionList()) {
@@ -1964,14 +1964,14 @@ public final class ProtobufUtil {
   public static List<UserPermission> getUserPermissions(
       AccessControlService.BlockingInterface protocol,
       TableName t) throws ServiceException {
-    AccessControlProtos.UserPermissionsRequest.Builder builder =
-      AccessControlProtos.UserPermissionsRequest.newBuilder();
+    AccessControlProtos.GetUserPermissionsRequest.Builder builder =
+      AccessControlProtos.GetUserPermissionsRequest.newBuilder();
     if (t != null) {
       builder.setTableName(ProtobufUtil.toProtoTableName(t));
     }
     builder.setType(AccessControlProtos.Permission.Type.Table);
-    AccessControlProtos.UserPermissionsRequest request = builder.build();
-    AccessControlProtos.UserPermissionsResponse response =
+    AccessControlProtos.GetUserPermissionsRequest request = builder.build();
+    AccessControlProtos.GetUserPermissionsResponse response =
       protocol.getUserPermissions(null, request);
     List<UserPermission> perms = new ArrayList<UserPermission>();
     for (AccessControlProtos.UserPermission perm: response.getUserPermissionList()) {

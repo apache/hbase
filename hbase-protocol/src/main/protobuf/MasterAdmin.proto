@@ -26,7 +26,7 @@ option java_generic_services = true;
 option java_generate_equals_and_hash = true;
 option optimize_for = SPEED;
 
-import "hbase.proto";
+import "HBase.proto";
 import "Client.proto";
 
 /* Column-level protobufs */
@@ -158,15 +158,15 @@ message ModifyNamespaceRequest {
   required NamespaceDescriptor namespaceDescriptor = 1;
 }
 
+message ModifyNamespaceResponse {
+}
+
 message GetNamespaceDescriptorRequest {
   required string namespaceName = 1;
 }
 
 message GetNamespaceDescriptorResponse {
   required NamespaceDescriptor namespaceDescriptor = 1;
-}
-
-message ModifyNamespaceResponse {
 }
 
 message ListNamespaceDescriptorsRequest {
@@ -223,10 +223,10 @@ message SetBalancerRunningResponse {
   optional bool prev_balance_value = 1;
 }
 
-message CatalogScanRequest {
+message RunCatalogScanRequest {
 }
 
-message CatalogScanResponse {
+message RunCatalogScanResponse {
   optional int32 scan_result = 1;
 }
 
@@ -245,26 +245,26 @@ message IsCatalogJanitorEnabledResponse {
   required bool value = 1;
 }
 
-message TakeSnapshotRequest{
+message SnapshotRequest {
 	required SnapshotDescription snapshot = 1;
 }
 
-message TakeSnapshotResponse{
+message SnapshotResponse {
 	required int64 expected_timeout = 1;
 }
 
-message ListSnapshotRequest{
+message GetCompletedSnapshotsRequest {
 }
 
-message ListSnapshotResponse{
+message GetCompletedSnapshotsResponse {
 	repeated SnapshotDescription snapshots = 1;
 }
 
-message DeleteSnapshotRequest{
+message DeleteSnapshotRequest {
 	required SnapshotDescription snapshot = 1;
 }
 
-message DeleteSnapshotResponse{
+message DeleteSnapshotResponse {
 }
 
 message RestoreSnapshotRequest {
@@ -277,11 +277,11 @@ message RestoreSnapshotResponse {
 /* if you don't send the snapshot, then you will get it back
  * in the response (if the snapshot is done) so you can check the snapshot
  */
-message IsSnapshotDoneRequest{
+message IsSnapshotDoneRequest {
 	optional SnapshotDescription snapshot = 1;
 }
 
-message IsSnapshotDoneResponse{
+message IsSnapshotDoneResponse {
 	optional bool done = 1 [default = false];
 	optional SnapshotDescription snapshot = 2;
 }
@@ -381,8 +381,8 @@ service MasterAdminService {
     returns(SetBalancerRunningResponse);
 
   /** Get a run of the catalog janitor */
-  rpc RunCatalogScan(CatalogScanRequest)
-     returns(CatalogScanResponse);
+  rpc RunCatalogScan(RunCatalogScanRequest)
+     returns(RunCatalogScanResponse);
 
   /**
    * Enable the catalog janitor on or off.
@@ -405,13 +405,13 @@ service MasterAdminService {
   /** 
    * Create a snapshot for the given table.
    */
-  rpc Snapshot(TakeSnapshotRequest) returns(TakeSnapshotResponse);
+  rpc Snapshot(SnapshotRequest) returns(SnapshotResponse);
 
   /**
-   * List completed snapshots.
+   * Get completed snapshots.
    * Returns a list of snapshot descriptors for completed snapshots
    */
-  rpc GetCompletedSnapshots(ListSnapshotRequest) returns(ListSnapshotResponse);
+  rpc GetCompletedSnapshots(GetCompletedSnapshotsRequest) returns(GetCompletedSnapshotsResponse);
 
   /**
    * Delete an existing snapshot. This method can also be used to clean up an aborted snapshot.
@@ -445,7 +445,7 @@ service MasterAdminService {
   rpc CreateNamespace(CreateNamespaceRequest)
     returns(CreateNamespaceResponse);
 
-  /** Delete's namespace synchronously */
+  /** Deletes namespace synchronously */
   rpc DeleteNamespace(DeleteNamespaceRequest)
     returns(DeleteNamespaceResponse);
 

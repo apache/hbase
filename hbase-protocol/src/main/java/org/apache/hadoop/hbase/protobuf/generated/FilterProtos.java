@@ -15687,7 +15687,7 @@ public final class FilterProtos {
       descriptor;
   static {
     java.lang.String[] descriptorData = {
-      "\n\014Filter.proto\032\013hbase.proto\032\020Comparator." +
+      "\n\014Filter.proto\032\013HBase.proto\032\020Comparator." +
       "proto\"1\n\006Filter\022\014\n\004name\030\001 \002(\t\022\031\n\021seriali" +
       "zed_filter\030\002 \001(\014\"%\n\024ColumnCountGetFilter" +
       "\022\r\n\005limit\030\001 \002(\005\"N\n\026ColumnPaginationFilte" +

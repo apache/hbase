@@ -1325,9 +1325,9 @@ public class AccessController extends BaseRegionObserver
 
   @Override
   public void getUserPermissions(RpcController controller,
-                                 AccessControlProtos.UserPermissionsRequest request,
-                                 RpcCallback<AccessControlProtos.UserPermissionsResponse> done) {
-    AccessControlProtos.UserPermissionsResponse response = null;
+                                 AccessControlProtos.GetUserPermissionsRequest request,
+                                 RpcCallback<AccessControlProtos.GetUserPermissionsResponse> done) {
+    AccessControlProtos.GetUserPermissionsResponse response = null;
     try {
       // only allowed to be called on _acl_ region
       if (aclRegion) {
@@ -1348,7 +1348,7 @@ public class AccessController extends BaseRegionObserver
           perms = AccessControlLists.getUserPermissions(
               regionEnv.getConfiguration(), null);
         }
-        response = ResponseConverter.buildUserPermissionsResponse(perms);
+        response = ResponseConverter.buildGetUserPermissionsResponse(perms);
       } else {
         throw new CoprocessorException(AccessController.class, "This method "
             + "can only execute at " + AccessControlLists.ACL_TABLE_NAME + " table.");

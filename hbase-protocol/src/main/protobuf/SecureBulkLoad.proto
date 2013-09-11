@@ -22,13 +22,13 @@ option java_generic_services = true;
 option java_generate_equals_and_hash = true;
 option optimize_for = SPEED;
 
-import 'hbase.proto';
+import 'HBase.proto';
 import 'Client.proto';
 
 message SecureBulkLoadHFilesRequest {
   repeated BulkLoadHFileRequest.FamilyPath family_path = 1;
   optional bool assign_seq_num = 2;
-  required DelegationTokenProto fs_token = 3;
+  required DelegationToken fs_token = 3;
   required string bulk_token = 4;
 }
 
@@ -36,7 +36,7 @@ message SecureBulkLoadHFilesResponse {
   required bool loaded = 1;
 }
 
-message DelegationTokenProto {
+message DelegationToken {
   optional bytes identifier = 1;
   optional bytes password = 2;
   optional string kind = 3;

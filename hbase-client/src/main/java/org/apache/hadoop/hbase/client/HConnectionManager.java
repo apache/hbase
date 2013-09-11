@@ -78,8 +78,8 @@ import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.AssignRegion
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.AssignRegionResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.BalanceRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.BalanceResponse;
-import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.CatalogScanRequest;
-import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.CatalogScanResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.RunCatalogScanRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.RunCatalogScanResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.CreateNamespaceRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.CreateNamespaceResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.CreateTableRequest;
@@ -110,8 +110,8 @@ import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.IsSnapshotDo
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.IsSnapshotDoneResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.ListNamespaceDescriptorsRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.ListNamespaceDescriptorsResponse;
-import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.ListSnapshotRequest;
-import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.ListSnapshotResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.GetCompletedSnapshotsRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.GetCompletedSnapshotsResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.ListTableDescriptorsByNamespaceRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.ListTableDescriptorsByNamespaceResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.ListTableNamesByNamespaceRequest;
@@ -135,8 +135,8 @@ import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.ShutdownRequ
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.ShutdownResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.StopMasterRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.StopMasterResponse;
-import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.TakeSnapshotRequest;
-import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.TakeSnapshotResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.SnapshotRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.SnapshotResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.UnassignRegionRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.UnassignRegionResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterMonitorProtos.GetClusterStatusRequest;
@@ -171,7 +171,7 @@ import com.google.protobuf.ServiceException;
  * A non-instantiable class that manages creation of {@link HConnection}s.
  * <p>The simplest way to use this class is by using {@link #createConnection(Configuration)}.
  * This creates a new {@link HConnection} that is managed by the caller.
- * From this {@link HConnection} {@link HTableInterface} implementations are retrieved 
+ * From this {@link HConnection} {@link HTableInterface} implementations are retrieved
  * with {@link HConnection#getTable(byte[])}. Example:
  * <pre>
  * {@code
@@ -646,7 +646,7 @@ public class HConnectionManager {
      HConnectionImplementation(Configuration conf, boolean managed) throws IOException {
        this(conf, managed, null, null);
      }
-     
+
     /**
      * constructor
      * @param conf Configuration object
@@ -713,7 +713,7 @@ public class HConnectionManager {
           HConstants.HBASE_CLIENT_PREFETCH_LIMIT,
           HConstants.DEFAULT_HBASE_CLIENT_PREFETCH_LIMIT);
     }
- 
+
     @Override
     public HTableInterface getTable(String tableName) throws IOException {
       return getTable(TableName.valueOf(tableName));
@@ -1188,7 +1188,7 @@ public class HConnectionManager {
           // the second will use the value that the first one found.
           synchronized (regionLockObject) {
             // Check the cache again for a hit in case some other thread made the
-            // same query while we were waiting on the lock. 
+            // same query while we were waiting on the lock.
             if (useCache) {
               location = getCachedLocation(tableName, row);
               if (location != null) {
@@ -2079,8 +2079,8 @@ public class HConnectionManager {
         }
 
         @Override
-        public CatalogScanResponse runCatalogScan(RpcController controller,
-            CatalogScanRequest request) throws ServiceException {
+        public RunCatalogScanResponse runCatalogScan(RpcController controller,
+            RunCatalogScanRequest request) throws ServiceException {
           return stub.runCatalogScan(controller, request);
         }
 
@@ -2106,14 +2106,14 @@ public class HConnectionManager {
         }
 
         @Override
-        public TakeSnapshotResponse snapshot(RpcController controller,
-            TakeSnapshotRequest request) throws ServiceException {
+        public SnapshotResponse snapshot(RpcController controller,
+            SnapshotRequest request) throws ServiceException {
           return stub.snapshot(controller, request);
         }
 
         @Override
-        public ListSnapshotResponse getCompletedSnapshots(
-            RpcController controller, ListSnapshotRequest request)
+        public GetCompletedSnapshotsResponse getCompletedSnapshots(
+            RpcController controller, GetCompletedSnapshotsRequest request)
             throws ServiceException {
           return stub.getCompletedSnapshots(controller, request);
         }

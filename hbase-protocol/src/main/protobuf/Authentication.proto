@@ -55,10 +55,10 @@ message Token {
 
 
 // RPC request & response messages
-message TokenRequest {
+message GetAuthenticationTokenRequest {
 }
 
-message TokenResponse {
+message GetAuthenticationTokenResponse {
     optional Token token = 1;
 }
 
@@ -73,8 +73,8 @@ message WhoAmIResponse {
 
 // RPC service
 service AuthenticationService {
-    rpc GetAuthenticationToken(TokenRequest)
-        returns (TokenResponse);
+    rpc GetAuthenticationToken(GetAuthenticationTokenRequest)
+        returns (GetAuthenticationTokenResponse);
 
     rpc WhoAmI(WhoAmIRequest)
         returns (WhoAmIResponse);

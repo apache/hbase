@@ -35,9 +35,9 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.ResponseConverter;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto;
-import org.apache.hadoop.hbase.protobuf.generated.MultiRowMutation.MultiMutateRequest;
-import org.apache.hadoop.hbase.protobuf.generated.MultiRowMutation.MultiMutateResponse;
-import org.apache.hadoop.hbase.protobuf.generated.MultiRowMutation.MultiRowMutationService;
+import org.apache.hadoop.hbase.protobuf.generated.MultiRowMutationProtos.MutateRowsRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MultiRowMutationProtos.MutateRowsResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MultiRowMutationProtos.MultiRowMutationService;
 
 import com.google.protobuf.RpcCallback;
 import com.google.protobuf.RpcController;
@@ -63,13 +63,13 @@ import com.google.protobuf.Service;
  * ...
  * Mutate m1 = ProtobufUtil.toMutate(MutateType.PUT, p1);
  * Mutate m2 = ProtobufUtil.toMutate(MutateType.PUT, p2);
- * MultiMutateRequest.Builder mrmBuilder = MultiMutateRequest.newBuilder();
+ * MutateRowsRequest.Builder mrmBuilder = MutateRowsRequest.newBuilder();
  * mrmBuilder.addMutationRequest(m1);
  * mrmBuilder.addMutationRequest(m2);
  * CoprocessorRpcChannel channel = t.coprocessorService(ROW);
  * MultiRowMutationService.BlockingInterface service = 
  *    MultiRowMutationService.newBlockingStub(channel);
- * MultiMutateRequest mrm = mrmBuilder.build();
+ * MutateRowsRequest mrm = mrmBuilder.build();
  * service.mutateRows(null, mrm);
  * </pre></code>
  */
@@ -79,9 +79,9 @@ public class MultiRowMutationEndpoint extends MultiRowMutationService implements
 CoprocessorService, Coprocessor {
   private RegionCoprocessorEnvironment env;
   @Override
-  public void mutateRows(RpcController controller, MultiMutateRequest request, 
-      RpcCallback<MultiMutateResponse> done) {
-    MultiMutateResponse response = MultiMutateResponse.getDefaultInstance();
+  public void mutateRows(RpcController controller, MutateRowsRequest request, 
+      RpcCallback<MutateRowsResponse> done) {
+    MutateRowsResponse response = MutateRowsResponse.getDefaultInstance();
     try {
       // set of rows to lock, sorted to avoid deadlocks
       SortedSet<byte[]> rowsToLock = new TreeSet<byte[]>(Bytes.BYTES_COMPARATOR);

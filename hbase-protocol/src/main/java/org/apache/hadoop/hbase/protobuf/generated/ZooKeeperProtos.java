@@ -9391,7 +9391,7 @@ public final class ZooKeeperProtos {
       descriptor;
   static {
     java.lang.String[] descriptorData = {
-      "\n\017ZooKeeper.proto\032\013hbase.proto\"D\n\020MetaRe" +
+      "\n\017ZooKeeper.proto\032\013HBase.proto\"D\n\020MetaRe" +
       "gionServer\022\033\n\006server\030\001 \002(\0132\013.ServerName\022" +
       "\023\n\013rpc_version\030\002 \001(\r\":\n\006Master\022\033\n\006master" +
       "\030\001 \002(\0132\013.ServerName\022\023\n\013rpc_version\030\002 \001(\r" +

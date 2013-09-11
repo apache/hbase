@@ -731,7 +731,7 @@ public final class MapReduceProtos {
       descriptor;
   static {
     java.lang.String[] descriptorData = {
-      "\n\017MapReduce.proto\032\013hbase.proto\".\n\013ScanMe" +
+      "\n\017MapReduce.proto\032\013HBase.proto\".\n\013ScanMe" +
       "trics\022\037\n\007metrics\030\001 \003(\0132\016.NameInt64PairBB" +
       "\n*org.apache.hadoop.hbase.protobuf.gener" +
       "atedB\017MapReduceProtosH\001\240\001\001"

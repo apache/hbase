@@ -78,7 +78,7 @@ import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier.Re
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.AddColumnRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.AssignRegionRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.BalanceRequest;
-import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.CatalogScanRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.RunCatalogScanRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.CreateTableRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DeleteColumnRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DeleteTableRequest;
@@ -1206,14 +1206,14 @@ public final class RequestConverter {
   /**
    * @see {@link #buildCatalogScanRequest}
    */
-  private static final CatalogScanRequest CATALOG_SCAN_REQUEST =
-    CatalogScanRequest.newBuilder().build();
+  private static final RunCatalogScanRequest CATALOG_SCAN_REQUEST =
+    RunCatalogScanRequest.newBuilder().build();
 
   /**
    * Creates a request for running a catalog scan
-   * @return A {@link CatalogScanRequest}
+   * @return A {@link RunCatalogScanRequest}
    */
-  public static CatalogScanRequest buildCatalogScanRequest() {
+  public static RunCatalogScanRequest buildCatalogScanRequest() {
     return CATALOG_SCAN_REQUEST;
   }
 

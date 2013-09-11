@@ -255,14 +255,14 @@ public class TestTokenAuthentication {
     }
 
     @Override
-    public AuthenticationProtos.TokenResponse getAuthenticationToken(
-        RpcController controller, AuthenticationProtos.TokenRequest request)
+    public AuthenticationProtos.GetAuthenticationTokenResponse getAuthenticationToken(
+        RpcController controller, AuthenticationProtos.GetAuthenticationTokenRequest request)
       throws ServiceException {
       LOG.debug("Authentication token request from "+RequestContext.getRequestUserName());
       // ignore passed in controller -- it's always null
       ServerRpcController serverController = new ServerRpcController();
-      BlockingRpcCallback<AuthenticationProtos.TokenResponse> callback =
-          new BlockingRpcCallback<AuthenticationProtos.TokenResponse>();
+      BlockingRpcCallback<AuthenticationProtos.GetAuthenticationTokenResponse> callback =
+          new BlockingRpcCallback<AuthenticationProtos.GetAuthenticationTokenResponse>();
       getAuthenticationToken(serverController, request, callback);
       try {
         serverController.checkFailed();

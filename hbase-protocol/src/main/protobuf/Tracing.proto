@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 option java_package = "org.apache.hadoop.hbase.protobuf.generated";
-option java_outer_classname = "Tracing";
+option java_outer_classname = "TracingProtos";
 option java_generate_equals_and_hash = true;
 option optimize_for = SPEED;
 

@@ -103,7 +103,7 @@ import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.IsRestoreSna
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.IsRestoreSnapshotDoneResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.IsSnapshotDoneRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.IsSnapshotDoneResponse;
-import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.ListSnapshotRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.GetCompletedSnapshotsRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.ModifyColumnRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.ModifyTableRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.MoveRegionRequest;
@@ -112,8 +112,8 @@ import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.RestoreSnaps
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.SetBalancerRunningRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.ShutdownRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.StopMasterRequest;
-import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.TakeSnapshotRequest;
-import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.TakeSnapshotResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.SnapshotRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.SnapshotResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.UnassignRegionRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterMonitorProtos.GetClusterStatusRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterMonitorProtos.GetSchemaAlterStatusRequest;
@@ -2655,7 +2655,7 @@ public class HBaseAdmin implements Abortable, Closeable {
   public void snapshot(SnapshotDescription snapshot) throws IOException, SnapshotCreationException,
       IllegalArgumentException {
     // actually take the snapshot
-    TakeSnapshotResponse response = takeSnapshotAsync(snapshot);
+    SnapshotResponse response = takeSnapshotAsync(snapshot);
     final IsSnapshotDoneRequest request = IsSnapshotDoneRequest.newBuilder().setSnapshot(snapshot)
         .build();
     IsSnapshotDoneResponse done = null;
@@ -2704,15 +2704,15 @@ public class HBaseAdmin implements Abortable, Closeable {
    * @throws SnapshotCreationException if snapshot creation failed
    * @throws IllegalArgumentException if the snapshot request is formatted incorrectly
    */
-  public TakeSnapshotResponse takeSnapshotAsync(SnapshotDescription snapshot) throws IOException,
+  public SnapshotResponse takeSnapshotAsync(SnapshotDescription snapshot) throws IOException,
       SnapshotCreationException {
     ClientSnapshotDescriptionUtils.assertSnapshotRequestIsValid(snapshot);
-    final TakeSnapshotRequest request = TakeSnapshotRequest.newBuilder().setSnapshot(snapshot)
+    final SnapshotRequest request = SnapshotRequest.newBuilder().setSnapshot(snapshot)
         .build();
     // run the snapshot on the master
-    return executeCallable(new MasterAdminCallable<TakeSnapshotResponse>(getConnection()) {
+    return executeCallable(new MasterAdminCallable<SnapshotResponse>(getConnection()) {
       @Override
-      public TakeSnapshotResponse call() throws ServiceException {
+      public SnapshotResponse call() throws ServiceException {
         return masterAdmin.snapshot(null, request);
       }
     });
@@ -2964,7 +2964,7 @@ public class HBaseAdmin implements Abortable, Closeable {
     return executeCallable(new MasterAdminCallable<List<SnapshotDescription>>(getConnection()) {
       @Override
       public List<SnapshotDescription> call() throws ServiceException {
-        return masterAdmin.getCompletedSnapshots(null, ListSnapshotRequest.newBuilder().build())
+        return masterAdmin.getCompletedSnapshots(null, GetCompletedSnapshotsRequest.newBuilder().build())
             .getSnapshotsList();
       }
     });

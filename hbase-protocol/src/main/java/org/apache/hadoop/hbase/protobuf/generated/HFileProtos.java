@@ -2263,7 +2263,7 @@ public final class HFileProtos {
       descriptor;
   static {
     java.lang.String[] descriptorData = {
-      "\n\013HFile.proto\032\013hbase.proto\"3\n\rFileInfoPr" +
+      "\n\013HFile.proto\032\013HBase.proto\"3\n\rFileInfoPr" +
       "oto\022\"\n\tmap_entry\030\001 \003(\0132\017.BytesBytesPair\"" +
       "\371\002\n\020FileTrailerProto\022\030\n\020file_info_offset" +
       "\030\001 \001(\004\022 \n\030load_on_open_data_offset\030\002 \001(\004" +

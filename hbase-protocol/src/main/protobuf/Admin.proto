@@ -25,7 +25,7 @@ option java_generate_equals_and_hash = true;
 option optimize_for = SPEED;
 
 import "Client.proto";
-import "hbase.proto";
+import "HBase.proto";
 import "WAL.proto";
 
 message GetRegionInfoRequest {

@@ -123,8 +123,8 @@ import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.AssignRegion
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.AssignRegionResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.BalanceRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.BalanceResponse;
-import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.CatalogScanRequest;
-import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.CatalogScanResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.RunCatalogScanRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.RunCatalogScanResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.CreateTableRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.CreateTableResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DeleteColumnRequest;
@@ -147,8 +147,8 @@ import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.IsRestoreSna
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.IsRestoreSnapshotDoneResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.IsSnapshotDoneRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.IsSnapshotDoneResponse;
-import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.ListSnapshotRequest;
-import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.ListSnapshotResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.GetCompletedSnapshotsRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.GetCompletedSnapshotsResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.ModifyColumnRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.ModifyColumnResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.ModifyTableRequest;
@@ -165,8 +165,8 @@ import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.ShutdownRequ
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.ShutdownResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.StopMasterRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.StopMasterResponse;
-import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.TakeSnapshotRequest;
-import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.TakeSnapshotResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.SnapshotRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.SnapshotResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.UnassignRegionRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.UnassignRegionResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterMonitorProtos;
@@ -1453,10 +1453,10 @@ MasterServices, Server {
   }
 
   @Override
-  public CatalogScanResponse runCatalogScan(RpcController c,
-      CatalogScanRequest req) throws ServiceException {
+  public RunCatalogScanResponse runCatalogScan(RpcController c,
+      RunCatalogScanRequest req) throws ServiceException {
     try {
-      return ResponseConverter.buildCatalogScanResponse(catalogJanitorChore.scan());
+      return ResponseConverter.buildRunCatalogScanResponse(catalogJanitorChore.scan());
     } catch (IOException ioe) {
       throw new ServiceException(ioe);
     }
@@ -2869,7 +2869,7 @@ MasterServices, Server {
    * {@inheritDoc}
    */
   @Override
-  public TakeSnapshotResponse snapshot(RpcController controller, TakeSnapshotRequest request)
+  public SnapshotResponse snapshot(RpcController controller, SnapshotRequest request)
       throws ServiceException {
     try {
       this.snapshotManager.checkSnapshotSupport();
@@ -2891,17 +2891,17 @@ MasterServices, Server {
     // send back the max amount of time the client should wait for the snapshot to complete
     long waitTime = SnapshotDescriptionUtils.getMaxMasterTimeout(conf, snapshot.getType(),
       SnapshotDescriptionUtils.DEFAULT_MAX_WAIT_TIME);
-    return TakeSnapshotResponse.newBuilder().setExpectedTimeout(waitTime).build();
+    return SnapshotResponse.newBuilder().setExpectedTimeout(waitTime).build();
   }
 
   /**
    * List the currently available/stored snapshots. Any in-progress snapshots are ignored
    */
   @Override
-  public ListSnapshotResponse getCompletedSnapshots(RpcController controller,
-      ListSnapshotRequest request) throws ServiceException {
+  public GetCompletedSnapshotsResponse getCompletedSnapshots(RpcController controller,
+      GetCompletedSnapshotsRequest request) throws ServiceException {
     try {
-      ListSnapshotResponse.Builder builder = ListSnapshotResponse.newBuilder();
+      GetCompletedSnapshotsResponse.Builder builder = GetCompletedSnapshotsResponse.newBuilder();
       List<SnapshotDescription> snapshots = snapshotManager.getCompletedSnapshots();
 
       // convert to protobuf

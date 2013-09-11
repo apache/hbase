@@ -98,10 +98,10 @@ public class TokenProvider implements AuthenticationProtos.AuthenticationService
 
   @Override
   public void getAuthenticationToken(RpcController controller,
-                                     AuthenticationProtos.TokenRequest request,
-                                     RpcCallback<AuthenticationProtos.TokenResponse> done) {
-    AuthenticationProtos.TokenResponse.Builder response =
-        AuthenticationProtos.TokenResponse.newBuilder();
+                                     AuthenticationProtos.GetAuthenticationTokenRequest request,
+                                     RpcCallback<AuthenticationProtos.GetAuthenticationTokenResponse> done) {
+    AuthenticationProtos.GetAuthenticationTokenResponse.Builder response =
+        AuthenticationProtos.GetAuthenticationTokenResponse.newBuilder();
 
     try {
       if (secretManager == null) {

@@ -8,7 +8,7 @@ public final class RowProcessorProtos {
   public static void registerAllExtensions(
       com.google.protobuf.ExtensionRegistry registry) {
   }
-  public interface RowProcessorRequestOrBuilder
+  public interface ProcessRequestOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
 
     // required string row_processor_class_name = 1;
@@ -52,24 +52,24 @@ public final class RowProcessorProtos {
     com.google.protobuf.ByteString getRowProcessorInitializerMessage();
   }
   /**
-   * Protobuf type {@code RowProcessorRequest}
+   * Protobuf type {@code ProcessRequest}
    */
-  public static final class RowProcessorRequest extends
+  public static final class ProcessRequest extends
       com.google.protobuf.GeneratedMessage
-      implements RowProcessorRequestOrBuilder {
-    // Use RowProcessorRequest.newBuilder() to construct.
-    private RowProcessorRequest(com.google.protobuf.GeneratedMessage.Builder<?> builder) {
+      implements ProcessRequestOrBuilder {
+    // Use ProcessRequest.newBuilder() to construct.
+    private ProcessRequest(com.google.protobuf.GeneratedMessage.Builder<?> builder) {
       super(builder);
       this.unknownFields = builder.getUnknownFields();
     }
-    private RowProcessorRequest(boolean noInit) { this.unknownFields = com.google.protobuf.UnknownFieldSet.getDefaultInstance(); }
+    private ProcessRequest(boolean noInit) { this.unknownFields = com.google.protobuf.UnknownFieldSet.getDefaultInstance(); }
 
-    private static final RowProcessorRequest defaultInstance;
-    public static RowProcessorRequest getDefaultInstance() {
+    private static final ProcessRequest defaultInstance;
+    public static ProcessRequest getDefaultInstance() {
       return defaultInstance;
     }
 
-    public RowProcessorRequest getDefaultInstanceForType() {
+    public ProcessRequest getDefaultInstanceForType() {
       return defaultInstance;
     }
 
@@ -79,7 +79,7 @@ public final class RowProcessorProtos {
         getUnknownFields() {
       return this.unknownFields;
     }
-    private RowProcessorRequest(
+    private ProcessRequest(
         com.google.protobuf.CodedInputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
@@ -131,28 +131,28 @@ public final class RowProcessorProtos {
     }
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.internal_static_RowProcessorRequest_descriptor;
+      return org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.internal_static_ProcessRequest_descriptor;
     }
 
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.internal_static_RowProcessorRequest_fieldAccessorTable
+      return org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.internal_static_ProcessRequest_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
-              org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.RowProcessorRequest.class, org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.RowProcessorRequest.Builder.class);
+              org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.ProcessRequest.class, org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.ProcessRequest.Builder.class);
     }
 
-    public static com.google.protobuf.Parser<RowProcessorRequest> PARSER =
-        new com.google.protobuf.AbstractParser<RowProcessorRequest>() {
-      public RowProcessorRequest parsePartialFrom(
+    public static com.google.protobuf.Parser<ProcessRequest> PARSER =
+        new com.google.protobuf.AbstractParser<ProcessRequest>() {
+      public ProcessRequest parsePartialFrom(
           com.google.protobuf.CodedInputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws com.google.protobuf.InvalidProtocolBufferException {
-        return new RowProcessorRequest(input, extensionRegistry);
+        return new ProcessRequest(input, extensionRegistry);
       }
     };
 
     @java.lang.Override
-    public com.google.protobuf.Parser<RowProcessorRequest> getParserForType() {
+    public com.google.protobuf.Parser<ProcessRequest> getParserForType() {
       return PARSER;
     }
 
@@ -327,10 +327,10 @@ public final class RowProcessorProtos {
       if (obj == this) {
        return true;
       }
-      if (!(obj instanceof org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.RowProcessorRequest)) {
+      if (!(obj instanceof org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.ProcessRequest)) {
         return super.equals(obj);
       }
-      org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.RowProcessorRequest other = (org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.RowProcessorRequest) obj;
+      org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.ProcessRequest other = (org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.ProcessRequest) obj;
 
       boolean result = true;
       result = result && (hasRowProcessorClassName() == other.hasRowProcessorClassName());
@@ -378,53 +378,53 @@ public final class RowProcessorProtos {
       return hash;
     }
 
-    public static org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.RowProcessorRequest parseFrom(
+    public static org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.ProcessRequest parseFrom(
         com.google.protobuf.ByteString data)
         throws com.google.protobuf.InvalidProtocolBufferException {
       return PARSER.parseFrom(data);
     }
-    public static org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.RowProcessorRequest parseFrom(
+    public static org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.ProcessRequest parseFrom(
         com.google.protobuf.ByteString data,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
       return PARSER.parseFrom(data, extensionRegistry);
     }
-    public static org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.RowProcessorRequest parseFrom(byte[] data)
+    public static org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.ProcessRequest parseFrom(byte[] data)
         throws com.google.protobuf.InvalidProtocolBufferException {
       return PARSER.parseFrom(data);
     }
-    public static org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.RowProcessorRequest parseFrom(
+    public static org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.ProcessRequest parseFrom(
         byte[] data,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
       return PARSER.parseFrom(data, extensionRegistry);
     }
-    public static org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.RowProcessorRequest parseFrom(java.io.InputStream input)
+    public static org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.ProcessRequest parseFrom(java.io.InputStream input)
         throws java.io.IOException {
       return PARSER.parseFrom(input);
     }
-    public static org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.RowProcessorRequest parseFrom(
+    public static org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.ProcessRequest parseFrom(
         java.io.InputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
       return PARSER.parseFrom(input, extensionRegistry);
     }
-    public static org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.RowProcessorRequest parseDelimitedFrom(java.io.InputStream input)
+    public static org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.ProcessRequest parseDelimitedFrom(java.io.InputStream input)
         throws java.io.IOException {
       return PARSER.parseDelimitedFrom(input);
     }
-    public static org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.RowProcessorRequest parseDelimitedFrom(
+    public static org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.ProcessRequest parseDelimitedFrom(
         java.io.InputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
       return PARSER.parseDelimitedFrom(input, extensionRegistry);
     }
-    public static org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.RowProcessorRequest parseFrom(
+    public static org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.ProcessRequest parseFrom(
         com.google.protobuf.CodedInputStream input)
         throws java.io.IOException {
       return PARSER.parseFrom(input);
     }
-    public static org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.RowProcessorRequest parseFrom(
+    public static org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.ProcessRequest parseFrom(
         com.google.protobuf.CodedInputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
@@ -433,7 +433,7 @@ public final class RowProcessorProtos {
 
     public static Builder newBuilder() { return Builder.create(); }
     public Builder newBuilderForType() { return newBuilder(); }
-    public static Builder newBuilder(org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.RowProcessorRequest prototype) {
+    public static Builder newBuilder(org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.ProcessRequest prototype) {
       return newBuilder().mergeFrom(prototype);
     }
     public Builder toBuilder() { return newBuilder(this); }
@@ -445,24 +445,24 @@ public final class RowProcessorProtos {
       return builder;
     }
     /**
-     * Protobuf type {@code RowProcessorRequest}
+     * Protobuf type {@code ProcessRequest}
      */
     public static final class Builder extends
         com.google.protobuf.GeneratedMessage.Builder<Builder>
-       implements org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.RowProcessorRequestOrBuilder {
+       implements org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.ProcessRequestOrBuilder {
       public static final com.google.protobuf.Descriptors.Descriptor
           getDescriptor() {
-        return org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.internal_static_RowProcessorRequest_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.internal_static_ProcessRequest_descriptor;
       }
 
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.internal_static_RowProcessorRequest_fieldAccessorTable
+        return org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.internal_static_ProcessRequest_fieldAccessorTable
             .ensureFieldAccessorsInitialized(
-                org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.RowProcessorRequest.class, org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.RowProcessorRequest.Builder.class);
+                org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.ProcessRequest.class, org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.ProcessRequest.Builder.class);
       }
 
-      // Construct using org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.RowProcessorRequest.newBuilder()
+      // Construct using org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.ProcessRequest.newBuilder()
       private Builder() {
         maybeForceBuilderInitialization();
       }
@@ -497,23 +497,23 @@ public final class RowProcessorProtos {
 
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.internal_static_RowProcessorRequest_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.internal_static_ProcessRequest_descriptor;
       }
 
-      public org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.RowProcessorRequest getDefaultInstanceForType() {
-        return org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.RowProcessorRequest.getDefaultInstance();
+      public org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.ProcessRequest getDefaultInstanceForType() {
+        return org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.ProcessRequest.getDefaultInstance();
       }
 
-      public org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.RowProcessorRequest build() {
-        org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.RowProcessorRequest result = buildPartial();
+      public org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.ProcessRequest build() {
+        org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.ProcessRequest result = buildPartial();
         if (!result.isInitialized()) {
           throw newUninitializedMessageException(result);
         }
         return result;
       }
 
-      public org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.RowProcessorRequest buildPartial() {
-        org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.RowProcessorRequest result = new org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.RowProcessorRequest(this);
+      public org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.ProcessRequest buildPartial() {
+        org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.ProcessRequest result = new org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.ProcessRequest(this);
         int from_bitField0_ = bitField0_;
         int to_bitField0_ = 0;
         if (((from_bitField0_ & 0x00000001) == 0x00000001)) {
@@ -534,16 +534,16 @@ public final class RowProcessorProtos {
       }
 
       public Builder mergeFrom(com.google.protobuf.Message other) {
-        if (other instanceof org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.RowProcessorRequest) {
-          return mergeFrom((org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.RowProcessorRequest)other);
+        if (other instanceof org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.ProcessRequest) {
+          return mergeFrom((org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.ProcessRequest)other);
         } else {
           super.mergeFrom(other);
           return this;
         }
       }
 
-      public Builder mergeFrom(org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.RowProcessorRequest other) {
-        if (other == org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.RowProcessorRequest.getDefaultInstance()) return this;
+      public Builder mergeFrom(org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.ProcessRequest other) {
+        if (other == org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.ProcessRequest.getDefaultInstance()) return this;
         if (other.hasRowProcessorClassName()) {
           bitField0_ |= 0x00000001;
           rowProcessorClassName_ = other.rowProcessorClassName_;
@@ -573,11 +573,11 @@ public final class RowProcessorProtos {
           com.google.protobuf.CodedInputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws java.io.IOException {
-        org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.RowProcessorRequest parsedMessage = null;
+        org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.ProcessRequest parsedMessage = null;
         try {
           parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
         } catch (com.google.protobuf.InvalidProtocolBufferException e) {
-          parsedMessage = (org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.RowProcessorRequest) e.getUnfinishedMessage();
+          parsedMessage = (org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.ProcessRequest) e.getUnfinishedMessage();
           throw e;
         } finally {
           if (parsedMessage != null) {
@@ -772,18 +772,18 @@ public final class RowProcessorProtos {
         return this;
       }
 
-      // @@protoc_insertion_point(builder_scope:RowProcessorRequest)
+      // @@protoc_insertion_point(builder_scope:ProcessRequest)
     }
 
     static {
-      defaultInstance = new RowProcessorRequest(true);
+      defaultInstance = new ProcessRequest(true);
       defaultInstance.initFields();
     }
 
-    // @@protoc_insertion_point(class_scope:RowProcessorRequest)
+    // @@protoc_insertion_point(class_scope:ProcessRequest)
   }
 
-  public interface RowProcessorResultOrBuilder
+  public interface ProcessResponseOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
 
     // required bytes row_processor_result = 1;
@@ -797,24 +797,24 @@ public final class RowProcessorProtos {
     com.google.protobuf.ByteString getRowProcessorResult();
   }
   /**
-   * Protobuf type {@code RowProcessorResult}
+   * Protobuf type {@code ProcessResponse}
    */
-  public static final class RowProcessorResult extends
+  public static final class ProcessResponse extends
       com.google.protobuf.GeneratedMessage
-      implements RowProcessorResultOrBuilder {
-    // Use RowProcessorResult.newBuilder() to construct.
-    private RowProcessorResult(com.google.protobuf.GeneratedMessage.Builder<?> builder) {
+      implements ProcessResponseOrBuilder {
+    // Use ProcessResponse.newBuilder() to construct.
+    private ProcessResponse(com.google.protobuf.GeneratedMessage.Builder<?> builder) {
       super(builder);
       this.unknownFields = builder.getUnknownFields();
     }
-    private RowProcessorResult(boolean noInit) { this.unknownFields = com.google.protobuf.UnknownFieldSet.getDefaultInstance(); }
+    private ProcessResponse(boolean noInit) { this.unknownFields = com.google.protobuf.UnknownFieldSet.getDefaultInstance(); }
 
-    private static final RowProcessorResult defaultInstance;
-    public static RowProcessorResult getDefaultInstance() {
+    private static final ProcessResponse defaultInstance;
+    public static ProcessResponse getDefaultInstance() {
       return defaultInstance;
     }
 
-    public RowProcessorResult getDefaultInstanceForType() {
+    public ProcessResponse getDefaultInstanceForType() {
       return defaultInstance;
     }
 
@@ -824,7 +824,7 @@ public final class RowProcessorProtos {
         getUnknownFields() {
       return this.unknownFields;
     }
-    private RowProcessorResult(
+    private ProcessResponse(
         com.google.protobuf.CodedInputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
@@ -866,28 +866,28 @@ public final class RowProcessorProtos {
     }
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.internal_static_RowProcessorResult_descriptor;
+      return org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.internal_static_ProcessResponse_descriptor;
     }
 
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.internal_static_RowProcessorResult_fieldAccessorTable
+      return org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.internal_static_ProcessResponse_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
-              org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.RowProcessorResult.class, org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.RowProcessorResult.Builder.class);
+              org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.ProcessResponse.class, org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.ProcessResponse.Builder.class);
     }
 
-    public static com.google.protobuf.Parser<RowProcessorResult> PARSER =
-        new com.google.protobuf.AbstractParser<RowProcessorResult>() {
-      public RowProcessorResult parsePartialFrom(
+    public static com.google.protobuf.Parser<ProcessResponse> PARSER =
+        new com.google.protobuf.AbstractParser<ProcessResponse>() {
+      public ProcessResponse parsePartialFrom(
           com.google.protobuf.CodedInputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws com.google.protobuf.InvalidProtocolBufferException {
-        return new RowProcessorResult(input, extensionRegistry);
+        return new ProcessResponse(input, extensionRegistry);
       }
     };
 
     @java.lang.Override
-    public com.google.protobuf.Parser<RowProcessorResult> getParserForType() {
+    public com.google.protobuf.Parser<ProcessResponse> getParserForType() {
       return PARSER;
     }
 
@@ -960,10 +960,10 @@ public final class RowProcessorProtos {
       if (obj == this) {
        return true;
       }
-      if (!(obj instanceof org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.RowProcessorResult)) {
+      if (!(obj instanceof org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.ProcessResponse)) {
         return super.equals(obj);
       }
-      org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.RowProcessorResult other = (org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.RowProcessorResult) obj;
+      org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.ProcessResponse other = (org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.ProcessResponse) obj;
 
       boolean result = true;
       result = result && (hasRowProcessorResult() == other.hasRowProcessorResult());
@@ -993,53 +993,53 @@ public final class RowProcessorProtos {
       return hash;
     }
 
-    public static org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.RowProcessorResult parseFrom(
+    public static org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.ProcessResponse parseFrom(
         com.google.protobuf.ByteString data)
         throws com.google.protobuf.InvalidProtocolBufferException {
       return PARSER.parseFrom(data);
     }
-    public static org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.RowProcessorResult parseFrom(
+    public static org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.ProcessResponse parseFrom(
         com.google.protobuf.ByteString data,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
       return PARSER.parseFrom(data, extensionRegistry);
     }
-    public static org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.RowProcessorResult parseFrom(byte[] data)
+    public static org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.ProcessResponse parseFrom(byte[] data)
         throws com.google.protobuf.InvalidProtocolBufferException {
       return PARSER.parseFrom(data);
     }
-    public static org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.RowProcessorResult parseFrom(
+    public static org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.ProcessResponse parseFrom(
         byte[] data,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
       return PARSER.parseFrom(data, extensionRegistry);
     }
-    public static org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.RowProcessorResult parseFrom(java.io.InputStream input)
+    public static org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.ProcessResponse parseFrom(java.io.InputStream input)
         throws java.io.IOException {
       return PARSER.parseFrom(input);
     }
-    public static org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.RowProcessorResult parseFrom(
+    public static org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.ProcessResponse parseFrom(
         java.io.InputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
       return PARSER.parseFrom(input, extensionRegistry);
     }
-    public static org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.RowProcessorResult parseDelimitedFrom(java.io.InputStream input)
+    public static org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.ProcessResponse parseDelimitedFrom(java.io.InputStream input)
         throws java.io.IOException {
       return PARSER.parseDelimitedFrom(input);
     }
-    public static org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.RowProcessorResult parseDelimitedFrom(
+    public static org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.ProcessResponse parseDelimitedFrom(
         java.io.InputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
       return PARSER.parseDelimitedFrom(input, extensionRegistry);
     }
-    public static org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.RowProcessorResult parseFrom(
+    public static org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.ProcessResponse parseFrom(
         com.google.protobuf.CodedInputStream input)
         throws java.io.IOException {
       return PARSER.parseFrom(input);
     }
-    public static org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.RowProcessorResult parseFrom(
+    public static org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.ProcessResponse parseFrom(
         com.google.protobuf.CodedInputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
@@ -1048,7 +1048,7 @@ public final class RowProcessorProtos {
 
     public static Builder newBuilder() { return Builder.create(); }
     public Builder newBuilderForType() { return newBuilder(); }
-    public static Builder newBuilder(org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.RowProcessorResult prototype) {
+    public static Builder newBuilder(org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.ProcessResponse prototype) {
       return newBuilder().mergeFrom(prototype);
     }
     public Builder toBuilder() { return newBuilder(this); }
@@ -1060,24 +1060,24 @@ public final class RowProcessorProtos {
       return builder;
     }
     /**
-     * Protobuf type {@code RowProcessorResult}
+     * Protobuf type {@code ProcessResponse}
      */
     public static final class Builder extends
         com.google.protobuf.GeneratedMessage.Builder<Builder>
-       implements org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.RowProcessorResultOrBuilder {
+       implements org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.ProcessResponseOrBuilder {
       public static final com.google.protobuf.Descriptors.Descriptor
           getDescriptor() {
-        return org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.internal_static_RowProcessorResult_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.internal_static_ProcessResponse_descriptor;
       }
 
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.internal_static_RowProcessorResult_fieldAccessorTable
+        return org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.internal_static_ProcessResponse_fieldAccessorTable
             .ensureFieldAccessorsInitialized(
-                org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.RowProcessorResult.class, org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.RowProcessorResult.Builder.class);
+                org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.ProcessResponse.class, org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.ProcessResponse.Builder.class);
       }
 
-      // Construct using org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.RowProcessorResult.newBuilder()
+      // Construct using org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.ProcessResponse.newBuilder()
       private Builder() {
         maybeForceBuilderInitialization();
       }
@@ -1108,23 +1108,23 @@ public final class RowProcessorProtos {
 
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.internal_static_RowProcessorResult_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.internal_static_ProcessResponse_descriptor;
       }
 
-      public org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.RowProcessorResult getDefaultInstanceForType() {
-        return org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.RowProcessorResult.getDefaultInstance();
+      public org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.ProcessResponse getDefaultInstanceForType() {
+        return org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.ProcessResponse.getDefaultInstance();
       }
 
-      public org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.RowProcessorResult build() {
-        org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.RowProcessorResult result = buildPartial();
+      public org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.ProcessResponse build() {
+        org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.ProcessResponse result = buildPartial();
         if (!result.isInitialized()) {
           throw newUninitializedMessageException(result);
         }
         return result;
       }
 
-      public org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.RowProcessorResult buildPartial() {
-        org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.RowProcessorResult result = new org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.RowProcessorResult(this);
+      public org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.ProcessResponse buildPartial() {
+        org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.ProcessResponse result = new org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.ProcessResponse(this);
         int from_bitField0_ = bitField0_;
         int to_bitField0_ = 0;
         if (((from_bitField0_ & 0x00000001) == 0x00000001)) {
@@ -1137,16 +1137,16 @@ public final class RowProcessorProtos {
       }
 
       public Builder mergeFrom(com.google.protobuf.Message other) {
-        if (other instanceof org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.RowProcessorResult) {
-          return mergeFrom((org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.RowProcessorResult)other);
+        if (other instanceof org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.ProcessResponse) {
+          return mergeFrom((org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.ProcessResponse)other);
         } else {
           super.mergeFrom(other);
           return this;
         }
       }
 
-      public Builder mergeFrom(org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.RowProcessorResult other) {
-        if (other == org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.RowProcessorResult.getDefaultInstance()) return this;
+      public Builder mergeFrom(org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.ProcessResponse other) {
+        if (other == org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.ProcessResponse.getDefaultInstance()) return this;
         if (other.hasRowProcessorResult()) {
           setRowProcessorResult(other.getRowProcessorResult());
         }
@@ -1166,11 +1166,11 @@ public final class RowProcessorProtos {
           com.google.protobuf.CodedInputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws java.io.IOException {
-        org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.RowProcessorResult parsedMessage = null;
+        org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.ProcessResponse parsedMessage = null;
         try {
           parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
         } catch (com.google.protobuf.InvalidProtocolBufferException e) {
-          parsedMessage = (org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.RowProcessorResult) e.getUnfinishedMessage();
+          parsedMessage = (org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.ProcessResponse) e.getUnfinishedMessage();
           throw e;
         } finally {
           if (parsedMessage != null) {
@@ -1217,15 +1217,15 @@ public final class RowProcessorProtos {
         return this;
       }
 
-      // @@protoc_insertion_point(builder_scope:RowProcessorResult)
+      // @@protoc_insertion_point(builder_scope:ProcessResponse)
     }
 
     static {
-      defaultInstance = new RowProcessorResult(true);
+      defaultInstance = new ProcessResponse(true);
       defaultInstance.initFields();
     }
 
-    // @@protoc_insertion_point(class_scope:RowProcessorResult)
+    // @@protoc_insertion_point(class_scope:ProcessResponse)
   }
 
   /**
@@ -1237,12 +1237,12 @@ public final class RowProcessorProtos {
 
     public interface Interface {
       /**
-       * <code>rpc Process(.RowProcessorRequest) returns (.RowProcessorResult);</code>
+       * <code>rpc Process(.ProcessRequest) returns (.ProcessResponse);</code>
        */
       public abstract void process(
           com.google.protobuf.RpcController controller,
-          org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.RowProcessorRequest request,
-          com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.RowProcessorResult> done);
+          org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.ProcessRequest request,
+          com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.ProcessResponse> done);
 
     }
 
@@ -1252,8 +1252,8 @@ public final class RowProcessorProtos {
         @java.lang.Override
         public  void process(
             com.google.protobuf.RpcController controller,
-            org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.RowProcessorRequest request,
-            com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.RowProcessorResult> done) {
+            org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.ProcessRequest request,
+            com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.ProcessResponse> done) {
           impl.process(controller, request, done);
         }
 
@@ -1280,7 +1280,7 @@ public final class RowProcessorProtos {
           }
           switch(method.getIndex()) {
             case 0:
-              return impl.process(controller, (org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.RowProcessorRequest)request);
+              return impl.process(controller, (org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.ProcessRequest)request);
             default:
               throw new java.lang.AssertionError("Can't get here.");
           }
@@ -1296,7 +1296,7 @@ public final class RowProcessorProtos {
           }
           switch(method.getIndex()) {
             case 0:
-              return org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.RowProcessorRequest.getDefaultInstance();
+              return org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.ProcessRequest.getDefaultInstance();
             default:
               throw new java.lang.AssertionError("Can't get here.");
           }
@@ -1312,7 +1312,7 @@ public final class RowProcessorProtos {
           }
           switch(method.getIndex()) {
             case 0:
-              return org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.RowProcessorResult.getDefaultInstance();
+              return org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.ProcessResponse.getDefaultInstance();
             default:
               throw new java.lang.AssertionError("Can't get here.");
           }
@@ -1322,12 +1322,12 @@ public final class RowProcessorProtos {
     }
 
     /**
-     * <code>rpc Process(.RowProcessorRequest) returns (.RowProcessorResult);</code>
+     * <code>rpc Process(.ProcessRequest) returns (.ProcessResponse);</code>
      */
     public abstract void process(
         com.google.protobuf.RpcController controller,
-        org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.RowProcessorRequest request,
-        com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.RowProcessorResult> done);
+        org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.ProcessRequest request,
+        com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.ProcessResponse> done);
 
     public static final
         com.google.protobuf.Descriptors.ServiceDescriptor
@@ -1352,8 +1352,8 @@ public final class RowProcessorProtos {
       }
       switch(method.getIndex()) {
         case 0:
-          this.process(controller, (org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.RowProcessorRequest)request,
-            com.google.protobuf.RpcUtil.<org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.RowProcessorResult>specializeCallback(
+          this.process(controller, (org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.ProcessRequest)request,
+            com.google.protobuf.RpcUtil.<org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.ProcessResponse>specializeCallback(
               done));
           return;
         default:
@@ -1371,7 +1371,7 @@ public final class RowProcessorProtos {
       }
       switch(method.getIndex()) {
         case 0:
-          return org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.RowProcessorRequest.getDefaultInstance();
+          return org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.ProcessRequest.getDefaultInstance();
         default:
           throw new java.lang.AssertionError("Can't get here.");
       }
@@ -1387,7 +1387,7 @@ public final class RowProcessorProtos {
       }
       switch(method.getIndex()) {
         case 0:
-          return org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.RowProcessorResult.getDefaultInstance();
+          return org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.ProcessResponse.getDefaultInstance();
         default:
           throw new java.lang.AssertionError("Can't get here.");
       }
@@ -1411,17 +1411,17 @@ public final class RowProcessorProtos {
 
       public  void process(
           com.google.protobuf.RpcController controller,
-          org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.RowProcessorRequest request,
-          com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.RowProcessorResult> done) {
+          org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.ProcessRequest request,
+          com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.ProcessResponse> done) {
         channel.callMethod(
           getDescriptor().getMethods().get(0),
           controller,
           request,
-          org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.RowProcessorResult.getDefaultInstance(),
+          org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.ProcessResponse.getDefaultInstance(),
           com.google.protobuf.RpcUtil.generalizeCallback(
             done,
-            org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.RowProcessorResult.class,
-            org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.RowProcessorResult.getDefaultInstance()));
+            org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.ProcessResponse.class,
+            org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.ProcessResponse.getDefaultInstance()));
       }
     }
 
@@ -1431,9 +1431,9 @@ public final class RowProcessorProtos {
     }
 
     public interface BlockingInterface {
-      public org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.RowProcessorResult process(
+      public org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.ProcessResponse process(
           com.google.protobuf.RpcController controller,
-          org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.RowProcessorRequest request)
+          org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.ProcessRequest request)
           throws com.google.protobuf.ServiceException;
     }
 
@@ -1444,15 +1444,15 @@ public final class RowProcessorProtos {
 
       private final com.google.protobuf.BlockingRpcChannel channel;
 
-      public org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.RowProcessorResult process(
+      public org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.ProcessResponse process(
           com.google.protobuf.RpcController controller,
-          org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.RowProcessorRequest request)
+          org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.ProcessRequest request)
           throws com.google.protobuf.ServiceException {
-        return (org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.RowProcessorResult) channel.callBlockingMethod(
+        return (org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.ProcessResponse) channel.callBlockingMethod(
           getDescriptor().getMethods().get(0),
           controller,
           request,
-          org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.RowProcessorResult.getDefaultInstance());
+          org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.ProcessResponse.getDefaultInstance());
       }
 
     }
@@ -1461,15 +1461,15 @@ public final class RowProcessorProtos {
   }
 
   private static com.google.protobuf.Descriptors.Descriptor
-    internal_static_RowProcessorRequest_descriptor;
+    internal_static_ProcessRequest_descriptor;
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
-      internal_static_RowProcessorRequest_fieldAccessorTable;
+      internal_static_ProcessRequest_fieldAccessorTable;
   private static com.google.protobuf.Descriptors.Descriptor
-    internal_static_RowProcessorResult_descriptor;
+    internal_static_ProcessResponse_descriptor;
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
-      internal_static_RowProcessorResult_fieldAccessorTable;
+      internal_static_ProcessResponse_fieldAccessorTable;
 
   public static com.google.protobuf.Descriptors.FileDescriptor
       getDescriptor() {
@@ -1479,33 +1479,32 @@ public final class RowProcessorProtos {
       descriptor;
   static {
     java.lang.String[] descriptorData = {
-      "\n\022RowProcessor.proto\"\222\001\n\023RowProcessorReq" +
-      "uest\022 \n\030row_processor_class_name\030\001 \002(\t\022." +
-      "\n&row_processor_initializer_message_name" +
-      "\030\002 \001(\t\022)\n!row_processor_initializer_mess" +
-      "age\030\003 \001(\014\"2\n\022RowProcessorResult\022\034\n\024row_p" +
-      "rocessor_result\030\001 \002(\0142K\n\023RowProcessorSer" +
-      "vice\0224\n\007Process\022\024.RowProcessorRequest\032\023." +
-      "RowProcessorResultBH\n*org.apache.hadoop." +
-      "hbase.protobuf.generatedB\022RowProcessorPr" +
-      "otosH\001\210\001\001\240\001\001"
+      "\n\022RowProcessor.proto\"\215\001\n\016ProcessRequest\022" +
+      " \n\030row_processor_class_name\030\001 \002(\t\022.\n&row" +
+      "_processor_initializer_message_name\030\002 \001(" +
+      "\t\022)\n!row_processor_initializer_message\030\003" +
+      " \001(\014\"/\n\017ProcessResponse\022\034\n\024row_processor" +
+      "_result\030\001 \002(\0142C\n\023RowProcessorService\022,\n\007" +
+      "Process\022\017.ProcessRequest\032\020.ProcessRespon" +
+      "seBH\n*org.apache.hadoop.hbase.protobuf.g" +
+      "eneratedB\022RowProcessorProtosH\001\210\001\001\240\001\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
         public com.google.protobuf.ExtensionRegistry assignDescriptors(
             com.google.protobuf.Descriptors.FileDescriptor root) {
           descriptor = root;
-          internal_static_RowProcessorRequest_descriptor =
+          internal_static_ProcessRequest_descriptor =
             getDescriptor().getMessageTypes().get(0);
-          internal_static_RowProcessorRequest_fieldAccessorTable = new
+          internal_static_ProcessRequest_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
-              internal_static_RowProcessorRequest_descriptor,
+              internal_static_ProcessRequest_descriptor,
               new java.lang.String[] { "RowProcessorClassName", "RowProcessorInitializerMessageName", "RowProcessorInitializerMessage", });
-          internal_static_RowProcessorResult_descriptor =
+          internal_static_ProcessResponse_descriptor =
             getDescriptor().getMessageTypes().get(1);
-          internal_static_RowProcessorResult_fieldAccessorTable = new
+          internal_static_ProcessResponse_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
-              internal_static_RowProcessorResult_descriptor,
+              internal_static_ProcessResponse_descriptor,
               new java.lang.String[] { "RowProcessorResult", });
           return null;
         }

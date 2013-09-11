@@ -17,19 +17,19 @@
  */
 import "Client.proto";
 option java_package = "org.apache.hadoop.hbase.protobuf.generated";
-option java_outer_classname = "MultiRowMutation";
+option java_outer_classname = "MultiRowMutationProtos";
 option java_generate_equals_and_hash = true;
 option java_generic_services = true;
 option optimize_for = SPEED;
 
-message MultiMutateRequest {
+message MutateRowsRequest {
   repeated MutationProto mutation_request = 1;
 }
 
-message MultiMutateResponse {
+message MutateRowsResponse {
 }
 
 service MultiRowMutationService {
-  rpc MutateRows(MultiMutateRequest)
-      returns(MultiMutateResponse);
+  rpc MutateRows(MutateRowsRequest)
+      returns(MutateRowsResponse);
 }

@@ -127,11 +127,11 @@ public class SecureBulkLoadClient {
 
             @Override
             public Boolean call(SecureBulkLoadProtos.SecureBulkLoadService instance) throws IOException {
-              SecureBulkLoadProtos.DelegationTokenProto protoDT =
-                  SecureBulkLoadProtos.DelegationTokenProto.newBuilder().build();
+              SecureBulkLoadProtos.DelegationToken protoDT =
+                  SecureBulkLoadProtos.DelegationToken.newBuilder().build();
               if(userToken != null) {
                 protoDT =
-                  SecureBulkLoadProtos.DelegationTokenProto.newBuilder()
+                  SecureBulkLoadProtos.DelegationToken.newBuilder()
                      .setIdentifier(ByteString.copyFrom(userToken.getIdentifier()))
                      .setPassword(ByteString.copyFrom(userToken.getPassword()))
                      .setKind(userToken.getKind().toString())

@@ -10302,7 +10302,7 @@ public final class ClusterStatusProtos {
       descriptor;
   static {
     java.lang.String[] descriptorData = {
-      "\n\023ClusterStatus.proto\032\013hbase.proto\032\017Clus" +
+      "\n\023ClusterStatus.proto\032\013HBase.proto\032\017Clus" +
       "terId.proto\032\010FS.proto\"\243\002\n\013RegionState\022 \n" +
       "\013region_info\030\001 \002(\0132\013.RegionInfo\022!\n\005state" +
       "\030\002 \002(\0162\022.RegionState.State\022\r\n\005stamp\030\003 \001(" +
