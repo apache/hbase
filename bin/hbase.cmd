@@ -392,29 +392,26 @@ goto :eof
   goto :eof
 
 :print_usage
-  echo Usage: hbase ^<command^>
+  echo Usage: hbase [^<options^>] ^<command^> [^<args^>]
   echo where ^<command^> an option from one of these categories::
-  echo DBA TOOLS
-  echo   shell            run the HBase shell
-  echo   hbck             run the hbase 'fsck' tool
-  echo   hlog             write-ahead-log analyzer
-  echo   hfile            store file analyzer
-  echo   zkcli            run the ZooKeeper shell
-  echo. 
-  echo PROCESS MANAGEMENT
-  echo   master           run an HBase HMaster node 
-  echo   regionserver     run an HBase HRegionServer node 
-  echo   zookeeper        run a Zookeeper server
-  echo   rest             run an HBase REST server 
-  echo   thrift           run the HBase Thrift server 
-  echo   thrift2          run the HBase Thrift2 server 
-  echo   avro             run an HBase Avro server 
-  echo. 
-  echo PACKAGE MANAGEMENT
-  echo   classpath        dump hbase CLASSPATH
-  echo   version          print the version
-  echo. 
-  echo  or
-  echo   CLASSNAME        run the class named CLASSNAME
-  echo Most commands print help when invoked w/o parameters.
+  echo Options:
+  echo   --config DIR    Configuration direction to use. Default: ./conf
+  echo.
+  echo Commands:
+  echo Some commands take arguments. Pass no args or -h for usage."
+  echo   shell           Run the HBase shell
+  echo   hbck            Run the hbase 'fsck' tool
+  echo   hlog            Write-ahead-log analyzer
+  echo   hfile           Store file analyzer
+  echo   zkcli           Run the ZooKeeper shell
+  echo   upgrade         Upgrade hbase
+  echo   master          Run an HBase HMaster node
+  echo   regionserver    Run an HBase HRegionServer node
+  echo   zookeeper       Run a Zookeeper server
+  echo   rest            Run an HBase REST server
+  echo   thrift          Run the HBase Thrift server
+  echo   thrift2         Run the HBase Thrift2 server
+  echo   classpath       Dump hbase CLASSPATH
+  echo   version         Print the version
+  echo   CLASSNAME       Run the class named CLASSNAME
   goto :eof
