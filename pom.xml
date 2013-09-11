@@ -268,6 +268,14 @@
       <organizationUrl>http://www.facebook.com</organizationUrl>
     </developer>
     <developer>
+      <id>ndimiduk</id>
+      <name>Nick Dimiduk</name>
+      <email>ndimiduk@apache.org</email>
+      <timezone>-8</timezone>
+      <organization>Hortonworks</organization>
+      <organizationUrl>http://www.hortonworks.com</organizationUrl>
+    </developer>
+    <developer>
       <id>nspiegelberg</id>
       <name>Nicolas Spiegelberg</name>
       <email>nspiegelberg@fb.com</email>
