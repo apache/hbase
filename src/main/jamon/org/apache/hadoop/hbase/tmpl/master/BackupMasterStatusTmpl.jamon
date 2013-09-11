@@ -50,7 +50,7 @@ ServerName [] serverNames = masters.toArray(new ServerName[masters.size()]);
 </%java>
 <%if (!master.isActiveMaster()) %>
     <h2>Master</h2>
-    <a href="<% serverNames[0].getHostname() %>:<% master.getConfiguration().getInt("hbase.master.info.port", 60010) %>/master-status" target="_blank"><% serverNames[0].getHostname() %></a>
+    <a href="http://<% serverNames[0].getHostname() %>:<% master.getConfiguration().getInt("hbase.master.info.port", 60010) %>/master-status" target="_blank"><% serverNames[0].getHostname() %></a>
 <%else>
     <h2>Backup Masters</h2>
 
@@ -65,7 +65,7 @@ ServerName [] serverNames = masters.toArray(new ServerName[masters.size()]);
     for (ServerName serverName: serverNames) {
     </%java>
     <tr>
-        <td><a href="<% serverName.getHostname() %>:<% master.getConfiguration().getInt("hbase.master.info.port", 60010) %>/master-status" target="_blank"><% serverName.getHostname() %></a></td>
+        <td><a href="http://<% serverName.getHostname() %>:<% master.getConfiguration().getInt("hbase.master.info.port", 60010) %>/master-status" target="_blank"><% serverName.getHostname() %></a></td>
         <td><% serverName.getPort() %></td>
         <td><% new Date(serverName.getStartcode()) %></td>
     </tr>
