@@ -1018,13 +1018,21 @@ possible configurations would overwhelm and obscure the important.
   </property>
 
   <property>
-  	<name>hbase.dynamic.jars.dir</name>
-  	<value>${hbase.rootdir}/lib</value>
-	<description>
-	The directory from which the custom filter/co-processor jars can be loaded
-	dynamically by the region server without the need to restart. However,
-	an already loaded filter/co-processor class would not be un-loaded. See
-	HBASE-1936 for more details.
+    <name>hbase.dynamic.jars.dir</name>
+    <value>${hbase.rootdir}/lib</value>
+    <description>
+      The directory from which the custom filter/co-processor jars can be loaded
+      dynamically by the region server without the need to restart. However,
+      an already loaded filter/co-processor class would not be un-loaded. See
+      HBASE-1936 for more details.
+    </description>
+  </property>
+  <property>
+    <name>hbase.security.authentication</name>
+    <value>simple</value>
+    <description>
+      Controls whether or not secure authentication is enabled for HBase.
+      Possible values are 'simple' (no authentication), and 'kerberos'.
     </description>
   </property>
 </configuration>
