@@ -948,6 +948,16 @@ public class HBaseAdmin implements Abortable, Closeable {
     return failed.toArray(new HTableDescriptor[failed.size()]);
   }
 
+  /*
+   * Checks whether table exists. If not, throws TableNotFoundException
+   * @param tableName
+   */
+  private void checkTableExistence(byte[] tableName) throws IOException {
+    if (!tableExists(tableName)) {
+      throw new TableNotFoundException(Bytes.toString(tableName));
+    }
+  }
+
   /**
    * @param tableName name of table to check
    * @return true if table is on-line
@@ -965,9 +975,7 @@ public class HBaseAdmin implements Abortable, Closeable {
     if (!HTableDescriptor.isMetaTable(tableName)) {
       HTableDescriptor.isLegalTableName(tableName);
     }
-    if(!tableExists(tableName)){
-      throw new TableNotFoundException(Bytes.toString(tableName));
-    }
+    checkTableExistence(tableName);
     return connection.isTableEnabled(tableName);
   }
 
@@ -989,6 +997,7 @@ public class HBaseAdmin implements Abortable, Closeable {
     if (!HTableDescriptor.isMetaTable(tableName)) {
       HTableDescriptor.isLegalTableName(tableName);
     }
+    checkTableExistence(tableName);
     return connection.isTableDisabled(tableName);
   }
 

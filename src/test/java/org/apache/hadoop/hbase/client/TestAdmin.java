@@ -1649,6 +1649,21 @@ public class TestAdmin {
     assertEquals("ROOT region should not be splitted.",1, regions.size());
   }
 
+  @Test
+  public void testIsEnabledOrDisabledOnUnknownTable() throws Exception {
+    try {
+      admin.isTableEnabled(Bytes.toBytes("unkownTable"));
+      fail("Test should fail if isTableEnabled called on unknown table.");
+    } catch (IOException e) {
+    }
+
+    try {
+      admin.isTableDisabled(Bytes.toBytes("unkownTable"));
+      fail("Test should fail if isTableDisabled called on unknown table.");
+    } catch (IOException e) {
+    }
+  }
+
   @org.junit.Rule
   public org.apache.hadoop.hbase.ResourceCheckerJUnitRule cu =
     new org.apache.hadoop.hbase.ResourceCheckerJUnitRule();
