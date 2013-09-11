@@ -147,6 +147,12 @@ possible configurations would overwhelm and obscure the important.
     META.</description>
   </property>
   <property>
+    <name>fail.fast.expired.active.master</name>
+    <value>false</value>
+    <description>If abort immediately for the expired master without trying
+      to recover its zk session.</description>
+  </property>
+  <property>
     <name>hbase.master.dns.interface</name>
     <value>default</value>
     <description>The name of the Network Interface from which a master
