@@ -1,5 +1,55 @@
 HBase Change Log
 
+Release 0.94.12 - 9/10/2013
+Sub-task
+
+    [HBASE-9277] - REST should use listTableNames to list tables
+    [HBASE-9279] - Thrift should use listTableNames to list tables
+
+Bug
+
+    [HBASE-7709] - Infinite loop possible in Master/Master replication
+    [HBASE-7954] - Fix the retrying logic of memstore flushes to avoid extra sleep
+    [HBASE-8760] - possible loss of data in snapshot taken after region split
+    [HBASE-8930] - Filter evaluates KVs outside requested columns
+    [HBASE-9167] - ServerCallable retries just once if timeout is not integer.max
+    [HBASE-9182] - Allow non-admin users to list all table names
+    [HBASE-9195] - Fix TestFSHDFSUtils against java7 test re-ordering
+    [HBASE-9207] - An Offline SplitParent Region can be assigned breaking split references
+    [HBASE-9231] - Multipage book is generated to the wrong location
+    [HBASE-9233] - isTableAvailable() may be stuck if an offline parent was never assigned
+    [HBASE-9252] - HConnectionManager#getZooKeeperWatcher() should be deprecated in 0.94
+    [HBASE-9256] - HBaseClient#setupIOStreams should handle all exceptions
+    [HBASE-9266] - Javadoc: Document that HBaseAdmin.flush(...) is synchronous
+    [HBASE-9286] - [0.94] ageOfLastShippedOp replication metric doesn't update if the slave regionserver is stalled
+    [HBASE-9301] - Default hbase.dynamic.jars.dir to hbase.rootdir/jars
+    [HBASE-9303] - Snapshot restore of table which splits after snapshot was taken encounters 'Region is not online'
+    [HBASE-9326] - ServerName is created using getLocalSocketAddress, breaks binding to the wildcard address. Revert HBASE-8640
+    [HBASE-9329] - SnapshotManager should check for directory existance before throwing a warning.
+    [HBASE-9344] - RegionServer not shutting down upon KeeperException in open region
+    [HBASE-9356] - [0.94] SecureServer.INSECURE_VERSIONS is declared incorrectly
+    [HBASE-9397] - Snapshots with the same name are allowed to proceed concurrently
+    [HBASE-9415] - In rpcServer, replicationQueue is initialized with the max queue size instead of the max queue lenght
+    [HBASE-9428] - Regex filters are at least an order of magnitude slower since 0.94.3
+    [HBASE-9429] - Add back MetaScanner.allTableRegions(Configuration conf,byte[] tablename,boolean offlined) method
+    [HBASE-9432] - Backport HBASE-8781 to 0.94
+    [HBASE-9448] - [0.94] Shell needs to fall back after HBASE-9182 if talking to older servers
+    [HBASE-9455] - Port HBASE-7113 'TestGzipFilter is flaky with jdk1.7' to 0.94
+
+Improvement
+
+    [HBASE-9243] - Add more useful statistics in the HFile tool
+    [HBASE-9314] - Dropping a table always prints a TableInfoMissingException in the master log
+
+Task
+
+    [HBASE-9377] - Backport HBASE- 9208 "ReplicationLogCleaner slow at large scale"
+
+Test
+
+    [HBASE-9287] - TestCatalogTracker depends on the execution order
+
+
 Release 0.94.11 - 8/13/2013
 Sub-task
 
