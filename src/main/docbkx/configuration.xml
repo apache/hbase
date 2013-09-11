@@ -946,6 +946,15 @@ index e70ebc6..96f8c27 100644
             for more detail.
         </para>
       </section>
+      <section xml:id="backup.master.fail.fast"><title>If a backup Master, making primary Master fail fast</title>
+          <para>If the primary Master loses its connection with ZooKeeper, it will fall into a loop where it
+              keeps trying to reconnect.  Disable this functionality if you are running more than one Master:
+              i.e. a backup Master.  Failing to do so, the dying Master may continue to receive RPCs though
+              another Master has assumed the role of primary.
+              See the configuration <xref linkend="fail.fast.expired.active.master" />.
+
+        </para>
+      </section>
       </section>
 
       <section xml:id="recommended_configurations"><title>Recommended Configurations</title>
