@@ -312,10 +312,28 @@ public class NamespaceUpgrade implements Tool {
             + oldMetaRegionDir + " to " + newMetaRegionDir);
       }
     }
+    // Remove .tableinfo files as they refer to ".META.".
+    // They will be recreated by master on startup.
+    removeTableInfoInPre96Format(TableName.META_TABLE_NAME);
 
     Path oldRootDir = new Path(rootDir, "-ROOT-");
     if(!fs.rename(oldRootDir, backupDir)) {
       throw new IllegalStateException("Failed to old data: "+oldRootDir+" to "+backupDir);
+    }
+  }
+
+  /**
+   * Removes .tableinfo files that are laid in pre-96 format (i.e., the tableinfo files are under
+   * table directory).
+   * @param tableName
+   * @throws IOException
+   */
+  private void removeTableInfoInPre96Format(TableName tableName) throws IOException {
+    Path tableDir = FSUtils.getTableDir(rootDir, tableName);
+    FileStatus[] status = FSUtils.listStatus(fs, tableDir, TABLEINFO_PATHFILTER);
+    if (status == null) return;
+    for (FileStatus fStatus : status) {
+      FSUtils.delete(fs, fStatus.getPath(), false);
     }
   }
 
