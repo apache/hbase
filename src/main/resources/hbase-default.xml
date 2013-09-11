@@ -1008,4 +1008,12 @@
 	HBASE-1936 for more details.
     </description>
   </property>
+  <property>
+    <name>hbase.security.authentication</name>
+    <value>simple</value>
+    <description>
+        Controls whether or not secure authentication is enabled for HBase.
+        Possible values are 'simple' (no authentication), and 'kerberos'.
+     </description>
+   </property>
 </configuration>
