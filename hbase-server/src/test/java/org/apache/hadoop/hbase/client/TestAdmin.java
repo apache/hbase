@@ -367,23 +367,7 @@ public class TestAdmin {
            assertTrue(exceptionThrown);
        }
    }
-  
-  @Test
-  public void testIsEnabledOrDisabledOnUnknownTable() throws Exception {
-    try {
-      admin.isTableEnabled(Bytes.toBytes("unkownTable"));
-      fail("Test should fail if isTableEnabled called on unknown table.");
-    } catch (IOException e) {
-    }
-
-    try {
-      admin.isTableDisabled(Bytes.toBytes("unkownTable"));
-      fail("Test should fail if isTableDisabled called on unknown table.");
-    } catch (IOException e) {
-    }
-  }
-   
-    /**
+  /**
    * Verify schema modification takes.
    * @throws IOException
    * @throws InterruptedException
