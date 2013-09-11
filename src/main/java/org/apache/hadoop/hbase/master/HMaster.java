@@ -1708,7 +1708,10 @@ Server {
     if (!this.isActiveMaster || this.stopped) {
       return true;
     }
-    if (t != null && t instanceof KeeperException.SessionExpiredException) {
+
+    boolean failFast = conf.getBoolean("fail.fast.expired.active.master", false);
+    if (t != null && t instanceof KeeperException.SessionExpiredException
+        && !failFast) {
       try {
         LOG.info("Primary Master trying to recover from ZooKeeper session " +
             "expiry.");
