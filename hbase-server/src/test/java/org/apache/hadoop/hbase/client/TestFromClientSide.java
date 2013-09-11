@@ -85,8 +85,8 @@ import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.MutationType;
-import org.apache.hadoop.hbase.protobuf.generated.MultiRowMutation.MultiMutateRequest;
-import org.apache.hadoop.hbase.protobuf.generated.MultiRowMutation.MultiRowMutationService;
+import org.apache.hadoop.hbase.protobuf.generated.MultiRowMutationProtos.MutateRowsRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MultiRowMutationProtos.MultiRowMutationService;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.NoSuchColumnFamilyException;
@@ -4314,10 +4314,10 @@ public class TestFromClientSide {
     p.add(FAMILY, QUALIFIER, VALUE);
     MutationProto m2 = ProtobufUtil.toMutation(MutationType.PUT, p);
 
-    MultiMutateRequest.Builder mrmBuilder = MultiMutateRequest.newBuilder();
+    MutateRowsRequest.Builder mrmBuilder = MutateRowsRequest.newBuilder();
     mrmBuilder.addMutationRequest(m1);
     mrmBuilder.addMutationRequest(m2);
-    MultiMutateRequest mrm = mrmBuilder.build();
+    MutateRowsRequest mrm = mrmBuilder.build();
     CoprocessorRpcChannel channel = t.coprocessorService(ROW);
     MultiRowMutationService.BlockingInterface service =
        MultiRowMutationService.newBlockingStub(channel);

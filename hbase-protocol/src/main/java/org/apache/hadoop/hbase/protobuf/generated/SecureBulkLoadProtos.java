@@ -46,19 +46,19 @@ public final class SecureBulkLoadProtos {
      */
     boolean getAssignSeqNum();
 
-    // required .DelegationTokenProto fs_token = 3;
+    // required .DelegationToken fs_token = 3;
     /**
-     * <code>required .DelegationTokenProto fs_token = 3;</code>
+     * <code>required .DelegationToken fs_token = 3;</code>
      */
     boolean hasFsToken();
     /**
-     * <code>required .DelegationTokenProto fs_token = 3;</code>
+     * <code>required .DelegationToken fs_token = 3;</code>
      */
-    org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationTokenProto getFsToken();
+    org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationToken getFsToken();
     /**
-     * <code>required .DelegationTokenProto fs_token = 3;</code>
+     * <code>required .DelegationToken fs_token = 3;</code>
      */
-    org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationTokenProtoOrBuilder getFsTokenOrBuilder();
+    org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationTokenOrBuilder getFsTokenOrBuilder();
 
     // required string bulk_token = 4;
     /**
@@ -140,11 +140,11 @@ public final class SecureBulkLoadProtos {
               break;
             }
             case 26: {
-              org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationTokenProto.Builder subBuilder = null;
+              org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationToken.Builder subBuilder = null;
               if (((bitField0_ & 0x00000002) == 0x00000002)) {
                 subBuilder = fsToken_.toBuilder();
               }
-              fsToken_ = input.readMessage(org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationTokenProto.PARSER, extensionRegistry);
+              fsToken_ = input.readMessage(org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationToken.PARSER, extensionRegistry);
               if (subBuilder != null) {
                 subBuilder.mergeFrom(fsToken_);
                 fsToken_ = subBuilder.buildPartial();
@@ -252,25 +252,25 @@ public final class SecureBulkLoadProtos {
       return assignSeqNum_;
     }
 
-    // required .DelegationTokenProto fs_token = 3;
+    // required .DelegationToken fs_token = 3;
     public static final int FS_TOKEN_FIELD_NUMBER = 3;
-    private org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationTokenProto fsToken_;
+    private org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationToken fsToken_;
     /**
-     * <code>required .DelegationTokenProto fs_token = 3;</code>
+     * <code>required .DelegationToken fs_token = 3;</code>
      */
     public boolean hasFsToken() {
       return ((bitField0_ & 0x00000002) == 0x00000002);
     }
     /**
-     * <code>required .DelegationTokenProto fs_token = 3;</code>
+     * <code>required .DelegationToken fs_token = 3;</code>
      */
-    public org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationTokenProto getFsToken() {
+    public org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationToken getFsToken() {
       return fsToken_;
     }
     /**
-     * <code>required .DelegationTokenProto fs_token = 3;</code>
+     * <code>required .DelegationToken fs_token = 3;</code>
      */
-    public org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationTokenProtoOrBuilder getFsTokenOrBuilder() {
+    public org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationTokenOrBuilder getFsTokenOrBuilder() {
       return fsToken_;
     }
 
@@ -320,7 +320,7 @@ public final class SecureBulkLoadProtos {
     private void initFields() {
       familyPath_ = java.util.Collections.emptyList();
       assignSeqNum_ = false;
-      fsToken_ = org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationTokenProto.getDefaultInstance();
+      fsToken_ = org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationToken.getDefaultInstance();
       bulkToken_ = "";
     }
     private byte memoizedIsInitialized = -1;
@@ -575,7 +575,7 @@ public final class SecureBulkLoadProtos {
         assignSeqNum_ = false;
         bitField0_ = (bitField0_ & ~0x00000002);
         if (fsTokenBuilder_ == null) {
-          fsToken_ = org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationTokenProto.getDefaultInstance();
+          fsToken_ = org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationToken.getDefaultInstance();
         } else {
           fsTokenBuilder_.clear();
         }
@@ -1002,20 +1002,20 @@ public final class SecureBulkLoadProtos {
         return this;
       }
 
-      // required .DelegationTokenProto fs_token = 3;
-      private org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationTokenProto fsToken_ = org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationTokenProto.getDefaultInstance();
+      // required .DelegationToken fs_token = 3;
+      private org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationToken fsToken_ = org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationToken.getDefaultInstance();
       private com.google.protobuf.SingleFieldBuilder<
-          org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationTokenProto, org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationTokenProto.Builder, org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationTokenProtoOrBuilder> fsTokenBuilder_;
+          org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationToken, org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationToken.Builder, org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationTokenOrBuilder> fsTokenBuilder_;
       /**
-       * <code>required .DelegationTokenProto fs_token = 3;</code>
+       * <code>required .DelegationToken fs_token = 3;</code>
        */
       public boolean hasFsToken() {
         return ((bitField0_ & 0x00000004) == 0x00000004);
       }
       /**
-       * <code>required .DelegationTokenProto fs_token = 3;</code>
+       * <code>required .DelegationToken fs_token = 3;</code>
        */
-      public org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationTokenProto getFsToken() {
+      public org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationToken getFsToken() {
         if (fsTokenBuilder_ == null) {
           return fsToken_;
         } else {
@@ -1023,9 +1023,9 @@ public final class SecureBulkLoadProtos {
         }
       }
       /**
-       * <code>required .DelegationTokenProto fs_token = 3;</code>
+       * <code>required .DelegationToken fs_token = 3;</code>
        */
-      public Builder setFsToken(org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationTokenProto value) {
+      public Builder setFsToken(org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationToken value) {
         if (fsTokenBuilder_ == null) {
           if (value == null) {
             throw new NullPointerException();
@@ -1039,10 +1039,10 @@ public final class SecureBulkLoadProtos {
         return this;
       }
       /**
-       * <code>required .DelegationTokenProto fs_token = 3;</code>
+       * <code>required .DelegationToken fs_token = 3;</code>
        */
       public Builder setFsToken(
-          org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationTokenProto.Builder builderForValue) {
+          org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationToken.Builder builderForValue) {
         if (fsTokenBuilder_ == null) {
           fsToken_ = builderForValue.build();
           onChanged();
@@ -1053,14 +1053,14 @@ public final class SecureBulkLoadProtos {
         return this;
       }
       /**
-       * <code>required .DelegationTokenProto fs_token = 3;</code>
+       * <code>required .DelegationToken fs_token = 3;</code>
        */
-      public Builder mergeFsToken(org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationTokenProto value) {
+      public Builder mergeFsToken(org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationToken value) {
         if (fsTokenBuilder_ == null) {
           if (((bitField0_ & 0x00000004) == 0x00000004) &&
-              fsToken_ != org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationTokenProto.getDefaultInstance()) {
+              fsToken_ != org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationToken.getDefaultInstance()) {
             fsToken_ =
-              org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationTokenProto.newBuilder(fsToken_).mergeFrom(value).buildPartial();
+              org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationToken.newBuilder(fsToken_).mergeFrom(value).buildPartial();
           } else {
             fsToken_ = value;
           }
@@ -1072,11 +1072,11 @@ public final class SecureBulkLoadProtos {
         return this;
       }
       /**
-       * <code>required .DelegationTokenProto fs_token = 3;</code>
+       * <code>required .DelegationToken fs_token = 3;</code>
        */
       public Builder clearFsToken() {
         if (fsTokenBuilder_ == null) {
-          fsToken_ = org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationTokenProto.getDefaultInstance();
+          fsToken_ = org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationToken.getDefaultInstance();
           onChanged();
         } else {
           fsTokenBuilder_.clear();
@@ -1085,17 +1085,17 @@ public final class SecureBulkLoadProtos {
         return this;
       }
       /**
-       * <code>required .DelegationTokenProto fs_token = 3;</code>
+       * <code>required .DelegationToken fs_token = 3;</code>
        */
-      public org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationTokenProto.Builder getFsTokenBuilder() {
+      public org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationToken.Builder getFsTokenBuilder() {
         bitField0_ |= 0x00000004;
         onChanged();
         return getFsTokenFieldBuilder().getBuilder();
       }
       /**
-       * <code>required .DelegationTokenProto fs_token = 3;</code>
+       * <code>required .DelegationToken fs_token = 3;</code>
        */
-      public org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationTokenProtoOrBuilder getFsTokenOrBuilder() {
+      public org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationTokenOrBuilder getFsTokenOrBuilder() {
         if (fsTokenBuilder_ != null) {
           return fsTokenBuilder_.getMessageOrBuilder();
         } else {
@@ -1103,14 +1103,14 @@ public final class SecureBulkLoadProtos {
         }
       }
       /**
-       * <code>required .DelegationTokenProto fs_token = 3;</code>
+       * <code>required .DelegationToken fs_token = 3;</code>
        */
       private com.google.protobuf.SingleFieldBuilder<
-          org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationTokenProto, org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationTokenProto.Builder, org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationTokenProtoOrBuilder> 
+          org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationToken, org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationToken.Builder, org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationTokenOrBuilder> 
           getFsTokenFieldBuilder() {
         if (fsTokenBuilder_ == null) {
           fsTokenBuilder_ = new com.google.protobuf.SingleFieldBuilder<
-              org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationTokenProto, org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationTokenProto.Builder, org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationTokenProtoOrBuilder>(
+              org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationToken, org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationToken.Builder, org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationTokenOrBuilder>(
                   fsToken_,
                   getParentForChildren(),
                   isClean());
@@ -1646,7 +1646,7 @@ public final class SecureBulkLoadProtos {
     // @@protoc_insertion_point(class_scope:SecureBulkLoadHFilesResponse)
   }
 
-  public interface DelegationTokenProtoOrBuilder
+  public interface DelegationTokenOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
 
     // optional bytes identifier = 1;
@@ -1700,24 +1700,24 @@ public final class SecureBulkLoadProtos {
         getServiceBytes();
   }
   /**
-   * Protobuf type {@code DelegationTokenProto}
+   * Protobuf type {@code DelegationToken}
    */
-  public static final class DelegationTokenProto extends
+  public static final class DelegationToken extends
       com.google.protobuf.GeneratedMessage
-      implements DelegationTokenProtoOrBuilder {
-    // Use DelegationTokenProto.newBuilder() to construct.
-    private DelegationTokenProto(com.google.protobuf.GeneratedMessage.Builder<?> builder) {
+      implements DelegationTokenOrBuilder {
+    // Use DelegationToken.newBuilder() to construct.
+    private DelegationToken(com.google.protobuf.GeneratedMessage.Builder<?> builder) {
       super(builder);
       this.unknownFields = builder.getUnknownFields();
     }
-    private DelegationTokenProto(boolean noInit) { this.unknownFields = com.google.protobuf.UnknownFieldSet.getDefaultInstance(); }
+    private DelegationToken(boolean noInit) { this.unknownFields = com.google.protobuf.UnknownFieldSet.getDefaultInstance(); }
 
-    private static final DelegationTokenProto defaultInstance;
-    public static DelegationTokenProto getDefaultInstance() {
+    private static final DelegationToken defaultInstance;
+    public static DelegationToken getDefaultInstance() {
       return defaultInstance;
     }
 
-    public DelegationTokenProto getDefaultInstanceForType() {
+    public DelegationToken getDefaultInstanceForType() {
       return defaultInstance;
     }
 
@@ -1727,7 +1727,7 @@ public final class SecureBulkLoadProtos {
         getUnknownFields() {
       return this.unknownFields;
     }
-    private DelegationTokenProto(
+    private DelegationToken(
         com.google.protobuf.CodedInputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
@@ -1784,28 +1784,28 @@ public final class SecureBulkLoadProtos {
     }
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.internal_static_DelegationTokenProto_descriptor;
+      return org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.internal_static_DelegationToken_descriptor;
     }
 
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.internal_static_DelegationTokenProto_fieldAccessorTable
+      return org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.internal_static_DelegationToken_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
-              org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationTokenProto.class, org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationTokenProto.Builder.class);
+              org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationToken.class, org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationToken.Builder.class);
     }
 
-    public static com.google.protobuf.Parser<DelegationTokenProto> PARSER =
-        new com.google.protobuf.AbstractParser<DelegationTokenProto>() {
-      public DelegationTokenProto parsePartialFrom(
+    public static com.google.protobuf.Parser<DelegationToken> PARSER =
+        new com.google.protobuf.AbstractParser<DelegationToken>() {
+      public DelegationToken parsePartialFrom(
           com.google.protobuf.CodedInputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws com.google.protobuf.InvalidProtocolBufferException {
-        return new DelegationTokenProto(input, extensionRegistry);
+        return new DelegationToken(input, extensionRegistry);
       }
     };
 
     @java.lang.Override
-    public com.google.protobuf.Parser<DelegationTokenProto> getParserForType() {
+    public com.google.protobuf.Parser<DelegationToken> getParserForType() {
       return PARSER;
     }
 
@@ -2000,10 +2000,10 @@ public final class SecureBulkLoadProtos {
       if (obj == this) {
        return true;
       }
-      if (!(obj instanceof org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationTokenProto)) {
+      if (!(obj instanceof org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationToken)) {
         return super.equals(obj);
       }
-      org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationTokenProto other = (org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationTokenProto) obj;
+      org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationToken other = (org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationToken) obj;
 
       boolean result = true;
       result = result && (hasIdentifier() == other.hasIdentifier());
@@ -2060,53 +2060,53 @@ public final class SecureBulkLoadProtos {
       return hash;
     }
 
-    public static org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationTokenProto parseFrom(
+    public static org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationToken parseFrom(
         com.google.protobuf.ByteString data)
         throws com.google.protobuf.InvalidProtocolBufferException {
       return PARSER.parseFrom(data);
     }
-    public static org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationTokenProto parseFrom(
+    public static org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationToken parseFrom(
         com.google.protobuf.ByteString data,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
       return PARSER.parseFrom(data, extensionRegistry);
     }
-    public static org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationTokenProto parseFrom(byte[] data)
+    public static org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationToken parseFrom(byte[] data)
         throws com.google.protobuf.InvalidProtocolBufferException {
       return PARSER.parseFrom(data);
     }
-    public static org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationTokenProto parseFrom(
+    public static org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationToken parseFrom(
         byte[] data,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
       return PARSER.parseFrom(data, extensionRegistry);
     }
-    public static org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationTokenProto parseFrom(java.io.InputStream input)
+    public static org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationToken parseFrom(java.io.InputStream input)
         throws java.io.IOException {
       return PARSER.parseFrom(input);
     }
-    public static org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationTokenProto parseFrom(
+    public static org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationToken parseFrom(
         java.io.InputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
       return PARSER.parseFrom(input, extensionRegistry);
     }
-    public static org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationTokenProto parseDelimitedFrom(java.io.InputStream input)
+    public static org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationToken parseDelimitedFrom(java.io.InputStream input)
         throws java.io.IOException {
       return PARSER.parseDelimitedFrom(input);
     }
-    public static org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationTokenProto parseDelimitedFrom(
+    public static org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationToken parseDelimitedFrom(
         java.io.InputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
       return PARSER.parseDelimitedFrom(input, extensionRegistry);
     }
-    public static org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationTokenProto parseFrom(
+    public static org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationToken parseFrom(
         com.google.protobuf.CodedInputStream input)
         throws java.io.IOException {
       return PARSER.parseFrom(input);
     }
-    public static org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationTokenProto parseFrom(
+    public static org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationToken parseFrom(
         com.google.protobuf.CodedInputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
@@ -2115,7 +2115,7 @@ public final class SecureBulkLoadProtos {
 
     public static Builder newBuilder() { return Builder.create(); }
     public Builder newBuilderForType() { return newBuilder(); }
-    public static Builder newBuilder(org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationTokenProto prototype) {
+    public static Builder newBuilder(org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationToken prototype) {
       return newBuilder().mergeFrom(prototype);
     }
     public Builder toBuilder() { return newBuilder(this); }
@@ -2127,24 +2127,24 @@ public final class SecureBulkLoadProtos {
       return builder;
     }
     /**
-     * Protobuf type {@code DelegationTokenProto}
+     * Protobuf type {@code DelegationToken}
      */
     public static final class Builder extends
         com.google.protobuf.GeneratedMessage.Builder<Builder>
-       implements org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationTokenProtoOrBuilder {
+       implements org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationTokenOrBuilder {
       public static final com.google.protobuf.Descriptors.Descriptor
           getDescriptor() {
-        return org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.internal_static_DelegationTokenProto_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.internal_static_DelegationToken_descriptor;
       }
 
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.internal_static_DelegationTokenProto_fieldAccessorTable
+        return org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.internal_static_DelegationToken_fieldAccessorTable
             .ensureFieldAccessorsInitialized(
-                org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationTokenProto.class, org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationTokenProto.Builder.class);
+                org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationToken.class, org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationToken.Builder.class);
       }
 
-      // Construct using org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationTokenProto.newBuilder()
+      // Construct using org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationToken.newBuilder()
       private Builder() {
         maybeForceBuilderInitialization();
       }
@@ -2181,23 +2181,23 @@ public final class SecureBulkLoadProtos {
 
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.internal_static_DelegationTokenProto_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.internal_static_DelegationToken_descriptor;
       }
 
-      public org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationTokenProto getDefaultInstanceForType() {
-        return org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationTokenProto.getDefaultInstance();
+      public org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationToken getDefaultInstanceForType() {
+        return org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationToken.getDefaultInstance();
       }
 
-      public org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationTokenProto build() {
-        org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationTokenProto result = buildPartial();
+      public org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationToken build() {
+        org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationToken result = buildPartial();
         if (!result.isInitialized()) {
           throw newUninitializedMessageException(result);
         }
         return result;
       }
 
-      public org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationTokenProto buildPartial() {
-        org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationTokenProto result = new org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationTokenProto(this);
+      public org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationToken buildPartial() {
+        org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationToken result = new org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationToken(this);
         int from_bitField0_ = bitField0_;
         int to_bitField0_ = 0;
         if (((from_bitField0_ & 0x00000001) == 0x00000001)) {
@@ -2222,16 +2222,16 @@ public final class SecureBulkLoadProtos {
       }
 
       public Builder mergeFrom(com.google.protobuf.Message other) {
-        if (other instanceof org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationTokenProto) {
-          return mergeFrom((org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationTokenProto)other);
+        if (other instanceof org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationToken) {
+          return mergeFrom((org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationToken)other);
         } else {
           super.mergeFrom(other);
           return this;
         }
       }
 
-      public Builder mergeFrom(org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationTokenProto other) {
-        if (other == org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationTokenProto.getDefaultInstance()) return this;
+      public Builder mergeFrom(org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationToken other) {
+        if (other == org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationToken.getDefaultInstance()) return this;
         if (other.hasIdentifier()) {
           setIdentifier(other.getIdentifier());
         }
@@ -2260,11 +2260,11 @@ public final class SecureBulkLoadProtos {
           com.google.protobuf.CodedInputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws java.io.IOException {
-        org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationTokenProto parsedMessage = null;
+        org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationToken parsedMessage = null;
         try {
           parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
         } catch (com.google.protobuf.InvalidProtocolBufferException e) {
-          parsedMessage = (org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationTokenProto) e.getUnfinishedMessage();
+          parsedMessage = (org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.DelegationToken) e.getUnfinishedMessage();
           throw e;
         } finally {
           if (parsedMessage != null) {
@@ -2495,15 +2495,15 @@ public final class SecureBulkLoadProtos {
         return this;
       }
 
-      // @@protoc_insertion_point(builder_scope:DelegationTokenProto)
+      // @@protoc_insertion_point(builder_scope:DelegationToken)
     }
 
     static {
-      defaultInstance = new DelegationTokenProto(true);
+      defaultInstance = new DelegationToken(true);
       defaultInstance.initFields();
     }
 
-    // @@protoc_insertion_point(class_scope:DelegationTokenProto)
+    // @@protoc_insertion_point(class_scope:DelegationToken)
   }
 
   public interface PrepareBulkLoadRequestOrBuilder
@@ -4824,10 +4824,10 @@ public final class SecureBulkLoadProtos {
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_SecureBulkLoadHFilesResponse_fieldAccessorTable;
   private static com.google.protobuf.Descriptors.Descriptor
-    internal_static_DelegationTokenProto_descriptor;
+    internal_static_DelegationToken_descriptor;
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
-      internal_static_DelegationTokenProto_fieldAccessorTable;
+      internal_static_DelegationToken_fieldAccessorTable;
   private static com.google.protobuf.Descriptors.Descriptor
     internal_static_PrepareBulkLoadRequest_descriptor;
   private static
@@ -4857,28 +4857,28 @@ public final class SecureBulkLoadProtos {
       descriptor;
   static {
     java.lang.String[] descriptorData = {
-      "\n\024SecureBulkLoad.proto\032\013hbase.proto\032\014Cli" +
-      "ent.proto\"\251\001\n\033SecureBulkLoadHFilesReques" +
+      "\n\024SecureBulkLoad.proto\032\013HBase.proto\032\014Cli" +
+      "ent.proto\"\244\001\n\033SecureBulkLoadHFilesReques" +
       "t\0225\n\013family_path\030\001 \003(\0132 .BulkLoadHFileRe" +
       "quest.FamilyPath\022\026\n\016assign_seq_num\030\002 \001(\010" +
-      "\022\'\n\010fs_token\030\003 \002(\0132\025.DelegationTokenProt" +
-      "o\022\022\n\nbulk_token\030\004 \002(\t\".\n\034SecureBulkLoadH" +
-      "FilesResponse\022\016\n\006loaded\030\001 \002(\010\"[\n\024Delegat" +
-      "ionTokenProto\022\022\n\nidentifier\030\001 \001(\014\022\020\n\010pas" +
-      "sword\030\002 \001(\014\022\014\n\004kind\030\003 \001(\t\022\017\n\007service\030\004 \001" +
-      "(\t\"8\n\026PrepareBulkLoadRequest\022\036\n\ntable_na",
-      "me\030\001 \002(\0132\n.TableName\"-\n\027PrepareBulkLoadR" +
-      "esponse\022\022\n\nbulk_token\030\001 \002(\t\",\n\026CleanupBu" +
-      "lkLoadRequest\022\022\n\nbulk_token\030\001 \002(\t\"\031\n\027Cle" +
-      "anupBulkLoadResponse2\370\001\n\025SecureBulkLoadS" +
-      "ervice\022D\n\017PrepareBulkLoad\022\027.PrepareBulkL" +
-      "oadRequest\032\030.PrepareBulkLoadResponse\022S\n\024" +
-      "SecureBulkLoadHFiles\022\034.SecureBulkLoadHFi" +
-      "lesRequest\032\035.SecureBulkLoadHFilesRespons" +
-      "e\022D\n\017CleanupBulkLoad\022\027.CleanupBulkLoadRe" +
-      "quest\032\030.CleanupBulkLoadResponseBJ\n*org.a",
-      "pache.hadoop.hbase.protobuf.generatedB\024S" +
-      "ecureBulkLoadProtosH\001\210\001\001\240\001\001"
+      "\022\"\n\010fs_token\030\003 \002(\0132\020.DelegationToken\022\022\n\n" +
+      "bulk_token\030\004 \002(\t\".\n\034SecureBulkLoadHFiles" +
+      "Response\022\016\n\006loaded\030\001 \002(\010\"V\n\017DelegationTo" +
+      "ken\022\022\n\nidentifier\030\001 \001(\014\022\020\n\010password\030\002 \001(" +
+      "\014\022\014\n\004kind\030\003 \001(\t\022\017\n\007service\030\004 \001(\t\"8\n\026Prep" +
+      "areBulkLoadRequest\022\036\n\ntable_name\030\001 \002(\0132\n",
+      ".TableName\"-\n\027PrepareBulkLoadResponse\022\022\n" +
+      "\nbulk_token\030\001 \002(\t\",\n\026CleanupBulkLoadRequ" +
+      "est\022\022\n\nbulk_token\030\001 \002(\t\"\031\n\027CleanupBulkLo" +
+      "adResponse2\370\001\n\025SecureBulkLoadService\022D\n\017" +
+      "PrepareBulkLoad\022\027.PrepareBulkLoadRequest" +
+      "\032\030.PrepareBulkLoadResponse\022S\n\024SecureBulk" +
+      "LoadHFiles\022\034.SecureBulkLoadHFilesRequest" +
+      "\032\035.SecureBulkLoadHFilesResponse\022D\n\017Clean" +
+      "upBulkLoad\022\027.CleanupBulkLoadRequest\032\030.Cl" +
+      "eanupBulkLoadResponseBJ\n*org.apache.hado",
+      "op.hbase.protobuf.generatedB\024SecureBulkL" +
+      "oadProtosH\001\210\001\001\240\001\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -4897,11 +4897,11 @@ public final class SecureBulkLoadProtos {
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_SecureBulkLoadHFilesResponse_descriptor,
               new java.lang.String[] { "Loaded", });
-          internal_static_DelegationTokenProto_descriptor =
+          internal_static_DelegationToken_descriptor =
             getDescriptor().getMessageTypes().get(2);
-          internal_static_DelegationTokenProto_fieldAccessorTable = new
+          internal_static_DelegationToken_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
-              internal_static_DelegationTokenProto_descriptor,
+              internal_static_DelegationToken_descriptor,
               new java.lang.String[] { "Identifier", "Password", "Kind", "Service", });
           internal_static_PrepareBulkLoadRequest_descriptor =
             getDescriptor().getMessageTypes().get(3);

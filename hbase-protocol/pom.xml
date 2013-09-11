@@ -102,7 +102,7 @@
                     <include>ErrorHandling.proto</include>
                     <include>Filter.proto</include>
                     <include>FS.proto</include>
-                    <include>hbase.proto</include>
+                    <include>HBase.proto</include>
                     <include>HFile.proto</include>
                     <include>LoadBalancer.proto</include>
                     <include>MapReduce.proto</include>

@@ -38,7 +38,7 @@ import org.apache.hadoop.hbase.coprocessor.ColumnInterpreter;
 import org.apache.hadoop.hbase.ipc.BlockingRpcCallback;
 import org.apache.hadoop.hbase.ipc.ServerRpcController;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateArgument;
+import org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateRequest;
 import org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateResponse;
 import org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateService;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -129,7 +129,7 @@ public class AggregationClient {
   public <R, S, P extends Message, Q extends Message, T extends Message> 
   R max(final HTable table, final ColumnInterpreter<R, S, P, Q, T> ci,
       final Scan scan) throws Throwable {
-    final AggregateArgument requestArg = validateArgAndGetPB(scan, ci);
+    final AggregateRequest requestArg = validateArgAndGetPB(scan, ci);
     class MaxCallBack implements Batch.Callback<R> {
       R max = null;
 
@@ -216,7 +216,7 @@ public class AggregationClient {
   public <R, S, P extends Message, Q extends Message, T extends Message> 
   R min(final HTable table, final ColumnInterpreter<R, S, P, Q, T> ci,
       final Scan scan) throws Throwable {
-    final AggregateArgument requestArg = validateArgAndGetPB(scan, ci);
+    final AggregateRequest requestArg = validateArgAndGetPB(scan, ci);
     class MinCallBack implements Batch.Callback<R> {
 
       private R min = null;
@@ -299,7 +299,7 @@ public class AggregationClient {
   public <R, S, P extends Message, Q extends Message, T extends Message> 
   long rowCount(final HTable table,
       final ColumnInterpreter<R, S, P, Q, T> ci, final Scan scan) throws Throwable {
-    final AggregateArgument requestArg = validateArgAndGetPB(scan, ci);
+    final AggregateRequest requestArg = validateArgAndGetPB(scan, ci);
     class RowNumCallback implements Batch.Callback<Long> {
       private final AtomicLong rowCountL = new AtomicLong(0);
 
@@ -369,7 +369,7 @@ public class AggregationClient {
   public <R, S, P extends Message, Q extends Message, T extends Message> 
   S sum(final HTable table, final ColumnInterpreter<R, S, P, Q, T> ci,
       final Scan scan) throws Throwable {
-    final AggregateArgument requestArg = validateArgAndGetPB(scan, ci);
+    final AggregateRequest requestArg = validateArgAndGetPB(scan, ci);
     
     class SumCallBack implements Batch.Callback<S> {
       S sumVal = null;
@@ -441,7 +441,7 @@ public class AggregationClient {
   private <R, S, P extends Message, Q extends Message, T extends Message>
   Pair<S, Long> getAvgArgs(final HTable table,
       final ColumnInterpreter<R, S, P, Q, T> ci, final Scan scan) throws Throwable {
-    final AggregateArgument requestArg = validateArgAndGetPB(scan, ci);
+    final AggregateRequest requestArg = validateArgAndGetPB(scan, ci);
     class AvgCallBack implements Batch.Callback<Pair<S, Long>> {
       S sum = null;
       Long rowCount = 0l;
@@ -538,7 +538,7 @@ public class AggregationClient {
   private <R, S, P extends Message, Q extends Message, T extends Message>
   Pair<List<S>, Long> getStdArgs(final HTable table,
       final ColumnInterpreter<R, S, P, Q, T> ci, final Scan scan) throws Throwable {
-    final AggregateArgument requestArg = validateArgAndGetPB(scan, ci);
+    final AggregateRequest requestArg = validateArgAndGetPB(scan, ci);
     class StdCallback implements Batch.Callback<Pair<List<S>, Long>> {
       long rowCountVal = 0l;
       S sumVal = null, sumSqVal = null;
@@ -660,7 +660,7 @@ public class AggregationClient {
   Pair<NavigableMap<byte[], List<S>>, List<S>>
   getMedianArgs(final HTable table,
       final ColumnInterpreter<R, S, P, Q, T> ci, final Scan scan) throws Throwable {
-    final AggregateArgument requestArg = validateArgAndGetPB(scan, ci);
+    final AggregateRequest requestArg = validateArgAndGetPB(scan, ci);
     final NavigableMap<byte[], List<S>> map =
       new TreeMap<byte[], List<S>>(Bytes.BYTES_COMPARATOR);
     class StdCallback implements Batch.Callback<List<S>> {
@@ -815,12 +815,12 @@ public class AggregationClient {
     return null;
   }
 
-  <R, S, P extends Message, Q extends Message, T extends Message> AggregateArgument 
+  <R, S, P extends Message, Q extends Message, T extends Message> AggregateRequest 
   validateArgAndGetPB(Scan scan, ColumnInterpreter<R,S,P,Q,T> ci)
       throws IOException {
     validateParameters(scan);
-    final AggregateArgument.Builder requestBuilder = 
-        AggregateArgument.newBuilder();
+    final AggregateRequest.Builder requestBuilder = 
+        AggregateRequest.newBuilder();
     requestBuilder.setInterpreterClassName(ci.getClass().getCanonicalName());
     P columnInterpreterSpecificData = null;
     if ((columnInterpreterSpecificData = ci.getRequestData()) 

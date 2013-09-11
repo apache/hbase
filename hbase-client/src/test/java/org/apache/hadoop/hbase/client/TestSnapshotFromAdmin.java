@@ -35,8 +35,8 @@ import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.IsSnapshotDoneRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.IsSnapshotDoneResponse;
-import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.TakeSnapshotRequest;
-import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.TakeSnapshotResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.SnapshotRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.SnapshotResponse;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
@@ -85,13 +85,13 @@ public class TestSnapshotFromAdmin {
     Mockito.when(mockConnection.getConfiguration()).thenReturn(conf);
     Mockito.when(mockConnection.getKeepAliveMasterAdminService()).thenReturn(mockMaster);
     // set the max wait time for the snapshot to complete
-    TakeSnapshotResponse response = TakeSnapshotResponse.newBuilder()
+    SnapshotResponse response = SnapshotResponse.newBuilder()
         .setExpectedTimeout(maxWaitTime)
         .build();
     Mockito
         .when(
           mockMaster.snapshot((RpcController) Mockito.isNull(),
-            Mockito.any(TakeSnapshotRequest.class))).thenReturn(response);
+            Mockito.any(SnapshotRequest.class))).thenReturn(response);
     // setup the response
     IsSnapshotDoneResponse.Builder builder = IsSnapshotDoneResponse.newBuilder();
     builder.setDone(false);
@@ -142,9 +142,9 @@ public class TestSnapshotFromAdmin {
     // mock the master connection
     MasterAdminKeepAliveConnection master = Mockito.mock(MasterAdminKeepAliveConnection.class);
     Mockito.when(mockConnection.getKeepAliveMasterAdminService()).thenReturn(master);
-    TakeSnapshotResponse response = TakeSnapshotResponse.newBuilder().setExpectedTimeout(0).build();
+    SnapshotResponse response = SnapshotResponse.newBuilder().setExpectedTimeout(0).build();
     Mockito.when(
-      master.snapshot((RpcController) Mockito.isNull(), Mockito.any(TakeSnapshotRequest.class)))
+      master.snapshot((RpcController) Mockito.isNull(), Mockito.any(SnapshotRequest.class)))
         .thenReturn(response);
     IsSnapshotDoneResponse doneResponse = IsSnapshotDoneResponse.newBuilder().setDone(true).build();
     Mockito.when(

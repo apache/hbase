@@ -31,7 +31,7 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.ipc.ServerRpcController;
-import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermissionsResponse;
+import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.GetUserPermissionsResponse;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.CloseRegionResponse;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetOnlineRegionResponse;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetServerInfoResponse;
@@ -42,7 +42,7 @@ import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ActionResult;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ScanResponse;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameBytesPair;
-import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.CatalogScanResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.RunCatalogScanResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.EnableCatalogJanitorResponse;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.GetLastFlushedSequenceIdResponse;
 import org.apache.hadoop.hbase.regionserver.RegionOpeningState;
@@ -109,11 +109,11 @@ public final class ResponseConverter {
   }
 
   /**
-   * Converts the permissions list into a protocol buffer UserPermissionsResponse
+   * Converts the permissions list into a protocol buffer GetUserPermissionsResponse
    */
-  public static UserPermissionsResponse buildUserPermissionsResponse(
+  public static GetUserPermissionsResponse buildGetUserPermissionsResponse(
       final List<UserPermission> permissions) {
-    UserPermissionsResponse.Builder builder = UserPermissionsResponse.newBuilder();
+    GetUserPermissionsResponse.Builder builder = GetUserPermissionsResponse.newBuilder();
     for (UserPermission perm : permissions) {
       builder.addUserPermission(ProtobufUtil.toUserPermission(perm));
     }
@@ -227,10 +227,10 @@ public final class ResponseConverter {
 
   /**
    * Creates a response for the catalog scan request
-   * @return A CatalogScanResponse
+   * @return A RunCatalogScanResponse
    */
-  public static CatalogScanResponse buildCatalogScanResponse(int numCleaned) {
-    return CatalogScanResponse.newBuilder().setScanResult(numCleaned).build();
+  public static RunCatalogScanResponse buildRunCatalogScanResponse(int numCleaned) {
+    return RunCatalogScanResponse.newBuilder().setScanResult(numCleaned).build();
   }
 
   /**

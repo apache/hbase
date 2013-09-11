@@ -2323,32 +2323,32 @@ public final class AuthenticationProtos {
     // @@protoc_insertion_point(class_scope:Token)
   }
 
-  public interface TokenRequestOrBuilder
+  public interface GetAuthenticationTokenRequestOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
   }
   /**
-   * Protobuf type {@code TokenRequest}
+   * Protobuf type {@code GetAuthenticationTokenRequest}
    *
    * <pre>
    * RPC request &amp; response messages
    * </pre>
    */
-  public static final class TokenRequest extends
+  public static final class GetAuthenticationTokenRequest extends
       com.google.protobuf.GeneratedMessage
-      implements TokenRequestOrBuilder {
-    // Use TokenRequest.newBuilder() to construct.
-    private TokenRequest(com.google.protobuf.GeneratedMessage.Builder<?> builder) {
+      implements GetAuthenticationTokenRequestOrBuilder {
+    // Use GetAuthenticationTokenRequest.newBuilder() to construct.
+    private GetAuthenticationTokenRequest(com.google.protobuf.GeneratedMessage.Builder<?> builder) {
       super(builder);
       this.unknownFields = builder.getUnknownFields();
     }
-    private TokenRequest(boolean noInit) { this.unknownFields = com.google.protobuf.UnknownFieldSet.getDefaultInstance(); }
+    private GetAuthenticationTokenRequest(boolean noInit) { this.unknownFields = com.google.protobuf.UnknownFieldSet.getDefaultInstance(); }
 
-    private static final TokenRequest defaultInstance;
-    public static TokenRequest getDefaultInstance() {
+    private static final GetAuthenticationTokenRequest defaultInstance;
+    public static GetAuthenticationTokenRequest getDefaultInstance() {
       return defaultInstance;
     }
 
-    public TokenRequest getDefaultInstanceForType() {
+    public GetAuthenticationTokenRequest getDefaultInstanceForType() {
       return defaultInstance;
     }
 
@@ -2358,7 +2358,7 @@ public final class AuthenticationProtos {
         getUnknownFields() {
       return this.unknownFields;
     }
-    private TokenRequest(
+    private GetAuthenticationTokenRequest(
         com.google.protobuf.CodedInputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
@@ -2394,28 +2394,28 @@ public final class AuthenticationProtos {
     }
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.internal_static_TokenRequest_descriptor;
+      return org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.internal_static_GetAuthenticationTokenRequest_descriptor;
     }
 
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.internal_static_TokenRequest_fieldAccessorTable
+      return org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.internal_static_GetAuthenticationTokenRequest_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
-              org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.TokenRequest.class, org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.TokenRequest.Builder.class);
+              org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.GetAuthenticationTokenRequest.class, org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.GetAuthenticationTokenRequest.Builder.class);
     }
 
-    public static com.google.protobuf.Parser<TokenRequest> PARSER =
-        new com.google.protobuf.AbstractParser<TokenRequest>() {
-      public TokenRequest parsePartialFrom(
+    public static com.google.protobuf.Parser<GetAuthenticationTokenRequest> PARSER =
+        new com.google.protobuf.AbstractParser<GetAuthenticationTokenRequest>() {
+      public GetAuthenticationTokenRequest parsePartialFrom(
           com.google.protobuf.CodedInputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws com.google.protobuf.InvalidProtocolBufferException {
-        return new TokenRequest(input, extensionRegistry);
+        return new GetAuthenticationTokenRequest(input, extensionRegistry);
       }
     };
 
     @java.lang.Override
-    public com.google.protobuf.Parser<TokenRequest> getParserForType() {
+    public com.google.protobuf.Parser<GetAuthenticationTokenRequest> getParserForType() {
       return PARSER;
     }
 
@@ -2459,10 +2459,10 @@ public final class AuthenticationProtos {
       if (obj == this) {
        return true;
       }
-      if (!(obj instanceof org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.TokenRequest)) {
+      if (!(obj instanceof org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.GetAuthenticationTokenRequest)) {
         return super.equals(obj);
       }
-      org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.TokenRequest other = (org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.TokenRequest) obj;
+      org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.GetAuthenticationTokenRequest other = (org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.GetAuthenticationTokenRequest) obj;
 
       boolean result = true;
       result = result &&
@@ -2483,53 +2483,53 @@ public final class AuthenticationProtos {
       return hash;
     }
 
-    public static org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.TokenRequest parseFrom(
+    public static org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.GetAuthenticationTokenRequest parseFrom(
         com.google.protobuf.ByteString data)
         throws com.google.protobuf.InvalidProtocolBufferException {
       return PARSER.parseFrom(data);
     }
-    public static org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.TokenRequest parseFrom(
+    public static org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.GetAuthenticationTokenRequest parseFrom(
         com.google.protobuf.ByteString data,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
       return PARSER.parseFrom(data, extensionRegistry);
     }
-    public static org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.TokenRequest parseFrom(byte[] data)
+    public static org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.GetAuthenticationTokenRequest parseFrom(byte[] data)
         throws com.google.protobuf.InvalidProtocolBufferException {
       return PARSER.parseFrom(data);
     }
-    public static org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.TokenRequest parseFrom(
+    public static org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.GetAuthenticationTokenRequest parseFrom(
         byte[] data,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
       return PARSER.parseFrom(data, extensionRegistry);
     }
-    public static org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.TokenRequest parseFrom(java.io.InputStream input)
+    public static org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.GetAuthenticationTokenRequest parseFrom(java.io.InputStream input)
         throws java.io.IOException {
       return PARSER.parseFrom(input);
     }
-    public static org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.TokenRequest parseFrom(
+    public static org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.GetAuthenticationTokenRequest parseFrom(
         java.io.InputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
       return PARSER.parseFrom(input, extensionRegistry);
     }
-    public static org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.TokenRequest parseDelimitedFrom(java.io.InputStream input)
+    public static org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.GetAuthenticationTokenRequest parseDelimitedFrom(java.io.InputStream input)
         throws java.io.IOException {
       return PARSER.parseDelimitedFrom(input);
     }
-    public static org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.TokenRequest parseDelimitedFrom(
+    public static org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.GetAuthenticationTokenRequest parseDelimitedFrom(
         java.io.InputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
       return PARSER.parseDelimitedFrom(input, extensionRegistry);
     }
-    public static org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.TokenRequest parseFrom(
+    public static org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.GetAuthenticationTokenRequest parseFrom(
         com.google.protobuf.CodedInputStream input)
         throws java.io.IOException {
       return PARSER.parseFrom(input);
     }
-    public static org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.TokenRequest parseFrom(
+    public static org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.GetAuthenticationTokenRequest parseFrom(
         com.google.protobuf.CodedInputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
@@ -2538,7 +2538,7 @@ public final class AuthenticationProtos {
 
     public static Builder newBuilder() { return Builder.create(); }
     public Builder newBuilderForType() { return newBuilder(); }
-    public static Builder newBuilder(org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.TokenRequest prototype) {
+    public static Builder newBuilder(org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.GetAuthenticationTokenRequest prototype) {
       return newBuilder().mergeFrom(prototype);
     }
     public Builder toBuilder() { return newBuilder(this); }
@@ -2550,7 +2550,7 @@ public final class AuthenticationProtos {
       return builder;
     }
     /**
-     * Protobuf type {@code TokenRequest}
+     * Protobuf type {@code GetAuthenticationTokenRequest}
      *
      * <pre>
      * RPC request &amp; response messages
@@ -2558,20 +2558,20 @@ public final class AuthenticationProtos {
      */
     public static final class Builder extends
         com.google.protobuf.GeneratedMessage.Builder<Builder>
-       implements org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.TokenRequestOrBuilder {
+       implements org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.GetAuthenticationTokenRequestOrBuilder {
       public static final com.google.protobuf.Descriptors.Descriptor
           getDescriptor() {
-        return org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.internal_static_TokenRequest_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.internal_static_GetAuthenticationTokenRequest_descriptor;
       }
 
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.internal_static_TokenRequest_fieldAccessorTable
+        return org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.internal_static_GetAuthenticationTokenRequest_fieldAccessorTable
             .ensureFieldAccessorsInitialized(
-                org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.TokenRequest.class, org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.TokenRequest.Builder.class);
+                org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.GetAuthenticationTokenRequest.class, org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.GetAuthenticationTokenRequest.Builder.class);
       }
 
-      // Construct using org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.TokenRequest.newBuilder()
+      // Construct using org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.GetAuthenticationTokenRequest.newBuilder()
       private Builder() {
         maybeForceBuilderInitialization();
       }
@@ -2600,38 +2600,38 @@ public final class AuthenticationProtos {
 
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.internal_static_TokenRequest_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.internal_static_GetAuthenticationTokenRequest_descriptor;
       }
 
-      public org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.TokenRequest getDefaultInstanceForType() {
-        return org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.TokenRequest.getDefaultInstance();
+      public org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.GetAuthenticationTokenRequest getDefaultInstanceForType() {
+        return org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.GetAuthenticationTokenRequest.getDefaultInstance();
       }
 
-      public org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.TokenRequest build() {
-        org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.TokenRequest result = buildPartial();
+      public org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.GetAuthenticationTokenRequest build() {
+        org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.GetAuthenticationTokenRequest result = buildPartial();
         if (!result.isInitialized()) {
           throw newUninitializedMessageException(result);
         }
         return result;
       }
 
-      public org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.TokenRequest buildPartial() {
-        org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.TokenRequest result = new org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.TokenRequest(this);
+      public org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.GetAuthenticationTokenRequest buildPartial() {
+        org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.GetAuthenticationTokenRequest result = new org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.GetAuthenticationTokenRequest(this);
         onBuilt();
         return result;
       }
 
       public Builder mergeFrom(com.google.protobuf.Message other) {
-        if (other instanceof org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.TokenRequest) {
-          return mergeFrom((org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.TokenRequest)other);
+        if (other instanceof org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.GetAuthenticationTokenRequest) {
+          return mergeFrom((org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.GetAuthenticationTokenRequest)other);
         } else {
           super.mergeFrom(other);
           return this;
         }
       }
 
-      public Builder mergeFrom(org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.TokenRequest other) {
-        if (other == org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.TokenRequest.getDefaultInstance()) return this;
+      public Builder mergeFrom(org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.GetAuthenticationTokenRequest other) {
+        if (other == org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.GetAuthenticationTokenRequest.getDefaultInstance()) return this;
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
       }
@@ -2644,11 +2644,11 @@ public final class AuthenticationProtos {
           com.google.protobuf.CodedInputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws java.io.IOException {
-        org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.TokenRequest parsedMessage = null;
+        org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.GetAuthenticationTokenRequest parsedMessage = null;
         try {
           parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
         } catch (com.google.protobuf.InvalidProtocolBufferException e) {
-          parsedMessage = (org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.TokenRequest) e.getUnfinishedMessage();
+          parsedMessage = (org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.GetAuthenticationTokenRequest) e.getUnfinishedMessage();
           throw e;
         } finally {
           if (parsedMessage != null) {
@@ -2658,18 +2658,18 @@ public final class AuthenticationProtos {
         return this;
       }
 
-      // @@protoc_insertion_point(builder_scope:TokenRequest)
+      // @@protoc_insertion_point(builder_scope:GetAuthenticationTokenRequest)
     }
 
     static {
-      defaultInstance = new TokenRequest(true);
+      defaultInstance = new GetAuthenticationTokenRequest(true);
       defaultInstance.initFields();
     }
 
-    // @@protoc_insertion_point(class_scope:TokenRequest)
+    // @@protoc_insertion_point(class_scope:GetAuthenticationTokenRequest)
   }
 
-  public interface TokenResponseOrBuilder
+  public interface GetAuthenticationTokenResponseOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
 
     // optional .Token token = 1;
@@ -2687,24 +2687,24 @@ public final class AuthenticationProtos {
     org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.TokenOrBuilder getTokenOrBuilder();
   }
   /**
-   * Protobuf type {@code TokenResponse}
+   * Protobuf type {@code GetAuthenticationTokenResponse}
    */
-  public static final class TokenResponse extends
+  public static final class GetAuthenticationTokenResponse extends
       com.google.protobuf.GeneratedMessage
-      implements TokenResponseOrBuilder {
-    // Use TokenResponse.newBuilder() to construct.
-    private TokenResponse(com.google.protobuf.GeneratedMessage.Builder<?> builder) {
+      implements GetAuthenticationTokenResponseOrBuilder {
+    // Use GetAuthenticationTokenResponse.newBuilder() to construct.
+    private GetAuthenticationTokenResponse(com.google.protobuf.GeneratedMessage.Builder<?> builder) {
       super(builder);
       this.unknownFields = builder.getUnknownFields();
     }
-    private TokenResponse(boolean noInit) { this.unknownFields = com.google.protobuf.UnknownFieldSet.getDefaultInstance(); }
+    private GetAuthenticationTokenResponse(boolean noInit) { this.unknownFields = com.google.protobuf.UnknownFieldSet.getDefaultInstance(); }
 
-    private static final TokenResponse defaultInstance;
-    public static TokenResponse getDefaultInstance() {
+    private static final GetAuthenticationTokenResponse defaultInstance;
+    public static GetAuthenticationTokenResponse getDefaultInstance() {
       return defaultInstance;
     }
 
-    public TokenResponse getDefaultInstanceForType() {
+    public GetAuthenticationTokenResponse getDefaultInstanceForType() {
       return defaultInstance;
     }
 
@@ -2714,7 +2714,7 @@ public final class AuthenticationProtos {
         getUnknownFields() {
       return this.unknownFields;
     }
-    private TokenResponse(
+    private GetAuthenticationTokenResponse(
         com.google.protobuf.CodedInputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
@@ -2764,28 +2764,28 @@ public final class AuthenticationProtos {
     }
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.internal_static_TokenResponse_descriptor;
+      return org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.internal_static_GetAuthenticationTokenResponse_descriptor;
     }
 
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.internal_static_TokenResponse_fieldAccessorTable
+      return org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.internal_static_GetAuthenticationTokenResponse_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
-              org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.TokenResponse.class, org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.TokenResponse.Builder.class);
+              org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.GetAuthenticationTokenResponse.class, org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.GetAuthenticationTokenResponse.Builder.class);
     }
 
-    public static com.google.protobuf.Parser<TokenResponse> PARSER =
-        new com.google.protobuf.AbstractParser<TokenResponse>() {
-      public TokenResponse parsePartialFrom(
+    public static com.google.protobuf.Parser<GetAuthenticationTokenResponse> PARSER =
+        new com.google.protobuf.AbstractParser<GetAuthenticationTokenResponse>() {
+      public GetAuthenticationTokenResponse parsePartialFrom(
           com.google.protobuf.CodedInputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws com.google.protobuf.InvalidProtocolBufferException {
-        return new TokenResponse(input, extensionRegistry);
+        return new GetAuthenticationTokenResponse(input, extensionRegistry);
       }
     };
 
     @java.lang.Override
-    public com.google.protobuf.Parser<TokenResponse> getParserForType() {
+    public com.google.protobuf.Parser<GetAuthenticationTokenResponse> getParserForType() {
       return PARSER;
     }
 
@@ -2860,10 +2860,10 @@ public final class AuthenticationProtos {
       if (obj == this) {
        return true;
       }
-      if (!(obj instanceof org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.TokenResponse)) {
+      if (!(obj instanceof org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.GetAuthenticationTokenResponse)) {
         return super.equals(obj);
       }
-      org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.TokenResponse other = (org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.TokenResponse) obj;
+      org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.GetAuthenticationTokenResponse other = (org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.GetAuthenticationTokenResponse) obj;
 
       boolean result = true;
       result = result && (hasToken() == other.hasToken());
@@ -2893,53 +2893,53 @@ public final class AuthenticationProtos {
       return hash;
     }
 
-    public static org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.TokenResponse parseFrom(
+    public static org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.GetAuthenticationTokenResponse parseFrom(
         com.google.protobuf.ByteString data)
         throws com.google.protobuf.InvalidProtocolBufferException {
       return PARSER.parseFrom(data);
     }
-    public static org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.TokenResponse parseFrom(
+    public static org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.GetAuthenticationTokenResponse parseFrom(
         com.google.protobuf.ByteString data,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
       return PARSER.parseFrom(data, extensionRegistry);
     }
-    public static org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.TokenResponse parseFrom(byte[] data)
+    public static org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.GetAuthenticationTokenResponse parseFrom(byte[] data)
         throws com.google.protobuf.InvalidProtocolBufferException {
       return PARSER.parseFrom(data);
     }
-    public static org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.TokenResponse parseFrom(
+    public static org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.GetAuthenticationTokenResponse parseFrom(
         byte[] data,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
       return PARSER.parseFrom(data, extensionRegistry);
     }
-    public static org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.TokenResponse parseFrom(java.io.InputStream input)
+    public static org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.GetAuthenticationTokenResponse parseFrom(java.io.InputStream input)
         throws java.io.IOException {
       return PARSER.parseFrom(input);
     }
-    public static org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.TokenResponse parseFrom(
+    public static org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.GetAuthenticationTokenResponse parseFrom(
         java.io.InputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
       return PARSER.parseFrom(input, extensionRegistry);
     }
-    public static org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.TokenResponse parseDelimitedFrom(java.io.InputStream input)
+    public static org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.GetAuthenticationTokenResponse parseDelimitedFrom(java.io.InputStream input)
         throws java.io.IOException {
       return PARSER.parseDelimitedFrom(input);
     }
-    public static org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.TokenResponse parseDelimitedFrom(
+    public static org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.GetAuthenticationTokenResponse parseDelimitedFrom(
         java.io.InputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
       return PARSER.parseDelimitedFrom(input, extensionRegistry);
     }
-    public static org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.TokenResponse parseFrom(
+    public static org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.GetAuthenticationTokenResponse parseFrom(
         com.google.protobuf.CodedInputStream input)
         throws java.io.IOException {
       return PARSER.parseFrom(input);
     }
-    public static org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.TokenResponse parseFrom(
+    public static org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.GetAuthenticationTokenResponse parseFrom(
         com.google.protobuf.CodedInputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
@@ -2948,7 +2948,7 @@ public final class AuthenticationProtos {
 
     public static Builder newBuilder() { return Builder.create(); }
     public Builder newBuilderForType() { return newBuilder(); }
-    public static Builder newBuilder(org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.TokenResponse prototype) {
+    public static Builder newBuilder(org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.GetAuthenticationTokenResponse prototype) {
       return newBuilder().mergeFrom(prototype);
     }
     public Builder toBuilder() { return newBuilder(this); }
@@ -2960,24 +2960,24 @@ public final class AuthenticationProtos {
       return builder;
     }
     /**
-     * Protobuf type {@code TokenResponse}
+     * Protobuf type {@code GetAuthenticationTokenResponse}
      */
     public static final class Builder extends
         com.google.protobuf.GeneratedMessage.Builder<Builder>
-       implements org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.TokenResponseOrBuilder {
+       implements org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.GetAuthenticationTokenResponseOrBuilder {
       public static final com.google.protobuf.Descriptors.Descriptor
           getDescriptor() {
-        return org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.internal_static_TokenResponse_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.internal_static_GetAuthenticationTokenResponse_descriptor;
       }
 
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.internal_static_TokenResponse_fieldAccessorTable
+        return org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.internal_static_GetAuthenticationTokenResponse_fieldAccessorTable
             .ensureFieldAccessorsInitialized(
-                org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.TokenResponse.class, org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.TokenResponse.Builder.class);
+                org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.GetAuthenticationTokenResponse.class, org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.GetAuthenticationTokenResponse.Builder.class);
       }
 
-      // Construct using org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.TokenResponse.newBuilder()
+      // Construct using org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.GetAuthenticationTokenResponse.newBuilder()
       private Builder() {
         maybeForceBuilderInitialization();
       }
@@ -3013,23 +3013,23 @@ public final class AuthenticationProtos {
 
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.internal_static_TokenResponse_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.internal_static_GetAuthenticationTokenResponse_descriptor;
       }
 
-      public org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.TokenResponse getDefaultInstanceForType() {
-        return org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.TokenResponse.getDefaultInstance();
+      public org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.GetAuthenticationTokenResponse getDefaultInstanceForType() {
+        return org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.GetAuthenticationTokenResponse.getDefaultInstance();
       }
 
-      public org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.TokenResponse build() {
-        org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.TokenResponse result = buildPartial();
+      public org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.GetAuthenticationTokenResponse build() {
+        org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.GetAuthenticationTokenResponse result = buildPartial();
         if (!result.isInitialized()) {
           throw newUninitializedMessageException(result);
         }
         return result;
       }
 
-      public org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.TokenResponse buildPartial() {
-        org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.TokenResponse result = new org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.TokenResponse(this);
+      public org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.GetAuthenticationTokenResponse buildPartial() {
+        org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.GetAuthenticationTokenResponse result = new org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.GetAuthenticationTokenResponse(this);
         int from_bitField0_ = bitField0_;
         int to_bitField0_ = 0;
         if (((from_bitField0_ & 0x00000001) == 0x00000001)) {
@@ -3046,16 +3046,16 @@ public final class AuthenticationProtos {
       }
 
       public Builder mergeFrom(com.google.protobuf.Message other) {
-        if (other instanceof org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.TokenResponse) {
-          return mergeFrom((org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.TokenResponse)other);
+        if (other instanceof org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.GetAuthenticationTokenResponse) {
+          return mergeFrom((org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.GetAuthenticationTokenResponse)other);
         } else {
           super.mergeFrom(other);
           return this;
         }
       }
 
-      public Builder mergeFrom(org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.TokenResponse other) {
-        if (other == org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.TokenResponse.getDefaultInstance()) return this;
+      public Builder mergeFrom(org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.GetAuthenticationTokenResponse other) {
+        if (other == org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.GetAuthenticationTokenResponse.getDefaultInstance()) return this;
         if (other.hasToken()) {
           mergeToken(other.getToken());
         }
@@ -3071,11 +3071,11 @@ public final class AuthenticationProtos {
           com.google.protobuf.CodedInputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws java.io.IOException {
-        org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.TokenResponse parsedMessage = null;
+        org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.GetAuthenticationTokenResponse parsedMessage = null;
         try {
           parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
         } catch (com.google.protobuf.InvalidProtocolBufferException e) {
-          parsedMessage = (org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.TokenResponse) e.getUnfinishedMessage();
+          parsedMessage = (org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.GetAuthenticationTokenResponse) e.getUnfinishedMessage();
           throw e;
         } finally {
           if (parsedMessage != null) {
@@ -3203,15 +3203,15 @@ public final class AuthenticationProtos {
         return tokenBuilder_;
       }
 
-      // @@protoc_insertion_point(builder_scope:TokenResponse)
+      // @@protoc_insertion_point(builder_scope:GetAuthenticationTokenResponse)
     }
 
     static {
-      defaultInstance = new TokenResponse(true);
+      defaultInstance = new GetAuthenticationTokenResponse(true);
       defaultInstance.initFields();
     }
 
-    // @@protoc_insertion_point(class_scope:TokenResponse)
+    // @@protoc_insertion_point(class_scope:GetAuthenticationTokenResponse)
   }
 
   public interface WhoAmIRequestOrBuilder
@@ -4239,12 +4239,12 @@ public final class AuthenticationProtos {
 
     public interface Interface {
       /**
-       * <code>rpc GetAuthenticationToken(.TokenRequest) returns (.TokenResponse);</code>
+       * <code>rpc GetAuthenticationToken(.GetAuthenticationTokenRequest) returns (.GetAuthenticationTokenResponse);</code>
        */
       public abstract void getAuthenticationToken(
           com.google.protobuf.RpcController controller,
-          org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.TokenRequest request,
-          com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.TokenResponse> done);
+          org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.GetAuthenticationTokenRequest request,
+          com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.GetAuthenticationTokenResponse> done);
 
       /**
        * <code>rpc WhoAmI(.WhoAmIRequest) returns (.WhoAmIResponse);</code>
@@ -4262,8 +4262,8 @@ public final class AuthenticationProtos {
         @java.lang.Override
         public  void getAuthenticationToken(
             com.google.protobuf.RpcController controller,
-            org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.TokenRequest request,
-            com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.TokenResponse> done) {
+            org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.GetAuthenticationTokenRequest request,
+            com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.GetAuthenticationTokenResponse> done) {
           impl.getAuthenticationToken(controller, request, done);
         }
 
@@ -4298,7 +4298,7 @@ public final class AuthenticationProtos {
           }
           switch(method.getIndex()) {
             case 0:
-              return impl.getAuthenticationToken(controller, (org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.TokenRequest)request);
+              return impl.getAuthenticationToken(controller, (org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.GetAuthenticationTokenRequest)request);
             case 1:
               return impl.whoAmI(controller, (org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.WhoAmIRequest)request);
             default:
@@ -4316,7 +4316,7 @@ public final class AuthenticationProtos {
           }
           switch(method.getIndex()) {
             case 0:
-              return org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.TokenRequest.getDefaultInstance();
+              return org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.GetAuthenticationTokenRequest.getDefaultInstance();
             case 1:
               return org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.WhoAmIRequest.getDefaultInstance();
             default:
@@ -4334,7 +4334,7 @@ public final class AuthenticationProtos {
           }
           switch(method.getIndex()) {
             case 0:
-              return org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.TokenResponse.getDefaultInstance();
+              return org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.GetAuthenticationTokenResponse.getDefaultInstance();
             case 1:
               return org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.WhoAmIResponse.getDefaultInstance();
             default:
@@ -4346,12 +4346,12 @@ public final class AuthenticationProtos {
     }
 
     /**
-     * <code>rpc GetAuthenticationToken(.TokenRequest) returns (.TokenResponse);</code>
+     * <code>rpc GetAuthenticationToken(.GetAuthenticationTokenRequest) returns (.GetAuthenticationTokenResponse);</code>
      */
     public abstract void getAuthenticationToken(
         com.google.protobuf.RpcController controller,
-        org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.TokenRequest request,
-        com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.TokenResponse> done);
+        org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.GetAuthenticationTokenRequest request,
+        com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.GetAuthenticationTokenResponse> done);
 
     /**
      * <code>rpc WhoAmI(.WhoAmIRequest) returns (.WhoAmIResponse);</code>
@@ -4384,8 +4384,8 @@ public final class AuthenticationProtos {
       }
       switch(method.getIndex()) {
         case 0:
-          this.getAuthenticationToken(controller, (org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.TokenRequest)request,
-            com.google.protobuf.RpcUtil.<org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.TokenResponse>specializeCallback(
+          this.getAuthenticationToken(controller, (org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.GetAuthenticationTokenRequest)request,
+            com.google.protobuf.RpcUtil.<org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.GetAuthenticationTokenResponse>specializeCallback(
               done));
           return;
         case 1:
@@ -4408,7 +4408,7 @@ public final class AuthenticationProtos {
       }
       switch(method.getIndex()) {
         case 0:
-          return org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.TokenRequest.getDefaultInstance();
+          return org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.GetAuthenticationTokenRequest.getDefaultInstance();
         case 1:
           return org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.WhoAmIRequest.getDefaultInstance();
         default:
@@ -4426,7 +4426,7 @@ public final class AuthenticationProtos {
       }
       switch(method.getIndex()) {
         case 0:
-          return org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.TokenResponse.getDefaultInstance();
+          return org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.GetAuthenticationTokenResponse.getDefaultInstance();
         case 1:
           return org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.WhoAmIResponse.getDefaultInstance();
         default:
@@ -4452,17 +4452,17 @@ public final class AuthenticationProtos {
 
       public  void getAuthenticationToken(
           com.google.protobuf.RpcController controller,
-          org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.TokenRequest request,
-          com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.TokenResponse> done) {
+          org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.GetAuthenticationTokenRequest request,
+          com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.GetAuthenticationTokenResponse> done) {
         channel.callMethod(
           getDescriptor().getMethods().get(0),
           controller,
           request,
-          org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.TokenResponse.getDefaultInstance(),
+          org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.GetAuthenticationTokenResponse.getDefaultInstance(),
           com.google.protobuf.RpcUtil.generalizeCallback(
             done,
-            org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.TokenResponse.class,
-            org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.TokenResponse.getDefaultInstance()));
+            org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.GetAuthenticationTokenResponse.class,
+            org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.GetAuthenticationTokenResponse.getDefaultInstance()));
       }
 
       public  void whoAmI(
@@ -4487,9 +4487,9 @@ public final class AuthenticationProtos {
     }
 
     public interface BlockingInterface {
-      public org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.TokenResponse getAuthenticationToken(
+      public org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.GetAuthenticationTokenResponse getAuthenticationToken(
           com.google.protobuf.RpcController controller,
-          org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.TokenRequest request)
+          org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.GetAuthenticationTokenRequest request)
           throws com.google.protobuf.ServiceException;
 
       public org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.WhoAmIResponse whoAmI(
@@ -4505,15 +4505,15 @@ public final class AuthenticationProtos {
 
       private final com.google.protobuf.BlockingRpcChannel channel;
 
-      public org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.TokenResponse getAuthenticationToken(
+      public org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.GetAuthenticationTokenResponse getAuthenticationToken(
           com.google.protobuf.RpcController controller,
-          org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.TokenRequest request)
+          org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.GetAuthenticationTokenRequest request)
           throws com.google.protobuf.ServiceException {
-        return (org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.TokenResponse) channel.callBlockingMethod(
+        return (org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.GetAuthenticationTokenResponse) channel.callBlockingMethod(
           getDescriptor().getMethods().get(0),
           controller,
           request,
-          org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.TokenResponse.getDefaultInstance());
+          org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.GetAuthenticationTokenResponse.getDefaultInstance());
       }
 
 
@@ -4549,15 +4549,15 @@ public final class AuthenticationProtos {
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_Token_fieldAccessorTable;
   private static com.google.protobuf.Descriptors.Descriptor
-    internal_static_TokenRequest_descriptor;
+    internal_static_GetAuthenticationTokenRequest_descriptor;
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
-      internal_static_TokenRequest_fieldAccessorTable;
+      internal_static_GetAuthenticationTokenRequest_fieldAccessorTable;
   private static com.google.protobuf.Descriptors.Descriptor
-    internal_static_TokenResponse_descriptor;
+    internal_static_GetAuthenticationTokenResponse_descriptor;
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
-      internal_static_TokenResponse_fieldAccessorTable;
+      internal_static_GetAuthenticationTokenResponse_fieldAccessorTable;
   private static com.google.protobuf.Descriptors.Descriptor
     internal_static_WhoAmIRequest_descriptor;
   private static
@@ -4585,15 +4585,17 @@ public final class AuthenticationProtos {
       " \001(\003\022\027\n\017expiration_date\030\005 \001(\003\022\027\n\017sequenc" +
       "e_number\030\006 \001(\003\"\034\n\004Kind\022\024\n\020HBASE_AUTH_TOK" +
       "EN\020\000\">\n\005Token\022\022\n\nidentifier\030\001 \001(\014\022\020\n\010pas" +
-      "sword\030\002 \001(\014\022\017\n\007service\030\003 \001(\014\"\016\n\014TokenReq" +
-      "uest\"&\n\rTokenResponse\022\025\n\005token\030\001 \001(\0132\006.T",
-      "oken\"\017\n\rWhoAmIRequest\"7\n\016WhoAmIResponse\022" +
-      "\020\n\010username\030\001 \001(\t\022\023\n\013auth_method\030\002 \001(\t2{" +
-      "\n\025AuthenticationService\0227\n\026GetAuthentica" +
-      "tionToken\022\r.TokenRequest\032\016.TokenResponse" +
-      "\022)\n\006WhoAmI\022\016.WhoAmIRequest\032\017.WhoAmIRespo" +
-      "nseBJ\n*org.apache.hadoop.hbase.protobuf." +
-      "generatedB\024AuthenticationProtosH\001\210\001\001\240\001\001"
+      "sword\030\002 \001(\014\022\017\n\007service\030\003 \001(\014\"\037\n\035GetAuthe" +
+      "nticationTokenRequest\"7\n\036GetAuthenticati",
+      "onTokenResponse\022\025\n\005token\030\001 \001(\0132\006.Token\"\017" +
+      "\n\rWhoAmIRequest\"7\n\016WhoAmIResponse\022\020\n\010use" +
+      "rname\030\001 \001(\t\022\023\n\013auth_method\030\002 \001(\t2\235\001\n\025Aut" +
+      "henticationService\022Y\n\026GetAuthenticationT" +
+      "oken\022\036.GetAuthenticationTokenRequest\032\037.G" +
+      "etAuthenticationTokenResponse\022)\n\006WhoAmI\022" +
+      "\016.WhoAmIRequest\032\017.WhoAmIResponseBJ\n*org." +
+      "apache.hadoop.hbase.protobuf.generatedB\024" +
+      "AuthenticationProtosH\001\210\001\001\240\001\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -4618,17 +4620,17 @@ public final class AuthenticationProtos {
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_Token_descriptor,
               new java.lang.String[] { "Identifier", "Password", "Service", });
-          internal_static_TokenRequest_descriptor =
+          internal_static_GetAuthenticationTokenRequest_descriptor =
             getDescriptor().getMessageTypes().get(3);
-          internal_static_TokenRequest_fieldAccessorTable = new
+          internal_static_GetAuthenticationTokenRequest_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
-              internal_static_TokenRequest_descriptor,
+              internal_static_GetAuthenticationTokenRequest_descriptor,
               new java.lang.String[] { });
-          internal_static_TokenResponse_descriptor =
+          internal_static_GetAuthenticationTokenResponse_descriptor =
             getDescriptor().getMessageTypes().get(4);
-          internal_static_TokenResponse_fieldAccessorTable = new
+          internal_static_GetAuthenticationTokenResponse_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
-              internal_static_TokenResponse_descriptor,
+              internal_static_GetAuthenticationTokenResponse_descriptor,
               new java.lang.String[] { "Token", });
           internal_static_WhoAmIRequest_descriptor =
             getDescriptor().getMessageTypes().get(5);

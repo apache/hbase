@@ -55,8 +55,8 @@ import org.apache.hadoop.hbase.coprocessor.protobuf.generated.IncrementCounterPr
 import org.apache.hadoop.hbase.coprocessor.protobuf.generated.IncrementCounterProcessorTestProtos.RowSwapProcessorResponse;
 import org.apache.hadoop.hbase.coprocessor.protobuf.generated.IncrementCounterProcessorTestProtos.TimeoutProcessorRequest;
 import org.apache.hadoop.hbase.coprocessor.protobuf.generated.IncrementCounterProcessorTestProtos.TimeoutProcessorResponse;
-import org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.RowProcessorRequest;
-import org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.RowProcessorResult;
+import org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.ProcessRequest;
+import org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.ProcessResponse;
 import org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.RowProcessorService;
 import org.apache.hadoop.hbase.regionserver.BaseRowProcessor;
 import org.apache.hadoop.hbase.regionserver.HRegion;
@@ -76,7 +76,7 @@ import com.sun.org.apache.commons.logging.Log;
 import com.sun.org.apache.commons.logging.LogFactory;
 
 /**
- * Verifies ProcessRowEndpoint works.
+ * Verifies ProcessEndpoint works.
  * The tested RowProcessor performs two scans and a read-modify-write.
  */
 @Category(MediumTests.class)
@@ -151,18 +151,18 @@ public class TestRowProcessorEndpoint {
   @Test
   public void testDoubleScan() throws Throwable {
     prepareTestData();
-    
+
     CoprocessorRpcChannel channel = table.coprocessorService(ROW);
     RowProcessorEndpoint.FriendsOfFriendsProcessor processor =
         new RowProcessorEndpoint.FriendsOfFriendsProcessor(ROW, A);
-    RowProcessorService.BlockingInterface service = 
+    RowProcessorService.BlockingInterface service =
         RowProcessorService.newBlockingStub(channel);
-    RowProcessorRequest request = RowProcessorClient.getRowProcessorPB(processor);
-    RowProcessorResult protoResult = service.process(null, request);
-    FriendsOfFriendsProcessorResponse response = 
+    ProcessRequest request = RowProcessorClient.getRowProcessorPB(processor);
+    ProcessResponse protoResult = service.process(null, request);
+    FriendsOfFriendsProcessorResponse response =
         FriendsOfFriendsProcessorResponse.parseFrom(protoResult.getRowProcessorResult());
     Set<String> result = new HashSet<String>();
-    result.addAll(response.getResultList()); 
+    result.addAll(response.getResultList());
     Set<String> expected =
       new HashSet<String>(Arrays.asList(new String[]{"d", "e", "f", "g"}));
     Get get = new Get(ROW);
@@ -198,10 +198,10 @@ public class TestRowProcessorEndpoint {
     CoprocessorRpcChannel channel = table.coprocessorService(ROW);
     RowProcessorEndpoint.IncrementCounterProcessor processor =
         new RowProcessorEndpoint.IncrementCounterProcessor(ROW);
-    RowProcessorService.BlockingInterface service = 
+    RowProcessorService.BlockingInterface service =
         RowProcessorService.newBlockingStub(channel);
-    RowProcessorRequest request = RowProcessorClient.getRowProcessorPB(processor);
-    RowProcessorResult protoResult = service.process(null, request);
+    ProcessRequest request = RowProcessorClient.getRowProcessorPB(processor);
+    ProcessResponse protoResult = service.process(null, request);
     IncCounterProcessorResponse response = IncCounterProcessorResponse
         .parseFrom(protoResult.getRowProcessorResult());
     Integer result = response.getResponse();
@@ -261,9 +261,9 @@ public class TestRowProcessorEndpoint {
     CoprocessorRpcChannel channel = table.coprocessorService(ROW);
     RowProcessorEndpoint.RowSwapProcessor processor =
         new RowProcessorEndpoint.RowSwapProcessor(ROW, ROW2);
-    RowProcessorService.BlockingInterface service = 
+    RowProcessorService.BlockingInterface service =
         RowProcessorService.newBlockingStub(channel);
-    RowProcessorRequest request = RowProcessorClient.getRowProcessorPB(processor);
+    ProcessRequest request = RowProcessorClient.getRowProcessorPB(processor);
     service.process(null, request);
   }
 
@@ -273,9 +273,9 @@ public class TestRowProcessorEndpoint {
     CoprocessorRpcChannel channel = table.coprocessorService(ROW);
     RowProcessorEndpoint.TimeoutProcessor processor =
         new RowProcessorEndpoint.TimeoutProcessor(ROW);
-    RowProcessorService.BlockingInterface service = 
+    RowProcessorService.BlockingInterface service =
         RowProcessorService.newBlockingStub(channel);
-    RowProcessorRequest request = RowProcessorClient.getRowProcessorPB(processor);
+    ProcessRequest request = RowProcessorClient.getRowProcessorPB(processor);
     boolean exceptionCaught = false;
     try {
       service.process(null, request);

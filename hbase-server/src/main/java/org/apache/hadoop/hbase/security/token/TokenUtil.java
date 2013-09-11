@@ -57,8 +57,8 @@ public class TokenUtil {
       CoprocessorRpcChannel rpcChannel = meta.coprocessorService(HConstants.EMPTY_START_ROW);
       AuthenticationProtos.AuthenticationService.BlockingInterface service =
           AuthenticationProtos.AuthenticationService.newBlockingStub(rpcChannel);
-      AuthenticationProtos.TokenResponse response = service.getAuthenticationToken(null,
-          AuthenticationProtos.TokenRequest.getDefaultInstance());
+      AuthenticationProtos.GetAuthenticationTokenResponse response = service.getAuthenticationToken(null,
+          AuthenticationProtos.GetAuthenticationTokenRequest.getDefaultInstance());
 
       return ProtobufUtil.toToken(response.getToken());
     } catch (ServiceException se) {

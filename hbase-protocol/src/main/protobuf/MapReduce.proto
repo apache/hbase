@@ -23,7 +23,7 @@
  option java_generate_equals_and_hash = true;
  option optimize_for = SPEED;
 
- import "hbase.proto";
+ import "HBase.proto";
 
  message ScanMetrics {
 

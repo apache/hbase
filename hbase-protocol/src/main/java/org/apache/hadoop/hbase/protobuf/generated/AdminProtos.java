@@ -20905,7 +20905,7 @@ public final class AdminProtos {
       descriptor;
   static {
     java.lang.String[] descriptorData = {
-      "\n\013Admin.proto\032\014Client.proto\032\013hbase.proto" +
+      "\n\013Admin.proto\032\014Client.proto\032\013HBase.proto" +
       "\032\tWAL.proto\"R\n\024GetRegionInfoRequest\022 \n\006r" +
       "egion\030\001 \002(\0132\020.RegionSpecifier\022\030\n\020compact" +
       "ion_state\030\002 \001(\010\"\331\001\n\025GetRegionInfoRespons" +

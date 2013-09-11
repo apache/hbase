@@ -48,8 +48,8 @@ import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescriptio
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DeleteSnapshotRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.IsSnapshotDoneRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.IsSnapshotDoneResponse;
-import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.ListSnapshotRequest;
-import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.ListSnapshotResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.GetCompletedSnapshotsRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.GetCompletedSnapshotsResponse;
 import org.apache.hadoop.hbase.regionserver.ConstantSizeRegionSplitPolicy;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
@@ -216,8 +216,8 @@ public class TestSnapshotFromMaster {
   @Test(timeout = 300000)
   public void testGetCompletedSnapshots() throws Exception {
     // first check when there are no snapshots
-    ListSnapshotRequest request = ListSnapshotRequest.newBuilder().build();
-    ListSnapshotResponse response = master.getCompletedSnapshots(null, request);
+    GetCompletedSnapshotsRequest request = GetCompletedSnapshotsRequest.newBuilder().build();
+    GetCompletedSnapshotsResponse response = master.getCompletedSnapshots(null, request);
     assertEquals("Found unexpected number of snapshots", 0, response.getSnapshotsCount());
 
     // write one snapshot to the fs

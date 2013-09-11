@@ -3598,11 +3598,11 @@ public final class RPCProtos {
     /**
      * <code>optional .RPCTInfo trace_info = 2;</code>
      */
-    org.apache.hadoop.hbase.protobuf.generated.Tracing.RPCTInfo getTraceInfo();
+    org.apache.hadoop.hbase.protobuf.generated.TracingProtos.RPCTInfo getTraceInfo();
     /**
      * <code>optional .RPCTInfo trace_info = 2;</code>
      */
-    org.apache.hadoop.hbase.protobuf.generated.Tracing.RPCTInfoOrBuilder getTraceInfoOrBuilder();
+    org.apache.hadoop.hbase.protobuf.generated.TracingProtos.RPCTInfoOrBuilder getTraceInfoOrBuilder();
 
     // optional string method_name = 3;
     /**
@@ -3724,11 +3724,11 @@ public final class RPCProtos {
               break;
             }
             case 18: {
-              org.apache.hadoop.hbase.protobuf.generated.Tracing.RPCTInfo.Builder subBuilder = null;
+              org.apache.hadoop.hbase.protobuf.generated.TracingProtos.RPCTInfo.Builder subBuilder = null;
               if (((bitField0_ & 0x00000002) == 0x00000002)) {
                 subBuilder = traceInfo_.toBuilder();
               }
-              traceInfo_ = input.readMessage(org.apache.hadoop.hbase.protobuf.generated.Tracing.RPCTInfo.PARSER, extensionRegistry);
+              traceInfo_ = input.readMessage(org.apache.hadoop.hbase.protobuf.generated.TracingProtos.RPCTInfo.PARSER, extensionRegistry);
               if (subBuilder != null) {
                 subBuilder.mergeFrom(traceInfo_);
                 traceInfo_ = subBuilder.buildPartial();
@@ -3825,7 +3825,7 @@ public final class RPCProtos {
 
     // optional .RPCTInfo trace_info = 2;
     public static final int TRACE_INFO_FIELD_NUMBER = 2;
-    private org.apache.hadoop.hbase.protobuf.generated.Tracing.RPCTInfo traceInfo_;
+    private org.apache.hadoop.hbase.protobuf.generated.TracingProtos.RPCTInfo traceInfo_;
     /**
      * <code>optional .RPCTInfo trace_info = 2;</code>
      */
@@ -3835,13 +3835,13 @@ public final class RPCProtos {
     /**
      * <code>optional .RPCTInfo trace_info = 2;</code>
      */
-    public org.apache.hadoop.hbase.protobuf.generated.Tracing.RPCTInfo getTraceInfo() {
+    public org.apache.hadoop.hbase.protobuf.generated.TracingProtos.RPCTInfo getTraceInfo() {
       return traceInfo_;
     }
     /**
      * <code>optional .RPCTInfo trace_info = 2;</code>
      */
-    public org.apache.hadoop.hbase.protobuf.generated.Tracing.RPCTInfoOrBuilder getTraceInfoOrBuilder() {
+    public org.apache.hadoop.hbase.protobuf.generated.TracingProtos.RPCTInfoOrBuilder getTraceInfoOrBuilder() {
       return traceInfo_;
     }
 
@@ -3948,7 +3948,7 @@ public final class RPCProtos {
 
     private void initFields() {
       callId_ = 0;
-      traceInfo_ = org.apache.hadoop.hbase.protobuf.generated.Tracing.RPCTInfo.getDefaultInstance();
+      traceInfo_ = org.apache.hadoop.hbase.protobuf.generated.TracingProtos.RPCTInfo.getDefaultInstance();
       methodName_ = "";
       requestParam_ = false;
       cellBlockMeta_ = org.apache.hadoop.hbase.protobuf.generated.RPCProtos.CellBlockMeta.getDefaultInstance();
@@ -4208,7 +4208,7 @@ public final class RPCProtos {
         callId_ = 0;
         bitField0_ = (bitField0_ & ~0x00000001);
         if (traceInfoBuilder_ == null) {
-          traceInfo_ = org.apache.hadoop.hbase.protobuf.generated.Tracing.RPCTInfo.getDefaultInstance();
+          traceInfo_ = org.apache.hadoop.hbase.protobuf.generated.TracingProtos.RPCTInfo.getDefaultInstance();
         } else {
           traceInfoBuilder_.clear();
         }
@@ -4389,9 +4389,9 @@ public final class RPCProtos {
       }
 
       // optional .RPCTInfo trace_info = 2;
-      private org.apache.hadoop.hbase.protobuf.generated.Tracing.RPCTInfo traceInfo_ = org.apache.hadoop.hbase.protobuf.generated.Tracing.RPCTInfo.getDefaultInstance();
+      private org.apache.hadoop.hbase.protobuf.generated.TracingProtos.RPCTInfo traceInfo_ = org.apache.hadoop.hbase.protobuf.generated.TracingProtos.RPCTInfo.getDefaultInstance();
       private com.google.protobuf.SingleFieldBuilder<
-          org.apache.hadoop.hbase.protobuf.generated.Tracing.RPCTInfo, org.apache.hadoop.hbase.protobuf.generated.Tracing.RPCTInfo.Builder, org.apache.hadoop.hbase.protobuf.generated.Tracing.RPCTInfoOrBuilder> traceInfoBuilder_;
+          org.apache.hadoop.hbase.protobuf.generated.TracingProtos.RPCTInfo, org.apache.hadoop.hbase.protobuf.generated.TracingProtos.RPCTInfo.Builder, org.apache.hadoop.hbase.protobuf.generated.TracingProtos.RPCTInfoOrBuilder> traceInfoBuilder_;
       /**
        * <code>optional .RPCTInfo trace_info = 2;</code>
        */
@@ -4401,7 +4401,7 @@ public final class RPCProtos {
       /**
        * <code>optional .RPCTInfo trace_info = 2;</code>
        */
-      public org.apache.hadoop.hbase.protobuf.generated.Tracing.RPCTInfo getTraceInfo() {
+      public org.apache.hadoop.hbase.protobuf.generated.TracingProtos.RPCTInfo getTraceInfo() {
         if (traceInfoBuilder_ == null) {
           return traceInfo_;
         } else {
@@ -4411,7 +4411,7 @@ public final class RPCProtos {
       /**
        * <code>optional .RPCTInfo trace_info = 2;</code>
        */
-      public Builder setTraceInfo(org.apache.hadoop.hbase.protobuf.generated.Tracing.RPCTInfo value) {
+      public Builder setTraceInfo(org.apache.hadoop.hbase.protobuf.generated.TracingProtos.RPCTInfo value) {
         if (traceInfoBuilder_ == null) {
           if (value == null) {
             throw new NullPointerException();
@@ -4428,7 +4428,7 @@ public final class RPCProtos {
        * <code>optional .RPCTInfo trace_info = 2;</code>
        */
       public Builder setTraceInfo(
-          org.apache.hadoop.hbase.protobuf.generated.Tracing.RPCTInfo.Builder builderForValue) {
+          org.apache.hadoop.hbase.protobuf.generated.TracingProtos.RPCTInfo.Builder builderForValue) {
         if (traceInfoBuilder_ == null) {
           traceInfo_ = builderForValue.build();
           onChanged();
@@ -4441,12 +4441,12 @@ public final class RPCProtos {
       /**
        * <code>optional .RPCTInfo trace_info = 2;</code>
        */
-      public Builder mergeTraceInfo(org.apache.hadoop.hbase.protobuf.generated.Tracing.RPCTInfo value) {
+      public Builder mergeTraceInfo(org.apache.hadoop.hbase.protobuf.generated.TracingProtos.RPCTInfo value) {
         if (traceInfoBuilder_ == null) {
           if (((bitField0_ & 0x00000002) == 0x00000002) &&
-              traceInfo_ != org.apache.hadoop.hbase.protobuf.generated.Tracing.RPCTInfo.getDefaultInstance()) {
+              traceInfo_ != org.apache.hadoop.hbase.protobuf.generated.TracingProtos.RPCTInfo.getDefaultInstance()) {
             traceInfo_ =
-              org.apache.hadoop.hbase.protobuf.generated.Tracing.RPCTInfo.newBuilder(traceInfo_).mergeFrom(value).buildPartial();
+              org.apache.hadoop.hbase.protobuf.generated.TracingProtos.RPCTInfo.newBuilder(traceInfo_).mergeFrom(value).buildPartial();
           } else {
             traceInfo_ = value;
           }
@@ -4462,7 +4462,7 @@ public final class RPCProtos {
        */
       public Builder clearTraceInfo() {
         if (traceInfoBuilder_ == null) {
-          traceInfo_ = org.apache.hadoop.hbase.protobuf.generated.Tracing.RPCTInfo.getDefaultInstance();
+          traceInfo_ = org.apache.hadoop.hbase.protobuf.generated.TracingProtos.RPCTInfo.getDefaultInstance();
           onChanged();
         } else {
           traceInfoBuilder_.clear();
@@ -4473,7 +4473,7 @@ public final class RPCProtos {
       /**
        * <code>optional .RPCTInfo trace_info = 2;</code>
        */
-      public org.apache.hadoop.hbase.protobuf.generated.Tracing.RPCTInfo.Builder getTraceInfoBuilder() {
+      public org.apache.hadoop.hbase.protobuf.generated.TracingProtos.RPCTInfo.Builder getTraceInfoBuilder() {
         bitField0_ |= 0x00000002;
         onChanged();
         return getTraceInfoFieldBuilder().getBuilder();
@@ -4481,7 +4481,7 @@ public final class RPCProtos {
       /**
        * <code>optional .RPCTInfo trace_info = 2;</code>
        */
-      public org.apache.hadoop.hbase.protobuf.generated.Tracing.RPCTInfoOrBuilder getTraceInfoOrBuilder() {
+      public org.apache.hadoop.hbase.protobuf.generated.TracingProtos.RPCTInfoOrBuilder getTraceInfoOrBuilder() {
         if (traceInfoBuilder_ != null) {
           return traceInfoBuilder_.getMessageOrBuilder();
         } else {
@@ -4492,11 +4492,11 @@ public final class RPCProtos {
        * <code>optional .RPCTInfo trace_info = 2;</code>
        */
       private com.google.protobuf.SingleFieldBuilder<
-          org.apache.hadoop.hbase.protobuf.generated.Tracing.RPCTInfo, org.apache.hadoop.hbase.protobuf.generated.Tracing.RPCTInfo.Builder, org.apache.hadoop.hbase.protobuf.generated.Tracing.RPCTInfoOrBuilder> 
+          org.apache.hadoop.hbase.protobuf.generated.TracingProtos.RPCTInfo, org.apache.hadoop.hbase.protobuf.generated.TracingProtos.RPCTInfo.Builder, org.apache.hadoop.hbase.protobuf.generated.TracingProtos.RPCTInfoOrBuilder> 
           getTraceInfoFieldBuilder() {
         if (traceInfoBuilder_ == null) {
           traceInfoBuilder_ = new com.google.protobuf.SingleFieldBuilder<
-              org.apache.hadoop.hbase.protobuf.generated.Tracing.RPCTInfo, org.apache.hadoop.hbase.protobuf.generated.Tracing.RPCTInfo.Builder, org.apache.hadoop.hbase.protobuf.generated.Tracing.RPCTInfoOrBuilder>(
+              org.apache.hadoop.hbase.protobuf.generated.TracingProtos.RPCTInfo, org.apache.hadoop.hbase.protobuf.generated.TracingProtos.RPCTInfo.Builder, org.apache.hadoop.hbase.protobuf.generated.TracingProtos.RPCTInfoOrBuilder>(
                   traceInfo_,
                   getParentForChildren(),
                   isClean());
@@ -5787,7 +5787,7 @@ public final class RPCProtos {
       descriptor;
   static {
     java.lang.String[] descriptorData = {
-      "\n\tRPC.proto\032\rTracing.proto\032\013hbase.proto\"" +
+      "\n\tRPC.proto\032\rTracing.proto\032\013HBase.proto\"" +
       "<\n\017UserInformation\022\026\n\016effective_user\030\001 \002" +
       "(\t\022\021\n\treal_user\030\002 \001(\t\"\222\001\n\020ConnectionHead" +
       "er\022#\n\tuser_info\030\001 \001(\0132\020.UserInformation\022" +
@@ -5854,7 +5854,7 @@ public final class RPCProtos {
     com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
         new com.google.protobuf.Descriptors.FileDescriptor[] {
-          org.apache.hadoop.hbase.protobuf.generated.Tracing.getDescriptor(),
+          org.apache.hadoop.hbase.protobuf.generated.TracingProtos.getDescriptor(),
           org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.getDescriptor(),
         }, assigner);
   }

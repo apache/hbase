@@ -26,16 +26,16 @@ option java_generic_services = true;
 option java_generate_equals_and_hash = true;
 option optimize_for = SPEED;
 
-message RowProcessorRequest {
+message ProcessRequest {
   required string row_processor_class_name = 1;
   optional string row_processor_initializer_message_name = 2;
   optional bytes  row_processor_initializer_message = 3;
 }
 
-message RowProcessorResult {
+message ProcessResponse {
   required bytes row_processor_result = 1;
 }
 
 service RowProcessorService {
-  rpc Process (RowProcessorRequest) returns (RowProcessorResult);
+  rpc Process(ProcessRequest) returns (ProcessResponse);
 }

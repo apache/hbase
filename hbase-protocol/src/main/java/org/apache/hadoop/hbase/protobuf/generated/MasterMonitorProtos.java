@@ -5098,7 +5098,7 @@ public final class MasterMonitorProtos {
       descriptor;
   static {
     java.lang.String[] descriptorData = {
-      "\n\023MasterMonitor.proto\032\014Master.proto\032\013hba" +
+      "\n\023MasterMonitor.proto\032\014Master.proto\032\013HBa" +
       "se.proto\032\023ClusterStatus.proto\"=\n\033GetSche" +
       "maAlterStatusRequest\022\036\n\ntable_name\030\001 \002(\013" +
       "2\n.TableName\"T\n\034GetSchemaAlterStatusResp" +

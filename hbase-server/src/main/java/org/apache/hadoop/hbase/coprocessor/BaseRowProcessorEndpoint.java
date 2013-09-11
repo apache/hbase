@@ -26,8 +26,8 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.protobuf.ResponseConverter;
-import org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.RowProcessorRequest;
-import org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.RowProcessorResult;
+import org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.ProcessRequest;
+import org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.ProcessResponse;
 import org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.RowProcessorService;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.RowProcessor;
@@ -61,16 +61,16 @@ extends RowProcessorService implements CoprocessorService, Coprocessor {
    * the read-modify-write procedure.
    */
   @Override
-  public void process(RpcController controller, RowProcessorRequest request,
-      RpcCallback<RowProcessorResult> done) {
-    RowProcessorResult resultProto = null;
+  public void process(RpcController controller, ProcessRequest request,
+      RpcCallback<ProcessResponse> done) {
+    ProcessResponse resultProto = null;
     try {
       RowProcessor<S,T> processor = constructRowProcessorFromRequest(request);
       HRegion region = env.getRegion();
       region.processRowsWithLocks(processor);
       T result = processor.getResult();
-      RowProcessorResult.Builder b = RowProcessorResult.newBuilder();
-      b.setRowProcessorResult(result.toByteString()); 
+      ProcessResponse.Builder b = ProcessResponse.newBuilder();
+      b.setRowProcessorResult(result.toByteString());
       resultProto = b.build();
     } catch (Exception e) {
       ResponseConverter.setControllerException(controller, new IOException(e));
@@ -108,7 +108,7 @@ extends RowProcessorService implements CoprocessorService, Coprocessor {
   }
 
   @SuppressWarnings("unchecked")
-  RowProcessor<S,T> constructRowProcessorFromRequest(RowProcessorRequest request)
+  RowProcessor<S,T> constructRowProcessorFromRequest(ProcessRequest request)
       throws IOException {
     String className = request.getRowProcessorClassName();
     Class<?> cls;

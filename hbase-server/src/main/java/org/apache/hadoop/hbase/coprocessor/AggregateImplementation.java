@@ -35,7 +35,7 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.filter.FirstKeyOnlyFilter;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.ResponseConverter;
-import org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateArgument;
+import org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateRequest;
 import org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateResponse;
 import org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateService;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
@@ -73,7 +73,7 @@ extends AggregateService implements CoprocessorService, Coprocessor {
    * entire column family will be returned.
    */
   @Override
-  public void getMax(RpcController controller, AggregateArgument request,
+  public void getMax(RpcController controller, AggregateRequest request,
       RpcCallback<AggregateResponse> done) {
     InternalScanner scanner = null;
     AggregateResponse response = null;
@@ -127,7 +127,7 @@ extends AggregateService implements CoprocessorService, Coprocessor {
    * entire column family will be returned.
    */
   @Override
-  public void getMin(RpcController controller, AggregateArgument request,
+  public void getMin(RpcController controller, AggregateRequest request,
       RpcCallback<AggregateResponse> done) {
     AggregateResponse response = null;
     InternalScanner scanner = null;
@@ -179,7 +179,7 @@ extends AggregateService implements CoprocessorService, Coprocessor {
    * family will be returned.
    */
   @Override
-  public void getSum(RpcController controller, AggregateArgument request,
+  public void getSum(RpcController controller, AggregateRequest request,
       RpcCallback<AggregateResponse> done) {
     AggregateResponse response = null;
     InternalScanner scanner = null;
@@ -231,7 +231,7 @@ extends AggregateService implements CoprocessorService, Coprocessor {
    * @throws IOException
    */
   @Override
-  public void getRowNum(RpcController controller, AggregateArgument request,
+  public void getRowNum(RpcController controller, AggregateRequest request,
       RpcCallback<AggregateResponse> done) {
     AggregateResponse response = null;
     long counter = 0l;
@@ -288,7 +288,7 @@ extends AggregateService implements CoprocessorService, Coprocessor {
    * type.
    */
   @Override
-  public void getAvg(RpcController controller, AggregateArgument request,
+  public void getAvg(RpcController controller, AggregateRequest request,
       RpcCallback<AggregateResponse> done) {
     AggregateResponse response = null;
     InternalScanner scanner = null;
@@ -347,7 +347,7 @@ extends AggregateService implements CoprocessorService, Coprocessor {
    * deviation is square root of variance.
    */
   @Override
-  public void getStd(RpcController controller, AggregateArgument request,
+  public void getStd(RpcController controller, AggregateRequest request,
       RpcCallback<AggregateResponse> done) {
     InternalScanner scanner = null;
     AggregateResponse response = null;
@@ -411,7 +411,7 @@ extends AggregateService implements CoprocessorService, Coprocessor {
    * the second qualifier (optional) is for weight column.
    */
   @Override
-  public void getMedian(RpcController controller, AggregateArgument request,
+  public void getMedian(RpcController controller, AggregateRequest request,
       RpcCallback<AggregateResponse> done) {
     AggregateResponse response = null;
     InternalScanner scanner = null;
@@ -469,7 +469,7 @@ extends AggregateService implements CoprocessorService, Coprocessor {
 
   @SuppressWarnings("unchecked")
   ColumnInterpreter<T,S,P,Q,R> constructColumnInterpreterFromRequest(
-      AggregateArgument request) throws IOException {
+      AggregateRequest request) throws IOException {
     String className = request.getInterpreterClassName();
     Class<?> cls;
     try {

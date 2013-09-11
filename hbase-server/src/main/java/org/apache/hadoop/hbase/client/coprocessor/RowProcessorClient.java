@@ -22,7 +22,7 @@ import java.io.IOException;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.RowProcessorRequest;
+import org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.ProcessRequest;
 import org.apache.hadoop.hbase.regionserver.RowProcessor;
 
 import com.google.protobuf.Message;
@@ -35,10 +35,10 @@ import com.google.protobuf.Message;
 @InterfaceStability.Evolving
 public class RowProcessorClient {
   public static <S extends Message, T extends Message>
-  RowProcessorRequest getRowProcessorPB(RowProcessor<S,T> r)
+  ProcessRequest getRowProcessorPB(RowProcessor<S,T> r)
       throws IOException {
-    final RowProcessorRequest.Builder requestBuilder =
-        RowProcessorRequest.newBuilder();
+    final ProcessRequest.Builder requestBuilder =
+        ProcessRequest.newBuilder();
     requestBuilder.setRowProcessorClassName(r.getClass().getName());
     S s = r.getRequestData();
     if (s != null) {

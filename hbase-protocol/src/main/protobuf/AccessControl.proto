@@ -22,7 +22,7 @@ option java_generic_services = true;
 option java_generate_equals_and_hash = true;
 option optimize_for = SPEED;
 
-import "hbase.proto";
+import "HBase.proto";
 
 message Permission {
     enum Action {
@@ -90,13 +90,13 @@ message RevokeRequest {
 message RevokeResponse {
 }
 
-message UserPermissionsRequest {
+message GetUserPermissionsRequest {
   optional Permission.Type type = 1;
   optional TableName table_name = 2;
   optional bytes namespace_name = 3;
 }
 
-message UserPermissionsResponse {
+message GetUserPermissionsResponse {
   repeated UserPermission user_permission = 1;
 }
 
@@ -114,8 +114,8 @@ service AccessControlService {
     rpc Revoke(RevokeRequest)
       returns (RevokeResponse);
 
-    rpc GetUserPermissions(UserPermissionsRequest)
-      returns (UserPermissionsResponse);
+    rpc GetUserPermissions(GetUserPermissionsRequest)
+      returns (GetUserPermissionsResponse);
 
     rpc CheckPermissions(CheckPermissionsRequest)
       returns (CheckPermissionsResponse);

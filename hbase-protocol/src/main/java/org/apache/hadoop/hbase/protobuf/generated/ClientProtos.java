@@ -27611,7 +27611,7 @@ public final class ClientProtos {
       descriptor;
   static {
     java.lang.String[] descriptorData = {
-      "\n\014Client.proto\032\013hbase.proto\032\014Filter.prot" +
+      "\n\014Client.proto\032\013HBase.proto\032\014Filter.prot" +
       "o\032\nCell.proto\032\020Comparator.proto\"+\n\006Colum" +
       "n\022\016\n\006family\030\001 \002(\014\022\021\n\tqualifier\030\002 \003(\014\"\347\001\n" +
       "\003Get\022\013\n\003row\030\001 \002(\014\022\027\n\006column\030\002 \003(\0132\007.Colu" +

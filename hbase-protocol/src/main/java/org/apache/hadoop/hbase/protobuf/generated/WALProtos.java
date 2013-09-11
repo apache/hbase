@@ -4811,7 +4811,7 @@ public final class WALProtos {
       descriptor;
   static {
     java.lang.String[] descriptorData = {
-      "\n\tWAL.proto\032\013hbase.proto\"$\n\tWALHeader\022\027\n" +
+      "\n\tWAL.proto\032\013HBase.proto\"$\n\tWALHeader\022\027\n" +
       "\017has_compression\030\001 \001(\010\"\337\001\n\006WALKey\022\033\n\023enc" +
       "oded_region_name\030\001 \002(\014\022\022\n\ntable_name\030\002 \002" +
       "(\014\022\033\n\023log_sequence_number\030\003 \002(\004\022\022\n\nwrite" +
