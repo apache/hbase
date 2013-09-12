@@ -17,12 +17,15 @@
  */
 package org.apache.hadoop.hbase;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+
 /**
  * Implementer can return a CellScanner over its Cell content.
  * Class name is ugly but mimicing java.util.Iterable only we are about the dumber
  * CellScanner rather than say Iterator<Cell>.  See CellScanner class comment for why we go
  * dumber than java.util.Iterator.
  */
+@InterfaceAudience.Private
 public interface CellScannable {
   /**
    * @return A CellScanner over the contained {@link Cell}s

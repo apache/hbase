@@ -22,6 +22,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 
 import org.apache.commons.io.IOUtils;
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -30,6 +31,7 @@ import org.apache.hadoop.hbase.util.Bytes;
  * Basic Cell codec that just writes out all the individual elements of a Cell.  Uses ints
  * delimiting all lengths. Profligate. Needs tune up. 
  */
+@InterfaceAudience.Private
 public class CellCodec implements Codec {
   static class CellEncoder extends BaseEncoder {
     CellEncoder(final OutputStream out) {

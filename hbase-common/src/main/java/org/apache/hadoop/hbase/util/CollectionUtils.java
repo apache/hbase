@@ -23,9 +23,12 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+
 /**
  * Utility methods for dealing with Collections, including treating null collections as empty.
  */
+@InterfaceAudience.Private
 public class CollectionUtils {
 
   private static final List<Object> EMPTY_LIST = Collections.unmodifiableList(

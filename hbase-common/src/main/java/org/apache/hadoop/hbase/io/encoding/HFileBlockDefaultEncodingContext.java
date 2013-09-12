@@ -22,6 +22,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.compress.Compression.Algorithm;
 import org.apache.hadoop.hbase.io.hfile.BlockType;
@@ -37,6 +38,7 @@ import com.google.common.base.Preconditions;
  * @see HFileBlockDefaultDecodingContext for the decompression part
  *
  */
+@InterfaceAudience.Private
 public class HFileBlockDefaultEncodingContext implements
     HFileBlockEncodingContext {
 

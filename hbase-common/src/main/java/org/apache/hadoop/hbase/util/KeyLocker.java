@@ -30,6 +30,7 @@ import java.util.concurrent.locks.ReentrantLock;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
 
 /**
  * A utility class to manage a set of locks. Each lock is identified by a String which serves
@@ -48,6 +49,7 @@ import org.apache.commons.logging.LogFactory;
  * }
  * </p>
  */
+@InterfaceAudience.Private
 public class KeyLocker<K extends Comparable<? super K>> {
   private static final Log LOG = LogFactory.getLog(KeyLocker.class);
 

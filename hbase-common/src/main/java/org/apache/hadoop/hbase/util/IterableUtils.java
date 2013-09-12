@@ -22,9 +22,12 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+
 /**
  * Utility methods for Iterable including null-safe handlers.
  */
+@InterfaceAudience.Private
 public class IterableUtils {
 
   private static final List<Object> EMPTY_LIST = Collections

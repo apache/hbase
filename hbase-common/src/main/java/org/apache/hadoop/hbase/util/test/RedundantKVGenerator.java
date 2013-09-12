@@ -24,6 +24,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.io.WritableUtils;
@@ -37,6 +38,7 @@ import com.google.common.primitives.Bytes;
 @edu.umd.cs.findbugs.annotations.SuppressWarnings(
     value="RV_ABSOLUTE_VALUE_OF_RANDOM_INT",
     justification="Should probably fix")
+@InterfaceAudience.Private
 public class RedundantKVGenerator {
   // row settings
   static byte[] DEFAULT_COMMON_PREFIX = new byte[0];
