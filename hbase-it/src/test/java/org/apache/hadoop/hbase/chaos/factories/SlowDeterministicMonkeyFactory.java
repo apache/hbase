@@ -54,8 +54,7 @@ public class SlowDeterministicMonkeyFactory extends MonkeyFactory {
         new CompactTableAction(tableName, 0.5f),
         new CompactRandomRegionOfTableAction(tableName, 0.6f),
         new FlushTableAction(tableName),
-        new FlushRandomRegionOfTableAction(tableName),
-        new MoveRandomRegionOfTableAction(tableName)
+        new FlushRandomRegionOfTableAction(tableName)
     };
 
     // Actions such as split/merge/snapshot.
@@ -69,12 +68,13 @@ public class SlowDeterministicMonkeyFactory extends MonkeyFactory {
 
     // Destructive actions to mess things around.
     Action[] actions3 = new Action[] {
-        new MoveRegionsOfTableAction(tableName),
+        new MoveRegionsOfTableAction(20000, tableName),
+        new MoveRandomRegionOfTableAction(20000, tableName),
         new RestartRandomRsAction(60000),
-        new BatchRestartRsAction(5000, 0.5f),
+        new BatchRestartRsAction(60000, 0.5f),
         new RestartActiveMasterAction(5000),
         new RollingBatchRestartRsAction(5000, 1.0f),
-        new RestartRsHoldingMetaAction(35000)
+        new RestartRsHoldingMetaAction(35000),
     };
 
     return new PolicyBasedChaosMonkey(util,

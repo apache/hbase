@@ -47,6 +47,10 @@ public class MoveRegionsOfTableAction extends Action {
 
   @Override
   public void perform() throws Exception {
+    if (sleepTime > 0) {
+      Thread.sleep(sleepTime);
+    }
+
     HBaseAdmin admin = this.context.getHaseIntegrationTestingUtility().getHBaseAdmin();
 
     List<HRegionInfo> regions = admin.getTableRegions(tableNameBytes);
@@ -63,9 +67,9 @@ public class MoveRegionsOfTableAction extends Action {
       } catch (Exception e) {
         LOG.debug("Error moving region", e);
       }
-    }
-    if (sleepTime > 0) {
-      Thread.sleep(sleepTime);
+      if (sleepTime > 0) {
+        Thread.sleep(sleepTime);
+      }
     }
   }
 }
