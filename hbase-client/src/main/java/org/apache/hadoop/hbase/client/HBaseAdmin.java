@@ -772,7 +772,13 @@ public class HBaseAdmin implements Abortable, Closeable {
     boolean enabled = false;
     long start = EnvironmentEdgeManager.currentTimeMillis();
     for (int tries = 0; tries < (this.numRetries * this.retryLongerMultiplier); tries++) {
-      enabled = isTableEnabled(tableName) && isTableAvailable(tableName);
+      try {
+        enabled = isTableEnabled(tableName);
+      } catch (TableNotFoundException tnfe) {
+        // wait for table to be created
+        enabled = false;
+      }
+      enabled = enabled && isTableAvailable(tableName);
       if (enabled) {
         break;
       }
@@ -1001,12 +1007,23 @@ public class HBaseAdmin implements Abortable, Closeable {
     return failed.toArray(new HTableDescriptor[failed.size()]);
   }
 
+  /*
+   * Checks whether table exists. If not, throws TableNotFoundException
+   * @param tableName
+   */
+  private void checkTableExistence(TableName tableName) throws IOException {
+    if (!tableExists(tableName)) {
+      throw new TableNotFoundException(tableName);
+    }
+  }
+  
   /**
    * @param tableName name of table to check
    * @return true if table is on-line
    * @throws IOException if a remote or network exception occurs
    */
   public boolean isTableEnabled(TableName tableName) throws IOException {
+    checkTableExistence(tableName);
     return connection.isTableEnabled(tableName);
   }
 
@@ -1026,6 +1043,7 @@ public class HBaseAdmin implements Abortable, Closeable {
    * @throws IOException if a remote or network exception occurs
    */
   public boolean isTableDisabled(TableName tableName) throws IOException {
+    checkTableExistence(tableName);
     return connection.isTableDisabled(tableName);
   }
 
