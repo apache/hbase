@@ -412,4 +412,13 @@ public interface HConnection extends Closeable {
   public void flushRegionAndWait(final HRegionInfo regionInfo,
       final HServerAddress addr, long acceptableWindowForLastFlush,
       long maximumWaitTime) throws IOException;
+
+  /**
+   * Returns a server configuration property as a string by querying a server
+   * through this connection without retries.
+   * @param prop : the String configuration property we want
+   * @return String encoding of the property value
+   * @throws IOException
+   */
+  public String getServerConfProperty(String prop) throws IOException;
 }

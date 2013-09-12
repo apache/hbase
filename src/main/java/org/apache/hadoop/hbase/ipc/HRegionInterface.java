@@ -270,6 +270,14 @@ public interface HRegionInterface extends HBaseRPCProtocolVersion, Restartable, 
       byte [] family, byte [] qualifier, long amount, boolean writeToWAL)
   throws IOException;
 
+  /**
+   * Get a configuration property from an HRegion
+   *
+   * @param String propName name of configuration property
+   * @return String value of property
+   * @throws IOException e
+   */
+  public String getConfProperty(String paramName) throws IOException;
 
   //
   // remote scanner interface

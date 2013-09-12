@@ -612,6 +612,18 @@ public class HTable implements HTableInterface {
     return s;
   }
 
+  /**
+   * Gets a server configuration property from a random server using the current
+   * table's connection.
+   *
+   * @param name : The name of the property requested
+   * @return String value of the property requested
+   * @throws IOException
+   */
+  public String getServerConfProperty(final String name) throws IOException {
+    return this.getConnectionAndResetOperationContext().getServerConfProperty(name);
+  }
+
   public Result get(final Get get) throws IOException {
     return this.getConnectionAndResetOperationContext().getRegionServerWithRetries(
         new ServerCallable<Result>(connection, tableName, get.getRow(), this.options) {

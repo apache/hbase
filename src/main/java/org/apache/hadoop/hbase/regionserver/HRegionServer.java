@@ -2731,6 +2731,11 @@ public class HRegionServer implements HRegionInterface,
         getLockFromId(delete.getLockId()));
   }
 
+  @Override
+  public String getConfProperty(String name){
+      return conf.get(name);
+  }
+
   //
   // remote scanner interface
   //

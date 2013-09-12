@@ -37,6 +37,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Random;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.Callable;
@@ -3032,6 +3033,56 @@ public class HConnectionManager {
         // and the function can be safely retried.
         throw new IOException(e);
       }
+    }
+
+    private HServerAddress getRandomServerAddress() throws IOException {
+      final ArrayList<String> addrs = new ArrayList<String>();
+
+      if (cachedServers.isEmpty()){
+        getMaster();
+        // If we have no cached servers
+        // Use a visitor to collect a list of all the region server addresses
+        // from the meta table
+        MetaScannerVisitor visitor = new MetaScannerVisitor() {
+          public boolean processRow(Result result) throws IOException {
+            try {
+              HRegionInfo info = Writables.getHRegionInfo(
+                  result.getValue(HConstants.CATALOG_FAMILY,
+                      HConstants.REGIONINFO_QUALIFIER));
+              if (!(info.isOffline() || info.isSplit())) {
+                byte [] value = result.getValue(HConstants.CATALOG_FAMILY,
+                    HConstants.SERVER_QUALIFIER);
+                if (value != null && value.length > 0) {
+                  addrs.add(Bytes.toString(value));
+                }
+              }
+              return true;
+            } catch (RuntimeException e) {
+              LOG.error("Result=" + result);
+              throw e;
+            }
+          }
+        };
+        MetaScanner.metaScan(conf, visitor);
+      }
+      else{
+        // If we have any cached servers use them
+        addrs.addAll(cachedServers);
+      }
+      // return a random region server address
+      int numServers = addrs.size();
+      if(numServers == 0){
+        throw new NoServerForRegionException("No Region Servers Found");
+      }
+      String serverAddrStr = addrs.get(new Random().nextInt(numServers));
+      return new HServerAddress(serverAddrStr);
+    }
+
+
+    public String getServerConfProperty(String prop) throws IOException{
+      HServerAddress addr = getRandomServerAddress();
+      HRegionInterface server = getHRegionConnection(addr);
+      return server.getConfProperty(prop);
     }
 
     private void trackMutationsToTable(byte[] tableNameBytes,
