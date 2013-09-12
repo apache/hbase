@@ -18,6 +18,7 @@
  */
 package org.apache.hadoop.hbase.rest;
 
+import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -67,7 +68,14 @@ public class HBaseRESTTestingUtility {
       // set up context
     Context context = new Context(server, "/", Context.SESSIONS);
     context.addServlet(sh, "/*");
-    context.addFilter(GzipFilter.class, "/*", 0);
+    // Load filters specified from configuration.
+    String[] filterClasses = conf.getStrings(Constants.FILTER_CLASSES,
+      ArrayUtils.EMPTY_STRING_ARRAY);
+    for (String filter : filterClasses) {
+      filter = filter.trim();
+      context.addFilter(Class.forName(filter), "/*", 0);
+    }
+    LOG.info("Loaded filter classes :" + filterClasses);
       // start the server
     server.start();
       // get the port

@@ -1041,4 +1041,11 @@ possible configurations would overwhelm and obscure the important.
       Possible values are 'simple' (no authentication), and 'kerberos'.
     </description>
   </property>
+  <property>
+    <name>hbase.rest.filter.classes</name>
+    <value>org.apache.hadoop.hbase.rest.filter.GzipFilter</value>
+    <description>
+      Servlet filters for REST service.
+    </description>
+  </property>
 </configuration>

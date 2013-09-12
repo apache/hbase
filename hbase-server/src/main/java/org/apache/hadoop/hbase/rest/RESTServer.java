@@ -28,6 +28,7 @@ import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 import org.apache.commons.cli.PosixParser;
+import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -226,7 +227,13 @@ public class RESTServer implements Constants {
       context.addFilter(authFilter, "/*", 1);
     }
 
-    context.addFilter(GzipFilter.class, "/*", 0);
+    // Load filters from configuration.
+    String[] filterClasses = servlet.getConfiguration().getStrings(FILTER_CLASSES,
+      ArrayUtils.EMPTY_STRING_ARRAY);
+    for (String filter : filterClasses) {
+      filter = filter.trim();
+      context.addFilter(Class.forName(filter), "/*", 0);
+    }
 
     // Put up info server.
     int port = conf.getInt("hbase.rest.info.port", 8085);
