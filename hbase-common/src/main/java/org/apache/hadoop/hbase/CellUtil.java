@@ -117,7 +117,12 @@ public final class CellUtil {
   public static ByteBuffer getValueBufferShallowCopy(Cell cell) {
     ByteBuffer buffer = ByteBuffer.wrap(cell.getValueArray(), cell.getValueOffset(),
       cell.getValueLength());
-//    buffer.position(buffer.limit());//make it look as if value was appended
+    return buffer;
+  }
+
+  public static ByteBuffer getQualifierBufferShallowCopy(Cell cell) {
+    ByteBuffer buffer = ByteBuffer.wrap(cell.getQualifierArray(), cell.getQualifierOffset(),
+        cell.getQualifierLength());
     return buffer;
   }
 
