@@ -46,6 +46,10 @@ public class MoveRandomRegionOfTableAction extends Action {
 
   @Override
   public void perform() throws Exception {
+    if (sleepTime > 0) {
+      Thread.sleep(sleepTime);
+    }
+
     HBaseTestingUtility util = context.getHaseIntegrationTestingUtility();
     HBaseAdmin admin = util.getHBaseAdmin();
 
