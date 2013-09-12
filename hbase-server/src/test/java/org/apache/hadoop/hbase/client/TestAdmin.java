@@ -1709,6 +1709,21 @@ public class TestAdmin {
     TEST_UTIL.getHBaseAdmin().createTable(htd);
   }
 
+  @Test
+  public void testIsEnabledOrDisabledOnUnknownTable() throws Exception {
+    try {
+      admin.isTableEnabled(Bytes.toBytes("unkownTable"));
+      fail("Test should fail if isTableEnabled called on unknown table.");
+    } catch (IOException e) {
+    }
+
+    try {
+      admin.isTableDisabled(Bytes.toBytes("unkownTable"));
+      fail("Test should fail if isTableDisabled called on unknown table.");
+    } catch (IOException e) {
+    }
+  }
+
   @Test (timeout=300000)
   public void testGetRegion() throws Exception {
     final String name = "testGetRegion";
