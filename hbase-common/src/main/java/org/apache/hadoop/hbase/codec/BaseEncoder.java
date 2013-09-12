@@ -20,8 +20,14 @@ package org.apache.hadoop.hbase.codec;
 import java.io.IOException;
 import java.io.OutputStream;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.Cell;
 
+/**
+ * TODO javadoc
+ */
+
+@InterfaceAudience.Private
 public abstract class BaseEncoder implements Codec.Encoder {
   protected final OutputStream out;
   // This encoder is 'done' once flush has been called.

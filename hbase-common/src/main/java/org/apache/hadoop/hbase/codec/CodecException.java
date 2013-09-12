@@ -18,12 +18,14 @@
 package org.apache.hadoop.hbase.codec;
 
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.HBaseIOException;
 
 /**
  * Thrown when problems in the codec whether setup or context.
  */
 @SuppressWarnings("serial")
+@InterfaceAudience.Private
 public class CodecException extends HBaseIOException {
   public CodecException() {
     super();

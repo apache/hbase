@@ -20,6 +20,9 @@ package org.apache.hadoop.hbase.util;
 
 import java.lang.reflect.InvocationTargetException;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+
+@InterfaceAudience.Private
 public class ReflectionUtils {
   @SuppressWarnings("unchecked")
   public static <T> T instantiateWithCustomCtor(String className,

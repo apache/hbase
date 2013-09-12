@@ -22,6 +22,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 
 import org.apache.commons.io.IOUtils;
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -31,6 +32,7 @@ import org.apache.hadoop.hbase.util.Bytes;
  * delimiting all lengths. Profligate. Needs tune up.  Does not write the mvcc stamp.
  * Use a different codec if you want that in the stream.
  */
+@InterfaceAudience.Private
 public class CellCodec implements Codec {
   static class CellEncoder extends BaseEncoder {
     CellEncoder(final OutputStream out) {

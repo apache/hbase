@@ -18,6 +18,7 @@ package org.apache.hadoop.hbase.util.test;
 
 import java.util.Random;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.MD5Hash;
 
@@ -28,6 +29,7 @@ import org.apache.hadoop.hbase.util.MD5Hash;
  * and generating a pseudo-random sequence of bytes seeded by key, column
  * qualifier, and value size.
  */
+@InterfaceAudience.Private
 public class LoadTestKVGenerator {
 
   /** A random number generator for determining value size */

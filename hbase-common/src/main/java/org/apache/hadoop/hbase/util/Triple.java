@@ -18,9 +18,12 @@
 
 package org.apache.hadoop.hbase.util;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+
 /**
  * Utility class to manage a triple.
  */
+@InterfaceAudience.Private
 public class Triple<A, B, C> {
   private A first;
   private B second;

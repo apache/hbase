@@ -21,10 +21,13 @@ package org.apache.hadoop.hbase.util;
 
 import java.util.concurrent.atomic.AtomicLong;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+
 /**
  * A simple barrier that can be used by classes that need to wait for some operations to
  * finish before stopping/closing/etc. forever.
  */
+@InterfaceAudience.Private
 public class DrainBarrier {
   /**
    * Contains the number of outstanding operations, as well as flags.

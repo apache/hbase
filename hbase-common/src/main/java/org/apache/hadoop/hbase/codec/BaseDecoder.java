@@ -23,8 +23,13 @@ import java.io.InputStream;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.Cell;
 
+/**
+ * TODO javadoc
+ */
+@InterfaceAudience.Private
 public abstract class BaseDecoder implements Codec.Decoder {
   protected static final Log LOG = LogFactory.getLog(BaseDecoder.class);
   protected final InputStream in;

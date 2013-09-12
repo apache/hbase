@@ -18,10 +18,13 @@ package org.apache.hadoop.hbase.util.test;
 
 import java.util.Set;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+
 /**
  * A generator of random data (keys/cfs/columns/values) for load testing.
  * Contains LoadTestKVGenerator as a matter of convenience...
  */
+@InterfaceAudience.Private
 public abstract class LoadTestDataGenerator {
   protected final LoadTestKVGenerator kvGenerator;
 

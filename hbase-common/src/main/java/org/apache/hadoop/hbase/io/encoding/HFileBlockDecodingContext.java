@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.io.encoding;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.io.compress.Compression;
 
 /**
@@ -27,6 +28,7 @@ import org.apache.hadoop.hbase.io.compress.Compression;
  *
  * @see HFileBlockEncodingContext for encoding
  */
+@InterfaceAudience.Private
 public interface HFileBlockDecodingContext {
 
   /**
