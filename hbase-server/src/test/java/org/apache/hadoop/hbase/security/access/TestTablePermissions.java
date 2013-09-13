@@ -191,7 +191,7 @@ public class TestTablePermissions {
     assertEquals("Should have 1 permission for george", 1, userPerms.size());
     TablePermission permission = userPerms.get(0);
     assertEquals("Permission should be for " + TEST_TABLE,
-        TEST_TABLE, permission.getTable());
+        TEST_TABLE, permission.getTableName());
     assertNull("Column family should be empty", permission.getFamily());
 
     // check actions
@@ -206,7 +206,7 @@ public class TestTablePermissions {
     assertEquals("Should have 1 permission for hubert", 1, userPerms.size());
     permission = userPerms.get(0);
     assertEquals("Permission should be for " + TEST_TABLE,
-        TEST_TABLE, permission.getTable());
+        TEST_TABLE, permission.getTableName());
     assertNull("Column family should be empty", permission.getFamily());
 
     // check actions
@@ -221,7 +221,7 @@ public class TestTablePermissions {
     assertEquals("Should have 1 permission for humphrey", 1, userPerms.size());
     permission = userPerms.get(0);
     assertEquals("Permission should be for " + TEST_TABLE,
-        TEST_TABLE, permission.getTable());
+        TEST_TABLE, permission.getTableName());
     assertTrue("Permission should be for family " + TEST_FAMILY,
         Bytes.equals(TEST_FAMILY, permission.getFamily()));
     assertTrue("Permission should be for qualifier " + TEST_QUALIFIER,
@@ -249,7 +249,7 @@ public class TestTablePermissions {
     assertNotNull(userPerms);
     assertEquals(1, userPerms.size());
     permission = userPerms.get(0);
-    assertEquals(TEST_TABLE, permission.getTable());
+    assertEquals(TEST_TABLE, permission.getTableName());
     assertEquals(1, permission.getActions().length);
     assertEquals(TablePermission.Action.READ, permission.getActions()[0]);
 
@@ -257,7 +257,7 @@ public class TestTablePermissions {
     assertNotNull(userPerms);
     assertEquals(1, userPerms.size());
     permission = userPerms.get(0);
-    assertEquals(TEST_TABLE2, permission.getTable());
+    assertEquals(TEST_TABLE2, permission.getTableName());
     assertEquals(2, permission.getActions().length);
     actions = Arrays.asList(permission.getActions());
     assertTrue(actions.contains(TablePermission.Action.READ));

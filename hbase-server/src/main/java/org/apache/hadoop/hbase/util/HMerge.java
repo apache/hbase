@@ -254,7 +254,7 @@ class HMerge {
               Bytes.toString(HConstants.CATALOG_FAMILY) + ":" +
               Bytes.toString(HConstants.REGIONINFO_QUALIFIER));
         }
-        if (!region.getTableName().equals(this.tableName)) {
+        if (!region.getTable().equals(this.tableName)) {
           return null;
         }
         return region;
@@ -283,7 +283,7 @@ class HMerge {
           continue;
         }
         HRegionInfo region = HRegionInfo.getHRegionInfo(currentRow);
-        if (!region.getTableName().equals(this.tableName)) {
+        if (!region.getTable().equals(this.tableName)) {
           currentRow = metaScanner.next();
           continue;
         }

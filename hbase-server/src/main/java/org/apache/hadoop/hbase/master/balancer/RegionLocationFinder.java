@@ -122,7 +122,7 @@ class RegionLocationFinder {
   protected List<ServerName> internalGetTopBlockLocation(HRegionInfo region) {
     List<ServerName> topServerNames = null;
     try {
-      HTableDescriptor tableDescriptor = getTableDescriptor(region.getTableName());
+      HTableDescriptor tableDescriptor = getTableDescriptor(region.getTable());
       if (tableDescriptor != null) {
         HDFSBlocksDistribution blocksDistribution =
             HRegion.computeHDFSBlocksDistribution(getConf(), tableDescriptor, region);

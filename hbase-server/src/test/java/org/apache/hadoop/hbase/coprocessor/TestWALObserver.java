@@ -186,7 +186,7 @@ public class TestWALObserver {
 
     // it's where WAL write cp should occur.
     long now = EnvironmentEdgeManager.currentTimeMillis();
-    log.append(hri, hri.getTableName(), edit, now, htd);
+    log.append(hri, hri.getTable(), edit, now, htd);
 
     // the edit shall have been change now by the coprocessor.
     foundFamily0 = false;

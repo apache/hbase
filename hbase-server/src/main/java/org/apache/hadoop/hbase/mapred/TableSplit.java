@@ -60,7 +60,8 @@ public class TableSplit implements InputSplit, Comparable<TableSplit> {
 
   public TableSplit(byte [] tableName, byte [] startRow, byte [] endRow,
       final String location) {
-    this(TableName.valueOf(tableName), startRow, endRow, location);
+    this(TableName.valueOf(tableName), startRow, endRow,
+      location);
   }
 
   /** @return table name */

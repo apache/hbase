@@ -926,15 +926,14 @@ public class HConnectionManager {
         public boolean processRow(Result row) throws IOException {
           HRegionInfo info = MetaScanner.getHRegionInfo(row);
           if (info != null && !info.isSplitParent()) {
-            if (tableName.equals(info.getTableName())) {
+            if (tableName.equals(info.getTable())) {
               ServerName server = HRegionInfo.getServerName(row);
               if (server == null) {
                 available.set(false);
                 return false;
               }
               regionCount.incrementAndGet();
-            } else if (tableName.compareTo(
-                info.getTableName()) < 0) {
+            } else if (tableName.compareTo(info.getTable()) < 0) {
               // Return if we are done with the current table
               return false;
             }
@@ -961,7 +960,7 @@ public class HConnectionManager {
         public boolean processRow(Result row) throws IOException {
           HRegionInfo info = MetaScanner.getHRegionInfo(row);
           if (info != null && !info.isSplitParent()) {
-            if (tableName.equals(info.getTableName())) {
+            if (tableName.equals(info.getTable())) {
               ServerName server = HRegionInfo.getServerName(row);
               if (server == null) {
                 available.set(false);
@@ -979,7 +978,7 @@ public class HConnectionManager {
                 // Always empty start row should be counted
                 regionCount.incrementAndGet();
               }
-            } else if (tableName.compareTo(info.getTableName()) < 0) {
+            } else if (tableName.compareTo(info.getTable()) < 0) {
               // Return if we are done with the current table
               return false;
             }
@@ -1000,7 +999,7 @@ public class HConnectionManager {
 
     @Override
     public HRegionLocation locateRegion(final byte[] regionName) throws IOException {
-      return locateRegion(HRegionInfo.getTableName(regionName),
+      return locateRegion(HRegionInfo.getTable(regionName),
           HRegionInfo.getStartKey(regionName), false, true);
     }
 
@@ -1113,7 +1112,7 @@ public class HConnectionManager {
             }
 
             // possible we got a region of a different table...
-            if (!regionInfo.getTableName().equals(tableName)) {
+            if (!regionInfo.getTable().equals(tableName)) {
               return false; // stop scanning
             }
             if (regionInfo.isOffline()) {
@@ -1226,10 +1225,10 @@ public class HConnectionManager {
           }
 
           // possible we got a region of a different table...
-          if (!regionInfo.getTableName().equals(tableName)) {
+          if (!regionInfo.getTable().equals(tableName)) {
             throw new TableNotFoundException(
                   "Table '" + tableName + "' was not found, got: " +
-                  regionInfo.getTableName() + ".");
+                  regionInfo.getTable() + ".");
           }
           if (regionInfo.isSplit()) {
             throw new RegionOfflineException("the only available region for" +
@@ -2306,7 +2305,7 @@ public class HConnectionManager {
                               ServerName serverName, long seqNum) {
       HRegionLocation newHrl = new HRegionLocation(hri, serverName, seqNum);
       synchronized (this.cachedRegionLocations) {
-        cacheLocation(hri.getTableName(), source, newHrl);
+        cacheLocation(hri.getTable(), source, newHrl);
       }
     }
 
@@ -2320,7 +2319,7 @@ public class HConnectionManager {
       HRegionLocation oldLocation;
       synchronized (this.cachedRegionLocations) {
         Map<byte[], HRegionLocation> tableLocations =
-          getTableLocations(hri.getTableName());
+          getTableLocations(hri.getTable());
         oldLocation = tableLocations.get(hri.getStartKey());
         if (oldLocation != null) {
            // Do not delete the cache entry if it's not for the same server that gave us the error.
@@ -2338,7 +2337,7 @@ public class HConnectionManager {
         return;
       }
       synchronized (this.cachedRegionLocations) {
-        TableName tableName = location.getRegionInfo().getTableName();
+        TableName tableName = location.getRegionInfo().getTable();
         Map<byte[], HRegionLocation> tableLocations =
             getTableLocations(tableName);
         if (!tableLocations.isEmpty()) {

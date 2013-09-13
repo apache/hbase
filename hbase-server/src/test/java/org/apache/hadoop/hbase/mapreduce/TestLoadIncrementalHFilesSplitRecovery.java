@@ -158,7 +158,7 @@ public class TestLoadIncrementalHFilesSplitRecovery {
           .toBytes(table));
 
       for (HRegionInfo hri : ProtobufUtil.getOnlineRegions(hrs)) {
-        if (Bytes.equals(hri.getTableName().getName(), Bytes.toBytes(table))) {
+        if (Bytes.equals(hri.getTable().getName(), Bytes.toBytes(table))) {
           // splitRegion doesn't work if startkey/endkey are null
           ProtobufUtil.split(hrs, hri, rowkey(ROWCOUNT / 2)); // hard code split
         }
@@ -169,7 +169,7 @@ public class TestLoadIncrementalHFilesSplitRecovery {
       do {
         regions = 0;
         for (HRegionInfo hri : ProtobufUtil.getOnlineRegions(hrs)) {
-          if (Bytes.equals(hri.getTableName().getName(), Bytes.toBytes(table))) {
+          if (Bytes.equals(hri.getTable().getName(), Bytes.toBytes(table))) {
             regions++;
           }
         }

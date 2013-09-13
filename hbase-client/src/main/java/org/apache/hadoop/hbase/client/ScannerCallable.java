@@ -102,6 +102,15 @@ public class ScannerCallable extends RegionServerCallable<Result[]> {
   }
 
   /**
+   * @deprecated Use {@link #ScannerCallable(HConnection, TableName, Scan, ScanMetrics)}
+   */
+  @Deprecated
+  public ScannerCallable (HConnection connection, final byte [] tableName, Scan scan,
+      ScanMetrics scanMetrics) {
+    this(connection, TableName.valueOf(tableName), scan, scanMetrics);
+  }
+
+  /**
    * @param reload force reload of server location
    * @throws IOException
    */

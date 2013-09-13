@@ -1615,7 +1615,7 @@ public class HLogSplitter {
       final long pause = conf.getLong(HConstants.HBASE_CLIENT_PAUSE,
         HConstants.DEFAULT_HBASE_CLIENT_PAUSE);
       boolean reloadLocation = false;
-      TableName tableName = loc.getRegionInfo().getTableName();
+      TableName tableName = loc.getRegionInfo().getTable();
       int tries = 0;
       Throwable cause = null;
       while (endTime > EnvironmentEdgeManager.currentTimeMillis()) {

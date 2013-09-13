@@ -494,7 +494,7 @@ public class HBaseAdmin implements Abortable, Closeable {
               LOG.warn("No serialized HRegionInfo in " + rowResult);
               return true;
             }
-            if (!info.getTableName().equals(desc.getTableName())) {
+            if (!info.getTable().equals(desc.getTableName())) {
               return false;
             }
             ServerName serverName = HRegionInfo.getServerName(rowResult);

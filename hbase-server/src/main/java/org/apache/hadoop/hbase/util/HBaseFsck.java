@@ -1270,7 +1270,7 @@ public class HBaseFsck extends Configured implements Tool {
    * Check if the specified region's table is disabled.
    */
   private boolean isTableDisabled(HRegionInfo regionInfo) {
-    return disabledTables.contains(regionInfo.getTableName());
+    return disabledTables.contains(regionInfo.getTable());
   }
 
   /**
@@ -1820,7 +1820,7 @@ public class HBaseFsck extends Configured implements Tool {
       if (hbi.deployedOn.size() == 0) continue;
 
       // We should be safe here
-      TableName tableName = hbi.metaEntry.getTableName();
+      TableName tableName = hbi.metaEntry.getTable();
       TableInfo modTInfo = tablesInfo.get(tableName);
       if (modTInfo == null) {
         modTInfo = new TableInfo(tableName);
@@ -2460,7 +2460,7 @@ public class HBaseFsck extends Configured implements Tool {
       // pick only those tables that were not modified in the last few milliseconds.
       if (info != null && info.getStartKey().length == 0 && !info.isMetaRegion()) {
         if (info.modTime + timelag < now) {
-          tableNames.add(info.getTableName());
+          tableNames.add(info.getTable());
         } else {
           numSkipped.incrementAndGet(); // one more in-flux table
         }
@@ -2584,7 +2584,7 @@ public class HBaseFsck extends Configured implements Tool {
             sn = pair.getSecond();
           }
           HRegionInfo hri = pair.getFirst();
-          if (!(isTableIncluded(hri.getTableName())
+          if (!(isTableIncluded(hri.getTable())
               || hri.isMetaRegion())) {
             return true;
           }
@@ -2661,7 +2661,7 @@ public class HBaseFsck extends Configured implements Tool {
       hash ^= Arrays.hashCode(getStartKey());
       hash ^= Arrays.hashCode(getEndKey());
       hash ^= Boolean.valueOf(isOffline()).hashCode();
-      hash ^= getTableName().hashCode();
+      hash ^= getTable().hashCode();
       if (regionServer != null) {
         hash ^= regionServer.hashCode();
       }
@@ -2752,7 +2752,7 @@ public class HBaseFsck extends Configured implements Tool {
 
     public TableName getTableName() {
       if (this.metaEntry != null) {
-        return this.metaEntry.getTableName();
+        return this.metaEntry.getTable();
       } else if (this.hdfsEntry != null) {
         // we are only guaranteed to have a path and not an HRI for hdfsEntry,
         // so we get the name from the Path
@@ -3108,7 +3108,7 @@ public class HBaseFsck extends Configured implements Tool {
       List<HRegionInfo> ret = Lists.newArrayList();
       for (HRegionInfo hri : regions) {
         if (hri.isMetaTable() || (!hbck.checkMetaOnly
-            && hbck.isTableIncluded(hri.getTableName()))) {
+            && hbck.isTableIncluded(hri.getTable()))) {
           ret.add(hri);
         }
       }

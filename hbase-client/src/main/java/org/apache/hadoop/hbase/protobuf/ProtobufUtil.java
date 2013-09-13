@@ -1645,7 +1645,7 @@ public final class ProtobufUtil {
 
         AccessControlProtos.TablePermission.Builder builder =
             AccessControlProtos.TablePermission.newBuilder();
-        builder.setTableName(ProtobufUtil.toProtoTableName(tablePerm.getTable()));
+        builder.setTableName(ProtobufUtil.toProtoTableName(tablePerm.getTableName()));
         if (tablePerm.hasFamily()) {
           builder.setFamily(ByteString.copyFrom(tablePerm.getFamily()));
         }
@@ -2195,7 +2195,7 @@ public final class ProtobufUtil {
     // input / output paths are relative to the store dir
     // store dir is relative to region dir
     CompactionDescriptor.Builder builder = CompactionDescriptor.newBuilder()
-        .setTableName(ByteString.copyFrom(info.getTableName().getName()))
+        .setTableName(ByteString.copyFrom(info.getTableName()))
         .setEncodedRegionName(ByteString.copyFrom(info.getEncodedNameAsBytes()))
         .setFamilyName(ByteString.copyFrom(family))
         .setStoreHomeDir(storeDir.getName()); //make relative

@@ -493,7 +493,7 @@ public class TestRegionObserverInterface {
     try {
       for (JVMClusterUtil.RegionServerThread t : cluster.getRegionServerThreads()) {
         for (HRegionInfo r : ProtobufUtil.getOnlineRegions(t.getRegionServer())) {
-          if (!r.getTableName().equals(tableName)) {
+          if (!r.getTable().equals(tableName)) {
             continue;
           }
           RegionCoprocessorHost cph = t.getRegionServer().getOnlineRegion(r.getRegionName()).

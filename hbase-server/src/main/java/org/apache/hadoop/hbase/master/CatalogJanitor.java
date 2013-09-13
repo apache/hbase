@@ -149,7 +149,7 @@ public class CatalogJanitor extends Chore {
         HRegionInfo info = HRegionInfo.getHRegionInfo(r);
         if (info == null) return true; // Keep scanning
         if (isTableSpecified
-            && info.getTableName().compareTo(tableName) > 0) {
+            && info.getTable().compareTo(tableName) > 0) {
           // Another table, stop scanning
           return false;
         }
@@ -184,9 +184,8 @@ public class CatalogJanitor extends Chore {
       final HRegionInfo regionA, final HRegionInfo regionB) throws IOException {
     FileSystem fs = this.services.getMasterFileSystem().getFileSystem();
     Path rootdir = this.services.getMasterFileSystem().getRootDir();
-    Path tabledir = FSUtils.getTableDir(rootdir,
-        mergedRegion.getTableName());
-    HTableDescriptor htd = getTableDescriptor(mergedRegion.getTableName());
+    Path tabledir = FSUtils.getTableDir(rootdir, mergedRegion.getTable());
+    HTableDescriptor htd = getTableDescriptor(mergedRegion.getTable());
     HRegionFileSystem regionFs = null;
     try {
       regionFs = HRegionFileSystem.openRegionFromFileSystem(
@@ -290,8 +289,7 @@ public class CatalogJanitor extends Chore {
       if (left == null) return -1;
       if (right == null) return 1;
       // Same table name.
-      int result = left.getTableName().compareTo(
-          right.getTableName());
+      int result = left.getTable().compareTo(right.getTable());
       if (result != 0) return result;
       // Compare start keys.
       result = Bytes.compareTo(left.getStartKey(), right.getStartKey());
@@ -375,7 +373,7 @@ public class CatalogJanitor extends Chore {
 
     FileSystem fs = this.services.getMasterFileSystem().getFileSystem();
     Path rootdir = this.services.getMasterFileSystem().getRootDir();
-    Path tabledir = FSUtils.getTableDir(rootdir, daughter.getTableName());
+    Path tabledir = FSUtils.getTableDir(rootdir, daughter.getTable());
 
     HRegionFileSystem regionFs = null;
     try {
@@ -387,7 +385,7 @@ public class CatalogJanitor extends Chore {
     }
 
     boolean references = false;
-    HTableDescriptor parentDescriptor = getTableDescriptor(parent.getTableName());
+    HTableDescriptor parentDescriptor = getTableDescriptor(parent.getTable());
     for (HColumnDescriptor family: parentDescriptor.getFamilies()) {
       if ((references = regionFs.hasReferences(family.getNameAsString()))) {
         break;

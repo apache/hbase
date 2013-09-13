@@ -518,6 +518,16 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
   }
 
   /**
+   * @deprecated Use {@link #tryAtomicRegionLoad(HConnection, TableName, byte[], Collection)}
+   */
+  @Deprecated
+  protected List<LoadQueueItem> tryAtomicRegionLoad(final HConnection conn,
+      final byte [] tableName, final byte[] first, Collection<LoadQueueItem> lqis)
+  throws IOException {
+    return tryAtomicRegionLoad(conn, TableName.valueOf(tableName), first, lqis);
+  }
+
+  /**
    * Attempts to do an atomic load of many hfiles into a region.  If it fails,
    * it returns a list of hfiles that need to be retried.  If it is successful
    * it will return an empty list.
@@ -531,9 +541,8 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
    * failure
    */
   protected List<LoadQueueItem> tryAtomicRegionLoad(final HConnection conn,
-      final TableName tableName,
-      final byte[] first, Collection<LoadQueueItem> lqis) throws IOException {
-
+      final TableName tableName, final byte[] first, Collection<LoadQueueItem> lqis)
+  throws IOException {
     final List<Pair<byte[], String>> famPaths =
       new ArrayList<Pair<byte[], String>>(lqis.size());
     for (LoadQueueItem lqi : lqis) {

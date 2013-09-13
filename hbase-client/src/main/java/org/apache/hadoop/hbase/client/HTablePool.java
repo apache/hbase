@@ -600,5 +600,11 @@ public class HTablePool implements Closeable {
         throw new IllegalStateException("Table=" + new String(table.getTableName()) + " already closed");
       }
     }
+
+    @Override
+    public long incrementColumnValue(byte[] row, byte[] family,
+        byte[] qualifier, long amount, boolean writeToWAL) throws IOException {
+      return table.incrementColumnValue(row, family, qualifier, amount, writeToWAL);
+    }
   }
 }

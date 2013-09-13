@@ -208,7 +208,7 @@ public class TestDistributedLogSplitting {
       hrs = rsts.get(i).getRegionServer();
       regions = ProtobufUtil.getOnlineRegions(hrs);
       for (HRegionInfo region : regions) {
-        if (region.getTableName().getNameAsString().equalsIgnoreCase("table")) {
+        if (region.getTable().getNameAsString().equalsIgnoreCase("table")) {
           foundRs = true;
           break;
         }
@@ -222,7 +222,7 @@ public class TestDistributedLogSplitting {
     Iterator<HRegionInfo> it = regions.iterator();
     while (it.hasNext()) {
       HRegionInfo region = it.next();
-      if (region.getTableName().getNamespaceAsString()
+      if (region.getTable().getNamespaceAsString()
           .equals(NamespaceDescriptor.SYSTEM_NAMESPACE_NAME_STR)) {
         it.remove();
       }
@@ -664,12 +664,12 @@ public class TestDistributedLogSplitting {
           break;
         }
         if (tableName != null &&
-            !tableName.equalsIgnoreCase(region.getTableName().getNameAsString())) {
+            !tableName.equalsIgnoreCase(region.getTable().getNameAsString())) {
           // make sure that we find a RS has online regions for both "table" and "disableTable"
           hasRegionsForBothTables = true;
           break;
         } else if (tableName == null) {
-          tableName = region.getTableName().getNameAsString();
+          tableName = region.getTable().getNameAsString();
         }
       }
       if (isCarryingMeta) {
@@ -1123,7 +1123,7 @@ public class TestDistributedLogSplitting {
       HRegionServer hrs = rst.getRegionServer();
       List<HRegionInfo> hris = ProtobufUtil.getOnlineRegions(hrs);
       for (HRegionInfo hri : hris) {
-        if (hri.getTableName().isSystemTable()) {
+        if (hri.getTable().isSystemTable()) {
           continue;
         }
         LOG.debug("adding data to rs = " + rst.getName() +
@@ -1148,7 +1148,7 @@ public class TestDistributedLogSplitting {
 
     for(Iterator<HRegionInfo> iter = regions.iterator(); iter.hasNext(); ) {
       HRegionInfo regionInfo = iter.next();
-      if(regionInfo.getTableName().isSystemTable()) {
+      if(regionInfo.getTable().isSystemTable()) {
          iter.remove();
       }
     }
@@ -1157,7 +1157,7 @@ public class TestDistributedLogSplitting {
 
     List<HRegionInfo> hris = new ArrayList<HRegionInfo>();
     for (HRegionInfo region : regions) {
-      if (!region.getTableName().getNameAsString().equalsIgnoreCase(tname)) {
+      if (!region.getTable().getNameAsString().equalsIgnoreCase(tname)) {
         continue;
       }
       hris.add(region);
@@ -1330,7 +1330,7 @@ public class TestDistributedLogSplitting {
         if (region.isMetaRegion()) {
           isCarryingMeta = true;
         }
-        if (tableName == null || region.getTableName().getNameAsString().equals(tableName)) {
+        if (tableName == null || region.getTable().getNameAsString().equals(tableName)) {
           foundTableRegion = true;
         }
         if (foundTableRegion && (isCarryingMeta || !hasMetaRegion)) {

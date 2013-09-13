@@ -433,7 +433,7 @@ public class RegionStates {
     // before all table's regions.
     HRegionInfo boundary = new HRegionInfo(tableName, null, null, false, 0L);
     for (HRegionInfo hri: regionAssignments.tailMap(boundary).keySet()) {
-      if(!hri.getTableName().equals(tableName)) break;
+      if(!hri.getTable().equals(tableName)) break;
       tableRegions.add(hri);
     }
     return tableRegions;
@@ -529,7 +529,7 @@ public class RegionStates {
         for (Map.Entry<ServerName, Set<HRegionInfo>> e: serverHoldings.entrySet()) {
           for (HRegionInfo hri: e.getValue()) {
             if (hri.isMetaRegion()) continue;
-            TableName tablename = hri.getTableName();
+            TableName tablename = hri.getTable();
             Map<ServerName, List<HRegionInfo>> svrToRegions = result.get(tablename);
             if (svrToRegions == null) {
               svrToRegions = new HashMap<ServerName, List<HRegionInfo>>(serverHoldings.size());

@@ -546,6 +546,16 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
   }
 
   /**
+   * Remove metadata represented by the key from the {@link #values} map
+   *
+   * @param key Key whose key and value we're to remove from HTableDescriptor
+   * parameters.
+   */
+  public void remove(final byte [] key) {
+    remove(new ImmutableBytesWritable(key));
+  }
+
+  /**
    * Check if the readOnly flag of the table is set. If the readOnly flag is
    * set then the contents of the table can only be read from but not modified.
    *

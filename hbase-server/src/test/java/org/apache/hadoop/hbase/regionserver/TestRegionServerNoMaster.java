@@ -307,7 +307,7 @@ public class TestRegionServerNoMaster {
         hri.getEncodedNameAsBytes()));
 
     // Let's start the open handler
-    HTableDescriptor htd = getRS().tableDescriptors.get(hri.getTableName());
+    HTableDescriptor htd = getRS().tableDescriptors.get(hri.getTable());
     getRS().service.submit(new OpenRegionHandler(getRS(), getRS(), hri, htd, 0));
 
     // The open handler should have removed the region from RIT but kept the region closed
@@ -361,7 +361,7 @@ public class TestRegionServerNoMaster {
     //  1) There is no ZK node
     //  2) The region in RIT was changed.
     // The order is more or less implementation dependant.
-    HTableDescriptor htd = getRS().tableDescriptors.get(hri.getTableName());
+    HTableDescriptor htd = getRS().tableDescriptors.get(hri.getTable());
     getRS().service.submit(new OpenRegionHandler(getRS(), getRS(), hri, htd, 0));
 
     // The open handler should have removed the region from RIT but kept the region closed

@@ -69,7 +69,7 @@ public class OpenedRegionHandler extends EventHandler implements TotesHRegionInf
     this.expectedVersion = expectedVersion;
     if(regionInfo.isMetaRegion()) {
       priority = OpenedPriority.META;
-    } else if(regionInfo.getTableName()
+    } else if(regionInfo.getTable()
         .getNamespaceAsString().equals(NamespaceDescriptor.SYSTEM_NAMESPACE_NAME_STR)) {
       priority = OpenedPriority.SYSTEM;
     } else {
@@ -113,8 +113,7 @@ public class OpenedRegionHandler extends EventHandler implements TotesHRegionInf
         " because regions is NOT in RIT -- presuming this is because it SPLIT");
     }
     if (!openedNodeDeleted) {
-      if (this.assignmentManager.getZKTable().isDisablingOrDisabledTable(
-          regionInfo.getTableName())) {
+      if (this.assignmentManager.getZKTable().isDisablingOrDisabledTable(regionInfo.getTable())) {
         debugLog(regionInfo, "Opened region "
             + regionInfo.getShortNameToLog() + " but "
             + "this table is disabled, triggering close of region");

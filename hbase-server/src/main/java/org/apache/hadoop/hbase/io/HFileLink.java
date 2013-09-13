@@ -263,7 +263,7 @@ public class HFileLink extends FileLink {
    */
   public static String createHFileLinkName(final HRegionInfo hfileRegionInfo,
       final String hfileName) {
-    return createHFileLinkName(hfileRegionInfo.getTableName(),
+    return createHFileLinkName(hfileRegionInfo.getTable(),
                       hfileRegionInfo.getEncodedName(), hfileName);
   }
 
@@ -300,7 +300,7 @@ public class HFileLink extends FileLink {
   public static boolean create(final Configuration conf, final FileSystem fs,
       final Path dstFamilyPath, final HRegionInfo hfileRegionInfo,
       final String hfileName) throws IOException {
-    TableName linkedTable = hfileRegionInfo.getTableName();
+    TableName linkedTable = hfileRegionInfo.getTable();
     String linkedRegion = hfileRegionInfo.getEncodedName();
     return create(conf, fs, dstFamilyPath, linkedTable, linkedRegion, hfileName);
   }

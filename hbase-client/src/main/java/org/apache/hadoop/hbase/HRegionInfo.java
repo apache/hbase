@@ -402,8 +402,10 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
    * Gets the table name from the specified region name.
    * @param regionName
    * @return Table name.
+   * @deprecated Since 0.96.0; use #getTable(byte[])
    */
-  public static TableName getTableName(byte[] regionName) {
+  @Deprecated
+  public static byte [] getTableName(byte[] regionName) {
     int offset = -1;
     for (int i = 0; i < regionName.length; i++) {
       if (regionName[i] == HConstants.DELIMITER) {
@@ -413,7 +415,18 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
     }
     byte[] buff  = new byte[offset];
     System.arraycopy(regionName, 0, buff, 0, offset);
-    return TableName.valueOf(buff);
+    return buff;
+  }
+
+  /**
+   * Gets the table name from the specified region name.
+   * Like {@link #getTableName(byte[])} only returns a {@link TableName} rather than a byte array.
+   * @param regionName
+   * @return Table name
+   * @see #getTableName(byte[])
+   */
+  public static TableName getTable(final byte [] regionName) {
+    return TableName.valueOf(getTableName(regionName));
   }
 
   /**
@@ -523,12 +536,26 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
   /**
    * Get current table name of the region
    * @return byte array of table name
+   * @deprecated Since 0.96.0; use #getTable()
    */
-  public TableName getTableName() {
+  @Deprecated
+  public byte [] getTableName() {
+    return getTable().toBytes();
+  }
+
+  /**
+   * Get current table name of the region
+   * @return TableName
+   * @see #getTableName()
+   */
+  public TableName getTable() {
+    // This method name should be getTableName but there was already a method getTableName
+    // that returned a byte array.  It is unfortunate given everwhere else, getTableName returns
+    // a TableName instance.
     if (tableName == null || tableName.getName().length == 0) {
-      tableName = getTableName(getRegionName());
+      tableName = getTable(getRegionName());
     }
-    return tableName;
+    return this.tableName;
   }
 
   /**
@@ -570,7 +597,7 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
 
   /** @return true if this region is a meta region */
   public boolean isMetaRegion() {
-     return tableName.equals(HRegionInfo.FIRST_META_REGIONINFO.getTableName());
+     return tableName.equals(HRegionInfo.FIRST_META_REGIONINFO.getTable());
   }
 
   /**
@@ -813,7 +840,7 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
   public static RegionInfo convert(final HRegionInfo info) {
     if (info == null) return null;
     RegionInfo.Builder builder = RegionInfo.newBuilder();
-    builder.setTableName(ProtobufUtil.toProtoTableName(info.getTableName()));
+    builder.setTableName(ProtobufUtil.toProtoTableName(info.getTable()));
     builder.setRegionId(info.getRegionId());
     if (info.getStartKey() != null) {
       builder.setStartKey(ByteString.copyFrom(info.getStartKey()));

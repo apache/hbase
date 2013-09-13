@@ -151,7 +151,7 @@ public class TablePermission extends Permission {
     return table != null;
   }
 
-  public TableName getTable() {
+  public TableName getTableName() {
     return table;
   }
 
@@ -318,7 +318,7 @@ public class TablePermission extends Permission {
     }
     TablePermission other = (TablePermission)obj;
 
-    if (!(table.equals(other.getTable()) &&
+    if (!(table.equals(other.getTableName()) &&
         ((family == null && other.getFamily() == null) ||
          Bytes.equals(family, other.getFamily())) &&
         ((qualifier == null && other.getQualifier() == null) ||

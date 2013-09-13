@@ -43,7 +43,6 @@ import org.apache.hadoop.hbase.catalog.CatalogTracker;
 import org.apache.hadoop.hbase.errorhandling.ForeignExceptionDispatcher;
 import org.apache.hadoop.hbase.io.HFileLink;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
-import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
@@ -160,7 +159,7 @@ public class TestRestoreSnapshotHelper {
     // First region, simple with one plain hfile.
     HRegionInfo hri = new HRegionInfo(htd.getTableName());
     HRegionFileSystem r0fs = HRegionFileSystem.createRegionOnFileSystem(conf,
-      fs, FSUtils.getTableDir(archiveDir, hri.getTableName()), hri);
+      fs, FSUtils.getTableDir(archiveDir, hri.getTable()), hri);
     Path storeFile = new Path(rootDir, TEST_HFILE);
     fs.createNewFile(storeFile);
     r0fs.commitStoreFile(TEST_FAMILY, storeFile);
@@ -169,7 +168,7 @@ public class TestRestoreSnapshotHelper {
     // This region contains a reference to the hfile in the first region.
     hri = new HRegionInfo(htd.getTableName());
     HRegionFileSystem r1fs = HRegionFileSystem.createRegionOnFileSystem(conf,
-      fs, FSUtils.getTableDir(archiveDir, hri.getTableName()), hri);
+      fs, FSUtils.getTableDir(archiveDir, hri.getTable()), hri);
     storeFile = new Path(rootDir, TEST_HFILE + '.' + r0fs.getRegionInfo().getEncodedName());
     fs.createNewFile(storeFile);
     r1fs.commitStoreFile(TEST_FAMILY, storeFile);

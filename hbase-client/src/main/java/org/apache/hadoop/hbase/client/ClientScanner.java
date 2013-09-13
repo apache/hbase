@@ -85,6 +85,15 @@ public class ClientScanner extends AbstractClientScanner {
       this(conf, scan, tableName, HConnectionManager.getConnection(conf));
     }
 
+    /**
+     * @deprecated Use {@link #ClientScanner(Configuration, Scan, TableName)}
+     */
+    @Deprecated
+    public ClientScanner(final Configuration conf, final Scan scan,
+        final byte [] tableName) throws IOException {
+      this(conf, scan, TableName.valueOf(tableName));
+    }
+
 
     /**
      * Create a new ClientScanner for the specified table
@@ -99,6 +108,15 @@ public class ClientScanner extends AbstractClientScanner {
   public ClientScanner(final Configuration conf, final Scan scan, final TableName tableName,
       HConnection connection) throws IOException {
     this(conf, scan, tableName, connection, new RpcRetryingCallerFactory(conf));
+  }
+
+  /**
+   * @deprecated Use {@link #ClientScanner(Configuration, Scan, TableName, HConnection)}
+   */
+  @Deprecated
+  public ClientScanner(final Configuration conf, final Scan scan, final byte [] tableName,
+      HConnection connection) throws IOException {
+    this(conf, scan, TableName.valueOf(tableName), connection, new RpcRetryingCallerFactory(conf));
   }
 
   /**
@@ -158,7 +176,16 @@ public class ClientScanner extends AbstractClientScanner {
       return this.connection;
     }
 
-    protected TableName getTableName() {
+    /**
+     * @return Table name
+     * @deprecated Since 0.96.0; use {@link #getTable()}
+     */
+    @Deprecated
+    protected byte [] getTableName() {
+      return this.tableName.getName();
+    }
+
+    protected TableName getTable() {
       return this.tableName;
     }
 
@@ -253,7 +280,7 @@ public class ClientScanner extends AbstractClientScanner {
         int nbRows) {
       scan.setStartRow(localStartKey);
       ScannerCallable s = new ScannerCallable(getConnection(),
-        getTableName(), scan, this.scanMetrics);
+        getTable(), scan, this.scanMetrics);
       s.setCaching(nbRows);
       return s;
     }

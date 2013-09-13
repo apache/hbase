@@ -104,7 +104,7 @@ public class TestRegionServerCoprocessorExceptionWithAbort {
                        final Put put, final WALEdit edit,
                        final Durability durability) {
       TableName tableName =
-          c.getEnvironment().getRegion().getRegionInfo().getTableName();
+          c.getEnvironment().getRegion().getRegionInfo().getTable();
       if (TABLE_NAME.equals(tableName) && Bytes.equals(put.getRow(), ROW)) {
         throw new NullPointerException("Buggy coprocessor: " + put);
       }

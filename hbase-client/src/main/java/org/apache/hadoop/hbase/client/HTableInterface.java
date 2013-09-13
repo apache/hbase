@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.client;
 
 import com.google.protobuf.Service;
 import com.google.protobuf.ServiceException;
+
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -383,6 +384,14 @@ public interface HTableInterface extends Closeable {
    */
   long incrementColumnValue(byte[] row, byte[] family, byte[] qualifier,
       long amount, Durability durability) throws IOException;
+
+  /**
+   * @deprecated Use {@link #incrementColumnValue(byte[], byte[], byte[], long, Durability)}
+   */
+  @Deprecated
+  long incrementColumnValue(final byte [] row, final byte [] family,
+      final byte [] qualifier, final long amount, final boolean writeToWAL)
+  throws IOException;
 
   /**
    * Tells whether or not 'auto-flush' is turned on.
