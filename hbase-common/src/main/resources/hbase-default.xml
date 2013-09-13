@@ -1048,4 +1048,11 @@ possible configurations would overwhelm and obscure the important.
       Servlet filters for REST service.
     </description>
   </property>
+  <property>
+    <name>hbase.master.loadbalancer.class</name>
+    <value>org.apache.hadoop.hbase.master.balancer.DefaultLoadBalancer</value>
+    <description>
+      Class used to execute the regions balancing when the period occurs.
+    </description>
+  </property>
 </configuration>
