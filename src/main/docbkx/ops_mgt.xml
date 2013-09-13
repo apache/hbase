@@ -344,6 +344,10 @@ row10	c1	c2
       See the <link xlink:href="http://ofps.oreilly.com/titles/9781449396107/performance.html">O'Reilly HBase Book</link> for
       an example of usage.
       </para>
+      <para>You will need to pass 3 parameters to this application. The first one is the table name. The second one is the fully
+      qualified name of the first region to merge, like "table_name,\x0A,1342956111995.7cef47f192318ba7ccc75b1bbf27a82b.". The third one
+      is the fully qualified name for the second region to merge.
+      </para>
       <para>Additionally, there is a Ruby script attached to <link xlink:href="https://issues.apache.org/jira/browse/HBASE-1621">HBASE-1621</link>
       for region merging.
       </para>
