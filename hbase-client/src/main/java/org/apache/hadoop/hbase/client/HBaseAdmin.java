@@ -2880,7 +2880,7 @@ public class HBaseAdmin implements Abortable, Closeable {
   public void cloneSnapshot(final String snapshotName, final TableName tableName)
       throws IOException, TableExistsException, RestoreSnapshotException, InterruptedException {
     if (tableExists(tableName)) {
-      throw new TableExistsException("Table '" + tableName + " already exists");
+      throw new TableExistsException(tableName);
     }
     internalRestoreSnapshot(snapshotName, tableName);
     waitUntilTableIsEnabled(tableName);
