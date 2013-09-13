@@ -190,13 +190,13 @@ public class AuthenticationTokenSecretManager
     }
   }
 
-  synchronized void removeKey(Integer keyId) {
+  synchronized boolean removeKey(Integer keyId) {
     // ignore zk changes when running as master
     if (leaderElector.isMaster()) {
       if (LOG.isDebugEnabled()) {
         LOG.debug("Running as master, ignoring removed key "+keyId);
       }
-      return;
+      return false;
     }
 
     if (LOG.isDebugEnabled()) {
@@ -204,6 +204,7 @@ public class AuthenticationTokenSecretManager
     }
 
     allKeys.remove(keyId);
+    return true;
   }
 
   AuthenticationKey getCurrentKey() {
