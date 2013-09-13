@@ -2573,6 +2573,9 @@ This option should not normally be used, and it is not in <code>-fixAll</code>.
   <appendix xml:id="compression">
 
     <title >Compression In HBase<indexterm><primary>Compression</primary></indexterm></title>
+    <para>There are a bunch of compression options in HBase.  There is some helpful discussion
+        to be found in <link xlink:href="http://search-hadoop.com/m/lL12B1PFVhp1">Documenting Guidance on compression and codecs</link>.
+    </para>
 
     <section xml:id="compression.test">
     <title>CompressionTest Tool</title>
