@@ -911,6 +911,14 @@ MasterServices, Server {
       startCatalogJanitorChore();
       startNamespaceJanitorChore();
     }
+    
+    if (this.cpHost != null) {
+      try {
+        this.cpHost.preMasterInitialization();
+      } catch (IOException e) {
+        LOG.error("Coprocessor preMasterInitialization() hook failed", e);
+      }
+    }
 
     status.markComplete("Initialization successful");
     LOG.info("Master has completed initialization");

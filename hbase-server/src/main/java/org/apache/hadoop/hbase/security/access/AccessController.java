@@ -780,6 +780,11 @@ public class AccessController extends BaseRegionObserver
   }
 
   @Override
+  public void preMasterInitialization(
+      ObserverContext<MasterCoprocessorEnvironment> ctx) throws IOException {
+  }
+
+  @Override
   public void preSnapshot(final ObserverContext<MasterCoprocessorEnvironment> ctx,
       final SnapshotDescription snapshot, final HTableDescriptor hTableDescriptor)
       throws IOException {

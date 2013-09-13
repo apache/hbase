@@ -518,6 +518,13 @@ public interface MasterObserver extends Coprocessor {
       throws IOException;
 
   /**
+   * Call before the master initialization is set to true.
+   * {@link org.apache.hadoop.hbase.master.HMaster} process.
+   */
+  void preMasterInitialization(final ObserverContext<MasterCoprocessorEnvironment> ctx)
+      throws IOException;
+
+  /**
    * Called before a new snapshot is taken.
    * Called as part of snapshot RPC call.
    * It can't bypass the default action, e.g., ctx.bypass() won't have effect.
