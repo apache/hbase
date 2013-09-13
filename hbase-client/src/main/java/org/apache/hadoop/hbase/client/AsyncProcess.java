@@ -145,23 +145,27 @@ class AsyncProcess<CResult> {
   }
 
   private static class BatchErrors {
-    private List<Throwable> throwables = new ArrayList<Throwable>();
-    private List<Row> actions = new ArrayList<Row>();
-    private List<String> addresses = new ArrayList<String>();
+    private final List<Throwable> throwables = new ArrayList<Throwable>();
+    private final List<Row> actions = new ArrayList<Row>();
+    private final List<String> addresses = new ArrayList<String>();
 
-    public void add(Throwable ex, Row row, HRegionLocation location) {
+    public synchronized void add(Throwable ex, Row row, HRegionLocation location) {
+      if (row == null){
+        throw new IllegalArgumentException("row cannot be null. location=" + location);
+      }
+
       throwables.add(ex);
       actions.add(row);
       addresses.add(location != null ? location.getHostnamePort() : "null location");
     }
 
-    private RetriesExhaustedWithDetailsException makeException() {
+    private synchronized RetriesExhaustedWithDetailsException makeException() {
       return new RetriesExhaustedWithDetailsException(
           new ArrayList<Throwable>(throwables),
           new ArrayList<Row>(actions), new ArrayList<String>(addresses));
     }
 
-    public void clear() {
+    public synchronized void clear() {
       throwables.clear();
       actions.clear();
       addresses.clear();
@@ -171,6 +175,10 @@ class AsyncProcess<CResult> {
   public AsyncProcess(HConnection hc, TableName tableName, ExecutorService pool,
       AsyncProcessCallback<CResult> callback, Configuration conf,
       RpcRetryingCallerFactory rpcCaller) {
+    if (hc == null){
+      throw new IllegalArgumentException("HConnection cannot be null.");
+    }
+
     this.hConnection = hc;
     this.tableName = tableName;
     this.pool = pool;
@@ -283,6 +291,10 @@ class AsyncProcess<CResult> {
   private HRegionLocation findDestLocation(Row row, int numAttempt,
                                            int posInList, boolean force,
                                            Map<String, Boolean> regionStatus) {
+    if (row == null){
+      throw new IllegalArgumentException("row cannot be null");
+    }
+
     HRegionLocation loc = null;
     IOException locationException = null;
     try {
@@ -608,10 +620,11 @@ class AsyncProcess<CResult> {
           ConnectionUtils.getPauseTime(pause, numAttempt));
       if (numAttempt > 3 && LOG.isDebugEnabled()) {
         // We use this value to have some logs when we have multiple failures, but not too many
-        //  logs as errors are to be expected wehn region moves, split and so on
+        //  logs, as errors are to be expected when a region moves, splits and so on
         LOG.debug("Attempt #" + numAttempt + "/" + numTries + " failed " + failureCount +
-          " ops , resubmitting " + toReplay.size() + ", " + location + ", last exception was: " +
-          throwable.getMessage() + ", sleeping " + backOffTime + "ms");
+            " ops , resubmitting " + toReplay.size() + ", " + location + ", last exception was: " +
+            (throwable == null ? "null" : throwable.getMessage()) +
+            ", sleeping " + backOffTime + "ms");
       }
       try {
         Thread.sleep(backOffTime);
