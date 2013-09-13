@@ -1070,7 +1070,7 @@ MasterServices, Server {
         MetaReader.fullScan(catalogTracker, disabledOrDisablingOrEnabling, true);
     for(Iterator<HRegionInfo> iter = allRegions.keySet().iterator();
         iter.hasNext();) {
-      if (!iter.next().getTableName().isSystemTable()) {
+      if (!iter.next().getTable().isSystemTable()) {
         iter.remove();
       }
     }
@@ -1110,8 +1110,8 @@ MasterServices, Server {
         this.assignmentManager.regionOnline(regionInfo, currServer);
       }
 
-      if (!this.assignmentManager.getZKTable().isEnabledTable(regionInfo.getTableName())) {
-        this.assignmentManager.setEnabledTable(regionInfo.getTableName());
+      if (!this.assignmentManager.getZKTable().isEnabledTable(regionInfo.getTable())) {
+        this.assignmentManager.setEnabledTable(regionInfo.getTable());
       }
       LOG.info("System region " + regionInfo.getRegionNameAsString() + " assigned, rit=" + rit +
         ", location=" + catalogTracker.getMetaLocation());
@@ -2096,7 +2096,7 @@ MasterServices, Server {
           if (pair == null) {
             return false;
           }
-          if (!pair.getFirst().getTableName().equals(tableName)) {
+          if (!pair.getFirst().getTable().equals(tableName)) {
             return false;
           }
           result.set(pair);

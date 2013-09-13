@@ -489,12 +489,12 @@ public class TestMasterTransitions {
     for (Result r = null; (r = s.next()) != null;) {
       HRegionInfo hri = HRegionInfo.getHRegionInfo(r);
       if (hri == null) break;
-      if (!hri.getTableName().getNameAsString().equals(TABLENAME)) {
+      if (!hri.getTable().getNameAsString().equals(TABLENAME)) {
         continue;
       }
 
       // If start key, add 'aaa'.
-      if(!hri.getTableName().getNameAsString().equals(TABLENAME)) {
+      if(!hri.getTable().getNameAsString().equals(TABLENAME)) {
         continue;
       }
       byte [] row = getStartKey(hri);
@@ -508,24 +508,6 @@ public class TestMasterTransitions {
     Assert.assertEquals(expected, rows);
     t.close();
     meta.close();
-    return rows;
-  }
-
-  /*
-   * @return Count of rows in TABLENAME
-   * @throws IOException
-   */
-  private static int count() throws IOException {
-    HTable t = new HTable(TEST_UTIL.getConfiguration(), TABLENAME);
-    int rows = 0;
-    Scan scan = new Scan();
-    ResultScanner s = t.getScanner(scan);
-    for (Result r = null; (r = s.next()) != null;) {
-      rows++;
-    }
-    s.close();
-    LOG.info("Counted=" + rows);
-    t.close();
     return rows;
   }
 
@@ -545,6 +527,4 @@ public class TestMasterTransitions {
   private static byte [] getTestQualifier() {
     return getTestFamily();
   }
-
 }
-

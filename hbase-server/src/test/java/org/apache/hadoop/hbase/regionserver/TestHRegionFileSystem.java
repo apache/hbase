@@ -60,7 +60,7 @@ public class TestHRegionFileSystem {
     // Create a Region
     HRegionInfo hri = new HRegionInfo(TableName.valueOf("TestTable"));
     HRegionFileSystem regionFs = HRegionFileSystem.createRegionOnFileSystem(conf, fs,
-        FSUtils.getTableDir(rootDir, hri.getTableName()), hri);
+        FSUtils.getTableDir(rootDir, hri.getTable()), hri);
 
     // Verify if the region is on disk
     Path regionDir = regionFs.getRegionDir();
@@ -72,12 +72,12 @@ public class TestHRegionFileSystem {
 
     // Open the region
     regionFs = HRegionFileSystem.openRegionFromFileSystem(conf, fs,
-        FSUtils.getTableDir(rootDir, hri.getTableName()), hri, false);
+        FSUtils.getTableDir(rootDir, hri.getTable()), hri, false);
     assertEquals(regionDir, regionFs.getRegionDir());
 
     // Delete the region
     HRegionFileSystem.deleteRegionFromFileSystem(conf, fs,
-        FSUtils.getTableDir(rootDir, hri.getTableName()), hri);
+        FSUtils.getTableDir(rootDir, hri.getTable()), hri);
     assertFalse("The region folder should be removed", fs.exists(regionDir));
 
     fs.delete(rootDir, true);

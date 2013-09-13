@@ -480,7 +480,7 @@ public class TestEndToEndSplitTransaction {
       throws IOException, InterruptedException {
     log("blocking until region is opened for reading:" + hri.getRegionNameAsString());
     long start = System.currentTimeMillis();
-    HTable table = new HTable(conf, hri.getTableName());
+    HTable table = new HTable(conf, hri.getTable());
 
     try {
       byte [] row = hri.getStartKey();

@@ -142,7 +142,7 @@ public class TestMetaScanner {
 
             //select a random region
             HRegionInfo parent = regions.get(random.nextInt(regions.size()));
-            if (parent == null || !TABLENAME.equals(parent.getTableName())) {
+            if (parent == null || !TABLENAME.equals(parent.getTable())) {
               continue;
             }
 

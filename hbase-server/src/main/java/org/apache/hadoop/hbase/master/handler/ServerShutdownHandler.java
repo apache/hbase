@@ -251,7 +251,7 @@ public class ServerShutdownHandler extends EventHandler {
             toAssignRegions.add(hri);
           } else if (rit != null) {
             if ((rit.isClosing() || rit.isPendingClose())
-                && am.getZKTable().isDisablingOrDisabledTable(hri.getTableName())) {
+                && am.getZKTable().isDisablingOrDisabledTable(hri.getTable())) {
               // If the table was partially disabled and the RS went down, we should clear the RIT
               // and remove the node for the region.
               // The rit that we use may be stale in case the table was in DISABLING state
@@ -324,18 +324,16 @@ public class ServerShutdownHandler extends EventHandler {
   public static boolean processDeadRegion(HRegionInfo hri, Result result,
       AssignmentManager assignmentManager, CatalogTracker catalogTracker)
   throws IOException {
-    boolean tablePresent = assignmentManager.getZKTable().isTablePresent(
-        hri.getTableName());
+    boolean tablePresent = assignmentManager.getZKTable().isTablePresent(hri.getTable());
     if (!tablePresent) {
-      LOG.info("The table " + hri.getTableName()
+      LOG.info("The table " + hri.getTable()
           + " was deleted.  Hence not proceeding.");
       return false;
     }
     // If table is not disabled but the region is offlined,
-    boolean disabled = assignmentManager.getZKTable().isDisabledTable(
-        hri.getTableName());
+    boolean disabled = assignmentManager.getZKTable().isDisabledTable(hri.getTable());
     if (disabled){
-      LOG.info("The table " + hri.getTableName()
+      LOG.info("The table " + hri.getTable()
           + " was disabled.  Hence not proceeding.");
       return false;
     }
@@ -345,10 +343,9 @@ public class ServerShutdownHandler extends EventHandler {
       //to the dead server. We don't have to do anything.
       return false;
     }
-    boolean disabling = assignmentManager.getZKTable().isDisablingTable(
-        hri.getTableName());
+    boolean disabling = assignmentManager.getZKTable().isDisablingTable(hri.getTable());
     if (disabling) {
-      LOG.info("The table " + hri.getTableName()
+      LOG.info("The table " + hri.getTable()
           + " is disabled.  Hence not assigning region" + hri.getEncodedName());
       return false;
     }

@@ -280,7 +280,7 @@ public class HStore implements Store {
 
   @Override
   public TableName getTableName() {
-    return this.getRegionInfo().getTableName();
+    return this.getRegionInfo().getTable();
   }
 
   @Override

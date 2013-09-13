@@ -1007,6 +1007,18 @@ public class HTable implements HTableInterface {
   }
 
   /**
+   * @deprecated Use {@link #incrementColumnValue(byte[], byte[], byte[], long, Durability)}
+   */
+  @Deprecated
+  @Override
+  public long incrementColumnValue(final byte [] row, final byte [] family,
+      final byte [] qualifier, final long amount, final boolean writeToWAL)
+  throws IOException {
+    return incrementColumnValue(row, family, qualifier, amount,
+      writeToWAL? Durability.SKIP_WAL: Durability.USE_DEFAULT);
+  }
+
+  /**
    * {@inheritDoc}
    */
   @Override

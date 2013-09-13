@@ -564,6 +564,12 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
       public void setWriteBufferSize(long writeBufferSize) throws IOException {
         table.setWriteBufferSize(writeBufferSize);
       }
+
+      @Override
+      public long incrementColumnValue(byte[] row, byte[] family,
+          byte[] qualifier, long amount, boolean writeToWAL) throws IOException {
+        return table.incrementColumnValue(row, family, qualifier, amount, writeToWAL);
+      }
     }
 
     /** The coprocessor */

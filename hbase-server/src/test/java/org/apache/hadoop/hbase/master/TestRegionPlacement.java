@@ -64,8 +64,6 @@ import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
-import org.apache.hadoop.hbase.zookeeper.ZKAssign;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.zookeeper.KeeperException;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -307,7 +305,7 @@ public class TestRegionPlacement {
           TEST_UTIL.getHBaseCluster().getRegionServer(killIndex).getOnlineRegionsLocalContext();
       isNamespaceServer = false;
       for (HRegion r : regs) {
-        if (r.getRegionInfo().getTableName().getNamespaceAsString()
+        if (r.getRegionInfo().getTable().getNamespaceAsString()
             .equals(NamespaceDescriptor.SYSTEM_NAMESPACE_NAME_STR)) {
           isNamespaceServer = true;
           break;
@@ -606,7 +604,7 @@ public class TestRegionPlacement {
       public boolean processRow(Result result) throws IOException {
         try {
           HRegionInfo info = MetaScanner.getHRegionInfo(result);
-          if(info.getTableName().getNamespaceAsString()
+          if(info.getTable().getNamespaceAsString()
               .equals(NamespaceDescriptor.SYSTEM_NAMESPACE_NAME_STR)) {
             return true;
           }

@@ -104,8 +104,8 @@ public class SnapshotOfRegionAssignmentFromMeta {
               HRegionInfo.getHRegionInfoAndServerName(result);
           HRegionInfo hri = regionAndServer.getFirst();
           if (hri  == null) return true;
-          if (hri.getTableName() == null) return true;
-          if (disabledTables.contains(hri.getTableName())) {
+          if (hri.getTable() == null) return true;
+          if (disabledTables.contains(hri.getTable())) {
             return true;
           }
           // Are we to include split parents in the list?
@@ -144,7 +144,7 @@ public class SnapshotOfRegionAssignmentFromMeta {
     regionNameToRegionInfoMap.put(regionInfo.getRegionNameAsString(), regionInfo);
 
     // Process the table to region map
-    TableName tableName = regionInfo.getTableName();
+    TableName tableName = regionInfo.getTable();
     List<HRegionInfo> regionList = tableToRegionMap.get(tableName);
     if (regionList == null) {
       regionList = new ArrayList<HRegionInfo>();

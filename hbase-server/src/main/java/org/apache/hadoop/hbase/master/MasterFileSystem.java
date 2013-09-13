@@ -588,7 +588,7 @@ public class MasterFileSystem {
   public void deleteFamilyFromFS(HRegionInfo region, byte[] familyName)
       throws IOException {
     // archive family store files
-    Path tableDir = FSUtils.getTableDir(rootdir, region.getTableName());
+    Path tableDir = FSUtils.getTableDir(rootdir, region.getTable());
     HFileArchiver.archiveFamily(fs, conf, region, tableDir, familyName);
 
     // delete the family folder

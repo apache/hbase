@@ -460,7 +460,7 @@ public class AssignmentManager extends ZooKeeperListener {
       // its a clean cluster startup, else its a failover.
       Map<HRegionInfo, ServerName> regions = regionStates.getRegionAssignments();
       for (Map.Entry<HRegionInfo, ServerName> e: regions.entrySet()) {
-        if (!e.getKey().getTableName().isSystemTable()
+        if (!e.getKey().getTable().isSystemTable()
             && e.getValue() != null) {
           LOG.debug("Found " + e + " out on cluster");
           failover = true;
@@ -1282,8 +1282,7 @@ public class AssignmentManager extends ZooKeeperListener {
             if (rs.isOpened()) {
               ServerName serverName = rs.getServerName();
               regionOnline(regionInfo, serverName);
-              boolean disabled = getZKTable().isDisablingOrDisabledTable(
-                regionInfo.getTableName());
+              boolean disabled = getZKTable().isDisablingOrDisabledTable(regionInfo.getTable());
               if (!serverManager.isServerOnline(serverName) && !disabled) {
                 LOG.info("Opened " + regionNameStr
                   + "but the region server is offline, reassign the region");
@@ -1898,7 +1897,7 @@ public class AssignmentManager extends ZooKeeperListener {
           // When we have a case such as all the regions are added directly into hbase:meta and we call
           // assignRegion then we need to make the table ENABLED. Hence in such case the table
           // will not be in ENABLING or ENABLED state.
-          TableName tableName = region.getTableName();
+          TableName tableName = region.getTable();
           if (!zkTable.isEnablingTable(tableName) && !zkTable.isEnabledTable(tableName)) {
             LOG.debug("Setting table " + tableName + " to ENABLED state.");
             setEnabledTable(tableName);
@@ -2085,7 +2084,7 @@ public class AssignmentManager extends ZooKeeperListener {
   }
 
   private boolean isDisabledorDisablingRegionInRIT(final HRegionInfo region) {
-    TableName tableName = region.getTableName();
+    TableName tableName = region.getTable();
     boolean disabled = this.zkTable.isDisabledTable(tableName);
     if (disabled || this.zkTable.isDisablingTable(tableName)) {
       LOG.info("Table " + tableName + (disabled ? " disabled;" : " disabling;") +
@@ -2584,7 +2583,7 @@ public class AssignmentManager extends ZooKeeperListener {
     //remove system tables because they would have been assigned earlier
     for(Iterator<HRegionInfo> iter = allRegions.keySet().iterator();
         iter.hasNext();) {
-      if (iter.next().getTableName().isSystemTable()) {
+      if (iter.next().getTable().isSystemTable()) {
         iter.remove();
       }
     }
@@ -2603,7 +2602,7 @@ public class AssignmentManager extends ZooKeeperListener {
     }
 
     for (HRegionInfo hri : allRegions.keySet()) {
-      TableName tableName = hri.getTableName();
+      TableName tableName = hri.getTable();
       if (!zkTable.isEnabledTable(tableName)) {
         setEnabledTable(tableName);
       }
@@ -2664,7 +2663,7 @@ public class AssignmentManager extends ZooKeeperListener {
       HRegionInfo regionInfo = region.getFirst();
       ServerName regionLocation = region.getSecond();
       if (regionInfo == null) continue;
-      TableName tableName = regionInfo.getTableName();
+      TableName tableName = regionInfo.getTable();
       if (tableName.isSystemTable()) continue;
       regionStates.createRegionState(regionInfo);
       if (regionStates.isRegionInState(regionInfo, State.SPLIT)) {
@@ -3161,7 +3160,7 @@ public class AssignmentManager extends ZooKeeperListener {
           } catch (KeeperException ke) {
             server.abort("Unexpected ZK exception deleting node " + hri, ke);
           }
-          if (zkTable.isDisablingOrDisabledTable(hri.getTableName())) {
+          if (zkTable.isDisablingOrDisabledTable(hri.getTable())) {
             it.remove();
             regionStates.regionOffline(hri);
             continue;
@@ -3193,8 +3192,7 @@ public class AssignmentManager extends ZooKeeperListener {
     // the master to disable, we need to make sure we close those regions in
     // that case. This is not racing with the region server itself since RS
     // report is done after the split transaction completed.
-    if (this.zkTable.isDisablingOrDisabledTable(
-        parent.getTableName())) {
+    if (this.zkTable.isDisablingOrDisabledTable(parent.getTable())) {
       unassign(a);
       unassign(b);
     }
@@ -3217,7 +3215,7 @@ public class AssignmentManager extends ZooKeeperListener {
     // the master to disable, we need to make sure we close those regions in
     // that case. This is not racing with the region server itself since RS
     // report is done after the regions merge transaction completed.
-    if (this.zkTable.isDisablingOrDisabledTable(merged.getTableName())) {
+    if (this.zkTable.isDisablingOrDisabledTable(merged.getTable())) {
       unassign(merged);
     }
   }

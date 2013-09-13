@@ -235,8 +235,7 @@ public class OfflineMetaRebuildTestCore {
     for (Result r : scanner) {
       HRegionInfo info =
           HRegionInfo.getHRegionInfo(r);
-      if(info != null &&
-          !info.getTableName().getNamespaceAsString()
+      if(info != null && !info.getTable().getNamespaceAsString()
           .equals(NamespaceDescriptor.SYSTEM_NAMESPACE_NAME_STR)) {
         Delete d = new Delete(r.getRow());
         dels.add(d);

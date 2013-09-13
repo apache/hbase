@@ -833,7 +833,7 @@ public class TestCatalogJanitor {
     // archive directory. Otherwise, it just seems to pick the first root directory it can find (so
     // the single test passes, but when the full suite is run, things get borked).
     FSUtils.setRootDir(fs.getConf(), rootdir);
-    Path tabledir = FSUtils.getTableDir(rootdir, parent.getTableName());
+    Path tabledir = FSUtils.getTableDir(rootdir, parent.getTable());
     Path storedir = HStore.getStoreHomedir(tabledir, parent, htd.getColumnFamilies()[0].getName());
     System.out.println("Old root:" + rootdir);
     System.out.println("Old table:" + tabledir);
@@ -915,7 +915,7 @@ public class TestCatalogJanitor {
       final HRegionInfo daughter, final byte [] midkey, final boolean top)
   throws IOException {
     Path rootdir = services.getMasterFileSystem().getRootDir();
-    Path tabledir = FSUtils.getTableDir(rootdir, parent.getTableName());
+    Path tabledir = FSUtils.getTableDir(rootdir, parent.getTable());
     Path storedir = HStore.getStoreHomedir(tabledir, daughter,
       htd.getColumnFamilies()[0].getName());
     Reference ref =

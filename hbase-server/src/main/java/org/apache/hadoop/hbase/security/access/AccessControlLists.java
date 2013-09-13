@@ -299,7 +299,7 @@ public class AccessControlLists {
     } else if(userPerm.isGlobal()) {
       row = ACL_GLOBAL_NAME;
     } else {
-      row = userPerm.getTable().getName();
+      row = userPerm.getTableName().getName();
     }
     return row;
   }
@@ -502,7 +502,7 @@ public class AccessControlLists {
 
     for (Map.Entry<String, TablePermission> entry : allPerms.entries()) {
       UserPermission up = new UserPermission(Bytes.toBytes(entry.getKey()),
-          entry.getValue().getTable(), entry.getValue().getFamily(),
+          entry.getValue().getTableName(), entry.getValue().getFamily(),
           entry.getValue().getQualifier(), entry.getValue().getActions());
       perms.add(up);
     }

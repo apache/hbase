@@ -214,11 +214,11 @@ public class TestSplitTransactionOnCluster {
       RegionStates regionStates = cluster.getMaster().getAssignmentManager().getRegionStates();
       Map<String, RegionState> rit = regionStates.getRegionsInTransition();
 
-      for (int i=0; rit.containsKey(hri.getTableName()) && i<100; i++) {
+      for (int i=0; rit.containsKey(hri.getTable()) && i<100; i++) {
         Thread.sleep(100);
       }
       assertFalse("region still in transition", rit.containsKey(
-          rit.containsKey(hri.getTableName())));
+          rit.containsKey(hri.getTable())));
 
       List<HRegion> onlineRegions = regionServer.getOnlineRegions(tableName);
       // Region server side split is successful.
@@ -891,7 +891,7 @@ public class TestSplitTransactionOnCluster {
     @Override
     void transitionZKNode(Server server, RegionServerServices services, HRegion a, HRegion b)
         throws IOException {
-      if (this.currentRegion.getRegionInfo().getTableName().getNameAsString()
+      if (this.currentRegion.getRegionInfo().getTable().getNameAsString()
           .equals("testShouldFailSplitIfZNodeDoesNotExistDueToPrevRollBack")) {
         try {
           if (!secondSplit){
@@ -903,14 +903,14 @@ public class TestSplitTransactionOnCluster {
 
       }
       super.transitionZKNode(server, services, a, b);
-      if (this.currentRegion.getRegionInfo().getTableName().getNameAsString()
+      if (this.currentRegion.getRegionInfo().getTable().getNameAsString()
           .equals("testShouldFailSplitIfZNodeDoesNotExistDueToPrevRollBack")) {
         firstSplitCompleted = true;
       }
     }
     @Override
     public boolean rollback(Server server, RegionServerServices services) throws IOException {
-      if (this.currentRegion.getRegionInfo().getTableName().getNameAsString()
+      if (this.currentRegion.getRegionInfo().getTable().getNameAsString()
           .equals("testShouldFailSplitIfZNodeDoesNotExistDueToPrevRollBack")) {
         if(secondSplit){
           super.rollback(server, services);

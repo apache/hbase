@@ -230,7 +230,7 @@ public class EnableTableHandler extends EventHandler {
       } else {
         if (LOG.isDebugEnabled()) {
           LOG.debug("Skipping assign for the region " + hri + " during enable table "
-              + hri.getTableName() + " because its already in tranition or assigned.");
+              + hri.getTable() + " because its already in tranition or assigned.");
         }
       }
     }

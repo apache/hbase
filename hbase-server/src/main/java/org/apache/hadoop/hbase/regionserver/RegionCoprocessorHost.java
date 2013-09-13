@@ -146,7 +146,7 @@ public class RegionCoprocessorHost
     loadSystemCoprocessors(conf, REGION_COPROCESSOR_CONF_KEY);
 
     // load system default cp's for user tables from configuration.
-    if (!region.getRegionInfo().getTableName().isSystemTable()) {
+    if (!region.getRegionInfo().getTable().isSystemTable()) {
       loadSystemCoprocessors(conf, USER_REGION_COPROCESSOR_CONF_KEY);
     }
 

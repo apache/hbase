@@ -1915,7 +1915,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
         continue;
       }
 
-      if (info.getTableName().equals(tableName)) {
+      if (info.getTable().equals(tableName)) {
         LOG.info("getMetaTableRows: row -> " +
             Bytes.toStringBinary(result.getRow()) + info);
         rows.add(result.getRow());
@@ -2657,7 +2657,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
             while ((r = s.next()) != null) {
               byte [] b = r.getValue(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER);
               HRegionInfo info = HRegionInfo.parseFromOrNull(b);
-              if (info != null && info.getTableName().equals(tableName)) {
+              if (info != null && info.getTable().equals(tableName)) {
                 b = r.getValue(HConstants.CATALOG_FAMILY, HConstants.SERVER_QUALIFIER);
                 allRegionsAssigned &= (b != null);
               }

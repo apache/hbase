@@ -103,10 +103,10 @@ public final class HLogPerformanceEvaluation extends Configured implements Tool 
           addFamilyMapToWALEdit(put.getFamilyCellMap(), walEdit);
           HRegionInfo hri = region.getRegionInfo();
           if (this.noSync) {
-            hlog.appendNoSync(hri, hri.getTableName(), walEdit,
+            hlog.appendNoSync(hri, hri.getTable(), walEdit,
                               new ArrayList<UUID>(), now, htd);
           } else {
-            hlog.append(hri, hri.getTableName(), walEdit, now, htd);
+            hlog.append(hri, hri.getTable(), walEdit, now, htd);
           }
         }
         long totalTime = (System.currentTimeMillis() - startTime);

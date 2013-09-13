@@ -2326,7 +2326,7 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
      synchronized (this.onlineRegions) {
        for (HRegion region: this.onlineRegions.values()) {
          HRegionInfo regionInfo = region.getRegionInfo();
-         if(regionInfo.getTableName().equals(tableName)) {
+         if(regionInfo.getTable().equals(tableName)) {
            tableRegions.add(region);
          }
        }
@@ -3511,10 +3511,10 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
           }
         }
         LOG.info("Open " + region.getRegionNameAsString());
-        htd = htds.get(region.getTableName());
+        htd = htds.get(region.getTable());
         if (htd == null) {
-          htd = this.tableDescriptors.get(region.getTableName());
-          htds.put(region.getTableName(), htd);
+          htd = this.tableDescriptors.get(region.getTable());
+          htds.put(region.getTable(), htd);
         }
 
         final Boolean previous = this.regionsInTransitionInRS.putIfAbsent(

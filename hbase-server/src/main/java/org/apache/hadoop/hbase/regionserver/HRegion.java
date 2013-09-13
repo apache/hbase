@@ -3949,11 +3949,11 @@ public class HRegion implements HeapSize { // , Writable{
                                       final HLog hlog,
                                       final boolean initialize, final boolean ignoreHLog)
       throws IOException {
-    LOG.info("creating HRegion " + info.getTableName().getNameAsString()
+    LOG.info("creating HRegion " + info.getTable().getNameAsString()
         + " HTD == " + hTableDescriptor + " RootDir = " + rootDir +
-        " Table name == " + info.getTableName().getNameAsString());
+        " Table name == " + info.getTable().getNameAsString());
 
-    Path tableDir = FSUtils.getTableDir(rootDir, info.getTableName());
+    Path tableDir = FSUtils.getTableDir(rootDir, info.getTable());
     FileSystem fs = FileSystem.get(conf);
     HRegionFileSystem rfs = HRegionFileSystem.createRegionOnFileSystem(conf, fs, tableDir, info);
     HLog effectiveHLog = hlog;
@@ -4113,7 +4113,7 @@ public class HRegion implements HeapSize { // , Writable{
     if (LOG.isDebugEnabled()) {
       LOG.debug("Opening region: " + info);
     }
-    Path dir = FSUtils.getTableDir(rootDir, info.getTableName());
+    Path dir = FSUtils.getTableDir(rootDir, info.getTable());
     HRegion r = HRegion.newHRegion(dir, wal, fs, conf, info, htd, rsServices);
     return r.openHRegion(reporter);
   }
@@ -4242,8 +4242,7 @@ public class HRegion implements HeapSize { // , Writable{
   @Deprecated
   public static Path getRegionDir(final Path rootdir, final HRegionInfo info) {
     return new Path(
-      FSUtils.getTableDir(rootdir, info.getTableName()),
-                                   info.getEncodedName());
+      FSUtils.getTableDir(rootdir, info.getTable()), info.getEncodedName());
   }
 
   /**
@@ -4302,8 +4301,7 @@ public class HRegion implements HeapSize { // , Writable{
    * @throws IOException
    */
   public static HRegion merge(final HRegion a, final HRegion b) throws IOException {
-    if (!a.getRegionInfo().getTableName().equals(
-        b.getRegionInfo().getTableName())) {
+    if (!a.getRegionInfo().getTable().equals(b.getRegionInfo().getTable())) {
       throw new IOException("Regions do not belong to the same table");
     }
 
@@ -5222,7 +5220,7 @@ public class HRegion implements HeapSize { // , Writable{
   public byte[] checkSplit() {
     // Can't split META
     if (this.getRegionInfo().isMetaTable() ||
-        TableName.NAMESPACE_TABLE_NAME.equals(this.getRegionInfo().getTableName())) {
+        TableName.NAMESPACE_TABLE_NAME.equals(this.getRegionInfo().getTable())) {
       if (shouldForceSplit()) {
         LOG.warn("Cannot split meta region in HBase 0.20 and above");
       }

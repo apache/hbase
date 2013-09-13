@@ -140,7 +140,7 @@ public class UserPermission extends TablePermission {
    * @param perm a TablePermission
    */
   public UserPermission(byte[] user, TablePermission perm) {
-    super(perm.getNamespace(), perm.getTable(), perm.getFamily(), perm.getQualifier(),
+    super(perm.getNamespace(), perm.getTableName(), perm.getFamily(), perm.getQualifier(),
         perm.actions);
     this.user = user;
   }

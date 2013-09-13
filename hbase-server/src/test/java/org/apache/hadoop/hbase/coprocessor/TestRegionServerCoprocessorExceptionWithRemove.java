@@ -53,8 +53,7 @@ public class TestRegionServerCoprocessorExceptionWithRemove {
                        final Put put, final WALEdit edit,
                        final Durability durability) {
       String tableName =
-          c.getEnvironment().getRegion().getRegionInfo()
-              .getTableName().getNameAsString();
+          c.getEnvironment().getRegion().getRegionInfo().getTable().getNameAsString();
       if (tableName.equals("observed_table")) {
         Integer i = null;
         i = i + 1;

@@ -103,9 +103,9 @@ public class MetaReader {
         Pair<HRegionInfo, ServerName> region = HRegionInfo.getHRegionInfoAndServerName(r);
         HRegionInfo hri = region.getFirst();
         if (hri  == null) return true;
-        if (hri.getTableName() == null) return true;
+        if (hri.getTable() == null) return true;
         if (disabledTables.contains(
-            hri.getTableName())) return true;
+            hri.getTable())) return true;
         // Are we to include split parents in the list?
         if (excludeOfflinedSplitParents && hri.isSplitParent()) return true;
         regions.put(hri, region.getSecond());
@@ -362,7 +362,7 @@ public class MetaReader {
    * <code>tableName</code>
    */
   static boolean isInsideTable(final HRegionInfo current, final TableName tableName) {
-    return tableName.equals(current.getTableName());
+    return tableName.equals(current.getTable());
   }
 
   /**

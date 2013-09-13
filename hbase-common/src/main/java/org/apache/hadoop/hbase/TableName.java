@@ -129,8 +129,9 @@ public final class TableName implements Comparable<TableName> {
     return tableName;
   }
 
-  public static void isLegalTableQualifierName(final byte[] qualifierName){
+  public static byte [] isLegalTableQualifierName(final byte[] qualifierName){
     isLegalTableQualifierName(qualifierName, 0, qualifierName.length);
+    return qualifierName;
   }
 
   /**

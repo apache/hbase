@@ -208,7 +208,7 @@ public class AccessController extends BaseRegionObserver
       RegionCoprocessorEnvironment e,
       Map<byte [], ? extends Collection<?>> families) {
     HRegionInfo hri = e.getRegion().getRegionInfo();
-    TableName tableName = hri.getTableName();
+    TableName tableName = hri.getTable();
 
     // 1. All users need read access to hbase:meta table.
     // this is a very common operation, so deal with it quickly.
@@ -470,7 +470,7 @@ public class AccessController extends BaseRegionObserver
       Map<byte[], ? extends Set<byte[]>> familyMap)
     throws IOException {
     HRegionInfo hri = env.getRegion().getRegionInfo();
-    TableName tableName = hri.getTableName();
+    TableName tableName = hri.getTable();
 
     if (user == null) {
       return false;
@@ -702,7 +702,7 @@ public class AccessController extends BaseRegionObserver
   @Override
   public void preMove(ObserverContext<MasterCoprocessorEnvironment> c, HRegionInfo region,
       ServerName srcServer, ServerName destServer) throws IOException {
-    requirePermission("move", region.getTableName(), null, null, Action.ADMIN);
+    requirePermission("move", region.getTable(), null, null, Action.ADMIN);
   }
 
   @Override
@@ -713,7 +713,7 @@ public class AccessController extends BaseRegionObserver
   @Override
   public void preAssign(ObserverContext<MasterCoprocessorEnvironment> c, HRegionInfo regionInfo)
       throws IOException {
-    requirePermission("assign", regionInfo.getTableName(), null, null, Action.ADMIN);
+    requirePermission("assign", regionInfo.getTable(), null, null, Action.ADMIN);
   }
 
   @Override
@@ -723,7 +723,7 @@ public class AccessController extends BaseRegionObserver
   @Override
   public void preUnassign(ObserverContext<MasterCoprocessorEnvironment> c, HRegionInfo regionInfo,
       boolean force) throws IOException {
-    requirePermission("unassign", regionInfo.getTableName(), null, null, Action.ADMIN);
+    requirePermission("unassign", regionInfo.getTable(), null, null, Action.ADMIN);
   }
 
   @Override
@@ -733,7 +733,7 @@ public class AccessController extends BaseRegionObserver
   @Override
   public void preRegionOffline(ObserverContext<MasterCoprocessorEnvironment> c,
       HRegionInfo regionInfo) throws IOException {
-    requirePermission("regionOffline", regionInfo.getTableName(), null, null, Action.ADMIN);
+    requirePermission("regionOffline", regionInfo.getTable(), null, null, Action.ADMIN);
   }
 
   @Override
@@ -1264,7 +1264,7 @@ public class AccessController extends BaseRegionObserver
         switch(request.getUserPermission().getPermission().getType()) {
           case Global :
           case Table :
-            requirePermission("grant", perm.getTable(), perm.getFamily(),
+            requirePermission("grant", perm.getTableName(), perm.getFamily(),
                 perm.getQualifier(), Action.ADMIN);
             break;
           case Namespace :
@@ -1304,7 +1304,7 @@ public class AccessController extends BaseRegionObserver
         switch(request.getUserPermission().getPermission().getType()) {
           case Global :
           case Table :
-            requirePermission("revoke", perm.getTable(), perm.getFamily(),
+            requirePermission("revoke", perm.getTableName(), perm.getFamily(),
                               perm.getQualifier(), Action.ADMIN);
             break;
           case Namespace :
@@ -1380,11 +1380,11 @@ public class AccessController extends BaseRegionObserver
         if (permission instanceof TablePermission) {
           TablePermission tperm = (TablePermission) permission;
           for (Permission.Action action : permission.getActions()) {
-            if (!tperm.getTable().equals(tableName)) {
+            if (!tperm.getTableName().equals(tableName)) {
               throw new CoprocessorException(AccessController.class, String.format("This method "
                   + "can only execute at the table specified in TablePermission. " +
                   "Table of the region:%s , requested table:%s", tableName,
-                  tperm.getTable()));
+                  tperm.getTableName()));
             }
 
             Map<byte[], Set<byte[]>> familyMap = Maps.newTreeMap(Bytes.BYTES_COMPARATOR);
@@ -1426,7 +1426,7 @@ public class AccessController extends BaseRegionObserver
     if (region != null) {
       HRegionInfo regionInfo = region.getRegionInfo();
       if (regionInfo != null) {
-        tableName = regionInfo.getTableName();
+        tableName = regionInfo.getTable();
       }
     }
     return tableName;
@@ -1458,7 +1458,7 @@ public class AccessController extends BaseRegionObserver
   }
 
   private boolean isSpecialTable(HRegionInfo regionInfo) {
-    TableName tableName = regionInfo.getTableName();
+    TableName tableName = regionInfo.getTable();
     return tableName.equals(AccessControlLists.ACL_TABLE_NAME)
         || tableName.equals(TableName.NAMESPACE_TABLE_NAME)
         || tableName.equals(TableName.META_TABLE_NAME);

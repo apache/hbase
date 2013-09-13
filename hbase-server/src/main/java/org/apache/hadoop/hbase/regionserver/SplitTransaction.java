@@ -168,8 +168,8 @@ public class SplitTransaction {
       return false;
     }
     long rid = getDaughterRegionIdTimestamp(hri);
-    this.hri_a = new HRegionInfo(hri.getTableName(), startKey, this.splitrow, false, rid);
-    this.hri_b = new HRegionInfo(hri.getTableName(), this.splitrow, endKey, false, rid);
+    this.hri_a = new HRegionInfo(hri.getTable(), startKey, this.splitrow, false, rid);
+    this.hri_b = new HRegionInfo(hri.getTable(), this.splitrow, endKey, false, rid);
     return true;
   }
 

@@ -85,8 +85,17 @@ implements Writable, Comparable<TableSplit> {
 
   /** Default constructor. */
   public TableSplit() {
-    this(null, null, HConstants.EMPTY_BYTE_ARRAY,
+    this((TableName)null, null, HConstants.EMPTY_BYTE_ARRAY,
       HConstants.EMPTY_BYTE_ARRAY, "");
+  }
+
+  /**
+   * @deprecated Since 0.96.0; use {@link TableSplit#TableSplit(TableName, byte[], byte[], String)}
+   */
+  @Deprecated
+  public TableSplit(final byte [] tableName, Scan scan, byte [] startRow, byte [] endRow,
+      final String location) {
+    this(TableName.valueOf(tableName), scan, startRow, endRow, location);
   }
 
   /**
@@ -111,7 +120,16 @@ implements Writable, Comparable<TableSplit> {
     this.endRow = endRow;
     this.regionLocation = location;
   }
-  
+
+  /**
+   * @deprecated Since 0.96.0; use {@link TableSplit#TableSplit(TableName, byte[], byte[], String)}
+   */
+  @Deprecated
+  public TableSplit(final byte [] tableName, byte[] startRow, byte[] endRow,
+      final String location) {
+    this(TableName.valueOf(tableName), startRow, endRow, location);
+  }
+
   /**
    * Creates a new instance without a scanner.
    *
@@ -136,11 +154,23 @@ implements Writable, Comparable<TableSplit> {
   }
 
   /**
+   * Returns the table name converted to a byte array.
+   * @see #getTable()
+   * @return The table name.
+   */
+  public byte [] getTableName() {
+    return tableName.getName();
+  }
+
+  /**
    * Returns the table name.
    *
    * @return The table name.
    */
-  public TableName getTableName() {
+  public TableName getTable() {
+    // It is ugly that usually to get a TableName, the method is called getTableName.  We can't do
+    // that in here though because there was an existing getTableName in place already since
+    // deprecated.
     return tableName;
   }
 
@@ -268,7 +298,7 @@ implements Writable, Comparable<TableSplit> {
     // If The table name of the two splits is the same then compare start row
     // otherwise compare based on table names
     int tableNameComparison =
-        getTableName().compareTo(split.getTableName());
+        getTable().compareTo(split.getTable());
     return tableNameComparison != 0 ? tableNameComparison : Bytes.compareTo(
         getStartRow(), split.getStartRow());
   }

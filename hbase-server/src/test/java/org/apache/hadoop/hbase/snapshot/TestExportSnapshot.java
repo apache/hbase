@@ -37,17 +37,16 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MediumTests;
-import org.apache.hadoop.hbase.master.snapshot.SnapshotManager;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
-import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.master.snapshot.SnapshotManager;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -202,7 +201,7 @@ public class TestExportSnapshot {
     // First region, simple with one plain hfile.
     HRegionInfo hri = new HRegionInfo(tableWithRefsName);
     HRegionFileSystem r0fs = HRegionFileSystem.createRegionOnFileSystem(conf,
-      fs, FSUtils.getTableDir(archiveDir, hri.getTableName()), hri);
+      fs, FSUtils.getTableDir(archiveDir, hri.getTable()), hri);
     Path storeFile = new Path(rootDir, TEST_HFILE);
     FSDataOutputStream out = fs.create(storeFile);
     out.write(Bytes.toBytes("Test Data"));
@@ -213,7 +212,7 @@ public class TestExportSnapshot {
     // This region contains a reference to the hfile in the first region.
     hri = new HRegionInfo(tableWithRefsName);
     HRegionFileSystem r1fs = HRegionFileSystem.createRegionOnFileSystem(conf,
-      fs, new Path(archiveDir, hri.getTableName().getNameAsString()), hri);
+      fs, new Path(archiveDir, hri.getTable().getNameAsString()), hri);
     storeFile = new Path(rootDir, TEST_HFILE + '.' + r0fs.getRegionInfo().getEncodedName());
     out = fs.create(storeFile);
     out.write(Bytes.toBytes("Test Data"));

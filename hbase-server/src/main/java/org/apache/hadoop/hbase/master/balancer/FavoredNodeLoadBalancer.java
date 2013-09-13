@@ -99,7 +99,7 @@ public class FavoredNodeLoadBalancer extends BaseLoadBalancer {
           currentServer.getPort(), ServerName.NON_STARTCODE);
       List<HRegionInfo> list = entry.getValue();
       for (HRegionInfo region : list) {
-        if(region.getTableName().getNamespaceAsString()
+        if(region.getTable().getNamespaceAsString()
             .equals(NamespaceDescriptor.SYSTEM_NAMESPACE_NAME_STR)) {
           continue;
         }

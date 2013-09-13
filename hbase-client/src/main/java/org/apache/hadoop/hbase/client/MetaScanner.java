@@ -355,7 +355,7 @@ public class MetaScanner {
       if (info == null) {
         return true;
       }
-      if (!(info.getTableName().equals(tableName))) {
+      if (!(info.getTable().equals(tableName))) {
         return false;
       }
       return super.processRow(rowResult);
