@@ -32,6 +32,8 @@
   import="org.apache.hadoop.hbase.master.HMaster" 
   import="org.apache.hadoop.hbase.util.Bytes"
   import="org.apache.hadoop.hbase.util.FSUtils"
+  import="org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest"
+  import="org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetRegionInfoResponse.CompactionState"
   import="org.apache.hadoop.hbase.TableName"
   import="org.apache.hadoop.hbase.HBaseConfiguration" %>
 <%
@@ -221,7 +223,20 @@
   </tr>
   <tr>
       <td>Compaction</td>
-      <td><%= hbadmin.getCompactionState(table.getTableName()) %></td>
+      <td>
+<%
+  try {
+    CompactionState compactionState = hbadmin.getCompactionState(table.getTableName());
+%>
+<%= compactionState %>
+<%
+  } catch (Exception e) {
+  // Nothing really to do here
+    e.printStackTrace();
+%> Unknown <%
+  }
+%>
+      </td>
       <td>Is the table compacting</td>
   </tr>
 <%  if (showFragmentation) { %>

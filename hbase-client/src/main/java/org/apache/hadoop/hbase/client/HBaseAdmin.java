@@ -2525,6 +2525,15 @@ public class HBaseAdmin implements Abortable, Closeable {
                 pair.getFirst() + ": " +
                 StringUtils.stringifyException(e));
             }
+          } catch (RemoteException e) {
+            if (e.getMessage().indexOf(NotServingRegionException.class.getName()) >= 0) {
+              if (LOG.isDebugEnabled()) {
+                LOG.debug("Trying to get compaction state of " + pair.getFirst() + ": "
+                    + StringUtils.stringifyException(e));
+              }
+            } else {
+              throw e;
+            }
           }
         }
       }
