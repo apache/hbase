@@ -305,6 +305,11 @@ public class BaseMasterObserver implements MasterObserver {
   }
 
   @Override
+  public void preMasterInitialization(
+      ObserverContext<MasterCoprocessorEnvironment> ctx) throws IOException {
+  }
+  
+  @Override
   public void start(CoprocessorEnvironment ctx) throws IOException {
   }
 
