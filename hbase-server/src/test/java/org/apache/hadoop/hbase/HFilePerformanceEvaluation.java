@@ -284,7 +284,10 @@ public class HFilePerformanceEvaluation {
     void doRow(int i) throws Exception {
       HFileScanner scanner = this.reader.getScanner(false, true);
       byte [] b = getRandomRow();
-      scanner.seekTo(b);
+      if (scanner.seekTo(b) < 0) {
+        LOG.info("Not able to seekTo " + new String(b));
+        return;
+      }
       ByteBuffer k = scanner.getKey();
       PerformanceEvaluationCommons.assertKey(b, k);
       ByteBuffer v = scanner.getValue();
@@ -309,7 +312,7 @@ public class HFilePerformanceEvaluation {
       HFileScanner scanner = this.reader.getScanner(false, false);
       byte [] b = getRandomRow();
       if (scanner.seekTo(b) != 0) {
-        System.out.println("Nonexistent row: " + new String(b));
+        LOG.info("Nonexistent row: " + new String(b));
         return;
       }
       ByteBuffer k = scanner.getKey();
@@ -317,7 +320,8 @@ public class HFilePerformanceEvaluation {
       // System.out.println("Found row: " + new String(b));
       for (int ii = 0; ii < 30; ii++) {
         if (!scanner.next()) {
-          System.out.println("NOTHING FOLLOWS");
+          LOG.info("NOTHING FOLLOWS");
+          return;
         }
         ByteBuffer v = scanner.getValue();
         PerformanceEvaluationCommons.assertValueSize(v.limit(), ROW_LENGTH);
@@ -341,10 +345,15 @@ public class HFilePerformanceEvaluation {
     @Override
     void doRow(int i) throws Exception {
       HFileScanner scanner = this.reader.getScanner(false, true);
-      scanner.seekTo(getGaussianRandomRowBytes());
+      byte[] gaussianRandomRowBytes = getGaussianRandomRowBytes();
+      if (scanner.seekTo(gaussianRandomRowBytes < 0) {
+        LOG.info("Not able to seekTo " + new String(gaussianRandomRowBytes));
+        return;
+      }
       for (int ii = 0; ii < 30; ii++) {
         if (!scanner.next()) {
-          System.out.println("NOTHING FOLLOWS");
+          LOG.info("NOTHING FOLLOWS");
+          return;
         }
         scanner.getKey();
         scanner.getValue();
