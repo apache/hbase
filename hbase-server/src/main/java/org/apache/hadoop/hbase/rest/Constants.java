@@ -57,4 +57,5 @@ public interface Constants {
 
   static final String REST_DNS_NAMESERVER = "hbase.rest.dns.nameserver";
   static final String REST_DNS_INTERFACE = "hbase.rest.dns.interface";
+  public static final String FILTER_CLASSES = "hbase.rest.filter.classes";
 }
