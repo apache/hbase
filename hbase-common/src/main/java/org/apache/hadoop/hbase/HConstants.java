@@ -38,6 +38,8 @@ import org.apache.hadoop.hbase.util.Bytes;
 @InterfaceAudience.Public
 @InterfaceStability.Stable
 public final class HConstants {
+  // NOTICE!!!! Please do not add a constants here, unless they are referenced by a lot of classes.
+
   //Bytes.UTF8_ENCODING should be updated if this changed
   /** When we encode strings, we always specify UTF8 encoding */
   public static final String UTF8_ENCODING = "UTF-8";
@@ -892,8 +894,6 @@ public final class HConstants {
    */
   public static final String STATUS_MULTICAST_PORT = "hbase.status.multicast.port";
   public static final int DEFAULT_STATUS_MULTICAST_PORT = 60100;
-
-
 
   private HConstants() {
     // Can't be instantiated with this ctor.

@@ -99,7 +99,7 @@ public class TestProtoBufRpc {
     this.server = new RpcServer(null, "testrpc",
         Lists.newArrayList(new RpcServer.BlockingServiceAndInterface(service, null)),
         new InetSocketAddress(ADDRESS, PORT), conf,
-        new SimpleRpcScheduler(conf, 10, 10, 0, null, 0));
+        new FifoRpcScheduler(conf, 10));
     this.isa = server.getListenerAddress();
     this.server.start();
   }

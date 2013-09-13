@@ -28,7 +28,7 @@ import java.net.InetSocketAddress;
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
-interface RpcScheduler {
+public interface RpcScheduler {
 
   /** Exposes runtime information of a {@code RpcServer} that a {@code RpcScheduler} may need. */
   interface Context {

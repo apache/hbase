@@ -18,6 +18,8 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import javax.management.ObjectName;
+
 import java.io.IOException;
 import java.lang.Thread.UncaughtExceptionHandler;
 import java.lang.annotation.Retention;
@@ -46,8 +48,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
-
-import javax.management.ObjectName;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -104,6 +104,7 @@ import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.ipc.HBaseRPCErrorHandler;
 import org.apache.hadoop.hbase.ipc.PayloadCarryingRpcController;
+import org.apache.hadoop.hbase.ipc.PriorityFunction;
 import org.apache.hadoop.hbase.ipc.RpcCallContext;
 import org.apache.hadoop.hbase.ipc.RpcClient;
 import org.apache.hadoop.hbase.ipc.RpcServer;
@@ -111,7 +112,6 @@ import org.apache.hadoop.hbase.ipc.RpcServer.BlockingServiceAndInterface;
 import org.apache.hadoop.hbase.ipc.RpcServerInterface;
 import org.apache.hadoop.hbase.ipc.ServerNotRunningYetException;
 import org.apache.hadoop.hbase.ipc.ServerRpcController;
-import org.apache.hadoop.hbase.ipc.SimpleRpcScheduler;
 import org.apache.hadoop.hbase.master.SplitLogManager;
 import org.apache.hadoop.hbase.master.TableLockManager;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
@@ -174,6 +174,7 @@ import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Coprocessor;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier.RegionSpecifierType;
+import org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RequestHeader;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.GetLastFlushedSequenceIdRequest;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerReportRequest;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerStartupRequest;
@@ -255,6 +256,10 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
   //false - if close region action in progress
   protected final ConcurrentMap<byte[], Boolean> regionsInTransitionInRS =
     new ConcurrentSkipListMap<byte[], Boolean>(Bytes.BYTES_COMPARATOR);
+
+  /** RPC scheduler to use for the region server. */
+  public static final String REGION_SERVER_RPC_SCHEDULER_FACTORY_CLASS =
+      "hbase.region.server.rpc.scheduler.factory.class";
 
   protected long maxScannerResultSize;
 
@@ -466,9 +471,9 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
   private final int scannerLeaseTimeoutPeriod;
 
   /**
-   * The reference to the QosFunction
+   * The reference to the priority extraction function
    */
-  private final QosFunction qosFunction;
+  private final PriorityFunction priority;
 
   private RegionServerCoprocessorHost rsHost;
 
@@ -552,22 +557,23 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
     String name = "regionserver/" + initialIsa.toString();
     // Set how many times to retry talking to another server over HConnection.
     HConnectionManager.setServerSideHConnectionRetries(this.conf, name, LOG);
-    this.qosFunction = new QosFunction(this);
-    int handlerCount = conf.getInt(HConstants.REGION_SERVER_HANDLER_COUNT,
-        HConstants.DEFAULT_REGION_SERVER_HANDLER_COUNT);
-    SimpleRpcScheduler scheduler = new SimpleRpcScheduler(
-        conf,
-        handlerCount,
-        conf.getInt(HConstants.REGION_SERVER_META_HANDLER_COUNT,
-            HConstants.DEFAULT_REGION_SERVER_META_HANDLER_COUNT),
-        conf.getInt(HConstants.REGION_SERVER_REPLICATION_HANDLER_COUNT,
-            HConstants.DEFAULT_REGION_SERVER_REPLICATION_HANDLER_COUNT),
-        qosFunction,
-        HConstants.QOS_THRESHOLD);
+    this.priority = new AnnotationReadingPriorityFunction(this);
+    RpcSchedulerFactory rpcSchedulerFactory;
+    try {
+      Class<?> rpcSchedulerFactoryClass = conf.getClass(
+          REGION_SERVER_RPC_SCHEDULER_FACTORY_CLASS,
+          SimpleRpcSchedulerFactory.class);
+      rpcSchedulerFactory = ((RpcSchedulerFactory) rpcSchedulerFactoryClass.newInstance());
+    } catch (InstantiationException e) {
+      throw new IllegalArgumentException(e);
+    } catch (IllegalAccessException e) {
+      throw new IllegalArgumentException(e);
+    }
     this.rpcServer = new RpcServer(this, name, getServices(),
       /*HBaseRPCErrorHandler.class, OnlineRegions.class},*/
       initialIsa, // BindAddress is IP we got for this server.
-      conf, scheduler);
+      conf,
+      rpcSchedulerFactory.create(conf, this));
 
     // Set our address.
     this.isa = this.rpcServer.getListenerAddress();
@@ -631,13 +637,18 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
     return this.clusterId;
   }
 
+  @Override
+  public int getPriority(RequestHeader header, Message param) {
+    return priority.getPriority(header, param);
+  }
+
   @Retention(RetentionPolicy.RUNTIME)
   protected @interface QosPriority {
     int priority() default 0;
   }
 
-  QosFunction getQosFunction() {
-    return qosFunction;
+  PriorityFunction getPriority() {
+    return priority;
   }
 
   RegionScanner getScanner(long scannerId) {

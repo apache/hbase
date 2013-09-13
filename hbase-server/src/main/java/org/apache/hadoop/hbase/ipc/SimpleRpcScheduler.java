@@ -17,20 +17,17 @@
  */
 package org.apache.hadoop.hbase.ipc;
 
-import com.google.common.base.Function;
-import com.google.common.base.Strings;
-import com.google.common.collect.Lists;
-import com.google.protobuf.Message;
+import java.util.List;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
+
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.protobuf.generated.RPCProtos;
-import org.apache.hadoop.hbase.util.Pair;
 
-import java.util.List;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.LinkedBlockingQueue;
+import com.google.common.base.Strings;
+import com.google.common.collect.Lists;
 
 /**
  * A scheduler that maintains isolated handler pools for general, high-priority and replication
@@ -44,12 +41,12 @@ public class SimpleRpcScheduler implements RpcScheduler {
   private final int handlerCount;
   private final int priorityHandlerCount;
   private final int replicationHandlerCount;
+  private final PriorityFunction priority;
   final BlockingQueue<RpcServer.CallRunner> callQueue;
   final BlockingQueue<RpcServer.CallRunner> priorityCallQueue;
   final BlockingQueue<RpcServer.CallRunner> replicationQueue;
   private volatile boolean running = false;
   private final List<Thread> handlers = Lists.newArrayList();
-  private final Function<Pair<RPCProtos.RequestHeader, Message>, Integer> qosFunction;
 
   /** What level a high priority call is at. */
   private final int highPriorityLevel;
@@ -59,22 +56,22 @@ public class SimpleRpcScheduler implements RpcScheduler {
    * @param handlerCount the number of handler threads that will be used to process calls
    * @param priorityHandlerCount How many threads for priority handling.
    * @param replicationHandlerCount How many threads for replication handling.
-   * @param qosFunction a function that maps requests to priorities
    * @param highPriorityLevel
+   * @param priority Function to extract request priority.
    */
   public SimpleRpcScheduler(
       Configuration conf,
       int handlerCount,
       int priorityHandlerCount,
       int replicationHandlerCount,
-      Function<Pair<RPCProtos.RequestHeader, Message>, Integer> qosFunction,
+      PriorityFunction priority,
       int highPriorityLevel) {
     int maxQueueLength = conf.getInt("ipc.server.max.callqueue.length",
         handlerCount * RpcServer.DEFAULT_MAX_CALLQUEUE_LENGTH_PER_HANDLER);
     this.handlerCount = handlerCount;
     this.priorityHandlerCount = priorityHandlerCount;
     this.replicationHandlerCount = replicationHandlerCount;
-    this.qosFunction = qosFunction;
+    this.priority = priority;
     this.highPriorityLevel = highPriorityLevel;
     this.callQueue = new LinkedBlockingQueue<RpcServer.CallRunner>(maxQueueLength);
     this.priorityCallQueue = priorityHandlerCount > 0
@@ -131,9 +128,7 @@ public class SimpleRpcScheduler implements RpcScheduler {
   @Override
   public void dispatch(RpcServer.CallRunner callTask) throws InterruptedException {
     RpcServer.Call call = callTask.getCall();
-    Pair<RPCProtos.RequestHeader, Message> headerAndParam =
-        new Pair<RPCProtos.RequestHeader, Message>(call.header, call.param);
-    int level = getQosLevel(headerAndParam);
+    int level = priority.getPriority(call.header, call.param);
     if (priorityCallQueue != null && level > highPriorityLevel) {
       priorityCallQueue.put(callTask);
     } else if (replicationQueue != null && level == HConstants.REPLICATION_QOS) {
@@ -167,12 +162,6 @@ public class SimpleRpcScheduler implements RpcScheduler {
         Thread.interrupted();
       }
     }
-  }
-
-  private int getQosLevel(Pair<RPCProtos.RequestHeader, Message> headerAndParam) {
-    if (qosFunction == null) return 0;
-    Integer res = qosFunction.apply(headerAndParam);
-    return res == null? 0: res;
   }
 }
 

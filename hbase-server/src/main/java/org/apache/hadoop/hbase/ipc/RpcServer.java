@@ -2165,6 +2165,7 @@ public class RpcServer implements RpcServerInterface {
     listener.interrupt();
     listener.doStop();
     responder.interrupt();
+    scheduler.stop();
     notifyAll();
   }
 

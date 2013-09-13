@@ -37,7 +37,7 @@ public class TestQosFunction {
   @Test
   public void testPriority() {
     HRegionServer hrs = Mockito.mock(HRegionServer.class);
-    QosFunction qosFunction = new QosFunction(hrs);
+    AnnotationReadingPriorityFunction qosFunction = new AnnotationReadingPriorityFunction(hrs);
 
     // Set method name in pb style with the method name capitalized.
     checkMethod("ReplicateWALEntry", HConstants.REPLICATION_QOS, qosFunction);
@@ -45,11 +45,9 @@ public class TestQosFunction {
     checkMethod("OpenRegion", HConstants.HIGH_QOS, qosFunction);
   }
 
-  private void checkMethod(final String methodName, final int expected, final QosFunction qosf) {
+  private void checkMethod(final String methodName, final int expected, final AnnotationReadingPriorityFunction qosf) {
     RequestHeader.Builder builder = RequestHeader.newBuilder();
     builder.setMethodName(methodName);
-    Pair<RequestHeader, Message> headerAndParam =
-      new Pair<RequestHeader, Message>(builder.build(), null);
-    assertEquals(methodName, expected, qosf.apply(headerAndParam).intValue());
+    assertEquals(methodName, expected, qosf.getPriority(builder.build(), null));
   }
 }

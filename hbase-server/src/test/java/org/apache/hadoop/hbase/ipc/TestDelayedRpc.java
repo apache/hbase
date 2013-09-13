@@ -86,7 +86,7 @@ public class TestDelayedRpc {
         Lists.newArrayList(new RpcServer.BlockingServiceAndInterface(service, null)),
         isa,
         conf,
-        new SimpleRpcScheduler(conf, 1, 0, 0, null, 0));
+        new FifoRpcScheduler(conf, 1));
     rpcServer.start();
     RpcClient rpcClient = new RpcClient(conf, HConstants.DEFAULT_CLUSTER_ID.toString());
     try {
@@ -167,7 +167,7 @@ public class TestDelayedRpc {
       Lists.newArrayList(new RpcServer.BlockingServiceAndInterface(service, null)),
         isa,
         conf,
-        new SimpleRpcScheduler(conf, 1, 0, 0, null, 0));
+        new FifoRpcScheduler(conf, 1));
     rpcServer.start();
     RpcClient rpcClient = new RpcClient(conf, HConstants.DEFAULT_CLUSTER_ID.toString());
     try {
@@ -289,7 +289,7 @@ public class TestDelayedRpc {
         Lists.newArrayList(new RpcServer.BlockingServiceAndInterface(service, null)),
         isa,
         conf,
-        new SimpleRpcScheduler(conf, 1, 0, 0, null, 0));
+        new FifoRpcScheduler(conf, 1));
     rpcServer.start();
     RpcClient rpcClient = new RpcClient(conf, HConstants.DEFAULT_CLUSTER_ID.toString());
     try {

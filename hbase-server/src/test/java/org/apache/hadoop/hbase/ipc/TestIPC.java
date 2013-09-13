@@ -21,18 +21,26 @@ package org.apache.hadoop.hbase.ipc;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyInt;
+import static org.mockito.Matchers.anyObject;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.verify;
+import static org.mockito.internal.verification.VerificationModeFactory.times;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import javax.net.SocketFactory;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -64,6 +72,7 @@ import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.mockito.Matchers;
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
@@ -139,9 +148,13 @@ public class TestIPC {
   private static class TestRpcServer extends RpcServer {
 
     TestRpcServer() throws IOException {
+      this(new FifoRpcScheduler(CONF, 1));
+    }
+
+    TestRpcServer(RpcScheduler scheduler) throws IOException {
       super(null, "testRpcServer",
           Lists.newArrayList(new BlockingServiceAndInterface(SERVICE, null)),
-        new InetSocketAddress("0.0.0.0", 0), CONF, new SimpleRpcScheduler(CONF, 1, 1, 0, null, 0));
+        new InetSocketAddress("0.0.0.0", 0), CONF, scheduler);
     }
 
     @Override
@@ -257,6 +270,29 @@ public class TestIPC {
     }
   }
 
+  /** Tests that the rpc scheduler is called when requests arrive. */
+  @Test
+  public void testRpcScheduler() throws IOException, InterruptedException {
+    RpcScheduler scheduler = spy(new FifoRpcScheduler(CONF, 1));
+    RpcServer rpcServer = new TestRpcServer(scheduler);
+    verify(scheduler).init((RpcScheduler.Context) anyObject());
+    RpcClient client = new RpcClient(CONF, HConstants.CLUSTER_ID_DEFAULT);
+    try {
+      rpcServer.start();
+      verify(scheduler).start();
+      MethodDescriptor md = SERVICE.getDescriptorForType().findMethodByName("echo");
+      EchoRequestProto param = EchoRequestProto.newBuilder().setMessage("hello").build();
+      for (int i = 0; i < 10; i++) {
+        client.call(md, param, CellUtil.createCellScanner(ImmutableList.of(CELL)),
+            md.getOutputType().toProto(), User.getCurrent(), rpcServer.getListenerAddress(), 0);
+      }
+      verify(scheduler, times(10)).dispatch((RpcServer.CallRunner) anyObject());
+    } finally {
+      rpcServer.stop();
+      verify(scheduler).stop();
+    }
+  }
+
   public static void main(String[] args)
   throws IOException, SecurityException, NoSuchMethodException, InterruptedException {
     if (args.length != 2) {
@@ -285,7 +321,8 @@ public class TestIPC {
       for (int i = 0; i < cycles; i++) {
         List<CellScannable> cells = new ArrayList<CellScannable>();
         // Message param = RequestConverter.buildMultiRequest(HConstants.EMPTY_BYTE_ARRAY, rm);
-        Message param = RequestConverter.buildNoDataMultiRequest(HConstants.EMPTY_BYTE_ARRAY, rm, cells);
+        Message param = RequestConverter.buildNoDataMultiRequest(
+            HConstants.EMPTY_BYTE_ARRAY, rm, cells);
         CellScanner cellScanner = CellUtil.createCellScanner(cells);
         if (i % 1000 == 0) {
           LOG.info("" + i);

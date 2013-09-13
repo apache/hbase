@@ -84,6 +84,8 @@ import org.apache.hadoop.hbase.exceptions.MergeRegionException;
 import org.apache.hadoop.hbase.exceptions.UnknownProtocolException;
 import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.executor.ExecutorType;
+import org.apache.hadoop.hbase.ipc.FifoRpcScheduler;
+import org.apache.hadoop.hbase.ipc.RpcScheduler;
 import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.ipc.RpcServer.BlockingServiceAndInterface;
 import org.apache.hadoop.hbase.ipc.RequestContext;
@@ -422,17 +424,10 @@ MasterServices, Server {
     HConnectionManager.setServerSideHConnectionRetries(this.conf, name, LOG);
     int numHandlers = conf.getInt(HConstants.MASTER_HANDLER_COUNT,
       conf.getInt(HConstants.REGION_SERVER_HANDLER_COUNT, HConstants.DEFAULT_MASTER_HANLDER_COUNT));
-    SimpleRpcScheduler scheduler = new SimpleRpcScheduler(
-        conf,
-        numHandlers,
-        0, // we don't use high priority handlers in master
-        0, // we don't use replication handlers in master
-        null, // this is a DNC w/o high priority handlers
-        0);
     this.rpcServer = new RpcServer(this, name, getServices(),
       initialIsa, // BindAddress is IP we got for this server.
       conf,
-      scheduler);
+      new FifoRpcScheduler(conf, numHandlers));
     // Set our address.
     this.isa = this.rpcServer.getListenerAddress();
     // We don't want to pass isa's hostname here since it could be 0.0.0.0

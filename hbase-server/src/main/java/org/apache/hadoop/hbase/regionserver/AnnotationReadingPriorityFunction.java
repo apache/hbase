@@ -25,6 +25,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.NotServingRegionException;
+import org.apache.hadoop.hbase.ipc.PriorityFunction;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.CloseRegionRequest;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.CompactRegionRequest;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.FlushRegionRequest;
@@ -38,17 +39,15 @@ import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ScanRequest;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier;
 import org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RequestHeader;
 import org.apache.hadoop.hbase.regionserver.HRegionServer.QosPriority;
-import org.apache.hadoop.hbase.util.Pair;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Function;
 import com.google.protobuf.Message;
 import com.google.protobuf.TextFormat;
 
 
 /**
- * A guava function that will return a priority for use by QoS facility in regionserver; e.g.
- * rpcs to hbase:meta and -ROOT-, etc., get priority.
+ * Reads special method annotations and table names to figure a priority for use by QoS facility in
+ * ipc; e.g: rpcs to hbase:meta get priority.
  */
 // TODO: Remove.  This is doing way too much work just to figure a priority.  Do as Elliott
 // suggests and just have the client specify a priority.
@@ -67,8 +66,9 @@ import com.google.protobuf.TextFormat;
 //All the argument classes declare a 'getRegion' method that returns a
 //RegionSpecifier object. Methods can be invoked on the returned object
 //to figure out whether it is a meta region or not.
-class QosFunction implements Function<Pair<RequestHeader, Message>, Integer> {
-  public static final Log LOG = LogFactory.getLog(QosFunction.class.getName());
+class AnnotationReadingPriorityFunction implements PriorityFunction {
+  public static final Log LOG =
+    LogFactory.getLog(AnnotationReadingPriorityFunction.class.getName());
   private final Map<String, Integer> annotatedQos;
   //We need to mock the regionserver instance for some unit tests (set via
   //setRegionServer method.
@@ -93,7 +93,7 @@ class QosFunction implements Function<Pair<RequestHeader, Message>, Integer> {
   private final Map<String, Map<Class<? extends Message>, Method>> methodMap =
     new HashMap<String, Map<Class<? extends Message>, Method>>();
 
-  QosFunction(final HRegionServer hrs) {
+  AnnotationReadingPriorityFunction(final HRegionServer hrs) {
     this.hRegionServer = hrs;
     Map<String, Integer> qosMap = new HashMap<String, Integer>();
     for (Method m : HRegionServer.class.getMethods()) {
@@ -142,15 +142,13 @@ class QosFunction implements Function<Pair<RequestHeader, Message>, Integer> {
   }
 
   @Override
-  public Integer apply(Pair<RequestHeader, Message> headerAndParam) {
-    RequestHeader header = headerAndParam.getFirst();
+  public int getPriority(RequestHeader header, Message param) {
     String methodName = header.getMethodName();
     Integer priorityByAnnotation = annotatedQos.get(methodName);
     if (priorityByAnnotation != null) {
       return priorityByAnnotation;
     }
 
-    Message param = headerAndParam.getSecond();
     if (param == null) {
       return HConstants.NORMAL_QOS;
     }

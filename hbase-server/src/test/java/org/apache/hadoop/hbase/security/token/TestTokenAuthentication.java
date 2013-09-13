@@ -44,6 +44,7 @@ import org.apache.hadoop.hbase.catalog.CatalogTracker;
 import org.apache.hadoop.hbase.client.HTableInterface;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.ipc.BlockingRpcCallback;
+import org.apache.hadoop.hbase.ipc.FifoRpcScheduler;
 import org.apache.hadoop.hbase.ipc.RequestContext;
 import org.apache.hadoop.hbase.ipc.RpcClient;
 import org.apache.hadoop.hbase.ipc.RpcServer;
@@ -130,10 +131,8 @@ public class TestTokenAuthentication {
         AuthenticationProtos.AuthenticationService.newReflectiveBlockingService(this);
       sai.add(new BlockingServiceAndInterface(service,
         AuthenticationProtos.AuthenticationService.BlockingInterface.class));
-      SimpleRpcScheduler scheduler = new SimpleRpcScheduler(
-          conf, 3, 1, 0, null, HConstants.QOS_THRESHOLD);
       this.rpcServer =
-        new RpcServer(this, "tokenServer", sai, initialIsa, conf, scheduler);
+        new RpcServer(this, "tokenServer", sai, initialIsa, conf, new FifoRpcScheduler(conf, 1));
       this.isa = this.rpcServer.getListenerAddress();
       this.sleeper = new Sleeper(1000, this);
     }
