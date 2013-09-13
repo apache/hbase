@@ -46,7 +46,7 @@ public class RowSpec {
     new TreeSet<byte[]>(Bytes.BYTES_COMPARATOR);
   private long startTime = DEFAULT_START_TIMESTAMP;
   private long endTime = DEFAULT_END_TIMESTAMP;
-  private int maxVersions = HColumnDescriptor.DEFAULT_VERSIONS;
+  private int maxVersions = 1;
   private int maxValues = Integer.MAX_VALUE;
 
   public RowSpec(String path) throws IllegalArgumentException {

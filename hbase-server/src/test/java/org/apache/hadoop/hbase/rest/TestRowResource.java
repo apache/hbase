@@ -52,7 +52,9 @@ import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.test.MetricsAssertHelper;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.junit.After;
 import org.junit.AfterClass;
+import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -74,7 +76,7 @@ public class TestRowResource {
   private static final String VALUE_4 = "testvalue4";
 
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
-  private static final HBaseRESTTestingUtility REST_TEST_UTIL = 
+  private static final HBaseRESTTestingUtility REST_TEST_UTIL =
     new HBaseRESTTestingUtility();
   private static final MetricsAssertHelper METRICS_ASSERT =
       CompatibilityFactory.getInstance(MetricsAssertHelper.class);
@@ -97,6 +99,10 @@ public class TestRowResource {
     unmarshaller = context.createUnmarshaller();
     client = new Client(new Cluster().add("localhost", 
       REST_TEST_UTIL.getServletPort()));
+  }
+
+  @Before
+  public void beforeMethod() throws Exception {
     HBaseAdmin admin = TEST_UTIL.getHBaseAdmin();
     if (admin.tableExists(TABLE)) {
       return;
@@ -107,13 +113,22 @@ public class TestRowResource {
     admin.createTable(htd);
   }
 
+  @After
+  public void afterMethod() throws Exception {
+    HBaseAdmin admin = TEST_UTIL.getHBaseAdmin();
+    if (admin.tableExists(TABLE)) {
+      admin.disableTable(TABLE);
+      admin.deleteTable(TABLE);
+    }
+  }
+
   @AfterClass
   public static void tearDownAfterClass() throws Exception {
     REST_TEST_UTIL.shutdownServletContainer();
     TEST_UTIL.shutdownMiniCluster();
   }
 
-  private static Response deleteRow(String table, String row) 
+  private static Response deleteRow(String table, String row)
       throws IOException {
     StringBuilder path = new StringBuilder();
     path.append('/');
@@ -183,7 +198,7 @@ public class TestRowResource {
   }
 
   private static Response getValuePB(String url) throws IOException {
-    Response response = client.get(url, Constants.MIMETYPE_PROTOBUF); 
+    Response response = client.get(url, Constants.MIMETYPE_PROTOBUF);
     return response;
   }
 
@@ -719,6 +734,34 @@ public class TestRowResource {
     Response response = client.put(path, Constants.MIMETYPE_XML,
       Bytes.toBytes(writer.toString()));
     assertEquals(response.getCode(), 400);
+  }
+
+  @Test
+  public void testLatestCellGetXML() throws IOException, JAXBException {
+    final String path = "/" + TABLE + "/" + ROW_1 + "/" + COLUMN_1;
+    CellSetModel cellSetModel = new CellSetModel();
+    RowModel rowModel = new RowModel(ROW_1);
+    CellModel cellOne = new CellModel(Bytes.toBytes(COLUMN_1), 1L, Bytes.toBytes(VALUE_1));
+    CellModel cellTwo = new CellModel(Bytes.toBytes(COLUMN_1), 2L, Bytes.toBytes(VALUE_2));
+    rowModel.addCell(cellOne);
+    rowModel.addCell(cellTwo);
+    cellSetModel.addRow(rowModel);
+    StringWriter writer = new StringWriter();
+    marshaller.marshal(cellSetModel, writer);
+    Response response = client.put(path, Constants.MIMETYPE_XML, Bytes.toBytes(writer.toString()));
+    assertEquals(response.getCode(), 200);
+    response = getValueXML(TABLE, ROW_1, COLUMN_1);
+    assertEquals(response.getCode(), 200);
+    assertEquals(Constants.MIMETYPE_XML, response.getHeader("content-type"));
+    CellSetModel cellSet = (CellSetModel) unmarshaller.unmarshal(new ByteArrayInputStream(response
+        .getBody()));
+    assertTrue(cellSet.getRows().size() == 1);
+    assertTrue(cellSet.getRows().get(0).getCells().size() == 1);
+    CellModel cell = cellSet.getRows().get(0).getCells().get(0);
+    assertEquals(VALUE_2, Bytes.toString(cell.getValue()));
+    assertEquals(2L, cell.getTimestamp());
+    response = deleteRow(TABLE, ROW_1);
+    assertEquals(response.getCode(), 200);
   }
 
 }
