@@ -346,7 +346,7 @@ public class HFilePerformanceEvaluation {
     void doRow(int i) throws Exception {
       HFileScanner scanner = this.reader.getScanner(false, true);
       byte[] gaussianRandomRowBytes = getGaussianRandomRowBytes();
-      if (scanner.seekTo(gaussianRandomRowBytes < 0) {
+      if (scanner.seekTo(gaussianRandomRowBytes) < 0) {
         LOG.info("Not able to seekTo " + new String(gaussianRandomRowBytes));
         return;
       }
