@@ -422,34 +422,6 @@
     <pluginManagement>
       <plugins>
         <plugin>
-          <!--Intentionally, this is not bound to a phase because it is an
-           'aggregating' plugin; it expects to be run from the top-level only; see
-           http://www.sonatype.com/books/mvnref-book/reference/assemblies-sect-basics.html.
-           To get javadoc into your site, you must precede site build by invocation of javadoc:aggregate expplicitly.
-           -->
-          <groupId>org.apache.maven.plugins</groupId>
-          <artifactId>maven-javadoc-plugin</artifactId>
-          <version>${javadoc.version}</version>
-          <executions>
-            <execution>
-              <id>javadoc</id>
-              <goals>
-                <goal>aggregate</goal>
-              </goals>
-            </execution>
-          </executions>
-          <configuration>
-            <!--Pass -DskipJavadoc=true or -DskipJavadoc on command-line to skip javadoc building-->
-            <skip>${skipJavadoc}</skip>
-            <docfilessubdirs>true</docfilessubdirs>
-            <excludePackageNames>org.junit.*:org.apache.hadoop.metrics2.*:org.apache.hadoop.hbase.protobuf.generated.*:org.apache.hadoop.hbase.thrift.generated:org.apache.hadoop.hbase.rest.generated</excludePackageNames>
-            <debug>true</debug>
-            <maxmemory>2g</maxmemory>
-            <verbose>true</verbose>
-            <reportOutputDirectory>target/apidocs</reportOutputDirectory>
-          </configuration>
-        </plugin>
-        <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-release-plugin</artifactId>
           <version>2.4.1</version>
@@ -1928,6 +1900,39 @@
           </excludes>
         </configuration>
       </plugin>
+
+      <plugin>
+	<groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-javadoc-plugin</artifactId>
+        <version>2.9.1</version>
+	<reportSets>
+	  <reportSet>
+	    <id>devapi</id> <!-- full internal hbase api -->
+	    <reports> <report>aggregate</report></reports>
+	    <configuration>
+	      <destDir>devapidocs</destDir>
+	    </configuration>
+	  </reportSet>
+	  
+	  <reportSet>
+	    <id>userapi</id> <!-- public user hbase api; limited but has stronger compat/deprecation guarantees -->
+	    <reports> <report>aggregate</report></reports>
+	    <configuration>
+	      <doclet>org.apache.hadoop.classification.tools.IncludePublicAnnotationsStandardDoclet</doclet>
+	      <docletArtifact>
+		<groupId>org.apache.hadoop</groupId>
+		<!-- doclet lives in hadoop 2's hadoop-common module -->
+		<artifactId>hadoop-common</artifactId>
+		<version>2.1.0-beta</version>
+	      </docletArtifact>
+	      <destDir>apidocs</destDir>
+	      <name>User API</name>
+	      <description>The HBase Application Programmer's API</description>
+	    </configuration>
+	  </reportSet>
+	</reportSets>	
+      </plugin>
+
     </plugins>
   </reporting>
   <distributionManagement>
