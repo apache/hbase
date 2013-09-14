@@ -3849,8 +3849,8 @@ public class TestHRegion extends HBaseTestCase {
 
     //verify append called or not
     verify(log, expectAppend ? times(1) : never())
-      .appendNoSync((HRegionInfo)any(), eq(tableName),
-        (WALEdit)any(), (List<UUID>)any(), anyLong(), (HTableDescriptor)any());
+      .appendNoSync((HRegionInfo)any(), eq(tableName), (WALEdit)any(), (List<UUID>)any(), 
+        anyLong(), (HTableDescriptor)any(), (RegionCoprocessorHost)any());
 
     //verify sync called or not
     if (expectSync || expectSyncFromLogSyncer) {

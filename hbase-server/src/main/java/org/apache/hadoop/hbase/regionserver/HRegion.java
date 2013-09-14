@@ -2206,7 +2206,8 @@ public class HRegion implements HeapSize { // , Writable{
       Mutation mutation = batchOp.operations[firstIndex];
       if (walEdit.size() > 0) {
         txid = this.log.appendNoSync(this.getRegionInfo(), this.htableDescriptor.getTableName(),
-               walEdit, mutation.getClusterIds(), now, this.htableDescriptor);
+              walEdit, mutation.getClusterIds(), now, this.htableDescriptor,
+              this.getCoprocessorHost());
       }
 
       // -------------------------------
@@ -4531,9 +4532,9 @@ public class HRegion implements HeapSize { // , Writable{
           long txid = 0;
           // 7. Append no sync
           if (!walEdit.isEmpty()) {
-            txid = this.log.appendNoSync(this.getRegionInfo(),
-                this.htableDescriptor.getTableName(), walEdit,
-                processor.getClusterIds(), now, this.htableDescriptor);
+            txid = this.log.appendNoSync(this.getRegionInfo(), this.htableDescriptor.getTableName(),
+                  walEdit, processor.getClusterIds(), now, this.htableDescriptor,
+                  this.getCoprocessorHost());
           }
           // 8. Release region lock
           if (locked) {
@@ -4760,7 +4761,7 @@ public class HRegion implements HeapSize { // , Writable{
             // as a Put.
             txid = this.log.appendNoSync(this.getRegionInfo(), this.htableDescriptor.getTableName(),
               walEdits, new ArrayList<UUID>(), EnvironmentEdgeManager.currentTimeMillis(),
-              this.htableDescriptor);
+              this.htableDescriptor, this.getCoprocessorHost());
           } else {
             recordMutationWithoutWal(append.getFamilyCellMap());
           }
@@ -4908,7 +4909,7 @@ public class HRegion implements HeapSize { // , Writable{
             // as a Put.
             txid = this.log.appendNoSync(this.getRegionInfo(), this.htableDescriptor.getTableName(),
                 walEdits, new ArrayList<UUID>(), EnvironmentEdgeManager.currentTimeMillis(),
-                this.htableDescriptor);
+                this.htableDescriptor, this.getCoprocessorHost());
           } else {
             recordMutationWithoutWal(increment.getFamilyCellMap());
           }

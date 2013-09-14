@@ -37,6 +37,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.Coprocessor;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
@@ -69,6 +70,7 @@ import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
+import org.apache.hadoop.hbase.util.Threads;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -92,6 +94,7 @@ public class TestRegionObserverInterface {
   public static void setupBeforeClass() throws Exception {
     // set configure to indicate which cp should be loaded
     Configuration conf = util.getConfiguration();
+    conf.setBoolean("hbase.master.distributed.log.replay", true);
     conf.set(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY,
         "org.apache.hadoop.hbase.coprocessor.SimpleRegionObserver");
 
@@ -487,11 +490,66 @@ public class TestRegionObserverInterface {
     table.close();
   }
 
+  @Test
+  public void testRecovery() throws Exception {
+    LOG.info(TestRegionObserverInterface.class.getName()+".testRecovery");
+    TableName tableName = TEST_TABLE;
+
+    HTable table = util.createTable(tableName, new byte[][] {A, B, C});
+
+    JVMClusterUtil.RegionServerThread rs1 = cluster.startRegionServer();
+    ServerName sn2 = rs1.getRegionServer().getServerName();
+    String regEN = table.getRegionLocations().firstEntry().getKey().getEncodedName();
+
+    util.getHBaseAdmin().move(regEN.getBytes(), sn2.getServerName().getBytes());
+    while (!sn2.equals(table.getRegionLocations().firstEntry().getValue() )){
+      Thread.sleep(100);
+    }
+
+    Put put = new Put(ROW);
+    put.add(A, A, A);
+    put.add(B, B, B);
+    put.add(C, C, C);
+    table.put(put);
+
+    verifyMethodResult(SimpleRegionObserver.class,
+        new String[] {"hadPreGet", "hadPostGet", "hadPrePut", "hadPostPut",
+            "hadPreBatchMutate", "hadPostBatchMutate", "hadDelete"},
+        TEST_TABLE,
+        new Boolean[] {false, false, true, true, true, true, false}
+    );
+
+    verifyMethodResult(SimpleRegionObserver.class,
+        new String[] {"getCtPreWALRestore", "getCtPostWALRestore", "getCtPrePut", "getCtPostPut"},
+        TEST_TABLE,
+        new Integer[] {0, 0, 1, 1});
+
+    cluster.killRegionServer(rs1.getRegionServer().getServerName());
+    Threads.sleep(20000); // just to be sure that the kill has fully started.
+    util.waitUntilAllRegionsAssigned(tableName);
+
+    verifyMethodResult(SimpleRegionObserver.class,
+        new String[]{"getCtPreWALRestore", "getCtPostWALRestore"},
+        TEST_TABLE,
+        new Integer[]{1, 1});
+
+    verifyMethodResult(SimpleRegionObserver.class,
+        new String[]{"getCtPrePut", "getCtPostPut"},
+        TEST_TABLE,
+        new Integer[]{0, 0});
+
+    util.deleteTable(tableName);
+    table.close();
+  }
+
   // check each region whether the coprocessor upcalls are called or not.
-  private void verifyMethodResult(Class c, String methodName[], TableName tableName,
+  private void verifyMethodResult(Class<?> c, String methodName[], TableName tableName,
                                   Object value[]) throws IOException {
     try {
       for (JVMClusterUtil.RegionServerThread t : cluster.getRegionServerThreads()) {
+        if (!t.isAlive() || t.getRegionServer().isAborted() || t.getRegionServer().isStopping()){
+          continue;
+        }
         for (HRegionInfo r : ProtobufUtil.getOnlineRegions(t.getRegionServer())) {
           if (!r.getTable().equals(tableName)) {
             continue;

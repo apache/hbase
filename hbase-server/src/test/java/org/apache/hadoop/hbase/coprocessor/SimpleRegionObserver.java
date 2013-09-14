@@ -28,6 +28,7 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableSet;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import com.google.common.collect.ImmutableList;
@@ -36,6 +37,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
+import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Mutation;
@@ -54,6 +56,7 @@ import org.apache.hadoop.hbase.regionserver.RegionScanner;
 import org.apache.hadoop.hbase.regionserver.ScanType;
 import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
+import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
@@ -103,6 +106,15 @@ public class SimpleRegionObserver extends BaseRegionObserver {
   final AtomicInteger ctPostBulkLoadHFile = new AtomicInteger(0);
   final AtomicInteger ctPreBatchMutate = new AtomicInteger(0);
   final AtomicInteger ctPostBatchMutate = new AtomicInteger(0);
+  final AtomicInteger ctPreWALRestore = new AtomicInteger(0);
+  final AtomicInteger ctPostWALRestore = new AtomicInteger(0);
+
+
+  final AtomicBoolean throwOnPostFlush = new AtomicBoolean(false);
+
+  public void setThrowOnPostFlush(Boolean val){
+    throwOnPostFlush.set(val);
+  }
 
   @Override
   public void start(CoprocessorEnvironment e) throws IOException {
@@ -144,7 +156,7 @@ public class SimpleRegionObserver extends BaseRegionObserver {
 
   @Override
   public InternalScanner preFlush(ObserverContext<RegionCoprocessorEnvironment> c,
-      Store store, InternalScanner scanner) {
+      Store store, InternalScanner scanner) throws IOException {
     ctPreFlush.incrementAndGet();
     return scanner;
   }
@@ -158,8 +170,11 @@ public class SimpleRegionObserver extends BaseRegionObserver {
 
   @Override
   public void postFlush(ObserverContext<RegionCoprocessorEnvironment> c,
-      Store store, StoreFile resultFile) {
+      Store store, StoreFile resultFile) throws IOException {
     ctPostFlush.incrementAndGet();
+    if (throwOnPostFlush.get()){
+      throw new IOException("throwOnPostFlush is true in postFlush");
+    }
   }
 
   public boolean wasFlushed() {
@@ -502,6 +517,19 @@ public class SimpleRegionObserver extends BaseRegionObserver {
     return hasLoaded;
   }
 
+  @Override
+  public void preWALRestore(ObserverContext<RegionCoprocessorEnvironment> env, HRegionInfo info,
+                            HLogKey logKey, WALEdit logEdit) throws IOException {
+    ctPreWALRestore.incrementAndGet();
+  }
+
+  @Override
+  public void postWALRestore(ObserverContext<RegionCoprocessorEnvironment> env,
+                             HRegionInfo info, HLogKey logKey, WALEdit logEdit) throws IOException {
+    ctPostWALRestore.incrementAndGet();
+  }
+
+
   public boolean hadPreGet() {
     return ctPreGet.get() > 0;
   }
@@ -665,5 +693,13 @@ public class SimpleRegionObserver extends BaseRegionObserver {
 
   public int getCtPostIncrement() {
     return ctPostIncrement.get();
+  }
+
+  public int getCtPreWALRestore() {
+    return ctPreWALRestore.get();
+  }
+
+  public int getCtPostWALRestore() {
+    return ctPostWALRestore.get();
   }
 }
