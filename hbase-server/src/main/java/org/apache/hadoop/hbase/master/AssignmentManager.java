@@ -587,6 +587,8 @@ public class AssignmentManager extends ZooKeeperListener {
           // died before sending the query the first time.
           regionStates.updateRegionState(rt, RegionState.State.CLOSING);
           final RegionState rs = regionStates.getRegionState(regionInfo);
+          final ClosedRegionHandler closedRegionHandler =
+            new ClosedRegionHandler(server, this, regionInfo);
           this.executorService.submit(
               new EventHandler(server, EventType.M_MASTER_RECOVERY) {
                 @Override
@@ -594,6 +596,9 @@ public class AssignmentManager extends ZooKeeperListener {
                   ReentrantLock lock = locker.acquireLock(regionInfo.getEncodedName());
                   try {
                     unassign(regionInfo, rs, expectedVersion, null, true, null);
+                    if (regionStates.isRegionOffline(regionInfo)) {
+                      closedRegionHandler.process();
+                    }
                   } finally {
                     lock.unlock();
                   }
@@ -2338,8 +2343,7 @@ public class AssignmentManager extends ZooKeeperListener {
         // The region is not open yet
         regionOffline(region);
         return;
-      } else if (force && (state.isPendingClose()
-          || state.isClosing() || state.isFailedClose())) {
+      } else if (force && state.isPendingCloseOrClosing()) {
         LOG.debug("Attempting to unassign " + region.getRegionNameAsString() +
           " which is already " + state.getState()  +
           " but forcing to send a CLOSE RPC again ");
@@ -2355,6 +2359,9 @@ public class AssignmentManager extends ZooKeeperListener {
       }
 
       unassign(region, state, versionOfClosingNode, dest, true, null);
+      if (regionStates.isRegionOffline(region)) {
+        new ClosedRegionHandler(server, this, region).process();
+      }
     } finally {
       lock.unlock();
     }
