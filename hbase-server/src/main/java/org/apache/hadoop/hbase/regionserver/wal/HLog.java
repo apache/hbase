@@ -37,6 +37,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos.WALTrailer;
+import org.apache.hadoop.hbase.regionserver.RegionCoprocessorHost;
 import org.apache.hadoop.io.Writable;
 
 
@@ -300,7 +301,8 @@ public interface HLog {
    * @throws IOException
    */
   public long appendNoSync(HRegionInfo info, TableName tableName, WALEdit edits,
-      List<UUID> clusterIds, final long now, HTableDescriptor htd) throws IOException;
+        List<UUID> clusterIds, final long now, HTableDescriptor htd,
+        RegionCoprocessorHost regionCoproHost) throws IOException;
 
   // TODO: Do we need all these versions of sync?
   void hsync() throws IOException;

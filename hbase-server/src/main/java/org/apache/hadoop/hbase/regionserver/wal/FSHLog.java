@@ -56,6 +56,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.regionserver.RegionCoprocessorHost;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.hadoop.hbase.util.DrainBarrier;
@@ -840,7 +841,7 @@ class FSHLog implements HLog, Syncable {
   @Override
   public void append(HRegionInfo info, TableName tableName, WALEdit edits,
     final long now, HTableDescriptor htd, boolean isInMemstore) throws IOException {
-    append(info, tableName, edits, new ArrayList<UUID>(), now, htd, true, isInMemstore);
+    append(info, tableName, edits, new ArrayList<UUID>(), now, htd, true, isInMemstore, null);
   }
 
   /**
@@ -870,9 +871,9 @@ class FSHLog implements HLog, Syncable {
    * @throws IOException
    */
   @SuppressWarnings("deprecation")
-  private long append(HRegionInfo info, TableName tableName, WALEdit edits,
-      List<UUID> clusterIds, final long now, HTableDescriptor htd, boolean doSync,
-      boolean isInMemstore)
+  private long append(HRegionInfo info, TableName tableName, WALEdit edits, List<UUID> clusterIds,
+      final long now, HTableDescriptor htd, boolean doSync, boolean isInMemstore,
+      RegionCoprocessorHost regionCoproHost)
     throws IOException {
       if (edits.isEmpty()) return this.unflushedEntries.get();
       if (this.closed) {
@@ -893,7 +894,7 @@ class FSHLog implements HLog, Syncable {
           byte [] encodedRegionName = info.getEncodedNameAsBytes();
           if (isInMemstore) this.oldestUnflushedSeqNums.putIfAbsent(encodedRegionName, seqNum);
           HLogKey logKey = makeKey(encodedRegionName, tableName, seqNum, now, clusterIds);
-          doWrite(info, logKey, edits, htd);
+          doWrite(info, logKey, edits, htd, regionCoproHost);
           this.numEntries.incrementAndGet();
           txid = this.unflushedEntries.incrementAndGet();
           if (htd.isDeferredLogFlush()) {
@@ -916,9 +917,10 @@ class FSHLog implements HLog, Syncable {
 
   @Override
   public long appendNoSync(HRegionInfo info, TableName tableName, WALEdit edits,
-      List<UUID> clusterIds, final long now, HTableDescriptor htd)
+      List<UUID> clusterIds, final long now, HTableDescriptor htd,
+      RegionCoprocessorHost regionCoproHost)
     throws IOException {
-    return append(info, tableName, edits, clusterIds, now, htd, false, true);
+    return append(info, tableName, edits, clusterIds, now, htd, false, true, regionCoproHost);
   }
 
   /**
@@ -1203,7 +1205,7 @@ class FSHLog implements HLog, Syncable {
 
   // TODO: Remove info.  Unused.
   protected void doWrite(HRegionInfo info, HLogKey logKey, WALEdit logEdit,
-                           HTableDescriptor htd)
+                           HTableDescriptor htd, RegionCoprocessorHost regionCoproHost)
   throws IOException {
     if (!this.enabled) {
       return;
@@ -1220,12 +1222,18 @@ class FSHLog implements HLog, Syncable {
         if (logEdit.isReplay()) {
           // set replication scope null so that this won't be replicated
           logKey.setScopes(null);
+          if(regionCoproHost != null) {
+            regionCoproHost.preWALRestore(info, logKey, logEdit);
+          }
         }
         // write to our buffer for the Hlog file.
         logSyncer.append(new FSHLog.Entry(logKey, logEdit));
       }
       long took = EnvironmentEdgeManager.currentTimeMillis() - now;
       coprocessorHost.postWALWrite(info, logKey, logEdit);
+      if(logEdit.isReplay() && regionCoproHost != null ) {
+        regionCoproHost.postWALRestore(info, logKey, logEdit);
+      }
       long len = 0;
       for (KeyValue kv : logEdit.getKeyValues()) {
         len += kv.getLength();
