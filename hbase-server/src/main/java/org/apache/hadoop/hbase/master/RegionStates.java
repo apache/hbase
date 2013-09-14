@@ -139,6 +139,13 @@ public class RegionStates {
   }
 
   /**
+   * @return True if specified region offline.
+   */
+  public synchronized boolean isRegionOffline(final HRegionInfo hri) {
+    return !isRegionInTransition(hri) && isRegionInState(hri, State.OFFLINE);
+  }
+
+  /**
    * @return True if specified region is in specified state
    */
   public synchronized boolean isRegionInState(

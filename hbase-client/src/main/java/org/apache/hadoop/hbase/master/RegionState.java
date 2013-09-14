@@ -151,11 +151,21 @@ public class RegionState implements org.apache.hadoop.io.Writable {
   }
 
   public boolean isPendingOpenOrOpeningOnServer(final ServerName sn) {
-    return isOnServer(sn) && (isPendingOpen() || isOpening());
+    return isOnServer(sn) && isPendingOpenOrOpening();
+  }
+
+  // Failed open is also kind of pending open
+  public boolean isPendingOpenOrOpening() {
+    return isPendingOpen() || isOpening() || isFailedOpen();
   }
 
   public boolean isPendingCloseOrClosingOnServer(final ServerName sn) {
-    return isOnServer(sn) && (isPendingClose() || isClosing());
+    return isOnServer(sn) && isPendingCloseOrClosing();
+  }
+
+  // Failed close is also kind of pending close
+  public boolean isPendingCloseOrClosing() {
+    return isPendingClose() || isClosing() || isFailedClose();
   }
 
   public boolean isOnServer(final ServerName sn) {

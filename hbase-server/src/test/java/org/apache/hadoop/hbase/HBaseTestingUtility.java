@@ -1792,6 +1792,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
     return createMultiRegions(c, table, family, regionStartKeys);
   }
 
+  @SuppressWarnings("deprecation")
   public int createMultiRegions(final Configuration c, final HTable table,
       final byte[] columnFamily, byte [][] startKeys)
   throws IOException {
@@ -3052,6 +3053,40 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
     while (true) {
       List<HRegionInfo> regions = getHBaseAdmin().getOnlineRegions(server);
       if (regions.contains(hri)) return;
+      long now = System.currentTimeMillis();
+      if (now > timeoutTime) break;
+      Thread.sleep(10);
+    }
+    fail("Could not find region " + hri.getRegionNameAsString()
+      + " on server " + server);
+  }
+
+  /**
+   * Check to make sure the region is open on the specified
+   * region server, but not on any other one.
+   */
+  public void assertRegionOnlyOnServer(
+      final HRegionInfo hri, final ServerName server,
+      final long timeout) throws IOException, InterruptedException {
+    long timeoutTime = System.currentTimeMillis() + timeout;
+    while (true) {
+      List<HRegionInfo> regions = getHBaseAdmin().getOnlineRegions(server);
+      if (regions.contains(hri)) {
+        List<JVMClusterUtil.RegionServerThread> rsThreads =
+          getHBaseCluster().getLiveRegionServerThreads();
+        for (JVMClusterUtil.RegionServerThread rsThread: rsThreads) {
+          HRegionServer rs = rsThread.getRegionServer();
+          if (server.equals(rs.getServerName())) {
+            continue;
+          }
+          Collection<HRegion> hrs = rs.getOnlineRegionsLocalContext();
+          for (HRegion r: hrs) {
+            assertTrue("Region should not be double assigned",
+              r.getRegionId() != hri.getRegionId());
+          }
+        }
+        return; // good, we are happy
+      }
       long now = System.currentTimeMillis();
       if (now > timeoutTime) break;
       Thread.sleep(10);

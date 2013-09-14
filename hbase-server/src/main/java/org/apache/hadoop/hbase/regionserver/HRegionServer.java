@@ -2409,7 +2409,7 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
         LOG.warn("Failed to close " + region.getRegionNameAsString() +
             " - ignoring and continuing");
       }
-    } catch (NotServingRegionException e) {
+    } catch (IOException e) {
       LOG.warn("Failed to close " + region.getRegionNameAsString() +
           " - ignoring and continuing", e);
     }
@@ -2436,14 +2436,14 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
    * @param versionOfClosingNode the version of znode to compare when RS transitions the znode from
    *   CLOSING state.
    * @return True if closed a region.
-   * @throws NotServingRegionException if the region is not online or if a close
-   * request in in progress.
+   * @throws NotServingRegionException if the region is not online
+   * @throws RegionAlreadyInTransitionException if the region is already closing
    */
   protected boolean closeRegion(String encodedName, final boolean abort,
       final boolean zk, final int versionOfClosingNode, final ServerName sn)
-      throws NotServingRegionException {
+      throws NotServingRegionException, RegionAlreadyInTransitionException {
     //Check for permissions to close.
-    final HRegion actualRegion = this.getFromOnlineRegions(encodedName);
+    HRegion actualRegion = this.getFromOnlineRegions(encodedName);
     if ((actualRegion != null) && (actualRegion.getCoprocessorHost() != null)) {
       try {
         actualRegion.getCoprocessorHost().preClose(false);
@@ -2465,21 +2465,29 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
         LOG.warn("The opening for region " + encodedName + " was done before we could cancel it." +
             " Doing a standard close now");
         return closeRegion(encodedName, abort, zk, versionOfClosingNode, sn);
-      } else {
+      }
+      // Let's get the region from the online region list again
+      actualRegion = this.getFromOnlineRegions(encodedName);
+      if (actualRegion == null) { // If already online, we still need to close it.
         LOG.info("The opening previously in progress has been cancelled by a CLOSE request.");
         // The master deletes the znode when it receives this exception.
         throw new NotServingRegionException("The region " + encodedName +
-            " was opening but not yet served. Opening is cancelled.");
+          " was opening but not yet served. Opening is cancelled.");
       }
     } else if (Boolean.FALSE.equals(previous)) {
       LOG.info("Received CLOSE for the region: " + encodedName +
-          " ,which we are already trying to CLOSE");
-      // The master deletes the znode when it receives this exception.
-      throw new NotServingRegionException("The region " + encodedName +
-          " was already closing. New CLOSE request is ignored.");
+        " ,which we are already trying to CLOSE, but not completed yet");
+      // The master will retry till the region is closed. We need to do this since
+      // the region could fail to close somehow. If we mark the region closed in master
+      // while it is not, there could be data loss.
+      // If the region stuck in closing for a while, and master runs out of retries,
+      // master will move the region to failed_to_close. Later on, if the region
+      // is indeed closed, master can properly re-assign it.
+      throw new RegionAlreadyInTransitionException("The region " + encodedName +
+        " was already closing. New CLOSE request is ignored.");
     }
 
-    if (actualRegion == null){
+    if (actualRegion == null) {
       LOG.error("Received CLOSE for a region which is not online, and we're not opening.");
       this.regionsInTransitionInRS.remove(encodedName.getBytes());
       // The master deletes the znode when it receives this exception.

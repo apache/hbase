@@ -213,7 +213,8 @@ public class OpenRegionHandler extends EventHandler {
                                                     // really unlucky.
           LOG.error("Race condition: we've finished to open a region, while a close was requested "
               + " on region=" + regionName + ". It can be a critical error, as a region that"
-              + " should be closed is now opened.");
+              + " should be closed is now opened. Closing it now");
+          cleanupFailedOpen(region);
         }
       }
     }
@@ -503,7 +504,10 @@ public class OpenRegionHandler extends EventHandler {
   }
 
   void cleanupFailedOpen(final HRegion region) throws IOException {
-    if (region != null) region.close();
+    if (region != null) {
+      this.rsServices.removeFromOnlineRegions(region, null);
+      region.close();
+    }
   }
 
   private boolean isRegionStillOpening() {
