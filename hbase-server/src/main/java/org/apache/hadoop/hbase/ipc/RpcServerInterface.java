@@ -34,18 +34,24 @@ import com.google.protobuf.Descriptors.MethodDescriptor;
 import com.google.protobuf.Message;
 import com.google.protobuf.ServiceException;
 
+/**
+ * RpcServer Interface.
+ * Start calls {@link #openServer()} and then {@link #startThreads()}.  Prefer {@link #start()}
+ * and {@link #stop()}.  Only use {@link #openServer()} and {@link #startThreads()} if in a
+ * situation where you could start getting requests though the server not up and fully
+ * initiaalized.
+ */
 @InterfaceAudience.Private
 public interface RpcServerInterface {
-  // TODO: Needs cleanup.  Why a 'start', and then a 'startThreads' and an 'openServer'?
-
-  void setSocketSendBufSize(int size);
-
   void start();
+  void openServer();
+  void startThreads();
+  boolean isStarted();
 
   void stop();
-
   void join() throws InterruptedException;
 
+  void setSocketSendBufSize(int size);
   InetSocketAddress getListenerAddress();
 
   Pair<Message, CellScanner> call(BlockingService service, MethodDescriptor md,
@@ -53,10 +59,7 @@ public interface RpcServerInterface {
   throws IOException, ServiceException;
 
   void setErrorHandler(HBaseRPCErrorHandler handler);
-
-  void openServer();
-
-  void startThreads();
+  HBaseRPCErrorHandler getErrorHandler();
 
   /**
    * Returns the metrics instance for reporting RPC call statistics
@@ -64,7 +67,14 @@ public interface RpcServerInterface {
   MetricsHBaseServer getMetrics();
 
   /**
-   * Refresh autentication manager policy.
+   * Add/subtract from the current size of all outstanding calls.  Called on setup of a call to add
+   * call total size and then again at end of a call to remove the call size.
+   * @param diff Change (plus or minus)
+   */
+  void addCallSize(long diff);
+
+  /**
+   * Refresh authentication manager policy.
    * @param pp
    */
   @VisibleForTesting

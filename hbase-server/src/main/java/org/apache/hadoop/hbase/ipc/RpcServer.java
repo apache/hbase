@@ -1,5 +1,4 @@
 /**
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -74,7 +73,6 @@ import org.apache.hadoop.hbase.codec.Codec;
 import org.apache.hadoop.hbase.exceptions.RegionMovedException;
 import org.apache.hadoop.hbase.io.ByteBufferOutputStream;
 import org.apache.hadoop.hbase.monitoring.MonitoredRPCHandler;
-import org.apache.hadoop.hbase.monitoring.TaskMonitor;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.RPCProtos.CellBlockMeta;
 import org.apache.hadoop.hbase.protobuf.generated.RPCProtos.ConnectionHeader;
@@ -111,9 +109,7 @@ import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.util.StringUtils;
 import org.cliffc.high_scale_lib.Counter;
-import org.cloudera.htrace.Trace;
 import org.cloudera.htrace.TraceInfo;
-import org.cloudera.htrace.TraceScope;
 import org.codehaus.jackson.map.ObjectMapper;
 
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
@@ -128,7 +124,21 @@ import com.google.protobuf.TextFormat;
 
 /**
  * An RPC server that hosts protobuf described Services.
- * <p>Once was copied from Hadoop to local to fix HBASE-900 but deviated long ago.
+ * 
+ * An RpcServer instance has a {@link Listener} that hosts the socket.  Listener has fixed number
+ * of {@link Reader}s in an ExecutorPool, 10 by default.  The Listener does an accept and then
+ * round robin a Reader is chosen to do the read.  The reader is registered on Selector.  Read does
+ * total read off the channel and the parse from which it makes a Call.  The call is wrapped in a
+ * CallRunner and passed to the scheduler to be run.  Reader goes back to see if more to be done
+ * and loops till done.
+ * 
+ * <p>Scheduler can be variously implemented but default simple scheduler has handlers to which it
+ * has given the queues into which calls (i.e. CallRunner instances) are inserted.  Handlers run
+ * taking from the queue.  They run the CallRunner#run method on each item gotten from queue
+ * and keep taking while the server is up.
+ * 
+ * CallRunner#run executes the call.  When done, asks the included Call to put itself on new
+ * queue for {@link Responder} to pull from and return result to client.
  *
  * @see RpcClient
  */
@@ -171,16 +181,13 @@ public class RpcServer implements RpcServerInterface {
   protected SecretManager<TokenIdentifier> secretManager;
   protected ServiceAuthorizationManager authManager;
 
-  protected static final ThreadLocal<RpcServerInterface> SERVER = new ThreadLocal<RpcServerInterface>();
-  private volatile boolean started = false;
-
-  /** This is set to Call object before Handler invokes an RPC and reset
+  /** This is set to Call object before Handler invokes an RPC and ybdie
    * after the call returns.
    */
   protected static final ThreadLocal<Call> CurCall = new ThreadLocal<Call>();
 
   /** Keeps MonitoredRPCHandler per handler thread. */
-  private static final ThreadLocal<MonitoredRPCHandler> MONITORED_RPC
+  static final ThreadLocal<MonitoredRPCHandler> MONITORED_RPC
       = new ThreadLocal<MonitoredRPCHandler>();
 
   protected final InetSocketAddress isa;
@@ -207,7 +214,22 @@ public class RpcServer implements RpcServerInterface {
   protected final boolean tcpKeepAlive; // if T then use keepalives
   protected final long purgeTimeout;    // in milliseconds
 
-  protected volatile boolean running = true;         // true while server runs
+  /**
+   * This flag is used to indicate to sub threads when they should go down.  When we call
+   * {@link #startThreads()}, all threads started will consult this flag on whether they should
+   * keep going.  It is set to false when {@link #stop()} is called.
+   */
+  volatile boolean running = true;
+
+  /**
+   * This flag is set to true after all threads are up and 'running' and the server is then opened
+   * for business by the calle to {@link #openServer()}.
+   */
+  volatile boolean started = false;
+
+  /**
+   * This is a running count of the size of all outstanding calls by size.
+   */
   protected final Counter callQueueSize = new Counter();
 
   protected final List<Connection> connectionList =
@@ -462,7 +484,7 @@ public class RpcServer implements RpcServerInterface {
     /**
      * If we have a response, and delay is not set, then respond
      * immediately.  Otherwise, do not respond to client.  This is
-     * called the by the RPC code in the context of the Handler thread.
+     * called by the RPC code in the context of the Handler thread.
      */
     public synchronized void sendResponseIfReady() throws IOException {
       if (!this.delayResponse) {
@@ -643,8 +665,6 @@ public class RpcServer implements RpcServerInterface {
     @Override
     public void run() {
       LOG.info(getName() + ": starting");
-      SERVER.set(RpcServer.this);
-
       while (running) {
         SelectionKey key = null;
         try {
@@ -815,7 +835,6 @@ public class RpcServer implements RpcServerInterface {
     @Override
     public void run() {
       LOG.info(getName() + ": starting");
-      SERVER.set(RpcServer.this);
       try {
         doRunLoop();
       } finally {
@@ -1685,8 +1704,7 @@ public class RpcServer implements RpcServerInterface {
       Call call = new Call(id, this.service, md, header, param, cellScanner, this, responder,
               totalRequestSize,
               traceInfo);
-      callQueueSize.add(totalRequestSize);
-      scheduler.dispatch(new CallRunner(call));
+      scheduler.dispatch(new CallRunner(RpcServer.this, call));
     }
 
     private boolean authorizeConnection() throws IOException {
@@ -1756,107 +1774,6 @@ public class RpcServer implements RpcServerInterface {
   }
 
   /**
-   * The real request processing logic, which is usually executed in
-   * thread pools provided by an {@link RpcScheduler}.
-   */
-  class CallRunner implements Runnable {
-    private final Call call;
-
-    public CallRunner(Call call) {
-      this.call = call;
-    }
-
-    public Call getCall() {
-      return call;
-    }
-
-    @Override
-    public void run() {
-      MonitoredRPCHandler status = getStatus();
-      SERVER.set(RpcServer.this);
-      try {
-        status.setStatus("Setting up call");
-        status.setConnection(call.connection.getHostAddress(), call.connection.getRemotePort());
-        if (LOG.isDebugEnabled()) {
-          UserGroupInformation remoteUser = call.connection.user;
-          LOG.debug(call.toShortString() + " executing as " +
-              ((remoteUser == null) ? "NULL principal" : remoteUser.getUserName()));
-        }
-        Throwable errorThrowable = null;
-        String error = null;
-        Pair<Message, CellScanner> resultPair = null;
-        CurCall.set(call);
-        TraceScope traceScope = null;
-        try {
-          if (!started) {
-            throw new ServerNotRunningYetException("Server is not running yet");
-          }
-          if (call.tinfo != null) {
-            traceScope = Trace.startSpan(call.toTraceString(), call.tinfo);
-          }
-          RequestContext.set(User.create(call.connection.user), getRemoteIp(),
-            call.connection.service);
-          // make the call
-          resultPair = call(call.service, call.md, call.param, call.cellScanner, call.timestamp,
-              status);
-        } catch (Throwable e) {
-          LOG.debug(Thread.currentThread().getName() + ": " + call.toShortString(), e);
-          errorThrowable = e;
-          error = StringUtils.stringifyException(e);
-        } finally {
-          if (traceScope != null) {
-            traceScope.close();
-          }
-          // Must always clear the request context to avoid leaking
-          // credentials between requests.
-          RequestContext.clear();
-        }
-        CurCall.set(null);
-        callQueueSize.add(call.getSize() * -1);
-        // Set the response for undelayed calls and delayed calls with
-        // undelayed responses.
-        if (!call.isDelayed() || !call.isReturnValueDelayed()) {
-          Message param = resultPair != null ? resultPair.getFirst() : null;
-          CellScanner cells = resultPair != null ? resultPair.getSecond() : null;
-          call.setResponse(param, cells, errorThrowable, error);
-        }
-        call.sendResponseIfReady();
-        status.markComplete("Sent response");
-        status.pause("Waiting for a call");
-      } catch (OutOfMemoryError e) {
-        if (errorHandler != null) {
-          if (errorHandler.checkOOME(e)) {
-            LOG.info(Thread.currentThread().getName() + ": exiting on OutOfMemoryError");
-            return;
-          }
-        } else {
-          // rethrow if no handler
-          throw e;
-        }
-      } catch (ClosedChannelException cce) {
-        LOG.warn(Thread.currentThread().getName() + ": caught a ClosedChannelException, " +
-            "this means that the server was processing a " +
-            "request but the client went away. The error message was: " +
-            cce.getMessage());
-      } catch (Exception e) {
-        LOG.warn(Thread.currentThread().getName()
-            + ": caught: " + StringUtils.stringifyException(e));
-      }
-    }
-
-    public MonitoredRPCHandler getStatus() {
-      MonitoredRPCHandler status = MONITORED_RPC.get();
-      if (status != null) {
-        return status;
-      }
-      status = TaskMonitor.get().createRPCStatus(Thread.currentThread().getName());
-      status.pause("Waiting for a call");
-      MONITORED_RPC.set(status);
-      return status;
-    }
-  }
-
-  /**
    * Datastructure for passing a {@link BlockingService} and its associated class of
    * protobuf service interface.  For example, a server that fielded what is defined
    * in the client protobuf service would pass in an implementation of the client blocking service
@@ -1875,14 +1792,6 @@ public class RpcServer implements RpcServerInterface {
     }
     public BlockingService getBlockingService() {
       return this.service;
-    }
-  }
-
-  private class RpcSchedulerContextImpl implements RpcScheduler.Context {
-
-    @Override
-    public InetSocketAddress getListenerAddress() {
-      return RpcServer.this.getListenerAddress();
     }
   }
 
@@ -1938,7 +1847,7 @@ public class RpcServer implements RpcServerInterface {
       HBaseSaslRpcServer.init(conf);
     }
     this.scheduler = scheduler;
-    this.scheduler.init(new RpcSchedulerContextImpl());
+    this.scheduler.init(new RpcSchedulerContext(this));
   }
 
   /**
@@ -1995,7 +1904,12 @@ public class RpcServer implements RpcServerInterface {
    */
   @Override
   public void openServer() {
-    started = true;
+    this.started = true;
+  }
+
+  @Override
+  public boolean isStarted() {
+    return this.started;
   }
 
   /**
@@ -2018,6 +1932,8 @@ public class RpcServer implements RpcServerInterface {
 
   @Override
   public void refreshAuthManager(PolicyProvider pp) {
+    // Ignore warnings that this should be accessed in a static way instead of via an instance;
+    // it'll break if you go via static route.
     this.authManager.refresh(this.conf, pp);
   }
 
@@ -2199,11 +2115,21 @@ public class RpcServer implements RpcServerInterface {
     this.errorHandler = handler;
   }
 
+  @Override
+  public HBaseRPCErrorHandler getErrorHandler() {
+    return this.errorHandler;
+  }
+
   /**
    * Returns the metrics instance for reporting RPC call statistics
    */
   public MetricsHBaseServer getMetrics() {
     return metrics;
+  }
+
+  @Override
+  public void addCallSize(final long diff) {
+    this.callQueueSize.add(diff);
   }
 
   /**
@@ -2376,7 +2302,7 @@ public class RpcServer implements RpcServerInterface {
    */
   public static InetAddress getRemoteIp() {
     Call call = CurCall.get();
-    if (call != null) {
+    if (call != null && call.connection.socket != null) {
       return call.connection.socket.getInetAddress();
     }
     return null;
@@ -2392,17 +2318,6 @@ public class RpcServer implements RpcServerInterface {
       return call.connection.getHostAddress();
     }
     return null;
-  }
-
-  /**
-   * May be called under
-   * {@code #call(Class, RpcRequestBody, long, MonitoredRPCHandler)} implementations,
-   * and under protobuf methods of parameters and return values.
-   * Permits applications to access the server context.
-   * @return the server instance called under or null
-   */
-  public static RpcServerInterface get() {
-    return SERVER.get();
   }
 
   /**

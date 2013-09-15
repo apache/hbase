@@ -286,7 +286,7 @@ public class TestIPC {
         client.call(md, param, CellUtil.createCellScanner(ImmutableList.of(CELL)),
             md.getOutputType().toProto(), User.getCurrent(), rpcServer.getListenerAddress(), 0);
       }
-      verify(scheduler, times(10)).dispatch((RpcServer.CallRunner) anyObject());
+      verify(scheduler, times(10)).dispatch((CallRunner) anyObject());
     } finally {
       rpcServer.stop();
       verify(scheduler).stop();

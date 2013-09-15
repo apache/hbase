@@ -42,9 +42,9 @@ public class SimpleRpcScheduler implements RpcScheduler {
   private final int priorityHandlerCount;
   private final int replicationHandlerCount;
   private final PriorityFunction priority;
-  final BlockingQueue<RpcServer.CallRunner> callQueue;
-  final BlockingQueue<RpcServer.CallRunner> priorityCallQueue;
-  final BlockingQueue<RpcServer.CallRunner> replicationQueue;
+  final BlockingQueue<CallRunner> callQueue;
+  final BlockingQueue<CallRunner> priorityCallQueue;
+  final BlockingQueue<CallRunner> replicationQueue;
   private volatile boolean running = false;
   private final List<Thread> handlers = Lists.newArrayList();
 
@@ -73,12 +73,12 @@ public class SimpleRpcScheduler implements RpcScheduler {
     this.replicationHandlerCount = replicationHandlerCount;
     this.priority = priority;
     this.highPriorityLevel = highPriorityLevel;
-    this.callQueue = new LinkedBlockingQueue<RpcServer.CallRunner>(maxQueueLength);
+    this.callQueue = new LinkedBlockingQueue<CallRunner>(maxQueueLength);
     this.priorityCallQueue = priorityHandlerCount > 0
-        ? new LinkedBlockingQueue<RpcServer.CallRunner>(maxQueueLength)
+        ? new LinkedBlockingQueue<CallRunner>(maxQueueLength)
         : null;
     this.replicationQueue = replicationHandlerCount > 0
-        ? new LinkedBlockingQueue<RpcServer.CallRunner>(maxQueueLength)
+        ? new LinkedBlockingQueue<CallRunner>(maxQueueLength)
         : null;
   }
 
@@ -101,7 +101,7 @@ public class SimpleRpcScheduler implements RpcScheduler {
 
   private void startHandlers(
       int handlerCount,
-      final BlockingQueue<RpcServer.CallRunner> callQueue,
+      final BlockingQueue<CallRunner> callQueue,
       String threadNamePrefix) {
     for (int i = 0; i < handlerCount; i++) {
       Thread t = new Thread(new Runnable() {
@@ -126,7 +126,7 @@ public class SimpleRpcScheduler implements RpcScheduler {
   }
 
   @Override
-  public void dispatch(RpcServer.CallRunner callTask) throws InterruptedException {
+  public void dispatch(CallRunner callTask) throws InterruptedException {
     RpcServer.Call call = callTask.getCall();
     int level = priority.getPriority(call.header, call.param);
     if (priorityCallQueue != null && level > highPriorityLevel) {
@@ -153,10 +153,10 @@ public class SimpleRpcScheduler implements RpcScheduler {
     return replicationQueue == null ? 0 : replicationQueue.size();
   }
 
-  private void consumerLoop(BlockingQueue<RpcServer.CallRunner> myQueue) {
+  private void consumerLoop(BlockingQueue<CallRunner> myQueue) {
     while (running) {
       try {
-        RpcServer.CallRunner task = myQueue.take();
+        CallRunner task = myQueue.take();
         task.run();
       } catch (InterruptedException e) {
         Thread.interrupted();

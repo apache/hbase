@@ -24,6 +24,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.security.User;
 
 import com.google.protobuf.BlockingService;
+
 import org.apache.hadoop.hbase.util.Bytes;
 import org.cloudera.htrace.Trace;
 
@@ -31,9 +32,9 @@ import java.net.InetAddress;
 
 /**
  * Represents client information (authenticated username, remote address, protocol)
- * for the currently executing request within a RPC server handler thread.  If
- * called outside the context of a RPC request, all values will be
- * <code>null</code>.
+ * for the currently executing request.  If called outside the context of a RPC request, all values
+ * will be <code>null</code>. The {@link CallRunner} class before it a call and then on
+ * its way out, it will clear the thread local.
  */
 @InterfaceAudience.Private
 public class RequestContext {
@@ -146,7 +147,7 @@ public class RequestContext {
     return this.service;
   }
 
-  public boolean isInRequest() {
+  boolean isInRequest() {
     return inRequest;
   }
 }

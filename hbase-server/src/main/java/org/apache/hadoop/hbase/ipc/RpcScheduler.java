@@ -57,7 +57,7 @@ public interface RpcScheduler {
    *
    * @param task the request to be dispatched
    */
-  void dispatch(RpcServer.CallRunner task) throws IOException, InterruptedException;
+  void dispatch(CallRunner task) throws IOException, InterruptedException;
 
   /** Retrieves length of the general queue for metrics. */
   int getGeneralQueueLength();
