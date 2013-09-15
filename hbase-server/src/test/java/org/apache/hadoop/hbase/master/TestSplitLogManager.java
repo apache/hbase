@@ -39,6 +39,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
+import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -48,6 +49,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.SplitLogTask;
@@ -531,5 +534,28 @@ public class TestSplitLogManager {
       }
       fs.delete(logDir, true);
     }
+  }
+
+  /**
+   * The following test case is aiming to test the situation when distributedLogReplay is turned off
+   * and restart a cluster there should no recovery regions in ZK left.
+   * @throws Exception
+   */
+  @Test(timeout = 300000)
+  public void testRecoveryRegionRemovedFromZK() throws Exception {
+    LOG.info("testRecoveryRegionRemovedFromZK");
+    conf.setBoolean(HConstants.DISTRIBUTED_LOG_REPLAY_KEY, false);
+    String nodePath =
+        ZKUtil.joinZNode(zkw.recoveringRegionsZNode,
+          HRegionInfo.FIRST_META_REGIONINFO.getEncodedName());
+    ZKUtil.createSetData(zkw, nodePath, ZKUtil.positionToByteArray(0L));
+
+    slm = new SplitLogManager(zkw, conf, stopper, master, DUMMY_MASTER);
+    slm.removeStaleRecoveringRegionsFromZK(null);
+
+    List<String> recoveringRegions =
+        zkw.getRecoverableZooKeeper().getChildren(zkw.recoveringRegionsZNode, false);
+
+    assertTrue("Recovery regions isn't cleaned", recoveringRegions.isEmpty());
   }
 }
