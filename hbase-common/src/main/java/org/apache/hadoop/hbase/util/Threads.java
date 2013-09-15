@@ -18,7 +18,6 @@
  */
 package org.apache.hadoop.hbase.util;
 
-import java.io.InterruptedIOException;
 import java.io.PrintWriter;
 import java.lang.Thread.UncaughtExceptionHandler;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -30,14 +29,12 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.util.ReflectionUtils;
 
 /**
  * Thread Utility
  */
-@InterfaceAudience.Public
-@InterfaceStability.Stable
+@InterfaceAudience.Private
 public class Threads {
   protected static final Log LOG = LogFactory.getLog(Threads.class);
   private static final AtomicInteger poolNumber = new AtomicInteger(1);

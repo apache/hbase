@@ -21,13 +21,11 @@
 package org.apache.hadoop.hbase.util;
 
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
 
 /**
  * Utilities for class manipulation.
  */
-@InterfaceAudience.Public
-@InterfaceStability.Stable
+@InterfaceAudience.Private
 public class Classes {
 
   /**

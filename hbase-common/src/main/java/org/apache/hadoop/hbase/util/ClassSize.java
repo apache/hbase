@@ -22,13 +22,11 @@ package org.apache.hadoop.hbase.util;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
-
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
 
 /**
  * Class for determining the "size" of a class, an attempt to calculate the
@@ -36,8 +34,7 @@ import org.apache.hadoop.classification.InterfaceStability;
  *
  * The core of this class is taken from the Derby project
  */
-@InterfaceAudience.Public
-@InterfaceStability.Stable
+@InterfaceAudience.Private
 public class ClassSize {
   static final Log LOG = LogFactory.getLog(ClassSize.class);
 

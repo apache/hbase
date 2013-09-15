@@ -22,6 +22,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.util.Bytes;
 
 /**
@@ -30,7 +31,8 @@ import org.apache.hadoop.hbase.util.Bytes;
  * want to add a new algorithm/version, assign it a new id. Announce the new id
  * in the HBase mailing list to prevent collisions.
  */
-@InterfaceAudience.Private
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
 public enum DataBlockEncoding {
 
   /** Disable data block encoding. */

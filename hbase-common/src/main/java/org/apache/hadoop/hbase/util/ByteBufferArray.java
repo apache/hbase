@@ -32,7 +32,7 @@ import org.apache.hadoop.util.StringUtils;
  * buffers are sequential and could be considered as a large buffer.It supports
  * reading/writing data from this large buffer with a position and offset
  */
-@InterfaceAudience.Public
+@InterfaceAudience.Private
 public final class ByteBufferArray {
   static final Log LOG = LogFactory.getLog(ByteBufferArray.class);
 

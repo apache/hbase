@@ -19,15 +19,13 @@
 package org.apache.hadoop.hbase.util;
 
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
 
 /**
  * Manages a singleton instance of the environment edge. This class shall
  * implement static versions of the interface {@link EnvironmentEdge}, then
  * defer to the delegate on invocation.
  */
-@InterfaceAudience.Public
-@InterfaceStability.Evolving
+@InterfaceAudience.Private
 public class EnvironmentEdgeManager {
   private static volatile EnvironmentEdge delegate = new DefaultEnvironmentEdge();
 

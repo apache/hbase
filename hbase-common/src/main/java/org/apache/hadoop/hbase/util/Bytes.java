@@ -137,6 +137,8 @@ public class Bytes {
   /**
    * Byte array comparator class.
    */
+  @InterfaceAudience.Public
+  @InterfaceStability.Stable
   public static class ByteArrayComparator implements RawComparator<byte []> {
     /**
      * Constructor
@@ -163,6 +165,8 @@ public class Bytes {
   // boundaries. Thus semantically, we should treat empty byte array as the smallest value
   // while comparing row keys, start keys etc; but as the largest value for comparing
   // region boundaries for endKeys.
+  @InterfaceAudience.Public
+  @InterfaceStability.Stable
   public static class RowEndKeyComparator extends ByteArrayComparator {
     @Override
     public int compare(byte[] left, byte[] right) {

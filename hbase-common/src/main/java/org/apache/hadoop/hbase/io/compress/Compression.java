@@ -26,6 +26,7 @@ import java.io.OutputStream;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.IOUtils;
@@ -100,6 +101,8 @@ public final class Compression {
   @edu.umd.cs.findbugs.annotations.SuppressWarnings(
       value="SE_TRANSIENT_FIELD_NOT_RESTORED",
       justification="We are not serializing so doesn't apply (not sure why transient though)")
+  @InterfaceAudience.Public
+  @InterfaceStability.Evolving
   public static enum Algorithm {
     LZO("lzo") {
       // Use base type to avoid compile-time dependencies.
