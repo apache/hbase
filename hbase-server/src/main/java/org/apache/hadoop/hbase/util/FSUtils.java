@@ -1343,7 +1343,7 @@ public abstract class FSUtils {
   /**
    * Checks if the given path is the one with 'recovered.edits' dir.
    * @param path
-   * @return
+   * @return True if recovered edits.
    */
   public static boolean isRecoveredEdits(Path path) {
     return path.toString().contains(HConstants.RECOVERED_EDITS_DIR);

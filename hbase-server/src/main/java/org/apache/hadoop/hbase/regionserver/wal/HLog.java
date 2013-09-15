@@ -268,7 +268,7 @@ public interface HLog {
   void closeAndDelete() throws IOException;
 
   /**
-   * Same as {@link #appendNoSync(HRegionInfo, TableName, WALEdit, List, long, HTableDescriptor)},
+   * Same as appendNoSync(HRegionInfo, TableName, WALEdit, List, long, HTableDescriptor),
    * except it causes a sync on the log
    */
   public void append(HRegionInfo info, TableName tableName, WALEdit edits,
