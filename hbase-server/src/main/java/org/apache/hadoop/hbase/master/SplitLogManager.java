@@ -572,6 +572,9 @@ public class SplitLogManager extends ZooKeeperListener {
       throws KeeperException {
 
     if (!this.distributedLogReplay) {
+      // remove any regions in recovery from ZK which could happen when we turn the feature on
+      // and later turn it off
+      ZKUtil.deleteChildrenRecursively(watcher, watcher.recoveringRegionsZNode);
       // the function is only used in distributedLogReplay mode when master is in initialization
       return;
     }

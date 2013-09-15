@@ -3571,7 +3571,8 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
 
         if (previous == null) {
           // check if the region to be opened is marked in recovering state in ZK
-          if (SplitLogManager.isRegionMarkedRecoveringInZK(this.getZooKeeper(),
+          if (this.distributedLogReplay
+              && SplitLogManager.isRegionMarkedRecoveringInZK(this.getZooKeeper(),
             region.getEncodedName())) {
             this.recoveringRegions.put(region.getEncodedName(), null);
           }
