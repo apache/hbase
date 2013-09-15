@@ -124,19 +124,19 @@ import com.google.protobuf.TextFormat;
 
 /**
  * An RPC server that hosts protobuf described Services.
- * 
- * An RpcServer instance has a {@link Listener} that hosts the socket.  Listener has fixed number
- * of {@link Reader}s in an ExecutorPool, 10 by default.  The Listener does an accept and then
+ *
+ * An RpcServer instance has a Listener that hosts the socket.  Listener has fixed number
+ * of Readers in an ExecutorPool, 10 by default.  The Listener does an accept and then
  * round robin a Reader is chosen to do the read.  The reader is registered on Selector.  Read does
  * total read off the channel and the parse from which it makes a Call.  The call is wrapped in a
  * CallRunner and passed to the scheduler to be run.  Reader goes back to see if more to be done
  * and loops till done.
- * 
+ *
  * <p>Scheduler can be variously implemented but default simple scheduler has handlers to which it
  * has given the queues into which calls (i.e. CallRunner instances) are inserted.  Handlers run
  * taking from the queue.  They run the CallRunner#run method on each item gotten from queue
  * and keep taking while the server is up.
- * 
+ *
  * CallRunner#run executes the call.  When done, asks the included Call to put itself on new
  * queue for {@link Responder} to pull from and return result to client.
  *
