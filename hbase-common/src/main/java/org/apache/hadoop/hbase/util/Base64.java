@@ -1254,6 +1254,8 @@ public class Base64 {
    * @see Base64
    * @since 1.3
    */
+  @InterfaceAudience.Public
+  @InterfaceStability.Stable
   public static class Base64InputStream extends FilterInputStream {
     private boolean encode;                     // Encoding or decoding
     private int position;                       // Current position in the buffer
@@ -1498,6 +1500,8 @@ public class Base64 {
      * @see Base64#DONT_BREAK_LINES
      * @since 1.3
      */
+    @InterfaceAudience.Public
+    @InterfaceStability.Stable
     public Base64OutputStream(OutputStream out, int options) {
       super(out);
       this.breakLines = (options & DONT_BREAK_LINES) != DONT_BREAK_LINES;

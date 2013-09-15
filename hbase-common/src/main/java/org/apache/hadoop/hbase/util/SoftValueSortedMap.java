@@ -33,7 +33,6 @@ import java.util.SortedMap;
 import java.util.TreeMap;
 
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
 
 /**
  * A SortedMap implementation that uses Soft Reference values
@@ -43,8 +42,7 @@ import org.apache.hadoop.classification.InterfaceStability;
  * @param <K> key class
  * @param <V> value class
  */
-@InterfaceAudience.Public
-@InterfaceStability.Stable
+@InterfaceAudience.Private
 public class SoftValueSortedMap<K,V> implements SortedMap<K,V> {
   private final SortedMap<K, SoftValue<K,V>> internalMap;
   private final ReferenceQueue<V> rq = new ReferenceQueue<V>();

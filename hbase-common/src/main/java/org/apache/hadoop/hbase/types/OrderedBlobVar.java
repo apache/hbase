@@ -28,7 +28,7 @@ import org.apache.hadoop.hbase.util.PositionedByteRange;
  * do not terminate the fields list. Built on
  * {@link OrderedBytes#encodeBlobVar(PositionedByteRange, byte[], int, int, Order)}.
  */
-@InterfaceAudience.Private
+@InterfaceAudience.Public
 @InterfaceStability.Evolving
 public class OrderedBlobVar extends OrderedBytesBase<byte[]> {
 
