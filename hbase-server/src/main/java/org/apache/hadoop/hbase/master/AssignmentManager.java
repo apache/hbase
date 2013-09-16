@@ -2295,6 +2295,13 @@ public class AssignmentManager extends ZooKeeperListener {
     RegionState state = regionStates.getRegionTransitionState(encodedName);
     try {
       if (state == null) {
+        // Region is not in transition.
+        // We can unassign it only if it's not SPLIT/MERGED.
+        state = regionStates.getRegionState(encodedName);
+        if (state.isMerged() || state.isSplit()) {
+          LOG.info("Attempting to unassign " + state + ", ignored");
+          return;
+        }
         // Create the znode in CLOSING state
         try {
           state = regionStates.getRegionState(region);
@@ -2307,7 +2314,7 @@ public class AssignmentManager extends ZooKeeperListener {
           versionOfClosingNode = ZKAssign.createNodeClosing(
             watcher, region, state.getServerName());
           if (versionOfClosingNode == -1) {
-            LOG.debug("Attempting to unassign " +
+            LOG.info("Attempting to unassign " +
                 region.getRegionNameAsString() + " but ZK closing node "
                 + "can't be created.");
             return;
