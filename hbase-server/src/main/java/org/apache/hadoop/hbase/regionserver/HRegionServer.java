@@ -854,7 +854,7 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
       mxBean = null;
     }
     if (this.thriftServer != null) this.thriftServer.shutdown();
-    this.leases.closeAfterLeasesExpire();
+    if (this.leases != null) this.leases.closeAfterLeasesExpire();
     this.rpcServer.stop();
     if (this.splitLogWorker != null) {
       splitLogWorker.stop();
@@ -2764,7 +2764,8 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
       if (existence != null) {
         builder.setExists(existence.booleanValue());
       } else if (r != null) {
-        builder.setResult(ProtobufUtil.toResult(r));
+        ClientProtos.Result pbr = ProtobufUtil.toResult(r);
+        builder.setResult(pbr);
       }
       return builder.build();
     } catch (IOException ie) {
@@ -2789,8 +2790,7 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
       requestCount.add(request.getGetCount());
       HRegion region = getRegion(request.getRegion());
       MultiGetResponse.Builder builder = MultiGetResponse.newBuilder();
-      for (ClientProtos.Get get: request.getGetList())
-      {
+      for (ClientProtos.Get get: request.getGetList()) {
         Boolean existence = null;
         Result r = null;
         if (request.getClosestRowBefore()) {
@@ -2926,20 +2926,33 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
           throw new DoNotRetryIOException(
             "Unsupported mutate type: " + type.name());
       }
-      CellScannable cellsToReturn = null;
-      if (processed != null) {
-        builder.setProcessed(processed.booleanValue());
-      } else if (r != null) {
-        builder.setResult(ProtobufUtil.toResultNoData(r));
-        cellsToReturn = r;
-      }
-      if (cellsToReturn != null) {
-        controller.setCellScanner(cellsToReturn.cellScanner());
-      }
+      if (processed != null) builder.setProcessed(processed.booleanValue());
+      addResult(builder, r, controller);
       return builder.build();
     } catch (IOException ie) {
       checkFileSystem();
       throw new ServiceException(ie);
+    }
+  }
+
+
+  /**
+   * @return True if current call supports cellblocks
+   */
+  private boolean isClientCellBlockSupport() {
+    RpcCallContext context = RpcServer.getCurrentCall();
+    return context != null && context.isClientCellBlockSupport();
+  }
+
+  private void addResult(final MutateResponse.Builder builder,
+      final Result result, final PayloadCarryingRpcController rpcc) {
+    if (result == null) return;
+    if (isClientCellBlockSupport()) {
+      builder.setResult(ProtobufUtil.toResultNoData(result));
+      rpcc.setCellScanner(result.cellScanner());
+    } else {
+      ClientProtos.Result pbr = ProtobufUtil.toResult(result);
+      builder.setResult(pbr);
     }
   }
 
@@ -3127,7 +3140,7 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
               moreResults = false;
               results = null;
             } else {
-              formatResults(builder, results, controller);
+              addResults(builder, results, controller);
             }
           } finally {
             // We're done. On way out re-add the above removed lease.
@@ -3175,18 +3188,15 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
     }
   }
 
-  private void formatResults(final ScanResponse.Builder builder, final List<Result> results,
+  private void addResults(final ScanResponse.Builder builder, final List<Result> results,
       final RpcController controller) {
     if (results == null || results.isEmpty()) return;
-    RpcCallContext context = RpcServer.getCurrentCall();
-    if (context != null && context.isClientCellBlockSupport()) {
-      List<CellScannable> cellScannables = new ArrayList<CellScannable>(results.size());
+    if (isClientCellBlockSupport()) {
       for (Result res : results) {
-        cellScannables.add(res);
         builder.addCellsPerResult(res.size());
       }
       ((PayloadCarryingRpcController)controller).
-        setCellScanner(CellUtil.createCellScanner(cellScannables));
+        setCellScanner(CellUtil.createCellScanner(results));
     } else {
       for (Result res: results) {
         ClientProtos.Result pbr = ProtobufUtil.toResult(res);

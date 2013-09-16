@@ -139,9 +139,9 @@ public final class CellUtil {
    * @param cellScannerables
    * @return CellScanner interface over <code>cellIterables</code>
    */
-  public static CellScanner createCellScanner(final List<CellScannable> cellScannerables) {
+  public static CellScanner createCellScanner(final List<? extends CellScannable> cellScannerables) {
     return new CellScanner() {
-      private final Iterator<CellScannable> iterator = cellScannerables.iterator();
+      private final Iterator<? extends CellScannable> iterator = cellScannerables.iterator();
       private CellScanner cellScanner = null;
 
       @Override
