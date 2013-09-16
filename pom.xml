@@ -485,8 +485,7 @@
               using method parallelization class ! -->
             <testFailureIgnore>false</testFailureIgnore>
             <forkedProcessTimeoutInSeconds>${surefire.timeout}</forkedProcessTimeoutInSeconds>
-            <argLine>-enableassertions -Xmx1900m -XX:MaxPermSize=100m
-              -Djava.security.egd=file:/dev/./urandom -Djava.net.preferIPv4Stack=true</argLine>
+            <argLine>-enableassertions -Xmx1900m -XX:MaxPermSize=100m -Djava.security.egd=file:/dev/./urandom -Djava.net.preferIPv4Stack=true -Djava.awt.headless=true</argLine>
             <redirectTestOutputToFile>${test.output.tofile}</redirectTestOutputToFile>
           </configuration>
           <executions>
@@ -1913,7 +1912,7 @@
 	      <destDir>devapidocs</destDir>
 	    </configuration>
 	  </reportSet>
-	  
+
 	  <reportSet>
 	    <id>userapi</id> <!-- public user hbase api; limited but has stronger compat/deprecation guarantees -->
 	    <reports> <report>aggregate</report></reports>
@@ -1930,7 +1929,7 @@
 	      <description>The HBase Application Programmer's API</description>
 	    </configuration>
 	  </reportSet>
-	</reportSets>	
+	</reportSets>
       </plugin>
 
     </plugins>
