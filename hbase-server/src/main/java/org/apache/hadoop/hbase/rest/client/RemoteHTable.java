@@ -771,6 +771,11 @@ public class RemoteHTable implements HTableInterface {
   }
 
   @Override
+  public void setAutoFlushTo(boolean autoFlush) {
+    throw new UnsupportedOperationException("setAutoFlushTo not implemented");
+  }
+
+  @Override
   public long getWriteBufferSize() {
     throw new UnsupportedOperationException("getWriteBufferSize not implemented");
   }

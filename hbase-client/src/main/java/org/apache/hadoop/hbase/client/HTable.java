@@ -1361,42 +1361,26 @@ public class HTable implements HTableInterface {
   }
 
   /**
-   * See {@link #setAutoFlush(boolean, boolean)}
-   *
-   * @param autoFlush
-   *          Whether or not to enable 'auto-flush'.
+   * {@inheritDoc}
    */
+  @Deprecated
+  @Override
   public void setAutoFlush(boolean autoFlush) {
     setAutoFlush(autoFlush, autoFlush);
   }
 
   /**
-   * Turns 'auto-flush' on or off.
-   * <p>
-   * When enabled (default), {@link Put} operations don't get buffered/delayed
-   * and are immediately executed. Failed operations are not retried. This is
-   * slower but safer.
-   * <p>
-   * Turning off {@link #autoFlush} means that multiple {@link Put}s will be
-   * accepted before any RPC is actually sent to do the write operations. If the
-   * application dies before pending writes get flushed to HBase, data will be
-   * lost.
-   * <p>
-   * When you turn {@link #autoFlush} off, you should also consider the
-   * {@link #clearBufferOnFail} option. By default, asynchronous {@link Put}
-   * requests will be retried on failure until successful. However, this can
-   * pollute the writeBuffer and slow down batching performance. Additionally,
-   * you may want to issue a number of Put requests and call
-   * {@link #flushCommits()} as a barrier. In both use cases, consider setting
-   * clearBufferOnFail to true to erase the buffer after {@link #flushCommits()}
-   * has been called, regardless of success.
-   *
-   * @param autoFlush
-   *          Whether or not to enable 'auto-flush'.
-   * @param clearBufferOnFail
-   *          Whether to keep Put failures in the writeBuffer
-   * @see #flushCommits
+   * {@inheritDoc}
    */
+  @Override
+  public void setAutoFlushTo(boolean autoFlush) {
+    setAutoFlush(autoFlush, clearBufferOnFail);
+  }
+
+  /**
+   * {@inheritDoc}
+   */
+  @Override
   public void setAutoFlush(boolean autoFlush, boolean clearBufferOnFail) {
     this.autoFlush = autoFlush;
     this.clearBufferOnFail = autoFlush || clearBufferOnFail;
@@ -1409,6 +1393,7 @@ public class HTable implements HTableInterface {
    * {@code hbase.client.write.buffer}.
    * @return The size of the write buffer in bytes.
    */
+  @Override
   public long getWriteBufferSize() {
     return writeBufferSize;
   }

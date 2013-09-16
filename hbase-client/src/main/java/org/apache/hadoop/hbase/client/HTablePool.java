@@ -569,13 +569,18 @@ public class HTablePool implements Closeable {
     @Override
     public void setAutoFlush(boolean autoFlush) {
       checkState();
-      table.setAutoFlush(autoFlush);
+      table.setAutoFlush(autoFlush, autoFlush);
     }
 
     @Override
     public void setAutoFlush(boolean autoFlush, boolean clearBufferOnFail) {
       checkState();
       table.setAutoFlush(autoFlush, clearBufferOnFail);
+    }
+
+    @Override
+    public void setAutoFlushTo(boolean autoFlush) {
+      table.setAutoFlushTo(autoFlush);
     }
 
     @Override

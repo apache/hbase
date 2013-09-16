@@ -89,7 +89,7 @@ FileOutputFormat<ImmutableBytesWritable, Put> {
       LOG.error(e);
       throw e;
     }
-    table.setAutoFlush(false);
+    table.setAutoFlush(false, true);
     return new TableRecordWriter(table);
   }
 

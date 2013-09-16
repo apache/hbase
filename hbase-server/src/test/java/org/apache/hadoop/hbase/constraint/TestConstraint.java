@@ -79,7 +79,6 @@ public class TestConstraint {
 
     util.getHBaseAdmin().createTable(desc);
     HTable table = new HTable(util.getConfiguration(), tableName);
-    table.setAutoFlush(true);
 
     // test that we don't fail on a valid put
     Put put = new Put(row1);
@@ -110,7 +109,6 @@ public class TestConstraint {
 
     util.getHBaseAdmin().createTable(desc);
     HTable table = new HTable(util.getConfiguration(), tableName);
-    table.setAutoFlush(true);
 
     // test that we do fail on violation
     Put put = new Put(row1);
@@ -154,7 +152,6 @@ public class TestConstraint {
 
     util.getHBaseAdmin().createTable(desc);
     HTable table = new HTable(util.getConfiguration(), tableName);
-    table.setAutoFlush(true);
 
     // test that we don't fail because its disabled
     Put put = new Put(row1);
@@ -185,7 +182,6 @@ public class TestConstraint {
 
     util.getHBaseAdmin().createTable(desc);
     HTable table = new HTable(util.getConfiguration(), tableName);
-    table.setAutoFlush(true);
 
     // test that we do fail on violation
     Put put = new Put(row1);
@@ -216,7 +212,6 @@ public class TestConstraint {
 
     util.getHBaseAdmin().createTable(desc);
     HTable table = new HTable(util.getConfiguration(), tableName);
-    table.setAutoFlush(true);
 
     // test that we do fail on violation
     Put put = new Put(row1);

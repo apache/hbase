@@ -817,7 +817,7 @@ public class TestDistributedLogSplitting {
       if (key == null || key.length == 0) {
         key = new byte[] { 0, 0, 0, 0, 1 };
       }
-      ht.setAutoFlush(true);
+      ht.setAutoFlush(true, true);
       Put put = new Put(key);
       put.add(Bytes.toBytes("family"), Bytes.toBytes("c1"), new byte[]{'b'});
       ht.put(put);
@@ -1229,7 +1229,7 @@ public class TestDistributedLogSplitting {
    * Load table with puts and deletes with expected values so that we can verify later
    */
   private void prepareData(final HTable t, final byte[] f, final byte[] column) throws IOException {
-    t.setAutoFlush(false);
+    t.setAutoFlush(false, true);
     byte[] k = new byte[3];
 
     // add puts

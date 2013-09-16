@@ -335,7 +335,7 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
         id = Bytes.toBytes(UUID.randomUUID().toString());
         Configuration conf = context.getConfiguration();
         table = new HTable(conf, getTableName(conf));
-        table.setAutoFlush(false);
+        table.setAutoFlush(false, true);
         table.setWriteBufferSize(4 * 1024 * 1024);
         this.width = context.getConfiguration().getInt(GENERATOR_WIDTH_KEY, WIDTH_DEFAULT);
         current = new byte[this.width][];

@@ -324,7 +324,7 @@ public class TestRegionServerMetrics {
 
     TEST_UTIL.createTable(tableName, cf);
     HTable t = new HTable(conf, tableName);
-    t.setAutoFlush(false);
+    t.setAutoFlush(false, true);
     for (int insertCount =0; insertCount < 100; insertCount++) {
       Put p = new Put(Bytes.toBytes("" + insertCount + "row"));
       p.add(cf, qualifier, val);

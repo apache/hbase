@@ -1580,7 +1580,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
    * @throws IOException
    */
   public int loadTable(final HTable t, final byte[] f) throws IOException {
-    t.setAutoFlush(false);
+    t.setAutoFlush(false, true);
     byte[] k = new byte[3];
     int rowCount = 0;
     for (byte b1 = 'a'; b1 <= 'z'; b1++) {
@@ -1608,7 +1608,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
    * @throws IOException
    */
   public int loadTable(final HTable t, final byte[][] f) throws IOException {
-    t.setAutoFlush(false);
+    t.setAutoFlush(false, true);
     byte[] k = new byte[3];
     int rowCount = 0;
     for (byte b1 = 'a'; b1 <= 'z'; b1++) {

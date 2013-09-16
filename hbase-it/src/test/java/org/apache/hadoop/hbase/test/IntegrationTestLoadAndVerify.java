@@ -177,7 +177,7 @@ public class IntegrationTestLoadAndVerify  extends IntegrationTestBase  {
       numBackReferencesPerRow = conf.getInt(NUM_BACKREFS_KEY, NUM_BACKREFS_DEFAULT);
       table = new HTable(conf, tableName);
       table.setWriteBufferSize(4*1024*1024);
-      table.setAutoFlush(false);
+      table.setAutoFlush(false, true);
 
       String taskId = conf.get("mapred.task.id");
       Matcher matcher = Pattern.compile(".+_m_(\\d+_\\d+)").matcher(taskId);
