@@ -20,6 +20,8 @@
 package org.apache.hadoop.hbase.zookeeper;
 
 import com.google.protobuf.InvalidProtocolBufferException;
+
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
@@ -37,6 +39,7 @@ import java.util.Set;
  *
  * <p>Does not cache state like {@link ZKTable}, actually reads from ZK each call.
  */
+@InterfaceAudience.Private
 public class ZKTableReadOnly {
 
   private ZKTableReadOnly() {}

@@ -23,15 +23,13 @@ import java.io.IOException;
 import java.util.concurrent.Callable;
 
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
 
 /**
  * A Callable<T> that will be retried.  If {@link #call()} invocation throws exceptions,
  * we will call {@link #throwable(Throwable, boolean)} with whatever the exception was.
  * @param <T>
  */
-@InterfaceAudience.Public
-@InterfaceStability.Stable
+@InterfaceAudience.Private
 public interface RetryingCallable<T> extends Callable<T> {
   /**
    * Prepare by setting up any connections to servers, etc., ahead of {@link #call()} invocation.

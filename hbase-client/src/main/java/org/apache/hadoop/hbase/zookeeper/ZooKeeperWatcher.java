@@ -18,10 +18,16 @@
  */
 package org.apache.hadoop.hbase.zookeeper;
 
+import java.io.Closeable;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.CountDownLatch;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.HConstants;
@@ -32,13 +38,6 @@ import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.Watcher;
 import org.apache.zookeeper.ZooDefs;
 import org.apache.zookeeper.data.ACL;
-
-import java.io.Closeable;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.concurrent.CountDownLatch;
 
 /**
  * Acts as the single ZooKeeper Watcher.  One instance of this is instantiated
@@ -51,8 +50,7 @@ import java.util.concurrent.CountDownLatch;
  * <p>This class also holds and manages the connection to ZooKeeper.  Code to
  * deal with connection related events and exceptions are handled here.
  */
-@InterfaceAudience.Public
-@InterfaceStability.Evolving
+@InterfaceAudience.Private
 public class ZooKeeperWatcher implements Watcher, Abortable, Closeable {
   private static final Log LOG = LogFactory.getLog(ZooKeeperWatcher.class);
 

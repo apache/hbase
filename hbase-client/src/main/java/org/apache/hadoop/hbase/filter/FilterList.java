@@ -55,6 +55,8 @@ import com.google.protobuf.InvalidProtocolBufferException;
 @InterfaceStability.Stable
 final public class FilterList extends Filter {
   /** set operator */
+  @InterfaceAudience.Public
+  @InterfaceStability.Stable
   public static enum Operator {
     /** !AND */
     MUST_PASS_ALL,

@@ -18,15 +18,14 @@
 
 package org.apache.hadoop.hbase.zookeeper;
 
+import java.util.concurrent.atomic.AtomicBoolean;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.zookeeper.KeeperException;
-
-import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * Handles coordination of a single "leader" instance among many possible
@@ -40,8 +39,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * @deprecated Not used
  */
 @Deprecated
-@InterfaceAudience.Public
-@InterfaceStability.Evolving
+@InterfaceAudience.Private
 public class ZKLeaderManager extends ZooKeeperListener {
   private static Log LOG = LogFactory.getLog(ZKLeaderManager.class);
 

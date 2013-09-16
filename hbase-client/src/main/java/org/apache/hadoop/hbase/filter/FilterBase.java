@@ -37,8 +37,7 @@ import org.apache.hadoop.hbase.KeyValueUtil;
  * If you could instantiate FilterBase, it would end up being a "null" filter -
  * that is one that never filters anything.
  */
-@InterfaceAudience.Public
-@InterfaceStability.Stable
+@InterfaceAudience.Private // TODO add filter limited private level
 public abstract class FilterBase extends Filter {
 
   /**

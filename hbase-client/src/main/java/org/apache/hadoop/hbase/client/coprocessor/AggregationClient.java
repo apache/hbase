@@ -19,17 +19,23 @@
 
 package org.apache.hadoop.hbase.client.coprocessor;
 
-import com.google.protobuf.ByteString;
-import com.google.protobuf.Message;
+import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.NavigableMap;
+import java.util.NavigableSet;
+import java.util.TreeMap;
+import java.util.concurrent.atomic.AtomicLong;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
@@ -44,15 +50,8 @@ import org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateServi
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 
-import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.NavigableMap;
-import java.util.NavigableSet;
-import java.util.TreeMap;
-import java.util.concurrent.atomic.AtomicLong;
+import com.google.protobuf.ByteString;
+import com.google.protobuf.Message;
 
 /**
  * This client class is for invoking the aggregate functions deployed on the
@@ -73,8 +72,7 @@ import java.util.concurrent.atomic.AtomicLong;
  * parameter type. For average and std, it returns a double value. For row
  * count, it returns a long value.
  */
-@InterfaceAudience.Public
-@InterfaceStability.Evolving
+@InterfaceAudience.Private
 public class AggregationClient {
 
   private static final Log log = LogFactory.getLog(AggregationClient.class);

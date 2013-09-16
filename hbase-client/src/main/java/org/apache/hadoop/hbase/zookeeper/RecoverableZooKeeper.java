@@ -18,10 +18,17 @@
  */
 package org.apache.hadoop.hbase.zookeeper;
 
+import java.io.IOException;
+import java.lang.management.ManagementFactory;
+import java.security.SecureRandom;
+import java.util.ArrayList;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Random;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.RetryCounter;
 import org.apache.hadoop.hbase.util.RetryCounterFactory;
@@ -40,14 +47,6 @@ import org.apache.zookeeper.proto.CreateRequest;
 import org.apache.zookeeper.proto.SetDataRequest;
 import org.cloudera.htrace.Trace;
 import org.cloudera.htrace.TraceScope;
-
-import java.io.IOException;
-import java.lang.management.ManagementFactory;
-import java.security.SecureRandom;
-import java.util.ArrayList;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Random;
 
 /**
  * A zookeeper that can handle 'recoverable' errors.
@@ -72,8 +71,7 @@ import java.util.Random;
  * succeeded an the znode it created is "x-352-109".
  * @see "http://wiki.apache.org/hadoop/ZooKeeper/ErrorHandling"
  */
-@InterfaceAudience.Public
-@InterfaceStability.Evolving
+@InterfaceAudience.Private
 public class RecoverableZooKeeper {
   private static final Log LOG = LogFactory.getLog(RecoverableZooKeeper.class);
   // the actual ZooKeeper client instance

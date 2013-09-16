@@ -19,18 +19,16 @@
 
 package org.apache.hadoop.hbase.client.coprocessor;
 
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
-
 import java.io.IOException;
+
+import org.apache.hadoop.classification.InterfaceAudience;
 
 
 /**
  * A collection of interfaces and utilities used for interacting with custom RPC
  * interfaces exposed by Coprocessors.
  */
-@InterfaceAudience.Public
-@InterfaceStability.Evolving
+@InterfaceAudience.Private
 public abstract class Batch {
   /**
    * Defines a unit of work to be executed.

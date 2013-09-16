@@ -21,12 +21,14 @@ package org.apache.hadoop.hbase.regionserver;
 import java.io.IOException;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 
 /**
  * Thrown by the region server when it is in shutting down state.
  */
 @SuppressWarnings("serial")
-@InterfaceAudience.Private
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
 public class RegionServerStoppedException extends IOException {
   public RegionServerStoppedException(String s) {
     super(s);

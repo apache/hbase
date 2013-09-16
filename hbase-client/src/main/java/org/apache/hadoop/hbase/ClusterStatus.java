@@ -254,6 +254,7 @@ public class ClusterStatus extends VersionedWritable {
     return this.liveServers.get(sn);
   }
 
+  @InterfaceAudience.Private
   public Map<String, RegionState> getRegionsInTransition() {
     return this.intransition;
   }

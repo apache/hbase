@@ -22,7 +22,6 @@ package org.apache.hadoop.hbase.coprocessor;
 import java.io.IOException;
 
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
@@ -56,8 +55,7 @@ import com.google.protobuf.Message;
  * @param <Q> PB message that is used to transport Cell (<T>) instance
  * @param <R> PB message that is used to transport Promoted (<S>) instance
  */
-@InterfaceAudience.Public
-@InterfaceStability.Evolving
+@InterfaceAudience.Private
 public abstract class ColumnInterpreter<T, S, P extends Message, 
 Q extends Message, R extends Message> {
 

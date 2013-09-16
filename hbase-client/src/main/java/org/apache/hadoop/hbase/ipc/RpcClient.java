@@ -52,6 +52,7 @@ import javax.security.sasl.SaslException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.HConstants;
@@ -208,6 +209,8 @@ public class RpcClient {
   }
 
   @SuppressWarnings("serial")
+  @InterfaceAudience.Public
+  @InterfaceStability.Evolving
   public static class FailedServerException extends IOException {
     public FailedServerException(String s) {
       super(s);
@@ -1202,6 +1205,8 @@ public class RpcClient {
    * Client-side call timeout
    */
   @SuppressWarnings("serial")
+  @InterfaceAudience.Public
+  @InterfaceStability.Evolving
   public static class CallTimeoutException extends IOException {
     public CallTimeoutException(final String msg) {
       super(msg);

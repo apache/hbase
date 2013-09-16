@@ -20,11 +20,13 @@
 package org.apache.hadoop.hbase.ipc;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 
 import java.io.IOException;
 
 @SuppressWarnings("serial")
-@InterfaceAudience.Private
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
 public class ServerNotRunningYetException extends IOException {
   public ServerNotRunningYetException(String s) {
     super(s);

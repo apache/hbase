@@ -34,8 +34,7 @@ import org.apache.hadoop.classification.InterfaceStability;
  * Note that the watcher will be blocked when invoking methods in listeners so
  * they must not be long-running.
  */
-@InterfaceAudience.Public
-@InterfaceStability.Evolving
+@InterfaceAudience.Private
 public abstract class ZooKeeperListener {
 
   // Reference to the zk watcher which also contains configuration and constants

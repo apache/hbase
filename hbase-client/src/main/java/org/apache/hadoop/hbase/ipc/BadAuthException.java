@@ -17,6 +17,11 @@
  */
 package org.apache.hadoop.hbase.ipc;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
 public class BadAuthException extends FatalConnectionException {
   public BadAuthException() {
     super();

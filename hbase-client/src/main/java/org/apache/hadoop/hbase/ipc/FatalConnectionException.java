@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.ipc;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 
 /**
@@ -26,7 +27,8 @@ import org.apache.hadoop.hbase.DoNotRetryIOException;
  * Closes connection after throwing this exception with message on why the failure.
  */
 @SuppressWarnings("serial")
-@InterfaceAudience.Private
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
 public class FatalConnectionException extends DoNotRetryIOException {
   public FatalConnectionException() {
     super();

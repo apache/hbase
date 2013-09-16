@@ -18,15 +18,15 @@
 
 package org.apache.hadoop.hbase.client.metrics;
 
-import com.google.common.collect.ImmutableMap;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
-
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
+
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
+
+import com.google.common.collect.ImmutableMap;
 
 
 /**
@@ -40,8 +40,7 @@ import java.util.concurrent.atomic.AtomicLong;
  * However, there is no need for this. So they are defined under scan operation
  * for now.
  */
-@InterfaceAudience.Public
-@InterfaceStability.Evolving
+@InterfaceAudience.Private
 public class ScanMetrics {
 
 

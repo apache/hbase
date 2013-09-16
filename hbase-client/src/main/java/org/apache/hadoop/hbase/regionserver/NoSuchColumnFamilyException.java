@@ -19,12 +19,14 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 
 /**
  * Thrown if request for nonexistent column family.
  */
-@InterfaceAudience.Private
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
 public class NoSuchColumnFamilyException extends DoNotRetryIOException {
   private static final long serialVersionUID = -6569952730832331274L;
 

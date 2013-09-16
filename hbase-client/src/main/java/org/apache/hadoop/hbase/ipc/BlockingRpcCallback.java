@@ -18,12 +18,12 @@
 
 package org.apache.hadoop.hbase.ipc;
 
-import com.google.protobuf.RpcCallback;
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
-
 import java.io.IOException;
 import java.io.InterruptedIOException;
+
+import org.apache.hadoop.classification.InterfaceAudience;
+
+import com.google.protobuf.RpcCallback;
 
 /**
  * Simple {@link RpcCallback} implementation providing a
@@ -31,8 +31,7 @@ import java.io.InterruptedIOException;
  * will block util the instance's {@link BlockingRpcCallback#run(Object)} method has been called.
  * {@code R} is the RPC response type that will be passed to the {@link #run(Object)} method.
  */
-@InterfaceAudience.Public
-@InterfaceStability.Evolving
+@InterfaceAudience.Private
 public class BlockingRpcCallback<R> implements RpcCallback<R> {
   private R result;
   private boolean resultSet = false;
