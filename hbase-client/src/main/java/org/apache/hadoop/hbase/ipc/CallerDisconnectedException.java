@@ -19,11 +19,16 @@ package org.apache.hadoop.hbase.ipc;
 
 import java.io.IOException;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+
 /**
  * Exception indicating that the remote host making this IPC lost its
  * IPC connection. This will never be returned back to a client,
  * but is only used for logging on the server side, etc.
  */
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
 public class CallerDisconnectedException extends IOException {
   private static final long serialVersionUID = 1L;
   public CallerDisconnectedException(String msg) {

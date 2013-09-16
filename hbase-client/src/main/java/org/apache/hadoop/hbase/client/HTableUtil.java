@@ -33,8 +33,7 @@ import java.util.Map;
  * 
  *
  */
-@InterfaceAudience.Public
-@InterfaceStability.Stable
+@InterfaceAudience.Private
 public class HTableUtil {
 
   private static final int INITIAL_LIST_SIZE = 250;

@@ -141,6 +141,8 @@ public abstract class Filter {
   /**
    * Return codes for filterValue().
    */
+  @InterfaceAudience.Public
+  @InterfaceStability.Stable
   public enum ReturnCode {
     /**
      * Include the Cell

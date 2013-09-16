@@ -34,6 +34,8 @@ import org.apache.hadoop.hbase.protobuf.generated.ComparatorProtos;
 public class BitComparator extends ByteArrayComparable {
 
   /** Bit operators. */
+  @InterfaceAudience.Public
+  @InterfaceStability.Stable
   public enum BitwiseOp {
     /** and */
     AND,

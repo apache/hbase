@@ -19,6 +19,8 @@
 package org.apache.hadoop.hbase.client.coprocessor;
 
 import com.google.protobuf.ByteString;
+
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HConstants;
@@ -40,6 +42,7 @@ import java.util.List;
  * Client proxy for SecureBulkLoadProtocol
  * used in conjunction with SecureBulkLoadEndpoint
  */
+@InterfaceAudience.Private
 public class SecureBulkLoadClient {
   private HTable table;
 

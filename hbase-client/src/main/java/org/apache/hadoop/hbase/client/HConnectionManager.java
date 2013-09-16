@@ -549,6 +549,7 @@ public class HConnectionManager {
    * @return the value returned by the connect method
    * @throws IOException
    */
+  @InterfaceAudience.Private
   public static <T> T execute(HConnectable<T> connectable) throws IOException {
     if (connectable == null || connectable.conf == null) {
       return null;

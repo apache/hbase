@@ -49,6 +49,8 @@ import java.util.ArrayList;
 public abstract class CompareFilter extends FilterBase {
 
   /** Comparison operators. */
+  @InterfaceAudience.Public
+  @InterfaceStability.Stable
   public enum CompareOp {
     /** less than */
     LESS,

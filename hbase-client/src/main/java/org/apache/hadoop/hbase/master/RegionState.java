@@ -17,16 +17,17 @@
  */
 package org.apache.hadoop.hbase.master;
 
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos;
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.util.Date;
 import java.util.concurrent.atomic.AtomicLong;
+
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos;
 
 /**
  * State of a Region while undergoing transitions.
@@ -35,6 +36,9 @@ import java.util.concurrent.atomic.AtomicLong;
  */
 @InterfaceAudience.Private
 public class RegionState implements org.apache.hadoop.io.Writable {
+
+  @InterfaceAudience.Public
+  @InterfaceStability.Evolving
   public enum State {
     OFFLINE,        // region is in an offline state
     PENDING_OPEN,   // sent rpc to server to open but has not begun

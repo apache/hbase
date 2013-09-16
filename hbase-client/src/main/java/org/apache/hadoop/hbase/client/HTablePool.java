@@ -18,14 +18,17 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import com.google.protobuf.Service;
-import com.google.protobuf.ServiceException;
+import java.io.Closeable;
+import java.io.IOException;
+import java.util.Collection;
+import java.util.List;
+import java.util.Map;
+
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.coprocessor.Batch;
 import org.apache.hadoop.hbase.client.coprocessor.Batch.Callback;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcChannel;
@@ -33,11 +36,8 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.PoolMap;
 import org.apache.hadoop.hbase.util.PoolMap.PoolType;
 
-import java.io.Closeable;
-import java.io.IOException;
-import java.util.Collection;
-import java.util.List;
-import java.util.Map;
+import com.google.protobuf.Service;
+import com.google.protobuf.ServiceException;
 
 /**
  * A simple pool of HTable instances.
@@ -62,8 +62,7 @@ import java.util.Map;
  * {@link HConnectionManager}.
  * @deprecated Use {@link HConnection#getTable(String)} instead.
  */
-@InterfaceAudience.Public
-@InterfaceStability.Stable
+@InterfaceAudience.Private
 public class HTablePool implements Closeable {
   private final PoolMap<String, HTableInterface> tables;
   private final int maxSize;

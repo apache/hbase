@@ -19,12 +19,14 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 
 /**
  * Reports a problem with a lease
  */
-@InterfaceAudience.Private
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
 public class LeaseException extends DoNotRetryIOException {
 
   private static final long serialVersionUID = 8179703995292418650L;

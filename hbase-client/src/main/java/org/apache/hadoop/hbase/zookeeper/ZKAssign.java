@@ -18,10 +18,11 @@
  */
 package org.apache.hadoop.hbase.zookeeper;
 
+import java.util.List;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.RegionTransition;
@@ -34,8 +35,6 @@ import org.apache.zookeeper.KeeperException.Code;
 import org.apache.zookeeper.KeeperException.NoNodeException;
 import org.apache.zookeeper.KeeperException.NodeExistsException;
 import org.apache.zookeeper.data.Stat;
-
-import java.util.List;
 
 // We should not be importing this Type here, nor a RegionTransition, etc.  This class should be
 // about zk and bytes only.
@@ -94,8 +93,7 @@ import java.util.List;
  *   </li>
  * </ol>
  */
-@InterfaceAudience.Public
-@InterfaceStability.Evolving
+@InterfaceAudience.Private
 public class ZKAssign {
   private static final Log LOG = LogFactory.getLog(ZKAssign.class);
 

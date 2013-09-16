@@ -21,6 +21,7 @@
 package org.apache.hadoop.hbase;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Strings;
@@ -28,7 +29,8 @@ import org.apache.hadoop.hbase.util.Strings;
 /**
   * Encapsulates per-region load metrics.
   */
-@InterfaceAudience.Private
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
 public class RegionLoad {
 
   protected ClusterStatusProtos.RegionLoad regionLoadPB;

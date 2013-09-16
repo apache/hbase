@@ -17,8 +17,12 @@
  */
 package org.apache.hadoop.hbase.ipc;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.HBaseIOException;
 
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
 public class StoppedRpcClientException extends HBaseIOException {
   public StoppedRpcClientException() {
     super();

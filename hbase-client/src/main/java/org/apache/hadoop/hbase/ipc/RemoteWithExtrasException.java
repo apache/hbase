@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.ipc;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.ipc.RemoteException;
 
@@ -27,7 +28,8 @@ import org.apache.hadoop.ipc.RemoteException;
  * <p>A {@link RemoteException} hosts exceptions we got from the server.
  */
 @SuppressWarnings("serial")
-@InterfaceAudience.Private
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
 public class RemoteWithExtrasException extends RemoteException {
   private final String hostname;
   private final int port;

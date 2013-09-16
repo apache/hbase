@@ -23,7 +23,6 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.coprocessor.ColumnInterpreter;
@@ -38,8 +37,7 @@ import com.google.protobuf.ByteString;
  * is required at the RegionServer also.
  *
  */
-@InterfaceAudience.Public
-@InterfaceStability.Evolving
+@InterfaceAudience.Private
 public class BigDecimalColumnInterpreter extends ColumnInterpreter<BigDecimal, BigDecimal,
   EmptyMsg, BigDecimalMsg, BigDecimalMsg> {
 

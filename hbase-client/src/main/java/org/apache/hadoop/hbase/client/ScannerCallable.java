@@ -24,7 +24,6 @@ import java.net.UnknownHostException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellScanner;
@@ -55,8 +54,7 @@ import com.google.protobuf.TextFormat;
  * Used by {@link ResultScanner}s made by {@link HTable}. Passed to a retrying caller such as
  * {@link RpcRetryingCaller} so fails are retried.
  */
-@InterfaceAudience.Public
-@InterfaceStability.Stable
+@InterfaceAudience.Private
 public class ScannerCallable extends RegionServerCallable<Result[]> {
   public static final String LOG_SCANNER_LATENCY_CUTOFF
     = "hbase.client.log.scanner.latency.cutoff";

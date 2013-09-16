@@ -276,6 +276,7 @@ public class ClientScanner extends AbstractClientScanner {
       return true;
     }
 
+    @InterfaceAudience.Private
     protected ScannerCallable getScannerCallable(byte [] localStartKey,
         int nbRows) {
       scan.setStartRow(localStartKey);

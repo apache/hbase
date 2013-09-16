@@ -18,12 +18,16 @@
 
 package org.apache.hadoop.hbase.snapshot;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
 
 /**
  * Thrown when a snapshot could not be restored due to a server-side error when restoring it.
  */
 @SuppressWarnings("serial")
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
 public class RestoreSnapshotException extends HBaseSnapshotException {
   public RestoreSnapshotException(String msg, SnapshotDescription desc) {
     super(msg, desc);

@@ -43,7 +43,6 @@ import com.google.protobuf.InvalidProtocolBufferException;
  * 
  */
 @InterfaceAudience.Private
-@InterfaceStability.Evolving
 final public class FilterWrapper extends Filter {
   Filter filter = null;
 
