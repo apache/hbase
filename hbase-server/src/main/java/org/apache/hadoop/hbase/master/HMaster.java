@@ -29,7 +29,6 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -43,7 +42,6 @@ import java.util.concurrent.atomic.AtomicReference;
 import javax.management.ObjectName;
 
 import com.google.common.collect.Lists;
-import com.google.common.collect.Sets;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -212,7 +210,6 @@ import org.apache.hadoop.hbase.zookeeper.LoadBalancerTracker;
 import org.apache.hadoop.hbase.zookeeper.MasterAddressTracker;
 import org.apache.hadoop.hbase.zookeeper.RegionServerTracker;
 import org.apache.hadoop.hbase.zookeeper.ZKClusterId;
-import org.apache.hadoop.hbase.zookeeper.ZKTable;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperListener;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
@@ -874,12 +871,6 @@ MasterServices, Server {
       this.fileSystemManager.splitMetaLog(previouslyFailedMetaRSs);
     }
 
-    status.setStatus("Assigning System tables");
-    // Make sure system tables are assigned before proceeding.
-    assignSystemTables(status);
-
-    enableServerShutdownHandler();
-
     status.setStatus("Submitting log splitting work for previously failed region servers");
     // Master has recovered hbase:meta region server and we put
     // other failed region servers in a queue to be handled later by SSH
@@ -907,9 +898,10 @@ MasterServices, Server {
       this.clusterStatusChore = getAndStartClusterStatusChore(this);
       this.balancerChore = getAndStartBalancerChore(this);
       this.catalogJanitorChore = new CatalogJanitor(this, this);
-      this.namespaceJanitorChore = new NamespaceJanitor(this);
       startCatalogJanitorChore();
-      startNamespaceJanitorChore();
+
+      status.setStatus("Starting namespace manager");
+      initNamespace();
     }
     
     if (this.cpHost != null) {
@@ -973,17 +965,6 @@ MasterServices, Server {
   }
 
   /**
-   * If ServerShutdownHandler is disabled, we enable it and expire those dead
-   * but not expired servers.
-   */
-  private void enableServerShutdownHandler() {
-    if (!serverShutdownHandlerEnabled) {
-      serverShutdownHandlerEnabled = true;
-      this.serverManager.processQueuedDeadServers();
-    }
-  }
-
-  /**
    * Check <code>hbase:meta</code> is assigned. If not, assign it.
    * @param status MonitoredTask
    * @throws InterruptedException
@@ -995,45 +976,60 @@ MasterServices, Server {
     // Work on meta region
     int assigned = 0;
     long timeout = this.conf.getLong("hbase.catalog.verification.timeout", 1000);
-    boolean beingExpired = false;
-
     status.setStatus("Assigning hbase:meta region");
+    ServerName logReplayFailedMetaServer = null;
 
     assignmentManager.getRegionStates().createRegionState(HRegionInfo.FIRST_META_REGIONINFO);
     boolean rit = this.assignmentManager
         .processRegionInTransitionAndBlockUntilAssigned(HRegionInfo.FIRST_META_REGIONINFO);
     boolean metaRegionLocation = this.catalogTracker.verifyMetaRegionLocation(timeout);
-    if (!rit && !metaRegionLocation) {
-      ServerName currentMetaServer = this.catalogTracker.getMetaLocation();
-      if (currentMetaServer != null) {
-        beingExpired = expireIfOnline(currentMetaServer);
-      }
-      if (beingExpired) {
-        splitMetaLogBeforeAssignment(currentMetaServer);
-      }
-      assignmentManager.assignMeta();
-      // Make sure a hbase:meta location is set.
-      enableSSHandWaitForMeta();
+    if (!metaRegionLocation) {
+      // Meta location is not verified. It should be in transition, or offline.
+      // We will wait for it to be assigned in enableSSHandWaitForMeta below.
       assigned++;
-      if (beingExpired && this.distributedLogReplay) {
-        // In Replay WAL Mode, we need the new hbase:meta server online
-        this.fileSystemManager.splitMetaLog(currentMetaServer);
+      if (!rit) {
+        // Assign meta since not already in transition
+        ServerName currentMetaServer = this.catalogTracker.getMetaLocation();
+        if (currentMetaServer != null) {
+          if (expireIfOnline(currentMetaServer)) {
+            splitMetaLogBeforeAssignment(currentMetaServer);
+            if (this.distributedLogReplay) {
+              logReplayFailedMetaServer = currentMetaServer;
+            }
+          }
+        }
+        assignmentManager.assignMeta();
       }
-    } else if (rit && !metaRegionLocation) {
-      // Make sure a hbase:meta location is set.
-      enableSSHandWaitForMeta();
-      assigned++;
     } else {
       // Region already assigned. We didn't assign it. Add to in-memory state.
       this.assignmentManager.regionOnline(HRegionInfo.FIRST_META_REGIONINFO,
         this.catalogTracker.getMetaLocation());
-      enableSSHandWaitForMeta();
     }
 
     enableMeta(TableName.META_TABLE_NAME);
+
+    // Make sure a hbase:meta location is set. We need to enable SSH here since
+    // if the meta region server is died at this time, we need it to be re-assigned
+    // by SSH so that system tables can be assigned.
+    // No need to wait for meta is assigned = 0 when meta is just verified.
+    enableServerShutdownHandler(assigned != 0);
+
+    // logReplayFailedMetaServer is set only if log replay is
+    // enabled and the current meta server is expired
+    if (logReplayFailedMetaServer != null) {
+      // In Replay WAL Mode, we need the new hbase:meta server online
+      this.fileSystemManager.splitMetaLog(logReplayFailedMetaServer);
+    }
+
     LOG.info("hbase:meta assigned=" + assigned + ", rit=" + rit +
       ", location=" + catalogTracker.getMetaLocation());
     status.setStatus("META assigned.");
+  }
+
+  void initNamespace() throws IOException {
+    //create namespace manager
+    tableNamespaceManager = new TableNamespaceManager(this);
+    tableNamespaceManager.start();
   }
 
   private void splitMetaLogBeforeAssignment(ServerName currentMetaServer) throws IOException {
@@ -1048,107 +1044,24 @@ MasterServices, Server {
     }
   }
 
-  private void splitLogBeforeAssignment(ServerName currentServer,
-                                        Set<HRegionInfo> regions) throws IOException {
-    if (this.distributedLogReplay) {
-      this.fileSystemManager.prepareLogReplay(currentServer, regions);
-    } else {
-      // In recovered.edits mode: create recovered edits file for region server
-      this.fileSystemManager.splitLog(currentServer);
-    }
-  }
-
-  void assignSystemTables(MonitoredTask status)
-      throws InterruptedException, IOException, KeeperException {
-    // Skip assignment for regions of tables in DISABLING state because during clean cluster startup
-    // no RS is alive and regions map also doesn't have any information about the regions.
-    // See HBASE-6281.
-    Set<TableName> disabledOrDisablingOrEnabling = ZKTable.getDisabledOrDisablingTables(zooKeeper);
-    disabledOrDisablingOrEnabling.addAll(ZKTable.getEnablingTables(zooKeeper));
-    // Scan hbase:meta for all system regions, skipping any disabled tables
-    Map<HRegionInfo, ServerName> allRegions =
-        MetaReader.fullScan(catalogTracker, disabledOrDisablingOrEnabling, true);
-    for(Iterator<HRegionInfo> iter = allRegions.keySet().iterator();
-        iter.hasNext();) {
-      if (!iter.next().getTable().isSystemTable()) {
-        iter.remove();
-      }
+  private void enableServerShutdownHandler(
+      final boolean waitForMeta) throws IOException, InterruptedException {
+    // If ServerShutdownHandler is disabled, we enable it and expire those dead
+    // but not expired servers. This is required so that if meta is assigning to
+    // a server which dies after assignMeta starts assignment,
+    // SSH can re-assign it. Otherwise, we will be
+    // stuck here waiting forever if waitForMeta is specified.
+    if (!serverShutdownHandlerEnabled) {
+      serverShutdownHandlerEnabled = true;
+      this.serverManager.processQueuedDeadServers();
     }
 
-    boolean beingExpired = false;
-
-    status.setStatus("Assigning System Regions");
-
-    for (Map.Entry<HRegionInfo, ServerName> entry: allRegions.entrySet()) {
-      HRegionInfo regionInfo = entry.getKey();
-      ServerName currServer = entry.getValue();
-
-      assignmentManager.getRegionStates().createRegionState(regionInfo);
-      boolean rit = this.assignmentManager
-          .processRegionInTransitionAndBlockUntilAssigned(regionInfo);
-      boolean regionLocation = false;
-      if (currServer != null) {
-        regionLocation = verifyRegionLocation(currServer, regionInfo);
-      }
-
-      if (!rit && !regionLocation) {
-        beingExpired = expireIfOnline(currServer);
-        if (beingExpired) {
-          splitLogBeforeAssignment(currServer, Sets.newHashSet(regionInfo));
-        }
-        assignmentManager.assign(regionInfo, true);
-        // Make sure a region location is set.
-        this.assignmentManager.waitForAssignment(regionInfo);
-        if (beingExpired && this.distributedLogReplay) {
-          // In Replay WAL Mode, we need the new region server online
-          this.fileSystemManager.splitLog(currServer);
-        }
-      } else if (rit && !regionLocation) {
-        if (!waitVerifiedRegionLocation(regionInfo)) return;
-      } else {
-        // Region already assigned. We didn't assign it. Add to in-memory state.
-        this.assignmentManager.regionOnline(regionInfo, currServer);
-      }
-
-      if (!this.assignmentManager.getZKTable().isEnabledTable(regionInfo.getTable())) {
-        this.assignmentManager.setEnabledTable(regionInfo.getTable());
-      }
-      LOG.info("System region " + regionInfo.getRegionNameAsString() + " assigned, rit=" + rit +
-        ", location=" + catalogTracker.getMetaLocation());
+    if (waitForMeta) {
+      this.catalogTracker.waitForMeta();
+      // Above check waits for general meta availability but this does not
+      // guarantee that the transition has completed
+      this.assignmentManager.waitForAssignment(HRegionInfo.FIRST_META_REGIONINFO);
     }
-    status.setStatus("System Regions assigned.");
-
-    initNamespace();
-  }
-
-  private void enableSSHandWaitForMeta() throws IOException, InterruptedException {
-    enableServerShutdownHandler();
-    this.catalogTracker.waitForMeta();
-    // Above check waits for general meta availability but this does not
-    // guarantee that the transition has completed
-    this.assignmentManager.waitForAssignment(HRegionInfo.FIRST_META_REGIONINFO);
-  }
-
-  private boolean waitVerifiedRegionLocation(HRegionInfo regionInfo) throws IOException {
-    while (!this.stopped) {
-      Pair<HRegionInfo, ServerName> p = MetaReader.getRegion(catalogTracker,
-          regionInfo.getRegionName());
-      if (verifyRegionLocation(p.getSecond(), p.getFirst())) break;
-    }
-    // We got here because we came of above loop.
-    return !this.stopped;
-  }
-
-  private boolean verifyRegionLocation(ServerName currServer, HRegionInfo regionInfo) {
-    try {
-      return
-          ProtobufUtil.getRegionInfo(HConnectionManager.getConnection(conf)
-              .getAdmin(currServer),
-              regionInfo.getRegionName()) != null;
-    } catch (IOException e) {
-      LOG.info("Failed verifying location=" + currServer + ", exception=" + e);
-    }
-    return false;
   }
 
   private void enableMeta(TableName metaTableName) {
@@ -1171,12 +1084,6 @@ MasterServices, Server {
     LOG.info("Forcing expire of " + sn);
     serverManager.expireServer(sn);
     return true;
-  }
-
-  void initNamespace() throws IOException {
-    //create namespace manager
-    tableNamespaceManager = new TableNamespaceManager(this);
-    tableNamespaceManager.start();
   }
 
   /**
