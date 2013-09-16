@@ -103,7 +103,7 @@ public class MultiTableOutputFormat extends OutputFormat<ImmutableBytesWritable,
       if (!tables.containsKey(tableName)) {
         LOG.debug("Opening HTable \"" + Bytes.toString(tableName.get())+ "\" for writing");
         HTable table = new HTable(conf, tableName.get());
-        table.setAutoFlush(false);
+        table.setAutoFlush(false, true);
         tables.put(tableName, table);
       }
       return tables.get(tableName);

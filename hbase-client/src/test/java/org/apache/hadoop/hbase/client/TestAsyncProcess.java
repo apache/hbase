@@ -600,7 +600,7 @@ public class TestAsyncProcess {
 
 
     Put p = createPut(true, false);
-    ht.setAutoFlush(false);
+    ht.setAutoFlush(false, false);
     ht.put(p);
 
     long start = System.currentTimeMillis();

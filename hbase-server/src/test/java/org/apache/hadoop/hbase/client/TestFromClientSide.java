@@ -3874,7 +3874,7 @@ public class TestFromClientSide {
     final int NB_BATCH_ROWS = 10;
     HTable table = TEST_UTIL.createTable(Bytes.toBytes("testRowsPutBufferedOneFlush"),
       new byte [][] {CONTENTS_FAMILY, SMALL_FAMILY});
-    table.setAutoFlush(false);
+    table.setAutoFlush(false, true);
     ArrayList<Put> rowsUpdate = new ArrayList<Put>();
     for (int i = 0; i < NB_BATCH_ROWS * 10; i++) {
       byte[] row = Bytes.toBytes("row" + i);
@@ -3915,7 +3915,7 @@ public class TestFromClientSide {
     final int NB_BATCH_ROWS = 10;
     HTable table = TEST_UTIL.createTable(Bytes.toBytes("testRowsPutBufferedManyManyFlushes"),
       new byte[][] {CONTENTS_FAMILY, SMALL_FAMILY });
-    table.setAutoFlush(false);
+    table.setAutoFlush(false, true);
     table.setWriteBufferSize(10);
     ArrayList<Put> rowsUpdate = new ArrayList<Put>();
     for (int i = 0; i < NB_BATCH_ROWS * 10; i++) {
@@ -4576,7 +4576,6 @@ public class TestFromClientSide {
 
     HTable table = TEST_UTIL.createTable(tableName, new byte[][] { FAMILY },
         conf, Integer.MAX_VALUE);
-    table.setAutoFlush(true);
 
     final long ts = EnvironmentEdgeManager.currentTimeMillis();
     Get get = new Get(ROW);
@@ -4614,7 +4613,6 @@ public class TestFromClientSide {
 
     final HTable table = TEST_UTIL.createTable(tableName,
         new byte[][] { FAMILY }, conf, 3);
-    table.setAutoFlush(true);
 
     final long ts = EnvironmentEdgeManager.currentTimeMillis();
     final Get get = new Get(ROW);

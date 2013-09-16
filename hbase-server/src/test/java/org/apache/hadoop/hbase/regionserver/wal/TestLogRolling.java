@@ -478,7 +478,7 @@ public class TestLogRolling  {
 
     writeData(table, 1002);
 
-    table.setAutoFlush(true);
+    table.setAutoFlush(true, true);
 
     long curTime = System.currentTimeMillis();
     long oldFilenum = log.getFilenum();

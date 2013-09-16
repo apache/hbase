@@ -511,8 +511,13 @@ public interface HTableInterface extends Closeable {
    * See {@link #setAutoFlush(boolean, boolean)}
    *
    * @param autoFlush
-   *        Whether or not to enable 'auto-flush'.
+   *          Whether or not to enable 'auto-flush'.
+   * @deprecated in 0.96. When called with setAutoFlush(false), this function also
+   *  set clearBufferOnFail to true, which is unexpected but kept for historical reasons.
+   *  Replace it with setAutoFlush(false, false) if this is exactly what you want, or by
+   *  {@link #setAutoFlushTo(boolean)} for all other cases.
    */
+  @Deprecated
   void setAutoFlush(boolean autoFlush);
 
   /**
@@ -522,27 +527,38 @@ public interface HTableInterface extends Closeable {
    * and are immediately executed. Failed operations are not retried. This is
    * slower but safer.
    * <p>
-   * Turning off {@code autoFlush} means that multiple {@link Put}s will be
+   * Turning off {@code #autoFlush} means that multiple {@link Put}s will be
    * accepted before any RPC is actually sent to do the write operations. If the
    * application dies before pending writes get flushed to HBase, data will be
    * lost.
    * <p>
    * When you turn {@code #autoFlush} off, you should also consider the
-   * {@code clearBufferOnFail} option. By default, asynchronous {@link Put}
+   * {@code #clearBufferOnFail} option. By default, asynchronous {@link Put}
    * requests will be retried on failure until successful. However, this can
    * pollute the writeBuffer and slow down batching performance. Additionally,
    * you may want to issue a number of Put requests and call
    * {@link #flushCommits()} as a barrier. In both use cases, consider setting
    * clearBufferOnFail to true to erase the buffer after {@link #flushCommits()}
    * has been called, regardless of success.
+   * <p>
+   * In other words, if you call {@code #setAutoFlush(false)}; HBase will retry N time for each
+   *  flushCommit, including the last one when closing the table. This is NOT recommended,
+   *  most of the time you want to call {@code #setAutoFlush(false, true)}.
    *
    * @param autoFlush
-   *        Whether or not to enable 'auto-flush'.
+   *          Whether or not to enable 'auto-flush'.
    * @param clearBufferOnFail
-   *        Whether to keep Put failures in the writeBuffer
+   *          Whether to keep Put failures in the writeBuffer. If autoFlush is true, then
+   *          the value of this parameter is ignored and clearBufferOnFail is set to true.
+   *          Setting clearBufferOnFail to false is deprecated since 0.96.
    * @see #flushCommits
    */
   void setAutoFlush(boolean autoFlush, boolean clearBufferOnFail);
+
+  /**
+   * Set the autoFlush behavior, without changing the value of {@code clearBufferOnFail}
+   */
+  void setAutoFlushTo(boolean autoFlush);
 
   /**
    * Returns the maximum size in bytes of the write buffer for this HTable.

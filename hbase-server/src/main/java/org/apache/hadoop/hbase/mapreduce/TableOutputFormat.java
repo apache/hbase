@@ -204,7 +204,7 @@ implements Configurable {
         this.conf.setInt(HConstants.ZOOKEEPER_CLIENT_PORT, zkClientPort);
       }
       this.table = new HTable(this.conf, tableName);
-      this.table.setAutoFlush(false);
+      this.table.setAutoFlush(false, true);
       LOG.info("Created table instance for "  + tableName);
     } catch(IOException e) {
       LOG.error(e);
