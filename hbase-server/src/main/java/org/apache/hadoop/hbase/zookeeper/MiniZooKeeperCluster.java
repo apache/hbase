@@ -134,7 +134,8 @@ public class MiniZooKeeperCluster {
   /**
    * @param baseDir
    * @param numZooKeeperServers
-   * @return ClientPort server bound to.
+   * @return ClientPort server bound to, -1 if there was a
+   *         binding problem and we couldn't pick another port.
    * @throws IOException
    * @throws InterruptedException
    */
@@ -169,7 +170,9 @@ public class MiniZooKeeperCluster {
               1000));
         } catch (BindException e) {
           LOG.debug("Failed binding ZK Server to client port: " +
-              tentativePort);
+              tentativePort, e);
+          // We're told to use some port but it's occupied, fail
+          if (defaultClientPort > 0) return -1;
           // This port is already in use, try to use another.
           tentativePort = selectClientPort();
           continue;
