@@ -456,21 +456,24 @@ public class AssignmentManager extends ZooKeeperListener {
         .getRequeuedDeadServers().isEmpty());
 
     if (!failover) {
-      // Run through all regions.  If they are not assigned and not in RIT, then
-      // its a clean cluster startup, else its a failover.
+      // If any one region except meta is assigned, it's a failover.
       Map<HRegionInfo, ServerName> regions = regionStates.getRegionAssignments();
-      for (Map.Entry<HRegionInfo, ServerName> e: regions.entrySet()) {
-        if (!e.getKey().getTable().isSystemTable()
-            && e.getValue() != null) {
-          LOG.debug("Found " + e + " out on cluster");
+      for (HRegionInfo hri: regions.keySet()) {
+        if (!hri.isMetaTable()) {
+          LOG.debug("Found " + hri + " out on cluster");
           failover = true;
           break;
         }
-        if (nodes.contains(e.getKey().getEncodedName())) {
-          LOG.debug("Found " + e.getKey().getRegionNameAsString() + " in RITs");
-          // Could be a meta region.
-          failover = true;
-          break;
+      }
+      if (!failover) {
+        // If any one region except meta is in transition, it's a failover.
+        for (String encodedName: nodes) {
+          RegionState state = regionStates.getRegionState(encodedName);
+          if (state != null && !state.getRegion().isMetaRegion()) {
+            LOG.debug("Found " + state.getRegion().getRegionNameAsString() + " in RITs");
+            failover = true;
+            break;
+          }
         }
       }
     }
@@ -2585,17 +2588,7 @@ public class AssignmentManager extends ZooKeeperListener {
        new SnapshotOfRegionAssignmentFromMeta(catalogTracker, disabledOrDisablingOrEnabling, true);
     snapshotOfRegionAssignment.initialize();
     allRegions = snapshotOfRegionAssignment.getRegionToRegionServerMap();
-    if (allRegions == null) return;
-
-    //remove system tables because they would have been assigned earlier
-    for(Iterator<HRegionInfo> iter = allRegions.keySet().iterator();
-        iter.hasNext();) {
-      if (iter.next().getTable().isSystemTable()) {
-        iter.remove();
-      }
-    }
-
-    if (allRegions.isEmpty()) return;
+    if (allRegions == null || allRegions.isEmpty()) return;
 
     // Determine what type of assignment to do on startup
     boolean retainAssignment = server.getConfiguration().
@@ -2670,8 +2663,6 @@ public class AssignmentManager extends ZooKeeperListener {
       HRegionInfo regionInfo = region.getFirst();
       ServerName regionLocation = region.getSecond();
       if (regionInfo == null) continue;
-      TableName tableName = regionInfo.getTable();
-      if (tableName.isSystemTable()) continue;
       regionStates.createRegionState(regionInfo);
       if (regionStates.isRegionInState(regionInfo, State.SPLIT)) {
         // Split is considered to be completed. If the split znode still
@@ -2680,6 +2671,7 @@ public class AssignmentManager extends ZooKeeperListener {
            + " split is completed. Hence need not add to regions list");
         continue;
       }
+      TableName tableName = regionInfo.getTable();
       if (regionLocation == null) {
         // regionLocation could be null if createTable didn't finish properly.
         // When createTable is in progress, HMaster restarts.

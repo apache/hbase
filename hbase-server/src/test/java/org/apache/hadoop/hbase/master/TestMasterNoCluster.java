@@ -211,8 +211,7 @@ public class TestMasterNoCluster {
       }
 
       @Override
-      void assignSystemTables(MonitoredTask status)
-          throws IOException, InterruptedException, KeeperException {
+      void initNamespace() {
       }
     };
     master.start();
@@ -302,8 +301,7 @@ public class TestMasterNoCluster {
       }
 
       @Override
-      void assignSystemTables(MonitoredTask status)
-          throws IOException, InterruptedException, KeeperException {
+      void initNamespace() {
       }
     };
     master.start();
@@ -366,7 +364,6 @@ public class TestMasterNoCluster {
     HMaster master = new HMaster(conf) {
       @Override
       void assignMeta(MonitoredTask status) {
-        return;
       }
 
       @Override
@@ -400,8 +397,7 @@ public class TestMasterNoCluster {
       }
 
       @Override
-      void assignSystemTables(MonitoredTask status)
-          throws IOException, InterruptedException, KeeperException {
+      void initNamespace() {
       }
     };
     master.start();
