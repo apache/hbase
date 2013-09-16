@@ -35,6 +35,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.CellScanner;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
@@ -148,7 +149,7 @@ public class Replication implements WALActionsListener,
     * @return True if replication is enabled.
     */
   public static boolean isReplication(final Configuration c) {
-    return c.getBoolean(REPLICATION_ENABLE_KEY, false);
+    return c.getBoolean(REPLICATION_ENABLE_KEY, HConstants.REPLICATION_ENABLE_DEFAULT);
   }
 
    /*
@@ -244,7 +245,10 @@ public class Replication implements WALActionsListener,
     byte[] family;
     for (KeyValue kv : logEdit.getKeyValues()) {
       family = kv.getFamily();
+      // This is expected and the KV should not be replicated
       if (kv.matchingFamily(WALEdit.METAFAMILY)) continue;
+      // Unexpected, has a tendency to happen in unit tests
+      assert htd.getFamily(family) != null;
 
       int scope = htd.getFamily(family).getScope();
       if (scope != REPLICATION_SCOPE_LOCAL &&

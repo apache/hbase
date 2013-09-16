@@ -90,7 +90,8 @@ public class ReplicationAdmin implements Closeable {
    * @throws RuntimeException if replication isn't enabled.
    */
   public ReplicationAdmin(Configuration conf) throws IOException {
-    if (!conf.getBoolean(HConstants.REPLICATION_ENABLE_KEY, false)) {
+    if (!conf.getBoolean(HConstants.REPLICATION_ENABLE_KEY,
+        HConstants.REPLICATION_ENABLE_DEFAULT)) {
       throw new RuntimeException("hbase.replication isn't true, please " +
           "enable it in order to use replication");
     }

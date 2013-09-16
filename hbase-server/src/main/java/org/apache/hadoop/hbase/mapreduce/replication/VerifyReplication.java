@@ -173,7 +173,8 @@ public class VerifyReplication {
     if (!doCommandLine(args)) {
       return null;
     }
-    if (!conf.getBoolean(HConstants.REPLICATION_ENABLE_KEY, false)) {
+    if (!conf.getBoolean(HConstants.REPLICATION_ENABLE_KEY,
+        HConstants.REPLICATION_ENABLE_DEFAULT)) {
       throw new IOException("Replication needs to be enabled to verify it.");
     }
     conf.set(NAME+".peerId", peerId);

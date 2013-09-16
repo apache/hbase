@@ -117,7 +117,8 @@ public class TestReplicationSourceManager {
     conf = HBaseConfiguration.create();
     conf.set("replication.replicationsource.implementation",
         ReplicationSourceDummy.class.getCanonicalName());
-    conf.setBoolean(HConstants.REPLICATION_ENABLE_KEY, true);
+    conf.setBoolean(HConstants.REPLICATION_ENABLE_KEY,
+        HConstants.REPLICATION_ENABLE_DEFAULT);
     utility = new HBaseTestingUtility(conf);
     utility.startMiniZKCluster();
 

@@ -110,7 +110,8 @@ public class ReplicationLogCleaner extends BaseLogCleanerDelegate implements Abo
   @Override
   public void setConf(Configuration config) {
     // If replication is disabled, keep all members null
-    if (!config.getBoolean(HConstants.REPLICATION_ENABLE_KEY, false)) {
+    if (!config.getBoolean(HConstants.REPLICATION_ENABLE_KEY,
+        HConstants.REPLICATION_ENABLE_DEFAULT)) {
       LOG.warn("Not configured - allowing all hlogs to be deleted");
       return;
     }

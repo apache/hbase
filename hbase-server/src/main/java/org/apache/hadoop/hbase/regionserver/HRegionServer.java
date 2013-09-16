@@ -2200,7 +2200,8 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
     HRegionServer server, FileSystem fs, Path logDir, Path oldLogDir) throws IOException{
 
     // If replication is not enabled, then return immediately.
-    if (!conf.getBoolean(HConstants.REPLICATION_ENABLE_KEY, false)) {
+    if (!conf.getBoolean(HConstants.REPLICATION_ENABLE_KEY,
+        HConstants.REPLICATION_ENABLE_DEFAULT)) {
       return;
     }
 
