@@ -368,15 +368,7 @@ public class TestAdmin {
        }
    }
   
-  @Test (timeout=300000)
-  public void testIsEnabledOnNonexistentTable() throws IOException {
-    try {
-      assertFalse(admin.isTableEnabled(Bytes.toBytes("non-existing")));
-    } catch (IOException e) {
-    }
-  }
-   
-    /**
+  /**
    * Verify schema modification takes.
    * @throws IOException
    * @throws InterruptedException
