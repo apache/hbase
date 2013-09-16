@@ -584,6 +584,7 @@
             <excludes>
               <exclude>hbase-site.xml</exclude>
               <exclude>hdfs-site.xml</exclude>
+              <exclude>mapred-site.xml</exclude>
               <exclude>log4j.properties</exclude>
             </excludes>
           </configuration>
