@@ -140,9 +140,15 @@ public class TestRegionMergeTransactionOnCluster {
 
     // We should not be able to assign it again
     am.assign(hri, true, true);
-    assertFalse("Merged region should not be in transition again",
-      regionStates.isRegionInTransition(hri)
-        && regionStates.isRegionInState(hri, State.MERGED));
+    assertFalse("Merged region can't be assigned",
+      regionStates.isRegionInTransition(hri));
+    assertTrue(regionStates.isRegionInState(hri, State.MERGED));
+
+    // We should not be able to unassign it either
+    am.unassign(hri, true, null);
+    assertFalse("Merged region can't be unassigned",
+      regionStates.isRegionInTransition(hri));
+    assertTrue(regionStates.isRegionInState(hri, State.MERGED));
 
     table.close();
   }
