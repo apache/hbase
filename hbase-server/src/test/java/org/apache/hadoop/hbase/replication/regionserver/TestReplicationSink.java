@@ -89,7 +89,8 @@ public class TestReplicationSink {
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
     TEST_UTIL.getConfiguration().setBoolean("dfs.support.append", true);
-    TEST_UTIL.getConfiguration().setBoolean(HConstants.REPLICATION_ENABLE_KEY, true);
+    TEST_UTIL.getConfiguration().setBoolean(HConstants.REPLICATION_ENABLE_KEY,
+        HConstants.REPLICATION_ENABLE_DEFAULT);
     TEST_UTIL.startMiniCluster(3);
     SINK =
       new ReplicationSink(new Configuration(TEST_UTIL.getConfiguration()), STOPPABLE);

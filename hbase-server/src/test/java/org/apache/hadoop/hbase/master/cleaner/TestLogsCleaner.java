@@ -65,7 +65,7 @@ public class TestLogsCleaner {
     // set TTL
     long ttl = 10000;
     conf.setLong("hbase.master.logcleaner.ttl", ttl);
-    conf.setBoolean(HConstants.REPLICATION_ENABLE_KEY, true);
+    conf.setBoolean(HConstants.REPLICATION_ENABLE_KEY, HConstants.REPLICATION_ENABLE_DEFAULT);
     Replication.decorateMasterConfiguration(conf);
     Server server = new DummyServer();
     ReplicationQueues repQueues =

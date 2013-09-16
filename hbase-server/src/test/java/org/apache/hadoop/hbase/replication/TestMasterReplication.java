@@ -97,7 +97,8 @@ public class TestMasterReplication {
     baseConfiguration.setLong("replication.source.sleepforretries", 100);
     baseConfiguration.setInt("hbase.regionserver.maxlogs", 10);
     baseConfiguration.setLong("hbase.master.logcleaner.ttl", 10);
-    baseConfiguration.setBoolean(HConstants.REPLICATION_ENABLE_KEY, true);
+    baseConfiguration.setBoolean(HConstants.REPLICATION_ENABLE_KEY,
+        HConstants.REPLICATION_ENABLE_DEFAULT);
     baseConfiguration.setBoolean("dfs.support.append", true);
     baseConfiguration.setLong(HConstants.THREAD_WAKE_FREQUENCY, 100);
     baseConfiguration.setStrings(

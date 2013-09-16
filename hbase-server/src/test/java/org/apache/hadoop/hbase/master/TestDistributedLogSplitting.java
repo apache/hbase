@@ -53,6 +53,7 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -1153,6 +1154,8 @@ public class TestDistributedLogSplitting {
       }
     }
     HTableDescriptor htd = new HTableDescriptor(fullTName);
+    byte[] family = Bytes.toBytes(fname);
+    htd.addFamily(new HColumnDescriptor(family));
     byte[] value = new byte[edit_size];
 
     List<HRegionInfo> hris = new ArrayList<HRegionInfo>();
@@ -1180,7 +1183,6 @@ public class TestDistributedLogSplitting {
         row = Arrays.copyOfRange(row, 3, 8); // use last 5 bytes because
                                              // HBaseTestingUtility.createMultiRegions use 5 bytes
                                              // key
-        byte[] family = Bytes.toBytes(fname);
         byte[] qualifier = Bytes.toBytes("c" + Integer.toString(i));
         e.add(new KeyValue(row, family, qualifier, System.currentTimeMillis(), value));
         log.append(curRegionInfo, fullTName, e, System.currentTimeMillis(), htd);
