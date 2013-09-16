@@ -470,7 +470,7 @@ public class IntegrationTestBulkLoad extends IntegrationTestBase {
       for (Map.Entry<byte[], byte[]> entry : value.getFamilyMap(CHAIN_FAM).entrySet()) {
         long chainId = Bytes.toLong(entry.getKey());
         long next = Bytes.toLong(entry.getValue());
-        Cell c = value.getColumn(SORT_FAM, entry.getKey()).get(0);
+        Cell c = value.getColumnCells(SORT_FAM, entry.getKey()).get(0);
         long order = Bytes.toLong(CellUtil.cloneValue(c));
         context.write(new LinkKey(chainId, order), new LinkChain(longRk, next));
       }

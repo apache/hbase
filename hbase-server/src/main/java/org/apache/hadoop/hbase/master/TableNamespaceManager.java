@@ -170,8 +170,8 @@ public class TableNamespaceManager {
     if (res.isEmpty()) {
       return null;
     }
-    byte[] val = CellUtil.cloneValue(res.getColumnLatest(HTableDescriptor.NAMESPACE_FAMILY_INFO_BYTES,
-        HTableDescriptor.NAMESPACE_COL_DESC_BYTES));
+    byte[] val = CellUtil.cloneValue(res.getColumnLatestCell(
+        HTableDescriptor.NAMESPACE_FAMILY_INFO_BYTES, HTableDescriptor.NAMESPACE_COL_DESC_BYTES));
     return
         ProtobufUtil.toNamespaceDescriptor(
             HBaseProtos.NamespaceDescriptor.parseFrom(val));
@@ -241,7 +241,8 @@ public class TableNamespaceManager {
     ResultScanner scanner = getNamespaceTable().getScanner(HTableDescriptor.NAMESPACE_FAMILY_INFO_BYTES);
     try {
       for(Result r : scanner) {
-        byte[] val = CellUtil.cloneValue(r.getColumnLatest(HTableDescriptor.NAMESPACE_FAMILY_INFO_BYTES,
+        byte[] val = CellUtil.cloneValue(r.getColumnLatestCell(
+          HTableDescriptor.NAMESPACE_FAMILY_INFO_BYTES,
           HTableDescriptor.NAMESPACE_COL_DESC_BYTES));
         ret.add(ProtobufUtil.toNamespaceDescriptor(
             HBaseProtos.NamespaceDescriptor.parseFrom(val)));

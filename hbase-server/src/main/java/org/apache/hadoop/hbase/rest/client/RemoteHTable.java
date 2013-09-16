@@ -176,7 +176,7 @@ public class RemoteHTable implements HTableInterface {
         kvs.add(new KeyValue(row.getKey(), column, qualifier,
           cell.getTimestamp(), cell.getValue()));
       }
-      results.add(new Result(kvs));
+      results.add(Result.create(kvs));
     }
     return results.toArray(new Result[results.size()]);
   }

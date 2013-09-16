@@ -156,7 +156,7 @@ public class TestChangingEncoding {
       Get get = new Get(getRowKey(batchId, i));
       Result result = table.get(get);
       for (int j = 0; j < NUM_COLS_PER_ROW; ++j) {
-        Cell kv = result.getColumnLatest(CF_BYTES, getQualifier(j));
+        Cell kv = result.getColumnLatestCell(CF_BYTES, getQualifier(j));
         assertTrue(CellUtil.matchingValue(kv, getValue(batchId, i, j)));
       }
     }

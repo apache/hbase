@@ -1060,7 +1060,7 @@ public final class ProtobufUtil {
     for (CellProtos.Cell c: values) {
       cells.add(toCell(c));
     }
-    return new Result(cells);
+    return Result.create(cells);
   }
 
   /**
@@ -1088,7 +1088,7 @@ public final class ProtobufUtil {
     for (CellProtos.Cell c: values) {
       cells.add(toCell(c));
     }
-    return new Result(cells);
+    return Result.create(cells);
   }
 
   /**

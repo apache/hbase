@@ -324,7 +324,7 @@ public class TestScannersFromClientSide {
         kvListScan.add(kv);
       }
     }
-    result = new Result(kvListScan);
+    result = Result.create(kvListScan);
     verifyResult(result, kvListExp, toLog, "Testing scan with maxResults");
 
   }

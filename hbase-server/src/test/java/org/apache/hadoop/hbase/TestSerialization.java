@@ -345,7 +345,7 @@ public class TestSerialization {
    * TODO
   @Test public void testResultEmpty() throws Exception {
     List<KeyValue> keys = new ArrayList<KeyValue>();
-    Result r = new Result(keys);
+    Result r = Result.newResult(keys);
     assertTrue(r.isEmpty());
     byte [] rb = Writables.getBytes(r);
     Result deserializedR = (Result)Writables.getWritable(rb, new Result());
@@ -367,7 +367,7 @@ public class TestSerialization {
     KeyValue kvA = new KeyValue(rowA, famA, qfA, valueA);
     KeyValue kvB = new KeyValue(rowB, famB, qfB, valueB);
 
-    Result result = new Result(new KeyValue[]{kvA, kvB});
+    Result result = Result.newResult(new KeyValue[]{kvA, kvB});
 
     byte [] rb = Writables.getBytes(result);
     Result deResult = (Result)Writables.getWritable(rb, new Result());
@@ -399,7 +399,7 @@ public class TestSerialization {
     KeyValue kvA = new KeyValue(rowA, famA, qfA, valueA);
     KeyValue kvB = new KeyValue(rowB, famB, qfB, valueB);
 
-    Result result = new Result(new KeyValue[]{kvA, kvB});
+    Result result = Result.newResult(new KeyValue[]{kvA, kvB});
 
     byte [] rb = Writables.getBytes(result);
 
@@ -441,9 +441,9 @@ public class TestSerialization {
     KeyValue kvB = new KeyValue(rowB, famB, qfB, valueB);
 
 
-    Result result1 = new Result(new KeyValue[]{kvA, kvB});
-    Result result2 = new Result(new KeyValue[]{kvB});
-    Result result3 = new Result(new KeyValue[]{kvB});
+    Result result1 = Result.newResult(new KeyValue[]{kvA, kvB});
+    Result result2 = Result.newResult(new KeyValue[]{kvB});
+    Result result3 = Result.newResult(new KeyValue[]{kvB});
 
     Result [] results = new Result [] {result1, result2, result3};
 
@@ -477,7 +477,7 @@ public class TestSerialization {
 
   @Test public void testResultArrayEmpty() throws Exception {
     List<KeyValue> keys = new ArrayList<KeyValue>();
-    Result r = new Result(keys);
+    Result r = Result.newResult(keys);
     Result [] results = new Result [] {r};
 
     ByteArrayOutputStream byteStream = new ByteArrayOutputStream();

@@ -1281,9 +1281,9 @@ public class TestHBaseFsck {
 
       Get get = new Get(hri.getRegionName());
       Result result = meta.get(get);
-      assertTrue(result.getColumn(HConstants.CATALOG_FAMILY,
+      assertTrue(result.getColumnCells(HConstants.CATALOG_FAMILY,
         HConstants.SPLITA_QUALIFIER).isEmpty());
-      assertTrue(result.getColumn(HConstants.CATALOG_FAMILY,
+      assertTrue(result.getColumnCells(HConstants.CATALOG_FAMILY,
         HConstants.SPLITB_QUALIFIER).isEmpty());
       TEST_UTIL.getHBaseAdmin().flush(TableName.META_TABLE_NAME.getName());
 
