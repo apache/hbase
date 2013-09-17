@@ -2298,7 +2298,7 @@ public class AssignmentManager extends ZooKeeperListener {
         // Region is not in transition.
         // We can unassign it only if it's not SPLIT/MERGED.
         state = regionStates.getRegionState(encodedName);
-        if (state.isMerged() || state.isSplit()) {
+        if (state != null && (state.isMerged() || state.isSplit())) {
           LOG.info("Attempting to unassign " + state + ", ignored");
           return;
         }
