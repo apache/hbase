@@ -46,7 +46,7 @@ public class TestDefaultLoadBalancer extends BalancerTestBase {
   public static void beforeAllTests() throws Exception {
     Configuration conf = HBaseConfiguration.create();
     conf.set("hbase.regions.slop", "0");
-    loadBalancer = new DefaultLoadBalancer();
+    loadBalancer = new SimpleLoadBalancer();
     loadBalancer.setConf(conf);
   }
 

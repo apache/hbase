@@ -1050,9 +1050,13 @@ possible configurations would overwhelm and obscure the important.
   </property>
   <property>
     <name>hbase.master.loadbalancer.class</name>
-    <value>org.apache.hadoop.hbase.master.balancer.DefaultLoadBalancer</value>
+    <value>org.apache.hadoop.hbase.master.balancer.StochasticLoadBalancer</value>
     <description>
       Class used to execute the regions balancing when the period occurs.
+      See the class comment for more on how it works
+      http://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/master/balancer/StochasticLoadBalancer.html
+      It replaces the DefaultLoadBalancer as the default (since renamed
+      as the SimpleLoadBalancer).
     </description>
   </property>
 </configuration>
