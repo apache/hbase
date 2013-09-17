@@ -685,9 +685,9 @@ public class RegionPlacementMaintainer {
             }
             // Update the single server update
             singleServerPlan.updateAssignmentPlan(region, favoredServerList);
-          }
-          regionUpdateInfos.add(
+            regionUpdateInfos.add(
               new Pair<HRegionInfo, List<ServerName>>(region, favoredServerList));
+          }
         }
         if (singleServerPlan != null) {
           // Update the current region server with its updated favored nodes
