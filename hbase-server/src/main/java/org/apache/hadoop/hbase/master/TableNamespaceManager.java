@@ -33,6 +33,8 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
+import org.apache.hadoop.hbase.NamespaceExistException;
+import org.apache.hadoop.hbase.NamespaceNotFoundException;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.ZKNamespaceManager;
 import org.apache.hadoop.hbase.catalog.MetaReader;
@@ -113,14 +115,14 @@ public class TableNamespaceManager {
         nsTable = new HTable(conf, TableName.NAMESPACE_TABLE_NAME);
         zkNamespaceManager = new ZKNamespaceManager(masterServices.getZooKeeper());
         zkNamespaceManager.start();
-    
+
         if (get(nsTable, NamespaceDescriptor.DEFAULT_NAMESPACE.getName()) == null) {
           create(nsTable, NamespaceDescriptor.DEFAULT_NAMESPACE);
         }
         if (get(nsTable, NamespaceDescriptor.SYSTEM_NAMESPACE.getName()) == null) {
           create(nsTable, NamespaceDescriptor.SYSTEM_NAMESPACE);
         }
-    
+
         ResultScanner scanner = nsTable.getScanner(HTableDescriptor.NAMESPACE_FAMILY_INFO_BYTES);
         try {
           for(Result result : scanner) {
@@ -160,7 +162,7 @@ public class TableNamespaceManager {
   public synchronized void update(NamespaceDescriptor ns) throws IOException {
     HTable table = getNamespaceTable();
     if (get(table, ns.getName()) == null) {
-      throw new ConstraintException("Namespace "+ns.getName()+" does not exist");
+      throw new NamespaceNotFoundException(ns.getName());
     }
     upsert(table, ns);
   }
@@ -179,7 +181,7 @@ public class TableNamespaceManager {
 
   private void create(HTable table, NamespaceDescriptor ns) throws IOException {
     if (get(table, ns.getName()) != null) {
-      throw new ConstraintException("Namespace "+ns.getName()+" already exists");
+      throw new NamespaceExistException(ns.getName());
     }
     FileSystem fs = masterServices.getMasterFileSystem().getFileSystem();
     fs.mkdirs(FSUtils.getNamespaceDir(
@@ -203,6 +205,9 @@ public class TableNamespaceManager {
   }
 
   public synchronized void remove(String name) throws IOException {
+    if (get(name) == null) {
+      throw new NamespaceNotFoundException(name);
+    }
     if (NamespaceDescriptor.RESERVED_NAMESPACES.contains(name)) {
       throw new ConstraintException("Reserved namespace "+name+" cannot be removed.");
     }
@@ -210,7 +215,7 @@ public class TableNamespaceManager {
     try {
       tableCount = masterServices.listTableDescriptorsByNamespace(name).size();
     } catch (FileNotFoundException fnfe) {
-      throw new ConstraintException("namespace " + name + " does not exist");
+      throw new NamespaceNotFoundException(name);
     }
     if (tableCount > 0) {
       throw new ConstraintException("Only empty namespaces can be removed. " +

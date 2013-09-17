@@ -51,22 +51,21 @@ import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.Chore;
 import org.apache.hadoop.hbase.ClusterId;
 import org.apache.hadoop.hbase.ClusterStatus;
-import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HBaseIOException;
-import org.apache.hadoop.hbase.NamespaceDescriptor;
-import org.apache.hadoop.hbase.constraint.ConstraintException;
-import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.HealthCheckChore;
 import org.apache.hadoop.hbase.MasterNotRunningException;
+import org.apache.hadoop.hbase.NamespaceDescriptor;
+import org.apache.hadoop.hbase.NamespaceNotFoundException;
 import org.apache.hadoop.hbase.PleaseHoldException;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerLoad;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableDescriptors;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotDisabledException;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.UnknownRegionException;
@@ -218,8 +217,11 @@ import org.apache.hadoop.metrics.util.MBeanUtil;
 import org.apache.hadoop.net.DNS;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.Watcher;
+import org.apache.hadoop.hbase.exceptions.DeserializationException;
 
+import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
 import com.google.protobuf.Descriptors;
 import com.google.protobuf.Message;
 import com.google.protobuf.RpcCallback;
@@ -366,7 +368,7 @@ MasterServices, Server {
 
   /** The health check chore. */
   private HealthCheckChore healthCheckChore;
-  
+
   /**
    * is in distributedLogReplay mode. When true, SplitLogWorker directly replays WAL edits to newly
    * assigned region servers instead of creating recovered.edits files.
@@ -489,7 +491,7 @@ MasterServices, Server {
       }
     }
 
-    distributedLogReplay = this.conf.getBoolean(HConstants.DISTRIBUTED_LOG_REPLAY_KEY, 
+    distributedLogReplay = this.conf.getBoolean(HConstants.DISTRIBUTED_LOG_REPLAY_KEY,
       HConstants.DEFAULT_DISTRIBUTED_LOG_REPLAY_CONFIG);
   }
 
@@ -902,7 +904,7 @@ MasterServices, Server {
       status.setStatus("Starting namespace manager");
       initNamespace();
     }
-    
+
     if (this.cpHost != null) {
       try {
         this.cpHost.preMasterInitialization();
@@ -1361,6 +1363,7 @@ MasterServices, Server {
     return !isStopped();
   }
 
+  @Override
   public IsMasterRunningResponse isMasterRunning(RpcController c, IsMasterRunningRequest req)
   throws ServiceException {
     return IsMasterRunningResponse.newBuilder().setIsMasterRunning(isMasterRunning()).build();
@@ -1718,9 +1721,7 @@ MasterServices, Server {
     }
 
     String namespace = hTableDescriptor.getTableName().getNamespaceAsString();
-    if (getNamespaceDescriptor(namespace) == null) {
-      throw new ConstraintException("Namespace " + namespace + " does not exist");
-    }
+    getNamespaceDescriptor(namespace); // ensure namespace exists
 
     HRegionInfo[] newRegions = getHRegionInfos(hTableDescriptor, splitKeys);
     checkInitialized();
@@ -2101,6 +2102,7 @@ MasterServices, Server {
       }
     }
     Collections.sort(backupMasters, new Comparator<ServerName>() {
+      @Override
       public int compare(ServerName s1, ServerName s2) {
         return s1.getServerName().compareTo(s2.getServerName());
       }});
@@ -2208,6 +2210,7 @@ MasterServices, Server {
     this.zooKeeper.reconnectAfterExpiration();
 
     Callable<Boolean> callable = new Callable<Boolean> () {
+      @Override
       public Boolean call() throws InterruptedException,
           IOException, KeeperException {
         MonitoredTask status =
@@ -2383,6 +2386,7 @@ MasterServices, Server {
     return this.stopped;
   }
 
+  @Override
   public boolean isAborted() {
     return this.abort;
   }
@@ -2414,6 +2418,7 @@ MasterServices, Server {
    *
    * @return true if master is ready to go, false if not.
    */
+  @Override
   public boolean isInitialized() {
     return initialized;
   }
@@ -2423,6 +2428,7 @@ MasterServices, Server {
    * assignMeta to prevent processing of ServerShutdownHandler.
    * @return true if assignMeta has completed;
    */
+  @Override
   public boolean isServerShutdownHandlerEnabled() {
     return this.serverShutdownHandlerEnabled;
   }
@@ -2521,6 +2527,7 @@ MasterServices, Server {
    * @return GetTableDescriptorsResponse
    * @throws ServiceException
    */
+  @Override
   public GetTableDescriptorsResponse getTableDescriptors(
 	      RpcController controller, GetTableDescriptorsRequest req) throws ServiceException {
     List<HTableDescriptor> descriptors = new ArrayList<HTableDescriptor>();
@@ -2589,6 +2596,7 @@ MasterServices, Server {
    * @return GetTableNamesResponse
    * @throws ServiceException
    */
+  @Override
   public GetTableNamesResponse getTableNames(
         RpcController controller, GetTableNamesRequest req) throws ServiceException {
     try {
@@ -3030,6 +3038,7 @@ MasterServices, Server {
     return org.apache.commons.lang.StringUtils.isNotBlank(healthScriptLocation);
   }
 
+  @Override
   public void createNamespace(NamespaceDescriptor descriptor) throws IOException {
     TableName.isLegalNamespaceName(Bytes.toBytes(descriptor.getName()));
     if (cpHost != null) {
@@ -3044,6 +3053,7 @@ MasterServices, Server {
     }
   }
 
+  @Override
   public void modifyNamespace(NamespaceDescriptor descriptor) throws IOException {
     TableName.isLegalNamespaceName(Bytes.toBytes(descriptor.getName()));
     if (cpHost != null) {
@@ -3058,6 +3068,7 @@ MasterServices, Server {
     }
   }
 
+  @Override
   public void deleteNamespace(String name) throws IOException {
     if (cpHost != null) {
       if (cpHost.preDeleteNamespace(name)) {
@@ -3071,19 +3082,29 @@ MasterServices, Server {
     }
   }
 
+  @Override
   public NamespaceDescriptor getNamespaceDescriptor(String name) throws IOException {
-      return tableNamespaceManager.get(name);
+    NamespaceDescriptor nsd = tableNamespaceManager.get(name);
+    if (nsd == null) {
+      throw new NamespaceNotFoundException(name);
+    }
+    return nsd;
   }
 
+  @Override
   public List<NamespaceDescriptor> listNamespaceDescriptors() throws IOException {
     return Lists.newArrayList(tableNamespaceManager.list());
   }
 
+  @Override
   public List<HTableDescriptor> listTableDescriptorsByNamespace(String name) throws IOException {
+    getNamespaceDescriptor(name); // check that namespace exists
     return Lists.newArrayList(tableDescriptors.getByNamespace(name).values());
   }
 
+  @Override
   public List<TableName> listTableNamesByNamespace(String name) throws IOException {
+    getNamespaceDescriptor(name); // check that namespace exists
     List<TableName> tableNames = Lists.newArrayList();
     for (HTableDescriptor descriptor: tableDescriptors.getByNamespace(name).values()) {
       tableNames.add(descriptor.getTableName());
