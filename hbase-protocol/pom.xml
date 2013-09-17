@@ -160,10 +160,6 @@
 
     <dependencies>
       <!-- Intra-project dependencies -->
-      <dependency>
-        <groupId>org.apache.hbase</groupId>
-        <artifactId>hbase-common</artifactId>
-      </dependency>
       <!-- General dependencies -->
       <dependency>
         <groupId>com.google.protobuf</groupId>
