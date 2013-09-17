@@ -55,7 +55,7 @@ public class TestRegionRebalancing {
   @Parameters
   public static Collection<Object[]> data() {
     Object[][] balancers =
-        new String[][] { { "org.apache.hadoop.hbase.master.balancer.DefaultLoadBalancer" },
+        new String[][] { { "org.apache.hadoop.hbase.master.balancer.SimpleLoadBalancer" },
             { "org.apache.hadoop.hbase.master.balancer.StochasticLoadBalancer" } };
     return Arrays.asList(balancers);
   }
