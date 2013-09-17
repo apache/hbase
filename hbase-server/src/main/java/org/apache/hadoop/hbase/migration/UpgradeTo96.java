@@ -120,12 +120,12 @@ public class UpgradeTo96 extends Configured implements Tool {
       if (res == 0) LOG.info("No HFileV1 found.");
       else {
         LOG.warn("There are some HFileV1, or corrupt files (files with incorrect major version).");
-        return -1;
       }
+      return res;
     }
     // if the user wants to upgrade, check for any HBase live process.
     // If yes, prompt the user to stop them
-    if (upgrade) {
+    else if (upgrade) {
       if (isAnyHBaseProcessAlive()) {
         LOG.error("Some HBase processes are still alive, or znodes not expired yet. "
             + "Please stop them before upgrade or try after some time.");

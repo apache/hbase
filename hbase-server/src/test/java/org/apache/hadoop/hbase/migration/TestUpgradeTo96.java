@@ -17,24 +17,22 @@
  */
 package org.apache.hadoop.hbase.migration;
 
-import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 import java.io.File;
 import java.io.IOException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FsShell;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.MediumTests;
-import org.apache.hadoop.hbase.master.TableNamespaceManager;
+import org.apache.hadoop.hbase.io.FileLink;
+import org.apache.hadoop.hbase.io.HFileLink;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos;
 import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.ReplicationPeer;
@@ -43,20 +41,14 @@ import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.HFileV1Detector;
-import org.apache.hadoop.hbase.util.ZKDataMigrator;
-import org.apache.hadoop.hbase.zookeeper.ZKTableReadOnly;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.zookeeper.KeeperException;
-import org.apache.zookeeper.server.ZKDatabase;
-import org.junit.After;
 import org.junit.AfterClass;
-import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-import org.mockito.Mockito;
 
 import com.google.protobuf.InvalidProtocolBufferException;
 
@@ -195,6 +187,35 @@ public class TestUpgradeTo96 {
     assertEquals(1, ToolRunner.run(TEST_UTIL.getConfiguration(), new HFileV1Detector(), null));
     // remove the corrupt file
     FileSystem.get(TEST_UTIL.getConfiguration()).delete(corruptFile, false);
+  }
+
+  @Test
+  public void testHFileLink() throws Exception {
+    // pass a link, and verify that correct paths are returned.
+    Path rootDir = FSUtils.getRootDir(TEST_UTIL.getConfiguration());
+    Path aFileLink = new Path(rootDir, "table/2086db948c48/cf/table=21212abcdc33-0906db948c48");
+    Path preNamespaceTablePath = new Path(rootDir, "table/21212abcdc33/cf/0906db948c48");
+    Path preNamespaceArchivePath =
+      new Path(rootDir, ".archive/table/21212abcdc33/cf/0906db948c48");
+    Path preNamespaceTempPath = new Path(rootDir, ".tmp/table/21212abcdc33/cf/0906db948c48");
+    boolean preNSTablePathExists = false;
+    boolean preNSArchivePathExists = false;
+    boolean preNSTempPathExists = false;
+    assertTrue(HFileLink.isHFileLink(aFileLink));
+    HFileLink hFileLink = new HFileLink(TEST_UTIL.getConfiguration(), aFileLink);
+    assertTrue(hFileLink.getArchivePath().toString().startsWith(rootDir.toString()));
+
+    HFileV1Detector t = new HFileV1Detector();
+    t.setConf(TEST_UTIL.getConfiguration());
+    FileLink fileLink = t.getFileLinkWithPreNSPath(aFileLink);
+    //assert it has 6 paths (2 NS, 2 Pre NS, and 2 .tmp)  to look.
+    assertTrue(fileLink.getLocations().length == 6);
+    for (Path p : fileLink.getLocations()) {
+      if (p.equals(preNamespaceArchivePath)) preNSArchivePathExists = true;
+      if (p.equals(preNamespaceTablePath)) preNSTablePathExists = true;
+      if (p.equals(preNamespaceTempPath)) preNSTempPathExists = true;
+    }
+    assertTrue(preNSArchivePathExists & preNSTablePathExists & preNSTempPathExists);
   }
 
   @Test
