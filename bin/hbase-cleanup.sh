@@ -51,13 +51,6 @@ fi
 
 format_option=$1;
 
-distMode=`$bin/hbase --config ${HBASE_CONF_DIR} org.apache.hadoop.hbase.util.HBaseConfTool hbase.cluster.distributed | head -n 1`
-
-if [ "$distMode" == 'false' ];then
-  echo "Skipping hbase data clearing in standalone mode." 2>&1
-  exit 1;
-fi
-
 zparent=`$bin/hbase org.apache.hadoop.hbase.util.HBaseConfTool zookeeper.znode.parent`
 if [ "$zparent" == "null" ]; then zparent="/hbase"; fi
 
