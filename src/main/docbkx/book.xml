@@ -182,6 +182,70 @@
 	</para>
 	</section>
 
+    <section xml:id="namespace">
+      <title>Namespace</title>
+      <para>
+      A namespace is a logical grouping of tables analogous to a database in relation database
+        systems. This abstraction lays the groundwork for upcoming multi-tenancy related features:
+        <itemizedlist>
+          <listitem>Quota Management (HBASE-8410) - Restrict the amount of resources (ie
+            regions, tables) a namespace can consume.</listitem>
+          <listitem>Namespace Security Administration (HBASE-9206) - provide another
+            level of security administration for tenants.</listitem>
+          <listitem>Region server groups (HBASE-6721) - A namespace/table can be
+            pinned onto a subset of regionservers thus guaranteeing a course level of
+            isolation.</listitem>
+        </itemizedlist>
+      </para>
+      <section xml:id="namespace_creation">
+        <title>Namespace management</title>
+        <para>
+        A namespace can be created, removed or altered. Namespace membership is determined during
+          table creation by specifying a fully-qualified table name of the form:
+          <para>
+            <code>&lt;table namespace&gt;:&lt;table qualifier&gt;</code>
+          </para>
+          <para>
+            Examples:
+          </para>
+<programlisting>
+#Create a namespace
+create_namespace 'my_ns'
+
+#create my_table in my_ns namespace
+create 'my_ns:my_table', 'fam'
+
+#delete namespace
+delete_namespace 'my_ns'
+
+#alter namespace
+alter_namespace 'my_ns', {METHOD => 'set', 'PROPERTY_NAME' => 'PROPERTY_VALUE'}
+</programlisting>
+        </para>
+      </section>
+      <section xml:id="namespace_special">
+        <title>Predefined namespaces</title>
+        <para>
+          There are two predefined special namespaces:
+          <itemizedlist>
+            <listitem>hbase - system namespace, used to contain hbase internal tables</listitem>
+            <listitem>default - tables with no explicit specified namespace will automatically
+              fall into this namespace.</listitem>
+          </itemizedlist>
+        </para>
+        <para>
+          Examples:
+<programlisting>
+#namespace=foo and table qualifier=bar
+create 'foo:bar', 'fam'
+
+#namespace=default and table qualifier=bar
+create 'bar', 'fam'
+</programlisting>
+        </para>
+      </section>
+    </section>
+
     <section xml:id="table">
       <title>Table</title>
       <para>
