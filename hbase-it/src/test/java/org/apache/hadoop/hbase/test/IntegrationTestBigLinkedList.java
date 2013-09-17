@@ -28,7 +28,6 @@ import java.util.Random;
 import java.util.Set;
 import java.util.UUID;
 
-import com.google.common.collect.Sets;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.GnuParser;
 import org.apache.commons.cli.HelpFormatter;
@@ -86,6 +85,8 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+
+import com.google.common.collect.Sets;
 
 /**
  * This is an integration test borrowed from goraci, written by Keith Turner,
@@ -331,6 +332,7 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
       long wrap;
       int width;
 
+      @Override
       protected void setup(Context context) throws IOException, InterruptedException {
         id = Bytes.toBytes(UUID.randomUUID().toString());
         Configuration conf = context.getConfiguration();
@@ -348,6 +350,7 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
         }
       }
 
+      @Override
       protected void cleanup(Context context) throws IOException ,InterruptedException {
         table.close();
       }
@@ -547,6 +550,7 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
     public static class VerifyReducer extends Reducer<BytesWritable,BytesWritable,Text,Text> {
       private ArrayList<byte[]> refs = new ArrayList<byte[]>();
 
+      @Override
       public void reduce(BytesWritable key, Iterable<BytesWritable> values, Context context)
           throws IOException, InterruptedException {
 
@@ -768,6 +772,7 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
    * A stand alone program that prints out portions of a list created by {@link Generator}
    */
   private static class Print extends Configured implements Tool {
+    @Override
     public int run(String[] args) throws Exception {
       Options options = new Options();
       options.addOption("s", "start", true, "start key");
@@ -828,6 +833,7 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
    * A stand alone program that deletes a single node.
    */
   private static class Delete extends Configured implements Tool {
+    @Override
     public int run(String[] args) throws Exception {
       if (args.length != 1) {
         System.out.println("Usage : " + Delete.class.getSimpleName() + " <node to delete>");
@@ -853,6 +859,7 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
    * A stand alone program that follows a linked list created by {@link Generator} and prints timing info.
    */
   private static class Walker extends Configured implements Tool {
+    @Override
     public int run(String[] args) throws IOException {
       Options options = new Options();
       options.addOption("n", "num", true, "number of queries");
@@ -980,7 +987,7 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
   @Override
   public void setUp() throws Exception {
     util = getTestingUtil(getConf());
-    util.initializeCluster(this.NUM_SLAVES_BASE);
+    util.initializeCluster(util.isDistributedCluster() ? 1 : this.NUM_SLAVES_BASE);
     this.setConf(util.getConfiguration());
   }
 
