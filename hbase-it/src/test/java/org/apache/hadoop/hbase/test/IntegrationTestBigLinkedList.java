@@ -334,7 +334,7 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
 
       @Override
       protected void setup(Context context) throws IOException, InterruptedException {
-        id = Bytes.toBytes(UUID.randomUUID().toString());
+        id = Bytes.toBytes("Job: "+context.getJobID() + " Task: " + context.getTaskAttemptID());
         Configuration conf = context.getConfiguration();
         table = new HTable(conf, getTableName(conf));
         table.setAutoFlush(false, true);
