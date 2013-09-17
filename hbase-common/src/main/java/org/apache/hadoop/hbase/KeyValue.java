@@ -61,7 +61,8 @@ import com.google.common.primitives.Longs;
  * KeyValue wraps a byte array and takes offsets and lengths into passed array at where to start
  * interpreting the content as KeyValue. The KeyValue format inside a byte array is:
  * <code>&lt;keylength> &lt;valuelength> &lt;key> &lt;value></code> Key is further decomposed as:
- * <code>&lt;rowlength> &lt;row> &lt;columnfamilylength> &lt;columnfamily> &lt;columnqualifier> &lt;timestamp> &lt;keytype></code>
+ * <code>&lt;rowlength> &lt;row> &lt;columnfamilylength> &lt;columnfamily> &lt;columnqualifier>
+ * &lt;timestamp> &lt;keytype></code>
  * The <code>rowlength</code> maximum is <code>Short.MAX_SIZE</code>, column family length maximum
  * is <code>Byte.MAX_SIZE</code>, and column qualifier + key length must be <
  * <code>Integer.MAX_SIZE</code>. The column does not contain the family/qualifier delimiter,
@@ -1413,10 +1414,16 @@ public class KeyValue implements Cell, HeapSize, Cloneable {
   }
 
   /**
-   * Splits a column in family:qualifier form into separate byte arrays.
+   * Splits a column in {@code family:qualifier} form into separate byte arrays. An empty qualifier
+   * (ie, {@code fam:}) is parsed as <code>{ fam, EMPTY_BYTE_ARRAY }</code> while no delimiter (ie,
+   * {@code fam}) is parsed as an array of one element, <code>{ fam }</code>.
+   * <p>
+   * Don't forget, HBase DOES support empty qualifiers. (see HBASE-9549)
+   * </p>
    * <p>
    * Not recommend to be used as this is old-style API.
-   * @param c  The column.
+   * </p>
+   * @param c The column.
    * @return The parsed column.
    */
   public static byte [][] parseColumn(byte [] c) {
@@ -1425,10 +1432,10 @@ public class KeyValue implements Cell, HeapSize, Cloneable {
       // If no delimiter, return array of size 1
       return new byte [][] { c };
     } else if(index == c.length - 1) {
-      // Only a family, return array size 1
+      // family with empty qualifier, return array size 2
       byte [] family = new byte[c.length-1];
       System.arraycopy(c, 0, family, 0, family.length);
-      return new byte [][] { family };
+      return new byte [][] { family, HConstants.EMPTY_BYTE_ARRAY};
     }
     // Family and column, return array size 2
     final byte [][] result = new byte [2][];
@@ -1436,8 +1443,7 @@ public class KeyValue implements Cell, HeapSize, Cloneable {
     System.arraycopy(c, 0, result[0], 0, index);
     final int len = c.length - (index + 1);
     result[1] = new byte[len];
-    System.arraycopy(c, index + 1 /*Skip delimiter*/, result[1], 0,
-      len);
+    System.arraycopy(c, index + 1 /* Skip delimiter */, result[1], 0, len);
     return result;
   }
 

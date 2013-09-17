@@ -50,10 +50,12 @@ public class RowResultGenerator extends ResultGenerator {
       if (rowspec.hasColumns()) {
         for (byte[] col: rowspec.getColumns()) {
           byte[][] split = KeyValue.parseColumn(col);
-          if (split.length == 2 && split[1].length != 0) {
+          if (split.length == 1) {
+            get.addFamily(split[0]);
+          } else if (split.length == 2) {
             get.addColumn(split[0], split[1]);
           } else {
-            get.addFamily(split[0]);
+            throw new IllegalArgumentException("Invalid column specifier.");
           }
         }
       }

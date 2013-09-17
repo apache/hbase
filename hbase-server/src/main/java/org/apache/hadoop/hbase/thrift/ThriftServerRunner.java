@@ -651,12 +651,22 @@ public class ThriftServerRunner implements Runnable {
         Map<ByteBuffer, ByteBuffer> attributes)
         throws IOError {
       byte [][] famAndQf = KeyValue.parseColumn(getBytes(column));
-      if(famAndQf.length == 1) {
-        return get(tableName, row, famAndQf[0], new byte[0], attributes);
+      if (famAndQf.length == 1) {
+        return get(tableName, row, famAndQf[0], null, attributes);
       }
-      return get(tableName, row, famAndQf[0], famAndQf[1], attributes);
+      if (famAndQf.length == 2) {
+        return get(tableName, row, famAndQf[0], famAndQf[1], attributes);
+      }
+      throw new IllegalArgumentException("Invalid familyAndQualifier provided.");
     }
 
+    /**
+     * Note: this internal interface is slightly different from public APIs in regard to handling
+     * of the qualifier. Here we differ from the public Java API in that null != byte[0]. Rather,
+     * we respect qual == null as a request for the entire column family. The caller (
+     * {@link #get(ByteBuffer, ByteBuffer, ByteBuffer, Map)}) interface IS consistent in that the
+     * column is parse like normal.
+     */
     protected List<TCell> get(ByteBuffer tableName,
                               ByteBuffer row,
                               byte[] family,
@@ -666,7 +676,7 @@ public class ThriftServerRunner implements Runnable {
         HTable table = getTable(tableName);
         Get get = new Get(getBytes(row));
         addAttributes(get, attributes);
-        if (qualifier == null || qualifier.length == 0) {
+        if (qualifier == null) {
           get.addFamily(family);
         } else {
           get.addColumn(family, qualifier);
@@ -681,27 +691,38 @@ public class ThriftServerRunner implements Runnable {
 
     @Deprecated
     @Override
-    public List<TCell> getVer(ByteBuffer tableName, ByteBuffer row,
-        ByteBuffer column, int numVersions,
-        Map<ByteBuffer, ByteBuffer> attributes) throws IOError {
+    public List<TCell> getVer(ByteBuffer tableName, ByteBuffer row, ByteBuffer column,
+        int numVersions, Map<ByteBuffer, ByteBuffer> attributes) throws IOError {
       byte [][] famAndQf = KeyValue.parseColumn(getBytes(column));
       if(famAndQf.length == 1) {
-        return getVer(tableName, row, famAndQf[0],
-            new byte[0], numVersions, attributes);
+        return getVer(tableName, row, famAndQf[0], null, numVersions, attributes);
       }
-      return getVer(tableName, row,
-          famAndQf[0], famAndQf[1], numVersions, attributes);
+      if (famAndQf.length == 2) {
+        return getVer(tableName, row, famAndQf[0], famAndQf[1], numVersions, attributes);
+      }
+      throw new IllegalArgumentException("Invalid familyAndQualifier provided.");
+
     }
 
-    public List<TCell> getVer(ByteBuffer tableName, ByteBuffer row,
-                              byte[] family,
-        byte[] qualifier, int numVersions,
-        Map<ByteBuffer, ByteBuffer> attributes) throws IOError {
+    /**
+     * Note: this public interface is slightly different from public Java APIs in regard to
+     * handling of the qualifier. Here we differ from the public Java API in that null != byte[0].
+     * Rather, we respect qual == null as a request for the entire column family. If you want to
+     * access the entire column family, use
+     * {@link #getVer(ByteBuffer, ByteBuffer, ByteBuffer, int, Map)} with a {@code column} value
+     * that lacks a {@code ':'}.
+     */
+    public List<TCell> getVer(ByteBuffer tableName, ByteBuffer row, byte[] family,
+        byte[] qualifier, int numVersions, Map<ByteBuffer, ByteBuffer> attributes) throws IOError {
       try {
         HTable table = getTable(tableName);
         Get get = new Get(getBytes(row));
         addAttributes(get, attributes);
-        get.addColumn(family, qualifier);
+        if (null == qualifier) {
+          get.addFamily(family);
+        } else {
+          get.addColumn(family, qualifier);
+        }
         get.setMaxVersions(numVersions);
         Result result = table.get(get);
         return ThriftUtilities.cellFromHBase(result.rawCells());
@@ -713,30 +734,38 @@ public class ThriftServerRunner implements Runnable {
 
     @Deprecated
     @Override
-    public List<TCell> getVerTs(ByteBuffer tableName,
-                                   ByteBuffer row,
-        ByteBuffer column,
-        long timestamp,
-        int numVersions,
-        Map<ByteBuffer, ByteBuffer> attributes) throws IOError {
+    public List<TCell> getVerTs(ByteBuffer tableName, ByteBuffer row, ByteBuffer column,
+        long timestamp, int numVersions, Map<ByteBuffer, ByteBuffer> attributes) throws IOError {
       byte [][] famAndQf = KeyValue.parseColumn(getBytes(column));
-      if(famAndQf.length == 1) {
-        return getVerTs(tableName, row, famAndQf[0], new byte[0], timestamp,
-            numVersions, attributes);
+      if (famAndQf.length == 1) {
+        return getVerTs(tableName, row, famAndQf[0], null, timestamp, numVersions, attributes);
       }
-      return getVerTs(tableName, row, famAndQf[0], famAndQf[1], timestamp,
-          numVersions, attributes);
+      if (famAndQf.length == 2) {
+        return getVerTs(tableName, row, famAndQf[0], famAndQf[1], timestamp, numVersions,
+          attributes);
+      }
+      throw new IllegalArgumentException("Invalid familyAndQualifier provided.");
     }
 
-    protected List<TCell> getVerTs(ByteBuffer tableName,
-                                   ByteBuffer row, byte [] family,
-        byte [] qualifier, long timestamp, int numVersions,
-        Map<ByteBuffer, ByteBuffer> attributes) throws IOError {
+    /**
+     * Note: this internal interface is slightly different from public APIs in regard to handling
+     * of the qualifier. Here we differ from the public Java API in that null != byte[0]. Rather,
+     * we respect qual == null as a request for the entire column family. The caller (
+     * {@link #getVerTs(ByteBuffer, ByteBuffer, ByteBuffer, long, int, Map)}) interface IS
+     * consistent in that the column is parse like normal.
+     */
+    protected List<TCell> getVerTs(ByteBuffer tableName, ByteBuffer row, byte[] family,
+        byte[] qualifier, long timestamp, int numVersions, Map<ByteBuffer, ByteBuffer> attributes)
+        throws IOError {
       try {
         HTable table = getTable(tableName);
         Get get = new Get(getBytes(row));
         addAttributes(get, attributes);
-        get.addColumn(family, qualifier);
+        if (null == qualifier) {
+          get.addFamily(family);
+        } else {
+          get.addColumn(family, qualifier);
+        }
         get.setTimeRange(0, timestamp);
         get.setMaxVersions(numVersions);
         Result result = table.get(get);
@@ -1002,9 +1031,8 @@ public class ThriftServerRunner implements Runnable {
                 : Durability.SKIP_WAL);
           } else {
             if(famAndQf.length == 1) {
-              put.add(famAndQf[0], HConstants.EMPTY_BYTE_ARRAY,
-                  m.value != null ? getBytes(m.value)
-                      : HConstants.EMPTY_BYTE_ARRAY);
+              LOG.warn("No column qualifier specified. Delete is the only mutation supported "
+                  + "over the whole column family.");
             } else {
               put.add(famAndQf[0], famAndQf[1],
                   m.value != null ? getBytes(m.value)
@@ -1060,14 +1088,16 @@ public class ThriftServerRunner implements Runnable {
             delete.setDurability(m.writeToWAL ? Durability.SYNC_WAL
                 : Durability.SKIP_WAL);
           } else {
-            if(famAndQf.length == 1) {
-              put.add(famAndQf[0], HConstants.EMPTY_BYTE_ARRAY,
-                  m.value != null ? getBytes(m.value)
-                      : HConstants.EMPTY_BYTE_ARRAY);
-            } else {
+            if (famAndQf.length == 1) {
+              LOG.warn("No column qualifier specified. Delete is the only mutation supported "
+                  + "over the whole column family.");
+            }
+            if (famAndQf.length == 2) {
               put.add(famAndQf[0], famAndQf[1],
                   m.value != null ? getBytes(m.value)
                       : HConstants.EMPTY_BYTE_ARRAY);
+            } else {
+              throw new IllegalArgumentException("Invalid famAndQf provided.");
             }
             put.setDurability(m.writeToWAL ? Durability.SYNC_WAL : Durability.SKIP_WAL);
           }
@@ -1102,8 +1132,7 @@ public class ThriftServerRunner implements Runnable {
             throws IOError, IllegalArgument, TException {
       byte [][] famAndQf = KeyValue.parseColumn(getBytes(column));
       if(famAndQf.length == 1) {
-        return atomicIncrement(tableName, row, famAndQf[0], new byte[0],
-            amount);
+        return atomicIncrement(tableName, row, famAndQf[0], HConstants.EMPTY_BYTE_ARRAY, amount);
       }
       return atomicIncrement(tableName, row, famAndQf[0], famAndQf[1], amount);
     }

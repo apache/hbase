@@ -28,17 +28,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 
-import com.google.protobuf.Service;
-import com.google.protobuf.ServiceException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-
-import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.client.*;
-import org.apache.hadoop.hbase.client.coprocessor.Batch;
-import org.apache.hadoop.hbase.ipc.CoprocessorRpcChannel;
-import org.apache.hadoop.util.StringUtils;
-
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -48,17 +39,22 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
-import org.apache.hadoop.hbase.client.RowMutations;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.Append;
 import org.apache.hadoop.hbase.client.Delete;
+import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HTableInterface;
 import org.apache.hadoop.hbase.client.Increment;
 import org.apache.hadoop.hbase.client.Put;
-import org.apache.hadoop.hbase.client.Row;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
+import org.apache.hadoop.hbase.client.Row;
+import org.apache.hadoop.hbase.client.RowMutations;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.coprocessor.Batch;
 import org.apache.hadoop.hbase.io.TimeRange;
+import org.apache.hadoop.hbase.ipc.CoprocessorRpcChannel;
 import org.apache.hadoop.hbase.rest.Constants;
 import org.apache.hadoop.hbase.rest.model.CellModel;
 import org.apache.hadoop.hbase.rest.model.CellSetModel;
@@ -66,6 +62,10 @@ import org.apache.hadoop.hbase.rest.model.RowModel;
 import org.apache.hadoop.hbase.rest.model.ScannerModel;
 import org.apache.hadoop.hbase.rest.model.TableSchemaModel;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.util.StringUtils;
+
+import com.google.protobuf.Service;
+import com.google.protobuf.ServiceException;
 
 /**
  * HTable interface to remote tables accessed via REST gateway
@@ -116,8 +116,8 @@ public class RemoteHTable implements HTableInterface {
             }
           }
         } else {
+          // this is an unqualified family. append the family name and NO ':'
           sb.append(Bytes.toStringBinary((byte[])e.getKey()));
-          sb.append(':');
         }
         if (i.hasNext()) {
           sb.append(',');
@@ -172,7 +172,14 @@ public class RemoteHTable implements HTableInterface {
       for (CellModel cell: row.getCells()) {
         byte[][] split = KeyValue.parseColumn(cell.getColumn());
         byte[] column = split[0];
-        byte[] qualifier = split.length > 1 ? split[1] : null;
+        byte[] qualifier = null;
+        if (split.length == 1) {
+          qualifier = HConstants.EMPTY_BYTE_ARRAY;
+        } else if (split.length == 2) {
+          qualifier = split[1];
+        } else {
+          throw new IllegalArgumentException("Invalid familyAndQualifier provided.");
+        }
         kvs.add(new KeyValue(row.getKey(), column, qualifier,
           cell.getTimestamp(), cell.getValue()));
       }

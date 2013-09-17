@@ -78,10 +78,10 @@ module Hbase
       assert_nil(qual)
     end
 
-    define_test "parse_column_name should not return a qualifier for family-only column specifiers" do
+    define_test "parse_column_name should support and empty column qualifier" do
       col, qual = table('hbase:meta').parse_column_name('foo:')
       assert_not_nil(col)
-      assert_nil(qual)
+      assert_not_nil(qual)
     end
 
     define_test "parse_column_name should return a qualifier for family:qualifier column specifiers" do
