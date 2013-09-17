@@ -19,6 +19,8 @@
 package org.apache.hadoop.hbase;
 
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
+import java.util.List;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
@@ -26,6 +28,9 @@ import org.apache.hadoop.hbase.util.SimpleByteRange;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.IterableUtils;
 import org.apache.hadoop.io.WritableUtils;
+
+import com.google.common.base.Function;
+import com.google.common.collect.Lists;
 
 /**
  * static convenience methods for dealing with KeyValues and collections of KeyValues
@@ -202,5 +207,14 @@ public class KeyValueUtil {
   public static KeyValue ensureKeyValue(final Cell cell) {
     if (cell == null) return null;
     return cell instanceof KeyValue? (KeyValue)cell: copyToNewKeyValue(cell);
+  }
+
+  public static List<KeyValue> ensureKeyValues(List<Cell> cells) {
+    List<KeyValue> lazyList = Lists.transform(cells, new Function<Cell, KeyValue>() {
+      public KeyValue apply(Cell arg0) {
+        return KeyValueUtil.ensureKeyValue(arg0);
+      }
+    });
+    return new ArrayList<KeyValue>(lazyList);
   }
 }

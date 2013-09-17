@@ -3115,7 +3115,7 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
                           currentScanResultSize += KeyValueUtil.ensureKeyValue(kv).heapSize();
                         }
                       }
-                      results.add(new Result(values));
+                      results.add(Result.create(values));
                     }
                     if (!moreRows) {
                       break;

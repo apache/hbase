@@ -29,6 +29,8 @@ import java.util.Map;
 import java.util.NavigableMap;
 import java.util.TreeMap;
 
+import javax.annotation.Nullable;
+
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.Cell;
@@ -95,24 +97,43 @@ public class Result implements CellScannable {
   }
 
   /**
-   * Instantiate a Result with the specified array of KeyValues.
-   * <br><strong>Note:</strong> You must ensure that the keyvalues
-   * are already sorted
-   * @param cells array of KeyValues
+   * @deprecated Use {@link #create(List)} instead.
    */
-  public Result(Cell [] cells) {
+  @Deprecated
+  public Result(KeyValue [] cells) {
     this.cells = cells;
   }
 
   /**
-   * Instantiate a Result with the specified List of KeyValues.
-   * <br><strong>Note:</strong> You must ensure that the keyvalues
-   * are already sorted
-   * @param kvs List of KeyValues
+   * @deprecated Use {@link #create(List)} instead.
    */
-  public Result(List<Cell> kvs) {
+  @Deprecated
+  public Result(List<KeyValue> kvs) {
     // TODO: Here we presume the passed in Cells are KVs.  One day this won't always be so.
     this(kvs.toArray(new Cell[kvs.size()]));
+  }
+
+  /**
+   * Instantiate a Result with the specified List of KeyValues.
+   * <br><strong>Note:</strong> You must ensure that the keyvalues are already sorted.
+   * @param cells List of cells
+   */
+  public static Result create(List<Cell> cells) {
+    return new Result(cells.toArray(new Cell[cells.size()]));
+  }
+
+  /**
+   * Instantiate a Result with the specified array of KeyValues.
+   * <br><strong>Note:</strong> You must ensure that the keyvalues are already sorted.
+   * @param cells array of cells
+   */
+  public static Result create(Cell[] cells) {
+    return new Result(cells);
+  }
+
+  /** Private ctor. Use {@link #create(Cell[])}. */
+  private Result(Cell[] cells) {
+    this.cells = cells;
   }
 
   /**
@@ -196,6 +217,13 @@ public class Result implements CellScannable {
     return isEmpty() ? null : Arrays.asList(raw());
   }
 
+  /**
+   * @deprecated Use {@link #getColumnCells(byte[], byte[])} instead.
+   */
+  @Deprecated
+  public List<KeyValue> getColumn(byte [] family, byte [] qualifier) {
+    return KeyValueUtil.ensureKeyValues(getColumnCells(family, qualifier));
+  }
 
   /**
    * Return the Cells for the specific column.  The Cells are sorted in
@@ -212,7 +240,7 @@ public class Result implements CellScannable {
    * @return a list of Cells for this column or empty list if the column
    * did not exist in the result set
    */
-  public List<Cell> getColumn(byte [] family, byte [] qualifier) {
+  public List<Cell> getColumnCells(byte [] family, byte [] qualifier) {
     List<Cell> result = new ArrayList<Cell>();
 
     Cell [] kvs = rawCells();
@@ -301,6 +329,14 @@ public class Result implements CellScannable {
   }
 
   /**
+   * @deprecated Use {@link #getColumnLatestCell(byte[], byte[])} instead.
+   */
+  @Deprecated
+  public KeyValue getColumnLatest(byte [] family, byte [] qualifier) {
+    return KeyValueUtil.ensureKeyValue(getColumnLatestCell(family, qualifier));
+  }
+
+  /**
    * The Cell for the most recent timestamp for a given column.
    *
    * @param family
@@ -309,7 +345,7 @@ public class Result implements CellScannable {
    * @return the Cell for the column, or null if no value exists in the row or none have been
    * selected in the query (Get/Scan)
    */
-  public Cell getColumnLatest(byte [] family, byte [] qualifier) {
+  public Cell getColumnLatestCell(byte [] family, byte [] qualifier) {
     Cell [] kvs = rawCells(); // side effect possibly.
     if (kvs == null || kvs.length == 0) {
       return null;
@@ -326,6 +362,16 @@ public class Result implements CellScannable {
   }
 
   /**
+   * @deprecated Use {@link #getColumnLatestCell(byte[], int, int, byte[], int, int)} instead.
+   */
+  @Deprecated
+  public KeyValue getColumnLatest(byte [] family, int foffset, int flength,
+      byte [] qualifier, int qoffset, int qlength) {
+    return KeyValueUtil.ensureKeyValue(
+        getColumnLatestCell(family, foffset, flength, qualifier, qoffset, qlength));
+  }
+
+  /**
    * The Cell for the most recent timestamp for a given column.
    *
    * @param family family name
@@ -338,7 +384,7 @@ public class Result implements CellScannable {
    * @return the Cell for the column, or null if no value exists in the row or none have been
    * selected in the query (Get/Scan)
    */
-  public Cell getColumnLatest(byte [] family, int foffset, int flength,
+  public Cell getColumnLatestCell(byte [] family, int foffset, int flength,
       byte [] qualifier, int qoffset, int qlength) {
 
     Cell [] kvs = rawCells(); // side effect possibly.
@@ -363,7 +409,7 @@ public class Result implements CellScannable {
    * @return value of latest version of column, null if none found
    */
   public byte[] getValue(byte [] family, byte [] qualifier) {
-    Cell kv = getColumnLatest(family, qualifier);
+    Cell kv = getColumnLatestCell(family, qualifier);
     if (kv == null) {
       return null;
     }
@@ -380,7 +426,7 @@ public class Result implements CellScannable {
    */
   public ByteBuffer getValueAsByteBuffer(byte [] family, byte [] qualifier) {
 
-    Cell kv = getColumnLatest(family, 0, family.length, qualifier, 0, qualifier.length);
+    Cell kv = getColumnLatestCell(family, 0, family.length, qualifier, 0, qualifier.length);
 
     if (kv == null) {
       return null;
@@ -403,7 +449,7 @@ public class Result implements CellScannable {
   public ByteBuffer getValueAsByteBuffer(byte [] family, int foffset, int flength,
       byte [] qualifier, int qoffset, int qlength) {
 
-    Cell kv = getColumnLatest(family, foffset, flength, qualifier, qoffset, qlength);
+    Cell kv = getColumnLatestCell(family, foffset, flength, qualifier, qoffset, qlength);
 
     if (kv == null) {
       return null;
@@ -449,7 +495,7 @@ public class Result implements CellScannable {
   public boolean loadValue(byte [] family, int foffset, int flength,
       byte [] qualifier, int qoffset, int qlength, ByteBuffer dst)
           throws BufferOverflowException {
-    Cell kv = getColumnLatest(family, foffset, flength, qualifier, qoffset, qlength);
+    Cell kv = getColumnLatestCell(family, foffset, flength, qualifier, qoffset, qlength);
 
     if (kv == null) {
       return false;
@@ -486,7 +532,7 @@ public class Result implements CellScannable {
   public boolean containsNonEmptyColumn(byte [] family, int foffset, int flength,
       byte [] qualifier, int qoffset, int qlength) {
 
-    Cell kv = getColumnLatest(family, foffset, flength, qualifier, qoffset, qlength);
+    Cell kv = getColumnLatestCell(family, foffset, flength, qualifier, qoffset, qlength);
 
     return (kv != null) && (kv.getValueLength() > 0);
   }
@@ -518,7 +564,7 @@ public class Result implements CellScannable {
    */
   public boolean containsEmptyColumn(byte [] family, int foffset, int flength,
       byte [] qualifier, int qoffset, int qlength) {
-    Cell kv = getColumnLatest(family, foffset, flength, qualifier, qoffset, qlength);
+    Cell kv = getColumnLatestCell(family, foffset, flength, qualifier, qoffset, qlength);
 
     return (kv != null) && (kv.getValueLength() == 0);
   }
@@ -532,7 +578,7 @@ public class Result implements CellScannable {
    * @return true if at least one value exists in the result, false if not
    */
   public boolean containsColumn(byte [] family, byte [] qualifier) {
-    Cell kv = getColumnLatest(family, qualifier);
+    Cell kv = getColumnLatestCell(family, qualifier);
     return kv != null;
   }
 
@@ -551,7 +597,7 @@ public class Result implements CellScannable {
   public boolean containsColumn(byte [] family, int foffset, int flength,
       byte [] qualifier, int qoffset, int qlength) {
 
-    return getColumnLatest(family, foffset, flength, qualifier, qoffset, qlength) != null;
+    return getColumnLatestCell(family, foffset, flength, qualifier, qoffset, qlength) != null;
   }
 
   /**

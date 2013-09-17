@@ -202,9 +202,9 @@ public class TestBulkDeleteProtocol {
     int rows = 0;
     for (Result result : ht.getScanner(new Scan())) {
       assertEquals(2, result.getFamilyMap(FAMILY1).size());
-      assertTrue(result.getColumn(FAMILY1, QUALIFIER2).isEmpty());
-      assertEquals(1, result.getColumn(FAMILY1, QUALIFIER1).size());
-      assertEquals(1, result.getColumn(FAMILY1, QUALIFIER3).size());
+      assertTrue(result.getColumnCells(FAMILY1, QUALIFIER2).isEmpty());
+      assertEquals(1, result.getColumnCells(FAMILY1, QUALIFIER1).size());
+      assertEquals(1, result.getColumnCells(FAMILY1, QUALIFIER3).size());
       rows++;
     }
     assertEquals(100, rows);
@@ -235,7 +235,7 @@ public class TestBulkDeleteProtocol {
     int rows = 0;
     for (Result result : ht.getScanner(new Scan())) {
       assertTrue(result.getFamilyMap(FAMILY1).isEmpty());
-      assertEquals(1, result.getColumn(FAMILY2, QUALIFIER2).size());
+      assertEquals(1, result.getColumnCells(FAMILY2, QUALIFIER2).size());
       rows++;
     }
     assertEquals(100, rows);
@@ -273,15 +273,15 @@ public class TestBulkDeleteProtocol {
     scan.setMaxVersions();
     for (Result result : ht.getScanner(scan)) {
       assertEquals(3, result.getFamilyMap(FAMILY1).size());
-      List<Cell> column = result.getColumn(FAMILY1, QUALIFIER1);
+      List<Cell> column = result.getColumnCells(FAMILY1, QUALIFIER1);
       assertEquals(1, column.size());
       assertTrue(CellUtil.matchingValue(column.get(0), "v1".getBytes()));
 
-      column = result.getColumn(FAMILY1, QUALIFIER2);
+      column = result.getColumnCells(FAMILY1, QUALIFIER2);
       assertEquals(1, column.size());
       assertTrue(CellUtil.matchingValue(column.get(0), "v1".getBytes()));
 
-      column = result.getColumn(FAMILY1, QUALIFIER3);
+      column = result.getColumnCells(FAMILY1, QUALIFIER3);
       assertEquals(1, column.size());
       assertTrue(CellUtil.matchingValue(column.get(0), "v1".getBytes()));
       rows++;
@@ -325,9 +325,9 @@ public class TestBulkDeleteProtocol {
     scan.setMaxVersions();
     for (Result result : ht.getScanner(scan)) {
       assertEquals(3, result.getFamilyMap(FAMILY1).size());
-      assertEquals(3, result.getColumn(FAMILY1, QUALIFIER1).size());
-      assertEquals(3, result.getColumn(FAMILY1, QUALIFIER2).size());
-      List<Cell> column = result.getColumn(FAMILY1, QUALIFIER3);
+      assertEquals(3, result.getColumnCells(FAMILY1, QUALIFIER1).size());
+      assertEquals(3, result.getColumnCells(FAMILY1, QUALIFIER2).size());
+      List<Cell> column = result.getColumnCells(FAMILY1, QUALIFIER3);
       assertEquals(2, column.size());
       assertTrue(CellUtil.matchingValue(column.get(0), "v3".getBytes()));
       assertTrue(CellUtil.matchingValue(column.get(1), "v1".getBytes()));
@@ -407,15 +407,15 @@ public class TestBulkDeleteProtocol {
     scan1.setMaxVersions();
     for (Result res : ht.getScanner(scan1)) {
       assertEquals(3, res.getFamilyMap(FAMILY1).size());
-      List<Cell> column = res.getColumn(FAMILY1, QUALIFIER1);
+      List<Cell> column = res.getColumnCells(FAMILY1, QUALIFIER1);
       assertEquals(2, column.size());
       assertTrue(CellUtil.matchingValue(column.get(0), "v4".getBytes()));
       assertTrue(CellUtil.matchingValue(column.get(1), "v3".getBytes()));
-      column = res.getColumn(FAMILY1, QUALIFIER2);
+      column = res.getColumnCells(FAMILY1, QUALIFIER2);
       assertEquals(2, column.size());
       assertTrue(CellUtil.matchingValue(column.get(0), "v4".getBytes()));
       assertTrue(CellUtil.matchingValue(column.get(1), "v3".getBytes()));
-      assertEquals(4, res.getColumn(FAMILY1, QUALIFIER3).size());
+      assertEquals(4, res.getColumnCells(FAMILY1, QUALIFIER3).size());
       rows++;
     }
     assertEquals(100, rows);

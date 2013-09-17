@@ -138,7 +138,7 @@ public class TestPutDeleteEtcCellIteration {
       byte [] bytes = Bytes.toBytes(i);
       cells[i] = new KeyValue(ROW, bytes, bytes, TIMESTAMP, bytes);
     }
-    Result r = new Result(Arrays.asList(cells));
+    Result r = Result.create(Arrays.asList(cells));
     int index = 0;
     for (CellScanner cellScanner = r.cellScanner(); cellScanner.advance();) {
       Cell cell = cellScanner.current();

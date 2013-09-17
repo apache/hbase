@@ -832,7 +832,7 @@ public class TestKeepDeletes {
 
   private void checkResult(Result r, byte[] fam, byte[] col, byte[] ... vals) {
     assertEquals(r.size(), vals.length);
-    List<Cell> kvs = r.getColumn(fam, col);
+    List<Cell> kvs = r.getColumnCells(fam, col);
     assertEquals(kvs.size(), vals.length);
     for (int i=0;i<vals.length;i++) {
       assertArrayEquals(CellUtil.cloneValue(kvs.get(i)), vals[i]);

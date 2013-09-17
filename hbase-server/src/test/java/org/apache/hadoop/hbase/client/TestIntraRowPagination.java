@@ -96,7 +96,7 @@ public class TestIntraRowPagination {
         kvListScan.addAll(results);
         results.clear();
       }
-      result = new Result(kvListScan);
+      result = Result.create(kvListScan);
       TestScannersFromClientSide.verifyResult(result, kvListExp, toLog,
           "Testing scan with storeOffset and storeLimit");
     } finally {

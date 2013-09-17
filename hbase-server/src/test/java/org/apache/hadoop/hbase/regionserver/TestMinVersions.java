@@ -461,7 +461,7 @@ public class TestMinVersions {
 
   private void checkResult(Result r, byte[] col, byte[] ... vals) {
     assertEquals(r.size(), vals.length);
-    List<Cell> kvs = r.getColumn(col, col);
+    List<Cell> kvs = r.getColumnCells(col, col);
     assertEquals(kvs.size(), vals.length);
     for (int i=0;i<vals.length;i++) {
       assertTrue(CellUtil.matchingValue(kvs.get(i), vals[i]));

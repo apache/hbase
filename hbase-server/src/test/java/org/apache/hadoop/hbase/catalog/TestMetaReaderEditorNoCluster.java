@@ -99,26 +99,26 @@ public class TestMetaReaderEditorNoCluster {
     assertNull(HRegionInfo.getHRegionInfo(new Result()));
 
     List<Cell> kvs = new ArrayList<Cell>();
-    Result r = new Result(kvs);
+    Result r = Result.create(kvs);
     assertNull(HRegionInfo.getHRegionInfo(r));
 
     byte [] f = HConstants.CATALOG_FAMILY;
     // Make a key value that doesn't have the expected qualifier.
     kvs.add(new KeyValue(HConstants.EMPTY_BYTE_ARRAY, f,
       HConstants.SERVER_QUALIFIER, f));
-    r = new Result(kvs);
+    r = Result.create(kvs);
     assertNull(HRegionInfo.getHRegionInfo(r));
     // Make a key that does not have a regioninfo value.
     kvs.add(new KeyValue(HConstants.EMPTY_BYTE_ARRAY, f,
       HConstants.REGIONINFO_QUALIFIER, f));
-    HRegionInfo hri = HRegionInfo.getHRegionInfo(new Result(kvs));
+    HRegionInfo hri = HRegionInfo.getHRegionInfo(Result.create(kvs));
     assertTrue(hri == null);
     // OK, give it what it expects
     kvs.clear();
     kvs.add(new KeyValue(HConstants.EMPTY_BYTE_ARRAY, f,
       HConstants.REGIONINFO_QUALIFIER,
       HRegionInfo.FIRST_META_REGIONINFO.toByteArray()));
-    hri = HRegionInfo.getHRegionInfo(new Result(kvs));
+    hri = HRegionInfo.getHRegionInfo(Result.create(kvs));
     assertNotNull(hri);
     assertTrue(hri.equals(HRegionInfo.FIRST_META_REGIONINFO));
   }
@@ -165,7 +165,7 @@ public class TestMetaReaderEditorNoCluster {
         HConstants.CATALOG_FAMILY, HConstants.STARTCODE_QUALIFIER,
         Bytes.toBytes(sn.getStartcode())));
       final List<CellScannable> cellScannables = new ArrayList<CellScannable>(1);
-      cellScannables.add(new Result(kvs));
+      cellScannables.add(Result.create(kvs));
       final ScanResponse.Builder builder = ScanResponse.newBuilder();
       for (CellScannable result : cellScannables) {
         builder.addCellsPerResult(((Result)result).size());

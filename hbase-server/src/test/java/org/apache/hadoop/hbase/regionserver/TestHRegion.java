@@ -294,7 +294,7 @@ public class TestHRegion extends HBaseTestCase {
       Get get = new Get(row);
       Result result = region.get(get);
       for (long i = minSeqId; i <= maxSeqId; i += 10) {
-        List<Cell> kvs = result.getColumn(family, Bytes.toBytes(i));
+        List<Cell> kvs = result.getColumnCells(family, Bytes.toBytes(i));
         assertEquals(1, kvs.size());
         assertEquals(Bytes.toBytes(i), CellUtil.cloneValue(kvs.get(0)));
       }
@@ -347,7 +347,7 @@ public class TestHRegion extends HBaseTestCase {
       Get get = new Get(row);
       Result result = region.get(get);
       for (long i = minSeqId; i <= maxSeqId; i += 10) {
-        List<Cell> kvs = result.getColumn(family, Bytes.toBytes(i));
+        List<Cell> kvs = result.getColumnCells(family, Bytes.toBytes(i));
         if (i < recoverSeqId) {
           assertEquals(0, kvs.size());
         } else {
@@ -3609,7 +3609,7 @@ public class TestHRegion extends HBaseTestCase {
     get.addColumn(Incrementer.family, Incrementer.qualifier);
     get.setMaxVersions(1);
     Result res = this.region.get(get);
-    List<Cell> kvs = res.getColumn(Incrementer.family,
+    List<Cell> kvs = res.getColumnCells(Incrementer.family,
         Incrementer.qualifier);
 
     //we just got the latest version
@@ -3703,7 +3703,7 @@ public class TestHRegion extends HBaseTestCase {
     get.addColumn(Appender.family, Appender.qualifier);
     get.setMaxVersions(1);
     Result res = this.region.get(get);
-    List<Cell> kvs = res.getColumn(Appender.family,
+    List<Cell> kvs = res.getColumnCells(Appender.family,
         Appender.qualifier);
 
     //we just got the latest version
@@ -3740,7 +3740,7 @@ public class TestHRegion extends HBaseTestCase {
     get.addColumn(family, qualifier);
     get.setMaxVersions();
     res = this.region.get(get);
-    kvs = res.getColumn(family, qualifier);
+    kvs = res.getColumnCells(family, qualifier);
     assertEquals(1, kvs.size());
     assertEquals(Bytes.toBytes("value0"), CellUtil.cloneValue(kvs.get(0)));
 
@@ -3749,7 +3749,7 @@ public class TestHRegion extends HBaseTestCase {
     get.addColumn(family, qualifier);
     get.setMaxVersions();
     res = this.region.get(get);
-    kvs = res.getColumn(family, qualifier);
+    kvs = res.getColumnCells(family, qualifier);
     assertEquals(1, kvs.size());
     assertEquals(Bytes.toBytes("value0"), CellUtil.cloneValue(kvs.get(0)));
 
@@ -3761,7 +3761,7 @@ public class TestHRegion extends HBaseTestCase {
     get.addColumn(family, qualifier);
     get.setMaxVersions();
     res = this.region.get(get);
-    kvs = res.getColumn(family, qualifier);
+    kvs = res.getColumnCells(family, qualifier);
     assertEquals(1, kvs.size());
     assertEquals(Bytes.toBytes("value1"), CellUtil.cloneValue(kvs.get(0)));
 
@@ -3770,7 +3770,7 @@ public class TestHRegion extends HBaseTestCase {
     get.addColumn(family, qualifier);
     get.setMaxVersions();
     res = this.region.get(get);
-    kvs = res.getColumn(family, qualifier);
+    kvs = res.getColumnCells(family, qualifier);
     assertEquals(1, kvs.size());
     assertEquals(Bytes.toBytes("value1"), CellUtil.cloneValue(kvs.get(0)));
   }

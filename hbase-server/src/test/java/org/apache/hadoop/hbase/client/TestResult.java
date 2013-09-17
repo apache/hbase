@@ -65,15 +65,15 @@ public class TestResult extends TestCase {
 
     Arrays.sort(kvs, KeyValue.COMPARATOR);
 
-    Result r = new Result(kvs);
+    Result r = Result.create(kvs);
 
     for (int i = 0; i < 100; ++i) {
       final byte[] qf = Bytes.toBytes(i);
 
-      List<Cell> ks = r.getColumn(family, qf);
+      List<Cell> ks = r.getColumnCells(family, qf);
       assertEquals(1, ks.size());
       assertTrue(CellUtil.matchingQualifier(ks.get(0), qf));
-      assertEquals(ks.get(0), r.getColumnLatest(family, qf));
+      assertEquals(ks.get(0), r.getColumnLatestCell(family, qf));
     }
   }
 
@@ -87,15 +87,15 @@ public class TestResult extends TestCase {
 
     Arrays.sort(kvs, KeyValue.COMPARATOR);
 
-    Result r = new Result(kvs);
+    Result r = Result.create(kvs);
     for (int i = 0; i < 100; ++i) {
       final byte[] qf = Bytes.toBytes(i);
 
-      List<Cell> ks = r.getColumn(family, qf);
+      List<Cell> ks = r.getColumnCells(family, qf);
       assertEquals(2, ks.size());
       assertTrue(CellUtil.matchingQualifier(ks.get(0), qf));
       assertEquals(200, ks.get(0).getTimestamp());
-      assertEquals(ks.get(0), r.getColumnLatest(family, qf));
+      assertEquals(ks.get(0), r.getColumnLatestCell(family, qf));
     }
   }
 
@@ -104,7 +104,7 @@ public class TestResult extends TestCase {
 
     Arrays.sort(kvs, KeyValue.COMPARATOR);
 
-    Result r = new Result(kvs);
+    Result r = Result.create(kvs);
 
     for (int i = 0; i < 100; ++i) {
       final byte[] qf = Bytes.toBytes(i);
@@ -124,7 +124,7 @@ public class TestResult extends TestCase {
 
     Arrays.sort(kvs, KeyValue.COMPARATOR);
 
-    Result r = new Result(kvs);
+    Result r = Result.create(kvs);
     for (int i = 0; i < 100; ++i) {
       final byte[] qf = Bytes.toBytes(i);
 
@@ -138,7 +138,7 @@ public class TestResult extends TestCase {
 
     Arrays.sort(kvs, KeyValue.COMPARATOR);
 
-    Result r = new Result(kvs);
+    Result r = Result.create(kvs);
     ByteBuffer loadValueBuffer = ByteBuffer.allocate(1024);
 
     for (int i = 0; i < 100; ++i) {
@@ -165,7 +165,7 @@ public class TestResult extends TestCase {
 
     ByteBuffer loadValueBuffer = ByteBuffer.allocate(1024);
 
-    Result r = new Result(kvs);
+    Result r = Result.create(kvs);
     for (int i = 0; i < 100; ++i) {
       final byte[] qf = Bytes.toBytes(i);
 
@@ -188,8 +188,8 @@ public class TestResult extends TestCase {
     KeyValue kv1 = new KeyValue(row, family, qual, value);
     KeyValue kv2 = new KeyValue(row, family, qual, value1);
 
-    Result r1 = new Result(new KeyValue[] {kv1});
-    Result r2 = new Result(new KeyValue[] {kv2});
+    Result r1 = Result.create(new KeyValue[] {kv1});
+    Result r2 = Result.create(new KeyValue[] {kv2});
     // no exception thrown
     Result.compareResults(r1, r1);
     try {
@@ -226,7 +226,7 @@ public class TestResult extends TestCase {
         Bytes.toBytes(valueSB.toString()), 1, n);
     Arrays.sort(kvs, KeyValue.COMPARATOR);
     ByteBuffer loadValueBuffer = ByteBuffer.allocate(1024);
-    Result r = new Result(kvs);
+    Result r = Result.create(kvs);
 
     byte[][] qfs = new byte[n][Bytes.SIZEOF_INT];
     for (int i = 0; i < n; ++i) {

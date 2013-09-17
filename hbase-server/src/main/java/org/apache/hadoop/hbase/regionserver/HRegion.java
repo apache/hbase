@@ -1804,7 +1804,7 @@ public class HRegion implements HeapSize { // , Writable{
   void delete(NavigableMap<byte[], List<Cell>> familyMap,
       Durability durability) throws IOException {
     Delete delete = new Delete(FOR_UNIT_TESTS_ONLY);
-    delete.setFamilyMap(familyMap);
+    delete.setFamilyCellMap(familyMap);
     delete.setDurability(durability);
     doBatchMutate(delete);
   }
@@ -2616,7 +2616,7 @@ public class HRegion implements HeapSize { // , Writable{
 
     familyMap.put(family, edits);
     Put p = new Put(row);
-    p.setFamilyMap(familyMap);
+    p.setFamilyCellMap(familyMap);
     doBatchMutate(p);
   }
 
@@ -4397,7 +4397,7 @@ public class HRegion implements HeapSize { // , Writable{
       }
     }
     List<Cell> results = get(get, true);
-    return new Result(results);
+    return Result.create(results);
   }
 
   /*
@@ -4835,7 +4835,7 @@ public class HRegion implements HeapSize { // , Writable{
     }
 
 
-    return append.isReturnResults() ? new Result(allKVs) : null;
+    return append.isReturnResults() ? Result.create(allKVs) : null;
   }
 
   /**
@@ -4980,7 +4980,7 @@ public class HRegion implements HeapSize { // , Writable{
       requestFlush();
     }
 
-    return new Result(allKVs);
+    return Result.create(allKVs);
   }
 
   //
