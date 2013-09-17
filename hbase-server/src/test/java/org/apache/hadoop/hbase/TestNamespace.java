@@ -18,7 +18,17 @@
  */
 package org.apache.hadoop.hbase;
 
-import com.google.common.collect.Sets;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+
+import java.io.IOException;
+import java.util.Set;
+import java.util.concurrent.Callable;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileSystem;
@@ -33,7 +43,9 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
+import com.google.common.collect.Sets;
 import org.junit.AfterClass;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Ignore;
@@ -117,8 +129,8 @@ public class TestNamespace {
     }
     //verify system tables aren't listed
     assertEquals(0, admin.listTables().length);
-    
-    //Try creating default and system namespaces. 
+
+    //Try creating default and system namespaces.
     boolean exceptionCaught = false;
     try {
       admin.createNamespace(NamespaceDescriptor.DEFAULT_NAMESPACE);
@@ -139,7 +151,7 @@ public class TestNamespace {
       assertTrue(exceptionCaught);
     }
   }
-  
+
   @Test
   public void testDeleteReservedNS() throws Exception {
     boolean exceptionCaught = false;
@@ -192,7 +204,7 @@ public class TestNamespace {
     LOG.info(testName);
 
     byte[] tableName = Bytes.toBytes("my_table");
-    byte[] tableNameFoo = Bytes.toBytes(nsName+".my_table");
+    byte[] tableNameFoo = Bytes.toBytes(nsName+":my_table");
     //create namespace and verify
     admin.createNamespace(NamespaceDescriptor.create(nsName).build());
     TEST_UTIL.createTable(tableName, Bytes.toBytes(nsName));
@@ -219,8 +231,8 @@ public class TestNamespace {
     desc.addFamily(colDesc);
     try {
       admin.createTable(desc);
-      fail("Expected no namespace constraint exception");
-    } catch (ConstraintException ex) {
+      fail("Expected no namespace exists exception");
+    } catch (NamespaceNotFoundException ex) {
     }
     //create table and in new namespace
     admin.createNamespace(NamespaceDescriptor.create(nsName).build());
@@ -262,7 +274,7 @@ public class TestNamespace {
     HColumnDescriptor colDesc = new HColumnDescriptor("cf1");
     desc.addFamily(colDesc);
     admin.createTable(desc);
-    assertTrue(admin.listTables().length == 1);  
+    assertTrue(admin.listTables().length == 1);
     admin.disableTable(desc.getTableName());
     admin.deleteTable(desc.getTableName());
   }
@@ -305,6 +317,111 @@ public class TestNamespace {
     assertEquals(zkCount,
         ZKUtil.listChildrenNoWatch(TEST_UTIL.getZooKeeperWatcher(),
             ZooKeeperWatcher.namespaceZNode).size());
+  }
+
+  @Test(timeout = 60000)
+  public void testNamespaceOperations() throws IOException {
+    admin.createNamespace(NamespaceDescriptor.create(prefix + "ns1").build());
+    admin.createNamespace(NamespaceDescriptor.create(prefix + "ns2").build());
+
+    // create namespace that already exists
+    runWithExpectedException(new Callable<Void>() {
+      @Override
+      public Void call() throws Exception {
+        admin.createNamespace(NamespaceDescriptor.create(prefix + "ns1").build());
+        return null;
+      }
+    }, NamespaceExistException.class);
+
+    // create a table in non-existing namespace
+    runWithExpectedException(new Callable<Void>() {
+      @Override
+      public Void call() throws Exception {
+        HTableDescriptor htd = new HTableDescriptor(TableName.valueOf("non_existing_namespace", "table1"));
+        htd.addFamily(new HColumnDescriptor("family1"));
+        admin.createTable(htd);
+        return null;
+      }
+    }, NamespaceNotFoundException.class);
+
+    // get descriptor for existing namespace
+    admin.getNamespaceDescriptor(prefix + "ns1");
+
+    // get descriptor for non-existing namespace
+    runWithExpectedException(new Callable<NamespaceDescriptor>() {
+      @Override
+      public NamespaceDescriptor call() throws Exception {
+        return admin.getNamespaceDescriptor("non_existing_namespace");
+      }
+    }, NamespaceNotFoundException.class);
+
+    // delete descriptor for existing namespace
+    admin.deleteNamespace(prefix + "ns2");
+
+    // delete descriptor for non-existing namespace
+    runWithExpectedException(new Callable<Void>() {
+      @Override
+      public Void call() throws Exception {
+        admin.deleteNamespace("non_existing_namespace");
+        return null;
+      }
+    }, NamespaceNotFoundException.class);
+
+    // modify namespace descriptor for existing namespace
+    NamespaceDescriptor ns1 = admin.getNamespaceDescriptor(prefix + "ns1");
+    ns1.setConfiguration("foo", "bar");
+    admin.modifyNamespace(ns1);
+
+    // modify namespace descriptor for non-existing namespace
+    runWithExpectedException(new Callable<Void>() {
+      @Override
+      public Void call() throws Exception {
+        admin.modifyNamespace(NamespaceDescriptor.create("non_existing_namespace").build());
+        return null;
+      }
+    }, NamespaceNotFoundException.class);
+
+    // get table descriptors for existing namespace
+    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(prefix + "ns1", "table1"));
+    htd.addFamily(new HColumnDescriptor("family1"));
+    admin.createTable(htd);
+    HTableDescriptor[] htds = admin.listTableDescriptorsByNamespace(prefix + "ns1");
+    assertNotNull("Should have not returned null", htds);
+    assertEquals("Should have returned non-empty array", 1, htds.length);
+
+    // get table descriptors for non-existing namespace
+    runWithExpectedException(new Callable<Void>() {
+      @Override
+      public Void call() throws Exception {
+        admin.listTableDescriptorsByNamespace("non_existing_namespace");
+        return null;
+      }
+    }, NamespaceNotFoundException.class);
+
+    // get table names for existing namespace
+    TableName[] tableNames = admin.listTableNamesByNamespace(prefix + "ns1");
+    assertNotNull("Should have not returned null", tableNames);
+    assertEquals("Should have returned non-empty array", 1, tableNames.length);
+
+    // get table names for non-existing namespace
+    runWithExpectedException(new Callable<Void>() {
+      @Override
+      public Void call() throws Exception {
+        admin.listTableNamesByNamespace("non_existing_namespace");
+        return null;
+      }
+    }, NamespaceNotFoundException.class);
+
+  }
+
+  private static <V, E> void runWithExpectedException(Callable<V> callable, Class<E> exceptionClass) {
+    try {
+      callable.call();
+    } catch(Exception ex) {
+      Assert.assertEquals(exceptionClass, ex.getClass());
+      return;
+    }
+    fail("Should have thrown exception " + exceptionClass);
   }
 
 }
