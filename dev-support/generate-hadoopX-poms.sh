@@ -124,7 +124,7 @@ for p in $poms; do
   sed -e "s/\${compat.module}/hbase-${hadoop_version}-compat/" \
     -e "s/${old_hbase_version}/${new_hbase_version}/" \
     -e "s/\(<module>[^<]*\)/\1\/${nupom}/" \
-    -e "s/\(relativePath\>\.\.\)/\1\/${nupom}/" \
+    -e "s/\(relativePath>\.\.\)/\1\/${nupom}/" \
     -e "s/<!--h1-->.*name>.*/${h1}/" \
     -e "s/<!--h2-->.*<name>.*/${h2}/" \
     -e '/--Below formatting for .*poms\.sh--/d' \
