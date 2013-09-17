@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.util;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
@@ -45,6 +46,9 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.NamespaceDescriptor;
+import org.apache.hadoop.hbase.io.FileLink;
 import org.apache.hadoop.hbase.io.HFileLink;
 import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
@@ -67,6 +71,14 @@ public class HFileV1Detector extends Configured implements Tool {
   private FileSystem fs;
   private static final Log LOG = LogFactory.getLog(HFileV1Detector.class);
   private static final int DEFAULT_NUM_OF_THREADS = 10;
+  /**
+   * Pre-namespace archive directory
+   */
+  private static final String PRE_NS_DOT_ARCHIVE = ".archive";
+  /**
+   * Pre-namespace tmp directory
+   */
+  private static final String PRE_NS_DOT_TMP = ".tmp";
   private int numOfThreads;
   /**
    * directory to start the processing.
@@ -93,6 +105,10 @@ public class HFileV1Detector extends Configured implements Tool {
       .newSetFromMap(new ConcurrentHashMap<Path, Boolean>());
 
   private Options options = new Options();
+  /**
+   * used for computing pre-namespace paths for hfilelinks
+   */
+  private Path defaultNamespace;
 
   public HFileV1Detector() {
     Option pathOption = new Option("p", "path", true, "Path to a table, or hbase installation");
@@ -169,6 +185,11 @@ public class HFileV1Detector extends Configured implements Tool {
       fs.close();
     }
     return -1;
+  }
+
+  private void setDefaultNamespaceDir() throws IOException {
+    Path dataDir = new Path(FSUtils.getRootDir(getConf()), HConstants.BASE_NAMESPACE_DIR);
+    defaultNamespace = new Path(dataDir, NamespaceDescriptor.DEFAULT_NAMESPACE_NAME_STR);
   }
 
   private int processResult(Set<Path> regionsWithHFileV1) {
@@ -292,9 +313,9 @@ public class HFileV1Detector extends Configured implements Tool {
               if (StoreFileInfo.isReference(storeFilePath)) continue;
               // check whether this path is a HFileLink.
               else if (HFileLink.isHFileLink(storeFilePath)) {
-                HFileLink fileLink = new HFileLink(getConf(), storeFilePath);
-                fsdis = fileLink.open(fs);
-                lenToRead = fileLink.getFileStatus(fs).getLen();
+                FileLink fLink = getFileLinkWithPreNSPath(storeFilePath);
+                fsdis = fLink.open(fs);
+                lenToRead = fLink.getFileStatus(fs).getLen();
               } else {
                 // a regular hfile
                 fsdis = fs.open(storeFilePath);
@@ -335,6 +356,47 @@ public class HFileV1Detector extends Configured implements Tool {
     };
     Future<Path> f = exec.submit(regionCallable);
     return f;
+  }
+
+  /**
+   * Creates a FileLink which adds pre-namespace paths in its list of available paths. This is used
+   * when reading a snapshot file in a pre-namespace file layout, for example, while upgrading.
+   * @param storeFilePath
+   * @return a FileLink which could read from pre-namespace paths.
+   * @throws IOException
+   */
+  public FileLink getFileLinkWithPreNSPath(Path storeFilePath) throws IOException {
+    HFileLink link = new HFileLink(getConf(), storeFilePath);
+    List<Path> pathsToProcess = getPreNSPathsForHFileLink(link);
+    pathsToProcess.addAll(Arrays.asList(link.getLocations()));
+    return new FileLink(pathsToProcess);
+  }
+
+  private List<Path> getPreNSPathsForHFileLink(HFileLink fileLink) throws IOException {
+    if (defaultNamespace == null) setDefaultNamespaceDir();
+    List<Path> p = new ArrayList<Path>();
+    String relativeTablePath = removeDefaultNSPath(fileLink.getOriginPath());
+    p.add(getPreNSPath(PRE_NS_DOT_ARCHIVE, relativeTablePath));
+    p.add(getPreNSPath(PRE_NS_DOT_TMP, relativeTablePath));
+    p.add(getPreNSPath(null, relativeTablePath));
+    return p;
+  }
+
+  /**
+   * Removes the prefix of defaultNamespace from the path.
+   * @param originPath
+   * @return
+   */
+  private String removeDefaultNSPath(Path originalPath) {
+    String pathStr = originalPath.toString();
+    if (!pathStr.startsWith(defaultNamespace.toString())) return pathStr;
+    return pathStr.substring(defaultNamespace.toString().length() + 1);
+  }
+
+  private Path getPreNSPath(String prefix, String relativeTablePath) throws IOException {
+    String relativePath = (prefix == null ? relativeTablePath : prefix + Path.SEPARATOR
+        + relativeTablePath);
+    return new Path(FSUtils.getRootDir(getConf()), relativePath);
   }
 
   private static boolean isTableDir(final FileSystem fs, final Path path) throws IOException {
