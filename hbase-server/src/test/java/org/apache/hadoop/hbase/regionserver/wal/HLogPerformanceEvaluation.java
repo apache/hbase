@@ -47,6 +47,7 @@ import org.apache.hadoop.hbase.regionserver.wal.HLog.Entry;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
+import org.apache.hadoop.hbase.HConstants;
 
 /**
  * This class runs performance benchmarks for {@link HLog}.
@@ -170,8 +171,12 @@ public final class HLogPerformanceEvaluation extends Configured implements Tool 
     }
 
     // Run HLog Performance Evaluation
+    // First set the fs from configs.  Do it for both configs in case we
+    // are on hadoop1
+    getConf().set("fs.default.name", getConf().get(HConstants.HBASE_DIR));
+    getConf().set("fs.defaultFS", getConf().get(HConstants.HBASE_DIR));
     FileSystem fs = FileSystem.get(getConf());
-    LOG.info("" + fs);
+    LOG.info("FileSystem: " + fs);
     try {
       if (rootRegionDir == null) {
         rootRegionDir = TEST_UTIL.getDataTestDir("HLogPerformanceEvaluation");
