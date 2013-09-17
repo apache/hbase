@@ -198,9 +198,8 @@ public class ThriftUtilities {
   public static Increment incrementFromThrift(TIncrement tincrement) {
     Increment inc = new Increment(tincrement.getRow());
     byte[][] famAndQf = KeyValue.parseColumn(tincrement.getColumn());
-    if (famAndQf.length <1 ) return null;
-    byte[] qual = famAndQf.length == 1 ? new byte[0]: famAndQf[1];
-    inc.addColumn(famAndQf[0], qual, tincrement.getAmmount());
+    if (famAndQf.length != 2) return null;
+    inc.addColumn(famAndQf[0], famAndQf[1], tincrement.getAmmount());
     return inc;
   }
 }

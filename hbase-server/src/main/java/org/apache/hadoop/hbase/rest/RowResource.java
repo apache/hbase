@@ -217,11 +217,12 @@ public class RowResource extends ResourceBase {
               .build();
           }
           byte [][] parts = KeyValue.parseColumn(col);
-          if (parts.length == 2 && parts[1].length > 0) {
-            put.add(parts[0], parts[1], cell.getTimestamp(), cell.getValue());
-          } else {
-            put.add(parts[0], null, cell.getTimestamp(), cell.getValue());
+          if (parts.length != 2) {
+            return Response.status(Response.Status.BAD_REQUEST)
+              .type(MIMETYPE_TEXT).entity("Bad request" + CRLF)
+              .build();
           }
+          put.add(parts[0], parts[1], cell.getTimestamp(), cell.getValue());
         }
         puts.add(put);
         if (LOG.isDebugEnabled()) {
@@ -285,11 +286,12 @@ public class RowResource extends ResourceBase {
       }
       Put put = new Put(row);
       byte parts[][] = KeyValue.parseColumn(column);
-      if (parts.length == 2 && parts[1].length > 0) {
-        put.add(parts[0], parts[1], timestamp, message);
-      } else {
-        put.add(parts[0], null, timestamp, message);
+      if (parts.length != 2) {
+        return Response.status(Response.Status.BAD_REQUEST)
+          .type(MIMETYPE_TEXT).entity("Bad request" + CRLF)
+          .build();
       }
+      put.add(parts[0], parts[1], timestamp, message);
       table = servlet.getTable(tableResource.getName());
       table.put(put);
       if (LOG.isDebugEnabled()) {
@@ -373,16 +375,24 @@ public class RowResource extends ResourceBase {
     for (byte[] column: rowspec.getColumns()) {
       byte[][] split = KeyValue.parseColumn(column);
       if (rowspec.hasTimestamp()) {
-        if (split.length == 2 && split[1].length != 0) {
+        if (split.length == 1) {
+          delete.deleteFamily(split[0], rowspec.getTimestamp());
+        } else if (split.length == 2) {
           delete.deleteColumns(split[0], split[1], rowspec.getTimestamp());
         } else {
-          delete.deleteFamily(split[0], rowspec.getTimestamp());
+          return Response.status(Response.Status.BAD_REQUEST)
+            .type(MIMETYPE_TEXT).entity("Bad request" + CRLF)
+            .build();
         }
       } else {
-        if (split.length == 2 && split[1].length != 0) {
+        if (split.length == 1) {
+          delete.deleteFamily(split[0]);
+        } else if (split.length == 2) {
           delete.deleteColumns(split[0], split[1]);
         } else {
-          delete.deleteFamily(split[0]);
+          return Response.status(Response.Status.BAD_REQUEST)
+            .type(MIMETYPE_TEXT).entity("Bad request" + CRLF)
+            .build();
         }
       }
     }
@@ -441,28 +451,26 @@ public class RowResource extends ResourceBase {
       CellModel valueToCheckCell = cellModels.get(cellModelCount - 1);
       byte[] valueToCheckColumn = valueToCheckCell.getColumn();
       byte[][] valueToPutParts = KeyValue.parseColumn(valueToCheckColumn);
-      if (valueToPutParts.length == 2 && valueToPutParts[1].length > 0) {
-        CellModel valueToPutCell = null;
-        for (int i = 0, n = cellModelCount - 1; i < n ; i++) {
-          if(Bytes.equals(cellModels.get(i).getColumn(),
-              valueToCheckCell.getColumn())) {
-            valueToPutCell = cellModels.get(i);
-            break;
-          }
-        }
-        if (valueToPutCell != null) {
-          put.add(valueToPutParts[0], valueToPutParts[1], valueToPutCell
-            .getTimestamp(), valueToPutCell.getValue());
-        } else {
-          return Response.status(Response.Status.BAD_REQUEST)
-            .type(MIMETYPE_TEXT).entity("Bad request" + CRLF)
-            .build();
-        }
-      } else {
+      if (valueToPutParts.length != 2) {
         return Response.status(Response.Status.BAD_REQUEST)
           .type(MIMETYPE_TEXT).entity("Bad request" + CRLF)
           .build();
       }
+      CellModel valueToPutCell = null;
+      for (int i = 0, n = cellModelCount - 1; i < n ; i++) {
+        if(Bytes.equals(cellModels.get(i).getColumn(),
+            valueToCheckCell.getColumn())) {
+          valueToPutCell = cellModels.get(i);
+          break;
+        }
+      }
+      if (null == valueToPutCell) {
+        return Response.status(Response.Status.BAD_REQUEST)
+          .type(MIMETYPE_TEXT).entity("Bad request" + CRLF)
+          .build();
+      }
+      put.add(valueToPutParts[0], valueToPutParts[1], valueToPutCell
+        .getTimestamp(), valueToPutCell.getValue());
 
       table = servlet.getTable(this.tableResource.getName());
       boolean retValue = table.checkAndPut(key, valueToPutParts[0],
@@ -527,13 +535,12 @@ public class RowResource extends ResourceBase {
         }
       }
       byte[][] parts = KeyValue.parseColumn(valueToDeleteColumn);
-      if (parts.length == 2 && parts[1].length > 0) {
-        delete.deleteColumns(parts[0], parts[1]);
-      } else {
+      if (parts.length != 2) {
         return Response.status(Response.Status.BAD_REQUEST)
           .type(MIMETYPE_TEXT).entity("Bad request" + CRLF)
           .build();
       }
+      delete.deleteColumns(parts[0], parts[1]);
 
       table = servlet.getTable(tableResource.getName());
       boolean retValue = table.checkAndDelete(key, parts[0], parts[1],

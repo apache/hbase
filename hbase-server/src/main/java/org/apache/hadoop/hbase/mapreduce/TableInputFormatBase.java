@@ -63,8 +63,8 @@ import org.apache.hadoop.net.DNS;
  *         Bytes.toBytes("exampleTable"));
  *       // mandatory
  *       setHTable(exampleTable);
- *       Text[] inputColumns = new byte [][] { Bytes.toBytes("columnA"),
- *         Bytes.toBytes("columnB") };
+ *       Text[] inputColumns = new byte [][] { Bytes.toBytes("cf1:columnA"),
+ *         Bytes.toBytes("cf2") };
  *       // mandatory
  *       setInputColumns(inputColumns);
  *       RowFilterInterface exampleFilter = new RegExpRowFilter("keyPrefix.*");

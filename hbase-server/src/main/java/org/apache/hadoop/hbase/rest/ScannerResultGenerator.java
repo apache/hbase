@@ -76,10 +76,12 @@ public class ScannerResultGenerator extends ResultGenerator {
         byte[][] columns = rowspec.getColumns();
         for (byte[] column: columns) {
           byte[][] split = KeyValue.parseColumn(column);
-          if (split.length > 1 && (split[1] != null && split[1].length != 0)) {
+          if (split.length == 1) {
+            scan.addFamily(split[0]);
+          } else if (split.length == 2) {
             scan.addColumn(split[0], split[1]);
           } else {
-            scan.addFamily(split[0]);
+            throw new IllegalArgumentException("Invalid familyAndQualifier provided.");
           }
         }
       }

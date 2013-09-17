@@ -77,6 +77,11 @@ public class TestKeyValue extends TestCase {
     // Test empty value and empty column -- both should work. (not empty fam)
     check(Bytes.toBytes(getName()), Bytes.toBytes(getName()), null, 1, null);
     check(HConstants.EMPTY_BYTE_ARRAY, Bytes.toBytes(getName()), null, 1, null);
+    // empty qual is equivalent to null qual
+    assertEquals(
+      new KeyValue(Bytes.toBytes("rk"), Bytes.toBytes("fam"), null, 1, (byte[]) null),
+      new KeyValue(Bytes.toBytes("rk"), Bytes.toBytes("fam"),
+        HConstants.EMPTY_BYTE_ARRAY, 1, (byte[]) null));
   }
 
   private void check(final byte [] row, final byte [] family, byte [] qualifier,

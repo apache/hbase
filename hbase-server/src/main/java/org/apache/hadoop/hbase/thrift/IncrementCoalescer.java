@@ -197,12 +197,10 @@ public class IncrementCoalescer implements IncrementCoalescerMBean {
 
   private boolean internalQueueTincrement(TIncrement inc) throws TException {
     byte[][] famAndQf = KeyValue.parseColumn(inc.getColumn());
-    if (famAndQf.length < 1) return false;
-    byte[] qual = famAndQf.length == 1 ? new byte[0] : famAndQf[1];
+    if (famAndQf.length != 2) return false;
 
-    return internalQueueIncrement(inc.getTable(), inc.getRow(), famAndQf[0], qual,
+    return internalQueueIncrement(inc.getTable(), inc.getRow(), famAndQf[0], famAndQf[1],
       inc.getAmmount());
-
   }
 
   private boolean internalQueueIncrement(byte[] tableName, byte[] rowKey, byte[] fam,
