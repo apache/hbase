@@ -1655,8 +1655,19 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
           Put put = new Put(k);
           put.add(f, null, k);
           if (r.getLog() == null) put.setDurability(Durability.SKIP_WAL);
-          r.put(put);
-          rowCount++;
+
+          int preRowCount = rowCount;
+          int pause = 10;
+          int maxPause = 1000;
+          while (rowCount == preRowCount) {
+            try {
+              r.put(put);
+              rowCount++;
+            } catch (RegionTooBusyException e) {
+              pause = (pause * 2 >= maxPause) ? maxPause : pause * 2;
+              Threads.sleep(pause);
+            }
+          }
         }
       }
       if (flush) {
