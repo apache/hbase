@@ -204,13 +204,9 @@ mvn clean package -DskipTests
              required.  This prestep takes as input the current pom.xmls and it generates hadoop1 or
              hadoop2 versions.  You then reference these generated poms when you build. Read on
          for examples</para>
-
-     <section xml:id="release">
-         <title>Making Release Candidate</title>
-         <para>I'll explain by running through the process.  See later in this section for more detail on particular steps.</para>
-        <para>You must use maven 3.0.x (Check by running <command>mvn -version</command>).
-        </para>
-            <para xml:id="mvn.settings.file">Make sure your local <filename>settings.xml</filename> is set up properly before you begin.
+<para xml:id="mvn.settings.file">Publishing to maven requires you sign the artifacts you want to upload.  To have the
+         build do this for you, you need to make sure you have a properly configured
+         <filename>settings.xml</filename> in your local repository under <filename>.m2</filename>.
             Here is my <filename>~/.m2/settings.xml</filename>.
         <programlisting>&lt;settings xmlns="http://maven.apache.org/SETTINGS/1.0.0"
   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
@@ -249,6 +245,13 @@ mvn clean package -DskipTests
 &lt;/settings>
         </programlisting>
         </para>
+        <para>You must use maven 3.0.x (Check by running <command>mvn -version</command>).
+        </para>
+
+     <section xml:id="maven.release">
+         <title>Making Release Candidate</title>
+         <para>I'll explain by running through the process.  See later in this section for more detail on particular steps.</para>
+
         <para>The <link xlink:href="http://wiki.apache.org/hadoop/HowToRelease">Hadoop How To Release</link> wiki page informs much of the below and may have more detail on particular sections so it is worth review.</para>
          <para>Update CHANGES.txt with the changes since the last release (query JIRA, export to excel then hack w/ vim to format to suit CHANGES.txt TODO: Needs detail).
              Adjust the version in all the poms appropriately; e.g. you may need to remove <emphasis>-SNAPSHOT</emphasis> from all versions.
@@ -266,21 +269,27 @@ mvn clean package -DskipTests
             we will publish this directory as our release candidate up on people.apache.org/~you.
         </para>
         <para>Now we are into the making of the hadoop1 and hadoop2 specific builds.  Lets do hadoop1 first.
-            <programlisting># First generate the hadoop1 poms.  See the generate-hadoopX-poms.sh script usage for what it expects by way of arguments.
-$ ./dev-support/generate-hadoopX-poms.sh 0.96.0 0.96.0-hadoop1
-# The script will work silently if all goes well.  It will drop a pom.xml.hadoop1 beside all pom.xmls in all modules.
-# Now build the hadoop1 tarball.  Note we ask for the generation of javadoc and site and we reference the new pom.xml.hadoop1 explicitly
-$ MAVEN_OPTS="-Xmx3g" mvn -f pom.xml.hadoop1 clean install -DskipTests  javadoc:aggregate site assembly:single -Prelease
-# Undo the tgz and check it out.  Look at doc. and see if it runs, etc.  Are the set of modules appropriate: e.g. do we have a hbase-hadoop2-compat in the hadoop1 tgz?
-# If good, copy the tarball to your 'version directory'
-# Now deploy hadoop1 hbase to mvn. Do the mvn deploy and tgz for a particular version all together in the one go else if you flip between hadoop1 and hadoop2 builds, you might mal-publish poms and hbase-default.xml's (the version interpolations won't match).
-# Use the apache-release profile instead of just 'release' when doing mvn deploy; it will sign your artifacts published to mvn as long as your settings.xml in your local .m2 repository is configured correctly.
-$ MAVEN_OPTS="-Xmx3g" mvn -f pom.xml.hadoop1 deploy -DskipTests -Papache-release -Pgpg
-# The above copies all artifacts for hadoop1 up to mvn repo.  The -Pgpg reads pgp password from settings.xml if it is set up properly.  If no '-SNAPSHOT' in the version, it puts the artifacts into a staging directory.  This is what you want.
-            </programlisting>
         </para>
+        <para>First generate the hadoop1 poms.  See the <filename>generate-hadoopX-poms.sh</filename> script usage for what it expects by way of arguments.
+            You will find it in the <filename>dev-support</filename> subdirectory.  In the below, we generate hadoop1 poms with a version
+            of <varname>0.96.0-hadoop1</varname> (the script will look for a version of <varname>0.96.0</varname> in the current <filename>pom.xml</filename>).
+            <programlisting>$ ./dev-support/generate-hadoopX-poms.sh 0.96.0 0.96.0-hadoop1</programlisting>
+            The script will work silently if all goes well.  It will drop a <filename>pom.xml.hadoop1</filename> beside all <filename>pom.xml</filename>s in all modules.
+            Now build the hadoop1 tarball.  Note we ask for the generation of javadoc and site and we reference the new <filename>pom.xml.hadoop1</filename> explicitly.
+            We also add the <varname>-Prelease profile</varname> when building; it checks files for licenses and will fail the build if unlicensed files present.
+            <programlisting>$ MAVEN_OPTS="-Xmx3g" mvn -f pom.xml.hadoop1 clean install -DskipTests  javadoc:aggregate site assembly:single -Prelease</programlisting>
+Undo the generated tarball and check it out.  Look at doc. and see if it runs, etc.  Are the set of modules appropriate: e.g. do we have a hbase-hadoop2-compat in the hadoop1 tarball?
+If good, copy the tarball to your <emphasis>version directory</emphasis>.
+Now deploy hadoop1 hbase to mvn. Do the mvn deploy and tgz for a particular version all together in the one go else if you flip between hadoop1 and hadoop2 builds,
+you might mal-publish poms and hbase-default.xml's (the version interpolations won't match).
+This time we use the <varname>apache-release</varname> profile instead of just <varname>release</varname> profile when doing mvn deploy;
+it will invoke the apache pom referenced by our poms.  It will also sign your artifacts published to mvn as long as your settings.xml in your local <filename>.m2</filename>
+repository is configured correctly (your <filename>settings.xml</filename> adds your gpg password property to the apache profile).
+<programlisting>$ MAVEN_OPTS="-Xmx3g" mvn -f pom.xml.hadoop1 deploy -DskipTests -Papache-release</programlisting>
+The last command above copies all artifacts for hadoop1 up to mvn repo.  If no <varname>-SNAPSHOT</varname> in the version, it puts the artifacts into a staging directory.  This is what you want.
+            </para>
 
-        <para>Lets do the hadoop2 artifacts (read above hadoop1 section closely before coming here because don't want to repeat detail since repeats have tendency to drift).
+        <para>Lets do the hadoop2 artifacts (read above hadoop1 section closely before coming here because we don't repeat explaination in the below).
             <programlisting># Generate the hadoop2 poms.
 $ ./dev-support/generate-hadoopX-poms.sh 0.96.0 0.96.0-hadoop2
 # Build the hadoop2 tarball.
@@ -291,8 +300,8 @@ $ MAVEN_OPTS="-Xmx3g" mvn -f pom.xml.hadoop2 deploy -DskipTests -Papache-release
         </para>
         <para>
         At this stage we have three tarballs in our 'version directory' and two sets of artifacts up in maven in staging area.
-        First lets put the 'version directory' up on people.apache.org.  You will need to sign and fingerprint them before you
-        push them up. In the 'version directory' do this:
+        First lets put the <emphasis>version directory</emphasis> up on people.apache.org.  You will need to sign and fingerprint them before you
+        push them up. In the <emphasis>version directory</emphasis> do this:
         <programlisting>$ for i in *.tar.gz; do echo $i; gpg --print-mds $i > $i.mds ; done
 $ for i in *.tar.gz; do echo $i; gpg --armor --output $i.asc --detach-sig $i  ; done
 $ cd ..
@@ -324,6 +333,25 @@ $ rsync -av 0.96.0RC0 people.apache.org:public_html
         repository was being sprayed across multiple apache machines making it so I could
         not release.  See <link xlink:href="https://issues.apache.org/jira/browse/INFRA-4482">INFRA-4482 Why is my upload to mvn spread across multiple repositories?</link>.</para>
 
+     </section>
+    <section xml:id="maven.snapshot">
+          <title>Publishing a SNAPSHOT to maven</title>
+          <para>Make sure your <filename>settings.xml</filename> is set up properly (see above for how).
+              Make sure the hbase version includes <varname>-SNAPSHOT</varname> as a suffix.  Here is how I published SNAPSHOTS of
+              a checked that had an hbase version of 0.96.0 in its poms.
+First we generated the hadoop1 poms with a version that has a <varname>-SNAPSHOT</varname> suffix.
+We then installed the build into the local repository. Then we deploy this build to apache.  See the output for the location
+up in apache to where the snapshot is copied.  Notice how add the <varname>release</varname> profile
+when install locally -- to find files that are without proper license -- and then the <varname>apache-release</varname>
+profile to deploy to the apache maven repository.
+          <programlisting>$ ./dev-support/generate-hadoopX-poms.sh 0.96.0 0.96.0-hadoop1-SNAPSHOT
+ $ MAVEN_OPTS="-Xmx3g" mvn -f pom.xml.hadoop1 clean install -DskipTests  javadoc:aggregate site assembly:single -Prelease
+ $ MAVEN_OPTS="-Xmx3g" mvn -f pom.xml.hadoop1 -DskipTests  deploy -Papache-release</programlisting>
+Next, do the same to publish the hadoop2 artifacts.
+<programlisting>$ ./dev-support/generate-hadoopX-poms.sh 0.96.0 0.96.0-hadoop2-SNAPSHOT
+$ MAVEN_OPTS="-Xmx3g" mvn -f pom.xml.hadoop2 clean install -DskipTests  javadoc:aggregate site assembly:single -Prelease
+$ MAVEN_OPTS="-Xmx3g" mvn -f pom.xml.hadoop2 deploy -DskipTests -Papache-release</programlisting>
+</para>
      </section>
 
       </section>

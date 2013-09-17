@@ -351,12 +351,8 @@ to ensure well-formedness of your document after an edit session.
       <title>HBase run modes: Standalone and Distributed</title>
 
       <para>HBase has two run modes: <xref linkend="standalone" /> and <xref linkend="distributed" />. Out of the box, HBase runs in
-      standalone mode. To set up a distributed deploy, you will need to
-      configure HBase by editing files in the HBase <filename>conf</filename>
-      directory.</para>
-
-      <para>Whatever your mode, you will need to edit
-      <code>conf/hbase-env.sh</code> to tell HBase which
+          standalone mode.  Whatever your mode, you will need to configure HBase by editing files in the HBase <filename>conf</filename>
+      directory.  At a minimum, you must edit <code>conf/hbase-env.sh</code> to tell HBase which
       <command>java</command> to use. In this file you set HBase environment
       variables such as the heapsize and other options for the
       <application>JVM</application>, the preferred location for log files,
@@ -386,11 +382,12 @@ to ensure well-formedness of your document after an edit session.
             comes from Hadoop.</para>
           </footnote>.</para>
 
-        <para>Distributed modes require an instance of the <emphasis>Hadoop
-        Distributed File System</emphasis> (HDFS). See the Hadoop <link
+          <para>Pseudo-distributed mode can run against the local filesystem or
+              it can run against an instance of the <emphasis>Hadoop
+                  Distributed File System</emphasis> (HDFS). Fully-distributed mode can
+              ONLY run on HDFS. See the Hadoop <link
         xlink:href="http://hadoop.apache.org/common/docs/r1.1.1/api/overview-summary.html#overview_description">
-        requirements and instructions</link> for how to set up a HDFS. Before
-        proceeding, ensure you have an appropriate, working HDFS.</para>
+        requirements and instructions</link> for how to set up HDFS.</para>
 
         <para>Below we describe the different distributed setups. Starting,
         verification and exploration of your install, whether a
@@ -399,45 +396,65 @@ to ensure well-formedness of your document after an edit session.
         section that follows, <xref linkend="confirm" />. The same verification script applies to both
         deploy types.</para>
 
+
+
+
+
+
         <section xml:id="pseudo">
           <title>Pseudo-distributed</title>
 
-          <para>A pseudo-distributed mode is simply a distributed mode run on
+          <para>A pseudo-distributed mode is simply a fully-distributed mode run on
           a single host. Use this configuration testing and prototyping on
           HBase. Do not use this configuration for production nor for
           evaluating HBase performance.</para>
 
-	      <para>First, setup your HDFS in <link xlink:href="http://hadoop.apache.org/docs/r1.0.3/single_node_setup.html">pseudo-distributed mode</link>.
+      <para>First, if you want to run on HDFS rather than on the local filesystem,
+          setup your HDFS.  You can set up HDFS also in
+          <link xlink:href="http://hadoop.apache.org/docs/r1.0.3/single_node_setup.html">pseudo-distributed mode</link>.
+          Ensure you have a working HDFS before proceeding.
    	      </para>
-	      <para>Next, configure HBase.  Below is an example <filename>conf/hbase-site.xml</filename>.
-          This is the file into
-          which you add local customizations and overrides for
-          <xref linkend="hbase_default_configurations" /> and <xref linkend="hdfs_client_conf" />.
-              Note that the <varname>hbase.rootdir</varname> property points to the
-              local HDFS instance.
-   		  </para>
 
-          <para>Now skip to <xref linkend="confirm" /> for how to start and verify your
-          pseudo-distributed install. <footnote>
-              <para>See <xref linkend="pseudo.extras">Pseudo-distributed
-              mode extras</xref> for notes on how to start extra Masters and
-              RegionServers when running pseudo-distributed.</para>
-            </footnote></para>
+          <para>Next, configure HBase.  Edit <filename>conf/hbase-site.xml</filename>.
+              This is the file into which you add local customizations and overrides.
+          At a minimum, you must tell HBase to run in (pseudo-)distributed mode rather than
+          in default standalone mode.  To do this, set the <varname>hbase.cluster.distributed</varname>
+          property to true (Its default is <varname>false</varname>).  The absolute bare-minimum
+          <filename>hbase-site.xml</filename> is therefore as follows:
+<programlisting>
+&lt;configuration&gt;
+  &lt;property&gt;
+    &lt;name&gt;hbase.cluster.distributed&lt;/name&gt;
+    &lt;value&gt;true&lt;/value&gt;
+  &lt;/property&gt;
+&lt;/configuration&gt;
+</programlisting>
+With this configuration, HBase will start up an HBase Master process, a ZooKeeper server,
+and a RegionServer process running against the
+local filesystem writing to wherever your operating system stores temporary files into a directory
+named <filename>hbase-YOUR_USER_NAME</filename>.</para>
 
+<para>Such a setup, using the local filesystem and
+writing to the operating systems's temporary directory is an ephemeral setup; the Hadoop
+local filesystem -- which is what HBase uses when it is writing the local filesytem does not
+support <command>sync</command> so unless the system is shutdown properly, the data will be lost.  Writing to
+the operating system's temporary directory can also make for data loss when the machine
+is restarted as this directory is usually cleared on reboot.  For a more permanent
+setup, see the next example where we make use of an instance of HDFS; HBase data will
+be written to the Hadoop distributed filesystem rather than to the local filesystem's
+tmp directory.</para>
+<para>In this <filename>conf/hbase-site.xml</filename> example, the
+<varname>hbase.rootdir</varname> property points to the local HDFS instance
+homed on the node <varname>h-24-30.example.com</varname>.
           <note>
+              <title>Let HBase create <filename>${hbase.rootdir}</filename></title>
             <para>Let HBase create the <varname>hbase.rootdir</varname>
             directory. If you don't, you'll get warning saying HBase needs a
             migration run because the directory is missing files expected by
             HBase (it'll create them if you let it).</para>
           </note>
-
-  		  <section xml:id="pseudo.config">
-  		  	<title>Pseudo-distributed Configuration File</title>
-			<para>Below is a sample pseudo-distributed file for the node <varname>h-24-30.example.com</varname>.
-<filename>hbase-site.xml</filename>
 <programlisting>
 &lt;configuration&gt;
-  ...
   &lt;property&gt;
     &lt;name&gt;hbase.rootdir&lt;/name&gt;
     &lt;value&gt;hdfs://h-24-30.sfo.stumble.net:8020/hbase&lt;/value&gt;
@@ -446,16 +463,15 @@ to ensure well-formedness of your document after an edit session.
     &lt;name&gt;hbase.cluster.distributed&lt;/name&gt;
     &lt;value&gt;true&lt;/value&gt;
   &lt;/property&gt;
-  &lt;property&gt;
-    &lt;name&gt;hbase.zookeeper.quorum&lt;/name&gt;
-    &lt;value&gt;h-24-30.sfo.stumble.net&lt;/value&gt;
-  &lt;/property&gt;
-  ...
 &lt;/configuration&gt;
 </programlisting>
 </para>
-
-  		  </section>
+          <para>Now skip to <xref linkend="confirm" /> for how to start and verify your
+          pseudo-distributed install. <footnote>
+              <para>See <xref linkend="pseudo.extras">Pseudo-distributed
+              mode extras</xref> for notes on how to start extra Masters and
+              RegionServers when running pseudo-distributed.</para>
+            </footnote></para>
 
 		  <section xml:id="pseudo.extras">
 		    <title>Pseudo-distributed Extras</title>
@@ -494,6 +510,10 @@ to ensure well-formedness of your document after an edit session.
 		  </section>
 
         </section>
+
+
+
+
 
         <section xml:id="fully_dist">
           <title>Fully-distributed</title>
@@ -924,6 +944,15 @@ index e70ebc6..96f8c27 100644
             default value of 1.  See
             <link xlink:href="https://issues.apache.org/jira/browse/HBASE-6389">HBASE-6389 Modify the conditions to ensure that Master waits for sufficient number of Region Servers before starting region assignments</link>
             for more detail.
+        </para>
+      </section>
+      <section xml:id="backup.master.fail.fast"><title>If a backup Master, making primary Master fail fast</title>
+          <para>If the primary Master loses its connection with ZooKeeper, it will fall into a loop where it
+              keeps trying to reconnect.  Disable this functionality if you are running more than one Master:
+              i.e. a backup Master.  Failing to do so, the dying Master may continue to receive RPCs though
+              another Master has assumed the role of primary.
+              See the configuration <xref linkend="fail.fast.expired.active.master" />.
+
         </para>
       </section>
       </section>
