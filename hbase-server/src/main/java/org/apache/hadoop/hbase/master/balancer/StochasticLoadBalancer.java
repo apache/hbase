@@ -138,7 +138,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     pickers = new RegionPicker[] {
       new RandomRegionPicker(),
       new LoadPicker(),
-      //localityPicker
+      localityPicker
     };
 
     regionLoadFunctions = new CostFromRegionLoadFunction[] {
