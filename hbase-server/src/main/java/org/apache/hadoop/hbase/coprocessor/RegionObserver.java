@@ -343,6 +343,27 @@ public interface RegionObserver extends Coprocessor {
       final HRegion r) throws IOException;
 
   /**
+   * This will be called before PONR step as part of split transaction. Calling
+   * {@link org.apache.hadoop.hbase.coprocessor.ObserverContext#bypass()} rollback the split
+   * @param ctx
+   * @param splitKey
+   * @param metaEntries
+   * @throws IOException
+   */
+  void preSplitBeforePONR(final ObserverContext<RegionCoprocessorEnvironment> ctx,
+      byte[] splitKey, List<Mutation> metaEntries) throws IOException;
+
+  
+  /**
+   * This will be called after PONR step as part of split transaction
+   * Calling {@link org.apache.hadoop.hbase.coprocessor.ObserverContext#bypass()} has no
+   * effect in this hook.
+   * @param ctx
+   * @throws IOException
+   */
+  void preSplitAfterPONR(final ObserverContext<RegionCoprocessorEnvironment> ctx) throws IOException;
+  
+  /**
    * This will be called before the roll back of the split region is completed 
    * @param ctx
    * @throws IOException

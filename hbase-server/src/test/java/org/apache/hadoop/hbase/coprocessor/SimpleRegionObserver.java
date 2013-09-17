@@ -108,6 +108,8 @@ public class SimpleRegionObserver extends BaseRegionObserver {
   final AtomicInteger ctPostBatchMutate = new AtomicInteger(0);
   final AtomicInteger ctPreWALRestore = new AtomicInteger(0);
   final AtomicInteger ctPostWALRestore = new AtomicInteger(0);
+  final AtomicInteger ctPreSplitBeforePONR = new AtomicInteger(0);
+  final AtomicInteger ctPreSplitAfterPONR = new AtomicInteger(0);
 
 
   final AtomicBoolean throwOnPostFlush = new AtomicBoolean(false);
@@ -186,6 +188,19 @@ public class SimpleRegionObserver extends BaseRegionObserver {
     ctPreSplit.incrementAndGet();
   }
 
+  @Override
+  public void preSplitBeforePONR(
+      ObserverContext<RegionCoprocessorEnvironment> ctx, byte[] splitKey,
+      List<Mutation> metaEntries) throws IOException {
+    ctPreSplitBeforePONR.incrementAndGet();
+  }
+  
+  @Override
+  public void preSplitAfterPONR(
+      ObserverContext<RegionCoprocessorEnvironment> ctx) throws IOException {
+    ctPreSplitAfterPONR.incrementAndGet();
+  }
+  
   @Override
   public void postSplit(ObserverContext<RegionCoprocessorEnvironment> c, HRegion l, HRegion r) {
     ctPostSplit.incrementAndGet();
@@ -629,6 +644,14 @@ public class SimpleRegionObserver extends BaseRegionObserver {
 
   public int getCtPreSplit() {
     return ctPreSplit.get();
+  }
+  
+  public int getCtPreSplitBeforePONR() {
+    return ctPreSplitBeforePONR.get();
+  }
+
+  public int getCtPreSplitAfterPONR() {
+    return ctPreSplitAfterPONR.get();
   }
 
   public int getCtPostSplit() {

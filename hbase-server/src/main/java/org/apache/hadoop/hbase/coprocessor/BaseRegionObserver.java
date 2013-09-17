@@ -116,6 +116,16 @@ public abstract class BaseRegionObserver implements RegionObserver {
   public void preSplit(ObserverContext<RegionCoprocessorEnvironment> c,
       byte[] splitRow) throws IOException {
   }
+
+  @Override
+  public void preSplitBeforePONR(ObserverContext<RegionCoprocessorEnvironment> ctx,
+      byte[] splitKey, List<Mutation> metaEntries) throws IOException {
+  }
+  
+  @Override
+  public void preSplitAfterPONR(
+      ObserverContext<RegionCoprocessorEnvironment> ctx) throws IOException {
+  }
   
   @Override
   public void preRollBackSplit(ObserverContext<RegionCoprocessorEnvironment> ctx)

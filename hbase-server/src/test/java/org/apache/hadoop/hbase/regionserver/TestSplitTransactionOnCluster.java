@@ -52,14 +52,19 @@ import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.UnknownRegionException;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
+import org.apache.hadoop.hbase.catalog.MetaEditor;
 import org.apache.hadoop.hbase.catalog.MetaReader;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.coprocessor.BaseRegionObserver;
+import org.apache.hadoop.hbase.coprocessor.ObserverContext;
+import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.executor.EventType;
 import org.apache.hadoop.hbase.master.AssignmentManager;
@@ -74,6 +79,7 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.HBaseFsck;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
+import org.apache.hadoop.hbase.util.PairOfSameType;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.zookeeper.ZKAssign;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
@@ -865,6 +871,53 @@ public class TestSplitTransactionOnCluster {
     }
   }
 
+  @Test(timeout = 180000)
+  public void testSplitHooksBeforeAndAfterPONR() throws Exception {
+    String firstTable = "testSplitHooksBeforeAndAfterPONR_1";
+    String secondTable = "testSplitHooksBeforeAndAfterPONR_2";
+    HTableDescriptor desc = new HTableDescriptor(TableName.valueOf(firstTable));
+    desc.addCoprocessor(MockedRegionObserver.class.getName());
+    HColumnDescriptor hcd = new HColumnDescriptor("cf");
+    desc.addFamily(hcd);
+    admin.createTable(desc);
+    desc = new HTableDescriptor(TableName.valueOf(secondTable));
+    hcd = new HColumnDescriptor("cf");
+    desc.addFamily(hcd);
+    admin.createTable(desc);
+    List<HRegion> firstTableregions = cluster.getRegions(TableName.valueOf(firstTable));
+    List<HRegion> secondTableRegions = cluster.getRegions(TableName.valueOf(secondTable));
+    ServerName serverName =
+        cluster.getServerHoldingRegion(firstTableregions.get(0).getRegionName());
+    admin.move(secondTableRegions.get(0).getRegionInfo().getEncodedNameAsBytes(),
+      Bytes.toBytes(serverName.getServerName()));
+    HTable table1 = null;
+    HTable table2 = null;
+    try {
+      table1 = new HTable(TESTING_UTIL.getConfiguration(), firstTable);
+      table2 = new HTable(TESTING_UTIL.getConfiguration(), firstTable);
+      insertData(Bytes.toBytes(firstTable), admin, table1);
+      insertData(Bytes.toBytes(secondTable), admin, table2);
+      admin.split(Bytes.toBytes(firstTable), "row2".getBytes());
+      firstTableregions = cluster.getRegions(Bytes.toBytes(firstTable));
+      while (firstTableregions.size() != 2) {
+        Thread.sleep(1000);
+        firstTableregions = cluster.getRegions(Bytes.toBytes(firstTable));
+      }
+      assertEquals("Number of regions after split should be 2.", 2, firstTableregions.size());
+      secondTableRegions = cluster.getRegions(Bytes.toBytes(secondTable));
+      assertEquals("Number of regions after split should be 2.", 2, secondTableRegions.size());
+    } finally {
+      if (table1 != null) {
+        table1.close();
+      }
+      if (table2 != null) {
+        table2.close();
+      }
+      TESTING_UTIL.deleteTable(firstTable);
+      TESTING_UTIL.deleteTable(secondTable);
+    }
+  }
+
   private void testSplitBeforeSettingSplittingInZKInternals() throws Exception {
     final byte[] tableName = Bytes.toBytes("testSplitBeforeSettingSplittingInZK");
     try {
@@ -1147,6 +1200,60 @@ public class TestSplitTransactionOnCluster {
     public SplittingNodeCreationFailedException () {
       super();
     }
+  }
+
+  public static class MockedRegionObserver extends BaseRegionObserver {
+    private SplitTransaction st = null;
+    private PairOfSameType<HRegion> daughterRegions = null;
+
+    @Override
+    public void preSplitBeforePONR(ObserverContext<RegionCoprocessorEnvironment> ctx,
+        byte[] splitKey, List<Mutation> metaEntries) throws IOException {
+      RegionCoprocessorEnvironment environment = ctx.getEnvironment();
+      HRegionServer rs = (HRegionServer) environment.getRegionServerServices();
+      List<HRegion> onlineRegions =
+          rs.getOnlineRegions(TableName.valueOf("testSplitHooksBeforeAndAfterPONR_2"));
+      HRegion region = onlineRegions.get(0);
+      for (HRegion r : onlineRegions) {
+        if (r.getRegionInfo().containsRow(splitKey)) {
+          region = r;
+          break;
+        }
+      }
+      st = new SplitTransaction(region, splitKey);
+      if (!st.prepare()) {
+        LOG.error("Prepare for the table " + region.getTableDesc().getNameAsString()
+            + " failed. So returning null. ");
+        ctx.bypass();
+        return;
+      }
+      region.forceSplit(splitKey);
+      daughterRegions = st.stepsBeforePONR(rs, rs, false);
+      HRegionInfo copyOfParent = new HRegionInfo(region.getRegionInfo());
+      copyOfParent.setOffline(true);
+      copyOfParent.setSplit(true);
+      // Put for parent
+      Put putParent = MetaEditor.makePutFromRegionInfo(copyOfParent);
+      MetaEditor.addDaughtersToPut(putParent, daughterRegions.getFirst().getRegionInfo(),
+        daughterRegions.getSecond().getRegionInfo());
+      metaEntries.add(putParent);
+      // Puts for daughters
+      Put putA = MetaEditor.makePutFromRegionInfo(daughterRegions.getFirst().getRegionInfo());
+      Put putB = MetaEditor.makePutFromRegionInfo(daughterRegions.getSecond().getRegionInfo());
+      st.addLocation(putA, rs.getServerName(), 1);
+      st.addLocation(putB, rs.getServerName(), 1);
+      metaEntries.add(putA);
+      metaEntries.add(putB);
+    }
+
+    @Override
+    public void preSplitAfterPONR(ObserverContext<RegionCoprocessorEnvironment> ctx)
+        throws IOException {
+      RegionCoprocessorEnvironment environment = ctx.getEnvironment();
+      HRegionServer rs = (HRegionServer) environment.getRegionServerServices();
+      st.stepsAfterPONR(rs, rs, daughterRegions);
+    }
+
   }
 }
 

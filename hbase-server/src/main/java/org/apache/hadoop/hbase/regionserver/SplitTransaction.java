@@ -34,11 +34,15 @@ import java.util.concurrent.TimeUnit;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.RegionTransition;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.catalog.CatalogTracker;
 import org.apache.hadoop.hbase.catalog.MetaEditor;
+import org.apache.hadoop.hbase.client.Mutation;
+import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.executor.EventType;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CancelableProgressable;
@@ -229,6 +233,64 @@ public class SplitTransaction {
         server.getConfiguration().getLong("hbase.regionserver.fileSplitTimeout",
           this.fileSplitTimeout);
 
+    PairOfSameType<HRegion> daughterRegions = stepsBeforePONR(server, services, testing);
+
+    List<Mutation> metaEntries = new ArrayList<Mutation>();
+    if (this.parent.getCoprocessorHost() != null) {
+      if (this.parent.getCoprocessorHost().
+          preSplitBeforePONR(this.splitrow, metaEntries)) {
+        throw new IOException("Coprocessor bypassing region "
+            + this.parent.getRegionNameAsString() + " split.");
+      }
+      try {
+        for (Mutation p : metaEntries) {
+          HRegionInfo.parseRegionName(p.getRow());
+        }
+      } catch (IOException e) {
+        LOG.error("Row key of mutation from coprossor is not parsable as region name."
+            + "Mutations from coprocessor should only for hbase:meta table.");
+        throw e;
+      }
+    }
+
+    // This is the point of no return.  Adding subsequent edits to .META. as we
+    // do below when we do the daughter opens adding each to .META. can fail in
+    // various interesting ways the most interesting of which is a timeout
+    // BUT the edits all go through (See HBASE-3872).  IF we reach the PONR
+    // then subsequent failures need to crash out this regionserver; the
+    // server shutdown processing should be able to fix-up the incomplete split.
+    // The offlined parent will have the daughters as extra columns.  If
+    // we leave the daughter regions in place and do not remove them when we
+    // crash out, then they will have their references to the parent in place
+    // still and the server shutdown fixup of .META. will point to these
+    // regions.
+    // We should add PONR JournalEntry before offlineParentInMeta,so even if
+    // OfflineParentInMeta timeout,this will cause regionserver exit,and then
+    // master ServerShutdownHandler will fix daughter & avoid data loss. (See
+    // HBase-4562).
+    this.journal.add(JournalEntry.PONR);
+
+    // Edit parent in meta.  Offlines parent region and adds splita and splitb
+    // as an atomic update. See HBASE-7721. This update to META makes the region
+    // will determine whether the region is split or not in case of failures.
+    // If it is successful, master will roll-forward, if not, master will rollback
+    // and assign the parent region.
+    if (!testing) {
+      if (metaEntries == null || metaEntries.isEmpty()) {
+        MetaEditor.splitRegion(server.getCatalogTracker(),
+            parent.getRegionInfo(), daughterRegions.getFirst().getRegionInfo(),
+            daughterRegions.getSecond().getRegionInfo(), server.getServerName());
+      } else {
+        offlineParentInMetaAndputMetaEntries(server.getCatalogTracker(),
+          parent.getRegionInfo(), daughterRegions.getFirst().getRegionInfo(), daughterRegions
+              .getSecond().getRegionInfo(), server.getServerName(), metaEntries);
+      }
+    }
+    return daughterRegions;
+  }
+
+  public PairOfSameType<HRegion> stepsBeforePONR(final Server server,
+      final RegionServerServices services, boolean testing) throws IOException {
     // Set ephemeral SPLITTING znode up in zk.  Mocked servers sometimes don't
     // have zookeeper so don't do zk stuff if server or zookeeper is null
     if (server != null && server.getZooKeeper() != null) {
@@ -305,33 +367,6 @@ public class SplitTransaction {
     // Ditto
     this.journal.add(JournalEntry.STARTED_REGION_B_CREATION);
     HRegion b = this.parent.createDaughterRegionFromSplits(this.hri_b);
-
-    // This is the point of no return.  Adding subsequent edits to hbase:meta as we
-    // do below when we do the daughter opens adding each to hbase:meta can fail in
-    // various interesting ways the most interesting of which is a timeout
-    // BUT the edits all go through (See HBASE-3872).  IF we reach the PONR
-    // then subsequent failures need to crash out this regionserver; the
-    // server shutdown processing should be able to fix-up the incomplete split.
-    // The offlined parent will have the daughters as extra columns.  If
-    // we leave the daughter regions in place and do not remove them when we
-    // crash out, then they will have their references to the parent in place
-    // still and the server shutdown fixup of hbase:meta will point to these
-    // regions.
-    // We should add PONR JournalEntry before offlineParentInMeta,so even if
-    // OfflineParentInMeta timeout,this will cause regionserver exit,and then
-    // master ServerShutdownHandler will fix daughter & avoid data loss. (See
-    // HBase-4562).
-    this.journal.add(JournalEntry.PONR);
-
-    // Edit parent in meta.  Offlines parent region and adds splita and splitb
-    // as an atomic update. See HBASE-7721. This update to hbase:meta makes the region
-    // will determine whether the region is split or not in case of failures.
-    // If it is successful, master will roll-forward, if not, master will rollback
-    // and assign the parent region.
-    if (!testing) {
-      MetaEditor.splitRegion(server.getCatalogTracker(), parent.getRegionInfo(),
-          a.getRegionInfo(), b.getRegionInfo(), server.getServerName());
-    }
     return new PairOfSameType<HRegion>(a, b);
   }
 
@@ -463,9 +498,52 @@ public class SplitTransaction {
       final RegionServerServices services)
   throws IOException {
     PairOfSameType<HRegion> regions = createDaughters(server, services);
+    if (this.parent.getCoprocessorHost() != null) {
+      this.parent.getCoprocessorHost().preSplitAfterPONR();
+    }
+    return stepsAfterPONR(server, services, regions);
+  }
+
+  public PairOfSameType<HRegion> stepsAfterPONR(final Server server,
+      final RegionServerServices services, PairOfSameType<HRegion> regions)
+      throws IOException {
     openDaughters(server, services, regions.getFirst(), regions.getSecond());
     transitionZKNode(server, services, regions.getFirst(), regions.getSecond());
     return regions;
+  }
+
+  private void offlineParentInMetaAndputMetaEntries(CatalogTracker catalogTracker,
+      HRegionInfo parent, HRegionInfo splitA, HRegionInfo splitB,
+      ServerName serverName, List<Mutation> metaEntries) throws IOException {
+    List<Mutation> mutations = metaEntries;
+    HRegionInfo copyOfParent = new HRegionInfo(parent);
+    copyOfParent.setOffline(true);
+    copyOfParent.setSplit(true);
+
+    //Put for parent
+    Put putParent = MetaEditor.makePutFromRegionInfo(copyOfParent);
+    MetaEditor.addDaughtersToPut(putParent, splitA, splitB);
+    mutations.add(putParent);
+    
+    //Puts for daughters
+    Put putA = MetaEditor.makePutFromRegionInfo(splitA);
+    Put putB = MetaEditor.makePutFromRegionInfo(splitB);
+
+    addLocation(putA, serverName, 1); //these are new regions, openSeqNum = 1 is fine.
+    addLocation(putB, serverName, 1);
+    mutations.add(putA);
+    mutations.add(putB);
+    MetaEditor.mutateMetaTable(catalogTracker, mutations);
+  }
+
+  public Put addLocation(final Put p, final ServerName sn, long openSeqNum) {
+    p.add(HConstants.CATALOG_FAMILY, HConstants.SERVER_QUALIFIER,
+      Bytes.toBytes(sn.getHostAndPort()));
+    p.add(HConstants.CATALOG_FAMILY, HConstants.STARTCODE_QUALIFIER,
+      Bytes.toBytes(sn.getStartcode()));
+    p.add(HConstants.CATALOG_FAMILY, HConstants.SEQNUM_QUALIFIER,
+        Bytes.toBytes(openSeqNum));
+    return p;
   }
 
   /*

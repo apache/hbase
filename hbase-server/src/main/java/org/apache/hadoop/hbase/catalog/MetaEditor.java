@@ -178,7 +178,7 @@ public class MetaEditor {
    * @param mutations Puts and Deletes to execute on hbase:meta
    * @throws IOException
    */
-  static void mutateMetaTable(final CatalogTracker ct, final List<Mutation> mutations)
+  public static void mutateMetaTable(final CatalogTracker ct, final List<Mutation> mutations)
       throws IOException {
     HTable t = MetaReader.getMetaHTable(ct);
     try {
