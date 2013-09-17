@@ -45,7 +45,7 @@ import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.LoadBalancer;
-import org.apache.hadoop.hbase.master.balancer.DefaultLoadBalancer;
+import org.apache.hadoop.hbase.master.balancer.SimpleLoadBalancer;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.zookeeper.EmptyWatcher;
@@ -556,7 +556,7 @@ public class TestZooKeeper {
     }
   }
 
-  static class MockLoadBalancer extends DefaultLoadBalancer {
+  static class MockLoadBalancer extends SimpleLoadBalancer {
     static boolean retainAssignCalled = false;
 
     @Override

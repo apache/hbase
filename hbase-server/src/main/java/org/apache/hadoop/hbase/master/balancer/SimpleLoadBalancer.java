@@ -54,8 +54,8 @@ import com.google.common.collect.MinMaxPriorityQueue;
  * <p>This classes produces plans for the {@link AssignmentManager} to execute.
  */
 @InterfaceAudience.Private
-public class DefaultLoadBalancer extends BaseLoadBalancer {
-  private static final Log LOG = LogFactory.getLog(DefaultLoadBalancer.class);
+public class SimpleLoadBalancer extends BaseLoadBalancer {
+  private static final Log LOG = LogFactory.getLog(SimpleLoadBalancer.class);
   private static final Random RANDOM = new Random(System.currentTimeMillis());
 
   private RegionInfoComparator riComparator = new RegionInfoComparator();
