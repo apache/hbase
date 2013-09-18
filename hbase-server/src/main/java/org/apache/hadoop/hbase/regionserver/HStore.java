@@ -863,8 +863,8 @@ public class HStore implements Store {
    * @return all scanners for this store
    */
   @Override
-  public List<KeyValueScanner> getScanners(boolean cacheBlocks,
-      boolean isGet, boolean isCompaction, ScanQueryMatcher matcher, byte[] startRow,
+  public List<KeyValueScanner> getScanners(boolean cacheBlocks, boolean isGet,
+      boolean usePread, boolean isCompaction, ScanQueryMatcher matcher, byte[] startRow,
       byte[] stopRow) throws IOException {
     Collection<StoreFile> storeFilesToScan;
     List<KeyValueScanner> memStoreScanners;
@@ -883,7 +883,7 @@ public class HStore implements Store {
     // but now we get them in ascending order, which I think is
     // actually more correct, since memstore get put at the end.
     List<StoreFileScanner> sfScanners = StoreFileScanner
-      .getScannersForStoreFiles(storeFilesToScan, cacheBlocks, isGet, isCompaction, matcher);
+      .getScannersForStoreFiles(storeFilesToScan, cacheBlocks, usePread, isCompaction, matcher);
     List<KeyValueScanner> scanners =
       new ArrayList<KeyValueScanner>(sfScanners.size()+1);
     scanners.addAll(sfScanners);

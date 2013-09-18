@@ -26,6 +26,7 @@ import java.net.SocketTimeoutException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.TableName;
@@ -140,5 +141,15 @@ public abstract class RegionServerCallable<T> implements RetryingCallable<T> {
       sleep = ConnectionUtils.addJitter(MIN_WAIT_DEAD_SERVER, 0.10f);
     }
     return sleep;
+  }
+
+  /**
+   * @return the HRegionInfo for the current region
+   */
+  public HRegionInfo getHRegionInfo() {
+    if (this.location == null) {
+      return null;
+    }
+    return this.location.getRegionInfo();
   }
 }

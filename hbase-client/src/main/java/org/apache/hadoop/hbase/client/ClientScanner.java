@@ -51,24 +51,24 @@ import org.apache.hadoop.hbase.util.Bytes;
 @InterfaceStability.Stable
 public class ClientScanner extends AbstractClientScanner {
     private final Log LOG = LogFactory.getLog(this.getClass());
-    private Scan scan;
-    private boolean closed = false;
+    protected Scan scan;
+    protected boolean closed = false;
     // Current region scanner is against.  Gets cleared if current region goes
     // wonky: e.g. if it splits on us.
-    private HRegionInfo currentRegion = null;
+    protected HRegionInfo currentRegion = null;
     private ScannerCallable callable = null;
-    private final LinkedList<Result> cache = new LinkedList<Result>();
-    private final int caching;
-    private long lastNext;
+    protected final LinkedList<Result> cache = new LinkedList<Result>();
+    protected final int caching;
+    protected long lastNext;
     // Keep lastResult returned successfully in case we have to reset scanner.
-    private Result lastResult = null;
-    private ScanMetrics scanMetrics = null;
-    private final long maxScannerResultSize;
+    protected Result lastResult = null;
+    protected ScanMetrics scanMetrics = null;
+    protected final long maxScannerResultSize;
     private final HConnection connection;
     private final TableName tableName;
     private final int scannerTimeout;
-    private boolean scanMetricsPublished = false;
-    private RpcRetryingCaller<Result []> caller;
+    protected boolean scanMetricsPublished = false;
+    protected RpcRetryingCaller<Result []> caller;
 
     /**
      * Create a new ClientScanner for the specified table. An HConnection will be
@@ -168,6 +168,10 @@ public class ClientScanner extends AbstractClientScanner {
 
     this.caller = rpcFactory.<Result[]> newCaller();
 
+      initializeScannerInConstruction();
+    }
+  
+    protected void initializeScannerInConstruction() throws IOException{
       // initialize the scanner
       nextScanner(this.caching, false);
     }
@@ -198,7 +202,7 @@ public class ClientScanner extends AbstractClientScanner {
     }
 
     // returns true if the passed region endKey
-    private boolean checkScanStopRow(final byte [] endKey) {
+    protected boolean checkScanStopRow(final byte [] endKey) {
       if (this.scan.getStopRow().length > 0) {
         // there is a stop row, check to see if we are past it.
         byte [] stopRow = scan.getStopRow();
@@ -297,7 +301,7 @@ public class ClientScanner extends AbstractClientScanner {
      *
      * scan.setAttribute(SCAN_ATTRIBUTES_METRICS_ENABLE, Bytes.toBytes(Boolean.TRUE))
      */
-    private void writeScanMetrics() {
+    protected void writeScanMetrics() {
       if (this.scanMetrics == null || scanMetricsPublished) {
         return;
       }
