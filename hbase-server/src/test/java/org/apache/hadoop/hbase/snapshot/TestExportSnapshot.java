@@ -123,7 +123,6 @@ public class TestExportSnapshot {
     TEST_UTIL.deleteTable(tableName);
     SnapshotTestingUtils.deleteAllSnapshots(TEST_UTIL.getHBaseAdmin());
     SnapshotTestingUtils.deleteArchiveDirectory(TEST_UTIL);
-    admin.close();
   }
 
   /**

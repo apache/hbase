@@ -3031,7 +3031,6 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
           totalNumberOfRegions);
 
       admin.createTable(desc, splits);
-      admin.close();
     } catch (MasterNotRunningException e) {
       LOG.error("Master not running", e);
       throw new IOException(e);
