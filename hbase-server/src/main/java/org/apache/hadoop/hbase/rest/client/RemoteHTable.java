@@ -97,7 +97,10 @@ public class RemoteHTable implements HTableInterface {
       while (i.hasNext()) {
         Map.Entry e = (Map.Entry)i.next();
         Collection quals = (Collection)e.getValue();
-        if (quals != null && !quals.isEmpty()) {
+        if (quals == null || quals.isEmpty()) {
+          // this is an unqualified family. append the family name and NO ':'
+          sb.append(Bytes.toStringBinary((byte[])e.getKey()));
+        } else {
           Iterator ii = quals.iterator();
           while (ii.hasNext()) {
             sb.append(Bytes.toStringBinary((byte[])e.getKey()));
@@ -115,9 +118,6 @@ public class RemoteHTable implements HTableInterface {
               sb.append(',');
             }
           }
-        } else {
-          // this is an unqualified family. append the family name and NO ':'
-          sb.append(Bytes.toStringBinary((byte[])e.getKey()));
         }
         if (i.hasNext()) {
           sb.append(',');

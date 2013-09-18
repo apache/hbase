@@ -106,8 +106,7 @@ public class RowSpec {
     return i;
   }
 
-  private int parseColumns(final String path, int i)
-      throws IllegalArgumentException {
+  private int parseColumns(final String path, int i) throws IllegalArgumentException {
     if (i >= path.length()) {
       return i;
     }
@@ -119,8 +118,7 @@ public class RowSpec {
           if (column.length() < 1) {
             throw new IllegalArgumentException("invalid path");
           }
-          String s = URLDecoder.decode(column.toString(),
-            HConstants.UTF8_ENCODING);
+          String s = URLDecoder.decode(column.toString(), HConstants.UTF8_ENCODING);
           this.columns.add(Bytes.toBytes(s));
           column.setLength(0);
           i++;
@@ -132,8 +130,7 @@ public class RowSpec {
       i++;
       // trailing list entry
       if (column.length() > 0) {
-        String s = URLDecoder.decode(column.toString(),
-          HConstants.UTF8_ENCODING);
+        String s = URLDecoder.decode(column.toString(), HConstants.UTF8_ENCODING);
         this.columns.add(Bytes.toBytes(s));
       }
     } catch (IndexOutOfBoundsException e) {

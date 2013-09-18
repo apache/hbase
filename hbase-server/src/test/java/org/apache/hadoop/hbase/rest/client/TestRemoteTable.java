@@ -157,7 +157,7 @@ public class TestRemoteTable {
     assertNull(value2);
 
     get = new Get(ROW_2);
-    result = remoteTable.get(get);    
+    result = remoteTable.get(get);
     value1 = result.getValue(COLUMN_1, QUALIFIER_1);
     value2 = result.getValue(COLUMN_2, QUALIFIER_2);
     assertNotNull(value1);
@@ -167,7 +167,7 @@ public class TestRemoteTable {
 
     get = new Get(ROW_2);
     get.addFamily(COLUMN_1);
-    result = remoteTable.get(get);    
+    result = remoteTable.get(get);
     value1 = result.getValue(COLUMN_1, QUALIFIER_1);
     value2 = result.getValue(COLUMN_2, QUALIFIER_2);
     assertNotNull(value1);
@@ -177,7 +177,7 @@ public class TestRemoteTable {
     get = new Get(ROW_2);
     get.addColumn(COLUMN_1, QUALIFIER_1);
     get.addColumn(COLUMN_2, QUALIFIER_2);
-    result = remoteTable.get(get);    
+    result = remoteTable.get(get);
     value1 = result.getValue(COLUMN_1, QUALIFIER_1);
     value2 = result.getValue(COLUMN_2, QUALIFIER_2);
     assertNotNull(value1);
@@ -191,7 +191,7 @@ public class TestRemoteTable {
     get.addFamily(COLUMN_1);
     get.addFamily(COLUMN_2);
     get.setTimeStamp(TS_1);
-    result = remoteTable.get(get);    
+    result = remoteTable.get(get);
     value1 = result.getValue(COLUMN_1, QUALIFIER_1);
     value2 = result.getValue(COLUMN_2, QUALIFIER_2);
     assertNotNull(value1);
@@ -204,7 +204,7 @@ public class TestRemoteTable {
     get.addFamily(COLUMN_1);
     get.addFamily(COLUMN_2);
     get.setTimeRange(0, TS_1 + 1);
-    result = remoteTable.get(get);    
+    result = remoteTable.get(get);
     value1 = result.getValue(COLUMN_1, QUALIFIER_1);
     value2 = result.getValue(COLUMN_2, QUALIFIER_2);
     assertNotNull(value1);
@@ -334,7 +334,7 @@ public class TestRemoteTable {
     Delete delete = new Delete(ROW_3);
     delete.deleteColumn(COLUMN_2, QUALIFIER_2);
     remoteTable.delete(delete);
-    
+
     get = new Get(ROW_3);
     get.addFamily(COLUMN_1);
     get.addFamily(COLUMN_2);
@@ -358,7 +358,7 @@ public class TestRemoteTable {
     assertNotNull(value1);
     assertTrue(Bytes.equals(VALUE_1, value1));
     assertNull(value2);
-    
+
     delete = new Delete(ROW_3);
     remoteTable.delete(delete);
 
@@ -369,7 +369,7 @@ public class TestRemoteTable {
     value1 = result.getValue(COLUMN_1, QUALIFIER_1);
     value2 = result.getValue(COLUMN_2, QUALIFIER_2);
     assertNull(value1);
-    assertNull(value2);            
+    assertNull(value2);
   }
 
   public void testScanner() throws IOException {
