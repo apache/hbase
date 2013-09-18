@@ -2377,9 +2377,10 @@ public class HBaseAdmin implements Abortable, Closeable {
   }
 
   @Override
-  public void close() throws IOException {
+  public synchronized void close() throws IOException {
     if (cleanupConnectionOnClose && this.connection != null) {
       this.connection.close();
+      this.connection = null;
     }
   }
 

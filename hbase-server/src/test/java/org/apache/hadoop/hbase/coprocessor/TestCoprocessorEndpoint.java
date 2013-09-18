@@ -287,7 +287,6 @@ public class TestCoprocessorEndpoint {
     TestRpcServiceProtos.TestProtobufRpcProto.BlockingInterface service =
         TestRpcServiceProtos.TestProtobufRpcProto.newBlockingStub(admin.coprocessorService());
     assertEquals("hello", service.echo(null, request).getMessage());
-    admin.close();
   }
 
   @Test
@@ -320,8 +319,6 @@ public class TestCoprocessorEndpoint {
       service.error(null, TestProtos.EmptyRequestProto.getDefaultInstance());
       fail("Should have thrown an exception");
     } catch (ServiceException e) {
-    } finally {
-      admin.close();
     }
   }
 
