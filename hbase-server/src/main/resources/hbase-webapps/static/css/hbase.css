@@ -15,7 +15,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
+/* General styling */
 body { padding-top: 60px; }
 .logo img { float: right; }
 .inner_header { margin-bottom: 1em;}
 section { margin-bottom: 3em; }
+
+
+/* Master page styling */
+#tab_catalogTables table {
+    /*
+     Catalog tab on master doesn't have any content before
+     it. Make sure there is some padding so it
+     doesn't look crowded.
+     */
+    margin-top: 1.2em;
+}
+
+/* Region Server page styling */

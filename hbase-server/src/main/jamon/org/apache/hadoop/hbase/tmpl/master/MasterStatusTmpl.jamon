@@ -301,7 +301,6 @@ AssignmentManager assignmentManager = master.getAssignmentManager();
 
 <table class="table table-striped">
 <tr>
-    <th>System Tables</th>
     <th>Table Name</th>
     <%if (frags != null) %>
         <th title="Fragmentation - Will be 0% after a major compaction and fluctuate during normal usage.">Frag.</th>
