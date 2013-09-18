@@ -42,6 +42,10 @@ public class HMsg implements Writable {
 
   /**
    * Message types sent between master and regionservers
+   *
+   * WARNING: Do not insert entry in between. Otherwise ordinal offset causes
+   * misinterpretation of HMsg between servers, which results in unexpected
+   * behavior during rolling restart.
    */
   public static enum Type {
     /** null message */
@@ -80,9 +84,6 @@ public class HMsg implements Writable {
 
     /** region server is processing open request */
     MSG_REPORT_PROCESS_OPEN,
-
-    /** region server is processing a close request */
-    MSG_REPORT_PROCESS_CLOSE,
 
     /**
      * Region server split the region associated with this message.
@@ -154,6 +155,9 @@ public class HMsg implements Writable {
      * region server reports any more.
       */
     MSG_REPORT_BEGINNING_OF_THE_END,
+
+    /** region server is processing a close request */
+    MSG_REPORT_PROCESS_CLOSE,
   }
 
   private Type type = null;
