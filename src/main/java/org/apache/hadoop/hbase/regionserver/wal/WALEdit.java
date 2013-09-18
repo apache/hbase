@@ -140,6 +140,26 @@ public class WALEdit implements Writable, HeapSize {
     return scopes.get(key);
   }
 
+  /**
+   * @return the underlying replication scope map
+   * @deprecated use {@link #getFromScope(byte[])} instead
+   */
+  @Deprecated
+  public NavigableMap<byte[], Integer> getScopes() {
+    return scopes;
+  }
+
+  /**
+   * @param scopes set all the replication scope information. Must be non-<tt>null</tt>
+   * @deprecated use {@link #putIntoScope(byte[], Integer)} instead. This completely overrides any
+   *             existing scopes
+   */
+  @Deprecated
+  public void setScopes(NavigableMap<byte[], Integer> scopes) {
+    this.scopes.clear();
+    this.scopes.putAll(scopes);
+  }
+
   public void putIntoScope(byte[] key, Integer value) {
     scopes.put(key, value);
   }
