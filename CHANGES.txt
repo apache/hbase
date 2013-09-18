@@ -35,6 +35,11 @@ Bug
     [HBASE-9432] - Backport HBASE-8781 to 0.94
     [HBASE-9448] - [0.94] Shell needs to fall back after HBASE-9182 if talking to older servers
     [HBASE-9455] - Port HBASE-7113 'TestGzipFilter is flaky with jdk1.7' to 0.94
+    [HBASE-9468] - Previous active master can still serves RPC request when it is trying recovering expired zk session
+    [HBASE-9482] - Do not enforce secure Hadoop for secure HBase
+    [HBASE-9506] - [0.94] Backport HBASE-9309 The links in the backup masters template are bad
+    [HBASE-9534] - Short-Circuit Coprocessor HTable access when on the same server
+    [HBASE-9566] - Add back WALEdit#get/setScopes method
 
 Improvement
 
