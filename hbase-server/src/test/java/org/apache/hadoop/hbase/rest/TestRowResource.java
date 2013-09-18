@@ -26,6 +26,7 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.StringWriter;
 import java.net.URLEncoder;
+import java.util.List;
 
 import javax.xml.bind.JAXBContext;
 import javax.xml.bind.JAXBException;
@@ -66,6 +67,7 @@ public class TestRowResource {
   private static final String CFB = "b";
   private static final String COLUMN_1 = CFA + ":1";
   private static final String COLUMN_2 = CFB + ":2";
+  private static final String COLUMN_3 = CFA + ":";
   private static final String ROW_1 = "testrow1";
   private static final String VALUE_1 = "testvalue1";
   private static final String ROW_2 = "testrow2";
@@ -711,7 +713,7 @@ public class TestRowResource {
       for (CellModel cell: rowModel.getCells()) {
         assertEquals(COLUMN_1, Bytes.toString(cell.getColumn()));
         assertEquals(values[i], Bytes.toString(cell.getValue()));
-      }   
+      }
     }
     for (String row : rows) {
       response = deleteRow(TABLE, row);
@@ -764,5 +766,52 @@ public class TestRowResource {
     assertEquals(response.getCode(), 200);
   }
 
+  @Test
+  public void testMultiColumnGetXML() throws Exception {
+    String path = "/" + TABLE + "/fakerow";
+    CellSetModel cellSetModel = new CellSetModel();
+    RowModel rowModel = new RowModel(ROW_1);
+    rowModel.addCell(new CellModel(Bytes.toBytes(COLUMN_1), Bytes.toBytes(VALUE_1)));
+    rowModel.addCell(new CellModel(Bytes.toBytes(COLUMN_2), Bytes.toBytes(VALUE_2)));
+    rowModel.addCell(new CellModel(Bytes.toBytes(COLUMN_3), Bytes.toBytes(VALUE_2)));
+    cellSetModel.addRow(rowModel);
+    StringWriter writer = new StringWriter();
+    marshaller.marshal(cellSetModel, writer);
+
+    Response response = client.put(path, Constants.MIMETYPE_XML, Bytes.toBytes(writer.toString()));
+    Thread.yield();
+
+    // make sure the fake row was not actually created
+    response = client.get(path, Constants.MIMETYPE_XML);
+    assertEquals(response.getCode(), 404);
+
+    // Try getting all the column values at once.
+    path = "/" + TABLE + "/" + ROW_1 + "/" + COLUMN_1 + "," + COLUMN_2 + "," + COLUMN_3;
+    response = client.get(path, Constants.MIMETYPE_XML);
+    assertEquals(200, response.getCode());
+    CellSetModel cellSet = (CellSetModel) unmarshaller.unmarshal(new ByteArrayInputStream(response
+        .getBody()));
+    assertTrue(cellSet.getRows().size() == 1);
+    assertTrue(cellSet.getRows().get(0).getCells().size() == 3);
+    List<CellModel> cells = cellSet.getRows().get(0).getCells();
+
+    assertTrue(containsCellModel(cells, COLUMN_1, VALUE_1));
+    assertTrue(containsCellModel(cells, COLUMN_2, VALUE_2));
+    assertTrue(containsCellModel(cells, COLUMN_3, VALUE_2));
+    response = deleteRow(TABLE, ROW_1);
+    assertEquals(response.getCode(), 200);
+  }
+
+  private boolean containsCellModel(List<CellModel> cells, String column, String value) {
+    boolean contains = false;
+    for (CellModel cell : cells) {
+      if (Bytes.toString(cell.getColumn()).equals(column)
+          && Bytes.toString(cell.getValue()).equals(value)) {
+        contains = true;
+        return contains;
+      }
+    }
+    return contains;
+  }
 }
 

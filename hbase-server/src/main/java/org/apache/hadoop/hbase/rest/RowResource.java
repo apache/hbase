@@ -92,6 +92,7 @@ public class RowResource extends ResourceBase {
       ResultGenerator generator =
         ResultGenerator.fromRowSpec(tableResource.getName(), rowspec, null);
       if (!generator.hasNext()) {
+        servlet.getMetrics().incrementFailedGetRequests(1);
         return Response.status(Response.Status.NOT_FOUND)
           .type(MIMETYPE_TEXT).entity("Not found" + CRLF)
           .build();
@@ -118,7 +119,7 @@ public class RowResource extends ResourceBase {
       servlet.getMetrics().incrementSucessfulGetRequests(1);
       return Response.ok(model).build();
     } catch (RuntimeException e) {
-      servlet.getMetrics().incrementFailedPutRequests(1);
+      servlet.getMetrics().incrementFailedGetRequests(1);
       if (e.getCause() instanceof TableNotFoundException) {
         return Response.status(Response.Status.NOT_FOUND)
           .type(MIMETYPE_TEXT).entity("Not found" + CRLF)
@@ -128,7 +129,7 @@ public class RowResource extends ResourceBase {
         .type(MIMETYPE_TEXT).entity("Bad request" + CRLF)
         .build();
     } catch (Exception e) {
-      servlet.getMetrics().incrementFailedPutRequests(1);
+      servlet.getMetrics().incrementFailedGetRequests(1);
       return Response.status(Response.Status.SERVICE_UNAVAILABLE)
         .type(MIMETYPE_TEXT).entity("Unavailable" + CRLF)
         .build();
@@ -153,6 +154,7 @@ public class RowResource extends ResourceBase {
       ResultGenerator generator =
         ResultGenerator.fromRowSpec(tableResource.getName(), rowspec, null);
       if (!generator.hasNext()) {
+        servlet.getMetrics().incrementFailedGetRequests(1);
         return Response.status(Response.Status.NOT_FOUND)
           .type(MIMETYPE_TEXT).entity("Not found" + CRLF)
           .build();
