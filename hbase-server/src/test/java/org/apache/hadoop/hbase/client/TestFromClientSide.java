@@ -5235,4 +5235,41 @@ public class TestFromClientSide {
     table.close();
     TEST_UTIL.deleteTable(TABLE);
   }
+
+  @Test
+  public void testSmallScan() throws Exception {
+    // Test Initialization.
+    byte[] TABLE = Bytes.toBytes("testSmallScan");
+    HTable table = TEST_UTIL.createTable(TABLE, FAMILY);
+
+    // Insert one row each region
+    int insertNum = 10;
+    for (int i = 0; i < 10; i++) {
+      Put put = new Put(Bytes.toBytes("row" + String.format("%03d", i)));
+      put.add(FAMILY, QUALIFIER, VALUE);
+      table.put(put);
+    }
+
+    // nomal scan
+    ResultScanner scanner = table.getScanner(new Scan());
+    int count = 0;
+    for (Result r : scanner) {
+      assertTrue(!r.isEmpty());
+      count++;
+    }
+    assertEquals(insertNum, count);
+
+    // small scan
+    Scan scan = new Scan(HConstants.EMPTY_START_ROW, HConstants.EMPTY_END_ROW);
+    scan.setSmall(true);
+    scan.setCaching(2);
+    scanner = table.getScanner(scan);
+    count = 0;
+    for (Result r : scanner) {
+      assertTrue(!r.isEmpty());
+      count++;
+    }
+    assertEquals(insertNum, count);
+
+  }
 }

@@ -83,6 +83,7 @@ public interface Store extends HeapSize, StoreConfigInformation {
    * the line).
    * @param cacheBlocks
    * @param isGet
+   * @param usePread
    * @param isCompaction
    * @param matcher
    * @param startRow
@@ -92,6 +93,7 @@ public interface Store extends HeapSize, StoreConfigInformation {
   List<KeyValueScanner> getScanners(
     boolean cacheBlocks,
     boolean isGet,
+    boolean usePread,
     boolean isCompaction,
     ScanQueryMatcher matcher,
     byte[] startRow,
