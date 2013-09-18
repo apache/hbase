@@ -137,12 +137,12 @@ public class ReadOnlyStore extends Store {
   }
 
   @Override
-  protected long add(final KeyValue kv) {
+  protected long add(final KeyValue kv, long seqNum) {
     throw new UnsupportedOperationException("Cannot add KeyValues to ReadOnlyStore");
   }
 
   @Override
-  protected long delete(final KeyValue kv) {
+  protected long delete(final KeyValue kv, long seqNum) {
     throw new UnsupportedOperationException("Cannot delete KeyValues from ReadOnlyStore");
   }
 
@@ -168,7 +168,7 @@ public class ReadOnlyStore extends Store {
 
   @Override
   public long updateColumnValue(byte [] row, byte [] f,
-      byte [] qualifier, long newValue) {
+      byte [] qualifier, long newValue, long seqNum) {
     throw new UnsupportedOperationException("Not supported on ReadOnlyStore");
   }
 

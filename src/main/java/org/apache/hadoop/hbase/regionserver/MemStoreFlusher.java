@@ -61,6 +61,7 @@ class MemStoreFlusher implements FlushRequester {
   private final Map<HRegion, FlushQueueEntry> regionsInQueue =
     new HashMap<HRegion, FlushQueueEntry>();
 
+  private final boolean perColumnFamilyFlushEnabled;
   private final long threadWakeFrequency;
   private final HRegionServer server;
   private final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
@@ -109,6 +110,9 @@ class MemStoreFlusher implements FlushRequester {
     this.blockingWaitTime = conf.getInt("hbase.hstore.blockingWaitTime",
       90000);
 
+    this.perColumnFamilyFlushEnabled = conf.getBoolean(
+            HConstants.HREGION_MEMSTORE_PER_COLUMN_FAMILY_FLUSH,
+            HConstants.DEFAULT_HREGION_MEMSTORE_PER_COLUMN_FAMILY_FLUSH);
     // number of "memstore flusher" threads per region server
     this.handlerCount = conf.getInt("hbase.regionserver.flusher.count", 2);
 
@@ -178,11 +182,15 @@ class MemStoreFlusher implements FlushRequester {
   }
 
   public void request(HRegion r) {
+    request(r, false);
+  }
+
+  public void request(HRegion r, boolean selectiveFlushRequest) {
     synchronized (regionsInQueue) {
       if (!regionsInQueue.containsKey(r)) {
         // This entry has no delay so it will be added at the top of the flush
         // queue.  It'll come out near immediately.
-        FlushQueueEntry fqe = new FlushQueueEntry(r);
+        FlushQueueEntry fqe = new FlushQueueEntry(r, selectiveFlushRequest);
         this.regionsInQueue.put(r, fqe);
         this.flushQueue.add(fqe);
       }
@@ -282,23 +290,25 @@ class MemStoreFlusher implements FlushRequester {
         return true;
       }
     }
-    return flushRegion(region, why, false);
+    return flushRegion(region, why, false, fqe.isSelectiveFlushRequest());
   }
 
-  /*
+  /**
    * Flush a region.
    * @param region Region to flush.
    * @param emergencyFlush Set if we are being force flushed. If true the region
    * needs to be removed from the flush queue. If false, when we were called
    * from the main flusher run loop and we got the entry to flush by calling
    * poll on the flush queue (which removed it).
+   * @param selectiveFlushRequest Do we want to selectively flush only the
+   * column families that dominate the memstore size?
    *
    * @return true if the region was successfully flushed, false otherwise. If
    * false, there will be accompanying log messages explaining why the log was
    * not flushed.
    */
   private boolean flushRegion(final HRegion region, String why,
-    final boolean emergencyFlush) {
+    final boolean emergencyFlush, boolean selectiveFlushRequest) {
 
     synchronized (this.regionsInQueue) {
       FlushQueueEntry fqe = this.regionsInQueue.remove(region);
@@ -310,7 +320,7 @@ class MemStoreFlusher implements FlushRequester {
      lock.readLock().lock();
     }
     try {
-      if (region.flushcache()) {
+      if (region.flushcache(selectiveFlushRequest)) {
         server.compactSplitThread.requestCompaction(region, why);
       }
       server.getMetrics().addFlush(region.getRecentFlushInfo());
@@ -379,7 +389,7 @@ class MemStoreFlusher implements FlushRequester {
         " exceeded; currently " +
         StringUtils.humanReadableInt(globalMemStoreSize) + " and flushing till " +
         StringUtils.humanReadableInt(this.globalMemStoreLimitLowMark));
-      if (!flushRegion(biggestMemStoreRegion, "emergencyFlush", true)) {
+      if (!flushRegion(biggestMemStoreRegion, "emergencyFlush", true, false)) {
         LOG.warn("Flush failed");
         break;
       }
@@ -403,11 +413,28 @@ class MemStoreFlusher implements FlushRequester {
     private final long createTime;
     private long whenToExpire;
     private int requeueCount = 0;
+    private boolean selectiveFlushRequest;
 
-    FlushQueueEntry(final HRegion r) {
+    /**
+     * @param r The region to flush
+     * @param selectiveFlushRequest Do we want to flush only the column
+     *                              families that dominate the memstore size,
+     *                              i.e., do a selective flush? If we are
+     *                              doing log rolling, then we should not do a
+     *                              selective flush.
+     */
+    FlushQueueEntry(final HRegion r, boolean selectiveFlushRequest) {
       this.region = r;
       this.createTime = System.currentTimeMillis();
       this.whenToExpire = this.createTime;
+      this.selectiveFlushRequest = selectiveFlushRequest;
+    }
+
+    /**
+     * @return Is this a request for a selective flush?
+     */
+    public boolean isSelectiveFlushRequest() {
+      return selectiveFlushRequest;
     }
 
     /**

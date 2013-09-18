@@ -313,6 +313,19 @@
     </description>
   </property>
   <property>
+    <name>hbase.columnfamily.memstore.flush.size</name>
+    <value>16777216</value>
+    <description>
+    If per column family flushing is turned on, then every time that we hit the
+    total memstore limit, we find out all the column families whose memstores
+    exceed this value, and only flush them, while retaining the others whose
+    memstores are lower than this limit. If none of the families have their
+    memstore size more than this, all the memstores will be flushed
+    (just as usual). This value should less than half of the total memstore
+    threshold (hbase.hregion.memstore.flush.size).
+    </description>
+  </property>
+  <property>
     <name>hbase.hregion.preclose.flush.size</name>
     <value>5242880</value>
     <description>

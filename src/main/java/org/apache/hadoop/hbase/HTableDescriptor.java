@@ -99,6 +99,9 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
 
   public static final long DEFAULT_MEMSTORE_FLUSH_SIZE = 1024*1024*64L;
 
+  public static final long DEFAULT_MEMSTORE_COLUMNFAMILY_FLUSH_SIZE =
+    1024*1024*16L;
+
   public static final long DEFAULT_MAX_FILESIZE = 1024*1024*256L;
 
   public static final boolean DEFAULT_DEFERRED_LOG_FLUSH = true;

@@ -30,7 +30,9 @@ import java.util.AbstractList;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableSet;
@@ -269,13 +271,20 @@ public class HRegion implements HeapSize {
 
   final long timestampTooNew;
   final long memstoreFlushSize;
-  private volatile long lastFlushTime; // start time for the last successful flush.
+  // The maximum size a column family's memstore can grow up to,
+  // before being flushed.
+  final long columnfamilyMemstoreFlushSize;
+  // Last flush time for each Store. Useful when we are flushing for each column
+  private Map<Store, Long> lastStoreFlushTimeMap
+    = new ConcurrentHashMap<Store, Long>();
   private List<Pair<Long,Long>> recentFlushes
     = new ArrayList<Pair<Long,Long>>();
   final FlushRequester flushListener;
   private final long blockingMemStoreSize;
   private final boolean waitOnMemstoreBlock;
   final long threadWakeFrequency;
+   // Selective flushing of Column Families which dominate the memstore?
+  final boolean perColumnFamilyFlushEnabled;
   // Used to guard splits and closes
   private final ReentrantReadWriteLock splitsAndClosesLock =
     new ReentrantReadWriteLock();
@@ -432,10 +441,12 @@ public class HRegion implements HeapSize {
     this.fs = null;
     this.timestampTooNew = HConstants.LATEST_TIMESTAMP;
     this.memstoreFlushSize = 0L;
+    this.columnfamilyMemstoreFlushSize = 0L;
     this.log = null;
     this.regiondir = null;
     this.regionInfo = null;
     this.threadWakeFrequency = 0L;
+    this.perColumnFamilyFlushEnabled = false;
     this.scannerReadPoints = new ConcurrentHashMap<RegionScanner, Long>();
     this.openDate = 0;
   }
@@ -494,6 +505,10 @@ public class HRegion implements HeapSize {
     this.flushListener = flushListener;
     this.threadWakeFrequency = conf.getLong(HConstants.THREAD_WAKE_FREQUENCY,
         10 * 1000);
+    this.perColumnFamilyFlushEnabled = conf.getBoolean(
+            HConstants.HREGION_MEMSTORE_PER_COLUMN_FAMILY_FLUSH,
+            HConstants.DEFAULT_HREGION_MEMSTORE_PER_COLUMN_FAMILY_FLUSH);
+    LOG.debug("Per Column Family Flushing: " + perColumnFamilyFlushEnabled);
     String encodedNameStr = this.regionInfo.getEncodedName();
     this.regiondir = new Path(tableDir, encodedNameStr);
     if (LOG.isDebugEnabled()) {
@@ -518,6 +533,9 @@ public class HRegion implements HeapSize {
     }
     this.disableWAL = regionInfo.getTableDesc().isWALDisabled();
     this.memstoreFlushSize = flushSize;
+    this.columnfamilyMemstoreFlushSize = conf.getLong(
+            HConstants.HREGION_MEMSTORE_COLUMNFAMILY_FLUSH_SIZE,
+            HTableDescriptor.DEFAULT_MEMSTORE_COLUMNFAMILY_FLUSH_SIZE);
     this.blockingMemStoreSize = (long)(this.memstoreFlushSize *
       conf.getFloat(HConstants.HREGION_MEMSTORE_BLOCK_MULTIPLIER, 2));
     this.waitOnMemstoreBlock =
@@ -640,7 +658,11 @@ public class HRegion implements HeapSize {
       }
 
       this.writestate.compacting = 0;
-      this.lastFlushTime = EnvironmentEdgeManager.currentTimeMillis();
+      long startTime = EnvironmentEdgeManager.currentTimeMillis();
+      for (Store store : stores.values()) {
+        this.lastStoreFlushTimeMap.put(store, startTime);
+      }
+
       // Use maximum of log sequenceid or that which was found in stores
       // (particularly if no recovered edits, seqid will be -1).
       long nextSeqid = maxSeqId + 1;
@@ -954,9 +976,22 @@ public class HRegion implements HeapSize {
     return this.fs;
   }
 
-  /** @return the last time the region was flushed */
-  public long getLastFlushTime() {
-    return this.lastFlushTime;
+  /**
+   * @return Returns the earliest time a store in the region
+   *         was flushed. All other stores in the region would
+   *         have been flushed either at, or after this time.
+   */
+  public long getMinFlushTimeForAllStores() {
+    return Collections.min(this.lastStoreFlushTimeMap.values());
+  }
+
+  /**
+   * Returns the last time a particular store was flushed
+   * @param store The store in question
+   * @return The last time this store was flushed
+   */
+  public long getLastStoreFlushTime(Store store) {
+    return this.lastStoreFlushTimeMap.get(store);
   }
 
   /** @return how info about the last flushes <time, size> */
@@ -1245,6 +1280,16 @@ public class HRegion implements HeapSize {
   }
 
   /**
+   * Flush the cache, while disabling selective flushing.
+   *
+   * @return
+   * @throws IOException
+   */
+  public boolean flushcache() throws IOException {
+    return flushcache(false);
+  }
+
+  /**
    * Flush the cache.
    *
    * When this method is called the cache will be flushed unless:
@@ -1258,11 +1303,22 @@ public class HRegion implements HeapSize {
    * <p>This method may block for some time, so it should not be called from a
    * time-sensitive thread.
    *
+   * @param selectiveFlushRequest If true, selectively flush column families
+   *                              which dominate the memstore size, provided it
+   *                              is enabled in the configuration.
+   *
    * @return true if cache was flushed
    *
    * @throws IOException general io exceptions
    */
-  public boolean flushcache() throws IOException {
+  public boolean flushcache(boolean selectiveFlushRequest) throws IOException {
+    // If a selective flush was requested, but the per-column family switch is
+    // off, we cannot do a selective flush.
+    if (selectiveFlushRequest && !perColumnFamilyFlushEnabled) {
+      LOG.debug("Disabling selective flushing of Column Families' memstores.");
+      selectiveFlushRequest = false;
+    }
+
     MonitoredTask status = TaskMonitor.get().createStatus("Flushing " + this);
     try {
       if (this.closed.get()) {
@@ -1284,12 +1340,41 @@ public class HRegion implements HeapSize {
           return false;
         }
       }
+      Collection<Store> specificStoresToFlush = null;
       try {
         // Prevent splits and closes
         status.setStatus("Acquiring readlock on region");
         splitsAndClosesLock.readLock().lock();
         try {
-          boolean result = internalFlushcache(status);
+          // We now have to flush the memstore since it has
+          // reached the threshold, however, we might not need
+          // to flush the entire memstore. If there are certain
+          // column families that are dominating the memstore size,
+          // we will flush just those. The second behavior only
+          // happens when selectiveFlushRequest is true.
+          boolean result;
+
+          // If it is okay to flush the memstore by selecting the
+          // column families which dominate the size, we are going
+          // to populate the specificStoresToFlush set.
+          if (selectiveFlushRequest) {
+            specificStoresToFlush = new HashSet<Store>();
+            for (Store store : stores.values()) {
+              if (shouldFlushStore(store)) {
+                specificStoresToFlush.add(store);
+                LOG.debug("Column Family: " + store.getColumnFamilyName() +
+                          " of region " + this + " will be flushed");
+              }
+            }
+            // Didn't find any CFs which were above the threshold for selection.
+            if (specificStoresToFlush.size() == 0) {
+              LOG.debug("Since none of the CFs were above the size, flushing all.");
+              specificStoresToFlush = stores.values();
+            }
+          } else {
+            specificStoresToFlush = stores.values();
+          }
+          result = internalFlushcache(specificStoresToFlush, status);
           status.markComplete("Flush successful");
           return result;
         } finally {
@@ -1342,33 +1427,65 @@ public class HRegion implements HeapSize {
    * @throws IOException general io exceptions
    */
   protected boolean internalFlushcache(MonitoredTask status)
-    throws IOException {
-    return internalFlushcache(this.log, -1, status);
+          throws IOException {
+    return internalFlushcache(this.log, -1L, stores.values(), status);
+  }
+
+  /**
+   * See {@link #internalFlushcache(org.apache.hadoop.hbase.monitoring.MonitoredTask)}
+   * @param storesToFlush The specific stores to flush.
+   * @param status
+   * @return
+   * @throws IOException
+   */
+  protected boolean internalFlushcache(Collection<Store> storesToFlush,
+                                       MonitoredTask status)
+          throws IOException {
+    return internalFlushcache(this.log, -1L, storesToFlush, status);
+  }
+
+  protected boolean internalFlushcache(final HLog wal, final long myseqid,
+                                       MonitoredTask status)
+          throws IOException {
+    return internalFlushcache(wal, myseqid, stores.values(), status);
   }
 
   /**
    * @param wal Null if we're NOT to go via hlog/wal.
    * @param myseqid The seqid to use if <code>wal</code> is null writing out
    * flush file.
+   * @param storesToFlush The list of stores to flush.
    * @param status
    * @return true if the region needs compacting
    * @throws IOException
    * @see {@link #internalFlushcache()}
    */
   protected boolean internalFlushcache(final HLog wal, final long myseqid,
-      MonitoredTask status) throws IOException {
+      Collection<Store> storesToFlush, MonitoredTask status) throws IOException {
     final long startTime = EnvironmentEdgeManager.currentTimeMillis();
     // If nothing to flush, return and avoid logging start/stop flush.
     if (this.memstoreSize.get() <= 0) {
-      // Record latest flush time
-      this.lastFlushTime = startTime;
+      // Since there is nothing to flush, we will reset the flush times for all
+      // the stores.
+      for (Store store : stores.values()) {
+        lastStoreFlushTimeMap.put(store, startTime);
+      }
       return false;
     }
+
     if (LOG.isDebugEnabled()) {
-      LOG.debug("Started memstore flush for region " + this +
-        ". Current region memstore size " +
+      LOG.debug("Started a " +
+        "memstore flush for region " + this + ", with current memstore size: " +
         StringUtils.humanReadableInt(this.memstoreSize.get()) +
+        ", and " + storesToFlush.size() + "/" + stores.size() +
+        " column families' memstores are being flushed." +
         ((wal != null)? "": "; wal is null, using passed myseqid=" + myseqid));
+      for (Store store : storesToFlush) {
+        LOG.debug("Flushing Column Family: " + store.getColumnFamilyName() +
+                  " which was occupying " +
+                  StringUtils.humanReadableInt(store.getMemStoreSize()) +
+                  " of memstore.");
+      }
     }
 
     // Stop updates while we snapshot the memstore of all stores. We only have
@@ -1389,17 +1506,39 @@ public class HRegion implements HeapSize {
     this.updatesLock.writeLock().lock();
     t0 = EnvironmentEdgeManager.currentTimeMillis();
     status.setStatus("Preparing to flush by snapshotting stores");
-    final long currentMemStoreSize = this.memstoreSize.get();
+    long totalMemstoreSizeOfFlushableStores = 0;
+
+    Set<Store> storesNotToFlush = new HashSet<Store>(stores.values());
+    storesNotToFlush.removeAll(storesToFlush);
+
+    // Calculate the smallest LSN numbers for edits in the stores that will
+    // be flushed and the ones which won't be. This will be used to populate
+    // the firstSeqWrittenInCurrentMemstore and
+    // firstSeqWrittenInSnapshotMemstore maps correctly.
+    long firstSeqIdInStoresToFlush = Long.MAX_VALUE;
+    for (Store store : storesToFlush) {
+      firstSeqIdInStoresToFlush = Math.min(firstSeqIdInStoresToFlush,
+        store.getSmallestSeqNumberInMemstore());
+    }
+
+    long firstSeqIdInStoresNotToFlush = Long.MAX_VALUE;
+    for (Store store : storesNotToFlush) {
+      firstSeqIdInStoresNotToFlush = Math.min(firstSeqIdInStoresNotToFlush,
+        store.getSmallestSeqNumberInMemstore());
+    }
+
     //copy the array of per column family memstore values
     List<StoreFlusher> storeFlushers = new ArrayList<StoreFlusher>(
-        stores.size());
+        storesToFlush.size());
     try {
       if (wal != null) {
-        sequenceId = wal.startCacheFlush(this.regionInfo.getRegionName());
+        sequenceId = wal.startCacheFlush(this.regionInfo.getRegionName(),
+          firstSeqIdInStoresToFlush, firstSeqIdInStoresNotToFlush);
       } else {
         sequenceId = myseqid;
       }
-      for (Store s : stores.values()) {
+      for (Store s : storesToFlush) {
+        totalMemstoreSizeOfFlushableStores += s.getMemStoreSize();
         storeFlushers.add(s.getStoreFlusher(sequenceId));
       }
 
@@ -1476,7 +1615,7 @@ public class HRegion implements HeapSize {
       storeFlushers.clear();
 
       // Set down the memstore size by amount of flush.
-      this.incMemoryUsage(-currentMemStoreSize);
+      this.incMemoryUsage(-totalMemstoreSizeOfFlushableStores);
     } catch (Throwable t) {
       // An exception here means that the snapshot was not persisted.
       // The hlog needs to be replayed so its content is restored to memstore.
@@ -1495,7 +1634,9 @@ public class HRegion implements HeapSize {
     // If we get to here, the HStores have been written. If we get an
     // error in completeCacheFlush it will release the lock it is holding
     // update lastFlushTime after the HStores have been written.
-    this.lastFlushTime = startTime;
+    for (Store store : storesToFlush) {
+      this.lastStoreFlushTimeMap.put(store, startTime);
+    }
 
     // B.  Write a FLUSHCACHE-COMPLETE message to the log.
     //     This tells future readers that the HStores were emitted correctly,
@@ -1522,13 +1663,14 @@ public class HRegion implements HeapSize {
     long time = EnvironmentEdgeManager.currentTimeMillis() - startTime;
     if (LOG.isDebugEnabled()) {
       LOG.info("Finished memstore flush of ~" +
-        StringUtils.humanReadableInt(currentMemStoreSize) + " for region " +
-        this + " in " + time + "ms, sequence id=" + sequenceId +
-        ", compaction requested=" + compactionRequested +
+        StringUtils.humanReadableInt(totalMemstoreSizeOfFlushableStores) +
+        " for region " + this + " in " + time + "ms, sequence id=" +
+        sequenceId + ", compaction requested=" + compactionRequested +
         ((wal == null)? "; wal=null": ""));
       status.setStatus("Finished memstore flush");
     }
-    this.recentFlushes.add(new Pair<Long,Long>(time/1000,currentMemStoreSize));
+    this.recentFlushes.add(
+            new Pair<Long,Long>(time/1000, totalMemstoreSizeOfFlushableStores));
 
     return compactionRequested;
   }
@@ -1785,6 +1927,7 @@ public class HRegion implements HeapSize {
     try {
       prepareDeleteTimestamps(familyMap, byteNow);
 
+      long seqNum = -1;
       if (!this.disableWAL && writeToWAL) {
         // write/sync to WAL should happen before we touch memstore.
         //
@@ -1796,12 +1939,12 @@ public class HRegion implements HeapSize {
         // single WALEdit.
         WALEdit walEdit = new WALEdit();
         addFamilyMapToWALEdit(familyMap, walEdit);
-        this.log.append(regionInfo, regionInfo.getTableDesc().getName(),
-            walEdit, now);
+        seqNum = this.log.append(regionInfo,
+                regionInfo.getTableDesc().getName(), walEdit, now);
       }
 
       // Now make changes to the memstore.
-      long addedSize = applyFamilyMapToMemstore(familyMap);
+      long addedSize = applyFamilyMapToMemstore(familyMap, seqNum);
       flush = isFlushSize(this.incMemoryUsage(addedSize));
     } finally {
       this.updatesLock.readLock().unlock();
@@ -2056,6 +2199,7 @@ public class HRegion implements HeapSize {
         }
       }
 
+      long seqNum = -1;
       // ------------------------------------
       // STEP 3. Write to WAL
       // ----------------------------------
@@ -2071,8 +2215,9 @@ public class HRegion implements HeapSize {
         }
 
         // Append the edit to WAL
-        this.log.append(regionInfo, regionInfo.getTableDesc().getName(),
-            walEdit, now);
+        seqNum = this.log.append(regionInfo,
+                regionInfo.getTableDesc().getName(),
+                walEdit, now);
       }
 
       // ------------------------------------
@@ -2084,7 +2229,7 @@ public class HRegion implements HeapSize {
         if (batchOp.retCodes[i] != OperationStatusCode.NOT_RUN) continue;
 
         Mutation op = batchOp.operations[i].getFirst();
-        addedSize += applyFamilyMapToMemstore(op.getFamilyMap());
+        addedSize += applyFamilyMapToMemstore(op.getFamilyMap(), seqNum);
         batchOp.retCodes[i] = OperationStatusCode.SUCCESS;
       }
       success = true;
@@ -2292,14 +2437,15 @@ public class HRegion implements HeapSize {
       // If order is reversed, i.e. we write to memstore first, and
       // for some reason fail to write/sync to commit log, the memstore
       // will contain uncommitted transactions.
+      long seqNum = -1;
       if (!this.disableWAL && writeToWAL) {
         WALEdit walEdit = new WALEdit();
         addFamilyMapToWALEdit(familyMap, walEdit);
-        this.log.append(regionInfo, regionInfo.getTableDesc().getName(),
-           walEdit, now);
+        seqNum = this.log.append(regionInfo,
+                regionInfo.getTableDesc().getName(), walEdit, now);
       }
 
-      long addedSize = applyFamilyMapToMemstore(familyMap);
+      long addedSize = applyFamilyMapToMemstore(familyMap, seqNum);
       flush = isFlushSize(this.incMemoryUsage(addedSize));
     } finally {
       this.updatesLock.readLock().unlock();
@@ -2323,15 +2469,20 @@ public class HRegion implements HeapSize {
    * should already have locked updatesLock.readLock(). This also does
    * <b>not</b> check the families for validity.
    *
+   * @param familyMap
+   * @param seqNum The log sequence number associated with the edits.
+   *
    * @return the additional memory usage of the memstore caused by the
    * new entries.
    */
-  private long applyFamilyMapToMemstore(Map<byte[], List<KeyValue>> familyMap) {
-    return applyFamilyMapToMemstore(familyMap, null);
+  private long applyFamilyMapToMemstore(Map<byte[], List<KeyValue>> familyMap,
+                                        long seqNum) {
+    return applyFamilyMapToMemstore(familyMap, null, seqNum);
   }
 
   private long applyFamilyMapToMemstore(Map<byte[], List<KeyValue>> familyMap,
-                 MultiVersionConsistencyControl.WriteEntry writeEntryToUse) {
+                 MultiVersionConsistencyControl.WriteEntry writeEntryToUse,
+                 long seqNum) {
     // Increment the rowUpdatedCnt
     this.rowUpdateCnt.incrementAndGet();
     
@@ -2349,7 +2500,7 @@ public class HRegion implements HeapSize {
         Store store = getStore(family);
         for (KeyValue kv: edits) {
           kv.setMemstoreTS(w.getWriteNumber());
-          size += store.add(kv);
+          size += store.add(kv, seqNum);
         }
       }
     } finally {
@@ -2424,7 +2575,9 @@ public class HRegion implements HeapSize {
       writestate.flushRequested = true;
     }
     // Make request outside of synchronize block; HBASE-818.
-    this.flushListener.request(this);
+    // Request for a selective flush of the memstore, if possible.
+    // This function is called by put(), delete(), etc.
+    this.flushListener.request(this, this.perColumnFamilyFlushEnabled);
     if (LOG.isDebugEnabled()) {
       LOG.debug("Flush requested on " + this);
     }
@@ -2436,6 +2589,15 @@ public class HRegion implements HeapSize {
    */
   private boolean isFlushSize(final long size) {
     return size > this.memstoreFlushSize;
+  }
+
+  /**
+   * @param store
+   * @return true if the size of the store is above the flush threshold for column families
+   */
+  private boolean shouldFlushStore(Store store) {
+    return (store.getMemStoreSize() > this.columnfamilyMemstoreFlushSize) ?
+            true : false;
   }
 
   /**
@@ -2507,6 +2669,8 @@ public class HRegion implements HeapSize {
 
     if (seqid > -1){
       // In case we added some edits to memory, we should flush
+      // We do not want to write to the log again, hence passing the log
+      // parameter as null.
       internalFlushcache(null, seqid, status);
     }
 
@@ -2585,9 +2749,11 @@ public class HRegion implements HeapSize {
             // Once we are over the limit, restoreEdit will keep returning true to
             // flush -- but don't flush until we've played all the kvs that make up
             // the WALEdit.
-            flush = restoreEdit(store, kv);
+            flush = restoreEdit(store, kv, key.getLogSeqNum());
             editsCount++;
           }
+          // We do not want to write to the WAL again, and hence setting the WAL
+          // parameter to null.
           if (flush) internalFlushcache(null, currentEditSeqId, status);
 
           // Every 'interval' edits, tell the reporter we're making progress.
@@ -2644,10 +2810,11 @@ public class HRegion implements HeapSize {
    * Used by tests
    * @param s Store to add edit too.
    * @param kv KeyValue to add.
+   * @param seqNum The sequence number for the edit.
    * @return True if we should flush.
    */
-  protected boolean restoreEdit(final Store s, final KeyValue kv) {
-    return isFlushSize(this.incMemoryUsage(s.add(kv)));
+  protected boolean restoreEdit(final Store s, final KeyValue kv, long seqNum) {
+    return isFlushSize(this.incMemoryUsage(s.add(kv, seqNum)));
   }
 
   /*
@@ -3536,12 +3703,13 @@ public class HRegion implements HeapSize {
 
         // 6. append/sync all edits at once
         // TODO: Do batching as in doMiniBatchPut
-        this.log.append(regionInfo, this.getTableDesc().getName(), walEdit, now);
+        long seqNum = this.log.append(regionInfo, this.getTableDesc().getName(),
+                walEdit, now);
 
         // 7. apply to memstore
         long addedSize = 0;
         for (Mutation m : rm.getMutations()) {
-          addedSize += applyFamilyMapToMemstore(m.getFamilyMap(), w);
+          addedSize += applyFamilyMapToMemstore(m.getFamilyMap(), w, seqNum);
         }
         flush = isFlushSize(this.incMemoryUsage(addedSize));
       } finally {
@@ -3616,19 +3784,21 @@ public class HRegion implements HeapSize {
           qualifier, EnvironmentEdgeManager.currentTimeMillis(),
           Bytes.toBytes(result));
 
+      long seqNum = -1;
       // now log it:
       if (writeToWAL) {
         long now = EnvironmentEdgeManager.currentTimeMillis();
         WALEdit walEdit = new WALEdit();
         walEdit.add(newKv);
-        this.log.append(regionInfo, regionInfo.getTableDesc().getName(),
+        seqNum = this.log.append(regionInfo, regionInfo.getTableDesc().getName(),
           walEdit, now);
       }
 
       // Now request the ICV to the store, this will set the timestamp
       // appropriately depending on if there is a value in memcache or not.
       // returns the
-      long size = store.updateColumnValue(row, family, qualifier, result);
+      long size = store.updateColumnValue(row, family, qualifier, result,
+                                          seqNum);
 
       size = this.incMemoryUsage(size);
       flush = isFlushSize(size);
@@ -3669,7 +3839,7 @@ public class HRegion implements HeapSize {
   public static final long FIXED_OVERHEAD = ClassSize.align(
       (2 * Bytes.SIZEOF_BOOLEAN) +
       (6 * Bytes.SIZEOF_LONG) + 2 * ClassSize.ARRAY +
-      (28 * ClassSize.REFERENCE) + ClassSize.OBJECT + Bytes.SIZEOF_INT);
+      (29 * ClassSize.REFERENCE) + ClassSize.OBJECT + Bytes.SIZEOF_INT);
 
   public static final long DEEP_OVERHEAD = ClassSize.align(FIXED_OVERHEAD +
       ClassSize.OBJECT + (2 * ClassSize.ATOMIC_BOOLEAN) +

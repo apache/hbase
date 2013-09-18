@@ -157,6 +157,7 @@ public class HLog implements Syncable {
   private final FileSystem fs;
   private final Path dir;
   private final Configuration conf;
+  private final boolean perColumnFamilyFlushEnabled;
   private final LogRollListener listener;
   private final long optionalFlushInterval;
   private final long blocksize;
@@ -435,6 +436,9 @@ public class HLog implements Syncable {
         RuntimeHaltAbortStrategy.INSTANCE : RuntimeExceptionAbortStrategy.INSTANCE;
     this.fs = fs;
     this.conf = conf;
+    this.perColumnFamilyFlushEnabled = conf.getBoolean(
+            HConstants.HREGION_MEMSTORE_PER_COLUMN_FAMILY_FLUSH,
+            HConstants.DEFAULT_HREGION_MEMSTORE_PER_COLUMN_FAMILY_FLUSH);
     this.listener = listener;
     this.flushlogentries =
       conf.getInt("hbase.regionserver.flushlogentries", 1);
@@ -1028,12 +1032,15 @@ public class HLog implements Syncable {
    * @param tableName
    * @param edits
    * @param now
+   * @return The log sequence number for the edit. -1 if the WAL is disabled.
+   *          This sequence number is used for book-keeping for per-CF flush
+   *          of the memstore.
    * @throws IOException
    */
-  public void append(HRegionInfo info, byte [] tableName, WALEdit edits,
+  public long append(HRegionInfo info, byte [] tableName, WALEdit edits,
     final long now) throws IOException {
     if (!this.enabled || edits.isEmpty()) {
-      return;
+      return -1L;
     }
     if (logSyncerThread.syncerShuttingDown) {
       // can't acquire lock for the duration of append()
@@ -1043,6 +1050,7 @@ public class HLog implements Syncable {
 
     long len = edits.getTotalKeyValueLength();
     long txid = 0;
+    long seqNum;
 
     long start = System.currentTimeMillis();
     byte[] regionName = info.getRegionName();
@@ -1053,7 +1061,7 @@ public class HLog implements Syncable {
       // memstore). . When the cache is flushed, the entry for the
       // region being flushed is removed if the sequence number of the flush
       // is greater than or equal to the value in lastSeqWritten.
-      long seqNum = obtainSeqNum();
+      seqNum = obtainSeqNum();
       this.firstSeqWrittenInCurrentMemstore.putIfAbsent(regionName, seqNum);
       HLogKey logKey = makeKey(regionName, tableName, seqNum, now);
 
@@ -1095,6 +1103,7 @@ public class HLog implements Syncable {
       // update sync time
       pData.addLong(ProfilingData.HLOG_SYNC_TIME_MS, syncTime);
     }
+    return seqNum;
   }
 
   /**
@@ -1306,6 +1315,38 @@ public class HLog implements Syncable {
     return 0;
   }
 
+  /**
+   * This is a utility method for tests to find the sequence number of the first
+   * KV in a given region's memstore
+   *
+   * @param region
+   * @return
+   */
+  public long getFirstSeqWrittenInCurrentMemstoreForRegion(HRegion region) {
+    Long value = firstSeqWrittenInCurrentMemstore.get(region.getRegionName());
+    if (value != null) {
+      return value.longValue();
+    } else {
+      return Long.MAX_VALUE;
+    }
+  }
+
+  /**
+   * This is a utility method for tests to find the sequence number of the first
+   * KV in a given region's snapshot memstore
+   *
+   * @param region
+   * @return
+   */
+  public long getFirstSeqWrittenInSnapshotMemstoreForRegion(HRegion region) {
+    Long value = firstSeqWrittenInSnapshotMemstore.get(region.getRegionName());
+    if (value != null) {
+      return value.longValue();
+    } else {
+      return Long.MAX_VALUE;
+    }
+  }
+
   boolean canGetCurReplicas() {
     return this.getNumCurrentReplicas != null;
   }
@@ -1334,10 +1375,18 @@ public class HLog implements Syncable {
   }
 
   /** @return the number of log files in use */
-  int getNumLogFiles() {
+  public int getNumLogFiles() {
     return outputfiles.size();
   }
 
+  /**
+   * See {@link #startCacheFlush(byte[], long, long)} (byte[], long, long)}
+   * @param regionName
+   * @return
+   */
+  public long startCacheFlush(final byte[] regionName) {
+    return startCacheFlush(regionName, -1L, -1L);
+  }
 
   /**
    * Acquire a lock so that we do not close between the start and
@@ -1352,26 +1401,65 @@ public class HLog implements Syncable {
    * lsn of the earliest in-memory lsn - which is now in the memstore snapshot -
    * is saved temporarily in the firstSeqWritten map while the flush is active.
    *
+   * In case the per-CF flush is enabled, we cannot simply clear the
+   * firstSeqWritten entry for the region to be flushed. There might be certain
+   * CFs whose memstores won't be flushed. Therefore, we need the first LSNs for
+   * the stores that will be flushed, and first LSNs for the stores that won't
+   * be flushed.
+   *
+   * @param regionName
+   * @param firstSeqIdInStoresToFlush
+   * @param firstSeqIdInStoresNotToFlush
    * @return sequence ID to pass {@link #completeCacheFlush(byte[], byte[], long, boolean)}
    * (byte[], byte[], long)}
    * @see #completeCacheFlush(byte[], byte[], long, boolean)
    * @see #abortCacheFlush()
    */
-  public long startCacheFlush(final byte [] regionName) {
+  public long startCacheFlush(final byte [] regionName,
+                              long firstSeqIdInStoresToFlush,
+                              long firstSeqIdInStoresNotToFlush) {
+    long num = -1;
     this.closeLock.readLock().lock();
     synchronized (oldestSeqNumsLock) {
       if (this.firstSeqWrittenInSnapshotMemstore.containsKey(regionName)) {
         LOG.warn("Requested a startCacheFlush while firstSeqWrittenInSnapshotMemstore still"
-            + " contains " + Bytes.toString(regionName) + " . Did the previous flush fail?"
-            + " Will try to complete it");
+          + " contains " + Bytes.toString(regionName) + " . Did the previous flush fail?"
+          + " Will try to complete it");
       } else {
-        Long seq = this.firstSeqWrittenInCurrentMemstore.remove(regionName);
-        if (seq != null) {
-          this.firstSeqWrittenInSnapshotMemstore.put(regionName, seq);
+
+        // If we are flushing the entire memstore, remove the entry from the
+        // current memstores.
+        if (firstSeqIdInStoresNotToFlush == Long.MAX_VALUE) {
+          Long seq = this.firstSeqWrittenInCurrentMemstore.remove(regionName);
+          if (seq != null) {
+            this.firstSeqWrittenInSnapshotMemstore.put(regionName, seq);
+          }
+          num  = obtainSeqNum();
+        } else {
+          // Amongst the Stores not being flushed, what is the smallest sequence
+          // number? Put that in this map.
+          this.firstSeqWrittenInCurrentMemstore.replace(regionName,
+            firstSeqIdInStoresNotToFlush);
+
+          // Amongst the Stores being flushed, what is the smallest sequence
+          // number? Put that in this map.
+          this.firstSeqWrittenInSnapshotMemstore.put(regionName,
+            firstSeqIdInStoresToFlush);
+
+          // During Log Replay, we can safely discard any edits that have
+          // the sequence number less than the smallest sequence id amongst the
+          // stores that we are not flushing. This might re-apply some edits
+          // which belonged to stores which are going to be flushed, but we
+          // expect these operations to be idempotent anyways, and this is
+          // simpler.
+          num = firstSeqIdInStoresNotToFlush - 1;
         }
       }
     }
-    return obtainSeqNum();
+    if (num == -1) {
+      num = obtainSeqNum();
+    }
+    return num;
   }
 
   /**

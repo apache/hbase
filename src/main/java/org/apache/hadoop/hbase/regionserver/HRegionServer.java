@@ -3168,12 +3168,11 @@ public class HRegionServer implements HRegionInterface,
        throw new IllegalArgumentException("No region : " + new String(regionName)
        + " available");
      }
-     if (region.getLastFlushTime() < ifOlderThanTS) region.flushcache();
+     if (region.getMinFlushTimeForAllStores() < ifOlderThanTS) region.flushcache();
    }
 
   /**
-   * Gets last flush time for the given region
-   * @return the last flush time for a region
+   * @return the earliest time a store in the given region was flushed.
    */
   public long getLastFlushTime(byte[] regionName) {
     HRegion region = getOnlineRegion(regionName);
@@ -3181,7 +3180,7 @@ public class HRegionServer implements HRegionInterface,
       throw new IllegalArgumentException("No region : " + new String(regionName)
       + " available");
     }
-    return region.getLastFlushTime();
+    return region.getMinFlushTimeForAllStores();
   }
 
   @Override
@@ -3189,7 +3188,7 @@ public class HRegionServer implements HRegionInterface,
      MapWritable map = new MapWritable();
      for (HRegion region: this.getOnlineRegions()) {
        map.put(new BytesWritable(region.getRegionName()),
-           new LongWritable(region.getLastFlushTime()));
+           new LongWritable(region.getMinFlushTimeForAllStores()));
      }
      return map;
   }

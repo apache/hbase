@@ -138,7 +138,10 @@ class LogRoller extends HasThread implements LogRollListener {
     if (r != null) {
       requester = this.server.getFlushRequester();
       if (requester != null) {
-        requester.request(r);
+        // If we do a selective flush, some column families might remain in
+        // the memstore for a long time, and might cause old logs to
+        // accumulate. Hence, we would not request for a selective flush.
+        requester.request(r, false);
         scheduled = true;
       }
     }

@@ -153,9 +153,9 @@ public class TestStore extends TestCase {
     for (int i = 1; i <= storeFileNum; i++) {
       LOG.info("Adding some data for the store file #" + i);
       timeStamp = System.currentTimeMillis();
-      this.store.add(new KeyValue(row, family, qf1, timeStamp, (byte[]) null));
-      this.store.add(new KeyValue(row, family, qf2, timeStamp, (byte[]) null));
-      this.store.add(new KeyValue(row, family, qf3, timeStamp, (byte[]) null));
+      this.store.add(new KeyValue(row, family, qf1, timeStamp, (byte[]) null), -1L);
+      this.store.add(new KeyValue(row, family, qf2, timeStamp, (byte[]) null), -1L);
+      this.store.add(new KeyValue(row, family, qf3, timeStamp, (byte[]) null), -1L);
       flush(i);
       Thread.sleep(sleepTime);
     }
@@ -164,7 +164,7 @@ public class TestStore extends TestCase {
     assertEquals(storeFileNum, this.store.getStorefiles().size());
 
     // Advanced the max sequence ID by flushing one more file
-    this.store.add(new KeyValue(row, family, qf3, System.currentTimeMillis(), (byte[]) null));
+    this.store.add(new KeyValue(row, family, qf3, System.currentTimeMillis(), (byte[]) null), -1L);
     flush(storeFileNum + 1);
     
     // Each compaction request will find one expired store file and delete it
@@ -195,9 +195,9 @@ public class TestStore extends TestCase {
     int storeFileNum = 4;
     for (int i = 1; i <= storeFileNum; i++) {
       LOG.info("Adding some data for the store file #"+i);
-      this.store.add(new KeyValue(row, family, qf1, i, (byte[])null));
-      this.store.add(new KeyValue(row, family, qf2, i, (byte[])null));
-      this.store.add(new KeyValue(row, family, qf3, i, (byte[])null));
+      this.store.add(new KeyValue(row, family, qf1, i, (byte[])null), -1L);
+      this.store.add(new KeyValue(row, family, qf2, i, (byte[])null), -1L);
+      this.store.add(new KeyValue(row, family, qf3, i, (byte[])null), -1L);
       flush(i);
     }
     // after flush; check the lowest time stamp
@@ -244,8 +244,8 @@ public class TestStore extends TestCase {
   public void testEmptyStoreFile() throws IOException {
     init(this.getName());
     // Write a store file.
-    this.store.add(new KeyValue(row, family, qf1, 1, (byte[])null));
-    this.store.add(new KeyValue(row, family, qf2, 1, (byte[])null));
+    this.store.add(new KeyValue(row, family, qf1, 1, (byte[])null), -1L);
+    this.store.add(new KeyValue(row, family, qf2, 1, (byte[])null), -1L);
     flush(1);
     // Now put in place an empty store file.  Its a little tricky.  Have to
     // do manually with hacked in sequence id.
@@ -282,12 +282,12 @@ public class TestStore extends TestCase {
     init(this.getName());
 
     //Put data in memstore
-    this.store.add(new KeyValue(row, family, qf1, 1, (byte[])null));
-    this.store.add(new KeyValue(row, family, qf2, 1, (byte[])null));
-    this.store.add(new KeyValue(row, family, qf3, 1, (byte[])null));
-    this.store.add(new KeyValue(row, family, qf4, 1, (byte[])null));
-    this.store.add(new KeyValue(row, family, qf5, 1, (byte[])null));
-    this.store.add(new KeyValue(row, family, qf6, 1, (byte[])null));
+    this.store.add(new KeyValue(row, family, qf1, 1, (byte[])null), -1L);
+    this.store.add(new KeyValue(row, family, qf2, 1, (byte[])null), -1L);
+    this.store.add(new KeyValue(row, family, qf3, 1, (byte[])null), -1L);
+    this.store.add(new KeyValue(row, family, qf4, 1, (byte[])null), -1L);
+    this.store.add(new KeyValue(row, family, qf5, 1, (byte[])null), -1L);
+    this.store.add(new KeyValue(row, family, qf6, 1, (byte[])null), -1L);
 
     //Get
     result = HBaseTestingUtility.getFromStoreFile(store,
@@ -305,20 +305,20 @@ public class TestStore extends TestCase {
     init(this.getName());
 
     //Put data in memstore
-    this.store.add(new KeyValue(row, family, qf1, 1, (byte[])null));
-    this.store.add(new KeyValue(row, family, qf2, 1, (byte[])null));
+    this.store.add(new KeyValue(row, family, qf1, 1, (byte[])null), -1L);
+    this.store.add(new KeyValue(row, family, qf2, 1, (byte[])null), -1L);
     //flush
     flush(1);
 
     //Add more data
-    this.store.add(new KeyValue(row, family, qf3, 1, (byte[])null));
-    this.store.add(new KeyValue(row, family, qf4, 1, (byte[])null));
+    this.store.add(new KeyValue(row, family, qf3, 1, (byte[])null), -1L);
+    this.store.add(new KeyValue(row, family, qf4, 1, (byte[])null), -1L);
     //flush
     flush(2);
 
     //Add more data
-    this.store.add(new KeyValue(row, family, qf5, 1, (byte[])null));
-    this.store.add(new KeyValue(row, family, qf6, 1, (byte[])null));
+    this.store.add(new KeyValue(row, family, qf5, 1, (byte[])null), -1L);
+    this.store.add(new KeyValue(row, family, qf6, 1, (byte[])null), -1L);
     //flush
     flush(3);
 
@@ -343,20 +343,20 @@ public class TestStore extends TestCase {
     init(this.getName());
 
     //Put data in memstore
-    this.store.add(new KeyValue(row, family, qf1, 1, (byte[])null));
-    this.store.add(new KeyValue(row, family, qf2, 1, (byte[])null));
+    this.store.add(new KeyValue(row, family, qf1, 1, (byte[])null), -1L);
+    this.store.add(new KeyValue(row, family, qf2, 1, (byte[])null), -1L);
     //flush
     flush(1);
 
     //Add more data
-    this.store.add(new KeyValue(row, family, qf3, 1, (byte[])null));
-    this.store.add(new KeyValue(row, family, qf4, 1, (byte[])null));
+    this.store.add(new KeyValue(row, family, qf3, 1, (byte[])null), -1L);
+    this.store.add(new KeyValue(row, family, qf4, 1, (byte[])null), -1L);
     //flush
     flush(2);
 
     //Add more data
-    this.store.add(new KeyValue(row, family, qf5, 1, (byte[])null));
-    this.store.add(new KeyValue(row, family, qf6, 1, (byte[])null));
+    this.store.add(new KeyValue(row, family, qf5, 1, (byte[])null), -1L);
+    this.store.add(new KeyValue(row, family, qf6, 1, (byte[])null), -1L);
 
     //Get
     result = HBaseTestingUtility.getFromStoreFile(store,
@@ -397,7 +397,8 @@ public class TestStore extends TestCase {
     long newValue = 3L;
     this.store.add(new KeyValue(row, family, qf1,
         System.currentTimeMillis(),
-        Bytes.toBytes(oldValue)));
+        Bytes.toBytes(oldValue)),
+        -1L);
 
     // snapshot the store.
     this.store.snapshot();
@@ -405,13 +406,14 @@ public class TestStore extends TestCase {
     // add other things:
     this.store.add(new KeyValue(row, family, qf2,
         System.currentTimeMillis(),
-        Bytes.toBytes(oldValue)));
+        Bytes.toBytes(oldValue)),
+        -1L);
 
     // sleep 2 ms to space out the increments.
     Thread.sleep(2);
 
     // update during the snapshot.
-    long ret = this.store.updateColumnValue(row, family, qf1, newValue);
+    long ret = this.store.updateColumnValue(row, family, qf1, newValue, -1L);
 
     // memstore should have grown by some amount.
     assertTrue(ret > 0);
@@ -462,9 +464,9 @@ public class TestStore extends TestCase {
     init(getName(), conf);
 
     LOG.info("Adding some data");
-    this.store.add(new KeyValue(row, family, qf1, 1, (byte[])null));
-    this.store.add(new KeyValue(row, family, qf2, 1, (byte[])null));
-    this.store.add(new KeyValue(row, family, qf3, 1, (byte[])null));
+    this.store.add(new KeyValue(row, family, qf1, 1, (byte[])null), -1L);
+    this.store.add(new KeyValue(row, family, qf2, 1, (byte[])null), -1L);
+    this.store.add(new KeyValue(row, family, qf3, 1, (byte[])null), -1L);
 
     LOG.info("Before flush, we should have no files");
     FileStatus[] files = fs.listStatus(store.getHomedir());
@@ -590,7 +592,7 @@ public class TestStore extends TestCase {
 
     List<KeyValue> kvList1 = getKeyValueSet(timestamps1,numRows, qf1, family);
     for (KeyValue kv : kvList1) {
-      this.store.add(kv);
+      this.store.add(kv, -1L);
     }
 
     this.store.snapshot();
@@ -598,7 +600,7 @@ public class TestStore extends TestCase {
 
     List<KeyValue> kvList2 = getKeyValueSet(timestamps2,numRows, qf1, family);
     for(KeyValue kv : kvList2) {
-      this.store.add(kv);
+      this.store.add(kv, -1L);
     }
 
     assertEquals(Math.max(timestamps1.length, timestamps2.length),

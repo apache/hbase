@@ -237,7 +237,8 @@ public class HRegionThriftServer extends HasThread {
     public Map<ByteBuffer, Long> getLastFlushTimes() throws TException {
       Map<ByteBuffer, Long> regionToFlushTime = new HashMap<ByteBuffer, Long>();
       for (HRegion region: rs.getOnlineRegions()) {
-        regionToFlushTime.put(ByteBuffer.wrap(region.getRegionName()), region.getLastFlushTime());
+        regionToFlushTime.put(ByteBuffer.wrap(region.getRegionName()),
+                              region.getMinFlushTimeForAllStores());
       }
       return regionToFlushTime;
     }

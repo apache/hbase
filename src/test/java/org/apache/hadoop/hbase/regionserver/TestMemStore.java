@@ -833,7 +833,7 @@ public class TestMemStore extends TestCase {
     for (int newValue = 0; newValue < 1000; newValue++) {
       for (int row = newValue; row < newValue + 1000; row++) {
         byte[] rowBytes = Bytes.toBytes(row);
-        size += memstore.updateColumnValue(rowBytes, FAMILY, qualifier, newValue, ++ts);
+        size += memstore.updateColumnValue(rowBytes, FAMILY, qualifier, newValue, ++ts, -1L);
       }
     }
     System.out.println("Wrote " + ts + " vals");

@@ -507,13 +507,14 @@ public class Store extends SchemaConfigured implements HeapSize,
   /**
    * Adds a value to the memstore
    *
-   * @param kv
-   * @return memstore size delta
+   * @param kv The KV to be added.
+   * @param seqNum The LSN associated with the key.
+   * @return
    */
-  protected long add(final KeyValue kv) {
+  protected long add(final KeyValue kv, long seqNum) {
     lock.readLock().lock();
     try {
-      return this.memstore.add(kv);
+      return this.memstore.add(kv, seqNum);
     } finally {
       lock.readLock().unlock();
     }
@@ -525,10 +526,10 @@ public class Store extends SchemaConfigured implements HeapSize,
    * @param kv
    * @return memstore size delta
    */
-  protected long delete(final KeyValue kv) {
+  protected long delete(final KeyValue kv, long seqNum) {
     lock.readLock().lock();
     try {
-      return this.memstore.delete(kv);
+      return this.memstore.delete(kv, seqNum);
     } finally {
       lock.readLock().unlock();
     }
@@ -1859,8 +1860,18 @@ public class Store extends SchemaConfigured implements HeapSize,
   /**
    * @return The size of this store's memstore, in bytes
    */
-  long getMemStoreSize() {
-    return this.memstore.heapSize();
+  public long getMemStoreSize() {
+    // Use memstore.keySize() instead of heapSize() since heapSize() gives the
+    // size of the keys + size of the map.
+    return this.memstore.keySize();
+  }
+
+  /**
+   * A helper function to get the smallest LSN in the mestore.
+   * @return
+   */
+  public long getSmallestSeqNumberInMemstore() {
+    return this.memstore.getSmallestSeqNumber();
   }
 
   /**
@@ -1892,12 +1903,13 @@ public class Store extends SchemaConfigured implements HeapSize,
    * @param row
    * @param f
    * @param qualifier
-   * @param newValue the new value to set into memstore
-   * @return memstore size delta
+   * @param newValue
+   * @param seqNum The LSN associated with the edit.
+   * @return
    * @throws IOException
    */
   public long updateColumnValue(byte [] row, byte [] f,
-                                byte [] qualifier, long newValue)
+                                byte [] qualifier, long newValue, long seqNum)
       throws IOException {
 
     this.lock.readLock().lock();
@@ -1908,7 +1920,8 @@ public class Store extends SchemaConfigured implements HeapSize,
           f,
           qualifier,
           newValue,
-          now);
+          now,
+          seqNum);
 
     } finally {
       this.lock.readLock().unlock();

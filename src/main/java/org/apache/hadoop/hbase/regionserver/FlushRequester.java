@@ -31,6 +31,11 @@ public interface FlushRequester {
    * Tell the listener the cache needs to be flushed.
    *
    * @param region the HRegion requesting the cache flush
+   * @param selectiveFlushRequest is this a selective flush request? This means
+   *                              that if some column families are dominating
+   *                              the memstore size, only those column families
+   *                              would be flushed.
+   *
    */
-  void request(HRegion region);
+  void request(HRegion region, boolean selectiveFlushRequest);
 }
