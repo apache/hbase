@@ -42,8 +42,10 @@ import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.client.Append;
+import org.apache.hadoop.hbase.client.CoprocessorHConnection;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
+import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.HTableInterface;
 import org.apache.hadoop.hbase.client.Increment;
@@ -60,6 +62,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CoprocessorClassLoader;
 import org.apache.hadoop.hbase.util.SortedCopyOnWriteSet;
 import org.apache.hadoop.hbase.util.VersionInfo;
+import org.apache.hadoop.io.MultipleIOException;
 
 /**
  * Provides the common setup framework and runtime services for coprocessor
@@ -358,15 +361,33 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
 
       private byte[] tableName;
       private HTable table;
+      private HConnection connection;
 
-      public HTableWrapper(byte[] tableName) throws IOException {
+      public HTableWrapper(byte[] tableName, HConnection connection) throws IOException {
         this.tableName = tableName;
-        this.table = new HTable(conf, tableName);
+        this.table = new HTable(tableName, connection);
+        this.connection = connection;
         openTables.add(this);
       }
 
       void internalClose() throws IOException {
-        table.close();
+        List<IOException> exceptions = new ArrayList<IOException>(2);
+        try {
+          table.close();
+        } catch (IOException e) {
+          exceptions.add(e);
+        }
+        try {
+          // have to self-manage our connection, as per the HTable contract
+          if (this.connection != null) {
+            this.connection.close();
+          }
+        } catch (IOException e) {
+          exceptions.add(e);
+        }
+        if (!exceptions.isEmpty()) {
+          throw MultipleIOException.createIOException(exceptions);
+        }
       }
 
       public Configuration getConfiguration() {
@@ -659,7 +680,7 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
      */
     @Override
     public HTableInterface getTable(byte[] tableName) throws IOException {
-      return new HTableWrapper(tableName);
+      return new HTableWrapper(tableName, CoprocessorHConnection.getConnectionForEnvironment(this));
     }
   }
 

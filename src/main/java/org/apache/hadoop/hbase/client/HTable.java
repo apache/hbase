@@ -151,6 +151,31 @@ public class HTable implements HTableInterface {
     this.connection = HConnectionManager.getConnection(conf);
     this.configuration = conf;
 
+    this.pool = getDefaultExecutor(conf);
+    this.finishSetup();
+  }
+
+  /**
+   * Creates an object to access a HBase table. Shares zookeeper connection and other resources with
+   * other HTable instances created with the same <code>connection</code> instance. Use this
+   * constructor when the HConnection instance is externally managed (does not close the connection
+   * on {@link #close()}).
+   * @param tableName Name of the table.
+   * @param connection @param connection HConnection to be used.
+   * @throws IOException if a remote or network exception occurs
+   */
+  public HTable(byte[] tableName, HConnection connection) throws IOException {
+    this.tableName = tableName;
+    this.cleanupPoolOnClose = true;
+    this.cleanupConnectionOnClose = false;
+    this.connection = connection;
+    this.configuration = connection.getConfiguration();
+
+    this.pool = getDefaultExecutor(this.configuration);
+    this.finishSetup();
+  }
+
+  private static ThreadPoolExecutor getDefaultExecutor(Configuration conf) {
     int maxThreads = conf.getInt("hbase.htable.threads.max", Integer.MAX_VALUE);
     if (maxThreads == 0) {
       maxThreads = 1; // is there a better default?
@@ -161,13 +186,12 @@ public class HTable implements HTableInterface {
     // if it is necessary and will grow unbounded. This could be bad but in HCM
     // we only create as many Runnables as there are region servers. It means
     // it also scales when new region servers are added.
-    this.pool = new ThreadPoolExecutor(1, maxThreads,
+    ThreadPoolExecutor pool = new ThreadPoolExecutor(1, maxThreads,
         keepAliveTime, TimeUnit.SECONDS,
         new SynchronousQueue<Runnable>(),
         Threads.newDaemonThreadFactory("hbase-table"));
-    ((ThreadPoolExecutor)this.pool).allowCoreThreadTimeOut(true);
-
-    this.finishSetup();
+    pool.allowCoreThreadTimeOut(true);
+    return pool;
   }
 
   /**
