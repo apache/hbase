@@ -28,6 +28,7 @@ import java.util.UUID;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -128,6 +129,7 @@ public final class HLogPerformanceEvaluation extends Configured implements Tool 
     boolean verify = false;
     boolean verbose = false;
     boolean cleanup = true;
+    boolean noclosefs = false;
     long roll = Long.MAX_VALUE;
     // Process command line args
     for (int i = 0; i < args.length; i++) {
@@ -155,6 +157,8 @@ public final class HLogPerformanceEvaluation extends Configured implements Tool 
           verbose = true;
         } else if (cmd.equals("-nocleanup")) {
           cleanup = false;
+        } else if (cmd.equals("-noclosefs")) {
+          noclosefs = true;
         } else if (cmd.equals("-roll")) {
           roll = Long.parseLong(args[++i]);
         } else if (cmd.equals("-h")) {
@@ -231,7 +235,8 @@ public final class HLogPerformanceEvaluation extends Configured implements Tool 
         if (cleanup) cleanRegionRootDir(fs, rootRegionDir);
       }
     } finally {
-      fs.close();
+      // We may be called inside a test that wants to keep on using the fs.
+      if (!noclosefs) fs.close();
     }
 
     return(0);
@@ -297,6 +302,7 @@ public final class HLogPerformanceEvaluation extends Configured implements Tool 
     System.err.println("  -keySize <N>     Row key size in byte.");
     System.err.println("  -valueSize <N>   Row/Col value size in byte.");
     System.err.println("  -nocleanup       Do NOT remove test data when done.");
+    System.err.println("  -noclosefs       Do NOT close the filesystem when done.");
     System.err.println("  -nosync          Append without syncing");
     System.err.println("  -verify          Verify edits written in sequence");
     System.err.println("  -verbose         Output extra info; e.g. all edit seq ids when verifying");
@@ -372,11 +378,11 @@ public final class HLogPerformanceEvaluation extends Configured implements Tool 
    * @return errCode
    * @throws Exception
    */
-  static int innerMain(final String [] args) throws Exception {
-    return ToolRunner.run(HBaseConfiguration.create(), new HLogPerformanceEvaluation(), args);
+  static int innerMain(final Configuration c, final String [] args) throws Exception {
+    return ToolRunner.run(c, new HLogPerformanceEvaluation(), args);
   }
 
   public static void main(String[] args) throws Exception {
-     System.exit(innerMain(args));
+     System.exit(innerMain(HBaseConfiguration.create(), args));
   }
 }
