@@ -38,6 +38,7 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CountDownLatch;
 
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Matchers.anyObject;
@@ -91,12 +92,16 @@ public class TestSimpleRpcScheduler {
         replicationTask, HConstants.REPLICATION_QOS);
     PriorityFunction qosFunction = mock(PriorityFunction.class);
     final Map<CallRunner, Thread> handlerThreads = Maps.newHashMap();
+    final CountDownLatch countDownLatch = new CountDownLatch(tasks.size());
     Answer<Void> answerToRun = new Answer<Void>() {
       @Override
       public Void answer(InvocationOnMock invocationOnMock) throws Throwable {
-        handlerThreads.put(
-            (CallRunner) invocationOnMock.getMock(),
-            Thread.currentThread());
+        synchronized (handlerThreads) {
+          handlerThreads.put(
+              (CallRunner) invocationOnMock.getMock(),
+              Thread.currentThread());
+        }
+        countDownLatch.countDown();
         return null;
       }
     };
@@ -119,6 +124,7 @@ public class TestSimpleRpcScheduler {
     scheduler.stop();
 
     // Tests that these requests are handled by three distinct threads.
+    countDownLatch.await();
     assertEquals(3, ImmutableSet.copyOf(handlerThreads.values()).size());
   }
 
