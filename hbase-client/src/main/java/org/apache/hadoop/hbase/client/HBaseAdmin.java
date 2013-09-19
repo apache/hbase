@@ -159,6 +159,7 @@ public class HBaseAdmin implements Abortable, Closeable {
   private final int retryLongerMultiplier;
   private boolean aborted;
   private boolean cleanupConnectionOnClose = false; // close the connection in close()
+  private boolean closed = false;
 
   private RpcRetryingCallerFactory rpcCallerFactory;
 
@@ -2378,9 +2379,9 @@ public class HBaseAdmin implements Abortable, Closeable {
 
   @Override
   public synchronized void close() throws IOException {
-    if (cleanupConnectionOnClose && this.connection != null) {
+    if (cleanupConnectionOnClose && this.connection != null && !this.closed) {
       this.connection.close();
-      this.connection = null;
+      this.closed = true;
     }
   }
 
