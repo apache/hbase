@@ -132,8 +132,8 @@ public class HTable implements HTableInterface {
   private ExecutorService pool;  // For Multi
   private boolean closed;
   private int operationTimeout;
-  private final boolean cleanupPoolOnClose; // shutdown the pool in close()
-  private final boolean cleanupConnectionOnClose; // close the connection in close()
+  private boolean cleanupPoolOnClose; // shutdown the pool in close()
+  private boolean cleanupConnectionOnClose; // close the connection in close()
 
   /** The Async process for puts with autoflush set to false or multiputs */
   protected AsyncProcess<Object> ap;
@@ -183,15 +183,26 @@ public class HTable implements HTableInterface {
    */
   public HTable(Configuration conf, final TableName tableName)
   throws IOException {
-    this.tableName = tableName;
-    this.cleanupPoolOnClose = this.cleanupConnectionOnClose = true;
-    if (conf == null) {
-      this.connection = null;
-      return;
-    }
-    this.connection = HConnectionManager.getConnection(conf);
-    this.configuration = conf;
+    this(tableName, conf == null ? null : HConnectionManager.getConnection(conf),
+        getDefaultExecutor(conf), conf);
+    this.cleanupConnectionOnClose = true;
+    this.cleanupPoolOnClose = true;
+  }
 
+  /**
+   * Creates an object to access a HBase table. Shares zookeeper connection and other resources with
+   * other HTable instances created with the same <code>connection</code> instance. Use this
+   * constructor when the HConnection instance is externally managed.
+   * @param tableName Name of the table.
+   * @param connection HConnection to be used.
+   * @throws IOException if a remote or network exception occurs
+   */
+  public HTable(TableName tableName, HConnection connection) throws IOException {
+    this(tableName, connection, getDefaultExecutor(connection.getConfiguration()));
+    this.cleanupPoolOnClose = true;
+  }
+
+  private static ThreadPoolExecutor getDefaultExecutor(Configuration conf) {
     int maxThreads = conf.getInt("hbase.htable.threads.max", Integer.MAX_VALUE);
     if (maxThreads == 0) {
       maxThreads = 1; // is there a better default?
@@ -202,11 +213,11 @@ public class HTable implements HTableInterface {
     // if it is necessary and will grow unbounded. This could be bad but in HCM
     // we only create as many Runnables as there are region servers. It means
     // it also scales when new region servers are added.
-    this.pool = new ThreadPoolExecutor(1, maxThreads, keepAliveTime, TimeUnit.SECONDS,
-        new SynchronousQueue<Runnable>(), Threads.newDaemonThreadFactory("htable"));
-    ((ThreadPoolExecutor) this.pool).allowCoreThreadTimeOut(true);
-
-    this.finishSetup();
+    ThreadPoolExecutor pool =
+        new ThreadPoolExecutor(1, maxThreads, keepAliveTime, TimeUnit.SECONDS,
+            new SynchronousQueue<Runnable>(), Threads.newDaemonThreadFactory("htable"));
+    pool.allowCoreThreadTimeOut(true);
+    return pool;
   }
 
   /**
@@ -240,14 +251,9 @@ public class HTable implements HTableInterface {
    */
   public HTable(Configuration conf, final TableName tableName, final ExecutorService pool)
       throws IOException {
-    this.connection = HConnectionManager.getConnection(conf);
-    this.configuration = conf;
-    this.pool = pool;
-    this.tableName = tableName;
+    this(tableName, HConnectionManager.getConnection(conf), pool, conf);
     this.cleanupPoolOnClose = false;
     this.cleanupConnectionOnClose = true;
-
-    this.finishSetup();
   }
 
   /**
@@ -279,13 +285,30 @@ public class HTable implements HTableInterface {
    */
   public HTable(TableName tableName, final HConnection connection,
       final ExecutorService pool) throws IOException {
+    this(tableName, connection, pool, connection.getConfiguration());
+  }
+
+  /**
+   * Creates an object to access a HBase table.
+   * Shares zookeeper connection and other resources with other HTable instances
+   * created with the same <code>connection</code> instance.
+   * Use this constructor when the ExecutorService and HConnection instance are
+   * externally managed.
+   * @param tableName Name of the table.
+   * @param connection HConnection to be used.
+   * @param pool ExecutorService to be used.
+   * @param conf {@link Configuration} to use for general table properties
+   * @throws IOException if a remote or network exception occurs
+   */
+  public HTable(TableName tableName, final HConnection connection, final ExecutorService pool,
+      Configuration conf) throws IOException {
     if (connection == null || connection.isClosed()) {
       throw new IllegalArgumentException("Connection is null or closed.");
     }
     this.tableName = tableName;
     this.cleanupPoolOnClose = this.cleanupConnectionOnClose = false;
     this.connection = connection;
-    this.configuration = connection.getConfiguration();
+    this.configuration = conf;
     this.pool = pool;
 
     this.finishSetup();
