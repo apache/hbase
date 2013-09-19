@@ -49,6 +49,7 @@ Improvement
 
 Task
 
+    [HBASE-9153] - Introduce/update a script to generate jdiff reports
     [HBASE-9377] - Backport HBASE- 9208 "ReplicationLogCleaner slow at large scale"
 
 Test
