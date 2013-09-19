@@ -1,6 +1,6 @@
 HBase Change Log
 
-Release 0.94.12 - 9/10/2013
+Release 0.94.12 - 9/19/2013
 Sub-task
 
     [HBASE-9277] - REST should use listTableNames to list tables
@@ -40,6 +40,7 @@ Bug
     [HBASE-9506] - [0.94] Backport HBASE-9309 The links in the backup masters template are bad
     [HBASE-9534] - Short-Circuit Coprocessor HTable access when on the same server
     [HBASE-9566] - Add back WALEdit#get/setScopes method
+    [HBASE-9584] - Short-Circuit Coprocessor doesn't correctly lookup table when on server
 
 Improvement
 
