@@ -250,7 +250,8 @@ mvn clean package -DskipTests
 
      <section xml:id="maven.release">
          <title>Making a Release Candidate</title>
-         <para>I'll explain by running through the process.  See later in this section for more detail on particular steps.</para>
+         <para>I'll explain by running through the process.  See later in this section for more detail on particular steps.
+             The script <filename>dev-support/make_rc.sh</filename> automates most of this.</para>
 
         <para>The <link xlink:href="http://wiki.apache.org/hadoop/HowToRelease">Hadoop How To Release</link> wiki page informs much of the below and may have more detail on particular sections so it is worth review.</para>
          <para>Update CHANGES.txt with the changes since the last release (query JIRA, export to excel then hack w/ vim to format to suit CHANGES.txt TODO: Needs detail).
@@ -294,6 +295,13 @@ it will invoke the apache pom referenced by our poms.  It will also sign your ar
 repository is configured correctly (your <filename>settings.xml</filename> adds your gpg password property to the apache profile).
 <programlisting>$ MAVEN_OPTS="-Xmx3g" mvn -f pom.xml.hadoop1 deploy -DskipTests -Papache-release</programlisting>
 The last command above copies all artifacts for hadoop1 up to mvn repo.  If no <varname>-SNAPSHOT</varname> in the version, it puts the artifacts into a staging directory.  This is what you want.
+<note>
+    <title>hbase-downstreamer</title>
+    <para>
+        See the <link xlink:href="">hbase-downstreamer</link> test for a simple example of a project that is downstream of hbase an depends on it.
+        Check it out and run its simple test to make sure maven hbase-hadoop1 and hbase-hadoop2 are properly deployed to the maven repository.
+    </para>
+</note>
             </para>
 
         <para>Lets do the hadoop2 artifacts (read above hadoop1 section closely before coming here because we don't repeat explaination in the below).
@@ -303,7 +311,7 @@ $ ./dev-support/generate-hadoopX-poms.sh 0.96.0 0.96.0-hadoop2
 $ MAVEN_OPTS="-Xmx3g" mvn -f pom.xml.hadoop2 clean install -DskipTests -Prelease
 $ MAVEN_OPTS="-Xmx3g" mvn -f pom.xml.hadoop2 install -DskipTests site assembly:single -Prelease
 # Undo the tgz and check it out.  If good, copy the tarball to your 'version directory'. Now deploy to mvn.
-$ MAVEN_OPTS="-Xmx3g" mvn -f pom.xml.hadoop2 deploy -DskipTests -Papache-release -Pgpg
+$ MAVEN_OPTS="-Xmx3g" mvn -f pom.xml.hadoop2 deploy -DskipTests -Papache-release
             </programlisting>
         </para>
         <para>
