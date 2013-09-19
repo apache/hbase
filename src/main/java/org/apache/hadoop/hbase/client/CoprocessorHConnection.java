@@ -18,29 +18,16 @@
 package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.ExecutorService;
+import java.net.InetSocketAddress;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
-import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HRegionLocation;
-import org.apache.hadoop.hbase.HServerAddress;
-import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.client.HConnectionManager.HConnectionImplementation;
-import org.apache.hadoop.hbase.client.coprocessor.Batch.Call;
-import org.apache.hadoop.hbase.client.coprocessor.Batch.Callback;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
-import org.apache.hadoop.hbase.ipc.CoprocessorProtocol;
-import org.apache.hadoop.hbase.ipc.HMasterInterface;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 
 /**
  * Connection to an HTable from within a Coprocessor. Can do some nice tricks since we know we are
@@ -91,34 +78,33 @@ public class CoprocessorHConnection extends HConnectionManager.HConnectionImplem
     this.serverName = server.getServerName();
   }
 
-  public HRegionInterface getHRegionConnection(String hostname, int port) throws IOException {
+  @Override
+  HRegionInterface getHRegionConnection(final String hostname, final int port,
+      final InetSocketAddress isa, final boolean master) throws IOException {
+    // check to see where the server is running
+    // need this isa stuff here since its what the HConnectionManager is doing too
+    boolean isRemote = false;
+    if (isa != null) {
+      isRemote = checkRemote(isa.getHostName(), isa.getPort());
+    } else {
+      isRemote = checkRemote(hostname, port);
+    }
     // if we aren't talking to the local HRegionServer, then do the usual thing
-    if (!this.serverName.getHostname().equals(hostname) || !(this.serverName.getPort() == port)) {
-      return super.getHRegionConnection(hostname, port);
+    if (isRemote) {
+      return super.getHRegionConnection(hostname, port, isa, master);
     }
 
-    // in the usual HConnectionImplementation we would check a cache for the server. However,
-    // because we can just return the actual server, we don't need to do anything special.
+    // local access, so just pass the actual server, rather than a proxy
     return this.server;
   }
 
-  @Deprecated
-  public HRegionInterface getHRegionConnection(HServerAddress regionServer) throws IOException {
-    throw new UnsupportedOperationException(
-        "Coprocessors only find tables via #getHRegionConnection(String, int)");
-  }
-
-  @Deprecated
-  public HRegionInterface getHRegionConnection(HServerAddress regionServer, boolean getMaster)
-      throws IOException {
-    throw new UnsupportedOperationException(
-        "Coprocessors only find tables via #getHRegionConnection(String, int)");
-  }
-
-  @Deprecated
-  public HRegionInterface getHRegionConnection(String hostname, int port, boolean getMaster)
-      throws IOException {
-    throw new UnsupportedOperationException(
-        "Coprocessors only find tables via #getHRegionConnection(String, int)");
+  /**
+   * Check that the hostname and port map the the server on which we are currently running
+   * @param hostName hostname to check
+   * @param port port to check
+   * @return <tt>true</tt> the connection is <b>not</b> currently running on the given host and port
+   */
+  private boolean checkRemote(String hostName, int port) {
+    return !(this.serverName.getHostname().equals(hostName) && this.serverName.getPort() == port);
   }
 }
