@@ -31,6 +31,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RawLocalFileSystem;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.io.hfile.HFile.Reader;
 import org.apache.hadoop.hbase.util.Bytes;
 
@@ -83,7 +84,7 @@ public class RandomSeek {
     List<String> keys = slurp("/Users/ryan/xaa.50k");
 
     // Get a scanner that doesn't cache and that uses pread.
-    HFileScanner scanner = reader.getScanner(false, true);
+    HFileScanner scanner = reader.getScanner(false, true, false);
     int count;
     long totalBytes = 0;
     int notFound = 0;

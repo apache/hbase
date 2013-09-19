@@ -38,6 +38,7 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.io.hfile.HFile.Reader;
 import org.apache.hadoop.hbase.io.hfile.HFile.Writer;
 import org.apache.hadoop.io.BytesWritable;
@@ -166,7 +167,7 @@ public class TestHFileSeek extends TestCase {
     KeySampler kSampler =
         new KeySampler(rng, reader.getFirstKey(), reader.getLastKey(),
             keyLenGen);
-    HFileScanner scanner = reader.getScanner(false, false);
+    HFileScanner scanner = reader.getScanner(false, false, false);
     BytesWritable key = new BytesWritable();
     timer.reset();
     timer.start();

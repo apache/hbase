@@ -1297,7 +1297,7 @@ public class StoreFile extends SchemaConfigured {
      * @return a scanner
      */
     public StoreFileScanner getStoreFileScanner(boolean cacheBlocks) {
-      return getStoreFileScanner(cacheBlocks, false);
+      return getStoreFileScanner(cacheBlocks, false, false);
     }
 
     /**
@@ -1305,12 +1305,14 @@ public class StoreFile extends SchemaConfigured {
      *
      * @param cacheBlocks should this scanner cache blocks?
      * @param isCompaction is scanner being used for compaction?
+     * @param preloadBlocksMode this tells whether the scanner uses Blocking/NonBlocking preloader
+     *          or not using preloading at all
      * @return a scanner
      */
     public StoreFileScanner getStoreFileScanner(boolean cacheBlocks,
-                                               boolean isCompaction) {
-      return new StoreFileScanner(this,
-                                 getScanner(cacheBlocks, isCompaction), !isCompaction);
+        boolean isCompaction, boolean preloadBlocks) {
+      return new StoreFileScanner(this, getScanner(cacheBlocks, isCompaction,
+        preloadBlocks), !isCompaction);
     }
 
     /**
@@ -1323,21 +1325,23 @@ public class StoreFile extends SchemaConfigured {
      */
     @Deprecated
     public HFileScanner getScanner(boolean cacheBlocks){
-      return getScanner(cacheBlocks, false);
+      return getScanner(cacheBlocks, false, false);
     }
 
     /**
-     * Warning: Do not write further code which depends on this call. Instead
-     * use getStoreFileScanner() which uses the StoreFileScanner class/interface
-     * which is the preferred way to scan a store with higher level concepts.
-     *
+     * Warning: Do not write further code which depends on this call. Instead use
+     * getStoreFileScanner() which uses the StoreFileScanner class/interface which is the preferred
+     * way to scan a store with higher level concepts.
      * @param cacheBlocks should we cache the blocks?
      * @param isCompaction is scanner being used for compaction?
+     * @param preloadBlocksMode this tells whether the scanner uses Blocking/NonBlocking preloader
+     *          or not using preloading at all
      * @return the underlying HFileScanner
      */
     @Deprecated
-    public HFileScanner getScanner(boolean cacheBlocks, boolean isCompaction) {
-      return reader.getScanner(cacheBlocks, isCompaction);
+    public HFileScanner getScanner(boolean cacheBlocks, boolean isCompaction,
+        boolean preloadBlocks) {
+      return reader.getScanner(cacheBlocks, isCompaction, preloadBlocks);
     }
 
     public void close(boolean evictOnClose) throws IOException {

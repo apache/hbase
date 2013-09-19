@@ -942,10 +942,15 @@ public class Store extends SchemaConfigured implements HeapSize,
   /**
    * Get all scanners with no filtering based on TTL (that happens further down
    * the line).
+   * @param cacheBlocks whether those scanners should cache the blocks into the block cache or not.
+   * @param isCompaction whether those scanners is being used for compaction or not.
+   * @param preloadDataBlocks whether those scanners should preload the next data blocks into the block cache or not.
    * @return all scanners for this store
    */
-  protected List<KeyValueScanner> getScanners(boolean cacheBlocks,
-      boolean isCompaction, ScanQueryMatcher matcher) throws IOException {
+  protected List<KeyValueScanner>
+      getScanners(boolean cacheBlocks, boolean isCompaction,
+          boolean preloadBlocks, ScanQueryMatcher matcher)
+          throws IOException {
     List<StoreFile> storeFiles;
     List<KeyValueScanner> memStoreScanners;
     this.lock.readLock().lock();
@@ -963,7 +968,7 @@ public class Store extends SchemaConfigured implements HeapSize,
     // actually more correct, since memstore get put at the end.
     List<StoreFileScanner> sfScanners =
         StoreFileScanner.getScannersForStoreFiles(storeFiles, cacheBlocks,
-            isCompaction, matcher);
+          isCompaction, preloadBlocks, matcher);
     List<KeyValueScanner> scanners =
       new ArrayList<KeyValueScanner>(sfScanners.size()+1);
     scanners.addAll(sfScanners);
@@ -1588,7 +1593,7 @@ public class Store extends SchemaConfigured implements HeapSize,
       firstOnRow = new KeyValue(lastKV.getRow(), HConstants.LATEST_TIMESTAMP);
     }
     // Get a scanner that caches blocks and that uses pread.
-    HFileScanner scanner = r.getScanner(true, false);
+    HFileScanner scanner = r.getScanner(true, false, false);
     // Seek scanner.  If can't seek it, return.
     if (!seekToScanner(scanner, firstOnRow, firstKV)) return;
     // If we found candidate on firstOnRow, just return. THIS WILL NEVER HAPPEN!

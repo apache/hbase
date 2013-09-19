@@ -38,6 +38,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
@@ -197,7 +198,7 @@ public class TestCompoundBloomFilter {
         NoOpDataBlockEncoder.INSTANCE);
     StoreFile.Reader r = sf.createReader();
     final boolean pread = true; // does not really matter
-    StoreFileScanner scanner = r.getStoreFileScanner(true, pread);
+    StoreFileScanner scanner = r.getStoreFileScanner(true, pread, false);
 
     {
       // Test for false negatives (not allowed).

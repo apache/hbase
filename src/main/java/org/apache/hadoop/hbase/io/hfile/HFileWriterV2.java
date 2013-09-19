@@ -123,7 +123,7 @@ public class HFileWriterV2 extends AbstractHFileWriter {
 
     LOG.debug("HFileWriter initialized with " + cacheConf);
   }
-
+  
   /**
    * At a block boundary, write all the inline blocks and opens new block.
    *
@@ -132,7 +132,7 @@ public class HFileWriterV2 extends AbstractHFileWriter {
   private void checkBlockBoundary() throws IOException {
     if (fsBlockWriter.blockSizeWritten() < blockSize)
       return;
-
+    
     finishBlock();
     writeInlineBlocks(false);
     newBlock();
@@ -329,7 +329,7 @@ public class HFileWriterV2 extends AbstractHFileWriter {
   public void append(final byte[] key, final byte[] value) throws IOException {
     append(0, key, 0, key.length, value, 0, value.length, null);
   }
-
+  
   /**
    * Add key/value to file. Keys must be added in an order that agrees with the
    * Comparator passed on construction.

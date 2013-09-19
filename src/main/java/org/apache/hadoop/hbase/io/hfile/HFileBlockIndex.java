@@ -259,7 +259,7 @@ public class HFileBlockIndex {
             expectedBlockType = BlockType.DATA;
           }
           block = cachingBlockReader.readBlock(currentOffset,
-              currentOnDiskSize, shouldCache, isCompaction,
+              currentOnDiskSize, shouldCache, isCompaction, false,
               expectedBlockType, kvContext);
         }
 
@@ -334,9 +334,9 @@ public class HFileBlockIndex {
         }
 
         // Caching, using pread, assuming this is not a compaction.
-        HFileBlock midLeafBlock = cachingBlockReader.readBlock(
-            midLeafBlockOffset, midLeafBlockOnDiskSize, true, false,
-            BlockType.LEAF_INDEX, null);
+        HFileBlock midLeafBlock =
+            cachingBlockReader.readBlock(midLeafBlockOffset, midLeafBlockOnDiskSize, true, false,
+              false, BlockType.LEAF_INDEX, null);
 
         ByteBuffer b = midLeafBlock.getBufferWithoutHeader();
         int numDataBlocks = b.getInt();

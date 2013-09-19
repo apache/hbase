@@ -170,7 +170,8 @@ public class HFileReaderV1 extends AbstractHFileReader {
    * @return Scanner on this file.
    */
   @Override
-  public HFileScanner getScanner(boolean cacheBlocks, final boolean isCompaction) {
+  public HFileScanner getScanner(boolean cacheBlocks,
+      final boolean isCompaction, boolean preloadBlocks) {
     return new ScannerV1(this, cacheBlocks, isCompaction);
   }
 
@@ -501,6 +502,15 @@ public class HFileReaderV1 extends AbstractHFileReader {
       blockSeek(key, offset, length, true);
       return true;
     }
+    
+    @Override
+    public void close() {
+      /*
+       * Note this function is overridden as we need to have it in HFileScanner interface, so that
+       * the store scanner can delegate the close operation(which is required in case of
+       * block preloading enabled) to the HFileScanner it owns
+       */
+    }
   }
 
   /**
@@ -699,13 +709,13 @@ public class HFileReaderV1 extends AbstractHFileReader {
     public boolean currKeyValueObtainedFromCache() {
       return this.kvContext.getObtainedFromCache();
     }
-
+    
   }
 
   @Override
-  public HFileBlock readBlock(long offset, long onDiskBlockSize,
-      boolean cacheBlock, boolean isCompaction,
-      BlockType expectedBlockType, KeyValueContext kvContext) {
+  public HFileBlock readBlock(long offset, long onDiskBlockSize, boolean cacheBlock,
+      boolean isCompaction, boolean cacheOnPreload, BlockType expectedBlockType,
+      KeyValueContext kvContext) {
     throw new UnsupportedOperationException();
   }
 

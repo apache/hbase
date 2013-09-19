@@ -113,6 +113,7 @@ import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.L2BucketCache;
 import org.apache.hadoop.hbase.io.hfile.LruBlockCache;
 import org.apache.hadoop.hbase.io.hfile.LruBlockCache.CacheStats;
+import org.apache.hadoop.hbase.io.hfile.PreloadThreadPool;
 import org.apache.hadoop.hbase.ipc.HBaseRPC;
 import org.apache.hadoop.hbase.ipc.HBaseRPCErrorHandler;
 import org.apache.hadoop.hbase.ipc.HBaseRPCOptions;
@@ -477,7 +478,13 @@ public class HRegionServer implements HRegionInterface,
                 return t;
               }
             });
-
+    // Construct threads for preloading
+    int corePreloadThreads =
+        conf.getInt(HConstants.CORE_PRELOAD_THREAD_COUNT,
+          HConstants.DEFAULT_CORE_PRELOAD_THREAD_COUNT);
+    int maxPreloadThreads = 
+        conf.getInt(HConstants.MAX_PRELOAD_THREAD_COUNT, HConstants.DEFAULT_MAX_PRELOAD_THREAD_COUNT);
+    PreloadThreadPool.constructPreloaderThreadPool(corePreloadThreads, maxPreloadThreads);
   }
 
   /**

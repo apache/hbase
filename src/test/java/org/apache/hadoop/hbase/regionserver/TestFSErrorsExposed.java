@@ -85,7 +85,7 @@ public class TestFSErrorsExposed {
         NoOpDataBlockEncoder.INSTANCE);
 
     StoreFile.Reader reader = sf.createReader();
-    HFileScanner scanner = reader.getScanner(false, true);
+    HFileScanner scanner = reader.getScanner(false, true, false);
 
     FaultyInputStream inStream = fs.inStreams.get(0).get();
     assertNotNull(inStream);

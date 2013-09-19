@@ -89,7 +89,8 @@ public class Scan extends Operation implements Writable {
   private static final byte RESPONSE_SIZE_VERSION = (byte)4;
   private static final byte FLASHBACK_VERSION = (byte) 5;
   private static final byte PREFETCH_VERSION = (byte) 6;
-  private static final byte SCAN_VERSION = PREFETCH_VERSION;
+  private static final byte PRELOAD_VERSION = (byte) 7;
+  private static final byte SCAN_VERSION = PRELOAD_VERSION;
 
   private byte [] startRow = HConstants.EMPTY_START_ROW;
   private byte [] stopRow  = HConstants.EMPTY_END_ROW;
@@ -108,6 +109,8 @@ public class Scan extends Operation implements Writable {
   private Map<byte [], NavigableSet<byte []>> familyMap =
     new TreeMap<byte [], NavigableSet<byte []>>(Bytes.BYTES_COMPARATOR);
   private long effectiveTS = HConstants.LATEST_TIMESTAMP;
+  /*This tells whether the scanner will preload blocks or not*/
+  private boolean preloadBlocks = false;
 
   /**
    * Create a Scan operation across all rows.
@@ -250,6 +253,22 @@ public class Scan extends Operation implements Writable {
   throws IOException {
     tr = new TimeRange(minStamp, maxStamp);
     return this;
+  }
+
+  /**
+   * This tells whether this scanner will preload data blocks or not.
+   * @return status of preload data blocks
+   */
+  public boolean isPreloadBlocks() {
+    return preloadBlocks;
+  }
+  
+  /**
+   * Set whether this scanner should preload data blocks or not.
+   * @param value
+   */
+  public void setPreloadBlocks(boolean value) {
+    preloadBlocks = true;
   }
 
   /**
@@ -700,7 +719,10 @@ public class Scan extends Operation implements Writable {
     }
     this.caching = in.readInt();
     this.cacheBlocks = in.readBoolean();
-    if(in.readBoolean()) {
+    if (version >= PRELOAD_VERSION) {
+      this.preloadBlocks = in.readBoolean();
+    }
+    if (in.readBoolean()) {
       this.filter = (Filter)createForName(Bytes.toString(Bytes.readByteArray(in)));
       this.filter.readFields(in);
     }
@@ -726,7 +748,9 @@ public class Scan extends Operation implements Writable {
     // We try to talk a protocol version as low as possible so that we can be
     // backward compatible as far as possible.
     byte version = (byte) 1;
-    if (serverPrefetching) {
+    if (preloadBlocks) {
+      version = PRELOAD_VERSION;
+    } else if (serverPrefetching) {
       version = PREFETCH_VERSION;
     } else if (effectiveTS != HConstants.LATEST_TIMESTAMP) {
       version = FLASHBACK_VERSION;
@@ -762,6 +786,9 @@ public class Scan extends Operation implements Writable {
     }
     out.writeInt(this.caching);
     out.writeBoolean(this.cacheBlocks);
+    if (version >= PRELOAD_VERSION) {
+      out.writeBoolean(this.preloadBlocks);
+    }
     if(this.filter == null) {
       out.writeBoolean(false);
     } else {

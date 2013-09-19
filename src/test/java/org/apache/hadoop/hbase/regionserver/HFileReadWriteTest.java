@@ -48,6 +48,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Scan;
@@ -589,7 +590,7 @@ public class HFileReadWriteTest {
     public Boolean call() throws Exception {
       Thread.currentThread().setName("reader " + readerId);
       Random rand = new Random();
-      StoreFileScanner scanner = reader.getStoreFileScanner(true, pread);
+      StoreFileScanner scanner = reader.getStoreFileScanner(true, pread, false);
 
       while (System.currentTimeMillis() < endTime) {
         byte[] row = createRandomRow(rand, firstRow, lastRow);

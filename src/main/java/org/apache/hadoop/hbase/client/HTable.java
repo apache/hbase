@@ -50,6 +50,7 @@ import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.UnknownScannerException;
 import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitor;
 import org.apache.hadoop.hbase.io.hfile.Compression;
+import org.apache.hadoop.hbase.io.hfile.PreloadThreadPool;
 import org.apache.hadoop.hbase.ipc.HBaseRPCOptions;
 import org.apache.hadoop.hbase.ipc.ProfilingData;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -606,6 +607,17 @@ public class HTable implements HTableInterface {
    */
   public ResultScanner getLocalScanner(final Scan scan,
       boolean createNewHardlinks) throws IOException {
+    // Construct preload threads in case this scanner is preloading scanner
+    // We'll obtain the number of threads from the HTableCon TODO (is this the right place ? )
+    if (scan.isPreloadBlocks()) {
+      int minimum =
+          getConfiguration().getInt(HConstants.CORE_PRELOAD_THREAD_COUNT,
+            HConstants.DEFAULT_CORE_PRELOAD_THREAD_COUNT);
+      int maximum =
+          getConfiguration().getInt(HConstants.MAX_PRELOAD_THREAD_COUNT,
+            HConstants.DEFAULT_MAX_PRELOAD_THREAD_COUNT);
+      PreloadThreadPool.constructPreloaderThreadPool(minimum, maximum);
+    }
     ClientLocalScanner s =
         new ClientLocalScanner(scan, this, createNewHardlinks);
     s.initialize();

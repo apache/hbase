@@ -181,7 +181,7 @@ public class HRegion implements HeapSize {
   // The number of rows are read
   protected final AtomicInteger rowReadCnt = new AtomicInteger(0);
   
-  // The numbe of rows are updated
+  // The number of rows are updated
   protected final AtomicInteger rowUpdateCnt = new AtomicInteger(0);
 
   private HRegionServer regionServer = null;
@@ -1749,9 +1749,8 @@ public class HRegion implements HeapSize {
    * @return InternalScanner
    * @throws IOException read exceptions
    */
-  public InternalScanner getScanner(Scan scan)
-  throws IOException {
-   return getScanner(scan, null);
+  public InternalScanner getScanner(Scan scan) throws IOException {
+    return getScanner(scan, null);
   }
 
   protected InternalScanner getScanner(Scan scan, List<KeyValueScanner> additionalScanners) throws IOException {

@@ -24,6 +24,7 @@ import java.io.IOException;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestCase;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.util.Bytes;
 
@@ -66,7 +67,7 @@ public class TestSeekTo extends HBaseTestCase {
     Path p = makeNewFile();
     HFile.Reader reader = HFile.createReader(fs, p, new CacheConfig(conf));
     reader.loadFileInfo();
-    HFileScanner scanner = reader.getScanner(false, true);
+    HFileScanner scanner = reader.getScanner(false, true, false);
     assertEquals(false, scanner.seekBefore(toKV("a").getKey()));
 
     assertEquals(false, scanner.seekBefore(toKV("c").getKey()));
@@ -99,7 +100,7 @@ public class TestSeekTo extends HBaseTestCase {
     Path p = makeNewFile();
     HFile.Reader reader = HFile.createReader(fs, p, new CacheConfig(conf));
     reader.loadFileInfo();
-    HFileScanner scanner = reader.getScanner(false, true);
+    HFileScanner scanner = reader.getScanner(false, true, false);
     assertEquals(false, scanner.seekBefore(toKV("a").getKey()));
     assertEquals(false, scanner.seekBefore(toKV("b").getKey()));
     assertEquals(false, scanner.seekBefore(toKV("c").getKey()));
@@ -183,7 +184,7 @@ public class TestSeekTo extends HBaseTestCase {
     HFile.Reader reader = HFile.createReader(fs, p, new CacheConfig(conf));
     reader.loadFileInfo();
     assertEquals(2, reader.getDataBlockIndexReader().getRootBlockCount());
-    HFileScanner scanner = reader.getScanner(false, true);
+    HFileScanner scanner = reader.getScanner(false, true, false);
     // lies before the start of the file.
     assertEquals(-1, scanner.seekTo(toKV("a").getKey()));
 

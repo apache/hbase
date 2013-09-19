@@ -33,6 +33,7 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestCase;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue.KeyComparator;
 import org.apache.hadoop.hbase.io.hfile.HFile.Reader;
 import org.apache.hadoop.hbase.io.hfile.HFile.Writer;
@@ -161,7 +162,7 @@ public class TestHFile extends HBaseTestCase {
     // Load up the index.
     reader.loadFileInfo();
     // Get a scanner that caches and that does not use pread.
-    HFileScanner scanner = reader.getScanner(true, false);
+    HFileScanner scanner = reader.getScanner(true, false, false);
     // Align scanner at start of the file.
     scanner.seekTo();
     readAllRecords(scanner);
@@ -239,7 +240,7 @@ public class TestHFile extends HBaseTestCase {
         this.fs.getFileStatus(mFile).getLen(), cacheConf);
     reader.loadFileInfo();
     // No data -- this should return false.
-    assertFalse(reader.getScanner(false, false).seekTo());
+    assertFalse(reader.getScanner(false, false, false).seekTo());
     someReadingWithMetaBlock(reader);
     fs.delete(mFile, true);
     reader.close();

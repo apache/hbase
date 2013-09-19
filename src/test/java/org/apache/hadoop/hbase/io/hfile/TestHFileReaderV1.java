@@ -28,6 +28,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics;
 import org.apache.hadoop.hbase.util.Bytes;
 
@@ -80,7 +81,7 @@ public class TestHFileReaderV1 {
       int totalDataSize = 0;
       int n = 0;
 
-      HFileScanner scanner = reader.getScanner(false, pread);
+      HFileScanner scanner = reader.getScanner(false, pread, false);
       assertTrue(scanner.seekTo());
       do {
         totalDataSize += scanner.getKey().limit() + scanner.getValue().limit()

@@ -210,7 +210,8 @@ public class TestCacheOnWrite {
     LOG.info("HFile information: " + reader);
     final boolean cacheBlocks = false;
     final boolean pread = false;
-    HFileScanner scanner = reader.getScanner(cacheBlocks, pread);
+    final boolean preloadBlocks = false;
+    HFileScanner scanner = reader.getScanner(cacheBlocks, pread, preloadBlocks);
     assertTrue(testDescription, scanner.seekTo());
 
     long offset = 0;
@@ -228,7 +229,7 @@ public class TestCacheOnWrite {
       // Flags: don't cache the block, use pread, this is not a compaction.
       // Also, pass null for expected block type to avoid checking it.
       HFileBlock block = reader.readBlock(offset, onDiskSize, false,
-          false, null, null);
+          false, false, null, null);
       BlockCacheKey blockCacheKey = new BlockCacheKey(reader.getName(),
           offset, encodingInCache, block.getBlockType());
       boolean isCached = blockCache.getBlock(blockCacheKey, true) != null;

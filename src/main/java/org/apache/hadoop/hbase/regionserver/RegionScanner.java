@@ -480,8 +480,6 @@ public class RegionScanner implements InternalScanner {
     return next(result, limit, null, kvContext);
   }
 
-  
-
   @Override
   public boolean currKeyValueObtainedFromCache() {
     return this.storeHeap.currKeyValueObtainedFromCache();

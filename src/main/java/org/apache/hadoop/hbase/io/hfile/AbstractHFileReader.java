@@ -187,7 +187,7 @@ public abstract class AbstractHFileReader extends SchemaConfigured
    */
   @Override
   public HFileScanner getScanner(boolean cacheBlocks) {
-    return getScanner(cacheBlocks, false);
+    return getScanner(cacheBlocks, false, false);
   }
 
   /**
@@ -315,7 +315,7 @@ public abstract class AbstractHFileReader extends SchemaConfigured
     }
 
     @Override
-    public boolean isSeeked(){
+    public boolean isSeeked() {
       return blockBuffer != null;
     }
 

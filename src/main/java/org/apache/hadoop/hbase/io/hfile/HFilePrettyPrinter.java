@@ -224,7 +224,7 @@ public class HFilePrettyPrinter {
 
     if (printKey || checkRow || checkFamily) {
       // scan over file and read key/value's, performing any requested checks
-      HFileScanner scanner = reader.getScanner(false, false);
+      HFileScanner scanner = reader.getScanner(false, false, false);
       if (this.isSeekToRow) {
         // seek to the first kv on this row
         scanner.seekTo(KeyValue.createFirstOnRow(this.row).getKey());

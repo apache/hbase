@@ -27,6 +27,7 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -431,8 +432,22 @@ public class HFile {
 
   /** An abstraction used by the block index */
   public interface CachingBlockReader {
+    /**
+     * Read in a file block.
+     * @param dataBlockOffset offset to read.
+     * @param onDiskBlockSize size of the block
+     * @param cacheBlock
+     * @param isCompaction is this block being read as part of a compaction
+     * @param cacheOnPreload should we put this block into cache because we are preloading it
+     * @param expectedBlockType the block type we are expecting to read with this read operation, or
+     *          null to read whatever block type is available and avoid checking (that might reduce
+     *          caching efficiency of encoded data blocks)
+     * @param obtainedFromCache
+     * @return Block wrapped in a ByteBuffer.
+     * @throws IOException
+     */
     HFileBlock readBlock(long offset, long onDiskBlockSize,
-        boolean cacheBlock, final boolean isCompaction,
+        boolean cacheBlock, final boolean isCompaction, boolean cacheOnPreload,
         BlockType expectedBlockType, KeyValueContext kvContext)
         throws IOException;
   }
@@ -450,7 +465,8 @@ public class HFile {
 
     RawComparator<byte []> getComparator();
 
-    HFileScanner getScanner(boolean cacheBlocks, final boolean isCompaction);
+    HFileScanner getScanner(boolean cacheBlocks, final boolean isCompaction,
+        boolean preloadBlocks);
 
     ByteBuffer getMetaBlock(String metaBlockName,
        boolean cacheBlock) throws IOException;

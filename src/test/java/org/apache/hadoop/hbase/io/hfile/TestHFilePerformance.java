@@ -34,6 +34,7 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.io.SequenceFile;
@@ -310,7 +311,7 @@ public class TestHFilePerformance extends TestCase {
           case 1:
           default:
             {
-              HFileScanner scanner = reader.getScanner(false, false);
+              HFileScanner scanner = reader.getScanner(false, false, false);
               scanner.seekTo();
               for (long l=0; l<rows; l++ ) {
                 key = scanner.getKey();

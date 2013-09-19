@@ -29,6 +29,7 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
@@ -49,7 +50,7 @@ public class StoreFileScanner implements KeyValueScanner {
   private boolean realSeekDone;
   private boolean delayedReseek;
   private KeyValue delayedSeekKV;
-
+  
   private boolean enforceMVCC = false;
 
   // The variable, realSeekDone, may cheat on store file scanner for the
@@ -87,10 +88,10 @@ public class StoreFileScanner implements KeyValueScanner {
    * Return an array of scanners corresponding to the given set of store files.
    */
   public static List<StoreFileScanner> getScannersForStoreFiles(
-      Collection<StoreFile> files, boolean cacheBlocks,
-      boolean isCompaction) throws IOException {
+      Collection<StoreFile> files, boolean cacheBlocks, boolean isCompaction)
+      throws IOException {
     return getScannersForStoreFiles(files, cacheBlocks, isCompaction,
-        null);
+      false, null);
   }
 
   /**
@@ -99,13 +100,14 @@ public class StoreFileScanner implements KeyValueScanner {
    * optimization
    */
   public static List<StoreFileScanner> getScannersForStoreFiles(
-      Collection<StoreFile> files, boolean cacheBlocks,
-      boolean isCompaction, ScanQueryMatcher matcher) throws IOException {
+      Collection<StoreFile> files, boolean cacheBlocks, boolean isCompaction,
+      boolean preloadBlocks, ScanQueryMatcher matcher) throws IOException {
     List<StoreFileScanner> scanners = new ArrayList<StoreFileScanner>(
         files.size());
     for (StoreFile file : files) {
       StoreFile.Reader r = file.createReader();
-      StoreFileScanner scanner = r.getStoreFileScanner(cacheBlocks, isCompaction);
+      StoreFileScanner scanner =
+          r.getStoreFileScanner(cacheBlocks, isCompaction, preloadBlocks);
       scanner.setScanQueryMatcher(matcher);
       scanners.add(scanner);
     }
@@ -209,7 +211,7 @@ public class StoreFileScanner implements KeyValueScanner {
   }
 
   public void close() {
-    // Nothing to close on HFileScanner?
+    hfs.close();
     cur = null;
   }
 

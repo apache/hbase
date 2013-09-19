@@ -44,6 +44,7 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueContext;
 import org.apache.hadoop.hbase.io.hfile.HFileBlockIndex.BlockIndexChunk;
@@ -140,7 +141,7 @@ public class TestHFileBlockIndex {
 
     @Override
     public HFileBlock readBlock(long offset, long onDiskSize,
-        boolean cacheBlock, boolean isCompaction,
+        boolean cacheBlock, boolean isCompaction, boolean preloadBlocks,
         BlockType expectedBlockType, KeyValueContext kvContext)
         throws IOException {
       if (offset == prevOffset && onDiskSize == prevOnDiskSize) {
@@ -522,7 +523,7 @@ public class TestHFileBlockIndex {
       LOG.info("Last key: " + Bytes.toStringBinary(keys[NUM_KV - 1]));
 
       for (boolean pread : new boolean[] { false, true }) {
-        HFileScanner scanner = reader.getScanner(true, pread);
+        HFileScanner scanner = reader.getScanner(true, pread, false);//pread? isn't this always on?
         for (int i = 0; i < NUM_KV; ++i) {
           checkSeekTo(keys, scanner, i);
           checkKeyValue("i=" + i, keys[i], values[i], scanner.getKey(),

@@ -36,6 +36,7 @@ import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.TableNotFoundException;
@@ -324,7 +325,7 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
               .withBloomType(bloomFilterType)
               .withBloomErrorRate(err)
               .build();
-      HFileScanner scanner = halfReader.getScanner(false, false);
+      HFileScanner scanner = halfReader.getScanner(false, false, false);
       scanner.seekTo();
       do {
         KeyValue kv = scanner.getKeyValue();

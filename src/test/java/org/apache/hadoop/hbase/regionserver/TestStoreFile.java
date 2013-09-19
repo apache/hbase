@@ -169,7 +169,7 @@ public class TestStoreFile extends HBaseTestCase {
         StoreFile.BloomType.NONE, NoOpDataBlockEncoder.INSTANCE);
     // Now confirm that I can read from the reference and that it only gets
     // keys from top half of the file.
-    HFileScanner s = refHsf.createReader().getScanner(false, false);
+    HFileScanner s = refHsf.createReader().getScanner(false, false, false);
     for(boolean first = true; (!s.isSeeked() && s.seekTo()) || s.next();) {
       ByteBuffer bb = s.getKey();
       kv = KeyValue.createKeyValueFromKey(bb);
@@ -218,7 +218,7 @@ public class TestStoreFile extends HBaseTestCase {
       // Now test reading from the top.
       boolean first = true;
       ByteBuffer key = null;
-      HFileScanner topScanner = top.getScanner(false, false);
+      HFileScanner topScanner = top.getScanner(false, false, false);
       while ((!topScanner.isSeeked() && topScanner.seekTo()) ||
           (topScanner.isSeeked() && topScanner.next())) {
         key = topScanner.getKey();
@@ -236,7 +236,7 @@ public class TestStoreFile extends HBaseTestCase {
       LOG.info("Last in top: " + Bytes.toString(Bytes.toBytes(key)));
 
       first = true;
-      HFileScanner bottomScanner = bottom.getScanner(false, false);
+      HFileScanner bottomScanner = bottom.getScanner(false, false, false);
       while ((!bottomScanner.isSeeked() && bottomScanner.seekTo()) ||
           bottomScanner.next()) {
         previous = bottomScanner.getKey();
@@ -268,7 +268,7 @@ public class TestStoreFile extends HBaseTestCase {
       bottom = new StoreFile(this.fs, bottomPath, conf, cacheConf,
           StoreFile.BloomType.NONE,
           NoOpDataBlockEncoder.INSTANCE).createReader();
-      bottomScanner = bottom.getScanner(false, false);
+      bottomScanner = bottom.getScanner(false, false, false);
       int count = 0;
       while ((!bottomScanner.isSeeked() && bottomScanner.seekTo()) ||
           bottomScanner.next()) {
@@ -278,7 +278,7 @@ public class TestStoreFile extends HBaseTestCase {
       assertTrue(count == 0);
       // Now read from the top.
       first = true;
-      topScanner = top.getScanner(false, false);
+      topScanner = top.getScanner(false, false, false);
       while ((!topScanner.isSeeked() && topScanner.seekTo()) ||
           topScanner.next()) {
         key = topScanner.getKey();
@@ -316,7 +316,7 @@ public class TestStoreFile extends HBaseTestCase {
           StoreFile.BloomType.NONE,
           NoOpDataBlockEncoder.INSTANCE).createReader();
       first = true;
-      bottomScanner = bottom.getScanner(false, false);
+      bottomScanner = bottom.getScanner(false, false, false);
       while ((!bottomScanner.isSeeked() && bottomScanner.seekTo()) ||
           bottomScanner.next()) {
         key = bottomScanner.getKey();
@@ -336,7 +336,7 @@ public class TestStoreFile extends HBaseTestCase {
         assertTrue(Bytes.toString(keyKV.getRow()).charAt(i) == 'z');
       }
       count = 0;
-      topScanner = top.getScanner(false, false);
+      topScanner = top.getScanner(false, false, false);
       while ((!topScanner.isSeeked() && topScanner.seekTo()) ||
           (topScanner.isSeeked() && topScanner.next())) {
         count++;
@@ -376,7 +376,7 @@ public class TestStoreFile extends HBaseTestCase {
         DataBlockEncoding.NONE);
     reader.loadFileInfo();
     reader.loadBloomfilter();
-    StoreFileScanner scanner = reader.getStoreFileScanner(false, false);
+    StoreFileScanner scanner = reader.getStoreFileScanner(false, false, false);
 
     // check false positives rate
     int falsePos = 0;
@@ -525,7 +525,7 @@ public class TestStoreFile extends HBaseTestCase {
           DataBlockEncoding.NONE);
       reader.loadFileInfo();
       reader.loadBloomfilter();
-      StoreFileScanner scanner = reader.getStoreFileScanner(true, true);
+      StoreFileScanner scanner = reader.getStoreFileScanner(true, true, false);
       assertEquals(expKeys[x], reader.generalBloomFilter.getKeyCount());
 
       // check false positives rate
@@ -706,7 +706,7 @@ public class TestStoreFile extends HBaseTestCase {
     StoreFile hsf = new StoreFile(this.fs, writer.getPath(), conf, cacheConf,
         StoreFile.BloomType.NONE, NoOpDataBlockEncoder.INSTANCE);
     StoreFile.Reader reader = hsf.createReader();
-    StoreFileScanner scanner = reader.getStoreFileScanner(false, false);
+    StoreFileScanner scanner = reader.getStoreFileScanner(false, false, false);
     TreeSet<byte[]> columns = new TreeSet<byte[]>(Bytes.BYTES_COMPARATOR);
     columns.add(qualifier);
 
@@ -758,7 +758,7 @@ public class TestStoreFile extends HBaseTestCase {
     // Read this file, we should see 3 misses
     StoreFile.Reader reader = hsf.createReader();
     reader.loadFileInfo();
-    StoreFileScanner scanner = reader.getStoreFileScanner(true, false);
+    StoreFileScanner scanner = reader.getStoreFileScanner(true, false, false);
     scanner.seek(KeyValue.LOWESTKEY);
     while (scanner.next() != null);
     assertEquals(startHit, cs.getHitCount());
@@ -780,7 +780,7 @@ public class TestStoreFile extends HBaseTestCase {
 
     // Read this file, we should see 3 hits
     reader = hsf.createReader();
-    scanner = reader.getStoreFileScanner(true, false);
+    scanner = reader.getStoreFileScanner(true, false, false);
     scanner.seek(KeyValue.LOWESTKEY);
     while (scanner.next() != null);
     assertEquals(startHit + 3, cs.getHitCount());
@@ -796,13 +796,13 @@ public class TestStoreFile extends HBaseTestCase {
         StoreFile.BloomType.NONE, NoOpDataBlockEncoder.INSTANCE);
     StoreFile.Reader readerOne = hsf.createReader();
     readerOne.loadFileInfo();
-    StoreFileScanner scannerOne = readerOne.getStoreFileScanner(true, false);
+    StoreFileScanner scannerOne = readerOne.getStoreFileScanner(true, false, false);
     scannerOne.seek(KeyValue.LOWESTKEY);
     hsf = new StoreFile(this.fs, pathCowOn, conf, cacheConf,
         StoreFile.BloomType.NONE, NoOpDataBlockEncoder.INSTANCE);
     StoreFile.Reader readerTwo = hsf.createReader();
     readerTwo.loadFileInfo();
-    StoreFileScanner scannerTwo = readerTwo.getStoreFileScanner(true, false);
+    StoreFileScanner scannerTwo = readerTwo.getStoreFileScanner(true, false, false);
     scannerTwo.seek(KeyValue.LOWESTKEY);
     KeyValue kv1 = null;
     KeyValue kv2 = null;

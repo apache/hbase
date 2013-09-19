@@ -26,6 +26,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
@@ -80,8 +81,9 @@ public class HalfStoreFileReader extends StoreFile.Reader {
 
   @Override
   public HFileScanner getScanner(final boolean cacheBlocks,
-                                final boolean isCompaction) {
-    final HFileScanner s = super.getScanner(cacheBlocks, isCompaction);
+      final boolean isCompaction, final boolean preloadBlocks) {
+    final HFileScanner s =
+        super.getScanner(cacheBlocks, isCompaction, preloadBlocks);
     return new HFileScanner() {
       final HFileScanner delegate = s;
       public boolean atEnd = false;
@@ -250,6 +252,11 @@ public class HalfStoreFileReader extends StoreFile.Reader {
       public boolean currKeyValueObtainedFromCache() {
         return this.delegate.currKeyValueObtainedFromCache();
       }
+
+      @Override
+      public void close() {
+        s.close();
+      }
     };
   }
 
@@ -259,7 +266,7 @@ public class HalfStoreFileReader extends StoreFile.Reader {
       return super.getLastKey();
     }
     // Get a scanner that caches the block and that uses pread.
-    HFileScanner scanner = getScanner(true, false);
+    HFileScanner scanner = getScanner(true, false, false);
     try {
       if (scanner.seekBefore(this.splitkey)) {
         return Bytes.toBytes(scanner.getKey());

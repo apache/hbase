@@ -88,7 +88,6 @@ public class TestClientLocalScanner {
     t.flushCommits();
     TEST_UTIL.flush(name);
     assertRowCount(t, rowCount);
-
     Scan scan = getScan(100, 100, true, FAMILY);
     assertTrue(compareScanners(tmpTable.getScanner(scan),
         t.getLocalScanner(scan)));

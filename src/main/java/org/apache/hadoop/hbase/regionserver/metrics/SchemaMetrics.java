@@ -42,7 +42,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.io.hfile.BlockType;
 import org.apache.hadoop.hbase.io.hfile.BlockType.BlockCategory;
-import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.LruBlockCache;
 import org.apache.hadoop.hbase.io.hfile.LruBlockCacheFactory;
 import org.apache.hadoop.hbase.regionserver.HRegion;
@@ -118,7 +117,11 @@ public class SchemaMetrics {
     READ_COUNT("BlockReadCnt", COMPACTION_AWARE_METRIC_FLAG),
     CACHE_HIT("BlockReadCacheHitCnt", COMPACTION_AWARE_METRIC_FLAG),
     CACHE_MISS("BlockReadCacheMissCnt", COMPACTION_AWARE_METRIC_FLAG),
-
+  
+    PRELOAD_CACHE_HIT("PreloadCacheHitCnt",COMPACTION_AWARE_METRIC_FLAG),
+    PRELOAD_CACHE_MISS("PreloadCacheMissCnt",COMPACTION_AWARE_METRIC_FLAG),
+    PRELOAD_READ_TIME("PreloadReadTime",COMPACTION_AWARE_METRIC_FLAG | TIME_VARYING_METRIC_FLAG),
+    
     CACHE_SIZE("blockCacheSize", PERSISTENT_METRIC_FLAG),
     UNENCODED_CACHE_SIZE("blockCacheUnencodedSize", PERSISTENT_METRIC_FLAG),
     CACHE_NUM_BLOCKS("cacheNumBlocks", PERSISTENT_METRIC_FLAG),
@@ -394,6 +397,18 @@ public class SchemaMetrics {
     return i;
   }
 
+  public String getBlockMetric(BlockMetricType type, BlockCategory category,
+      boolean isCompaction) {
+    return HRegion.getNumericMetric(getBlockMetricName(category, isCompaction,
+      type)) + "";
+  }
+
+  public String getTimeVaryingBlockMetric(BlockMetricType type,
+      BlockCategory category, boolean isCompaction) {
+    return HRegion.getTimeVaryingMetric(getBlockMetricName(category,
+      isCompaction, type)) + "";
+  }
+
   public String getBlockMetricName(BlockCategory blockCategory,
       boolean isCompaction, BlockMetricType metricType) {
     if (isCompaction && !metricType.compactionAware()) {
@@ -436,7 +451,7 @@ public class SchemaMetrics {
       addToReadTime(BlockCategory.ALL_CATEGORIES, isCompaction, timeMs);
     }
   }
-
+  
   /**
    * Used to accumulate store metrics across multiple regions in a region
    * server.  These metrics are not "persistent", i.e. we keep overriding them
@@ -488,10 +503,35 @@ public class SchemaMetrics {
     HRegion.incrNumericPersistentMetric(
         storeMetricNames[storeMetricType.ordinal()], value);
   }
+  
+  /**
+   * Updates metrics for cacheHit/cacheMiss when a block is read.
+   * @param blockCategory category of the block read
+   * @param isCompaction whether this is compaction read or not
+   * @param timeMs time taken to read the block
+   * @param preload whether this a preloaded block or not
+   * @param obtainedFromCache whether the block is found in cache or not
+   */
+  public void updateOnBlockRead(BlockCategory blockCategory,
+      boolean isCompaction, long timeMs, boolean preload,
+      boolean obtainedFromCache) {
+    if (obtainedFromCache) {
+      if (!preload) {
+        updateOnCacheHit(blockCategory, isCompaction, timeMs);
+      } else {
+        updateOnPreloadCacheHit(blockCategory, isCompaction, timeMs);
+      }
+    } else {
+      if (!preload) {
+        updateOnCacheMiss(blockCategory, isCompaction, timeMs);
+      } else {
+        updateOnPreloadCacheMiss(blockCategory, isCompaction, timeMs);
+      }
+    }
+  }
 
   /**
-   * Updates the number of hits and the total number of block reads on a block
-   * cache hit.
+   * Updates the number of hits and the total number of block reads on a block cache hit.
    */
   public void updateOnCacheHit(BlockCategory blockCategory,
       boolean isCompaction) {
@@ -500,6 +540,20 @@ public class SchemaMetrics {
     incrNumericMetric(blockCategory, isCompaction, BlockMetricType.READ_COUNT);
     if (this != ALL_SCHEMA_METRICS) {
       ALL_SCHEMA_METRICS.updateOnCacheHit(blockCategory, isCompaction);
+    }
+  }
+  /**
+   * Updates the number of hits and the total number of block reads on a block
+   * cache hit.
+   */
+  public void updateOnCacheHit(BlockCategory blockCategory,
+      boolean isCompaction, long deltaMs) {
+    blockCategory.expectSpecific();
+    incrNumericMetric(blockCategory, isCompaction, BlockMetricType.CACHE_HIT);
+    incrNumericMetric(blockCategory, isCompaction, BlockMetricType.READ_COUNT);
+    addToReadTime(blockCategory, isCompaction, deltaMs);
+    if (this != ALL_SCHEMA_METRICS) {
+      ALL_SCHEMA_METRICS.updateOnCacheHit(blockCategory, isCompaction, deltaMs);
     }
   }
 
@@ -518,7 +572,46 @@ public class SchemaMetrics {
           timeMs);
     }
   }
+  
+  private void addToPreloadReadTime(BlockCategory blockCategory,
+      boolean isCompaction, long timeMs) {
+    HRegion.incrTimeVaryingMetric(getBlockMetricName(blockCategory,
+        isCompaction, BlockMetricType.PRELOAD_READ_TIME), timeMs);
 
+    // Also update the read time aggregated across all block categories
+    if (blockCategory != BlockCategory.ALL_CATEGORIES) {
+      addToPreloadReadTime(BlockCategory.ALL_CATEGORIES, isCompaction, timeMs);
+    }
+  }
+  
+  /**
+   * Updates read time, the number of misses, and the total number of block for preloader
+   */
+  public void updateOnPreloadCacheMiss(BlockCategory blockCategory, boolean isCompaction,
+      long timeMs) {
+    blockCategory.expectSpecific();
+    addToPreloadReadTime(blockCategory, isCompaction, timeMs);
+    incrNumericMetric(blockCategory, isCompaction, BlockMetricType.PRELOAD_CACHE_MISS);
+    if (this != ALL_SCHEMA_METRICS) {
+      ALL_SCHEMA_METRICS.updateOnPreloadCacheMiss(blockCategory, isCompaction, timeMs);
+    }
+  }
+
+  /**
+   * Updates read time, the number of hits, and the total number of block for preloader
+   */
+  public void updateOnPreloadCacheHit(BlockCategory blockCategory,
+      boolean isCompaction, long timeMs) {
+    blockCategory.expectSpecific();
+    addToPreloadReadTime(blockCategory, isCompaction, timeMs);
+    incrNumericMetric(blockCategory, isCompaction,
+      BlockMetricType.PRELOAD_CACHE_HIT);
+    if (this != ALL_SCHEMA_METRICS) {
+      ALL_SCHEMA_METRICS.updateOnPreloadCacheMiss(blockCategory, isCompaction,
+        timeMs);
+    }
+  }
+  
   /**
    * Adds the given delta to the cache size for the given block category and
    * the aggregate metric for all block categories. Updates both the per-CF

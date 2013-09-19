@@ -37,6 +37,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoder;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
@@ -588,7 +589,7 @@ public class DataBlockEncodingTool {
 
     StoreFile.Reader reader = hsf.createReader();
     reader.loadFileInfo();
-    KeyValueScanner scanner = reader.getStoreFileScanner(true, true);
+    KeyValueScanner scanner = reader.getStoreFileScanner(true, true, false);
 
     // run the utilities
     DataBlockEncodingTool comp = new DataBlockEncodingTool(compressionName);

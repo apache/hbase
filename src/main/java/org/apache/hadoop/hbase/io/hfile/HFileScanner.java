@@ -145,4 +145,9 @@ public interface HFileScanner {
   public boolean isSeeked();
 
   public boolean currKeyValueObtainedFromCache();
+ 
+  /**
+   * closes the scanner
+   */
+  public void close();
 }

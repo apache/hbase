@@ -29,6 +29,7 @@ import junit.framework.Assert;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Test;
 
@@ -69,7 +70,7 @@ public class TestReseekTo {
     HFile.Reader reader = HFile.createReader(TEST_UTIL.getTestFileSystem(),
         ncTFile, cacheConf);
     reader.loadFileInfo();
-    HFileScanner scanner = reader.getScanner(false, true);
+    HFileScanner scanner = reader.getScanner(false, true, false);
 
     scanner.seekTo();
     for (int i = 0; i < keyList.size(); i++) {

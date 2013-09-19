@@ -380,6 +380,25 @@ public final class HConstants {
   public static final String HREGIONSERVER_ENABLE_SERVERSIDE_PROFILING =
       "hbase.regionserver.enable.serverside.profiling";
 
+  /** Conf key for the preload blocks count if preloading is enabled for some scanner */
+  public static final String SCAN_PRELOAD_BLOCK_COUNT =
+      "hbase.regionserver.preload.block.count";
+  /** Default number of blocks to preload during sequential scan of hfile (if enabled)*/
+  public static final int DEFAULT_PRELOAD_BLOCK_COUNT = 64;
+  /** Conf key for the core preload threads */
+  public static final String CORE_PRELOAD_THREAD_COUNT = "hbase.regionserver.core.preload.thread.count";
+  /** Default number of core preload threads per region server */
+  public static final int DEFAULT_CORE_PRELOAD_THREAD_COUNT = 1;
+  /** Conf key for the max preload threads */
+  public static final String MAX_PRELOAD_THREAD_COUNT = "hbase.regionserver.max.preload.thread.count";
+  /** Defualt number of core preload threads per region server */
+  public static final int DEFAULT_MAX_PRELOAD_THREAD_COUNT = 64;
+  /** Conf key for max preload blocks kept in cache per hfilescanner */
+  public static final String MAX_PRELOAD_BLOCKS_KEPT_IN_CACHE =
+      "hbase.regionserver.preload.blocks.kept.in.cache";
+  /** Default maximum number of preload blocks to keep in block cache per hfilescanner */
+  public static final int DEFAULT_MAX_PRELOAD_BLOCKS_KEPT_IN_CACHE = 128;
+  
   // Always store the location of the root table's HRegion.
   // This HRegion is never split.
 

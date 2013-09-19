@@ -30,6 +30,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
@@ -100,7 +101,7 @@ public class TestHalfStoreFileReader {
     final HalfStoreFileReader halfreader = new HalfStoreFileReader(fs, p,
         cacheConf, bottom, DataBlockEncoding.NONE);
     halfreader.loadFileInfo();
-    final HFileScanner scanner = halfreader.getScanner(false, false);
+    final HFileScanner scanner = halfreader.getScanner(false, false, false);
 
     scanner.seekTo();
     KeyValue curr;

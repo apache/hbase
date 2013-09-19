@@ -23,6 +23,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Test;
 
@@ -75,7 +76,7 @@ public class TestHFileInlineToRootChunkConversion {
     hfw.close();
 
     HFileReaderV2 reader = (HFileReaderV2) HFile.createReader(fs, hfPath, cacheConf);
-    HFileScanner scanner = reader.getScanner(true, true);
+    HFileScanner scanner = reader.getScanner(true, true, false);
     for (int i = 0; i < keys.size(); ++i) {
       scanner.seekTo(keys.get(i));
     }

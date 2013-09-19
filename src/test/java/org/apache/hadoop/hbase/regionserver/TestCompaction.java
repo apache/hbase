@@ -483,7 +483,7 @@ public class TestCompaction extends HBaseClusterTestCase {
     int count1 = 0;
     int count2 = 0;
     for (StoreFile f: this.r.stores.get(COLUMN_FAMILY_TEXT).getStorefiles()) {
-      HFileScanner scanner = f.getReader().getScanner(false, false);
+      HFileScanner scanner = f.getReader().getScanner(false, false, false);
       scanner.seekTo();
       do {
         byte [] row = scanner.getKeyValue().getRow();
@@ -575,7 +575,7 @@ public class TestCompaction extends HBaseClusterTestCase {
     int count = 0;
     for (StoreFile f: this.r.stores.
         get(COLUMN_FAMILY_TEXT).getStorefiles()) {
-      HFileScanner scanner = f.getReader().getScanner(false, false);
+      HFileScanner scanner = f.getReader().getScanner(false, false, false);
       if (!scanner.seekTo()) {
         continue;
       }

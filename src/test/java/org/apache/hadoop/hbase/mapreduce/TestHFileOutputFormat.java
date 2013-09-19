@@ -334,7 +334,7 @@ public class TestHFileOutputFormat  {
             for (FileStatus stat : fs.listStatus(status.getPath())) {
               Reader r = HFile.createReader(fs, stat.getPath(),
                   new CacheConfig(conf));
-              HFileScanner scanner = r.getScanner(false, false);
+              HFileScanner scanner = r.getScanner(false, false, false);
               scanner.seekTo();
 
               int index = 0;

@@ -25,6 +25,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.bucket.BucketCache;
@@ -128,7 +129,7 @@ public class TestL2BucketCache {
     DataBlockEncoding encodingInCache = ENCODER.getEncodingInCache();
     HFileReaderV2 reader = (HFileReaderV2) HFile.createReaderWithEncoding(fs,
         storeFilePath, cacheConf, encodingInCache);
-    HFileScanner scanner = reader.getScanner(false, false);
+    HFileScanner scanner = reader.getScanner(false, false, false);
     assertTrue(scanner.seekTo());
     long offset = 0;
     long cachedCount = 0;
@@ -136,7 +137,8 @@ public class TestL2BucketCache {
       mockedL2Cache.enableReads.set(false);
       HFileBlock blockFromDisk;
       try {
-        blockFromDisk = reader.readBlock(offset, -1, false, false, null, null);
+        blockFromDisk =
+            reader.readBlock(offset, -1, false, false, false, null, null);
       } finally {
         mockedL2Cache.enableReads.set(true);
       }
@@ -174,11 +176,11 @@ public class TestL2BucketCache {
     cacheConf.getBlockCache().clearCache();
     underlyingCache.clearCache();
     while (offset < reader.getTrailer().getLoadOnOpenDataOffset()) {
-      HFileBlock blockFromDisk = reader.readBlock(offset, -1, true, false, null, null);
+      HFileBlock blockFromDisk = reader.readBlock(offset, -1, true, false, false, null, null);
       assertNotNull(mockedL2Cache.getRawBlock(reader.getName(), offset));
       cacheConf.getBlockCache().evictBlock(new BlockCacheKey(reader.getName(),
           offset, encodingInCache, blockFromDisk.getBlockType()));
-      HFileBlock blockFromL2Cache = reader.readBlock(offset, -1, true, false,
+      HFileBlock blockFromL2Cache = reader.readBlock(offset, -1, true, false, false,
           null, null);
       assertEquals("Data in block from disk (" + blockFromDisk +
           ") should match data in block from cache (" + blockFromL2Cache +

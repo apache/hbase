@@ -30,6 +30,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
@@ -233,7 +234,7 @@ public class TestLoadIncrementalHFiles {
     HFile.Reader reader = HFile.createReader(
         p.getFileSystem(conf), p, new CacheConfig(conf));
     reader.loadFileInfo();
-    HFileScanner scanner = reader.getScanner(false, false);
+    HFileScanner scanner = reader.getScanner(false, false, false);
     scanner.seekTo();
     int count = 0;
     do {
