@@ -509,6 +509,21 @@ public class TestKeyValue extends TestCase {
     assertTrue(keyComparator.compareFlatKey(kv1.getKey(), kv2.getKey()) < 0);
     newKey = keyComparator.getShortMidpointKey(kv1.getKey(), kv2.getKey());
     assertTrue(keyComparator.compareFlatKey(kv1.getKey(), newKey) < 0);
-    assertTrue(keyComparator.compareFlatKey(newKey, kv2.getKey()) == 0);
+    assertTrue(keyComparator.compareFlatKey(newKey, kv2.getKey()) < 0);
+    newRowLength = Bytes.toShort(newKey, 0);
+    expectedArray = Bytes.toBytes("ilovehbasea");
+    Bytes.equals(newKey, KeyValue.ROW_LENGTH_SIZE, newRowLength, expectedArray, 0,
+      expectedArray.length);
+    //verify only 1 offset scenario
+    kv1 = new KeyValue(Bytes.toBytes("100abcdefg"), family, qualA, ts, Type.Put);
+    kv2 = new KeyValue(Bytes.toBytes("101abcdefg"), family, qualA, ts, Type.Put);
+    assertTrue(keyComparator.compareFlatKey(kv1.getKey(), kv2.getKey()) < 0);
+    newKey = keyComparator.getShortMidpointKey(kv1.getKey(), kv2.getKey());
+    assertTrue(keyComparator.compareFlatKey(kv1.getKey(), newKey) < 0);
+    assertTrue(keyComparator.compareFlatKey(newKey, kv2.getKey()) < 0);
+    newRowLength = Bytes.toShort(newKey, 0);
+    expectedArray = Bytes.toBytes("101");
+    Bytes.equals(newKey, KeyValue.ROW_LENGTH_SIZE, newRowLength, expectedArray, 0,
+      expectedArray.length);
   }
 }

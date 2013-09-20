@@ -42,6 +42,7 @@ import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.mortbay.log.Log;
 
 @Category(SmallTests.class)
 public class TestHalfStoreFileReader {
@@ -172,11 +173,13 @@ public class TestHalfStoreFileReader {
       // Ugly code to get the item before the midkey
       KeyValue beforeMidKey = null;
       for (KeyValue item : items) {
-          if (item.equals(midKV)) {
+          if (KeyValue.COMPARATOR.compare(item, midKV) >= 0) {
               break;
           }
           beforeMidKey = item;
       }
+      System.out.println("midkey: " + midKV + " or: " + Bytes.toStringBinary(midkey));
+      System.out.println("beforeMidKey: " + beforeMidKey);
 
 
       // Seek on the splitKey, should be in top, not in bottom

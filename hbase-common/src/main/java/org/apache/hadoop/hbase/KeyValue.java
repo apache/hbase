@@ -1960,34 +1960,25 @@ public class KeyValue implements Cell, HeapSize, Cloneable {
           && leftKey[ROW_LENGTH_SIZE + diffIdx] == rightKey[ROW_LENGTH_SIZE + diffIdx]) {
         diffIdx++;
       }
+      byte[] newRowKey = null;
       if (diffIdx >= minLength) {
-        // leftKey's row is prefix of rightKey's. we can optimize it in future
-        return Arrays.copyOf(rightKey, rightKey.length);
-      }
-      int diffByte = leftKey[ROW_LENGTH_SIZE + diffIdx];
-      if ((0xff & diffByte) < 0xff && (diffByte + 1) <
-          (rightKey[ROW_LENGTH_SIZE + diffIdx] & 0xff)) {
-        byte[] newRowKey = new byte[diffIdx + 1];
-        System.arraycopy(leftKey, ROW_LENGTH_SIZE, newRowKey, 0, diffIdx);
-        newRowKey[diffIdx] = (byte) (diffByte + 1);
-        int rightFamilyLength = rightKey[rightCommonLength - 1];
-        byte[] family = null;
-        if (rightFamilyLength > 0) {
-          family = new byte[rightFamilyLength];
-          System.arraycopy(rightKey, rightCommonLength, family, 0, rightFamilyLength);
+        // leftKey's row is prefix of rightKey's.
+        newRowKey = new byte[diffIdx + 1];
+        System.arraycopy(rightKey, ROW_LENGTH_SIZE, newRowKey, 0, diffIdx + 1);
+      } else {
+        int diffByte = leftKey[ROW_LENGTH_SIZE + diffIdx];
+        if ((0xff & diffByte) < 0xff && (diffByte + 1) <
+            (rightKey[ROW_LENGTH_SIZE + diffIdx] & 0xff)) {
+          newRowKey = new byte[diffIdx + 1];
+          System.arraycopy(leftKey, ROW_LENGTH_SIZE, newRowKey, 0, diffIdx);
+          newRowKey[diffIdx] = (byte) (diffByte + 1);
+        } else {
+          newRowKey = new byte[diffIdx + 1];
+          System.arraycopy(rightKey, ROW_LENGTH_SIZE, newRowKey, 0, diffIdx + 1);
         }
-        int rightQualifierLength = rightColumnLength - rightFamilyLength;
-        byte[] qualifier = null;
-        if (rightQualifierLength > 0) {
-          qualifier = new byte[rightQualifierLength];
-          System.arraycopy(rightKey, rightCommonLength + rightFamilyLength, qualifier, 0,
-            rightQualifierLength);
-        }
-        return new KeyValue(newRowKey, null, null, HConstants.LATEST_TIMESTAMP,
-          Type.Maximum).getKey();
       }
-      // the following is optimizable in future
-      return Arrays.copyOf(rightKey, rightKey.length);
+      return new KeyValue(newRowKey, null, null, HConstants.LATEST_TIMESTAMP,
+        Type.Maximum).getKey();
     }
 
     @Override

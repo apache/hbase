@@ -261,7 +261,7 @@ public class TestCacheOnWrite {
     BlockType cachedDataBlockType =
         encoderType.encodeInCache ? BlockType.ENCODED_DATA : BlockType.DATA;
     assertEquals("{" + cachedDataBlockType
-        + "=1379, LEAF_INDEX=173, BLOOM_CHUNK=9, INTERMEDIATE_INDEX=24}",
+        + "=1379, LEAF_INDEX=154, BLOOM_CHUNK=9, INTERMEDIATE_INDEX=18}",
         countByType);
 
     reader.close();
