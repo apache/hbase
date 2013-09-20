@@ -57,7 +57,7 @@ public class HRegionServerCommandLine extends ServerCommandLine {
         LOG.warn("Not starting a distinct region server because "
             + HConstants.CLUSTER_DISTRIBUTED + " is false");
       } else {
-        logJVMInfo();
+        logProcessInfo(getConf());
         HRegionServer hrs = HRegionServer.constructRegionServer(regionServerClass, conf);
         Thread rsThread = HRegionServer.startRegionServer(hrs);
 
