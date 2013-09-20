@@ -22,6 +22,8 @@ import java.io.IOException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Result;
@@ -64,6 +66,8 @@ import org.apache.hadoop.mapred.Reporter;
  */
 
 @Deprecated
+@InterfaceAudience.Public
+@InterfaceStability.Stable
 public abstract class TableInputFormatBase
 implements InputFormat<ImmutableBytesWritable, Result> {
   final Log LOG = LogFactory.getLog(TableInputFormatBase.class);

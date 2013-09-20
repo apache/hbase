@@ -22,6 +22,7 @@ import java.io.IOException;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.ProcessRequest;
 import org.apache.hadoop.hbase.regionserver.RowProcessor;
 
@@ -31,7 +32,7 @@ import com.google.protobuf.Message;
  * For example usage, refer TestRowProcessorEndpoint
  *
  */
-@InterfaceAudience.Public
+@InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.COPROC)
 @InterfaceStability.Evolving
 public class RowProcessorClient {
   public static <S extends Message, T extends Message>

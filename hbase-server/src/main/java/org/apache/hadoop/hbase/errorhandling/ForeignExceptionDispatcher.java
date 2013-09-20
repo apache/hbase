@@ -23,7 +23,6 @@ import java.util.List;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
 
 /**
  * The dispatcher acts as the state holding entity for foreign error handling.  The first
@@ -39,8 +38,7 @@ import org.apache.hadoop.classification.InterfaceStability;
  * This is thread-safe and must be because this is expected to be used to propagate exceptions
  * from foreign threads.
  */
-@InterfaceAudience.Public
-@InterfaceStability.Evolving
+@InterfaceAudience.Private
 public class ForeignExceptionDispatcher implements ForeignExceptionListener, ForeignExceptionSnare {
   public static final Log LOG = LogFactory.getLog(ForeignExceptionDispatcher.class);
   protected final String name;

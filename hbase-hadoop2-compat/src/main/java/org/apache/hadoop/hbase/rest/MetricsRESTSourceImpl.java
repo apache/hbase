@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.hbase.rest;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.metrics.BaseSourceImpl;
 import org.apache.hadoop.metrics2.lib.MutableCounterLong;
 
@@ -27,6 +28,7 @@ import org.apache.hadoop.metrics2.lib.MutableCounterLong;
  *
  * Implements BaseSource through BaseSourceImpl, following the pattern
  */
+@InterfaceAudience.Private
 public class MetricsRESTSourceImpl extends BaseSourceImpl implements MetricsRESTSource {
 
   private MutableCounterLong request;

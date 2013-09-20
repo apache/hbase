@@ -27,7 +27,6 @@ import java.util.NavigableSet;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
@@ -58,8 +57,7 @@ import com.google.protobuf.Service;
  * @param <Q> PB message that is used to transport Cell (<T>) instance
  * @param <R> PB message that is used to transport Promoted (<S>) instance
  */
-@InterfaceAudience.Public
-@InterfaceStability.Evolving
+@InterfaceAudience.Private
 public class AggregateImplementation<T, S, P extends Message, Q extends Message, R extends Message> 
 extends AggregateService implements CoprocessorService, Coprocessor {
   protected static final Log log = LogFactory.getLog(AggregateImplementation.class);

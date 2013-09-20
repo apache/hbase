@@ -27,8 +27,7 @@ import org.apache.hadoop.classification.InterfaceStability;
  * Get, remove and modify table descriptors.
  * Used by servers to host descriptors.
  */
-@InterfaceAudience.Public
-@InterfaceStability.Evolving
+@InterfaceAudience.Private
 public interface TableDescriptors {
   /**
    * @param tableName

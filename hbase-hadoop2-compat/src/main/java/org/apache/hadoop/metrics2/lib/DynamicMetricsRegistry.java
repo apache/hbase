@@ -21,15 +21,15 @@ package org.apache.hadoop.metrics2.lib;
 import java.util.Collection;
 import java.util.concurrent.ConcurrentMap;
 
-import com.google.common.base.Objects;
-import com.google.common.collect.Maps;
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.metrics2.MetricsException;
 import org.apache.hadoop.metrics2.MetricsInfo;
 import org.apache.hadoop.metrics2.MetricsRecordBuilder;
 import org.apache.hadoop.metrics2.MetricsTag;
 import org.apache.hadoop.metrics2.impl.MsInfo;
+
+import com.google.common.base.Objects;
+import com.google.common.collect.Maps;
 
 /**
  * An optional metrics registry class for creating and maintaining a
@@ -42,8 +42,7 @@ import org.apache.hadoop.metrics2.impl.MsInfo;
  *       Another difference is that metricsMap implementation is substituted with
  *       thread-safe map, as we allow dynamic metrics additions/removals.
  */
-@InterfaceAudience.Public
-@InterfaceStability.Evolving
+@InterfaceAudience.Private
 public class DynamicMetricsRegistry {
   private final ConcurrentMap<String, MutableMetric> metricsMap =
           Maps.newConcurrentMap();

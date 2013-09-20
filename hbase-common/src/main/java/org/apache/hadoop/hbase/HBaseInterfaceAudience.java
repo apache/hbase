@@ -15,24 +15,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.procedure;
+package org.apache.hadoop.hbase;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 
 /**
- * Task builder to build instances of a {@link ProcedureMember}'s {@link Subprocedure}s.
+ * This class defines constants for different classes of hbase limited private apis
  */
-@InterfaceAudience.Private
-public interface SubprocedureFactory {
-
-  /**
-   * Build {@link Subprocedure} when requested.
-   * @param procName name of the procedure associated with this subprocedure
-   * @param procArgs  arguments passed from the coordinator about the procedure
-   * @return {@link Subprocedure} to run or <tt>null</tt> if the no operation should be run
-   * @throws IllegalArgumentException if the operation could not be run because of errors in the
-   *           request
-   * @throws IllegalStateException if the current runner cannot accept any more new requests
-   */
-  Subprocedure buildSubprocedure(String procName, byte[] procArgs);
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
+public class HBaseInterfaceAudience {
+  public static final String COPROC = "Coprocesssor";
 }

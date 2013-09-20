@@ -19,7 +19,6 @@
 package org.apache.hadoop.hbase.codec.prefixtree.scanner;
 
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
 
 /**
  * An indicator of the state of the scanner after an operation such as nextCell() or
@@ -33,8 +32,7 @@ import org.apache.hadoop.classification.InterfaceStability;
  * next region.</li>
  * </ul>
  */
-@InterfaceAudience.Public
-@InterfaceStability.Evolving
+@InterfaceAudience.Private
 public enum CellScannerPosition {
 
   /**

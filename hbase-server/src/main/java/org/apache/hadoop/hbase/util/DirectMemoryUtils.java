@@ -31,7 +31,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 
 import com.google.common.base.Preconditions;
 
-@InterfaceAudience.Public
+@InterfaceAudience.Private
 @InterfaceStability.Evolving
 public class DirectMemoryUtils {
   /**

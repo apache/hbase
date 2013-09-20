@@ -18,9 +18,12 @@
 
 package org.apache.hadoop.hbase.master;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+
 /**
  * Factory to create MetricsMasterSource when given a  MetricsMasterWrapper
  */
+@InterfaceAudience.Private
 public class MetricsMasterSourceFactoryImpl implements MetricsMasterSourceFactory {
   private static enum FactoryStorage {
     INSTANCE;

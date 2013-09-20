@@ -18,16 +18,18 @@
 
 package org.apache.hadoop.metrics2.lib;
 
-import org.apache.hadoop.metrics2.MetricsExecutor;
-
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.metrics2.MetricsExecutor;
+
 /**
  *  Class to handle the ScheduledExecutorService{@link ScheduledExecutorService} used by MetricMutableQuantiles{@link MetricMutableQuantiles}
  */
+@InterfaceAudience.Private
 public class MetricsExecutorImpl implements MetricsExecutor {
 
   @Override

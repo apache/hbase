@@ -22,6 +22,8 @@ import java.io.IOException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
@@ -39,6 +41,8 @@ import org.apache.hadoop.mapred.Partitioner;
  * @param <V2>
  */
 @Deprecated
+@InterfaceAudience.Public
+@InterfaceStability.Stable
 public class HRegionPartitioner<K2,V2>
 implements Partitioner<ImmutableBytesWritable, V2> {
   private final Log LOG = LogFactory.getLog(TableInputFormat.class);

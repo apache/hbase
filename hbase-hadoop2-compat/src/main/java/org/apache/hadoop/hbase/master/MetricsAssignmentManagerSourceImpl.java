@@ -18,11 +18,12 @@
 
 package org.apache.hadoop.hbase.master;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.metrics.BaseSourceImpl;
 import org.apache.hadoop.metrics2.lib.MutableGaugeLong;
 import org.apache.hadoop.metrics2.lib.MutableHistogram;
 
-
+@InterfaceAudience.Private
 public class MetricsAssignmentManagerSourceImpl extends BaseSourceImpl implements MetricsAssignmentManagerSource {
 
   private MutableGaugeLong ritGauge;

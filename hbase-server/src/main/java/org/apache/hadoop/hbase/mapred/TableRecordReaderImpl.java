@@ -22,6 +22,8 @@ import java.io.IOException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Result;
@@ -39,6 +41,9 @@ import static org.apache.hadoop.hbase.mapreduce.TableRecordReaderImpl.LOG_PER_RO
 /**
  * Iterate over an HBase table data, return (Text, RowResult) pairs
  */
+@Deprecated
+@InterfaceAudience.Public
+@InterfaceStability.Stable
 public class TableRecordReaderImpl {
   static final Log LOG = LogFactory.getLog(TableRecordReaderImpl.class);
 

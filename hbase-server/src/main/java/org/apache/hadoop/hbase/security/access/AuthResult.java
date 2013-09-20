@@ -22,9 +22,8 @@ import java.util.Collection;
 import java.util.Map;
 
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Bytes;
 
@@ -32,8 +31,7 @@ import org.apache.hadoop.hbase.util.Bytes;
  * Represents the result of an authorization check for logging and error
  * reporting.
  */
-@InterfaceAudience.Public
-@InterfaceStability.Evolving
+@InterfaceAudience.Private
 public class AuthResult {
   private final boolean allowed;
   private final String namespace;

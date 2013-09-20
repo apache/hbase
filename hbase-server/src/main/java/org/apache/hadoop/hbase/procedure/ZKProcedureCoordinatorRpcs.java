@@ -36,8 +36,7 @@ import com.google.protobuf.InvalidProtocolBufferException;
 /**
  * ZooKeeper based {@link ProcedureCoordinatorRpcs} for a {@link ProcedureCoordinator}
  */
-@InterfaceAudience.Public
-@InterfaceStability.Evolving
+@InterfaceAudience.Private
 public class ZKProcedureCoordinatorRpcs implements ProcedureCoordinatorRpcs {
   public static final Log LOG = LogFactory.getLog(ZKProcedureCoordinatorRpcs.class);
   private ZKProcedureUtil zkProc = null;

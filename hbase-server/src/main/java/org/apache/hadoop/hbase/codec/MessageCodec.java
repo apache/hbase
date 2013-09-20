@@ -36,8 +36,7 @@ import org.apache.hadoop.classification.InterfaceStability;
  * Codec that just writes out Cell as a protobuf Cell Message.  Does not write the mvcc stamp.
  * Use a different codec if you want that in the stream.
  */
-@InterfaceAudience.Public
-@InterfaceStability.Evolving
+@InterfaceAudience.Private
 public class MessageCodec implements Codec {
   static class MessageEncoder extends BaseEncoder {
     MessageEncoder(final OutputStream out) {

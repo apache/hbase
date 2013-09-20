@@ -33,7 +33,6 @@ import java.util.concurrent.TimeUnit;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.DaemonThreadFactory;
 import org.apache.hadoop.hbase.errorhandling.ForeignException;
 import org.apache.hadoop.hbase.errorhandling.ForeignExceptionDispatcher;
@@ -46,8 +45,7 @@ import com.google.common.collect.MapMaker;
  * The {@link Procedure} is generic and subclassing or customization shouldn't be
  * necessary -- any customization should happen just in {@link Subprocedure}s.
  */
-@InterfaceAudience.Public
-@InterfaceStability.Evolving
+@InterfaceAudience.Private
 public class ProcedureCoordinator {
   private static final Log LOG = LogFactory.getLog(ProcedureCoordinator.class);
 

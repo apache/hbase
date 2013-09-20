@@ -35,8 +35,7 @@ import java.util.concurrent.TimeUnit;
  * low error bounds. This is particularly useful for accurate high-percentile (e.g. 95th, 99th)
  * latency metrics.
  */
-@InterfaceAudience.Public
-@InterfaceStability.Evolving
+@InterfaceAudience.Private
 public class MetricMutableQuantiles extends MetricMutable implements MetricHistogram {
 
   static final MetricQuantile[] quantiles = {new MetricQuantile(0.50, 0.050),

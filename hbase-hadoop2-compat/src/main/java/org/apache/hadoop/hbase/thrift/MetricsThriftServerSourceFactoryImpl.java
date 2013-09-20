@@ -18,9 +18,12 @@
 
 package org.apache.hadoop.hbase.thrift;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+
 /**
  * Class used to create metrics sources for Thrift and Thrift2 servers.
  */
+@InterfaceAudience.Private
 public class MetricsThriftServerSourceFactoryImpl implements MetricsThriftServerSourceFactory {
 
   /**

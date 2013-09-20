@@ -25,6 +25,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
+import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.protobuf.ResponseConverter;
 import org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.ProcessRequest;
 import org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.ProcessResponse;
@@ -42,7 +43,7 @@ import com.google.protobuf.Service;
  * This class demonstrates how to implement atomic read-modify-writes
  * using {@link HRegion#processRowsWithLocks} and Coprocessor endpoints.
  */
-@InterfaceAudience.Public
+@InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.COPROC)
 @InterfaceStability.Evolving
 public abstract class BaseRowProcessorEndpoint<S extends Message, T extends Message> 
 extends RowProcessorService implements CoprocessorService, Coprocessor {

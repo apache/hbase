@@ -18,9 +18,12 @@
 
 package org.apache.hadoop.hbase.regionserver;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+
 /**
  * Factory to create MetricsRegionServerSource when given a  MetricsRegionServerWrapper
  */
+@InterfaceAudience.Private
 public class MetricsRegionServerSourceFactoryImpl implements MetricsRegionServerSourceFactory {
   public static enum FactoryStorage {
     INSTANCE;

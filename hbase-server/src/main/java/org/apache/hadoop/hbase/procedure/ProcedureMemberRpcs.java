@@ -28,8 +28,7 @@ import org.apache.hadoop.hbase.errorhandling.ForeignException;
  * This is the notification interface for Procedures that encapsulates message passing from
  * members to a coordinator.  Each of these calls should send a message to the coordinator.
  */
-@InterfaceAudience.Public
-@InterfaceStability.Evolving
+@InterfaceAudience.Private
 public interface ProcedureMemberRpcs extends Closeable {
 
   /**

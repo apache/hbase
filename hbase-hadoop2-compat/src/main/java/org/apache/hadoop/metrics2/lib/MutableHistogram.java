@@ -18,19 +18,22 @@
 
 package org.apache.hadoop.metrics2.lib;
 
-import com.yammer.metrics.stats.ExponentiallyDecayingSample;
-import com.yammer.metrics.stats.Sample;
-import com.yammer.metrics.stats.Snapshot;
+import java.util.concurrent.atomic.AtomicLong;
+
 import org.apache.commons.lang.StringUtils;
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.metrics2.MetricHistogram;
 import org.apache.hadoop.metrics2.MetricsInfo;
 import org.apache.hadoop.metrics2.MetricsRecordBuilder;
 
-import java.util.concurrent.atomic.AtomicLong;
+import com.yammer.metrics.stats.ExponentiallyDecayingSample;
+import com.yammer.metrics.stats.Sample;
+import com.yammer.metrics.stats.Snapshot;
 
 /**
  * A histogram implementation that runs in constant space, and exports to hadoop2's metrics2 system.
  */
+@InterfaceAudience.Private
 public class MutableHistogram extends MutableMetric implements MetricHistogram {
 
   private static final int DEFAULT_SAMPLE_SIZE = 2046;

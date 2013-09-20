@@ -18,14 +18,15 @@
 
 package org.apache.hadoop.metrics2.impl;
 
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.metrics2.MetricsExecutor;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.metrics2.lib.MetricsExecutorImpl;
-
-import java.util.concurrent.ScheduledFuture;
-import java.util.concurrent.TimeUnit;
 
 /**
  * JMX caches the beans that have been exported; even after the values are removed from hadoop's
@@ -38,6 +39,7 @@ import java.util.concurrent.TimeUnit;
 @edu.umd.cs.findbugs.annotations.SuppressWarnings(
     value="LI_LAZY_INIT_STATIC",
     justification="Yeah, its weird but its what we want")
+@InterfaceAudience.Private
 public class JmxCacheBuster {
   private static final Log LOG = LogFactory.getLog(JmxCacheBuster.class);
   private static Object lock = new Object();

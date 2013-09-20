@@ -22,6 +22,8 @@ import java.io.IOException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.client.HTable;
@@ -39,6 +41,8 @@ import org.apache.hadoop.util.Progressable;
  * Convert Map/Reduce output and write it to an HBase table
  */
 @Deprecated
+@InterfaceAudience.Public
+@InterfaceStability.Stable
 public class TableOutputFormat extends
 FileOutputFormat<ImmutableBytesWritable, Put> {
 

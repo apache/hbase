@@ -21,12 +21,13 @@ package org.apache.hadoop.hbase.coprocessor;
 import com.google.protobuf.Service;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 
 /**
  * Coprocessor endpoints providing protobuf services should implement this
  * interface and return the {@link Service} instance via {@link #getService()}.
  */
-@InterfaceAudience.Public
+@InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.COPROC)
 @InterfaceStability.Evolving
 public interface CoprocessorService {
   Service getService();

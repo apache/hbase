@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.hbase.metrics;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.metrics2.MetricsCollector;
 import org.apache.hadoop.metrics2.MetricsSource;
 import org.apache.hadoop.metrics2.impl.JmxCacheBuster;
@@ -35,6 +36,7 @@ import org.apache.hadoop.metrics2.source.JvmMetrics;
  *
  * All MetricsSource's in hbase-hadoop2-compat should derive from this class.
  */
+@InterfaceAudience.Private
 public class BaseSourceImpl implements BaseSource, MetricsSource {
 
   private static enum DefaultMetricsSystemInitializer {

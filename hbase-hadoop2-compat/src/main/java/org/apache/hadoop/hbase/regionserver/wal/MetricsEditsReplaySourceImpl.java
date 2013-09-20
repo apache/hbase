@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.regionserver.wal;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.metrics.BaseSourceImpl;
 import org.apache.hadoop.metrics2.MetricHistogram;
 
@@ -27,6 +28,7 @@ import org.apache.hadoop.metrics2.MetricHistogram;
  * Hadoop1 implementation of MetricsMasterSource. Implements BaseSource through BaseSourceImpl,
  * following the pattern
  */
+@InterfaceAudience.Private
 public class MetricsEditsReplaySourceImpl extends BaseSourceImpl implements
     MetricsEditsReplaySource {
 
