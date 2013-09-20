@@ -46,7 +46,6 @@ import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HConnectionManager;
-import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.HTableInterface;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
@@ -63,12 +62,9 @@ import org.apache.hadoop.hbase.mapreduce.TableMapReduceUtil;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Hash;
 import org.apache.hadoop.hbase.util.MurmurHash;
 import org.apache.hadoop.hbase.util.Pair;
-import org.apache.hadoop.hbase.zookeeper.MiniZooKeeperCluster;
-import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.NullWritable;
@@ -122,7 +118,6 @@ public class PerformanceEvaluation extends Configured implements Tool {
 
   protected Map<String, CmdDescriptor> commands = new TreeMap<String, CmdDescriptor>();
 
-  private boolean miniCluster = false;
   private boolean nomapred = false;
   private int rowPrefixLength = DEFAULT_ROW_PREFIX_LENGTH;
   private int N = 1;
@@ -1246,43 +1241,14 @@ public class PerformanceEvaluation extends Configured implements Tool {
   }
 
   private void runTest(final Class<? extends Test> cmd) throws IOException,
-          InterruptedException, ClassNotFoundException {
-    MiniHBaseCluster hbaseMiniCluster = null;
-    MiniDFSCluster dfsCluster = null;
-    MiniZooKeeperCluster zooKeeperCluster = null;
-    Configuration conf = getConf();
-    if (this.miniCluster) {
-      dfsCluster = new MiniDFSCluster(conf, 2, true, (String[])null);
-      zooKeeperCluster = new MiniZooKeeperCluster(conf);
-      int zooKeeperPort = zooKeeperCluster.startup(new File(System.getProperty("java.io.tmpdir")));
-
-      // mangle the conf so that the fs parameter points to the minidfs we
-      // just started up
-      FileSystem fs = dfsCluster.getFileSystem();
-      FSUtils.setFsDefault(conf, new Path(fs.getUri()));
-      conf.set(HConstants.ZOOKEEPER_CLIENT_PORT, Integer.toString(zooKeeperPort));
-      Path parentdir = fs.getHomeDirectory();
-      FSUtils.setRootDir(conf, parentdir);
-      fs.mkdirs(parentdir);
-      FSUtils.setVersion(fs, parentdir);
-      hbaseMiniCluster = new MiniHBaseCluster(conf, N);
-    }
-
-    try {
-      if (N == 1) {
-        // If there is only one client and one HRegionServer, we assume nothing
-        // has been set up at all.
-        runNIsOne(cmd);
-      } else {
-        // Else, run
-        runNIsMoreThanOne(cmd);
-      }
-    } finally {
-      if(this.miniCluster) {
-        if (hbaseMiniCluster != null) hbaseMiniCluster.shutdown();
-        if (zooKeeperCluster != null) zooKeeperCluster.shutdown();
-        HBaseTestCase.shutdownDfs(dfsCluster);
-      }
+      InterruptedException, ClassNotFoundException {
+    if (N == 1) {
+      // If there is only one client and one HRegionServer, we assume nothing
+      // has been set up at all.
+      runNIsOne(cmd);
+    } else {
+      // Else, run
+      runNIsMoreThanOne(cmd);
     }
   }
 
@@ -1295,11 +1261,10 @@ public class PerformanceEvaluation extends Configured implements Tool {
       System.err.println(message);
     }
     System.err.println("Usage: java " + this.getClass().getName() + " \\");
-    System.err.println("  [--miniCluster] [--nomapred] [--rows=ROWS] [--table=NAME] \\");
+    System.err.println("  [--nomapred] [--rows=ROWS] [--table=NAME] \\");
     System.err.println("  [--compress=TYPE] [--blockEncoding=TYPE] [-D<property=value>]* <command> <nclients>");
     System.err.println();
     System.err.println("Options:");
-    System.err.println(" miniCluster     Run the test on an HBaseMiniCluster");
     System.err.println(" nomapred        Run multiple clients using threads " +
       "(rather than use mapreduce)");
     System.err.println(" rows            Rows each client runs. Default: One million");
@@ -1360,12 +1325,6 @@ public class PerformanceEvaluation extends Configured implements Tool {
           printUsage();
           errCode = 0;
           break;
-        }
-
-        final String miniClusterArgKey = "--miniCluster";
-        if (cmd.startsWith(miniClusterArgKey)) {
-          this.miniCluster = true;
-          continue;
         }
 
         final String nmr = "--nomapred";
