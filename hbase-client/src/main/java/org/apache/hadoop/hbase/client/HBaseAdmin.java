@@ -2922,7 +2922,8 @@ public class HBaseAdmin implements Abortable, Closeable {
 
     final IsRestoreSnapshotDoneRequest request = IsRestoreSnapshotDoneRequest.newBuilder()
         .setSnapshot(snapshot).build();
-    IsRestoreSnapshotDoneResponse done = IsRestoreSnapshotDoneResponse.newBuilder().buildPartial();
+    IsRestoreSnapshotDoneResponse done = IsRestoreSnapshotDoneResponse.newBuilder()
+        .setDone(false).buildPartial();
     final long maxPauseTime = 5000;
     int tries = 0;
     while (!done.getDone()) {
