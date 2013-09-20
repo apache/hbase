@@ -1902,6 +1902,8 @@
 	      <destDir>apidocs</destDir>
 	      <name>User API</name>
 	      <description>The HBase Application Programmer's API</description>
+	      <!-- exclude all the packages that are empty after the public annotation only filter -->
+	      <excludePackageNames>org.apache.hadoop.hbase.backup*:org.apache.hadoop.hbase.catalog:org.apache.hadoop.hbase.client.coprocessor:org.apache.hadoop.hbase.client.metrics:org.apache.hadoop.hbase.codec*:org.apache.hadoop.hbase.constraint:org.apache.hadoop.hbase.coprocessor.*:org.apache.hadoop.hbase.executor:org.apache.hadoop.hbase.fs:org.apache.hadoop.hbase.generated.*:org.apache.hadoop.hbase.io.hfile.*:org.apache.hadoop.hbase.mapreduce.hadoopbackport:org.apache.hadoop.hbase.mapreduce.replication:org.apache.hadoop.hbase.master.*:org.apache.hadoop.hbase.metrics*:org.apache.hadoop.hbase.migration:org.apache.hadoop.hbase.monitoring:org.apache.hadoop.hbase.p*:org.apache.hadoop.hbase.regionserver.compactions:org.apache.hadoop.hbase.regionserver.handler:org.apache.hadoop.hbase.regionserver.snapshot:org.apache.hadoop.hbase.replication.*:org.apache.hadoop.hbase.rest.filter:org.apache.hadoop.hbase.rest.model:org.apache.hadoop.hbase.rest.p*:org.apache.hadoop.hbase.security.*:org.apache.hadoop.hbase.thrift*:org.apache.hadoop.hbase.tmpl.*:org.apache.hadoop.hbase.tool:org.apache.hadoop.hbase.trace:org.apache.hadoop.hbase.util.byterange*:org.apache.hadoop.hbase.util.test:org.apache.hadoop.hbase.util.vint:org.apache.hadoop.hbase.zookeeper.lock:org.apache.hadoop.metrics2*</excludePackageNames>
 	    </configuration>
 	  </reportSet>
 	</reportSets>
