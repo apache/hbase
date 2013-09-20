@@ -953,7 +953,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
    */
   public void shutdownMiniHBaseCluster() throws IOException {
     if (hbaseAdmin != null) {
-      hbaseAdmin.close();
+      hbaseAdmin.close0();
       hbaseAdmin = null;
     }
 
@@ -2274,7 +2274,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
   /**
    * Returns a HBaseAdmin instance.
    * This instance is shared between HBaseTestingUtility instance users.
-   * Don't close it, it will be closed automatically when the
+   * Closing it has no effect, it will be closed automatically when the
    * cluster shutdowns
    *
    * @return The HBaseAdmin instance.
@@ -2283,11 +2283,27 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
   public synchronized HBaseAdmin getHBaseAdmin()
   throws IOException {
     if (hbaseAdmin == null){
-      hbaseAdmin = new HBaseAdmin(getConfiguration());
+      hbaseAdmin = new HBaseAdminForTests(getConfiguration());
     }
     return hbaseAdmin;
   }
-  private HBaseAdmin hbaseAdmin = null;
+
+  private HBaseAdminForTests hbaseAdmin = null;
+  private static class HBaseAdminForTests extends HBaseAdmin {
+    public HBaseAdminForTests(Configuration c) throws MasterNotRunningException,
+        ZooKeeperConnectionException, IOException {
+      super(c);
+    }
+
+    @Override
+    public synchronized void close() throws IOException {
+      LOG.warn("close() called on HBaseAdmin instance returned from HBaseTestingUtility.getHBaseAdmin()");
+    }
+
+    private synchronized void close0() throws IOException {
+      super.close();
+    }
+  }
 
   /**
    * Returns a ZooKeeperWatcher instance.
