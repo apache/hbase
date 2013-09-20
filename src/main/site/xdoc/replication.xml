@@ -330,6 +330,15 @@
           at random, thus the chance of overlapping and full usage of the slave
           cluster is higher.
         </p>
+        <p>
+          A ZK watcher is placed on the ${zookeeper.znode.parent}/rs node of 
+          the slave cluster by each of the master cluster's region servers. 
+          This watch is used to monitor changes in the composition of the 
+          slave cluster. When nodes are removed from the slave cluster (or 
+          if nodes go down and/or come back up), the master cluster's region
+          servers will respond by selecting a new pool of slave region servers
+          to replicate to.
+        </p>
       </section>
       <section name="Keeping track of logs">
         <p>
