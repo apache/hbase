@@ -962,8 +962,8 @@ public class MemStore implements HeapSize {
 
   public final static long DEEP_OVERHEAD = ClassSize.align(FIXED_OVERHEAD +
       ClassSize.REENTRANT_LOCK + ClassSize.ATOMIC_LONG +
-      ClassSize.COPYONWRITE_ARRAYSET + ClassSize.COPYONWRITE_ARRAYLIST +
-      (2 * ClassSize.CONCURRENT_SKIPLISTMAP));
+      (2 * ClassSize.TIMERANGE_TRACKER) +
+      (2 * ClassSize.KEYVALUE_SKIPLIST_SET) + (2 * ClassSize.CONCURRENT_SKIPLISTMAP));
 
   /** Used for readability when we don't store memstore timestamp in HFile */
   public static final boolean NO_PERSISTENT_TS = false;

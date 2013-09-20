@@ -103,6 +103,12 @@ public class ClassSize {
   /** Overhead for timerange */
   public static final int TIMERANGE;
 
+  /** Overhead for TimeRangeTracker */
+  public static final int TIMERANGE_TRACKER;
+
+  /** Overhead for KeyValueSkipListSet */
+  public static final int KEYVALUE_SKIPLIST_SET;
+
   /* Are we running on jdk7? */
   private static final boolean JDK7;
   static {
@@ -181,6 +187,10 @@ public class ClassSize {
     COPYONWRITE_ARRAYLIST = align(OBJECT + (2 * REFERENCE) + ARRAY);
 
     TIMERANGE = align(ClassSize.OBJECT + Bytes.SIZEOF_LONG * 2 + Bytes.SIZEOF_BOOLEAN);
+
+    TIMERANGE_TRACKER = align(ClassSize.OBJECT + Bytes.SIZEOF_LONG * 2);
+
+    KEYVALUE_SKIPLIST_SET = align(OBJECT + REFERENCE);
   }
 
   /**
