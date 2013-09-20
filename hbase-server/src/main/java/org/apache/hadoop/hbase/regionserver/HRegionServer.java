@@ -431,9 +431,6 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
   // Cache configuration and block cache reference
   final CacheConfig cacheConfig;
 
-  // reference to the Thrift Server.
-  volatile private HRegionThriftServer thriftServer;
-
   /** The health check chore. */
   private HealthCheckChore healthCheckChore;
 
@@ -779,13 +776,6 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
 
     this.leases = new Leases(this.threadWakeFrequency);
 
-    // Create the thread for the ThriftServer.
-    if (conf.getBoolean("hbase.regionserver.export.thrift", false)) {
-      thriftServer = new HRegionThriftServer(this, conf);
-      thriftServer.start();
-      LOG.info("Started Thrift API from Region Server.");
-    }
-
     // Create the thread to clean the moved regions list
     movedRegionsCleaner = MovedRegionsCleaner.createAndStart(this);
 
@@ -874,7 +864,6 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
       MBeanUtil.unregisterMBean(mxBean);
       mxBean = null;
     }
-    if (this.thriftServer != null) this.thriftServer.shutdown();
     if (this.leases != null) this.leases.closeAfterLeasesExpire();
     this.rpcServer.stop();
     if (this.splitLogWorker != null) {
