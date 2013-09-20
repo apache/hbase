@@ -126,8 +126,6 @@
                 <jspcompiler uriroot="${src.webapps}/regionserver" outputdir="${generated.sources}/java" package="org.apache.hadoop.hbase.generated.regionserver" webxml="${build.webapps}/regionserver/WEB-INF/web.xml"/>
                 <mkdir dir="${build.webapps}/rest/WEB-INF"/>
                 <jspcompiler uriroot="${src.webapps}/rest" outputdir="${generated.sources}/java" package="org.apache.hadoop.hbase.generated.rest" webxml="${build.webapps}/rest/WEB-INF/web.xml"/>
-                <mkdir dir="${build.webapps}/thrift/WEB-INF"/>
-                <jspcompiler uriroot="${src.webapps}/thrift" outputdir="${generated.sources}/java" package="org.apache.hadoop.hbase.generated.thrift" webxml="${build.webapps}/thrift/WEB-INF/web.xml"/>
               </target>
             </configuration>
             <goals>
@@ -142,7 +140,7 @@
         <executions>
           <!-- Add the generated sources -->
           <execution>
-            <id>jspcSource-packageInfo-Avro-source</id>
+            <id>jspcSource-packageInfo-source</id>
             <phase>generate-sources</phase>
             <goals>
               <goal>add-source</goal>
@@ -370,14 +368,6 @@
     <dependency>
       <groupId>org.apache.zookeeper</groupId>
       <artifactId>zookeeper</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.slf4j</groupId>
-      <artifactId>slf4j-api</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.thrift</groupId>
-      <artifactId>libthrift</artifactId>
     </dependency>
     <dependency>
       <groupId>org.jruby</groupId>
