@@ -22,7 +22,7 @@ package org.apache.hadoop.hbase.rest.model;
 import java.io.IOException;
 import java.io.Serializable;
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -74,7 +74,7 @@ public class TableSchemaModel implements Serializable, ProtobufMessageHandler {
     new QName(HColumnDescriptor.COMPRESSION);
 
   private String name;
-  private Map<QName,Object> attrs = new HashMap<QName,Object>();
+  private Map<QName,Object> attrs = new LinkedHashMap<QName,Object>();
   private List<ColumnSchemaModel> columns = new ArrayList<ColumnSchemaModel>();
   
   /**

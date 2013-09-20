@@ -20,7 +20,7 @@
 package org.apache.hadoop.hbase.rest.model;
 
 import java.io.Serializable;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 import javax.xml.bind.annotation.XmlAnyAttribute;
@@ -57,7 +57,7 @@ public class ColumnSchemaModel implements Serializable {
   private static QName VERSIONS = new QName(HConstants.VERSIONS);
 
   private String name;
-  private Map<QName,Object> attrs = new HashMap<QName,Object>();
+  private Map<QName,Object> attrs = new LinkedHashMap<QName,Object>();
 
   /**
    * Default constructor
