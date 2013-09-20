@@ -33,6 +33,7 @@ import org.apache.commons.collections.map.ReferenceMap;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.Coprocessor;
@@ -56,7 +57,11 @@ import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.RegionObserver;
 import org.apache.hadoop.hbase.filter.ByteArrayComparable;
 import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
+import org.apache.hadoop.hbase.io.FSDataInputStreamWrapper;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
+import org.apache.hadoop.hbase.io.Reference;
+import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
+import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
 import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
@@ -1636,4 +1641,71 @@ public class RegionCoprocessorHost
     return hasLoaded;
   }
 
+  /**
+   * @param fs fileystem to read from
+   * @param p path to the file
+   * @param in {@link FSDataInputStreamWrapper}
+   * @param size Full size of the file
+   * @param cacheConf
+   * @param preferredEncodingInCache
+   * @param r original reference file. This will be not null only when reading a split file.
+   * @return a Reader instance to use instead of the base reader if overriding
+   * default behavior, null otherwise
+   * @throws IOException
+   */
+  public StoreFile.Reader preStoreFileReaderOpen(final FileSystem fs, final Path p,
+      final FSDataInputStreamWrapper in, long size, final CacheConfig cacheConf,
+      final DataBlockEncoding preferredEncodingInCache, final Reference r) throws IOException {
+    StoreFile.Reader reader = null;
+    ObserverContext<RegionCoprocessorEnvironment> ctx = null;
+    for (RegionEnvironment env : coprocessors) {
+      if (env.getInstance() instanceof RegionObserver) {
+        ctx = ObserverContext.createAndPrepare(env, ctx);
+        try {
+          reader = ((RegionObserver) env.getInstance()).preStoreFileReaderOpen(ctx, fs, p, in,
+              size, cacheConf, preferredEncodingInCache, r, reader);
+        } catch (Throwable e) {
+          handleCoprocessorThrowable(env, e);
+        }
+        if (ctx.shouldComplete()) {
+          break;
+        }
+      }
+    }
+    return reader;
+  }
+
+  /**
+   * @param fs fileystem to read from
+   * @param p path to the file
+   * @param in {@link FSDataInputStreamWrapper}
+   * @param size Full size of the file
+   * @param cacheConf
+   * @param preferredEncodingInCache
+   * @param r original reference file. This will be not null only when reading a split file.
+   * @param reader the base reader instance
+   * @return The reader to use
+   * @throws IOException
+   */
+  public StoreFile.Reader postStoreFileReaderOpen(final FileSystem fs, final Path p,
+      final FSDataInputStreamWrapper in, long size, final CacheConfig cacheConf,
+      final DataBlockEncoding preferredEncodingInCache, final Reference r, StoreFile.Reader reader)
+      throws IOException {
+    ObserverContext<RegionCoprocessorEnvironment> ctx = null;
+    for (RegionEnvironment env : coprocessors) {
+      if (env.getInstance() instanceof RegionObserver) {
+        ctx = ObserverContext.createAndPrepare(env, ctx);
+        try {
+          reader = ((RegionObserver) env.getInstance()).postStoreFileReaderOpen(ctx, fs, p, in,
+              size, cacheConf, preferredEncodingInCache, r, reader);
+        } catch (Throwable e) {
+          handleCoprocessorThrowable(env, e);
+        }
+        if (ctx.shouldComplete()) {
+          break;
+        }
+      }
+    }
+    return reader;
+  }
 }

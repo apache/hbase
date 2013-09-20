@@ -474,7 +474,9 @@ public class HStore implements Store {
   }
 
   private StoreFile createStoreFileAndReader(final Path p, final HFileDataBlockEncoder encoder) throws IOException {
-    StoreFile storeFile = new StoreFile(this.getFileSystem(), p, this.conf, this.cacheConf,
+    StoreFileInfo info = new StoreFileInfo(conf, this.getFileSystem(), p);
+    info.setRegionCoprocessorHost(this.region.getCoprocessorHost());
+    StoreFile storeFile = new StoreFile(this.getFileSystem(), info, this.conf, this.cacheConf,
         this.family.getBloomFilterType(), encoder);
     storeFile.createReader();
     return storeFile;

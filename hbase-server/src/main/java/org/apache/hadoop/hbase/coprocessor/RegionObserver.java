@@ -21,6 +21,8 @@ import java.util.NavigableSet;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -36,6 +38,10 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.filter.ByteArrayComparable;
+import org.apache.hadoop.hbase.io.FSDataInputStreamWrapper;
+import org.apache.hadoop.hbase.io.Reference;
+import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
+import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.regionserver.KeyValueScanner;
@@ -1002,4 +1008,47 @@ public interface RegionObserver extends Coprocessor {
    */
   boolean postBulkLoadHFile(final ObserverContext<RegionCoprocessorEnvironment> ctx,
     List<Pair<byte[], String>> familyPaths, boolean hasLoaded) throws IOException;
+
+  /**
+   * Called before creation of Reader for a store file.
+   * Calling {@link org.apache.hadoop.hbase.coprocessor.ObserverContext#bypass()} has no
+   * effect in this hook.
+   * 
+   * @param ctx the environment provided by the region server
+   * @param fs fileystem to read from
+   * @param p path to the file
+   * @param in {@link FSDataInputStreamWrapper}
+   * @param size Full size of the file
+   * @param cacheConf
+   * @param preferredEncodingInCache
+   * @param r original reference file. This will be not null only when reading a split file.
+   * @param reader the base reader, if not {@code null}, from previous RegionObserver in the chain
+   * @return a Reader instance to use instead of the base reader if overriding
+   * default behavior, null otherwise
+   * @throws IOException
+   */
+  StoreFile.Reader preStoreFileReaderOpen(final ObserverContext<RegionCoprocessorEnvironment> ctx,
+      final FileSystem fs, final Path p, final FSDataInputStreamWrapper in, long size,
+      final CacheConfig cacheConf, final DataBlockEncoding preferredEncodingInCache,
+      final Reference r, StoreFile.Reader reader) throws IOException;
+
+  /**
+   * Called after the creation of Reader for a store file.
+   * 
+   * @param ctx the environment provided by the region server
+   * @param fs fileystem to read from
+   * @param p path to the file
+   * @param in {@link FSDataInputStreamWrapper}
+   * @param size Full size of the file
+   * @param cacheConf
+   * @param preferredEncodingInCache
+   * @param r original reference file. This will be not null only when reading a split file.
+   * @param reader the base reader instance
+   * @return The reader to use
+   * @throws IOException
+   */
+  StoreFile.Reader postStoreFileReaderOpen(final ObserverContext<RegionCoprocessorEnvironment> ctx,
+      final FileSystem fs, final Path p, final FSDataInputStreamWrapper in, long size,
+      final CacheConfig cacheConf, final DataBlockEncoding preferredEncodingInCache,
+      final Reference r, StoreFile.Reader reader) throws IOException;
 }

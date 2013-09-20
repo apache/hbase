@@ -79,6 +79,8 @@ public class StoreFileInfo {
   // FileSystem information for the file.
   private final FileStatus fileStatus;
 
+  private RegionCoprocessorHost coprocessorHost;
+
   /**
    * Create a Store File Info
    * @param conf the {@link Configuration} to use
@@ -124,6 +126,14 @@ public class StoreFileInfo {
     } else {
       throw new IOException("path=" + p + " doesn't look like a valid StoreFile");
     }
+  }
+
+  /**
+   * Sets the region coprocessor env.
+   * @param coprocessorHost
+   */
+  public void setRegionCoprocessorHost(RegionCoprocessorHost coprocessorHost) {
+    this.coprocessorHost = coprocessorHost;
   }
 
   /*
@@ -182,12 +192,27 @@ public class StoreFileInfo {
     long length = status.getLen();
     if (this.reference != null) {
       hdfsBlocksDistribution = computeRefFileHDFSBlockDistribution(fs, reference, status);
-      return new HalfStoreFileReader(
-          fs, this.getPath(), in, length, cacheConf, reference, dataBlockEncoding);
     } else {
       hdfsBlocksDistribution = FSUtils.computeHDFSBlocksDistribution(fs, status, 0, length);
-      return new StoreFile.Reader(fs, this.getPath(), in, length, cacheConf, dataBlockEncoding);
     }
+    StoreFile.Reader reader = null;
+    if (this.coprocessorHost != null) {
+      reader = this.coprocessorHost.preStoreFileReaderOpen(fs, this.getPath(), in, length,
+          cacheConf, dataBlockEncoding, reference);
+    }
+    if (reader == null) {
+      if (this.reference != null) {
+        reader = new HalfStoreFileReader(fs, this.getPath(), in, length, cacheConf, reference,
+            dataBlockEncoding);
+      } else {
+        reader = new StoreFile.Reader(fs, this.getPath(), in, length, cacheConf, dataBlockEncoding);
+      }
+    }
+    if (this.coprocessorHost != null) {
+      reader = this.coprocessorHost.postStoreFileReaderOpen(fs, this.getPath(), in, length,
+          cacheConf, dataBlockEncoding, reference, reader);
+    }
+    return reader;
   }
 
   /**
