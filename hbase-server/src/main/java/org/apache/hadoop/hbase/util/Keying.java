@@ -34,6 +34,7 @@ import org.apache.hadoop.classification.InterfaceStability;
  */
 @InterfaceAudience.Public
 @InterfaceStability.Stable
+@Deprecated // seems unused
 public class Keying {
   private static final String SCHEME = "r:";
   private static final Pattern URI_RE_PARSER =
