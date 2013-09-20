@@ -291,7 +291,7 @@ message IsRestoreSnapshotDoneRequest {
 }
 
 message IsRestoreSnapshotDoneResponse {
-  optional bool done = 1 [default = true];
+  optional bool done = 1 [default = false];
 }
 
 service MasterAdminService {
