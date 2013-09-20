@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.hbase.thrift;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.metrics.BaseSourceImpl;
 import org.apache.hadoop.metrics2.lib.MutableGaugeLong;
 import org.apache.hadoop.metrics2.lib.MutableStat;
@@ -27,6 +28,7 @@ import org.apache.hadoop.metrics2.lib.MutableStat;
  *
  * Implements BaseSource through BaseSourceImpl, following the pattern
  */
+@InterfaceAudience.Private
 public class MetricsThriftServerSourceImpl extends BaseSourceImpl implements
     MetricsThriftServerSource {
 

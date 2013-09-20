@@ -85,8 +85,7 @@ import com.google.protobuf.InvalidProtocolBufferException;
 /**
  * Utility methods for interacting with the underlying file system.
  */
-@InterfaceAudience.Public
-@InterfaceStability.Evolving
+@InterfaceAudience.Private
 public abstract class FSUtils {
   private static final Log LOG = LogFactory.getLog(FSUtils.class);
 

@@ -45,7 +45,7 @@ import org.apache.hadoop.hbase.Stoppable;
  *
  * <p>This classes produces plans for the {@link AssignmentManager} to execute.
  */
-@InterfaceAudience.Public
+@InterfaceAudience.Private
 public interface LoadBalancer extends Configurable, Stoppable {
 
   /**

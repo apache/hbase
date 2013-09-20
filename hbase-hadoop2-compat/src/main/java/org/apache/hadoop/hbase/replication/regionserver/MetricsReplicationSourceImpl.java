@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.hbase.replication.regionserver;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.metrics.BaseSourceImpl;
 
 /**
@@ -26,6 +27,7 @@ import org.apache.hadoop.hbase.metrics.BaseSourceImpl;
  *
  * Implements BaseSource through BaseSourceImpl, following the pattern
  */
+@InterfaceAudience.Private
 public class MetricsReplicationSourceImpl extends BaseSourceImpl implements
     MetricsReplicationSource {
 

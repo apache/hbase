@@ -19,15 +19,13 @@
 package org.apache.hadoop.hbase.client;
 
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
 
 /**
  * A Get, Put or Delete associated with it's region.  Used internally by  
  * {@link HTable#batch} to associate the action with it's region and maintain
  * the index from the original request. 
  */
-@InterfaceAudience.Public
-@InterfaceStability.Stable
+@InterfaceAudience.Private
 public class Action<R> implements Comparable<R> {
   // TODO: This class should not be visible outside of the client package.
   private Row action;

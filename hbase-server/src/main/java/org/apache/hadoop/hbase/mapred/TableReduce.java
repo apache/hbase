@@ -18,9 +18,10 @@
  */
 package org.apache.hadoop.hbase.mapred;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
-import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapred.Reducer;
 
@@ -31,6 +32,8 @@ import org.apache.hadoop.mapred.Reducer;
  * @param <V> value class
  */
 @Deprecated
+@InterfaceAudience.Public
+@InterfaceStability.Stable
 @SuppressWarnings("unchecked")
 public interface TableReduce<K extends WritableComparable, V>
 extends Reducer<K, V, ImmutableBytesWritable, Put> {

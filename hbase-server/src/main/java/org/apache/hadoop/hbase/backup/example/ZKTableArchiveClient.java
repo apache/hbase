@@ -31,7 +31,7 @@ import org.apache.zookeeper.KeeperException;
 /**
  * Example class for how to use the table archiving coordinated via zookeeper
  */
-@InterfaceAudience.Public
+@InterfaceAudience.Private
 public class ZKTableArchiveClient extends Configured {
 
   /** Configuration key for the archive node. */

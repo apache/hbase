@@ -36,8 +36,7 @@ import org.apache.hadoop.classification.InterfaceStability;
  * the snare.  The snare is referenced and checked by multiple threads which enables exception 
  * notification in all the involved threads/processes. 
  */
-@InterfaceAudience.Public
-@InterfaceStability.Evolving
+@InterfaceAudience.Private
 public interface ForeignExceptionSnare {
 
   /**

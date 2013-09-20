@@ -21,7 +21,7 @@ package org.apache.hadoop.hbase.thrift;
 import org.apache.hadoop.hbase.metrics.BaseSource;
 
 /**
- * Inteface of a class that will export metrics about Thrift to hadoop's metrics2.
+ * Interface of a class that will export metrics about Thrift to hadoop's metrics2.
  */
 public interface MetricsThriftServerSource extends BaseSource {
 

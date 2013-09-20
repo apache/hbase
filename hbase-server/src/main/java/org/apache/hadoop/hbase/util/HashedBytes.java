@@ -27,7 +27,7 @@ import org.apache.hadoop.classification.InterfaceStability;
  * This class encapsulates a byte array and overrides hashCode and equals so
  * that it's identity is based on the data rather than the array instance.
  */
-@InterfaceAudience.Public
+@InterfaceAudience.Private
 @InterfaceStability.Stable
 public class HashedBytes {
 

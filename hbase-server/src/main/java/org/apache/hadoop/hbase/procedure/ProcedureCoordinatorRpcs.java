@@ -22,7 +22,6 @@ import java.io.IOException;
 import java.util.List;
 
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.errorhandling.ForeignException;
 
 /**
@@ -30,8 +29,7 @@ import org.apache.hadoop.hbase.errorhandling.ForeignException;
  * distributed members.
  * @see ProcedureCoordinator
  */
-@InterfaceAudience.Public
-@InterfaceStability.Evolving
+@InterfaceAudience.Private
 public interface ProcedureCoordinatorRpcs extends Closeable {
 
   /**

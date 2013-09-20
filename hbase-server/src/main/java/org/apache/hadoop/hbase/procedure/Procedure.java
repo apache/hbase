@@ -27,7 +27,6 @@ import java.util.concurrent.TimeUnit;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.errorhandling.ForeignException;
 import org.apache.hadoop.hbase.errorhandling.ForeignExceptionDispatcher;
 import org.apache.hadoop.hbase.errorhandling.ForeignExceptionListener;
@@ -65,8 +64,7 @@ import com.google.common.collect.Lists;
  * for them implicitly via {@link ProcedureCoordinator#startProcedure(ForeignExceptionDispatcher,
  * String, byte[], List)}}
  */
-@InterfaceAudience.Public
-@InterfaceStability.Evolving
+@InterfaceAudience.Private
 public class Procedure implements Callable<Void>, ForeignExceptionListener {
   private static final Log LOG = LogFactory.getLog(Procedure.class);
 

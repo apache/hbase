@@ -19,14 +19,14 @@
 package org.apache.hadoop.hbase.mapred;
 
 import java.io.IOException;
-import java.util.Map;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.mapred.FileOutputFormat;
 import org.apache.hadoop.mapred.JobClient;
 import org.apache.hadoop.mapred.JobConf;
@@ -42,6 +42,8 @@ import org.apache.hadoop.util.ToolRunner;
  * Uses an {@link IdentityReducer}
  */
 @Deprecated
+@InterfaceAudience.Public
+@InterfaceStability.Stable
 public class RowCounter extends Configured implements Tool {
   // Name of this 'program'
   static final String NAME = "rowcounter";

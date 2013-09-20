@@ -18,7 +18,7 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.RegionObserver;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 
@@ -29,8 +29,7 @@ import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
  * @see RegionObserver#postBatchMutate(ObserverContext, MiniBatchOperationInProgress)
  * @param <T> Pair<Mutation, Integer> pair of Mutations and associated rowlock ids .
  */
-@InterfaceAudience.Public
-@InterfaceStability.Evolving
+@InterfaceAudience.Private
 public class MiniBatchOperationInProgress<T> {
   private final T[] operations;
   private final OperationStatus[] retCodeDetails;

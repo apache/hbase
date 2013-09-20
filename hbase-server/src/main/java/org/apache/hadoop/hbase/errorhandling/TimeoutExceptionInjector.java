@@ -33,8 +33,7 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
  * The timer won't start tracking time until calling {@link #start()}. If {@link #complete()} or
  * {@link #trigger()} is called before {@link #start()}, calls to {@link #start()} will fail.
  */
-@InterfaceAudience.Public
-@InterfaceStability.Evolving
+@InterfaceAudience.Private
 public class TimeoutExceptionInjector {
 
   private static final Log LOG = LogFactory.getLog(TimeoutExceptionInjector.class);

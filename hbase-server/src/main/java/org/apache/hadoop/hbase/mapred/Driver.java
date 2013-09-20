@@ -18,6 +18,8 @@
  */
 package org.apache.hadoop.hbase.mapred;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.util.ProgramDriver;
 
 /**
@@ -25,6 +27,8 @@ import org.apache.hadoop.util.ProgramDriver;
  * name of job to this main.
  */
 @Deprecated
+@InterfaceAudience.Public
+@InterfaceStability.Stable
 public class Driver {
   /**
    * @param args

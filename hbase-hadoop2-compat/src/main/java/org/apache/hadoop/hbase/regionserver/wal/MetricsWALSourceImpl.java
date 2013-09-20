@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.hbase.regionserver.wal;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.metrics.BaseSourceImpl;
 import org.apache.hadoop.metrics2.MetricHistogram;
 import org.apache.hadoop.metrics2.lib.MutableCounterLong;
@@ -28,6 +29,7 @@ import org.apache.hadoop.metrics2.lib.MutableCounterLong;
  *
  * Implements BaseSource through BaseSourceImpl, following the pattern.
  */
+@InterfaceAudience.Private
 public class MetricsWALSourceImpl extends BaseSourceImpl implements MetricsWALSource {
 
   private final MetricHistogram appendSizeHisto;

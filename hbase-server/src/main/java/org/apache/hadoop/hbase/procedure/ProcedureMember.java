@@ -31,7 +31,6 @@ import java.util.concurrent.TimeUnit;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.DaemonThreadFactory;
 import org.apache.hadoop.hbase.errorhandling.ForeignException;
 
@@ -46,8 +45,7 @@ import com.google.common.collect.MapMaker;
  * currently running subprocedures are notify to failed since there is no longer a way to reach any
  * other members or coordinators since the rpcs are down.
  */
-@InterfaceAudience.Public
-@InterfaceStability.Evolving
+@InterfaceAudience.Private
 public class ProcedureMember implements Closeable {
   private static final Log LOG = LogFactory.getLog(ProcedureMember.class);
 

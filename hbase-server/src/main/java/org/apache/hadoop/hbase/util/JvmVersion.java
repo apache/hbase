@@ -29,7 +29,7 @@ import org.apache.hadoop.classification.InterfaceStability;
  * class has a utility function to determine whether the current JVM
  * is known to be unstable.
  */
-@InterfaceAudience.Public
+@InterfaceAudience.Private
 @InterfaceStability.Stable
 public abstract class JvmVersion {
   private static Set<String> BAD_JVM_VERSIONS = new HashSet<String>();

@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.hbase.regionserver;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.metrics.BaseSourceImpl;
 import org.apache.hadoop.metrics2.MetricHistogram;
 import org.apache.hadoop.metrics2.MetricsCollector;
@@ -30,6 +31,7 @@ import org.apache.hadoop.metrics2.lib.MutableCounterLong;
  *
  * Implements BaseSource through BaseSourceImpl, following the pattern
  */
+@InterfaceAudience.Private
 public class MetricsRegionServerSourceImpl
     extends BaseSourceImpl implements MetricsRegionServerSource {
 

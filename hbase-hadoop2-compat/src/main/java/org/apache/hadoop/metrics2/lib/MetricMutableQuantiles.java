@@ -18,10 +18,14 @@
 
 package org.apache.hadoop.metrics2.lib;
 
-import com.google.common.annotations.VisibleForTesting;
+import static org.apache.hadoop.metrics2.lib.Interns.info;
+
+import java.io.IOException;
+import java.util.Map;
+import java.util.concurrent.TimeUnit;
+
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.metrics2.MetricHistogram;
 import org.apache.hadoop.metrics2.MetricsExecutor;
 import org.apache.hadoop.metrics2.MetricsInfo;
@@ -29,19 +33,14 @@ import org.apache.hadoop.metrics2.MetricsRecordBuilder;
 import org.apache.hadoop.metrics2.util.MetricQuantile;
 import org.apache.hadoop.metrics2.util.MetricSampleQuantiles;
 
-import java.io.IOException;
-import java.util.Map;
-import java.util.concurrent.TimeUnit;
-
-import static org.apache.hadoop.metrics2.lib.Interns.info;
+import com.google.common.annotations.VisibleForTesting;
 
 /**
  * Watches a stream of long values, maintaining online estimates of specific quantiles with provably
  * low error bounds. This is particularly useful for accurate high-percentile (e.g. 95th, 99th)
  * latency metrics.
  */
-@InterfaceAudience.Public
-@InterfaceStability.Evolving
+@InterfaceAudience.Private
 public class MetricMutableQuantiles extends MutableMetric implements MetricHistogram {
 
   static final MetricQuantile[] quantiles = {new MetricQuantile(0.50, 0.050),

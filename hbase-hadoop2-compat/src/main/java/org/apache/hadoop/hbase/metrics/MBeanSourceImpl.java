@@ -18,13 +18,15 @@
 
 package org.apache.hadoop.hbase.metrics;
 
-import org.apache.hadoop.metrics2.util.MBeans;
-
 import javax.management.ObjectName;
+
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.metrics2.util.MBeans;
 
 /**
  * Hadoop2 metrics2 implementation of an object that registers MBeans.
  */
+@InterfaceAudience.Private
 public class MBeanSourceImpl implements MBeanSource {
 
   /**
