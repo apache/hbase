@@ -59,13 +59,13 @@ public class TestColumnSchemaModel extends TestModelBase<ColumnSchemaModel> {
   protected ColumnSchemaModel buildTestModel() {
     ColumnSchemaModel model = new ColumnSchemaModel();
     model.setName(COLUMN_NAME);
-    model.__setBlockcache(BLOCKCACHE);
     model.__setBlocksize(BLOCKSIZE);
     model.__setBloomfilter(BLOOMFILTER);
+    model.__setBlockcache(BLOCKCACHE);
     model.__setCompression(COMPRESSION);
-    model.__setInMemory(IN_MEMORY);
-    model.__setTTL(TTL);
     model.__setVersions(VERSIONS);
+    model.__setTTL(TTL);
+    model.__setInMemory(IN_MEMORY);
     return model;
   }
 
