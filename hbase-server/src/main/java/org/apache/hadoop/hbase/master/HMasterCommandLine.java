@@ -180,7 +180,7 @@ public class HMasterCommandLine extends ServerCommandLine {
         cluster.startup();
         waitOnMasterThreads(cluster);
       } else {
-        logJVMInfo();
+        logProcessInfo(getConf());
         HMaster master = HMaster.constructMaster(masterClass, conf);
         if (master.isStopped()) {
           LOG.info("Won't bring the Master up as a shutdown is requested");

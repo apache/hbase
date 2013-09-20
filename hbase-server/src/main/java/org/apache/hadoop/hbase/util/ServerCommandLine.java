@@ -18,8 +18,12 @@
  */
 package org.apache.hadoop.hbase.util;
 
-import java.lang.management.RuntimeMXBean;
 import java.lang.management.ManagementFactory;
+import java.lang.management.RuntimeMXBean;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.Map.Entry;
+import java.util.Set;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -36,6 +40,15 @@ import org.apache.hadoop.util.ToolRunner;
 @InterfaceAudience.Private
 public abstract class ServerCommandLine extends Configured implements Tool {
   private static final Log LOG = LogFactory.getLog(ServerCommandLine.class);
+  @SuppressWarnings("serial")
+  private static final Set<String> DEFAULT_SKIP_WORDS = new HashSet<String>() {
+    {
+      add("secret");
+      add("passwd");
+      add("password");
+      add("credential");
+    }
+  };
 
   /**
    * Implementing subclasses should return a usage string to print out.
@@ -67,6 +80,41 @@ public abstract class ServerCommandLine extends Configured implements Tool {
                runtime.getVmVendor() + ", vmVersion=" + runtime.getVmVersion());
       LOG.info("vmInputArguments=" + runtime.getInputArguments());
     }
+  }
+
+  /**
+   * Logs information about the currently running JVM process including
+   * the environment variables. Logging of env vars can be disabled by
+   * setting {@code "hbase.envvars.logging.disabled"} to {@code "true"}.
+   * <p>If enabled, you can also exclude environment variables containing
+   * certain substrings by setting {@code "hbase.envvars.logging.skipwords"}
+   * to comma separated list of such substrings.
+   */
+  public static void logProcessInfo(Configuration conf) {
+    // log environment variables unless asked not to
+    if (conf == null || !conf.getBoolean("hbase.envvars.logging.disabled", false)) {
+      Set<String> skipWords = new HashSet<String>(DEFAULT_SKIP_WORDS);
+      if (conf != null) {
+        String[] confSkipWords = conf.getStrings("hbase.envvars.logging.skipwords");
+        if (confSkipWords != null) {
+          skipWords.addAll(Arrays.asList(confSkipWords));
+        }
+      }
+
+      nextEnv:
+      for (Entry<String, String> entry : System.getenv().entrySet()) {
+        String key = entry.getKey().toLowerCase();
+        String value = entry.getValue().toLowerCase();
+        // exclude variables which may contain skip words
+        for(String skipWord : skipWords) {
+          if (key.contains(skipWord) || value.contains(skipWord))
+            continue nextEnv;
+        }
+        LOG.info("env:"+entry);
+      }
+    }
+    // and JVM info
+    logJVMInfo();
   }
 
   /**
