@@ -36,6 +36,11 @@
 
     <para>Here we list HBase tools for administration, analysis, fixup, and
     debugging.</para>
+    <section xml:id="health.check"><title>Health Checker</title>
+        <para>You can configure HBase to run a script on a period and if it fails N times (configurable), have the server exit.
+            See <link xlink:ref="">HBASE-7351 Periodic health check script</link> for configurations and detail.
+        </para>
+    </section>
     <section xml:id="driver"><title>Driver</title>
       <para>There is a <code>Driver</code> class that is executed by the HBase jar can be used to invoke frequently accessed utilities.  For example,
 <programlisting>HADOOP_CLASSPATH=`${HBASE_HOME}/bin/hbase classpath` ${HADOOP_HOME}/bin/hadoop jar ${HBASE_HOME}/hbase-VERSION.jar

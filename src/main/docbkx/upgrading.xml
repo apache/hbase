@@ -203,6 +203,24 @@
              If the output from the execute step looks good, start hbase-0.96.0.
          </para>
      </section>
+     <section xml:id="096.migration.troubleshooting"><title>Troubleshooting</title>
+     <section xml:id="096.migration.troubleshooting.old.client"><title>Old Client connecting to 0.96 cluster</title>
+         <para>It will fail with an exception like the below.  Upgrade.
+             <programlisting>17:22:15  Exception in thread "main" java.lang.IllegalArgumentException: Not a host:port pair: PBUF
+17:22:15  *
+17:22:15   api-compat-8.ent.cloudera.com ��  ���(
+17:22:15    at org.apache.hadoop.hbase.util.Addressing.parseHostname(Addressing.java:60)
+17:22:15    at org.apache.hadoop.hbase.ServerName.&amp;init>(ServerName.java:101)
+17:22:15    at org.apache.hadoop.hbase.ServerName.parseVersionedServerName(ServerName.java:283)
+17:22:15    at org.apache.hadoop.hbase.MasterAddressTracker.bytesToServerName(MasterAddressTracker.java:77)
+17:22:15    at org.apache.hadoop.hbase.MasterAddressTracker.getMasterAddress(MasterAddressTracker.java:61)
+17:22:15    at org.apache.hadoop.hbase.client.HConnectionManager$HConnectionImplementation.getMaster(HConnectionManager.java:703)
+17:22:15    at org.apache.hadoop.hbase.client.HBaseAdmin.&amp;init>(HBaseAdmin.java:126)
+17:22:15    at Client_4_3_0.setup(Client_4_3_0.java:716)
+17:22:15    at Client_4_3_0.main(Client_4_3_0.java:63)</programlisting>
+         </para>
+     </section>
+     </section>
  </section>
 
 
