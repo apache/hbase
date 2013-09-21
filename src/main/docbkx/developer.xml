@@ -249,8 +249,9 @@ mvn clean package -DskipTests
         </para>
 
      <section xml:id="maven.release">
-         <title>Making Release Candidate</title>
-         <para>I'll explain by running through the process.  See later in this section for more detail on particular steps.</para>
+         <title>Making a Release Candidate</title>
+         <para>I'll explain by running through the process.  See later in this section for more detail on particular steps.
+             The script <filename>dev-support/make_rc.sh</filename> automates most of this.</para>
 
         <para>The <link xlink:href="http://wiki.apache.org/hadoop/HowToRelease">Hadoop How To Release</link> wiki page informs much of the below and may have more detail on particular sections so it is worth review.</para>
          <para>Update CHANGES.txt with the changes since the last release (query JIRA, export to excel then hack w/ vim to format to suit CHANGES.txt TODO: Needs detail).
@@ -260,8 +261,9 @@ mvn clean package -DskipTests
              <programlisting>$ mvn clean org.codehaus.mojo:versions-maven-plugin:1.3.1:set -DnewVersion=0.96.0</programlisting>
              Checkin the <filename>CHANGES.txt</filename> and version changes.
         </para>
-        <para>Now, build the src tarball.  This tarball is hadoop version independent.  It is just the pure src code and is without the hadoop1 or  hadoop2 taint.
-            <programlisting>$ MAVEN_OPTS="-Xmx2g" mvn clean install javadoc:aggregate site assembly:single -DskipTests -Dassembly.file=hbase-assembly/src/main/assembly/src.xml -Prelease</programlisting>
+        <para>Now, build the src tarball.  This tarball is hadoop version independent.  It is just the pure src code and documentation without an hadoop1 or hadoop2 taint.
+            Add the <varname>-Prelease</varname> profile when building; it checks files for licenses and will fail the build if unlicensed files present.
+            <programlisting>$ MAVEN_OPTS="-Xmx2g" mvn clean install -DskipTests assembly:single -Dassembly.file=hbase-assembly/src/main/assembly/src.xml -Prelease</programlisting>
             Undo the tarball and make sure it looks good (A good test is seeing if you can build from the undone tarball).
             Save it off to a <emphasis>version directory</emphasis>, i.e a directory somewhere where you are collecting
             all of the tarballs you will publish as part of the release candidate.  For example if we were building a
@@ -269,33 +271,47 @@ mvn clean package -DskipTests
             we will publish this directory as our release candidate up on people.apache.org/~you.
         </para>
         <para>Now we are into the making of the hadoop1 and hadoop2 specific builds.  Lets do hadoop1 first.
-        </para>
-        <para>First generate the hadoop1 poms.  See the <filename>generate-hadoopX-poms.sh</filename> script usage for what it expects by way of arguments.
+        First generate the hadoop1 poms.  See the <filename>generate-hadoopX-poms.sh</filename> script usage for what it expects by way of arguments.
             You will find it in the <filename>dev-support</filename> subdirectory.  In the below, we generate hadoop1 poms with a version
             of <varname>0.96.0-hadoop1</varname> (the script will look for a version of <varname>0.96.0</varname> in the current <filename>pom.xml</filename>).
             <programlisting>$ ./dev-support/generate-hadoopX-poms.sh 0.96.0 0.96.0-hadoop1</programlisting>
             The script will work silently if all goes well.  It will drop a <filename>pom.xml.hadoop1</filename> beside all <filename>pom.xml</filename>s in all modules.
-            Now build the hadoop1 tarball.  Note we ask for the generation of javadoc and site and we reference the new <filename>pom.xml.hadoop1</filename> explicitly.
-            We also add the <varname>-Prelease profile</varname> when building; it checks files for licenses and will fail the build if unlicensed files present.
-            <programlisting>$ MAVEN_OPTS="-Xmx3g" mvn -f pom.xml.hadoop1 clean install -DskipTests  javadoc:aggregate site assembly:single -Prelease</programlisting>
+        </para>
+        <para>Now build the hadoop1 tarball.  Note how we reference the new <filename>pom.xml.hadoop1</filename> explicitly.
+            We also add the <varname>-Prelease</varname> profile when building; it checks files for licenses and will fail the build if unlicensed files present.
+            Do it in two steps. First install into the local repository and then generate documentation and assemble the tarball
+            (Otherwise build complains that hbase modules are not in maven repo when we try to do it all in the one go especially on fresh repo).
+            It seems that you need the install goal in both steps.
+            <programlisting>$ MAVEN_OPTS="-Xmx3g" mvn -f pom.xml.hadoop1 clean install -DskipTests -Prelease
+$ MAVEN_OPTS="-Xmx3g" mvn -f pom.xml.hadoop1 install -DskipTests site assembly:single -Prelease</programlisting>
 Undo the generated tarball and check it out.  Look at doc. and see if it runs, etc.  Are the set of modules appropriate: e.g. do we have a hbase-hadoop2-compat in the hadoop1 tarball?
 If good, copy the tarball to your <emphasis>version directory</emphasis>.
-Now deploy hadoop1 hbase to mvn. Do the mvn deploy and tgz for a particular version all together in the one go else if you flip between hadoop1 and hadoop2 builds,
+</para>
+<para>I'll tag the release at this point since its looking good.  If we find an issue later, we can delete the tag and start over.  Release needs to be tagged when we do next step.</para>
+<para>Now deploy hadoop1 hbase to mvn. Do the mvn deploy and tgz for a particular version all together in the one go else if you flip between hadoop1 and hadoop2 builds,
 you might mal-publish poms and hbase-default.xml's (the version interpolations won't match).
 This time we use the <varname>apache-release</varname> profile instead of just <varname>release</varname> profile when doing mvn deploy;
 it will invoke the apache pom referenced by our poms.  It will also sign your artifacts published to mvn as long as your settings.xml in your local <filename>.m2</filename>
 repository is configured correctly (your <filename>settings.xml</filename> adds your gpg password property to the apache profile).
 <programlisting>$ MAVEN_OPTS="-Xmx3g" mvn -f pom.xml.hadoop1 deploy -DskipTests -Papache-release</programlisting>
 The last command above copies all artifacts for hadoop1 up to mvn repo.  If no <varname>-SNAPSHOT</varname> in the version, it puts the artifacts into a staging directory.  This is what you want.
+<note>
+    <title>hbase-downstreamer</title>
+    <para>
+        See the <link xlink:href="">hbase-downstreamer</link> test for a simple example of a project that is downstream of hbase an depends on it.
+        Check it out and run its simple test to make sure maven hbase-hadoop1 and hbase-hadoop2 are properly deployed to the maven repository.
+    </para>
+</note>
             </para>
 
         <para>Lets do the hadoop2 artifacts (read above hadoop1 section closely before coming here because we don't repeat explaination in the below).
             <programlisting># Generate the hadoop2 poms.
 $ ./dev-support/generate-hadoopX-poms.sh 0.96.0 0.96.0-hadoop2
-# Build the hadoop2 tarball.
-$ MAVEN_OPTS="-Xmx3g" mvn -f pom.xml.hadoop2 clean install -DskipTests  javadoc:aggregate site assembly:single -Prelease
+# Install the hbase hadoop2 jars into local repo then build the doc and tarball
+$ MAVEN_OPTS="-Xmx3g" mvn -f pom.xml.hadoop2 clean install -DskipTests -Prelease
+$ MAVEN_OPTS="-Xmx3g" mvn -f pom.xml.hadoop2 install -DskipTests site assembly:single -Prelease
 # Undo the tgz and check it out.  If good, copy the tarball to your 'version directory'. Now deploy to mvn.
-$ MAVEN_OPTS="-Xmx3g" mvn -f pom.xml.hadoop2 deploy -DskipTests -Papache-release -Pgpg
+$ MAVEN_OPTS="-Xmx3g" mvn -f pom.xml.hadoop2 deploy -DskipTests -Papache-release
             </programlisting>
         </para>
         <para>
