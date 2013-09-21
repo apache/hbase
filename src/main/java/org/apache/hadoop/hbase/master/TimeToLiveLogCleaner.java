@@ -20,12 +20,14 @@
 package org.apache.hadoop.hbase.master;
 
 import java.io.IOException;
+import java.text.ParseException;
 
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.regionserver.wal.HLog;
 
 /**
  * Log cleaner that uses the timestamp of the hlog to determine if it should
@@ -35,20 +37,30 @@ public class TimeToLiveLogCleaner implements LogCleanerDelegate {
 
   static final Log LOG =
       LogFactory.getLog(TimeToLiveLogCleaner.class.getName());
+
   private Configuration conf;
   // Configured time a log can be kept after it was closed
   private long ttl;
+  private boolean parseTimeFromPathName;
 
   @Override
   public boolean isLogDeletable(Path filePath) {
     long time = 0;
     long currentTime = System.currentTimeMillis();
     try {
-      FileStatus fStat = filePath.getFileSystem(conf).getFileStatus(filePath);
-      time = fStat.getModificationTime();
+      // If the path name is in hourly format, skip getting modification time
+      if (HLog.shouldArchiveToHourlyDir() && OldLogsCleaner.isMatchDatePattern(filePath)) {
+        time = HLog.DATE_FORMAT.parse(filePath.getName()).getTime();
+      } else {
+        FileStatus fStat = filePath.getFileSystem(conf).getFileStatus(filePath);
+        time = fStat.getModificationTime();
+      }
     } catch (IOException e) {
       LOG.error("Unable to get modification time of file " + filePath.getName() +
       ", not deleting it.", e);
+      return false;
+    } catch (ParseException pe) {
+      LOG.error("Unable to parse the date out of given file path " + filePath.getName(), pe);
       return false;
     }
     long life = currentTime - time;

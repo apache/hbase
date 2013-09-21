@@ -20,6 +20,10 @@
 package org.apache.hadoop.hbase.master;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.regex.Pattern;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -41,6 +45,8 @@ import org.apache.hadoop.hbase.regionserver.wal.HLog;
 public class OldLogsCleaner extends Chore {
 
   static final Log LOG = LogFactory.getLog(OldLogsCleaner.class.getName());
+
+  private final static Pattern datePattern = Pattern.compile("\\d{4}-\\d{2}-\\d{2}-\\d{2}");
 
   // Max number we can delete on every chore, this is to make sure we don't
   // issue thousands of delete commands around the same time
@@ -92,6 +98,30 @@ public class OldLogsCleaner extends Chore {
   }
 
   /**
+   * Delete old hourly log directories directly.
+   * @throws IOException
+   */
+  private void cleanHourlyDirectories(List<FileStatus> hourly) throws IOException {
+    FileStatus[] files = this.fs.listStatus(this.oldLogDir);
+    if (files == null || files.length == 0) {
+      LOG.debug("Old log folder is empty");
+      return;
+    }
+    Arrays.sort(files);
+    // Only delete one hourly sub-directory in one iteration. So we won't delete
+    // too many directories/files in a short period of time.
+    // When the system generates 10000-12000 log files per hour,
+    // around 4GB data is deleted.
+    Path path = files[0].getPath();
+    if (logCleaner.isLogDeletable(path)) {
+      LOG.info("Removing old logs in " + path.toString());
+      this.fs.delete(path, true);
+    } else {
+      LOG.debug("Current hourly directories are not old enough. Oldest directory: " + path.toString());
+    }
+  }
+
+  /**
    * Delete log files directories recursively.
    * @param files The list of files/directories to traverse.
    * @param deleteCountLeft Max number of files to delete
@@ -109,8 +139,15 @@ public class OldLogsCleaner extends Chore {
     for (FileStatus file : files) {
       if (deleteCountLeft <= 0) return 0; // we don't have anymore to delete
       if (file.isDir()) {
-        deleteCountLeft = cleanFiles(this.fs.listStatus(file.getPath()),
-                                     deleteCountLeft, maxDepth - 1);
+        FileStatus[] content = this.fs.listStatus(file.getPath());
+        if (content.length == 0) {
+          this.fs.delete(file.getPath(), true);
+          deleteCountLeft++;
+          LOG.debug("Remove empty folder " + file.getPath());
+        } else {
+          deleteCountLeft = cleanFiles(this.fs.listStatus(file.getPath()),
+              deleteCountLeft, maxDepth - 1);
+        }
         continue;
       }
       Path filePath = file.getPath();
@@ -132,10 +169,41 @@ public class OldLogsCleaner extends Chore {
   @Override
   protected void chore() {
     try {
-      cleanFiles(this.fs.listStatus(this.oldLogDir), maxDeletedLogs, 2);
+      if (HLog.shouldArchiveToHourlyDir()) {
+        FileStatus[] subdirs = this.fs.listStatus(this.oldLogDir);
+        List<FileStatus> hourly = new ArrayList<FileStatus>();
+        List<FileStatus> legacy = new ArrayList<FileStatus>();
+        for (FileStatus f : subdirs) {
+          if (isMatchDatePattern(f.getPath())) {
+            hourly.add(f);
+          } else {
+            legacy.add(f);
+          }
+        }
+        if (!hourly.isEmpty()) {
+          cleanHourlyDirectories(hourly);
+        }
+        if (!legacy.isEmpty()) {
+          cleanFiles(legacy.toArray(new FileStatus[legacy.size()]), maxDeletedLogs, 2);
+        }
+      } else {
+        cleanFiles(this.fs.listStatus(this.oldLogDir), maxDeletedLogs, 2);
+      }
     } catch (IOException e) {
       e = RemoteExceptionHandler.checkIOException(e);
       LOG.warn("Error while cleaning the logs", e);
     }
+  }
+
+  /**
+   * Update TTL setup for log cleaner delegate.
+   * @param c
+   */
+  public void updateLogCleanerConf(Configuration c) {
+    this.logCleaner.setConf(c);
+  }
+
+  public static boolean isMatchDatePattern(Path file) {
+    return datePattern.matcher(file.getName()).matches();
   }
 }

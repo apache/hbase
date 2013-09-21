@@ -22,11 +22,11 @@ package org.apache.hadoop.hbase.master;
 import static org.junit.Assert.assertEquals;
 
 import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -37,7 +37,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.conf.Configuration;
 
 import java.net.URLEncoder;
-import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.Calendar;
 
 public class TestOldLogsCleaner {
 
@@ -102,8 +102,8 @@ public class TestOldLogsCleaner {
     fs.createNewFile(new Path(oldLogDir, fakeMachineName + "." + (now + 10000) ));
 
     for (FileStatus stat : fs.listStatus(oldLogDir)) {
-        System.out.println(stat.getPath().toString());
-      }
+      System.out.println(stat.getPath().toString());
+    }
 
     assertEquals(34, fs.listStatus(oldLogDir).length);
 
@@ -119,4 +119,73 @@ public class TestOldLogsCleaner {
     assertEquals(2, fs.listStatus(oldLogDir).length);
   }
 
+  @Test
+  public void testLogCleaningWithArchivingToHourlyDir() throws Exception{
+    Configuration c = TEST_UTIL.getConfiguration();
+    // set TTL to delete 5 hours
+    c.setLong("hbase.master.logcleaner.ttl", 4 * 3600 * 1000);
+    c.setBoolean("hbase.hlog.archive.hourlydir", true);
+    HLog.setArchiveToHourlyDir(true);
+    Path oldLogDir = new Path(TEST_UTIL.getTestDir(),
+        HConstants.HREGION_OLDLOGDIR_NAME);
+    String fakeMachineName = URLEncoder.encode("regionserver:60020", "UTF8");
+
+    FileSystem fs = FileSystem.get(c);
+    StoppableImpl stop = new StoppableImpl();
+    OldLogsCleaner cleaner = new OldLogsCleaner(1000, stop,c, fs, oldLogDir);
+
+    // Create 1 invalid directory (considering legacy logs), 10 directories representing
+    // recent 10 hours respectively
+    fs.delete(oldLogDir, true);
+    fs.mkdirs(oldLogDir);
+    Path legacyDir = new Path(oldLogDir, "abc");
+    fs.mkdirs(legacyDir);
+    fs.createNewFile(new Path(legacyDir, "123.456"));
+    Calendar cal = Calendar.getInstance();
+    System.out.println("Now is: " + HLog.DATE_FORMAT.format(cal.getTime()));
+    for (int i = 0; i < 10; i++) {
+      cal.add(Calendar.HOUR, -1);
+      Path hourDir = new Path(oldLogDir, HLog.DATE_FORMAT.format(cal.getTime()));
+      fs.mkdirs(hourDir);
+      fs.createNewFile(new Path(hourDir, new Path(fakeMachineName + "." + i)));
+    }
+
+    for (FileStatus stat : fs.listStatus(oldLogDir)) {
+      System.out.println(stat.getPath().toString());
+    }
+
+    assertEquals(11, fs.listStatus(oldLogDir).length);
+
+    // This will delete oldest sub-directory
+    cleaner.chore();
+
+    assertEquals(10, fs.listStatus(oldLogDir).length);
+
+    // We will delete all log dir older than 4 hours
+    for (int i = 0; i < 10; i++) {
+      cleaner.chore();
+    }
+
+    // We should still see 3 newer dirs and an legacy one
+    assertEquals(4, fs.listStatus(oldLogDir).length);
+
+    Thread.sleep(1000);
+
+    // Update TTL configuration to delete all logs
+    c.setLong("hbase.master.logcleaner.ttl", 800);
+    cleaner.updateLogCleanerConf(c);
+
+    // Delete an hourly dir. File "123.456" should also be deleted this time.
+    cleaner.chore();
+    assertEquals(3, fs.listStatus(oldLogDir).length);
+    assertEquals(0, fs.listStatus(legacyDir).length);
+
+    // Delete an hourly dir. Dir "abc" should also be deleted this time.
+    cleaner.chore();
+    assertEquals(1, fs.listStatus(oldLogDir).length);
+
+    // Delete the last
+    cleaner.chore();
+    assertEquals(0, fs.listStatus(oldLogDir).length);
+  }
 }

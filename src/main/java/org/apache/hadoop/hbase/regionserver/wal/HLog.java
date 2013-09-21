@@ -31,20 +31,20 @@ import java.io.OutputStream;
 import java.lang.reflect.Method;
 import java.net.URLEncoder;
 import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Calendar;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableSet;
-import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.concurrent.Callable;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentNavigableMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -142,6 +142,7 @@ public class HLog implements Syncable {
   public static final byte [] METAFAMILY = Bytes.toBytes("METAFAMILY");
   public static final byte [] METAROW = Bytes.toBytes("METAROW");
   public static final boolean SPLIT_SKIP_ERRORS_DEFAULT = false;
+  public static final SimpleDateFormat DATE_FORMAT = new SimpleDateFormat("yyyy-MM-dd-HH");
 
   /*
    * Name of directory that holds recovered edits written by the wal log
@@ -153,6 +154,10 @@ public class HLog implements Syncable {
 
   /** We include all timestamps by default */
   public static final long DEFAULT_LATEST_TS_TO_INCLUDE = Long.MAX_VALUE;
+
+  // If enabled, old logs will be archived into hourly sub-directories instead of
+  // server address sub-directories.
+  private static boolean ARCHIVE_TO_HOURLY_DIR = false;
 
   private final FileSystem fs;
   private final Path dir;
@@ -454,6 +459,7 @@ public class HLog implements Syncable {
       fs.mkdirs(oldLogDir);
     }
     this.oldLogDir = oldLogDir;
+    ARCHIVE_TO_HOURLY_DIR = conf.getBoolean("hbase.hlog.archive.hourlydir", false);
 
     if (!fs.exists(dir)) {
       fs.mkdirs(dir);
@@ -1863,13 +1869,27 @@ public class HLog implements Syncable {
       return new Path(oldLogDir, filename);
     }
 
-    // since the filename is a valid name, we know there
-    // is a last '.' (won't return -1)
-    String subDirectoryName = filename.substring(0, filename.lastIndexOf('.'));
+    String subDirectoryName;
+    if (ARCHIVE_TO_HOURLY_DIR) {
+      // Group into hourly sub-directory
+      subDirectoryName = DATE_FORMAT.format(Calendar.getInstance().getTime());
+    } else {
+      // since the filename is a valid name, we know there
+      // is a last '.' (won't return -1)
+      subDirectoryName = filename.substring(0, filename.lastIndexOf('.'));
+    }
     Path oldLogsSubDir = new Path(oldLogDir, subDirectoryName);
     fs.mkdirs(oldLogsSubDir);
 
     return new Path(oldLogsSubDir, filename);
+  }
+
+  public static boolean shouldArchiveToHourlyDir() {
+    return ARCHIVE_TO_HOURLY_DIR;
+  }
+
+  public static void setArchiveToHourlyDir(boolean b) {
+    ARCHIVE_TO_HOURLY_DIR = b;
   }
 
   /**
